@@ -12,7 +12,7 @@ window.dataFinalInspGlobal = window.dataFinalInspGlobal || [];
 window.inspPorPagina = window.inspPorPagina || parseInt(localStorage.getItem('fleet_insp_ppp') || '50');
 window.inspPaginaActual = window.inspPaginaActual || 1;
 
-const DEFAULT_INSP_SCHEMA = [
+var DEFAULT_INSP_SCHEMA = window.DEFAULT_INSP_SCHEMA || [
     { tab: 'LLANTA', template_id: 'cat_llanta', items: [{ id: 'i_1', label: 'Cortes o Averías', type: 'okfalla' }, { id: 'i_2', label: 'PSI del Neumático', type: 'okfalla' }, { id: 'i_3', label: 'Otros', type: 'okfalla' }] },
     { tab: 'MOTOR', template_id: 'cat_motor', items: [{ id: 'i_4', label: 'Niveles de Motor', type: 'okfalla' }, { id: 'i_5', label: 'Sistema de Lubricación Fugas', type: 'okfalla' }, { id: 'i_6', label: 'Sistema de Combustible', type: 'okfalla' }, { id: 'i_7', label: 'Sistema de Refrigeración', type: 'okfalla' }, { id: 'i_8', label: 'Correas, Ventilador y Accesorios', type: 'okfalla' }, { id: 'i_9', label: 'Código de Falla', type: 'okfalla' }, { id: 'i_10', label: 'Otros', type: 'okfalla' }] },
     { tab: 'SISTEMA ELECTRICO', template_id: 'cat_elec', items: [{ id: 'i_11', label: 'Sistema Eléctrico General', type: 'okfalla' }, { id: 'i_12', label: 'Estado de Bateria', type: 'okfalla' }, { id: 'i_13', label: 'Otros', type: 'okfalla' }] },
@@ -23,7 +23,7 @@ const DEFAULT_INSP_SCHEMA = [
     { tab: 'SUSPENSION', template_id: 'cat_susp', items: [{ id: 'i_33', label: 'Muelles o Bolsas de Aire', type: 'okfalla' }, { id: 'i_34', label: 'Amortiguadores', type: 'okfalla' }, { id: 'i_35', label: 'Eje de Barra Estabilizadora', type: 'okfalla' }, { id: 'i_36', label: 'Otros', type: 'okfalla' }] },
     { tab: 'HERMETIZADO', template_id: 'cat_herm', items: [{ id: 'i_37', label: 'Cabina Exterior e Interior', type: 'okfalla' }, { id: 'i_38', label: 'Puerta, Chapas y Asientos', type: 'okfalla' }, { id: 'i_39', label: 'Chasis, Tornamesa y Bastidor', type: 'okfalla' }, { id: 'i_40', label: 'Furgón (Estructura Laterales)', type: 'okfalla' }, { id: 'i_41', label: 'Lavado y Limpieza Interior de ThermoKing', type: 'okfalla' }] }
 ];
-
+window.DEFAULT_INSP_SCHEMA = DEFAULT_INSP_SCHEMA;
 window.DYNAMIC_INSP_SCHEMA = window.DYNAMIC_INSP_SCHEMA || DEFAULT_INSP_SCHEMA;
 
 window.ensureInspConfig = function() {
@@ -1424,18 +1424,18 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
         try {
             let reqCfg = await fetch('/api/mantenimiento/inspecciones/configuracion', { method: 'GET' });
             let resCfg = await reqCfg.json();
-            if (resCfg.data && resCfg.data.length > 0) {
+            if (resCfg && resCfg.data && resCfg.data.length > 0) {
                 window.DYNAMIC_INSP_SCHEMA = resCfg.data.map(d => {
-                    let items = d.items;
+                    let items = d.items_json || d.items || [];
                     try { if (typeof items === 'string') items = JSON.parse(items); } catch(e){}
-                    return { tab: d.tab, items: items };
+                    return { tab: (d.titulo || d.tab || 'SISTEMA').toUpperCase(), template_id: d.template_id, items: Array.isArray(items) ? items : [] };
                 });
             } else {
-                window.DYNAMIC_INSP_SCHEMA = [];
+                window.DYNAMIC_INSP_SCHEMA = DEFAULT_INSP_SCHEMA;
             }
         } catch (e) {
             console.error("Error loading schema", e);
-            window.DYNAMIC_INSP_SCHEMA = [];
+            window.DYNAMIC_INSP_SCHEMA = DEFAULT_INSP_SCHEMA;
         }
     }
 
@@ -3220,11 +3220,12 @@ window.importarExcelInspecciones = function (event) {
 // ================================================================
 window.init_inspecciones = function () {
     if (!window.checkPerm('insp', 'l')) {
-        window.showNoPermMsg('mod-inspecciones');
+        var wrap = document.getElementById('moduloStatus') || document.getElementById('root-dinamico');
+        if (wrap) window.showNoPermMsg(wrap);
         return;
     }
     // Ocultar botones sin permiso crear
-    var btnNuevo = document.querySelector('#mod-inspecciones [onclick*="abrirModalInspeccion"], [onclick*="abrirWizard"]');
+    var btnNuevo = document.querySelector('#moduloStatus [onclick*="abrirModalInspeccion"], #moduloStatus [onclick*="abrirWizard"]');
     if (btnNuevo) btnNuevo.style.display = window.checkPerm('insp', 'c') ? '' : 'none';
     // Leer filtro pendiente desde navegación por dashboard
     var navFilter = localStorage.getItem('fleet_insp_nav_filter');

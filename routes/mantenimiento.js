@@ -15,23 +15,24 @@ module.exports = function (db, logAudit) {
         { template_id: 'cat_herm', titulo: 'HERMETIZADO', items_json: [{ id: 'i_37', label: 'Cabina Exterior e Interior', type: 'okfalla' }, { id: 'i_38', label: 'Puerta, Chapas y Asientos', type: 'okfalla' }, { id: 'i_39', label: 'Chasis, Tornamesa y Bastidor', type: 'okfalla' }, { id: 'i_40', label: 'Furgón (Estructura Laterales)', type: 'okfalla' }, { id: 'i_41', label: 'Lavado y Limpieza Interior de ThermoKing', type: 'okfalla' }] }
     ];
 
+    const ensureTableSql = `
+    CREATE TABLE IF NOT EXISTS mant_insp_templates (
+        id INT NOT NULL AUTO_INCREMENT,
+        template_id VARCHAR(30) NOT NULL,
+        titulo VARCHAR(150) NOT NULL,
+        items_json LONGTEXT NOT NULL,
+        orden INT NOT NULL DEFAULT '0',
+        activo TINYINT(1) NOT NULL DEFAULT '1',
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_template_id (template_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
     // GET /api/mantenimiento/inspecciones/config y alias /inspecciones/configuracion
     const handleGetInspConfig = (req, res) => {
         const targetDb = req.db || db;
-        const ensureTableSql = `
-        CREATE TABLE IF NOT EXISTS mant_insp_templates (
-            id INT NOT NULL AUTO_INCREMENT,
-            template_id VARCHAR(30) NOT NULL,
-            titulo VARCHAR(150) NOT NULL,
-            items_json JSON NOT NULL,
-            orden INT NOT NULL DEFAULT '0',
-            activo TINYINT(1) NOT NULL DEFAULT '1',
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            UNIQUE KEY uq_template_id (template_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        `;
         targetDb.query(ensureTableSql, () => {
             const query = 'SELECT * FROM mant_insp_templates ORDER BY orden ASC';
             targetDb.query(query, (err, rows) => {
@@ -57,7 +58,8 @@ module.exports = function (db, logAudit) {
         }
 
         const targetDb = req.db || db;
-        targetDb.getConnection((err, conn) => {
+        targetDb.query(ensureTableSql, () => {
+            targetDb.getConnection((err, conn) => {
             if (err) {
                 console.error('Error getConnection:', err);
                 return res.status(500).json({ ok: false, error: err.message });
@@ -108,6 +110,7 @@ module.exports = function (db, logAudit) {
                     });
                 });
             });
+        });
         });
     });
 
