@@ -263,6 +263,7 @@ router.post('/proveedores/bulk-delete', (req, res) => {
 const _stockSQL = `
   SELECT i.*,
     DATE_FORMAT(i.fecha_regularizacion, '%Y-%m-%d %H:%i:%s') AS fecha_regularizacion,
+    COALESCE(prov.ultimo_proveedor, p_dir.nombre) AS ultimo_proveedor,
     ROUND(
       COALESCE(i.stock_regularizado, 0)
       + COALESCE(ent.total_entradas, 0)
@@ -270,6 +271,17 @@ const _stockSQL = `
       - COALESCE(sal.total_salidas, 0)
     , 4) AS stock_actual
   FROM inventario i
+  LEFT JOIN (
+      SELECT 
+          d.inventario_id,
+          SUBSTRING_INDEX(GROUP_CONCAT(e.proveedor_nombre ORDER BY COALESCE(e.fecha, e.created_at) DESC, d.id DESC SEPARATOR '|||'), '|||', 1) AS ultimo_proveedor
+      FROM detalle_entradas_inv d
+      JOIN entradas_inv e ON e.id = d.entrada_id
+      WHERE (e.estado IS NULL OR e.estado != 'Anulado')
+        AND e.proveedor_nombre IS NOT NULL AND e.proveedor_nombre != ''
+      GROUP BY d.inventario_id
+  ) prov ON prov.inventario_id = i.id
+  LEFT JOIN proveedores_inv p_dir ON p_dir.id = i.proveedor_id
   LEFT JOIN (
       SELECT 
           d.inventario_id, 
