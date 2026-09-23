@@ -1053,7 +1053,7 @@
             <div class="row g-3 text-start">
                 <!-- Opción 1: Inspección de Neumáticos -->
                 <div class="col-12 col-sm-6">
-                    <div class="insp-type-card" onclick="window.seleccionarTipoInspeccion('neumaticos')">
+                    <div class="insp-type-card" data-bs-dismiss="modal" onclick="window._inspTipoSeleccionado='neumaticos'">
                         <div class="insp-type-icon" style="background: #e0f2fe; color: #0284c7;">
                             <i class="bi bi-disc-fill"></i>
                         </div>
@@ -1065,7 +1065,7 @@
                 </div>
                 <!-- Opción 2: Inspección Mecánica Integral -->
                 <div class="col-12 col-sm-6">
-                    <div class="insp-type-card" onclick="window.seleccionarTipoInspeccion('mecanica')">
+                    <div class="insp-type-card" data-bs-dismiss="modal" onclick="window._inspTipoSeleccionado='mecanica'">
                         <div class="insp-type-icon" style="background: #fef3c7; color: #d97706;">
                             <i class="bi bi-truck-front-fill"></i>
                         </div>
