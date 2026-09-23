@@ -2282,7 +2282,6 @@ app.use('/api', mantenimientoRoutes);
 const checklistRoutes = require('./routes/checklist')(db, broadcast, logAudit);
 app.use('/api/checklist', checklistRoutes);
 app.use('/api/mantenimiento/checklist', checklistRoutes);
-app.use('/api', checklistRoutes);
 
 function getCatRampasSafe(targetDb, cb) {
     targetDb.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
@@ -3911,7 +3910,6 @@ app.put('/api/integraciones', (req, res) => {
 // ============================================================
 // 🚀 EL PUENTE DE LECTURA A MYSQL (Legacy)
 // Módulo Directorio de Clientes (Fase 1 - ERP)
-app.use('/api/checklist', require('./routes/checklist')(db, broadcast, logAudit));
 app.use('/api/clientes', require('./routes/clientes')(db, logAudit));
 app.use('/api/disponibilidad-flota', require('./routes/disponibilidad')(db, logAudit));
 app.use('/api/neumaticos', require('./routes/neumaticos')(db, broadcast, logAudit));
