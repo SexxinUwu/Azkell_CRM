@@ -3,6 +3,10 @@
 // Cargado dinámicamente por cargarModuloAislado('mantenimiento/inspecciones')
 // ================================================================
 
+window.normalizeStr = window.normalizeStr || function(str) {
+    return (str || '').toString().trim().toUpperCase();
+};
+
 // Paginación inspecciones (patrón window para SPA)
 window.dataFinalInspGlobal = window.dataFinalInspGlobal || [];
 window.inspPorPagina = window.inspPorPagina || parseInt(localStorage.getItem('fleet_insp_ppp') || '50');
@@ -1759,22 +1763,30 @@ async function procesarGuardadoInspeccion() {
 // 🚀 AUTOCOMPLETAR INFO EN INSPECCIONES
 // ============================================================
 window.autocompletarInfoInsp = function () {
-    let placaInput = normalizeStr(document.getElementById('i_placa').value);
-    let match = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placaInput);
+    let placaEl = document.getElementById('i_placa');
+    if (!placaEl) return;
+    let placaInput = (placaEl.value || '').toString().trim().toUpperCase();
+    let placasList = window.dataGlobalPlacas || [];
+    let match = placasList.find(p => (p && p[0] ? p[0].toString().trim().toUpperCase() : '') === placaInput);
 
+    let clientEl = document.getElementById('i_cliente');
+    let modeloEl = document.getElementById('i_modelo');
     if (match) {
-        document.getElementById('i_cliente').value = match[1] || "";
-        document.getElementById('i_modelo').value = match[5] || "";
+        if (clientEl) clientEl.value = match[1] || "";
+        if (modeloEl) modeloEl.value = match[5] || "";
     } else {
-        document.getElementById('i_cliente').value = "";
-        document.getElementById('i_modelo').value = "";
+        if (clientEl) clientEl.value = "";
+        if (modeloEl) modeloEl.value = "";
     }
 
-    let wialonData = buscarWialonPorPlaca(placaInput);
-    if (wialonData) {
-        document.getElementById('i_kmgps').value = wialonData.km;
-    } else {
-        document.getElementById('i_kmgps').value = '';
+    let kmGpsEl = document.getElementById('i_kmgps');
+    if (kmGpsEl) {
+        if (typeof window.buscarWialonPorPlaca === 'function') {
+            let wialonData = window.buscarWialonPorPlaca(placaInput);
+            kmGpsEl.value = (wialonData && wialonData.km) ? wialonData.km : '';
+        } else {
+            kmGpsEl.value = '';
+        }
     }
 };
 
@@ -2050,21 +2062,23 @@ window.limpiarFirmaCanvas = function(id) {
 window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect, kmPreselect) {
     if (!document.getElementById('drawerInspeccion')) {
         if (typeof window.rotToast === 'function') window.rotToast("Cargando formulario...", "bg-info");
-        fetch('/modulos/mantenimiento/inspecciones/vista.html')
-            .then(r => r.text())
-            .then(html => {
-                let tmp = document.createElement('div');
-                tmp.innerHTML = html;
-                let drawer = tmp.querySelector('#drawerInspeccion');
-                if (drawer) {
-                    document.body.appendChild(drawer);
-                    window.abrirModalNuevaInspeccion(placaPreselect, idOtPreselect, kmPreselect);
-                } else {
-                    alert("No se encontró la vista de Inspecciones.");
-                }
-            })
-            .catch(e => console.error(e));
-        return;
+        try {
+            let res = await fetch('/modulos/mantenimiento/inspecciones/vista.html');
+            let html = await res.text();
+            let tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            let drawer = tmp.querySelector('#drawerInspeccion');
+            if (drawer) {
+                document.body.appendChild(drawer);
+                return window.abrirModalNuevaInspeccion(placaPreselect, idOtPreselect, kmPreselect);
+            } else {
+                alert("No se encontró la vista de Inspecciones.");
+                return;
+            }
+        } catch(e) {
+            console.error("Error al cargar vista inspecciones:", e);
+            return;
+        }
     }
 
     await window.ensureInspConfig();
@@ -2079,20 +2093,6 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
     let maxId = 0;
     let year = new Date().getFullYear();
     
-    try {
-        let res = await fetch('/api/script/obtenerDatosInspecciones', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ args: [] })
-        });
-        let data = await res.json();
-        if (data.data) {
-            window.dataGlobalInspecciones = data.data;
-        }
-    } catch (e) {
-        console.warn("No se pudo actualizar inspecciones", e);
-    }
-
     if (window.dataGlobalInspecciones && window.dataGlobalInspecciones.length > 0) {
         window.dataGlobalInspecciones.forEach(row => {
             let parts = (row.id || '').split('-');
@@ -2113,7 +2113,8 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
     if (idOtInput) idOtInput.value = idOtPreselect || "";
 
     let tzOffset = (new Date()).getTimezoneOffset() * 60000;
-    document.getElementById('i_fecha').value = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+    let fechaEl = document.getElementById('i_fecha');
+    if (fechaEl) fechaEl.value = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
 
     document.querySelectorAll('[id^="f_p_"]').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.pct-btn').forEach(btn => {
@@ -2128,69 +2129,46 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
         if (iKm) iKm.value = kmPreselect;
     }
 
-    setTimeout(() => {
-        document.getElementById('i_placa').value = placaPreselect || "";
+    if (placaPreselect) {
+        let iPlaca = document.getElementById('i_placa');
         let txtPla = document.getElementById('i_placa-txt');
-        if(txtPla) txtPla.value = placaPreselect || "";
+        if (iPlaca) iPlaca.value = placaPreselect;
+        if (txtPla) txtPla.value = placaPreselect;
         window.autocompletarInfoInsp();
-
-        let diasPrevios = "30";
-        if (placaPreselect && dataGlobalInspecciones && dataGlobalInspecciones.length > 0) {
-            let normalizeStr = (str) => (str || '').toString().trim().toUpperCase();
-            let numId = (id) => {
-                if (!id) return 0;
-                let parts = id.toString().split('-');
-                if (parts.length > 2 && parts[1].length === 4) { return parseInt(parts[1] + parts[2] + parts[3]) || 0; }
-                return parseInt(parts[1]) || 0;
-            };
-            let inspOrd = [...dataGlobalInspecciones].sort((a, b) => numId(b.id) - numId(a.id));
-            let prevInsp = inspOrd.find(i => normalizeStr(i.placa) === normalizeStr(placaPreselect));
-            if (prevInsp && prevInsp.dias_propuestos) diasPrevios = prevInsp.dias_propuestos.toString();
-        }
-
-        let chk30 = document.getElementById('chk_30dias');
-        let inputDias = document.getElementById('i_dias');
-        let containerDias = document.getElementById('i_dias_container');
-        if(diasPrevios == "30") {
-            if(chk30) chk30.checked = true;
-            if(containerDias) containerDias.style.display = 'none';
-        } else {
-            if(chk30) chk30.checked = false;
-            if(containerDias) containerDias.style.display = 'block';
-            if(inputDias) inputDias.value = diasPrevios;
-        }
-
-        let titleEl = document.querySelector('#drawerInspeccion h5');
-        let indicator = document.getElementById('ot-linked-indicator');
-        if (!indicator && titleEl) {
-            indicator = document.createElement('span');
-            indicator.id = 'ot-linked-indicator';
-            indicator.className = 'badge ms-2 shadow-sm';
-            indicator.style.backgroundColor = '#e0f2fe';
-            indicator.style.color = '#0284c7';
-            indicator.style.fontSize = '0.75rem';
-            indicator.style.fontWeight = 'bold';
-            indicator.style.border = '1px solid #7dd3fc';
-            titleEl.appendChild(indicator);
-        }
-        if (indicator) {
-            if (idOtPreselect) {
-                indicator.innerHTML = `<i class="bi bi-link-45deg"></i> Vinculada a OT: ${idOtPreselect}`;
-                indicator.style.display = 'inline-block';
-            } else {
-                indicator.style.display = 'none';
-            }
-        }
-    }, 50);
+    }
 
     let offEl = document.getElementById('drawerInspeccion');
     if (offEl) {
         if (offEl.parentElement !== document.body) {
             document.body.appendChild(offEl);
         }
+        offEl.style.setProperty('z-index', '1080', 'important');
         let modal = bootstrap.Modal.getOrCreateInstance(offEl);
         modal.show();
     }
+
+    // Cargar / actualizar lista de inspecciones en segundo plano sin congelar UI
+    fetch('/api/script/obtenerDatosInspecciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ args: [] })
+    }).then(r => r.json()).then(data => {
+        if (data && data.data) {
+            window.dataGlobalInspecciones = data.data;
+            let currentMax = 0;
+            data.data.forEach(row => {
+                let parts = (row.id || '').split('-');
+                if (parts.length === 3 && parts[1] == year) {
+                    let num = parseInt(parts[2], 10);
+                    if (num > currentMax) currentMax = num;
+                }
+            });
+            let showInp = document.getElementById('i_id_inspeccion_show');
+            if (showInp && !document.getElementById('i_id_inspeccion')?.value) {
+                showInp.value = "INSP-" + year + "-" + String(currentMax + 1).padStart(4, '0');
+            }
+        }
+    }).catch(e => console.warn("Background update inspecciones:", e));
 };
 
 window.abrirModalEditarInspeccion = async function (idBusqueda) {
@@ -3601,22 +3579,24 @@ window.seleccionarTipoInspeccion = function(tipo) {
     var placa = window._inspPlacaSeleccionada || '';
     var km = window._inspKmSeleccionado || 0;
 
-    if (tipo === 'neumaticos') {
-        if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
-            window.rotAbrirInspeccionNeumaticos(placa, '', km);
+    setTimeout(function() {
+        if (tipo === 'neumaticos') {
+            if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+                window.rotAbrirInspeccionNeumaticos(placa, '', km);
+            } else {
+                var script = document.createElement('script');
+                script.src = '/modulos/mantenimiento/neumaticos/modal_inspeccion.js?v=' + Date.now();
+                script.onload = function() {
+                    if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+                        window.rotAbrirInspeccionNeumaticos(placa, '', km);
+                    }
+                };
+                document.body.appendChild(script);
+            }
         } else {
-            var script = document.createElement('script');
-            script.src = '/modulos/mantenimiento/neumaticos/modal_inspeccion.js?v=' + Date.now();
-            script.onload = function() {
-                if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
-                    window.rotAbrirInspeccionNeumaticos(placa, '', km);
-                }
-            };
-            document.body.appendChild(script);
+            window.abrirModalNuevaInspeccion(placa, '', km);
         }
-    } else {
-        window.abrirModalNuevaInspeccion(placa);
-    }
+    }, 150);
 };
 
 window._inspeccionIdAEliminar = null;
