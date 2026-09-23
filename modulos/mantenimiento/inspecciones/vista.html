@@ -18,7 +18,7 @@
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 18px;
-    padding: 1rem 1.25rem;
+    padding: 0.95rem 1.15rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -26,6 +26,9 @@
     cursor: pointer;
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
     user-select: none;
+    height: 100%;
+    min-height: 94px;
+    box-sizing: border-box;
 }
 .ck-kpi-card:hover {
     transform: translateY(-2px);
@@ -35,6 +38,16 @@
     border-color: #0284c7 !important;
     box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
     background: #f8fafc !important;
+}
+.ck-kpi-title {
+    font-size: 0.69rem;
+    letter-spacing: 0.4px;
+    height: 30px;
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 2px;
+    line-height: 1.25;
+    text-transform: uppercase;
 }
 .ck-kpi-icon {
     width: 46px;
@@ -404,9 +417,9 @@
   <div class="row g-2 g-md-3 mb-3" id="panelKPIsGenerales">
     <div class="col-6 col-md-3">
       <div class="ck-kpi-card active" id="insp-kpi-total" onclick="window.filtrarInspCard('total', this)" style="cursor: pointer;">
-        <div>
-          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Flota Inspeccionada</span>
-          <h2 id="kpi-insp-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
+        <div class="flex-grow-1 pe-2">
+          <span class="text-secondary small fw-bold ck-kpi-title">Flota Inspeccionada</span>
+          <h2 id="kpi-insp-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem; line-height: 1.1;">0</h2>
         </div>
         <div class="ck-kpi-icon" style="background: #eff6ff; color: #2563eb;">
           <i class="bi bi-clipboard2-check"></i>
@@ -415,9 +428,9 @@
     </div>
     <div class="col-6 col-md-3">
       <div class="ck-kpi-card" id="insp-kpi-conformes" onclick="window.filtrarInspCard('verde', this)" style="cursor: pointer;">
-        <div>
-          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Conformes / Verde</span>
-          <h2 id="kpi-insp-conformes" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">0</h2>
+        <div class="flex-grow-1 pe-2">
+          <span class="text-secondary small fw-bold ck-kpi-title">Conformes / Verde</span>
+          <h2 id="kpi-insp-conformes" class="fw-bolder m-0 text-success" style="font-size: 1.6rem; line-height: 1.1;">0</h2>
         </div>
         <div class="ck-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
           <i class="bi bi-check-circle-fill"></i>
@@ -426,9 +439,9 @@
     </div>
     <div class="col-6 col-md-3">
       <div class="ck-kpi-card" id="insp-kpi-alerta" onclick="window.filtrarInspCard('amarillo', this)" style="cursor: pointer;">
-        <div>
-          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">En Alerta / Amarillo</span>
-          <h2 id="kpi-insp-alerta" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem;">0</h2>
+        <div class="flex-grow-1 pe-2">
+          <span class="text-secondary small fw-bold ck-kpi-title">En Alerta / Amarillo</span>
+          <h2 id="kpi-insp-alerta" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem; line-height: 1.1;">0</h2>
         </div>
         <div class="ck-kpi-icon" style="background: #fefce8; color: #ca8a04;">
           <i class="bi bi-exclamation-circle-fill"></i>
@@ -437,9 +450,9 @@
     </div>
     <div class="col-6 col-md-3">
       <div class="ck-kpi-card" id="insp-kpi-criticas" onclick="window.filtrarInspCard('rojo', this)" style="cursor: pointer;">
-        <div>
-          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Críticas / Rojo</span>
-          <h2 id="kpi-insp-criticas" class="fw-bolder m-0 text-danger" style="font-size: 1.6rem;">0</h2>
+        <div class="flex-grow-1 pe-2">
+          <span class="text-secondary small fw-bold ck-kpi-title">Críticas / Rojo</span>
+          <h2 id="kpi-insp-criticas" class="fw-bolder m-0 text-danger" style="font-size: 1.6rem; line-height: 1.1;">0</h2>
         </div>
         <div class="ck-kpi-icon" style="background: #fef2f2; color: #dc2626;">
           <i class="bi bi-x-circle-fill"></i>
