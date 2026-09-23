@@ -437,10 +437,9 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
-/* ── Config Drawer Modal & Detail Modal (80% de altura, 100% ancho de borde a borde, sube de abajo hacia arriba) ── */
+/* ── Config Drawer Modal (80% de altura, 100% ancho de borde a borde, sube de abajo hacia arriba) ── */
 .ck-fullscreen-config-dialog,
-#modalConfigInsp .modal-dialog,
-#modalResumenInspeccion .modal-dialog {
+#modalConfigInsp .modal-dialog {
     max-width: 100vw !important;
     width: 100vw !important;
     min-width: 100vw !important;
@@ -460,14 +459,11 @@
 .modal.show .ck-fullscreen-config-dialog,
 .modal.fade.show .ck-fullscreen-config-dialog,
 #modalConfigInsp.show .modal-dialog,
-#modalConfigInsp.fade.show .modal-dialog,
-#modalResumenInspeccion.show .modal-dialog,
-#modalResumenInspeccion.fade.show .modal-dialog {
+#modalConfigInsp.fade.show .modal-dialog {
     transform: translateY(0) !important;
 }
 .ck-fullscreen-config-content,
-#modalConfigInsp .modal-content,
-#modalResumenInspeccion .modal-content {
+#modalConfigInsp .modal-content {
     width: 100vw !important;
     min-width: 100vw !important;
     height: 80vh !important;
@@ -482,11 +478,61 @@
     flex-direction: column !important;
     margin: 0 !important;
 }
-#modalConfigInsp .modal-body,
+#modalConfigInsp .modal-body {
+    padding: 1.25rem 1.5rem !important;
+    overflow-y: auto !important;
+    flex: 1 1 auto !important;
+}
+
+/* ── Floating Drawer Modal (Idéntico 1:1 a Reporte de Fallas) ──────────────────────── */
+.ck-floating-drawer-dialog,
+#modalResumenInspeccion .modal-dialog {
+    max-width: 740px !important;
+    width: 100% !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+    margin: 0 auto !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translate(-50%, 100%) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    top: auto !important;
+    right: auto !important;
+}
+
+#modalResumenInspeccion.show .modal-dialog,
+#modalResumenInspeccion.fade.show .modal-dialog {
+    transform: translate(-50%, 0) !important;
+}
+
+.ck-floating-drawer-content,
+#modalResumenInspeccion .modal-content {
+    height: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 28px 28px 0 0 !important;
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.25) !important;
+    overflow: hidden !important;
+    background: #f8fafc !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
 #modalResumenInspeccion .modal-body {
     padding: 1.25rem 1.5rem !important;
     overflow-y: auto !important;
     flex: 1 1 auto !important;
+}
+
+@media (max-width: 768px) {
+    #modalResumenInspeccion .modal-dialog {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        height: 95vh !important;
+        max-height: 95vh !important;
+    }
 }
 .ck-btn-trash-item {
     color: #94a3b8 !important;
@@ -872,11 +918,11 @@
 </div>
 
 <!-- ================================================================= -->
-<!-- 📋 MODAL RESUMEN INSPECCIÓN & EXPORTAR PDF (BOTTOM DRAWER FULLSCREEN 80%) -->
+<!-- 📋 MODAL RESUMEN INSPECCIÓN & EXPORTAR PDF                        -->
 <!-- ================================================================= -->
 <div class="modal fade" id="modalResumenInspeccion" tabindex="-1">
-    <div class="modal-dialog modal-dialog-scrollable ck-fullscreen-config-dialog">
-        <div class="modal-content border-0 ck-fullscreen-config-content">
+    <div class="modal-dialog modal-dialog-scrollable ck-floating-drawer-dialog">
+        <div class="modal-content border-0 ck-floating-drawer-content">
             <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
                 <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2 m-0" style="font-size: 1.15rem;">
                     <i class="bi bi-clipboard2-check-fill text-primary"></i> <span id="lbl-resumen-insp-folio">Resumen de Inspección Mecánica</span>
