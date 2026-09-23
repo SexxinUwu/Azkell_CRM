@@ -2267,6 +2267,7 @@ app.post('/api/configuracion/email/programaciones', async (req, res) => {
 // ============================================================
 const tallerRoutes = require('./routes/taller')(db, logAudit, _generarCodigoAlmacen);
 app.use('/api', tallerRoutes);
+app.use('/api/taller', tallerRoutes);
 
 // ============================================================
 // 🛡️ RUTAS SEGURIDAD (Unidades checklist + Asistencia QR)

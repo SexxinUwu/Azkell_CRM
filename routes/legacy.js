@@ -45,11 +45,16 @@ function generarIdFleetrunUnico(placa, tipoMp, fecha, cb) {
     );
 }
 
-// ── Sincronización Automática de Hallazgos hacia RF y OT activa (Marsisa) ──
-async function procesarHallazgosInspeccionMarsisa(tdb, req, nextId, datos) {
+// ── Sincronización Automática de Hallazgos hacia RF y OT activa (Exclusivo Marsisa) ──
+async function procesarHallazgosInspeccion(tdb, req, nextId, datos) {
     try {
-        const isMarsisa = (req.tenantSlug === 'marsisa' || req.tenantSlug === 'master' || !req.tenantSlug || req.tenantSlug.includes('marsisa'));
-        if (!isMarsisa) return;
+        const tenantSlug = (req.tenantSlug || (req.tenantInfo && req.tenantInfo.slug) || (req.headers && (req.headers['x-tenant-id'] || req.headers['x-tenant-slug'])) || '').toLowerCase();
+        const host = (req.headers && req.headers.host ? req.headers.host : '').toLowerCase();
+        const isMarsisa = tenantSlug.includes('marsisa') || host.includes('marsisa') || tenantSlug === 'master';
+        
+        if (!isMarsisa) {
+            return;
+        }
 
         let detalles = [];
         try {
@@ -58,7 +63,8 @@ async function procesarHallazgosInspeccionMarsisa(tdb, req, nextId, datos) {
 
         const fallas = detalles.filter(d => {
             const st = String(d.estado || '').toUpperCase().trim();
-            return st === 'FALLA' || st === 'MAL' || st === 'M' || st === 'NO CONFORME' || (d.observacion && d.observacion.trim().length > 3 && st !== 'OK');
+            return st === 'FALLA' || st === 'MAL' || st === 'M' || st === 'NO CONFORME' || 
+                   (d.observacion && d.observacion.trim().length > 2 && st !== 'OK' && st !== 'SIN DATOS' && st !== 'REGISTRADO');
         });
 
         if (!fallas.length) return;
@@ -66,93 +72,130 @@ async function procesarHallazgosInspeccionMarsisa(tdb, req, nextId, datos) {
         const placa = (datos.placa || '').trim().toUpperCase();
         if (!placa) return;
 
-        const fallasParaRF = fallas.map(f => ({
-            sistema: f.categoria || 'Inspección Mecánica',
-            item: f.item || 'Componente inspeccionado',
-            estado: 'FALLA',
-            observacion: (f.observacion || '').trim() || `Hallazgo en ${f.item} (${nextId})`,
-            foto: f.foto || null,
-            origen_inspeccion: nextId
-        }));
+        let isRemolque = false;
+        try {
+            const [pRows] = await tdb.promise().query("SELECT motora, tipo FROM placas WHERE UPPER(placa) = ? LIMIT 1", [placa]);
+            if (pRows && pRows.length > 0) {
+                const p = pRows[0];
+                const motora = String(p.motora || '').toLowerCase();
+                const tipo = String(p.tipo || '').toLowerCase();
+                if (motora.includes('no') || tipo.includes('remolque') || tipo.includes('carreta') || tipo.includes('semirremolque') || tipo.includes('furgon') || tipo.includes('plataforma') || tipo.includes('tolva') || tipo.includes('cisterna')) {
+                    isRemolque = true;
+                }
+            }
+        } catch(e) {}
+
+        const fechaStr = new Date().toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+        const fallasParaRF = fallas.map(f => {
+            const obsText = (f.observacion || f.obs || '').trim() || `Hallazgo en ${f.item} (${nextId})`;
+            return {
+                sistema: f.categoria || 'Inspección Mecánica',
+                item: f.item || 'Componente inspeccionado',
+                obs: obsText,
+                observacion: obsText,
+                estado: 'FALLA',
+                foto: (f.foto && f.foto.startsWith('http') && f.foto.length > 30) ? f.foto : null,
+                fecha: fechaStr,
+                origen_inspeccion: nextId,
+                backlog_id: null
+            };
+        });
 
         // 1. Revisar si la unidad tiene una OT activa
         const [otsActivas] = await tdb.promise().query(
-            "SELECT ticket_entrada, id_ot, id_rampa, placa FROM ordenes_trabajo WHERE UPPER(placa) = ? AND estado IN ('Pendiente', 'En Proceso', 'En Rampa', 'Pausada') ORDER BY id DESC LIMIT 1",
+            "SELECT ticket_entrada, id_ot, id_rampa, placa FROM ordenes_trabajo WHERE UPPER(placa) = ? AND estado IN ('Abierto', 'Pendiente', 'En Proceso', 'En Rampa', 'Pausada') ORDER BY fecha_ingreso DESC, ticket_entrada DESC LIMIT 1",
             [placa]
         );
 
         if (otsActivas && otsActivas.length > 0) {
             const ot = otsActivas[0];
             const otId = ot.id_ot || ot.ticket_entrada;
-            console.log(`🔗 Auto-Sync Inspección: Placa ${placa} tiene OT activa (${otId}). Vinculando fallas...`);
+            console.log(`🔗 Auto-Sync Inspección: Placa ${placa} tiene OT activa (${otId}). Vinculando fallas a trabajos_ot...`);
 
             for (const f of fallasParaRF) {
-                const descTrabajo = `[${f.sistema}] ${f.item}: ${f.observacion}`;
+                const descTrabajo = `[${f.sistema}] ${f.item}: ${f.obs}`;
                 await tdb.promise().query(
                     `INSERT INTO trabajos_ot (ticket_visita, tipo_trabajo, sistema_vehiculo, detalle_trabajo, trabajo_realizado, tecnico, costo, placa, fecha_trabajo)
                      VALUES (?, 'Correctivo', ?, ?, ?, ?, 0, ?, NOW())`,
                     [otId, f.sistema, descTrabajo, descTrabajo, datos.tecnico || '', placa]
                 );
             }
+            if (typeof broadcast === 'function') broadcast('taller', 'actualizar');
             return;
         }
 
         // 2. Revisar si la unidad tiene un Reporte de Fallas activo
         const [rfsActivos] = await tdb.promise().query(
-            "SELECT id, folio, fallas_tracto_json, fallas_libres_text FROM reportes_fallas WHERE (UPPER(placa_tracto) = ? OR UPPER(placa_remolque) = ?) AND estado IN ('Pendiente', 'Registrado') ORDER BY id DESC LIMIT 1",
+            "SELECT id, folio, fallas_tracto_json, fallas_remolque_json, fallas_libres_text FROM reportes_fallas WHERE (UPPER(placa_tracto) = ? OR UPPER(placa_remolque) = ?) AND estado IN ('Pendiente', 'Registrado', 'En Espera') ORDER BY id DESC LIMIT 1",
             [placa, placa]
         );
 
         if (rfsActivos && rfsActivos.length > 0) {
             const rf = rfsActivos[0];
-            let existentes = [];
-            try { existentes = JSON.parse(rf.fallas_tracto_json || '[]'); } catch(e) {}
-            const unificados = [...existentes, ...fallasParaRF];
-            await tdb.promise().query(
-                "UPDATE reportes_fallas SET fallas_tracto_json = ? WHERE id = ?",
-                [JSON.stringify(unificados), rf.id]
-            );
+            if (isRemolque) {
+                let existentesR = [];
+                try { existentesR = JSON.parse(rf.fallas_remolque_json || '[]'); } catch(e) {}
+                const unificadosR = [...existentesR, ...fallasParaRF];
+                await tdb.promise().query(
+                    "UPDATE reportes_fallas SET fallas_remolque_json = ? WHERE id = ?",
+                    [JSON.stringify(unificadosR), rf.id]
+                );
+            } else {
+                let existentesT = [];
+                try { existentesT = JSON.parse(rf.fallas_tracto_json || '[]'); } catch(e) {}
+                const unificadosT = [...existentesT, ...fallasParaRF];
+                await tdb.promise().query(
+                    "UPDATE reportes_fallas SET fallas_tracto_json = ? WHERE id = ?",
+                    [JSON.stringify(unificadosT), rf.id]
+                );
+            }
             console.log(`🔗 Auto-Sync Inspección: Placa ${placa} anexada al RF ${rf.folio}`);
+            if (typeof broadcast === 'function') broadcast('checklist', 'actualizar');
             return;
         }
 
         // 3. Crear nuevo Reporte de Fallas
         const anio = new Date().getFullYear();
+        const prefix = `F-${anio}-`;
         const [rowsMax] = await tdb.promise().query(
             "SELECT folio FROM reportes_fallas WHERE folio LIKE ? ORDER BY id DESC LIMIT 1",
-            [`RF-${anio}-%`]
+            [`${prefix}%`]
         );
-        let nextRfNum = 1;
+        let nextSeq = 1;
         if (rowsMax && rowsMax.length > 0) {
-            const parts = rowsMax[0].folio.split('-');
-            const num = parseInt(parts[parts.length - 1], 10) || 0;
-            nextRfNum = num + 1;
+            const lastFolio = rowsMax[0].folio;
+            const lastNum = parseInt(lastFolio.split('-').pop(), 10);
+            if (!isNaN(lastNum)) nextSeq = lastNum + 1;
         }
-        const nuevoFolio = `RF-${anio}-${String(nextRfNum).padStart(4, '0')}`;
+        const nuevoFolio = `${prefix}${String(nextSeq).padStart(4, '0')}`;
         const fotosUrls = fallasParaRF.map(f => f.foto).filter(Boolean);
 
-        await tdb.promise().query(
-            `INSERT INTO reportes_fallas (
-                folio, placa_tracto, km_inicial, km_final, conductor, procedencia,
-                fallas_tracto_json, fallas_remolque_json, fallas_libres_text,
-                fotos_json, estado, creado_por, fecha_reporte
-            ) VALUES (?, ?, ?, ?, ?, 'Inspección Técnica en Patio', ?, '[]', ?, ?, 'Pendiente', ?, NOW())`,
-            [
-                nuevoFolio,
-                placa,
-                parseInt(datos.km_tablero) || 0,
-                parseInt(datos.km_tablero) || 0,
-                datos.tecnico || 'Inspector Técnico',
-                JSON.stringify(fallasParaRF),
-                `Generado automáticamente desde Inspección ${nextId}`,
-                JSON.stringify(fotosUrls),
-                datos.tecnico || 'Sistema'
-            ]
-        );
-        console.log(`✅ Auto-Sync Inspección: Creado nuevo RF ${nuevoFolio} para placa ${placa}`);
+        const sqlInsert = `
+            INSERT INTO reportes_fallas (
+                folio, orden_viaje, fecha_reporte, placa_tracto, placa_remolque, km_inicial, km_final,
+                conductor, procedencia, fallas_tracto_json, fallas_remolque_json, fallas_libres_text,
+                fotos_json, estado, creado_por, creado_en
+            ) VALUES (?, NULL, NOW(), ?, ?, ?, ?, ?, 'Inspección Técnica en Patio', ?, ?, ?, ?, 'Pendiente', ?, NOW())
+        `;
+
+        const [resIns] = await tdb.promise().query(sqlInsert, [
+            nuevoFolio,
+            isRemolque ? '' : placa,
+            isRemolque ? placa : '',
+            parseInt(datos.km_tablero) || 0,
+            parseInt(datos.km_tablero) || 0,
+            datos.tecnico || 'Inspector Técnico',
+            isRemolque ? '[]' : JSON.stringify(fallasParaRF),
+            isRemolque ? JSON.stringify(fallasParaRF) : '[]',
+            `Generado automáticamente desde Inspección ${nextId}`,
+            JSON.stringify(fotosUrls),
+            datos.tecnico || 'Sistema'
+        ]);
+
+        console.log(`✅ Auto-Sync Inspección: Creado nuevo RF ${nuevoFolio} (ID ${resIns.insertId}) para placa ${placa}`);
         if (typeof broadcast === 'function') broadcast('checklist', 'crear');
     } catch(errSync) {
-        console.error('⚠️ Error en procesarHallazgosInspeccionMarsisa:', errSync);
+        console.error('⚠️ Error en procesarHallazgosInspeccion:', errSync);
     }
 }
 
@@ -708,6 +751,7 @@ router.post('/:metodo', async (req, res) => {
     }
 
     if (metodo === 'guardarInspeccion') {
+        const tdb = req.db || db;
         const datos = req.body.form || {};
         const isNew = !datos.id;
 
@@ -717,7 +761,7 @@ router.post('/:metodo', async (req, res) => {
             const regex = `^${prefix}-${anio}-[0-9]{4}$`;
 
             const intentarInsertar = (intentoActual) => {
-                db.query(`SELECT MAX(id) AS ultimo FROM inspecciones WHERE id REGEXP ?`, [regex], (err, rows) => {
+                tdb.query(`SELECT MAX(id) AS ultimo FROM inspecciones WHERE id REGEXP ?`, [regex], (err, rows) => {
                     let nextId = `${prefix}-${anio}-0001`;
                     if (!err && rows.length && rows[0].ultimo) {
                         const parts = String(rows[0].ultimo).split('-');
@@ -735,7 +779,7 @@ router.post('/:metodo', async (req, res) => {
                         parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64, datos.id_ot || null, datos.tipo_inspeccion || 'General'
                     ];
 
-                    db.query(insertQuery, values, (insertErr) => {
+                    tdb.query(insertQuery, values, (insertErr) => {
                         if (insertErr) {
                             if (insertErr.code === 'ER_DUP_ENTRY') {
                                 console.warn(`Colisión de ID en inspecciones (${nextId}). Reintento ${intentoActual}/5`);
@@ -756,8 +800,8 @@ router.post('/:metodo', async (req, res) => {
                         const usuario = (req.body && req.body.usuario) || datos.tecnico || 'sistema';
                         logAudit(usuario, 'inspecciones', 'CREÓ', `${datos.placa || '?'} · ${datos.fecha_ingreso || '?'}`);
                         
-                        // Sincronización automática de hallazgos hacia Reportes de Fallas y OT activa (Marsisa)
-                        procesarHallazgosInspeccionMarsisa(db, req, nextId, datos).catch(e => console.warn('Sync insp error:', e));
+                        // Sincronización automática de hallazgos hacia Reportes de Fallas y OT activa
+                        procesarHallazgosInspeccion(tdb, req, nextId, datos).catch(e => console.warn('Sync insp error:', e));
 
                         return res.json({ data: "Éxito", id: nextId });
                     });
@@ -778,7 +822,7 @@ router.post('/:metodo', async (req, res) => {
                 datos.id
             ];
 
-            db.query(updateQuery, values, (updateErr) => {
+            tdb.query(updateQuery, values, (updateErr) => {
                 if (updateErr) {
                     console.error("Error BD Inspecciones (UPDATE):", updateErr);
                     return res.json({ data: "Error al actualizar inspección" });
@@ -788,6 +832,10 @@ router.post('/:metodo', async (req, res) => {
                 broadcast('inspecciones', metodo);
                 const usuario = (req.body && req.body.usuario) || datos.tecnico || 'sistema';
                 logAudit(usuario, 'inspecciones', 'MODIFICÓ', `${datos.placa || '?'} · ${datos.fecha_ingreso || '?'}`);
+                
+                // Sincronización automática de hallazgos hacia Reportes de Fallas y OT activa
+                procesarHallazgosInspeccion(tdb, req, datos.id, datos).catch(e => console.warn('Sync insp error:', e));
+
                 return res.json({ data: "Éxito", id: datos.id });
             });
         }
