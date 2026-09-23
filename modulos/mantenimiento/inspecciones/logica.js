@@ -3750,13 +3750,16 @@ window._ejecutarEliminarInspeccionConfirmado = async function() {
             if (modal) modal.hide();
         }
         
-        if (data && (data.ok || data.status === 'success' || data.success)) {
+        if (data && (data.ok || data.status === 'success' || data.success || data.data === 'Éxito')) {
+            if (window.dataGlobalInspecciones) {
+                window.dataGlobalInspecciones = window.dataGlobalInspecciones.filter(x => x.id !== id);
+            }
             if (typeof window.rotToast === 'function') window.rotToast('Inspección eliminada correctamente', 'bg-success');
             if (typeof window.recargarModulo === 'function') window.recargarModulo('statusMant');
             else if (typeof window.inicializarModuloStatus === 'function') window.inicializarModuloStatus();
         } else {
-            if (typeof window.rotToast === 'function') window.rotToast('Error: ' + (data?.message || 'No se pudo eliminar'), 'bg-danger');
-            else alert('Error al eliminar: ' + (data?.message || 'Desconocido'));
+            if (typeof window.rotToast === 'function') window.rotToast('Error al eliminar: ' + (data?.message || data?.data || 'No se pudo eliminar'), 'bg-danger');
+            else alert('Error al eliminar: ' + (data?.message || data?.data || 'Desconocido'));
         }
     } catch(err) {
         console.error('Error al eliminar inspección:', err);
