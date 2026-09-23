@@ -1177,6 +1177,158 @@ window.rotAccion = async function(accion, idOT) {
         return;
     }
 
+function rotModalCerrarOTConChecklist(idOT, onConfirm) {
+    var existente = document.getElementById('rot-modal-cerrar-ot-checklist');
+    if (existente) existente.remove();
+
+    var ot = (window.rotData || []).find(function(x) { return x.id_ot === idOT || x.ticket_entrada === idOT; }) || {};
+    var placaOT = ot.placa || '';
+    var detOT = {};
+    try { detOT = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); } catch(e){}
+
+    fetch('/api/taller/ot-trabajos?id_ot=' + encodeURIComponent(idOT))
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .catch(function() { return []; })
+        .then(function(trabs) {
+            var motivosList = [];
+            if (Array.isArray(trabs) && trabs.length) {
+                trabs.forEach(function(t) {
+                    var txt = t.trabajo_realizado || t.detalle_trabajo || '';
+                    if (txt && !motivosList.some(function(m) { return m.texto === txt; })) {
+                        motivosList.push({ texto: txt, backlog_id: t.backlog_id || null });
+                    }
+                });
+            }
+
+            if (!motivosList.length) {
+                if (detOT.motivo) motivosList.push({ texto: detOT.motivo, backlog_id: null });
+                if (detOT.situacion_inicial && detOT.situacion_inicial !== detOT.motivo) motivosList.push({ texto: detOT.situacion_inicial, backlog_id: null });
+                if (Array.isArray(detOT.trabajos_det)) {
+                    detOT.trabajos_det.forEach(function(td) {
+                        var txt = typeof td === 'string' ? td : (td.trabajo || td.descripcion || '');
+                        if (txt && !motivosList.some(function(m) { return m.texto === txt; })) {
+                            motivosList.push({ texto: txt, backlog_id: td.backlog_id || null });
+                        }
+                    });
+                }
+            }
+
+            if (!motivosList.length) {
+                motivosList.push({ texto: 'Trabajos de mantenimiento según OT ' + idOT, backlog_id: null });
+            }
+
+            var overlay = document.createElement('div');
+            overlay.id = 'rot-modal-cerrar-ot-checklist';
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s ease;';
+
+            var itemsHtml = motivosList.map(function(m, idx) {
+                return '<div class="card p-2.5 mb-2 border rounded-3 bg-white shadow-2xs d-flex flex-row align-items-start gap-2.5" style="border:1px solid #e2e8f0!important;">'
+                     + '<input type="checkbox" class="form-check-input chk-motivo-cierre mt-1" id="chk_motivo_' + idx + '" data-idx="' + idx + '" checked style="transform:scale(1.2); cursor:pointer;">'
+                     + '<label class="form-check-label flex-grow-1" for="chk_motivo_' + idx + '" style="cursor:pointer;">'
+                     + '<div class="d-flex align-items-center justify-content-between">'
+                     + '<span class="fw-bold text-dark small">' + rotEscHtml(m.texto) + '</span>'
+                     + '<span class="badge bg-success-subtle text-success badge-status-motivo" id="lbl_status_motivo_' + idx + '" style="font-size:0.72rem;">Realizado</span>'
+                     + '</div>'
+                     + '<div class="text-muted small mt-1 info-backlog-motivo" id="lbl_bk_info_' + idx + '" style="font-size:0.72rem; display:none; color:#d97706!important;">'
+                     + '<i class="bi bi-clock-history me-1"></i>Pasará automáticamente a <strong>Backlog de Taller (Pendiente)</strong>'
+                     + '</div>'
+                     + '</label>'
+                     + '</div>';
+            }).join('');
+
+            overlay.innerHTML =
+                '<div style="background:var(--surface,#fff);border-radius:20px;width:520px;max-width:94vw;box-shadow:0 12px 48px rgba(0,0,0,0.25);transform:scale(0.95);transition:transform 0.2s ease;overflow:hidden;">'
+              + '<div style="padding:22px 24px 16px; border-bottom:1px solid #f1f5f9;">'
+              + '<div class="d-flex align-items-center gap-2 mb-1">'
+              + '<span class="p-2 rounded-3 bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width:36px;height:36px;"><i class="bi bi-clipboard-check-fill fs-5"></i></span>'
+              + '<div>'
+              + '<h5 style="margin:0;font-weight:800;color:var(--text);font-size:1.15rem;">Cierre de Orden de Trabajo</h5>'
+              + '<small class="text-muted">' + rotEscHtml(idOT) + ' • Placa: <strong>' + rotEscHtml(placaOT) + '</strong></small>'
+              + '</div>'
+              + '</div>'
+              + '</div>'
+              + '<div style="padding:16px 24px; max-height:60vh; overflow-y:auto;" class="custom-scrollbar">'
+              + '<div class="mb-3">'
+              + '<label class="form-label fw-bold text-secondary small text-uppercase" style="font-size:0.74rem; letter-spacing:0.5px;">1. Checklist de Motivos y Trabajos</label>'
+              + '<div class="text-muted small mb-2" style="font-size:0.78rem;">Desmarca los motivos que <strong>no se realizaron</strong> para enviarlos automáticamente a Backlog.</div>'
+              + '<div id="rot-contenedor-motivos-cierre">' + itemsHtml + '</div>'
+              + '</div>'
+              + '<div class="mb-2">'
+              + '<label class="form-label fw-bold text-secondary small text-uppercase" style="font-size:0.74rem; letter-spacing:0.5px;">2. Observaciones / Comentario de Cierre</label>'
+              + '<textarea id="rot-cierre-obs" rows="3" class="form-control" style="border-radius:10px;font-size:0.88rem;" placeholder="Escribe las observaciones de entrega y cierre…"></textarea>'
+              + '<div id="rot-cierre-err" style="display:none;color:#dc3545;font-size:0.75rem;margin-top:4px;">Las observaciones son obligatorias.</div>'
+              + '</div>'
+              + '</div>'
+              + '<div style="background:#f8fafc;padding:14px 24px;display:flex;gap:12px;justify-content:flex-end;border-top:1px solid #e2e8f0;">'
+              + '<button id="rot-cierre-cancel" class="btn btn-light border px-3 rounded-3" style="font-weight:600;">Cancelar</button>'
+              + '<button id="rot-cierre-ok" class="btn btn-primary px-4 rounded-3 shadow-2xs" style="font-weight:700; background:#0284c7; border-color:#0284c7;"><i class="bi bi-check2-all me-1"></i> Cerrar OT</button>'
+              + '</div></div>';
+
+            document.body.appendChild(overlay);
+
+            setTimeout(function() {
+                overlay.style.opacity = '1';
+                overlay.firstChild.style.transform = 'scale(1)';
+            }, 10);
+
+            overlay.querySelectorAll('.chk-motivo-cierre').forEach(function(chk) {
+                chk.addEventListener('change', function() {
+                    var idx = this.getAttribute('data-idx');
+                    var lblSt = document.getElementById('lbl_status_motivo_' + idx);
+                    var lblBk = document.getElementById('lbl_bk_info_' + idx);
+                    if (this.checked) {
+                        if (lblSt) {
+                            lblSt.className = 'badge bg-success-subtle text-success badge-status-motivo';
+                            lblSt.textContent = 'Realizado';
+                        }
+                        if (lblBk) lblBk.style.display = 'none';
+                    } else {
+                        if (lblSt) {
+                            lblSt.className = 'badge bg-warning-subtle text-warning-emphasis badge-status-motivo';
+                            lblSt.textContent = 'Pendiente ➔ Backlog';
+                        }
+                        if (lblBk) lblBk.style.display = 'block';
+                    }
+                });
+            });
+
+            var ta  = document.getElementById('rot-cierre-obs');
+            var err = document.getElementById('rot-cierre-err');
+            var ok  = document.getElementById('rot-cierre-ok');
+            var can = document.getElementById('rot-cierre-cancel');
+
+            function cerrar() {
+                overlay.style.opacity = '0';
+                overlay.firstChild.style.transform = 'scale(0.95)';
+                setTimeout(function(){ overlay.remove(); }, 200);
+            }
+
+            can.addEventListener('click', cerrar);
+
+            ok.addEventListener('click', function() {
+                var comentario = ta ? ta.value.trim() : '';
+                if (!comentario) {
+                    if (err) err.style.display = 'block';
+                    if (ta) ta.focus();
+                    return;
+                }
+
+                var motivosChecklist = motivosList.map(function(m, idx) {
+                    var chkEl = document.getElementById('chk_motivo_' + idx);
+                    var isRealizado = chkEl ? chkEl.checked : true;
+                    return {
+                        texto: m.texto,
+                        realizado: isRealizado,
+                        backlog_id: m.backlog_id || null
+                    };
+                });
+
+                cerrar();
+                onConfirm({ comentario: comentario, motivos_checklist: motivosChecklist });
+            });
+        });
+}
+
     if (accion === 'iniciar') {
         if (!window.guardAction('ot', 'e')) return;
         rotConfirmModerno('Iniciar OT', '¿Iniciar la OT ' + idOT + '?', function() {
@@ -1252,7 +1404,7 @@ window.rotAccion = async function(accion, idOT) {
 
     if (accion === 'cerrar') {
         if (!window.guardAction('ot', 'e')) return;
-        rotModalComentario('Comentario de cierre', 'Escribe las observaciones de cierre (obligatorio)…', true, function(comentario) {
+        rotModalCerrarOTConChecklist(idOT, function(resCierre) {
             var pad = function(n) { return String(n).padStart(2, '0'); };
             var dn = new Date();
             var fSalida = dn.getFullYear() + '-' + pad(dn.getMonth()+1) + '-' + pad(dn.getDate()) + ' ' + pad(dn.getHours()) + ':' + pad(dn.getMinutes()) + ':' + pad(dn.getSeconds());
@@ -1262,7 +1414,8 @@ window.rotAccion = async function(accion, idOT) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     accion: 'cerrar',
-                    comentario_cierre: comentario,
+                    comentario_cierre: resCierre.comentario,
+                    motivos_checklist: resCierre.motivos_checklist,
                     cerrado_por: localStorage.getItem('fleet_correo') || '',
                     fecha_hora_salida: fSalida
                 })

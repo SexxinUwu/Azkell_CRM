@@ -872,9 +872,12 @@
             <div class="border rounded-3 p-3 bg-light">
               <div class="fw-bold text-dark small mb-2">¿No encuentras el ítem? agrégalo aquí manualmente:</div>
               <div id="ck_contenedor_fallas_manuales"></div>
-              <button type="button" class="btn btn-outline-primary btn-sm fw-bold mt-2" onclick="window.ckAgregarFallaManual()">
-                <i class="bi bi-plus-lg me-1"></i> Agregar otra falla
-              </button>
+              <div class="d-flex align-items-center flex-wrap gap-2 mt-2">
+                <button type="button" class="btn btn-outline-primary btn-sm fw-bold" onclick="window.ckAgregarFallaManual()">
+                  <i class="bi bi-plus-lg me-1"></i> Agregar otra falla
+                </button>
+                <div id="containerAlertaBacklogRF" class="d-inline-flex align-items-center"></div>
+              </div>
             </div>
           </div>
 
@@ -1191,3 +1194,42 @@
         </div>
     </div>
 </div>
+
+<!-- ================================================================= -->
+<!-- 📋 MODAL: SELECCIONAR BACKLOGS PENDIENTES DE LA UNIDAD            -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalSeleccionarBacklogRF" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 580px;">
+        <div class="modal-content rounded-4 border-0 shadow-lg p-3 p-md-4">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <h5 class="modal-title fw-bolder text-dark m-0" style="font-size: 1.2rem;">
+                        <i class="bi bi-clock-history text-warning me-1"></i> Backlogs Pendientes en Taller
+                    </h5>
+                    <p class="text-muted small m-0 mt-1" id="lblBacklogUnidadInfo">Selecciona los motivos pendientes que deseas incorporar a este reporte de fallas.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Tareas / Motivos Pendientes</span>
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-bold" style="font-size: 0.78rem;" onclick="window.ckToggleSeleccionarTodosBacklogs()">
+                        <i class="bi bi-check-all me-1"></i> Marcar/Desmarcar todos
+                    </button>
+                </div>
+                <div id="contenedorListaBacklogsRF" class="d-flex flex-column gap-2 custom-scrollbar" style="max-height: 320px; overflow-y: auto;">
+                    <!-- Renderizado dinámico desde JS -->
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-3 d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-light rounded-3 fw-bold px-3 py-2" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-warning text-dark fw-bold rounded-3 px-4 py-2 shadow-2xs" onclick="window.ckImportarBacklogsSeleccionados()">
+                    <i class="bi bi-plus-circle-fill me-1"></i> Agregar al Reporte
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

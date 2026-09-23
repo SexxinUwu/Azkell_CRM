@@ -672,27 +672,23 @@ function mostrarStatusInspecciones(inspecciones) {
                 <td class="py-1.5">${ubicacionInfo.badgeHtml}</td>
                 <td class="py-1.5 text-end font-monospace fw-bold text-dark" style="font-size:0.82rem;">${txtKmInsp}</td>
                 <td class="pe-3 py-1.5 text-end">
-                    <div class="d-inline-flex align-items-center gap-1">
-                        ${insp && insp.id ? `
-                            <button type="button" class="ck-action-btn ck-btn-view" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', false)" title="Ver Detalle">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button type="button" class="ck-action-btn ck-btn-pdf" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', true)" title="Exportar PDF">
-                                <i class="bi bi-file-earmark-pdf"></i>
-                            </button>
-                            ${window.checkPerm && window.checkPerm('insp', 'e') ? `
-                            <button type="button" class="ck-action-btn ck-btn-edit" onclick="event.stopPropagation(); window.abrirModalEditarInspeccion('${insp.id}')" title="Editar / Re-firmar">
-                                <i class="bi bi-pencil"></i>
-                            </button>` : ''}
-                            ${window.checkPerm && window.checkPerm('insp', 'd') ? `
-                            <button type="button" class="ck-action-btn ck-btn-delete" onclick="event.stopPropagation(); window.eliminarRegistro('${insp.id}', 'Inspecciones')" title="Eliminar">
-                                <i class="bi bi-trash3"></i>
-                            </button>` : ''}
-                        ` : `
-                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-2 py-0.5" onclick="event.stopPropagation(); window.abrirModalNuevaInspeccion('${placa}')" style="font-size:0.75rem; border-radius:6px;">
-                                <i class="bi bi-plus-lg"></i> Registrar
-                            </button>
-                        `}
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-sm btn-light border-0 rounded-circle p-1 d-inline-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 28px; height: 28px; color: #64748b;" title="Opciones">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-1" style="font-size: 0.82rem; min-width: 140px; z-index: 1050;">
+                            ${insp && insp.id ? `
+                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Detalle</a></li>
+                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-earmark-pdf text-danger"></i> Exportar PDF</a></li>
+                                ${window.checkPerm && window.checkPerm('insp', 'e') ? `
+                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-secondary"></i> Editar</a></li>` : ''}
+                                <li><hr class="dropdown-divider my-1"></li>
+                                ${window.checkPerm && window.checkPerm('insp', 'd') ? `
+                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.eliminarInspeccion('${insp.id}')"><i class="bi bi-trash3"></i> Eliminar</a></li>` : ''}
+                            ` : `
+                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-primary fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.abrirModalNuevaInspeccion('${placa}')"><i class="bi bi-plus-lg"></i> Registrar</a></li>
+                            `}
+                        </ul>
                     </div>
                 </td>
             </tr>`;
@@ -3534,3 +3530,86 @@ window.filtrarTablaFrenosPorKPI = function(estado, el) {
     });
 };
 
+// ── 6. NUEVAS FUNCIONES: SELECTOR DE INSPECCIÓN Y MODAL DE ELIMINACIÓN ──
+window.abrirModalSeleccionarTipoInspeccion = function() {
+    var modalEl = document.getElementById('modalTipoInspeccionSeleccion');
+    if (modalEl) {
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
+window.seleccionarTipoInspeccion = function(tipo) {
+    var modalEl = document.getElementById('modalTipoInspeccionSeleccion');
+    if (modalEl) {
+        var modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+    }
+    if (tipo === 'neumaticos') {
+        if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+            window.rotAbrirInspeccionNeumaticos();
+        } else if (typeof window.cargarModuloAislado === 'function') {
+            window.cargarModuloAislado('mantenimiento/neumaticos').then(function() {
+                setTimeout(function() {
+                    if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+                        window.rotAbrirInspeccionNeumaticos();
+                    }
+                }, 400);
+            });
+        }
+    } else {
+        window.abrirModalNuevaInspeccion();
+    }
+};
+
+window._inspeccionIdAEliminar = null;
+window.eliminarInspeccion = function(id) {
+    window._inspeccionIdAEliminar = id;
+    var modalEl = document.getElementById('modalEliminarInspeccionConfirm');
+    if (modalEl) {
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    } else {
+        if (confirm('¿Desea eliminar esta inspección?')) {
+            window._ejecutarEliminarInspeccionConfirmado();
+        }
+    }
+};
+
+window._ejecutarEliminarInspeccionConfirmado = async function() {
+    var id = window._inspeccionIdAEliminar;
+    if (!id) return;
+    try {
+        var btn = document.getElementById('btnConfirmarEliminarInspeccion');
+        if (btn) btn.disabled = true;
+        
+        var resp = await fetch('/api/script/eliminarRegistro', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: [id, 'Inspecciones'] })
+        });
+        var data = await resp.json();
+        
+        var modalEl = document.getElementById('modalEliminarInspeccionConfirm');
+        if (modalEl) {
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+        
+        if (data && (data.ok || data.status === 'success' || data.success)) {
+            if (typeof window.rotToast === 'function') window.rotToast('Inspección eliminada correctamente', 'bg-success');
+            if (typeof window.recargarModulo === 'function') window.recargarModulo('statusMant');
+            else if (typeof window.inicializarModuloStatus === 'function') window.inicializarModuloStatus();
+        } else {
+            if (typeof window.rotToast === 'function') window.rotToast('Error: ' + (data?.message || 'No se pudo eliminar'), 'bg-danger');
+            else alert('Error al eliminar: ' + (data?.message || 'Desconocido'));
+        }
+    } catch(err) {
+        console.error('Error al eliminar inspección:', err);
+        if (typeof window.rotToast === 'function') window.rotToast('Error de conexión', 'bg-danger');
+    } finally {
+        var btn = document.getElementById('btnConfirmarEliminarInspeccion');
+        if (btn) btn.disabled = false;
+        window._inspeccionIdAEliminar = null;
+    }
+};

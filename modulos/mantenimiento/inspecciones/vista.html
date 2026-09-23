@@ -275,6 +275,95 @@
     max-height: 230px !important;
     overflow-y: auto !important;
 }
+
+/* ── Modal Confirmación Eliminar (Diseño B Limpio) ── */
+.ck-delete-dialog {
+    max-width: 380px !important;
+    margin: auto !important;
+}
+.ck-delete-card {
+    border-radius: 28px !important;
+    background: #ffffff !important;
+    padding: 2.25rem 1.75rem 1.75rem !important;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.16) !important;
+}
+.ck-delete-badge-icon {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: #e11d48;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin-bottom: 1.15rem;
+}
+.ck-btn-circle {
+    width: 54px;
+    height: 54px;
+    border-radius: 50% !important;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    outline: none;
+}
+.ck-btn-cancel-circle {
+    background: #18181b !important;
+    color: #ffffff !important;
+}
+.ck-btn-cancel-circle:hover {
+    background: #09090b !important;
+    transform: scale(1.06);
+}
+.ck-btn-delete-circle {
+    background: #e11d48 !important;
+    color: #ffffff !important;
+}
+.ck-btn-delete-circle:hover {
+    background: #be123c !important;
+    transform: scale(1.06);
+}
+
+/* ── Tarjetas Selector de Tipo de Inspección ── */
+.insp-type-card {
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1.5rem 1.25rem;
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+}
+.insp-type-card:hover {
+    transform: translateY(-4px);
+    border-color: #0284c7;
+    box-shadow: 0 16px 36px -8px rgba(2, 132, 199, 0.16);
+    background: #f8fafc;
+}
+.insp-type-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.85rem;
+    margin-bottom: 1rem;
+    transition: transform 0.2s ease;
+}
+.insp-type-card:hover .insp-type-icon {
+    transform: scale(1.1);
+}
 </style>
 
 <div class="ck-app-container d-flex flex-column" id="moduloStatus">
@@ -308,9 +397,9 @@
       <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" onclick="window.exportarExcelInspecciones()" title="Exportar Excel">
         <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
       </button>
-      <!-- Botón Nueva Inspección (solo visible en Desktop, en móvil usa el FAB) -->
-      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalNuevaInspeccion()" style="background: #0284c7; border-color: #0284c7;">
-        <i class="bi bi-plus-lg fs-6"></i> <span>Nueva Inspección</span>
+      <!-- Botón + Inspeccionar (solo visible en Desktop, en móvil usa el FAB) -->
+      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalSeleccionarTipoInspeccion()" style="background: #0284c7; border-color: #0284c7;">
+        <i class="bi bi-plus-lg fs-6"></i> <span>Inspeccionar</span>
       </button>
     </div>
   </div>
@@ -519,7 +608,7 @@
   <!-- ── 5. BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
   <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1040;">
     <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
-            onclick="window.abrirModalNuevaInspeccion()"
+            onclick="window.abrirModalSeleccionarTipoInspeccion()"
             style="width: 58px; height: 58px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.6rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;">
       <i class="bi bi-plus-lg"></i>
     </button>
@@ -872,6 +961,80 @@
                 <div id="config-insp-container" class="d-flex flex-column gap-1">
                     <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Cargando sistemas...</div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 🔍 MODAL: SELECCIÓN DE TIPO DE INSPECCIÓN                         -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalTipoInspeccionSeleccion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 540px;">
+        <div class="modal-content rounded-4 border-0 shadow-lg p-3 p-md-4">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <h5 class="modal-title fw-bolder text-dark m-0" style="font-size: 1.25rem;">
+                        <i class="bi bi-shield-check text-primary me-1"></i> Seleccionar Inspección
+                    </h5>
+                    <p class="text-muted small m-0 mt-1">Elige el tipo de diagnóstico técnico que deseas realizar</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body pt-4">
+                <div class="row g-3">
+                    <!-- Opción 1: Inspección de Neumáticos -->
+                    <div class="col-12 col-sm-6">
+                        <div class="insp-type-card" onclick="window.seleccionarTipoInspeccion('neumaticos')">
+                            <div class="insp-type-icon" style="background: #e0f2fe; color: #0284c7;">
+                                <i class="bi bi-disc-fill"></i>
+                            </div>
+                            <h6 class="fw-bold text-dark mb-1">Neumáticos</h6>
+                            <p class="text-muted small mb-0" style="font-size: 0.78rem; line-height: 1.35;">
+                                Medición de remanente (R1-R4), presión PSI, marcas y control de desgaste.
+                            </p>
+                        </div>
+                    </div>
+                    <!-- Opción 2: Inspección Mecánica Integral -->
+                    <div class="col-12 col-sm-6">
+                        <div class="insp-type-card" onclick="window.seleccionarTipoInspeccion('mecanica')">
+                            <div class="insp-type-icon" style="background: #fef3c7; color: #d97706;">
+                                <i class="bi bi-truck-front-fill"></i>
+                            </div>
+                            <h6 class="fw-bold text-dark mb-1">Mecánica Integral</h6>
+                            <p class="text-muted small mb-0" style="font-size: 0.78rem; line-height: 1.35;">
+                                Checklist por sistemas: motor, frenos, luces, suspensión, chasis y cabina.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 🗑️ MODAL: CONFIRMAR ELIMINACIÓN DE INSPECCIÓN                     -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalEliminarInspeccionConfirm" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered ck-delete-dialog">
+        <div class="modal-content border-0 ck-delete-card">
+            <div class="d-flex justify-content-center">
+                <div class="ck-delete-badge-icon">
+                    <i class="bi bi-trash3-fill"></i>
+                </div>
+            </div>
+            <h5 class="fw-bold text-dark mb-2" style="font-size: 1.25rem;">¿Eliminar Inspección?</h5>
+            <p class="text-muted small mb-4" style="line-height: 1.4;">
+                Esta acción eliminará el registro de inspección de forma permanente del sistema. ¿Deseas continuar?
+            </p>
+            <div class="d-flex align-items-center justify-content-center gap-3">
+                <button type="button" class="ck-btn-circle ck-btn-cancel-circle shadow-sm" data-bs-dismiss="modal" title="Cancelar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <button type="button" class="ck-btn-circle ck-btn-delete-circle shadow-sm" id="btnConfirmarEliminarInspeccion" onclick="window._ejecutarEliminarInspeccionConfirmado()" title="Eliminar definitivamente">
+                    <i class="bi bi-trash3"></i>
+                </button>
             </div>
         </div>
     </div>
