@@ -937,7 +937,8 @@ router.get('/km-historico', (req, res) => {
 // CONFIG MÉTRICA POR PLACA (km vs horas motor)
 // ============================================================
 router.get('/config-metrica', (req, res) => {
-    db.query(
+    const tdb = (req && req.db) ? req.db : db;
+    tdb.query(
         `SELECT placa, marca, metrica FROM placas ORDER BY placa`,
         (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
@@ -947,9 +948,10 @@ router.get('/config-metrica', (req, res) => {
 });
 
 router.put('/config-metrica/:placa', (req, res) => {
+    const tdb = (req && req.db) ? req.db : db;
     const { placa } = req.params;
     const metrica = (req.body.metrica || 'km').toLowerCase() === 'horas' ? 'horas' : 'km';
-    db.query(
+    tdb.query(
         `UPDATE placas SET metrica = ? WHERE placa = ?`,
         [metrica, placa],
         (err, result) => {

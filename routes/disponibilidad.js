@@ -13,99 +13,95 @@ module.exports = function (db, logAudit) {
         }
     }
 
-    // Asegurar tabla una sola vez al cargar el módulo
-    const sqlCreateTable = `
-        CREATE TABLE IF NOT EXISTS flota_disponibilidad (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            flota VARCHAR(100) NULL DEFAULT '',
-            conductor_eventual VARCHAR(150) NULL DEFAULT '',
-            conductor_asignado VARCHAR(150) NULL DEFAULT '',
-            placa_camion VARCHAR(50) NULL DEFAULT '',
-            placa_carreta VARCHAR(50) NULL DEFAULT '',
-            capacidad_tanque VARCHAR(50) NULL DEFAULT '',
-            marca VARCHAR(50) NULL DEFAULT '',
-            categoria_conductor VARCHAR(50) NULL DEFAULT '',
-            tipo_unidad VARCHAR(100) NULL DEFAULT '',
-            estado_conductor VARCHAR(50) NOT NULL DEFAULT 'Disponible',
-            estado_unidad VARCHAR(50) NOT NULL DEFAULT 'Disponible',
-            ubicacion_manual TEXT NULL,
-            observaciones TEXT NULL,
-            creado_por VARCHAR(100) NULL DEFAULT '',
-            actualizado_por VARCHAR(100) NULL DEFAULT '',
-            fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            INDEX idx_estado_con (estado_conductor),
-            INDEX idx_estado_uni (estado_unidad)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `;
-    db.query(sqlCreateTable, (err) => {
-        if (err) console.warn('[Disponibilidad] Error asegurando tabla:', err.message);
-    });
+    async function ensureTableDisponibilidad(tdb) {
+        const sqlCreateTable = `
+            CREATE TABLE IF NOT EXISTS flota_disponibilidad (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                flota VARCHAR(100) NULL DEFAULT '',
+                conductor_eventual VARCHAR(150) NULL DEFAULT '',
+                conductor_asignado VARCHAR(150) NULL DEFAULT '',
+                placa_camion VARCHAR(50) NULL DEFAULT '',
+                placa_carreta VARCHAR(50) NULL DEFAULT '',
+                capacidad_tanque VARCHAR(50) NULL DEFAULT '',
+                marca VARCHAR(50) NULL DEFAULT '',
+                categoria_conductor VARCHAR(50) NULL DEFAULT '',
+                tipo_unidad VARCHAR(100) NULL DEFAULT '',
+                estado_conductor VARCHAR(50) NOT NULL DEFAULT 'Disponible',
+                estado_unidad VARCHAR(50) NOT NULL DEFAULT 'Disponible',
+                ubicacion_manual TEXT NULL,
+                observaciones TEXT NULL,
+                creado_por VARCHAR(100) NULL DEFAULT '',
+                actualizado_por VARCHAR(100) NULL DEFAULT '',
+                fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_estado_con (estado_conductor),
+                INDEX idx_estado_uni (estado_unidad)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `;
+        try {
+            await (tdb.promise ? tdb.promise() : tdb).query(sqlCreateTable);
+        } catch (e) {}
+    }
 
     // ── GET /api/disponibilidad-flota (Listado general consolidado en vivo) ───────
-    router.get('/', (req, res) => {
-        const tdb = getDb(req);
-        const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const norm = str => (str || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    router.get('/', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const pDb = (tdb.promise ? tdb.promise() : tdb);
+            await ensureTableDisponibilidad(tdb);
 
-        // 1. Placas maestras
-        const sqlPlacas = `
-            SELECT placa, cliente, marca, tipo, sub_tipo, combustible, uts, carga_util, capacidad_tanque, motora 
-            FROM placas 
-            WHERE (estado = 'Activa' OR estado IS NULL OR estado = '')
-            ORDER BY placa ASC
-        `;
+            const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const norm = str => (str || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
-        // 2. Reportes de fallas activos (En Taller / En Proceso / Pendiente)
-        const sqlFallas = `
-            SELECT id, folio, fecha_reporte, placa_tracto, placa_remolque, conductor, estado, ots_generadas_json
-            FROM reportes_fallas
-            WHERE estado != 'Finalizado'
-            ORDER BY id DESC
-        `;
+            const safeQuery = async (sql, params = []) => {
+                try {
+                    const [rows] = await pDb.query(sql, params);
+                    return rows || [];
+                } catch (err) {
+                    return [];
+                }
+            };
 
-        // 3. OTs activas directas en ordenes_trabajo
-        const sqlOTs = `
-            SELECT placa, id_ot, ticket_entrada, estado, fecha_ingreso
-            FROM ordenes_trabajo
-            WHERE estado NOT IN ('Finalizado', 'Finalizada', 'Anulado', 'Anulada', 'Cerrado', 'Cerrada')
-        `;
+            // 1. Placas maestras
+            const placas = await safeQuery(`
+                SELECT placa, cliente, marca, tipo, sub_tipo, combustible, uts, carga_util, capacidad_tanque, motora 
+                FROM placas 
+                WHERE (estado = 'Activa' OR estado IS NULL OR estado = '')
+                ORDER BY placa ASC
+            `);
 
-        // 4. Unidades en ruta desde Checklist / Seguridad
-        const sqlEnRuta = `
-            SELECT id, placa_tracto, placa_carreta, conductor, destino, salida_fecha, salida_hora, estado, salida_observaciones
-            FROM seg_unidades_registros
-            WHERE estado = 'en_ruta'
-            ORDER BY id DESC
-        `;
+            // 2. Reportes de fallas activos
+            const fallasRows = await safeQuery(`
+                SELECT id, folio, fecha_reporte, placa_tracto, placa_remolque, conductor, estado, ots_generadas_json
+                FROM reportes_fallas
+                WHERE estado != 'Finalizado'
+                ORDER BY id DESC
+            `);
 
-        // 5. Últimos registros en Base desde Seguridad
-        const sqlBase = `
-            SELECT placa_camion, placa_carreta, conductor, observacion
-            FROM seg_unidades_base
-            ORDER BY fecha DESC, id DESC
-        `;
+            // 3. OTs activas directas
+            const otRows = await safeQuery(`
+                SELECT placa, id_ot, ticket_entrada, estado, fecha_ingreso
+                FROM ordenes_trabajo
+                WHERE estado NOT IN ('Finalizado', 'Finalizada', 'Anulado', 'Anulada', 'Cerrado', 'Cerrada')
+            `);
 
-        // 6. Disponibilidad manual guardada
-        const sqlDisp = `SELECT * FROM flota_disponibilidad`;
+            // 4. Unidades en ruta
+            const enRutaRows = await safeQuery(`
+                SELECT id, placa_tracto, placa_carreta, conductor, destino, salida_fecha, salida_hora, estado, salida_observaciones
+                FROM seg_unidades_registros
+                WHERE estado = 'en_ruta'
+                ORDER BY id DESC
+            `);
 
-        tdb.query(sqlPlacas, (errP, placas) => {
-            if (errP) return res.status(500).json({ error: 'Error consultando placas', detalle: errP.message });
+            // 5. Unidades en base
+            const baseRows = await safeQuery(`
+                SELECT placa_camion, placa_carreta, conductor, observacion
+                FROM seg_unidades_base
+                ORDER BY fecha DESC, id DESC
+            `);
 
-            tdb.query(sqlFallas, (errF, fallasRows) => {
-                if (errF) return res.status(500).json({ error: 'Error consultando reportes de fallas', detalle: errF.message });
-
-                tdb.query(sqlOTs, (errOT, otRows) => {
-                    if (errOT) return res.status(500).json({ error: 'Error consultando OTs', detalle: errOT.message });
-
-                    tdb.query(sqlEnRuta, (errR, enRutaRows) => {
-                        if (errR) return res.status(500).json({ error: 'Error consultando unidades en ruta', detalle: errR.message });
-
-                        tdb.query(sqlBase, (errB, baseRows) => {
-                            if (errB) return res.status(500).json({ error: 'Error consultando unidades en base', detalle: errB.message });
-
-                            tdb.query(sqlDisp, (errD, dispRows) => {
-                                if (errD) return res.status(500).json({ error: 'Error consultando disponibilidad', detalle: errD.message });
+            // 6. Disponibilidad manual
+            const dispRows = await safeQuery(`SELECT * FROM flota_disponibilidad`);
 
                                 const otSet = new Set();
                                 (otRows || []).forEach(ot => {
