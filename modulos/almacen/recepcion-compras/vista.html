@@ -227,6 +227,60 @@
     border-bottom: 1px solid #f1f5f9;
 }
 
+/* ── Modal Confirmación Eliminar (Diseño B Limpio 1:1 Reporte de Fallas) ── */
+.rec-delete-dialog {
+    max-width: 360px !important;
+    margin: auto !important;
+}
+.rec-delete-card {
+    border-radius: 28px !important;
+    background: #ffffff !important;
+    padding: 2.25rem 1.75rem 1.75rem !important;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.16) !important;
+}
+.rec-delete-badge-icon {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: #e11d48;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin-bottom: 1.15rem;
+}
+.rec-btn-circle {
+    width: 54px;
+    height: 54px;
+    border-radius: 50% !important;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    outline: none;
+}
+.rec-btn-cancel-circle {
+    background: #18181b !important;
+    color: #ffffff !important;
+}
+.rec-btn-cancel-circle:hover {
+    background: #09090b !important;
+    transform: scale(1.06);
+}
+.rec-btn-delete-circle {
+    background: #e11d48 !important;
+    color: #ffffff !important;
+}
+.rec-btn-delete-circle:hover {
+    background: #be123c !important;
+    transform: scale(1.06);
+}
+
 /* Adaptación Móvil */
 @media (max-width: 768px) {
     .rec-app-container {
@@ -237,6 +291,30 @@
     }
     #recCardContainer {
         display: block !important;
+    }
+    #modalRecepcionOC .modal-dialog {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        height: 96vh !important;
+        max-height: 96vh !important;
+        margin: 0 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        transform: none !important;
+        border-radius: 24px 24px 0 0 !important;
+    }
+    #modalRecepcionOC .modal-content {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 96vh !important;
+        max-height: 96vh !important;
+        border-radius: 24px 24px 0 0 !important;
+        border: none !important;
+        box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.15) !important;
     }
 }
 </style>
@@ -531,6 +609,45 @@
 
             </div>
         </div>
+    <!-- ================================================================= -->
+    <!-- 🗑️ MODAL CONFIRMACIÓN DE ELIMINAR ENTREGA (DISEÑO B)              -->
+    <!-- ================================================================= -->
+    <div class="modal fade" id="modalEliminarRecepcionConfirm" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered rec-delete-dialog">
+        <div class="modal-content rec-delete-card border-0">
+          
+          <!-- Icono Alerta Rojo -->
+          <div class="d-flex justify-content-center">
+            <div class="rec-delete-badge-icon">
+              <i class="bi bi-trash3-fill"></i>
+            </div>
+          </div>
+
+          <!-- Título -->
+          <h4 class="fw-bolder text-dark mb-2" style="font-size: 1.25rem; letter-spacing: -0.3px;">
+            ¿Eliminar esta entrega?
+          </h4>
+
+          <!-- Descripción -->
+          <p class="text-secondary mb-4 px-2" id="lbl-rec-eliminar-desc" style="font-size: 0.84rem; line-height: 1.45; font-weight: 500;">
+            Al eliminar este registro, se revertirá el stock ingresado y la cantidad pendiente quedará disponible nuevamente.
+          </p>
+
+          <!-- Botones de Acción (Diseño B) -->
+          <div class="d-flex align-items-center justify-content-center gap-4">
+            <!-- Cancelar (X negro) -->
+            <button type="button" class="rec-btn-circle rec-btn-cancel-circle" data-bs-dismiss="modal" title="Cancelar">
+              <i class="bi bi-x-lg"></i>
+            </button>
+
+            <!-- Eliminar (Papelera rojo) -->
+            <button type="button" class="rec-btn-circle rec-btn-delete-circle" id="btnEjecutarEliminarRecepcion" onclick="window._ejecutarEliminarRecepcionConfirmado()" title="Eliminar entrega">
+              <i class="bi bi-trash3-fill"></i>
+            </button>
+          </div>
+
+        </div>
+      </div>
     </div>
 
 </div>

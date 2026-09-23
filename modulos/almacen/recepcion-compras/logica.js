@@ -472,11 +472,34 @@
         });
     };
 
-    // ── 6. Eliminar / Revertir Entrega Parcial o Total ───────────────
-    window.eliminarRegistroRecepcion = async function(recepcionId, desc, cant) {
+    // ── 6. Eliminar / Revertir Entrega Parcial o Total (Modal Diseño B) ──
+    let _itemRecepcionAEliminar = null;
+
+    window.eliminarRegistroRecepcion = function(recepcionId, desc, cant) {
         if (!recepcionId) return;
-        const msg = `¿Estás seguro de eliminar este registro de entrega (+${cant} ${desc})?\n\nAl eliminarlo, se revertirá el stock y la cantidad pendiente quedará disponible nuevamente.`;
-        if (!confirm(msg)) return;
+        _itemRecepcionAEliminar = { recepcionId, desc, cant };
+
+        const descEl = document.getElementById('lbl-rec-eliminar-desc');
+        if (descEl) {
+            descEl.innerHTML = `¿Eliminar entrega de <strong>+${cant} ${desc}</strong>?<br><span class="text-muted" style="font-size:0.78rem;">Se revertirá el stock ingresado y el saldo pendiente quedará disponible.</span>`;
+        }
+
+        const modalEl = document.getElementById('modalEliminarRecepcionConfirm');
+        if (modalEl) {
+            const m = bootstrap.Modal.getOrCreateInstance(modalEl);
+            m.show();
+        }
+    };
+
+    window._ejecutarEliminarRecepcionConfirmado = async function() {
+        if (!_itemRecepcionAEliminar || !_itemRecepcionAEliminar.recepcionId) return;
+        const { recepcionId } = _itemRecepcionAEliminar;
+        _itemRecepcionAEliminar = null;
+
+        const modalDelEl = document.getElementById('modalEliminarRecepcionConfirm');
+        if (modalDelEl) {
+            bootstrap.Modal.getInstance(modalDelEl)?.hide();
+        }
 
         try {
             const usuario = localStorage.getItem('fleet_user_nombre') || localStorage.getItem('fleet_user') || 'Usuario';
@@ -489,8 +512,6 @@
             if (!res.ok || !data.ok) {
                 throw new Error(data.error || 'No se pudo eliminar el registro de entrega');
             }
-
-            alert('✅ Registro de entrega eliminado y saldo revertido exitosamente.');
 
             // Recargar datos actualizados del backend
             const resReload = await fetch('/api/almacen/recepciones-oc');
