@@ -716,8 +716,8 @@ module.exports = (db, logAudit) => {
         const corteTarget = req.query.corte || 'ALL';
         const empresaTarget = (req.query.empresa || 'TODAS').toUpperCase().trim();
 
-        // 1. Obtener todas las placas maestras del sistema
-        tdb.query('SELECT placa, cliente, marca, tipo, motora FROM placas ORDER BY placa ASC', (errP, placasRows) => {
+        // 1. Obtener todas las placas maestras del sistema activas
+        tdb.query("SELECT placa, cliente, marca, tipo, motora FROM placas WHERE (estado = 'Activa' OR estado IS NULL OR estado = '') ORDER BY placa ASC", (errP, placasRows) => {
             if (errP) return res.status(500).json({ error: errP.message });
 
             // 2. Obtener todas las unidades en ruta desde el módulo de Checklist
@@ -959,17 +959,11 @@ module.exports = (db, logAudit) => {
                         });
                     });
 
-                    // ── 2. Procesar Unidades No-Motoras (Carretas / Semirremolques en Base) ──
+                    // ── 2. Procesar Unidades No-Motoras (Carretas / Semirremolques en Base y Ruta) ──
                     noMotoras.forEach(p => {
                         const pUpper = (p.placa || '').toUpperCase().trim();
                         const cleanP = clean(pUpper);
                         if (!cleanP) return;
-
-                        // Si ya está asignada en una ruta activa acoplada a un tracto
-                        if (carretasEnRutaSet.has(cleanP)) return;
-
-                        // Si ya está acoplada a un camión registrado en base para este corte/fecha
-                        if (carretasAcopladasEnBaseSet.has(cleanP)) return;
 
                         let rawCliente = String(p.cliente || '').toUpperCase().trim();
                         let emp = 'MARSISA';
@@ -983,6 +977,30 @@ module.exports = (db, logAudit) => {
                         const empStat = getEmpresaStatsObj(emp);
                         globalStats.total_flota++;
                         empStat.total_flota++;
+
+                        // Si ya está asignada en una ruta activa acoplada a un tracto
+                        if (carretasEnRutaSet.has(cleanP)) {
+                            globalStats.en_ruta++;
+                            empStat.en_ruta++;
+                            return; // Ya se visualiza en la fila del tracto en ruta
+                        }
+
+                        // Si ya está acoplada a un camión registrado en base para este corte/fecha
+                        if (carretasAcopladasEnBaseSet.has(cleanP)) {
+                            const parentTruck = baseCarretaMap[cleanP];
+                            const pZonaUpper = String((parentTruck && parentTruck.zona) || '').toUpperCase();
+                            if (pZonaUpper.includes('MANTENIMIENTO') || pZonaUpper.includes('TALLER')) {
+                                globalStats.en_taller++;
+                                empStat.en_taller++;
+                            } else if (pZonaUpper.includes('LAVADO')) {
+                                globalStats.en_lavado++;
+                                empStat.en_lavado++;
+                            } else {
+                                globalStats.en_base++;
+                                empStat.en_base++;
+                            }
+                            return; // Ya se visualiza en la fila del camión acoplado en base
+                        }
 
                         const baseRecord = baseCarretaMap[cleanP];
 
