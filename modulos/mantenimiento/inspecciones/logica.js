@@ -3277,85 +3277,59 @@ window.recargarInspecciones = function () {
 
 
 // ==========================================
-// ⚙️ CONFIGURACIÓN DINÁMICA DE SISTEMAS Y FALLAS
 // ==========================================
-window._inspConfigTabActiva = 'tracto';
-window._inspConfigTemp = { tracto: [], remolque: [] };
-
-function parseCodigoTextoInsp(itStr, fallbackIdx) {
-    if (typeof itStr === 'object' && itStr !== null) {
-        let label = itStr.label || itStr.texto || '';
-        let m = String(label).trim().match(/^(\d+)\s*[-.)]?\s*(.*)$/);
-        if (m) return { codigo: m[1].padStart(2, '0'), texto: m[2].trim() };
-        return { codigo: String(fallbackIdx + 1).padStart(2, '0'), texto: label };
-    }
-    const raw = String(itStr || '').trim();
-    const m = raw.match(/^(\d+)\s*[-.)]?\s*(.*)$/);
-    if (m) {
-        return {
-            codigo: m[1].padStart(2, '0'),
-            texto: m[2].trim()
-        };
-    }
-    return {
-        codigo: String(fallbackIdx + 1).padStart(2, '0'),
-        texto: raw
-    };
-}
+// ⚙️ CONSTRUCTOR DINÁMICO DE PLANTILLA (INSPECCIONES)
+// ==========================================
+var _inspEditingTemplate = [];
 
 window.abrirConfigInspecciones = async function() {
     try {
-        let res = await fetch('/api/mantenimiento/inspecciones/config').then(r => r.json());
-        let templates = (res.ok && Array.isArray(res.data)) ? res.data : [];
+        let res = await fetch('/api/mantenimiento/inspecciones/config').then(r => r.json()).catch(() => ({ ok: false }));
+        let templates = (res && res.ok && Array.isArray(res.data)) ? res.data : [];
 
-        let parsedTracto = [];
-        let parsedRemolque = [];
-
-        templates.forEach(t => {
+        let parsed = [];
+        templates.forEach((t, idx) => {
             let items = [];
             try {
-                items = typeof t.items_json === 'string' ? JSON.parse(t.items_json) : (t.items_json || []);
+                let raw = typeof t.items_json === 'string' ? JSON.parse(t.items_json) : (t.items_json || []);
+                items = (Array.isArray(raw) ? raw : []).map((it, iIdx) => {
+                    if (typeof it === 'object' && it !== null) {
+                        return {
+                            id: it.id || ('it_' + idx + '_' + iIdx),
+                            label: it.label || it.texto || '',
+                            type: it.type || 'okfalla'
+                        };
+                    }
+                    return {
+                        id: 'it_' + idx + '_' + iIdx,
+                        label: String(it || ''),
+                        type: 'okfalla'
+                    };
+                });
             } catch(e) { items = []; }
-            
-            let tit = (t.titulo || '').toUpperCase();
-            let obj = {
-                key: t.template_id || ('sys_' + Date.now() + Math.floor(Math.random()*100)),
-                title: t.titulo || 'SISTEMA',
-                icon: (tit.includes('CARRETA') || tit.includes('REMOLQUE') || tit.includes('SUSPENSION')) ? 'bi-truck-flatbed' : 'bi-gear-fill',
-                items: items
-            };
 
-            if (tit.includes('CARRETA') || tit.includes('REMOLQUE') || tit.includes('SEMIREMOLQUE') || t.template_id?.startsWith('rem_')) {
-                parsedRemolque.push(obj);
-            } else {
-                parsedTracto.push(obj);
-            }
+            parsed.push({
+                id: t.template_id || ('cat_' + Date.now() + '_' + idx),
+                titulo: t.titulo || 'SISTEMA',
+                items: items
+            });
         });
 
-        // Si no habían templates cargados, inicializar con estructura predeterminada
-        if (parsedTracto.length === 0 && parsedRemolque.length === 0) {
-            parsedTracto = [
-                { key: 'mot', title: 'MOTOR', icon: 'bi-gear-fill', items: ['01 Nivel de aceite motor', '02 Fugas de fluidos', '03 Filtro de aire', '04 Pérdida de potencia', '05 Compresora de aire'] },
-                { key: 'caj', title: 'CAJA - CORONAS', icon: 'bi-gear-wide-connected', items: ['06 Embrague', '07 Palanca de cambios', '08 Freno de Motor', '09 Ruido en caja de cambios'] },
-                { key: 'ref', title: 'REFRIGERACION', icon: 'bi-thermometer-half', items: ['10 Nivel de refrigerante', '11 Fugas de refrigerante', '12 Radiador, intercooler'] },
-                { key: 'dir', title: 'DIRECCION', icon: 'bi-compass', items: ['13 Alineamiento y balanceo', '14 Caja de dirección', '15 Barras y terminales'] },
-                { key: 'cab', title: 'CABINA Y CHASIS', icon: 'bi-truck-front', items: ['16 Tablero e instrumentos', '17 Lunas y parabrisas', '18 Cinturones de seguridad'] }
-            ];
-            parsedRemolque = [
-                { key: 'fre', title: 'FRENOS', icon: 'bi-hand-index-thumb', items: ['19 Revisar Zapatas', '20 Pulpo de Freno', '21 Tanque de Aire', '22 Rachet de Freno'] },
-                { key: 'car', title: 'CARRETA', icon: 'bi-truck-flatbed', items: ['23 Estado de triplay', '24 Pisos sin Óxido', '25 Tiro de Remolque', '26 Muelles y Soporte'] },
-                { key: 'ele', title: 'SISTEMA ELECTRICO', icon: 'bi-lightning-charge', items: ['27 Luces en general', '28 Faros delanteros', '29 Baterías y bornes', '30 Testigos check engine'] },
-                { key: 'sus', title: 'SUSPENSION', icon: 'bi-arrows-expand', items: ['31 Amortiguadores', '32 Bolsas de aire', '33 Muelles y grilletes'] }
+        if (parsed.length === 0) {
+            parsed = [
+                { id: 'cat_llanta', titulo: 'LLANTA', items: [{ id: 'i_1', label: 'Cortes o Averías', type: 'okfalla' }, { id: 'i_2', label: 'PSI del Neumático', type: 'okfalla' }, { id: 'i_3', label: 'Otros', type: 'okfalla' }] },
+                { id: 'cat_motor', titulo: 'MOTOR', items: [{ id: 'i_4', label: 'Niveles de Motor', type: 'okfalla' }, { id: 'i_5', label: 'Sistema de Lubricación Fugas', type: 'okfalla' }, { id: 'i_6', label: 'Sistema de Combustible', type: 'okfalla' }, { id: 'i_7', label: 'Sistema de Refrigeración', type: 'okfalla' }, { id: 'i_8', label: 'Correas, Ventilador y Accesorios', type: 'okfalla' }, { id: 'i_9', label: 'Código de Falla', type: 'okfalla' }, { id: 'i_10', label: 'Otros', type: 'okfalla' }] },
+                { id: 'cat_elec', titulo: 'SISTEMA ELECTRICO', items: [{ id: 'i_11', label: 'Sistema Eléctrico General', type: 'okfalla' }, { id: 'i_12', label: 'Estado de Bateria', type: 'okfalla' }, { id: 'i_13', label: 'Otros', type: 'okfalla' }] },
+                { id: 'cat_aire', titulo: 'SISTEMA DE AIRE', items: [{ id: 'i_14', label: 'Inspección General de Aire', type: 'okfalla' }, { id: 'i_15', label: 'Mantenimiento de Válvulas', type: 'okfalla' }, { id: 'i_16', label: 'Inspección de Manitos de Aire', type: 'okfalla' }] },
+                { id: 'cat_trans', titulo: 'TRANSMISION', items: [{ id: 'i_17', label: 'Embrague', type: 'okfalla' }, { id: 'i_18', label: 'Caja de Cambio', type: 'okfalla' }, { id: 'i_19', label: 'Diferencial', type: 'okfalla' }, { id: 'i_20', label: 'Cardanes', type: 'okfalla' }, { id: 'i_21', label: 'Otros', type: 'okfalla' }] },
+                { id: 'cat_dir', titulo: 'DIRECCION', items: [{ id: 'i_22', label: 'Servo Dirección', type: 'okfalla' }, { id: 'i_23', label: 'Alineamiento', type: 'okfalla' }, { id: 'i_24', label: 'Pines, Bocinas y Terminales', type: 'okfalla' }, { id: 'i_25', label: 'Caja de Dirección', type: 'okfalla' }, { id: 'i_26', label: 'Otros', type: 'okfalla' }] },
+                { id: 'cat_frenos', titulo: 'FRENOS', items: [{ id: 'i_27', label: 'Limpieza y Regulación', type: 'okfalla' }, { id: 'i_28', label: 'Zapatas Delanteras o Pastillas Delanteras', type: 'percent' }, { id: 'i_29', label: 'Zapatas Tracción o  1er Eje Tracciona', type: 'percent' }, { id: 'i_30', label: 'Zapatas Eje Loca o  2do Eje Tracciona', type: 'percent' }, { id: 'i_31', label: 'Disco de Embrague', type: 'percent' }, { id: 'i_32', label: 'Otros', type: 'okfalla' }] },
+                { id: 'cat_susp', titulo: 'SUSPENSION', items: [{ id: 'i_33', label: 'Muelles o Bolsas de Aire', type: 'okfalla' }, { id: 'i_34', label: 'Amortiguadores', type: 'okfalla' }, { id: 'i_35', label: 'Eje de Barra Estabilizadora', type: 'okfalla' }, { id: 'i_36', label: 'Otros', type: 'okfalla' }] },
+                { id: 'cat_herm', titulo: 'Hermetizado', items: [{ id: 'i_37', label: 'Cabina Exterior e Interior', type: 'okfalla' }, { id: 'i_38', label: 'Puerta, Chapas y Asientos', type: 'okfalla' }, { id: 'i_39', label: 'Chasis, Tornamesa y Bastidor', type: 'okfalla' }, { id: 'i_40', label: 'Furgón (Estructura Laterales)', type: 'okfalla' }, { id: 'i_41', label: 'Lavado y Limpieza Interior de ThermoKing', type: 'okfalla' }] }
             ];
         }
 
-        window._inspConfigTemp = {
-            tracto: parsedTracto,
-            remolque: parsedRemolque
-        };
-
-        window._inspConfigTabActiva = 'tracto';
-        window.ckActualizarBadgesTabsConfigInsp();
+        _inspEditingTemplate = parsed;
         window.ckRenderizarConfigSistemasInsp();
 
         const vLista = document.getElementById('insp-view-lista');
@@ -3364,9 +3338,11 @@ window.abrirConfigInspecciones = async function() {
         if (vPlantilla) vPlantilla.style.display = 'block';
     } catch (e) {
         console.error('Error al abrir plantilla de inspecciones:', e);
-        alert('Error al abrir la plantilla.');
+        if (typeof window.mostrarToast === 'function') window.mostrarToast('Error al abrir la plantilla: ' + e.message, 'error');
     }
 };
+
+window.ckAbrirPlantillaInsp = window.abrirConfigInspecciones;
 
 window.cerrarPlantillaInsp = function() {
     const vLista = document.getElementById('insp-view-lista');
@@ -3375,90 +3351,38 @@ window.cerrarPlantillaInsp = function() {
     if (vPlantilla) vPlantilla.style.display = 'none';
 };
 
-window.ckActualizarBadgesTabsConfigInsp = function() {
-    const cntT = document.getElementById('insp-cnt-cfg-tracto');
-    const cntR = document.getElementById('insp-cnt-cfg-remolque');
-    if (cntT) cntT.textContent = (window._inspConfigTemp.tracto || []).length;
-    if (cntR) cntR.textContent = (window._inspConfigTemp.remolque || []).length;
-};
-
-window.ckCambiarTabConfigUnidadInsp = function(unidad) {
-    window._inspConfigTabActiva = unidad;
-    const btnT = document.getElementById('insp-tab-cfg-tracto');
-    const btnR = document.getElementById('insp-tab-cfg-remolque');
-    const cntT = document.getElementById('insp-cnt-cfg-tracto');
-    const cntR = document.getElementById('insp-cnt-cfg-remolque');
-
-    if (btnT && btnR) {
-        if (unidad === 'tracto') {
-            btnT.classList.add('active', 'fw-bold');
-            btnT.classList.remove('text-secondary', 'fw-semibold');
-            btnT.style.background = '#ffffff';
-            btnT.style.color = '#0f172a';
-            btnT.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
-            if (cntT) { cntT.style.background = '#e0f2fe'; cntT.style.color = '#0284c7'; }
-
-            btnR.classList.remove('active', 'fw-bold');
-            btnR.classList.add('text-secondary', 'fw-semibold');
-            btnR.style.background = 'transparent';
-            btnR.style.color = '#64748b';
-            btnR.style.boxShadow = 'none';
-            if (cntR) { cntR.style.background = ''; cntR.style.color = ''; }
-        } else {
-            btnR.classList.add('active', 'fw-bold');
-            btnR.classList.remove('text-secondary', 'fw-semibold');
-            btnR.style.background = '#ffffff';
-            btnR.style.color = '#0f172a';
-            btnR.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
-            if (cntR) { cntR.style.background = '#e0f2fe'; cntR.style.color = '#0284c7'; }
-
-            btnT.classList.remove('active', 'fw-bold');
-            btnT.classList.add('text-secondary', 'fw-semibold');
-            btnT.style.background = 'transparent';
-            btnT.style.color = '#64748b';
-            btnT.style.boxShadow = 'none';
-            if (cntT) { cntT.style.background = ''; cntT.style.color = ''; }
-        }
-    }
-    window.ckRenderizarConfigSistemasInsp();
-};
-
 window.ckRenderizarConfigSistemasInsp = function() {
     const container = document.getElementById('config-insp-container');
     if (!container) return;
 
-    const unidad = window._inspConfigTabActiva || 'tracto';
-    const sistemas = window._inspConfigTemp[unidad] || [];
-    window.ckActualizarBadgesTabsConfigInsp();
-
-    if (sistemas.length === 0) {
+    if (!_inspEditingTemplate || _inspEditingTemplate.length === 0) {
         container.innerHTML = `
             <div class="text-center py-5 text-muted bg-white rounded-4 border shadow-2xs">
                 <i class="bi bi-folder2-open fs-1 text-secondary d-block mb-2"></i>
-                <div class="fw-bold">No hay categorías ni sistemas configurados para ${unidad === 'tracto' ? 'Camión / Tracto' : 'Carreta / Remolque'}.</div>
-                <small class="text-secondary">Haz clic en "+ Añadir Nuevo Sistema" para comenzar.</small>
+                <div class="fw-bold">No hay categorías ni sistemas configurados.</div>
+                <small class="text-secondary">Haz clic en "+ Añadir Nueva Categoría / Sistema" para comenzar.</small>
             </div>
         `;
         return;
     }
 
     let html = '';
-    sistemas.forEach((sys, sysIdx) => {
-        const title = sys.title || 'SISTEMA';
-        const items = Array.isArray(sys.items) ? sys.items : [];
+    _inspEditingTemplate.forEach((cat, catIdx) => {
+        const title = cat.titulo || 'SISTEMA';
+        const items = Array.isArray(cat.items) ? cat.items : [];
 
         let itemsHtml = '';
-        items.forEach((itTxt, itemIdx) => {
-            const parsed = parseCodigoTextoInsp(itTxt, itemIdx);
+        items.forEach((item, itemIdx) => {
+            const label = (item.label || item.texto || '').replace(/"/g, '&quot;');
             itemsHtml += `
                 <div class="d-flex align-items-center justify-content-between gap-2 mb-2 ps-2 ps-md-3 flex-wrap flex-sm-nowrap">
                     <i class="bi bi-dot fs-4 text-secondary d-none d-sm-inline"></i>
                     <input type="text" class="form-control form-control-sm border-0 bg-transparent flex-grow-1 text-dark" 
                         style="font-size:0.88rem; box-shadow:none; padding: 0.25rem 0.5rem;" 
-                        value="${parsed.texto.replace(/"/g, '&quot;')}" 
-                        oninput="window.ckActualizarItemFallaCompuestoInsp(${sysIdx}, ${itemIdx}, null, this.value)" 
+                        value="${label}" 
+                        oninput="window.ckActualizarItemLabelInsp(${catIdx}, ${itemIdx}, this.value)" 
                         placeholder="Nombre de Subcategoría / Ítem">
-                    <button class="btn btn-sm btn-light text-secondary border rounded-2" onclick="window.ckEliminarItemFallaInsp(${sysIdx}, ${itemIdx})" title="Eliminar ítem">
+                    <button class="btn btn-sm btn-light text-secondary border rounded-2" onclick="window.ckEliminarItemFallaInsp(${catIdx}, ${itemIdx})" title="Eliminar ítem">
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
@@ -3469,23 +3393,23 @@ window.ckRenderizarConfigSistemasInsp = function() {
             <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
                 <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
                     <div class="d-flex align-items-center gap-2 flex-grow-1 me-2">
-                        <span class="badge rounded-circle fw-bold" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:#0284c7;color:#fff;font-size:0.78rem;">${sysIdx + 1}</span>
+                        <span class="badge rounded-circle fw-bold" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:#0284c7;color:#fff;font-size:0.78rem;">${catIdx + 1}</span>
                         <input type="text" class="form-control form-control-sm fw-bold text-dark border-0 bg-transparent p-0" 
                             style="font-size:0.95rem; box-shadow:none;" 
                             value="${title.replace(/"/g, '&quot;')}" 
-                            oninput="window.ckActualizarTituloSistemaInsp(${sysIdx}, this.value)" 
+                            oninput="window.ckActualizarTituloSistemaInsp(${catIdx}, this.value)" 
                             placeholder="Nombre del Sistema / Categoría">
                     </div>
-                    <button class="btn btn-sm btn-outline-danger border-0" onclick="window.ckEliminarSistemaInsp(${sysIdx})" title="Eliminar Categoría">
+                    <button class="btn btn-sm btn-outline-danger border-0" onclick="window.ckEliminarSistemaInsp(${catIdx})" title="Eliminar Categoría">
                         <i class="bi bi-trash fs-6"></i>
                     </button>
                 </div>
 
                 <div class="d-flex flex-column gap-1">
-                    ${itemsHtml}
+                    ${itemsHtml || '<div class="text-muted small ps-3 py-1">Sin subcategorías aún.</div>'}
                 </div>
 
-                <button class="btn btn-sm btn-light border w-100 mt-2 fw-semibold text-secondary rounded-3 py-2" onclick="window.ckAgregarItemADeclaradoInsp(${sysIdx})">
+                <button class="btn btn-sm btn-light border w-100 mt-2 fw-semibold text-secondary rounded-3 py-2" onclick="window.ckAgregarItemADeclaradoInsp(${catIdx})">
                     <i class="bi bi-plus-lg me-1"></i> Añadir Subcategoría
                 </button>
             </div>
@@ -3495,88 +3419,70 @@ window.ckRenderizarConfigSistemasInsp = function() {
     container.innerHTML = html;
 };
 
-window.ckAgregarItemADeclaradoInsp = function(sysIdx) {
-    const unidad = window._inspConfigTabActiva || 'tracto';
-    const sys = window._inspConfigTemp[unidad][sysIdx];
-    if (!sys) return;
-    if (!Array.isArray(sys.items)) sys.items = [];
-    const nextNum = sys.items.length + 1;
-    const padded = String(nextNum).padStart(2, '0');
-    sys.items.push(`${padded} Nuevo Ítem de Inspección`);
+window.ckActualizarTituloSistemaInsp = function(catIdx, val) {
+    if (_inspEditingTemplate[catIdx]) {
+        _inspEditingTemplate[catIdx].titulo = val;
+    }
+};
+
+window.ckActualizarItemLabelInsp = function(catIdx, itemIdx, val) {
+    if (_inspEditingTemplate[catIdx] && _inspEditingTemplate[catIdx].items[itemIdx]) {
+        _inspEditingTemplate[catIdx].items[itemIdx].label = val;
+    }
+};
+
+window.ckAgregarItemADeclaradoInsp = function(catIdx) {
+    const cat = _inspEditingTemplate[catIdx];
+    if (!cat) return;
+    if (!Array.isArray(cat.items)) cat.items = [];
+    cat.items.push({
+        id: 'i_' + Date.now() + '_' + (cat.items.length + 1),
+        label: 'Nuevo Ítem de Inspección',
+        type: 'okfalla'
+    });
     window.ckRenderizarConfigSistemasInsp();
 };
 
 window.ckAgregarNuevoSistemaInsp = function() {
-    const unidad = window._inspConfigTabActiva || 'tracto';
-    if (!window._inspConfigTemp[unidad]) window._inspConfigTemp[unidad] = [];
-
-    const nuevoIdx = window._inspConfigTemp[unidad].length + 1;
-    const padded = String(nuevoIdx).padStart(2, '0');
-    window._inspConfigTemp[unidad].push({
-        key: 'sys_' + Date.now(),
-        title: `NUEVO SISTEMA ${padded}`,
-        icon: unidad === 'tracto' ? 'bi-gear' : 'bi-truck-flatbed',
-        items: []
+    const nuevoIdx = _inspEditingTemplate.length + 1;
+    _inspEditingTemplate.push({
+        id: 'cat_' + Date.now(),
+        titulo: `NUEVA CATEGORÍA ${nuevoIdx}`,
+        items: [
+            { id: 'i_' + Date.now() + '_1', label: 'Ítem de Revisión Inicial', type: 'okfalla' }
+        ]
     });
-
     window.ckRenderizarConfigSistemasInsp();
 };
 
-window.ckEliminarSistemaInsp = function(sysIdx) {
-    const unidad = window._inspConfigTabActiva || 'tracto';
-    const sys = window._inspConfigTemp[unidad][sysIdx];
-    const nombre = sys ? sys.title : 'este sistema';
-
-    if (confirm(`¿Estás seguro de eliminar el sistema "${nombre}" y todos sus ítems asociados?`)) {
-        window._inspConfigTemp[unidad].splice(sysIdx, 1);
+window.ckEliminarSistemaInsp = function(catIdx) {
+    const cat = _inspEditingTemplate[catIdx];
+    const nombre = cat ? cat.titulo : 'esta categoría';
+    if (confirm(`¿Estás seguro de eliminar "${nombre}" y todos sus ítems asociados?`)) {
+        _inspEditingTemplate.splice(catIdx, 1);
         window.ckRenderizarConfigSistemasInsp();
     }
 };
 
-window.ckActualizarTituloSistemaInsp = function(sysIdx, val) {
-    const unidad = window._inspConfigTabActiva || 'tracto';
-    if (window._inspConfigTemp[unidad] && window._inspConfigTemp[unidad][sysIdx]) {
-        window._inspConfigTemp[unidad][sysIdx].title = (val || '').toUpperCase();
-    }
-};
-
-window.ckEliminarItemFallaInsp = function(sysIdx, itemIdx) {
-    const unidad = window._inspConfigTabActiva || 'tracto';
-    const sys = window._inspConfigTemp[unidad][sysIdx];
-    if (sys && Array.isArray(sys.items)) {
-        sys.items.splice(itemIdx, 1);
+window.ckEliminarItemFallaInsp = function(catIdx, itemIdx) {
+    const cat = _inspEditingTemplate[catIdx];
+    if (cat && Array.isArray(cat.items)) {
+        cat.items.splice(itemIdx, 1);
         window.ckRenderizarConfigSistemasInsp();
-    }
-};
-
-window.ckActualizarItemFallaCompuestoInsp = function(sysIdx, itemIdx, newCodigo, newTexto) {
-    const unidad = window._inspConfigTabActiva || 'tracto';
-    const sys = window._inspConfigTemp[unidad][sysIdx];
-    if (sys && Array.isArray(sys.items) && sys.items[itemIdx] !== undefined) {
-        const current = parseCodigoTextoInsp(sys.items[itemIdx], itemIdx);
-        const cod = (newCodigo !== null && newCodigo !== undefined) ? newCodigo.trim() : current.codigo;
-        const txt = (newTexto !== null && newTexto !== undefined) ? newTexto.trim() : current.texto;
-        sys.items[itemIdx] = cod ? `${cod} ${txt}` : txt;
     }
 };
 
 window.guardarConfigInsp = async function() {
     try {
-        const templates = [];
-        (window._inspConfigTemp.tracto || []).forEach(sys => {
-            templates.push({
-                titulo: sys.title,
-                template_id: sys.key || ('sys_' + Date.now() + Math.floor(Math.random()*100)),
-                items_json: sys.items || []
-            });
-        });
-        (window._inspConfigTemp.remolque || []).forEach(sys => {
-            templates.push({
-                titulo: sys.title,
-                template_id: sys.key?.startsWith('rem_') ? sys.key : ('rem_' + (sys.key || Date.now())),
-                items_json: sys.items || []
-            });
-        });
+        const templates = _inspEditingTemplate.map((cat, idx) => ({
+            template_id: cat.id || ('cat_' + (idx + 1)),
+            titulo: (cat.titulo || `CATEGORÍA ${idx + 1}`).trim(),
+            items_json: (cat.items || []).map(it => ({
+                id: it.id,
+                label: (it.label || '').trim(),
+                type: it.type || 'okfalla'
+            }))
+        }));
 
         const res = await fetch('/api/mantenimiento/inspecciones/config/guardar', {
             method: 'POST',
@@ -3594,39 +3500,39 @@ window.guardarConfigInsp = async function() {
 
             window.cerrarPlantillaInsp();
 
-            if (typeof window.showToastNotification === 'function') {
-                window.showToastNotification('✅ Plantilla de inspecciones guardada exitosamente.', 'success');
+            if (typeof window.mostrarToast === 'function') {
+                window.mostrarToast('✅ Plantilla de inspecciones guardada exitosamente.', 'success');
             } else {
                 alert('✅ Plantilla de inspecciones guardada exitosamente.');
             }
-            recargarModulo('statusMant');
+            if (typeof window.recargarModulo === 'function') window.recargarModulo('statusMant');
         } else {
             alert('Error al guardar plantilla: ' + (json.error || 'Error desconocido'));
         }
     } catch (e) {
         console.error('Error guardando plantilla:', e);
-        alert('Error de conexión al guardar plantilla.');
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast('Error de conexión al guardar plantilla.', 'error');
+        } else {
+            alert('Error de conexión al guardar plantilla.');
+        }
     }
 };
 
 window.ckRestaurarConfigInsp = async function() {
-    if (!confirm('¿Deseas restablecer todos los sistemas y fallas a la plantilla estándar?')) return;
+    if (!confirm('¿Deseas restablecer todas las categorías y fallas a la plantilla estándar?')) return;
     
-    window._inspConfigTemp = {
-        tracto: [
-            { key: 'mot', title: 'MOTOR', icon: 'bi-gear-fill', items: ['01 Nivel de aceite motor', '02 Fugas de fluidos', '03 Filtro de aire', '04 Pérdida de potencia', '05 Compresora de aire'] },
-            { key: 'caj', title: 'CAJA - CORONAS', icon: 'bi-gear-wide-connected', items: ['06 Embrague', '07 Palanca de cambios', '08 Freno de Motor', '09 Ruido en caja de cambios'] },
-            { key: 'ref', title: 'REFRIGERACION', icon: 'bi-thermometer-half', items: ['10 Nivel de refrigerante', '11 Fugas de refrigerante', '12 Radiador, intercooler'] },
-            { key: 'dir', title: 'DIRECCION', icon: 'bi-compass', items: ['13 Alineamiento y balanceo', '14 Caja de dirección', '15 Barras y terminales'] },
-            { key: 'cab', title: 'CABINA Y CHASIS', icon: 'bi-truck-front', items: ['16 Tablero e instrumentos', '17 Lunas y parabrisas', '18 Cinturones de seguridad'] }
-        ],
-        remolque: [
-            { key: 'fre', title: 'FRENOS', icon: 'bi-hand-index-thumb', items: ['19 Revisar Zapatas', '20 Pulpo de Freno', '21 Tanque de Aire', '22 Rachet de Freno'] },
-            { key: 'car', title: 'CARRETA', icon: 'bi-truck-flatbed', items: ['23 Estado de triplay', '24 Pisos sin Óxido', '25 Tiro de Remolque', '26 Muelles y Soporte'] },
-            { key: 'ele', title: 'SISTEMA ELECTRICO', icon: 'bi-lightning-charge', items: ['27 Luces en general', '28 Faros delanteros', '29 Baterías y bornes', '30 Testigos check engine'] },
-            { key: 'sus', title: 'SUSPENSION', icon: 'bi-arrows-expand', items: ['31 Amortiguadores', '32 Bolsas de aire', '33 Muelles y grilletes'] }
-        ]
-    };
+    _inspEditingTemplate = [
+        { id: 'cat_llanta', titulo: 'LLANTA', items: [{ id: 'i_1', label: 'Cortes o Averías', type: 'okfalla' }, { id: 'i_2', label: 'PSI del Neumático', type: 'okfalla' }, { id: 'i_3', label: 'Otros', type: 'okfalla' }] },
+        { id: 'cat_motor', titulo: 'MOTOR', items: [{ id: 'i_4', label: 'Niveles de Motor', type: 'okfalla' }, { id: 'i_5', label: 'Sistema de Lubricación Fugas', type: 'okfalla' }, { id: 'i_6', label: 'Sistema de Combustible', type: 'okfalla' }, { id: 'i_7', label: 'Sistema de Refrigeración', type: 'okfalla' }, { id: 'i_8', label: 'Correas, Ventilador y Accesorios', type: 'okfalla' }, { id: 'i_9', label: 'Código de Falla', type: 'okfalla' }, { id: 'i_10', label: 'Otros', type: 'okfalla' }] },
+        { id: 'cat_elec', titulo: 'SISTEMA ELECTRICO', items: [{ id: 'i_11', label: 'Sistema Eléctrico General', type: 'okfalla' }, { id: 'i_12', label: 'Estado de Bateria', type: 'okfalla' }, { id: 'i_13', label: 'Otros', type: 'okfalla' }] },
+        { id: 'cat_aire', titulo: 'SISTEMA DE AIRE', items: [{ id: 'i_14', label: 'Inspección General de Aire', type: 'okfalla' }, { id: 'i_15', label: 'Mantenimiento de Válvulas', type: 'okfalla' }, { id: 'i_16', label: 'Inspección de Manitos de Aire', type: 'okfalla' }] },
+        { id: 'cat_trans', titulo: 'TRANSMISION', items: [{ id: 'i_17', label: 'Embrague', type: 'okfalla' }, { id: 'i_18', label: 'Caja de Cambio', type: 'okfalla' }, { id: 'i_19', label: 'Diferencial', type: 'okfalla' }, { id: 'i_20', label: 'Cardanes', type: 'okfalla' }, { id: 'i_21', label: 'Otros', type: 'okfalla' }] },
+        { id: 'cat_dir', titulo: 'DIRECCION', items: [{ id: 'i_22', label: 'Servo Dirección', type: 'okfalla' }, { id: 'i_23', label: 'Alineamiento', type: 'okfalla' }, { id: 'i_24', label: 'Pines, Bocinas y Terminales', type: 'okfalla' }, { id: 'i_25', label: 'Caja de Dirección', type: 'okfalla' }, { id: 'i_26', label: 'Otros', type: 'okfalla' }] },
+        { id: 'cat_frenos', titulo: 'FRENOS', items: [{ id: 'i_27', label: 'Limpieza y Regulación', type: 'okfalla' }, { id: 'i_28', label: 'Zapatas Delanteras o Pastillas Delanteras', type: 'percent' }, { id: 'i_29', label: 'Zapatas Tracción o  1er Eje Tracciona', type: 'percent' }, { id: 'i_30', label: 'Zapatas Eje Loca o  2do Eje Tracciona', type: 'percent' }, { id: 'i_31', label: 'Disco de Embrague', type: 'percent' }, { id: 'i_32', label: 'Otros', type: 'okfalla' }] },
+        { id: 'cat_susp', titulo: 'SUSPENSION', items: [{ id: 'i_33', label: 'Muelles o Bolsas de Aire', type: 'okfalla' }, { id: 'i_34', label: 'Amortiguadores', type: 'okfalla' }, { id: 'i_35', label: 'Eje de Barra Estabilizadora', type: 'okfalla' }, { id: 'i_36', label: 'Otros', type: 'okfalla' }] },
+        { id: 'cat_herm', titulo: 'Hermetizado', items: [{ id: 'i_37', label: 'Cabina Exterior e Interior', type: 'okfalla' }, { id: 'i_38', label: 'Puerta, Chapas y Asientos', type: 'okfalla' }, { id: 'i_39', label: 'Chasis, Tornamesa y Bastidor', type: 'okfalla' }, { id: 'i_40', label: 'Furgón (Estructura Laterales)', type: 'okfalla' }, { id: 'i_41', label: 'Lavado y Limpieza Interior de ThermoKing', type: 'okfalla' }] }
+    ];
     window.ckRenderizarConfigSistemasInsp();
 };
 
