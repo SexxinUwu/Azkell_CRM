@@ -1,22 +1,114 @@
 <!-- ═══════════════════════════════════════════════════════════════════
      MÓDULO ALMACÉN: RECEPCIÓN DE COMPRAS (ERP AZKELL)
-     Vistas: Actual (Pendientes/Parciales) | Historial (Completadas)
-     Modal: Recepción con sustento AWS S3, Almacén y Timeline de Entregas
+     Diseño 1:1 Reporte de Fallas (Bento Cards + Apple Segmented + Mobile Native)
+     Modal: Pantalla ancha multi-dispositivo (Web, Tablet y Móvil)
 ═══════════════════════════════════════════════════════════════════ -->
 <style>
-#moduloRecepcionCompras {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    padding: 1rem 1.25rem 3rem 1.25rem !important;
-    width: 100% !important;
-    box-sizing: border-box;
-}
-@media (max-width: 768px) {
-    #moduloRecepcionCompras { padding: 0.5rem 0.5rem 120px 0.5rem !important; }
+/* ── Reset root-dinamico padding for 100% full-bleed ─────────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
 }
 
-/* ── Estilos de Tabla y Badges (Compactos y Ultra Optimizados) ────────── */
+/* ── Apple-like UI Tokens & Layout (1:1 Reporte de Fallas) ────────── */
+.rec-app-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem 1.25rem 2.5rem 1.25rem !important;
+    background: transparent;
+    min-height: 100%;
+    box-sizing: border-box;
+}
+
+/* Bento KPIs Apple Cards */
+.rec-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+.rec-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+}
+.rec-kpi-card.active {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2), 0 8px 24px -4px rgba(2, 132, 199, 0.15) !important;
+}
+.rec-kpi-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+}
+
+/* Control Bar (Search + Apple Segmented Pill) */
+.rec-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 14px 8px 38px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+.rec-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+.rec-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+.rec-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 16px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.rec-segment-item:hover { color: #0f172a; }
+.rec-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Desktop Table Styling */
+#rec-tabla-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
+    min-height: 320px;
+}
 .table-rec-compras {
-    font-size: 0.78rem !important;
+    font-size: 0.84rem !important;
     border-collapse: separate;
     border-spacing: 0;
     width: 100%;
@@ -24,302 +116,370 @@
 .table-rec-compras thead th {
     background: #f8fafc;
     color: #475569;
-    font-size: 0.68rem !important;
+    font-size: 0.72rem !important;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    padding: 6px 10px !important;
+    padding: 10px 14px !important;
     border-bottom: 2px solid #e2e8f0;
     white-space: nowrap !important;
     vertical-align: middle;
 }
 .table-rec-compras tbody td {
-    padding: 5px 10px !important;
+    padding: 9px 14px !important;
     vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
-    line-height: 1.25 !important;
-    white-space: nowrap !important;
+    line-height: 1.35 !important;
 }
 .table-rec-compras tbody tr:hover {
     background: #f8fafc;
 }
 
-/* Botón Recepcionar / Ver Detalle Compacto */
-.btn-rec-action {
-    background: #f59e0b;
-    color: #ffffff !important;
-    border: 1px solid #d97706;
-    font-size: 0.7rem !important;
+/* Action Buttons (Capsules 1:1 Reporte de Fallas) */
+.rec-action-btn {
+    padding: 5px 12px;
+    height: 32px;
+    font-size: 0.76rem !important;
     font-weight: 700;
-    letter-spacing: 0.02em;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+.rec-btn-recepcionar {
+    background: #ea580c;
+    color: #ffffff !important;
+    border-color: #ea580c;
+    box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);
+}
+.rec-btn-recepcionar:hover {
+    background: #c2410c;
+    border-color: #c2410c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(234, 88, 12, 0.35);
+}
+.rec-btn-ver {
+    background: #eff6ff;
+    color: #0284c7 !important;
+    border-color: #bfdbfe;
+}
+.rec-btn-ver:hover {
+    background: #0284c7;
+    color: #ffffff !important;
+    border-color: #0284c7;
+    transform: translateY(-1px);
+}
+
+/* Badges de Estado */
+.rec-badge {
+    font-size: 0.7rem !important;
+    font-weight: 800;
+    letter-spacing: 0.03em;
     padding: 3px 8px !important;
     border-radius: 6px;
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    cursor: pointer;
+    text-transform: uppercase;
     white-space: nowrap !important;
-    box-shadow: 0 1px 2px rgba(245, 158, 11, 0.2);
-    transition: all 0.15s ease;
 }
-.btn-rec-action:hover {
-    background: #d97706;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(217, 119, 6, 0.3);
-}
-.btn-rec-action.btn-ver-historial {
-    background: #0284c7;
-    border-color: #0369a1;
-    box-shadow: 0 1px 2px rgba(2, 132, 199, 0.2);
-}
-.btn-rec-action.btn-ver-historial:hover {
-    background: #0369a1;
-}
+.rec-badge-completo { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.rec-badge-parcial { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+.rec-badge-pendiente { background: #ffe4e6; color: #e11d48; border: 1px solid #fecdd3; }
 
-/* Badges de Estado Compactos */
-.badge-oc-procesado {
-    background: #0284c7;
-    color: #ffffff;
-    font-size: 0.68rem !important;
-    font-weight: 800;
-    letter-spacing: 0.03em;
-    padding: 2px 7px !important;
-    border-radius: 4px;
-    display: inline-block;
-    text-transform: uppercase;
-    white-space: nowrap !important;
-}
-.badge-rec-pendiente {
-    background: #e11d48;
-    color: #ffffff;
-    font-size: 0.68rem !important;
-    font-weight: 800;
-    letter-spacing: 0.03em;
-    padding: 2px 7px !important;
-    border-radius: 4px;
-    display: inline-block;
-    text-transform: uppercase;
-    white-space: nowrap !important;
-}
-.badge-rec-parcial {
-    background: #d97706;
-    color: #ffffff;
-    font-size: 0.68rem !important;
-    font-weight: 800;
-    letter-spacing: 0.03em;
-    padding: 2px 7px !important;
-    border-radius: 4px;
-    display: inline-block;
-    text-transform: uppercase;
-    white-space: nowrap !important;
-}
-.badge-rec-completo {
-    background: #16a34a;
-    color: #ffffff;
-    font-size: 0.68rem !important;
-    font-weight: 800;
-    letter-spacing: 0.03em;
-    padding: 2px 7px !important;
-    border-radius: 4px;
-    display: inline-block;
-    text-transform: uppercase;
-    white-space: nowrap !important;
-}
-
-/* Pestañas de Vista (Actual vs Historial) */
-.rec-nav-pill {
-    border: none;
-    background: transparent;
-    padding: 8px 18px;
-    border-radius: 10px;
-    font-size: 0.84rem;
-    font-weight: 700;
-    color: #64748b;
-    transition: all 0.18s ease;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-.rec-nav-pill:hover { color: #0f172a; }
-.rec-nav-pill.active {
-    background: #ffffff !important;
-    color: #0284c7 !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
-}
-
-/* Modal Styling */
-.modal-rec-header {
-    border-bottom: 2px solid #0284c7;
-    padding: 16px 24px;
-}
-.rec-summary-box {
+/* Universal Modern Card (Mobile) */
+.rec-mobile-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 14px 18px;
-    margin-bottom: 16px;
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 14px rgba(15, 23, 42, 0.03);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.rec-mobile-card:active {
+    transform: scale(0.99);
+}
+
+/* Modal Wide Glassmorphism & Bento Styling */
+.rec-modal-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+}
+.rec-modal-card-title {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* Adaptación Móvil */
+@media (max-width: 768px) {
+    .rec-app-container {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+    }
+    #rec-tabla-wrap {
+        display: none !important;
+    }
+    #recCardContainer {
+        display: block !important;
+    }
 }
 </style>
 
-<div id="moduloRecepcionCompras" class="modulo-wrapper d-flex flex-column h-100">
+<div id="moduloRecepcionCompras" class="rec-app-container d-flex flex-column h-100">
 
-    <!-- ── 1. ENCABEZADO OFICIAL ERP ─────────────────────────────── -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        <div class="d-flex align-items-center gap-3">
-            <div style="width: 44px; height: 44px; background: #fff7ed; color: #ea580c; border-radius: 12px; font-size: 1.35rem; display: flex; align-items: center; justify-content: center;">
-                <i class="bi bi-box-arrow-in-down"></i>
+    <!-- ── 1. ENCABEZADO OFICIAL ERP (1:1 Reporte de Fallas) ────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2 gap-md-3">
+            <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                <i class="bi bi-box-arrow-in-down text-warning fs-5" style="color:#ea580c !important;"></i>
             </div>
             <div>
-                <div class="d-flex align-items-center gap-2">
-                    <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Recepción de Compras</h4>
-                    <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" style="font-size:0.72rem;font-weight:800;">ALMACÉN</span>
-                </div>
-                <span class="text-secondary small">Recepción física de artículos, control de entregas parciales y afectación de stock en tiempo real</span>
+                <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+                    Recepción de Compras
+                </h4>
+                <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">Recepción física de artículos, control de entregas parciales y afectación de stock en tiempo real</small>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-warning text-white rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm" style="background:#ea580c;border-color:#ea580c;" onclick="window.cargarRecepcionesOC()" title="Actualizar">
-                <i class="bi bi-arrow-clockwise fs-6"></i> <span>Actualizar</span>
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.cargarRecepcionesOC(true)" title="Recargar">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
+            </button>
+            <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" onclick="window.exportarRecepcionesExcel()" title="Exportar a Excel">
+                <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
             </button>
         </div>
     </div>
 
-    <!-- ── 2. BARRA COMPACTA DE PESTAÑAS Y BÚSQUEDA (1 SOLA FILA) ── -->
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-        <!-- Pestañas de Navegación Segmentada -->
-        <div class="d-inline-flex p-1 bg-white rounded-3 border shadow-2xs">
-            <button class="rec-nav-pill active" id="tab-rec-actual" onclick="window.cambiarTabRecepciones('actual')">
-                <i class="bi bi-hourglass-split text-warning"></i> Actual <span class="badge bg-warning text-dark rounded-pill px-2" id="badge-rec-actual-count">0</span>
-            </button>
-            <button class="rec-nav-pill" id="tab-rec-historial" onclick="window.cambiarTabRecepciones('historial')">
-                <i class="bi bi-clock-history text-primary"></i> Historial <span class="badge bg-secondary rounded-pill px-2" id="badge-rec-historial-count">0</span>
-            </button>
+    <!-- ── 2. BENTO KPIS ROW (1:1 Reporte de Fallas) ─────────────────── -->
+    <div class="row g-2 g-md-3 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="rec-kpi-card active" id="rec-kpi-card-total" onclick="window.filtrarEstadoRecepcion('TODOS', this)">
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Total Órdenes</span>
+                    <h2 id="kpi-rec-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
+                </div>
+                <div class="rec-kpi-icon" style="background: #eff6ff; color: #2563eb;">
+                    <i class="bi bi-file-earmark-text"></i>
+                </div>
+            </div>
         </div>
-
-        <!-- Acciones Rápidas (Imprimir, Excel, Filtro Buscar) -->
-        <div class="d-flex align-items-center gap-2 ms-auto">
-            <button class="btn btn-sm btn-light bg-white border text-secondary rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1 shadow-2xs" onclick="window.print()" style="font-size:0.82rem; height:36px;">
-                <i class="bi bi-printer"></i> Imprimir
-            </button>
-            <button class="btn btn-sm btn-light bg-white border text-secondary rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1 shadow-2xs" onclick="window.exportarRecepcionesExcel()" style="font-size:0.82rem; height:36px;">
-                <i class="bi bi-file-earmark-excel text-success"></i> Excel
-            </button>
-            <div class="position-relative" style="min-width: 220px;">
-                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.82rem;"></i>
-                <input type="text" id="filtro-buscar-rec" class="form-control form-control-sm ps-5 rounded-3 border bg-white shadow-2xs" placeholder="Buscar en tabla..." style="font-size:0.82rem; height:36px;" oninput="window.filtrarTablaRecepciones()">
+        <div class="col-6 col-md-3">
+            <div class="rec-kpi-card" id="rec-kpi-card-pendientes" onclick="window.filtrarEstadoRecepcion('PENDIENTE', this)">
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Pendientes</span>
+                    <h2 id="kpi-rec-pendientes" class="fw-bolder m-0 text-danger" style="font-size: 1.6rem; color:#e11d48 !important;">0</h2>
+                </div>
+                <div class="rec-kpi-icon" style="background: #ffe4e6; color: #e11d48;">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="rec-kpi-card" id="rec-kpi-card-parciales" onclick="window.filtrarEstadoRecepcion('PARCIAL', this)">
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">En Recepción</span>
+                    <h2 id="kpi-rec-parciales" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem; color:#d97706 !important;">0</h2>
+                </div>
+                <div class="rec-kpi-icon" style="background: #fffbeb; color: #d97706;">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="rec-kpi-card" id="rec-kpi-card-completos" onclick="window.filtrarEstadoRecepcion('COMPLETO', this)">
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Finalizadas</span>
+                    <h2 id="kpi-rec-completos" class="fw-bolder m-0 text-success" style="font-size: 1.6rem; color:#16a34a !important;">0</h2>
+                </div>
+                <div class="rec-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
+                    <i class="bi bi-check2-circle"></i>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ── 3. TABLA PRINCIPAL DE ÓRDENES DE COMPRA (Fiel a Imagen 1) ── -->
-    <div class="card border-0 shadow-2xs rounded-4 bg-white overflow-hidden" style="border:1px solid #e2e8f0!important;">
-        <div class="table-responsive">
-            <table class="table table-hover table-rec-compras m-0 align-middle">
-                <thead>
-                    <tr>
-                        <th style="width: 130px; white-space:nowrap;">ACCIÓN</th>
-                        <th style="width: 140px; white-space:nowrap;">ORDEN DE COMPRA</th>
-                        <th style="width: 140px; white-space:nowrap;">FECHA</th>
-                        <th style="min-width: 220px;">PROVEEDOR</th>
-                        <th style="min-width: 180px;">SOLICITANTE</th>
-                        <th style="width: 120px; text-align:right; white-space:nowrap;">IMPORTE</th>
-                        <th style="width: 120px; text-align:center; white-space:nowrap;">ESTADO OC</th>
-                        <th style="width: 160px; text-align:center; white-space:nowrap;">PROGRESO DE RECEPCIÓN</th>
+    <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS SEGMENTED (FULL-BLEED) ──────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="position-relative flex-grow-1" style="max-width: 380px;">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+            <input type="text" id="filtro-buscar-rec" class="rec-apple-search" placeholder="Buscar orden, proveedor, solicitante, artículo..." oninput="window.filtrarTablaRecepciones()">
+        </div>
+        <div class="rec-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-estados-rec">
+            <button type="button" class="rec-segment-item active" data-estado="TODOS" onclick="window.filtrarEstadoRecepcion('TODOS', this)">Todas</button>
+            <button type="button" class="rec-segment-item" data-estado="PENDIENTE" onclick="window.filtrarEstadoRecepcion('PENDIENTE', this)">Pendientes</button>
+            <button type="button" class="rec-segment-item" data-estado="PARCIAL" onclick="window.filtrarEstadoRecepcion('PARCIAL', this)">En Recepción</button>
+            <button type="button" class="rec-segment-item" data-estado="COMPLETO" onclick="window.filtrarEstadoRecepcion('COMPLETO', this)">Finalizadas</button>
+        </div>
+    </div>
+
+    <!-- ── 4. VISTA MÓVIL NATIVA (BENTO CARDS) ───────────────────────── -->
+    <div id="recCardContainer" class="d-md-none">
+        <div class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando recepciones...
+        </div>
+    </div>
+
+    <!-- ── 5. VISTA ESCRITORIO (TABLA FLUIDA 1:1 REPORTE DE FALLAS) ──── -->
+    <div id="rec-tabla-wrap" class="flex-grow-1 d-none d-md-block" style="min-height: 320px;">
+        <div class="custom-scrollbar overflow-x-auto" style="overflow-y: visible; min-height: 320px;">
+            <table class="table table-hover table-rec-compras align-middle m-0" id="tablaRecepciones" style="font-size: 0.88rem;">
+                <thead class="bg-light sticky-top shadow-2xs border-bottom">
+                    <tr class="text-secondary" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                        <th class="ps-4 py-3" style="min-width: 140px; white-space: nowrap;">ORDEN DE COMPRA</th>
+                        <th class="py-3" style="min-width: 130px; white-space: nowrap;">FECHA</th>
+                        <th class="py-3" style="min-width: 240px; white-space: nowrap;">PROVEEDOR</th>
+                        <th class="py-3" style="min-width: 160px; white-space: nowrap;">SOLICITANTE</th>
+                        <th class="py-3 text-end" style="min-width: 120px; white-space: nowrap;">IMPORTE TOTAL</th>
+                        <th class="py-3 text-center" style="min-width: 120px; white-space: nowrap;">ESTADO OC</th>
+                        <th class="py-3 text-center" style="min-width: 160px; white-space: nowrap;">PROGRESO RECEPCIÓN</th>
+                        <th class="pe-4 py-3 text-end" style="min-width: 130px; white-space: nowrap;">ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-rec-compras">
                     <tr>
                         <td colspan="8" class="text-center py-5 text-secondary">
-                            <div class="spinner-border spinner-border-sm text-primary me-2"></div> Cargando órdenes de compra...
+                            <div class="spinner-border spinner-border-sm text-primary me-2"></div> Consultando recepciones del ERP...
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-        <div class="p-3 border-top bg-light d-flex align-items-center justify-content-between" style="font-size:0.8rem; color:#64748b;">
+        <div class="p-3 border-top bg-light d-flex align-items-center justify-content-between rounded-bottom-4" style="font-size:0.8rem; color:#64748b;">
             <span id="txt-rec-contador">Mostrando 0 registros</span>
         </div>
     </div>
 
-    <!-- ── 4. MODAL EJECUTIVO DE RECEPCIÓN (Fiel a Imágenes 2 y 3) ── -->
+    <!-- ── 6. MODAL ESPACIOSO DE RECEPCIÓN (PANTALLA ANCHA & RESPONSIVE) ── -->
     <div class="modal fade" id="modalRecepcionOC" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
-                <!-- Header Modal -->
-                <div class="modal-header modal-rec-header bg-white">
-                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size:1.15rem;">
-                        <i class="bi bi-box-seam text-primary"></i> Recepción de Orden de Compra
-                    </h5>
+                
+                <!-- Modal Header -->
+                <div class="modal-header bg-white px-4 py-3 border-bottom d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width: 38px; height: 38px; background: #fff7ed; color: #ea580c; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem;">
+                            <i class="bi bi-box-seam-fill"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="modal-title fw-bolder text-dark m-0" style="font-size: 1.15rem; letter-spacing: -0.2px;">
+                                    Recepción de Orden de Compra
+                                </h5>
+                                <span class="badge bg-primary text-white font-monospace px-2.5 py-1" id="modal-rec-badge-folio" style="font-size: 0.75rem; letter-spacing: 0.5px;">ENT-2026-XXXX</span>
+                            </div>
+                            <small class="text-muted" style="font-size: 0.78rem;">Valida los productos ingresados a almacén y registra el sustento digital</small>
+                        </div>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <!-- Body Modal -->
-                <div class="modal-body p-4 bg-light">
-                    <!-- Resumen de la Orden de Compra -->
-                    <div class="rec-summary-box shadow-2xs">
-                        <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
-                            <i class="bi bi-card-text text-secondary"></i>
-                            <h6 class="fw-bold m-0 text-dark">Resumen de la Orden de Compra</h6>
-                        </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-12 col-md-3">
-                                <span class="text-secondary small d-block fw-bold">Orden:</span>
-                                <strong class="text-dark" id="modal-rec-orden">-</strong>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <span class="text-secondary small d-block fw-bold">Proveedor:</span>
-                                <strong class="text-dark text-truncate d-block" id="modal-rec-proveedor">-</strong>
-                            </div>
-                            <div class="col-12 col-md-3">
-                                <span class="text-secondary small d-block fw-bold">Solicitante:</span>
-                                <strong class="text-dark" id="modal-rec-solicitante">-</strong>
-                            </div>
-                            <div class="col-12 col-md-2">
-                                <span class="text-secondary small d-block fw-bold">Importe:</span>
-                                <strong class="text-dark" id="modal-rec-importe">-</strong>
+                <!-- Modal Body (Spacious Bento Grid) -->
+                <div class="modal-body p-3 p-md-4 bg-light custom-scrollbar">
+                    
+                    <!-- Bento Top: Resumen de OC + Formulario de Entrada en 2 Columnas -->
+                    <div class="row g-3 mb-3">
+                        
+                        <!-- Columna Izquierda: Tarjetas de Información de la Orden -->
+                        <div class="col-12 col-lg-5">
+                            <div class="rec-modal-card h-100">
+                                <div class="rec-modal-card-title">
+                                    <i class="bi bi-info-circle text-primary"></i> Datos de la Orden de Compra
+                                </div>
+                                <div class="row g-2.5" style="font-size: 0.83rem;">
+                                    <div class="col-6">
+                                        <span class="text-muted small d-block">N° Orden:</span>
+                                        <span class="fw-bolder text-primary font-monospace" id="modal-rec-orden">—</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <span class="text-muted small d-block">Importe Total:</span>
+                                        <span class="fw-bolder text-success" id="modal-rec-importe">—</span>
+                                    </div>
+                                    <div class="col-12">
+                                        <span class="text-muted small d-block">Proveedor:</span>
+                                        <span class="fw-bold text-dark text-truncate d-block" id="modal-rec-proveedor" title="">—</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <span class="text-muted small d-block">Solicitante:</span>
+                                        <span class="fw-semibold text-secondary" id="modal-rec-solicitante">—</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <span class="text-muted small d-block">Condición / Pago:</span>
+                                        <span class="fw-semibold text-secondary" id="modal-rec-condicion">Al Contado</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Formulario de Entrada: Fecha, Observación y Sustento S3 -->
-                        <div class="row g-3 pt-2 border-top" id="modal-rec-inputs-box">
-                            <div class="col-12 col-md-3">
-                                <label class="form-label small fw-bold text-secondary mb-1">Fecha de Recepción (*)</label>
-                                <input type="datetime-local" id="modal-rec-fecha" class="form-control rounded-3 border bg-light py-1.5" style="font-size:0.83rem;">
-                            </div>
-                            <div class="col-12 col-md-5">
-                                <label class="form-label small fw-bold text-secondary mb-1">Observación</label>
-                                <input type="text" id="modal-rec-obs" class="form-control rounded-3 border bg-light py-1.5" placeholder="Comentarios de la entrega..." style="font-size:0.83rem;">
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label small fw-bold text-secondary mb-1">Sustento / Evidencia (Guía, Factura, Foto)</label>
-                                <input type="file" id="modal-rec-file" class="form-control rounded-3 border bg-light py-1" style="font-size:0.8rem;" accept="image/*,application/pdf">
-                                <small class="text-muted" style="font-size:0.7rem;">Opcional. Se almacenará en AWS S3 con la entrega.</small>
+                        <!-- Columna Derecha: Formulario de Recepción & Sustento -->
+                        <div class="col-12 col-lg-7" id="modal-rec-inputs-box">
+                            <div class="rec-modal-card h-100 border-warning" style="background:#fffefb;">
+                                <div class="rec-modal-card-title text-warning" style="color:#ea580c !important;">
+                                    <i class="bi bi-pencil-square"></i> Registrar Nueva Entrega
+                                </div>
+                                <div class="row g-2.5">
+                                    <div class="col-12 col-sm-6">
+                                        <label class="form-label small fw-bold text-secondary mb-1">Fecha y Hora de Recepción (*)</label>
+                                        <input type="datetime-local" id="modal-rec-fecha" class="form-control rounded-3 border bg-white py-1.5" style="font-size:0.83rem;">
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <label class="form-label small fw-bold text-secondary mb-1">Sustento (Guía, Factura, Foto)</label>
+                                        <input type="file" id="modal-rec-file" class="form-control rounded-3 border bg-white py-1" style="font-size:0.8rem;" accept="image/*,application/pdf">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold text-secondary mb-1">Observaciones / Comentarios de la Entrega</label>
+                                        <input type="text" id="modal-rec-obs" class="form-control rounded-3 border bg-white py-1.5" placeholder="Ej: Entrega completa según Guía GR-001..." style="font-size:0.83rem;">
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
                     </div>
 
-                    <!-- Productos a Recepcionar -->
-                    <div class="rec-summary-box shadow-2xs">
+                    <!-- Bento Middle: Artículos a Recepcionar (Spacious Table) -->
+                    <div class="rec-modal-card mb-3">
                         <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
                             <div class="d-flex align-items-center gap-2">
-                                <i class="bi bi-boxes text-secondary"></i>
-                                <h6 class="fw-bold m-0 text-dark">Productos a Recepcionar</h6>
+                                <i class="bi bi-boxes text-primary fs-5"></i>
+                                <div>
+                                    <h6 class="fw-bolder m-0 text-dark" style="font-size: 0.95rem;">Artículos & Productos a Recepcionar</h6>
+                                    <small class="text-muted" style="font-size:0.75rem;">Ingresa la cantidad recibida físicamente para cada ítem</small>
+                                </div>
                             </div>
-                            <span class="badge bg-light text-dark border" id="modal-rec-items-badge">0 Ítems</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-warning fw-bold py-1 px-2.5 rounded-3 d-flex align-items-center gap-1" id="btn-rec-autofill-all" onclick="window.autoCompletarTodoSaldo()" style="font-size:0.75rem;">
+                                    <i class="bi bi-lightning-charge-fill"></i> Recibir Todo el Saldo
+                                </button>
+                                <span class="badge bg-light text-dark border px-2.5 py-1.5" id="modal-rec-items-badge" style="font-size:0.75rem;">0 Ítems</span>
+                            </div>
                         </div>
 
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0" style="font-size:0.84rem;">
                                 <thead class="bg-light">
-                                    <tr>
-                                        <th style="min-width: 220px;">PRODUCTO</th>
+                                    <tr class="text-secondary" style="font-size:0.72rem; letter-spacing:0.4px;">
+                                        <th style="min-width: 260px;">PRODUCTO / ARTÍCULO</th>
                                         <th class="text-center" style="width: 80px;">UNIDAD</th>
-                                        <th class="text-center" style="width: 80px;">PEDIDO</th>
-                                        <th class="text-center" style="width: 100px;">RECEPCIONADO</th>
-                                        <th class="text-center" style="width: 90px;">PENDIENTE</th>
-                                        <th class="text-center" style="width: 140px;">CANTIDAD A RECEPCIONAR</th>
-                                        <th style="min-width: 180px;">ALMACÉN</th>
+                                        <th class="text-center" style="width: 90px;">PEDIDO</th>
+                                        <th class="text-center" style="width: 100px;">RECIBIDO</th>
+                                        <th class="text-center" style="width: 100px;">PENDIENTE</th>
+                                        <th class="text-center" style="width: 160px;">CANTIDAD A RECIBIR</th>
+                                        <th style="min-width: 180px;">ALMACÉN DESTINO</th>
                                     </tr>
                                 </thead>
                                 <tbody id="modal-rec-items-body">
@@ -329,24 +489,27 @@
                         </div>
                     </div>
 
-                    <!-- Historial de Recepciones Anteriores -->
-                    <div class="rec-summary-box shadow-2xs mb-0">
+                    <!-- Bento Bottom: Historial de Entregas & Sustentos Registrados -->
+                    <div class="rec-modal-card">
                         <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
-                            <i class="bi bi-clock-history text-secondary"></i>
-                            <h6 class="fw-bold m-0 text-dark">Historial de Entregas & Sustentos Registrados</h6>
+                            <i class="bi bi-clock-history text-secondary fs-5"></i>
+                            <div>
+                                <h6 class="fw-bolder m-0 text-dark" style="font-size: 0.95rem;">Historial de Entregas & Sustentos Registrados</h6>
+                                <small class="text-muted" style="font-size:0.75rem;">Bitácora de movimientos y fotos almacenadas en la nube</small>
+                            </div>
                         </div>
                         <div class="table-responsive">
-                            <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.8rem;">
-                                <thead class="bg-light text-secondary">
+                            <table class="table table-hover table-bordered align-middle mb-0" style="font-size:0.8rem;">
+                                <thead class="bg-light text-secondary" style="font-size:0.72rem; letter-spacing:0.3px;">
                                     <tr>
-                                        <th>FECHA / HORA</th>
-                                        <th>USUARIO</th>
-                                        <th>ARTÍCULO</th>
-                                        <th class="text-center">CANTIDAD</th>
-                                        <th>ALMACÉN DESTINO</th>
-                                        <th>OBSERVACIÓN</th>
-                                        <th class="text-center">SUSTENTO / FOTO</th>
-                                        <th class="text-center" style="width:60px;">ACCIONES</th>
+                                        <th style="min-width: 125px;">FECHA / HORA</th>
+                                        <th style="min-width: 110px;">RESPONSABLE</th>
+                                        <th style="min-width: 180px;">ARTÍCULO</th>
+                                        <th class="text-center" style="width: 90px;">CANTIDAD</th>
+                                        <th style="min-width: 120px;">ALMACÉN</th>
+                                        <th style="min-width: 140px;">OBSERVACIÓN</th>
+                                        <th class="text-center" style="width: 110px;">EVIDENCIA</th>
+                                        <th class="text-center" style="width: 50px;">ELIM.</th>
                                     </tr>
                                 </thead>
                                 <tbody id="modal-rec-historial-body">
@@ -355,15 +518,17 @@
                             </table>
                         </div>
                     </div>
+
                 </div>
 
-                <!-- Footer Modal -->
-                <div class="modal-footer bg-white p-3 d-flex justify-content-between">
+                <!-- Modal Footer -->
+                <div class="modal-footer bg-white px-4 py-3 d-flex align-items-center justify-content-between border-top">
                     <button type="button" class="btn btn-light rounded-3 px-4 fw-semibold" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="button" id="btn-modal-ejecutar-recepcion" class="btn btn-primary rounded-3 px-4 fw-bold shadow-sm" onclick="window.ejecutarRegistroRecepcion()">
-                        <i class="bi bi-check2-circle me-1"></i> Registrar Recepción
+                    <button type="button" id="btn-modal-ejecutar-recepcion" class="btn btn-primary rounded-3 px-4 py-2 fw-bold shadow-sm d-flex align-items-center gap-2" style="background:#0284c7; border-color:#0284c7;" onclick="window.ejecutarRegistroRecepcion()">
+                        <i class="bi bi-check2-circle fs-6"></i> <span>Registrar Recepción</span>
                     </button>
                 </div>
+
             </div>
         </div>
     </div>
