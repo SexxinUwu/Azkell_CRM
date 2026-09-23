@@ -3,16 +3,47 @@ const express = require('express');
 module.exports = function (db, logAudit) {
     const router = express.Router();
 
+    const DEFAULT_INSP_TEMPLATES = [
+        { template_id: 'cat_llanta', titulo: 'LLANTA', items_json: [{ id: 'i_1', label: 'Cortes o Averías', type: 'okfalla' }, { id: 'i_2', label: 'PSI del Neumático', type: 'okfalla' }, { id: 'i_3', label: 'Otros', type: 'okfalla' }] },
+        { template_id: 'cat_motor', titulo: 'MOTOR', items_json: [{ id: 'i_4', label: 'Niveles de Motor', type: 'okfalla' }, { id: 'i_5', label: 'Sistema de Lubricación Fugas', type: 'okfalla' }, { id: 'i_6', label: 'Sistema de Combustible', type: 'okfalla' }, { id: 'i_7', label: 'Sistema de Refrigeración', type: 'okfalla' }, { id: 'i_8', label: 'Correas, Ventilador y Accesorios', type: 'okfalla' }, { id: 'i_9', label: 'Código de Falla', type: 'okfalla' }, { id: 'i_10', label: 'Otros', type: 'okfalla' }] },
+        { template_id: 'cat_elec', titulo: 'SISTEMA ELECTRICO', items_json: [{ id: 'i_11', label: 'Sistema Eléctrico General', type: 'okfalla' }, { id: 'i_12', label: 'Estado de Bateria', type: 'okfalla' }, { id: 'i_13', label: 'Otros', type: 'okfalla' }] },
+        { template_id: 'cat_aire', titulo: 'SISTEMA DE AIRE', items_json: [{ id: 'i_14', label: 'Inspección General de Aire', type: 'okfalla' }, { id: 'i_15', label: 'Mantenimiento de Válvulas', type: 'okfalla' }, { id: 'i_16', label: 'Inspección de Manitos de Aire', type: 'okfalla' }] },
+        { template_id: 'cat_trans', titulo: 'TRANSMISION', items_json: [{ id: 'i_17', label: 'Embrague', type: 'okfalla' }, { id: 'i_18', label: 'Caja de Cambio', type: 'okfalla' }, { id: 'i_19', label: 'Diferencial', type: 'okfalla' }, { id: 'i_20', label: 'Cardanes', type: 'okfalla' }, { id: 'i_21', label: 'Otros', type: 'okfalla' }] },
+        { template_id: 'cat_dir', titulo: 'DIRECCION', items_json: [{ id: 'i_22', label: 'Servo Dirección', type: 'okfalla' }, { id: 'i_23', label: 'Alineamiento', type: 'okfalla' }, { id: 'i_24', label: 'Pines, Bocinas y Terminales', type: 'okfalla' }, { id: 'i_25', label: 'Caja de Dirección', type: 'okfalla' }, { id: 'i_26', label: 'Otros', type: 'okfalla' }] },
+        { template_id: 'cat_frenos', titulo: 'FRENOS', items_json: [{ id: 'i_27', label: 'Limpieza y Regulación', type: 'okfalla' }, { id: 'i_28', label: 'Zapatas Delanteras o Pastillas Delanteras', type: 'percent' }, { id: 'i_29', label: 'Zapatas Tracción o 1er Eje Tracciona', type: 'percent' }, { id: 'i_30', label: 'Zapatas Eje Loca o 2do Eje Tracciona', type: 'percent' }, { id: 'i_31', label: 'Disco de Embrague', type: 'percent' }, { id: 'i_32', label: 'Otros', type: 'okfalla' }] },
+        { template_id: 'cat_susp', titulo: 'SUSPENSION', items_json: [{ id: 'i_33', label: 'Muelles o Bolsas de Aire', type: 'okfalla' }, { id: 'i_34', label: 'Amortiguadores', type: 'okfalla' }, { id: 'i_35', label: 'Eje de Barra Estabilizadora', type: 'okfalla' }, { id: 'i_36', label: 'Otros', type: 'okfalla' }] },
+        { template_id: 'cat_herm', titulo: 'HERMETIZADO', items_json: [{ id: 'i_37', label: 'Cabina Exterior e Interior', type: 'okfalla' }, { id: 'i_38', label: 'Puerta, Chapas y Asientos', type: 'okfalla' }, { id: 'i_39', label: 'Chasis, Tornamesa y Bastidor', type: 'okfalla' }, { id: 'i_40', label: 'Furgón (Estructura Laterales)', type: 'okfalla' }, { id: 'i_41', label: 'Lavado y Limpieza Interior de ThermoKing', type: 'okfalla' }] }
+    ];
+
     // GET /api/mantenimiento/inspecciones/config y alias /inspecciones/configuracion
     const handleGetInspConfig = (req, res) => {
         const targetDb = req.db || db;
-        const query = 'SELECT * FROM mant_insp_templates ORDER BY orden ASC';
-        targetDb.query(query, (err, rows) => {
-            if (err) {
-                console.error('Error al obtener config de inspecciones:', err);
-                return res.status(500).json({ ok: false, error: err.message });
-            }
-            res.json({ ok: true, data: rows });
+        const ensureTableSql = `
+        CREATE TABLE IF NOT EXISTS mant_insp_templates (
+            id INT NOT NULL AUTO_INCREMENT,
+            template_id VARCHAR(30) NOT NULL,
+            titulo VARCHAR(150) NOT NULL,
+            items_json JSON NOT NULL,
+            orden INT NOT NULL DEFAULT '0',
+            activo TINYINT(1) NOT NULL DEFAULT '1',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_template_id (template_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `;
+        targetDb.query(ensureTableSql, () => {
+            const query = 'SELECT * FROM mant_insp_templates ORDER BY orden ASC';
+            targetDb.query(query, (err, rows) => {
+                if (err) {
+                    console.error('Error al obtener config de inspecciones:', err);
+                    return res.json({ ok: true, data: DEFAULT_INSP_TEMPLATES });
+                }
+                if (!rows || rows.length === 0) {
+                    return res.json({ ok: true, data: DEFAULT_INSP_TEMPLATES });
+                }
+                res.json({ ok: true, data: rows });
+            });
         });
     };
     router.get('/inspecciones/config', handleGetInspConfig);
