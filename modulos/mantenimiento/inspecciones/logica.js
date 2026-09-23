@@ -3358,16 +3358,21 @@ window.abrirConfigInspecciones = async function() {
         window.ckActualizarBadgesTabsConfigInsp();
         window.ckRenderizarConfigSistemasInsp();
 
-        let modalEl = document.getElementById('modalConfigInsp');
-        if (modalEl) {
-            if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
-            let modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.show();
-        }
+        const vLista = document.getElementById('insp-view-lista');
+        const vPlantilla = document.getElementById('insp-view-plantilla');
+        if (vLista) vLista.style.display = 'none';
+        if (vPlantilla) vPlantilla.style.display = 'block';
     } catch (e) {
-        console.error('Error al abrir configuración de inspecciones:', e);
-        alert('Error al abrir la configuración.');
+        console.error('Error al abrir plantilla de inspecciones:', e);
+        alert('Error al abrir la plantilla.');
     }
+};
+
+window.cerrarPlantillaInsp = function() {
+    const vLista = document.getElementById('insp-view-lista');
+    const vPlantilla = document.getElementById('insp-view-plantilla');
+    if (vLista) vLista.style.display = 'block';
+    if (vPlantilla) vPlantilla.style.display = 'none';
 };
 
 window.ckActualizarBadgesTabsConfigInsp = function() {
@@ -3430,8 +3435,8 @@ window.ckRenderizarConfigSistemasInsp = function() {
         container.innerHTML = `
             <div class="text-center py-5 text-muted bg-white rounded-4 border shadow-2xs">
                 <i class="bi bi-folder2-open fs-1 text-secondary d-block mb-2"></i>
-                <div class="fw-bold">No hay sistemas configurados para ${unidad.toUpperCase()}.</div>
-                <small class="text-secondary">Haz clic en "+ Nuevo Sistema" para comenzar.</small>
+                <div class="fw-bold">No hay categorías ni sistemas configurados para ${unidad === 'tracto' ? 'Camión / Tracto' : 'Carreta / Remolque'}.</div>
+                <small class="text-secondary">Haz clic en "+ Añadir Nuevo Sistema" para comenzar.</small>
             </div>
         `;
         return;
@@ -3439,69 +3444,50 @@ window.ckRenderizarConfigSistemasInsp = function() {
 
     let html = '';
     sistemas.forEach((sys, sysIdx) => {
-        const title = (sys.title || 'SISTEMA').toUpperCase();
-        const icon = sys.icon || (unidad === 'tracto' ? (title.includes('LLANTA') ? 'bi-disc' : (title.includes('MOTOR') ? 'bi-gear' : 'bi-sliders')) : 'bi-truck-flatbed');
+        const title = sys.title || 'SISTEMA';
         const items = Array.isArray(sys.items) ? sys.items : [];
 
         let itemsHtml = '';
         items.forEach((itTxt, itemIdx) => {
             const parsed = parseCodigoTextoInsp(itTxt, itemIdx);
             itemsHtml += `
-                <div class="d-flex align-items-center gap-3 p-2.5 px-3 bg-white" style="border-bottom: 1px solid #f1f5f9;">
-                    <span class="text-muted fw-bold" style="font-family: monospace; font-size: 0.85rem; width: 24px; min-width: 24px; color: #94a3b8;">${parsed.codigo}</span>
-                    <input type="text" class="form-control form-control-sm fw-medium text-dark border-0 bg-transparent p-0 flex-grow-1" 
-                        style="font-size: 0.9rem; box-shadow: none;" 
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-2 ps-2 ps-md-3 flex-wrap flex-sm-nowrap">
+                    <i class="bi bi-dot fs-4 text-secondary d-none d-sm-inline"></i>
+                    <input type="text" class="form-control form-control-sm border-0 bg-transparent flex-grow-1 text-dark" 
+                        style="font-size:0.88rem; box-shadow:none; padding: 0.25rem 0.5rem;" 
                         value="${parsed.texto.replace(/"/g, '&quot;')}" 
-                        placeholder="Descripción del ítem..." 
-                        oninput="window.ckActualizarItemFallaCompuestoInsp(${sysIdx}, ${itemIdx}, null, this.value)">
-                    <button type="button" class="btn btn-link text-muted p-1 text-decoration-none ck-btn-trash-item" onclick="window.ckEliminarItemFallaInsp(${sysIdx}, ${itemIdx})" title="Eliminar ítem">
-                        <i class="bi bi-trash3 fs-6"></i>
+                        oninput="window.ckActualizarItemFallaCompuestoInsp(${sysIdx}, ${itemIdx}, null, this.value)" 
+                        placeholder="Nombre de Subcategoría / Ítem">
+                    <button class="btn btn-sm btn-light text-secondary border rounded-2" onclick="window.ckEliminarItemFallaInsp(${sysIdx}, ${itemIdx})" title="Eliminar ítem">
+                        <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
             `;
         });
 
         html += `
-            <div class="mb-4">
-                <!-- Encabezado del Sistema -->
-                <div class="d-flex align-items-center justify-content-between px-2 mb-2">
-                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 85%;">
-                        <div class="d-flex align-items-center justify-content-center rounded-circle text-secondary flex-shrink-0" style="width: 28px; height: 28px; background: #e2e8f0;">
-                            <i class="bi ${icon}" style="font-size: 0.85rem;"></i>
-                        </div>
-                        <input type="text" class="form-control form-control-sm text-dark border-0 bg-transparent p-0 fw-bold" 
-                            style="font-size: 0.95rem; letter-spacing: 0.02em; font-weight: 800 !important; box-shadow: none;" 
+            <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 me-2">
+                        <span class="badge rounded-circle fw-bold" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:#0284c7;color:#fff;font-size:0.78rem;">${sysIdx + 1}</span>
+                        <input type="text" class="form-control form-control-sm fw-bold text-dark border-0 bg-transparent p-0" 
+                            style="font-size:0.95rem; box-shadow:none;" 
                             value="${title.replace(/"/g, '&quot;')}" 
-                            oninput="window.ckActualizarTituloSistemaInsp(${sysIdx}, this.value)"
-                            placeholder="NOMBRE SISTEMA">
-                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 fw-normal flex-shrink-0" style="font-size: 0.72rem;">
-                            ${items.length} ítems
-                        </span>
+                            oninput="window.ckActualizarTituloSistemaInsp(${sysIdx}, this.value)" 
+                            placeholder="Nombre del Sistema / Categoría">
                     </div>
-                    <button type="button" class="btn btn-link text-muted p-1 text-decoration-none" onclick="window.ckEliminarSistemaInsp(${sysIdx})" title="Eliminar sistema">
-                        <i class="bi bi-trash3 fs-6"></i>
+                    <button class="btn btn-sm btn-outline-danger border-0" onclick="window.ckEliminarSistemaInsp(${sysIdx})" title="Eliminar Categoría">
+                        <i class="bi bi-trash fs-6"></i>
                     </button>
                 </div>
 
-                <!-- Tarjeta con Ítems -->
-                <div class="card border-0 rounded-4 shadow-2xs overflow-hidden bg-white" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex flex-column">
-                        ${itemsHtml}
-                        
-                        <!-- Barra para añadir ítem -->
-                        <div class="d-flex align-items-center gap-2 p-2.5 px-3 bg-white" style="border-top: ${items.length > 0 ? '1px solid #f1f5f9' : 'none'};">
-                            <i class="bi bi-plus text-primary fs-5"></i>
-                            <input type="text" class="form-control form-control-sm border-0 bg-transparent text-dark p-0 flex-grow-1" 
-                                id="insp-new-item-input-${sysIdx}" 
-                                style="font-size: 0.88rem; box-shadow: none;" 
-                                placeholder="Añadir ítem a ${title} (presiona Enter)..." 
-                                onkeydown="if(event.key==='Enter'){ event.preventDefault(); window.ckAgregarItemDesdeInputInsp(${sysIdx}); }">
-                            <button type="button" class="btn btn-link text-primary fw-bold text-decoration-none p-0 px-2 flex-shrink-0" style="font-size: 0.85rem;" onclick="window.ckAgregarItemDesdeInputInsp(${sysIdx})">
-                                Añadir
-                            </button>
-                        </div>
-                    </div>
+                <div class="d-flex flex-column gap-1">
+                    ${itemsHtml}
                 </div>
+
+                <button class="btn btn-sm btn-light border w-100 mt-2 fw-semibold text-secondary rounded-3 py-2" onclick="window.ckAgregarItemADeclaradoInsp(${sysIdx})">
+                    <i class="bi bi-plus-lg me-1"></i> Añadir Subcategoría
+                </button>
             </div>
         `;
     });
@@ -3509,21 +3495,14 @@ window.ckRenderizarConfigSistemasInsp = function() {
     container.innerHTML = html;
 };
 
-window.ckAgregarItemDesdeInputInsp = function(sysIdx) {
+window.ckAgregarItemADeclaradoInsp = function(sysIdx) {
     const unidad = window._inspConfigTabActiva || 'tracto';
-    const input = document.getElementById(`insp-new-item-input-${sysIdx}`);
-    if (!input) return;
-    const txt = (input.value || '').trim();
-    if (!txt) return;
-
     const sys = window._inspConfigTemp[unidad][sysIdx];
     if (!sys) return;
     if (!Array.isArray(sys.items)) sys.items = [];
-
     const nextNum = sys.items.length + 1;
     const padded = String(nextNum).padStart(2, '0');
-    sys.items.push(`${padded} ${txt}`);
-    input.value = '';
+    sys.items.push(`${padded} Nuevo Ítem de Inspección`);
     window.ckRenderizarConfigSistemasInsp();
 };
 
@@ -3613,24 +3592,20 @@ window.guardarConfigInsp = async function() {
                 items: t.items_json
             }));
 
-            const modalEl = document.getElementById('modalConfigInsp');
-            if (modalEl) {
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-            }
+            window.cerrarPlantillaInsp();
 
             if (typeof window.showToastNotification === 'function') {
-                window.showToastNotification('✅ Configuración de inspecciones guardada exitosamente.', 'success');
+                window.showToastNotification('✅ Plantilla de inspecciones guardada exitosamente.', 'success');
             } else {
-                alert('✅ Configuración de inspecciones guardada exitosamente.');
+                alert('✅ Plantilla de inspecciones guardada exitosamente.');
             }
             recargarModulo('statusMant');
         } else {
-            alert('Error al guardar configuración: ' + (json.error || 'Error desconocido'));
+            alert('Error al guardar plantilla: ' + (json.error || 'Error desconocido'));
         }
     } catch (e) {
-        console.error('Error guardando configuración:', e);
-        alert('Error de conexión al guardar configuración.');
+        console.error('Error guardando plantilla:', e);
+        alert('Error de conexión al guardar plantilla.');
     }
 };
 

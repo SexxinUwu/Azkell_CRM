@@ -739,7 +739,7 @@ window.ckRenderizarTodosAcordeones = function() {
 window._ckConfigTabActiva = 'tracto';
 window._ckConfigTemp = { tracto: [], remolque: [] };
 
-window.ckAbrirModalConfigSistemas = async function() {
+window.ckAbrirPlantilla = async function() {
     await window.ckCargarConfigSistemasDesdeBackend();
 
     // Clonar esquemas para edición temporal
@@ -752,12 +752,19 @@ window.ckAbrirModalConfigSistemas = async function() {
     window.ckActualizarBadgesTabsConfig();
     window.ckRenderizarConfigSistemas();
 
-    const modalEl = document.getElementById('modalConfigChecklistSistemas');
-    if (modalEl) {
-        if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modal.show();
-    }
+    const vLista = document.getElementById('ck-view-lista');
+    const vPlantilla = document.getElementById('ck-view-plantilla');
+    if (vLista) vLista.style.display = 'none';
+    if (vPlantilla) vPlantilla.style.display = 'block';
+};
+
+window.ckAbrirModalConfigSistemas = window.ckAbrirPlantilla;
+
+window.ckCerrarPlantilla = function() {
+    const vLista = document.getElementById('ck-view-lista');
+    const vPlantilla = document.getElementById('ck-view-plantilla');
+    if (vPlantilla) vPlantilla.style.display = 'none';
+    if (vLista) vLista.style.display = 'block';
 };
 
 window.ckActualizarBadgesTabsConfig = function() {
@@ -845,68 +852,48 @@ window.ckRenderizarConfigSistemas = function() {
     let html = '';
     sistemas.forEach((sys, sysIdx) => {
         const title = (sys.title || 'SISTEMA').toUpperCase();
-        const icon = sys.icon || (unidad === 'tracto' ? (title.includes('LLANTA') ? 'bi-disc' : (title.includes('MOTOR') ? 'bi-gear' : 'bi-sliders')) : 'bi-truck-flatbed');
         const items = Array.isArray(sys.items) ? sys.items : [];
 
         let itemsHtml = '';
         items.forEach((itTxt, itemIdx) => {
             const parsed = ckParseCodigoTexto(itTxt, itemIdx);
             itemsHtml += `
-                <div class="d-flex align-items-center gap-3 p-2.5 px-3 bg-white" style="border-bottom: 1px solid #f1f5f9;">
-                    <span class="text-muted fw-bold" style="font-family: monospace; font-size: 0.85rem; width: 24px; min-width: 24px; color: #94a3b8;">${parsed.codigo}</span>
-                    <input type="text" class="form-control form-control-sm fw-medium text-dark border-0 bg-transparent p-0 flex-grow-1" 
-                        style="font-size: 0.9rem; box-shadow: none;" 
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-2 ps-2 ps-md-3 flex-wrap flex-sm-nowrap">
+                    <i class="bi bi-dot fs-4 text-secondary d-none d-sm-inline"></i>
+                    <input type="text" class="form-control form-control-sm flex-grow-1" style="font-size:0.88rem; font-weight:600; border:1px solid #e2e8f0; border-radius:10px; padding:0.5rem 0.8rem; background:#f8fafc;" 
                         value="${parsed.texto.replace(/"/g, '&quot;')}" 
-                        placeholder="Descripción del componente..." 
-                        oninput="window.ckActualizarItemFallaCompuesto(${sysIdx}, ${itemIdx}, null, this.value)">
-                    <button type="button" class="btn btn-link text-muted p-1 text-decoration-none ck-btn-trash-item" onclick="window.ckEliminarItemFalla(${sysIdx}, ${itemIdx})" title="Eliminar ítem">
-                        <i class="bi bi-trash3 fs-6"></i>
+                        oninput="window.ckActualizarItemFallaCompuesto(${sysIdx}, ${itemIdx}, '${parsed.codigo}', this.value)" 
+                        placeholder="Nombre de Subcategoría / Ítem">
+                    <button class="btn btn-sm btn-light text-secondary border" onclick="window.ckEliminarItemFalla(${sysIdx}, ${itemIdx})" title="Eliminar ítem" style="border-radius:8px; padding:0.4rem 0.65rem;">
+                        <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
             `;
         });
 
         html += `
-            <div class="mb-4">
-                <!-- Encabezado del Sistema -->
-                <div class="d-flex align-items-center justify-content-between px-2 mb-2">
-                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 85%;">
-                        <div class="d-flex align-items-center justify-content-center rounded-circle text-secondary flex-shrink-0" style="width: 28px; height: 28px; background: #e2e8f0;">
-                            <i class="bi ${icon}" style="font-size: 0.85rem;"></i>
-                        </div>
-                        <input type="text" class="form-control form-control-sm text-dark border-0 bg-transparent p-0 fw-bold" 
-                            style="font-size: 0.95rem; letter-spacing: 0.02em; font-weight: 800 !important; box-shadow: none;" 
+            <div class="bg-white rounded-4 p-3 p-md-4 border shadow-2xs mb-3" style="border:1px solid #e2e8f0 !important;">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 me-2">
+                        <span class="badge rounded-circle d-flex align-items-center justify-content-center" style="width:28px;height:28px;background:#0284c7;color:#fff;font-size:0.85rem;font-weight:700;">${sysIdx + 1}</span>
+                        <input type="text" class="form-control form-control-sm border-0 bg-transparent fw-bold text-dark p-0" 
+                            style="font-size:1rem; font-weight:800; box-shadow:none;" 
                             value="${title.replace(/"/g, '&quot;')}" 
-                            oninput="window.ckActualizarTituloSistema(${sysIdx}, this.value)"
-                            placeholder="NOMBRE SISTEMA">
-                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 fw-normal flex-shrink-0" style="font-size: 0.72rem;">
-                            ${items.length} ítems
-                        </span>
+                            oninput="window.ckActualizarTituloSistema(${sysIdx}, this.value)" 
+                            placeholder="Nombre de Categoría / Sistema">
                     </div>
-                    <button type="button" class="btn btn-link text-muted p-1 text-decoration-none" onclick="window.ckEliminarSistema(${sysIdx})" title="Eliminar sistema">
-                        <i class="bi bi-trash3 fs-6"></i>
+                    <button class="btn btn-sm btn-outline-danger" onclick="window.ckEliminarSistema(${sysIdx})" title="Eliminar Categoría" style="border-radius:8px;">
+                        <i class="bi bi-trash"></i>
                     </button>
                 </div>
 
-                <!-- Tarjeta con Ítems -->
-                <div class="card border-0 rounded-4 shadow-2xs overflow-hidden bg-white" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex flex-column">
-                        ${itemsHtml}
-                        
-                        <!-- Barra para añadir ítem -->
-                        <div class="d-flex align-items-center gap-2 p-2.5 px-3 bg-white" style="border-top: ${items.length > 0 ? '1px solid #f1f5f9' : 'none'};">
-                            <i class="bi bi-plus text-primary fs-5"></i>
-                            <input type="text" class="form-control form-control-sm border-0 bg-transparent text-dark p-0 flex-grow-1" 
-                                id="ck-new-item-input-${sysIdx}" 
-                                style="font-size: 0.88rem; box-shadow: none;" 
-                                placeholder="Añadir ítem a ${title} (presiona Enter)..." 
-                                onkeydown="if(event.key==='Enter'){ event.preventDefault(); window.ckAgregarItemDesdeInput(${sysIdx}); }">
-                            <button type="button" class="btn btn-link text-primary fw-bold text-decoration-none p-0 px-2 flex-shrink-0" style="font-size: 0.85rem;" onclick="window.ckAgregarItemDesdeInput(${sysIdx})">
-                                Añadir
-                            </button>
-                        </div>
-                    </div>
+                <div class="mb-2">
+                    ${itemsHtml}
                 </div>
+
+                <button class="btn btn-sm btn-light border w-100 mt-2 fw-semibold text-secondary" onclick="window.ckAgregarItemDesdeInputRapido(${sysIdx})" style="border-radius:10px; padding:0.6rem;">
+                    <i class="bi bi-plus-lg me-1"></i> Añadir Subcategoría
+                </button>
             </div>
         `;
     });
@@ -914,21 +901,15 @@ window.ckRenderizarConfigSistemas = function() {
     container.innerHTML = html;
 };
 
-window.ckAgregarItemDesdeInput = function(sysIdx) {
+window.ckAgregarItemDesdeInputRapido = function(sysIdx) {
     const unidad = window._ckConfigTabActiva || 'tracto';
-    const input = document.getElementById(`ck-new-item-input-${sysIdx}`);
-    if (!input) return;
-    const txt = (input.value || '').trim();
-    if (!txt) return;
-
     const sys = window._ckConfigTemp[unidad][sysIdx];
     if (!sys) return;
     if (!Array.isArray(sys.items)) sys.items = [];
 
     const nextNum = sys.items.length + 1;
     const padded = String(nextNum).padStart(2, '0');
-    sys.items.push(`${padded} ${txt}`);
-    input.value = '';
+    sys.items.push(`${padded} Nuevo Ítem de Revisión`);
     window.ckRenderizarConfigSistemas();
 };
 
@@ -940,7 +921,7 @@ window.ckAgregarNuevoSistema = function() {
     const padded = String(nuevoIdx).padStart(2, '0');
     window._ckConfigTemp[unidad].push({
         key: 'sys_' + Date.now(),
-        title: `NUEVO SISTEMA ${padded}`,
+        title: `NUEVA CATEGORÍA ${padded}`,
         icon: unidad === 'tracto' ? 'bi-gear' : 'bi-truck-flatbed',
         items: []
     });
@@ -953,7 +934,7 @@ window.ckEliminarSistema = function(sysIdx) {
     const sys = window._ckConfigTemp[unidad][sysIdx];
     const nombre = sys ? sys.title : 'este sistema';
 
-    if (confirm(`¿Estás seguro de eliminar el sistema "${nombre}" y todas sus fallas asociadas?`)) {
+    if (confirm(`¿Eliminar la categoría "${nombre}" y todas sus subcategorías asociadas?`)) {
         window._ckConfigTemp[unidad].splice(sysIdx, 1);
         window.ckRenderizarConfigSistemas();
     }
@@ -986,6 +967,26 @@ window.ckActualizarItemFallaCompuesto = function(sysIdx, itemIdx, newCodigo, new
     }
 };
 
+window.ckRestaurarConfigSistemas = function() {
+    if (!confirm('¿Deseas restablecer los sistemas y fallas a los valores originales de fábrica?')) return;
+    window._ckConfigTemp = {
+        tracto: [
+            { key: 'motor', title: 'MOTOR', icon: 'bi-gear-fill', items: ['01 Nivel de aceite motor', '02 Fugas de fluidos', '03 Filtro de aire', '04 Pérdida de potencia', '05 Compresora de aire'] },
+            { key: 'caja', title: 'CAJA - CORONAS', icon: 'bi-gear-wide-connected', items: ['06 Embrague', '07 Palanca de cambios', '08 Freno de Motor', '09 Ruido en caja de cambios'] },
+            { key: 'refri', title: 'REFRIGERACION', icon: 'bi-thermometer-half', items: ['10 Nivel de refrigerante', '11 Fugas de refrigerante', '12 Radiador, intercooler'] },
+            { key: 'direccion', title: 'DIRECCION', icon: 'bi-compass', items: ['13 Alineamiento y balanceo', '14 Caja de dirección', '15 Barras y terminales'] },
+            { key: 'cabina', title: 'CABINA Y CHASIS', icon: 'bi-truck-front', items: ['16 Tablero e instrumentos', '17 Lunas y parabrisas', '18 Cinturones de seguridad'] }
+        ],
+        remolque: [
+            { key: 'frenos', title: 'FRENOS', icon: 'bi-hand-index-thumb', items: ['19 Revisar Zapatos', '20 Pulpo de Freno', '21 Tanque de Aire', '22 Rachet de Freno'] },
+            { key: 'carreta', title: 'CARRETA', icon: 'bi-truck-flatbed', items: ['23 Estado de triplay', '24 Pisos sin Oxido', '25 Tiro de Remolque', '26 Muelles y Soporte'] },
+            { key: 'electrico', title: 'SISTEMA ELECTRICO', icon: 'bi-lightning-charge', items: ['27 Luces en general', '28 Faros delanteros', '29 Baterías y bornes', '30 Testigos check engine'] },
+            { key: 'suspension', title: 'SUSPENSION', icon: 'bi-arrows-expand', items: ['31 Amortiguadores', '32 Bolsas de aire', '33 Muelles y grilletes'] }
+        ]
+    };
+    window.ckRenderizarConfigSistemas();
+};
+
 window.ckGuardarConfigSistemas = async function() {
     try {
         const payload = {
@@ -1006,16 +1007,12 @@ window.ckGuardarConfigSistemas = async function() {
             window.ckActualizarSistemasObjetos();
             window.ckRenderizarTodosAcordeones();
 
-            const modalEl = document.getElementById('modalConfigChecklistSistemas');
-            if (modalEl) {
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-            }
+            window.ckCerrarPlantilla();
 
             if (typeof window.showToastNotification === 'function') {
-                window.showToastNotification('✅ Configuración de sistemas y fallas guardada exitosamente.', 'success');
+                window.showToastNotification('✅ Plantilla de fallas actualizada con éxito.', 'success');
             } else {
-                alert('✅ Configuración de sistemas y fallas guardada exitosamente.');
+                alert('✅ Plantilla de fallas actualizada con éxito.');
             }
         } else {
             alert('Error guardando configuración: ' + (json.error || 'Error desconocido'));

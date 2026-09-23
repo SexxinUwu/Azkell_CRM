@@ -271,6 +271,7 @@ window.verificarSesionGuardada = function() {
     var vGps       = showFlotaHub && _cL('gps');
     var vPlacas    = showFlotaHub && _cL('placas');
     var vDocsFlota = showFlotaHub && _cL('docs_flota');
+    var vEntregaVehiculos = showFlotaHub && (_cL('entrega_vehiculos') || _cL('seguridad_unidades') || _cL('seg_unidades') || _cL('placas'));
 
     safe('nav-disponibilidad-flota',   vDisponibilidad);
     safe('mbnav-disponibilidad-flota', vDisponibilidad);
@@ -280,8 +281,10 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-placas',     vPlacas);
     safe('nav-documentos-flota',   vDocsFlota);
     safe('mbnav-documentos-flota', vDocsFlota);
+    safe('nav-entrega-vehiculos',  vEntregaVehiculos);
+    safe('mbnav-entrega-vehiculos', vEntregaVehiculos);
 
-    var showFlota = vDisponibilidad || vGps || vPlacas || vDocsFlota;
+    var showFlota = vDisponibilidad || vGps || vPlacas || vDocsFlota || vEntregaVehiculos;
     safe('wrap-flota', showFlota);
     safe('bnav-flota', showFlota);
 
@@ -483,8 +486,6 @@ window.verificarSesionGuardada = function() {
     
     safe('nav-seg-unidades',          vChecklistSeg);
     safe('mbnav-seg-unidades',        vChecklistSeg);
-    safe('nav-seg-entrega-vehiculos', vChecklistSeg);
-    safe('mbnav-seg-entrega-vehiculos', vChecklistSeg);
     safe('nav-seg-unidades-base',     vUnidadesBase);
     safe('mbnav-seg-unidades-base',   vUnidadesBase);
 
@@ -3983,6 +3984,7 @@ const TITULOS_MODULOS = {
     'tesoreria/bancos':                 'Bancos',
     'tesoreria/centros-costos':         'Centros de Costos',
     'operaciones/conductor-portal':     'Mi Viaje & Rendición',
+    'flota/entrega-vehiculos':          'CheckList Entrega de Vehículos',
     'seguridad/entrega-vehiculos':      'CheckList Entrega de Vehículos',
 };
 
@@ -4043,6 +4045,7 @@ const MENU_IDS = {
     'flota/disponibilidad':        'nav-disponibilidad-flota',
     'flota/documentos':            'nav-documentos-flota',
     'flota/ubicacion':             'nav-ubicacion',
+    'flota/entrega-vehiculos':     'nav-entrega-vehiculos',
     'directorio/conductores':      'nav-conductores',
     'directorio/clientes':         'nav-clientes',
     'sistema/usuarios':            'nav-usuarios',
@@ -4058,7 +4061,7 @@ const MENU_IDS = {
     'tesoreria/bancos':            'nav-tesoreria-bancos',
     'tesoreria/centros-costos':    'nav-tesoreria-centros-costos',
     'operaciones/conductor-portal': 'nav-conductor-portal',
-    'seguridad/entrega-vehiculos': 'nav-seg-entrega-vehiculos',
+    'seguridad/entrega-vehiculos': 'nav-entrega-vehiculos',
 };
 
 const MENU_SECTION = {
@@ -4099,6 +4102,7 @@ const MENU_SECTION = {
     'mantenimiento/planificacion':    'mantenimiento',
     'mantenimiento/ordenes':          'mantenimiento',
     'flota/ubicacion':            'flota',
+    'flota/entrega-vehiculos':    'flota',
     'directorio/conductores':     'directorio',
     'sistema/usuarios':           'configuracion',
     'sistema/auditoria':          'configuracion',
@@ -4128,7 +4132,7 @@ const MENU_SECTION = {
     'tesoreria/bancos':            'tesoreria',
     'tesoreria/centros-costos':    'tesoreria',
     'operaciones/conductor-portal': 'conductor',
-    'seguridad/entrega-vehiculos': 'seguridad',
+    'seguridad/entrega-vehiculos': 'flota',
 };
 
 const BREADCRUMB_MAP = {
@@ -4140,7 +4144,8 @@ const BREADCRUMB_MAP = {
     'tesoreria/bancos':           ['Tesorería','Bancos'],
     'tesoreria/centros-costos':   ['Tesorería','Centros de Costos'],
     'operaciones/conductor-portal': ['Conductor','Mi Viaje & Rendición'],
-    'seguridad/entrega-vehiculos': ['Seguridad','Entrega de Vehículos'],
+    'flota/entrega-vehiculos':    ['Flota','Entrega de Vehículos'],
+    'seguridad/entrega-vehiculos': ['Flota','Entrega de Vehículos'],
     'almacen/recepcion-compras':  ['Almacén','Recepción de Compras'],
     'operaciones/programacion':    ['Operaciones','Programación'],
     'operaciones/ordenes-viaje':   ['Operaciones','Órdenes de Viaje'],

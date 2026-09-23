@@ -14,6 +14,7 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicación',  desc:'Visualización en tiempo real',  lcad:false },
     { grupo:'FLOTA',         key:'docs_flota',    nombre:'Documentos Flota', desc:'Control documentario',          lcad:true  },
     { grupo:'FLOTA',         key:'placas',        nombre:'Maestro de Placas',desc:'Configuración técnica de unidades', lcad:true },
+    { grupo:'FLOTA',         key:'entrega_vehiculos', nombre:'Entrega de Vehículos', desc:'Actas de entrega y recepción de flota', lcad:true },
     { grupo:'MANTENIMIENTO', key:'status_rampa',  nombre:'Status Rampa',     desc:'Gestión visual en taller',      lcad:true  },
     { grupo:'MANTENIMIENTO', key:'checklist',     nombre:'Reporte de Fallas',desc:'Checklist y reportes de falla',  lcad:true  },
     { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Análisis de Inspecciones', desc:'Registro de inspecciones', lcad:true  },
