@@ -585,7 +585,7 @@ window.cambiarModoVistaDoc = function(modo) {
 window._calDate = new Date();
 window._calFiltroTipo = 'ALL';
 
-const CAL_MESES_ES = [
+var CAL_MESES_ES = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];

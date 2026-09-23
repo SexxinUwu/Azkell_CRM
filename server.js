@@ -3033,22 +3033,25 @@ const _multerInv = multer({
 
 // ── Helper endpoints para formularios de Almacén ─────────────────
 app.get('/api/conductores', (req, res) => {
-    db.query("SELECT * FROM conductores ORDER BY estado, nombre", (err, rows) => {
+    const targetDb = req.db || db;
+    targetDb.query("SELECT * FROM conductores ORDER BY estado, nombre", (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        res.json(rows || []);
     });
 });
 
 app.get('/api/conductores-lista', (req, res) => {
-    db.query("SELECT idConductor AS id, nombre, dni FROM conductores ORDER BY nombre", (err, rows) => {
+    const targetDb = req.db || db;
+    targetDb.query("SELECT idConductor AS id, nombre, dni FROM conductores ORDER BY nombre", (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        res.json(rows || []);
     });
 });
 
 app.delete('/api/conductores/:id', (req, res) => {
+    const targetDb = req.db || db;
     const id = req.params.id;
-    db.query("DELETE FROM conductores WHERE idConductor = ?", [id], (err, result) => {
+    targetDb.query("DELETE FROM conductores WHERE idConductor = ?", [id], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
         if (typeof broadcast === 'function') broadcast('conductores', 'eliminar');
         res.json({ ok: true, mensaje: 'Personal eliminado correctamente' });
