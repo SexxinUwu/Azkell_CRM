@@ -1251,9 +1251,12 @@ window._entRender = function() {
         var placaHtml = d.placa ? '<span class="text-dark fw-bold text-nowrap" style="font-size:0.78rem;">' + _entEsc(d.placa) + '</span>' : '<span class="text-dark fw-bold small">—</span>';
         var motivoHtml = d.motivo_entrada ? '<span class="text-dark fw-semibold" style="font-size:0.78rem;">' + _entEsc(d.motivo_entrada) + '</span>' : '<span class="text-muted small">—</span>';
         
-        var vHTML = d.url_voucher_presigned ? '<a href="'+_entEsc(d.url_voucher_presigned)+'" target="_blank" class="text-danger text-decoration-none fw-bold" style="font-size:0.75rem;"><i class="bi bi-file-earmark-pdf"></i> Ver Voucher</a>' : '<a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\');" class="text-secondary text-decoration-none small opacity-75" title="Subir Voucher"><i class="bi bi-upload"></i> Subir</a>';
-        var cHTML = d.url_cotizacion_presigned ? '<a href="'+_entEsc(d.url_cotizacion_presigned)+'" target="_blank" class="text-primary text-decoration-none fw-bold" style="font-size:0.75rem;"><i class="bi bi-file-earmark-text"></i> Ver Cotización</a>' : '<a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\');" class="text-secondary text-decoration-none small opacity-75" title="Subir Cotización"><i class="bi bi-upload"></i> Subir</a>';
-        var fHTML = d.url_factura_presigned ? '<a href="'+_entEsc(d.url_factura_presigned)+'" target="_blank" class="text-success text-decoration-none fw-bold" style="font-size:0.75rem;"><i class="bi bi-file-earmark-check"></i> Ver Factura</a>' : '<a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\');" class="text-secondary text-decoration-none small opacity-75" title="Subir Factura"><i class="bi bi-upload"></i> Subir</a>';
+        var vUrl = d.url_voucher_presigned || d.url_voucher;
+        var cUrl = d.url_cotizacion_presigned || d.url_cotizacion;
+        var fUrl = d.url_factura_presigned || d.url_factura;
+        var vHTML = vUrl ? '<a href="'+_entEsc(vUrl)+'" target="_blank" class="text-danger text-decoration-none fw-bold" style="font-size:0.75rem;"><i class="bi bi-file-earmark-pdf"></i> Ver Voucher</a>' : '<a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\');" class="text-secondary text-decoration-none small opacity-75" title="Subir Voucher"><i class="bi bi-upload"></i> Subir</a>';
+        var cHTML = cUrl ? '<a href="'+_entEsc(cUrl)+'" target="_blank" class="text-primary text-decoration-none fw-bold" style="font-size:0.75rem;"><i class="bi bi-file-earmark-text"></i> Ver Cotización</a>' : '<a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\');" class="text-secondary text-decoration-none small opacity-75" title="Subir Cotización"><i class="bi bi-upload"></i> Subir</a>';
+        var fHTML = fUrl ? '<a href="'+_entEsc(fUrl)+'" target="_blank" class="text-success text-decoration-none fw-bold" style="font-size:0.75rem;"><i class="bi bi-file-earmark-check"></i> Ver Factura</a>' : '<a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\');" class="text-secondary text-decoration-none small opacity-75" title="Subir Factura"><i class="bi bi-upload"></i> Subir</a>';
 
         var items = d.items || [];
         var countItems = items.length;
@@ -1988,6 +1991,15 @@ window.guardarArchivosOCModal = async function() {
         if (!r.ok) {
             var txt = await r.text();
             throw new Error('Error subiendo ' + tipo + ': ' + txt);
+        }
+        var data = await r.json().catch(function() { return {}; });
+        var entrada = (window._entData || []).find(function(e) { return e.id === id; });
+        if (entrada && data.ok) {
+            entrada['url_' + tipo] = data.url;
+            entrada['url_' + tipo + '_presigned'] = data.presignedUrl || data.url;
+            if (tipo === 'voucher' && data.estado) {
+                entrada.estado = data.estado;
+            }
         }
     };
 

@@ -993,6 +993,7 @@ router.get('/empresa-cuentas', (req, res) => {
 });
 
 router.get('/entradas', (req, res) => {
+    const tdb = getDb(req);
     let q = `SELECT e.*, GROUP_CONCAT(CONCAT(COALESCE(i.descripcion, d.descripcion, ''),'|',COALESCE(d.cantidad,0),'|',COALESCE(d.costo_unitario,0),'|',COALESCE(d.moneda,'PEN'),'|',COALESCE(d.inventario_id,''),'|',COALESCE(d.importe,0)) SEPARATOR ';;') AS items_raw
              FROM entradas_inv e
              LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
@@ -1003,7 +1004,7 @@ router.get('/entradas', (req, res) => {
         params.push(req.query.ot_id);
     }
     q += ` GROUP BY e.id ORDER BY e.fecha DESC, e.id DESC LIMIT 300`;
-    db.query(q, params, async (err, rows) => {
+    tdb.query(q, params, async (err, rows) => {
         if (err) {
             console.error('[GET /api/almacen/entradas error]', err);
             return res.status(500).json({ error: err.message });
@@ -1013,7 +1014,7 @@ router.get('/entradas', (req, res) => {
         // Mapear usuarios y proveedores para nombres completos y RUC
         const [usuariosMap, provsMap] = await Promise.all([
             new Promise(resU => {
-                db.query('SELECT nombre, correo, idUsuario FROM usuarios', (eU, rU) => {
+                tdb.query('SELECT nombre, correo, idUsuario FROM usuarios', (eU, rU) => {
                     const uMap = {};
                     if (!eU && rU) {
                         rU.forEach(u => {
@@ -1026,7 +1027,7 @@ router.get('/entradas', (req, res) => {
                 });
             }),
             new Promise(resP => {
-                db.query('SELECT id, nombre, razon_social, numero_documento, telefono, email FROM proveedores_inv', (eP, rP) => {
+                tdb.query('SELECT id, nombre, razon_social, numero_documento, telefono, email FROM proveedores_inv', (eP, rP) => {
                     const pMap = {};
                     if (!eP && rP) {
                         rP.forEach(p => {
@@ -1040,7 +1041,7 @@ router.get('/entradas', (req, res) => {
             })
         ]);
 
-        const signedRows = await Promise.all(rows.map(async (r) => {
+        const signedRows = await Promise.all((rows || []).map(async (r) => {
             // Resolver creador_nombre
             const creadorKey = (r.creado_por || '').toLowerCase().trim();
             r.creador_nombre = usuariosMap[creadorKey] || usuariosMap[r.creado_por] || r.creado_por || 'SISTEMA';
@@ -1082,6 +1083,7 @@ router.get('/entradas', (req, res) => {
     });
 });
 router.post('/entradas', (req, res) => {
+    const tdb = getDb(req);
     const {
         fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv,
         observaciones, creado_por, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id,
@@ -1092,7 +1094,7 @@ router.post('/entradas', (req, res) => {
     _generarCodigoAlmacen('ENT', anio, (err, id) => {
         if (err) return res.status(500).json({ error: err.message });
         const total_pen = _calcularTotalPen(items || [], tc);
-        db.query(
+        tdb.query(
             `INSERT INTO entradas_inv (
                 id, fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, total_pen,
                 observaciones, tipo_igv, creado_por, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id, estado,
@@ -1113,7 +1115,7 @@ router.post('/entradas', (req, res) => {
                 const descsEntrada = items.filter(d => !d.inventario_id && d.descripcion).map(d => d.descripcion);
                 const resolverEntrada = (cb) => {
                     if (!descsEntrada.length) return cb({});
-                    db.query('SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1', [descsEntrada], (e, rows) => {
+                    tdb.query('SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1', [descsEntrada], (e, rows) => {
                         const mapa = {};
                         if (!e && rows) rows.forEach(r => { mapa[r.descripcion] = r.id; });
                         cb(mapa);
@@ -1126,7 +1128,7 @@ router.post('/entradas', (req, res) => {
                             parseFloat(d.cantidad)||0, parseFloat(d.costo_unitario)||0, d.moneda||moneda||'PEN',
                             parseFloat(d.importe)||((parseFloat(d.cantidad)||0)*(parseFloat(d.costo_unitario)||0))];
                     });
-                    db.query('INSERT INTO detalle_entradas_inv (entrada_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {
+                    tdb.query('INSERT INTO detalle_entradas_inv (entrada_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {
                         // Actualizar costo_referencial en PEN para cada ítem con inventario_id conocido
                         const toUpdate = items.filter(d =>
                             (d.inventario_id || mapaInvEnt[d.descripcion]) && parseFloat(d.costo_unitario) > 0
@@ -1138,7 +1140,7 @@ router.post('/entradas', (req, res) => {
                             const isUSD      = d.moneda === 'USD' || moneda === 'USD';
                             const costoOrig  = parseFloat(d.costo_unitario);
                             const costoSoles = isUSD ? costoOrig * tc : costoOrig;
-                            db.query(
+                            tdb.query(
                                 'UPDATE inventario SET costo_referencial=?, costo_soles=?, tipo_cambio=? WHERE id=? AND activo=1',
                                 [costoOrig, costoSoles, isUSD ? tc : null, invId],
                                 () => { if (++done === toUpdate.length) if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id }); }
@@ -1150,6 +1152,7 @@ router.post('/entradas', (req, res) => {
     });
 });
 router.put('/entradas/:id', (req, res) => {
+    const tdb = getDb(req);
     const { id } = req.params;
     const {
         fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv,
@@ -1159,7 +1162,7 @@ router.put('/entradas/:id', (req, res) => {
     const tc = parseFloat(tipo_cambio) || 1;
     const total_pen = _calcularTotalPen(items || [], tc);
 
-    db.query(
+    tdb.query(
         `UPDATE entradas_inv SET
             fecha=?, proveedor_id=?, proveedor_nombre=?, documento_referencia=?, moneda=?, tipo_cambio=?, total_pen=?,
             observaciones=?, tipo_igv=?, motivo_entrada=?, placa=?, tipo_orden=?, condicion_pago=?, dias_credito=?, ot_id=?,
@@ -1177,14 +1180,14 @@ router.put('/entradas/:id', (req, res) => {
             if (err) return res.status(500).json({ error: err.message });
             
             // Delete old details
-            db.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (errDel) => {
+            tdb.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (errDel) => {
                 if (errDel) return res.status(500).json({ error: errDel.message });
                 if (!items || !items.length) { if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
 
                 const descsEntrada = items.filter(d => !d.inventario_id && d.descripcion).map(d => d.descripcion);
                 const resolverEntrada = (cb) => {
                     if (!descsEntrada.length) return cb({});
-                    db.query('SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1', [descsEntrada], (e, rows) => {
+                    tdb.query('SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1', [descsEntrada], (e, rows) => {
                         const mapa = {};
                         if (!e && rows) rows.forEach(r => { mapa[r.descripcion] = r.id; });
                         cb(mapa);
@@ -1198,7 +1201,7 @@ router.put('/entradas/:id', (req, res) => {
                             parseFloat(d.cantidad)||0, parseFloat(d.costo_unitario)||0, d.moneda||moneda||'PEN',
                             parseFloat(d.importe)||((parseFloat(d.cantidad)||0)*(parseFloat(d.costo_unitario)||0))];
                     });
-                    db.query('INSERT INTO detalle_entradas_inv (entrada_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {
+                    tdb.query('INSERT INTO detalle_entradas_inv (entrada_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {
                         const toUpdate = items.filter(d =>
                             (d.inventario_id || mapaInvEnt[d.descripcion]) && parseFloat(d.costo_unitario) > 0
                         );
@@ -1209,7 +1212,7 @@ router.put('/entradas/:id', (req, res) => {
                             const isUSD      = d.moneda === 'USD' || moneda === 'USD';
                             const costoOrig  = parseFloat(d.costo_unitario);
                             const costoSoles = isUSD ? costoOrig * tc : costoOrig;
-                            db.query(
+                            tdb.query(
                                 'UPDATE inventario SET costo_referencial=?, costo_soles=?, tipo_cambio=? WHERE id=? AND activo=1',
                                 [costoOrig, costoSoles, isUSD ? tc : null, invId],
                                 () => { if (++done === toUpdate.length) if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id }); }
@@ -1222,10 +1225,11 @@ router.put('/entradas/:id', (req, res) => {
     );
 });
 router.delete('/entradas/:id', (req, res) => {
+    const tdb = getDb(req);
     const { id } = req.params;
-    db.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (err) => {
+    tdb.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        db.query('DELETE FROM entradas_inv WHERE id=?', [id], (err2) => {
+        tdb.query('DELETE FROM entradas_inv WHERE id=?', [id], (err2) => {
             if (err2) return res.status(500).json({ error: err2.message });
             if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
@@ -1233,6 +1237,7 @@ router.delete('/entradas/:id', (req, res) => {
 });
 
 router.put('/entradas/:id/estado', (req, res) => {
+    const tdb = getDb(req);
     const { id } = req.params;
     const { estado, comentario, usuario } = req.body;
     if (!estado) return res.status(400).json({ error: 'Estado requerido' });
@@ -1256,10 +1261,10 @@ router.put('/entradas/:id/estado', (req, res) => {
     params.push(id);
     let sql = `UPDATE entradas_inv SET ${setFields.join(', ')} WHERE id=?`;
 
-    db.query(sql, params, (err) => {
+    tdb.query(sql, params, (err) => {
         if (err) {
             // Fallback si la columna no existiera
-            db.query('UPDATE entradas_inv SET estado=? WHERE id=?', [estado, id], (errFallback) => {
+            tdb.query('UPDATE entradas_inv SET estado=? WHERE id=?', [estado, id], (errFallback) => {
                 if (errFallback) return res.status(500).json({ error: errFallback.message });
                 res.json({ ok: true, estado });
             });
@@ -1273,9 +1278,10 @@ router.put('/entradas/:id/estado', (req, res) => {
 });
 
 router.put('/entradas/:id/anular', (req, res) => {
+    const tdb = getDb(req);
     const { id } = req.params;
     const { motivo } = req.body;
-    db.query('UPDATE entradas_inv SET estado=?, motivo_anulacion=? WHERE id=?',
+    tdb.query('UPDATE entradas_inv SET estado=?, motivo_anulacion=? WHERE id=?',
         ['Anulado', String(motivo || '').trim(), id], (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); } 
@@ -1290,9 +1296,10 @@ router.post('/entradas/:id/archivo/:tipo', _multerInv.single('archivo'), (req, r
     if (!req.file) return res.status(400).json({ error: 'No se recibió archivo' });
 
     try {
-        const { uploadToS3, deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
+        const tdb = getDb(req);
+        const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl } = require('../utils/s3');
         const col = `url_${tipo}`;
-        db.query(`SELECT ${col}, estado FROM entradas_inv WHERE id=?`, [req.params.id], async (err, rows) => {
+        tdb.query(`SELECT ${col}, estado FROM entradas_inv WHERE id=?`, [req.params.id], async (err, rows) => {
             if (err) return res.status(500).json({ error: 'DB Error: ' + err.message });
             try {
                 if (rows && rows.length > 0 && rows[0][col]) {
@@ -1310,9 +1317,10 @@ router.post('/entradas/:id/archivo/:tipo', _multerInv.single('archivo'), (req, r
                     updateSql = `UPDATE entradas_inv SET ${col}=?, estado='Procesado' WHERE id=?`;
                 }
 
-                db.query(updateSql, updateParams, (err2) => {
+                tdb.query(updateSql, updateParams, async (err2) => {
                     if (err2) return res.status(500).json({ error: 'Update Error: ' + err2.message });
-                    res.json({ ok: true, url, estado: tipo === 'voucher' ? 'Procesado' : (rows[0] ? rows[0].estado : 'Registrado') });
+                    const presignedUrl = await getPresignedUrl(s3Key).catch(() => url);
+                    res.json({ ok: true, url, presignedUrl, estado: tipo === 'voucher' ? 'Procesado' : (rows[0] ? rows[0].estado : 'Registrado') });
                 });
             } catch (innerError) {
                 res.status(500).json({ error: 'S3 Error: ' + innerError.message });
@@ -1328,16 +1336,17 @@ router.delete('/entradas/:id/archivo/:tipo', (req, res) => {
     if (!['voucher', 'cotizacion', 'factura'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
 
     try {
+        const tdb = getDb(req);
         const { deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
         const col = `url_${tipo}`;
-        db.query(`SELECT ${col} FROM entradas_inv WHERE id=?`, [req.params.id], async (err, rows) => {
+        tdb.query(`SELECT ${col} FROM entradas_inv WHERE id=?`, [req.params.id], async (err, rows) => {
             if (err) return res.status(500).json({ error: 'DB Error: ' + err.message });
             try {
                 if (rows && rows.length > 0 && rows[0][col]) {
                     const oldKey = s3KeyFromUrl(rows[0][col]);
                     if (oldKey) await deleteFromS3(oldKey).catch(() => {});
                 }
-                db.query(`UPDATE entradas_inv SET ${col}=NULL WHERE id=?`, [req.params.id], (err2) => {
+                tdb.query(`UPDATE entradas_inv SET ${col}=NULL WHERE id=?`, [req.params.id], (err2) => {
                     if (err2) return res.status(500).json({ error: 'Update Error: ' + err2.message });
                     if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'ELIMINÓ', req.path); }
                     res.json({ ok: true });

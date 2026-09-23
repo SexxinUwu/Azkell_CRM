@@ -272,18 +272,24 @@ window.dispActualizarKPIs = function () {
 
 // ── Filtro Nivel 1: Click en Cards Superiores (Estado) ─────────────
 window.dispFiltrarPorCard = function (estado, el) {
-    window._dispFiltroCard = estado || 'TODOS';
-    window._dispFiltroEmpresa = 'TODAS';
+    if (window._dispFiltroCard === estado && estado !== 'TODOS') {
+        window._dispFiltroCard = 'TODOS';
+    } else {
+        window._dispFiltroCard = estado || 'TODOS';
+    }
 
-    // Actualizar clase activa en cards superiores
-    document.querySelectorAll('#disponibilidad-app .ck-kpi-card').forEach(function(card) {
-        var cardId = 'disp-kpi-card-' + (estado === 'En Base' ? 'base' : (estado === 'En Ruta' ? 'ruta' : (estado === 'En Mantenimiento' ? 'mant' : 'total')));
-        card.classList.toggle('active', card.id === cardId);
-    });
+    const currentCard = window._dispFiltroCard;
+    const cardMap = {
+        'En Base': 'disp-kpi-card-base',
+        'En Ruta': 'disp-kpi-card-ruta',
+        'En Mantenimiento': 'disp-kpi-card-mant',
+        'TODOS': 'disp-kpi-card-total'
+    };
+    const targetId = cardMap[currentCard] || 'disp-kpi-card-total';
 
-    // Resetear segmented control inferior a "Todas"
-    document.querySelectorAll('#btn-group-empresas-disp .ck-segment-item').forEach(function(b) {
-        b.classList.toggle('active', b.getAttribute('data-empresa') === 'TODAS');
+    // Actualizar clase activa en cards superiores respetando el filtro de empresa actual
+    document.querySelectorAll('#disponibilidad-app .ck-kpi-card, #disp-kpi-row .ck-kpi-card').forEach(function(card) {
+        card.classList.toggle('active', card.id === targetId);
     });
 
     window.dispFiltrar();
@@ -297,7 +303,8 @@ window.dispFiltrarPorEmpresa = function (empresa, btn) {
 
     // Actualizar clase activa en segmented control inferior
     document.querySelectorAll('#btn-group-empresas-disp .ck-segment-item').forEach(function(b) {
-        b.classList.toggle('active', b === btn || b.getAttribute('data-empresa') === empresa);
+        const bEmp = b.getAttribute('data-empresa');
+        b.classList.toggle('active', b === btn || bEmp === window._dispFiltroEmpresa);
     });
 
     window.dispFiltrar();
