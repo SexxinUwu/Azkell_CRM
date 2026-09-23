@@ -767,15 +767,11 @@ window.filtrarInventario = function() {
 };
 
 // ── Helpers de stock badge ────────────────────────────────────────
-function _invAlmacenBadge(almacenStr, ubicacionStr, anaquelVal) {
+function _invAlmacenBadge(almacenStr, ubicacionStr, anaquelVal, ultimoProveedor) {
     var alm = (almacenStr || '').trim();
     var ubi = (ubicacionStr || '').trim();
     var anaq = (anaquelVal != null && anaquelVal !== '') ? String(anaquelVal).trim() : '';
-    
-    var locParts = [];
-    if (ubi) locParts.push(ubi);
-    if (anaq) locParts.push('Anaquel ' + anaq);
-    var locText = locParts.join(' - ');
+    var prov = (ultimoProveedor != null && ultimoProveedor !== '') ? String(ultimoProveedor).trim() : '';
 
     var icon = '🏭';
     var bg = '#e0f2fe';
@@ -788,10 +784,23 @@ function _invAlmacenBadge(almacenStr, ubicacionStr, anaquelVal) {
     }
 
     var almHtml = alm ? '<span style="background:' + bg + '; color:' + color + '; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.68rem; display:inline-flex; align-items:center; gap:4px;">' + icon + ' ' + _invEsc(alm) + '</span>' : '';
-    var ubiHtml = locText ? '<span style="background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:6px; font-weight:600; font-size:0.68rem; display:inline-flex; align-items:center; gap:4px;">📍 ' + _invEsc(locText) + '</span>' : '';
+    
+    // Anaquel / Ubicación
+    var anaqHtml = '';
+    if (anaq) {
+        anaqHtml = '<span style="background:#f1f5f9; color:#334155; border:1px solid #e2e8f0; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.68rem; display:inline-flex; align-items:center; gap:4px;" title="Anaquel / Posición física"><i class="bi bi-grid-3x3 text-secondary" style="font-size:0.75rem;"></i> Anaquel: ' + _invEsc(anaq) + '</span>';
+    } else if (ubi) {
+        anaqHtml = '<span style="background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:6px; font-weight:600; font-size:0.68rem; display:inline-flex; align-items:center; gap:4px;" title="Ubicación"><i class="bi bi-geo-alt-fill text-danger" style="font-size:0.75rem;"></i> ' + _invEsc(ubi) + '</span>';
+    }
 
-    if (!almHtml && !ubiHtml) return '<span style="color:#9ca3af; font-size:0.68rem; font-style:italic;">Sin almacén asignado</span>';
-    return almHtml + ubiHtml;
+    // Último Proveedor (obtenido de las compras registradas con el código INV)
+    var provHtml = '';
+    if (prov) {
+        provHtml = '<span style="background:#f8fafc; color:#1e293b; border:1px solid #cbd5e1; padding:2px 8px; border-radius:6px; font-weight:600; font-size:0.68rem; display:inline-flex; align-items:center; gap:4px; max-width:280px;" class="text-truncate" title="Último Proveedor de Compra: ' + _invEsc(prov) + '"><i class="bi bi-truck text-primary" style="font-size:0.75rem;"></i> <span class="text-truncate">' + _invEsc(prov) + '</span></span>';
+    }
+
+    if (!almHtml && !anaqHtml && !provHtml) return '<span style="color:#9ca3af; font-size:0.68rem; font-style:italic;">Sin almacén asignado</span>';
+    return almHtml + anaqHtml + provHtml;
 }
 
 function _invStockBadge(d) {
@@ -937,7 +946,7 @@ function _invRenderCard(d) {
     var costo  = parseFloat(d.costo_soles != null ? d.costo_soles : d.costo_referencial || 0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
     var stockFmt = stockActual.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
     
-    var almBadge = _invAlmacenBadge(d.almacen, d.ubicacion, d.anaquel);
+    var almBadge = _invAlmacenBadge(d.almacen, d.ubicacion, d.anaquel, d.ultimo_proveedor);
 
     var imageOrIcon = (d.imagen_url && d.imagen_url.length > 0)
         ? '<img src="' + _invEsc(d.imagen_url) + '" style="width:100%;height:100%;object-fit:cover;border-radius:0.75rem;">'
@@ -1330,6 +1339,9 @@ window.abrirDetalleInv = function(id) {
     if (!isService) {
         html += techItem('6 col-md-3', 'Stock Mínimo', parseFloat(item.stock_min || 0) + ' ' + (item.unidad || ''));
         html += techItem('6 col-md-3', 'Stock Máximo', parseFloat(item.stock_max || 0) + ' ' + (item.unidad || ''));
+        if (item.ultimo_proveedor) {
+            html += techItem('12 col-md-6', 'Último Proveedor (OC / Entrada)', item.ultimo_proveedor);
+        }
     }
     
     html += '<div class="col-12 col-md-6">' +
