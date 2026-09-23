@@ -3,8 +3,8 @@ const express = require('express');
 module.exports = function (db, logAudit) {
     const router = express.Router();
 
-    // GET /api/mantenimiento/inspecciones/config
-    router.get('/inspecciones/config', (req, res) => {
+    // GET /api/mantenimiento/inspecciones/config y alias /inspecciones/configuracion
+    const handleGetInspConfig = (req, res) => {
         const targetDb = req.db || db;
         const query = 'SELECT * FROM mant_insp_templates ORDER BY orden ASC';
         targetDb.query(query, (err, rows) => {
@@ -14,7 +14,9 @@ module.exports = function (db, logAudit) {
             }
             res.json({ ok: true, data: rows });
         });
-    });
+    };
+    router.get('/inspecciones/config', handleGetInspConfig);
+    router.get('/inspecciones/configuracion', handleGetInspConfig);
 
     // POST /api/mantenimiento/inspecciones/config/guardar
     router.post('/inspecciones/config/guardar', (req, res) => {
