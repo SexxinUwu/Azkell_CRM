@@ -2574,6 +2574,7 @@ module.exports = function (db, broadcast, logAudit) {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'DB no disponible' });
             await ensureTableCaja(req);
+            await ensureTableCentrosCostos(req);
             await _ensureColumnasPagoRequerimientos(tdb);
 
             const { banco, estado, fecha_desde, fecha_hasta, tipo_movimiento, search } = req.query;
@@ -2598,18 +2599,18 @@ module.exports = function (db, broadcast, logAudit) {
                 params.push(tipo_movimiento.toUpperCase());
             }
             if (banco && banco !== 'TODOS' && banco !== '') {
-                condiciones.push("(UPPER(c.cuenta_bancaria_empresa) LIKE ? OR UPPER(c.origen_dinero) LIKE ?)");
-                params.push(`%${banco.toUpperCase()}%`, `%${banco.toUpperCase()}%`);
+                condiciones.push("UPPER(COALESCE(c.cuenta_bancaria_empresa, '')) LIKE ?");
+                params.push(`%${banco.toUpperCase()}%`);
             }
 
             const sql = `
                 SELECT 
                     c.*,
-                    COALESCE(c.numero_caja, CONCAT(COALESCE(c.anio, YEAR(c.fecha)), '-', LPAD(COALESCE(c.numero, c.id), 6, '0'))) AS codigo_caja,
-                    COALESCE(c.total, c.importe, 0) AS monto_total,
+                    CONCAT(COALESCE(c.serie, YEAR(c.fecha)), '-', LPAD(COALESCE(c.numero, c.id), 6, '0')) AS codigo_caja,
+                    COALESCE(c.importe_total, c.subtotal, 0) AS monto_total,
                     cc.nombre AS centro_costo_nombre
                 FROM tesoreria_caja c
-                LEFT JOIN centros_costos cc ON cc.codigo = c.centro_costo
+                LEFT JOIN tesoreria_centros_costos cc ON cc.codigo = c.centro_costo
                 WHERE ${condiciones.join(" AND ")}
                 ORDER BY c.fecha DESC, c.id DESC
             `;
@@ -2617,9 +2618,9 @@ module.exports = function (db, broadcast, logAudit) {
             const [rows] = await tdb.query(sql, params);
 
             // Enriquecer registros con URLs firmadas y campos unificados
-            const resultado = await Promise.all(rows.map(async (r) => {
+            const resultado = await Promise.all((rows || []).map(async (r) => {
                 let voucherPresigned = null;
-                const vUrl = r.voucher_url || r.url_voucher;
+                const vUrl = r.voucher_url || r.sustento_url;
                 if (vUrl) {
                     const k = s3KeyFromUrl(vUrl);
                     if (k) voucherPresigned = await getPresignedUrl(k).catch(() => vUrl);
@@ -2627,7 +2628,7 @@ module.exports = function (db, broadcast, logAudit) {
                 }
 
                 const tipoMov = (r.tipo_movimiento || 'EGRESO').toUpperCase();
-                const montoNum = parseFloat(r.monto_total || r.total || r.importe || 0) || 0;
+                const montoNum = parseFloat(r.monto_total || r.importe_total || r.subtotal || 0) || 0;
                 const esIngreso = tipoMov === 'INGRESO';
 
                 return {
@@ -2644,21 +2645,21 @@ module.exports = function (db, broadcast, logAudit) {
                     sub_motivo: r.sub_motivo || '-',
                     descripcion: r.descripcion || r.observacion || '-',
                     tipo_caja: (r.cuenta_bancaria_empresa && r.cuenta_bancaria_empresa.includes('CAJA')) ? 'CAJA' : 'BANCO',
-                    banco_cuenta: r.cuenta_bancaria_empresa || r.origen_dinero || 'BANCO PRINCIPAL',
-                    numero_operacion: r.numero_operacion || '-',
-                    numero_factura: r.numero_factura || r.numero_comprobante || '-',
-                    beneficiario: r.beneficiario || r.persona || '-',
+                    banco_cuenta: r.cuenta_bancaria_empresa || 'BANCO PRINCIPAL',
+                    numero_operacion: r.numero_constancia_deposito || r.numero || '-',
+                    numero_factura: r.numero_factura || '-',
+                    beneficiario: r.persona || '-',
                     tipo_persona: r.tipo_persona || 'PROVEEDOR',
-                    solicitante: r.solicitante || r.usuario_creacion || '-',
-                    autoriza: r.usuario_aprobacion || '-',
+                    solicitante: r.usuario_creacion || '-',
+                    autoriza: r.usuario_aprobacion || r.autoriza || '-',
                     observacion: r.observacion || '',
                     fecha_aprobacion: r.fecha_aprobacion || null,
-                    fecha_valuta: r.fecha_pago || r.fecha,
-                    cliente: r.cliente || '-',
-                    tipo_servicio: r.tipo_servicio || '-',
+                    fecha_valuta: r.fecha_valuta || r.fecha,
+                    cliente: '-',
+                    tipo_servicio: '-',
                     orden_viaje: r.orden_viaje || '-',
                     placa: r.placa || '-',
-                    ruta: r.ruta || '-',
+                    ruta: r.ruta_viaje || '-',
                     centro_costo: r.centro_costo || 'CC-ADM',
                     centro_costo_nombre: r.centro_costo_nombre || '',
                     estado: (r.estado || 'PROCESADO').toUpperCase(),

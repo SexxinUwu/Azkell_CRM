@@ -7,10 +7,14 @@ window.normalizeStr = window.normalizeStr || function(str) {
     return (str || '').toString().trim().toUpperCase();
 };
 
-// Paginación inspecciones (patrón window para SPA)
+// Paginación e inicialización de estados inspecciones
 window.dataFinalInspGlobal = window.dataFinalInspGlobal || [];
 window.inspPorPagina = window.inspPorPagina || parseInt(localStorage.getItem('fleet_insp_ppp') || '50');
 window.inspPaginaActual = window.inspPaginaActual || 1;
+var isHistorialStatus = window.isHistorialStatus || false;
+var dataGlobalInspecciones = window.dataGlobalInspecciones || [];
+var dataGlobalPlacas = window.dataGlobalPlacas || [];
+var dataGlobalNeumaticos = window.dataGlobalNeumaticos || [];
 
 var DEFAULT_INSP_SCHEMA = window.DEFAULT_INSP_SCHEMA || [
     { tab: 'LLANTA', template_id: 'cat_llanta', items: [{ id: 'i_1', label: 'Cortes o Averías', type: 'okfalla' }, { id: 'i_2', label: 'PSI del Neumático', type: 'okfalla' }, { id: 'i_3', label: 'Otros', type: 'okfalla' }] },
