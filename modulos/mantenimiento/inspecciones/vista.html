@@ -915,8 +915,52 @@
       <i class="bi bi-plus-lg"></i>
     </button>
   </div>
+    <div class="insp-bottom-spacer" style="height: 90px; width: 100%;"></div>
+</div><!-- /#insp-view-lista -->
 
-</div>
+<!-- ================================================================= -->
+<!-- 📋 VISTA: CONSTRUCTOR DINÁMICO DE PLANTILLA (PANTALLA COMPLETA)   -->
+<!-- ================================================================= -->
+<div id="insp-view-plantilla" style="display:none;" class="pb-5">
+    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-light bg-white border shadow-2xs text-dark rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5" onclick="window.cerrarPlantillaInsp()">
+                <i class="bi bi-arrow-left"></i> Volver a la Lista
+            </button>
+            <div>
+                <h5 class="fw-bold mb-0 text-dark" style="letter-spacing: -0.2px;">Constructor Dinámico de Plantilla</h5>
+                <small class="text-secondary" style="font-size: 0.78rem;">Inspecciones Mecánicas e Integrales de Unidades</small>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-light bg-white border shadow-2xs rounded-3 px-3 py-2 text-secondary fw-semibold d-flex align-items-center gap-1.5" onclick="window.ckRestaurarConfigInsp()" title="Restablecer a valores estándar de fábrica">
+                <i class="bi bi-arrow-counterclockwise fs-6"></i> <span class="d-none d-sm-inline">Restablecer</span>
+            </button>
+            <button class="btn btn-primary fw-bold rounded-3 px-3.5 py-2 shadow-sm d-flex align-items-center gap-2" style="background:#0284c7; border-color:#0284c7;" onclick="window.guardarConfigInsp()">
+                <i class="bi bi-cloud-check fs-5"></i> <span>Guardar Plantilla</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="alert alert-info border-0 rounded-3 mb-3 d-flex align-items-center gap-2.5" style="background:#f0f9ff;border:1px solid #bae6fd !important;color:#0369a1;font-size:0.84rem;">
+        <i class="bi bi-shield-check fs-5 flex-shrink-0 text-primary"></i>
+        <div>
+            <strong>Plantilla Inmutable:</strong> Modifique o agregue categorías y subcategorías de inspección técnica. Los cambios se aplicarán <strong>a futuras inspecciones</strong> manteniendo íntegro el histórico.
+        </div>
+    </div>
+
+    <!-- Contenedor Dinámico de Tarjetas por Categoría -->
+    <div id="config-insp-container" class="d-flex flex-column gap-3 mb-3">
+        <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Cargando plantilla...</div>
+    </div>
+
+    <button class="btn btn-light w-100 py-3 rounded-4 fw-bold mb-4 d-flex align-items-center justify-content-center gap-2 shadow-2xs" onclick="window.ckAgregarNuevoSistemaInsp()" style="border:2px dashed #cbd5e1;background:#f8fafc;color:#334155;font-size:0.92rem;">
+        <i class="bi bi-plus-circle text-primary fs-5"></i> Añadir Nueva Categoría / Sistema
+    </button>
+    <div class="insp-bottom-spacer" style="height: 100px; width: 100%;"></div>
+</div><!-- /#insp-view-plantilla -->
+
+</div><!-- /#moduloStatus -->
 
 <!-- ================================================================= -->
 <!-- 📋 MODAL RESUMEN INSPECCIÓN & EXPORTAR PDF                        -->
@@ -1225,53 +1269,6 @@
         </div>
     </div>
 </div>
-
-    <div class="insp-bottom-spacer" style="height: 90px; width: 100%;"></div>
-</div><!-- /#insp-view-lista -->
-
-<!-- ================================================================= -->
-<!-- 📋 VISTA: CONSTRUCTOR DINÁMICO DE PLANTILLA (PANTALLA COMPLETA)   -->
-<!-- ================================================================= -->
-<div id="insp-view-plantilla" style="display:none;" class="pb-5">
-    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-light bg-white border shadow-2xs text-dark rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5" onclick="window.cerrarPlantillaInsp()">
-                <i class="bi bi-arrow-left"></i> Volver a la Lista
-            </button>
-            <div>
-                <h5 class="fw-bold mb-0 text-dark" style="letter-spacing: -0.2px;">Constructor Dinámico de Plantilla</h5>
-                <small class="text-secondary" style="font-size: 0.78rem;">Inspecciones Mecánicas e Integrales de Unidades</small>
-            </div>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-light bg-white border shadow-2xs rounded-3 px-3 py-2 text-secondary fw-semibold d-flex align-items-center gap-1.5" onclick="window.ckRestaurarConfigInsp()" title="Restablecer a valores estándar de fábrica">
-                <i class="bi bi-arrow-counterclockwise fs-6"></i> <span class="d-none d-sm-inline">Restablecer</span>
-            </button>
-            <button class="btn btn-primary fw-bold rounded-3 px-3.5 py-2 shadow-sm d-flex align-items-center gap-2" style="background:#0284c7; border-color:#0284c7;" onclick="window.guardarConfigInsp()">
-                <i class="bi bi-cloud-check fs-5"></i> <span>Guardar Plantilla</span>
-            </button>
-        </div>
-    </div>
-
-    <div class="alert alert-info border-0 rounded-3 mb-3 d-flex align-items-center gap-2.5" style="background:#f0f9ff;border:1px solid #bae6fd !important;color:#0369a1;font-size:0.84rem;">
-        <i class="bi bi-shield-check fs-5 flex-shrink-0 text-primary"></i>
-        <div>
-            <strong>Plantilla Inmutable:</strong> Modifique o agregue categorías y subcategorías de inspección técnica. Los cambios se aplicarán <strong>a futuras inspecciones</strong> manteniendo íntegro el histórico.
-        </div>
-    </div>
-
-    <!-- Contenedor Dinámico de Tarjetas por Categoría -->
-    <div id="config-insp-container" class="d-flex flex-column gap-3 mb-3">
-        <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Cargando plantilla...</div>
-    </div>
-
-    <button class="btn btn-light w-100 py-3 rounded-4 fw-bold mb-4 d-flex align-items-center justify-content-center gap-2 shadow-2xs" onclick="window.ckAgregarNuevoSistemaInsp()" style="border:2px dashed #cbd5e1;background:#f8fafc;color:#334155;font-size:0.92rem;">
-        <i class="bi bi-plus-circle text-primary fs-5"></i> Añadir Nueva Categoría / Sistema
-    </button>
-    <div class="insp-bottom-spacer" style="height: 100px; width: 100%;"></div>
-</div><!-- /#insp-view-plantilla -->
-
-</div><!-- /#moduloStatus -->
 
 <!-- ================================================================= -->
 <!-- ================================================================= -->
