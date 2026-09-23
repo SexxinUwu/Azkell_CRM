@@ -60,6 +60,7 @@ module.exports = function globalRBAC(req, res, next) {
         '/seguridad/recursos',
         '/seguridad/template',
         '/seguridad/entrega-vehiculos',
+        '/flota/entrega-vehiculos',
         '/vehiculos-flota',
         '/tesoreria/motivos-gastos',
         '/checklist/config-sistemas'
@@ -92,6 +93,7 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/integraciones')) mod = 'integraciones';
     else if (path.startsWith('/auditoria')) mod = 'mod_auditoria';
     else if (path.startsWith('/seguridad/asistencia')) mod = ['asist', 'seguridad'];
+    else if (path.startsWith('/seguridad/entrega-vehiculos') || path.startsWith('/flota/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas'];
     else if (path.startsWith('/seguridad')) mod = ['seguridad_unidades', 'seguridad', 'checklist', 'placas', 'unid'];
     else if (path.startsWith('/configuracion-flota')) mod = 'cfg_mant';
     

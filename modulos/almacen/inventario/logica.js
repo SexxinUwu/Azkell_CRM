@@ -670,7 +670,8 @@ window.filtrarInventarioPorKPI = function(tipo, btn) {
 };
 
 window.filtrarInventario = function() {
-    var buscar  = ((document.getElementById('inv-buscar')       || {}).value || '').toLowerCase().trim();
+    var buscar        = ((document.getElementById('inv-buscar')         || {}).value || '').toLowerCase().trim();
+    var buscarAnaquel = ((document.getElementById('inv-buscar-anaquel') || {}).value || '').toLowerCase().trim();
     var fKpi = window._invKpiFiltro || 'total';
 
     var kpiTot = 0, kpiOpt = 0, kpiAle = 0, kpiQui = 0;
@@ -704,12 +705,19 @@ window.filtrarInventario = function() {
         }
 
         var matchB = !buscar ||
-            (d.id           || '').toLowerCase().includes(buscar) ||
-            (d.descripcion  || '').toLowerCase().includes(buscar) ||
-            (d.marca        || '').toLowerCase().includes(buscar) ||
-            (d.familia      || '').toLowerCase().includes(buscar) ||
-            (d.codigo_item  || '').toLowerCase().includes(buscar) ||
-            (d.codigo_barras|| '').toLowerCase().includes(buscar);
+            (d.id               || '').toLowerCase().includes(buscar) ||
+            (d.descripcion      || '').toLowerCase().includes(buscar) ||
+            (d.marca            || '').toLowerCase().includes(buscar) ||
+            (d.familia          || '').toLowerCase().includes(buscar) ||
+            (d.codigo_item      || '').toLowerCase().includes(buscar) ||
+            (d.codigo_barras    || '').toLowerCase().includes(buscar) ||
+            (d.anaquel          || '').toLowerCase().includes(buscar) ||
+            (d.ubicacion        || '').toLowerCase().includes(buscar) ||
+            (d.ultimo_proveedor || '').toLowerCase().includes(buscar);
+
+        var matchAnaquel = !buscarAnaquel ||
+            (d.anaquel          || '').toLowerCase().includes(buscarAnaquel) ||
+            (d.ubicacion        || '').toLowerCase().includes(buscarAnaquel);
         
         var matchAdv = true;
         if (window.inventarioFiltros && typeof INVENTARIO_COLUMNAS !== 'undefined') {
@@ -736,7 +744,7 @@ window.filtrarInventario = function() {
             matchKpi = d.tipo !== 'Servicio' && sa <= 0;
         }
 
-        return matchB && matchAdv && matchKpi;
+        return matchB && matchAnaquel && matchAdv && matchKpi;
     });
 
     var setKpi = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
@@ -2543,6 +2551,7 @@ var INVENTARIO_COLUMNAS = window.INVENTARIO_COLUMNAS = [
     { key: "sistema", label: "Sistema" },
     { key: "almacen", label: "Almacén" },
     { key: "anaquel", label: "Anaquel" },
+    { key: "ultimo_proveedor", label: "Último Proveedor" },
     { key: "marca", label: "Marca" },
     { key: "tipo", label: "Tipo" },
     { key: "sub_tipo", label: "Sub Tipo" }

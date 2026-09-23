@@ -1,7 +1,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════
-     MÓDULO SEGURIDAD: CHECKLIST "ENTREGA DE VEHÍCULOS"
+     MÓDULO FLOTA: CHECKLIST "ENTREGA DE VEHÍCULOS"
      Formato Oficial: Inventario Físico Estado de Vehículo
-     Diseño: Formulario Segmentado Moderno + Bento Multi-Empresa Fiel
+     Diseño: Formulario Segmentado Moderno + Bento Multi-Empresa + Plantilla Dinámica
 ═══════════════════════════════════════════════════════════════════ -->
 <style>
 #root-dinamico, .main-area {
@@ -523,6 +523,34 @@
     cursor: crosshair;
     touch-action: none;
 }
+
+/* ── Plantilla Form Cards ────────────────────────────────────────── */
+.ev-form-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.ev-form-input-clean {
+    width: 100%;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #0f172a;
+    outline: none;
+    transition: all 0.18s ease;
+}
+.ev-form-input-clean:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
 /* ── Modal Confirmación Eliminación (Diseño Círculos Moderno) ─── */
 .ev-delete-dialog {
     max-width: 350px !important;
@@ -630,13 +658,13 @@
         <div class="ev-portal-hero">
             <div class="d-flex align-items-center gap-3">
                 <div class="ev-portal-avatar" id="ev-portal-user-avatar">
-                    <i class="bi bi-shield-lock-fill"></i>
+                    <i class="bi bi-truck-front-fill"></i>
                 </div>
                 <div>
                     <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge bg-primary px-2 py-1 rounded-pill" style="font-size:0.68rem;font-weight:800;letter-spacing:0.04em;">MÓDULO SEGURIDAD</span>
+                        <span class="badge bg-primary px-2 py-1 rounded-pill" style="font-size:0.68rem;font-weight:800;letter-spacing:0.04em;">MÓDULO FLOTA</span>
                     </div>
-                    <h3 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">¡Hola, <span id="ev-portal-user-name">Oficial de Seguridad</span>! 👋</h3>
+                    <h3 class="fw-bold mb-1 text-dark" style="letter-spacing:-0.02em;">¡Hola, <span id="ev-portal-user-name">Supervisor de Flota</span>! 👋</h3>
                     <p class="text-secondary mb-0" style="font-size:0.88rem;">¿A qué empresa deseas gestionar / consultar CheckList de Entrega de Vehículos hoy?</p>
                 </div>
             </div>
@@ -657,12 +685,12 @@
 
     <!-- ═══════════════════════════════════════════════════════════
          VISTA 1: LISTADO POR EMPRESA (TABLE DASHBOARD)
-    ═══════════════════════════════════════════════════════════ -->
+    ══════════════════════════════════════════════════════════════ -->
     <div id="ev-list" class="ev-view">
         <div class="ev-header-box">
             <div class="ev-header-left">
                 <div class="ev-header-icon">
-                    <i class="bi bi-shield-check"></i>
+                    <i class="bi bi-truck-front"></i>
                 </div>
                 <div>
                     <div class="d-flex align-items-center gap-2">
@@ -675,6 +703,9 @@
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <button class="ev-btn-top" onclick="window.evIrAPortal()" title="Ir al Portal Multi-Empresa">
                     <i class="bi bi-grid-fill text-primary"></i> <span class="d-none d-sm-inline">Empresas</span>
+                </button>
+                <button class="ev-btn-top" onclick="window.evAbrirPlantilla()" title="Plantilla de Entrega de Vehículos">
+                    <i class="bi bi-sliders text-warning"></i> <span class="d-none d-sm-inline">Plantilla</span>
                 </button>
                 <button class="ev-btn-top" onclick="window.evCargarDatos()" title="Actualizar">
                     <i class="bi bi-arrow-clockwise fs-6"></i>
@@ -965,6 +996,41 @@
             </div>
 
         </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         VISTA 3: CONSTRUCTOR DINÁMICO DE PLANTILLA (AJUSTES)
+    ══════════════════════════════════════════════════════════════ -->
+    <div id="ev-settings" class="ev-view">
+        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <button class="ev-btn-top" onclick="window.evNav('list')">
+                    <i class="bi bi-arrow-left"></i> Volver a la Lista
+                </button>
+                <h5 class="fw-bold mb-0 text-dark">Constructor Dinámico de Plantilla</h5>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-light bg-white border shadow-2xs rounded-circle p-2 text-secondary d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" onclick="window.evRestaurarConfigPlantilla()" title="Restablecer a valores de fábrica">
+                    <i class="bi bi-arrow-counterclockwise fs-6"></i>
+                </button>
+                <button class="ev-btn-top ev-btn-primary" onclick="window.evGuardarSettings()">
+                    <i class="bi bi-cloud-check"></i> Guardar Plantilla
+                </button>
+            </div>
+        </div>
+
+        <div class="alert alert-info border-0 rounded-3 mb-3 d-flex align-items-center gap-2" style="background:#eff6ff;color:#0369a1;font-size:0.85rem;">
+            <i class="bi bi-info-circle-fill fs-5"></i>
+            <div>
+                <strong>Plantilla Inmutable:</strong> Agregue o modifique categorías e ítems de inspección. Los cambios se aplicarán <strong>exclusivamente a futuros registros</strong>, conservando íntegro el historial anterior.
+            </div>
+        </div>
+
+        <div id="ev-settings-container"></div>
+
+        <button class="ev-btn-top w-100 py-3 rounded-3 fw-bold mb-4 justify-content-center" onclick="window.evAddSettingsCat()" style="border:2px dashed #cbd5e1;background:#f8fafc;">
+            <i class="bi bi-plus-lg"></i> Añadir Nueva Categoría
+        </button>
     </div>
 
     <!-- Datalists para autocompletar -->

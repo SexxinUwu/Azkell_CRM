@@ -1,7 +1,7 @@
 // =========================================================================
-// MÓDULO SEGURIDAD: CHECKLIST "ENTREGA DE VEHÍCULOS"
+// MÓDULO FLOTA: CHECKLIST "ENTREGA DE VEHÍCULOS"
 // Formato Oficial: Inventario Físico Estado de Vehículo
-// Lógica de Negocio + Portal Bento Multi-Empresa + Dibujo por Configuración
+// Lógica de Negocio + Portal Bento Multi-Empresa + Plantilla Dinámica
 // =========================================================================
 
 (function() {
@@ -16,8 +16,8 @@
     window._evCantidades = {};
     window._evCurrentConfiguracion = 'T3';
 
-    // Estructura de Partes y Accesorios agrupada por sistemas
-    const GRUPOS_SISTEMAS = [
+    // Estructura de Partes y Accesorios agrupada por sistemas (Plantilla por Defecto)
+    const GRUPOS_SISTEMAS_DEFAULT = [
         {
             id: 'frente_exterior',
             titulo: 'Frente Exterior',
@@ -98,11 +98,22 @@
         }
     ];
 
+    let _evGlobalTemplate = null;
+    try {
+        const saved = localStorage.getItem('ev_global_template_flota') || localStorage.getItem('ev_global_template');
+        if (saved) _evGlobalTemplate = JSON.parse(saved);
+    } catch(e) {}
+    if (!_evGlobalTemplate || !Array.isArray(_evGlobalTemplate) || _evGlobalTemplate.length === 0) {
+        _evGlobalTemplate = JSON.parse(JSON.stringify(GRUPOS_SISTEMAS_DEFAULT));
+    }
+
+    let _evEditingTemplate = [];
+
     // Variables de canvas
     let _canvasEntrega, _ctxEntrega, _dibujandoEntrega = false;
     let _canvasRecibe, _ctxRecibe, _dibujandoRecibe = false;
 
-    window.init_seguridad_entrega_vehiculos = window.init_entrega_vehiculos = window.inicializarModuloEntregaVehiculos = function() {
+    window.init_flota_entrega_vehiculos = window.init_seguridad_entrega_vehiculos = window.init_entrega_vehiculos = window.inicializarModuloEntregaVehiculos = function() {
         window.evActualizarUsuarioActual();
         window.evIrAPortal();
         window.evRenderizarSistemas();
@@ -112,7 +123,7 @@
     };
 
     window.evActualizarUsuarioActual = function() {
-        const lsUser = localStorage.getItem('fleet_user') || 'Oficial de Seguridad';
+        const lsUser = localStorage.getItem('fleet_user') || 'Supervisor de Flota';
         const elUserName = document.getElementById('ev-portal-user-name');
         const elUserAvatar = document.getElementById('ev-portal-user-avatar');
         if (elUserName) elUserName.textContent = lsUser;
@@ -129,9 +140,9 @@
         if (elFirmaEntNom) elFirmaEntNom.textContent = lsUser.toUpperCase();
     };
 
-    // ── GESTIÓN DE VISTAS (Portal -> Lista -> Formulario) ───────────
+    // ── GESTIÓN DE VISTAS (Portal -> Lista -> Formulario -> Plantilla) ───────────
     window.evShowView = function(viewName) {
-        ['portal', 'list', 'form'].forEach(v => {
+        ['portal', 'list', 'form', 'settings'].forEach(v => {
             const el = document.getElementById(`ev-${v}`);
             if (el) {
                 if (v === viewName) {
@@ -143,6 +154,10 @@
                 }
             }
         });
+    };
+
+    window.evNav = function(viewName) {
+        window.evShowView(viewName);
     };
 
     window.evIrAPortal = function() {
@@ -159,6 +174,131 @@
         if (badge) badge.textContent = empresa;
 
         window.evCargarDatos();
+    };
+
+    // ── CONSTRUCTOR DINÁMICO DE PLANTILLA (FULL SCREEN) ────────────
+    window.evAbrirPlantilla = function() {
+        _evEditingTemplate = JSON.parse(JSON.stringify(_evGlobalTemplate));
+        window.evShowView('settings');
+        window.evRenderizarSettings();
+    };
+
+    window.evRenderizarSettings = function() {
+        const c = document.getElementById('ev-settings-container');
+        if (!c) return;
+
+        if (!_evEditingTemplate.length) {
+            c.innerHTML = '<div class="text-center py-5 text-muted bg-white rounded-4 border"><i class="bi bi-grid fs-2 d-block mb-2 text-secondary"></i>No hay categorías. Crea una nueva haciendo clic en "+ Añadir Nueva Categoría".</div>';
+            return;
+        }
+
+        let html = '';
+        _evEditingTemplate.forEach((cat, index) => {
+            html += `
+                <div class="ev-form-card mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                        <div class="d-flex align-items-center gap-2 flex-grow-1 me-2">
+                            <span class="badge rounded-circle d-flex align-items-center justify-content-center" style="width:28px;height:28px;background:#0284c7;color:#fff;font-size:0.85rem;font-weight:700;">${index + 1}</span>
+                            <input type="text" class="ev-form-input-clean fw-bold text-dark border-0 bg-transparent p-0" 
+                                style="font-size:1rem; font-weight:800; box-shadow:none;" 
+                                value="${(cat.titulo || cat.title || '').replace(/"/g, '&quot;')}" 
+                                oninput="window.evUpdateSettingsCatTitle('${cat.id}', this.value)" 
+                                placeholder="Nombre de Categoría">
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger" onclick="window.evDelSettingsCat('${cat.id}')" title="Eliminar Categoría" style="border-radius:8px;">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+            `;
+
+            (cat.items || []).forEach((item, itemIdx) => {
+                const itemLabel = typeof item === 'string' ? item : (item.label || item.texto || '');
+                html += `
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2 ps-2 ps-md-3 flex-wrap flex-sm-nowrap">
+                        <i class="bi bi-dot fs-4 text-secondary d-none d-sm-inline"></i>
+                        <input type="text" class="form-control form-control-sm flex-grow-1" 
+                            style="font-size:0.88rem; font-weight:600; border:1px solid #e2e8f0; border-radius:10px; padding:0.5rem 0.8rem; background:#f8fafc;" 
+                            value="${itemLabel.replace(/"/g, '&quot;')}" 
+                            oninput="window.evUpdateSettingsItemLabel('${cat.id}', ${itemIdx}, this.value)" 
+                            placeholder="Nombre de Subcategoría / Ítem">
+                        <button class="btn btn-sm btn-light text-secondary border" onclick="window.evDelSettingsItem('${cat.id}', ${itemIdx})" title="Eliminar ítem" style="border-radius:8px; padding:0.4rem 0.65rem;">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                `;
+            });
+
+            html += `
+                    <button class="btn btn-sm btn-light border w-100 mt-2 fw-semibold text-secondary" onclick="window.evAddSettingsItem('${cat.id}')" style="border-radius:10px; padding:0.6rem;">
+                        <i class="bi bi-plus-lg me-1"></i> Añadir Subcategoría
+                    </button>
+                </div>
+            `;
+        });
+
+        c.innerHTML = html;
+    };
+
+    window.evUpdateSettingsCatTitle = function(catId, val) {
+        const cat = _evEditingTemplate.find(c => c.id === catId);
+        if (cat) cat.titulo = val;
+    };
+
+    window.evUpdateSettingsItemLabel = function(catId, itemIdx, val) {
+        const cat = _evEditingTemplate.find(c => c.id === catId);
+        if (!cat || !cat.items) return;
+        if (typeof cat.items[itemIdx] === 'string') {
+            cat.items[itemIdx] = val;
+        } else if (cat.items[itemIdx]) {
+            cat.items[itemIdx].label = val;
+        }
+    };
+
+    window.evAddSettingsCat = function() {
+        _evEditingTemplate.push({
+            id: 'cat_' + Date.now(),
+            titulo: 'Nueva Categoría',
+            icon: 'bi-card-checklist',
+            items: []
+        });
+        window.evRenderizarSettings();
+    };
+
+    window.evDelSettingsCat = function(catId) {
+        if (!confirm('¿Eliminar esta categoría completa y todos sus ítems?')) return;
+        _evEditingTemplate = _evEditingTemplate.filter(c => c.id !== catId);
+        window.evRenderizarSettings();
+    };
+
+    window.evAddSettingsItem = function(catId) {
+        const cat = _evEditingTemplate.find(c => c.id === catId);
+        if (!cat) return;
+        cat.items = cat.items || [];
+        cat.items.push('Nuevo Ítem de Revisión');
+        window.evRenderizarSettings();
+    };
+
+    window.evDelSettingsItem = function(catId, itemIdx) {
+        const cat = _evEditingTemplate.find(c => c.id === catId);
+        if (!cat || !cat.items) return;
+        cat.items.splice(itemIdx, 1);
+        window.evRenderizarSettings();
+    };
+
+    window.evRestaurarConfigPlantilla = function() {
+        if (!confirm('¿Deseas restablecer la plantilla a las categorías originales de fábrica?')) return;
+        _evEditingTemplate = JSON.parse(JSON.stringify(GRUPOS_SISTEMAS_DEFAULT));
+        window.evRenderizarSettings();
+    };
+
+    window.evGuardarSettings = function() {
+        _evGlobalTemplate = JSON.parse(JSON.stringify(_evEditingTemplate));
+        try {
+            localStorage.setItem('ev_global_template_flota', JSON.stringify(_evGlobalTemplate));
+        } catch(e) {}
+        window.evRenderizarSistemas();
+        window.evShowView('list');
+        alert('✅ Plantilla de Entrega de Vehículos guardada exitosamente.');
     };
 
     // ── CARGAR RECURSOS Y STATS DEL PORTAL ─────────────────────────
@@ -616,7 +756,7 @@
     };
 
     window.evSyncNombresFirmas = function() {
-        const lsUser = localStorage.getItem('fleet_user') || 'Oficial de Seguridad';
+        const lsUser = localStorage.getItem('fleet_user') || 'Supervisor de Flota';
         const elFirmaEntNom = document.getElementById('ev-lbl-firma-entrega-nom');
         if (elFirmaEntNom) elFirmaEntNom.textContent = lsUser.toUpperCase();
 
@@ -848,254 +988,251 @@
         `;
     }
 
-    function _evRenderTracto(axlesCount, isChata) {
-        const frontAxleX = isChata ? 200 : 270;
-        const rearAxle1X = axlesCount === 3 ? 580 : 620;
-        const rearAxle2X = axlesCount === 3 ? 695 : null;
-        const chassisEndX = axlesCount === 3 ? rearAxle2X + 65 : rearAxle1X + 70;
-        const chassisStartX = isChata ? 140 : 155;
-        const fifthWheelX = axlesCount === 3 ? (rearAxle1X + rearAxle2X) / 2 : rearAxle1X;
+    function _evRenderTracto(numEjes, isChata) {
+        const startX = 140;
+        let cabHtml = isChata ? _evRenderCabinaChata(startX) : _evRenderCabinaTrompa(startX);
+        const chassisLen = numEjes === 3 ? 560 : 440;
 
         let out = `
-            <rect x="${chassisStartX}" y="215" width="${chassisEndX - chassisStartX}" height="22" rx="3" fill="url(#evChassisGrad)" stroke="#0f172a" stroke-width="2.5" />
-            <rect x="${chassisStartX + 10}" y="222" width="${chassisEndX - chassisStartX - 20}" height="4" fill="#334155" />
-            <circle cx="${chassisEndX - 10}" cy="226" r="3" fill="#ef4444" />
-            ${isChata ? _evRenderCabinaChata(135) : _evRenderCabinaTrompa(145)}
-            <g>
-                <rect x="${frontAxleX + 60}" y="220" width="${rearAxle1X - frontAxleX - 95}" height="30" rx="6" fill="url(#evFuelGrad)" stroke="#334155" stroke-width="2" />
-                <circle cx="${frontAxleX + 80}" cy="230" r="3.5" fill="#1e293b" />
-                <rect x="${frontAxleX + 50}" y="238" width="${rearAxle1X - frontAxleX - 75}" height="5" rx="2" fill="#475569" />
-            </g>
-            <g id="quintaRueda">
-                <polygon points="${fifthWheelX - 32},215 ${fifthWheelX - 20},186 ${fifthWheelX + 20},186 ${fifthWheelX + 32},215" fill="#1e293b" stroke="#0f172a" stroke-width="2" />
-                <rect x="${fifthWheelX - 38}" y="178" width="76" height="9" rx="3" fill="#0f172a" stroke="#020617" stroke-width="2" />
-                <rect x="${fifthWheelX - 4}" y="178" width="8" height="5" fill="#64748b" />
-                <g transform="translate(${fifthWheelX}, 162)">
-                    <rect x="-42" y="-10" width="84" height="17" rx="3" fill="#1e293b" />
-                    <text x="0" y="2" font-size="8.5" font-weight="700" fill="#38bdf8" text-anchor="middle" font-family="'Inter', sans-serif">QUINTA RUEDA</text>
-                    <line x1="0" y1="7" x2="0" y2="16" stroke="#0284c7" stroke-width="1.5" />
-                </g>
-            </g>
+            <g id="tractoT">
+                <rect x="${startX + 20}" y="235" width="${chassisLen}" height="20" rx="3" fill="url(#evChassisGrad)" stroke="#0f172a" stroke-width="2"/>
+                <rect x="${startX + 195}" y="222" width="130" height="28" rx="5" fill="url(#evFuelGrad)" stroke="#334155" stroke-width="1.8"/>
+                <rect x="${startX + 215}" y="220" width="4" height="32" fill="#334155"/>
+                <rect x="${startX + 295}" y="220" width="4" height="32" fill="#334155"/>
+                <polygon points="${startX + chassisLen - 80},235 ${startX + chassisLen - 45},220 ${startX + chassisLen - 20},220 ${startX + chassisLen + 10},235" fill="#0f172a" stroke="#475569" stroke-width="1.5" />
+                <line x1="${startX + chassisLen - 40}" y1="219" x2="${startX + chassisLen - 15}" y2="219" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" />
+                <text x="${startX + chassisLen - 30}" y="210" font-size="8.5" font-weight="800" fill="#0284c7" text-anchor="middle" font-family="'Inter', sans-serif">5TA RUEDA</text>
+                ${cabHtml}
+                ${_evRenderWheel(startX + 65, 252, 'EJE 1 (DIR)')}
         `;
 
-        if (axlesCount === 3) {
-            out += `<path d="M ${rearAxle1X - 54} 238 A 52 52 0 0 1 ${rearAxle1X + 50} 214 L ${rearAxle2X - 50} 214 A 52 52 0 0 1 ${rearAxle2X + 54} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
-                    <line x1="${chassisEndX}" y1="220" x2="${chassisEndX}" y2="265" stroke="#1e293b" stroke-width="6" stroke-linecap="round" />`;
+        if (numEjes === 3) {
+            out += `
+                <path d="M ${startX + chassisLen - 160} 238 A 52 52 0 0 1 ${startX + chassisLen - 50} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                <path d="M ${startX + chassisLen - 55} 238 A 52 52 0 0 1 ${startX + chassisLen + 55} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                ${_evRenderWheel(startX + chassisLen - 105, 252, 'EJE 2 (TRAC)')}
+                ${_evRenderWheel(startX + chassisLen, 252, 'EJE 3 (TRAC)')}
+            `;
         } else {
-            out += `<path d="M ${rearAxle1X - 54} 238 A 52 52 0 0 1 ${rearAxle1X + 54} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/>
-                    <line x1="${chassisEndX}" y1="220" x2="${chassisEndX}" y2="265" stroke="#1e293b" stroke-width="6" stroke-linecap="round" />`;
+            out += `
+                <path d="M ${startX + chassisLen - 60} 238 A 52 52 0 0 1 ${startX + chassisLen + 50} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                ${_evRenderWheel(startX + chassisLen - 5, 252, 'EJE 2 (TRAC)')}
+            `;
         }
 
-        out += _evRenderWheel(frontAxleX, 252, 'E1: Direccional');
-        out += _evRenderWheel(rearAxle1X, 252, 'E2: Tracción 1');
-        if (rearAxle2X) out += _evRenderWheel(rearAxle2X, 252, 'E3: Tracción 2');
+        out += `</g>`;
         return out;
     }
 
-    function _evRenderCamionRigido(axlesCount, isChata, isFurgon) {
-        const frontAxleX = isChata ? 180 : 250;
-        const rearAxle1X = axlesCount === 3 ? 610 : 660;
-        const rearAxle2X = axlesCount === 3 ? 725 : null;
-        const chassisStartX = isChata ? 120 : 135;
-        const chassisEndX = axlesCount === 3 ? rearAxle2X + 70 : rearAxle1X + 80;
-        const bodyStartX = isChata ? 305 : 360;
-        const bodyWidth = chassisEndX - bodyStartX + 10;
+    function _evRenderCamionRigido(numEjes, isChata, isFurgon) {
+        const startX = 120;
+        let cabHtml = isChata ? _evRenderCabinaChata(startX) : _evRenderCabinaTrompa(startX);
+        const bodyStart = isChata ? startX + 190 : startX + 225;
+        const bodyWidth = 530;
+        const totalLen = bodyStart + bodyWidth - startX;
+
+        let bodyHtml = '';
+        if (isFurgon) {
+            bodyHtml = `
+                <g id="bodyFurgon">
+                    <rect x="${bodyStart}" y="70" width="${bodyWidth}" height="165" rx="5" fill="url(#evBodyGrad)" stroke="#1e293b" stroke-width="2.5" />
+                    <line x1="${bodyStart + 130}" y1="70" x2="${bodyStart + 130}" y2="235" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4" />
+                    <line x1="${bodyStart + 265}" y1="70" x2="${bodyStart + 265}" y2="235" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4" />
+                    <line x1="${bodyStart + 400}" y1="70" x2="${bodyStart + 400}" y2="235" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4" />
+                    <rect x="${bodyStart + bodyWidth - 12}" y="115" width="6" height="45" rx="2" fill="#0f172a" />
+                    <rect x="${bodyStart + 15}" y="75" width="4" height="4" fill="#f59e0b" />
+                    <rect x="${bodyStart + bodyWidth - 18}" y="75" width="4" height="4" fill="#ef4444" />
+                </g>
+            `;
+        } else {
+            bodyHtml = `
+                <g id="bodyPlataforma">
+                    <rect x="${bodyStart}" y="200" width="${bodyWidth}" height="35" rx="3" fill="#f8fafc" stroke="#1e293b" stroke-width="2" />
+                    <line x1="${bodyStart}" y1="140" x2="${bodyStart + bodyWidth}" y2="140" stroke="#334155" stroke-width="3" />
+                    <line x1="${bodyStart}" y1="170" x2="${bodyStart + bodyWidth}" y2="170" stroke="#334155" stroke-width="3" />
+                    <line x1="${bodyStart + 40}" y1="140" x2="${bodyStart + 40}" y2="200" stroke="#334155" stroke-width="3" />
+                    <line x1="${bodyStart + 180}" y1="140" x2="${bodyStart + 180}" y2="200" stroke="#334155" stroke-width="3" />
+                    <line x1="${bodyStart + 320}" y1="140" x2="${bodyStart + 320}" y2="200" stroke="#334155" stroke-width="3" />
+                    <line x1="${bodyStart + 460}" y1="140" x2="${bodyStart + 460}" y2="200" stroke="#334155" stroke-width="3" />
+                </g>
+            `;
+        }
 
         let out = `
-            <rect x="${chassisStartX}" y="215" width="${chassisEndX - chassisStartX}" height="22" rx="3" fill="url(#evChassisGrad)" stroke="#0f172a" stroke-width="2.5" />
-            <rect x="${chassisStartX + 10}" y="222" width="${chassisEndX - chassisStartX - 20}" height="4" fill="#334155" />
-            <circle cx="${chassisEndX - 10}" cy="226" r="3" fill="#ef4444" />
-            ${isChata ? _evRenderCabinaChata(115) : _evRenderCabinaTrompa(125)}
+            <g id="camionRigido">
+                <rect x="${startX + 20}" y="235" width="${totalLen - 20}" height="20" rx="3" fill="url(#evChassisGrad)" stroke="#0f172a" stroke-width="2"/>
+                <rect x="${startX + 185}" y="222" width="110" height="28" rx="5" fill="url(#evFuelGrad)" stroke="#334155" stroke-width="1.8"/>
+                ${bodyHtml}
+                ${cabHtml}
+                ${_evRenderWheel(startX + 65, 252, 'EJE 1 (DIR)')}
         `;
 
-        if (isFurgon) {
+        if (numEjes === 3) {
             out += `
-                <g>
-                    <rect x="${bodyStartX}" y="75" width="${bodyWidth}" height="140" rx="4" fill="url(#evBodyGrad)" stroke="#334155" stroke-width="2.5" />
-                    <line x1="${bodyStartX + bodyWidth * 0.25}" y1="85" x2="${bodyStartX + bodyWidth * 0.25}" y2="205" stroke="#cbd5e1" stroke-width="2" />
-                    <line x1="${bodyStartX + bodyWidth * 0.5}" y1="85" x2="${bodyStartX + bodyWidth * 0.5}" y2="205" stroke="#cbd5e1" stroke-width="2" />
-                    <line x1="${bodyStartX + bodyWidth * 0.75}" y1="85" x2="${bodyStartX + bodyWidth * 0.75}" y2="205" stroke="#cbd5e1" stroke-width="2" />
-                    <rect x="${bodyStartX + 10}" y="85" width="${bodyWidth - 20}" height="120" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6 3" />
-                    <text x="${bodyStartX + bodyWidth/2}" y="148" font-size="12" font-weight="700" fill="#64748b" text-anchor="middle" font-family="'Inter', sans-serif">CARROCERÍA FURGÓN</text>
-                </g>
+                <path d="M ${bodyStart + bodyWidth - 170} 238 A 52 52 0 0 1 ${bodyStart + bodyWidth - 60} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                <path d="M ${bodyStart + bodyWidth - 65} 238 A 52 52 0 0 1 ${bodyStart + bodyWidth + 45} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                ${_evRenderWheel(bodyStart + bodyWidth - 115, 252, 'EJE 2 (TRAC)')}
+                ${_evRenderWheel(bodyStart + bodyWidth - 10, 252, 'EJE 3 (TRAC)')}
             `;
         } else {
             out += `
-                <g>
-                    <rect x="${bodyStartX}" y="195" width="${bodyWidth}" height="20" rx="3" fill="#cbd5e1" stroke="#334155" stroke-width="2" />
-                    <rect x="${bodyStartX}" y="150" width="10" height="50" fill="#475569" />
-                    <rect x="${bodyStartX + bodyWidth - 8}" y="150" width="8" height="50" fill="#475569" />
-                    <line x1="${bodyStartX}" y1="170" x2="${bodyStartX + bodyWidth}" y2="170" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 4"/>
-                    <text x="${bodyStartX + bodyWidth/2}" y="185" font-size="11" font-weight="700" fill="#64748b" text-anchor="middle" font-family="'Inter', sans-serif">PLATAFORMA RÍGIDA</text>
-                </g>
+                <path d="M ${bodyStart + bodyWidth - 90} 238 A 52 52 0 0 1 ${bodyStart + bodyWidth + 20} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                ${_evRenderWheel(bodyStart + bodyWidth - 35, 252, 'EJE 2 (TRAC)')}
             `;
         }
 
-        out += `<rect x="${frontAxleX + 55}" y="222" width="${rearAxle1X - frontAxleX - 95}" height="26" rx="5" fill="url(#evFuelGrad)" stroke="#334155" stroke-width="2" />`;
-
-        if (axlesCount === 3) {
-            out += `<path d="M ${rearAxle1X - 52} 238 A 50 50 0 0 1 ${rearAxle1X + 48} 215 L ${rearAxle2X - 48} 215 A 50 50 0 0 1 ${rearAxle2X + 52} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />`;
-        } else {
-            out += `<path d="M ${rearAxle1X - 52} 238 A 50 50 0 0 1 ${rearAxle1X + 52} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />`;
-        }
-
-        out += _evRenderWheel(frontAxleX, 252, 'E1: Direccional');
-        out += _evRenderWheel(rearAxle1X, 252, 'E2: Posterior 1');
-        if (rearAxle2X) out += _evRenderWheel(rearAxle2X, 252, 'E3: Posterior 2');
+        out += `</g>`;
         return out;
     }
 
-    function _evRenderSemirremolque(axlesCount, isFurgon) {
-        const semiStartX = 140;
-        const semiEndX = 810;
-        const width = semiEndX - semiStartX;
-        let r1, r2, r3;
-        if (axlesCount === 3) {
-            r1 = 570; r2 = 665; r3 = 760;
+    function _evRenderSemirremolque(numEjes, isFurgon) {
+        const startX = 110;
+        const bodyWidth = 700;
+
+        let bodyHtml = '';
+        if (isFurgon) {
+            bodyHtml = `
+                <g id="bodySemiFurgon">
+                    <rect x="${startX}" y="60" width="${bodyWidth}" height="175" rx="6" fill="url(#evBodyGrad)" stroke="#1e293b" stroke-width="2.5" />
+                    <line x1="${startX + 140}" y1="60" x2="${startX + 140}" y2="235" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4" />
+                    <line x1="${startX + 280}" y1="60" x2="${startX + 280}" y2="235" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4" />
+                    <line x1="${startX + 420}" y1="60" x2="${startX + 420}" y2="235" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4" />
+                    <line x1="${startX + 560}" y1="60" x2="${startX + 560}" y2="235" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4" />
+                    <rect x="${startX + 15}" y="65" width="5" height="5" fill="#f59e0b" />
+                    <rect x="${startX + bodyWidth - 18}" y="65" width="5" height="5" fill="#ef4444" />
+                </g>
+            `;
         } else {
-            r1 = 640; r2 = 745; r3 = null;
+            bodyHtml = `
+                <g id="bodySemiPlataforma">
+                    <rect x="${startX}" y="195" width="${bodyWidth}" height="40" rx="3" fill="#f8fafc" stroke="#1e293b" stroke-width="2.2" />
+                    <line x1="${startX}" y1="130" x2="${startX + bodyWidth}" y2="130" stroke="#334155" stroke-width="3" />
+                    <line x1="${startX}" y1="162" x2="${startX + bodyWidth}" y2="162" stroke="#334155" stroke-width="3" />
+                    <line x1="${startX + 40}" y1="130" x2="${startX + 40}" y2="195" stroke="#334155" stroke-width="3" />
+                    <line x1="${startX + 180}" y1="130" x2="${startX + 180}" y2="195" stroke="#334155" stroke-width="3" />
+                    <line x1="${startX + 320}" y1="130" x2="${startX + 320}" y2="195" stroke="#334155" stroke-width="3" />
+                    <line x1="${startX + 460}" y1="130" x2="${startX + 460}" y2="195" stroke="#334155" stroke-width="3" />
+                    <line x1="${startX + 600}" y1="130" x2="${startX + 600}" y2="195" stroke="#334155" stroke-width="3" />
+                </g>
+            `;
         }
 
         let out = `
-            <rect x="${semiStartX}" y="205" width="${width}" height="18" rx="2" fill="url(#evChassisGrad)" stroke="#0f172a" stroke-width="2.5" />
-            <g id="kingpinAcople">
-                <rect x="${semiStartX + 35}" y="222" width="70" height="6" rx="2" fill="#0f172a" />
-                <polygon points="${semiStartX + 66},228 ${semiStartX + 74},228 ${semiStartX + 72},238 ${semiStartX + 68},238" fill="#eab308" stroke="#a16207" stroke-width="1.5" />
-                <g transform="translate(${semiStartX + 70}, 252)">
-                    <rect x="-38" y="-9" width="76" height="16" rx="3" fill="#ca8a04" />
-                    <text x="0" y="3" font-size="8" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="'Inter', sans-serif">PERNO REY</text>
-                </g>
-            </g>
-            <g id="patasApoyo">
-                <rect x="${semiStartX + 160}" y="215" width="16" height="65" fill="#334155" stroke="#0f172a" stroke-width="2"/>
-                <rect x="${semiStartX + 154}" y="278" width="28" height="7" rx="2" fill="#1e293b" />
-                <line x1="${semiStartX + 168}" y1="220" x2="${semiStartX + 205}" y2="250" stroke="#475569" stroke-width="3" />
-                <text x="${semiStartX + 168}" y="302" font-size="8" font-weight="700" fill="#475569" text-anchor="middle" font-family="'Inter', sans-serif">PATAS RETRÁCTILES</text>
-            </g>
-            <rect x="${semiStartX + 215}" y="226" width="${r1 - (semiStartX + 235)}" height="12" rx="2" fill="#94a3b8" stroke="#475569" stroke-width="1.5" />
-            <rect x="${semiEndX - 8}" y="215" width="8" height="65" fill="#1e293b" />
-            <rect x="${semiEndX - 18}" y="270" width="18" height="10" fill="#ef4444" stroke="#991b1b" stroke-width="1.5" />
+            <g id="semirremolqueS">
+                ${bodyHtml}
+                <line x1="${startX + 55}" y1="235" x2="${startX + 55}" y2="252" stroke="#0284c7" stroke-width="5" stroke-linecap="round"/>
+                <circle cx="${startX + 55}" cy="254" r="5" fill="#0284c7" />
+                <text x="${startX + 55}" y="270" font-size="8.5" font-weight="800" fill="#0284c7" text-anchor="middle" font-family="'Inter', sans-serif">KING PIN</text>
+
+                <!-- Patas de apoyo -->
+                <rect x="${startX + 150}" y="235" width="10" height="52" fill="#334155" stroke="#0f172a" stroke-width="1.5" />
+                <rect x="${startX + 144}" y="284" width="22" height="6" rx="2" fill="#0f172a" />
+                <text x="${startX + 155}" y="302" font-size="8" font-weight="700" fill="#64748b" text-anchor="middle" font-family="'Inter', sans-serif">PATAS</text>
         `;
 
-        if (isFurgon) {
+        if (numEjes === 3) {
             out += `
-                <g>
-                    <rect x="${semiStartX}" y="65" width="${width}" height="140" rx="3" fill="url(#evBodyGrad)" stroke="#334155" stroke-width="2.5" />
-                    <line x1="${semiStartX + width * 0.2}" y1="75" x2="${semiStartX + width * 0.2}" y2="195" stroke="#cbd5e1" stroke-width="2" />
-                    <line x1="${semiStartX + width * 0.4}" y1="75" x2="${semiStartX + width * 0.4}" y2="195" stroke="#cbd5e1" stroke-width="2" />
-                    <line x1="${semiStartX + width * 0.6}" y1="75" x2="${semiStartX + width * 0.6}" y2="195" stroke="#cbd5e1" stroke-width="2" />
-                    <line x1="${semiStartX + width * 0.8}" y1="75" x2="${semiStartX + width * 0.8}" y2="195" stroke="#cbd5e1" stroke-width="2" />
-                    <text x="${semiStartX + width/2}" y="140" font-size="14" font-weight="700" fill="#64748b" text-anchor="middle" font-family="'Inter', sans-serif">SEMIRREMOLQUE ${axlesCount === 3 ? 'S3 (3 EJES)' : 'S2 (2 EJES)'}</text>
-                </g>
+                <path d="M ${startX + bodyWidth - 275} 238 A 50 50 0 0 1 ${startX + bodyWidth - 175} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                <path d="M ${startX + bodyWidth - 180} 238 A 50 50 0 0 1 ${startX + bodyWidth - 80} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                <path d="M ${startX + bodyWidth - 85} 238 A 50 50 0 0 1 ${startX + bodyWidth + 15} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                ${_evRenderWheel(startX + bodyWidth - 225, 252, 'EJE 1')}
+                ${_evRenderWheel(startX + bodyWidth - 130, 252, 'EJE 2')}
+                ${_evRenderWheel(startX + bodyWidth - 35, 252, 'EJE 3')}
             `;
         } else {
             out += `
-                <g>
-                    <rect x="${semiStartX}" y="190" width="${width}" height="18" rx="2" fill="#94a3b8" stroke="#334155" stroke-width="2" />
-                    <rect x="${semiStartX}" y="145" width="10" height="50" fill="#1e293b" />
-                    <text x="${semiStartX + width/2}" y="180" font-size="12" font-weight="700" fill="#475569" text-anchor="middle" font-family="'Inter', sans-serif">PLATAFORMA PLANA</text>
-                </g>
+                <path d="M ${startX + bodyWidth - 195} 238 A 50 50 0 0 1 ${startX + bodyWidth - 95} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                <path d="M ${startX + bodyWidth - 100} 238 A 50 50 0 0 1 ${startX + bodyWidth} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                ${_evRenderWheel(startX + bodyWidth - 145, 252, 'EJE 1')}
+                ${_evRenderWheel(startX + bodyWidth - 50, 252, 'EJE 2')}
             `;
         }
 
-        if (axlesCount === 3) {
-            out += `<path d="M ${r1 - 50} 235 A 48 48 0 0 1 ${r1 + 46} 210 L ${r3 - 46} 210 A 48 48 0 0 1 ${r3 + 50} 235" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />`;
-        } else {
-            out += `<path d="M ${r1 - 50} 235 A 48 48 0 0 1 ${r1 + 46} 210 L ${r2 - 46} 210 A 48 48 0 0 1 ${r2 + 50} 235" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />`;
-        }
-
-        out += _evRenderWheel(r1, 252, 'E1: Trídem');
-        out += _evRenderWheel(r2, 252, 'E2: Trídem');
-        if (r3) out += _evRenderWheel(r3, 252, 'E3: Trídem');
+        out += `</g>`;
         return out;
     }
 
     function _evRenderRemolqueR2(isFurgon) {
-        const trailerStartX = 230;
-        const trailerEndX = 810;
-        const width = trailerEndX - trailerStartX;
-        const frontAxleX = trailerStartX + 85;
-        const rearAxleX = trailerEndX - 95;
+        const startX = 180;
+        const bodyWidth = 600;
 
-        let out = `
-            <g id="lanzaRemolque">
-                <circle cx="115" cy="245" r="10" fill="none" stroke="#eab308" stroke-width="4" />
-                <line x1="125" y1="245" x2="${trailerStartX + 30}" y2="225" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/>
-                <line x1="125" y1="245" x2="${trailerStartX + 30}" y2="245" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/>
-                <rect x="155" y="235" width="22" height="12" fill="#ca8a04" rx="2" />
-                <text x="145" y="270" font-size="8.5" font-weight="700" fill="#a16207" text-anchor="middle" font-family="'Inter', sans-serif">LANZA CON ARGOLLA</text>
-            </g>
-            <g id="tornamesa">
-                <ellipse cx="${frontAxleX}" cy="216" rx="35" ry="5" fill="#475569" stroke="#0f172a" stroke-width="2"/>
-                <circle cx="${frontAxleX}" cy="216" r="6" fill="#1e293b" />
-            </g>
-            <rect x="${trailerStartX}" y="205" width="${width}" height="18" rx="2" fill="url(#evChassisGrad)" stroke="#0f172a" stroke-width="2.5" />
-        `;
-
+        let bodyHtml = '';
         if (isFurgon) {
-            out += `
-                <g>
-                    <rect x="${trailerStartX}" y="70" width="${width}" height="135" rx="3" fill="url(#evBodyGrad)" stroke="#334155" stroke-width="2.5" />
-                    <line x1="${trailerStartX + width * 0.33}" y1="80" x2="${trailerStartX + width * 0.33}" y2="195" stroke="#cbd5e1" stroke-width="2" />
-                    <line x1="${trailerStartX + width * 0.66}" y1="80" x2="${trailerStartX + width * 0.66}" y2="195" stroke="#cbd5e1" stroke-width="2" />
-                    <text x="${trailerStartX + width/2}" y="140" font-size="13" font-weight="700" fill="#64748b" text-anchor="middle" font-family="'Inter', sans-serif">REMOLQUE R2 (2 EJES DISTRIBUIDOS)</text>
+            bodyHtml = `
+                <g id="bodyRemolqueFurgon">
+                    <rect x="${startX}" y="70" width="${bodyWidth}" height="165" rx="6" fill="url(#evBodyGrad)" stroke="#1e293b" stroke-width="2.5" />
+                    <line x1="${startX + 150}" y1="70" x2="${startX + 150}" y2="235" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4" />
+                    <line x1="${startX + 300}" y1="70" x2="${startX + 300}" y2="235" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4" />
+                    <line x1="${startX + 450}" y1="70" x2="${startX + 450}" y2="235" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4" />
                 </g>
             `;
         } else {
-            out += `
-                <g>
-                    <rect x="${trailerStartX}" y="190" width="${width}" height="18" rx="2" fill="#94a3b8" stroke="#334155" stroke-width="2" />
-                    <rect x="${trailerStartX}" y="150" width="8" height="45" fill="#1e293b" />
-                    <rect x="${trailerEndX - 8}" y="150" width="8" height="45" fill="#1e293b" />
-                    <text x="${trailerStartX + width/2}" y="180" font-size="12" font-weight="700" fill="#475569" text-anchor="middle" font-family="'Inter', sans-serif">PLATAFORMA REMOLQUE</text>
+            bodyHtml = `
+                <g id="bodyRemolquePlat">
+                    <rect x="${startX}" y="195" width="${bodyWidth}" height="40" rx="3" fill="#f8fafc" stroke="#1e293b" stroke-width="2.2" />
+                    <line x1="${startX}" y1="135" x2="${startX + bodyWidth}" y2="135" stroke="#334155" stroke-width="3" />
+                    <line x1="${startX}" y1="165" x2="${startX + bodyWidth}" y2="165" stroke="#334155" stroke-width="3" />
+                    <line x1="${startX + 50}" y1="135" x2="${startX + 50}" y2="195" stroke="#334155" stroke-width="3" />
+                    <line x1="${startX + 200}" y1="135" x2="${startX + 200}" y2="195" stroke="#334155" stroke-width="3" />
+                    <line x1="${startX + 350}" y1="135" x2="${startX + 350}" y2="195" stroke="#334155" stroke-width="3" />
+                    <line x1="${startX + 500}" y1="135" x2="${startX + 500}" y2="195" stroke="#334155" stroke-width="3" />
                 </g>
             `;
         }
 
-        out += `
-            <path d="M ${frontAxleX - 50} 236 A 48 48 0 0 1 ${frontAxleX + 50} 236" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
-            <path d="M ${rearAxleX - 50} 236 A 48 48 0 0 1 ${rearAxleX + 50} 236" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
-        `;
+        let out = `
+            <g id="remolqueR2">
+                ${bodyHtml}
+                <line x1="${startX - 75}" y1="245" x2="${startX}" y2="235" stroke="#0284c7" stroke-width="5" stroke-linecap="round"/>
+                <circle cx="${startX - 75}" cy="245" r="7" fill="#0284c7" />
+                <text x="${startX - 75}" y="265" font-size="8.5" font-weight="800" fill="#0284c7" text-anchor="middle" font-family="'Inter', sans-serif">LANZA</text>
 
-        out += _evRenderWheel(frontAxleX, 252, 'E1: Dir. Tornamesa');
-        out += _evRenderWheel(rearAxleX, 252, 'E2: Posterior');
+                <path d="M ${startX + 20} 238 A 50 50 0 0 1 ${startX + 120} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                ${_evRenderWheel(startX + 70, 252, 'EJE DEL (DIR)')}
+
+                <path d="M ${startX + bodyWidth - 120} 238 A 50 50 0 0 1 ${startX + bodyWidth - 20} 238" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+                ${_evRenderWheel(startX + bodyWidth - 70, 252, 'EJE TRAS')}
+            </g>
+        `;
         return out;
     }
 
-    // ── RENDERIZAR SISTEMAS Y COMPONENTES ─────────────────────────
+    // ── RENDERIZAR SISTEMAS Y ACORDEONES SEGÚN PLANTILLA ACTIVA ────
     window.evRenderizarSistemas = function() {
         const cont = document.getElementById('ev-sistemas-accordion-container');
         if (!cont) return;
 
+        const templateList = _evGlobalTemplate || GRUPOS_SISTEMAS_DEFAULT;
         let html = '';
-        GRUPOS_SISTEMAS.forEach((grp, idx) => {
-            const collapseId = `ev-collapse-sys-${grp.id}`;
-            const isFirst = idx < 2;
 
+        templateList.forEach((grp, idx) => {
+            const isFirst = idx === 0;
+            const items = grp.items || [];
             html += `
                 <div class="ev-system-card" id="ev-card-${grp.id}">
-                    <div class="ev-system-header" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="${isFirst}">
+                    <div class="ev-system-header" data-bs-toggle="collapse" data-bs-target="#ev-collapse-sys-${grp.id}" aria-expanded="${isFirst ? 'true' : 'false'}">
                         <div class="d-flex align-items-center gap-2">
-                            <i class="bi ${grp.icon} text-primary fs-5"></i>
-                            <strong class="text-dark" style="font-size:0.92rem;">${grp.titulo}</strong>
-                            <span class="badge bg-light text-secondary border rounded-pill px-2 py-1" style="font-size:0.7rem;">${grp.items.length} ítems</span>
+                            <i class="bi ${grp.icon || 'bi-card-checklist'} text-primary fs-5"></i>
+                            <span class="fw-bold text-dark" style="font-size:0.92rem;">${grp.titulo || grp.title}</span>
+                            <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2" style="font-size:0.72rem;">${items.length} ítems</span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-success-subtle text-success border border-success-subtle d-none" id="ev-badge-count-${grp.id}" style="font-size:0.7rem;"></span>
-                            <i class="bi bi-chevron-down text-secondary" style="transition: transform 0.2s ease;"></i>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 d-none" id="ev-badge-count-${grp.id}" style="font-size:0.7rem;">0 calificados</span>
+                            <i class="bi bi-chevron-down text-secondary"></i>
                         </div>
                     </div>
-
-                    <div class="collapse ${isFirst ? 'show' : ''}" id="${collapseId}">
+                    <div class="collapse ${isFirst ? 'show' : ''}" id="ev-collapse-sys-${grp.id}">
                         <div class="p-2 bg-white">
             `;
 
-            grp.items.forEach(it => {
-                const cleanKey = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            items.forEach((item) => {
+                const itemLabel = typeof item === 'string' ? item : (item.label || item.texto || '');
+                const cleanKey = itemLabel.toLowerCase().replace(/[^a-z0-9]/g, '_');
                 html += `
                     <div class="ev-item-row" id="ev-row-${cleanKey}">
-                        <div class="fw-semibold text-dark" style="font-size:0.86rem;">
-                            ${it}
+                        <div class="d-flex align-items-center gap-2 flex-grow-1">
+                            <i class="bi bi-dot text-secondary fs-4 d-none d-sm-inline"></i>
+                            <span class="fw-semibold text-dark" style="font-size:0.86rem;">${itemLabel}</span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <div class="d-flex align-items-center gap-1">
@@ -1142,19 +1279,21 @@
 
     window.evActualizarBadgeGrupo = function(grpId) {
         if (!grpId) return;
-        const grp = GRUPOS_SISTEMAS.find(g => g.id === grpId);
+        const templateList = _evGlobalTemplate || GRUPOS_SISTEMAS_DEFAULT;
+        const grp = templateList.find(g => g.id === grpId);
         if (!grp) return;
 
         let marcados = 0;
-        grp.items.forEach(it => {
-            const k = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        (grp.items || []).forEach(it => {
+            const itemLabel = typeof it === 'string' ? it : (it.label || it.texto || '');
+            const k = itemLabel.toLowerCase().replace(/[^a-z0-9]/g, '_');
             if (window._evItemsStates[k]) marcados++;
         });
 
         const badge = document.getElementById(`ev-badge-count-${grpId}`);
         if (badge) {
             if (marcados > 0) {
-                badge.textContent = `${marcados}/${grp.items.length} calificados`;
+                badge.textContent = `${marcados}/${(grp.items || []).length} calificados`;
                 badge.classList.remove('d-none');
             } else {
                 badge.classList.add('d-none');
@@ -1163,9 +1302,11 @@
     };
 
     window.evMarcarTodosBueno = function() {
-        GRUPOS_SISTEMAS.forEach(grp => {
-            grp.items.forEach(it => {
-                const k = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const templateList = _evGlobalTemplate || GRUPOS_SISTEMAS_DEFAULT;
+        templateList.forEach(grp => {
+            (grp.items || []).forEach(it => {
+                const itemLabel = typeof it === 'string' ? it : (it.label || it.texto || '');
+                const k = itemLabel.toLowerCase().replace(/[^a-z0-9]/g, '_');
                 window.evSetItemState(k, 'B', grp.id);
             });
         });
@@ -1173,13 +1314,15 @@
 
     window.evFiltrarItems = function(query) {
         const q = (query || '').trim().toLowerCase();
-        GRUPOS_SISTEMAS.forEach(grp => {
+        const templateList = _evGlobalTemplate || GRUPOS_SISTEMAS_DEFAULT;
+        templateList.forEach(grp => {
             let matches = 0;
-            grp.items.forEach(it => {
-                const k = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            (grp.items || []).forEach(it => {
+                const itemLabel = typeof it === 'string' ? it : (it.label || it.texto || '');
+                const k = itemLabel.toLowerCase().replace(/[^a-z0-9]/g, '_');
                 const row = document.getElementById(`ev-row-${k}`);
                 if (row) {
-                    const match = !q || it.toLowerCase().includes(q);
+                    const match = !q || itemLabel.toLowerCase().includes(q);
                     row.style.display = match ? 'flex' : 'none';
                     if (match) matches++;
                 }
@@ -1360,7 +1503,7 @@
         return svg;
     }
 
-    // ── RASTERIZADOR DE SVG A PNG ULTRA ALTA DEFINICIÓN (COMPATIBLE CON HTML2PDF/CANVAS) ──
+    // ── RASTERIZADOR DE SVG A PNG ULTRA ALTA DEFINICIÓN ──
     async function _evRasterizarSvgAPng(svgString) {
         return new Promise(function(resolve) {
             try {
@@ -1410,10 +1553,16 @@
         const fechaStr = r.fecha ? r.fecha.slice(0, 10) : new Date().toISOString().slice(0, 10);
         const kmFmt = parseFloat(r.kilometraje || 0).toLocaleString('es-PE');
         const pdfConfig = _evObtenerConfiguracion(r);
+        const templateList = _evGlobalTemplate || GRUPOS_SISTEMAS_DEFAULT;
 
         const diagramaHtml = diagramaDataUrl
             ? `<img src="${diagramaDataUrl}" style="width: 100%; max-width: 740px; height: 135px; object-fit: contain; display: block; margin: 0 auto;" alt="Diagrama Unidad">`
             : _evGenerarSvgDiagrama(pdfConfig);
+
+        const third = Math.ceil(templateList.length / 3);
+        const col1 = templateList.slice(0, third);
+        const col2 = templateList.slice(third, third * 2);
+        const col3 = templateList.slice(third * 2);
 
         return `
             <main class="report-page w-full max-w-[840px] bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-3 sm:p-4 text-slate-900 mx-auto" style="box-sizing:border-box;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;">
@@ -1501,11 +1650,7 @@
                 <!-- 3. MATRIZ DE CALIFICACIÓN DE SISTEMAS Y ACCESORIOS -->
                 <section class="mb-2">
                     <div class="grid grid-cols-3 gap-1" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;">
-                        ${[
-                            GRUPOS_SISTEMAS.slice(0, 5),
-                            GRUPOS_SISTEMAS.slice(5, 10),
-                            GRUPOS_SISTEMAS.slice(10)
-                        ].map(colGrupos => `
+                        ${[col1, col2, col3].map(colGrupos => `
                             <div class="doc-grid-box rounded-lg overflow-hidden bg-white" style="border:1.5px solid #0F172A;">
                                 <table style="width:100%; border-collapse: collapse; font-size: 7.2px;">
                                     <thead>
@@ -1519,11 +1664,12 @@
                                         ${colGrupos.map(grp => `
                                             <tr style="background:#F1F5F9; border-top:1px solid #0F172A; border-bottom:1px solid #0F172A;">
                                                 <td colspan="3" style="padding: 1px 3px; font-weight: 800; font-size: 7.2px; color: #1E293B; text-transform: uppercase;">
-                                                    • ${grp.titulo}
+                                                    • ${grp.titulo || grp.title}
                                                 </td>
                                             </tr>
-                                            ${grp.items.map(it => {
-                                                const k = it.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                                            ${(grp.items || []).map(it => {
+                                                const itemLabel = typeof it === 'string' ? it : (it.label || it.texto || '');
+                                                const k = itemLabel.toLowerCase().replace(/[^a-z0-9]/g, '_');
                                                 const est = partes[k] || 'B';
                                                 let badgeHtml = '<span class="px-1 py-0.2 rounded font-extrabold text-[6.8px] bg-emerald-100 text-emerald-800 border border-emerald-300">OK</span>';
                                                 if (est === 'R') badgeHtml = '<span class="px-1 py-0.2 rounded font-extrabold text-[6.8px] bg-amber-100 text-amber-800 border border-amber-300">REG</span>';
@@ -1531,7 +1677,7 @@
 
                                                 return `
                                                     <tr style="border-bottom: 1px solid #E2E8F0;">
-                                                        <td style="padding: 0.8px 3px; color: #334155; font-weight: 500; font-size: 7px;">${it}</td>
+                                                        <td style="padding: 0.8px 3px; color: #334155; font-weight: 500; font-size: 7px;">${itemLabel}</td>
                                                         <td style="padding: 0.8px 2px; text-align:center; font-family:monospace; font-weight:bold; color:#64748B; font-size: 7px;">1</td>
                                                         <td style="padding: 0.8px 2px; text-align:center;">${badgeHtml}</td>
                                                     </tr>
@@ -1573,7 +1719,7 @@
                             </div>
                             <div class="w-full pt-1 border-t border-slate-300" style="border-top:1px solid #CBD5E1;">
                                 <div class="font-bold text-slate-900 text-[8px] uppercase">${r.quien_entrega}</div>
-                                <div class="text-[6.8px] text-slate-500 font-semibold uppercase">ENTREGADO POR (CONTROL DE SEGURIDAD)</div>
+                                <div class="text-[6.8px] text-slate-500 font-semibold uppercase">ENTREGADO POR (CONTROL DE FLOTA)</div>
                             </div>
                         </div>
 
@@ -1649,7 +1795,7 @@
         });
     }
 
-    // ── VENTANA DE IMPRESIÓN Y DESCARGA DIRECTA (IDÉNTICA A CHECKLIST UNIDADES) ──
+    // ── VENTANA DE IMPRESIÓN Y DESCARGA DIRECTA ──
     function _evAbrirVentanaImpresion(htmlBody, filename, titulo, autoPrint) {
         var finalHtml = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n'
             + '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
@@ -1753,7 +1899,7 @@
         return `Entrega de Vehiculo - ${placa} - ${fechaStr}.pdf`;
     }
 
-    // ── COMPARTIR DIRECTAMENTE EL ARCHIVO PDF POR WHATSAPP (MÓVIL Y PC) ─────────
+    // ── COMPARTIR DIRECTAMENTE EL ARCHIVO PDF POR WHATSAPP ─────────
     window.evCompartirWhatsApp = async function(id) {
         try {
             const token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token');
@@ -1777,8 +1923,6 @@
             const pdfBlob = await _evRenderPdfBlob(htmlBody, filename);
             const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-            // 1. Si el dispositivo soporta compartir archivos nativamente (Android, iOS y Navegadores compatibles)
-            // Se envía únicamente el archivo PDF sin texto adicional para que llegue en un solo mensaje
             if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
                 try {
                     await navigator.share({
@@ -1792,7 +1936,6 @@
                 }
             }
 
-            // 2. En PC / Escritorio: Descarga directa automática del PDF + Apertura de WhatsApp para adjuntarlo
             const fileUrl = URL.createObjectURL(pdfBlob);
             const a = document.createElement('a');
             a.href = fileUrl;
@@ -1804,13 +1947,13 @@
             window.open('https://api.whatsapp.com/send', '_blank');
 
         } catch(e) {
-            if (e.name === 'AbortError') return; // Cancelado en el selector nativo
+            if (e.name === 'AbortError') return;
             console.error('Error al compartir PDF por WhatsApp:', e);
             alert('Error al generar y compartir el PDF por WhatsApp.');
         }
     };
 
-    // ── GENERACIÓN E IMPRESIÓN DEL PDF OFICIAL (IDÉNTICO A CHECKLIST UNIDADES) ──────
+    // ── GENERACIÓN E IMPRESIÓN DEL PDF OFICIAL ──────
     window.evImprimirPDF = async function(id) {
         try {
             const token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token');
