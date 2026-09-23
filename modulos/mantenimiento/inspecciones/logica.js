@@ -11,12 +11,12 @@ window.normalizeStr = window.normalizeStr || function(str) {
 window.dataFinalInspGlobal = window.dataFinalInspGlobal || [];
 window.inspPorPagina = window.inspPorPagina || parseInt(localStorage.getItem('fleet_insp_ppp') || '50');
 window.inspPaginaActual = window.inspPaginaActual || 1;
-var isHistorialStatus = window.isHistorialStatus || false;
-var dataGlobalInspecciones = window.dataGlobalInspecciones || [];
-var dataGlobalPlacas = window.dataGlobalPlacas || [];
-var dataGlobalNeumaticos = window.dataGlobalNeumaticos || [];
+window.isHistorialStatus = window.isHistorialStatus || false;
+window.dataGlobalInspecciones = window.dataGlobalInspecciones || [];
+window.dataGlobalPlacas = window.dataGlobalPlacas || [];
+window.dataGlobalNeumaticos = window.dataGlobalNeumaticos || [];
 
-var DEFAULT_INSP_SCHEMA = window.DEFAULT_INSP_SCHEMA || [
+window.DEFAULT_INSP_SCHEMA = window.DEFAULT_INSP_SCHEMA || [
     { tab: 'LLANTA', template_id: 'cat_llanta', items: [{ id: 'i_1', label: 'Cortes o Averías', type: 'okfalla' }, { id: 'i_2', label: 'PSI del Neumático', type: 'okfalla' }, { id: 'i_3', label: 'Otros', type: 'okfalla' }] },
     { tab: 'MOTOR', template_id: 'cat_motor', items: [{ id: 'i_4', label: 'Niveles de Motor', type: 'okfalla' }, { id: 'i_5', label: 'Sistema de Lubricación Fugas', type: 'okfalla' }, { id: 'i_6', label: 'Sistema de Combustible', type: 'okfalla' }, { id: 'i_7', label: 'Sistema de Refrigeración', type: 'okfalla' }, { id: 'i_8', label: 'Correas, Ventilador y Accesorios', type: 'okfalla' }, { id: 'i_9', label: 'Código de Falla', type: 'okfalla' }, { id: 'i_10', label: 'Otros', type: 'okfalla' }] },
     { tab: 'SISTEMA ELECTRICO', template_id: 'cat_elec', items: [{ id: 'i_11', label: 'Sistema Eléctrico General', type: 'okfalla' }, { id: 'i_12', label: 'Estado de Bateria', type: 'okfalla' }, { id: 'i_13', label: 'Otros', type: 'okfalla' }] },
@@ -27,8 +27,7 @@ var DEFAULT_INSP_SCHEMA = window.DEFAULT_INSP_SCHEMA || [
     { tab: 'SUSPENSION', template_id: 'cat_susp', items: [{ id: 'i_33', label: 'Muelles o Bolsas de Aire', type: 'okfalla' }, { id: 'i_34', label: 'Amortiguadores', type: 'okfalla' }, { id: 'i_35', label: 'Eje de Barra Estabilizadora', type: 'okfalla' }, { id: 'i_36', label: 'Otros', type: 'okfalla' }] },
     { tab: 'HERMETIZADO', template_id: 'cat_herm', items: [{ id: 'i_37', label: 'Cabina Exterior e Interior', type: 'okfalla' }, { id: 'i_38', label: 'Puerta, Chapas y Asientos', type: 'okfalla' }, { id: 'i_39', label: 'Chasis, Tornamesa y Bastidor', type: 'okfalla' }, { id: 'i_40', label: 'Furgón (Estructura Laterales)', type: 'okfalla' }, { id: 'i_41', label: 'Lavado y Limpieza Interior de ThermoKing', type: 'okfalla' }] }
 ];
-window.DEFAULT_INSP_SCHEMA = DEFAULT_INSP_SCHEMA;
-window.DYNAMIC_INSP_SCHEMA = window.DYNAMIC_INSP_SCHEMA || DEFAULT_INSP_SCHEMA;
+window.DYNAMIC_INSP_SCHEMA = window.DYNAMIC_INSP_SCHEMA || window.DEFAULT_INSP_SCHEMA;
 
 window.ensureInspConfig = function() {
     return fetch('/api/mantenimiento/inspecciones/config')
@@ -3289,7 +3288,7 @@ window.recargarInspecciones = function () {
 // ==========================================
 // ⚙️ CONSTRUCTOR DINÁMICO DE PLANTILLA (INSPECCIONES)
 // ==========================================
-var _inspEditingTemplate = [];
+window._inspEditingTemplate = window._inspEditingTemplate || [];
 
 window.abrirConfigInspecciones = async function() {
     try {
