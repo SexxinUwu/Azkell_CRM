@@ -203,36 +203,31 @@ window.ovActualizarKPIs = function() {
 
     var totalViajes = viajes.length;
     var totalOrdenes = rutas.length;
-    var pesoIdaKg = 0;
-    var pesoRetornoKg = 0;
+    var pendientes = 0;
+    var enRuta = 0;
+    var finalizados = 0;
 
-    rutas.forEach(function(r) {
-        var p = parseFloat(r.peso_total) || 0;
-        if (parseInt(r.es_retorno, 10) === 1) {
-            pesoRetornoKg += p;
+    viajes.forEach(function(v) {
+        var st = (v.estado || '').toUpperCase();
+        if (st === 'INICIADO' || st === 'EN RUTA' || st === 'EN TRÁNSITO' || st === 'EN CURSO') {
+            enRuta++;
+        } else if (st === 'FINALIZADO' || st === 'COMPLETADO' || st === 'CERRADO' || st === 'LIQUIDADO') {
+            finalizados++;
         } else {
-            pesoIdaKg += p;
+            pendientes++;
         }
     });
 
-    // Si hay viajes registrados pero sin detalle en rutas (ej. nuevo viaje creado con peso principal)
-    if (pesoIdaKg === 0 && pesoRetornoKg === 0) {
-        viajes.forEach(function(v) {
-            var p = parseFloat(v.peso) || 0;
-            pesoIdaKg += (p * 1000);
-        });
-    }
-
     var kTotal = document.getElementById('ov-kpi-total');
-    var kOrdenes = document.getElementById('ov-kpi-ordenes');
-    var kPesoIda = document.getElementById('ov-kpi-peso-ida');
-    var kPesoRetorno = document.getElementById('ov-kpi-peso-retorno');
+    var kPend = document.getElementById('ov-kpi-pendientes');
+    var kRuta = document.getElementById('ov-kpi-en-ruta');
+    var kFin = document.getElementById('ov-kpi-finalizados');
     var badgeTotal = document.getElementById('ov-lbl-total-badge');
 
     if (kTotal) kTotal.textContent = totalViajes.toLocaleString();
-    if (kOrdenes) kOrdenes.textContent = totalOrdenes.toLocaleString();
-    if (kPesoIda) kPesoIda.textContent = (pesoIdaKg / 1000).toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' TN';
-    if (kPesoRetorno) kPesoRetorno.textContent = (pesoRetornoKg / 1000).toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' TN';
+    if (kPend) kPend.textContent = pendientes.toLocaleString();
+    if (kRuta) kRuta.textContent = enRuta.toLocaleString();
+    if (kFin) kFin.textContent = finalizados.toLocaleString();
     if (badgeTotal) badgeTotal.textContent = `${totalViajes} viajes · ${totalOrdenes} O/S`;
 };
 

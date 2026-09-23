@@ -790,7 +790,8 @@ window.guardarEntrada = function() {
     var provNombre = window._cbGetText('ent-f-proveedor');
     var ctaProv    = (document.getElementById('ent-f-cuenta-prov') || {}).value || '';
     var ctaEmpresa = (document.getElementById('ent-f-cuenta-empresa') || {}).value || '';
-    var solicitante= (document.getElementById('ent-f-solicitante') || {}).value || '';
+    var autoriza   = (document.getElementById('ent-f-autoriza') || {}).value || '';
+    var solicitante= autoriza || (document.getElementById('ent-f-solicitante') || {}).value || '';
     var docRef     = (document.getElementById('ent-f-doc-ref') || {}).value || '';
     var estadoFact = (document.getElementById('ent-f-estado-factura') || {}).value || 'Factura Pendiente';
     var moneda     = (document.getElementById('ent-f-moneda')  || {}).value || 'PEN';
@@ -802,7 +803,6 @@ window.guardarEntrada = function() {
     var motivo     = (document.getElementById('ent-f-motivo')  || {}).value || '';
     var centro_costo = (document.getElementById('ent-f-centro-costo') || {}).value || 'CC-100';
     var sub_motivo = (document.getElementById('ent-f-sub-motivo') || {}).value || '';
-    var autoriza   = (document.getElementById('ent-f-autoriza') || {}).value || '';
     var placa      = window._cbGet('ent-f-placa') || '';
     var ot_id      = window._cbGet('ent-f-ot') || '';
     if (tipo_orden.toLowerCase() === 'orden de servicio') {
@@ -812,6 +812,7 @@ window.guardarEntrada = function() {
     }
       
     if (!fecha)  { alert('Falta la fecha.'); return; }
+    if (!autoriza) { alert('Por favor seleccione el Directivo Autorizador / Solicitante.'); return; }
     if (!provId || (window._entProvItems && !window._entProvItems.find(function(p) { return p.value === provId; }))) {
         var typedProv = provNombre || window._cbGetText('ent-f-proveedor');
         if (typedProv) {
@@ -880,7 +881,7 @@ window.guardarEntrada = function() {
         condicion_pago: condicion_pago,
         dias_credito: dias_credito,
         dias_pagar: dias_credito,
-        creado_por: localStorage.getItem('fleet_user')||'',
+        creado_por: localStorage.getItem('fleet_nombre_usuario') || localStorage.getItem('fleet_user') || 'Daniel',
         items: items
     };
 
@@ -1097,11 +1098,12 @@ window.abrirModalEditarEntrada = function(id) {
     var fPrio = document.getElementById('ent-f-prioridad');
     if (fPrio) fPrio.value = entrada.prioridad || 'Normal';
 
+    var directivoVal = entrada.autoriza || entrada.solicitante || '';
     var fSoli = document.getElementById('ent-f-solicitante');
-    if (fSoli) fSoli.value = entrada.solicitante || '';
+    if (fSoli) fSoli.value = directivoVal;
 
     var fAutoriza = document.getElementById('ent-f-autoriza');
-    if (fAutoriza) fAutoriza.value = entrada.autoriza || '';
+    if (fAutoriza) fAutoriza.value = directivoVal;
 
     var fCC = document.getElementById('ent-f-centro-costo');
     if (fCC) fCC.value = entrada.centro_costo || 'CC-100';

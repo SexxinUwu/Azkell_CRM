@@ -115,15 +115,45 @@
             if (result.ok) {
                 _osData = result.data || [];
                 _osFilteredData = [..._osData];
+                actualizarKpisOS(_osData);
                 renderizarTabla(_osFilteredData);
             } else {
-                tbody.innerHTML = `<tr><td colspan="19" class="text-center py-4 text-danger">Error: ${result.error || 'No se pudo cargar la información'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="21" class="text-center py-4 text-danger">Error: ${result.error || 'No se pudo cargar la información'}</td></tr>`;
             }
         } catch (err) {
             console.error("Error al consultar órdenes de servicio:", err);
-            tbody.innerHTML = `<tr><td colspan="19" class="text-center py-4 text-danger">Error de conexión: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="21" class="text-center py-4 text-danger">Error de conexión: ${err.message}</td></tr>`;
         }
     };
+
+    function actualizarKpisOS(lista) {
+        const arr = lista || [];
+        const total = arr.length;
+        let pendientes = 0;
+        let enProceso = 0;
+        let finalizadas = 0;
+
+        arr.forEach(item => {
+            const st = String(item.estado_servicio || 'PENDIENTE').toUpperCase();
+            if (st === 'INICIADO' || st === 'EN TRÁNSITO' || st === 'EN RUTA') {
+                enProceso++;
+            } else if (st === 'FINALIZADO' || st === 'COMPLETADO' || st === 'LIQUIDADO') {
+                finalizadas++;
+            } else {
+                pendientes++;
+            }
+        });
+
+        const elTotal = document.getElementById('os-kpi-total');
+        const elPend = document.getElementById('os-kpi-pendientes');
+        const elProc = document.getElementById('os-kpi-proceso');
+        const elFin = document.getElementById('os-kpi-finalizados');
+
+        if (elTotal) elTotal.textContent = total;
+        if (elPend) elPend.textContent = pendientes;
+        if (elProc) elProc.textContent = enProceso;
+        if (elFin) elFin.textContent = finalizadas;
+    }
 
     function renderizarTabla(lista) {
         const tbody = document.getElementById('os-tbody');
@@ -153,30 +183,30 @@
                 ? `<a href="${item.sustento_url}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-1.5" title="Ver Sustento"><i class="bi bi-file-earmark-arrow-down"></i></a>`
                 : `<span class="text-muted opacity-50">—</span>`;
 
-            // Badge estilizado de Estado de Servicio
+            // Badge estilizado de Estado de Servicio (1:1 Reporte de Fallas)
             const estServ = String(item.estado_servicio || 'PENDIENTE').toUpperCase();
-            let badgeEstado = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace px-2 py-1"><i class="bi bi-clock me-1"></i>PENDIENTE</span>';
-            if (estServ === 'INICIADO') {
-                badgeEstado = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle font-monospace px-2 py-1"><i class="bi bi-play-circle me-1"></i>INICIADO</span>';
-            } else if (estServ === 'FINALIZADO') {
-                badgeEstado = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle font-monospace px-2 py-1"><i class="bi bi-check2-circle me-1"></i>FINALIZADO</span>';
+            let badgeEstado = '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.73rem;"><i class="bi bi-clock me-1"></i>PENDIENTE</span>';
+            if (estServ === 'INICIADO' || estServ === 'EN TRÁNSITO' || estServ === 'EN RUTA') {
+                badgeEstado = '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.73rem;"><i class="bi bi-play-circle me-1"></i>EN TRÁNSITO</span>';
+            } else if (estServ === 'FINALIZADO' || estServ === 'COMPLETADO' || estServ === 'LIQUIDADO') {
+                badgeEstado = '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.73rem;"><i class="bi bi-check2-circle me-1"></i>FINALIZADO</span>';
             } else if (estServ === 'ANULADO' || estServ === 'CANCELADO') {
-                badgeEstado = '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle font-monospace px-2 py-1"><i class="bi bi-x-circle me-1"></i>ANULADO</span>';
+                badgeEstado = '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.73rem;"><i class="bi bi-x-circle me-1"></i>ANULADO</span>';
             }
 
             html += `
                 <tr>
                     <td class="text-nowrap col-sticky-os-accion">
                         <div class="dropdown d-inline-block">
-                            <button class="btn btn-sm os-btn-editar-drop dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false">
+                            <button class="btn btn-sm btn-light bg-white border shadow-2xs text-secondary rounded-3 px-2 py-1 fw-bold dropdown-toggle" style="font-size:0.75rem;" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false">
                                 ACCIÓN
                             </button>
-                            <ul class="dropdown-menu shadow-sm border-0" style="font-size:0.8rem;">
-                                <li><a class="dropdown-item fw-bold text-primary" href="javascript:void(0)" onclick="window.osAbrirModalEditar(${item.id})"><i class="bi bi-pencil-square me-1"></i> Modificar Orden</a></li>
-                                ${estServ !== 'INICIADO' && estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-primary fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'INICIADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-play-fill me-1"></i> Iniciar Servicio</a></li>` : ''}
-                                ${estServ === 'INICIADO' ? `<li><a class="dropdown-item text-warning fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'PENDIENTE', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-arrow-counterclockwise me-1"></i> Volver a Pendiente</a></li>` : ''}
-                                ${estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-success fw-bold" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'FINALIZADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-check2-circle me-1"></i> Finalizar Servicio</a></li>` : ''}
-                                ${estServ !== 'ANULADO' ? `<li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'ANULADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-x-circle me-1"></i> Anular Orden</a></li>` : ''}
+                            <ul class="dropdown-menu shadow-lg border-0 rounded-3 p-1" style="font-size:0.8rem; z-index:1070;">
+                                <li><a class="dropdown-item fw-bold text-primary rounded-2" href="javascript:void(0)" onclick="window.osAbrirModalEditar(${item.id})"><i class="bi bi-pencil-square me-1"></i> Modificar Orden</a></li>
+                                ${estServ !== 'INICIADO' && estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-primary fw-bold rounded-2" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'INICIADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-play-fill me-1"></i> Iniciar Servicio</a></li>` : ''}
+                                ${estServ === 'INICIADO' ? `<li><a class="dropdown-item text-warning fw-bold rounded-2" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'PENDIENTE', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-arrow-counterclockwise me-1"></i> Volver a Pendiente</a></li>` : ''}
+                                ${estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-success fw-bold rounded-2" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'FINALIZADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-check2-circle me-1"></i> Finalizar Servicio</a></li>` : ''}
+                                ${estServ !== 'ANULADO' ? `<li><a class="dropdown-item text-danger rounded-2" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'ANULADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-x-circle me-1"></i> Anular Orden</a></li>` : ''}
                             </ul>
                         </div>
                     </td>
@@ -189,7 +219,7 @@
                     <td class="text-nowrap fw-bold text-dark">${escapeHtml(item.cliente_nombre || '—')}</td>
                     <td class="text-nowrap">${escapeHtml(item.tipo_contratacion || 'CLIENTE DIRECTO')}</td>
                     <td class="text-nowrap">${escapeHtml(item.modalidad_ejecucion || 'PROPIO')}</td>
-                    <td class="text-nowrap">${(item.es_retorno === 1 || item.es_retorno === '1' || item.es_retorno === true) ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace"><i class="bi bi-arrow-left me-0.5"></i>RETORNO</span>' : '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle font-monospace"><i class="bi bi-arrow-right me-0.5"></i>IDA</span>'}</td>
+                    <td class="text-nowrap">${(item.es_retorno === 1 || item.es_retorno === '1' || item.es_retorno === true) ? '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-0.5 rounded-pill font-monospace" style="font-size:0.7rem;"><i class="bi bi-arrow-left me-0.5"></i>RETORNO</span>' : '<span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2 py-0.5 rounded-pill font-monospace" style="font-size:0.7rem;"><i class="bi bi-arrow-right me-0.5"></i>IDA</span>'}</td>
                     <td class="text-nowrap">${escapeHtml(item.tipo_servicio || 'CARGA GENERAL')}</td>
                     <td class="text-nowrap">${escapeHtml(item.destinatario || '—')}</td>
                     <td class="text-center font-monospace">${item.puntos_carga || 1}</td>
@@ -199,7 +229,7 @@
                     <td class="text-nowrap font-monospace">${escapeHtml(item.moneda || 'SOLES')}</td>
                     <td class="text-end font-monospace fw-bold text-dark">${item.moneda === 'DÓLARES' ? '$' : 'S/'} ${fleteVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td class="text-center text-nowrap">${sustentoBtn}</td>
-                    <td class="text-nowrap" style="max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(item.observaciones || '')}">${escapeHtml(item.observaciones || '—')}</td>
+                    <td class="text-nowrap pe-3" style="max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(item.observaciones || '')}">${escapeHtml(item.observaciones || '—')}</td>
                 </tr>
             `;
         });
@@ -207,22 +237,49 @@
         tbody.innerHTML = html;
     }
 
-    // ── Buscador local en tabla ─────────────────────────────────────
-    window.osFiltrarLocalmente = function (termino) {
-        const q = (termino || '').toLowerCase().trim();
-        if (!q) {
-            renderizarTabla(_osData);
-            return;
-        }
-        _osFilteredData = _osData.filter(i => 
-            (i.codigo_orden || '').toLowerCase().includes(q) ||
-            (i.cliente_nombre || '').toLowerCase().includes(q) ||
-            (i.conductor || '').toLowerCase().includes(q) ||
-            (i.viaje_asignado || '').toLowerCase().includes(q) ||
-            (i.tipo_servicio || '').toLowerCase().includes(q)
-        );
-        renderizarTabla(_osFilteredData);
+    // ── Filtros combinados: Estado Segmented + Buscador ─────────────
+    let _osEstadoActivo = 'TODOS';
+
+    window.osFiltrarEstado = function(estado, btn) {
+        document.querySelectorAll('#btn-group-estados-os .ck-segment-item').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        _osEstadoActivo = estado;
+        aplicarFiltrosCombinadosOS();
     };
+
+    window.osFiltrarLocalmente = function (termino) {
+        aplicarFiltrosCombinadosOS();
+    };
+
+    function aplicarFiltrosCombinadosOS() {
+        const q = (document.getElementById('os-buscador-tabla')?.value || '').toLowerCase().trim();
+        let filtrados = [..._osData];
+
+        if (_osEstadoActivo && _osEstadoActivo !== 'TODOS') {
+            filtrados = filtrados.filter(item => {
+                const st = String(item.estado_servicio || 'PENDIENTE').toUpperCase();
+                if (_osEstadoActivo === 'PENDIENTE') return st === 'PENDIENTE' || st === 'REGISTRADO';
+                if (_osEstadoActivo === 'INICIADO') return st === 'INICIADO' || st === 'EN TRÁNSITO' || st === 'EN RUTA';
+                if (_osEstadoActivo === 'FINALIZADO') return st === 'FINALIZADO' || st === 'COMPLETADO' || st === 'LIQUIDADO';
+                return st === _osEstadoActivo;
+            });
+        }
+
+        if (q) {
+            filtrados = filtrados.filter(i => 
+                (i.codigo_orden || '').toLowerCase().includes(q) ||
+                (i.cliente_nombre || '').toLowerCase().includes(q) ||
+                (i.conductor || '').toLowerCase().includes(q) ||
+                (i.viaje_asignado || '').toLowerCase().includes(q) ||
+                (i.placa_tracto || '').toLowerCase().includes(q) ||
+                (i.destinatario || '').toLowerCase().includes(q) ||
+                (i.tipo_servicio || '').toLowerCase().includes(q)
+            );
+        }
+
+        _osFilteredData = filtrados;
+        renderizarTabla(_osFilteredData);
+    }
 
     // ── Botón Atrás Contextual ──────────────────────────────────────
     window.osRegresarAtras = function () {
