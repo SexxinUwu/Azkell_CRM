@@ -742,10 +742,28 @@ window._ckConfigTemp = { tracto: [], remolque: [] };
 window.ckAbrirPlantilla = async function() {
     await window.ckCargarConfigSistemasDesdeBackend();
 
+    if (!Array.isArray(window.SISTEMAS_TRACTO_CONFIG) || window.SISTEMAS_TRACTO_CONFIG.length === 0) {
+        window.SISTEMAS_TRACTO_CONFIG = [
+            { key: 'motor', title: 'MOTOR', icon: 'bi-gear-fill', items: ['01 Nivel de aceite motor', '02 Fugas de fluidos', '03 Filtro de aire', '04 Pérdida de potencia', '05 Compresora de aire', '06 Fajas, poleas, templadores', '07 Turbo', '08 Múltiple de escape', '09 Silenciador', '10 Cañerías de combustible'] },
+            { key: 'caja', title: 'CAJA - CORONAS', icon: 'bi-gear-wide-connected', items: ['11 Embrague', '12 Palanca de cambios', '13 Freno de Motor', '14 Ruido en la caja de cambios', '15 Ruido en las coronas', '16 Retenes de Corona', '17 Templadores, soportes', '18 Cardan y crucetas'] },
+            { key: 'refri', title: 'REFRIGERACION', icon: 'bi-thermometer-half', items: ['19 Nivel de refrigerante', '20 Fugas de refrigerante', '21 Tanque de expansión', '22 Temperatura elevada', '23 Radiador, intercooler', '24 Bomba de agua'] },
+            { key: 'direccion', title: 'DIRECCION', icon: 'bi-compass', items: ['25 Alineamiento y balanceo', '26 Servo, Sist. hidráulico', '27 Caja de dirección', '28 Barras y terminales'] },
+            { key: 'cabina', title: 'CABINA Y CHASIS', icon: 'bi-truck-front', items: ['29 Tablero', '30 Lunas y parabrisas', '31 Suspensión de asiento', '32 Cinturones de seguridad', '33 Tablero e instrumentos', '34 Amortiguadores', '35 Tanques de combustible', '36 Puertas y manijas', '37 Timón', '38 Espejos laterales', '39 Soportes de cabina', '40 Control veloc. Crucero', '41 Accesorios en general', '42 Autoradio y antenas', '43 Quinta rueda', '44 OTROS'] }
+        ];
+    }
+    if (!Array.isArray(window.SISTEMAS_REMOLQUE_CONFIG) || window.SISTEMAS_REMOLQUE_CONFIG.length === 0) {
+        window.SISTEMAS_REMOLQUE_CONFIG = [
+            { key: 'frenos', title: 'FRENOS', icon: 'bi-hand-index-thumb', items: ['45 Revisar zapatas', '46 Pulpo de Freno', '47 Válvulas de freno', '48 Freno de mano / estacionamiento', '49 Tanque de aire', '50 Rachet de freno', '51 Freno de servicio', '52 Mangueras y conexiones', '53 OTROS'] },
+            { key: 'carreta', title: 'CARRETA', icon: 'bi-truck-flatbed', items: ['54 Estado de triplay', '55 Pisos sin huecos ni óxido', '56 Seguro de puertas', '57 Guarda fangos', '58 Muelle de arrastre', '59 Seguro de perno rey', '60 Parachoques posterior', '61 Plancha de enganche', '62 Ganchos de carpa', '63 Patas de apoyo', '64 Escalera de acceso', '65 OTROS'] },
+            { key: 'electrico', title: 'SISTEMA ELECTRICO', icon: 'bi-lightning-charge', items: ['66 Luces en general', '67 Faros piratas', '68 Conectores de carreta', '69 Claxon', '70 Alarma de retroceso', '71 Faros delanteros', '72 Faros posteriores', '73 Faros laterales', '74 Alternador', '75 Arrancador', '76 Baterías y bornes', '77 Conectores en general', '78 Testigos check engine', '79 OTROS'] },
+            { key: 'suspension', title: 'SUSPENSION', icon: 'bi-arrows-expand', items: ['80 Amortiguadores', '81 Bolsas de aire', '82 Muelles y grilletes', '83 Templadores de suspensión'] }
+        ];
+    }
+
     // Clonar esquemas para edición temporal
     window._ckConfigTemp = {
-        tracto: JSON.parse(JSON.stringify(window.SISTEMAS_TRACTO_CONFIG || [])),
-        remolque: JSON.parse(JSON.stringify(window.SISTEMAS_REMOLQUE_CONFIG || []))
+        tracto: JSON.parse(JSON.stringify(window.SISTEMAS_TRACTO_CONFIG)),
+        remolque: JSON.parse(JSON.stringify(window.SISTEMAS_REMOLQUE_CONFIG))
     };
 
     window._ckConfigTabActiva = 'tracto';
