@@ -1681,6 +1681,11 @@ async function procesarGuardadoInspeccion() {
                                 console.log("Error subiendo foto a S3, usando fallback", e);
                                 fotoEvidencia = await fileToBase64(inputFoto.files[0]);
                             }
+                        } else {
+                            let prevImg = document.getElementById(`prev_img_${uid}`);
+                            if (prevImg && prevImg.src && prevImg.src.startsWith('http')) {
+                                fotoEvidencia = prevImg.src;
+                            }
                         }
                     }
                 } else if (t === 'percent') {
@@ -1730,12 +1735,7 @@ async function procesarGuardadoInspeccion() {
         .then(r => {
             if (r.data === 'Éxito') {
                 let finalId = isNew ? r.id : idInsp;
-                let offEl = document.getElementById('drawerInspeccion');
-                if (offEl) {
-                    let modal = bootstrap.Modal.getInstance(offEl);
-                    if (modal) modal.hide();
-                    offEl.classList.remove("open");
-                }
+                window.inspCerrarFormulario();
                 if (window.dataGlobalInspecciones) {
                     let existing = window.dataGlobalInspecciones.find(x => x.id === finalId);
                     if (!existing) {
@@ -1886,28 +1886,41 @@ window.renderModernInspForm = function() {
 
             if (t === 'okfalla') {
                 html += `
+                <input type="hidden" id="${uid}_ok" data-chk="0">
+                <input type="hidden" id="${uid}_fa" data-chk="0">
                 <div class="d-flex gap-2 w-100 position-relative">
-                    <input type="radio" class="btn-check" name="${uid}" id="${uid}_ok" value="OK" onclick="toggleRadioOkFalla(this, 'f_${uid}', false)">
-                    <label class="btn btn-sm btn-outline-success fw-bold flex-grow-1 rounded-3 py-2 d-flex align-items-center justify-content-center gap-1.5 shadow-2xs" 
-                           for="${uid}_ok" style="font-size:0.78rem; border-width:1.5px; text-transform:uppercase;">
+                    <button type="button" class="insp-btn-toggle insp-btn-toggle-ok flex-grow-1" id="${uid}_btn_ok" onclick="window.inspMarcarItem('${uid}', 'OK')">
                         <i class="bi bi-check-circle-fill"></i> OK
-                    </label>
-                    <input type="radio" class="btn-check" name="${uid}" id="${uid}_fa" value="FALLA" onclick="toggleRadioOkFalla(this, 'f_${uid}', true)">
-                    <label class="btn btn-sm btn-outline-danger fw-bold flex-grow-1 rounded-3 py-2 d-flex align-items-center justify-content-center gap-1.5 shadow-2xs" 
-                           for="${uid}_fa" style="font-size:0.78rem; border-width:1.5px; text-transform:uppercase;">
+                    </button>
+                    <button type="button" class="insp-btn-toggle insp-btn-toggle-fa flex-grow-1" id="${uid}_btn_fa" onclick="window.inspMarcarItem('${uid}', 'FALLA')">
                         <i class="bi bi-exclamation-triangle-fill"></i> FALLA
-                    </label>
+                    </button>
                 </div>
-                <div id="f_${uid}" style="display:none;" class="mt-2.5 p-3 bg-danger bg-opacity-10 rounded-3 border border-danger border-opacity-25 shadow-2xs">
-                    <label class="form-label text-danger fw-bold mb-1 d-flex align-items-center gap-1" style="font-size:0.75rem;">
-                        <i class="bi bi-pencil-square"></i> Detalle de la Falla / Observación
+                <div id="f_${uid}" class="insp-falla-box">
+                    <label class="form-label text-danger fw-bold mb-1.5 d-flex align-items-center gap-1.5" style="font-size:0.76rem;">
+                        <i class="bi bi-exclamation-octagon-fill"></i> DETALLE DE LA FALLA / OBSERVACIÓN
                     </label>
-                    <textarea class="form-control form-control-sm mb-2 border-danger bg-white" rows="2" id="obs_${uid}" 
-                              placeholder="Describe el defecto, anomalía o recomendación..." style="border-radius:8px; font-size:0.8rem;"></textarea>
-                    <label class="form-label text-danger fw-bold mb-1 d-flex align-items-center gap-1" style="font-size:0.75rem;">
-                        <i class="bi bi-camera-fill"></i> Evidencia Fotográfica (Opcional)
+                    <textarea class="form-control form-control-sm mb-2.5 bg-white border-danger border-opacity-50" rows="2" id="obs_${uid}" 
+                              placeholder="Describe la anomalía, defecto, holgura o recomendación..." style="border-radius:10px; font-size:0.82rem;"></textarea>
+                    
+                    <label class="form-label text-danger fw-bold mb-1 d-flex align-items-center justify-content-between" style="font-size:0.76rem;">
+                        <span class="d-flex align-items-center gap-1.5"><i class="bi bi-camera-fill"></i> EVIDENCIA FOTOGRÁFICA (OPCIONAL)</span>
+                        <span class="text-muted fw-normal small" style="font-size:0.72rem;">JPG, PNG</span>
                     </label>
-                    <input type="file" class="form-control form-control-sm border-danger bg-white" id="foto_${uid}" accept="image/*" style="border-radius:8px; font-size:0.75rem;">
+                    <input type="file" class="form-control form-control-sm bg-white border-danger border-opacity-50" id="foto_${uid}" accept="image/*" 
+                           onchange="window.handleInspFotoPreview('${uid}', this)" style="border-radius:10px; font-size:0.78rem;">
+                    
+                    <!-- Previsualización Instantánea de Foto -->
+                    <div id="prev_box_${uid}" class="insp-photo-preview-wrap" style="display:none;">
+                        <img id="prev_img_${uid}" class="insp-photo-thumb" src="" alt="Evidencia">
+                        <div class="flex-grow-1 overflow-hidden">
+                            <span id="prev_name_${uid}" class="fw-semibold text-dark d-block text-truncate small" style="font-size:0.78rem;"></span>
+                            <span class="badge bg-success bg-opacity-10 text-success fw-bold" style="font-size:0.7rem;"><i class="bi bi-check me-0.5"></i>Listo para subir</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-light text-danger border rounded-circle p-1" onclick="window.quitarInspFoto('${uid}')" title="Quitar foto">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
                 </div>`;
             } else if (t === 'percent') {
                 html += `
@@ -2059,6 +2072,103 @@ window.limpiarFirmaCanvas = function(id) {
     ctx.clearRect(0, 0, cvs.width, cvs.height);
 };
 
+// ── Control Nativo del Drawer y Conteo de Inspección ────────────────
+window.inspAbrirFormulario = function() {
+    var backdrop = document.getElementById('inspDrawerBackdrop');
+    var drawer = document.getElementById('drawerInspeccion');
+    var selModal = document.getElementById('modalTipoInspeccionSeleccion');
+
+    if (selModal) selModal.classList.remove('open');
+    if (backdrop) backdrop.classList.add('open');
+    if (drawer) drawer.classList.add('open');
+};
+
+window.inspCerrarFormulario = function() {
+    var backdrop = document.getElementById('inspDrawerBackdrop');
+    var drawer = document.getElementById('drawerInspeccion');
+    var selModal = document.getElementById('modalTipoInspeccionSeleccion');
+
+    if (drawer) drawer.classList.remove('open');
+    if (selModal) selModal.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('open');
+};
+
+window.inspMarcarItem = function(uid, valor) {
+    var ok = document.getElementById(uid + '_ok');
+    var fa = document.getElementById(uid + '_fa');
+    var btnOk = document.getElementById(uid + '_btn_ok');
+    var btnFa = document.getElementById(uid + '_btn_fa');
+    var box = document.getElementById('f_' + uid);
+
+    if (!ok || !fa) return;
+
+    if (valor === 'OK') {
+        if (ok.dataset.chk === '1') {
+            ok.dataset.chk = '0';
+            if (btnOk) btnOk.classList.remove('active');
+        } else {
+            ok.dataset.chk = '1';
+            fa.dataset.chk = '0';
+            if (btnOk) btnOk.classList.add('active');
+            if (btnFa) btnFa.classList.remove('active');
+            if (box) box.style.display = 'none';
+        }
+    } else if (valor === 'FALLA') {
+        if (fa.dataset.chk === '1') {
+            fa.dataset.chk = '0';
+            if (btnFa) btnFa.classList.remove('active');
+            if (box) box.style.display = 'none';
+        } else {
+            fa.dataset.chk = '1';
+            ok.dataset.chk = '0';
+            if (btnFa) btnFa.classList.add('active');
+            if (btnOk) btnOk.classList.remove('active');
+            if (box) box.style.display = 'block';
+        }
+    }
+    window.actualizarConteoInsp();
+};
+
+window.actualizarConteoInsp = function() {
+    var cntOk = 0;
+    var cntFalla = 0;
+    document.querySelectorAll('[id$="_ok"]').forEach(function(el) {
+        if (el.dataset.chk === '1') cntOk++;
+    });
+    document.querySelectorAll('[id$="_fa"]').forEach(function(el) {
+        if (el.dataset.chk === '1') cntFalla++;
+    });
+    var elOk = document.getElementById('cnt-val-ok');
+    var elFa = document.getElementById('cnt-val-falla');
+    if (elOk) elOk.textContent = cntOk;
+    if (elFa) elFa.textContent = cntFalla;
+};
+
+window.handleInspFotoPreview = function(uid, input) {
+    var box = document.getElementById('prev_box_' + uid);
+    var img = document.getElementById('prev_img_' + uid);
+    var name = document.getElementById('prev_name_' + uid);
+    if (!box || !img || !input.files || !input.files[0]) return;
+
+    var file = input.files[0];
+    if (name) name.textContent = file.name;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        img.src = e.target.result;
+        box.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+};
+
+window.quitarInspFoto = function(uid) {
+    var input = document.getElementById('foto_' + uid);
+    var box = document.getElementById('prev_box_' + uid);
+    var img = document.getElementById('prev_img_' + uid);
+    if (input) input.value = '';
+    if (img) img.src = '';
+    if (box) box.style.display = 'none';
+};
+
 window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect, kmPreselect) {
     if (!document.getElementById('drawerInspeccion')) {
         if (typeof window.rotToast === 'function') window.rotToast("Cargando formulario...", "bg-info");
@@ -2068,6 +2178,8 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
             let tmp = document.createElement('div');
             tmp.innerHTML = html;
             let drawer = tmp.querySelector('#drawerInspeccion');
+            let backdrop = tmp.querySelector('#inspDrawerBackdrop');
+            if (backdrop && !document.getElementById('inspDrawerBackdrop')) document.body.appendChild(backdrop);
             if (drawer) {
                 document.body.appendChild(drawer);
                 return window.abrirModalNuevaInspeccion(placaPreselect, idOtPreselect, kmPreselect);
@@ -2122,7 +2234,8 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
         btn.classList.add('btn-outline-primary');
     });
     document.querySelectorAll('[id^="val_p_"]').forEach(el => el.value = '');
-    document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
+    document.querySelectorAll('[id$="_ok"], [id$="_fa"]').forEach(r => r.dataset.chk = '0');
+    document.querySelectorAll('.insp-btn-toggle').forEach(b => b.classList.remove('active'));
 
     if (kmPreselect) {
         let iKm = document.getElementById('i_kmtablero');
@@ -2137,17 +2250,11 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
         window.autocompletarInfoInsp();
     }
 
-    let offEl = document.getElementById('drawerInspeccion');
-    if (offEl) {
-        if (offEl.parentElement !== document.body) {
-            document.body.appendChild(offEl);
-        }
-        offEl.style.setProperty('z-index', '1080', 'important');
-        let modal = bootstrap.Modal.getOrCreateInstance(offEl);
-        modal.show();
-    }
+    // Apertura nativa instantánea sin modales de Bootstrap
+    window.inspAbrirFormulario();
+    window.actualizarConteoInsp();
 
-    // Cargar / actualizar lista de inspecciones en segundo plano sin congelar UI
+    // Actualizar maxId en segundo plano
     fetch('/api/script/obtenerDatosInspecciones', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2174,24 +2281,25 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
 window.abrirModalEditarInspeccion = async function (idBusqueda) {
     if (!document.getElementById('drawerInspeccion')) {
         if (typeof window.rotToast === 'function') window.rotToast("Cargando formulario...", "bg-info");
-        fetch('/modulos/mantenimiento/inspecciones/vista.html')
-            .then(r => r.text())
-            .then(html => {
-                let tmp = document.createElement('div');
-                tmp.innerHTML = html;
-                let drawer = tmp.querySelector('#drawerInspeccion');
-                if (drawer) {
-                    document.body.appendChild(drawer);
-                    window.abrirModalEditarInspeccion(idBusqueda);
-                } else {
-                    alert("No se encontró la vista de Inspecciones.");
-                }
-            })
-            .catch(e => console.error(e));
-        return;
+        try {
+            let res = await fetch('/modulos/mantenimiento/inspecciones/vista.html');
+            let html = await res.text();
+            let tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            let drawer = tmp.querySelector('#drawerInspeccion');
+            let backdrop = tmp.querySelector('#inspDrawerBackdrop');
+            if (backdrop && !document.getElementById('inspDrawerBackdrop')) document.body.appendChild(backdrop);
+            if (drawer) {
+                document.body.appendChild(drawer);
+                return window.abrirModalEditarInspeccion(idBusqueda);
+            }
+        } catch(e) {
+            console.error(e);
+            return;
+        }
     }
 
-    let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
+    let insp = (window.dataGlobalInspecciones || []).find(i => i.id === idBusqueda);
     if (!insp) return;
 
     await window.ensureInspConfig();
@@ -2214,26 +2322,34 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
         btn.classList.add('btn-outline-primary');
     });
     document.querySelectorAll('[id^="val_p_"]').forEach(el => el.value = '');
-    document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
+    document.querySelectorAll('[id$="_ok"], [id$="_fa"]').forEach(r => r.dataset.chk = '0');
+    document.querySelectorAll('.insp-btn-toggle').forEach(b => b.classList.remove('active'));
 
-    let fIngreso;
+    let fIngreso = "";
     if (insp.fecha_ingreso && insp.fecha_ingreso.includes('/')) {
         let p = insp.fecha_ingreso.split('/'); fIngreso = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
     } else if (insp.fecha_ingreso) {
         fIngreso = insp.fecha_ingreso.split('T')[0];
-    } else { fIngreso = ""; }
+    }
 
-    document.getElementById('i_fecha').value = fIngreso;
+    let fEl = document.getElementById('i_fecha');
+    if (fEl) fEl.value = fIngreso;
     
     setTimeout(() => {
-        document.getElementById('i_placa').value = insp.placa || "";
+        let iPlaca = document.getElementById('i_placa');
         let txtPla = document.getElementById('i_placa-txt');
-        if(txtPla) txtPla.value = insp.placa || "";
+        if (iPlaca) iPlaca.value = insp.placa || "";
+        if (txtPla) txtPla.value = insp.placa || "";
     }, 50);
-    document.getElementById('i_kmtablero').value = insp.km_tablero || "";
-    document.getElementById('i_cliente').value = insp.cliente || "";
-    document.getElementById('i_tecnico').value = insp.tecnico || "";
-    if (document.getElementById('i_tecnico-txt')) document.getElementById('i_tecnico-txt').value = insp.tecnico || "";
+
+    let elKm = document.getElementById('i_kmtablero');
+    if (elKm) elKm.value = insp.km_tablero || "";
+    let elCli = document.getElementById('i_cliente');
+    if (elCli) elCli.value = insp.cliente || "";
+    let elTec = document.getElementById('i_tecnico');
+    if (elTec) elTec.value = insp.tecnico || "";
+    let elTecTxt = document.getElementById('i_tecnico-txt');
+    if (elTecTxt) elTecTxt.value = insp.tecnico || "";
     
     let diasPropuestos = insp.dias_propuestos || "30";
     let chk30 = document.getElementById('chk_30dias');
@@ -2261,7 +2377,7 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
     } catch (e) { }
 
     if (Array.isArray(arr)) {
-        window.DYNAMIC_INSP_SCHEMA.forEach((sec, i) => {
+        (window.DYNAMIC_INSP_SCHEMA || []).forEach((sec, i) => {
             if (sec.items) {
                 sec.items.forEach((item, j) => {
                     let lbl = typeof item === 'string' ? item : item.label;
@@ -2273,16 +2389,22 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
                     if (res && res.estado && res.estado !== "SIN DATOS" && res.estado !== "") {
                         if (t === 'okfalla') {
                             if (res.estado === 'OK') {
-                                let rOk = document.getElementById(`${uid}_ok`);
-                                if (rOk) { rOk.checked = true; rOk.dataset.chk = '1'; }
-                            }
-                            else if (res.estado === 'FALLA') {
-                                let rFa = document.getElementById(`${uid}_fa`);
-                                if (rFa) {
-                                    rFa.checked = true; rFa.dataset.chk = '1';
-                                    let caja = document.getElementById(`f_${uid}`);
-                                    if (caja) caja.style.display = 'block';
-                                    if (res.observacion) document.getElementById(`obs_${uid}`).value = res.observacion;
+                                window.inspMarcarItem(uid, 'OK');
+                            } else if (res.estado === 'FALLA') {
+                                window.inspMarcarItem(uid, 'FALLA');
+                                if (res.observacion) {
+                                    let obsEl = document.getElementById(`obs_${uid}`);
+                                    if (obsEl) obsEl.value = res.observacion;
+                                }
+                                if (res.foto) {
+                                    let prevBox = document.getElementById(`prev_box_${uid}`);
+                                    let prevImg = document.getElementById(`prev_img_${uid}`);
+                                    let prevName = document.getElementById(`prev_name_${uid}`);
+                                    if (prevBox && prevImg) {
+                                        prevImg.src = res.foto;
+                                        if (prevName) prevName.textContent = 'Evidencia guardada';
+                                        prevBox.style.display = 'flex';
+                                    }
                                 }
                             }
                         } else if (t === 'percent') {
@@ -2307,15 +2429,9 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
         });
     }
 
-
-    let offEl = document.getElementById('drawerInspeccion');
-    if (offEl) {
-        if (offEl.parentElement !== document.body) {
-            document.body.appendChild(offEl);
-        }
-        let modal = bootstrap.Modal.getOrCreateInstance(offEl);
-        modal.show();
-    }
+    // Apertura nativa instantánea sin modales de Bootstrap
+    window.inspAbrirFormulario();
+    window.actualizarConteoInsp();
 };
 
 // ============================================================
@@ -3064,19 +3180,8 @@ window.ckRestaurarConfigInsp = async function() {
 };
 
 window.toggleRadioOkFalla = function(el, cajaId, isFalla) {
-    let caja = document.getElementById(cajaId);
-    if (!caja) return;
-    
-    if (el.dataset.chk === '1') {
-        el.checked = false;
-        el.dataset.chk = '0';
-        caja.style.display = 'none';
-    } else {
-        let group = document.querySelectorAll(`input[name="${el.name}"]`);
-        group.forEach(r => r.dataset.chk = '0');
-        el.dataset.chk = '1';
-        caja.style.display = isFalla ? 'block' : 'none';
-    }
+    var uid = cajaId.replace(/^f_/, '');
+    window.inspMarcarItem(uid, isFalla ? 'FALLA' : 'OK');
 };
 
 // ==========================================
@@ -3563,60 +3668,53 @@ window._inspKmSeleccionado = 0;
 window.abrirModalSeleccionarTipoInspeccion = function(placa, km) {
     window._inspPlacaSeleccionada = placa || '';
     window._inspKmSeleccionado = km || 0;
-    window._inspTipoSeleccionado = ''; // reset
 
-    var modalEl = document.getElementById('modalTipoInspeccionSeleccion');
-    if (!modalEl) return;
+    var backdrop = document.getElementById('inspDrawerBackdrop');
+    var selModal = document.getElementById('modalTipoInspeccionSeleccion');
+    var drawer = document.getElementById('drawerInspeccion');
+    if (drawer) drawer.classList.remove('open');
 
-    // Registrar listener ONE-TIME para cuando Bootstrap cierre el modal naturalmente
-    var onHidden = async function() {
-        modalEl.removeEventListener('hidden.bs.modal', onHidden);
+    if (backdrop) backdrop.classList.add('open');
+    if (selModal) selModal.classList.add('open');
+};
 
-        var tipo = window._inspTipoSeleccionado;
-        if (!tipo) return; // Se cerró con Cancelar, no hacer nada
+window.inspCerrarTipoSeleccion = function() {
+    var backdrop = document.getElementById('inspDrawerBackdrop');
+    var selModal = document.getElementById('modalTipoInspeccionSeleccion');
+    if (selModal) selModal.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('open');
+};
 
-        var placaSel = window._inspPlacaSeleccionada || '';
-        var kmSel = window._inspKmSeleccionado || 0;
+window.inspSeleccionarTipo = function(tipo) {
+    var placaSel = window._inspPlacaSeleccionada || '';
+    var kmSel = window._inspKmSeleccionado || 0;
 
-        try {
-            if (tipo === 'neumaticos') {
+    var selModal = document.getElementById('modalTipoInspeccionSeleccion');
+    if (selModal) selModal.classList.remove('open');
+
+    if (tipo === 'neumaticos') {
+        var backdrop = document.getElementById('inspDrawerBackdrop');
+        if (backdrop) backdrop.classList.remove('open');
+
+        if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
+            window.rotAbrirInspeccionNeumaticos(placaSel, '', kmSel);
+        } else {
+            var script = document.createElement('script');
+            script.src = '/modulos/mantenimiento/neumaticos/modal_inspeccion.js?v=' + Date.now();
+            script.onload = function() {
                 if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
                     window.rotAbrirInspeccionNeumaticos(placaSel, '', kmSel);
-                } else {
-                    var script = document.createElement('script');
-                    script.src = '/modulos/mantenimiento/neumaticos/modal_inspeccion.js?v=' + Date.now();
-                    script.onload = function() {
-                        if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
-                            window.rotAbrirInspeccionNeumaticos(placaSel, '', kmSel);
-                        }
-                    };
-                    document.body.appendChild(script);
                 }
-            } else {
-                await window.abrirModalNuevaInspeccion(placaSel, '', kmSel);
-            }
-        } catch(err) {
-            console.error('Error al abrir formulario de inspección:', err);
-            if (typeof window.rotToast === 'function') {
-                window.rotToast('Error al abrir formulario: ' + err.message, 'bg-danger');
-            }
+            };
+            document.body.appendChild(script);
         }
-    };
-    modalEl.addEventListener('hidden.bs.modal', onHidden);
-
-    var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-    modal.show();
-};
-
-// Legacy: mantener por si algún otro módulo la llama directamente
-window.seleccionarTipoInspeccion = function(tipo) {
-    window._inspTipoSeleccionado = tipo;
-    var modalEl = document.getElementById('modalTipoInspeccionSeleccion');
-    if (modalEl) {
-        var modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
+    } else {
+        // Mecánica Integral: Abrir directamente el formulario drawer nativo
+        window.abrirModalNuevaInspeccion(placaSel, '', kmSel);
     }
 };
+
+window.seleccionarTipoInspeccion = window.inspSeleccionarTipo;
 
 window._inspeccionIdAEliminar = null;
 window.eliminarInspeccion = function(id) {
