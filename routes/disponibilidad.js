@@ -305,13 +305,11 @@ module.exports = function (db, logAudit) {
                                     });
                                 });
 
-                                res.json(resultado);
-                            });
-                        });
-                    });
-                });
-            });
-        });
+            res.json(resultado);
+        } catch (err) {
+            console.error('Error en GET /api/disponibilidad-flota:', err);
+            res.status(500).json({ error: 'Error al consultar disponibilidad', detalle: err.message });
+        }
     });
 
     // ── POST /api/disponibilidad-flota (Crear / Guardar registro) ───────────────
