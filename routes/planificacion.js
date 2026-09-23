@@ -941,7 +941,13 @@ router.get('/config-metrica', (req, res) => {
     tdb.query(
         `SELECT placa, marca, metrica FROM placas ORDER BY placa`,
         (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) {
+                tdb.query(`SELECT placa, marca FROM placas ORDER BY placa`, (err2, rows2) => {
+                    if (err2) return res.json([]);
+                    res.json((rows2 || []).map(r => ({ ...r, metrica: 'km' })));
+                });
+                return;
+            }
             res.json(rows || []);
         }
     );
