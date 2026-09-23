@@ -2423,6 +2423,9 @@ module.exports = function (db, broadcast, logAudit) {
                     folio: oc.id,
                     fecha: oc.fecha,
                     solicitante: oc.solicitante || '—',
+                    centro_costo: oc.centro_costo || 'CC-100',
+                    sub_motivo: oc.sub_motivo || '',
+                    autoriza: oc.autoriza || '',
                     motivo: oc.motivo_entrada || `ORDEN DE COMPRA: ${oc.id}`,
                     tipo_orden: oc.tipo_orden || 'Orden de compra',
                     moneda: oc.moneda || 'PEN',
@@ -2518,12 +2521,14 @@ module.exports = function (db, broadcast, logAudit) {
                         centro_costo, sub_motivo, modalidad_pago, beneficiario,
                         importe, subtotal, total, observacion, voucher_url, numero_operacion,
                         estado, usuario_creacion, usuario_aprobacion, fecha_aprobacion
-                    ) VALUES (?, ?, CURDATE(), 'EGRESO', ?, 'ALMACÉN', 'CC-ADM', 'PAGO REQUERIMIENTO', 'TRANSFERENCIA', ?, ?, ?, ?, ?, ?, ?, 'PROCESADO', ?, ?, NOW())
+                    ) VALUES (?, ?, CURDATE(), 'EGRESO', ?, 'ALMACÉN', ?, ?, 'TRANSFERENCIA', ?, ?, ?, ?, ?, ?, ?, 'PROCESADO', ?, ?, NOW())
                 `;
                 await tdb.query(insertCajaSql, [
                     anioActual,
                     numCajaFmt,
                     cuentaOrigen || 'BANCO',
+                    oc.centro_costo || 'CC-100',
+                    oc.sub_motivo || 'PAGO REQUERIMIENTO',
                     oc.proveedor_nombre || 'PROVEEDOR',
                     montoPagado || oc.total_pen || 0,
                     montoPagado || oc.total_pen || 0,
@@ -2531,8 +2536,8 @@ module.exports = function (db, broadcast, logAudit) {
                     `PAGO DE REQUERIMIENTO OC ${id} - ${descripcionPago} | N° Constancia: ${numeroConstancia}`,
                     voucherUrl,
                     numeroConstancia,
-                    usuarioPago,
-                    usuarioPago
+                    oc.creado_por || usuarioPago,
+                    oc.autoriza || oc.aprobado_por || usuarioPago
                 ]);
             } catch (errCaja) {
                 console.warn('Advertencia al asentar egreso en tesoreria_caja:', errCaja.message);
@@ -2557,6 +2562,114 @@ module.exports = function (db, broadcast, logAudit) {
             });
         } catch (err) {
             console.error('Error al procesar pago de requerimiento:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ============================================================
+    // 📊 MOVIMIENTOS DE TESORERÍA (Libro Banco & Caja Unificado)
+    // ============================================================
+    router.get('/movimientos', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'DB no disponible' });
+            await ensureTableCaja(req);
+            await _ensureColumnasPagoRequerimientos(tdb);
+
+            const { banco, estado, fecha_desde, fecha_hasta, tipo_movimiento, search } = req.query;
+
+            let condiciones = ["1=1"];
+            let params = [];
+
+            if (fecha_desde) {
+                condiciones.push("c.fecha >= ?");
+                params.push(fecha_desde);
+            }
+            if (fecha_hasta) {
+                condiciones.push("c.fecha <= ?");
+                params.push(fecha_hasta);
+            }
+            if (estado && estado !== 'TODOS' && estado !== '') {
+                condiciones.push("UPPER(c.estado) = ?");
+                params.push(estado.toUpperCase());
+            }
+            if (tipo_movimiento && tipo_movimiento !== 'TODOS' && tipo_movimiento !== '') {
+                condiciones.push("UPPER(c.tipo_movimiento) = ?");
+                params.push(tipo_movimiento.toUpperCase());
+            }
+            if (banco && banco !== 'TODOS' && banco !== '') {
+                condiciones.push("(UPPER(c.cuenta_bancaria_empresa) LIKE ? OR UPPER(c.origen_dinero) LIKE ?)");
+                params.push(`%${banco.toUpperCase()}%`, `%${banco.toUpperCase()}%`);
+            }
+
+            const sql = `
+                SELECT 
+                    c.*,
+                    COALESCE(c.numero_caja, CONCAT(COALESCE(c.anio, YEAR(c.fecha)), '-', LPAD(COALESCE(c.numero, c.id), 6, '0'))) AS codigo_caja,
+                    COALESCE(c.total, c.importe, 0) AS monto_total,
+                    cc.nombre AS centro_costo_nombre
+                FROM tesoreria_caja c
+                LEFT JOIN centros_costos cc ON cc.codigo = c.centro_costo
+                WHERE ${condiciones.join(" AND ")}
+                ORDER BY c.fecha DESC, c.id DESC
+            `;
+
+            const [rows] = await tdb.query(sql, params);
+
+            // Enriquecer registros con URLs firmadas y campos unificados
+            const resultado = await Promise.all(rows.map(async (r) => {
+                let voucherPresigned = null;
+                const vUrl = r.voucher_url || r.url_voucher;
+                if (vUrl) {
+                    const k = s3KeyFromUrl(vUrl);
+                    if (k) voucherPresigned = await getPresignedUrl(k).catch(() => vUrl);
+                    else voucherPresigned = vUrl;
+                }
+
+                const tipoMov = (r.tipo_movimiento || 'EGRESO').toUpperCase();
+                const montoNum = parseFloat(r.monto_total || r.total || r.importe || 0) || 0;
+                const esIngreso = tipoMov === 'INGRESO';
+
+                return {
+                    id: r.id,
+                    caja_folio: r.codigo_caja || `CJ-${r.id}`,
+                    fecha: r.fecha,
+                    hora: r.hora || null,
+                    tipo_movimiento: tipoMov,
+                    moneda: (r.moneda || 'SOLES').toUpperCase(),
+                    monto: montoNum,
+                    debe: esIngreso ? montoNum : 0,
+                    haber: !esIngreso ? montoNum : 0,
+                    motivo: r.motivo || 'GENERAL',
+                    sub_motivo: r.sub_motivo || '-',
+                    descripcion: r.descripcion || r.observacion || '-',
+                    tipo_caja: (r.cuenta_bancaria_empresa && r.cuenta_bancaria_empresa.includes('CAJA')) ? 'CAJA' : 'BANCO',
+                    banco_cuenta: r.cuenta_bancaria_empresa || r.origen_dinero || 'BANCO PRINCIPAL',
+                    numero_operacion: r.numero_operacion || '-',
+                    numero_factura: r.numero_factura || r.numero_comprobante || '-',
+                    beneficiario: r.beneficiario || r.persona || '-',
+                    tipo_persona: r.tipo_persona || 'PROVEEDOR',
+                    solicitante: r.solicitante || r.usuario_creacion || '-',
+                    autoriza: r.usuario_aprobacion || '-',
+                    observacion: r.observacion || '',
+                    fecha_aprobacion: r.fecha_aprobacion || null,
+                    fecha_valuta: r.fecha_pago || r.fecha,
+                    cliente: r.cliente || '-',
+                    tipo_servicio: r.tipo_servicio || '-',
+                    orden_viaje: r.orden_viaje || '-',
+                    placa: r.placa || '-',
+                    ruta: r.ruta || '-',
+                    centro_costo: r.centro_costo || 'CC-ADM',
+                    centro_costo_nombre: r.centro_costo_nombre || '',
+                    estado: (r.estado || 'PROCESADO').toUpperCase(),
+                    voucher_url: vUrl,
+                    voucher_url_presigned: voucherPresigned
+                };
+            }));
+
+            res.json({ ok: true, data: resultado });
+        } catch (err) {
+            console.error('Error en GET /api/tesoreria/movimientos:', err);
             res.status(500).json({ error: err.message });
         }
     });

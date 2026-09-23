@@ -154,6 +154,86 @@ window._entCargarConfig = function() {
         }).catch(function() {});
 };
 
+window._entSubMotivosMap = {
+    'Mantenimiento y Auxilio': [
+        'Repuestos menores / Accesorios',
+        'Mantenimiento preventivo programado',
+        'Mantenimiento correctivo / Auxilio mecánico',
+        'Llantas, neumáticos y enllante',
+        'Frenos, suspensión y aire',
+        'Aceites, filtros y lubricación',
+        'Sistema eléctrico / Baterías',
+        'Carrocería, pintura y soldadura'
+    ],
+    'Gastos Administrativos / Oficina': [
+        'Útiles de escritorio y papelería',
+        'Artículos de limpieza y aseo',
+        'Comunicaciones, internet y telefonía',
+        'Software, licencias y hosting',
+        'Alquiler de locales / Oficinas',
+        'Seguridad y vigilancia'
+    ],
+    'Combustibles y Fluidos': [
+        'Diésel DB5 S-50',
+        'Gasolina 90 / 95 / 97',
+        'Gas Licuado / GNV',
+        'Úrea / AdBlue',
+        'Refrigerantes y anticongelantes'
+    ],
+    'Gastos de Viaje y Ruta': [
+        'Peajes y pesajes',
+        'Viáticos y alimentación en ruta',
+        'Hospedaje y pernocte conductores',
+        'Cocheras y estacionamientos',
+        'Movilidad local / Taxis'
+    ],
+    'Servicios de Terceros': [
+        'Servicios de tornería y rectificación',
+        'Servicio técnico especializado externo',
+        'Asesoría legal / Contable / Auditoría',
+        'Fletes y transportes tercerizados',
+        'Certificaciones y revisiones técnicas'
+    ],
+    'Activos Fijos / Equipamiento': [
+        'Herramientas y maquinaria de taller',
+        'Equipos de cómputo y tecnología',
+        'Mobiliario y enseres',
+        'Equipos de comunicación / GPS / Radios'
+    ],
+    'Compras Generales Almacén': [
+        'Stock general de almacén',
+        'EPPs y seguridad industrial',
+        'Materiales de embalaje y estiba',
+        'Insumos varios'
+    ]
+};
+
+window._entCambiarMotivoGasto = function(subSeleccionado) {
+    var motivoEl = document.getElementById('ent-f-motivo-gasto');
+    var subEl = document.getElementById('ent-f-sub-motivo');
+    var ccEl = document.getElementById('ent-f-centro-costo');
+    if (!motivoEl || !subEl) return;
+
+    var motivo = motivoEl.value;
+    var subs = window._entSubMotivosMap[motivo] || [];
+    subEl.innerHTML = '';
+    subs.forEach(function(s) {
+        var opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        if (subSeleccionado && subSeleccionado === s) opt.selected = true;
+        subEl.appendChild(opt);
+    });
+
+    // Auto sugerir centro de costo según motivo si no se ha seleccionado manualmente
+    if (ccEl) {
+        if (motivo === 'Mantenimiento y Auxilio') ccEl.value = 'CC-400';
+        else if (motivo === 'Gastos Administrativos / Oficina') ccEl.value = 'CC-100';
+        else if (motivo === 'Combustibles y Fluidos' || motivo === 'Gastos de Viaje y Ruta') ccEl.value = 'CC-300';
+        else if (motivo === 'Compras Generales Almacén') ccEl.value = 'CC-500';
+    }
+};
+
 window._entCargarPlacas = function() {
     fetch('/api/placas-lista')
         .then(function(r) { return r.json(); })
@@ -162,6 +242,16 @@ window._entCargarPlacas = function() {
                 .filter(function(x) { return x.value; })
                 .sort(function(a,b){ return a.label.localeCompare(b.label); });
             window._cbInit('ent-f-placa', items, 'Buscar placa...');
+
+            window._cbOnSelect('ent-f-placa', function(placaVal) {
+                if (placaVal) {
+                    var ccEl = document.getElementById('ent-f-centro-costo');
+                    if (ccEl) ccEl.value = 'CC-400';
+                    var motEl = document.getElementById('ent-f-motivo-gasto');
+                    if (motEl) motEl.value = 'Mantenimiento y Auxilio';
+                    window._entCambiarMotivoGasto();
+                }
+            });
         }).catch(function() {});
 };
 
@@ -710,6 +800,9 @@ window.guardarEntrada = function() {
     var dias_credito = parseInt((document.getElementById('ent-f-dias-credito') || {}).value, 10) || 0;
     var prioridad  = (document.getElementById('ent-f-prioridad') || {}).value || 'Normal';
     var motivo     = (document.getElementById('ent-f-motivo')  || {}).value || '';
+    var centro_costo = (document.getElementById('ent-f-centro-costo') || {}).value || 'CC-100';
+    var sub_motivo = (document.getElementById('ent-f-sub-motivo') || {}).value || '';
+    var autoriza   = (document.getElementById('ent-f-autoriza') || {}).value || '';
     var placa      = window._cbGet('ent-f-placa') || '';
     var ot_id      = window._cbGet('ent-f-ot') || '';
     if (tipo_orden.toLowerCase() === 'orden de servicio') {
@@ -770,6 +863,9 @@ window.guardarEntrada = function() {
         cuenta_bancaria_proveedor: ctaProv || null,
         cuenta_bancaria_empresa: ctaEmpresa || null,
         solicitante: solicitante || null,
+        centro_costo: centro_costo,
+        sub_motivo: sub_motivo,
+        autoriza: autoriza,
         documento_referencia: docRef || null,
         estado_factura: estadoFact,
         moneda: moneda,
@@ -903,6 +999,16 @@ window.abrirModalEntrada = function() {
     var estFact = document.getElementById('ent-f-estado-factura');
     if (estFact) estFact.value = 'Factura Pendiente';
     
+    var autorizaEl = document.getElementById('ent-f-autoriza');
+    if (autorizaEl) autorizaEl.value = '';
+    var ccEl = document.getElementById('ent-f-centro-costo');
+    if (ccEl) ccEl.value = 'CC-100';
+    var motGastoEl = document.getElementById('ent-f-motivo-gasto');
+    if (motGastoEl) motGastoEl.value = 'Gastos Administrativos / Oficina';
+    if (typeof window._entCambiarMotivoGasto === 'function') {
+        window._entCambiarMotivoGasto();
+    }
+
     var tipoOrden = document.getElementById('ent-f-tipo-orden');
     if (tipoOrden) tipoOrden.value = 'Orden de compra';
     var condPago = document.getElementById('ent-f-condicion-pago');
@@ -993,6 +1099,27 @@ window.abrirModalEditarEntrada = function(id) {
 
     var fSoli = document.getElementById('ent-f-solicitante');
     if (fSoli) fSoli.value = entrada.solicitante || '';
+
+    var fAutoriza = document.getElementById('ent-f-autoriza');
+    if (fAutoriza) fAutoriza.value = entrada.autoriza || '';
+
+    var fCC = document.getElementById('ent-f-centro-costo');
+    if (fCC) fCC.value = entrada.centro_costo || 'CC-100';
+
+    var fMotGasto = document.getElementById('ent-f-motivo-gasto');
+    var subMot = entrada.sub_motivo || '';
+    var motGastoEncontrado = 'Gastos Administrativos / Oficina';
+    if (subMot && window._entSubMotivosMap) {
+        Object.keys(window._entSubMotivosMap).forEach(function(m) {
+            if (window._entSubMotivosMap[m].includes(subMot)) motGastoEncontrado = m;
+        });
+    } else if (entrada.placa) {
+        motGastoEncontrado = 'Mantenimiento y Auxilio';
+    }
+    if (fMotGasto) fMotGasto.value = motGastoEncontrado;
+    if (typeof window._entCambiarMotivoGasto === 'function') {
+        window._entCambiarMotivoGasto(subMot);
+    }
 
     var fEstFact = document.getElementById('ent-f-estado-factura');
     if (fEstFact) {
@@ -1281,8 +1408,9 @@ window._entRender = function() {
                 <div>${estadoHtml}</div>
             </div>
 
-            <!-- Proveedor y Placa -->
+            <!-- Proveedor, Placa y Centro Costo -->
             <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold px-2 py-1" style="font-size:0.75rem; border-radius:6px;">🏢 ${_entEsc(d.centro_costo || 'CC-100')}</span>
                 ${d.proveedor_nombre ? `<span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🏢 ${_entEsc(d.proveedor_nombre)}</span>` : ''}
                 ${d.placa ? `<span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🚛 ${_entEsc(d.placa)}</span>` : ''}
                 <span class="badge bg-secondary-subtle text-secondary border fw-semibold px-2 py-1" style="font-size:0.72rem; border-radius:6px;">${tipoOrdText}</span>
@@ -1356,6 +1484,7 @@ window._entRender = function() {
                 '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
                 '<td>' + aprobadorHtml + '</td>' +
+                '<td><span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-bold" style="font-size:0.72rem;">' + _entEsc(d.centro_costo || 'CC-100') + '</span></td>' +
                 '<td>' + placaHtml + '</td>' +
                 '<td>' + motivoHtml + '</td>' +
                 '<td>' + (d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
@@ -1382,7 +1511,7 @@ window._entRender = function() {
         var buscar = ((document.getElementById('ent-buscar') || {}).value || '').toLowerCase().trim();
         var itemsFiltrados = items;
         if (buscar) {
-            var cabText = [d.id, d.proveedor_nombre, d.documento_referencia].join(' ').toLowerCase();
+            var cabText = [d.id, d.proveedor_nombre, d.documento_referencia, d.centro_costo].join(' ').toLowerCase();
             if (cabText.indexOf(buscar) === -1) {
                 itemsFiltrados = items.filter(function(it) {
                     return [(it.inventario_id || ''), (it.descripcion || '')].join(' ').toLowerCase().indexOf(buscar) !== -1;
@@ -1411,6 +1540,7 @@ window._entRender = function() {
                 '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
                 '<td>' + aprobadorHtml + '</td>' +
+                '<td><span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-bold" style="font-size:0.72rem;">' + _entEsc(d.centro_costo || 'CC-100') + '</span></td>' +
                 '<td>' + placaHtml + '</td>' +
                 '<td>' + motivoHtml + '</td>' +
                 '<td>' + provHtml + '</td>' +
