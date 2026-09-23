@@ -384,15 +384,15 @@
                     </td>
                     <td class="text-center">
                         ${pend > 0 && !soloVer && !esCompleto ? `
-                            <div class="input-group input-group-sm mx-auto" style="max-width: 130px;">
+                            <div class="input-group input-group-sm mx-auto" style="max-width: 135px;">
                                 <input type="number" step="any" min="0" max="${pend}" 
-                                       class="form-control text-center fw-bolder border-warning rec-item-cant-input" 
+                                       class="form-control text-center fw-bolder border-primary rec-item-cant-input" 
                                        data-idx="${idx}" 
                                        data-pend="${pend}"
                                        value="${pend}" 
-                                       style="background:#fffbeb; font-size:0.88rem;">
-                                <button class="btn btn-outline-warning btn-sm" type="button" onclick="window.autoCompletarFila(${idx}, ${pend})" title="Cargar saldo completo">
-                                    <i class="bi bi-check2"></i>
+                                       style="background:#f0f9ff; font-size:0.88rem; transition: background-color 0.3s ease;">
+                                <button class="btn btn-outline-primary btn-sm fw-bold px-2" type="button" onclick="window.autoCompletarFila(${idx}, ${pend})" title="Llenar con el saldo máximo (${pend})">
+                                    MAX
                                 </button>
                             </div>
                         ` : `
@@ -461,14 +461,22 @@
     // ── Helper: Autocompletar Saldo en Modal ─────────────────────────
     window.autoCompletarFila = function(idx, val) {
         const inp = document.querySelector(`.rec-item-cant-input[data-idx="${idx}"]`);
-        if (inp) inp.value = val;
+        if (inp) {
+            inp.value = val;
+            inp.style.backgroundColor = '#dcfce7';
+            setTimeout(() => { inp.style.backgroundColor = '#f0f9ff'; }, 350);
+        }
     };
 
     window.autoCompletarTodoSaldo = function() {
         const inputs = document.querySelectorAll('.rec-item-cant-input');
         inputs.forEach(inp => {
             const pend = inp.getAttribute('data-pend') || inp.getAttribute('max');
-            if (pend) inp.value = pend;
+            if (pend) {
+                inp.value = pend;
+                inp.style.backgroundColor = '#dcfce7';
+                setTimeout(() => { inp.style.backgroundColor = '#f0f9ff'; }, 350);
+            }
         });
     };
 
