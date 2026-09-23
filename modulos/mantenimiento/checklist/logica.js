@@ -655,6 +655,9 @@ window.poblarPlacasChecklist = function() {
             const txtEl = document.getElementById('ck_placa_tracto-txt');
             if (txtEl) txtEl.value = val || lbl || '';
             window.ckSyncPlacaTracto();
+            if (typeof window.ckVerificarBacklogsPendientes === 'function') {
+                window.ckVerificarBacklogsPendientes(val || lbl);
+            }
         });
         window._cbOnSelect('ck_placa_remolque', function(val, lbl) {
             const txtEl = document.getElementById('ck_placa_remolque-txt');
@@ -1285,24 +1288,33 @@ window.ckActualizarEncabezadosPlacas = function() {
     window.ckActualizarChipsFallas();
 };
 
-window.ckAgregarFallaManual = function() {
+window.ckAgregarFallaManual = function(textoInicial, backlogId, sistemaInicial) {
     const container = document.getElementById('ck_contenedor_fallas_manuales');
     if (!container) return;
 
     const p = window.ckObtenerPlacasSeleccionadas();
-    const rowId = 'manual_' + Date.now();
+    const rowId = 'manual_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
     const div = document.createElement('div');
     div.className = 'row g-2 mb-2 align-items-center ck-manual-falla-row';
     div.id = rowId;
+    if (backlogId) {
+        div.dataset.backlogId = backlogId;
+    }
+    const valText = (textoInicial || '').replace(/"/g, '&quot;');
+    const isBk = Boolean(backlogId);
+
     div.innerHTML = `
         <div class="col-md-4">
             <select class="form-select form-select-sm ck-manual-sistema fw-bold text-primary border-secondary-subtle">
-                <option value="${p.placaTracto || 'TRACTO'}">🚛 ${p.tractoLabel}</option>
-                <option value="${p.placaRemolque || 'SEMIRREMOLQUE'}">🚛 ${p.remolqueLabel}</option>
+                <option value="${p.placaTracto || 'TRACTO'}" ${sistemaInicial && sistemaInicial.includes('REMOLQUE') ? '' : 'selected'}>🚛 ${p.tractoLabel}</option>
+                <option value="${p.placaRemolque || 'SEMIRREMOLQUE'}" ${sistemaInicial && sistemaInicial.includes('REMOLQUE') ? 'selected' : ''}>🚛 ${p.remolqueLabel}</option>
             </select>
         </div>
         <div class="col-md-7">
-            <input type="text" class="form-control form-control-sm text-uppercase ck-manual-desc border-secondary-subtle" placeholder="Describa el componente / falla no listada...">
+            <div class="input-group input-group-sm">
+                ${isBk ? `<span class="input-group-text bg-warning-subtle text-warning-emphasis fw-bold" style="font-size:0.75rem;" title="Importado de Backlog de Taller"><i class="bi bi-clock-history me-1"></i>BK</span>` : ''}
+                <input type="text" class="form-control form-control-sm text-uppercase ck-manual-desc border-secondary-subtle" value="${valText}" placeholder="Describa el componente / falla no listada...">
+            </div>
         </div>
         <div class="col-md-1 text-end">
             <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1" onclick="document.getElementById('${rowId}').remove(); window.ckActualizarContadores();" title="Eliminar">
@@ -1313,6 +1325,123 @@ window.ckAgregarFallaManual = function() {
     container.appendChild(div);
     window.ckActualizarContadores();
 };
+
+// ── CICLO DE BACKLOG DE TALLER EN REPORTE DE FALLAS ────────────────
+window._backlogsPendientesPlacaActual = [];
+
+window.ckVerificarBacklogsPendientes = async function(placa) {
+    const contAlert = document.getElementById('containerAlertaBacklogRF');
+    if (!contAlert) return;
+
+    const p = (placa || (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '') || (document.getElementById('ck_placa_tracto-txt') || {}).value || '').trim().toUpperCase();
+    if (!p) {
+        contAlert.innerHTML = '';
+        window._backlogsPendientesPlacaActual = [];
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/api/taller/ot-backlog?placa=${encodeURIComponent(p)}&estado=Pendiente`);
+        const list = await resp.json();
+        
+        if (Array.isArray(list) && list.length > 0) {
+            window._backlogsPendientesPlacaActual = list;
+            contAlert.innerHTML = `
+                <button type="button" class="btn btn-sm btn-outline-warning text-dark fw-bold border-warning d-inline-flex align-items-center gap-1.5 shadow-2xs py-1 px-2.5 rounded-3" onclick="window.abrirModalSeleccionarBacklogRF()" title="Ver Backlogs pendientes de esta unidad">
+                    <i class="bi bi-clock-history text-warning-emphasis fs-6"></i>
+                    <span>Tiene <strong>${list.length}</strong> ${list.length === 1 ? 'Backlog pendiente' : 'Backlogs pendientes'}</span>
+                    <span class="badge bg-warning text-dark rounded-pill ms-1" style="font-size:0.7rem;">Seleccionar</span>
+                </button>
+            `;
+        } else {
+            contAlert.innerHTML = '';
+            window._backlogsPendientesPlacaActual = [];
+        }
+    } catch(e) {
+        console.warn('Error verificando backlogs:', e);
+        contAlert.innerHTML = '';
+    }
+};
+
+window.abrirModalSeleccionarBacklogRF = function() {
+    const list = window._backlogsPendientesPlacaActual || [];
+    const contList = document.getElementById('contenedorListaBacklogsRF');
+    const lblInfo = document.getElementById('lblBacklogUnidadInfo');
+    const p = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '') || (document.getElementById('ck_placa_tracto-txt') || {}).value || '';
+
+    if (lblInfo) {
+        lblInfo.textContent = `Unidad ${p.toUpperCase()}: Selecciona los motivos pendientes que deseas incorporar a este reporte de fallas.`;
+    }
+
+    if (contList) {
+        if (!list.length) {
+            contList.innerHTML = '<div class="text-center py-4 text-muted small"><i class="bi bi-check2-circle fs-3 d-block text-success mb-1"></i>No hay backlogs pendientes para esta unidad.</div>';
+        } else {
+            contList.innerHTML = list.map((bk, idx) => {
+                const bId = bk.id || bk.backlog_id || idx;
+                const fRep = bk.fecha_reporte ? bk.fecha_reporte.split('T')[0] : '—';
+                const tema = bk.tema || 'Taller';
+                const ticket = bk.ticket_ot ? `<span class="badge bg-light text-secondary border ms-1">${bk.ticket_ot}</span>` : '';
+                return `
+                    <div class="card p-2.5 border rounded-3 bg-white shadow-2xs d-flex flex-row align-items-start gap-2.5">
+                        <input type="checkbox" class="form-check-input chk-backlog-item mt-1" id="chk_bk_${bId}" value="${bId}" checked style="transform:scale(1.15);">
+                        <label class="form-check-label flex-grow-1 cursor-pointer" for="chk_bk_${bId}" style="cursor:pointer;">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="badge bg-warning-subtle text-warning-emphasis fw-bold" style="font-size:0.72rem;">${bk.backlog_id || 'BK-PENDIENTE'} ${ticket}</span>
+                                <span class="text-muted small" style="font-size:0.72rem;"><i class="bi bi-calendar3 me-1"></i>${fRep}</span>
+                            </div>
+                            <div class="fw-bold text-dark small mb-0.5">${bk.tarea}</div>
+                            ${bk.reportado_por ? `<div class="text-muted" style="font-size:0.72rem;"><i class="bi bi-person me-1"></i>Reportado por: ${bk.reportado_por}</div>` : ''}
+                        </label>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    const modalEl = document.getElementById('modalSeleccionarBacklogRF');
+    if (modalEl) {
+        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
+window.ckToggleSeleccionarTodosBacklogs = function() {
+    const chks = document.querySelectorAll('.chk-backlog-item');
+    if (!chks.length) return;
+    const allChecked = Array.from(chks).every(c => c.checked);
+    chks.forEach(c => c.checked = !allChecked);
+};
+
+window.ckImportarBacklogsSeleccionados = function() {
+    const list = window._backlogsPendientesPlacaActual || [];
+    const chks = document.querySelectorAll('.chk-backlog-item:checked');
+    if (!chks.length) {
+        if (typeof window.rotToast === 'function') window.rotToast('No seleccionaste ningún backlog', 'bg-warning');
+        return;
+    }
+
+    let agregados = 0;
+    chks.forEach(chk => {
+        const bId = chk.value;
+        const item = list.find(x => String(x.id || x.backlog_id) === String(bId));
+        if (item) {
+            window.ckAgregarFallaManual(item.tarea, item.id || item.backlog_id);
+            agregados++;
+        }
+    });
+
+    const modalEl = document.getElementById('modalSeleccionarBacklogRF');
+    if (modalEl) {
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+    }
+
+    if (typeof window.rotToast === 'function') {
+        window.rotToast(`Se agregaron ${agregados} backlogs al reporte`, 'bg-success');
+    }
+};
+
 
 window.ckObtenerSiguienteFolio = function() {
     const list = Array.isArray(window.dataGlobalChecklist) ? window.dataGlobalChecklist : [];
@@ -1643,6 +1772,7 @@ window.ckSyncPlacaTracto = async function() {
         if (docBox) docBox.style.display = 'none';
         if (inputKm) inputKm.value = '';
         if (window.ckActualizarEncabezadosPlacas) window.ckActualizarEncabezadosPlacas();
+        if (typeof window.ckVerificarBacklogsPendientes === 'function') window.ckVerificarBacklogsPendientes('');
         return;
     }
 
@@ -1652,6 +1782,7 @@ window.ckSyncPlacaTracto = async function() {
     if (lblT) lblT.textContent = visibleText;
 
     if (window.ckActualizarEncabezadosPlacas) window.ckActualizarEncabezadosPlacas();
+    if (typeof window.ckVerificarBacklogsPendientes === 'function') window.ckVerificarBacklogsPendientes(visibleText);
 
     // 1. Cargar fechas de documentos e inspección
     window.ckObtenerFechasDocVehiculo(visibleText).then(d => {
@@ -2382,10 +2513,11 @@ window.guardarChecklist = function(e) {
             const sysVal = selectEl ? selectEl.value : 'TRACTO';
             const obs = descEl ? descEl.value.trim() : '';
             const fechaFalla = row.dataset.fecha || nowFmt;
+            const bId = row.dataset.backlogId || null;
 
             if (obs) {
                 const isRem = sysVal.toUpperCase().includes('REMOLQUE') || sysVal.toUpperCase().includes('CARRETA') || (placaRemolque && sysVal === placaRemolque);
-                const obj = { sistema: 'MANUAL', item: 'Falla Manual', obs: obs, fecha: fechaFalla };
+                const obj = { sistema: 'MANUAL', item: bId ? `Backlog (${bId})` : 'Falla Manual', obs: obs, fecha: fechaFalla, backlog_id: bId };
                 if (isRem) {
                     fallasRemolque.push(obj);
                 } else {

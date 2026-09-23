@@ -250,20 +250,65 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
     }
 
     if (accion === 'cerrar') {
-        const { comentario_cierre, cerrado_por } = req.body;
-        db.query('SELECT detalles_json FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
+        const { comentario_cierre, cerrado_por, motivos_checklist, km_actual } = req.body;
+        const targetDb = req.db || db;
+        targetDb.query('SELECT detalles_json, placa FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], async (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
             const raw = rows[0].detalles_json;
+            const placaOT = (rows[0].placa || '').toUpperCase();
             let det = {};
             try { det = typeof raw === 'string' ? JSON.parse(raw) : (raw || {}); } catch(e) { det = {}; }
             det.aprobacion    = 'Cerrada';
             det.tecnico_cierre = (detalles_cierre || {}).tecnico_cierre || '';
             det.obs_cierre    = (detalles_cierre || {}).obs_cierre || '';
             det.firma         = (detalles_cierre || {}).firma || null;
+            if (Array.isArray(motivos_checklist)) {
+                det.motivos_cierre_checklist = motivos_checklist;
+            }
             const fhSalidaRaw = fecha_hora_salida ? new Date(fecha_hora_salida) : new Date();
             const fhSalida = fhSalidaRaw.toISOString().slice(0, 19).replace('T', ' ');
-            db.query(
+
+            // Procesar motivos_checklist -> Sincronizar Backlog
+            if (Array.isArray(motivos_checklist) && motivos_checklist.length > 0) {
+                const anioBk = new Date().getFullYear();
+                const kmRegistrado = parseInt(km_actual) || parseInt(det.km) || 0;
+
+                for (const item of motivos_checklist) {
+                    const textoMotivo = (item.texto || item.tarea || '').trim();
+                    if (!textoMotivo) continue;
+
+                    if (item.realizado === true) {
+                        // Si se realizó y venía de un backlog existente, marcarlo como Realizado
+                        if (item.backlog_id || item.id_backlog) {
+                            const bId = item.backlog_id || item.id_backlog;
+                            targetDb.query(
+                                "UPDATE ot_backlog SET estado = 'Realizado' WHERE id = ? OR backlog_id = ?",
+                                [bId, bId],
+                                (errBkUp) => {
+                                    if (!errBkUp) console.log(`✅ Backlog ${bId} completado y cerrado por OT ${ticketId}`);
+                                }
+                            );
+                        }
+                    } else {
+                        // Si NO se realizó y NO viene de un backlog ya registrado como pendiente
+                        if (!item.backlog_id && !item.id_backlog) {
+                            generarId('ot_backlog', 'backlog_id', 'BK', anioBk, (nuevoBkId) => {
+                                targetDb.query(
+                                    `INSERT INTO ot_backlog (backlog_id, placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por, ticket_ot)
+                                     VALUES (?, ?, ?, 'Pendiente de OT', ?, ?, NOW(), 'Pendiente', ?, ?)`,
+                                    [nuevoBkId, placaOT, kmRegistrado, textoMotivo, cerrado_por || 'Taller', cerrado_por || 'Sistema', ticketId],
+                                    (errBkIns) => {
+                                        if (!errBkIns) console.log(`📋 Auto-Backlog generado: ${nuevoBkId} para ${placaOT} (${textoMotivo})`);
+                                    }
+                                );
+                            });
+                        }
+                    }
+                }
+            }
+
+            targetDb.query(
                 'UPDATE ordenes_trabajo SET estado=?, detalles_json=?, fecha_hora_salida=?, comentario_cierre=?, cerrado_por=? WHERE ticket_entrada=?',
                 ['Finalizado', JSON.stringify(det), fhSalida,
                  comentario_cierre || (detalles_cierre || {}).obs_cierre || null,

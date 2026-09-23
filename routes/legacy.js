@@ -45,6 +45,118 @@ function generarIdFleetrunUnico(placa, tipoMp, fecha, cb) {
     );
 }
 
+// ── Sincronización Automática de Hallazgos hacia RF y OT activa (Marsisa) ──
+async function procesarHallazgosInspeccionMarsisa(tdb, req, nextId, datos) {
+    try {
+        const isMarsisa = (req.tenantSlug === 'marsisa' || req.tenantSlug === 'master' || !req.tenantSlug || req.tenantSlug.includes('marsisa'));
+        if (!isMarsisa) return;
+
+        let detalles = [];
+        try {
+            detalles = typeof datos.detalles_json === 'string' ? JSON.parse(datos.detalles_json) : (datos.detalles_json || []);
+        } catch(e) {}
+
+        const fallas = detalles.filter(d => {
+            const st = String(d.estado || '').toUpperCase().trim();
+            return st === 'FALLA' || st === 'MAL' || st === 'M' || st === 'NO CONFORME' || (d.observacion && d.observacion.trim().length > 3 && st !== 'OK');
+        });
+
+        if (!fallas.length) return;
+
+        const placa = (datos.placa || '').trim().toUpperCase();
+        if (!placa) return;
+
+        const fallasParaRF = fallas.map(f => ({
+            sistema: f.categoria || 'Inspección Mecánica',
+            item: f.item || 'Componente inspeccionado',
+            estado: 'FALLA',
+            observacion: (f.observacion || '').trim() || `Hallazgo en ${f.item} (${nextId})`,
+            foto: f.foto || null,
+            origen_inspeccion: nextId
+        }));
+
+        // 1. Revisar si la unidad tiene una OT activa
+        const [otsActivas] = await tdb.promise().query(
+            "SELECT ticket_entrada, id_ot, id_rampa, placa FROM ordenes_trabajo WHERE UPPER(placa) = ? AND estado IN ('Pendiente', 'En Proceso', 'En Rampa', 'Pausada') ORDER BY id DESC LIMIT 1",
+            [placa]
+        );
+
+        if (otsActivas && otsActivas.length > 0) {
+            const ot = otsActivas[0];
+            const otId = ot.id_ot || ot.ticket_entrada;
+            console.log(`🔗 Auto-Sync Inspección: Placa ${placa} tiene OT activa (${otId}). Vinculando fallas...`);
+
+            for (const f of fallasParaRF) {
+                const descTrabajo = `[${f.sistema}] ${f.item}: ${f.observacion}`;
+                await tdb.promise().query(
+                    `INSERT INTO trabajos_ot (ticket_visita, tipo_trabajo, sistema_vehiculo, detalle_trabajo, trabajo_realizado, tecnico, costo, placa, fecha_trabajo)
+                     VALUES (?, 'Correctivo', ?, ?, ?, ?, 0, ?, NOW())`,
+                    [otId, f.sistema, descTrabajo, descTrabajo, datos.tecnico || '', placa]
+                );
+            }
+            return;
+        }
+
+        // 2. Revisar si la unidad tiene un Reporte de Fallas activo
+        const [rfsActivos] = await tdb.promise().query(
+            "SELECT id, folio, fallas_tracto_json, fallas_libres_text FROM reportes_fallas WHERE (UPPER(placa_tracto) = ? OR UPPER(placa_remolque) = ?) AND estado IN ('Pendiente', 'Registrado') ORDER BY id DESC LIMIT 1",
+            [placa, placa]
+        );
+
+        if (rfsActivos && rfsActivos.length > 0) {
+            const rf = rfsActivos[0];
+            let existentes = [];
+            try { existentes = JSON.parse(rf.fallas_tracto_json || '[]'); } catch(e) {}
+            const unificados = [...existentes, ...fallasParaRF];
+            await tdb.promise().query(
+                "UPDATE reportes_fallas SET fallas_tracto_json = ? WHERE id = ?",
+                [JSON.stringify(unificados), rf.id]
+            );
+            console.log(`🔗 Auto-Sync Inspección: Placa ${placa} anexada al RF ${rf.folio}`);
+            return;
+        }
+
+        // 3. Crear nuevo Reporte de Fallas
+        const anio = new Date().getFullYear();
+        const [rowsMax] = await tdb.promise().query(
+            "SELECT folio FROM reportes_fallas WHERE folio LIKE ? ORDER BY id DESC LIMIT 1",
+            [`RF-${anio}-%`]
+        );
+        let nextRfNum = 1;
+        if (rowsMax && rowsMax.length > 0) {
+            const parts = rowsMax[0].folio.split('-');
+            const num = parseInt(parts[parts.length - 1], 10) || 0;
+            nextRfNum = num + 1;
+        }
+        const nuevoFolio = `RF-${anio}-${String(nextRfNum).padStart(4, '0')}`;
+        const fotosUrls = fallasParaRF.map(f => f.foto).filter(Boolean);
+
+        await tdb.promise().query(
+            `INSERT INTO reportes_fallas (
+                folio, placa_tracto, km_inicial, km_final, conductor, procedencia,
+                fallas_tracto_json, fallas_remolque_json, fallas_libres_text,
+                fotos_json, estado, creado_por, fecha_reporte
+            ) VALUES (?, ?, ?, ?, ?, 'Inspección Técnica en Patio', ?, '[]', ?, ?, 'Pendiente', ?, NOW())`,
+            [
+                nuevoFolio,
+                placa,
+                parseInt(datos.km_tablero) || 0,
+                parseInt(datos.km_tablero) || 0,
+                datos.tecnico || 'Inspector Técnico',
+                JSON.stringify(fallasParaRF),
+                `Generado automáticamente desde Inspección ${nextId}`,
+                JSON.stringify(fotosUrls),
+                datos.tecnico || 'Sistema'
+            ]
+        );
+        console.log(`✅ Auto-Sync Inspección: Creado nuevo RF ${nuevoFolio} para placa ${placa}`);
+        if (typeof broadcast === 'function') broadcast('checklist', 'crear');
+    } catch(errSync) {
+        console.error('⚠️ Error en procesarHallazgosInspeccionMarsisa:', errSync);
+    }
+}
+
+
 
 // ── IMPORTACIÓN MASIVA DE PLACAS (23 CAMPOS) ─────────────────────────────────
 
@@ -643,6 +755,10 @@ router.post('/:metodo', async (req, res) => {
                         broadcast('inspecciones', metodo);
                         const usuario = (req.body && req.body.usuario) || datos.tecnico || 'sistema';
                         logAudit(usuario, 'inspecciones', 'CREÓ', `${datos.placa || '?'} · ${datos.fecha_ingreso || '?'}`);
+                        
+                        // Sincronización automática de hallazgos hacia Reportes de Fallas y OT activa (Marsisa)
+                        procesarHallazgosInspeccionMarsisa(db, req, nextId, datos).catch(e => console.warn('Sync insp error:', e));
+
                         return res.json({ data: "Éxito", id: nextId });
                     });
                 });
