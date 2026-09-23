@@ -1,0 +1,548 @@
+<!-- ================================================================= -->
+<!-- 💳 MÓDULO TESORERÍA: PAGO DE REQUERIMIENTOS (VISTA SPA)            -->
+<!-- Diseño 1:1 Apple / Bento UI + Estética Reporte de Fallas          -->
+<!-- ================================================================= -->
+
+<style>
+/* ── Reset root-dinamico padding for 100% full-bleed ─────────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
+/* ── Layout & Container ───────────────────────────────────────────── */
+.pr-app-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem 1.25rem 7.5rem 1.25rem !important;
+    background: transparent;
+    min-height: 100%;
+}
+
+/* ── Bento KPI Cards ──────────────────────────────────────────────── */
+.pr-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 0.95rem 1.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    height: 100%;
+    min-height: 94px;
+    box-sizing: border-box;
+}
+.pr-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+}
+.pr-kpi-card.active {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
+    background: #f8fafc !important;
+}
+.pr-kpi-title {
+    font-size: 0.69rem;
+    letter-spacing: 0.4px;
+    height: 30px;
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 2px;
+    line-height: 1.25;
+    text-transform: uppercase;
+}
+.pr-kpi-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+/* ── Search & Controls (Apple Segmented Pill) ─────────────────────── */
+.pr-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 14px 8px 38px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+.pr-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+.pr-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+.pr-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+.pr-segment-item:hover { color: #0f172a; }
+.pr-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ── Table Styling ────────────────────────────────────────────────── */
+#pr-tabla-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
+    min-height: 320px;
+}
+#tablaPagoReq tbody tr td {
+    padding-top: 0.45rem !important;
+    padding-bottom: 0.45rem !important;
+    padding-left: 0.6rem !important;
+    padding-right: 0.6rem !important;
+    vertical-align: middle !important;
+}
+#tablaPagoReq thead tr th {
+    padding-top: 0.55rem !important;
+    padding-bottom: 0.55rem !important;
+    padding-left: 0.6rem !important;
+    padding-right: 0.6rem !important;
+    font-size: 0.72rem !important;
+}
+
+/* ── Botón Acción Proceder ────────────────────────────────────────── */
+.btn-proceder-req {
+    background: #10b981;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+    transition: all 0.18s ease;
+    white-space: nowrap;
+    text-transform: uppercase;
+}
+.btn-proceder-req:hover {
+    background: #059669;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.35);
+}
+.btn-proceder-req:active {
+    transform: scale(0.96);
+}
+
+.btn-procesado-tag {
+    background: #f1f5f9;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+    border-radius: 10px;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* ── Modal Confirmación / Proceder (Diseño 1:1 Reporte de Fallas) ─── */
+.pr-modal-dialog {
+    max-width: 580px !important;
+    width: 92% !important;
+    margin: 1.75rem auto !important;
+}
+.pr-modal-card {
+    background: #ffffff !important;
+    border-radius: 28px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.14) !important;
+    padding: 2rem 1.8rem 1.8rem 1.8rem !important;
+    transform: translateZ(0);
+}
+.pr-modal-badge-icon {
+    font-size: 2.8rem;
+    color: #0284c7;
+    line-height: 1;
+    margin-bottom: 0.65rem;
+    display: inline-block;
+}
+
+/* Botón Circular Oscuro de Cancelar (Reporte de Fallas) */
+.ck-btn-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50% !important;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    outline: none;
+}
+.ck-btn-cancel-circle {
+    background: #18181b !important;
+    color: #ffffff !important;
+}
+.ck-btn-cancel-circle:hover {
+    background: #09090b !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.ck-btn-cancel-circle:active {
+    transform: scale(0.95);
+}
+
+/* Previsualizador de Voucher */
+.pr-voucher-preview-wrap {
+    background: #f8fafc;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.pr-voucher-thumb {
+    width: 54px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+    .pr-app-container {
+        padding: 0.75rem 0.5rem 7.5rem 0.5rem !important;
+    }
+}
+</style>
+
+<div class="pr-app-container d-flex flex-column" id="moduloPagoRequerimientos">
+
+  <!-- ── 1. ENCABEZADO PRINCIPAL (RESPONSIVE) ───────────────────────── -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="d-flex align-items-center gap-2 gap-md-3">
+      <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+        <i class="bi bi-credit-card-2-front-fill text-success fs-5"></i>
+      </div>
+      <div>
+        <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+          Pago de Requerimientos
+        </h4>
+        <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">
+          Tesorería — Gestión y procesamiento de pagos de órdenes de compra aprobadas
+        </small>
+      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.cargarPagoRequerimientos(true)" title="Actualizar Datos">
+        <i class="bi bi-arrow-clockwise fs-6"></i> <span class="d-none d-sm-inline">Actualizar</span>
+      </button>
+      <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" onclick="window.exportarExcelPagoRequerimientos()" title="Exportar a Excel">
+        <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── 2. BENTO KPIS ROW (APPLE CARDS INTERACTIVAS) ──────────────── -->
+  <div class="row g-2 g-md-3 mb-3" id="panelKPIsPagoReq">
+    <div class="col-6 col-md-3">
+      <div class="pr-kpi-card active" id="pr-kpi-pendientes" onclick="window.filtrarEstadoTab('APROBADO', this)">
+        <div class="flex-grow-1 pe-2">
+          <span class="text-secondary small fw-bold pr-kpi-title">Por Pagar (Aprobados)</span>
+          <h2 id="kpi-req-pendientes" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem; line-height: 1.1;">0</h2>
+        </div>
+        <div class="pr-kpi-icon" style="background: #eff6ff; color: #2563eb;">
+          <i class="bi bi-hourglass-split"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="pr-kpi-card" id="pr-kpi-soles" onclick="window.filtrarMonedaTab('PEN', this)">
+        <div class="flex-grow-1 pe-2">
+          <span class="text-secondary small fw-bold pr-kpi-title">Total en Soles (S/)</span>
+          <h2 id="kpi-req-soles" class="fw-bolder m-0 text-success" style="font-size: 1.4rem; line-height: 1.1;">S/ 0.00</h2>
+        </div>
+        <div class="pr-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
+          <i class="bi bi-cash-stack"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="pr-kpi-card" id="pr-kpi-dolares" onclick="window.filtrarMonedaTab('USD', this)">
+        <div class="flex-grow-1 pe-2">
+          <span class="text-secondary small fw-bold pr-kpi-title">Total en Dólares (US$)</span>
+          <h2 id="kpi-req-dolares" class="fw-bolder m-0 text-warning" style="font-size: 1.4rem; line-height: 1.1;">$ 0.00</h2>
+        </div>
+        <div class="pr-kpi-icon" style="background: #fefce8; color: #ca8a04;">
+          <i class="bi bi-currency-dollar"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="pr-kpi-card" id="pr-kpi-procesados" onclick="window.filtrarEstadoTab('PROCESADO', this)">
+        <div class="flex-grow-1 pe-2">
+          <span class="text-secondary small fw-bold pr-kpi-title">Pagados / Procesados</span>
+          <h2 id="kpi-req-procesados" class="fw-bolder m-0 text-indigo" style="font-size: 1.6rem; line-height: 1.1; color: #6366f1;">0</h2>
+        </div>
+        <div class="pr-kpi-icon" style="background: #eef2ff; color: #6366f1;">
+          <i class="bi bi-check2-all"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. HERRAMIENTAS, FILTROS Y BÚSQUEDA ────────────────────────── -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <!-- Buscador Universal -->
+    <div class="position-relative flex-grow-1" style="max-width: 380px;">
+      <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+      <input type="text" id="buscadorPagoReq" class="pr-apple-search" placeholder="Buscar folio, solicitante, creador, aprobador, proveedor..." oninput="window.filtrarTablaPagoReq()">
+    </div>
+
+    <!-- Segmented Control Estado + Moneda -->
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <div class="pr-apple-segmented" id="btnGroupEstadoPagoReq">
+        <button type="button" class="pr-segment-item active" onclick="window.setFiltroEstado('APROBADO', this)">Por Pagar</button>
+        <button type="button" class="pr-segment-item" onclick="window.setFiltroEstado('PROCESADO', this)">Pagados</button>
+        <button type="button" class="pr-segment-item" onclick="window.setFiltroEstado('TODOS', this)">Todos</button>
+      </div>
+
+      <div class="pr-apple-segmented" id="btnGroupMonedaPagoReq">
+        <button type="button" class="pr-segment-item active" onclick="window.setFiltroMoneda('TODAS', this)">Todas</button>
+        <button type="button" class="pr-segment-item" onclick="window.setFiltroMoneda('PEN', this)">S/ Soles</button>
+        <button type="button" class="pr-segment-item" onclick="window.setFiltroMoneda('USD', this)">US$ Dólares</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4. TABLA PRINCIPAL DE PAGO DE REQUERIMIENTOS ───────────────── -->
+  <div class="table-responsive rounded-4 border bg-white shadow-2xs" id="pr-tabla-wrap">
+    <table class="table table-hover align-middle mb-0" id="tablaPagoReq" style="font-size: 0.81rem; white-space: nowrap;">
+      <thead class="bg-light border-bottom text-muted fw-bold text-uppercase" style="background:#f8fafc !important;">
+        <tr>
+          <th class="ps-3" style="width: 110px;">Acción</th>
+          <th style="width: 140px;">Monto a Proceder</th>
+          <th>Solicitante</th>
+          <th>Motivo</th>
+          <th>Orden de Compra</th>
+          <th>Usuario Creación</th>
+          <th>Fecha Registro</th>
+          <th>Días Restantes</th>
+          <th>Usuario Aprobación</th>
+          <th>Fecha Aprobación</th>
+          <th>Proveedor</th>
+          <th class="pe-3">Cuenta Bancaria Destino</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyPagoReq" class="divide-y divide-slate-100">
+        <tr>
+          <td colspan="12" class="text-center py-5 text-muted">
+            <span class="spinner-border spinner-border-sm text-primary me-2"></span> Cargando requerimientos aprobados...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="insp-bottom-spacer" style="height: 100px; width: 100%;"></div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 💳 MODAL: PROCEDER CON EL REQUERIMIENTO (COPIA REPORTES DE FALLAS) -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalProcederPagoReq" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered pr-modal-dialog">
+    <div class="modal-content border-0 pr-modal-card">
+      
+      <!-- Icono Header -->
+      <div class="d-flex justify-content-center">
+        <div class="pr-modal-badge-icon">
+          <i class="bi bi-cash-coin text-success"></i>
+        </div>
+      </div>
+
+      <h5 class="fw-bold text-dark mb-1 text-center" style="font-size: 1.25rem;">Proceder con el Requerimiento</h5>
+      <p class="text-muted small mb-3 text-center" style="font-size: 0.82rem;">
+        Registro oficial de pago bancario y adjunto de constancia
+      </p>
+
+      <!-- Banner de Confirmación -->
+      <div class="p-2.5 rounded-3 mb-3 d-flex align-items-center gap-2" style="background: #f0fdf4; border: 1px solid #bbf7d0; font-size: 0.8rem; color: #166534;">
+        <input class="form-check-input ms-1 me-1 flex-shrink-0" type="checkbox" id="chkConfirmarProceder" style="cursor: pointer;" checked>
+        <label class="form-check-label fw-bold mb-0" for="chkConfirmarProceder" style="cursor: pointer;">
+          Confirmo proceder con el requerimiento registrado en Caja. Esta acción no se podrá revertir.
+        </label>
+      </div>
+
+      <!-- Formulario de Pago -->
+      <form id="formProcederPago" onsubmit="event.preventDefault(); window.ejecutarProcesarPago();">
+        <input type="hidden" id="pago_oc_id">
+        <input type="hidden" id="pago_oc_moneda">
+        <input type="hidden" id="pago_oc_importe">
+
+        <div class="row g-2 mb-2 text-start">
+          <!-- Folio OC -->
+          <div class="col-6">
+            <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.72rem;">ORDEN DE COMPRA</label>
+            <input type="text" class="form-control form-control-sm bg-light fw-bold text-primary" id="pago_txt_oc" readonly style="border-radius: 10px;">
+          </div>
+          <!-- Solicitante -->
+          <div class="col-6">
+            <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.72rem;">SOLICITANTE</label>
+            <input type="text" class="form-control form-control-sm bg-light fw-semibold text-dark" id="pago_txt_solicitante" readonly style="border-radius: 10px;">
+          </div>
+        </div>
+
+        <!-- Proveedor -->
+        <div class="mb-2 text-start">
+          <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.72rem;">PROVEEDOR</label>
+          <input type="text" class="form-control form-control-sm bg-light fw-bold text-dark" id="pago_txt_proveedor" readonly style="border-radius: 10px;">
+        </div>
+
+        <!-- Número de Constancia / Operación (Requerido) -->
+        <div class="mb-2 text-start">
+          <label class="form-label fw-bold text-dark small mb-1" style="font-size: 0.75rem;">
+            NÚMERO CONSTANCIA DEPÓSITO / N° OPERACIÓN <span class="text-danger">*</span>
+          </label>
+          <input type="text" class="form-control form-control-sm border fw-bold text-dark" id="pago_num_constancia" placeholder="Ej: 00482910 o N° de transferencia..." required style="border-radius: 10px; background:#ffffff;">
+        </div>
+
+        <!-- Cuenta Destino del Proveedor -->
+        <div class="mb-2 text-start">
+          <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.72rem;">NÚMERO CUENTA DESTINO (PROVEEDOR)</label>
+          <input type="text" class="form-control form-control-sm bg-light fw-semibold text-secondary" id="pago_txt_cuenta_destino" readonly style="border-radius: 10px;">
+        </div>
+
+        <!-- Cuenta Origen (Empresa) -->
+        <div class="mb-2 text-start">
+          <label class="form-label fw-bold text-dark small mb-1" style="font-size: 0.75rem;">
+            CUENTA ORIGEN (EMPRESA) <span class="text-danger">*</span>
+          </label>
+          <select class="form-select form-select-sm fw-semibold text-dark" id="pago_select_cuenta_origen" required style="border-radius: 10px;">
+            <option value="">Seleccionar cuenta de origen...</option>
+            <option value="BCP - CTA CTE SOLES">BCP - Cuenta Corriente Soles</option>
+            <option value="BCP - CTA CTE DOLARES">BCP - Cuenta Corriente Dólares</option>
+            <option value="BBVA - CTA CTE SOLES">BBVA - Cuenta Corriente Soles</option>
+            <option value="INTERBANK - CTA CTE SOLES">Interbank - Cuenta Corriente Soles</option>
+            <option value="CAJA CHICA">Caja Chica Efectivo</option>
+          </select>
+        </div>
+
+        <!-- Descripción / Motivo -->
+        <div class="mb-2 text-start">
+          <label class="form-label fw-bold text-muted small mb-1" style="font-size: 0.72rem;">DESCRIPCIÓN</label>
+          <input type="text" class="form-control form-control-sm bg-light text-secondary" id="pago_txt_descripcion" readonly style="border-radius: 10px;">
+        </div>
+
+        <!-- Subir Voucher / Constancia -->
+        <div class="mb-3 text-start">
+          <label class="form-label fw-bold text-dark small mb-1 d-flex align-items-center justify-content-between" style="font-size: 0.75rem;">
+            <span><i class="bi bi-paperclip me-1 text-primary"></i> SUBIR VOUCHER / CONSTANCIA (OPCIONAL)</span>
+            <span class="text-muted fw-normal" style="font-size: 0.7rem;">JPG, PNG, PDF</span>
+          </label>
+          <input type="file" class="form-control form-control-sm" id="pago_file_voucher" accept="image/*,application/pdf" onchange="window.handlePagoVoucherPreview(this)" style="border-radius: 10px;">
+          
+          <div id="pago_voucher_preview_box" class="pr-voucher-preview-wrap mt-2" style="display: none;">
+            <img id="pago_voucher_preview_img" class="pr-voucher-thumb" src="" alt="Voucher">
+            <div class="flex-grow-1 overflow-hidden">
+              <span id="pago_voucher_preview_name" class="fw-semibold text-dark d-block text-truncate small" style="font-size:0.78rem;"></span>
+              <span class="badge bg-success bg-opacity-10 text-success fw-bold" style="font-size:0.7rem;"><i class="bi bi-check me-0.5"></i>Listo para procesar</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-light text-danger border rounded-circle p-1" onclick="window.quitarPagoVoucher()" title="Quitar archivo">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Importe Total Destacado -->
+        <div class="p-2.5 rounded-3 mb-4 bg-light border d-flex align-items-center justify-content-between">
+          <span class="text-muted fw-bold small text-uppercase">IMPORTE TOTAL:</span>
+          <span class="fw-bolder fs-5 text-success" id="pago_badge_importe">S/ 0.00</span>
+        </div>
+
+        <!-- Botones de Acción (Estilo Reporte de Fallas) -->
+        <div class="d-flex align-items-center justify-content-center gap-3">
+          <button type="button" class="ck-btn-circle ck-btn-cancel-circle shadow-sm" data-bs-dismiss="modal" title="Cancelar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+          <button type="submit" class="btn btn-success fw-bold px-4 py-2.5 rounded-pill shadow-sm d-flex align-items-center gap-2" id="btnEjecutarPagoSubmit" style="font-size: 0.95rem; min-height: 48px;">
+            <i class="bi bi-check2-circle fs-5"></i> <span>Proceder Ahora!</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 📄 MODAL: VER DETALLE DE ORDEN DE COMPRA                          -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalDetalleOCPagoReq" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header bg-light border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="modal-title fw-bold text-dark mb-0" id="lblDetalleOCFolio">Detalle de Orden de Compra</h5>
+          <small class="text-muted" id="lblDetalleOCProveedor"></small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="table-responsive rounded-3 border">
+          <table class="table table-sm table-hover mb-0" style="font-size:0.82rem;">
+            <thead class="bg-light text-muted fw-bold">
+              <tr>
+                <th class="ps-3">#</th>
+                <th>Descripción / Ítem</th>
+                <th class="text-center">Cantidad</th>
+                <th class="text-end">Costo Unit.</th>
+                <th class="text-end pe-3">Importe</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyDetalleOCItems">
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer bg-light px-4 py-2.5">
+        <button type="button" class="btn btn-secondary rounded-3 px-3.5 btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>

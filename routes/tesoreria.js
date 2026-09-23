@@ -2293,5 +2293,274 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ============================================================
+    // 💳 PAGO DE REQUERIMIENTOS (Órdenes de Compra Aprobadas)
+    // ============================================================
+
+    // ── Helper: Asegurar columnas necesarias en entradas_inv ─────
+    async function _ensureColumnasPagoRequerimientos(tdb) {
+        const cols = [
+            { col: 'numero_operacion', def: 'VARCHAR(100) NULL' },
+            { col: 'fecha_pago', def: 'DATETIME NULL' },
+            { col: 'pagado_por', def: 'VARCHAR(150) NULL' },
+            { col: 'fecha_aprobacion', def: 'DATETIME NULL' },
+            { col: 'cuenta_bancaria_empresa', def: 'VARCHAR(150) NULL' }
+        ];
+        for (const c of cols) {
+            try {
+                const [r] = await tdb.query(
+                    `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='${c.col}'`
+                );
+                if (r && r[0] && r[0].cnt === 0) {
+                    await tdb.query(`ALTER TABLE entradas_inv ADD COLUMN ${c.col} ${c.def}`);
+                }
+            } catch(e) {}
+        }
+    }
+
+    // ── GET /api/tesoreria/pago-requerimientos ───────────────────
+    router.get('/pago-requerimientos', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'DB no disponible' });
+            await _ensureColumnasPagoRequerimientos(tdb);
+
+            const estadoFiltro = (req.query.estado || 'aprobado').toLowerCase();
+            let whereClause = "WHERE LOWER(e.estado) IN ('aprobado', 'autorizado')";
+            if (estadoFiltro === 'todos') {
+                whereClause = "WHERE LOWER(e.estado) IN ('aprobado', 'autorizado', 'procesado', 'pagado')";
+            } else if (estadoFiltro === 'procesados' || estadoFiltro === 'pagados') {
+                whereClause = "WHERE LOWER(e.estado) IN ('procesado', 'pagado')";
+            }
+
+            // 1. Obtener Órdenes de Compra
+            const sqlOC = `
+                SELECT e.*,
+                       COALESCE(e.total_pen, 0) AS total_oc,
+                       COUNT(DISTINCT de.id) AS total_items,
+                       GROUP_CONCAT(CONCAT(COALESCE(de.descripcion,''), '|', COALESCE(de.cantidad,0), '|', COALESCE(de.costo_unitario,0), '|', COALESCE(de.moneda,'PEN'), '|', COALESCE(de.importe,0)) SEPARATOR ';;') AS items_raw
+                FROM entradas_inv e
+                LEFT JOIN detalle_entradas_inv de ON de.entrada_id = e.id
+                ${whereClause}
+                GROUP BY e.id
+                ORDER BY e.fecha DESC, e.id DESC
+            `;
+            const [ocs] = await tdb.query(sqlOC);
+
+            // 2. Mapear Usuarios para nombres legibles
+            const [usrRows] = await tdb.query("SELECT idUsuario, correo, nombre FROM usuarios").catch(() => [[]]);
+            const usuariosMap = {};
+            (usrRows || []).forEach(u => {
+                if (u.idUsuario) usuariosMap[u.idUsuario.toLowerCase()] = u.nombre;
+                if (u.correo) usuariosMap[u.correo.toLowerCase()] = u.nombre;
+                if (u.nombre) usuariosMap[u.nombre.toLowerCase()] = u.nombre;
+            });
+
+            // 3. Mapear Cuentas Bancarias de Proveedores
+            const [ctasRows] = await tdb.query("SELECT * FROM proveedor_cuentas_bancarias WHERE estado = 1").catch(() => [[]]);
+            const ctasProvMap = {};
+            (ctasRows || []).forEach(c => {
+                if (!ctasProvMap[c.proveedor_id]) ctasProvMap[c.proveedor_id] = [];
+                ctasProvMap[c.proveedor_id].push(`${c.banco} - ${c.tipo_cuenta} - ${c.numero_cuenta}`);
+            });
+
+            // 4. Mapear Proveedores info (RUC, Teléfono)
+            const [provRows] = await tdb.query("SELECT id, numero_documento, nombre, telefono, email FROM proveedores_inv").catch(() => [[]]);
+            const provsMap = {};
+            (provRows || []).forEach(p => {
+                if (p.id) provsMap[p.id] = p;
+                if (p.nombre) provsMap[p.nombre.toLowerCase()] = p;
+            });
+
+            // 5. Enriquecer cada requerimiento con presigned URLs y datos de pago
+            const resultado = await Promise.all((ocs || []).map(async (oc) => {
+                const creadorKey = (oc.creado_por || '').toLowerCase().trim();
+                const creadorNombre = usuariosMap[creadorKey] || usuariosMap[oc.creado_por] || oc.creado_por || 'SISTEMA';
+
+                const aprobKey = (oc.aprobado_por || '').toLowerCase().trim();
+                const aprobadorNombre = usuariosMap[aprobKey] || usuariosMap[oc.aprobado_por] || oc.aprobado_por || 'Gerencia';
+
+                const pInfo = (oc.proveedor_id && provsMap[oc.proveedor_id]) ||
+                              (oc.proveedor_nombre && provsMap[oc.proveedor_nombre.toLowerCase()]) || null;
+                const proveedorRuc = pInfo ? pInfo.numero_documento : '';
+
+                // Cuenta bancaria de destino
+                let cuentaDestino = oc.cuenta_bancaria_proveedor || '';
+                if (!cuentaDestino && oc.proveedor_id && ctasProvMap[oc.proveedor_id] && ctasProvMap[oc.proveedor_id].length > 0) {
+                    cuentaDestino = ctasProvMap[oc.proveedor_id][0];
+                }
+
+                // Desglosar ítems
+                const items = oc.items_raw ? oc.items_raw.split(';;').map(s => {
+                    const [desc, cant, cu, mon, imp] = s.split('|');
+                    return {
+                        descripcion: desc || '',
+                        cantidad: parseFloat(cant) || 0,
+                        costo_unitario: parseFloat(cu) || 0,
+                        moneda: mon || oc.moneda || 'PEN',
+                        importe: parseFloat(imp) || ((parseFloat(cant) || 0) * (parseFloat(cu) || 0))
+                    };
+                }) : [];
+
+                // Calcular importe total correcto
+                let importeCalculado = 0;
+                if (items.length > 0) {
+                    importeCalculado = items.reduce((acc, it) => acc + (it.importe || 0), 0);
+                } else {
+                    importeCalculado = parseFloat(oc.total_pen) || 0;
+                }
+
+                // Generar URL firmada para voucher si ya existe
+                let voucherPresigned = null;
+                if (oc.url_voucher) {
+                    const k = s3KeyFromUrl(oc.url_voucher);
+                    if (k) voucherPresigned = await getPresignedUrl(k).catch(() => oc.url_voucher);
+                    else voucherPresigned = oc.url_voucher;
+                }
+
+                return {
+                    id: oc.id,
+                    folio: oc.id,
+                    fecha: oc.fecha,
+                    solicitante: oc.solicitante || '—',
+                    motivo: oc.motivo_entrada || `ORDEN DE COMPRA: ${oc.id}`,
+                    tipo_orden: oc.tipo_orden || 'Orden de compra',
+                    moneda: oc.moneda || 'PEN',
+                    importe: importeCalculado,
+                    total_pen: oc.total_pen,
+                    tipo_cambio: oc.tipo_cambio || 1,
+                    creado_por: oc.creado_por,
+                    creador_nombre: creadorNombre,
+                    aprobado_por: oc.aprobado_por,
+                    aprobador_nombre: aprobadorNombre,
+                    fecha_aprobacion: oc.fecha_aprobacion || oc.actualizado_en || oc.fecha,
+                    dias_pagar: parseInt(oc.dias_pagar) || 0,
+                    condicion_pago: oc.condicion_pago || 'Al contado',
+                    prioridad: oc.prioridad || 'Normal',
+                    proveedor_id: oc.proveedor_id,
+                    proveedor_nombre: oc.proveedor_nombre || 'PROVEEDOR GENERAL',
+                    proveedor_ruc: proveedorRuc,
+                    cuenta_bancaria_proveedor: cuentaDestino,
+                    cuenta_bancaria_empresa: oc.cuenta_bancaria_empresa || '',
+                    estado: oc.estado || 'Aprobado',
+                    numero_operacion: oc.numero_operacion || '',
+                    fecha_pago: oc.fecha_pago || null,
+                    pagado_por: oc.pagado_por || '',
+                    url_voucher: oc.url_voucher,
+                    url_voucher_presigned: voucherPresigned,
+                    items: items
+                };
+            }));
+
+            res.json({ ok: true, data: resultado });
+        } catch (err) {
+            console.error('Error en GET /api/tesoreria/pago-requerimientos:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── POST /api/tesoreria/pago-requerimientos/:id/procesar ─────
+    router.post('/pago-requerimientos/:id/procesar', upload.single('voucher'), async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'DB no disponible' });
+            await _ensureColumnasPagoRequerimientos(tdb);
+            await ensureTableCaja(req);
+
+            const { id } = req.params;
+            const b = req.body || {};
+            const numeroConstancia = (b.numero_constancia || b.numero_operacion || '').trim();
+            const cuentaOrigen = (b.cuenta_origen || '').trim();
+            const usuarioPago = (req.user && req.user.nombre) ? req.user.nombre : (b.usuario || 'Tesorería');
+            const descripcionPago = (b.descripcion || `ORDEN DE COMPRA: ${id}`).trim();
+            const montoPagado = parseFloat(b.monto || b.importe) || 0;
+            const monedaPago = (b.moneda || 'PEN').toUpperCase();
+
+            // 1. Obtener la Orden de Compra actual
+            const [ocRows] = await tdb.query("SELECT * FROM entradas_inv WHERE id = ?", [id]);
+            if (!ocRows.length) return res.status(404).json({ error: 'Orden de Compra no encontrada' });
+            const oc = ocRows[0];
+
+            // 2. Subir voucher a S3 si se adjuntó
+            let voucherUrl = oc.url_voucher || null;
+            if (req.file) {
+                const f = req.file;
+                const ext = (f.originalname.split('.').pop() || 'jpg').toLowerCase();
+                const key = `tesoreria/requerimientos/voucher_${id}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+                voucherUrl = await uploadToS3(f.buffer, key, f.mimetype);
+            }
+
+            // 3. Actualizar estado de la Orden de Compra a PROCESADO
+            await tdb.query(`
+                UPDATE entradas_inv SET
+                    estado = 'Procesado',
+                    numero_operacion = ?,
+                    cuenta_bancaria_empresa = ?,
+                    url_voucher = ?,
+                    pagado_por = ?,
+                    fecha_pago = NOW()
+                WHERE id = ?
+            `, [numeroConstancia, cuentaOrigen, voucherUrl, usuarioPago, id]);
+
+            // 4. Asentar egreso automático en tesoreria_caja (Conciliación automática)
+            try {
+                const anioActual = new Date().getFullYear();
+                const [maxRow] = await tdb.query(
+                    "SELECT MAX(CAST(SUBSTRING_INDEX(numero_caja, '-', -1) AS UNSIGNED)) AS maxNum FROM tesoreria_caja WHERE anio = ?",
+                    [anioActual]
+                );
+                const nextNum = (maxRow && maxRow[0] && maxRow[0].maxNum ? maxRow[0].maxNum : 0) + 1;
+                const numCajaFmt = `${anioActual}-${String(nextNum).padStart(6, '0')}`;
+
+                const insertCajaSql = `
+                    INSERT INTO tesoreria_caja (
+                        anio, numero_caja, fecha, tipo_movimiento, origen_dinero, modulo_origen,
+                        centro_costo, sub_motivo, modalidad_pago, beneficiario,
+                        importe, subtotal, total, observacion, voucher_url, numero_operacion,
+                        estado, usuario_creacion, usuario_aprobacion, fecha_aprobacion
+                    ) VALUES (?, ?, CURDATE(), 'EGRESO', ?, 'ALMACÉN', 'CC-ADM', 'PAGO REQUERIMIENTO', 'TRANSFERENCIA', ?, ?, ?, ?, ?, ?, ?, 'PROCESADO', ?, ?, NOW())
+                `;
+                await tdb.query(insertCajaSql, [
+                    anioActual,
+                    numCajaFmt,
+                    cuentaOrigen || 'BANCO',
+                    oc.proveedor_nombre || 'PROVEEDOR',
+                    montoPagado || oc.total_pen || 0,
+                    montoPagado || oc.total_pen || 0,
+                    montoPagado || oc.total_pen || 0,
+                    `PAGO DE REQUERIMIENTO OC ${id} - ${descripcionPago} | N° Constancia: ${numeroConstancia}`,
+                    voucherUrl,
+                    numeroConstancia,
+                    usuarioPago,
+                    usuarioPago
+                ]);
+            } catch (errCaja) {
+                console.warn('Advertencia al asentar egreso en tesoreria_caja:', errCaja.message);
+            }
+
+            // 5. Auditoría y broadcast
+            if (typeof logAudit === 'function') {
+                logAudit(usuarioPago, 'tesoreria/pago-requerimientos', 'PROCESÓ PAGO', `OC: ${id} - Constancia: ${numeroConstancia} - Monto: ${monedaPago} ${montoPagado}`);
+            }
+            if (typeof broadcast === 'function') {
+                broadcast('almacen', 'actualizar_oc');
+                broadcast('tesoreria', 'pago_procesado');
+            }
+
+            res.json({
+                ok: true,
+                message: 'Pago de requerimiento procesado exitosamente',
+                id: id,
+                estado: 'Procesado',
+                numero_operacion: numeroConstancia,
+                voucher_url: voucherUrl
+            });
+        } catch (err) {
+            console.error('Error al procesar pago de requerimiento:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     return router;
 };
+
