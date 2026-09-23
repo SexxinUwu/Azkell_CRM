@@ -10,7 +10,7 @@ window.FLEET_I18N = {
     // Navegación
     'nav.dashboard':      'Dashboard',
     'nav.mantenimiento':  'Mantenimiento',
-    'nav.inspecciones':   'Análisis Insp.',
+    'nav.inspecciones':   'Análisis de Inspecciones',
     'nav.placas':         'Placas',
     'nav.fleetrun': 'Mantenimiento Preventivo',
     'nav.status_rampa':   'Status Rampa',

@@ -397,10 +397,6 @@
       <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" onclick="window.exportarExcelInspecciones()" title="Exportar Excel">
         <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
       </button>
-      <!-- Botón + Inspeccionar (solo visible en Desktop, en móvil usa el FAB) -->
-      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalSeleccionarTipoInspeccion()" style="background: #0284c7; border-color: #0284c7;">
-        <i class="bi bi-plus-lg fs-6"></i> <span>Inspeccionar</span>
-      </button>
     </div>
   </div>
 
@@ -445,7 +441,7 @@
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Críticas / Rojo</span>
           <h2 id="kpi-insp-criticas" class="fw-bolder m-0 text-danger" style="font-size: 1.6rem;">0</h2>
         </div>
-        <div class="ck-kpi-icon" style="background: #fef2f2; color: #ef4444;">
+        <div class="ck-kpi-icon" style="background: #fef2f2; color: #dc2626;">
           <i class="bi bi-x-circle-fill"></i>
         </div>
       </div>
@@ -489,7 +485,7 @@
     </div>
   </div>
 
-  <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS SEGMENTED ───────────────────── -->
+  <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS SEGMENTED (FULL-BLEED) ──────── -->
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3" id="panelHerramientasStatus">
     <div class="position-relative flex-grow-1" style="max-width: 360px;">
       <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
@@ -526,14 +522,15 @@
                 <th class="py-2" style="min-width: 90px; white-space: nowrap;">FECHA INSP.</th>
                 <th class="py-2" style="min-width: 110px; white-space: nowrap;">PRÓXIMA INSP.</th>
                 <th class="py-2 text-center" style="min-width: 100px; white-space: nowrap;">SEMÁFORO</th>
+                <th class="py-2 text-center" style="min-width: 140px; white-space: nowrap;"><i class="bi bi-shield-check text-primary"></i> EVALUACIÓN</th>
                 <th class="py-2" style="min-width: 110px; white-space: nowrap;"><i class="bi bi-geo-alt-fill text-primary"></i> UBICACIÓN</th>
                 <th class="py-2 text-end" style="min-width: 95px; white-space: nowrap;"><i class="bi bi-speedometer2 text-secondary"></i> KM INSP.</th>
-                <th class="pe-3 py-2 text-end" style="min-width: 95px; white-space: nowrap;">ACCIONES</th>
+                <th class="pe-3 py-2 text-end" style="min-width: 155px; white-space: nowrap;">ACCIONES</th>
               </tr>
             </thead>
             <tbody id="cuerpoTablaStatus">
               <tr>
-                <td colspan="9" class="text-center py-4 text-muted">
+                <td colspan="10" class="text-center py-4 text-muted">
                   <div class="spinner-border spinner-border-sm me-2 text-primary" role="status"></div> Cargando inspecciones...
                 </td>
               </tr>
@@ -806,43 +803,42 @@
 </div>
 
 <!-- ================================================================= -->
-<!-- 📝 FORMULARIO WIZARD DE INSPECCIONES (DRAWER / FULL SCREEN)       -->
+<!-- 📝 MODAL FORMULARIO DE INSPECCIONES (FLOTANTE TIPO REPORTE DE FALLAS) -->
 <!-- ================================================================= -->
-<div id="drawerInspeccion" class="rot-sub-drawer">
-    <div class="insp-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
-        <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
-                    onclick="document.getElementById('drawerInspeccion').classList.remove('open')" 
-                    title="Volver" 
-                    style="width: 34px; height: 34px; color: var(--subtext, #64748b);">
-                <i class="bi bi-arrow-left"></i>
-            </button>
-            <div>
-                <span class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
-                    <i class="bi bi-clipboard2-check-fill text-primary" style="color: #0284c7;"></i> Formulario de Inspecciones
-                </span>
-                <small class="text-muted d-block" style="font-size: 0.72rem;" id="insp-header-ot-lbl">Inspección técnica integral de unidad</small>
-            </div>
+<div class="modal fade" id="drawerInspeccion" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-scrollable ck-floating-drawer-dialog">
+    <div class="modal-content border-0 ck-floating-drawer-content">
+      
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2 m-0" style="font-size: 1.2rem;">
+            <i class="bi bi-clipboard2-check-fill text-primary" style="color: #0284c7;"></i>
+            <span id="lbl-insp-modal-titulo">Inspección Mecánica Integral</span>
+            <span class="text-muted fw-normal fs-6" id="insp-header-ot-lbl"></span>
+          </h5>
         </div>
-        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="document.getElementById('drawerInspeccion').classList.remove('open')" style="color:var(--subtext, #64748b);">
-            <i class="bi bi-x-lg"></i>
-        </button>
-    </div>
-    <div class="insp-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc; flex: 1;">
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-3 p-md-4 custom-scrollbar" style="font-family: inherit; background: #f8fafc;">
         <form id="formNuevaInspeccion" class="d-flex flex-column h-100">
-            <div id="wizard-dynamic-tabs" style="flex-grow:1;">
-                <!-- El contenido se generará dinámicamente aquí -->
-            </div>
+          <div id="wizard-dynamic-tabs" style="flex-grow:1;">
+            <!-- Renderizado dinámico idéntico a Reporte de Fallas -->
+          </div>
+
+          <!-- Footer Buttons -->
+          <div class="d-flex align-items-center justify-content-end gap-2 pt-3 border-top mt-2">
+            <button type="button" class="btn btn-light fw-bold rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-success fw-bold px-4 shadow-sm rounded-3" id="btnWizGuardar" onclick="procesarGuardadoInspeccion()">
+              <i class="bi bi-check-circle-fill me-1"></i> Guardar Inspección
+            </button>
+          </div>
         </form>
+      </div>
     </div>
-    <div class="insp-footer bg-white border-top px-3 py-2 d-flex justify-content-end gap-2">
-        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" onclick="document.getElementById('drawerInspeccion').classList.remove('open')">
-            Cancelar
-        </button>
-        <button type="button" class="btn btn-primary fw-bold rounded-3 px-4 py-2 shadow-2xs" id="btnWizGuardar" onclick="procesarGuardadoInspeccion()" style="background: #0284c7; border-color: #0284c7;">
-            <i class="bi bi-check-lg me-1"></i> Guardar Registro
-        </button>
-    </div>
+  </div>
 </div>
 
 <!-- ================================================================= -->

@@ -444,6 +444,21 @@ window.asegurarWialonCache = async function() {
     } catch(e) {}
 };
 
+window.asegurarNeumaticosInspecciones = async function() {
+    if (window.dataGlobalNeumaticos && window.dataGlobalNeumaticos.length > 0) return window.dataGlobalNeumaticos;
+    try {
+        const r = await fetch('/api/neumaticos/inspecciones?limit=1000');
+        const res = await r.json();
+        if (res && res.ok && Array.isArray(res.data)) {
+            window.dataGlobalNeumaticos = res.data;
+            return res.data;
+        }
+    } catch(e) {
+        console.warn("Error cargando inspecciones de neumáticos:", e);
+    }
+    return [];
+};
+
 function obtenerUbicacionUnidad(placa) {
     const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     const pClean = clean(placa);
@@ -470,6 +485,16 @@ function obtenerUbicacionUnidad(placa) {
 function mostrarStatusInspecciones(inspecciones) {
     if (procesadorErroresCuota(inspecciones, 'cuerpoTablaStatus')) return;
     dataGlobalInspecciones = inspecciones;
+    
+    // Asegurar carga asíncrona de neumáticos para cobertura panorámica
+    if (!window.dataGlobalNeumaticos) {
+        window.asegurarNeumaticosInspecciones().then(() => {
+            if (window.dataFinalInspGlobal && window.dataFinalInspGlobal.length > 0) {
+                mostrarStatusInspecciones(dataGlobalInspecciones);
+            }
+        });
+    }
+
     let hoy = new Date(); hoy.setHours(0, 0, 0, 0);
     let numId = (id) => {
         if (!id) return 0;
@@ -534,7 +559,7 @@ function mostrarStatusInspecciones(inspecciones) {
     let htmlCards = '';
 
     if (dataFinal.length === 0) {
-        htmlTable = '<tr><td colspan="8" class="text-center py-5 text-muted">No hay datos de inspecciones para mostrar.</td></tr>';
+        htmlTable = '<tr><td colspan="10" class="text-center py-5 text-muted">No hay datos de inspecciones para mostrar.</td></tr>';
         htmlCards = '<div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>No hay registros disponibles.</div>';
     } else {
         dataFinal.forEach((item) => {
@@ -618,6 +643,21 @@ function mostrarStatusInspecciones(inspecciones) {
                 ? `${Number(kmInspNum).toLocaleString()} km` 
                 : '—';
 
+            // ── NUEVO: Panorama de Evaluación / Cobertura (Mecánica vs Neumáticos) ──
+            let tieneMec = Boolean(insp && insp.id);
+            let tieneNeu = Array.isArray(window.dataGlobalNeumaticos) && window.dataGlobalNeumaticos.some(n => cleanPlaca(n.placa) === cleanPlaca(placa));
+
+            let badgeEvaluacion = '';
+            if (tieneMec && tieneNeu) {
+                badgeEvaluacion = `<span class="badge rounded-pill fw-bold px-2.5 py-1 text-nowrap" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.73rem;"><i class="bi bi-shield-fill-check me-1 text-success"></i>Mecánica + Neumáticos</span>`;
+            } else if (tieneMec && !tieneNeu) {
+                badgeEvaluacion = `<span class="badge rounded-pill fw-semibold px-2.5 py-1 text-nowrap" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.73rem;"><i class="bi bi-wrench-adjustable me-1 text-primary"></i>Solo Mecánica</span>`;
+            } else if (!tieneMec && tieneNeu) {
+                badgeEvaluacion = `<span class="badge rounded-pill fw-semibold px-2.5 py-1 text-nowrap" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 0.73rem;"><i class="bi bi-disc-fill me-1 text-warning"></i>Solo Neumáticos</span>`;
+            } else {
+                badgeEvaluacion = `<span class="badge rounded-pill fw-medium px-2 py-0.5 text-nowrap bg-light text-secondary border" style="font-size: 0.72rem;"><i class="bi bi-dash-circle me-1"></i>Sin Registro</span>`;
+            }
+
             let daysOverdueHTML = '';
             if (!insp || !insp.id) {
                 daysOverdueHTML = `<span class="badge bg-light text-secondary border fw-bold" style="font-size: 0.72rem; border-radius: 6px;"><i class="bi bi-dash-circle me-1"></i> SIN REGISTRO</span>`;
@@ -652,7 +692,7 @@ function mostrarStatusInspecciones(inspecciones) {
                 badgeEstadoMobile = `<span class="badge bg-success-subtle text-success fw-semibold" style="font-size:0.72rem; border-radius:6px;">CONFORME</span>`;
             }
 
-            // 1. Desktop Row (Compact & Modern)
+            // 1. Desktop Row (Compact, Modern & with Row-level + Inspeccionar Button)
             htmlTable += `
             <tr class="clickable-row data-row-status" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" data-ubicacion="${ubicacionInfo.tipo}">
                 <td class="ps-3 py-1.5 fw-bold text-dark">
@@ -669,31 +709,37 @@ function mostrarStatusInspecciones(inspecciones) {
                 <td class="py-1.5 text-secondary" style="font-size:0.82rem;">${fIngresoBonita}</td>
                 <td class="py-1.5" style="font-size:0.82rem;">${badgeProx}</td>
                 <td class="py-1.5 text-center">${badgeEst}</td>
+                <td class="py-1.5 text-center">${badgeEvaluacion}</td>
                 <td class="py-1.5">${ubicacionInfo.badgeHtml}</td>
                 <td class="py-1.5 text-end font-monospace fw-bold text-dark" style="font-size:0.82rem;">${txtKmInsp}</td>
-                <td class="pe-3 py-1.5 text-end">
-                    <div class="dropdown d-inline-block">
-                        <button class="btn btn-sm btn-light border-0 rounded-circle p-1 d-inline-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 28px; height: 28px; color: #64748b;" title="Opciones">
-                            <i class="bi bi-three-dots-vertical"></i>
+                <td class="pe-3 py-1.5 text-end text-nowrap">
+                    <div class="d-inline-flex align-items-center gap-1.5">
+                        <button type="button" class="btn btn-sm btn-primary py-1 px-2.5 rounded-3 fw-bold d-inline-flex align-items-center gap-1 shadow-2xs" style="background: #0284c7; border-color: #0284c7; font-size: 0.76rem;" onclick="event.stopPropagation(); window.abrirModalSeleccionarTipoInspeccion('${placa}', ${kmInspNum ? Number(kmInspNum) : 0})" title="Realizar Inspección para ${placa}">
+                            <i class="bi bi-plus-lg"></i><span>Inspeccionar</span>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-1" style="font-size: 0.82rem; min-width: 140px; z-index: 1050;">
-                            ${insp && insp.id ? `
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Detalle</a></li>
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-earmark-pdf text-danger"></i> Exportar PDF</a></li>
-                                ${window.checkPerm && window.checkPerm('insp', 'e') ? `
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-secondary"></i> Editar</a></li>` : ''}
-                                <li><hr class="dropdown-divider my-1"></li>
-                                ${window.checkPerm && window.checkPerm('insp', 'd') ? `
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.eliminarInspeccion('${insp.id}')"><i class="bi bi-trash3"></i> Eliminar</a></li>` : ''}
-                            ` : `
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-primary fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.abrirModalNuevaInspeccion('${placa}')"><i class="bi bi-plus-lg"></i> Registrar</a></li>
-                            `}
-                        </ul>
+                        <div class="dropdown d-inline-block">
+                            <button class="btn btn-sm btn-light border-0 rounded-circle p-1 d-inline-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 28px; height: 28px; color: #64748b;" title="Más opciones">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-1" style="font-size: 0.82rem; min-width: 140px; z-index: 1050;">
+                                ${insp && insp.id ? `
+                                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Detalle</a></li>
+                                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-earmark-pdf text-danger"></i> Exportar PDF</a></li>
+                                    ${window.checkPerm && window.checkPerm('insp', 'e') ? `
+                                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-dark" href="javascript:void(0)" onclick="event.stopPropagation(); window.abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-secondary"></i> Editar</a></li>` : ''}
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    ${window.checkPerm && window.checkPerm('insp', 'd') ? `
+                                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="event.stopPropagation(); window.eliminarInspeccion('${insp.id}')"><i class="bi bi-trash3"></i> Eliminar</a></li>` : ''}
+                                ` : `
+                                    <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-primary fw-bold" href="javascript:void(0)" onclick="event.stopPropagation(); window.abrirModalSeleccionarTipoInspeccion('${placa}', ${kmInspNum ? Number(kmInspNum) : 0})"><i class="bi bi-plus-lg"></i> Registrar Inspección</a></li>
+                                `}
+                            </ul>
+                        </div>
                     </div>
                 </td>
             </tr>`;
 
-            // 2. Mobile Native Card (1:1 Layout with Location and Report Mileage)
+            // 2. Mobile Native Card (1:1 Layout with Coverage Badge, Location and Quick Actions)
             htmlCards += `
             <div class="ck-mobile-card data-card-insp" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" data-ubicacion="${ubicacionInfo.tipo}">
                 <!-- Header Card: Folio/ID + Fecha + Estado -->
@@ -705,10 +751,11 @@ function mostrarStatusInspecciones(inspecciones) {
                     <div>${badgeEstadoMobile}</div>
                 </div>
 
-                <!-- Placa y Modelo/Tipo -->
-                <div class="d-flex align-items-center gap-1.5 mb-2">
+                <!-- Placa, Modelo y Cobertura Evaluación -->
+                <div class="d-flex flex-wrap align-items-center gap-1.5 mb-2">
                     <span class="badge bg-light text-dark border fw-bold px-2 py-0.5" style="font-size:0.78rem; border-radius:6px;">🚛 ${placa}</span>
                     ${mod && mod !== '-' ? `<span class="badge bg-light text-secondary border fw-medium px-2 py-0.5" style="font-size:0.75rem; border-radius:6px;">${mod}</span>` : ''}
+                    <div>${badgeEvaluacion}</div>
                 </div>
 
                 <!-- Cliente/Técnico y Ubicación (Esquina Superior Derecha) -->
@@ -733,21 +780,20 @@ function mostrarStatusInspecciones(inspecciones) {
                 </div>
 
                 <!-- Botones de Acción Móvil -->
-                <div class="d-flex align-items-center justify-content-between gap-1 pt-2 border-top">
+                <div class="d-flex align-items-center justify-content-between gap-1.5 pt-2 border-top">
+                    <button type="button" class="btn btn-sm btn-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1.5 py-1.5 shadow-2xs" onclick="window.abrirModalSeleccionarTipoInspeccion('${placa}', ${kmInspNum ? Number(kmInspNum) : 0})" style="border-radius:8px; font-size:0.8rem; background: #0284c7; border-color: #0284c7;">
+                        <i class="bi bi-plus-lg"></i> Inspeccionar
+                    </button>
                     ${insp && insp.id ? `
-                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.verDetalleInspeccion('${insp.id}', false)" style="border-radius:8px; font-size:0.78rem;">
-                            <i class="bi bi-eye"></i> Detalle
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-2.5 py-1.5 d-flex align-items-center justify-content-center gap-1" onclick="window.verDetalleInspeccion('${insp.id}', false)" style="border-radius:8px; font-size:0.78rem;" title="Ver Detalle">
+                            <i class="bi bi-eye"></i>
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-3 py-1 d-flex align-items-center gap-1" onclick="window.verDetalleInspeccion('${insp.id}', true)" title="PDF" style="border-radius:8px; font-size:0.78rem;">
-                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-2.5 py-1.5 d-flex align-items-center gap-1" onclick="window.verDetalleInspeccion('${insp.id}', true)" title="PDF" style="border-radius:8px; font-size:0.78rem;">
+                            <i class="bi bi-file-earmark-pdf"></i>
                         </button>
-                    ` : `
-                        <button type="button" class="btn btn-sm btn-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.abrirModalNuevaInspeccion('${placa}')" style="border-radius:8px; font-size:0.78rem; background: #0284c7; border-color: #0284c7;">
-                            <i class="bi bi-plus-lg"></i> Registrar Inspección
-                        </button>
-                    `}
+                    ` : ''}
                     <div class="dropdown">
-                        <button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="border-radius:8px;">
+                        <button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1.5" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="border-radius:8px;">
                             <i class="bi bi-three-dots-vertical"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
@@ -771,13 +817,13 @@ function mostrarStatusInspecciones(inspecciones) {
                                 ${window.checkPerm && window.checkPerm('insp', 'd') ? `
                                 <li><hr class="dropdown-divider my-1"></li>
                                 <li>
-                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window.eliminarRegistro('${insp.id}', 'Inspecciones')">
-                                        <i class="bi bi-trash3 text-danger fs-6"></i> Eliminar
+                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" onclick="window.eliminarInspeccion('${insp.id}')">
+                                        <i class="bi bi-trash3 fs-6"></i> Eliminar
                                     </a>
                                 </li>` : ''}
                             ` : `
                                 <li>
-                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-primary" href="javascript:void(0)" onclick="window.abrirModalNuevaInspeccion('${placa}')">
+                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 text-primary fw-bold" href="javascript:void(0)" onclick="window.abrirModalSeleccionarTipoInspeccion('${placa}', ${kmInspNum ? Number(kmInspNum) : 0})">
                                         <i class="bi bi-plus-lg fs-6"></i> Registrar Inspección
                                     </a>
                                 </li>
@@ -1682,6 +1728,8 @@ async function procesarGuardadoInspeccion() {
                 let finalId = isNew ? r.id : idInsp;
                 let offEl = document.getElementById('drawerInspeccion');
                 if (offEl) {
+                    let modal = bootstrap.Modal.getInstance(offEl);
+                    if (modal) modal.hide();
                     offEl.classList.remove("open");
                 }
                 if (window.dataGlobalInspecciones) {
@@ -2140,8 +2188,8 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
         if (offEl.parentElement !== document.body) {
             document.body.appendChild(offEl);
         }
-        offEl.style.zIndex = '1150';
-        offEl.classList.add("open");
+        let modal = bootstrap.Modal.getOrCreateInstance(offEl);
+        modal.show();
     }
 };
 
@@ -2287,8 +2335,8 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
         if (offEl.parentElement !== document.body) {
             document.body.appendChild(offEl);
         }
-        offEl.style.zIndex = '1150';
-        offEl.classList.add("open");
+        let modal = bootstrap.Modal.getOrCreateInstance(offEl);
+        modal.show();
     }
 };
 
