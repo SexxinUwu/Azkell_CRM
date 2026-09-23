@@ -12,38 +12,42 @@ window.dataFinalInspGlobal = window.dataFinalInspGlobal || [];
 window.inspPorPagina = window.inspPorPagina || parseInt(localStorage.getItem('fleet_insp_ppp') || '50');
 window.inspPaginaActual = window.inspPaginaActual || 1;
 
-window.DYNAMIC_INSP_SCHEMA = window.DYNAMIC_INSP_SCHEMA || [];
+const DEFAULT_INSP_SCHEMA = [
+    { tab: 'LLANTA', template_id: 'cat_llanta', items: [{ id: 'i_1', label: 'Cortes o Averías', type: 'okfalla' }, { id: 'i_2', label: 'PSI del Neumático', type: 'okfalla' }, { id: 'i_3', label: 'Otros', type: 'okfalla' }] },
+    { tab: 'MOTOR', template_id: 'cat_motor', items: [{ id: 'i_4', label: 'Niveles de Motor', type: 'okfalla' }, { id: 'i_5', label: 'Sistema de Lubricación Fugas', type: 'okfalla' }, { id: 'i_6', label: 'Sistema de Combustible', type: 'okfalla' }, { id: 'i_7', label: 'Sistema de Refrigeración', type: 'okfalla' }, { id: 'i_8', label: 'Correas, Ventilador y Accesorios', type: 'okfalla' }, { id: 'i_9', label: 'Código de Falla', type: 'okfalla' }, { id: 'i_10', label: 'Otros', type: 'okfalla' }] },
+    { tab: 'SISTEMA ELECTRICO', template_id: 'cat_elec', items: [{ id: 'i_11', label: 'Sistema Eléctrico General', type: 'okfalla' }, { id: 'i_12', label: 'Estado de Bateria', type: 'okfalla' }, { id: 'i_13', label: 'Otros', type: 'okfalla' }] },
+    { tab: 'SISTEMA DE AIRE', template_id: 'cat_aire', items: [{ id: 'i_14', label: 'Inspección General de Aire', type: 'okfalla' }, { id: 'i_15', label: 'Mantenimiento de Válvulas', type: 'okfalla' }, { id: 'i_16', label: 'Inspección de Manitos de Aire', type: 'okfalla' }] },
+    { tab: 'TRANSMISION', template_id: 'cat_trans', items: [{ id: 'i_17', label: 'Embrague', type: 'okfalla' }, { id: 'i_18', label: 'Caja de Cambio', type: 'okfalla' }, { id: 'i_19', label: 'Diferencial', type: 'okfalla' }, { id: 'i_20', label: 'Cardanes', type: 'okfalla' }, { id: 'i_21', label: 'Otros', type: 'okfalla' }] },
+    { tab: 'DIRECCION', template_id: 'cat_dir', items: [{ id: 'i_22', label: 'Servo Dirección', type: 'okfalla' }, { id: 'i_23', label: 'Alineamiento', type: 'okfalla' }, { id: 'i_24', label: 'Pines, Bocinas y Terminales', type: 'okfalla' }, { id: 'i_25', label: 'Caja de Dirección', type: 'okfalla' }, { id: 'i_26', label: 'Otros', type: 'okfalla' }] },
+    { tab: 'FRENOS', template_id: 'cat_frenos', items: [{ id: 'i_27', label: 'Limpieza y Regulación', type: 'okfalla' }, { id: 'i_28', label: 'Zapatas Delanteras o Pastillas Delanteras', type: 'percent' }, { id: 'i_29', label: 'Zapatas Tracción o 1er Eje Tracciona', type: 'percent' }, { id: 'i_30', label: 'Zapatas Eje Loca o 2do Eje Tracciona', type: 'percent' }, { id: 'i_31', label: 'Disco de Embrague', type: 'percent' }, { id: 'i_32', label: 'Otros', type: 'okfalla' }] },
+    { tab: 'SUSPENSION', template_id: 'cat_susp', items: [{ id: 'i_33', label: 'Muelles o Bolsas de Aire', type: 'okfalla' }, { id: 'i_34', label: 'Amortiguadores', type: 'okfalla' }, { id: 'i_35', label: 'Eje de Barra Estabilizadora', type: 'okfalla' }, { id: 'i_36', label: 'Otros', type: 'okfalla' }] },
+    { tab: 'HERMETIZADO', template_id: 'cat_herm', items: [{ id: 'i_37', label: 'Cabina Exterior e Interior', type: 'okfalla' }, { id: 'i_38', label: 'Puerta, Chapas y Asientos', type: 'okfalla' }, { id: 'i_39', label: 'Chasis, Tornamesa y Bastidor', type: 'okfalla' }, { id: 'i_40', label: 'Furgón (Estructura Laterales)', type: 'okfalla' }, { id: 'i_41', label: 'Lavado y Limpieza Interior de ThermoKing', type: 'okfalla' }] }
+];
+
+window.DYNAMIC_INSP_SCHEMA = window.DYNAMIC_INSP_SCHEMA || DEFAULT_INSP_SCHEMA;
 
 window.ensureInspConfig = function() {
-    if (window.DYNAMIC_INSP_SCHEMA && window.DYNAMIC_INSP_SCHEMA.length > 0) return Promise.resolve();
-    if (typeof window.rotToast === 'function') window.rotToast("Cargando módulos...", "bg-info");
     return fetch('/api/mantenimiento/inspecciones/config')
-        .then(r => r.json())
+        .then(r => r.ok ? r.json() : { ok: false })
         .then(res => {
-            if (res.ok && res.data) {
+            if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
                 window.DYNAMIC_INSP_SCHEMA = res.data.map(d => {
                     let parsedItems = [];
                     try { parsedItems = typeof d.items_json === 'string' ? JSON.parse(d.items_json) : d.items_json; } catch(e){}
-                    return { tab: d.titulo, template_id: d.template_id, items: parsedItems };
+                    return { tab: (d.titulo || 'SISTEMA').toUpperCase(), template_id: d.template_id, items: parsedItems };
                 });
             } else {
-                window.DYNAMIC_INSP_SCHEMA = [];
+                window.DYNAMIC_INSP_SCHEMA = DEFAULT_INSP_SCHEMA;
             }
-        }).catch(e => { console.error("Error al cargar cfg inspecciones", e); window.DYNAMIC_INSP_SCHEMA = []; });
+        }).catch(e => {
+            console.warn("Advertencia cargando cfg inspecciones:", e);
+            if (!window.DYNAMIC_INSP_SCHEMA || window.DYNAMIC_INSP_SCHEMA.length === 0) {
+                window.DYNAMIC_INSP_SCHEMA = DEFAULT_INSP_SCHEMA;
+            }
+        });
 };
 
-fetch('/api/mantenimiento/inspecciones/config')
-    .then(r => r.json())
-    .then(res => {
-        if (res.ok && res.data) {
-            window.DYNAMIC_INSP_SCHEMA = res.data.map(d => {
-                let parsedItems = [];
-                try { parsedItems = typeof d.items_json === 'string' ? JSON.parse(d.items_json) : d.items_json; } catch(e){}
-                return { tab: d.titulo, template_id: d.template_id, items: parsedItems };
-            });
-        }
-    })
-    .catch(err => console.error("Error preloading config insp:", err));
+window.ensureInspConfig();
 
 // ── Lightbox para evidencias fotográficas ─────────────────────────
 window.verFotoEvidencia = function (fotoOrIndex, titulo = '') {
@@ -3284,7 +3288,16 @@ var _inspEditingTemplate = [];
 
 window.abrirConfigInspecciones = async function() {
     try {
-        let res = await fetch('/api/mantenimiento/inspecciones/config').then(r => r.json()).catch(() => ({ ok: false }));
+        let res = await fetch('/api/mantenimiento/inspecciones/config')
+            .then(r => r.ok ? r.json() : { ok: false })
+            .catch(() => ({ ok: false }));
+
+        if (!res || !res.ok || !Array.isArray(res.data) || res.data.length === 0) {
+            res = await fetch('/api/inspecciones/config')
+                .then(r => r.ok ? r.json() : { ok: false })
+                .catch(() => ({ ok: false }));
+        }
+
         let templates = (res && res.ok && Array.isArray(res.data)) ? res.data : [];
 
         let parsed = [];
@@ -3297,7 +3310,7 @@ window.abrirConfigInspecciones = async function() {
                         return {
                             id: it.id || ('it_' + idx + '_' + iIdx),
                             label: it.label || it.texto || '',
-                            type: it.type || 'okfalla'
+                            type: (it.type === 'percent' || it.tipo === 'percent') ? 'percent' : 'okfalla'
                         };
                     }
                     return {
@@ -3309,8 +3322,8 @@ window.abrirConfigInspecciones = async function() {
             } catch(e) { items = []; }
 
             parsed.push({
-                id: t.template_id || ('cat_' + Date.now() + '_' + idx),
-                titulo: t.titulo || 'SISTEMA',
+                id: t.template_id || ('cat_' + (idx + 1)),
+                titulo: (t.titulo || 'SISTEMA').toUpperCase(),
                 items: items
             });
         });
@@ -3323,9 +3336,9 @@ window.abrirConfigInspecciones = async function() {
                 { id: 'cat_aire', titulo: 'SISTEMA DE AIRE', items: [{ id: 'i_14', label: 'Inspección General de Aire', type: 'okfalla' }, { id: 'i_15', label: 'Mantenimiento de Válvulas', type: 'okfalla' }, { id: 'i_16', label: 'Inspección de Manitos de Aire', type: 'okfalla' }] },
                 { id: 'cat_trans', titulo: 'TRANSMISION', items: [{ id: 'i_17', label: 'Embrague', type: 'okfalla' }, { id: 'i_18', label: 'Caja de Cambio', type: 'okfalla' }, { id: 'i_19', label: 'Diferencial', type: 'okfalla' }, { id: 'i_20', label: 'Cardanes', type: 'okfalla' }, { id: 'i_21', label: 'Otros', type: 'okfalla' }] },
                 { id: 'cat_dir', titulo: 'DIRECCION', items: [{ id: 'i_22', label: 'Servo Dirección', type: 'okfalla' }, { id: 'i_23', label: 'Alineamiento', type: 'okfalla' }, { id: 'i_24', label: 'Pines, Bocinas y Terminales', type: 'okfalla' }, { id: 'i_25', label: 'Caja de Dirección', type: 'okfalla' }, { id: 'i_26', label: 'Otros', type: 'okfalla' }] },
-                { id: 'cat_frenos', titulo: 'FRENOS', items: [{ id: 'i_27', label: 'Limpieza y Regulación', type: 'okfalla' }, { id: 'i_28', label: 'Zapatas Delanteras o Pastillas Delanteras', type: 'percent' }, { id: 'i_29', label: 'Zapatas Tracción o  1er Eje Tracciona', type: 'percent' }, { id: 'i_30', label: 'Zapatas Eje Loca o  2do Eje Tracciona', type: 'percent' }, { id: 'i_31', label: 'Disco de Embrague', type: 'percent' }, { id: 'i_32', label: 'Otros', type: 'okfalla' }] },
+                { id: 'cat_frenos', titulo: 'FRENOS', items: [{ id: 'i_27', label: 'Limpieza y Regulación', type: 'okfalla' }, { id: 'i_28', label: 'Zapatas Delanteras o Pastillas Delanteras', type: 'percent' }, { id: 'i_29', label: 'Zapatas Tracción o 1er Eje Tracciona', type: 'percent' }, { id: 'i_30', label: 'Zapatas Eje Loca o 2do Eje Tracciona', type: 'percent' }, { id: 'i_31', label: 'Disco de Embrague', type: 'percent' }, { id: 'i_32', label: 'Otros', type: 'okfalla' }] },
                 { id: 'cat_susp', titulo: 'SUSPENSION', items: [{ id: 'i_33', label: 'Muelles o Bolsas de Aire', type: 'okfalla' }, { id: 'i_34', label: 'Amortiguadores', type: 'okfalla' }, { id: 'i_35', label: 'Eje de Barra Estabilizadora', type: 'okfalla' }, { id: 'i_36', label: 'Otros', type: 'okfalla' }] },
-                { id: 'cat_herm', titulo: 'Hermetizado', items: [{ id: 'i_37', label: 'Cabina Exterior e Interior', type: 'okfalla' }, { id: 'i_38', label: 'Puerta, Chapas y Asientos', type: 'okfalla' }, { id: 'i_39', label: 'Chasis, Tornamesa y Bastidor', type: 'okfalla' }, { id: 'i_40', label: 'Furgón (Estructura Laterales)', type: 'okfalla' }, { id: 'i_41', label: 'Lavado y Limpieza Interior de ThermoKing', type: 'okfalla' }] }
+                { id: 'cat_herm', titulo: 'HERMETIZADO', items: [{ id: 'i_37', label: 'Cabina Exterior e Interior', type: 'okfalla' }, { id: 'i_38', label: 'Puerta, Chapas y Asientos', type: 'okfalla' }, { id: 'i_39', label: 'Chasis, Tornamesa y Bastidor', type: 'okfalla' }, { id: 'i_40', label: 'Furgón (Estructura Laterales)', type: 'okfalla' }, { id: 'i_41', label: 'Lavado y Limpieza Interior de ThermoKing', type: 'okfalla' }] }
             ];
         }
 
@@ -3336,6 +3349,7 @@ window.abrirConfigInspecciones = async function() {
         const vPlantilla = document.getElementById('insp-view-plantilla');
         if (vLista) vLista.style.display = 'none';
         if (vPlantilla) vPlantilla.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
         console.error('Error al abrir plantilla de inspecciones:', e);
         if (typeof window.mostrarToast === 'function') window.mostrarToast('Error al abrir la plantilla: ' + e.message, 'error');
@@ -3349,6 +3363,7 @@ window.cerrarPlantillaInsp = function() {
     const vPlantilla = document.getElementById('insp-view-plantilla');
     if (vLista) vLista.style.display = 'block';
     if (vPlantilla) vPlantilla.style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
 window.ckRenderizarConfigSistemasInsp = function() {
@@ -3368,23 +3383,34 @@ window.ckRenderizarConfigSistemasInsp = function() {
 
     let html = '';
     _inspEditingTemplate.forEach((cat, catIdx) => {
-        const title = cat.titulo || 'SISTEMA';
+        const title = (cat.titulo || 'SISTEMA').toUpperCase();
         const items = Array.isArray(cat.items) ? cat.items : [];
 
         let itemsHtml = '';
         items.forEach((item, itemIdx) => {
             const label = (item.label || item.texto || '').replace(/"/g, '&quot;');
+            const type = item.type || 'okfalla';
+            const isPercent = type === 'percent';
+
             itemsHtml += `
-                <div class="d-flex align-items-center justify-content-between gap-2 mb-2 ps-2 ps-md-3 flex-wrap flex-sm-nowrap">
-                    <i class="bi bi-dot fs-4 text-secondary d-none d-sm-inline"></i>
-                    <input type="text" class="form-control form-control-sm border-0 bg-transparent flex-grow-1 text-dark" 
-                        style="font-size:0.88rem; box-shadow:none; padding: 0.25rem 0.5rem;" 
-                        value="${label}" 
-                        oninput="window.ckActualizarItemLabelInsp(${catIdx}, ${itemIdx}, this.value)" 
-                        placeholder="Nombre de Subcategoría / Ítem">
-                    <button class="btn btn-sm btn-light text-secondary border rounded-2" onclick="window.ckEliminarItemFallaInsp(${catIdx}, ${itemIdx})" title="Eliminar ítem">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-2 ps-2 ps-md-3 flex-wrap flex-sm-nowrap bg-light rounded-3 p-2 border" style="background:#f8fafc !important;">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1">
+                        <i class="bi bi-dot fs-4 text-primary d-none d-sm-inline"></i>
+                        <input type="text" class="form-control form-control-sm border-0 bg-transparent flex-grow-1 text-dark fw-semibold" 
+                            style="font-size:0.88rem; box-shadow:none; padding: 0.25rem 0.5rem;" 
+                            value="${label}" 
+                            oninput="window.ckActualizarItemLabelInsp(${catIdx}, ${itemIdx}, this.value)" 
+                            placeholder="Nombre de Subcategoría / Ítem">
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <select class="form-select form-select-sm fw-bold border text-secondary" style="width: auto; font-size: 0.78rem; border-radius: 8px; background-color: #ffffff;" onchange="window.ckActualizarItemTypeInsp(${catIdx}, ${itemIdx}, this.value)">
+                            <option value="okfalla" ${!isPercent ? 'selected' : ''}>✓ OK / Falla</option>
+                            <option value="percent" ${isPercent ? 'selected' : ''}>% Medición Desgaste</option>
+                        </select>
+                        <button class="btn btn-sm btn-light text-secondary border rounded-2" onclick="window.ckEliminarItemFallaInsp(${catIdx}, ${itemIdx})" title="Eliminar ítem">
+                            <i class="bi bi-trash3 text-danger fs-6"></i>
+                        </button>
+                    </div>
                 </div>
             `;
         });
@@ -3393,24 +3419,24 @@ window.ckRenderizarConfigSistemasInsp = function() {
             <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white mb-3" style="border: 1px solid #e2e8f0 !important;">
                 <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
                     <div class="d-flex align-items-center gap-2 flex-grow-1 me-2">
-                        <span class="badge rounded-circle fw-bold" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:#0284c7;color:#fff;font-size:0.78rem;">${catIdx + 1}</span>
+                        <span class="badge rounded-circle fw-bold" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:#0284c7;color:#fff;font-size:0.82rem;">${catIdx + 1}</span>
                         <input type="text" class="form-control form-control-sm fw-bold text-dark border-0 bg-transparent p-0" 
-                            style="font-size:0.95rem; box-shadow:none;" 
+                            style="font-size:1rem; font-weight:800; box-shadow:none; letter-spacing:-0.2px;" 
                             value="${title.replace(/"/g, '&quot;')}" 
                             oninput="window.ckActualizarTituloSistemaInsp(${catIdx}, this.value)" 
                             placeholder="Nombre del Sistema / Categoría">
                     </div>
-                    <button class="btn btn-sm btn-outline-danger border-0" onclick="window.ckEliminarSistemaInsp(${catIdx})" title="Eliminar Categoría">
-                        <i class="bi bi-trash fs-6"></i>
+                    <button class="btn btn-sm btn-outline-danger border-0 rounded-3 p-1.5" onclick="window.ckEliminarSistemaInsp(${catIdx})" title="Eliminar Categoría">
+                        <i class="bi bi-trash fs-5"></i>
                     </button>
                 </div>
 
                 <div class="d-flex flex-column gap-1">
-                    ${itemsHtml || '<div class="text-muted small ps-3 py-1">Sin subcategorías aún.</div>'}
+                    ${itemsHtml || '<div class="text-muted small ps-3 py-2">Sin subcategorías aún. Haz clic en "+ Añadir Subcategoría".</div>'}
                 </div>
 
-                <button class="btn btn-sm btn-light border w-100 mt-2 fw-semibold text-secondary rounded-3 py-2" onclick="window.ckAgregarItemADeclaradoInsp(${catIdx})">
-                    <i class="bi bi-plus-lg me-1"></i> Añadir Subcategoría
+                <button class="btn btn-sm btn-light border w-100 mt-2 fw-semibold text-secondary rounded-3 py-2 d-flex align-items-center justify-content-center gap-1.5" onclick="window.ckAgregarItemADeclaradoInsp(${catIdx})" style="background:#f8fafc;">
+                    <i class="bi bi-plus-circle text-primary"></i> Añadir Subcategoría
                 </button>
             </div>
         `;
@@ -3428,6 +3454,12 @@ window.ckActualizarTituloSistemaInsp = function(catIdx, val) {
 window.ckActualizarItemLabelInsp = function(catIdx, itemIdx, val) {
     if (_inspEditingTemplate[catIdx] && _inspEditingTemplate[catIdx].items[itemIdx]) {
         _inspEditingTemplate[catIdx].items[itemIdx].label = val;
+    }
+};
+
+window.ckActualizarItemTypeInsp = function(catIdx, itemIdx, type) {
+    if (_inspEditingTemplate[catIdx] && _inspEditingTemplate[catIdx].items[itemIdx]) {
+        _inspEditingTemplate[catIdx].items[itemIdx].type = type;
     }
 };
 
@@ -3458,7 +3490,7 @@ window.ckAgregarNuevoSistemaInsp = function() {
 window.ckEliminarSistemaInsp = function(catIdx) {
     const cat = _inspEditingTemplate[catIdx];
     const nombre = cat ? cat.titulo : 'esta categoría';
-    if (confirm(`¿Estás seguro de eliminar "${nombre}" y todos sus ítems asociados?`)) {
+    if (confirm(`¿Estás seguro de eliminar "${nombre}" y todas sus subcategorías?`)) {
         _inspEditingTemplate.splice(catIdx, 1);
         window.ckRenderizarConfigSistemasInsp();
     }
@@ -3476,7 +3508,7 @@ window.guardarConfigInsp = async function() {
     try {
         const templates = _inspEditingTemplate.map((cat, idx) => ({
             template_id: cat.id || ('cat_' + (idx + 1)),
-            titulo: (cat.titulo || `CATEGORÍA ${idx + 1}`).trim(),
+            titulo: (cat.titulo || `CATEGORÍA ${idx + 1}`).trim().toUpperCase(),
             items_json: (cat.items || []).map(it => ({
                 id: it.id,
                 label: (it.label || '').trim(),
@@ -3529,9 +3561,9 @@ window.ckRestaurarConfigInsp = async function() {
         { id: 'cat_aire', titulo: 'SISTEMA DE AIRE', items: [{ id: 'i_14', label: 'Inspección General de Aire', type: 'okfalla' }, { id: 'i_15', label: 'Mantenimiento de Válvulas', type: 'okfalla' }, { id: 'i_16', label: 'Inspección de Manitos de Aire', type: 'okfalla' }] },
         { id: 'cat_trans', titulo: 'TRANSMISION', items: [{ id: 'i_17', label: 'Embrague', type: 'okfalla' }, { id: 'i_18', label: 'Caja de Cambio', type: 'okfalla' }, { id: 'i_19', label: 'Diferencial', type: 'okfalla' }, { id: 'i_20', label: 'Cardanes', type: 'okfalla' }, { id: 'i_21', label: 'Otros', type: 'okfalla' }] },
         { id: 'cat_dir', titulo: 'DIRECCION', items: [{ id: 'i_22', label: 'Servo Dirección', type: 'okfalla' }, { id: 'i_23', label: 'Alineamiento', type: 'okfalla' }, { id: 'i_24', label: 'Pines, Bocinas y Terminales', type: 'okfalla' }, { id: 'i_25', label: 'Caja de Dirección', type: 'okfalla' }, { id: 'i_26', label: 'Otros', type: 'okfalla' }] },
-        { id: 'cat_frenos', titulo: 'FRENOS', items: [{ id: 'i_27', label: 'Limpieza y Regulación', type: 'okfalla' }, { id: 'i_28', label: 'Zapatas Delanteras o Pastillas Delanteras', type: 'percent' }, { id: 'i_29', label: 'Zapatas Tracción o  1er Eje Tracciona', type: 'percent' }, { id: 'i_30', label: 'Zapatas Eje Loca o  2do Eje Tracciona', type: 'percent' }, { id: 'i_31', label: 'Disco de Embrague', type: 'percent' }, { id: 'i_32', label: 'Otros', type: 'okfalla' }] },
+        { id: 'cat_frenos', titulo: 'FRENOS', items: [{ id: 'i_27', label: 'Limpieza y Regulación', type: 'okfalla' }, { id: 'i_28', label: 'Zapatas Delanteras o Pastillas Delanteras', type: 'percent' }, { id: 'i_29', label: 'Zapatas Tracción o 1er Eje Tracciona', type: 'percent' }, { id: 'i_30', label: 'Zapatas Eje Loca o 2do Eje Tracciona', type: 'percent' }, { id: 'i_31', label: 'Disco de Embrague', type: 'percent' }, { id: 'i_32', label: 'Otros', type: 'okfalla' }] },
         { id: 'cat_susp', titulo: 'SUSPENSION', items: [{ id: 'i_33', label: 'Muelles o Bolsas de Aire', type: 'okfalla' }, { id: 'i_34', label: 'Amortiguadores', type: 'okfalla' }, { id: 'i_35', label: 'Eje de Barra Estabilizadora', type: 'okfalla' }, { id: 'i_36', label: 'Otros', type: 'okfalla' }] },
-        { id: 'cat_herm', titulo: 'Hermetizado', items: [{ id: 'i_37', label: 'Cabina Exterior e Interior', type: 'okfalla' }, { id: 'i_38', label: 'Puerta, Chapas y Asientos', type: 'okfalla' }, { id: 'i_39', label: 'Chasis, Tornamesa y Bastidor', type: 'okfalla' }, { id: 'i_40', label: 'Furgón (Estructura Laterales)', type: 'okfalla' }, { id: 'i_41', label: 'Lavado y Limpieza Interior de ThermoKing', type: 'okfalla' }] }
+        { id: 'cat_herm', titulo: 'HERMETIZADO', items: [{ id: 'i_37', label: 'Cabina Exterior e Interior', type: 'okfalla' }, { id: 'i_38', label: 'Puerta, Chapas y Asientos', type: 'okfalla' }, { id: 'i_39', label: 'Chasis, Tornamesa y Bastidor', type: 'okfalla' }, { id: 'i_40', label: 'Furgón (Estructura Laterales)', type: 'okfalla' }, { id: 'i_41', label: 'Lavado y Limpieza Interior de ThermoKing', type: 'okfalla' }] }
     ];
     window.ckRenderizarConfigSistemasInsp();
 };
