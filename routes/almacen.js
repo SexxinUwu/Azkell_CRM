@@ -389,9 +389,10 @@ router.get('/inventario', (req, res) => {
 
 // ─── Marcas de placas para multi-select inventario ───────────────
 router.get('/marcas-placas', (req, res) => {
-    db.query(`SELECT DISTINCT marca FROM placas WHERE marca IS NOT NULL AND marca <> '' ORDER BY marca`, (err, rows) => {
+    const targetDb = req.db || db;
+    targetDb.query(`SELECT DISTINCT marca FROM placas WHERE marca IS NOT NULL AND marca <> '' ORDER BY marca`, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows.map(r => r.marca));
+        res.json((rows || []).map(r => r.marca));
     });
 });
 
@@ -1094,12 +1095,34 @@ router.get('/entradas', (req, res) => {
         res.json(signedRows);
     });
 });
+async function _ensureColumnasOC(tdb) {
+    const cols = [
+        { col: 'centro_costo', def: 'VARCHAR(60) NULL' },
+        { col: 'sub_motivo', def: 'VARCHAR(150) NULL' },
+        { col: 'autoriza', def: 'VARCHAR(150) NULL' }
+    ];
+    for (const c of cols) {
+        try {
+            tdb.query(
+                `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='${c.col}'`,
+                (err, r) => {
+                    if (!err && r && r[0] && r[0].cnt === 0) {
+                        tdb.query(`ALTER TABLE entradas_inv ADD COLUMN ${c.col} ${c.def}`, () => {});
+                    }
+                }
+            );
+        } catch(e) {}
+    }
+}
+
 router.post('/entradas', (req, res) => {
     const tdb = getDb(req);
+    _ensureColumnasOC(tdb);
     const {
         fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv,
         observaciones, creado_por, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id,
-        serie, numero_correlativo, dias_pagar, prioridad, cuenta_bancaria_proveedor, cuenta_bancaria_empresa, solicitante, estado_factura
+        serie, numero_correlativo, dias_pagar, prioridad, cuenta_bancaria_proveedor, cuenta_bancaria_empresa, solicitante, estado_factura,
+        centro_costo, sub_motivo, autoriza
     } = req.body;
     const anio = new Date(fecha || Date.now()).getFullYear();
     const tc = parseFloat(tipo_cambio) || 1;
@@ -1110,15 +1133,17 @@ router.post('/entradas', (req, res) => {
             `INSERT INTO entradas_inv (
                 id, fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, total_pen,
                 observaciones, tipo_igv, creado_por, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id, estado,
-                serie, numero_correlativo, dias_pagar, prioridad, cuenta_bancaria_proveedor, cuenta_bancaria_empresa, solicitante, estado_factura
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                serie, numero_correlativo, dias_pagar, prioridad, cuenta_bancaria_proveedor, cuenta_bancaria_empresa, solicitante, estado_factura,
+                centro_costo, sub_motivo, autoriza
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [
                 id, fecha || new Date().toISOString().split('T')[0], proveedor_id || null, proveedor_nombre || null,
                 documento_referencia || null, moneda || 'PEN', tc || null, total_pen, observaciones || null, tipo_igv || 'sin_igv',
                 creado_por || null, motivo_entrada || null, placa || null, tipo_orden || 'Orden de compra', condicion_pago || 'Al contado',
                 dias_credito || 30, ot_id || null, 'Registrado',
                 serie || String(anio), numero_correlativo || id, parseInt(dias_pagar) || 0, prioridad || 'Normal',
-                cuenta_bancaria_proveedor || null, cuenta_bancaria_empresa || null, solicitante || null, estado_factura || 'Pendiente'
+                cuenta_bancaria_proveedor || null, cuenta_bancaria_empresa || null, solicitante || null, estado_factura || 'Pendiente',
+                centro_costo || 'CC-100', sub_motivo || null, autoriza || null
             ],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
@@ -1165,11 +1190,13 @@ router.post('/entradas', (req, res) => {
 });
 router.put('/entradas/:id', (req, res) => {
     const tdb = getDb(req);
+    _ensureColumnasOC(tdb);
     const { id } = req.params;
     const {
         fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv,
         observaciones, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id,
-        serie, numero_correlativo, dias_pagar, prioridad, cuenta_bancaria_proveedor, cuenta_bancaria_empresa, solicitante, estado_factura
+        serie, numero_correlativo, dias_pagar, prioridad, cuenta_bancaria_proveedor, cuenta_bancaria_empresa, solicitante, estado_factura,
+        centro_costo, sub_motivo, autoriza
     } = req.body;
     const tc = parseFloat(tipo_cambio) || 1;
     const total_pen = _calcularTotalPen(items || [], tc);
@@ -1178,7 +1205,8 @@ router.put('/entradas/:id', (req, res) => {
         `UPDATE entradas_inv SET
             fecha=?, proveedor_id=?, proveedor_nombre=?, documento_referencia=?, moneda=?, tipo_cambio=?, total_pen=?,
             observaciones=?, tipo_igv=?, motivo_entrada=?, placa=?, tipo_orden=?, condicion_pago=?, dias_credito=?, ot_id=?,
-            serie=?, numero_correlativo=?, dias_pagar=?, prioridad=?, cuenta_bancaria_proveedor=?, cuenta_bancaria_empresa=?, solicitante=?, estado_factura=?
+            serie=?, numero_correlativo=?, dias_pagar=?, prioridad=?, cuenta_bancaria_proveedor=?, cuenta_bancaria_empresa=?, solicitante=?, estado_factura=?,
+            centro_costo=?, sub_motivo=?, autoriza=?
          WHERE id=?`,
         [
             fecha||new Date().toISOString().split('T')[0], proveedor_id||null, proveedor_nombre||null,
@@ -1186,6 +1214,7 @@ router.put('/entradas/:id', (req, res) => {
             observaciones||null, tipo_igv||'sin_igv', motivo_entrada||null, placa||null, tipo_orden||'Orden de compra', condicion_pago||'Al contado', dias_credito||30, ot_id||null,
             serie||null, numero_correlativo||null, parseInt(dias_pagar)||0, prioridad||'Normal',
             cuenta_bancaria_proveedor||null, cuenta_bancaria_empresa||null, solicitante||null, estado_factura||'Pendiente',
+            centro_costo||'CC-100', sub_motivo||null, autoriza||null,
             id
         ],
         (err) => {

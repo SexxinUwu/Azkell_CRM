@@ -485,6 +485,7 @@
                         <th style="min-width:135px;">Fecha</th>
                         <th class="text-center" style="min-width:100px; font-size:0.68rem;">ESTADO</th>
                         <th style="min-width:130px;">Usuario Aprobación</th>
+                        <th style="min-width:130px;">Centro Costo</th>
                         <th style="min-width:100px;">Placa</th>
                         <th style="min-width:160px;">Motivo</th>
                         <th style="min-width:220px;">Proveedor</th>
@@ -500,7 +501,7 @@
                     </tr>
                 </thead>
                 <tbody id="tbody-entradas">
-                    <tr><td colspan="17" class="td-placeholder"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
+                    <tr><td colspan="18" class="td-placeholder"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -745,7 +746,66 @@
         </div>
       </div>
 
-      <!-- ── SECCIÓN 3: PROVEEDOR Y CUENTAS BANCARIAS ── -->
+      <!-- ── SECCIÓN 3: CONCEPTO, CENTRO DE COSTOS & AUTORIZACIÓN ── -->
+      <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 60; overflow: visible !important;">
+        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3 border-bottom pb-2" style="font-size:0.92rem;">
+          <i class="bi bi-diagram-3-fill text-indigo" style="color: #6366f1;"></i> Concepto, Centro de Costos & Autorización
+        </h6>
+        <div class="row g-2">
+          <!-- Autoriza -->
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold text-secondary small mb-1">Autoriza (Aprobador) <span class="text-danger">*</span></label>
+            <select id="ent-f-autoriza" class="form-select form-select-sm border-secondary-subtle fw-semibold text-dark">
+              <option value="">Seleccione aprobador directivo...</option>
+              <option value="JENRRY SAUL">JENRRY SAUL</option>
+              <option value="LEONEL ANDERSON">LEONEL ANDERSON</option>
+              <option value="SHARON SIVELY">SHARON SIVELY</option>
+              <option value="GERENCIA">GERENCIA GENERAL</option>
+            </select>
+          </div>
+
+          <!-- Centro de Costos (Destino) -->
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold text-secondary small mb-1">Centro de Costos (Destino) <span class="text-danger">*</span></label>
+            <select id="ent-f-centro-costo" class="form-select form-select-sm border-secondary-subtle fw-bold text-primary">
+              <option value="CC-100">CC-100 - Administración General</option>
+              <option value="CC-200">CC-200 - Comercial & Ventas</option>
+              <option value="CC-300">CC-300 - Operaciones & Flota en Ruta</option>
+              <option value="CC-400">CC-400 - Mantenimiento & Taller</option>
+              <option value="CC-500">CC-500 - Almacén Central</option>
+            </select>
+          </div>
+
+          <!-- Motivo (Naturaleza) -->
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold text-secondary small mb-1">Motivo (Naturaleza del Gasto) <span class="text-danger">*</span></label>
+            <select id="ent-f-motivo-gasto" class="form-select form-select-sm border-secondary-subtle fw-semibold" onchange="window._entCambiarMotivoGasto()">
+              <option value="Mantenimiento y Auxilio">Mantenimiento y Auxilio</option>
+              <option value="Gastos Administrativos / Oficina">Gastos Administrativos / Oficina</option>
+              <option value="Combustibles y Fluidos">Combustibles y Fluidos</option>
+              <option value="Gastos de Viaje y Ruta">Gastos de Viaje y Ruta</option>
+              <option value="Servicios de Terceros">Servicios de Terceros</option>
+              <option value="Activos Fijos / Equipamiento">Activos Fijos / Equipamiento</option>
+              <option value="Compras Generales Almacén">Compras Generales Almacén</option>
+            </select>
+          </div>
+
+          <!-- Sub Motivo (Detalle) -->
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold text-secondary small mb-1">Sub Motivo (Detalle) <span class="text-danger">*</span></label>
+            <select id="ent-f-sub-motivo" class="form-select form-select-sm border-secondary-subtle fw-semibold">
+              <option value="Repuestos menores / Accesorios">Repuestos menores / Accesorios</option>
+              <option value="Mantenimiento preventivo programado">Mantenimiento preventivo programado</option>
+              <option value="Llantas y neumáticos">Llantas y neumáticos</option>
+              <option value="Frenos, suspensión y aire">Frenos, suspensión y aire</option>
+              <option value="Útiles de escritorio y oficina">Útiles de escritorio y oficina</option>
+              <option value="Herramientas y equipamiento">Herramientas y equipamiento</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECCIÓN 4: PROVEEDOR Y CUENTAS BANCARIAS ── -->
       <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 50; overflow: visible !important;">
         <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3 border-bottom pb-2" style="font-size:0.92rem;">
           <i class="bi bi-bank2 text-info"></i> Información del Proveedor y Cuentas Bancarias

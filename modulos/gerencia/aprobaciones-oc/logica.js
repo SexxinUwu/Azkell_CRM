@@ -111,7 +111,10 @@
                         fecha: fechaFmt,
                         fecha_raw: d.created_at || d.fecha,
                         usuario: nombreUsuario,
-                        solicitante: d.creador_nombre || d.creado_por || 'Almacén / Mantenimiento',
+                        solicitante: d.solicitante || d.creador_nombre || d.creado_por || 'Almacén / Mantenimiento',
+                        centro_costo: d.centro_costo || 'CC-100',
+                        sub_motivo: d.sub_motivo || '',
+                        autoriza: d.autoriza || '',
                         proveedor: d.proveedor_nombre || 'PROVEEDOR GENERAL',
                         ruc: ruc || '-',
                         contacto: contactoArr.join(' • ') || 'No especificado',
@@ -400,10 +403,11 @@
                         </div>
                     </div>
 
-                    <!-- Meta datos: Fecha, Usuario y Almacén -->
+                    <!-- Meta datos: Fecha, Usuario, Centro Costo y Almacén -->
                     <div class="d-flex align-items-center justify-content-between text-muted mb-2 pb-2 border-bottom flex-wrap gap-1" style="font-size:0.75rem;">
                         <span><i class="bi bi-calendar3 text-primary"></i> ${oc.fecha}</span>
                         <span class="fw-bold text-dark"><i class="bi bi-person-circle text-primary"></i> ${oc.usuario || 'SISTEMA'}</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold" style="font-size:0.7rem;">🏢 ${oc.centro_costo || 'CC-100'}</span>
                         <span class="badge bg-light text-dark border">Sede ${oc.almacen || 'Principal'}</span>
                     </div>
 
@@ -500,6 +504,13 @@
             <td class="text-nowrap" style="width: 1%;">
                 <span class="btn-oc-code" onclick="window.verDetalleOC('${oc.id}')" title="Ver Detalle de la Orden">
                     <i class="bi bi-eye"></i> ${String(oc.id || '').replace(/^ENT-/i, '')}
+                </span>
+            </td>
+
+            <!-- Columna CENTRO COSTO -->
+            <td class="text-nowrap" style="width: 1%;">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5 fw-bold" style="font-size:0.72rem;">
+                    ${oc.centro_costo || 'CC-100'}
                 </span>
             </td>
 

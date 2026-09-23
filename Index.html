@@ -377,13 +377,21 @@
                 <div id="wrap-tesoreria">
                     <button class="nav-section-toggle" data-section="tesoreria" aria-expanded="false" onclick="window.toggleNavSection('tesoreria')">
                         <span class="link-text">Tesorería</span>
-                        <span class="section-badge">5</span>
+                        <span class="section-badge">7</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-tesoreria">
                         <a id="nav-tesoreria-caja" class="nav-item" onclick="cargarModuloAislado('tesoreria/caja')">
                             <i class="bi bi-cash-stack nav-icon"></i>
                             <span class="link-text">Caja</span>
+                        </a>
+                        <a id="nav-tesoreria-pago-requerimientos" class="nav-item" onclick="cargarModuloAislado('tesoreria/pago-requerimientos')">
+                            <i class="bi bi-credit-card-2-front-fill nav-icon text-success"></i>
+                            <span class="link-text">Pago de Requerimientos</span>
+                        </a>
+                        <a id="nav-tesoreria-movimientos" class="nav-item" onclick="cargarModuloAislado('tesoreria/movimientos')">
+                            <i class="bi bi-arrow-left-right nav-icon text-info"></i>
+                            <span class="link-text">Movimientos</span>
                         </a>
                         <a id="nav-tesoreria-liquidaciones" class="nav-item" onclick="cargarModuloAislado('tesoreria/liquidaciones')">
                             <i class="bi bi-calculator-fill nav-icon text-success"></i>
@@ -1436,6 +1444,22 @@
                     <div class="bnav-row-content">
                         <p class="bnav-row-title">Caja</p>
                         <p class="bnav-row-desc">Movimientos de ingresos, egresos y comprobantes</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
+                <div id="mbnav-tesoreria-pago-requerimientos" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetTesoreria')).hide(); cargarModuloAislado('tesoreria/pago-requerimientos'); setBottomNavActive('bnav-tesoreria');">
+                    <div class="bnav-row-icon" style="color: #10b981;"><i class="bi bi-credit-card-2-front-fill"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Pago de Requerimientos</p>
+                        <p class="bnav-row-desc">Órdenes de compra aprobadas y constancias de pago</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
+                <div id="mbnav-tesoreria-movimientos" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetTesoreria')).hide(); cargarModuloAislado('tesoreria/movimientos'); setBottomNavActive('bnav-tesoreria');">
+                    <div class="bnav-row-icon" style="color: #06b6d4;"><i class="bi bi-arrow-left-right"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Movimientos</p>
+                        <p class="bnav-row-desc">Libro general de ingresos, egresos y bancos</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>

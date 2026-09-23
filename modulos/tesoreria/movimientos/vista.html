@@ -1,0 +1,417 @@
+<!-- ================================================================= -->
+<!-- 📊 MÓDULO TESORERÍA: MOVIMIENTOS (LIBRO BANCO & CAJA UNIFICADO)    -->
+<!-- Diseño 1:1 Apple / Bento UI + Estética Reporte de Fallas          -->
+<!-- ================================================================= -->
+
+<style>
+/* ── Reset root-dinamico padding for 100% full-bleed ─────────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
+/* ── Layout & Container ───────────────────────────────────────────── */
+.mov-app-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem 1.25rem 7.5rem 1.25rem !important;
+    background: transparent;
+    min-height: 100%;
+}
+
+/* ── Bento KPI Cards ──────────────────────────────────────────────── */
+.mov-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 0.95rem 1.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
+    height: 100%;
+    min-height: 94px;
+    box-sizing: border-box;
+}
+.mov-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+}
+.mov-kpi-card.active {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25) !important;
+    background: #f8fafc !important;
+}
+.mov-kpi-title {
+    font-size: 0.69rem;
+    letter-spacing: 0.4px;
+    height: 30px;
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 2px;
+    line-height: 1.25;
+    text-transform: uppercase;
+}
+.mov-kpi-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+/* ── Search & Filter Controls ─────────────────────────────────────── */
+.mov-filter-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+.mov-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 14px 8px 38px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+.mov-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+.mov-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+.mov-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+.mov-segment-item:hover { color: #0f172a; }
+.mov-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ── Table Styling ────────────────────────────────────────────────── */
+#mov-tabla-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
+    min-height: 340px;
+}
+#tablaMovimientos tbody tr td {
+    padding-top: 0.45rem !important;
+    padding-bottom: 0.45rem !important;
+    padding-left: 0.6rem !important;
+    padding-right: 0.6rem !important;
+    vertical-align: middle !important;
+}
+#tablaMovimientos thead tr th {
+    padding-top: 0.55rem !important;
+    padding-bottom: 0.55rem !important;
+    padding-left: 0.6rem !important;
+    padding-right: 0.6rem !important;
+    font-size: 0.72rem !important;
+    background: #f8fafc !important;
+}
+
+/* ── Badges & Chips ───────────────────────────────────────────────── */
+.badge-tipo-egreso {
+    background: #fee2e2;
+    color: #ef4444;
+    border: 1px solid #fca5a5;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+.badge-tipo-ingreso {
+    background: #dcfce7;
+    color: #10b981;
+    border: 1px solid #86efac;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+</style>
+
+<div class="mov-app-container">
+
+  <!-- 1. Cabecera Principal / Hero -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-2.5 py-1 rounded-pill fw-bold" style="font-size: 0.75rem;">
+          <i class="bi bi-bank me-1"></i>TESORERÍA & BANCOS
+        </span>
+        <span class="text-muted small fw-semibold">| Libro General de Movimientos</span>
+      </div>
+      <h3 class="fw-bolder text-dark mb-0 mt-1 tracking-tight" style="font-size: 1.55rem;">
+        Movimientos de Tesorería
+      </h3>
+      <p class="text-muted small mb-0" style="font-size: 0.82rem;">
+        Control unificado de ingresos, egresos, pagos de requerimientos y caja chica
+      </p>
+    </div>
+
+    <!-- Botones de Acción Global -->
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-semibold shadow-sm px-3" onclick="window.imprimirMovimientos()" title="Imprimir listado">
+        <i class="bi bi-printer me-1"></i> Imprimir
+      </button>
+      <button type="button" class="btn btn-outline-success btn-sm rounded-3 fw-bold shadow-sm px-3" onclick="window.exportarExcelMovimientos()" title="Exportar a Excel">
+        <i class="bi bi-file-earmark-excel-fill me-1"></i> Excel
+      </button>
+      <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold shadow-sm px-3" onclick="window.cargarMovimientosTesoreria(true)" title="Recargar datos">
+        <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. Bento KPI Cards -->
+  <div class="row g-3 mb-3">
+    <!-- Total Ingresos -->
+    <div class="col-6 col-md-3">
+      <div class="mov-kpi-card" onclick="window.filtrarMovPorKPI('ingreso')">
+        <div>
+          <span class="mov-kpi-title text-success fw-bold d-block">TOTAL INGRESOS</span>
+          <span class="fs-4 fw-bolder text-success lh-1" id="kpi-mov-ingresos">S/ 0.00</span>
+        </div>
+        <div class="mov-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
+          <i class="bi bi-arrow-down-left-circle-fill"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Egresos -->
+    <div class="col-6 col-md-3">
+      <div class="mov-kpi-card" onclick="window.filtrarMovPorKPI('egreso')">
+        <div>
+          <span class="mov-kpi-title text-danger fw-bold d-block">TOTAL EGRESOS</span>
+          <span class="fs-4 fw-bolder text-danger lh-1" id="kpi-mov-egresos">S/ 0.00</span>
+        </div>
+        <div class="mov-kpi-icon" style="background: #fef2f2; color: #dc2626;">
+          <i class="bi bi-arrow-up-right-circle-fill"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Balance Neto -->
+    <div class="col-6 col-md-3">
+      <div class="mov-kpi-card" onclick="window.filtrarMovPorKPI('todos')">
+        <div>
+          <span class="mov-kpi-title text-primary fw-bold d-block">BALANCE NETO</span>
+          <span class="fs-4 fw-bolder text-primary lh-1" id="kpi-mov-balance">S/ 0.00</span>
+        </div>
+        <div class="mov-kpi-icon" style="background: #eff6ff; color: #2563eb;">
+          <i class="bi bi-wallet2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Registros -->
+    <div class="col-6 col-md-3">
+      <div class="mov-kpi-card" onclick="window.filtrarMovPorKPI('todos')">
+        <div>
+          <span class="mov-kpi-title text-muted fw-bold d-block">REGISTROS PROCESADOS</span>
+          <span class="fs-4 fw-bolder text-dark lh-1" id="kpi-mov-total">0</span>
+        </div>
+        <div class="mov-kpi-icon" style="background: #f8fafc; color: #64748b;">
+          <i class="bi bi-journal-check"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Panel de Filtros Superiores (Estilo Bancos Reportes Modernizado) -->
+  <div class="mov-filter-box mb-3">
+    <div class="row g-2 align-items-end">
+      <!-- Banco / Origen -->
+      <div class="col-12 col-md-3">
+        <label class="form-label fw-bold text-muted small mb-1" style="font-size:0.73rem;">BANCO / CUENTA</label>
+        <select class="form-select form-select-sm fw-semibold" id="mov-filtro-banco" onchange="window.filtrarTablaMovimientos()">
+          <option value="TODOS">TODOS LOS BANCOS / CUENTAS</option>
+          <option value="BCP">BCP - BANCO DE CRÉDITO</option>
+          <option value="BBVA">BBVA CONTINENTAL</option>
+          <option value="INTERBANK">INTERBANK</option>
+          <option value="CAJA CHICA">CAJA CHICA</option>
+        </select>
+      </div>
+
+      <!-- Estado -->
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-bold text-muted small mb-1" style="font-size:0.73rem;">ESTADO</label>
+        <select class="form-select form-select-sm fw-semibold" id="mov-filtro-estado" onchange="window.filtrarTablaMovimientos()">
+          <option value="TODOS">TODOS</option>
+          <option value="PROCESADO" selected>PROCESADO</option>
+          <option value="APROBADO">APROBADO</option>
+          <option value="PENDIENTE">PENDIENTE</option>
+          <option value="ANULADO">ANULADO</option>
+        </select>
+      </div>
+
+      <!-- Fecha Desde -->
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-bold text-muted small mb-1" style="font-size:0.73rem;">FECHA DESDE</label>
+        <input type="date" class="form-control form-control-sm fw-semibold" id="mov-filtro-desde">
+      </div>
+
+      <!-- Fecha Hasta -->
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-bold text-muted small mb-1" style="font-size:0.73rem;">FECHA HASTA</label>
+        <input type="date" class="form-control form-control-sm fw-semibold" id="mov-filtro-hasta">
+      </div>
+
+      <!-- Botón Buscar por Fechas -->
+      <div class="col-6 col-md-3 d-flex gap-2">
+        <button type="button" class="btn btn-warning btn-sm fw-bold px-3 w-100 rounded-3 shadow-sm text-dark d-flex align-items-center justify-content-center gap-1" onclick="window.cargarMovimientosTesoreria(true)">
+          <i class="bi bi-search"></i> <span>Buscar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Fila inferior: Segmented Controls + Buscador en Vivo -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mt-3 pt-3 border-top">
+      <!-- Segmented Tipo Movimiento -->
+      <div class="mov-apple-segmented" id="mov-tipo-segmented">
+        <button type="button" class="mov-segment-item active" id="mov-seg-todos" onclick="window.setFiltroTipoMov('TODOS', this)">
+          Todos
+        </button>
+        <button type="button" class="mov-segment-item" id="mov-seg-egresos" onclick="window.setFiltroTipoMov('EGRESO', this)">
+          <i class="bi bi-arrow-up-right me-1 text-danger"></i>Solo Egresos
+        </button>
+        <button type="button" class="mov-segment-item" id="mov-seg-ingresos" onclick="window.setFiltroTipoMov('INGRESO', this)">
+          <i class="bi bi-arrow-down-left me-1 text-success"></i>Solo Ingresos
+        </button>
+      </div>
+
+      <!-- Buscador en tiempo real -->
+      <div class="position-relative w-100" style="max-width: 380px;">
+        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+        <input type="text" class="mov-apple-search" id="busquedaMovimientos" placeholder="Buscar en tabla (Folio, Beneficiario, RUC, N° Op)...">
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Tabla Principal de Movimientos -->
+  <div id="mov-tabla-wrap" class="overflow-hidden">
+    <!-- Header interno de la tabla -->
+    <div class="px-3.5 py-2.5 bg-light border-bottom d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-0.5 rounded-pill fw-bold" id="mov-contador-registros" style="font-size:0.75rem;">
+          0 registros
+        </span>
+        <span class="text-muted small">| Desplazamiento horizontal para ver auditoría completa</span>
+      </div>
+    </div>
+
+    <!-- Contenedor con scroll horizontal para 22 columnas -->
+    <div class="table-responsive" style="max-height: 560px; overflow-x: auto;">
+      <table class="table table-hover table-striped align-middle mb-0" id="tablaMovimientos" style="min-width: 2400px; font-size: 0.8rem;">
+        <thead>
+          <tr class="text-muted text-uppercase fw-bold border-bottom">
+            <th class="ps-3 text-center" style="width: 80px;">ARCHIVO</th>
+            <th style="width: 120px;">MONTO</th>
+            <th style="width: 110px;">TIPO MOV.</th>
+            <th class="text-end" style="width: 100px;">DEBE</th>
+            <th class="text-end" style="width: 100px;">HABER</th>
+            <th style="width: 170px;">MOTIVO</th>
+            <th style="width: 160px;">SUB MOTIVO</th>
+            <th style="width: 140px;">CAJA / FOLIO</th>
+            <th style="width: 240px;">DESCRIPCIÓN</th>
+            <th style="width: 95px;">TIPO CAJA</th>
+            <th style="width: 140px;">FECHA DEPÓSITO</th>
+            <th style="width: 130px;">N° OPERACIÓN</th>
+            <th style="width: 120px;">N° FACTURA</th>
+            <th style="width: 200px;">BENEFICIARIO</th>
+            <th style="width: 120px;">TIPO PERSONA</th>
+            <th style="width: 140px;">SOLICITANTE</th>
+            <th style="width: 140px;">AUTORIZA</th>
+            <th style="width: 130px;">FECHA APROB.</th>
+            <th style="width: 150px;">CENTRO COSTO</th>
+            <th style="width: 180px;">DATOS OPERATIVOS</th>
+            <th class="text-center" style="width: 100px;">ESTADO</th>
+            <th class="pe-3" style="width: 220px;">BANCO / CUENTA</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyMovimientos">
+          <tr>
+            <td colspan="22" class="text-center py-5 text-muted">
+              <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+              <span class="fw-semibold">Cargando movimientos de tesorería...</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div id="mov-empty-state" class="text-center py-5" style="display: none;">
+      <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" style="width: 54px; height: 54px;">
+        <i class="bi bi-inbox text-muted fs-3"></i>
+      </div>
+      <h6 class="fw-bold text-dark mb-1">No se encontraron movimientos</h6>
+      <p class="text-muted small mb-0">No hay registros que coincidan con los filtros seleccionados.</p>
+    </div>
+  </div>
+
+  <div style="height: 80px; width: 100%;"></div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 🔍 MODAL: VISOR DE COMPROBANTE / VOUCHER S3                       -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalVisorVoucherMov" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+      <div class="modal-header bg-light border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="modal-title fw-bold text-dark mb-0" id="lblVisorVoucherTitulo">Constancia de Pago / Voucher</h5>
+          <small class="text-muted" id="lblVisorVoucherSubtitulo"></small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 text-center bg-dark bg-opacity-10 d-flex align-items-center justify-content-center" style="min-height: 420px;">
+        <img id="imgVisorVoucher" src="" alt="Voucher" class="img-fluid rounded-3 shadow-sm" style="max-height: 520px; object-fit: contain; display: none;">
+        <iframe id="iframeVisorVoucher" src="" style="width: 100%; height: 520px; border: none; display: none;" class="rounded-3 shadow-sm"></iframe>
+      </div>
+      <div class="modal-footer bg-light px-4 py-2.5 d-flex justify-content-between">
+        <a id="btnDescargarVoucherModal" href="#" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Abrir en nueva pestaña
+        </a>
+        <button type="button" class="btn btn-secondary rounded-pill px-4 btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -402,19 +402,57 @@ window.invMsInit = function(valorActual) {
     if (s) s.value = '';
 
     var doRender = function() { window.invMsRenderOptions(''); };
-    if (window._invMarcasLista.length > 0) { doRender(); return; }
-    
-    fetch('/api/placas-lista')
+    if (window._invMarcasLista && window._invMarcasLista.length > 0) { doRender(); return; }
+
+    // 1. Si ya tenemos marcas en caché global
+    if (Array.isArray(window._invMarcasPlacas) && window._invMarcasPlacas.length > 0) {
+        window._invMarcasLista = window._invMarcasPlacas.map(function(m){ return String(m).trim().toUpperCase(); }).filter(Boolean).sort();
+        doRender();
+        return;
+    }
+
+    // 2. Si tenemos dataGlobalPlacas
+    if (Array.isArray(window.dataGlobalPlacas) && window.dataGlobalPlacas.length > 0) {
+        var mSet = {};
+        window.dataGlobalPlacas.forEach(function(row) {
+            var m = row[3] || row.marca || '';
+            if (m && m !== '-') mSet[String(m).trim().toUpperCase()] = true;
+        });
+        var list = Object.keys(mSet).sort();
+        if (list.length > 0) {
+            window._invMarcasLista = list;
+            doRender();
+            return;
+        }
+    }
+
+    // 3. Petición al backend con fallback
+    fetch('/api/almacen/marcas-placas')
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(data) {
-            var marcasSet = {};
-            data.forEach(function(p) {
-                if (p.marca) marcasSet[p.marca.trim().toUpperCase()] = true;
-            });
-            window._invMarcasLista = Object.keys(marcasSet).sort();
-            doRender();
+            if (Array.isArray(data) && data.length > 0) {
+                var marcasSet = {};
+                data.forEach(function(p) {
+                    var m = typeof p === 'string' ? p : (p.marca || '');
+                    if (m && m !== '-') marcasSet[m.trim().toUpperCase()] = true;
+                });
+                window._invMarcasLista = Object.keys(marcasSet).sort();
+                doRender();
+            } else {
+                fetch('/api/placas-lista')
+                    .then(function(r) { return r.ok ? r.json() : []; })
+                    .then(function(d2) {
+                        var marcasSet2 = {};
+                        (d2 || []).forEach(function(p) {
+                            if (p && p.marca) marcasSet2[p.marca.trim().toUpperCase()] = true;
+                        });
+                        window._invMarcasLista = Object.keys(marcasSet2).sort();
+                        doRender();
+                    })
+                    .catch(function() { doRender(); });
+            }
         })
-        .catch(function() {});
+        .catch(function() { doRender(); });
 };
 
 window.invMsToggle = function() {

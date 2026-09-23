@@ -19,6 +19,7 @@
 
     // Alias estándar de carga modular
     window.init_pago_requerimientos = window.inicializarModuloPagoRequerimientos;
+    window.init_tesoreria_pago_requerimientos = window.inicializarModuloPagoRequerimientos;
 
     /**
      * Configuración de eventos de UI y listeners
@@ -61,7 +62,8 @@
                 throw new Error(`Error ${res.status}: ${res.statusText}`);
             }
 
-            const data = await res.json();
+            const resJson = await res.json();
+            const data = Array.isArray(resJson) ? resJson : (resJson.data || []);
             prDataCache = Array.isArray(data) ? data : [];
 
             calcularKPIsPagoReq(prDataCache);
@@ -190,6 +192,8 @@
                 const searchCorpus = [
                     item.id,
                     item.codigo_oc || `OC-${item.id}`,
+                    item.centro_costo || '',
+                    item.sub_motivo || '',
                     item.motivo || '',
                     item.solicitante || '',
                     item.creado_por_nombre || item.creado_por || '',
@@ -223,7 +227,7 @@
     }
 
     /**
-     * Renderizar fila individual con las 12 columnas exactas
+     * Renderizar fila individual con las 13 columnas exactas
      */
     function renderFilaPagoReq(item) {
         const estado = (item.estado || '').toUpperCase();
@@ -292,14 +296,21 @@
                     <span class="fw-bold text-dark text-uppercase" style="font-size:0.78rem;">${escapeHtml(item.solicitante || 'NO ESPECIFICADO')}</span>
                 </td>
 
-                <!-- 4. Motivo -->
+                <!-- 4. Centro de Costo -->
+                <td>
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-0.5 fw-bold" style="font-size:0.72rem;">
+                        ${escapeHtml(item.centro_costo || 'CC-100')}
+                    </span>
+                </td>
+
+                <!-- 5. Motivo -->
                 <td>
                     <span class="text-secondary fw-semibold text-truncate d-inline-block" style="max-width: 170px; font-size:0.78rem;" title="${escapeHtml(motivoOC)}">
                         ${escapeHtml(motivoOC)}
                     </span>
                 </td>
 
-                <!-- 5. Folio OC -->
+                <!-- 6. Folio OC -->
                 <td>
                     <button type="button" class="btn btn-sm p-0 text-primary fw-bold text-decoration-underline" onclick="window.verDetalleOC(${item.id})" style="font-size:0.78rem;">
                         <i class="bi bi-file-earmark-text me-0.5"></i>${escapeHtml(folioOC)}

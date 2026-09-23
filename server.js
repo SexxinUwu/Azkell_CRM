@@ -3075,9 +3075,10 @@ app.post('/api/conductores/importarMasivo', (req, res) => {
     procesar(0);
 });
 app.get('/api/placas-lista', (req, res) => {
-    db.query("SELECT * FROM placas ORDER BY placa", (err, rows) => {
+    const targetDb = req.db || db;
+    targetDb.query("SELECT * FROM placas ORDER BY placa", (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        res.json(rows || []);
     });
 });
 
