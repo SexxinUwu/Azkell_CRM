@@ -3572,14 +3572,16 @@ window.abrirModalSeleccionarTipoInspeccion = function(placa, km) {
 
 window.seleccionarTipoInspeccion = function(tipo) {
     var modalEl = document.getElementById('modalTipoInspeccionSeleccion');
-    if (modalEl) {
-        var modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
-    }
     var placa = window._inspPlacaSeleccionada || '';
     var km = window._inspKmSeleccionado || 0;
 
-    setTimeout(function() {
+    var proceed = function() {
+        // Limpiar cualquier backdrop residual antes de abrir el nuevo modal
+        document.querySelectorAll('.modal-backdrop').forEach(function(b) { b.remove(); });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+
         if (tipo === 'neumaticos') {
             if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
                 window.rotAbrirInspeccionNeumaticos(placa, '', km);
@@ -3596,7 +3598,26 @@ window.seleccionarTipoInspeccion = function(tipo) {
         } else {
             window.abrirModalNuevaInspeccion(placa, '', km);
         }
-    }, 150);
+    };
+
+    if (modalEl) {
+        var modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal && modalEl.classList.contains('show')) {
+            var executed = false;
+            var onHidden = function() {
+                modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                if (!executed) {
+                    executed = true;
+                    proceed();
+                }
+            };
+            modalEl.addEventListener('hidden.bs.modal', onHidden);
+            modal.hide();
+            setTimeout(onHidden, 350);
+            return;
+        }
+    }
+    proceed();
 };
 
 window._inspeccionIdAEliminar = null;
