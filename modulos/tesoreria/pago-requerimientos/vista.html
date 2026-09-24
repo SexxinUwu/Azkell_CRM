@@ -119,20 +119,30 @@
     border-radius: 18px;
     box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
     min-height: 320px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+#tablaPagoReq {
+    min-width: 1950px;
+    width: 100%;
 }
 #tablaPagoReq tbody tr td {
-    padding-top: 0.45rem !important;
-    padding-bottom: 0.45rem !important;
-    padding-left: 0.6rem !important;
-    padding-right: 0.6rem !important;
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+    padding-left: 0.85rem !important;
+    padding-right: 0.85rem !important;
     vertical-align: middle !important;
+    white-space: normal !important;
+    word-break: normal !important;
 }
 #tablaPagoReq thead tr th {
-    padding-top: 0.55rem !important;
-    padding-bottom: 0.55rem !important;
-    padding-left: 0.6rem !important;
-    padding-right: 0.6rem !important;
-    font-size: 0.72rem !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    padding-left: 0.85rem !important;
+    padding-right: 0.85rem !important;
+    font-size: 0.73rem !important;
+    letter-spacing: 0.04em !important;
+    white-space: nowrap !important;
 }
 
 /* ── Botón Acción Proceder ────────────────────────────────────────── */
@@ -281,10 +291,10 @@
   <!-- ── 2. BENTO KPIS ROW (APPLE CARDS INTERACTIVAS) ──────────────── -->
   <div class="row g-2 g-md-3 mb-3" id="panelKPIsPagoReq">
     <div class="col-6 col-md-3">
-      <div class="pr-kpi-card active" id="pr-kpi-pendientes" onclick="window.filtrarEstadoTab('APROBADO', this)">
+      <div class="pr-kpi-card active" id="pr-kpi-pendientes" onclick="window.filtrarPorKPI('por-pagar')">
         <div class="flex-grow-1 pe-2">
           <span class="text-secondary small fw-bold pr-kpi-title">Por Pagar (Aprobados)</span>
-          <h2 id="kpi-req-pendientes" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem; line-height: 1.1;">0</h2>
+          <h2 id="kpi-por-pagar" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem; line-height: 1.1;">0</h2>
         </div>
         <div class="pr-kpi-icon" style="background: #eff6ff; color: #2563eb;">
           <i class="bi bi-hourglass-split"></i>
@@ -292,10 +302,10 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="pr-kpi-card" id="pr-kpi-soles" onclick="window.filtrarMonedaTab('PEN', this)">
+      <div class="pr-kpi-card" id="pr-kpi-soles" onclick="window.filtrarPorKPI('soles')">
         <div class="flex-grow-1 pe-2">
           <span class="text-secondary small fw-bold pr-kpi-title">Total en Soles (S/)</span>
-          <h2 id="kpi-req-soles" class="fw-bolder m-0 text-success" style="font-size: 1.4rem; line-height: 1.1;">S/ 0.00</h2>
+          <h2 id="kpi-soles" class="fw-bolder m-0 text-success" style="font-size: 1.4rem; line-height: 1.1;">S/ 0.00</h2>
         </div>
         <div class="pr-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
           <i class="bi bi-cash-stack"></i>
@@ -303,10 +313,10 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="pr-kpi-card" id="pr-kpi-dolares" onclick="window.filtrarMonedaTab('USD', this)">
+      <div class="pr-kpi-card" id="pr-kpi-dolares" onclick="window.filtrarPorKPI('dolares')">
         <div class="flex-grow-1 pe-2">
           <span class="text-secondary small fw-bold pr-kpi-title">Total en Dólares (US$)</span>
-          <h2 id="kpi-req-dolares" class="fw-bolder m-0 text-warning" style="font-size: 1.4rem; line-height: 1.1;">$ 0.00</h2>
+          <h2 id="kpi-dolares" class="fw-bolder m-0 text-warning" style="font-size: 1.4rem; line-height: 1.1;">US$ 0.00</h2>
         </div>
         <div class="pr-kpi-icon" style="background: #fefce8; color: #ca8a04;">
           <i class="bi bi-currency-dollar"></i>
@@ -314,10 +324,10 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="pr-kpi-card" id="pr-kpi-procesados" onclick="window.filtrarEstadoTab('PROCESADO', this)">
+      <div class="pr-kpi-card" id="pr-kpi-procesados" onclick="window.filtrarPorKPI('pagados')">
         <div class="flex-grow-1 pe-2">
           <span class="text-secondary small fw-bold pr-kpi-title">Pagados / Procesados</span>
-          <h2 id="kpi-req-procesados" class="fw-bolder m-0 text-indigo" style="font-size: 1.6rem; line-height: 1.1; color: #6366f1;">0</h2>
+          <h2 id="kpi-pagados" class="fw-bolder m-0 text-indigo" style="font-size: 1.6rem; line-height: 1.1; color: #6366f1;">0</h2>
         </div>
         <div class="pr-kpi-icon" style="background: #eef2ff; color: #6366f1;">
           <i class="bi bi-check2-all"></i>
@@ -331,53 +341,64 @@
     <!-- Buscador Universal -->
     <div class="position-relative flex-grow-1" style="max-width: 380px;">
       <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
-      <input type="text" id="buscadorPagoReq" class="pr-apple-search" placeholder="Buscar folio, solicitante, creador, aprobador, proveedor..." oninput="window.filtrarTablaPagoReq()">
+      <input type="text" id="busquedaPagoReq" class="pr-apple-search" placeholder="Buscar folio, solicitante, creador, aprobador, proveedor...">
     </div>
 
     <!-- Segmented Control Estado + Moneda -->
     <div class="d-flex align-items-center gap-2 flex-wrap">
-      <div class="pr-apple-segmented" id="btnGroupEstadoPagoReq">
-        <button type="button" class="pr-segment-item active" onclick="window.setFiltroEstado('APROBADO', this)">Por Pagar</button>
-        <button type="button" class="pr-segment-item" onclick="window.setFiltroEstado('PROCESADO', this)">Pagados</button>
-        <button type="button" class="pr-segment-item" onclick="window.setFiltroEstado('TODOS', this)">Todos</button>
+      <div class="pr-apple-segmented" id="filtro-estado-group">
+        <button type="button" id="filtro-estado-pendientes" class="pr-segment-item active" onclick="window.setFiltroEstado('Aprobado', this)">Por Pagar</button>
+        <button type="button" id="filtro-estado-procesados" class="pr-segment-item" onclick="window.setFiltroEstado('Procesado', this)">Pagados</button>
+        <button type="button" id="filtro-estado-todos" class="pr-segment-item" onclick="window.setFiltroEstado('TODOS', this)">Todos</button>
       </div>
 
-      <div class="pr-apple-segmented" id="btnGroupMonedaPagoReq">
-        <button type="button" class="pr-segment-item active" onclick="window.setFiltroMoneda('TODAS', this)">Todas</button>
-        <button type="button" class="pr-segment-item" onclick="window.setFiltroMoneda('PEN', this)">S/ Soles</button>
-        <button type="button" class="pr-segment-item" onclick="window.setFiltroMoneda('USD', this)">US$ Dólares</button>
+      <div class="pr-apple-segmented" id="filtro-moneda-group">
+        <button type="button" id="filtro-moneda-todas" class="pr-segment-item active" onclick="window.setFiltroMoneda('TODAS', this)">Todas</button>
+        <button type="button" id="filtro-moneda-pen" class="pr-segment-item" onclick="window.setFiltroMoneda('PEN', this)">S/ Soles</button>
+        <button type="button" id="filtro-moneda-usd" class="pr-segment-item" onclick="window.setFiltroMoneda('USD', this)">US$ Dólares</button>
       </div>
+
+      <span class="badge bg-light text-muted border px-2.5 py-1.5 rounded-3 fw-bold" id="pr-contador-registros" style="font-size:0.75rem;">
+        0 registros
+      </span>
     </div>
   </div>
 
   <!-- ── 4. TABLA PRINCIPAL DE PAGO DE REQUERIMIENTOS ───────────────── -->
-  <div class="table-responsive rounded-4 border bg-white shadow-2xs" id="pr-tabla-wrap">
-    <table class="table table-hover align-middle mb-0" id="tablaPagoReq" style="font-size: 0.81rem; white-space: nowrap;">
+  <div class="rounded-4 border bg-white shadow-2xs" id="pr-tabla-wrap">
+    <table class="table table-hover align-middle mb-0" id="tablaPagoReq" style="font-size: 0.81rem;">
       <thead class="bg-light border-bottom text-muted fw-bold text-uppercase" style="background:#f8fafc !important;">
         <tr>
-          <th class="ps-3" style="width: 110px;">Acción</th>
-          <th style="width: 140px;">Monto a Proceder</th>
-          <th>Solicitante</th>
-          <th>Centro Costo</th>
-          <th>Motivo</th>
-          <th>Orden de Compra</th>
-          <th>Usuario Creación</th>
-          <th>Fecha Registro</th>
-          <th>Días Restantes</th>
-          <th>Usuario Aprobación</th>
-          <th>Fecha Aprobación</th>
-          <th>Proveedor</th>
-          <th class="pe-3">Cuenta Bancaria Destino</th>
+          <th class="ps-3" style="min-width: 120px;">Acción</th>
+          <th style="min-width: 145px;">Monto a Proceder</th>
+          <th style="min-width: 140px;">Solicitante</th>
+          <th style="min-width: 110px;">Centro Costo</th>
+          <th style="min-width: 200px;">Motivo</th>
+          <th style="min-width: 140px;">Orden de Compra</th>
+          <th style="min-width: 140px;">Usuario Creación</th>
+          <th style="min-width: 115px;">Fecha Registro</th>
+          <th style="min-width: 125px; text-align:center;">Días Restantes</th>
+          <th style="min-width: 140px;">Usuario Aprobación</th>
+          <th style="min-width: 130px;">Fecha Aprobación</th>
+          <th style="min-width: 220px;">Proveedor</th>
+          <th style="min-width: 240px;">Cuenta Destino (Proveedor)</th>
+          <th class="pe-3" style="min-width: 220px;">Cuenta Origen (Empresa)</th>
         </tr>
       </thead>
       <tbody id="tbodyPagoReq" class="divide-y divide-slate-100">
         <tr>
-          <td colspan="13" class="text-center py-5 text-muted">
+          <td colspan="14" class="text-center py-5 text-muted">
             <span class="spinner-border spinner-border-sm text-primary me-2"></span> Cargando requerimientos aprobados...
           </td>
         </tr>
       </tbody>
     </table>
+    
+    <div id="pr-empty-state" class="text-center py-5 text-muted" style="display: none;">
+      <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+      <h6 class="fw-bold text-dark mb-1">No se encontraron requerimientos</h6>
+      <p class="small text-muted mb-0">No hay órdenes de compra que coincidan con los filtros aplicados.</p>
+    </div>
   </div>
 
   <div class="insp-bottom-spacer" style="height: 100px; width: 100%;"></div>
@@ -456,11 +477,11 @@
           </label>
           <select class="form-select form-select-sm fw-semibold text-dark" id="pago_select_cuenta_origen" required style="border-radius: 10px;">
             <option value="">Seleccionar cuenta de origen...</option>
-            <option value="BCP - CTA CTE SOLES">BCP - Cuenta Corriente Soles</option>
-            <option value="BCP - CTA CTE DOLARES">BCP - Cuenta Corriente Dólares</option>
-            <option value="BBVA - CTA CTE SOLES">BBVA - Cuenta Corriente Soles</option>
-            <option value="INTERBANK - CTA CTE SOLES">Interbank - Cuenta Corriente Soles</option>
-            <option value="CAJA CHICA">Caja Chica Efectivo</option>
+            <option value="BCP - CTA CTE SOLES">BCP - Cuenta Corriente Soles (S/)</option>
+            <option value="BCP - CTA CTE DOLARES">BCP - Cuenta Corriente Dólares (US$)</option>
+            <option value="BBVA - CTA CTE SOLES">BBVA - Cuenta Corriente Soles (S/)</option>
+            <option value="INTERBANK - CTA CTE SOLES">Interbank - Cuenta Corriente Soles (S/)</option>
+            <option value="CAJA CHICA - SOLES">Caja Chica Efectivo (S/)</option>
           </select>
         </div>
 
@@ -512,37 +533,119 @@
 </div>
 
 <!-- ================================================================= -->
-<!-- 📄 MODAL: VER DETALLE DE ORDEN DE COMPRA                          -->
+<!-- 📄 MODAL COMPLETO: DETALLE DE ÓRDEN DE COMPRA (1:1 ERP)            -->
 <!-- ================================================================= -->
 <div class="modal fade" id="modalDetalleOCPagoReq" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
     <div class="modal-content rounded-4 border-0 shadow-lg">
       <div class="modal-header bg-light border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
         <div>
-          <h5 class="modal-title fw-bold text-dark mb-0" id="lblDetalleOCFolio">Detalle de Orden de Compra</h5>
-          <small class="text-muted" id="lblDetalleOCProveedor"></small>
+          <h5 class="modal-title fw-bold text-dark mb-0" id="lblDetalleOCFolio">Órden de Compra</h5>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-4">
-        <div class="table-responsive rounded-3 border">
-          <table class="table table-sm table-hover mb-0" style="font-size:0.82rem;">
-            <thead class="bg-light text-muted fw-bold">
+        <!-- Sección 1: Ficha Técnica de la OC -->
+        <div class="rounded-3 border p-3 mb-3" style="background:#fafafa;">
+          <div class="row g-3">
+            <div class="col-12 col-md-4">
+              <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Datos del Solicitante / Creador</div>
+              <div id="pr-det-oc-solicitante" class="text-dark fw-bold" style="font-size:0.85rem;">—</div>
+            </div>
+            <div class="col-12 col-md-4">
+              <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Fecha de Registro</div>
+              <div id="pr-det-oc-fecha" class="text-dark fw-semibold" style="font-size:0.85rem;">—</div>
+            </div>
+            <div class="col-12 col-md-4">
+              <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Tipo de Orden</div>
+              <div id="pr-det-oc-tipo" class="text-dark fw-semibold" style="font-size:0.85rem;">ORDEN DE COMPRA</div>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Motivo / Justificación</div>
+              <div id="pr-det-oc-motivo" class="text-dark fw-semibold" style="font-size:0.85rem;">—</div>
+            </div>
+            <div class="col-12 col-md-4">
+              <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Moneda & Condición de Pago</div>
+              <div id="pr-det-oc-moneda-pago" class="text-dark fw-bold" style="font-size:0.85rem;">—</div>
+            </div>
+            <div class="col-12 col-md-4">
+              <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Destino / Lugar de Entrega</div>
+              <div id="pr-det-oc-destino" class="text-dark fw-semibold" style="font-size:0.85rem;">—</div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Proveedor</div>
+              <div id="pr-det-oc-proveedor" class="text-dark fw-bold" style="font-size:0.85rem;">—</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="text-uppercase text-secondary fw-bold" style="font-size:0.70rem; letter-spacing:0.04em;">Estado Actual</div>
+              <div id="pr-det-oc-estado" class="mt-1"></div>
+            </div>
+          </div>
+
+          <!-- Adjuntos resumen -->
+          <div class="row g-2 mt-2 pt-2 border-top">
+            <div class="col-12 col-md-4 d-flex align-items-center gap-1.5" style="font-size:0.78rem;">
+              <span class="text-secondary fw-bold text-uppercase">Cotización:</span>
+              <span id="pr-det-oc-adj-cotizacion">—</span>
+            </div>
+            <div class="col-12 col-md-4 d-flex align-items-center gap-1.5" style="font-size:0.78rem;">
+              <span class="text-secondary fw-bold text-uppercase">Factura:</span>
+              <span id="pr-det-oc-adj-factura">—</span>
+            </div>
+            <div class="col-12 col-md-4 d-flex align-items-center gap-1.5" style="font-size:0.78rem;">
+              <span class="text-secondary fw-bold text-uppercase">Voucher:</span>
+              <span id="pr-det-oc-adj-voucher">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección 2: Tabla de Artículos -->
+        <div class="text-center mb-3">
+          <h6 class="fw-bold text-dark text-uppercase m-0" style="letter-spacing:0.06em; font-size:0.95rem;">
+            Detalle de Órden de Compra
+          </h6>
+        </div>
+
+        <div class="table-responsive border rounded-3 overflow-hidden mb-3">
+          <table class="table table-sm table-hover align-middle m-0" style="font-size:0.82rem;">
+            <thead class="table-light text-secondary text-uppercase fw-bold" style="font-size:0.72rem; letter-spacing:0.04em;">
               <tr>
-                <th class="ps-3">#</th>
-                <th>Descripción / Ítem</th>
-                <th class="text-center">Cantidad</th>
-                <th class="text-end">Costo Unit.</th>
-                <th class="text-end pe-3">Importe</th>
+                <th class="text-center py-2" style="width:5%;">Item</th>
+                <th class="text-center py-2" style="width:10%;">Cantidad</th>
+                <th class="text-center py-2" style="width:15%;">Cód. Art.</th>
+                <th class="py-2" style="width:45%;">Artículo / Descripción</th>
+                <th class="text-end py-2" style="width:12%;">P. Unitario</th>
+                <th class="text-end py-2" style="width:13%;">Importe</th>
               </tr>
             </thead>
-            <tbody id="tbodyDetalleOCItems">
-            </tbody>
+            <tbody id="tbodyDetalleOCItems"></tbody>
           </table>
         </div>
+
+        <!-- Resumen de Totales y Letras -->
+        <div class="d-flex flex-column align-items-end mb-2">
+          <div class="d-flex align-items-center gap-3">
+            <span class="fw-bold text-secondary text-uppercase" style="font-size:0.85rem;">Total:</span>
+            <span id="pr-det-oc-total-general" class="fw-black text-success fs-5">S/ 0.00</span>
+          </div>
+        </div>
+        <div class="text-center p-2 rounded-2 bg-light border text-muted small">
+          <span class="fw-bold text-secondary text-uppercase">Importe en Letras:</span>
+          <span id="pr-det-oc-total-letras" class="text-dark fw-semibold ms-1"></span>
+        </div>
+
       </div>
-      <div class="modal-footer bg-light px-4 py-2.5">
-        <button type="button" class="btn btn-secondary rounded-3 px-3.5 btn-sm" data-bs-dismiss="modal">Cerrar</button>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer border-0 pt-0 pb-3 px-4 d-flex justify-content-between align-items-center">
+        <button type="button" class="btn btn-light border rounded-3 px-4 py-2 fw-semibold text-secondary" data-bs-dismiss="modal" style="background:#f1f5f9;">
+          Cerrar
+        </button>
+        <button type="button" class="btn btn-dark rounded-3 px-4 py-2 fw-bold text-white shadow-sm d-flex align-items-center gap-2" id="pr-det-oc-btn-pdf" onclick="window.imprimirPDFDesdeDetalleOC()">
+          <i class="bi bi-file-earmark-pdf"></i> Imprimir / Ver PDF
+        </button>
       </div>
     </div>
   </div>

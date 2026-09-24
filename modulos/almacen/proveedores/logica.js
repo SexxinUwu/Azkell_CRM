@@ -368,6 +368,10 @@ window._provRenderTablaCuentas = function() {
             return '<option value="' + _provEsc(b) + '" ' + sel + '>' + _provEsc(b) + '</option>';
         }).join('');
 
+        var monNorm = (c.moneda || 'SOLES').toUpperCase();
+        var selSoles = (monNorm === 'SOLES' || monNorm === 'PEN' || monNorm === 'S/') ? 'selected' : '';
+        var selDolares = (monNorm === 'DOLARES' || monNorm === 'DÓLARES' || monNorm === 'USD' || monNorm === 'US$') ? 'selected' : '';
+
         var optTipos = window.TIPOS_CUENTA_PERU.map(function(t) {
             var sel = (c.tipo_cuenta === t) ? 'selected' : '';
             return '<option value="' + _provEsc(t) + '" ' + sel + '>' + _provEsc(t) + '</option>';
@@ -380,6 +384,12 @@ window._provRenderTablaCuentas = function() {
             '<td style="padding:6px 8px;">' +
                 '<select class="form-select form-select-sm fw-semibold" onchange="window._provActualizarCuenta(' + idx + ', \'banco\', this.value)" style="font-size:0.8rem;border-radius:8px;">' +
                     '<option value="">Seleccione Banco...</option>' + optBancos +
+                '</select>' +
+            '</td>' +
+            '<td style="padding:6px 8px;">' +
+                '<select class="form-select form-select-sm fw-bold ' + (selDolares ? 'text-primary' : 'text-success') + '" onchange="window._provActualizarCuenta(' + idx + ', \'moneda\', this.value); window._provRenderTablaCuentas();" style="font-size:0.8rem;border-radius:8px;">' +
+                    '<option value="SOLES" ' + selSoles + '>S/ Soles (PEN)</option>' +
+                    '<option value="DOLARES" ' + selDolares + '>US$ Dólares (USD)</option>' +
                 '</select>' +
             '</td>' +
             '<td style="padding:6px 8px;">' +
@@ -409,6 +419,7 @@ window._provAgregarFilaCuenta = function() {
     window._provCuentas = window._provCuentas || [];
     window._provCuentas.push({
         banco: 'BCP (Banco de Crédito del Perú)',
+        moneda: 'SOLES',
         tipo_cuenta: 'CUENTA CORRIENTE',
         numero_cuenta: '',
         detraccion: 0,

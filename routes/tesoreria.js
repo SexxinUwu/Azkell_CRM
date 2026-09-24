@@ -2361,7 +2361,15 @@ module.exports = function (db, broadcast, logAudit) {
             const ctasProvMap = {};
             (ctasRows || []).forEach(c => {
                 if (!ctasProvMap[c.proveedor_id]) ctasProvMap[c.proveedor_id] = [];
-                ctasProvMap[c.proveedor_id].push(`${c.banco} - ${c.tipo_cuenta} - ${c.numero_cuenta}`);
+                const monStr = (c.moneda || 'SOLES').toUpperCase();
+                const monLabel = (monStr.includes('DOL') || monStr === 'USD' || monStr === 'US$') ? 'USD' : 'PEN';
+                ctasProvMap[c.proveedor_id].push({
+                    banco: c.banco,
+                    tipo_cuenta: c.tipo_cuenta,
+                    numero_cuenta: c.numero_cuenta,
+                    moneda: monLabel,
+                    texto: `${c.banco} - ${c.tipo_cuenta} [${monLabel === 'USD' ? 'DÓLARES' : 'SOLES'}] - ${c.numero_cuenta}`
+                });
             });
 
             // 4. Mapear Proveedores info (RUC, Teléfono)
@@ -2386,8 +2394,10 @@ module.exports = function (db, broadcast, logAudit) {
 
                 // Cuenta bancaria de destino
                 let cuentaDestino = oc.cuenta_bancaria_proveedor || '';
+                let cuentaDestinoMoneda = (oc.moneda || 'PEN').toUpperCase();
                 if (!cuentaDestino && oc.proveedor_id && ctasProvMap[oc.proveedor_id] && ctasProvMap[oc.proveedor_id].length > 0) {
-                    cuentaDestino = ctasProvMap[oc.proveedor_id][0];
+                    cuentaDestino = ctasProvMap[oc.proveedor_id][0].texto;
+                    cuentaDestinoMoneda = ctasProvMap[oc.proveedor_id][0].moneda;
                 }
 
                 // Desglosar ítems
@@ -2410,7 +2420,21 @@ module.exports = function (db, broadcast, logAudit) {
                     importeCalculado = parseFloat(oc.total_pen) || 0;
                 }
 
-                // Generar URL firmada para voucher si ya existe
+                // Generar presigned URLs para cotización, factura y voucher
+                let cotizacionPresigned = null;
+                if (oc.url_cotizacion) {
+                    const k = s3KeyFromUrl(oc.url_cotizacion);
+                    if (k) cotizacionPresigned = await getPresignedUrl(k).catch(() => oc.url_cotizacion);
+                    else cotizacionPresigned = oc.url_cotizacion;
+                }
+
+                let facturaPresigned = null;
+                if (oc.url_factura) {
+                    const k = s3KeyFromUrl(oc.url_factura);
+                    if (k) facturaPresigned = await getPresignedUrl(k).catch(() => oc.url_factura);
+                    else facturaPresigned = oc.url_factura;
+                }
+
                 let voucherPresigned = null;
                 if (oc.url_voucher) {
                     const k = s3KeyFromUrl(oc.url_voucher);
@@ -2422,33 +2446,46 @@ module.exports = function (db, broadcast, logAudit) {
                     id: oc.id,
                     folio: oc.id,
                     fecha: oc.fecha,
+                    created_at: oc.created_at,
                     solicitante: oc.solicitante || oc.autoriza || '—',
                     centro_costo: oc.centro_costo || 'CC-100',
                     sub_motivo: oc.sub_motivo || '',
                     autoriza: oc.autoriza || '',
                     motivo: oc.motivo_entrada || `ORDEN DE COMPRA: ${oc.id}`,
+                    motivo_entrada: oc.motivo_entrada || '',
                     tipo_orden: oc.tipo_orden || 'Orden de compra',
                     moneda: oc.moneda || 'PEN',
                     importe: importeCalculado,
                     total_pen: oc.total_pen,
                     tipo_cambio: oc.tipo_cambio || 1,
+                    tipo_igv: oc.tipo_igv || 'sin_igv',
+                    placa: oc.placa || '',
+                    ot_id: oc.ot_id || '',
+                    observaciones: oc.observaciones || '',
+                    documento_referencia: oc.documento_referencia || '',
                     creado_por: oc.creado_por,
                     creador_nombre: creadorNombre,
                     aprobado_por: oc.aprobado_por,
                     aprobador_nombre: aprobadorNombre,
                     fecha_aprobacion: oc.fecha_aprobacion || oc.actualizado_en || oc.fecha,
-                    dias_pagar: parseInt(oc.dias_pagar) || 0,
+                    dias_credito: parseInt(oc.dias_credito) || 0,
+                    dias_pagar: parseInt(oc.dias_pagar || oc.dias_credito) || 0,
                     condicion_pago: oc.condicion_pago || 'Al contado',
                     prioridad: oc.prioridad || 'Normal',
                     proveedor_id: oc.proveedor_id,
                     proveedor_nombre: oc.proveedor_nombre || 'PROVEEDOR GENERAL',
                     proveedor_ruc: proveedorRuc,
                     cuenta_bancaria_proveedor: cuentaDestino,
+                    cuenta_destino_moneda: cuentaDestinoMoneda,
                     cuenta_bancaria_empresa: oc.cuenta_bancaria_empresa || '',
                     estado: oc.estado || 'Aprobado',
                     numero_operacion: oc.numero_operacion || '',
                     fecha_pago: oc.fecha_pago || null,
                     pagado_por: oc.pagado_por || '',
+                    url_cotizacion: oc.url_cotizacion,
+                    url_cotizacion_presigned: cotizacionPresigned,
+                    url_factura: oc.url_factura,
+                    url_factura_presigned: facturaPresigned,
                     url_voucher: oc.url_voucher,
                     url_voucher_presigned: voucherPresigned,
                     items: items

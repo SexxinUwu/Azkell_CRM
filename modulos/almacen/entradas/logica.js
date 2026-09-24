@@ -2185,8 +2185,9 @@ window.abrirModalDetalleOC = function(id) {
     var monPagoEl = document.getElementById('det-oc-moneda-pago');
     if (monPagoEl) {
         var monText = (d.moneda === 'USD') ? 'DÓLARES (USD)' : 'SOLES (PEN)';
-        var pagoText = (d.condicion_pago || 'CONTADO').toUpperCase();
-        if (d.dias_credito) pagoText += ' (' + d.dias_credito + ' DÍAS)';
+        var pagoText = (d.condicion_pago || 'AL CONTADO').toUpperCase();
+        var esCredito = pagoText.includes('CRÉDITO') || pagoText.includes('CREDITO');
+        if (esCredito && d.dias_credito) pagoText += ' (' + d.dias_credito + ' DÍAS)';
         monPagoEl.innerText = monText + ' • ' + pagoText;
     }
 
