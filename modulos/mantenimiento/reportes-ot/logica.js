@@ -962,7 +962,7 @@ window.rotAbrirDetalle = function(idOT) {
 
 // ── Cerrar drawer ─────────────────────────────────────────────────
 window.rotCerrarDetalle = function() {
-    ['rot-drawer-trabajo', 'rot-drawer-material', 'drawerInspeccion', 'rot-drawer-backlog', 'rot-drawer-editar-ot', 'rot-drawer-editar-fechas'].forEach(function(id) {
+    ['rot-drawer-trabajo', 'rot-drawer-material', 'drawerInspeccion', 'rot-drawer-backlog', 'rot-drawer-editar-ot', 'rot-drawer-editar-fechas', 'rot-drawer-kit'].forEach(function(id) {
         var d = document.getElementById(id); if (d) d.classList.remove('open');
     });
     var back1  = document.getElementById('rotDrawerBackdrop');
@@ -3411,12 +3411,8 @@ window._rotAbrirModalKits = async function() {
     if (prevWrap) prevWrap.classList.add('d-none');
     if (btnInsertar) btnInsertar.disabled = true;
 
-    // Abrir modal Bootstrap
-    var modalEl = document.getElementById('rotModalKits');
-    if (modalEl && window.bootstrap && window.bootstrap.Modal) {
-        var modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modalInst.show();
-    }
+    // Abrir Drawer al frente con las mismas dimensiones
+    window.rotAbrirSubDrawer('rot-drawer-kit');
 
     // Asegurar inventario cargado para validación de stock (Punto 6)
     if (!window._rotInvData || !window._rotInvData.length) {
@@ -3631,12 +3627,8 @@ window._rotInsertarKit = function() {
 
     _rotActualizarTotalMat();
 
-    // Cerrar modal
-    var modalEl = document.getElementById('rotModalKits');
-    if (modalEl && window.bootstrap && window.bootstrap.Modal) {
-        var modalInst = bootstrap.Modal.getInstance(modalEl);
-        if (modalInst) modalInst.hide();
-    }
+    // Cerrar sub-drawer
+    window.rotCerrarSubDrawer('rot-drawer-kit');
 
     if (typeof window.rotToast === 'function') {
         window.rotToast('Se agregaron ' + items.length + ' repuestos del kit ' + kit.tipo, 'bg-success text-white');
