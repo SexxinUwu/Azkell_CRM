@@ -140,6 +140,14 @@
             console.warn('Error cargando órdenes de compra en gerencia:', e);
         }
 
+        // Establecer por defecto la fecha de hoy en ambos selectores si están vacíos
+        const inputDesde = document.getElementById('filtro-fecha-desde');
+        const inputHasta = document.getElementById('filtro-fecha-hasta');
+        const fechaHoy = obtenerFechaHoyISO();
+
+        if (inputDesde && !inputDesde.value) inputDesde.value = fechaHoy;
+        if (inputHasta && !inputHasta.value) inputHasta.value = fechaHoy;
+
         window.aplicarFiltrosOC();
     }
 
@@ -944,10 +952,11 @@
         if (inp) inp.value = '';
         const sel = document.getElementById('filtro-almacen-oc');
         if (sel) sel.value = '';
+        const fechaHoy = obtenerFechaHoyISO();
         const fDesde = document.getElementById('filtro-fecha-desde');
         const fHasta = document.getElementById('filtro-fecha-hasta');
-        if (fDesde) fDesde.value = '';
-        if (fHasta) fHasta.value = '';
+        if (fDesde) fDesde.value = fechaHoy;
+        if (fHasta) fHasta.value = fechaHoy;
         window.filtrarPorTab('pendiente');
     };
 
