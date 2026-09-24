@@ -3915,35 +3915,6 @@ window.rotGuardarMaterial = function() {
     }
     if (!items.length) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Agrega al menos un artículo', 'danger'); return; }
 
-    // Validar stock antes de guardar
-    var sinStock = [];
-    items.forEach(function(it) {
-        var invIds = document.querySelectorAll('.rot-mat-item-inv-id');
-        var descs  = document.querySelectorAll('.rot-mat-item-desc');
-        var invId = '';
-        for (var j = 0; j < descs.length; j++) {
-            if ((descs[j].value || '').trim() === it.descripcion) {
-                invId = invIds[j] ? invIds[j].value : '';
-                break;
-            }
-        }
-        if (invId) {
-            var inv = (window._rotInvData || []).find(function(d) { return d.id === invId; });
-            if (inv) {
-                var stockDisp = parseFloat(inv.stock_actual != null ? inv.stock_actual : 0);
-                if (it.cantidad > stockDisp) {
-                    sinStock.push('"' + it.descripcion + '" — solicitado: ' + it.cantidad + ', disponible: ' + (stockDisp <= 0 ? 'Sin stock' : stockDisp));
-                }
-            }
-        }
-    });
-    if (sinStock.length) {
-        if (typeof window.mostrarAlerta === 'function') {
-            window.mostrarAlerta('Stock insuficiente:\n• ' + sinStock.join('\n• '), 'danger');
-        }
-        return;
-    }
-
     var user = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
     fetch('/api/ot-materiales', {
         method: 'POST',

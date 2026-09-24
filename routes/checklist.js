@@ -500,9 +500,19 @@ module.exports = function (db, broadcast, logAudit) {
                                 firma_conductor || null,
                                 repExistente.id
                             ],
-                            (errUpd) => {
+                            async (errUpd) => {
                                 if (errUpd) return res.status(500).json({ error: errUpd.message });
-                                if (typeof broadcast === 'function') broadcast('checklist', 'actualizar');
+
+                                await syncReporteConOTsYRampas(
+                                    tdb, repExistente.id, folio,
+                                    repExistente.placa_tracto,
+                                    repExistente.placa_remolque,
+                                    mergedFallasT,
+                                    mergedFallasR,
+                                    fallas_libres_text || repExistente.fallas_libres_text,
+                                    broadcast
+                                );
+
                                 return res.json({ ok: true, id: repExistente.id, folio, anexado: true, fotos: fotosUrls });
                             }
                         );
@@ -893,6 +903,109 @@ module.exports = function (db, broadcast, logAudit) {
     router.post('/:id/generar-ots', handleGenerarOTs);
     router.post('/generar-ots', handleGenerarOTs);
 
+    async function syncReporteConOTsYRampas(tdb, repId, folio, placaT, placaR, fallasT, fallasR, fallasLibres, broadcast) {
+        try {
+            const esObsGen = txt => {
+                if (!txt) return true;
+                const up = String(txt).trim().toUpperCase();
+                return up === 'OBSERVADO EN CHECKLIST' || up === 'OBSERVACION REPORTADA' || up === 'OBSERVACIÓN REPORTADA' 
+                    || up === 'FALLA OBSERVADA' || up === 'FALLA REPORTADA' || up === 'SIN OBSERVACIÓN' || up === 'SIN OBSERVACION'
+                    || up === 'OBSERVACIÓN' || up === 'OBSERVACION';
+            };
+
+            const arrFallasT = Array.isArray(fallasT) ? fallasT : [];
+            const arrFallasR = Array.isArray(fallasR) ? fallasR : [];
+
+            const cleanListT = arrFallasT.map(f => {
+                const desc = (!esObsGen(f.obs) && f.obs !== f.item) ? f.obs : (f.item || f.motivo || f.descripcion || 'Falla observada');
+                return String(desc).replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
+            }).filter(Boolean);
+            if (fallasLibres && String(fallasLibres).trim()) cleanListT.push(String(fallasLibres).trim());
+
+            const cleanListR = arrFallasR.map(f => {
+                const desc = (!esObsGen(f.obs) && f.obs !== f.item) ? f.obs : (f.item || f.motivo || f.descripcion || 'Falla observada');
+                return String(desc).replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
+            }).filter(Boolean);
+
+            const descTractoClean = cleanListT.map(t => '• ' + t).join('\n');
+            const descRemolqueClean = cleanListR.map(t => '• ' + t).join('\n');
+
+            // 1. Buscar OTs vinculadas a este reporte
+            const [ots] = await tdb.promise().query(
+                `SELECT ticket_entrada, id_ot, placa, detalles_json FROM ordenes_trabajo 
+                 WHERE detalles_json LIKE ? OR detalles_json LIKE ? OR detalles_json LIKE ?`,
+                [`%"id_reporte_falla":${repId}%`, `%"id_reporte_falla":"${repId}"%`, `%"folio_reporte":"${folio}"%`]
+            );
+
+            if (ots && ots.length > 0) {
+                for (const ot of ots) {
+                    let det = {};
+                    try { det = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); } catch(e){}
+
+                    const isRemolque = (placaR && ot.placa === placaR) || det.unidad === 'Remolque' || det.unidad === 'Carreta';
+                    const descClean = isRemolque ? descRemolqueClean : descTractoClean;
+                    const cleanList = isRemolque ? cleanListR : cleanListT;
+                    const rawFallas = isRemolque ? arrFallasR : arrFallasT;
+
+                    if (descClean) {
+                        det.motivo = `[Reporte ${folio}]\n${descClean}`;
+                        det.observaciones = `[Reporte ${folio}]\n${descClean}`;
+                        det.descripcion_falla = descClean;
+                        det.fallas_seleccionadas = cleanList;
+
+                        // Actualizar motivos_array preservando asignaciones de técnicos existentes si coinciden
+                        const oldMotivos = Array.isArray(det.motivos_array) ? det.motivos_array : [];
+                        det.motivos_array = rawFallas.map(f => {
+                            const desc = (!esObsGen(f.obs) && f.obs !== f.item) ? f.obs : (f.item || f.motivo || f.descripcion || 'Falla reportada');
+                            const clean = String(desc).replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
+                            const matchedOld = oldMotivos.find(om => {
+                                const omTxt = String(om.obs || om.motivo || om.item || '').trim().toUpperCase();
+                                return omTxt.includes(clean.toUpperCase()) || clean.toUpperCase().includes(omTxt);
+                            });
+                            return {
+                                item: f.item || clean,
+                                sistema: f.sistema || 'MANUAL',
+                                motivo: clean,
+                                descripcion: clean,
+                                obs: f.obs || clean,
+                                tecnico: (matchedOld && matchedOld.tecnico) ? matchedOld.tecnico : (det.supervisor || ''),
+                                tecnico_nombre: (matchedOld && matchedOld.tecnico_nombre) ? matchedOld.tecnico_nombre : (det.supervisor || '')
+                            };
+                        });
+
+                        await tdb.promise().query(
+                            `UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ? OR id_ot = ?`,
+                            [JSON.stringify(det), ot.ticket_entrada, ot.id_ot]
+                        );
+                    }
+                }
+            }
+
+            // 2. Sincronizar tabla taller_rampas en tiempo real si hay rampa activa para estas placas
+            const placas = [placaT, placaR].filter(Boolean);
+            if (placas.length > 0) {
+                for (const p of placas) {
+                    const isR = (placaR && p === placaR);
+                    const descRampa = isR ? descRemolqueClean : descTractoClean;
+                    if (descRampa) {
+                        await tdb.promise().query(
+                            `UPDATE taller_rampas SET obs = ? WHERE UPPER(placa) = UPPER(?) AND estado != 'Liberado'`,
+                            [descRampa, p]
+                        );
+                    }
+                }
+            }
+
+            if (typeof broadcast === 'function') {
+                broadcast('checklist', 'actualizar');
+                broadcast('ordenes', 'actualizar');
+                broadcast('status', 'actualizar');
+            }
+        } catch(eSync) {
+            console.warn('⚠️ Error en syncReporteConOTsYRampas:', eSync.message);
+        }
+    }
+
     // ── PUT /api/checklist/:id — Actualizar/Editar reporte de fallas ────────
     router.put('/:id', async (req, res) => {
         const tdb = getDb(req);
@@ -983,10 +1096,20 @@ module.exports = function (db, broadcast, logAudit) {
                 id
             ];
 
-            tdb.query(sql, values, (errUpd) => {
+            tdb.query(sql, values, async (errUpd) => {
                 if (errUpd) return res.status(500).json({ error: errUpd.message });
 
-                if (typeof broadcast === 'function') broadcast('checklist', 'actualizar');
+                // Sincronizar en tiempo real con OTs vinculadas y Status Rampa
+                await syncReporteConOTsYRampas(
+                    tdb, id, folio,
+                    (placa_tracto || rep.placa_tracto),
+                    (placa_remolque || rep.placa_remolque),
+                    fallas_tracto,
+                    fallas_remolque,
+                    fallas_libres_text,
+                    broadcast
+                );
+
                 res.json({ ok: true, id, folio, fotos: fotosUrls });
             });
         });
