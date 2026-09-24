@@ -536,9 +536,14 @@
                 <span class="fw-bold d-flex align-items-center gap-1" style="font-size: 0.76rem; color: #475569; text-transform: uppercase;">
                     <i class="bi bi-list-check text-success"></i> Lista de Artículos / Repuestos:
                 </span>
-                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold" style="font-size: 0.72rem;" onclick="window._salAgregarItem()">
-                    <i class="bi bi-plus-lg me-1"></i> Agregar Ítem
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1" style="font-size: 0.72rem;" onclick="window._salAbrirModalKits()">
+                        <i class="bi bi-box-seam"></i> Agregar Kit
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1" style="font-size: 0.72rem;" onclick="window._salAgregarItem()">
+                        <i class="bi bi-plus-lg"></i> Agregar Ítem
+                    </button>
+                </div>
             </div>
             <div class="table-responsive rounded-3 border">
                 <table class="table table-sm align-middle mb-0" style="font-size: 0.8rem; min-width: 480px;">
@@ -574,3 +579,89 @@
         </button>
     </div>
 </div>
+
+<!-- ═══════════════ MODAL: Seleccionar Kit MP (Almacén Salidas) ═══════════════ -->
+<div class="modal fade" id="salModalKits" tabindex="-1" aria-hidden="true" style="z-index: 1105;">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-bottom px-4 py-3 bg-white">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background: #e0f2fe; color: #0284c7; width: 38px; height: 38px;">
+                        <i class="bi bi-box-seam-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold text-dark mb-0">Agregar Kit de Mantenimiento</h6>
+                        <small class="text-muted" style="font-size: 0.74rem;">Carga repuestos preconfigurados según la unidad</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" style="background: #f8fafc;">
+                <!-- Card Info Vehículo -->
+                <div class="card border-0 rounded-3 p-3 mb-3 shadow-2xs" style="background: #ffffff; border: 1px solid #e2e8f0 !important;">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-sm-4">
+                            <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.65rem;">Placa Seleccionada</span>
+                            <span class="fw-bold text-primary fs-6" id="sal-kit-placa-lbl">—</span>
+                        </div>
+                        <div class="col-sm-4">
+                            <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.65rem;">Marca</span>
+                            <span class="fw-bold text-dark" id="sal-kit-marca-lbl">—</span>
+                        </div>
+                        <div class="col-sm-4">
+                            <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.65rem;">Modelo</span>
+                            <span class="fw-bold text-dark" id="sal-kit-modelo-lbl">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selector de Kit -->
+                <div class="mb-3" id="sal-kit-selector-wrap">
+                    <label class="form-label fw-bold text-dark" style="font-size: 0.76rem; text-transform: uppercase;">
+                        Selecciona el Kit / Tipo de Servicio (*):
+                    </label>
+                    <select class="form-select fw-bold bg-white" id="sal-kit-select-tipo" onchange="window._salOnKitSelected(this.value)" style="border-radius: 8px; min-height: 42px; font-size: 0.85rem; border: 1px solid #cbd5e1;">
+                        <option value="">— Seleccionar Kit —</option>
+                    </select>
+                </div>
+
+                <!-- Alerta sin kits -->
+                <div id="sal-kit-no-kits" class="alert alert-warning border-0 rounded-3 d-none mb-3" style="font-size: 0.82rem;">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    No se encontraron kits configurados para esta marca y modelo. Puedes configurarlos en el módulo <strong>Kits de Mantenimiento</strong>.
+                </div>
+
+                <!-- Previsualización de Repuestos -->
+                <div id="sal-kit-preview-wrap" class="d-none">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="fw-bold text-dark d-flex align-items-center gap-1" style="font-size: 0.76rem; text-transform: uppercase;">
+                            <i class="bi bi-list-check text-success"></i> Repuestos del Kit (<span id="sal-kit-items-count">0</span>):
+                        </span>
+                    </div>
+                    <div class="table-responsive rounded-3 border bg-white shadow-2xs">
+                        <table class="table table-sm align-middle mb-0" style="font-size: 0.8rem;">
+                            <thead style="background: #f1f5f9;">
+                                <tr>
+                                    <th style="padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569;">Artículo / Repuesto</th>
+                                    <th style="width:90px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">Cant.</th>
+                                    <th style="width:90px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">Unidad</th>
+                                    <th style="width:140px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">Stock Almacén</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sal-kit-preview-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-primary fw-bold rounded-3 px-4 py-2 shadow-2xs" id="sal-btn-insertar-kit" onclick="window._salInsertarKit()" disabled>
+                    <i class="bi bi-plus-circle me-1"></i> Agregar Repuestos al Formulario
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

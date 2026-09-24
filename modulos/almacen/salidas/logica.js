@@ -1054,6 +1054,353 @@ window._salBuscarPlacaPorOT = function() {
         .catch(function() {});
 };
 
+// ── Lógica de Kits de Mantenimiento para Órdenes de Salida ─────────
+window._salKitsDisponibles = window._salKitsDisponibles || [];
+window._salKitSeleccionado = window._salKitSeleccionado || null;
+
+window._obtenerVehiculoPorPlaca = window._obtenerVehiculoPorPlaca || async function(placa) {
+    if (!placa) return null;
+    placa = String(placa).trim().toUpperCase();
+    
+    // 1. Buscar en dataGlobalPlacas si existe
+    if (Array.isArray(window.dataGlobalPlacas) && window.dataGlobalPlacas.length > 0) {
+        var found = window.dataGlobalPlacas.find(function(p) {
+            if (Array.isArray(p)) return (p[0] || '').trim().toUpperCase() === placa;
+            return (p.placa || '').trim().toUpperCase() === placa;
+        });
+        if (found) {
+            if (Array.isArray(found)) {
+                return {
+                    placa: placa,
+                    marca: (found[3] || '').trim().toUpperCase(),
+                    modelo: (found[4] || '').trim().toUpperCase()
+                };
+            } else {
+                return {
+                    placa: placa,
+                    marca: (found.marca || '').trim().toUpperCase(),
+                    modelo: (found.modelo || found.modelo_uts || '').trim().toUpperCase()
+                };
+            }
+        }
+    }
+    
+    // 2. Buscar en _salPlacas
+    if (Array.isArray(window._salPlacas) && window._salPlacas.length > 0) {
+        var foundSal = window._salPlacas.find(function(p) {
+            return (p.placa || '').trim().toUpperCase() === placa;
+        });
+        if (foundSal && (foundSal.marca || foundSal.modelo)) {
+            return {
+                placa: placa,
+                marca: (foundSal.marca || '').trim().toUpperCase(),
+                modelo: (foundSal.modelo || foundSal.modelo_uts || '').trim().toUpperCase()
+            };
+        }
+    }
+
+    // 3. Fallback: consultar /api/placas-lista
+    try {
+        var resp = await fetch('/api/placas-lista');
+        if (resp.ok) {
+            var lista = await resp.json();
+            if (Array.isArray(lista)) {
+                window._salPlacas = lista;
+                var item = lista.find(function(p) { return (p.placa || '').trim().toUpperCase() === placa; });
+                if (item) {
+                    return {
+                        placa: placa,
+                        marca: (item.marca || '').trim().toUpperCase(),
+                        modelo: (item.modelo || item.modelo_uts || '').trim().toUpperCase()
+                    };
+                }
+            }
+        }
+    } catch(e) {}
+
+    return { placa: placa, marca: '', modelo: '' };
+};
+
+window._salAbrirModalKits = async function() {
+    var placaEl = document.getElementById('sal-f-placa');
+    var placaVal = placaEl ? (placaEl.value || '').trim().toUpperCase() : '';
+    
+    // Si no hay placa en el selector, intentar buscar si se seleccionó una OT
+    if (!placaVal) {
+        var otEl = document.getElementById('sal-f-ot');
+        var otVal = otEl ? (otEl.value || '').trim().toUpperCase() : '';
+        if (otVal && window._salOTs) {
+            var otMatch = window._salOTs.find(function(o){ return (o.id_ot || '').toUpperCase() === otVal; });
+            if (otMatch && otMatch.placa) placaVal = otMatch.placa.trim().toUpperCase();
+        }
+    }
+
+    // Punto 4: Validación si no hay placa
+    if (!placaVal) {
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast('Por favor, seleccione primero una placa o N° de OT para cargar sus kits correspondientes', 'warning');
+        } else if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('Por favor, seleccione primero una placa o N° de OT para cargar sus kits correspondientes', 'warning');
+        } else {
+            alert('Por favor, seleccione primero una placa o N° de OT para cargar sus kits correspondientes');
+        }
+        return;
+    }
+
+    var vehiculo = (typeof window._obtenerVehiculoPorPlaca === 'function') 
+        ? await window._obtenerVehiculoPorPlaca(placaVal)
+        : null;
+
+    if (!vehiculo) {
+        // Búsqueda directa en _salPlacas o dataGlobalPlacas
+        var foundPlaca = (window._salPlacas || []).find(function(p){ return (p.placa || '').toUpperCase() === placaVal; });
+        var marca = foundPlaca ? (foundPlaca.marca || '').toUpperCase() : '';
+        var modelo = foundPlaca ? (foundPlaca.modelo || foundPlaca.modelo_uts || '').toUpperCase() : '';
+        vehiculo = { placa: placaVal, marca: marca, modelo: modelo };
+    }
+
+    var marca = vehiculo.marca || '';
+    var modelo = vehiculo.modelo || '';
+
+    var lblPlaca = document.getElementById('sal-kit-placa-lbl');
+    var lblMarca = document.getElementById('sal-kit-marca-lbl');
+    var lblModelo = document.getElementById('sal-kit-modelo-lbl');
+    if (lblPlaca) lblPlaca.textContent = placaVal;
+    if (lblMarca) lblMarca.textContent = marca || 'NO ESPECIFICADA';
+    if (lblModelo) lblModelo.textContent = modelo || 'NO ESPECIFICADO';
+
+    // Resetear selector y preview
+    var selTipo = document.getElementById('sal-kit-select-tipo');
+    var noKitsAlert = document.getElementById('sal-kit-no-kits');
+    var prevWrap = document.getElementById('sal-kit-preview-wrap');
+    var btnInsertar = document.getElementById('sal-btn-insertar-kit');
+    if (selTipo) selTipo.innerHTML = '<option value="">— Cargando kits... —</option>';
+    if (noKitsAlert) noKitsAlert.classList.add('d-none');
+    if (prevWrap) prevWrap.classList.add('d-none');
+    if (btnInsertar) btnInsertar.disabled = true;
+
+    // Abrir modal Bootstrap
+    var modalEl = document.getElementById('salModalKits');
+    if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+        var modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalInst.show();
+    }
+
+    // Asegurar inventario cargado para validación de stock (Punto 6)
+    if (!window._salInvData || !window._salInvData.length) {
+        try {
+            var rInv = await fetch('/api/almacen/inventario');
+            if (rInv.ok) window._salInvData = await rInv.json();
+        } catch(e) {}
+    }
+
+    // Consultar kits
+    try {
+        var respKits = await fetch('/api/mantenimiento-kits');
+        var dataKits = respKits.ok ? await respKits.json() : { data: [] };
+        var allKits = Array.isArray(dataKits.data) ? dataKits.data : (Array.isArray(dataKits) ? dataKits : []);
+
+        // Filtrar estrictamente por Marca y Modelo de la placa
+        var kitsFiltrados = allKits.filter(function(k) {
+            var kMarca = (k.marca_vehiculo || '').trim().toUpperCase();
+            var kModelo = (k.modelo_vehiculo || '').trim().toUpperCase();
+            return kMarca === marca && kModelo === modelo;
+        });
+
+        window._salKitsDisponibles = kitsFiltrados;
+
+        // Agrupar por tipo_mp / nombre_kit
+        var grupos = {};
+        kitsFiltrados.forEach(function(item) {
+            var key = item.tipo_mp || item.nombre_kit || 'General';
+            if (!grupos[key]) grupos[key] = [];
+            grupos[key].push(item);
+        });
+
+        var keys = Object.keys(grupos);
+        if (!keys.length) {
+            if (selTipo) selTipo.innerHTML = '<option value="">— No hay kits para este modelo —</option>';
+            if (noKitsAlert) noKitsAlert.classList.remove('d-none');
+            return;
+        }
+
+        if (selTipo) {
+            selTipo.innerHTML = '<option value="">— Seleccionar Kit (' + keys.length + ' disponibles) —</option>' +
+                keys.map(function(k) {
+                    var cantArt = grupos[k].length;
+                    return '<option value="' + salEsc(k) + '">' + salEsc(k) + ' (' + cantArt + ' ' + (cantArt === 1 ? 'ítem' : 'ítems') + ')</option>';
+                }).join('');
+        }
+    } catch(err) {
+        console.error('Error cargando kits en salidas:', err);
+        if (selTipo) selTipo.innerHTML = '<option value="">— Error al cargar kits —</option>';
+    }
+};
+
+window._salOnKitSelected = function(tipoMp) {
+    var prevWrap = document.getElementById('sal-kit-preview-wrap');
+    var tb = document.getElementById('sal-kit-preview-tbody');
+    var countEl = document.getElementById('sal-kit-items-count');
+    var btnInsertar = document.getElementById('sal-btn-insertar-kit');
+
+    if (!tipoMp) {
+        if (prevWrap) prevWrap.classList.add('d-none');
+        if (btnInsertar) btnInsertar.disabled = true;
+        window._salKitSeleccionado = null;
+        return;
+    }
+
+    var items = (window._salKitsDisponibles || []).filter(function(k) {
+        return (k.tipo_mp || k.nombre_kit || 'General') === tipoMp;
+    });
+
+    window._salKitSeleccionado = { tipo: tipoMp, items: items };
+
+    if (!items.length) {
+        if (prevWrap) prevWrap.classList.add('d-none');
+        if (btnInsertar) btnInsertar.disabled = true;
+        return;
+    }
+
+    if (countEl) countEl.textContent = items.length;
+    if (tb) {
+        tb.innerHTML = items.map(function(it) {
+            // Buscar stock en almacén para este ítem (Punto 6)
+            var invItem = (window._salInvData || []).find(function(x) {
+                var invNom = (x.descripcion || x.articulo || x.nombre || '').trim().toUpperCase();
+                var kitNom = (it.item_nombre || '').trim().toUpperCase();
+                return invNom === kitNom || invNom.includes(kitNom) || kitNom.includes(invNom);
+            });
+
+            var stock = invItem ? parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : 0)) : null;
+            var cantReq = parseFloat(it.cantidad || 1);
+            var stockBadge = '';
+
+            if (stock === null) {
+                stockBadge = '<span class="badge bg-light text-muted border">No inventariado</span>';
+            } else if (stock >= cantReq) {
+                stockBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>' + stock + ' ' + (it.unidad_medida || 'UND') + '</span>';
+            } else if (stock > 0) {
+                stockBadge = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Stock bajo: ' + stock + '</span>';
+            } else {
+                stockBadge = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="bi bi-x-circle-fill me-1"></i>Sin Stock (0)</span>';
+            }
+
+            return `
+                <tr>
+                    <td class="fw-bold text-dark" style="padding: 8px 12px;">
+                        <i class="bi bi-wrench-adjustable text-secondary me-1"></i> ${salEsc(it.item_nombre || '—')}
+                    </td>
+                    <td class="text-center fw-bold text-primary" style="padding: 8px 12px;">
+                        ${cantReq}
+                    </td>
+                    <td class="text-center text-muted fw-medium" style="padding: 8px 12px; font-size: 0.76rem;">
+                        ${salEsc(it.unidad_medida || 'UND')}
+                    </td>
+                    <td class="text-center" style="padding: 8px 12px;">
+                        ${stockBadge}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    if (prevWrap) prevWrap.classList.remove('d-none');
+    if (btnInsertar) btnInsertar.disabled = false;
+};
+
+window._salInsertarKit = function() {
+    if (!window._salKitSeleccionado || !window._salKitSeleccionado.items || !window._salKitSeleccionado.items.length) {
+        return;
+    }
+
+    var kit = window._salKitSeleccionado;
+    var items = kit.items;
+
+    // Verificar si hay una fila inicial vacía para limpiarla
+    var descs = document.querySelectorAll('.sal-item-desc');
+    if (descs.length === 1 && !descs[0].value.trim()) {
+        var singleTr = document.getElementById('sal-item-0');
+        if (singleTr) singleTr.remove();
+    }
+
+    // Inyectar cada repuesto del kit (Punto 2 y 3: Acumulativo y editable)
+    items.forEach(function(it) {
+        var idx = window._salItemIdx++;
+        var tbody = document.getElementById('sal-items-tbody');
+        if (!tbody) return;
+
+        var tr = document.createElement('tr');
+        tr.id = 'sal-item-' + idx;
+        tr.innerHTML = `
+            <td style="padding:6px 8px;">
+                <div style="display:flex;gap:4px;align-items:center;">
+                    <input type="text" class="form-control form-control-sm sal-item-desc bg-white fw-medium" list="sal-inv-list" placeholder="Buscar artículo…" 
+                        data-idx="${idx}" oninput="window._salBuscarArt(this, ${idx})" style="border-radius:8px; font-size:0.8rem;">
+                    <button type="button" class="btn btn-sm btn-light border text-primary shadow-2xs" style="flex-shrink:0; padding:3px 8px; border-radius:8px;" 
+                        onclick="window._salAbrirQR(${idx})" title="Escanear código de barras o QR">
+                        <i class="bi bi-upc-scan"></i>
+                    </button>
+                </div>
+                <input type="hidden" class="sal-item-inv-id" data-idx="${idx}">
+            </td>
+            <td style="padding:6px 8px; width:75px;">
+                <input type="number" class="form-control form-control-sm sal-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="${parseFloat(it.cantidad || 1)}" min="0.001" step="0.001" oninput="window._salCalcItem(${idx})" style="border-radius:8px; font-size:0.8rem;">
+            </td>
+            <td style="padding:6px 8px; width:105px;">
+                <input type="number" class="form-control form-control-sm sal-item-cu bg-white fw-semibold" data-idx="${idx}" value="0" min="0" step="0.01" oninput="window._salCalcItem(${idx})" style="border-radius:8px; font-size:0.8rem;">
+            </td>
+            <td style="padding:6px 8px; width:100px;">
+                <input type="number" class="form-control form-control-sm sal-item-imp bg-light fw-bold text-success" data-idx="${idx}" value="0" readonly style="border-radius:8px; font-size:0.8rem;">
+            </td>
+            <td style="padding:6px 8px; width:38px; text-align:center;">
+                <button type="button" class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1" onclick="window._salQuitarItem(${idx})" title="Eliminar fila">
+                    <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        // Buscar correspondencia en almacén
+        var invItem = (window._salInvData || []).find(function(x) {
+            var invNom = (x.descripcion || x.articulo || x.nombre || '').trim().toUpperCase();
+            var kitNom = (it.item_nombre || '').trim().toUpperCase();
+            return invNom === kitNom || invNom.includes(kitNom) || kitNom.includes(invNom);
+        });
+
+        var descEl = tr.querySelector('.sal-item-desc');
+        var hidEl  = tr.querySelector('.sal-item-inv-id');
+        var cuEl   = tr.querySelector('.sal-item-cu');
+
+        if (invItem) {
+            if (descEl) descEl.value = invItem.id + ' — ' + (invItem.descripcion || it.item_nombre);
+            if (hidEl)  hidEl.value  = invItem.id;
+            var costoSoles = parseFloat(invItem.costo_soles != null ? invItem.costo_soles : (invItem.costo_referencial || it.costo_unitario || 0));
+            if (cuEl) cuEl.value = costoSoles.toFixed(2);
+        } else {
+            if (descEl) descEl.value = it.item_nombre || '';
+            if (cuEl) cuEl.value = parseFloat(it.costo_unitario || 0).toFixed(2);
+        }
+
+        window._salCalcItem(idx);
+    });
+
+    _salActualizarTotal();
+
+    // Cerrar modal
+    var modalEl = document.getElementById('salModalKits');
+    if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+        var modalInst = bootstrap.Modal.getInstance(modalEl);
+        if (modalInst) modalInst.hide();
+    }
+
+    if (typeof window.mostrarToast === 'function') {
+        window.mostrarToast('Se agregaron ' + items.length + ' repuestos del kit ' + kit.tipo, 'success');
+    } else if (typeof window.mostrarAlerta === 'function') {
+        window.mostrarAlerta('Se agregaron ' + items.length + ' repuestos del kit ' + kit.tipo, 'success');
+    }
+};
+
 // ── Items del formulario ──────────────────────────────────────
 window._salAgregarItem = function() {
     var tbody = document.getElementById('sal-items-tbody');

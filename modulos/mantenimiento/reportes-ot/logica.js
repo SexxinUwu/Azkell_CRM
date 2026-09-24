@@ -3301,6 +3301,350 @@ window.rotAgregarSalida = function(idOt) {
     rotAbrirSubDrawer('rot-drawer-material');
 };
 
+// ── Lógica de Kits de Mantenimiento para Solicitud OT ───────────────
+window._rotKitsDisponibles = window._rotKitsDisponibles || [];
+window._rotKitSeleccionado = window._rotKitSeleccionado || null;
+
+window._obtenerVehiculoPorPlaca = async function(placa) {
+    if (!placa) return null;
+    placa = String(placa).trim().toUpperCase();
+    
+    // 1. Buscar en dataGlobalPlacas si existe
+    if (Array.isArray(window.dataGlobalPlacas) && window.dataGlobalPlacas.length > 0) {
+        var found = window.dataGlobalPlacas.find(function(p) {
+            if (Array.isArray(p)) return (p[0] || '').trim().toUpperCase() === placa;
+            return (p.placa || '').trim().toUpperCase() === placa;
+        });
+        if (found) {
+            if (Array.isArray(found)) {
+                return {
+                    placa: placa,
+                    marca: (found[3] || '').trim().toUpperCase(),
+                    modelo: (found[4] || '').trim().toUpperCase()
+                };
+            } else {
+                return {
+                    placa: placa,
+                    marca: (found.marca || '').trim().toUpperCase(),
+                    modelo: (found.modelo || found.modelo_uts || '').trim().toUpperCase()
+                };
+            }
+        }
+    }
+    
+    // 2. Buscar en _salPlacas
+    if (Array.isArray(window._salPlacas) && window._salPlacas.length > 0) {
+        var foundSal = window._salPlacas.find(function(p) {
+            return (p.placa || '').trim().toUpperCase() === placa;
+        });
+        if (foundSal && (foundSal.marca || foundSal.modelo)) {
+            return {
+                placa: placa,
+                marca: (foundSal.marca || '').trim().toUpperCase(),
+                modelo: (foundSal.modelo || foundSal.modelo_uts || '').trim().toUpperCase()
+            };
+        }
+    }
+
+    // 3. Fallback: consultar /api/placas-lista
+    try {
+        var resp = await fetch('/api/placas-lista');
+        if (resp.ok) {
+            var lista = await resp.json();
+            if (Array.isArray(lista)) {
+                window._salPlacas = lista;
+                var item = lista.find(function(p) { return (p.placa || '').trim().toUpperCase() === placa; });
+                if (item) {
+                    return {
+                        placa: placa,
+                        marca: (item.marca || '').trim().toUpperCase(),
+                        modelo: (item.modelo || item.modelo_uts || '').trim().toUpperCase()
+                    };
+                }
+            }
+        }
+    } catch(e) {}
+
+    return { placa: placa, marca: '', modelo: '' };
+};
+
+window._rotAbrirModalKits = async function() {
+    var placaEl = document.getElementById('rot-mat-placa') || document.getElementById('rot-mat-placa-txt');
+    var placaVal = placaEl ? (placaEl.value || '').trim().toUpperCase() : '';
+    
+    // Si no hay placa en el input, intentar obtener de la OT activa
+    if (!placaVal && window.rotOtActivaId) {
+        var otAct = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(window.rotOtActivaId); });
+        if (otAct && otAct.placa) placaVal = otAct.placa.trim().toUpperCase();
+    }
+
+    // Punto 4: Validación si no hay placa
+    if (!placaVal) {
+        if (typeof window.rotToast === 'function') {
+            window.rotToast('Por favor, seleccione primero una placa o N° de OT para cargar sus kits correspondientes', 'bg-warning text-dark');
+        } else if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('Por favor, seleccione primero una placa o N° de OT para cargar sus kits correspondientes', 'warning');
+        } else {
+            alert('Por favor, seleccione primero una placa o N° de OT para cargar sus kits correspondientes');
+        }
+        return;
+    }
+
+    var vehiculo = await window._obtenerVehiculoPorPlaca(placaVal);
+    var marca = vehiculo ? (vehiculo.marca || '') : '';
+    var modelo = vehiculo ? (vehiculo.modelo || '') : '';
+
+    var lblPlaca = document.getElementById('rot-kit-placa-lbl');
+    var lblMarca = document.getElementById('rot-kit-marca-lbl');
+    var lblModelo = document.getElementById('rot-kit-modelo-lbl');
+    if (lblPlaca) lblPlaca.textContent = placaVal;
+    if (lblMarca) lblMarca.textContent = marca || 'NO ESPECIFICADA';
+    if (lblModelo) lblModelo.textContent = modelo || 'NO ESPECIFICADO';
+
+    // Resetear selector y preview
+    var selTipo = document.getElementById('rot-kit-select-tipo');
+    var noKitsAlert = document.getElementById('rot-kit-no-kits');
+    var prevWrap = document.getElementById('rot-kit-preview-wrap');
+    var btnInsertar = document.getElementById('rot-btn-insertar-kit');
+    if (selTipo) selTipo.innerHTML = '<option value="">— Cargando kits... —</option>';
+    if (noKitsAlert) noKitsAlert.classList.add('d-none');
+    if (prevWrap) prevWrap.classList.add('d-none');
+    if (btnInsertar) btnInsertar.disabled = true;
+
+    // Abrir modal Bootstrap
+    var modalEl = document.getElementById('rotModalKits');
+    if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+        var modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalInst.show();
+    }
+
+    // Asegurar inventario cargado para validación de stock (Punto 6)
+    if (!window._rotInvData || !window._rotInvData.length) {
+        try {
+            var rInv = await fetch('/api/almacen/inventario');
+            if (rInv.ok) window._rotInvData = await rInv.json();
+        } catch(e) {}
+    }
+
+    // Consultar kits
+    try {
+        var respKits = await fetch('/api/mantenimiento-kits');
+        var dataKits = respKits.ok ? await respKits.json() : { data: [] };
+        var allKits = Array.isArray(dataKits.data) ? dataKits.data : (Array.isArray(dataKits) ? dataKits : []);
+
+        // Filtrar estrictamente por Marca y Modelo de la placa
+        var kitsFiltrados = allKits.filter(function(k) {
+            var kMarca = (k.marca_vehiculo || '').trim().toUpperCase();
+            var kModelo = (k.modelo_vehiculo || '').trim().toUpperCase();
+            return kMarca === marca && kModelo === modelo;
+        });
+
+        window._rotKitsDisponibles = kitsFiltrados;
+
+        // Agrupar por tipo_mp / nombre_kit
+        var grupos = {};
+        kitsFiltrados.forEach(function(item) {
+            var key = item.tipo_mp || item.nombre_kit || 'General';
+            if (!grupos[key]) grupos[key] = [];
+            grupos[key].push(item);
+        });
+
+        var keys = Object.keys(grupos);
+        if (!keys.length) {
+            if (selTipo) selTipo.innerHTML = '<option value="">— No hay kits para este modelo —</option>';
+            if (noKitsAlert) noKitsAlert.classList.remove('d-none');
+            return;
+        }
+
+        if (selTipo) {
+            selTipo.innerHTML = '<option value="">— Seleccionar Kit (' + keys.length + ' disponibles) —</option>' +
+                keys.map(function(k) {
+                    var cantArt = grupos[k].length;
+                    return '<option value="' + rotEscHtml(k) + '">' + rotEscHtml(k) + ' (' + cantArt + ' ' + (cantArt === 1 ? 'ítem' : 'ítems') + ')</option>';
+                }).join('');
+        }
+    } catch(err) {
+        console.error('Error cargando kits:', err);
+        if (selTipo) selTipo.innerHTML = '<option value="">— Error al cargar kits —</option>';
+    }
+};
+
+window._rotOnKitSelected = function(tipoMp) {
+    var prevWrap = document.getElementById('rot-kit-preview-wrap');
+    var tb = document.getElementById('rot-kit-preview-tbody');
+    var countEl = document.getElementById('rot-kit-items-count');
+    var btnInsertar = document.getElementById('rot-btn-insertar-kit');
+
+    if (!tipoMp) {
+        if (prevWrap) prevWrap.classList.add('d-none');
+        if (btnInsertar) btnInsertar.disabled = true;
+        window._rotKitSeleccionado = null;
+        return;
+    }
+
+    var items = (window._rotKitsDisponibles || []).filter(function(k) {
+        return (k.tipo_mp || k.nombre_kit || 'General') === tipoMp;
+    });
+
+    window._rotKitSeleccionado = { tipo: tipoMp, items: items };
+
+    if (!items.length) {
+        if (prevWrap) prevWrap.classList.add('d-none');
+        if (btnInsertar) btnInsertar.disabled = true;
+        return;
+    }
+
+    if (countEl) countEl.textContent = items.length;
+    if (tb) {
+        tb.innerHTML = items.map(function(it) {
+            // Buscar stock en almacén para este ítem (Punto 6)
+            var invItem = (window._rotInvData || []).find(function(x) {
+                var invNom = (x.descripcion || x.articulo || x.nombre || '').trim().toUpperCase();
+                var kitNom = (it.item_nombre || '').trim().toUpperCase();
+                return invNom === kitNom || invNom.includes(kitNom) || kitNom.includes(invNom);
+            });
+
+            var stock = invItem ? parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : 0)) : null;
+            var cantReq = parseFloat(it.cantidad || 1);
+            var stockBadge = '';
+
+            if (stock === null) {
+                stockBadge = '<span class="badge bg-light text-muted border">No inventariado</span>';
+            } else if (stock >= cantReq) {
+                stockBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>' + stock + ' ' + (it.unidad_medida || 'UND') + '</span>';
+            } else if (stock > 0) {
+                stockBadge = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Stock bajo: ' + stock + '</span>';
+            } else {
+                stockBadge = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="bi bi-x-circle-fill me-1"></i>Sin Stock (0)</span>';
+            }
+
+            return `
+                <tr>
+                    <td class="fw-bold text-dark" style="padding: 8px 12px;">
+                        <i class="bi bi-wrench-adjustable text-secondary me-1"></i> ${rotEscHtml(it.item_nombre || '—')}
+                    </td>
+                    <td class="text-center fw-bold text-primary" style="padding: 8px 12px;">
+                        ${cantReq}
+                    </td>
+                    <td class="text-center text-muted fw-medium" style="padding: 8px 12px; font-size: 0.76rem;">
+                        ${rotEscHtml(it.unidad_medida || 'UND')}
+                    </td>
+                    <td class="text-center" style="padding: 8px 12px;">
+                        ${stockBadge}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    if (prevWrap) prevWrap.classList.remove('d-none');
+    if (btnInsertar) btnInsertar.disabled = false;
+};
+
+window._rotInsertarKit = function() {
+    if (!window._rotKitSeleccionado || !window._rotKitSeleccionado.items || !window._rotKitSeleccionado.items.length) {
+        return;
+    }
+
+    var kit = window._rotKitSeleccionado;
+    var items = kit.items;
+
+    // Verificar si hay una fila inicial vacía para limpiarla
+    var descs = document.querySelectorAll('.rot-mat-item-desc');
+    if (descs.length === 1 && !descs[0].value.trim()) {
+        var singleTr = document.getElementById('rot-mat-item-0');
+        if (singleTr) singleTr.remove();
+    }
+
+    // Inyectar cada repuesto del kit (Punto 2 y 3: Acumulativo y editable)
+    items.forEach(function(it) {
+        var idx = window._rotMatIdx++;
+        var tbody = document.getElementById('rot-mat-items-tbody');
+        if (!tbody) return;
+
+        var tr = document.createElement('tr');
+        tr.id = 'rot-mat-item-' + idx;
+        tr.innerHTML = `
+            <td style="padding:6px 8px;">
+                <div style="display:flex;gap:4px;align-items:center;">
+                    <input type="text" class="form-control form-control-sm rot-mat-item-desc bg-white fw-medium" list="rot-mat-inv-list" placeholder="Buscar artículo…" 
+                        data-idx="${idx}" oninput="window._rotBuscarArtMat(this, ${idx})" style="border-radius:8px; font-size:0.8rem;">
+                    <button type="button" class="btn btn-sm btn-light border text-primary shadow-2xs" style="flex-shrink:0; padding:3px 8px; border-radius:8px;" 
+                        onclick="window._rotAbrirQR(${idx})" title="Escanear código de barras o QR">
+                        <i class="bi bi-upc-scan"></i>
+                    </button>
+                </div>
+                <input type="hidden" class="rot-mat-item-inv-id" data-idx="${idx}">
+                <input type="hidden" class="rot-mat-item-stock" data-idx="${idx}" value="">
+                <input type="hidden" class="rot-mat-item-cu" data-idx="${idx}" value="0">
+                <input type="hidden" class="rot-mat-item-imp" data-idx="${idx}" value="0">
+                <div class="rot-mat-item-stock-lbl" data-idx="${idx}" style="font-size:0.75rem;margin-top:4px;display:none;"></div>
+            </td>
+            <td style="padding:6px 8px; width:120px; text-align:center;">
+                <input type="number" class="form-control form-control-sm rot-mat-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="${parseFloat(it.cantidad || 1)}" min="0.001" step="0.001" oninput="window._rotCalcItemMat(${idx})" style="border-radius:8px; font-size:0.82rem;">
+            </td>
+            <td style="padding:6px 8px; width:44px; text-align:center;">
+                <button type="button" class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1" onclick="window._rotQuitarItemMat(${idx})" title="Eliminar fila">
+                    <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        // Buscar correspondencia en almacén
+        var invItem = (window._rotInvData || []).find(function(x) {
+            var invNom = (x.descripcion || x.articulo || x.nombre || '').trim().toUpperCase();
+            var kitNom = (it.item_nombre || '').trim().toUpperCase();
+            return invNom === kitNom || invNom.includes(kitNom) || kitNom.includes(invNom);
+        });
+
+        var descEl  = tr.querySelector('.rot-mat-item-desc');
+        var hidEl   = tr.querySelector('.rot-mat-item-inv-id');
+        var cuEl    = tr.querySelector('.rot-mat-item-cu');
+        var stockEl = tr.querySelector('.rot-mat-item-stock');
+        var lblEl   = tr.querySelector('.rot-mat-item-stock-lbl');
+
+        if (invItem) {
+            if (descEl) descEl.value = invItem.id + ' — ' + (invItem.descripcion || it.item_nombre);
+            if (hidEl) hidEl.value = invItem.id;
+            var costo = parseFloat(invItem.costo_referencial || invItem.costo || it.costo_unitario || 0);
+            if (cuEl) cuEl.value = costo.toFixed(2);
+            var stock = parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : -1));
+            if (stockEl) stockEl.value = stock;
+            if (lblEl) {
+                lblEl.style.display = 'block';
+                if (stock <= 0) {
+                    lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock disponible</span>';
+                } else if (stock < parseFloat(it.cantidad || 1)) {
+                    lblEl.innerHTML = '<span style="color:#d97706;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Stock insuficiente: ' + stock + ' ' + (invItem.unidad || 'und') + '</span>';
+                } else {
+                    lblEl.innerHTML = '<span style="color:#16a34a;"><i class="bi bi-check-circle-fill me-1"></i>Stock disponible: <strong>' + stock + '</strong> ' + (invItem.unidad || 'und') + '</span>';
+                }
+            }
+        } else {
+            if (descEl) descEl.value = it.item_nombre || '';
+            if (cuEl) cuEl.value = parseFloat(it.costo_unitario || 0).toFixed(2);
+        }
+
+        window._rotCalcItemMat(idx);
+    });
+
+    _rotActualizarTotalMat();
+
+    // Cerrar modal
+    var modalEl = document.getElementById('rotModalKits');
+    if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+        var modalInst = bootstrap.Modal.getInstance(modalEl);
+        if (modalInst) modalInst.hide();
+    }
+
+    if (typeof window.rotToast === 'function') {
+        window.rotToast('Se agregaron ' + items.length + ' repuestos del kit ' + kit.tipo, 'bg-success text-white');
+    } else if (typeof window.mostrarAlerta === 'function') {
+        window.mostrarAlerta('Se agregaron ' + items.length + ' repuestos del kit ' + kit.tipo, 'success');
+    }
+};
+
 // ── Item helpers para el form de materiales ───────────────────────
 window._rotAgregarItemMat = function() {
     var tbody = document.getElementById('rot-mat-items-tbody');
