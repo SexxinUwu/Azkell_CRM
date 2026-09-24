@@ -2591,6 +2591,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             res.json({
                 ok: true,
+                success: true,
                 message: 'Pago de requerimiento procesado exitosamente',
                 id: id,
                 estado: 'Procesado',

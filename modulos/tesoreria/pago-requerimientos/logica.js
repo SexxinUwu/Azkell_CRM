@@ -312,9 +312,9 @@
 
                 <!-- 5. Motivo -->
                 <td>
-                    <div class="text-secondary fw-semibold" style="font-size:0.78rem; line-height:1.3; min-width:180px;">
+                    <span class="text-secondary fw-semibold" style="font-size:0.78rem;">
                         ${escapeHtml(motivoOC)}
-                    </div>
+                    </span>
                 </td>
 
                 <!-- 6. Folio OC -->
@@ -353,19 +353,18 @@
 
                 <!-- 12. Proveedor -->
                 <td>
-                    <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.35; min-width:200px;">
+                    <span class="fw-bold text-dark" style="font-size:0.8rem;">
                         ${escapeHtml(item.proveedor_nombre || item.proveedor || '-')}
-                    </div>
-                    ${item.proveedor_ruc ? `<div class="text-muted" style="font-size:0.7rem;">RUC: ${escapeHtml(item.proveedor_ruc)}</div>` : ''}
+                    </span>
                 </td>
 
                 <!-- 13. Cuenta Destino (Proveedor) -->
                 <td>
-                    <div class="d-flex align-items-center gap-1.5" style="min-width:220px;">
+                    <div class="d-inline-flex align-items-center gap-1.5">
                         <span class="badge ${esUSDDestino ? 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-success bg-opacity-10 text-success border border-success border-opacity-25'} fw-bold" style="font-size:0.68rem;">
                             ${esUSDDestino ? 'USD' : 'PEN'}
                         </span>
-                        <span class="text-dark fw-semibold" style="font-size:0.75rem; line-height:1.3;">
+                        <span class="text-dark fw-semibold" style="font-size:0.75rem;">
                             ${escapeHtml(cuentaDestino)}
                         </span>
                     </div>
@@ -373,7 +372,7 @@
 
                 <!-- 14. Cuenta Origen (Empresa) -->
                 <td>
-                    <div class="d-flex align-items-center gap-1.5" style="min-width:200px;">
+                    <div class="d-inline-flex align-items-center gap-1.5">
                         ${cuentaOrigen ? `
                             <span class="badge ${esUSDOrigen ? 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-success bg-opacity-10 text-success border border-success border-opacity-25'} fw-bold" style="font-size:0.68rem;">
                                 ${esUSDOrigen ? 'USD' : 'PEN'}
@@ -573,7 +572,7 @@
 
             const resData = await res.json();
 
-            if (!res.ok || !resData.success) {
+            if (!res.ok || (!resData.ok && !resData.success)) {
                 throw new Error(resData.error || resData.message || `Error del servidor (${res.status})`);
             }
 
