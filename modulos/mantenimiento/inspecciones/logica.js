@@ -1255,16 +1255,6 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
                     </div>
                 </div>
             </div>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1.5" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="border-radius:8px;">
-                            <i class="bi bi-three-dots-vertical"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
-                            ${menuOpcionesHtml}
-                        </ul>
-                    </div>
-                </div>
-            </div>
             `;
         });
     }

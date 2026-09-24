@@ -614,8 +614,23 @@ module.exports = function (db, broadcast, logAudit) {
 
             let fallasTracto = [];
             let fallasRemolque = [];
-            try { fallasTracto = JSON.parse(rep.fallas_tracto_json || '[]'); } catch(e) {}
-            try { fallasRemolque = JSON.parse(rep.fallas_remolque_json || '[]'); } catch(e) {}
+            try {
+                if (rep.fallas_tracto_json) {
+                    fallasTracto = typeof rep.fallas_tracto_json === 'string' ? JSON.parse(rep.fallas_tracto_json) : rep.fallas_tracto_json;
+                } else if (rep.fallas_tracto) {
+                    fallasTracto = typeof rep.fallas_tracto === 'string' ? JSON.parse(rep.fallas_tracto) : rep.fallas_tracto;
+                }
+            } catch(e) {}
+            if (!Array.isArray(fallasTracto)) fallasTracto = [];
+
+            try {
+                if (rep.fallas_remolque_json) {
+                    fallasRemolque = typeof rep.fallas_remolque_json === 'string' ? JSON.parse(rep.fallas_remolque_json) : rep.fallas_remolque_json;
+                } else if (rep.fallas_remolque) {
+                    fallasRemolque = typeof rep.fallas_remolque === 'string' ? JSON.parse(rep.fallas_remolque) : rep.fallas_remolque;
+                }
+            } catch(e) {}
+            if (!Array.isArray(fallasRemolque)) fallasRemolque = [];
 
             let otsCreadas = [];
             let errorCreacion = null;
@@ -646,26 +661,45 @@ module.exports = function (db, broadcast, logAudit) {
 
                 // Descripción de fallas limpia y concisa para impresión y detalle
                 let descFallasClean = '';
-                if (Array.isArray(item.fallas_seleccionadas) && item.fallas_seleccionadas.length > 0) {
+                if (Array.isArray(item.motivos_array) && item.motivos_array.length > 0) {
+                    descFallasClean = item.motivos_array.map(m => {
+                        const itemTxt = m.item || m.motivo || 'Falla reportada';
+                        const obsTxt = (m.obs && m.obs !== m.item && m.obs !== 'Observado en checklist') ? `: ${m.obs}` : '';
+                        const sysTxt = (m.sistema && m.sistema !== 'MANUAL' && m.sistema !== 'GENERAL') ? `${m.sistema} — ` : '';
+                        const tecTxt = m.tecnico ? ` (Técnico: ${m.tecnico})` : '';
+                        return `• ${sysTxt}${itemTxt}${obsTxt}${tecTxt}`;
+                    }).join('\n');
+                } else if (Array.isArray(item.fallas_seleccionadas) && item.fallas_seleccionadas.length > 0) {
                     descFallasClean = item.fallas_seleccionadas.map(f => {
-                        let clean = f.replace(/^\[[^\]]+\]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '');
+                        let clean = String(f).replace(/^\[[^\]]+\]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').replace(/^[•\-\*]\s*/, '');
                         return `• ` + clean;
                     }).join('\n');
                 } else {
-                    let itemsFalla = (item.unidad === 'Remolque' || item.unidad === 'Carreta') ? fallasRemolque : fallasTracto;
-                    descFallasClean = itemsFalla.map(f => {
-                        let clean = (f.sistema === 'MANUAL' || (f.item || '').toLowerCase() === 'falla manual') ? (f.obs || 'Observación') : `${f.item}: ${f.obs || 'Observado'}`;
-                        return `• ${clean}`;
-                    }).join('\n');
+                    const isRemolque = (item.unidad === 'Remolque' || item.unidad === 'Carreta' || (rep.placa_remolque && placa === rep.placa_remolque));
+                    let itemsFalla = isRemolque ? fallasRemolque : fallasTracto;
+                    if (!Array.isArray(itemsFalla) || itemsFalla.length === 0) {
+                        itemsFalla = fallasTracto.concat(fallasRemolque);
+                    }
+                    if (Array.isArray(itemsFalla) && itemsFalla.length > 0) {
+                        descFallasClean = itemsFalla.map(f => {
+                            let clean = (f.sistema === 'MANUAL' || (f.item || '').toLowerCase() === 'falla manual') 
+                                ? (f.obs || 'Observación adicional') 
+                                : `${f.sistema ? f.sistema + ' — ' : ''}${f.item || 'Falla'}${f.obs && f.obs !== f.item ? ': ' + f.obs : ''}`;
+                            return `• ${clean}`;
+                        }).join('\n');
+                    }
                 }
 
                 if (item.trabajo_custom) {
                     descFallasClean += (descFallasClean ? '\n' : '') + `• ${item.trabajo_custom}`;
-                } else if (rep.fallas_libres_text && !item.fallas_seleccionadas) {
+                } else if (rep.fallas_libres_text && (!item.fallas_seleccionadas || !item.fallas_seleccionadas.length)) {
                     descFallasClean += (descFallasClean ? '\n' : '') + `• ${rep.fallas_libres_text}`;
                 }
 
-                const motivoLimpio = `[Reporte ${rep.folio}]\n${descFallasClean}`;
+                const motivoLimpio = descFallasClean 
+                    ? `[Reporte ${rep.folio}]\n${descFallasClean}` 
+                    : `[Reporte ${rep.folio}] ${item.subtipo_ot || 'Falla reportada'}`;
+
                 const supervisorStr = (item.supervisor || '').trim() || (Array.isArray(item.tecnicos) && item.tecnicos.length ? item.tecnicos[0] : 'Por Asignar');
                 const tecnicosStr = Array.isArray(item.tecnicos) ? item.tecnicos.join(', ') : (item.tecnico || 'Por Asignar');
 
@@ -707,6 +741,7 @@ module.exports = function (db, broadcast, logAudit) {
                     motivo: motivoLimpio,
                     motivos_array: motivosArray,
                     observaciones: motivoLimpio,
+                    descripcion_falla: descFallasClean || (item.subtipo_ot || 'Falla'),
                     tipo_ot: item.tipo_ot || 'Correctivo',
                     tipo_mantenimiento: item.tipo_ot || 'Correctivo',
                     sub_tipo: item.subtipo_ot || 'Mecánica General',
@@ -753,7 +788,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                     // Registrar en Módulo Status Rampa (tabla taller_rampas)
                     if (id_rampa && id_rampa !== 'En Ruta' && id_rampa !== 'En Espera') {
-                        const obsRampa = descFallasClean || (item.subtipo_ot || 'Mecánica General');
+                        const obsRampa = descFallasClean || `${item.subtipo_ot || 'Falla'}: ${item.tipo_ot || 'Correctivo'}`;
                         let fIngDate = fecha_ingreso ? fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0];
                         let fIngTime = fecha_ingreso && fecha_ingreso.includes('T') ? fecha_ingreso.split('T')[1].substring(0, 5) : new Date().toTimeString().substring(0, 5);
 
@@ -780,7 +815,7 @@ module.exports = function (db, broadcast, logAudit) {
                                 rId = existingRampa[0].id;
                                 const oldObs = (existingRampa[0].obs || '').trim();
                                 let newObs = obsRampa;
-                                if (oldObs) {
+                                if (oldObs && oldObs.toUpperCase() !== 'FALLA' && oldObs.toUpperCase() !== 'MECÁNICA GENERAL') {
                                     if (!oldObs.includes(obsRampa)) {
                                         newObs = oldObs + '\n' + obsRampa;
                                     } else {
