@@ -351,9 +351,17 @@ window._entOnCondicionPagoChange = function() {
     }
 };
 
+function _entFechaHoyLocal() {
+    var d = new Date();
+    var yyyy = d.getFullYear();
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd;
+}
+
 window._entCargarProveedores = function() {
     var fechaEl = document.getElementById('ent-f-fecha');
-    if (fechaEl && !fechaEl.value) fechaEl.value = new Date().toISOString().split('T')[0];
+    if (fechaEl && !fechaEl.value) fechaEl.value = _entFechaHoyLocal();
     if (window._entProvItems && window._entProvItems.length) {
         window._cbInit('ent-f-proveedor', window._entProvItems, 'Buscar proveedor…');
     }
@@ -1059,7 +1067,7 @@ window.abrirModalEntrada = function() {
 
     window._cbReset('ent-f-proveedor');
     var fecha = document.getElementById('ent-f-fecha');
-    if (fecha) fecha.value = new Date().toISOString().split('T')[0];
+    if (fecha) fecha.value = _entFechaHoyLocal();
     var mon = document.getElementById('ent-f-moneda');
     if (mon) mon.value = 'PEN';
     window._entOnMonedaChange();
@@ -1439,7 +1447,7 @@ window._entRender = function() {
 
             <!-- Proveedor, Placa y Centro Costo -->
             <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold px-2 py-1" style="font-size:0.75rem; border-radius:6px;">🏢 ${_entEsc(d.centro_costo || 'CC-100')}</span>
+                <span class="badge font-monospace fw-bold px-2 py-1" style="font-size:0.75rem; border-radius:6px; background:#eff6ff; color:#0f172a !important; border:1px solid #bfdbfe;">🏢 ${_entEsc(d.centro_costo || 'CC-100')}</span>
                 ${d.proveedor_nombre ? `<span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🏢 ${_entEsc(d.proveedor_nombre)}</span>` : ''}
                 ${d.placa ? `<span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🚛 ${_entEsc(d.placa)}</span>` : ''}
                 <span class="badge bg-secondary-subtle text-secondary border fw-semibold px-2 py-1" style="font-size:0.72rem; border-radius:6px;">${tipoOrdText}</span>
@@ -1513,7 +1521,7 @@ window._entRender = function() {
                 '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
                 '<td>' + aprobadorHtml + '</td>' +
-                '<td><span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-bold" style="font-size:0.72rem;">' + _entEsc(d.centro_costo || 'CC-100') + '</span></td>' +
+                '<td><span class="badge font-monospace fw-bold" style="font-size:0.74rem; background:#eff6ff; color:#0f172a !important; border:1px solid #bfdbfe; border-radius:6px; padding:3px 8px;">' + _entEsc(d.centro_costo || 'CC-100') + '</span></td>' +
                 '<td>' + placaHtml + '</td>' +
                 '<td>' + motivoHtml + '</td>' +
                 '<td>' + (d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
@@ -1569,7 +1577,7 @@ window._entRender = function() {
                 '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
                 '<td>' + aprobadorHtml + '</td>' +
-                '<td><span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-bold" style="font-size:0.72rem;">' + _entEsc(d.centro_costo || 'CC-100') + '</span></td>' +
+                '<td><span class="badge font-monospace fw-bold" style="font-size:0.74rem; background:#eff6ff; color:#0f172a !important; border:1px solid #bfdbfe; border-radius:6px; padding:3px 8px;">' + _entEsc(d.centro_costo || 'CC-100') + '</span></td>' +
                 '<td>' + placaHtml + '</td>' +
                 '<td>' + motivoHtml + '</td>' +
                 '<td>' + provHtml + '</td>' +
