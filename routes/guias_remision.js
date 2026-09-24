@@ -1615,7 +1615,87 @@ module.exports = function(db, tenantStorage) {
         }
     });
 
-    // 9. Eliminar Guía
+    // 10. Registrar GRE Manual / Extraída por OCR
+    router.post('/registrar-gre-manual', async (req, res) => {
+        try {
+            const dbConn = getDb(req);
+            await initTables(dbConn);
+
+            const p = req.body || {};
+            const numeroGuia = (p.numero_guia || '').trim().toUpperCase();
+
+            if (!numeroGuia) {
+                return res.status(400).json({ ok: false, error: "El número de guía es obligatorio." });
+            }
+
+            const tipoDoc = (p.tipo_documento || (numeroGuia.startsWith('V') ? '31' : '09'));
+
+            // Verificar si ya existe
+            const [exist] = await dbConn.query("SELECT id FROM guias_remision WHERE numero_guia = ?", [numeroGuia]);
+            let guiaId = null;
+
+            if (exist.length > 0) {
+                guiaId = exist[0].id;
+                await dbConn.query(`
+                    UPDATE guias_remision SET
+                        tipo_documento = ?, fecha_emision = ?, fecha_traslado = ?, fecha_entrega = ?,
+                        remitente_ruc = ?, remitente_razon_social = ?, destinatario_ruc = ?, destinatario_razon_social = ?,
+                        punto_partida_direccion = ?, punto_partida_ubigeo = ?, punto_llegada_direccion = ?, punto_llegada_ubigeo = ?,
+                        placa_tracto = ?, placa_carreta = ?, conductor_nombre = ?, conductor_num_doc = ?, conductor_licencia = ?,
+                        peso_bruto_total = ?, volumen_m3 = ?, modalidad_traslado = ?, motivo_traslado = ?,
+                        numero_transporte = ?, foto_evidencia = COALESCE(?, foto_evidencia)
+                    WHERE id = ?
+                `, [
+                    tipoDoc, p.fecha_emision || null, p.fecha_traslado || null, p.fecha_entrega || null,
+                    p.remitente_ruc || null, p.remitente_razon_social || null, p.destinatario_ruc || null, p.destinatario_razon_social || null,
+                    p.punto_partida_direccion || null, p.punto_partida_ubigeo || null, p.punto_llegada_direccion || null, p.punto_llegada_ubigeo || null,
+                    p.placa_tracto || null, p.placa_carreta || null, p.conductor_nombre || null, p.conductor_num_doc || null, p.conductor_licencia || null,
+                    Number(p.peso_bruto_total || 0), Number(p.volumen_m3 || 0), p.modalidad_traslado || 'Público', p.motivo_traslado || '01',
+                    p.numero_transporte || null, p.foto_evidencia || null, guiaId
+                ]);
+                await dbConn.query("DELETE FROM guias_remision_items WHERE guia_id = ?", [guiaId]);
+            } else {
+                const [insertRes] = await dbConn.query(`
+                    INSERT INTO guias_remision (
+                        numero_guia, tipo_documento, fecha_emision, fecha_traslado, fecha_entrega,
+                        remitente_ruc, remitente_razon_social, destinatario_ruc, destinatario_razon_social,
+                        punto_partida_direccion, punto_partida_ubigeo, punto_llegada_direccion, punto_llegada_ubigeo,
+                        placa_tracto, placa_carreta, conductor_nombre, conductor_num_doc, conductor_licencia,
+                        peso_bruto_total, volumen_m3, modalidad_traslado, motivo_traslado,
+                        numero_transporte, foto_evidencia, estado_sunat, observaciones_sunat
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACEPTADO', 'Registro Manual / Foto OCR')
+                `, [
+                    numeroGuia, tipoDoc, p.fecha_emision || null, p.fecha_traslado || null, p.fecha_entrega || null,
+                    p.remitente_ruc || null, p.remitente_razon_social || null, p.destinatario_ruc || null, p.destinatario_razon_social || null,
+                    p.punto_partida_direccion || null, p.punto_partida_ubigeo || null, p.punto_llegada_direccion || null, p.punto_llegada_ubigeo || null,
+                    p.placa_tracto || null, p.placa_carreta || null, p.conductor_nombre || null, p.conductor_num_doc || null, p.conductor_licencia || null,
+                    Number(p.peso_bruto_total || 0), Number(p.volumen_m3 || 0), p.modalidad_traslado || 'Público', p.motivo_traslado || '01',
+                    p.numero_transporte || null, p.foto_evidencia || null
+                ]);
+                guiaId = insertRes.insertId;
+            }
+
+            // Insertar ítems
+            if (Array.isArray(p.items) && p.items.length > 0) {
+                for (const it of p.items) {
+                    await dbConn.query(`
+                        INSERT INTO guias_remision_items (guia_id, item_numero, codigo, descripcion, unidad_medida, cantidad, peso_unitario)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        guiaId, it.item_numero || 1, it.codigo || '001', it.descripcion || 'MERCADERIA',
+                        it.unidad_medida || 'NIU', Number(it.cantidad || 1), Number(it.peso_unitario || 0)
+                    ]);
+                }
+            }
+
+            res.json({ ok: true, message: `Guía ${numeroGuia} guardada exitosamente.`, id: guiaId });
+        } catch (err) {
+            console.error("Error en /registrar-gre-manual:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 11. Eliminar Guía
     router.delete('/:id', async (req, res) => {
         try {
             const dbConn = getDb(req);
