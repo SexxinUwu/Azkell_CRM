@@ -435,9 +435,78 @@
     }
 
     /**
+     * Cargar Cuentas Bancarias de la Empresa en el selector de origen
+     */
+    window.prCargarCuentasOrigenSelect = async function (cuentaSeleccionada, esUSD) {
+        const sel = document.getElementById('pago_select_cuenta_origen');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Cargando cuentas...</option>';
+
+        try {
+            const resp = await fetch('/api/tesoreria/bancos');
+            const res = await resp.json();
+            const bancos = (res && res.ok && Array.isArray(res.data)) ? res.data.filter(b => b.estado === 'ACTIVO' || !b.estado) : [];
+
+            sel.innerHTML = '<option value="">Seleccionar cuenta de origen...</option>';
+
+            if (!bancos.length) {
+                const optS = new Option('BCP - CTA CTE SOLES', 'BCP - CTA CTE SOLES');
+                const optD = new Option('BCP - CTA CTE DÓLARES', 'BCP - CTA CTE DÓLARES');
+                sel.add(optS);
+                sel.add(optD);
+                sel.value = esUSD ? 'BCP - CTA CTE DÓLARES' : 'BCP - CTA CTE SOLES';
+                return;
+            }
+
+            let matched = false;
+            bancos.forEach((b) => {
+                const mon = (b.moneda || 'SOLES').toUpperCase();
+                const monLabel = (mon.includes('DOL') || mon === 'USD' || mon === 'US$') ? 'DÓLARES' : 'SOLES';
+                const num = (b.numero_cuenta || '').trim();
+                const tipo = b.tipo_cuenta || 'CTA CTE';
+                const label = `${b.banco} - ${tipo} [${monLabel}] - ${num}`;
+
+                const opt = new Option(label, label);
+                opt.dataset.banco = b.banco;
+                opt.dataset.moneda = monLabel;
+                opt.dataset.numero = num;
+
+                // Comprobar si coincide con la cuenta bancaria de la empresa guardada en la OC
+                if (cuentaSeleccionada) {
+                    const ctaSelClean = String(cuentaSeleccionada).trim();
+                    if (ctaSelClean === label || (num && ctaSelClean.includes(num)) || (b.banco && ctaSelClean.includes(b.banco) && ctaSelClean.includes(monLabel))) {
+                        opt.selected = true;
+                        matched = true;
+                    }
+                }
+                sel.add(opt);
+            });
+
+            // Si no hubo coincidencia exacta con lo de la OC, preseleccionar según la moneda de la orden
+            if (!matched) {
+                const targetMon = esUSD ? 'DÓLARES' : 'SOLES';
+                for (let i = 0; i < sel.options.length; i++) {
+                    const opt = sel.options[i];
+                    if (opt.dataset.moneda === targetMon) {
+                        opt.selected = true;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched && sel.options.length > 1) {
+                    sel.selectedIndex = 1;
+                }
+            }
+        } catch (e) {
+            console.warn('Error cargando cuentas origen:', e);
+            sel.innerHTML = '<option value="">Seleccionar cuenta de origen...</option><option value="BCP - CTA CTE SOLES">BCP - CTA CTE SOLES</option>';
+        }
+    };
+
+    /**
      * Abrir modal para Proceder con el Requerimiento
      */
-    window.abrirModalProcederPago = function (id) {
+    window.abrirModalProcederPago = async function (id) {
         const item = prDataCache.find(x => x.id === id || String(x.id) === String(id));
         if (!item) {
             alert("No se encontró la orden de compra seleccionada.");
@@ -461,9 +530,11 @@
         document.getElementById('pago_txt_proveedor').value = item.proveedor_nombre || item.proveedor || '-';
         document.getElementById('pago_num_constancia').value = '';
         document.getElementById('pago_txt_cuenta_destino').value = item.cuenta_bancaria || item.cuenta_bancaria_proveedor || 'No especificada';
-        document.getElementById('pago_select_cuenta_origen').value = esUSD ? 'BCP - CTA CTE DOLARES' : 'BCP - CTA CTE SOLES';
         document.getElementById('pago_txt_descripcion').value = item.motivo_entrada || item.motivo || `ORDEN DE COMPRA: ${folioOC}`;
         document.getElementById('pago_badge_importe').textContent = `${simbolo} ${importeFormateado}`;
+
+        // Cargar y preseleccionar cuentas bancarias de la empresa
+        await window.prCargarCuentasOrigenSelect(item.cuenta_bancaria_empresa, esUSD);
 
         // Reset confirmación y archivo
         document.getElementById('chkConfirmarProceder').checked = true;
