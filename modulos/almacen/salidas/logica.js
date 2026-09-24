@@ -1029,6 +1029,7 @@ window.salCerrarNuevo = function() {
     if (drawer) drawer.classList.remove('open');
     var bd = document.getElementById('salNuevoBackdrop');
     if (bd) bd.classList.remove('open');
+    window.salCerrarSubDrawer('sal-drawer-kit');
 };
 
 // ── Auto-completar Placa al ingresar N° OT ────────────────────
@@ -1179,12 +1180,8 @@ window._salAbrirModalKits = async function() {
     if (prevWrap) prevWrap.classList.add('d-none');
     if (btnInsertar) btnInsertar.disabled = true;
 
-    // Abrir modal Bootstrap
-    var modalEl = document.getElementById('salModalKits');
-    if (modalEl && window.bootstrap && window.bootstrap.Modal) {
-        var modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modalInst.show();
-    }
+    // Abrir Drawer al frente con las mismas dimensiones
+    window.salAbrirSubDrawer('sal-drawer-kit');
 
     // Asegurar inventario cargado para validación de stock (Punto 6)
     if (!window._salInvData || !window._salInvData.length) {
@@ -1387,18 +1384,30 @@ window._salInsertarKit = function() {
 
     _salActualizarTotal();
 
-    // Cerrar modal
-    var modalEl = document.getElementById('salModalKits');
-    if (modalEl && window.bootstrap && window.bootstrap.Modal) {
-        var modalInst = bootstrap.Modal.getInstance(modalEl);
-        if (modalInst) modalInst.hide();
-    }
+    // Cerrar sub-drawer
+    window.salCerrarSubDrawer('sal-drawer-kit');
 
     if (typeof window.mostrarToast === 'function') {
         window.mostrarToast('Se agregaron ' + items.length + ' repuestos del kit ' + kit.tipo, 'success');
     } else if (typeof window.mostrarAlerta === 'function') {
         window.mostrarAlerta('Se agregaron ' + items.length + ' repuestos del kit ' + kit.tipo, 'success');
     }
+};
+
+window.salAbrirSubDrawer = function(id) {
+    var d = document.getElementById(id);
+    if (d) {
+        if (d.parentElement !== document.body) {
+            document.body.appendChild(d);
+        }
+        d.style.zIndex = '1150';
+        d.classList.add('open');
+    }
+};
+
+window.salCerrarSubDrawer = function(id) {
+    var d = document.getElementById(id);
+    if (d) d.classList.remove('open');
 };
 
 // ── Items del formulario ──────────────────────────────────────
