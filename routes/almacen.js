@@ -60,6 +60,7 @@ router.get('/proveedores', (req, res) => {
                        JSON_OBJECT(
                            'id', c.id,
                            'banco', c.banco,
+                           'moneda', COALESCE(c.moneda, 'SOLES'),
                            'tipo_cuenta', c.tipo_cuenta,
                            'numero_cuenta', c.numero_cuenta,
                            'detraccion', c.detraccion,
@@ -112,13 +113,14 @@ router.post('/proveedores', (req, res) => {
                     const cVals = cuentas.map(c => [
                         id,
                         c.banco || '',
+                        c.moneda || 'SOLES',
                         c.tipo_cuenta || 'CUENTA CORRIENTE',
                         c.numero_cuenta || '',
                         c.detraccion ? 1 : 0,
                         c.estado !== false && c.estado !== 0 ? 1 : 0
-                    ]).filter(c => c[1] && c[3]);
+                    ]).filter(c => c[1] && c[4]);
                     if (cVals.length) {
-                        db.query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,tipo_cuenta,numero_cuenta,detraccion,estado) VALUES ?', [cVals], () => {});
+                        db.query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,moneda,tipo_cuenta,numero_cuenta,detraccion,estado) VALUES ?', [cVals], () => {});
                     }
                 }
                 if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
@@ -145,13 +147,14 @@ router.put('/proveedores/:id', (req, res) => {
                     const cVals = cuentas.map(c => [
                         id,
                         c.banco || '',
+                        c.moneda || 'SOLES',
                         c.tipo_cuenta || 'CUENTA CORRIENTE',
                         c.numero_cuenta || '',
                         c.detraccion ? 1 : 0,
                         c.estado !== false && c.estado !== 0 ? 1 : 0
-                    ]).filter(c => c[1] && c[3]);
+                    ]).filter(c => c[1] && c[4]);
                     if (cVals.length) {
-                        db.query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,tipo_cuenta,numero_cuenta,detraccion,estado) VALUES ?', [cVals], () => {});
+                        db.query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,moneda,tipo_cuenta,numero_cuenta,detraccion,estado) VALUES ?', [cVals], () => {});
                     }
                 }
             });

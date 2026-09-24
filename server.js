@@ -4021,6 +4021,7 @@ app.listen(process.env.PORT || 3000, () => {
             id INT AUTO_INCREMENT PRIMARY KEY,
             proveedor_id VARCHAR(20) NOT NULL,
             banco VARCHAR(100) NOT NULL,
+            moneda VARCHAR(20) DEFAULT 'SOLES',
             tipo_cuenta ENUM('CUENTA CORRIENTE', 'CUENTA DE AHORROS', 'CUENTA REMUNERADA') NOT NULL,
             numero_cuenta VARCHAR(100) NOT NULL,
             detraccion TINYINT(1) DEFAULT 0,
@@ -4031,6 +4032,18 @@ app.listen(process.env.PORT || 3000, () => {
     `, (e) => {
         if (e) console.warn('CREATE proveedor_cuentas_bancarias:', e.message);
         else console.log('✅ Tabla proveedor_cuentas_bancarias verificada');
+        // Asegurar columna moneda si ya existía la tabla sin ella
+        db.query(
+            "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='proveedor_cuentas_bancarias' AND COLUMN_NAME='moneda'",
+            (eCol, rCol) => {
+                if (!eCol && rCol && rCol[0] && rCol[0].cnt === 0) {
+                    db.query("ALTER TABLE proveedor_cuentas_bancarias ADD COLUMN moneda VARCHAR(20) DEFAULT 'SOLES'", (eAlt) => {
+                        if (eAlt) console.warn('ALTER proveedor_cuentas_bancarias ADD moneda:', eAlt.message);
+                        else console.log('✅ Columna moneda añadida a proveedor_cuentas_bancarias');
+                    });
+                }
+            }
+        );
     });
 
     // Migración: añadir url_firma a inspecciones si no existe

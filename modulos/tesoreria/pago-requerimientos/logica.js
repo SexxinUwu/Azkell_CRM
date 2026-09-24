@@ -227,7 +227,7 @@
     }
 
     /**
-     * Renderizar fila individual con las 13 columnas exactas
+     * Renderizar fila individual con las 14 columnas completas
      */
     function renderFilaPagoReq(item) {
         const estado = (item.estado || '').toUpperCase();
@@ -242,7 +242,7 @@
         const importeFormateado = importeNum.toLocaleString(esUSD ? 'en-US' : 'es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         // 2. Cálculo de Días Restantes / Semáforo
-        const diasBadge = calcularBadgeDiasRestantes(item.fecha, item.dias_credito || item.dias_pago || 0, esPagado);
+        const diasBadge = calcularBadgeDiasRestantes(item.fecha, item.dias_credito || item.dias_pagar || 0, item.condicion_pago, esPagado);
 
         // 3. Botón de Acción
         let colAccion = '';
@@ -258,8 +258,8 @@
                     <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill fw-bold" style="font-size:0.72rem;">
                         <i class="bi bi-check2-all me-0.5"></i> PROCESADO
                     </span>
-                    ${item.voucher_url ? `
-                        <a href="${item.voucher_url}" target="_blank" class="btn btn-sm btn-outline-secondary p-1 rounded-circle" title="Ver Voucher" style="width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center;">
+                    ${item.url_voucher_presigned || item.url_voucher || item.voucher_url ? `
+                        <a href="${item.url_voucher_presigned || item.url_voucher || item.voucher_url}" target="_blank" class="btn btn-sm btn-outline-secondary p-1 rounded-circle" title="Ver Voucher" style="width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center;">
                             <i class="bi bi-image" style="font-size:0.75rem;"></i>
                         </a>
                     ` : ''}
@@ -269,10 +269,17 @@
 
         // 4. Folio OC y link a detalle
         const folioOC = item.folio || item.codigo_oc || item.id || '-';
-        const motivoOC = item.motivo || `ORDEN DE COMPRA: ${folioOC}`;
+        const codLimpio = String(folioOC).replace(/^ENT-/i, '');
+        const motivoOC = item.motivo_entrada || item.motivo || `ORDEN DE COMPRA: ${folioOC}`;
 
-        // 5. Cuentas bancarias formateadas
-        const cuentaBancaria = item.cuenta_bancaria || item.cuenta_bancaria_proveedor || 'No especificada';
+        // 5. Cuentas bancarias formateadas con monedas
+        const cuentaDestino = item.cuenta_bancaria || item.cuenta_bancaria_proveedor || 'No especificada';
+        const cuentaDestinoMoneda = (item.cuenta_destino_moneda || item.moneda || 'PEN').toUpperCase();
+        const esUSDDestino = cuentaDestinoMoneda.includes('DOL') || cuentaDestinoMoneda === 'USD' || cuentaDestinoMoneda === 'US$';
+
+        const cuentaOrigen = item.cuenta_bancaria_empresa || '';
+        const cuentaOrigenMoneda = (cuentaOrigen.toUpperCase().includes('DOL') || cuentaOrigen.toUpperCase().includes('USD')) ? 'USD' : 'PEN';
+        const esUSDOrigen = cuentaOrigenMoneda === 'USD';
 
         // 6. Fechas
         const fechaReg = item.fecha ? String(item.fecha).substring(0, 10) : '-';
@@ -288,7 +295,7 @@
                     <span class="badge ${esUSD ? 'bg-primary bg-opacity-10 text-primary' : 'bg-success bg-opacity-10 text-success'} fw-bold me-1" style="font-size:0.72rem;">
                         ${simboloMoneda}
                     </span>
-                    <span class="fw-bolder text-dark" style="font-size:0.82rem;">${importeFormateado}</span>
+                    <span class="fw-bolder text-dark" style="font-size:0.84rem;">${importeFormateado}</span>
                 </td>
 
                 <!-- 3. Solicitante -->
@@ -305,57 +312,79 @@
 
                 <!-- 5. Motivo -->
                 <td>
-                    <span class="text-secondary fw-semibold text-truncate d-inline-block" style="max-width: 170px; font-size:0.78rem;" title="${escapeHtml(motivoOC)}">
+                    <div class="text-secondary fw-semibold" style="font-size:0.78rem; line-height:1.3; min-width:180px;">
                         ${escapeHtml(motivoOC)}
-                    </span>
+                    </div>
                 </td>
 
                 <!-- 6. Folio OC -->
                 <td>
-                    <button type="button" class="btn btn-sm p-0 text-primary fw-bold text-decoration-underline" onclick="window.verDetalleOC('${escapeHtml(String(item.id))}')" style="font-size:0.78rem;">
-                        <i class="bi bi-file-earmark-text me-0.5"></i>${escapeHtml(folioOC)}
+                    <button type="button" class="btn btn-sm p-0 text-primary fw-bold text-decoration-underline d-inline-flex align-items-center gap-1" onclick="window.verDetalleOC('${escapeHtml(String(item.id))}')" style="font-size:0.78rem;">
+                        <i class="bi bi-file-earmark-text"></i> ${escapeHtml(folioOC)}
                     </button>
                 </td>
 
-                <!-- 6. Usuario Creación -->
+                <!-- 7. Usuario Creación -->
                 <td>
                     <span class="text-muted fw-semibold text-uppercase" style="font-size:0.75rem;">
-                        ${escapeHtml(item.creado_por_nombre || item.creado_por || '-')}
+                        ${escapeHtml(item.creador_nombre || item.creado_por_nombre || item.creado_por || '-')}
                     </span>
                 </td>
 
-                <!-- 7. Fecha Registro -->
+                <!-- 8. Fecha Registro -->
                 <td>
                     <span class="text-secondary fw-semibold" style="font-size:0.75rem;">${fechaReg}</span>
                 </td>
 
-                <!-- 8. Días Restantes -->
+                <!-- 9. Días Restantes -->
                 <td class="text-center">${diasBadge}</td>
 
-                <!-- 9. Usuario Aprobación -->
+                <!-- 10. Usuario Aprobación -->
                 <td>
                     <span class="text-dark fw-bold text-uppercase" style="font-size:0.75rem;">
-                        ${escapeHtml(item.aprobado_por_nombre || item.aprobado_por || '-')}
+                        ${escapeHtml(item.aprobador_nombre || item.aprobado_por_nombre || item.aprobado_por || '-')}
                     </span>
                 </td>
 
-                <!-- 10. Fecha Aprobación -->
+                <!-- 11. Fecha Aprobación -->
                 <td>
                     <span class="text-muted small" style="font-size:0.72rem;">${fechaAprob}</span>
                 </td>
 
-                <!-- 11. Proveedor -->
+                <!-- 12. Proveedor -->
                 <td>
-                    <span class="fw-bold text-dark text-truncate d-inline-block" style="max-width: 180px; font-size:0.78rem;" title="${escapeHtml(item.proveedor_nombre || item.proveedor || '-')}">
+                    <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.35; min-width:200px;">
                         ${escapeHtml(item.proveedor_nombre || item.proveedor || '-')}
-                    </span>
+                    </div>
+                    ${item.proveedor_ruc ? `<div class="text-muted" style="font-size:0.7rem;">RUC: ${escapeHtml(item.proveedor_ruc)}</div>` : ''}
                 </td>
 
-                <!-- 12. Cuenta Bancaria -->
+                <!-- 13. Cuenta Destino (Proveedor) -->
                 <td>
-                    <span class="text-secondary small fw-semibold text-truncate d-inline-block" style="max-width: 220px; font-size:0.73rem;" title="${escapeHtml(cuentaBancaria)}">
-                        ${escapeHtml(cuentaBancaria)}
-                    </span>
+                    <div class="d-flex align-items-center gap-1.5" style="min-width:220px;">
+                        <span class="badge ${esUSDDestino ? 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-success bg-opacity-10 text-success border border-success border-opacity-25'} fw-bold" style="font-size:0.68rem;">
+                            ${esUSDDestino ? 'USD' : 'PEN'}
+                        </span>
+                        <span class="text-dark fw-semibold" style="font-size:0.75rem; line-height:1.3;">
+                            ${escapeHtml(cuentaDestino)}
+                        </span>
+                    </div>
+                </td>
+
+                <!-- 14. Cuenta Origen (Empresa) -->
+                <td>
+                    <div class="d-flex align-items-center gap-1.5" style="min-width:200px;">
+                        ${cuentaOrigen ? `
+                            <span class="badge ${esUSDOrigen ? 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-success bg-opacity-10 text-success border border-success border-opacity-25'} fw-bold" style="font-size:0.68rem;">
+                                ${esUSDOrigen ? 'USD' : 'PEN'}
+                            </span>
+                            <span class="text-secondary fw-semibold" style="font-size:0.75rem;">
+                                ${escapeHtml(cuentaOrigen)}
+                            </span>
+                        ` : `
+                            <span class="text-muted small fst-italic">— Pendiente de Pago —</span>
+                        `}
+                    </div>
                 </td>
             </tr>
         `;
@@ -364,9 +393,16 @@
     /**
      * Calcular badge de días restantes / antigüedad
      */
-    function calcularBadgeDiasRestantes(fechaStr, diasCredito = 0, esPagado = false) {
+    function calcularBadgeDiasRestantes(fechaStr, diasCredito = 0, condicionPago = 'Al contado', esPagado = false) {
         if (esPagado) {
-            return `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1 rounded-pill" style="font-size:0.7rem;">Liquidado</span>`;
+            return `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.72rem;"><i class="bi bi-check2-circle me-1"></i>Liquidado</span>`;
+        }
+
+        const cond = (condicionPago || 'Al contado').toLowerCase();
+        const esCredito = cond.includes('crédito') || cond.includes('credito');
+
+        if (!esCredito) {
+            return `<span class="badge bg-light text-secondary border border-secondary border-opacity-25 px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.72rem;">Al Contado</span>`;
         }
 
         if (!fechaStr) {
@@ -386,13 +422,13 @@
             const diffDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
             if (diffDias < 0) {
-                return `<span class="badge bg-danger text-white px-2 py-1 rounded-pill fw-bold" style="font-size:0.7rem; letter-spacing:0.3px;">Hace ${Math.abs(diffDias)} días</span>`;
+                return `<span class="badge bg-danger text-white px-2.5 py-1 rounded-pill fw-bold shadow-2xs" style="font-size:0.72rem; letter-spacing:0.3px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Vencido hace ${Math.abs(diffDias)} días</span>`;
             } else if (diffDias === 0) {
-                return `<span class="badge bg-warning text-dark px-2 py-1 rounded-pill fw-bold" style="font-size:0.7rem;">Vence Hoy</span>`;
+                return `<span class="badge bg-warning text-dark px-2.5 py-1 rounded-pill fw-bold shadow-2xs" style="font-size:0.72rem;"><i class="bi bi-clock-history me-1"></i>Vence Hoy</span>`;
             } else if (diffDias <= 3) {
-                return `<span class="badge bg-warning bg-opacity-25 text-dark border border-warning px-2 py-1 rounded-pill fw-bold" style="font-size:0.7rem;">Faltan ${diffDias} días</span>`;
+                return `<span class="badge bg-warning bg-opacity-25 text-dark border border-warning px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.72rem;">Faltan ${diffDias} días</span>`;
             } else {
-                return `<span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill fw-bold" style="font-size:0.7rem;">Faltan ${diffDias} días</span>`;
+                return `<span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.72rem;">Faltan ${diffDias} días</span>`;
             }
         } catch (e) {
             return `<span class="text-muted small">-</span>`;
@@ -427,7 +463,7 @@
         document.getElementById('pago_num_constancia').value = '';
         document.getElementById('pago_txt_cuenta_destino').value = item.cuenta_bancaria || item.cuenta_bancaria_proveedor || 'No especificada';
         document.getElementById('pago_select_cuenta_origen').value = esUSD ? 'BCP - CTA CTE DOLARES' : 'BCP - CTA CTE SOLES';
-        document.getElementById('pago_txt_descripcion').value = item.motivo || `ORDEN DE COMPRA: ${folioOC}`;
+        document.getElementById('pago_txt_descripcion').value = item.motivo_entrada || item.motivo || `ORDEN DE COMPRA: ${folioOC}`;
         document.getElementById('pago_badge_importe').textContent = `${simbolo} ${importeFormateado}`;
 
         // Reset confirmación y archivo
@@ -577,51 +613,139 @@
     };
 
     /**
-     * Ver Detalle de Ítems de la Orden de Compra
+     * Ver Detalle Completo de la Orden de Compra (Modal 1:1 ERP)
      */
     window.verDetalleOC = function (id) {
         const item = prDataCache.find(x => x.id === id || String(x.id) === String(id));
-        if (!item) return;
+        if (!item) {
+            alert("No se encontró la orden de compra seleccionada.");
+            return;
+        }
 
-        const folioOC = item.folio || item.codigo_oc || (item.id ? (String(item.id).startsWith('ENT') || String(item.id).startsWith('OC') ? String(item.id) : `2026-${String(item.id).padStart(8, '0')}`) : '-');
+        window._ocSeleccionadaDetalle = item.id;
+
+        const codLimpio = String(item.id || item.folio || '').replace(/^ENT-/i, '');
         const lblFolio = document.getElementById('lblDetalleOCFolio');
-        const lblProv = document.getElementById('lblDetalleOCProveedor');
-        const tbody = document.getElementById('tbodyDetalleOCItems');
+        if (lblFolio) lblFolio.textContent = `Órden de Compra: ${codLimpio}`;
 
-        if (lblFolio) lblFolio.textContent = `Orden de Compra: ${folioOC}`;
-        if (lblProv) lblProv.textContent = `Proveedor: ${item.proveedor_nombre || item.proveedor || '-'} | Solicitante: ${item.solicitante || '-'}`;
+        const solEl = document.getElementById('pr-det-oc-solicitante');
+        if (solEl) solEl.textContent = (item.creador_nombre || item.creado_por || item.solicitante || 'SISTEMA').toUpperCase();
+
+        const fecEl = document.getElementById('pr-det-oc-fecha');
+        if (fecEl) fecEl.textContent = formatearFechaHora(item.fecha || item.created_at);
+
+        const tipEl = document.getElementById('pr-det-oc-tipo');
+        if (tipEl) tipEl.textContent = (item.tipo_orden || 'ORDEN DE COMPRA').toUpperCase();
+
+        const motEl = document.getElementById('pr-det-oc-motivo');
+        if (motEl) motEl.textContent = (item.motivo_entrada || item.motivo || 'Sin motivo').toUpperCase();
+
+        const monPagoEl = document.getElementById('pr-det-oc-moneda-pago');
+        if (monPagoEl) {
+            const monedaRaw = (item.moneda || 'SOLES').toUpperCase();
+            const esUSD = monedaRaw.includes('DOL') || monedaRaw === 'USD' || monedaRaw === 'US$';
+            const monText = esUSD ? 'DÓLARES (USD)' : 'SOLES (PEN)';
+            let pagoText = (item.condicion_pago || 'AL CONTADO').toUpperCase();
+            const esCredito = pagoText.includes('CRÉDITO') || pagoText.includes('CREDITO');
+            if (esCredito && item.dias_credito) {
+                pagoText += ' (' + item.dias_credito + ' DÍAS)';
+            }
+            monPagoEl.textContent = `${monText} • ${pagoText}`;
+        }
+
+        const desEl = document.getElementById('pr-det-oc-destino');
+        if (desEl) {
+            let desText = '';
+            if (item.placa) desText += 'UNIDAD ' + item.placa;
+            if (item.ot_id) desText += (desText ? ' | ' : '') + 'OT: ' + item.ot_id;
+            if (!desText) desText = 'SEDE PRINCIPAL / ALMACÉN';
+            desEl.textContent = desText;
+        }
+
+        const provEl = document.getElementById('pr-det-oc-proveedor');
+        if (provEl) {
+            let pText = item.proveedor_nombre || item.proveedor || 'Sin Proveedor';
+            if (item.proveedor_ruc) pText += ' (RUC: ' + item.proveedor_ruc + ')';
+            provEl.textContent = pText;
+        }
+
+        const estEl = document.getElementById('pr-det-oc-estado');
+        if (estEl) {
+            const estNorm = (item.estado || 'APROBADA').toUpperCase();
+            let badgeHtml = '<span class="badge bg-success fw-bold px-2.5 py-1" style="font-size:0.75rem;">APROBADA</span>';
+            if (estNorm === 'PROCESADO' || estNorm === 'PROCESADA' || estNorm === 'PAGADO' || estNorm === 'PAGADA') {
+                badgeHtml = '<span class="badge bg-primary fw-bold px-2.5 py-1" style="font-size:0.75rem;">PROCESADA</span>';
+            }
+            const aprobador = item.aprobador_nombre || item.aprobado_por;
+            if (aprobador) {
+                badgeHtml += ' <span class="ms-2 text-dark fw-bold" style="font-size:0.8rem;"><i class="bi bi-person-check-fill text-success me-1"></i>Aprobado por: ' + escapeHtml(aprobador) + '</span>';
+            }
+            estEl.innerHTML = badgeHtml;
+        }
+
+        // Adjuntos
+        const cotAdjEl = document.getElementById('pr-det-oc-adj-cotizacion');
+        if (cotAdjEl) {
+            const urlCot = item.url_cotizacion_presigned || item.url_cotizacion;
+            cotAdjEl.innerHTML = urlCot ? `<a href="${urlCot}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-file-earmark-text"></i> Ver Cotización</a>` : `<span class="text-muted fst-italic">Sin archivo</span>`;
+        }
+
+        const facAdjEl = document.getElementById('pr-det-oc-adj-factura');
+        if (facAdjEl) {
+            const urlFac = item.url_factura_presigned || item.url_factura;
+            facAdjEl.innerHTML = urlFac ? `<a href="${urlFac}" target="_blank" class="text-success fw-bold text-decoration-none"><i class="bi bi-file-earmark-check"></i> Ver Factura</a>` : `<span class="text-muted fst-italic">Sin archivo</span>`;
+        }
+
+        const vouAdjEl = document.getElementById('pr-det-oc-adj-voucher');
+        if (vouAdjEl) {
+            const urlVou = item.url_voucher_presigned || item.url_voucher;
+            vouAdjEl.innerHTML = urlVou ? `<a href="${urlVou}" target="_blank" class="text-danger fw-bold text-decoration-none"><i class="bi bi-file-earmark-pdf"></i> Ver Voucher</a>` : `<span class="text-muted fst-italic">Sin archivo</span>`;
+        }
+
+        // Artículos
+        const tbody = document.getElementById('tbodyDetalleOCItems');
+        const items = Array.isArray(item.items) ? item.items : [];
+        const monedaRaw = (item.moneda || 'SOLES').toUpperCase();
+        const esUSD = monedaRaw.includes('DOL') || monedaRaw === 'USD' || monedaRaw === 'US$';
+        const sym = esUSD ? 'US$ ' : 'S/ ';
+        let totalCalc = 0;
 
         if (tbody) {
-            const items = Array.isArray(item.items) ? item.items : [];
             if (items.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center py-3 text-muted">
-                            ${item.motivo ? escapeHtml(item.motivo) : 'Sin desglose de ítems disponible.'}
-                        </td>
-                    </tr>
-                `;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3 fst-italic">${item.motivo ? escapeHtml(item.motivo) : 'No hay artículos registrados en esta orden.'}</td></tr>`;
             } else {
-                const monedaRaw = (item.moneda || 'SOLES').toUpperCase();
-                const esUSD = monedaRaw.includes('DOL') || monedaRaw === 'USD' || monedaRaw === 'US$';
-                const simbolo = esUSD ? 'US$' : 'S/';
-
                 tbody.innerHTML = items.map((it, idx) => {
                     const cant = parseFloat(it.cantidad || 0);
-                    const precio = parseFloat(it.precio_unitario || it.costo_unitario || 0);
-                    const subtotal = parseFloat(it.subtotal || it.importe || (cant * precio));
+                    const cu = parseFloat(it.costo_unitario || it.precio_unitario || 0);
+                    const imp = parseFloat(it.importe || (cant * cu));
+                    totalCalc += imp;
+                    const codArt = it.inventario_id || it.codigo || it.cod_art || `INV-${String(idx + 1).padStart(4, '0')}`;
+                    const descArt = it.descripcion || it.nombre_producto || it.item || 'Artículo';
 
                     return `
                         <tr>
-                            <td class="ps-3 text-muted fw-bold">${idx + 1}</td>
-                            <td class="fw-semibold text-dark">${escapeHtml(it.descripcion || it.nombre_producto || it.item || 'Ítem')}</td>
-                            <td class="text-center fw-bold">${cant}</td>
-                            <td class="text-end text-muted">${simbolo} ${precio.toFixed(2)}</td>
-                            <td class="text-end pe-3 fw-bold text-dark">${simbolo} ${subtotal.toFixed(2)}</td>
+                            <td class="text-center fw-bold text-secondary">${idx + 1}</td>
+                            <td class="text-center fw-bold text-dark">${cant.toLocaleString('es-PE', { maximumFractionDigits: 3 })}</td>
+                            <td class="text-center font-monospace fw-bold text-dark">${escapeHtml(codArt)}</td>
+                            <td class="fw-semibold text-dark">${escapeHtml(descArt)}</td>
+                            <td class="text-end fw-semibold text-dark">${sym}${cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td class="text-end fw-bold text-dark">${sym}${imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         </tr>
                     `;
                 }).join('');
             }
+        }
+
+        const totalReal = (item.importe != null && parseFloat(item.importe) > 0) ? parseFloat(item.importe) : ((item.total_pen != null && parseFloat(item.total_pen) > 0) ? parseFloat(item.total_pen) : totalCalc);
+        const totGenEl = document.getElementById('pr-det-oc-total-general');
+        if (totGenEl) {
+            totGenEl.textContent = sym + totalReal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        const totLetEl = document.getElementById('pr-det-oc-total-letras');
+        if (totLetEl) {
+            const monedaTxt = esUSD ? 'DÓLARES AMERICANOS' : 'SOLES';
+            totLetEl.textContent = `${numeroALetras(totalReal)} ${monedaTxt}`;
         }
 
         const modalEl = document.getElementById('modalDetalleOCPagoReq');
@@ -630,6 +754,67 @@
             modal.show();
         }
     };
+
+    /**
+     * Imprimir / Ver PDF desde el modal de detalle
+     */
+    window.imprimirPDFDesdeDetalleOC = function () {
+        if (!window._ocSeleccionadaDetalle) return;
+        if (typeof window.generarComprobanteEntrada === 'function') {
+            window.generarComprobanteEntrada(window._ocSeleccionadaDetalle);
+        } else {
+            // Intentar invocar comprobante o abrir ventana
+            window.print();
+        }
+    };
+
+    /**
+     * Convertidor de número a letras con fallback
+     */
+    function numeroALetras(num) {
+        if (typeof window.numeroALetras === 'function') {
+            return window.numeroALetras(num);
+        }
+        const unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+        const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+        const diezY = ['', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
+        const centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+
+        num = parseFloat(num) || 0;
+        const entero = Math.floor(num);
+        const centavos = Math.round((num - entero) * 100);
+        const centavosStr = String(centavos).padStart(2, '0') + '/100';
+
+        if (entero === 0) return 'CERO CON ' + centavosStr;
+        if (entero === 100) return 'CIEN CON ' + centavosStr;
+
+        function seccion(n) {
+            let res = '';
+            const c = Math.floor(n / 100);
+            const d = Math.floor((n % 100) / 10);
+            const u = n % 10;
+
+            if (c > 0) res += centenas[c] + ' ';
+            if (d === 1 && u > 0) {
+                res += diezY[u] + ' ';
+            } else {
+                if (d > 0) res += decenas[d] + (u > 0 ? ' Y ' : ' ');
+                if (u > 0) res += unidades[u] + ' ';
+            }
+            return res.trim();
+        }
+
+        let letras = '';
+        const miles = Math.floor(entero / 1000);
+        const resto = entero % 1000;
+
+        if (miles === 1) letras += 'MIL ';
+        else if (miles > 1) letras += seccion(miles) + ' MIL ';
+
+        if (resto > 0) letras += seccion(resto) + ' ';
+
+        return (letras.trim() + ' CON ' + centavosStr).toUpperCase();
+    }
 
     /**
      * Exportar listado actual a Excel / CSV
@@ -652,16 +837,20 @@
                     'ESTADO': estado,
                     'MONEDA': moneda,
                     'MONTO': monto,
+                    'CONDICIÓN DE PAGO': item.condicion_pago || 'Al contado',
+                    'DÍAS CRÉDITO': item.dias_credito || 0,
                     'SOLICITANTE': item.solicitante || '',
-                    'MOTIVO': item.motivo || '',
+                    'CENTRO COSTO': item.centro_costo || '',
+                    'MOTIVO': item.motivo_entrada || item.motivo || '',
                     'ORDEN DE COMPRA': folioOC,
-                    'USUARIO CREACIÓN': item.creado_por_nombre || item.creado_por || '',
+                    'USUARIO CREACIÓN': item.creador_nombre || item.creado_por_nombre || item.creado_por || '',
                     'FECHA REGISTRO': item.fecha ? String(item.fecha).substring(0, 10) : '',
-                    'USUARIO APROBACIÓN': item.aprobado_por_nombre || item.aprobado_por || '',
+                    'USUARIO APROBACIÓN': item.aprobador_nombre || item.aprobado_por_nombre || item.aprobado_por || '',
                     'FECHA APROBACIÓN': item.fecha_aprobacion ? formatearFechaHora(item.fecha_aprobacion) : '',
                     'PROVEEDOR': item.proveedor_nombre || item.proveedor || '',
                     'RUC': item.proveedor_ruc || '',
-                    'CUENTA DESTINO': item.cuenta_bancaria || '',
+                    'CUENTA DESTINO': item.cuenta_bancaria || item.cuenta_bancaria_proveedor || '',
+                    'CUENTA ORIGEN': item.cuenta_bancaria_empresa || '',
                     'N° OPERACIÓN / CONSTANCIA': item.numero_operacion || ''
                 };
             });
