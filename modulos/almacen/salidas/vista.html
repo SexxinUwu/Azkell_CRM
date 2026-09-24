@@ -1,261 +1,324 @@
 <!-- Módulo Almacén / Salidas — Azkell Fleet v2 (Bento UI & Apple Native Cards) -->
 <style>
-/* ── Reset root-dinamico padding for full-bleed ─────────── */
-#root-dinamico, .main-area {
-    padding: 0 !important;
-}
+    /* ── Reset root-dinamico padding for full-bleed ─────────── */
+    #root-dinamico,
+    .main-area {
+        padding: 0 !important;
+    }
 
-/* ── UI Tokens & Layout (Idéntico a Reporte de Fallas) ──── */
-.sal-app-container {
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 1rem 1.25rem 2.5rem 1.25rem !important;
-    background: transparent;
-    min-height: 100%;
-}
-
-/* KPIs Cards */
-.sal-app-container .ck-kpi-card {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 18px !important;
-    padding: 1rem 1.25rem !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-}
-.sal-app-container .ck-kpi-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08) !important;
-}
-.sal-app-container .ck-kpi-icon {
-    width: 46px !important;
-    height: 46px !important;
-    border-radius: 14px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 1.3rem !important;
-    flex-shrink: 0 !important;
-}
-
-/* Control Bar (Search + Apple Segmented Pill) */
-.sal-app-container .ck-apple-search {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 8px 14px 8px 38px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    color: #1e293b;
-    width: 100%;
-}
-.sal-app-container .ck-apple-search:focus {
-    background: #ffffff;
-    border-color: #0284c7;
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-    outline: none;
-}
-.sal-app-container .ck-apple-segmented {
-    background: #e2e8f0 !important;
-    padding: 4px !important;
-    border-radius: 14px !important;
-    display: inline-flex !important;
-    gap: 3px !important;
-    border: 1px solid #cbd5e1 !important;
-}
-.sal-app-container .ck-segment-item {
-    border: none;
-    background: transparent;
-    padding: 6px 16px;
-    border-radius: 10px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #64748b;
-    transition: all 0.18s ease;
-    cursor: pointer;
-    user-select: none;
-    white-space: nowrap;
-}
-.sal-app-container .ck-segment-item:hover { color: #0f172a; }
-.sal-app-container .ck-segment-item.active {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    font-weight: 700 !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
-}
-
-/* Universal Modern Card (Mobile) */
-.sal-mobile-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 18px;
-    padding: 16px;
-    margin-bottom: 12px;
-    box-shadow: 0 3px 14px rgba(15, 23, 42, 0.03);
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.sal-mobile-card:active {
-    transform: scale(0.99);
-}
-
-/* Desktop Table Styling */
-.sal-table-wrap {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 18px;
-    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
-    min-height: 320px;
-    overflow-x: auto;
-}
-#moduloSalidas table { width: 100%; min-width: 1100px; border-collapse: collapse; font-size: 0.85rem; }
-#moduloSalidas thead th {
-    background: #f8fafc; color: #475569;
-    font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
-    letter-spacing: 0.05em; padding: 10px 12px;
-    border-bottom: 2px solid #e2e8f0;
-    position: sticky; top: 0; z-index: 2; white-space: nowrap;
-}
-#moduloSalidas tbody tr { border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background .12s; }
-#moduloSalidas tbody tr:hover { background: #f8fafc; }
-#moduloSalidas tbody td { padding: 8px 12px; color: #1e293b; white-space: nowrap; vertical-align: middle; }
-
-/* ── Mobile View Adaptations (@media max-width: 768px) ─────────────── */
-@media (max-width: 768px) {
+    /* ── UI Tokens & Layout (Idéntico a Reporte de Fallas) ──── */
     .sal-app-container {
-        padding: 0.5rem 0.5rem 120px 0.5rem !important;
-        background: transparent !important;
-    }
-    .sal-app-container .ck-kpi-card {
-        padding: 0.75rem 0.85rem !important;
-        border-radius: 14px !important;
-    }
-    .sal-app-container .ck-kpi-card h2 {
-        font-size: 1.35rem !important;
-    }
-    .sal-app-container .ck-kpi-icon {
-        width: 36px !important;
-        height: 36px !important;
-        font-size: 1rem !important;
-        border-radius: 10px !important;
-    }
-    .sal-app-container .ck-apple-segmented {
         width: 100% !important;
+        max-width: 100% !important;
+        padding: 1rem 1.25rem 2.5rem 1.25rem !important;
+        background: transparent;
+        min-height: 100%;
+    }
+
+    /* KPIs Cards */
+    .sal-app-container .ck-kpi-card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 18px !important;
+        padding: 1rem 1.25rem !important;
         display: flex !important;
+        align-items: center !important;
         justify-content: space-between !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
     }
+
+    .sal-app-container .ck-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    .sal-app-container .ck-kpi-icon {
+        width: 46px !important;
+        height: 46px !important;
+        border-radius: 14px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.3rem !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Control Bar (Search + Apple Segmented Pill) */
+    .sal-app-container .ck-apple-search {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 8px 14px 8px 38px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        color: #1e293b;
+        width: 100%;
+    }
+
+    .sal-app-container .ck-apple-search:focus {
+        background: #ffffff;
+        border-color: #0284c7;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+        outline: none;
+    }
+
+    .sal-app-container .ck-apple-segmented {
+        background: #e2e8f0 !important;
+        padding: 4px !important;
+        border-radius: 14px !important;
+        display: inline-flex !important;
+        gap: 3px !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+
     .sal-app-container .ck-segment-item {
-        flex: 1 !important;
-        text-align: center !important;
-        padding: 6px 4px !important;
-        font-size: 0.75rem !important;
+        border: none;
+        background: transparent;
+        padding: 6px 16px;
+        border-radius: 10px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #64748b;
+        transition: all 0.18s ease;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
     }
-}
 
-/* ─── Panel Detalle Drawer (Centrado y animado de abajo hacia arriba) ─ */
-#sal-det-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.45) !important;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    z-index: 1088 !important;
-    transition: opacity .25s ease;
-}
-#sal-det-backdrop.open { display: block !important; }
+    .sal-app-container .ck-segment-item:hover {
+        color: #0f172a;
+    }
 
-#sal-panel-detalle {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 50% !important;
-    top: auto !important;
-    right: auto !important;
-    transform: translateX(-50%) translateY(100%) !important;
-    width: 100% !important;
-    max-width: 680px !important;
-    height: 90vh !important;
-    max-height: 90vh !important;
-    background: #f8fafc !important;
-    border: 1px solid #e2e8f0 !important;
-    border-bottom: none !important;
-    border-radius: 28px 28px 0 0 !important;
-    box-shadow: 0 -16px 56px rgba(0,0,0,.35) !important;
-    transition: transform .28s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    z-index: 1089 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-    visibility: hidden !important;
-    margin: 0 !important;
-}
-#sal-panel-detalle.open {
-    transform: translateX(-50%) translateY(0) !important;
-    visibility: visible !important;
-    display: flex !important;
-}
+    .sal-app-container .ck-segment-item.active {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    }
 
-@media (max-width: 768px) {
+    /* Universal Modern Card (Mobile) */
+    .sal-mobile-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 3px 14px rgba(15, 23, 42, 0.03);
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sal-mobile-card:active {
+        transform: scale(0.99);
+    }
+
+    /* Desktop Table Styling */
+    .sal-table-wrap {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
+        min-height: 320px;
+        overflow-x: auto;
+    }
+
+    #moduloSalidas table {
+        width: 100%;
+        min-width: 1100px;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+    }
+
+    #moduloSalidas thead th {
+        background: #f8fafc;
+        color: #475569;
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 10px 12px;
+        border-bottom: 2px solid #e2e8f0;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        white-space: nowrap;
+    }
+
+    #moduloSalidas tbody tr {
+        border-bottom: 1px solid #f1f5f9;
+        cursor: pointer;
+        transition: background .12s;
+    }
+
+    #moduloSalidas tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    #moduloSalidas tbody td {
+        padding: 8px 12px;
+        color: #1e293b;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    /* ── Mobile View Adaptations (@media max-width: 768px) ─────────────── */
+    @media (max-width: 768px) {
+        .sal-app-container {
+            padding: 0.5rem 0.5rem 120px 0.5rem !important;
+            background: transparent !important;
+        }
+
+        .sal-app-container .ck-kpi-card {
+            padding: 0.75rem 0.85rem !important;
+            border-radius: 14px !important;
+        }
+
+        .sal-app-container .ck-kpi-card h2 {
+            font-size: 1.35rem !important;
+        }
+
+        .sal-app-container .ck-kpi-icon {
+            width: 36px !important;
+            height: 36px !important;
+            font-size: 1rem !important;
+            border-radius: 10px !important;
+        }
+
+        .sal-app-container .ck-apple-segmented {
+            width: 100% !important;
+            display: flex !important;
+            justify-content: space-between !important;
+        }
+
+        .sal-app-container .ck-segment-item {
+            flex: 1 !important;
+            text-align: center !important;
+            padding: 6px 4px !important;
+            font-size: 0.75rem !important;
+        }
+    }
+
+    /* ─── Panel Detalle Drawer (Centrado y animado de abajo hacia arriba) ─ */
+    #sal-det-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45) !important;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 1088 !important;
+        transition: opacity .25s ease;
+    }
+
+    #sal-det-backdrop.open {
+        display: block !important;
+    }
+
     #sal-panel-detalle {
-        max-width: 100vw !important;
-        width: 100vw !important;
-        left: 0 !important;
-        transform: translateY(100%) !important;
-        border-radius: 24px 24px 0 0 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 50% !important;
+        top: auto !important;
+        right: auto !important;
+        transform: translateX(-50%) translateY(100%) !important;
+        width: 100% !important;
+        max-width: 680px !important;
+        height: 90vh !important;
+        max-height: 90vh !important;
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-bottom: none !important;
+        border-radius: 28px 28px 0 0 !important;
+        box-shadow: 0 -16px 56px rgba(0, 0, 0, .35) !important;
+        transition: transform .28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        z-index: 1089 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        visibility: hidden !important;
+        margin: 0 !important;
     }
-    #sal-panel-detalle.open {
-        transform: translateY(0) !important;
-    }
-}
 
-/* Drawer Nueva Salida */
-#salNuevoBackdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45) !important; z-index:1089 !important; backdrop-filter: blur(2px); }
-#salNuevoBackdrop.open { display:block !important; }
-.sal-drawer {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 50% !important;
-    top: auto !important;
-    right: auto !important;
-    transform: translateX(-50%) translateY(100%) !important;
-    width: 100% !important;
-    max-width: 740px !important;
-    height: 94vh !important;
-    max-height: 94vh !important;
-    background: #f8fafc !important;
-    border: 1px solid #e2e8f0 !important;
-    border-bottom: none !important;
-    border-radius: 28px 28px 0 0 !important;
-    box-shadow: 0 -16px 56px rgba(0,0,0,.35) !important;
-    transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    z-index: 1090 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-    visibility: hidden !important;
-    margin: 0 !important;
-}
-.sal-drawer.open {
-    transform: translateX(-50%) translateY(0) !important;
-    visibility: visible !important;
-    display: flex !important;
-}
-@media (max-width: 768px) {
+    #sal-panel-detalle.open {
+        transform: translateX(-50%) translateY(0) !important;
+        visibility: visible !important;
+        display: flex !important;
+    }
+
+    @media (max-width: 768px) {
+        #sal-panel-detalle {
+            max-width: 100vw !important;
+            width: 100vw !important;
+            left: 0 !important;
+            transform: translateY(100%) !important;
+            border-radius: 24px 24px 0 0 !important;
+        }
+
+        #sal-panel-detalle.open {
+            transform: translateY(0) !important;
+        }
+    }
+
+    /* Drawer Nueva Salida */
+    #salNuevoBackdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .45) !important;
+        z-index: 1089 !important;
+        backdrop-filter: blur(2px);
+    }
+
+    #salNuevoBackdrop.open {
+        display: block !important;
+    }
+
     .sal-drawer {
-        max-width: 100vw !important;
-        width: 100vw !important;
-        left: 0 !important;
-        transform: translateY(100%) !important;
-        border-radius: 24px 24px 0 0 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 50% !important;
+        top: auto !important;
+        right: auto !important;
+        transform: translateX(-50%) translateY(100%) !important;
+        width: 100% !important;
+        max-width: 740px !important;
+        height: 94vh !important;
+        max-height: 94vh !important;
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-bottom: none !important;
+        border-radius: 28px 28px 0 0 !important;
+        box-shadow: 0 -16px 56px rgba(0, 0, 0, .35) !important;
+        transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        z-index: 1090 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        visibility: hidden !important;
+        margin: 0 !important;
     }
+
     .sal-drawer.open {
-        transform: translateY(0) !important;
+        transform: translateX(-50%) translateY(0) !important;
+        visibility: visible !important;
+        display: flex !important;
     }
-}
+
+    @media (max-width: 768px) {
+        .sal-drawer {
+            max-width: 100vw !important;
+            width: 100vw !important;
+            left: 0 !important;
+            transform: translateY(100%) !important;
+            border-radius: 24px 24px 0 0 !important;
+        }
+
+        .sal-drawer.open {
+            transform: translateY(0) !important;
+        }
+    }
 </style>
 
 <!-- Backdrop Modal -->
@@ -268,25 +331,34 @@
     <!-- ── 1. ENCABEZADO PRINCIPAL (RESPONSIVE) ───────────────────────── -->
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <div class="d-flex align-items-center gap-2 gap-md-3">
-            <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+            <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center"
+                style="width: 42px; height: 42px;">
                 <i class="bi bi-box-arrow-up-right text-primary fs-5"></i>
             </div>
             <div>
                 <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.3rem; letter-spacing: -0.3px;">
                     Órdenes de Salida
                 </h4>
-                <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">Despacho de artículos, entrega de repuestos a OTs y control de egresos</small>
+                <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">Despacho de artículos,
+                    entrega de repuestos a OTs y control de egresos</small>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.salCargar()" title="Actualizar">
+            <button
+                class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1"
+                onclick="window.salCargar()" title="Actualizar">
                 <i class="bi bi-arrow-clockwise fs-6"></i>
             </button>
-            <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.salExportar()" title="Exportar a Excel">
-                <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
+            <button
+                class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1"
+                onclick="window.salExportar()" title="Exportar a Excel">
+                <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span
+                    class="d-none d-sm-inline">Exportar Excel</span>
             </button>
             <!-- Botón Nueva Solicitud (Desktop) -->
-            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-flex align-items-center gap-2 rounded-3" onclick="window.salAbrirNuevo()" style="background: #0284c7; border-color: #0284c7;">
+            <button
+                class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-flex align-items-center gap-2 rounded-3"
+                onclick="window.salAbrirNuevo()" style="background: #0284c7; border-color: #0284c7;">
                 <i class="bi bi-plus-lg fs-6"></i> <span>Nueva Solicitud</span>
             </button>
         </div>
@@ -297,7 +369,8 @@
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" id="sal-kpi-total-card" onclick="window.salCambiarTab('desp')">
                 <div>
-                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Total Despachos</span>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1"
+                        style="font-size:0.7rem; letter-spacing: 0.5px;">Total Despachos</span>
                     <h2 id="kpi-sal-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
                 </div>
                 <div class="ck-kpi-icon" style="background: #eff6ff; color: #2563eb;">
@@ -308,7 +381,8 @@
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" id="sal-kpi-pendientes-card" onclick="window.salCambiarTab('pend')">
                 <div>
-                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Pendientes</span>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1"
+                        style="font-size:0.7rem; letter-spacing: 0.5px;">Pendientes</span>
                     <h2 id="kpi-sal-pendientes" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem;">0</h2>
                 </div>
                 <div class="ck-kpi-icon" style="background: #fefce8; color: #ca8a04;">
@@ -319,7 +393,8 @@
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" id="sal-kpi-despachadas-card" onclick="window.salCambiarTab('desp')">
                 <div>
-                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Despachadas</span>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1"
+                        style="font-size:0.7rem; letter-spacing: 0.5px;">Despachadas</span>
                     <h2 id="kpi-sal-despachadas" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">0</h2>
                 </div>
                 <div class="ck-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
@@ -330,7 +405,8 @@
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card" id="sal-kpi-ots-card" onclick="window.salCambiarTab('desp')">
                 <div>
-                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">OTs Atendidas</span>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1"
+                        style="font-size:0.7rem; letter-spacing: 0.5px;">OTs Atendidas</span>
                     <h2 id="kpi-sal-ots" class="fw-bolder m-0 text-primary" style="font-size: 1.6rem;">0</h2>
                 </div>
                 <div class="ck-kpi-icon" style="background: #f5f3ff; color: #7c3aed;">
@@ -343,17 +419,21 @@
     <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS SEGMENTED (FULL-BLEED) ──────── -->
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <div class="position-relative flex-grow-1" style="max-width: 380px;">
-            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
-            <input type="text" id="sal-search" class="ck-apple-search" placeholder="Buscar folio, placa, responsable, artículo..." oninput="window.salFiltrar()">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
+                style="font-size:0.85rem;"></i>
+            <input type="text" id="sal-search" class="ck-apple-search"
+                placeholder="Buscar folio, placa, responsable, artículo..." oninput="window.salFiltrar()">
         </div>
         <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-sal-tabs">
-            <button type="button" class="ck-segment-item active" id="sal-tab-pend" onclick="window.salCambiarTab('pend');">
+            <button type="button" class="ck-segment-item active" id="sal-tab-pend"
+                onclick="window.salCambiarTab('pend');">
                 Pendientes <span class="badge bg-warning text-dark ms-1 rounded-pill" id="sal-badge-pend">0</span>
             </button>
             <button type="button" class="ck-segment-item" id="sal-tab-desp" onclick="window.salCambiarTab('desp');">
                 Despachadas <span class="badge bg-success ms-1 rounded-pill" id="sal-badge-desp">0</span>
             </button>
-            <button type="button" class="ck-segment-item" id="sal-tab-anulado" onclick="window.salCambiarTab('anulado');">
+            <button type="button" class="ck-segment-item" id="sal-tab-anulado"
+                onclick="window.salCambiarTab('anulado');">
                 Anuladas <span class="badge bg-secondary ms-1 rounded-pill" id="sal-badge-anulado">0</span>
             </button>
         </div>
@@ -390,7 +470,8 @@
                 <tbody id="sal-tbody">
                     <tr>
                         <td colspan="13" class="text-center py-5 text-muted">
-                            <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando solicitudes...
+                            <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando
+                            solicitudes...
                         </td>
                     </tr>
                 </tbody>
@@ -401,10 +482,11 @@
 
     <!-- ── 6. BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
     <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1045;">
-        <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
-                onclick="window.salAbrirNuevo()"
-                style="width: 58px; height: 58px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.6rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;"
-                title="Nueva Solicitud de Salida">
+        <button type="button"
+            class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+            onclick="window.salAbrirNuevo()"
+            style="width: 58px; height: 58px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.6rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;"
+            title="Nueva Solicitud de Salida">
             <i class="bi bi-plus-lg text-white"></i>
         </button>
     </div>
@@ -413,46 +495,57 @@
 
 <!-- ── PANEL DETALLE DRAWER (MODERNO BENTO CENTRADO / BOTTOM-SHEET) ── -->
 <div class="sal-detail-drawer" id="sal-panel-detalle">
-    <div class="d-flex align-items-center justify-content-between px-3 py-2.5 bg-white border-bottom flex-shrink-0" style="min-height: 56px;">
+    <div class="d-flex align-items-center justify-content-between px-3 py-2.5 bg-white border-bottom flex-shrink-0"
+        style="min-height: 56px;">
         <div class="d-flex align-items-center gap-2.5">
-            <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 38px; height: 38px; background: #eff6ff; color: #0284c7;">
+            <div class="d-flex align-items-center justify-content-center rounded-circle"
+                style="width: 38px; height: 38px; background: #eff6ff; color: #0284c7;">
                 <i class="bi bi-box-arrow-up-right fs-6"></i>
             </div>
             <div>
-                <div class="fw-bold text-dark lh-1" style="font-size: 0.98rem;" id="sal-detalle-titulo">Detalle de Solicitud</div>
-                <small class="text-muted" style="font-size: 0.72rem;">Gestión de despacho y control de existencias</small>
+                <div class="fw-bold text-dark lh-1" style="font-size: 0.98rem;" id="sal-detalle-titulo">Detalle de
+                    Solicitud</div>
+                <small class="text-muted" style="font-size: 0.72rem;">Gestión de despacho y control de
+                    existencias</small>
             </div>
         </div>
-        <button type="button" class="btn btn-sm btn-light border-0 rounded-circle p-1 d-flex align-items-center justify-content-center" onclick="window.salCerrarDetalle()" style="width:34px; height:34px; color:#64748b; background:#f1f5f9;">
+        <button type="button"
+            class="btn btn-sm btn-light border-0 rounded-circle p-1 d-flex align-items-center justify-content-center"
+            onclick="window.salCerrarDetalle()" style="width:34px; height:34px; color:#64748b; background:#f1f5f9;">
             <i class="bi bi-x-lg fs-6"></i>
         </button>
     </div>
 
     <!-- Scrollable Body (Segmentado Bento) -->
-    <div class="sal-detail-scroll p-3 flex-grow-1 overflow-auto custom-scrollbar" id="sal-detalle-scroll" style="background: #f8fafc;"></div>
+    <div class="sal-detail-scroll p-3 flex-grow-1 overflow-auto custom-scrollbar" id="sal-detalle-scroll"
+        style="background: #f8fafc;"></div>
 
     <!-- Footer Fijo de Acciones (Estilo Pills Nativos) -->
-    <div class="sal-detail-footer bg-white border-top p-3 flex-shrink-0" id="sal-detalle-footer" style="display:none; box-shadow: 0 -4px 16px rgba(0,0,0,0.04);"></div>
+    <div class="sal-detail-footer bg-white border-top p-3 flex-shrink-0" id="sal-detalle-footer"
+        style="display:none; box-shadow: 0 -4px 16px rgba(0,0,0,0.04);"></div>
 </div>
 
 <!-- DRAWER: Nueva Solicitud (MODERNO BENTO) -->
 <div class="sal-drawer" id="sal-drawer-nuevo">
-    <div class="sal-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
+    <div class="sal-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white"
+        style="height: auto; min-height: 54px;">
         <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
-                    onclick="window.salCerrarNuevo()" 
-                    title="Volver" 
-                    style="width: 34px; height: 34px; color: #64748b;">
+            <button
+                class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs"
+                onclick="window.salCerrarNuevo()" title="Volver" style="width: 34px; height: 34px; color: #64748b;">
                 <i class="bi bi-arrow-left"></i>
             </button>
             <div>
-                <span class="sal-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+                <span class="sal-drawer-title fw-bold text-dark d-flex align-items-center gap-2"
+                    style="font-size: 1.05rem;">
                     <i class="bi bi-box-seam-fill text-success"></i> Nueva Solicitud de Salida
                 </span>
-                <small class="text-muted d-block" style="font-size: 0.72rem;">Despacho de piezas y repuestos del almacén</small>
+                <small class="text-muted d-block" style="font-size: 0.72rem;">Despacho de piezas y repuestos del
+                    almacén</small>
             </div>
         </div>
-        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.salCerrarNuevo()" style="color:#64748b;">
+        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.salCerrarNuevo()"
+            style="color:#64748b;">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
@@ -462,70 +555,88 @@
         <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
             <div class="row g-2 mb-1">
                 <div class="col-6" id="sal-col-ot">
-                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">N° OT</label>
+                    <label class="form-label fw-bold"
+                        style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">N°
+                        OT</label>
                     <div class="position-relative">
                         <input type="text" id="sal-f-ot-txt" class="form-control form-control-sm bg-white fw-bold"
-                               placeholder="BUSCAR N° OT O PLACA…" autocomplete="off"
-                               style="border-radius: 8px; min-height: 40px; text-transform: uppercase; font-size: 0.82rem;"
-                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sal-f-ot')"
-                               onfocus="window._cbFiltrar('sal-f-ot')"
-                               onblur="window._cbHide('sal-f-ot')">
+                            placeholder="BUSCAR N° OT O PLACA…" autocomplete="off"
+                            style="border-radius: 8px; min-height: 40px; text-transform: uppercase; font-size: 0.82rem;"
+                            oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sal-f-ot')"
+                            onfocus="window._cbFiltrar('sal-f-ot')" onblur="window._cbHide('sal-f-ot')">
                         <input type="hidden" id="sal-f-ot" name="sal-f-ot">
-                        <div id="sal-f-ot-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
+                        <div id="sal-f-ot-dd" class="cb-dropdown shadow-sm"
+                            style="border-radius: 10px; font-size: 0.82rem;"></div>
                     </div>
                 </div>
                 <div class="col-6">
-                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Fecha de Salida (*)</label>
+                    <label class="form-label fw-bold"
+                        style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Fecha
+                        de Salida (*)</label>
                     <input type="date" class="form-control form-control-sm bg-white" id="sal-f-fecha"
-                           style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
+                        style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
                 </div>
                 <div class="col-6">
-                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Orden (*)</label>
-                    <select class="form-select form-select-sm fw-bold bg-white" id="sal-f-tipo-orden" onchange="window.salToggleTipoOrden()"
-                            style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
+                    <label class="form-label fw-bold"
+                        style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo
+                        de Orden (*)</label>
+                    <select class="form-select form-select-sm fw-bold bg-white" id="sal-f-tipo-orden"
+                        onchange="window.salToggleTipoOrden()"
+                        style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
                         <option value="Orden de Salida">Orden de Salida (Normal)</option>
                         <option value="Ajuste de Inventario (Resta)">Ajuste de Inventario (Resta)</option>
                     </select>
                 </div>
                 <div class="col-6" id="sal-col-tipo-destino">
-                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo Destino</label>
-                    <select class="form-select form-select-sm fw-bold bg-white" id="sal-f-tipo" onchange="window.salToggleTipo()"
-                            style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
+                    <label class="form-label fw-bold"
+                        style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo
+                        Destino</label>
+                    <select class="form-select form-select-sm fw-bold bg-white" id="sal-f-tipo"
+                        onchange="window.salToggleTipo()"
+                        style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
                         <option value="Vehiculo">Vehículo / Unidad</option>
                         <option value="Personal">Personal / Taller</option>
                     </select>
                 </div>
                 <div class="col-6" id="sal-row-placa">
-                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Placa Destino</label>
+                    <label class="form-label fw-bold"
+                        style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Placa
+                        Destino</label>
                     <div class="position-relative">
-                        <input type="text" id="sal-f-placa-txt" class="form-control form-control-sm text-uppercase fw-bold bg-white"
-                               placeholder="BUSCAR PLACA…" autocomplete="off"
-                               style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;"
-                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sal-f-placa')"
-                               onfocus="window._cbFiltrar('sal-f-placa')"
-                               onblur="window._cbHide('sal-f-placa')">
+                        <input type="text" id="sal-f-placa-txt"
+                            class="form-control form-control-sm text-uppercase fw-bold bg-white"
+                            placeholder="BUSCAR PLACA…" autocomplete="off"
+                            style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;"
+                            oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sal-f-placa')"
+                            onfocus="window._cbFiltrar('sal-f-placa')" onblur="window._cbHide('sal-f-placa')">
                         <input type="hidden" id="sal-f-placa" name="sal-f-placa">
-                        <div id="sal-f-placa-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
+                        <div id="sal-f-placa-dd" class="cb-dropdown shadow-sm"
+                            style="border-radius: 10px; font-size: 0.82rem;"></div>
                     </div>
                 </div>
                 <div class="col-6">
-                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Solicitante / Responsable</label>
+                    <label class="form-label fw-bold"
+                        style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Solicitante
+                        / Responsable</label>
                     <div class="position-relative">
                         <input type="text" id="sal-f-responsable-txt" class="form-control form-control-sm bg-white"
-                               placeholder="NOMBRE DEL SOLICITANTE..."
-                               autocomplete="off" style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;"
-                               oninput="window._cbFiltrar('sal-f-responsable')"
-                               onfocus="window._cbFiltrar('sal-f-responsable')"
-                               onblur="window._cbHide('sal-f-responsable')">
+                            placeholder="NOMBRE DEL SOLICITANTE..." autocomplete="off"
+                            style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;"
+                            oninput="window._cbFiltrar('sal-f-responsable')"
+                            onfocus="window._cbFiltrar('sal-f-responsable')"
+                            onblur="window._cbHide('sal-f-responsable')">
                         <input type="hidden" id="sal-f-responsable">
-                        <div id="sal-f-responsable-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
+                        <div id="sal-f-responsable-dd" class="cb-dropdown shadow-sm"
+                            style="border-radius: 10px; font-size: 0.82rem;"></div>
                     </div>
                 </div>
                 <div class="col-12">
-                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Observaciones / Motivo</label>
+                    <label class="form-label fw-bold"
+                        style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Observaciones
+                        / Motivo</label>
                     <input type="text" class="form-control form-control-sm bg-white" id="sal-f-obs"
-                           placeholder="Motivo, referencia, notas…"
-                           style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
+                        placeholder="Motivo, referencia, notas…"
+                        style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
                 </div>
             </div>
         </div>
@@ -533,14 +644,19 @@
         <!-- Card 2: Artículos y Materiales -->
         <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
             <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
-                <span class="fw-bold d-flex align-items-center gap-1" style="font-size: 0.76rem; color: #475569; text-transform: uppercase;">
+                <span class="fw-bold d-flex align-items-center gap-1"
+                    style="font-size: 0.76rem; color: #475569; text-transform: uppercase;">
                     <i class="bi bi-list-check text-success"></i> Lista de Artículos / Repuestos:
                 </span>
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1" style="font-size: 0.72rem;" onclick="window._salAbrirModalKits()">
+                    <button type="button"
+                        class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1"
+                        style="font-size: 0.72rem;" onclick="window._salAbrirModalKits()">
                         <i class="bi bi-box-seam"></i> Agregar Kit
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1" style="font-size: 0.72rem;" onclick="window._salAgregarItem()">
+                    <button type="button"
+                        class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1"
+                        style="font-size: 0.72rem;" onclick="window._salAgregarItem()">
                         <i class="bi bi-plus-lg"></i> Agregar Ítem
                     </button>
                 </div>
@@ -549,18 +665,29 @@
                 <table class="table table-sm align-middle mb-0" style="font-size: 0.8rem; min-width: 480px;">
                     <thead style="background: #f8fafc;">
                         <tr>
-                            <th style="min-width:200px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Artículo</th>
-                            <th style="width:75px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Cant.</th>
-                            <th style="width:105px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">P. Unit</th>
-                            <th style="width:100px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Importe</th>
+                            <th
+                                style="min-width:200px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">
+                                Artículo</th>
+                            <th
+                                style="width:75px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">
+                                Cant.</th>
+                            <th
+                                style="width:105px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">
+                                P. Unit</th>
+                            <th
+                                style="width:100px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">
+                                Importe</th>
                             <th style="width:38px;"></th>
                         </tr>
                     </thead>
                     <tbody id="sal-items-tbody"></tbody>
                     <tfoot style="background: #f8fafc;">
                         <tr>
-                            <td colspan="3" style="text-align:right; font-weight:700; padding:8px 10px; font-size:.82rem; color:#64748b;">Total Solicitud:</td>
-                            <td style="font-weight:800; color:#16a34a; font-size:.9rem; padding:8px 10px;" id="sal-items-total">S/. 0.00</td>
+                            <td colspan="3"
+                                style="text-align:right; font-weight:700; padding:8px 10px; font-size:.82rem; color:#64748b;">
+                                Total Solicitud:</td>
+                            <td style="font-weight:800; color:#16a34a; font-size:.9rem; padding:8px 10px;"
+                                id="sal-items-total">S/. 0.00</td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -571,10 +698,12 @@
     </div>
 
     <div class="sal-drawer-footer bg-white border-top px-3 py-2 d-flex justify-content-end gap-2">
-        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" onclick="window.salCerrarNuevo()">
+        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2"
+            onclick="window.salCerrarNuevo()">
             Cancelar
         </button>
-        <button type="button" class="btn btn-success fw-bold rounded-3 px-4 py-2 shadow-2xs" onclick="window.salGuardarNuevo()">
+        <button type="button" class="btn btn-success fw-bold rounded-3 px-4 py-2 shadow-2xs"
+            onclick="window.salGuardarNuevo()">
             <i class="bi bi-check-lg me-1"></i> Guardar Solicitud
         </button>
     </div>
@@ -582,22 +711,26 @@
 
 <!-- ═══════════════ SUB-DRAWER: Seleccionar Kit MP (Almacén Salidas) ═══════════════ -->
 <div class="sal-drawer" id="sal-drawer-kit" style="max-width: 740px; width: 100%; z-index: 1150 !important;">
-    <div class="sal-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
+    <div class="sal-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white"
+        style="height: auto; min-height: 54px;">
         <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
-                    onclick="window.salCerrarSubDrawer('sal-drawer-kit')" 
-                    title="Volver" 
-                    style="width: 34px; height: 34px; color: #64748b;">
+            <button
+                class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs"
+                onclick="window.salCerrarSubDrawer('sal-drawer-kit')" title="Volver"
+                style="width: 34px; height: 34px; color: #64748b;">
                 <i class="bi bi-arrow-left"></i>
             </button>
             <div>
-                <span class="sal-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+                <span class="sal-drawer-title fw-bold text-dark d-flex align-items-center gap-2"
+                    style="font-size: 1.05rem;">
                     <i class="bi bi-box-seam-fill text-primary"></i> Seleccionar Kit de Mantenimiento
                 </span>
-                <small class="text-muted d-block" style="font-size: 0.72rem;">Carga repuestos preconfigurados según la unidad</small>
+                <small class="text-muted d-block" style="font-size: 0.72rem;">Carga repuestos preconfigurados según la
+                    unidad</small>
             </div>
         </div>
-        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.salCerrarSubDrawer('sal-drawer-kit')" style="color:#64748b;">
+        <button class="btn btn-sm btn-light border-0 rounded-circle p-1"
+            onclick="window.salCerrarSubDrawer('sal-drawer-kit')" style="color:#64748b;">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
@@ -621,36 +754,53 @@
         </div>
 
         <!-- Card 2: Selector de Kit -->
-        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;" id="sal-kit-selector-wrap">
-            <label class="form-label fw-bold text-dark" style="font-size: 0.74rem; text-transform: uppercase; margin-bottom: 6px;">
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;"
+            id="sal-kit-selector-wrap">
+            <label class="form-label fw-bold text-dark"
+                style="font-size: 0.74rem; text-transform: uppercase; margin-bottom: 6px;">
                 Selecciona el Kit / Tipo de Servicio (*):
             </label>
-            <select class="form-select fw-bold bg-white" id="sal-kit-select-tipo" onchange="window._salOnKitSelected(this.value)" style="border-radius: 8px; min-height: 42px; font-size: 0.85rem; border: 1px solid #cbd5e1;">
+            <select class="form-select fw-bold bg-white" id="sal-kit-select-tipo"
+                onchange="window._salOnKitSelected(this.value)"
+                style="border-radius: 8px; min-height: 42px; font-size: 0.85rem; border: 1px solid #cbd5e1;">
                 <option value="">— Seleccionar Kit —</option>
             </select>
         </div>
 
         <!-- Alerta sin kits -->
-        <div id="sal-kit-no-kits" class="alert alert-warning border-0 rounded-4 d-none mb-3 shadow-2xs" style="font-size: 0.82rem;">
+        <div id="sal-kit-no-kits" class="alert alert-warning border-0 rounded-4 d-none mb-3 shadow-2xs"
+            style="font-size: 0.82rem;">
             <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            No se encontraron kits configurados para esta marca y modelo. Puedes configurarlos en el módulo <strong>Kits de Mantenimiento</strong>.
+            No se encontraron kits configurados para esta marca y modelo. Puedes configurarlos en el módulo <strong>Kits
+                de Mantenimiento</strong>.
         </div>
 
         <!-- Previsualización de Repuestos -->
-        <div id="sal-kit-preview-wrap" class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs d-none" style="border: 1px solid #e2e8f0 !important;">
+        <div id="sal-kit-preview-wrap" class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs d-none"
+            style="border: 1px solid #e2e8f0 !important;">
             <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
-                <span class="fw-bold text-dark d-flex align-items-center gap-1" style="font-size: 0.76rem; text-transform: uppercase;">
-                    <i class="bi bi-list-check text-success"></i> Repuestos del Kit (<span id="sal-kit-items-count">0</span>):
+                <span class="fw-bold text-dark d-flex align-items-center gap-1"
+                    style="font-size: 0.76rem; text-transform: uppercase;">
+                    <i class="bi bi-list-check text-success"></i> Repuestos del Kit (<span
+                        id="sal-kit-items-count">0</span>):
                 </span>
             </div>
             <div class="table-responsive rounded-3 border bg-white">
                 <table class="table table-sm align-middle mb-0" style="font-size: 0.8rem; min-width: 380px;">
                     <thead style="background: #f8fafc;">
                         <tr>
-                            <th style="padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569;">Artículo / Repuesto</th>
-                            <th style="width:75px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">Cant.</th>
-                            <th style="width:75px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">Unidad</th>
-                            <th style="width:130px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">Stock Almacén</th>
+                            <th
+                                style="padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569;">
+                                Artículo / Repuesto</th>
+                            <th
+                                style="width:75px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">
+                                Cant.</th>
+                            <th
+                                style="width:75px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">
+                                Unidad</th>
+                            <th
+                                style="width:130px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">
+                                Stock Almacén</th>
                         </tr>
                     </thead>
                     <tbody id="sal-kit-preview-tbody"></tbody>
@@ -659,12 +809,13 @@
         </div>
     </div>
     <div class="sal-drawer-footer bg-white border-top px-3 py-2 d-flex justify-content-end gap-2">
-        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" onclick="window.salCerrarSubDrawer('sal-drawer-kit')">
+        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2"
+            onclick="window.salCerrarSubDrawer('sal-drawer-kit')">
             Cancelar
         </button>
-        <button type="button" class="btn btn-primary fw-bold rounded-3 px-4 py-2 shadow-2xs" id="sal-btn-insertar-kit" onclick="window._salInsertarKit()" disabled>
+        <button type="button" class="btn btn-primary fw-bold rounded-3 px-4 py-2 shadow-2xs" id="sal-btn-insertar-kit"
+            onclick="window._salInsertarKit()" disabled>
             <i class="bi bi-plus-circle me-1"></i> Agregar Repuestos al Formulario
         </button>
     </div>
 </div>
-
