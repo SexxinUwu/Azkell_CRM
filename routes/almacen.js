@@ -1449,6 +1449,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
         targetDb.query(`SELECT s.*,
               GROUP_CONCAT(CONCAT_WS('\x1F',
+                COALESCE(d.id, 0),
                 COALESCE(d.inventario_id,''),
                 COALESCE(i.descripcion, d.descripcion,''),
                 COALESCE(d.cantidad,0),
@@ -1475,12 +1476,13 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     const items = r.items_raw ? r.items_raw.split(SEP_ROW).map(seg => {
                         const parts = seg.split(SEP_FIELD);
                         return {
-                            inventario_id: parts[0] || null,
-                            descripcion: parts[1] || null,
-                            cantidad: parseFloat(parts[2]) || 0,
-                            costo_unitario: parseFloat(parts[3]) || 0,
-                            moneda: parts[4] || 'PEN',
-                            importe: parseFloat(parts[5]) || 0
+                            id: parseInt(parts[0], 10) || null,
+                            inventario_id: parts[1] || null,
+                            descripcion: parts[2] || null,
+                            cantidad: parseFloat(parts[3]) || 0,
+                            costo_unitario: parseFloat(parts[4]) || 0,
+                            moneda: parts[5] || 'PEN',
+                            importe: parseFloat(parts[6]) || 0
                         };
                     }).filter(it => it.descripcion || it.inventario_id) : [];
 
@@ -1561,21 +1563,65 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 });
         } else if (accion === 'despachar') {
-            const sqlStockCheck = `
-            SELECT d.descripcion, d.cantidad, i.stock_actual, i.descripcion AS inv_desc
-            FROM detalle_salidas_inv d
-            LEFT JOIN inventario i ON (i.id = d.inventario_id OR i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
-            WHERE d.salida_id = ?
-        `;
-            db.query(sqlStockCheck, [id], (errStk, rowsStk) => {
-                if (errStk) return res.status(500).json({ error: errStk.message });
+            const { item_ids } = req.body;
+            const targetDb = getDb(req);
 
+            const sqlDetalleConStock = `
+                SELECT d.id AS detalle_id, d.descripcion, d.cantidad, d.costo_unitario, d.moneda, d.importe, d.inventario_id,
+                       i.id AS inv_id, i.descripcion AS inv_desc,
+                       ROUND(COALESCE(i.stock_regularizado, 0) 
+                         + COALESCE(ent.total_entradas, 0) 
+                         + COALESCE(rec.total_recepciones, 0) 
+                         - COALESCE(sal.total_salidas, 0), 4) AS stock_actual
+                FROM detalle_salidas_inv d
+                LEFT JOIN inventario i ON (i.id = d.inventario_id OR i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
+                LEFT JOIN (
+                    SELECT de.inventario_id, SUM(de.cantidad) AS total_entradas 
+                    FROM detalle_entradas_inv de
+                    JOIN entradas_inv e ON e.id = de.entrada_id
+                    WHERE (e.estado IS NULL OR e.estado != 'Anulado') AND (e.tipo_orden = 'Entrada directa' OR e.tipo_orden = 'Ajuste')
+                    GROUP BY de.inventario_id
+                ) ent ON ent.inventario_id = i.id
+                LEFT JOIN (
+                    SELECT dr.inventario_id, SUM(dr.cantidad_recibida) AS total_recepciones
+                    FROM detalle_recepciones_oc dr
+                    GROUP BY dr.inventario_id
+                ) rec ON rec.inventario_id = i.id
+                LEFT JOIN (
+                    SELECT ds.inventario_id, SUM(ds.cantidad) AS total_salidas
+                    FROM detalle_salidas_inv ds
+                    JOIN salidas_inv s2 ON s2.id = ds.salida_id
+                    WHERE s2.estado = 'Despachado'
+                    GROUP BY ds.inventario_id
+                ) sal ON sal.inventario_id = i.id
+                WHERE d.salida_id = ?
+            `;
+
+            targetDb.query(sqlDetalleConStock, [id], (errStk, rowsStk) => {
+                if (errStk) return res.status(500).json({ error: errStk.message });
+                if (!rowsStk || !rowsStk.length) return res.status(404).json({ error: 'La salida no tiene artículos para despachar' });
+
+                // Filtrar según item_ids seleccionados si se proporcionan
+                let aDespachar = rowsStk;
+                let quedanPendientes = [];
+
+                if (Array.isArray(item_ids) && item_ids.length > 0) {
+                    const idSet = new Set(item_ids.map(Number));
+                    aDespachar = rowsStk.filter(r => idSet.has(Number(r.detalle_id)));
+                    quedanPendientes = rowsStk.filter(r => !idSet.has(Number(r.detalle_id)));
+
+                    if (aDespachar.length === 0) {
+                        return res.status(400).json({ error: 'Debes seleccionar al menos un repuesto para despachar.' });
+                    }
+                }
+
+                // Validar stock solo para los repuestos que se van a despachar
                 const sinStock = [];
-                (rowsStk || []).forEach(it => {
-                    const stockDisp = parseFloat(it.stock_actual != null ? it.stock_actual : 0);
+                aDespachar.forEach(it => {
+                    const stockDisp = it.stock_actual != null ? parseFloat(it.stock_actual) : 0;
                     const cantReq = parseFloat(it.cantidad || 0);
                     if (cantReq > stockDisp) {
-                        sinStock.push(`"${it.descripcion || it.inv_desc}" (Requerido: ${cantReq}, Disponible: ${stockDisp <= 0 ? 0 : stockDisp})`);
+                        sinStock.push(`"${it.descripcion || it.inv_desc || it.inventario_id}" (Requerido: ${cantReq}, Disponible: ${stockDisp <= 0 ? 0 : stockDisp})`);
                     }
                 });
 
@@ -1585,19 +1631,82 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     });
                 }
 
-                db.query("UPDATE salidas_inv SET estado='Despachado' WHERE id=?", [id], (err, result) => {
-                    if (err) return res.status(500).json({ error: err.message });
-                    if (!result.affectedRows) return res.status(404).json({ error: 'No encontrado' });
-                    // Resolver inventario_id nulos: por descripción exacta O prefijo "INV-XXX — ..."
-                    db.query(
-                        `UPDATE detalle_salidas_inv d
-                     INNER JOIN inventario i ON (i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
-                     SET d.inventario_id = i.id
-                     WHERE d.salida_id = ? AND (d.inventario_id IS NULL OR d.inventario_id = '')`,
-                        [id], () => { }
-                    );
-                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
-                });
+                // Proceder con el despacho
+                if (quedanPendientes.length > 0) {
+                    // Despacho parcial: Consultar cabecera original
+                    targetDb.query('SELECT * FROM salidas_inv WHERE id = ?', [id], (errCab, rowsCab) => {
+                        if (errCab || !rowsCab.length) return res.status(500).json({ error: 'Error al obtener cabecera de salida' });
+                        const cab = rowsCab[0];
+                        const anio = new Date(cab.fecha || Date.now()).getFullYear();
+
+                        _generarCodigoAlmacen('SAL', anio, (errCod, nuevoId) => {
+                            if (errCod) return res.status(500).json({ error: 'Error al generar folio para ítems pendientes' });
+
+                            const tc = parseFloat(cab.tipo_cambio) || 1;
+                            const totalPendientePen = quedanPendientes.reduce((acc, it) => acc + ((parseFloat(it.importe) || (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)))), 0);
+                            const totalDespachadoPen = aDespachar.reduce((acc, it) => acc + ((parseFloat(it.importe) || (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)))), 0);
+
+                            // Insertar nueva salida con estado 'Pendiente' para los ítems restantes
+                            targetDb.query(
+                                'INSERT INTO salidas_inv (id, fecha, tipo_destino, placa, responsable, responsable_id, moneda, tipo_cambio, total_pen, observaciones, creado_por, ticket_ot, estado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                                [
+                                    nuevoId, cab.fecha, cab.tipo_destino, cab.placa, cab.responsable, cab.responsable_id,
+                                    cab.moneda || 'PEN', tc, totalPendientePen,
+                                    (cab.observaciones ? cab.observaciones + ' ' : '') + `(Separado de ${id})`,
+                                    cab.creado_por, cab.ticket_ot, 'Pendiente'
+                                ],
+                                (errIns) => {
+                                    if (errIns) return res.status(500).json({ error: 'Error al registrar salida pendiente restante' });
+
+                                    // Mover los registros de detalle no despachados a la nueva salida
+                                    const idsMover = quedanPendientes.map(r => r.detalle_id);
+                                    targetDb.query('UPDATE detalle_salidas_inv SET salida_id = ? WHERE id IN (?)', [nuevoId, idsMover], (errUpdDet) => {
+                                        if (errUpdDet) console.error('Error moviendo detalles:', errUpdDet);
+
+                                        // Marcar la salida original como Despachada y actualizar su total
+                                        targetDb.query("UPDATE salidas_inv SET estado='Despachado', total_pen=? WHERE id=?", [totalDespachadoPen, id], (errFinal) => {
+                                            if (errFinal) return res.status(500).json({ error: errFinal.message });
+
+                                            // Normalizar inventario_id si faltara
+                                            targetDb.query(
+                                                `UPDATE detalle_salidas_inv d
+                                                 INNER JOIN inventario i ON (i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
+                                                 SET d.inventario_id = i.id
+                                                 WHERE d.salida_id = ? AND (d.inventario_id IS NULL OR d.inventario_id = '')`,
+                                                [id], () => { }
+                                            );
+
+                                            if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
+                                                logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); 
+                                            }
+                                            res.json({ ok: true, parcial: true, nuevo_pendiente_id: nuevoId, despachado_id: id });
+                                        });
+                                    });
+                                }
+                            );
+                        });
+                    });
+                } else {
+                    // Despacho total de todos los artículos
+                    targetDb.query("UPDATE salidas_inv SET estado='Despachado' WHERE id=?", [id], (err, result) => {
+                        if (err) return res.status(500).json({ error: err.message });
+                        if (!result.affectedRows) return res.status(404).json({ error: 'No encontrado' });
+
+                        // Normalizar inventario_id si faltara
+                        targetDb.query(
+                            `UPDATE detalle_salidas_inv d
+                             INNER JOIN inventario i ON (i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
+                             SET d.inventario_id = i.id
+                             WHERE d.salida_id = ? AND (d.inventario_id IS NULL OR d.inventario_id = '')`,
+                            [id], () => { }
+                        );
+
+                        if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
+                            logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); 
+                        }
+                        res.json({ ok: true, parcial: false });
+                    });
+                }
             });
         } else if (accion === 'editar') {
             const { fecha, tipo_destino, placa, responsable, ticket_ot, observaciones, items, moneda, tipo_cambio } = req.body;

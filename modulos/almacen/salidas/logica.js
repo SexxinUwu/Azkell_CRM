@@ -845,19 +845,21 @@ window.salDespachar = function (id) {
     var sinStockList = [];
 
     if (chks.length > 0) {
+        var checkedAny = false;
         chks.forEach(function(c) {
             if (c.checked) {
+                checkedAny = true;
                 var itId = c.getAttribute('data-item-id');
                 if (itId) selectedIds.push(parseInt(itId, 10));
                 var cant = parseFloat(c.getAttribute('data-cant') || 0);
                 var stock = parseFloat(c.getAttribute('data-stock') || 0);
                 if (stock < cant) {
-                    sinStockList.push(c.getAttribute('data-desc') + ' (Req: ' + cant + ', Disp: ' + stock + ')');
+                    sinStockList.push(c.getAttribute('data-desc') + ' (Req: ' + cant + ', Disp: ' + (stock <= 0 ? 0 : stock) + ')');
                 }
             }
         });
 
-        if (selectedIds.length === 0) {
+        if (!checkedAny) {
             if (typeof window.mostrarAlerta === 'function') {
                 window.mostrarAlerta('Debes seleccionar al menos un repuesto para despachar.', 'warning');
             }
@@ -866,7 +868,7 @@ window.salDespachar = function (id) {
 
         if (sinStockList.length > 0) {
             if (typeof window.mostrarAlerta === 'function') {
-                window.mostrarAlerta('Los siguientes repuestos seleccionados no cuentan con stock disponible en almacén:\n• ' + sinStockList.join('\n• '), 'danger');
+                window.mostrarAlerta('No se puede despachar porque los siguientes repuestos seleccionados no cuentan con stock disponible en almacén:\n• ' + sinStockList.join('\n• ') + '\n\nPor favor, desmárcalos para despachar solo los que tienen stock disponible.', 'danger');
             }
             return;
         }
@@ -879,12 +881,12 @@ window.salDespachar = function (id) {
         totalCount: (m.items || []).length
     };
 
-    var txtResumen = document.getElementById('sal-despachar-resumen-txt');
+    var txtResumen = document.getElementById('sal-despachar-modal-msg') || document.getElementById('sal-despachar-resumen-txt');
     if (txtResumen) {
-        if (m.items && m.items.length > 1 && selectedIds.length < m.items.length) {
-            txtResumen.innerHTML = '¿Despachar <strong>' + selectedIds.length + ' de ' + m.items.length + '</strong> repuestos seleccionados de la salida <strong class="text-dark">' + salEsc(id) + '</strong>?<br><span class="text-primary fw-bold">El resto de repuestos quedará como pendiente para despachar luego.</span>';
+        if (m.items && m.items.length > 1 && selectedIds.length > 0 && selectedIds.length < m.items.length) {
+            txtResumen.innerHTML = '¿Despachar <strong>' + selectedIds.length + ' de ' + m.items.length + '</strong> repuestos seleccionados de la salida <strong class="text-dark">' + salEsc(id) + '</strong>?<br><span class="text-primary fw-bold">El resto de repuestos quedará como pendiente en una nueva salida.</span>';
         } else {
-            txtResumen.innerHTML = '¿Despachar todos los repuestos de la salida <strong class="text-dark">' + salEsc(id) + '</strong>?<br>El stock del inventario será descontado inmediatamente.';
+            txtResumen.innerHTML = '¿Despachar los repuestos de la salida <strong class="text-dark">' + salEsc(id) + '</strong>?<br>El stock del inventario de almacén será descontado inmediatamente.';
         }
     }
 
