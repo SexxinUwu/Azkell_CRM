@@ -96,7 +96,7 @@
             const estado = (oc.estado || '').toUpperCase();
             const esPendiente = estado === 'APROBADO' || estado === 'AUTORIZADO';
             const esPagado = estado === 'PROCESADO' || estado === 'PAGADO';
-            const importe = parseFloat(oc.monto_total || oc.importe_total || 0) || 0;
+            const importe = parseFloat(oc.importe || oc.total_pen || oc.monto_total || oc.importe_total || 0) || 0;
             const moneda = (oc.moneda || 'SOLES').toUpperCase();
 
             if (esPendiente) {
@@ -238,7 +238,7 @@
         const monedaRaw = (item.moneda || 'SOLES').toUpperCase();
         const esUSD = monedaRaw.includes('DOL') || monedaRaw === 'USD' || monedaRaw === 'US$';
         const simboloMoneda = esUSD ? 'US$' : 'S/';
-        const importeNum = parseFloat(item.monto_total || item.importe_total || 0) || 0;
+        const importeNum = parseFloat(item.importe || item.total_pen || item.monto_total || item.importe_total || 0) || 0;
         const importeFormateado = importeNum.toLocaleString(esUSD ? 'en-US' : 'es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         // 2. Cálculo de Días Restantes / Semáforo
@@ -248,7 +248,7 @@
         let colAccion = '';
         if (esPendiente) {
             colAccion = `
-                <button type="button" class="btn btn-proceder-req shadow-sm" onclick="window.abrirModalProcederPago(${item.id})">
+                <button type="button" class="btn btn-proceder-req shadow-sm" onclick="window.abrirModalProcederPago('${escapeHtml(String(item.id))}')">
                     <i class="bi bi-play-circle-fill"></i> PROCEDER
                 </button>
             `;
@@ -268,7 +268,7 @@
         }
 
         // 4. Folio OC y link a detalle
-        const folioOC = item.codigo_oc || (item.id ? `2026-${String(item.id).padStart(8, '0')}` : '-');
+        const folioOC = item.folio || item.codigo_oc || item.id || '-';
         const motivoOC = item.motivo || `ORDEN DE COMPRA: ${folioOC}`;
 
         // 5. Cuentas bancarias formateadas
@@ -312,7 +312,7 @@
 
                 <!-- 6. Folio OC -->
                 <td>
-                    <button type="button" class="btn btn-sm p-0 text-primary fw-bold text-decoration-underline" onclick="window.verDetalleOC(${item.id})" style="font-size:0.78rem;">
+                    <button type="button" class="btn btn-sm p-0 text-primary fw-bold text-decoration-underline" onclick="window.verDetalleOC('${escapeHtml(String(item.id))}')" style="font-size:0.78rem;">
                         <i class="bi bi-file-earmark-text me-0.5"></i>${escapeHtml(folioOC)}
                     </button>
                 </td>
@@ -410,11 +410,11 @@
         }
 
         // Llenar campos del modal
-        const folioOC = item.codigo_oc || (item.id ? `2026-${String(item.id).padStart(8, '0')}` : '-');
+        const folioOC = item.folio || item.codigo_oc || item.id || '-';
         const monedaRaw = (item.moneda || 'SOLES').toUpperCase();
         const esUSD = monedaRaw.includes('DOL') || monedaRaw === 'USD' || monedaRaw === 'US$';
         const simbolo = esUSD ? 'US$' : 'S/';
-        const importeNum = parseFloat(item.monto_total || item.importe_total || 0) || 0;
+        const importeNum = parseFloat(item.importe || item.total_pen || item.monto_total || item.importe_total || 0) || 0;
         const importeFormateado = importeNum.toLocaleString(esUSD ? 'en-US' : 'es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         document.getElementById('pago_oc_id').value = item.id;
@@ -583,7 +583,7 @@
         const item = prDataCache.find(x => x.id === id || String(x.id) === String(id));
         if (!item) return;
 
-        const folioOC = item.codigo_oc || (item.id ? `2026-${String(item.id).padStart(8, '0')}` : '-');
+        const folioOC = item.folio || item.codigo_oc || (item.id ? (String(item.id).startsWith('ENT') || String(item.id).startsWith('OC') ? String(item.id) : `2026-${String(item.id).padStart(8, '0')}`) : '-');
         const lblFolio = document.getElementById('lblDetalleOCFolio');
         const lblProv = document.getElementById('lblDetalleOCProveedor');
         const tbody = document.getElementById('tbodyDetalleOCItems');
@@ -643,9 +643,9 @@
         try {
             const filasExportar = prDataCache.map((item, idx) => {
                 const estado = (item.estado || '').toUpperCase();
-                const folioOC = item.codigo_oc || (item.id ? `2026-${String(item.id).padStart(8, '0')}` : '-');
+                const folioOC = item.folio || item.codigo_oc || (item.id ? (String(item.id).startsWith('ENT') || String(item.id).startsWith('OC') ? String(item.id) : `2026-${String(item.id).padStart(8, '0')}`) : '-');
                 const moneda = (item.moneda || 'SOLES').toUpperCase().includes('DOL') ? 'USD' : 'PEN';
-                const monto = parseFloat(item.monto_total || item.importe_total || 0) || 0;
+                const monto = parseFloat(item.importe || item.total_pen || item.monto_total || item.importe_total || 0) || 0;
 
                 return {
                     'N°': idx + 1,

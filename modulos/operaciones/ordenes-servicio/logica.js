@@ -202,15 +202,15 @@
                                 ACCIÓN
                             </button>
                             <ul class="dropdown-menu shadow-lg border-0 rounded-3 p-1" style="font-size:0.8rem; z-index:1070;">
-                                <li><a class="dropdown-item fw-bold text-primary rounded-2" href="javascript:void(0)" onclick="window.osAbrirModalEditar(${item.id})"><i class="bi bi-pencil-square me-1"></i> Modificar Orden</a></li>
-                                ${estServ !== 'INICIADO' && estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-primary fw-bold rounded-2" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'INICIADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-play-fill me-1"></i> Iniciar Servicio</a></li>` : ''}
-                                ${estServ === 'INICIADO' ? `<li><a class="dropdown-item text-warning fw-bold rounded-2" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'PENDIENTE', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-arrow-counterclockwise me-1"></i> Volver a Pendiente</a></li>` : ''}
-                                ${estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-success fw-bold rounded-2" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'FINALIZADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-check2-circle me-1"></i> Finalizar Servicio</a></li>` : ''}
-                                ${estServ !== 'ANULADO' ? `<li><a class="dropdown-item text-danger rounded-2" href="javascript:void(0)" onclick="window.osCambiarEstado(${item.id}, 'ANULADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-x-circle me-1"></i> Anular Orden</a></li>` : ''}
+                                <li><a class="dropdown-item fw-bold text-primary rounded-2" href="javascript:void(0)" onclick="window.osAbrirModalEditar('${item.id}')"><i class="bi bi-pencil-square me-1"></i> Modificar Orden</a></li>
+                                ${estServ !== 'INICIADO' && estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-primary fw-bold rounded-2" href="javascript:void(0)" onclick="window.osCambiarEstado('${item.id}', 'INICIADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-play-fill me-1"></i> Iniciar Servicio</a></li>` : ''}
+                                ${estServ === 'INICIADO' ? `<li><a class="dropdown-item text-warning fw-bold rounded-2" href="javascript:void(0)" onclick="window.osCambiarEstado('${item.id}', 'PENDIENTE', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-arrow-counterclockwise me-1"></i> Volver a Pendiente</a></li>` : ''}
+                                ${estServ !== 'FINALIZADO' ? `<li><a class="dropdown-item text-success fw-bold rounded-2" href="javascript:void(0)" onclick="window.osCambiarEstado('${item.id}', 'FINALIZADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-check2-circle me-1"></i> Finalizar Servicio</a></li>` : ''}
+                                ${estServ !== 'ANULADO' ? `<li><a class="dropdown-item text-danger rounded-2" href="javascript:void(0)" onclick="window.osCambiarEstado('${item.id}', 'ANULADO', '${escapeHtml(item.codigo_orden)}')"><i class="bi bi-x-circle me-1"></i> Anular Orden</a></li>` : ''}
                             </ul>
                         </div>
                     </td>
-                    <td class="text-nowrap font-monospace fw-bold text-primary" style="cursor:pointer;" onclick="window.osAbrirModalEditar(${item.id})" title="Ver detalles">${escapeHtml(item.codigo_orden)}</td>
+                    <td class="text-nowrap font-monospace fw-bold text-primary" style="cursor:pointer;" onclick="window.osAbrirModalEditar('${item.id}')" title="Ver detalles">${escapeHtml(item.codigo_orden)}</td>
                     <td class="text-center text-nowrap">${badgeEstado}</td>
                     <td class="text-nowrap font-monospace">${fInicio}</td>
                     <td class="text-nowrap">${badgeViaje}</td>
