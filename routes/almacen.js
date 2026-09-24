@@ -1002,8 +1002,15 @@ router.get('/entradas/proximo-codigo', (req, res) => {
 });
 
 router.get('/empresa-cuentas', (req, res) => {
-    db.query('SELECT * FROM empresa_cuentas_bancarias WHERE estado = 1 ORDER BY id ASC', (err, rows) => {
-        if (err) return res.json([]); // Si no existe la tabla o está vacía, devuelve array vacío
+    const tdb = getDb(req);
+    tdb.query("SELECT * FROM tesoreria_bancos WHERE estado = 'ACTIVO' OR estado = '1' OR estado IS NULL ORDER BY banco ASC", (err, rows) => {
+        if (err || !rows || !rows.length) {
+            tdb.query('SELECT * FROM empresa_cuentas_bancarias WHERE estado = 1 ORDER BY id ASC', (err2, rows2) => {
+                if (err2) return res.json(rows || []);
+                res.json((rows && rows.length) ? rows : (rows2 || []));
+            });
+            return;
+        }
         res.json(rows || []);
     });
 });
