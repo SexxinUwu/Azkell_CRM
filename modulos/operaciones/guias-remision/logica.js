@@ -2068,6 +2068,246 @@
         }
     };
 
+    // ══════════════════════════════════════════════════════════
+    // 🌐 CONSULTAR GRE RECIBIDA EN LÍNEA DIRECTO EN SUNAT
+    // ══════════════════════════════════════════════════════════
+    window.greToggleConsultaOnlineSunat = function() {
+        const box = document.getElementById('greBoxConsultaOnlineSunat');
+        if (!box) return;
+        box.classList.toggle('d-none');
+        if (!box.classList.contains('d-none')) {
+            document.getElementById('greBoxPegarXml')?.classList.add('d-none');
+            document.getElementById('greBoxBusquedaManual')?.classList.add('d-none');
+        }
+    };
+
+    window.greConsultarSunatEnLinea = async function(e) {
+        if (e) e.preventDefault();
+        const ruc = (document.getElementById('greOnlineRucEmisor')?.value || '').trim();
+        const tipo = document.getElementById('greOnlineTipoDoc')?.value || '09';
+        const serie = (document.getElementById('greOnlineSerie')?.value || '').trim().toUpperCase();
+        const num = (document.getElementById('greOnlineNumero')?.value || '').trim();
+        const btn = document.getElementById('greBtnOnlineSubmit');
+
+        if (!ruc || !serie || !num) {
+            alert('Por favor complete el RUC del emisor, la serie y el número de la guía.');
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Consultando...';
+        }
+
+        try {
+            const resp = await fetch(`/api/guias-remision/consultar-sunat?rucEmisor=${encodeURIComponent(ruc)}&tipoDoc=${encodeURIComponent(tipo)}&serie=${encodeURIComponent(serie)}&correlativo=${encodeURIComponent(num)}&guardar=true`);
+            const result = await resp.json();
+
+            if (result.ok && result.data) {
+                window._greUltimaConsultaData = result.data;
+                window.grePoblarVisorSunat(result.data);
+
+                const secUpload = document.getElementById('greSeccionUploadXml');
+                const secVisor = document.getElementById('greSeccionVisorSunat');
+                if (secUpload) secUpload.classList.add('d-none');
+                if (secVisor) secVisor.classList.remove('d-none');
+
+                if (typeof window.mostrarAlerta === 'function') {
+                    window.mostrarAlerta(`✓ Guía ${result.data.numero_guia} obtenida de SUNAT y registrada en el ERP.`, 'success');
+                } else {
+                    alert(`✓ Guía ${result.data.numero_guia} obtenida de SUNAT y registrada en el ERP.`);
+                }
+
+                await window.greCargarGuias();
+            } else {
+                alert(`No se pudo encontrar la guía en SUNAT: ${result.error || 'Verifique el RUC, serie y número'}`);
+            }
+        } catch (err) {
+            console.error("Error consultando SUNAT online:", err);
+            alert(`Error de red al consultar SUNAT: ${err.message}`);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-search"></i> Consultar';
+            }
+        }
+    };
+
+    // ══════════════════════════════════════════════════════════
+    // 📷 LECTOR INTELIGENTE OCR DE FOTOS DE GUÍAS FÍSICAS
+    // ══════════════════════════════════════════════════════════
+    window.greLlenarFormularioDesdeFoto = async function(files) {
+        if (!files || files.length === 0) return;
+        const file = files[0];
+
+        // 1. Mostrar preview de la foto de inmediato
+        window.greHandleFotoEvidencia(files, 'manual');
+
+        const barWrap = document.getElementById('greOcrProgressBarWrap');
+        const barInner = document.getElementById('greOcrProgressInner');
+        const statusText = document.getElementById('greOcrStatusText');
+        const percText = document.getElementById('greOcrPercentage');
+
+        if (barWrap) barWrap.classList.remove('d-none');
+        if (barInner) barInner.style.width = '15%';
+        if (percText) percText.textContent = '15%';
+        if (statusText) statusText.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Iniciando motor de reconocimiento OCR...';
+
+        try {
+            // Cargar Tesseract.js si aún no está en el navegador
+            if (!window.Tesseract) {
+                if (statusText) statusText.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Cargando módulos de visión inteligente...';
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error("No se pudo cargar la librería OCR"));
+                    document.head.appendChild(script);
+                });
+            }
+
+            if (statusText) statusText.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Escaneando caracteres y tablas de la guía...';
+
+            const worker = await window.Tesseract.createWorker('spa');
+            
+            const ret = await worker.recognize(file);
+            const text = ret.data.text || '';
+            await worker.terminate();
+
+            if (barInner) barInner.style.width = '90%';
+            if (percText) percText.textContent = '90%';
+            if (statusText) statusText.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Procesando datos estructurados SUNAT...';
+
+            // Heurística de Extracción SUNAT del texto escaneado
+            const cleanText = text.toUpperCase();
+
+            // 1. Número de Guía (Ej: T001-00048123, 001-0004582, EG01-1245)
+            const mGuia = cleanText.match(/\b([A-Z0-9]{3,4})[- ]*0*(\d{4,8})\b/) || cleanText.match(/\b(T\d{3}|V\d{3}|EG\d{2}|\d{3})[- ]+(\d{4,8})\b/);
+            if (mGuia) {
+                const s = mGuia[1].trim();
+                const n = mGuia[2].trim().padStart(8, '0');
+                const elNum = document.getElementById('manual-gre-numero');
+                if (elNum) elNum.value = `${s}-${n}`;
+            }
+
+            // 2. Fechas (dd/mm/yyyy o yyyy-mm-dd)
+            const mFechas = [...cleanText.matchAll(/\b(\d{2})[\/\.-](\d{2})[\/\.-](\d{4})\b/g)];
+            if (mFechas.length > 0) {
+                const formatFechaInput = (d, m, y) => `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                const f1 = mFechas[0];
+                const fec1 = formatFechaInput(f1[1], f1[2], f1[3]);
+                const elEmi = document.getElementById('manual-gre-fec-emision');
+                if (elEmi) elEmi.value = fec1;
+
+                if (mFechas.length > 1) {
+                    const f2 = mFechas[1];
+                    const fec2 = formatFechaInput(f2[1], f2[2], f2[3]);
+                    const elTras = document.getElementById('manual-gre-fec-traslado');
+                    if (elTras) elTras.value = fec2;
+                }
+            }
+
+            // 3. RUCs (11 dígitos comenzando en 20 o 10)
+            const rucsEncontrados = [...new Set([...cleanText.matchAll(/\b(20\d{9}|10\d{9})\b/g)].map(m => m[1]))];
+            if (rucsEncontrados.length > 0) {
+                const elRemRuc = document.getElementById('manual-gre-rem-ruc');
+                if (elRemRuc && !elRemRuc.value) elRemRuc.value = rucsEncontrados[0];
+
+                if (rucsEncontrados.length > 1) {
+                    const elDestRuc = document.getElementById('manual-gre-dest-ruc');
+                    if (elDestRuc && !elDestRuc.value) elDestRuc.value = rucsEncontrados[1];
+                }
+            }
+
+            // 4. Placas de Vehículo (Formato peruano ABC-123 o ABC123)
+            const mPlacas = [...new Set([...cleanText.matchAll(/\b([A-Z0-9]{3}[- ]?[A-Z0-9]{3})\b/g)]
+                .map(m => m[1].replace(/[- ]/g, ''))
+                .filter(p => p.length === 6 && !rucsEncontrados.some(r => r.includes(p)) && !/^\d+$/.test(p))
+            )];
+
+            if (mPlacas.length > 0) {
+                const elTracto = document.getElementById('manual-gre-tracto');
+                if (elTracto) elTracto.value = mPlacas[0];
+                if (mPlacas.length > 1) {
+                    const elCarreta = document.getElementById('manual-gre-carreta');
+                    if (elCarreta) elCarreta.value = mPlacas[1];
+                }
+            }
+
+            // 5. Conductor DNI (8 dígitos)
+            const dnis = [...cleanText.matchAll(/\b(7\d{7}|4\d{7}|0\d{7}|1\d{7}|2\d{7}|6\d{7})\b/g)].map(m => m[1]);
+            if (dnis.length > 0) {
+                const elCondDoc = document.getElementById('manual-gre-conductor-doc');
+                if (elCondDoc) elCondDoc.value = dnis[0];
+            }
+
+            // 6. Peso Bruto Total
+            const mPeso = cleanText.match(/(?:PESO|BRUTO|TOTAL|KGM|KG)[^\d]*(\d+[\.,]\d{1,3})/);
+            if (mPeso) {
+                const pVal = parseFloat(mPeso[1].replace(',', '.'));
+                const elPeso = document.getElementById('manual-gre-peso-total');
+                if (elPeso && !isNaN(pVal) && pVal > 0) elPeso.value = pVal.toFixed(2);
+            }
+
+            // 7. Extracción de Artículos / Ítems de la carga
+            const lineas = text.split('\n').map(l => l.trim()).filter(Boolean);
+            const articulosExtraidos = [];
+
+            lineas.forEach(line => {
+                const lUpper = line.toUpperCase();
+                const matchCant = line.match(/\b(\d+(?:\.\d+)?)\s*(NIU|KGM|BX|UND|PZA|CJ|PAQ|TN)?\b/i);
+                if (matchCant && line.length > 5 && !lUpper.includes('RUC') && !lUpper.includes('TELEF') && !lUpper.includes('FECHA')) {
+                    const cant = parseFloat(matchCant[1]) || 1;
+                    const um = matchCant[2] ? matchCant[2].toUpperCase() : 'NIU';
+                    const desc = line.replace(matchCant[0], '').replace(/^[0-9\.\-\s]+/, '').trim();
+                    if (desc.length > 3) {
+                        articulosExtraidos.push({
+                            codigo: `ITM-${articulosExtraidos.length + 1}`,
+                            descripcion: desc.toUpperCase(),
+                            cantidad: cant,
+                            unidad_medida: um === 'UND' ? 'NIU' : (um === 'CJ' ? 'BX' : um),
+                            peso: 0
+                        });
+                    }
+                }
+            });
+
+            // Poblar tabla de artículos si encontramos
+            if (articulosExtraidos.length > 0) {
+                const tbody = document.getElementById('manual-articulos-tbody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+                    _contadorFilasArticulos = 0;
+                    articulosExtraidos.slice(0, 20).forEach(art => {
+                        window.greAgregarFilaArticuloManual(art);
+                    });
+                }
+            }
+
+            if (barInner) barInner.style.width = '100%';
+            if (percText) percText.textContent = '100%';
+            if (statusText) statusText.innerHTML = '✓ ¡Escaneo y extracción completada!';
+
+            setTimeout(() => {
+                if (barWrap) barWrap.classList.add('d-none');
+            }, 1500);
+
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta('✓ Datos extraídos de la foto y precargados en el formulario.', 'success');
+            } else {
+                alert('✓ Datos extraídos de la foto y precargados en el formulario.');
+            }
+
+        } catch (err) {
+            console.error("Error en escaneo OCR:", err);
+            if (statusText) statusText.innerHTML = `<span class="text-danger">Error: ${err.message}</span>`;
+            setTimeout(() => {
+                if (barWrap) barWrap.classList.add('d-none');
+            }, 3000);
+            alert("No se pudo extraer texto de la imagen: " + err.message);
+        }
+    };
+
     window.greGuardarRegistroManual = async function(e) {
         if (e) e.preventDefault();
 

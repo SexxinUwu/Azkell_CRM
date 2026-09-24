@@ -586,10 +586,13 @@
                                     <i class="bi bi-folder2-open me-1"></i> Explorar Archivo XML
                                 </button>
                                 <button type="button" class="btn btn-warning btn-sm rounded-pill px-3.5 fw-bold shadow-sm text-dark d-flex align-items-center gap-1.5" onclick="event.stopPropagation(); window.greAbrirModalRegistroManual();">
-                                    <i class="bi bi-pencil-square"></i> Registro Manual (Hoja Física)
+                                    <i class="bi bi-camera-fill"></i> Foto / Registro Manual
+                                </button>
+                                <button type="button" class="btn btn-outline-info btn-sm rounded-pill px-3 fw-bold text-dark d-flex align-items-center gap-1.5" onclick="event.stopPropagation(); window.greToggleConsultaOnlineSunat();">
+                                    <i class="bi bi-globe2 text-info"></i> Consultar GRE en SUNAT
                                 </button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold" onclick="event.stopPropagation(); window.greTogglePegarXml();">
-                                    <i class="bi bi-clipboard me-1"></i> Pegar Texto XML
+                                    <i class="bi bi-clipboard me-1"></i> Pegar XML
                                 </button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold" onclick="event.stopPropagation(); window.greToggleBusquedaManual();">
                                     <i class="bi bi-search me-1"></i> Buscar en BD
@@ -601,6 +604,46 @@
                         <div id="greDropzoneOverlay" class="d-none position-absolute top-0 start-0 w-100 h-100 rounded-4 d-flex align-items-center justify-content-center" style="background: rgba(0, 82, 204, 0.85); z-index: 10;">
                             <h4 class="text-white fw-bold"><i class="bi bi-download me-2"></i> Suelta aquí el archivo XML de SUNAT</h4>
                         </div>
+                    </div>
+
+                    <!-- Cuadro Plegable: Consultar GRE Recibida Directamente desde SUNAT -->
+                    <div id="greBoxConsultaOnlineSunat" class="card border-0 rounded-4 shadow-xs p-3 bg-white mt-3 d-none" style="border: 1.5px solid #0284c7 !important; background: #f0f9ff !important;">
+                        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                            <div class="fw-bold text-dark small text-uppercase d-flex align-items-center gap-1.5">
+                                <i class="bi bi-cloud-arrow-down-fill text-primary fs-5"></i> Consulta de GRE Recibida directamente en SUNAT
+                            </div>
+                            <span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill px-2.5 py-0.5 small">
+                                Sin necesidad de XML
+                            </span>
+                        </div>
+                        <form onsubmit="window.greConsultarSunatEnLinea(event)">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-dark mb-1">RUC Emisor (Cliente)</label>
+                                    <input type="text" id="greOnlineRucEmisor" class="form-control form-control-sm font-monospace fw-bold" placeholder="20XXXXXXXXX" maxlength="11" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label fw-bold small text-dark mb-1">Tipo Doc.</label>
+                                    <select id="greOnlineTipoDoc" class="form-select form-select-sm fw-semibold">
+                                        <option value="09" selected>09 (GRE Remitente)</option>
+                                        <option value="31">31 (GRT Transportista)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label fw-bold small text-dark mb-1">Serie</label>
+                                    <input type="text" id="greOnlineSerie" class="form-control form-control-sm font-monospace text-uppercase fw-bold" placeholder="T001" maxlength="4" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-dark mb-1">Correlativo</label>
+                                    <input type="text" id="greOnlineNumero" class="form-control form-control-sm font-monospace fw-bold" placeholder="00045820" maxlength="8" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" id="greBtnOnlineSubmit" class="btn btn-primary btn-sm w-100 fw-bold rounded-pill shadow-xs d-flex align-items-center justify-content-center gap-1">
+                                        <i class="bi bi-search"></i> Consultar
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
 
                     <!-- Cuadro Plegable para Pegar Texto XML Directo -->
@@ -869,23 +912,43 @@
             <!-- Body con Formulario Estructurado en Colores Pastel -->
             <div class="modal-body p-4 bg-light" style="font-size: 0.85rem;">
                 
-                <!-- ZONA DE ACCIÓN RÁPIDA: SUBIR XML PARA AUTOLLENAR FORMULARIO -->
-                <div class="card border-0 rounded-4 p-3 shadow-xs mb-3 text-center" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px dashed #0284c7 !important;">
-                    <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2 text-start">
+                <!-- ZONA DE ACCIÓN RÁPIDA: OCR DE FOTO / SUBIR XML -->
+                <div class="card border-0 rounded-4 p-3 shadow-xs mb-3 text-center" style="background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border: 1.5px dashed #0284c7 !important;">
+                    <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 text-start">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="rounded-circle p-2.5 bg-white text-primary shadow-xs d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
-                                <i class="bi bi-file-earmark-arrow-up-fill fs-4 text-primary"></i>
+                            <div class="rounded-circle p-2.5 bg-white text-primary shadow-xs d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-camera-fill fs-4 text-success"></i>
                             </div>
                             <div>
-                                <span class="fw-bold text-dark d-block" style="font-size: 0.95rem;">¿Tienes el XML de SUNAT de esta Guía?</span>
-                                <small class="text-muted">Cárgalo aquí y se rellenarán automáticamente todos los campos y la tabla de artículos.</small>
+                                <span class="fw-bold text-dark d-block" style="font-size: 0.95rem;">📷 Lector Inteligente de Fotos / XML de Guías</span>
+                                <small class="text-muted">Sube la foto de la guía física (WhatsApp/Cámara) o el archivo XML para autocompletar todo al instante.</small>
                             </div>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <input type="file" id="manual-modal-xml-input" accept=".xml" class="d-none" onchange="window.greLlenarFormularioDesdeXml(this.files)">
-                            <button type="button" class="btn btn-primary rounded-pill px-3.5 py-1.5 fw-bold shadow-xs text-white d-flex align-items-center gap-1.5" onclick="document.getElementById('manual-modal-xml-input').click();">
-                                <i class="bi bi-cloud-arrow-up-fill"></i> Subir y Cargar Datos de XML
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <!-- Input para Fotos / Imágenes OCR -->
+                            <input type="file" id="manual-modal-foto-ocr-input" accept="image/*,application/pdf" class="d-none" onchange="window.greLlenarFormularioDesdeFoto(this.files)">
+                            <button type="button" class="btn btn-success rounded-pill px-3.5 py-1.5 fw-bold shadow-xs text-white d-flex align-items-center gap-1.5" onclick="document.getElementById('manual-modal-foto-ocr-input').click();">
+                                <i class="bi bi-camera-fill"></i> Escanear Foto (OCR)
                             </button>
+                            
+                            <!-- Input para XML -->
+                            <input type="file" id="manual-modal-xml-input" accept=".xml" class="d-none" onchange="window.greLlenarFormularioDesdeXml(this.files)">
+                            <button type="button" class="btn btn-outline-primary bg-white rounded-pill px-3 py-1.5 fw-bold shadow-xs d-flex align-items-center gap-1.5" onclick="document.getElementById('manual-modal-xml-input').click();">
+                                <i class="bi bi-filetype-xml"></i> Cargar XML
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Barra de Progreso de Escaneo OCR -->
+                    <div id="greOcrProgressBarWrap" class="d-none mt-3 pt-2 border-top text-start">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span id="greOcrStatusText" class="small fw-bold text-primary d-flex align-items-center gap-1">
+                                <span class="spinner-border spinner-border-sm me-1"></span> Escaneando y extrayendo datos de la guía...
+                            </span>
+                            <span id="greOcrPercentage" class="small font-monospace fw-bold text-primary">0%</span>
+                        </div>
+                        <div class="progress" style="height: 8px; border-radius: 6px;">
+                            <div id="greOcrProgressInner" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
