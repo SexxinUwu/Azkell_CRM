@@ -2893,18 +2893,23 @@ window.abrirDetalleChecklist = async function(id) {
     // ── 3. DETALLE DE FALLA (TABLA CON FECHA Y RESULTADOS) ──
     html += `
         <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
-            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
-                <i class="bi bi-tools text-primary"></i> Detalle de Falla
-            </h6>
-            <div class="table-responsive border rounded-3 overflow-hidden">
-                <table class="table table-hover align-middle m-0 small">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="fw-bold text-dark d-flex align-items-center gap-2 m-0" style="font-size:1rem;">
+                    <i class="bi bi-tools text-primary"></i> Detalle de Falla
+                </h6>
+                <small class="text-muted fw-semibold d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                    <i class="bi bi-arrow-left-right text-primary"></i> Desliza horizontalmente para ver todo el detalle
+                </small>
+            </div>
+            <div class="border rounded-3 p-0 bg-white" style="overflow-x: auto !important; -webkit-overflow-scrolling: touch; width: 100%;">
+                <table class="table table-hover align-middle m-0 small" style="min-width: 900px; width: 100%; white-space: nowrap !important; table-layout: auto;">
                     <thead class="table-light sticky-top">
-                        <tr>
-                            <th class="py-2 ps-3" style="min-width: 170px; white-space: nowrap;">FECHA REPORTE</th>
-                            <th class="py-2" style="white-space: nowrap;">UNIDAD</th>
-                            <th class="py-2" style="white-space: nowrap;">SISTEMA</th>
-                            <th class="py-2" style="white-space: nowrap;">ÍTEM</th>
-                            <th class="py-2 pe-3">DESCRIPCIÓN DE LA FALLA</th>
+                        <tr style="text-transform: uppercase; font-size: 0.74rem; letter-spacing: 0.04em;">
+                            <th class="py-2.5 ps-3" style="min-width: 170px; width: 170px; white-space: nowrap !important;">FECHA REPORTE</th>
+                            <th class="py-2.5" style="min-width: 110px; width: 110px; white-space: nowrap !important;">UNIDAD</th>
+                            <th class="py-2.5" style="min-width: 130px; width: 130px; white-space: nowrap !important;">SISTEMA</th>
+                            <th class="py-2.5" style="min-width: 250px; white-space: nowrap !important;">ÍTEM</th>
+                            <th class="py-2.5 pe-3" style="min-width: 320px; white-space: nowrap !important;">DESCRIPCIÓN DE LA FALLA</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2918,17 +2923,17 @@ window.abrirDetalleChecklist = async function(id) {
             const badgeClass = sistTxt === 'MANUAL' ? 'badge bg-secondary-subtle text-secondary' : 'badge bg-primary-subtle text-primary';
             html += `
                 <tr>
-                    <td class="ps-3 fw-bold text-secondary font-monospace" style="font-size:0.78rem; white-space: nowrap;">
+                    <td class="ps-3 fw-bold text-secondary font-monospace" style="font-size:0.78rem; white-space: nowrap !important;">
                         <i class="bi bi-clock-history me-1 text-primary"></i>${f.fecha || fechaFmt}
                     </td>
-                    <td class="fw-bold text-primary" style="white-space: nowrap;">
+                    <td class="fw-bold text-primary" style="white-space: nowrap !important;">
                         <span class="badge bg-light border text-primary fw-bolder px-2 py-1">${f.placaDisplay || f.unidad || '-'}</span>
                     </td>
-                    <td class="fw-semibold text-dark" style="white-space: nowrap;">
+                    <td class="fw-semibold text-dark" style="white-space: nowrap !important;">
                         <span class="${badgeClass} fw-bold px-2 py-1 text-uppercase" style="font-size:0.72rem;">${sistTxt}</span>
                     </td>
-                    <td class="fw-bold text-danger">${f.item || '—'}</td>
-                    <td class="pe-3 fw-semibold text-dark">${f.obs || 'SIN DESCRIPCIÓN'}</td>
+                    <td class="fw-bold text-danger" style="white-space: nowrap !important; font-size: 0.84rem;">${f.item || '—'}</td>
+                    <td class="pe-3 fw-semibold text-dark" style="white-space: nowrap !important; font-size: 0.84rem;">${f.obs || 'SIN DESCRIPCIÓN'}</td>
                 </tr>
             `;
         });
@@ -3713,7 +3718,10 @@ window.enviarGeneracionOTs = function(e) {
         }
         
         // Obtener motivos y técnicos específicos seleccionados
-        const fallasObjs = window._genOT_TodasFallas.filter(f => (c.fallasSeleccionadas || []).includes(f.id));
+        const fallasUnidad = window._genOT_TodasFallas.filter(f => f.unidad === c.unidad || !f.unidad);
+        const fallasObjs = (c.fallasSeleccionadas && c.fallasSeleccionadas.length > 0)
+            ? window._genOT_TodasFallas.filter(f => c.fallasSeleccionadas.includes(f.id))
+            : (fallasUnidad.length > 0 ? fallasUnidad : window._genOT_TodasFallas);
         
         const motivosArray = [];
         for (let j = 0; j < fallasObjs.length; j++) {

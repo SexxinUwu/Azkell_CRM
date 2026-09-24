@@ -1122,15 +1122,39 @@ window.srAbrirDetalle = function(id) {
 
     // ── 4. Tareas y Motivos de Ingreso (Limpio y Bento) ─────────────
     var obsTextoCompleto = (e.obs || '').trim();
-    if (!obsTextoCompleto && otsPlaca && otsPlaca.length > 0) {
+    var esGenerico = !obsTextoCompleto || ['FALLA', 'MECÁNICA GENERAL', 'MECANICA GENERAL', 'CORRECTIVO', 'PREVENTIVO'].includes(obsTextoCompleto.toUpperCase());
+
+    if ((esGenerico || !obsTextoCompleto) && otsPlaca && otsPlaca.length > 0) {
         var obsOTList = [];
         otsPlaca.forEach(function(o) {
             var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
-            var mot = (det.motivo || o.observaciones || '').trim();
-            if (mot) obsOTList.push(mot);
+            if (Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
+                det.motivos_array.forEach(function(m) {
+                    var itemTxt = m.item || m.motivo || '';
+                    var obsTxt = (m.obs && m.obs !== m.item && m.obs !== 'Observado en checklist') ? ': ' + m.obs : '';
+                    var sysTxt = (m.sistema && m.sistema !== 'MANUAL' && m.sistema !== 'GENERAL') ? '[' + m.sistema + '] ' : '';
+                    var tecTxt = m.tecnico ? ' (Téc: ' + m.tecnico + ')' : '';
+                    if (itemTxt) obsOTList.push(sysTxt + itemTxt + obsTxt + tecTxt);
+                });
+            } else if (Array.isArray(det.fallas_seleccionadas) && det.fallas_seleccionadas.length > 0) {
+                det.fallas_seleccionadas.forEach(function(f) {
+                    var clean = String(f).replace(/^\[[^\]]+\]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').replace(/^[•\-\*]\s*/, '');
+                    if (clean) obsOTList.push(clean);
+                });
+            } else {
+                var mot = (det.motivo || o.observaciones || '').trim();
+                var parsedMot = typeof window.srParsearTareasArray === 'function' ? window.srParsearTareasArray(mot) : { tareas: [mot] };
+                if (parsedMot && parsedMot.tareas && parsedMot.tareas.length > 0) {
+                    parsedMot.tareas.forEach(function(t) {
+                        if (t && !['FALLA', 'MECÁNICA GENERAL', 'MECANICA GENERAL'].includes(t.toUpperCase())) {
+                            obsOTList.push(t);
+                        }
+                    });
+                }
+            }
         });
         if (obsOTList.length > 0) {
-            obsTextoCompleto = Array.from(new Set(obsOTList)).join('\n');
+            obsTextoCompleto = Array.from(new Set(obsOTList)).map(function(t){ return '• ' + t; }).join('\n');
         }
     }
 

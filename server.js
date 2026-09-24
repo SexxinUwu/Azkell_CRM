@@ -241,7 +241,7 @@ app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
                 display: 'standalone',
                 background_color: '#0f172a',
                 theme_color: '#0f172a',
-                orientation: 'portrait',
+                orientation: 'any',
                 icons: [
                     {
                         src: '/favicon-2003.png',
@@ -296,7 +296,7 @@ app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
             display: 'standalone',
             background_color: '#0f172a',
             theme_color: '#0f172a',
-            orientation: 'portrait',
+            orientation: 'any',
             icons: [
                 {
                     src: iconSrc,

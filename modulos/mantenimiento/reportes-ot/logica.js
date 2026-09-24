@@ -320,6 +320,44 @@ function rotCleanObsText(text) {
         .trim();
 }
 
+function rotGetCleanMotivoDisplay(det, ot) {
+    if (!det) det = {};
+    if (!ot) ot = {};
+
+    // 1. Si tiene motivos_array estructurado, formatear cada falla claramente
+    if (Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
+        return det.motivos_array.map(function(m) {
+            var itemTxt = m.item || m.motivo || 'Falla observada';
+            var obsTxt = (m.obs && m.obs !== m.item && m.obs !== 'Observado en checklist') ? ': ' + m.obs : '';
+            var sysTxt = (m.sistema && m.sistema !== 'MANUAL' && m.sistema !== 'GENERAL') ? '[' + m.sistema + '] ' : '';
+            var tecTxt = m.tecnico ? ' (Téc: ' + m.tecnico + ')' : '';
+            return '• ' + sysTxt + itemTxt + obsTxt + tecTxt;
+        }).join('\n');
+    }
+
+    // 2. Si tiene fallas_seleccionadas como array
+    if (Array.isArray(det.fallas_seleccionadas) && det.fallas_seleccionadas.length > 0) {
+        return det.fallas_seleccionadas.map(function(f) {
+            var clean = String(f).replace(/^\[[^\]]+\]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').replace(/^[•\-\*]\s*/, '');
+            return '• ' + clean;
+        }).join('\n');
+    }
+
+    // 3. Limpieza de texto directo
+    var rawText = det.motivo || ot.observaciones || det.observaciones || '';
+    var cleaned = rotCleanObsText(rawText);
+    if (cleaned) return cleaned;
+
+    // 4. Si el texto contenía [Reporte ...] pero no items detallados
+    if (rawText && rawText.includes('[Reporte')) {
+        var repMatch = rawText.match(/\[Reporte\s+([^\]]+)\]/i);
+        var repFolio = repMatch ? repMatch[1] : (det.folio_reporte || '');
+        return 'REPORTE ' + repFolio + (det.sub_tipo || det.subtipo_ot ? ' — ' + (det.sub_tipo || det.subtipo_ot) : '');
+    }
+
+    return (det.descripcion_falla || det.sub_tipo || det.subtipo_ot || ot.tipo || 'Sin observaciones registradas');
+}
+
 function rotFmtKmCol(det) {
     if (!det) return '0 km';
     if (det.horas_motor) {
@@ -358,7 +396,7 @@ window.rotRenderTabla = function(lista) {
         var rName = rObj ? (rObj.descripcion || rObj.nombre_rampa || rObj.nombre || rId) : (rId ? 'Rampa ' + rId : '—');
         var tecsStr = det.tecnicos ? (Array.isArray(det.tecnicos) ? det.tecnicos.join(', ') : det.tecnicos) : (det.tecnicos_str || det.tecnico_lider || '—');
 
-        var rawObs = rotCleanObsText(det.motivo || ot.observaciones || '');
+        var rawObs = rotGetCleanMotivoDisplay(det, ot);
 
         html += '<tr class="' + (esActiva ? 'rot-tr-activa' : '') + '" data-id="' + rotEscHtml(idOT) + '" onclick="window.rotAbrirDetalle(\'' + rotEscHtml(idOT) + '\')">'
               + '<td onclick="event.stopPropagation();" style="white-space:nowrap;padding:8px 10px;">' + rotBotonesAccion(ot) + '</td>'
@@ -635,13 +673,13 @@ window.rotAbrirDetalle = function(idOT) {
         </div>
 
         <!-- Motivo / Observaciones -->
-        ${(det.motivo || ot.observaciones) ? `
+        ${(det.motivo || ot.observaciones || (det.motivos_array && det.motivos_array.length) || (det.fallas_seleccionadas && det.fallas_seleccionadas.length)) ? `
             <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
                 <h6 class="m-0 fw-bold text-dark mb-2 pb-1 border-bottom d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
                     <i class="bi bi-card-text text-primary"></i> Motivo y Observaciones Iniciales
                 </h6>
                 <div class="p-2 rounded-3 bg-light border fw-semibold text-dark text-uppercase" style="font-size: 0.82rem; white-space: pre-line; line-height: 1.5;">
-                    ${esc(rotCleanObsText(det.motivo || ot.observaciones || ''))}
+                    ${esc(rotGetCleanMotivoDisplay(det, ot))}
                 </div>
             </div>
         ` : ''}
