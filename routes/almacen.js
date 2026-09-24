@@ -1065,6 +1065,18 @@ router.get('/entradas', (req, res) => {
         ]);
 
         const signedRows = await Promise.all((rows || []).map(async (r) => {
+            // Formatear fecha exacta YYYY-MM-DD sin desfase de zona horaria
+            if (r.fecha) {
+                if (r.fecha instanceof Date) {
+                    const y = r.fecha.getFullYear();
+                    const m = String(r.fecha.getMonth() + 1).padStart(2, '0');
+                    const day = String(r.fecha.getDate()).padStart(2, '0');
+                    r.fecha = `${y}-${m}-${day}`;
+                } else {
+                    r.fecha = String(r.fecha).split('T')[0];
+                }
+            }
+
             // Resolver creador_nombre
             const creadorKey = (r.creado_por || '').toLowerCase().trim();
             r.creador_nombre = usuariosMap[creadorKey] || usuariosMap[r.creado_por] || r.creado_por || 'SISTEMA';
