@@ -662,10 +662,17 @@ module.exports = function (db, broadcast, logAudit) {
                 // Descripción de fallas limpia y concisa para impresión y detalle
                 let descFallasClean = '';
                 if (Array.isArray(item.motivos_array) && item.motivos_array.length > 0) {
+                    const esObsGen = txt => {
+                        if (!txt) return true;
+                        const up = String(txt).trim().toUpperCase();
+                        return up === 'OBSERVADO EN CHECKLIST' || up === 'OBSERVACION REPORTADA' || up === 'OBSERVACIÓN REPORTADA' 
+                            || up === 'FALLA OBSERVADA' || up === 'FALLA REPORTADA' || up === 'SIN OBSERVACIÓN' || up === 'SIN OBSERVACION'
+                            || up === 'OBSERVACIÓN' || up === 'OBSERVACION';
+                    };
                     descFallasClean = item.motivos_array.map(m => {
-                        const desc = (m.obs && m.obs !== m.item && m.obs !== 'Observado en checklist') 
+                        const desc = (!esObsGen(m.obs) && m.obs !== m.item) 
                             ? m.obs 
-                            : (m.motivo || m.descripcion || m.item || 'Falla reportada');
+                            : (m.motivo || m.item || m.descripcion || 'Falla reportada');
                         const cleanDesc = String(desc).replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
                         return `• ${cleanDesc}`;
                     }).join('\n');

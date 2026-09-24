@@ -340,12 +340,20 @@ function rotGetCleanMotivoDisplay(det, ot) {
     if (!det) det = {};
     if (!ot) ot = {};
 
+    var esTextoGenerico = function(txt) {
+        if (!txt) return true;
+        var up = String(txt).trim().toUpperCase();
+        return up === 'OBSERVADO EN CHECKLIST' || up === 'OBSERVACION REPORTADA' || up === 'OBSERVACIÓN REPORTADA' 
+            || up === 'FALLA OBSERVADA' || up === 'FALLA REPORTADA' || up === 'SIN OBSERVACIÓN' || up === 'SIN OBSERVACION'
+            || up === 'OBSERVACIÓN' || up === 'OBSERVACION';
+    };
+
     // 1. Si tiene motivos_array estructurado, formatear únicamente la descripción puntual de cada falla
     if (Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
         return det.motivos_array.map(function(m) {
-            var desc = (m.obs && m.obs !== m.item && m.obs !== 'Observado en checklist') 
+            var desc = (!esTextoGenerico(m.obs) && m.obs !== m.item) 
                 ? m.obs 
-                : (m.motivo || m.descripcion || m.item || 'Falla observada');
+                : (m.motivo || m.item || m.descripcion || 'Falla observada');
             var clean = String(desc)
                 .replace(/^\[[^\]]+\]\s*/, '')
                 .replace(/^[A-Z0-9\s]+—\s*/i, '')
@@ -1268,12 +1276,26 @@ function rotModalCerrarOTConChecklist(idOT, onConfirm) {
         return true;
     }
 
+    function limpiarMotivoTexto(raw) {
+        if (!raw || typeof raw !== 'string') return '';
+        return raw
+            .replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '')
+            .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
+            .replace(/^\[[^\]]+\]\s*[\:\-]?\s*/g, '')
+            .replace(/^[A-Z0-9\s]+—\s*/i, '')
+            .replace(/^\d+\s+[^:]+:\s*/i, '')
+            .replace(/\s*\((?:Téc|Tec|TÉC|TEC):[^\)]*\)/gi, '')
+            .replace(/^(?:FALLA\s*MANUAL|MANUAL)\s*:\s*/i, '')
+            .replace(/^[\s•\-\*\d\.\)\:]+/g, '')
+            .trim();
+    }
+
     function parsearLineasMotivo(texto) {
         if (!texto || typeof texto !== 'string') return [];
         var lineas = texto.split(/[\r\n]+|(?<=\.)\s+(?=[0-9]+\.)/);
         var res = [];
         lineas.forEach(function(l) {
-            var limp = l.replace(/^\[[^\]]+\]\s*[\:\-]?\s*/g, '').replace(/^[\s•\-\*\d\.\)\:]+/g, '').trim();
+            var limp = limpiarMotivoTexto(l);
             if (esMotivoValido(limp) && res.indexOf(limp) === -1) {
                 res.push(limp);
             }
@@ -1283,10 +1305,40 @@ function rotModalCerrarOTConChecklist(idOT, onConfirm) {
 
     // 1. Extraer motivos iniciales directamente de memoria para mostrar el modal de inmediato (0ms lag)
     var motivosList = [];
-    if (Array.isArray(detOT.trabajos_det)) {
+
+    var esTextoGenerico = function(txt) {
+        if (!txt) return true;
+        var up = String(txt).trim().toUpperCase();
+        return up === 'OBSERVADO EN CHECKLIST' || up === 'OBSERVACION REPORTADA' || up === 'OBSERVACIÓN REPORTADA' 
+            || up === 'FALLA OBSERVADA' || up === 'FALLA REPORTADA' || up === 'SIN OBSERVACIÓN' || up === 'SIN OBSERVACION'
+            || up === 'OBSERVACIÓN' || up === 'OBSERVACION';
+    };
+
+    if (Array.isArray(detOT.motivos_array) && detOT.motivos_array.length > 0) {
+        detOT.motivos_array.forEach(function(m) {
+            var desc = (!esTextoGenerico(m.obs) && m.obs !== m.item) 
+                ? m.obs 
+                : (m.motivo || m.item || m.descripcion || '');
+            var txt = limpiarMotivoTexto(String(desc));
+            if (esMotivoValido(txt) && !motivosList.some(function(x) { return x.texto === txt; })) {
+                motivosList.push({ texto: txt, backlog_id: null });
+            }
+        });
+    }
+
+    if (!motivosList.length && Array.isArray(detOT.fallas_seleccionadas) && detOT.fallas_seleccionadas.length > 0) {
+        detOT.fallas_seleccionadas.forEach(function(f) {
+            var txt = limpiarMotivoTexto(String(f));
+            if (esMotivoValido(txt) && !motivosList.some(function(x) { return x.texto === txt; })) {
+                motivosList.push({ texto: txt, backlog_id: null });
+            }
+        });
+    }
+
+    if (!motivosList.length && Array.isArray(detOT.trabajos_det)) {
         detOT.trabajos_det.forEach(function(td) {
             var rawTxt = typeof td === 'string' ? td : (td.trabajo || td.descripcion || '');
-            var txt = rawTxt.replace(/^\[[^\]]+\]\s*[\:\-]?\s*/g, '').replace(/^[\s•\-\*\d\.\)\:]+/g, '').trim();
+            var txt = limpiarMotivoTexto(rawTxt);
             if (esMotivoValido(txt) && !motivosList.some(function(m) { return m.texto === txt; })) {
                 motivosList.push({ texto: txt, backlog_id: td.backlog_id || null });
             }
@@ -1389,22 +1441,22 @@ function rotModalCerrarOTConChecklist(idOT, onConfirm) {
     }
     enlazarCheckboxes();
 
-    // 2. En segundo plano consultar /api/ot-trabajos por si hay ítems registrados en base de datos
+    // 2. En segundo plano consultar /api/ot-trabajos para agregar trabajos adicionales sin borrar los originales
     fetch('/api/ot-trabajos?id_ot=' + encodeURIComponent(idOT))
         .then(function(r) { return r.ok ? r.json() : []; })
         .catch(function() { return []; })
         .then(function(trabs) {
             if (Array.isArray(trabs) && trabs.length) {
-                var newList = [];
+                var huboNuevos = false;
                 trabs.forEach(function(t) {
                     var rawTxt = t.trabajo_realizado || t.detalle_trabajo || '';
-                    var txt = rawTxt.replace(/^\[[^\]]+\]\s*[\:\-]?\s*/g, '').replace(/^[\s•\-\*\d\.\)\:]+/g, '').trim();
-                    if (esMotivoValido(txt) && !newList.some(function(m) { return m.texto === txt; })) {
-                        newList.push({ texto: txt, backlog_id: t.backlog_id || null });
+                    var txt = limpiarMotivoTexto(rawTxt);
+                    if (esMotivoValido(txt) && !motivosList.some(function(m) { return m.texto.trim().toUpperCase() === txt.trim().toUpperCase(); })) {
+                        motivosList.push({ texto: txt, backlog_id: t.backlog_id || null });
+                        huboNuevos = true;
                     }
                 });
-                if (newList.length) {
-                    motivosList = newList;
+                if (huboNuevos) {
                     var cont = document.getElementById('rot-contenedor-motivos-cierre');
                     if (cont) {
                         cont.innerHTML = renderizarItemsHtml(motivosList);

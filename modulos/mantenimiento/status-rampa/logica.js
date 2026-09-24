@@ -1129,10 +1129,17 @@ window.srAbrirDetalle = function(id) {
         otsPlaca.forEach(function(o) {
             var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
             if (Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
+                var esObsGen = function(txt) {
+                    if (!txt) return true;
+                    var up = String(txt).trim().toUpperCase();
+                    return up === 'OBSERVADO EN CHECKLIST' || up === 'OBSERVACION REPORTADA' || up === 'OBSERVACIÓN REPORTADA' 
+                        || up === 'FALLA OBSERVADA' || up === 'FALLA REPORTADA' || up === 'SIN OBSERVACIÓN' || up === 'SIN OBSERVACION'
+                        || up === 'OBSERVACIÓN' || up === 'OBSERVACION';
+                };
                 det.motivos_array.forEach(function(m) {
-                    var desc = (m.obs && m.obs !== m.item && m.obs !== 'Observado en checklist') 
+                    var desc = (!esObsGen(m.obs) && m.obs !== m.item) 
                         ? m.obs 
-                        : (m.motivo || m.descripcion || m.item || '');
+                        : (m.motivo || m.item || m.descripcion || '');
                     var cleanDesc = String(desc)
                         .replace(/^\[[^\]]+\]\s*/, '')
                         .replace(/^[A-Z0-9\s]+—\s*/i, '')
