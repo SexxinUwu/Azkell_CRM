@@ -667,8 +667,7 @@ module.exports = function (db, broadcast, logAudit) {
                             ? m.obs 
                             : (m.motivo || m.descripcion || m.item || 'Falla reportada');
                         const cleanDesc = String(desc).replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
-                        const tecTxt = m.tecnico ? ` (Téc: ${m.tecnico})` : '';
-                        return `• ${cleanDesc}${tecTxt}`;
+                        return `• ${cleanDesc}`;
                     }).join('\n');
                 } else if (Array.isArray(item.fallas_seleccionadas) && item.fallas_seleccionadas.length > 0) {
                     descFallasClean = item.fallas_seleccionadas.map(f => {

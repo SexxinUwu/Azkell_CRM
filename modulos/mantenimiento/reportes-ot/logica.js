@@ -310,7 +310,7 @@ function rotCalcularTiempos(ot) {
 
 function rotCleanObsText(text) {
     if (!text) return '';
-    return String(text)
+    var raw = String(text)
         .replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '')
         .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
         .replace(/(?:^|\n)\s*(?:\d+[\.\)\-]?\s*)?(?:FALLA\s*MANUAL|MANUAL)\s*:\s*/gim, function(match) {
@@ -318,27 +318,56 @@ function rotCleanObsText(text) {
         })
         .replace(/^(?:FALLA\s*MANUAL|MANUAL)\s*:\s*/gim, '')
         .trim();
+
+    var lines = raw.split('\n');
+    var cleanedLines = [];
+    lines.forEach(function(l) {
+        var trimmed = l.trim();
+        if (!trimmed) return;
+        var clean = trimmed
+            .replace(/^[-*•]\s*/, '')
+            .replace(/^\[[^\]]+\]\s*/, '')
+            .replace(/^[A-Z0-9\s]+—\s*/i, '')
+            .replace(/^\d+\s+[^:]+:\s*/i, '')
+            .replace(/\s*\((?:Téc|Tec|TÉC|TEC):[^\)]*\)/gi, '')
+            .trim();
+        if (clean) cleanedLines.push('• ' + clean);
+    });
+    return cleanedLines.join('\n');
 }
 
 function rotGetCleanMotivoDisplay(det, ot) {
     if (!det) det = {};
     if (!ot) ot = {};
 
-    // 1. Si tiene motivos_array estructurado, formatear cada falla claramente
+    // 1. Si tiene motivos_array estructurado, formatear únicamente la descripción puntual de cada falla
     if (Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
         return det.motivos_array.map(function(m) {
-            var itemTxt = m.item || m.motivo || 'Falla observada';
-            var obsTxt = (m.obs && m.obs !== m.item && m.obs !== 'Observado en checklist') ? ': ' + m.obs : '';
-            var sysTxt = (m.sistema && m.sistema !== 'MANUAL' && m.sistema !== 'GENERAL') ? '[' + m.sistema + '] ' : '';
-            var tecTxt = m.tecnico ? ' (Téc: ' + m.tecnico + ')' : '';
-            return '• ' + sysTxt + itemTxt + obsTxt + tecTxt;
+            var desc = (m.obs && m.obs !== m.item && m.obs !== 'Observado en checklist') 
+                ? m.obs 
+                : (m.motivo || m.descripcion || m.item || 'Falla observada');
+            var clean = String(desc)
+                .replace(/^\[[^\]]+\]\s*/, '')
+                .replace(/^[A-Z0-9\s]+—\s*/i, '')
+                .replace(/^\d+\s+[^:]+:\s*/i, '')
+                .replace(/\s*\((?:Téc|Tec|TÉC|TEC):[^\)]*\)/gi, '')
+                .replace(/^[•\-\*]\s*/, '')
+                .trim();
+            return '• ' + clean;
         }).join('\n');
     }
 
     // 2. Si tiene fallas_seleccionadas como array
     if (Array.isArray(det.fallas_seleccionadas) && det.fallas_seleccionadas.length > 0) {
         return det.fallas_seleccionadas.map(function(f) {
-            var clean = String(f).replace(/^\[[^\]]+\]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').replace(/^[•\-\*]\s*/, '');
+            var clean = String(f)
+                .replace(/^\[[^\]]+\]\s*/, '')
+                .replace(/^[A-Z0-9\s]+—\s*/i, '')
+                .replace(/^\d+\s+[^:]+:\s*/i, '')
+                .replace(/\s*\((?:Téc|Tec|TÉC|TEC):[^\)]*\)/gi, '')
+                .replace(/^(Falla Manual|MANUAL):\s*/i, '')
+                .replace(/^[•\-\*]\s*/, '')
+                .trim();
             return '• ' + clean;
         }).join('\n');
     }
