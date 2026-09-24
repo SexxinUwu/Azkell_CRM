@@ -796,10 +796,7 @@
 
     // ── Guardar Orden de Servicio (Create / Update) ──────────────────
     window.osGuardarOrdenDirecto = function () {
-        const form = document.getElementById('formOrdenServicio');
-        if (form) {
-            form.requestSubmit();
-        }
+        window.osGuardarOrden();
     };
 
     window.osGuardarOrden = async function (e) {
@@ -813,7 +810,7 @@
         const tipo_cambio = document.getElementById('os-input-tipo-cambio')?.value;
         const tipo_contratacion = document.getElementById('os-input-tipo-contratacion')?.value;
         const modalidad_ejecucion = document.getElementById('os-input-modalidad-ejecucion')?.value;
-        const cliente_nombre = document.getElementById('os-input-cliente')?.value;
+        const cliente_nombre = document.getElementById('os-input-cliente')?.value?.trim();
         const tipo_servicio = document.getElementById('os-input-tipo-servicio')?.value;
         const es_retorno = parseInt(document.getElementById('os-input-es-retorno')?.value || '0', 10);
         const tipo_costo = document.getElementById('os-input-tipo-costo')?.value;
@@ -821,15 +818,20 @@
         const costo_flete = document.getElementById('os-input-costo-flete')?.value;
         const puntos_carga = document.getElementById('os-input-puntos-carga')?.value;
         const puntos_destino = document.getElementById('os-input-puntos-destino')?.value;
-        const destinatario = document.getElementById('os-input-destinatario')?.value;
+        const destinatario = document.getElementById('os-input-destinatario')?.value?.trim();
         const observaciones = document.getElementById('os-input-observaciones')?.value;
         const viaje_asignado = document.getElementById('os-input-viaje-asignado')?.value?.trim() || null;
         const placa_tracto = document.getElementById('os-input-tracto')?.value?.trim() || null;
         const placa_carreta = document.getElementById('os-input-carreta')?.value?.trim() || null;
 
         if (!cliente_nombre) {
-            alert("Por favor seleccione un Cliente/Remitente (*).");
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta("Por favor ingrese o seleccione el Cliente/Remitente (*)", "warning");
+            } else {
+                alert("Por favor seleccione un Cliente/Remitente (*).");
+            }
             activarTab('tab-os-orden-link');
+            setTimeout(() => document.getElementById('os-input-cliente')?.focus(), 200);
             return;
         }
 
@@ -1170,6 +1172,7 @@
                         fecha_carga: g.fecha_traslado || g.fecha_emision || '',
                         fecha_entrega: g.fecha_traslado || ''
                     });
+                    _autoRellenarDesdeGre(g);
                     agregadas++;
                 } catch (_) {}
             }
@@ -1185,6 +1188,26 @@
         }
         document.body.classList.add('modal-open');
     };
+
+    function _autoRellenarDesdeGre(g) {
+        if (!g) return;
+        const elCli = document.getElementById('os-input-cliente');
+        if (elCli && (!elCli.value || elCli.value.trim() === '')) {
+            elCli.value = g.remitente_razon_social || '';
+        }
+        const elDest = document.getElementById('os-input-destinatario');
+        if (elDest && (!elDest.value || elDest.value.trim() === '')) {
+            elDest.value = g.destinatario_razon_social || '';
+        }
+        const elTracto = document.getElementById('os-input-tracto');
+        if (elTracto && (!elTracto.value || elTracto.value.trim() === '') && g.placa_tracto) {
+            elTracto.value = g.placa_tracto.trim().toUpperCase();
+        }
+        const elCarreta = document.getElementById('os-input-carreta');
+        if (elCarreta && (!elCarreta.value || elCarreta.value.trim() === '') && g.placa_carreta) {
+            elCarreta.value = g.placa_carreta.trim().toUpperCase();
+        }
+    }
 
     window.osFiltrarGresDisponibles = function (txt) {
         const q = (txt || '').toLowerCase().trim();
@@ -1220,6 +1243,7 @@
                 fecha_entrega: g.fecha_traslado || ''
             });
 
+            _autoRellenarDesdeGre(g);
             renderizarDocsAdjuntos();
 
             // Cerrar el selector y volver al modal principal
