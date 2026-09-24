@@ -666,20 +666,45 @@ router.put('/ot-materiales/:id', (req, res) => {
     const id = req.params.id;
     const { accion, motivo } = req.body;
     if (accion === 'despachar') {
-        db.query("UPDATE salidas_inv SET estado = 'Despachado' WHERE id = ?", [id], (err, result) => {
-            if (err) {
-                console.error('Error despachando:', err.message);
-                return res.status(500).json({ error: err.message });
+        const sqlStockCheck = `
+            SELECT d.descripcion, d.cantidad, i.stock_actual, i.descripcion AS inv_desc
+            FROM detalle_salidas_inv d
+            LEFT JOIN inventario i ON (i.id = d.inventario_id OR i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
+            WHERE d.salida_id = ?
+        `;
+        db.query(sqlStockCheck, [id], (errStk, rowsStk) => {
+            if (errStk) return res.status(500).json({ error: errStk.message });
+
+            const sinStock = [];
+            (rowsStk || []).forEach(it => {
+                const stockDisp = parseFloat(it.stock_actual != null ? it.stock_actual : 0);
+                const cantReq = parseFloat(it.cantidad || 0);
+                if (cantReq > stockDisp) {
+                    sinStock.push(`"${it.descripcion || it.inv_desc}" (Requerido: ${cantReq}, Disponible: ${stockDisp <= 0 ? 0 : stockDisp})`);
+                }
+            });
+
+            if (sinStock.length > 0) {
+                return res.status(400).json({
+                    error: `No se puede despachar la salida porque no cuenta con stock suficiente en almacén:\n• ${sinStock.join('\n• ')}`
+                });
             }
-            // Resolver inventario_id nulos: por descripción exacta O prefijo "INV-XXX — ..."
-            db.query(
-                `UPDATE detalle_salidas_inv d
-                 INNER JOIN inventario i ON (i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
-                 SET d.inventario_id = i.id
-                 WHERE d.salida_id = ? AND (d.inventario_id IS NULL OR d.inventario_id = '')`,
-                [id], () => {}
-            );
-            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+
+            db.query("UPDATE salidas_inv SET estado = 'Despachado' WHERE id = ?", [id], (err, result) => {
+                if (err) {
+                    console.error('Error despachando:', err.message);
+                    return res.status(500).json({ error: err.message });
+                }
+                // Resolver inventario_id nulos: por descripción exacta O prefijo "INV-XXX — ..."
+                db.query(
+                    `UPDATE detalle_salidas_inv d
+                     INNER JOIN inventario i ON (i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
+                     SET d.inventario_id = i.id
+                     WHERE d.salida_id = ? AND (d.inventario_id IS NULL OR d.inventario_id = '')`,
+                    [id], () => {}
+                );
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+            });
         });
     } else if (accion === 'anular') {
         if (!motivo || !String(motivo).trim()) return res.status(400).json({ error: 'Motivo requerido' });
