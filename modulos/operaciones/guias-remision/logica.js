@@ -19,9 +19,9 @@
 
     // Inicializador del Módulo
     window.inicializarModuloGuiasRemision = async function() {
-        // Establecer fechas por defecto (mes actual)
+        // Establecer fechas por defecto (últimos 60 días para cubrir guías recientes y del mes anterior)
         const hoy = new Date();
-        const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        const sesentaDiasAtras = new Date(hoy.getTime() - 60 * 24 * 60 * 60 * 1000);
         
         const formatYMD = (d) => d.toISOString().slice(0, 10);
         
@@ -43,7 +43,7 @@
         
         const fDesde = document.getElementById('gre-filter-desde');
         const fHasta = document.getElementById('gre-filter-hasta');
-        if (fDesde && !fDesde.value) fDesde.value = formatYMD(primerDia);
+        if (fDesde && !fDesde.value) fDesde.value = formatYMD(sesentaDiasAtras);
         if (fHasta && !fHasta.value) fHasta.value = formatYMD(hoy);
 
         // Configurar Drag and Drop y limpieza para el Modal de XML
@@ -122,10 +122,10 @@
             }
             if (tituloTablaCard) tituloTablaCard.textContent = 'Historial de Guías de Remisión de Transportista (GRT)';
 
-            // En GRT NO deben salir las opciones de XML ni Carga masiva de GRE
-            if (btnEmitirGrt) btnEmitirGrt.style.display = 'inline-flex';
-            if (btnSubirXml) btnSubirXml.style.display = 'none';
-            if (btnCargaLote) btnCargaLote.style.display = 'none';
+            // En GRT solo debe salir Emitir GRT (ocultar Subir XML)
+            if (btnEmitirGrt) btnEmitirGrt.classList.remove('d-none');
+            if (btnSubirXml) btnSubirXml.classList.add('d-none');
+            if (btnCargaLote) btnCargaLote.classList.add('d-none');
 
             window._greTipoFiltro = '31';
         } else {
@@ -142,10 +142,10 @@
             }
             if (tituloTablaCard) tituloTablaCard.textContent = 'Historial de Guías de Remisión Electrónica (GRE)';
 
-            // En GRE mostramos Subir XML y Carga Masiva; ocultamos Emitir GRT del encabezado
-            if (btnEmitirGrt) btnEmitirGrt.style.display = 'none';
-            if (btnSubirXml) btnSubirXml.style.display = 'inline-flex';
-            if (btnCargaLote) btnCargaLote.style.display = 'inline-flex';
+            // En GRE mostramos Subir XML; ocultamos Emitir GRT del encabezado principal
+            if (btnEmitirGrt) btnEmitirGrt.classList.add('d-none');
+            if (btnSubirXml) btnSubirXml.classList.remove('d-none');
+            if (btnCargaLote) btnCargaLote.classList.add('d-none');
 
             window._greTipoFiltro = '09';
         }
@@ -170,9 +170,9 @@
         if (fSearch) fSearch.value = '';
 
         const hoy = new Date();
-        const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        const sesentaDiasAtras = new Date(hoy.getTime() - 60 * 24 * 60 * 60 * 1000);
         const formatYMD = (d) => d.toISOString().slice(0, 10);
-        if (fDesde) fDesde.value = formatYMD(primerDia);
+        if (fDesde) fDesde.value = formatYMD(sesentaDiasAtras);
         if (fHasta) fHasta.value = formatYMD(hoy);
 
         window._greTipoFiltro = (window._greModoActivo === 'GRT') ? '31' : '09';
@@ -1181,6 +1181,15 @@
             const result = await resp.json();
 
             if (result.ok) {
+                // Si la fecha de emisión de la guía es anterior al filtro 'Desde', expandir el filtro automáticamente
+                const fDesde = document.getElementById('gre-filter-desde');
+                if (fDesde && guia.fecha_emision) {
+                    const fEmiStr = String(guia.fecha_emision).slice(0, 10);
+                    if (fDesde.value > fEmiStr) {
+                        fDesde.value = fEmiStr;
+                    }
+                }
+
                 if (typeof window.mostrarAlerta === 'function') {
                     window.mostrarAlerta(`✓ ${result.message || 'Guía guardada exitosamente en el ERP'}`, 'success');
                 } else {
