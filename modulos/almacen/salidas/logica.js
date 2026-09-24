@@ -619,14 +619,14 @@ function salAbrirDetalle(m) {
                 <i class="bi bi-box-seam-fill text-primary" style="font-size: 0.95rem;"></i>
                 <span>Artículos (${items.length})</span>
             </div>
-            <div class="d-flex align-items-center gap-2.5">
+            <div class="d-flex align-items-center gap-2">
                 ${esPendiente && items.length > 1 ? `
                 <div class="d-flex align-items-center gap-1.5 bg-light px-2.5 py-1 rounded-2 border" style="cursor: pointer;" onclick="document.getElementById('sal-chk-select-all').click()">
                     <input type="checkbox" id="sal-chk-select-all" checked onchange="window._salToggleSelectAll(this.checked)" onclick="event.stopPropagation()" style="width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: #0284c7;">
                     <label for="sal-chk-select-all" class="small fw-bold text-secondary m-0" style="font-size: 0.72rem; user-select: none; cursor: pointer;">Todos</label>
                 </div>
                 ` : ''}
-                <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" style="font-size: 0.7rem; font-weight: 700;">
+                <span id="sal-detalle-cant-badge" class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" style="font-size: 0.7rem; font-weight: 700;">
                     ${totalCant.toLocaleString('es-PE', { maximumFractionDigits: 3 })} Unidades
                 </span>
             </div>
@@ -664,6 +664,8 @@ function salAbrirDetalle(m) {
                                value="${it.id || idx}" 
                                data-item-id="${it.id || ''}"
                                data-cant="${cant}"
+                               data-cu="${cu}"
+                               data-imp="${imp}"
                                data-stock="${stockDisp != null ? stockDisp : 999}"
                                data-desc="${salEsc(it.descripcion || it.inventario_id || '')}"
                                ${tieneStock ? 'checked' : ''}
@@ -708,16 +710,24 @@ function salAbrirDetalle(m) {
     html += `
         </div>
 
-        <!-- Total General -->
-        <div class="d-flex align-items-center justify-content-between mt-3 pt-2.5 border-top bg-white p-2.5 rounded-3 border">
-            <span class="fw-bold text-dark" style="font-size: 0.9rem;">Monto Total Solicitud:</span>
-            <span class="fw-bolder text-success" style="font-size: 1.25rem;">${salFmtMoney(m.total_pen)}</span>
+        <!-- Total General Dinámico -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between mt-3 pt-2.5 border-top bg-white p-2.5 rounded-3 border gap-2">
+            <div>
+                <span id="sal-detalle-total-lbl" class="fw-bold text-dark" style="font-size: 0.88rem;">Monto Total Solicitud:</span>
+                <div id="sal-detalle-total-breakdown" class="mt-0.5"></div>
+            </div>
+            <span id="sal-detalle-total-val" class="fw-bolder text-success" style="font-size: 1.25rem;">${salFmtMoney(m.total_pen)}</span>
         </div>
     </div>
     `;
 
     var scroll = document.getElementById('sal-detalle-scroll');
     if (scroll) scroll.innerHTML = html;
+
+    // Actualizar inmediatamente totales dinámicos si es pendiente
+    if (esPendiente && typeof window._salActualizarContadorDespacho === 'function') {
+        window._salActualizarContadorDespacho();
+    }
 
     var footer = document.getElementById('sal-detalle-footer');
     if (footer) {
@@ -822,14 +832,70 @@ window._salActualizarContadorDespacho = function() {
     var chks = document.querySelectorAll('.sal-item-chk');
     var total = chks.length;
     var checkedCount = 0;
-    chks.forEach(function(c) { if (c.checked) checkedCount++; });
+    var totalCant = 0;
+    var cantSel = 0;
+    var totalImp = 0;
+    var impSel = 0;
 
-    var lbl = document.getElementById('lbl-sal-despachar-txt');
-    if (lbl) {
-        if (total > 1 && checkedCount < total && checkedCount > 0) {
-            lbl.textContent = 'Despachar Selección (' + checkedCount + ' de ' + total + ')';
+    chks.forEach(function(c) {
+        var cant = parseFloat(c.getAttribute('data-cant') || 0);
+        var imp = parseFloat(c.getAttribute('data-imp') || 0);
+        totalCant += cant;
+        totalImp += imp;
+        if (c.checked) {
+            checkedCount++;
+            cantSel += cant;
+            impSel += imp;
+        }
+    });
+
+    // Actualizar el switch "Todos"
+    var chkAll = document.getElementById('sal-chk-select-all');
+    if (chkAll && total > 1) {
+        chkAll.checked = (checkedCount === total);
+        chkAll.indeterminate = (checkedCount > 0 && checkedCount < total);
+    }
+
+    // Actualizar Badge de Cantidad de Unidades
+    var badgeCant = document.getElementById('sal-detalle-cant-badge');
+    if (badgeCant) {
+        if (total > 1 && checkedCount < total) {
+            badgeCant.innerHTML = '<span class="text-primary fw-bold">' + cantSel.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + '</span> / ' + totalCant.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + ' Unidades';
         } else {
-            lbl.textContent = 'Despachar Salida';
+            badgeCant.textContent = totalCant.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + ' Unidades';
+        }
+    }
+
+    // Actualizar Monto Total / Monto a Despachar
+    var lblTotal = document.getElementById('sal-detalle-total-lbl');
+    var valTotal = document.getElementById('sal-detalle-total-val');
+    var breakdownEl = document.getElementById('sal-detalle-total-breakdown');
+
+    if (lblTotal && valTotal) {
+        if (total > 0 && checkedCount < total) {
+            lblTotal.textContent = 'Monto a Despachar:';
+            valTotal.textContent = 'S/. ' + impSel.toFixed(2);
+            if (breakdownEl) {
+                var pendienteImp = Math.max(0, totalImp - impSel);
+                var pendienteCant = Math.max(0, totalCant - cantSel);
+                breakdownEl.innerHTML = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size:0.68rem; font-weight:600;"><i class="bi bi-clock-history me-1"></i>Pendiente restante: S/. ' + pendienteImp.toFixed(2) + ' (' + pendienteCant.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + ' u.)</span>';
+            }
+        } else {
+            lblTotal.textContent = 'Monto Total Solicitud:';
+            valTotal.textContent = 'S/. ' + totalImp.toFixed(2);
+            if (breakdownEl) breakdownEl.innerHTML = '';
+        }
+    }
+
+    // Actualizar Botón de Despacho
+    var lblBtn = document.getElementById('lbl-sal-despachar-txt');
+    if (lblBtn) {
+        if (total > 1 && checkedCount < total && checkedCount > 0) {
+            lblBtn.textContent = 'Despachar Selección (' + checkedCount + ' de ' + total + ' ítems · S/. ' + impSel.toFixed(2) + ')';
+        } else if (checkedCount === 0) {
+            lblBtn.textContent = 'Selecciona repuestos para despachar';
+        } else {
+            lblBtn.textContent = 'Despachar Salida';
         }
     }
 };
