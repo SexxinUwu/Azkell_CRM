@@ -699,7 +699,10 @@
         if (lblFolio) lblFolio.textContent = `Órden de Compra: ${codLimpio}`;
 
         const solEl = document.getElementById('pr-det-oc-solicitante');
-        if (solEl) solEl.textContent = (item.creador_nombre || item.creado_por || item.solicitante || 'SISTEMA').toUpperCase();
+        if (solEl) solEl.textContent = (item.solicitante || item.autoriza || '—').toUpperCase();
+
+        const creadorEl = document.getElementById('pr-det-oc-creador');
+        if (creadorEl) creadorEl.textContent = (item.creador_nombre || item.creado_por || 'SISTEMA').toUpperCase();
 
         const fecEl = document.getElementById('pr-det-oc-fecha');
         if (fecEl) fecEl.textContent = formatearFechaHora(item.fecha || item.created_at);

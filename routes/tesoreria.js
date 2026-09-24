@@ -2703,9 +2703,20 @@ module.exports = function (db, broadcast, logAudit) {
                 const montoNum = parseFloat(r.monto_total || r.importe_total || r.subtotal || 0) || 0;
                 const esIngreso = tipoMov === 'INGRESO';
 
+                // Detectar si proviene de una Orden de Compra
+                const descStr = String(r.descripcion || '') + ' ' + String(r.observacion || '');
+                const ocMatch = descStr.match(/OC\s+(ENT-\d{4}-\d+|\d{4}-\d+)/i) || 
+                                (r.tipo_comprobante === 'ORDEN DE COMPRA' ? descStr.match(/(ENT-\d{4}-\d+|\d{4}-\d+)/i) : null);
+                const codigoOC = ocMatch ? ocMatch[1].replace(/^ENT-/i, '') : null;
+                const esOC = Boolean(codigoOC || (r.tipo_comprobante && r.tipo_comprobante.toUpperCase().includes('ORDEN')) || (r.sub_motivo && r.sub_motivo.toUpperCase().includes('REQUERIMIENTO')));
+                const tipoOrigen = esOC ? 'ORDEN DE COMPRA' : 'CAJA CHICA';
+                const cajaFolioFinal = esOC && codigoOC ? codigoOC : (r.codigo_caja || `CJ-${r.id}`);
+
                 return {
                     id: r.id,
-                    caja_folio: r.codigo_caja || `CJ-${r.id}`,
+                    caja_folio: cajaFolioFinal,
+                    codigo_oc: codigoOC,
+                    tipo_origen: tipoOrigen,
                     fecha: r.fecha,
                     hora: r.hora || null,
                     tipo_movimiento: tipoMov,
@@ -2722,7 +2733,8 @@ module.exports = function (db, broadcast, logAudit) {
                     numero_factura: r.numero_factura || '-',
                     beneficiario: r.persona || '-',
                     tipo_persona: r.tipo_persona || 'PROVEEDOR',
-                    solicitante: r.usuario_creacion || '-',
+                    usuario_creacion: r.usuario_creacion || r.creado_por || '-',
+                    solicitante: r.solicitante || r.usuario_creacion || '-',
                     autoriza: r.usuario_aprobacion || r.autoriza || '-',
                     observacion: r.observacion || '',
                     fecha_aprobacion: r.fecha_aprobacion || null,

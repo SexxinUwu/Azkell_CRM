@@ -2216,7 +2216,10 @@ window.abrirModalDetalleOC = function(id) {
     if (titEl) titEl.innerText = codLimpio;
 
     var solEl = document.getElementById('det-oc-solicitante');
-    if (solEl) solEl.innerText = (d.creador_nombre || d.creado_por || 'SISTEMA').toUpperCase();
+    if (solEl) solEl.innerText = (d.solicitante || d.autoriza || '—').toUpperCase();
+
+    var creadorEl = document.getElementById('det-oc-creador');
+    if (creadorEl) creadorEl.innerText = (d.creador_nombre || d.creado_por || 'SISTEMA').toUpperCase();
 
     var fecEl = document.getElementById('det-oc-fecha');
     if (fecEl) fecEl.innerText = _entFmtFechaHora(d.fecha, d.created_at);
