@@ -789,7 +789,7 @@
         const oc = window._gerenciaOC.ordenSeleccionada;
         if (!oc) return;
 
-        const usuarioActual = localStorage.getItem('fleet_nombre_usuario') || localStorage.getItem('fleet_user') || window.usuarioActual || 'Dirección / Gerencia';
+        const usuarioActual = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || (typeof usuarioLogueado !== 'undefined' && usuarioLogueado) || window.usuarioLogueado || 'Dirección / Gerencia';
         const fechaHora = new Date().toLocaleString('es-PE');
 
         try {
@@ -846,7 +846,7 @@
             return;
         }
 
-        const usuarioActual = localStorage.getItem('fleet_nombre_usuario') || localStorage.getItem('fleet_user') || window.usuarioActual || 'Dirección / Gerencia';
+        const usuarioActual = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || (typeof usuarioLogueado !== 'undefined' && usuarioLogueado) || window.usuarioLogueado || 'Dirección / Gerencia';
         const fechaHora = new Date().toLocaleString('es-PE');
 
         let nuevoEstadoBD = 'Registrado';
