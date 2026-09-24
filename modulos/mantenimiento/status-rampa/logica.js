@@ -1130,15 +1130,28 @@ window.srAbrirDetalle = function(id) {
             var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
             if (Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
                 det.motivos_array.forEach(function(m) {
-                    var itemTxt = m.item || m.motivo || '';
-                    var obsTxt = (m.obs && m.obs !== m.item && m.obs !== 'Observado en checklist') ? ': ' + m.obs : '';
-                    var sysTxt = (m.sistema && m.sistema !== 'MANUAL' && m.sistema !== 'GENERAL') ? '[' + m.sistema + '] ' : '';
-                    var tecTxt = m.tecnico ? ' (Téc: ' + m.tecnico + ')' : '';
-                    if (itemTxt) obsOTList.push(sysTxt + itemTxt + obsTxt + tecTxt);
+                    var desc = (m.obs && m.obs !== m.item && m.obs !== 'Observado en checklist') 
+                        ? m.obs 
+                        : (m.motivo || m.descripcion || m.item || '');
+                    var cleanDesc = String(desc)
+                        .replace(/^\[[^\]]+\]\s*/, '')
+                        .replace(/^[A-Z0-9\s]+—\s*/i, '')
+                        .replace(/^\d+\s+[^:]+:\s*/i, '')
+                        .replace(/\s*\((?:Téc|Tec|TÉC|TEC):[^\)]*\)/gi, '')
+                        .replace(/^[•\-\*]\s*/, '')
+                        .trim();
+                    if (cleanDesc) obsOTList.push(cleanDesc);
                 });
             } else if (Array.isArray(det.fallas_seleccionadas) && det.fallas_seleccionadas.length > 0) {
                 det.fallas_seleccionadas.forEach(function(f) {
-                    var clean = String(f).replace(/^\[[^\]]+\]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').replace(/^[•\-\*]\s*/, '');
+                    var clean = String(f)
+                        .replace(/^\[[^\]]+\]\s*/, '')
+                        .replace(/^[A-Z0-9\s]+—\s*/i, '')
+                        .replace(/^\d+\s+[^:]+:\s*/i, '')
+                        .replace(/\s*\((?:Téc|Tec|TÉC|TEC):[^\)]*\)/gi, '')
+                        .replace(/^(Falla Manual|MANUAL):\s*/i, '')
+                        .replace(/^[•\-\*]\s*/, '')
+                        .trim();
                     if (clean) obsOTList.push(clean);
                 });
             } else {
@@ -3876,7 +3889,15 @@ window.srParsearTareasArray = function(texto) {
             var nVal = trimmed.replace(/^(nota|obs):\s*/i, '').trim();
             if (nVal) notas.push(nVal);
         } else {
-            var tVal = trimmed.replace(/^[-*•]\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/^(?:FALLA\s*MANUAL|MANUAL)\s*:\s*/i, '').trim();
+            var tVal = trimmed
+                .replace(/^[-*•]\s*/, '')
+                .replace(/^\d+[\.\)]\s*/, '')
+                .replace(/^\[[^\]]+\]\s*/, '')
+                .replace(/^[A-Z0-9\s]+—\s*/i, '')
+                .replace(/^\d+\s+[^:]+:\s*/i, '')
+                .replace(/\s*\((?:Téc|Tec|TÉC|TEC):[^\)]*\)/gi, '')
+                .replace(/^(?:FALLA\s*MANUAL|MANUAL)\s*:\s*/i, '')
+                .trim();
             if (tVal) tareas.push(tVal);
         }
     });
