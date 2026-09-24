@@ -480,9 +480,9 @@
         <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" onclick="window.ckExportarExcel()" title="Exportar a Excel">
           <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
         </button>
-        <!-- Botón Nuevo Reporte (solo visible en Desktop, en móvil usa el FAB) -->
-        <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalNuevoChecklist()" style="background: #0284c7; border-color: #0284c7;">
-          <i class="bi bi-plus-lg fs-6"></i> <span>Nuevo Reporte</span>
+        <!-- Botón Nuevo Reporte (visible en Móvil y Desktop) -->
+        <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-1.5 rounded-3" onclick="window.abrirModalNuevoChecklist()" style="background: #0284c7; border-color: #0284c7;">
+          <i class="bi bi-plus-lg fs-6"></i> <span class="d-none d-sm-inline">Nuevo Reporte</span>
         </button>
       </div>
     </div>
@@ -582,6 +582,16 @@
       </table>
     </div>
   </div>
+
+    <!-- ── 5. BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
+    <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1040;">
+        <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+                onclick="window.abrirModalNuevoChecklist()"
+                title="Nuevo Reporte de Fallas"
+                style="width: 56px; height: 56px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.55rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    </div>
 
     <div class="ck-bottom-spacer" style="height: 90px; width: 100%;"></div>
   </div>
