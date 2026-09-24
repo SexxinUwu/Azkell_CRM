@@ -2546,35 +2546,67 @@ module.exports = function (db, broadcast, logAudit) {
             try {
                 const anioActual = new Date().getFullYear();
                 const [maxRow] = await tdb.query(
-                    "SELECT MAX(CAST(SUBSTRING_INDEX(numero_caja, '-', -1) AS UNSIGNED)) AS maxNum FROM tesoreria_caja WHERE anio = ?",
-                    [anioActual]
+                    "SELECT numero FROM tesoreria_caja WHERE serie = ? ORDER BY id DESC LIMIT 1",
+                    [String(anioActual)]
                 );
-                const nextNum = (maxRow && maxRow[0] && maxRow[0].maxNum ? maxRow[0].maxNum : 0) + 1;
-                const numCajaFmt = `${anioActual}-${String(nextNum).padStart(6, '0')}`;
+                let nextNum = 1;
+                if (maxRow && maxRow[0] && maxRow[0].numero) {
+                    const match = String(maxRow[0].numero).match(/\d+$/);
+                    if (match) nextNum = parseInt(match[0], 10) + 1;
+                }
+                const formatted = String(nextNum).padStart(8, '0');
 
                 const insertCajaSql = `
                     INSERT INTO tesoreria_caja (
-                        anio, numero_caja, fecha, tipo_movimiento, origen_dinero, modulo_origen,
-                        centro_costo, sub_motivo, modalidad_pago, beneficiario,
-                        importe, subtotal, total, observacion, voucher_url, numero_operacion,
+                        fecha, hora, fecha_valuta, hora_valuta,
+                        numero_constancia_deposito, numero_factura, serie, numero,
+                        orden_viaje, conductor, ruta_viaje, placa,
+                        autoriza, motivo, centro_costo, sub_motivo, modalidad_pago, moneda,
+                        tipo_persona, persona, tipo_movimiento, subtotal,
+                        retencion_detraccion, importe_total, tipo_cambio, descripcion,
+                        tipo_comprobante, cuenta_bancaria_persona, cuenta_bancaria_empresa,
+                        voucher_url, observacion, no_aplica_liquidacion,
                         estado, usuario_creacion, usuario_aprobacion, fecha_aprobacion
-                    ) VALUES (?, ?, CURDATE(), 'EGRESO', ?, 'ALMACÉN', ?, ?, 'TRANSFERENCIA', ?, ?, ?, ?, ?, ?, ?, 'PROCESADO', ?, ?, NOW())
+                    ) VALUES (
+                        CURDATE(), CURTIME(), CURDATE(), CURTIME(),
+                        ?, ?, ?, ?,
+                        ?, '', '', ?,
+                        ?, ?, ?, ?, ?, ?,
+                        'PROVEEDOR', ?, 'EGRESO', ?,
+                        0, ?, ?, ?,
+                        'ORDEN DE COMPRA', ?, ?,
+                        ?, ?, 0,
+                        'PROCESADO', ?, ?, NOW()
+                    )
                 `;
+
+                const monStr = (oc.moneda || monedaPago || 'SOLES').toUpperCase().includes('DOL') ? 'DOLARES' : 'SOLES';
+                const totalFinal = montoPagado || parseFloat(oc.total_pen) || 0;
+
                 await tdb.query(insertCajaSql, [
-                    anioActual,
-                    numCajaFmt,
-                    cuentaOrigen || 'BANCO',
+                    numeroConstancia || '',
+                    oc.documento_referencia || '',
+                    String(anioActual),
+                    formatted,
+                    oc.ot_id || '',
+                    oc.placa || '',
+                    oc.autoriza || oc.aprobado_por || usuarioPago,
+                    oc.motivo_entrada || 'COMPRA / ALMACÉN',
                     oc.centro_costo || 'CC-100',
-                    oc.sub_motivo || 'PAGO REQUERIMIENTO',
-                    oc.proveedor_nombre || 'PROVEEDOR',
-                    montoPagado || oc.total_pen || 0,
-                    montoPagado || oc.total_pen || 0,
-                    montoPagado || oc.total_pen || 0,
-                    `PAGO DE REQUERIMIENTO OC ${id} - ${descripcionPago} | N° Constancia: ${numeroConstancia}`,
+                    'PAGO REQUERIMIENTO',
+                    cuentaOrigen.includes('CAJA') ? 'EFECTIVO' : 'TRANSFERENCIA',
+                    monStr,
+                    oc.proveedor_nombre || 'PROVEEDOR GENERAL',
+                    totalFinal,
+                    totalFinal,
+                    oc.tipo_cambio || 1,
+                    `PAGO DE REQUERIMIENTO OC ${id} - ${descripcionPago}`,
+                    oc.cuenta_bancaria_proveedor || '',
+                    cuentaOrigen || 'BCP - CTA CTE SOLES',
                     voucherUrl,
-                    numeroConstancia,
+                    `PAGO DE REQUERIMIENTO OC ${id} | N° Constancia: ${numeroConstancia}`,
                     oc.creado_por || usuarioPago,
-                    oc.autoriza || oc.aprobado_por || usuarioPago
+                    oc.aprobado_por || oc.autoriza || usuarioPago
                 ]);
             } catch (errCaja) {
                 console.warn('Advertencia al asentar egreso en tesoreria_caja:', errCaja.message);
@@ -2644,6 +2676,8 @@ module.exports = function (db, broadcast, logAudit) {
             const sql = `
                 SELECT 
                     c.*,
+                    DATE_FORMAT(c.fecha, '%Y-%m-%d') AS fecha,
+                    DATE_FORMAT(c.fecha_valuta, '%Y-%m-%d') AS fecha_valuta,
                     CONCAT(COALESCE(c.serie, YEAR(c.fecha)), '-', LPAD(COALESCE(c.numero, c.id), 6, '0')) AS codigo_caja,
                     COALESCE(c.importe_total, c.subtotal, 0) AS monto_total,
                     cc.nombre AS centro_costo_nombre
