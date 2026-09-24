@@ -222,47 +222,55 @@ module.exports = function (db, broadcast, logAudit) {
                 INDEX idx_os_rutas_id (orden_servicio_id),
                 INDEX idx_os_rutas_cod (codigo_orden)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+            const ovCols = [
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN peso DECIMAL(12,2) NULL DEFAULT 0.00",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN origen VARCHAR(100) NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN destino VARCHAR(100) NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN ubigeo_partida VARCHAR(10) NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN direccion_partida VARCHAR(255) NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN ubigeo_llegada VARCHAR(10) NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN direccion_llegada VARCHAR(255) NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN escolta VARCHAR(150) NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN observaciones TEXT NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN configuracion_tracto VARCHAR(50) NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN configuracion_remolque VARCHAR(50) NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO'",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN fecha_inicio DATETIME NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN fecha_fin DATETIME NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN kilometraje_inicial INT NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN kilometraje_final INT NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN horas_motor_remolque INT NULL",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN usuario_creacion VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR DEL SISTEMA'",
+                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN usuario_finalizacion VARCHAR(150) NULL"
+            ];
+            for (const sql of ovCols) {
+                try { await tdb.query(sql); } catch (_) {}
+            }
+
+            const osCols = [
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN ruta_sistema VARCHAR(255) NULL",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN tipo_medida VARCHAR(50) DEFAULT 'VIAJE'",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN costo_medida DECIMAL(12,2) DEFAULT 0.00",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN cargos_adicionales DECIMAL(12,2) DEFAULT 0.00",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN descuentos DECIMAL(12,2) DEFAULT 0.00",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN subtotal DECIMAL(12,2) DEFAULT 0.00",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN igv DECIMAL(12,2) DEFAULT 0.00",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN kilometraje_fin INT NULL",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN usuario_creacion VARCHAR(100) DEFAULT 'ADMINISTRADOR'",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN factura VARCHAR(60) NULL",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN es_retorno TINYINT(1) DEFAULT 0",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN estado_liquidacion VARCHAR(30) DEFAULT 'PENDIENTE'"
+            ];
+            for (const sql of osCols) {
+                try { await tdb.query(sql); } catch (_) {}
+            }
+
             try {
                 await tdb.query("ALTER TABLE operaciones_ordenes_viaje_rutas ADD COLUMN distancia_km DECIMAL(10,2) NULL, ADD COLUMN galones DECIMAL(10,2) NULL");
-            } catch (ignore) {}
-            try {
-                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN peso DECIMAL(12,2) NULL DEFAULT 0.00 AFTER placa_remolque");
-            } catch (ignore) {}
-            try {
-                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN ubigeo_partida VARCHAR(10) NULL AFTER destino, ADD COLUMN direccion_partida VARCHAR(255) NULL AFTER ubigeo_partida, ADD COLUMN ubigeo_llegada VARCHAR(10) NULL AFTER direccion_partida, ADD COLUMN direccion_llegada VARCHAR(255) NULL AFTER ubigeo_llegada, ADD COLUMN escolta VARCHAR(150) NULL AFTER direccion_llegada, ADD COLUMN observaciones TEXT NULL AFTER escolta");
-            } catch (ignore) {}
-            try {
-                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN fecha_inicio DATETIME NULL AFTER estado, ADD COLUMN fecha_fin DATETIME NULL AFTER fecha_inicio, ADD COLUMN kilometraje_inicial INT NULL AFTER fecha_fin, ADD COLUMN kilometraje_final INT NULL AFTER kilometraje_inicial, ADD COLUMN horas_motor_remolque INT NULL AFTER kilometraje_final, ADD COLUMN usuario_creacion VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR DEL SISTEMA' AFTER horas_motor_remolque, ADD COLUMN usuario_finalizacion VARCHAR(150) NULL AFTER usuario_creacion");
-            } catch (ignore) {}
-            try {
-                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN configuracion_tracto VARCHAR(50) NULL");
-            } catch (ignore) {}
-            try {
-                await tdb.query("ALTER TABLE operaciones_ordenes_viaje ADD COLUMN configuracion_remolque VARCHAR(50) NULL");
-            } catch (ignore) {}
+            } catch (_) {}
             try {
                 await tdb.query("ALTER TABLE placas ADD COLUMN configuracion VARCHAR(50) NULL");
-            } catch (ignore) {}
-            try {
-                await tdb.query(`ALTER TABLE operaciones_ordenes_servicio 
-                    ADD COLUMN ruta_sistema VARCHAR(255) NULL AFTER placa_carreta,
-                    ADD COLUMN tipo_medida VARCHAR(50) DEFAULT 'VIAJE' AFTER ruta_sistema,
-                    ADD COLUMN costo_medida DECIMAL(12,2) DEFAULT 0.00 AFTER tipo_medida,
-                    ADD COLUMN cargos_adicionales DECIMAL(12,2) DEFAULT 0.00 AFTER costo_medida,
-                    ADD COLUMN descuentos DECIMAL(12,2) DEFAULT 0.00 AFTER cargos_adicionales,
-                    ADD COLUMN subtotal DECIMAL(12,2) DEFAULT 0.00 AFTER descuentos,
-                    ADD COLUMN igv DECIMAL(12,2) DEFAULT 0.00 AFTER subtotal,
-                    ADD COLUMN kilometraje_fin INT NULL AFTER igv,
-                    ADD COLUMN usuario_creacion VARCHAR(100) DEFAULT 'ADMINISTRADOR' AFTER kilometraje_fin,
-                    ADD COLUMN factura VARCHAR(60) NULL AFTER usuario_creacion
-                `);
-            } catch (ignore) {}
-            try {
-                await tdb.query(`ALTER TABLE operaciones_ordenes_servicio ADD COLUMN es_retorno TINYINT(1) DEFAULT 0 AFTER tipo_servicio`);
-            } catch (ignore) {}
-            try {
-                await tdb.query(`ALTER TABLE operaciones_ordenes_servicio ADD COLUMN estado_liquidacion VARCHAR(30) DEFAULT 'PENDIENTE' AFTER estado_servicio`);
-            } catch (ignore) {}
+            } catch (_) {}
             _tenantsInitSet.add(tenantId);
         } catch (err) {
             console.error('Error asegurando tablas de operaciones:', err);
