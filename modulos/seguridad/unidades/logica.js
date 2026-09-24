@@ -1605,15 +1605,12 @@ function _sguInitForm() {
 
 window._sguVerificarUnidadEnRuta = function(placaTracto, placaCarreta) {
     var pT = (placaTracto || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    var pC = (placaCarreta || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (!pT && !pC) return null;
+    if (!pT) return null; // Solo se valida y restringe tractos/camiones en ruta; las carretas pueden reasignarse
 
     var enRuta = (_sguRecords || []).find(function(r) {
         if (r.estado !== 'en_ruta') return false;
         var rT = (r.placa_tracto || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-        var rC = (r.placa_carreta || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-        if (pT && (rT === pT || rC === pT)) return true;
-        if (pC && (rT === pC || rC === pC)) return true;
+        if (pT && rT === pT) return true;
         return false;
     });
 

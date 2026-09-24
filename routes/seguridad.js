@@ -109,21 +109,17 @@ module.exports = (db, logAudit) => {
         const cleanT = (placa_tracto || '').trim().toUpperCase();
         const cleanC = (placa_carreta || '').trim().toUpperCase();
 
-        // 1. Validar que la unidad no se encuentre actualmente EN RUTA
-        let checkSql = "SELECT id, placa_tracto, placa_carreta, conductor, salida_fecha, salida_hora FROM seg_unidades_registros WHERE estado = 'en_ruta' AND (placa_tracto = ?";
+        // 1. Validar que la unidad (tracto / camión) no se encuentre actualmente EN RUTA
+        // NOTA: Solo se restringe por tracto/camión. Las carretas o semirremolques no bloquean la salida.
+        const checkSql = "SELECT id, placa_tracto, placa_carreta, conductor, salida_fecha, salida_hora FROM seg_unidades_registros WHERE estado = 'en_ruta' AND placa_tracto = ? LIMIT 1";
         const checkParams = [cleanT];
-        if (cleanC) {
-            checkSql += " OR placa_carreta = ? OR placa_tracto = ?";
-            checkParams.push(cleanC, cleanC);
-        }
-        checkSql += ") LIMIT 1";
 
         tdb.query(checkSql, checkParams, (errDup, dupRows) => {
             if (errDup) return res.status(500).json({ error: errDup.message });
             if (dupRows && dupRows.length > 0) {
                 const dup = dupRows[0];
                 return res.status(400).json({
-                    error: `La unidad ya se encuentra EN RUTA con un viaje pendiente de retorno (Folio: ${dup.id}, Conductor: ${dup.conductor || 'N/A'}, Salida: ${dup.salida_fecha || ''} ${dup.salida_hora || ''}). Debe registrarse su retorno antes de iniciar una nueva salida.`
+                    error: `El tracto / camión ${cleanT} ya se encuentra EN RUTA con un viaje pendiente de retorno (Folio: ${dup.id}, Conductor: ${dup.conductor || 'N/A'}, Salida: ${dup.salida_fecha || ''} ${dup.salida_hora || ''}). Debe registrarse su retorno antes de iniciar una nueva salida.`
                 });
             }
 
