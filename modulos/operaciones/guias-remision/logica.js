@@ -330,11 +330,26 @@
                     </td>
                     <td class="text-center text-nowrap">
                         <div class="d-inline-flex align-items-center gap-1">
+                            ${(g.pdf_url || g.apisunat_document_id) ? `
+                                <a href="/api/guias-remision/pdf-apisunat/${g.id}" target="_blank" class="btn btn-outline-danger btn-sm rounded-pill py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1 shadow-2xs" style="font-size:0.7rem; line-height: 1.5;" title="Ver PDF Oficial generado por APISUNAT">
+                                    <i class="bi bi-file-earmark-pdf-fill text-danger"></i> PDF
+                                </a>
+                            ` : ''}
+                            ${g.cdr_url ? `
+                                <a href="${esc(g.cdr_url)}" target="_blank" class="btn btn-outline-success btn-sm rounded-pill py-0 px-1.5 fw-semibold d-inline-flex align-items-center gap-1 shadow-2xs" style="font-size:0.7rem; line-height: 1.5;" title="Descargar CDR (Constancia de Recepción SUNAT)">
+                                    <i class="bi bi-file-earmark-check-fill text-success"></i> CDR
+                                </a>
+                            ` : ''}
+                            ${g.apisunat_document_id ? `
+                                <button class="btn btn-outline-primary btn-sm rounded-circle p-1" style="line-height: 1;" onclick="window.greSincronizarApisunat(${g.id})" title="Sincronizar estado con APISUNAT / SUNAT">
+                                    <i class="bi bi-arrow-repeat" style="font-size:0.75rem;"></i>
+                                </button>
+                            ` : ''}
                             ${(g.tipo_documento === '09' || (g.numero_guia && (g.numero_guia.startsWith('T') || g.numero_guia.startsWith('09')))) ? `
                                 <button class="btn btn-warning btn-sm rounded-pill py-0 px-2 fw-bold text-dark d-flex align-items-center gap-1 shadow-2xs" style="font-size:0.7rem; line-height: 1.5;" onclick="window.grtEmitirDesdeGre(${g.id})" title="Emitir GRT Transportista a partir de esta GRE">
                                     <i class="bi bi-truck-flatbed"></i> Emitir GRT
                                 </button>
-                            ` : (g.num_ticket ? `
+                            ` : (g.num_ticket && !g.apisunat_document_id ? `
                                 <button class="btn btn-outline-primary btn-sm rounded-pill py-0 px-2 fw-semibold" style="font-size:0.7rem; line-height: 1.5;" onclick="window.grtConsultarTicket(${g.id})" title="Consultar Ticket SUNAT">
                                     <i class="bi bi-arrow-repeat"></i> Ticket
                                 </button>
@@ -349,6 +364,26 @@
         });
 
         tbody.innerHTML = html;
+    };
+
+    // Sincronizar Guía con APISUNAT
+    window.greSincronizarApisunat = async function(guiaId) {
+        try {
+            const resp = await fetch(`/api/guias-remision/sincronizar-apisunat/${guiaId}`);
+            const res = await resp.json();
+            if (res.ok) {
+                if (typeof window.mostrarAlerta === 'function') {
+                    window.mostrarAlerta(`✓ Estado APISUNAT: ${res.estado_sunat}`, "success");
+                } else {
+                    alert(`Estado APISUNAT: ${res.estado_sunat}`);
+                }
+                await window.greCargarGuias();
+            } else {
+                alert(`Error sincronizando: ${res.error || 'Fallo desconocido'}`);
+            }
+        } catch (e) {
+            alert(`Error de red: ${e.message}`);
+        }
     };
 
     // 3. Calcular KPIs
@@ -1434,20 +1469,41 @@
         const switchModo = document.getElementById('grtSwitchModoReal');
         const switchLbl = document.getElementById('grtSwitchModoLbl');
         if (switchModo && switchLbl) {
+            switchModo.checked = true;
+            switchLbl.textContent = "Modo APISUNAT Oficial (Producción)";
+            switchLbl.className = "form-check-label small fw-bold text-success user-select-none";
+
             switchModo.onchange = function() {
                 if (switchModo.checked) {
-                    switchLbl.textContent = "Modo SUNAT Oficial (Real)";
-                    switchLbl.className = "form-check-label small fw-bold text-danger user-select-none";
+                    switchLbl.textContent = "Modo APISUNAT Oficial (Producción)";
+                    switchLbl.className = "form-check-label small fw-bold text-success user-select-none";
                 } else {
                     switchLbl.textContent = "Modo Simulación (Pruebas)";
-                    switchLbl.className = "form-check-label small fw-bold text-dark user-select-none";
+                    switchLbl.className = "form-check-label small fw-bold text-muted user-select-none";
                 }
             };
         }
 
-        // Obtener siguiente correlativo sugerido
+        // Listener para actualizar correlativo dinámicamente si cambian la serie
+        const serieInput = document.getElementById('grtInputSerie');
+        if (serieInput) {
+            serieInput.onchange = async function() {
+                const s = (serieInput.value || 'V001').trim().toUpperCase();
+                try {
+                    const resp = await fetch(`/api/guias-remision/siguiente-correlativo?serie=${encodeURIComponent(s)}&tipoDoc=31`);
+                    const res = await resp.json();
+                    if (res.ok && res.correlativo) {
+                        const corrInput = document.getElementById('grtInputCorrelativo');
+                        if (corrInput) corrInput.value = res.correlativo;
+                    }
+                } catch (e) {}
+            };
+        }
+
+        // Obtener siguiente correlativo sugerido inicial
         try {
-            const resp = await fetch('/api/guias-remision/siguiente-correlativo?serie=V001');
+            const curSerie = (serieInput && serieInput.value) ? serieInput.value.trim().toUpperCase() : 'V001';
+            const resp = await fetch(`/api/guias-remision/siguiente-correlativo?serie=${encodeURIComponent(curSerie)}&tipoDoc=31`);
             const res = await resp.json();
             if (res.ok && res.correlativo) {
                 const corrInput = document.getElementById('grtInputCorrelativo');

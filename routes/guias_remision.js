@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const SunatGrService = require('../services/sunatGrService');
+const ApisunatService = require('../services/apisunatService');
 
 module.exports = function(db, tenantStorage) {
 
@@ -86,7 +87,13 @@ module.exports = function(db, tenantStorage) {
                 "ALTER TABLE guias_remision ADD COLUMN orden_viaje VARCHAR(60) DEFAULT NULL",
                 "ALTER TABLE guias_remision ADD COLUMN foto_evidencia TEXT DEFAULT NULL",
                 "ALTER TABLE guias_remision ADD COLUMN fecha_entrega DATE DEFAULT NULL",
-                "ALTER TABLE guias_remision ADD COLUMN numero_transporte VARCHAR(50) DEFAULT NULL"
+                "ALTER TABLE guias_remision ADD COLUMN numero_transporte VARCHAR(50) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN apisunat_document_id VARCHAR(60) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN xml_url TEXT DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN cdr_url TEXT DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN pdf_url TEXT DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN apisunat_status VARCHAR(30) DEFAULT NULL",
+                "ALTER TABLE guias_remision ADD COLUMN apisunat_faults TEXT DEFAULT NULL"
             ];
             for (const sql of addCols) {
                 try { await dbConn.query(sql); } catch(_) {}
@@ -1228,91 +1235,171 @@ module.exports = function(db, tenantStorage) {
         }
     });
 
-    // 6. Obtener Siguiente Correlativo GRT (Transportista Serie V001)
+    // 6. Obtener Siguiente Correlativo (GRT Serie V001 o GRE Serie T001)
     router.get('/siguiente-correlativo', async (req, res) => {
         try {
             const dbConn = getDb(req);
             await initTables(dbConn);
 
-            const serie = (req.query.serie || 'V001').trim().toUpperCase();
+            const tipoDoc = req.query.tipoDoc || '31';
+            const serie = (req.query.serie || (tipoDoc === '31' ? 'V001' : 'T001')).trim().toUpperCase();
+
+            // 1. Obtener correlativo de la BD local
             const [rows] = await dbConn.query(
-                "SELECT numero_guia FROM guias_remision WHERE tipo_documento = '31' AND numero_guia LIKE ? ORDER BY id DESC LIMIT 1",
-                [`${serie}-%`]
+                "SELECT numero_guia FROM guias_remision WHERE tipo_documento = ? AND numero_guia LIKE ? ORDER BY id DESC LIMIT 1",
+                [tipoDoc, `${serie}-%`]
             );
 
-            let correlativo = 1;
+            let localCorrelativo = 1;
             if (rows.length > 0) {
                 const parts = rows[0].numero_guia.split('-');
                 if (parts.length === 2) {
                     const num = parseInt(parts[1], 10);
-                    if (!isNaN(num)) correlativo = num + 1;
+                    if (!isNaN(num)) localCorrelativo = num + 1;
                 }
             }
+
+            // 2. Consultar correlativo sugerido en APISUNAT
+            let remoteCorrelativo = 1;
+            try {
+                const creds = await ApisunatService.getCredenciales(dbConn);
+                const remoteRes = await ApisunatService.lastDocument({
+                    personaId: creds.persona_id,
+                    personaToken: creds.persona_token,
+                    type: tipoDoc,
+                    serie: serie
+                });
+
+                if (remoteRes.ok && remoteRes.suggestedNumber) {
+                    remoteCorrelativo = parseInt(remoteRes.suggestedNumber, 10) || 1;
+                }
+            } catch (errApi) {
+                console.warn("[APISUNAT] Advertencia obteniendo correlativo remoto:", errApi.message);
+            }
+
+            const finalCorrelativo = Math.max(localCorrelativo, remoteCorrelativo);
 
             res.json({
                 ok: true,
                 serie,
-                correlativo,
-                numero_sugerido: `${serie}-${String(correlativo).padStart(8, '0')}`
+                correlativo: finalCorrelativo,
+                numero_sugerido: `${serie}-${String(finalCorrelativo).padStart(8, '0')}`,
+                localCorrelativo,
+                remoteCorrelativo
             });
         } catch (err) {
-            console.error("Error obteniendo correlativo GRT:", err);
+            console.error("Error obteniendo correlativo:", err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });
 
-    // 7. Emitir GRT (Transportista) con opción Simulación o Envío Real a SUNAT
+    // 7. Emitir Guía de Remisión (GRT 31 / GRE 09) vía APISUNAT o Simulación
     router.post('/emitir-grt', async (req, res) => {
         try {
             const dbConn = getDb(req);
             await initTables(dbConn);
 
             const grtData = req.body || {};
-            const modo = grtData.modo_emision || 'SIMULACION'; // SIMULACION o PRODUCCION
+            const modo = grtData.modo_emision || 'PRODUCCION'; // PRODUCCION o SIMULACION
+            const tipoDoc = grtData.tipo_documento || '31';
+            const serie = (grtData.serie || (tipoDoc === '31' ? 'V001' : 'T001')).trim().toUpperCase();
 
-            // Obtener credenciales SUNAT
-            const [rowsCreds] = await dbConn.query(
-                "SELECT clave, valor FROM integraciones_api WHERE clave IN ('sunat_client_id', 'sunat_client_secret', 'sunat_ruc_emisor', 'sunat_usuario_sol', 'sunat_clave_sol', 'sunat_modo_entorno')"
-            );
-            const creds = {};
-            rowsCreds.forEach(r => creds[r.clave] = r.valor || '');
+            // Obtener credenciales APISUNAT
+            const apisunatCreds = await ApisunatService.getCredenciales(dbConn);
 
-            // Determinar serie y correlativo si no vienen dados
-            const serie = (grtData.serie || 'V001').trim().toUpperCase();
+            // Obtener correlativo sugerido si no viene
             let correlativo = grtData.correlativo;
-
             if (!correlativo) {
                 const [lastGrt] = await dbConn.query(
-                    "SELECT numero_guia FROM guias_remision WHERE tipo_documento = '31' AND numero_guia LIKE ? ORDER BY id DESC LIMIT 1",
-                    [`${serie}-%`]
+                    "SELECT numero_guia FROM guias_remision WHERE tipo_documento = ? AND numero_guia LIKE ? ORDER BY id DESC LIMIT 1",
+                    [tipoDoc, `${serie}-%`]
                 );
-                correlativo = 1;
+                let localCorrelativo = 1;
                 if (lastGrt.length > 0) {
                     const parts = lastGrt[0].numero_guia.split('-');
                     if (parts.length === 2) {
                         const num = parseInt(parts[1], 10);
-                        if (!isNaN(num)) correlativo = num + 1;
+                        if (!isNaN(num)) localCorrelativo = num + 1;
                     }
                 }
+                correlativo = localCorrelativo;
             }
 
+            const numCorrelativoStr = String(correlativo).padStart(8, '0');
+            const numeroGuiaCompleto = `${serie}-${numCorrelativoStr}`;
             grtData.serie = serie;
             grtData.correlativo = correlativo;
 
-            // Procesar emisión a través de SunatGrService
-            const emisionRes = await SunatGrService.emitirGrt(grtData, creds, modo);
+            let apisunatDocId = null;
+            let estadoSunat = 'ACEPTADO';
+            let xmlUrl = null;
+            let cdrUrl = null;
+            let pdfUrl = null;
+            let obsSunat = 'Guía emitida exitosamente';
+            let codigoResp = '0';
+            let payloadEnviado = {};
 
-            if (!emisionRes.ok) {
-                return res.status(400).json({
-                    ok: false,
-                    error: emisionRes.error || "No se pudo emitir la Guía ante SUNAT.",
-                    detalle: emisionRes.detalle
+            if (modo === 'PRODUCCION' && apisunatCreds.persona_id && apisunatCreds.persona_token) {
+                // ── PRODUCCIÓN REAL CON APISUNAT ──
+                const rucEmisor = apisunatCreds.ruc_emisor || '20609532484';
+                const razonSocialEmisor = apisunatCreds.razon_social || 'YOGUI TRANSPORT S.A.C.';
+                const fileName = `${rucEmisor}-${tipoDoc}-${serie}-${numCorrelativoStr}`;
+
+                const documentBody = (tipoDoc === '31')
+                    ? ApisunatService.buildGrtBody(grtData, rucEmisor, razonSocialEmisor)
+                    : ApisunatService.buildGreBody(grtData, rucEmisor, razonSocialEmisor);
+
+                payloadEnviado = { fileName, documentBody };
+
+                const sendRes = await ApisunatService.sendBill({
+                    personaId: apisunatCreds.persona_id,
+                    personaToken: apisunatCreds.persona_token,
+                    fileName,
+                    documentBody,
+                    customerEmail: grtData.customerEmail
                 });
+
+                if (!sendRes.ok) {
+                    return res.status(400).json({
+                        ok: false,
+                        error: sendRes.error?.message || (typeof sendRes.error === 'string' ? sendRes.error : JSON.stringify(sendRes.error)) || "Rechazo en APISUNAT al emitir guía.",
+                        detalle: sendRes.error
+                    });
+                }
+
+                apisunatDocId = sendRes.documentId;
+                estadoSunat = 'PENDIENTE';
+                pdfUrl = ApisunatService.getPdfUrl(apisunatDocId, fileName, 'A4');
+
+                // Esperar 1.2 segundos para consultar si SUNAT ya emitió el CDR de inmediato
+                await new Promise(r => setTimeout(r, 1200));
+
+                try {
+                    const statusRes = await ApisunatService.getById(apisunatDocId);
+                    if (statusRes.ok) {
+                        estadoSunat = statusRes.status || 'PENDIENTE';
+                        xmlUrl = statusRes.xml || null;
+                        cdrUrl = statusRes.cdr || null;
+                        if (statusRes.faults && statusRes.faults.length > 0) {
+                            obsSunat = statusRes.faults.map(f => `${f.code || ''}: ${f.message || ''}`).join(' | ');
+                        } else if (statusRes.notes && statusRes.notes.length > 0) {
+                            obsSunat = statusRes.notes.join(' | ');
+                        }
+                    }
+                } catch (ePoll) {
+                    console.warn("[APISUNAT] Error en verificación inmediata de estado:", ePoll.message);
+                }
+
+            } else {
+                // ── MODO SIMULACIÓN / TEST OFFLINE ──
+                const simRes = await SunatGrService.emitirGrt(grtData, { sunat_ruc_emisor: apisunatCreds.ruc_emisor }, 'SIMULACION');
+                estadoSunat = simRes.estado_sunat || 'ACEPTADO';
+                obsSunat = simRes.observaciones || 'Guía en Simulación.';
+                apisunatDocId = simRes.num_ticket || `SIM-${Date.now()}`;
+                payloadEnviado = simRes.payload_enviado || {};
             }
 
-            const numeroGuiaCompleto = emisionRes.numero_guia;
-
-            // Guardar en la base de datos de guías de remisión
+            // Guardar en MySQL
             const [insertRes] = await dbConn.query(`
                 INSERT INTO guias_remision (
                     numero_guia, tipo_documento, fecha_emision, fecha_traslado,
@@ -1320,12 +1407,12 @@ module.exports = function(db, tenantStorage) {
                     punto_partida_direccion, punto_partida_ubigeo, punto_llegada_direccion, punto_llegada_ubigeo,
                     placa_tracto, placa_carreta, conductor_tipo_doc, conductor_num_doc, conductor_nombre, conductor_licencia,
                     peso_bruto_total, unidad_medida, estado_sunat, codigo_respuesta_sunat, observaciones_sunat,
-                    gre_relacionada_id, gre_relacionada_numero, num_ticket, xml_hash, modo_emision, motivo_traslado,
-                    datos_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    gre_relacionada_id, gre_relacionada_numero, num_ticket, modo_emision, motivo_traslado,
+                    apisunat_document_id, xml_url, cdr_url, pdf_url, apisunat_status, datos_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 numeroGuiaCompleto,
-                '31', // Transportista
+                tipoDoc,
                 grtData.fecha_emision || new Date().toISOString().slice(0, 10),
                 grtData.fecha_traslado || new Date().toISOString().slice(0, 10),
                 grtData.remitente_ruc || null,
@@ -1344,21 +1431,25 @@ module.exports = function(db, tenantStorage) {
                 grtData.conductor_licencia || null,
                 Number(grtData.peso_bruto_total || 0),
                 grtData.unidad_medida || 'KGM',
-                emisionRes.estado_sunat || 'ACEPTADO',
-                emisionRes.codigo_respuesta || '0',
-                emisionRes.observaciones || 'Guía Transportista emitida exitosamente',
+                estadoSunat,
+                codigoResp,
+                obsSunat,
                 grtData.gre_relacionada_id || null,
                 grtData.gre_relacionada_numero || null,
-                emisionRes.num_ticket || null,
-                emisionRes.xml_hash || null,
+                apisunatDocId,
                 modo,
                 grtData.motivo_traslado || '01',
-                JSON.stringify(emisionRes.payload_enviado || {})
+                apisunatDocId,
+                xmlUrl,
+                cdrUrl,
+                pdfUrl,
+                estadoSunat,
+                JSON.stringify(payloadEnviado)
             ]);
 
             const nuevaGrtId = insertRes.insertId;
 
-            // Guardar ítems si existen
+            // Guardar ítems
             const items = grtData.items || [];
             if (items.length > 0) {
                 for (const item of items) {
@@ -1379,18 +1470,108 @@ module.exports = function(db, tenantStorage) {
             res.json({
                 ok: true,
                 message: modo === 'SIMULACION'
-                    ? `[SIMULACIÓN] Guía Transportista ${numeroGuiaCompleto} emitida con éxito.`
-                    : `Guía Transportista ${numeroGuiaCompleto} despachada a SUNAT.`,
+                    ? `[SIMULACIÓN] Guía ${numeroGuiaCompleto} emitida con éxito.`
+                    : `Guía ${numeroGuiaCompleto} emitida y enviada a APISUNAT / SUNAT.`,
                 id: nuevaGrtId,
                 numero_guia: numeroGuiaCompleto,
-                num_ticket: emisionRes.num_ticket,
-                estado_sunat: emisionRes.estado_sunat,
-                xml_hash: emisionRes.xml_hash,
+                documentId: apisunatDocId,
+                num_ticket: apisunatDocId,
+                estado_sunat: estadoSunat,
+                pdf_url: pdfUrl,
+                xml_url: xmlUrl,
+                cdr_url: cdrUrl,
                 modo
             });
 
         } catch (err) {
             console.error("Error en /emitir-grt:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 8. Sincronizar Estado de Guía con APISUNAT
+    router.get('/sincronizar-apisunat/:id', async (req, res) => {
+        try {
+            const dbConn = getDb(req);
+            await initTables(dbConn);
+            const { id } = req.params;
+
+            const [rows] = await dbConn.query("SELECT * FROM guias_remision WHERE id = ?", [id]);
+            if (rows.length === 0) {
+                return res.status(404).json({ ok: false, error: "Guía no encontrada." });
+            }
+
+            const guia = rows[0];
+            const docId = guia.apisunat_document_id || guia.num_ticket;
+            if (!docId) {
+                return res.json({ ok: true, estado_sunat: guia.estado_sunat, mensaje: "Esta guía no tiene ID de APISUNAT." });
+            }
+
+            const statusRes = await ApisunatService.getById(docId);
+            if (!statusRes.ok) {
+                return res.status(400).json({ ok: false, error: statusRes.error || "No se pudo consultar APISUNAT." });
+            }
+
+            const estado = statusRes.status || guia.estado_sunat;
+            const xml = statusRes.xml || guia.xml_url;
+            const cdr = statusRes.cdr || guia.cdr_url;
+            const fileName = statusRes.fileName || guia.numero_guia;
+            const pdf = ApisunatService.getPdfUrl(docId, fileName, 'A4');
+            let obs = guia.observaciones_sunat;
+
+            if (statusRes.faults && statusRes.faults.length > 0) {
+                obs = statusRes.faults.map(f => `${f.code || ''}: ${f.message || ''}`).join(' | ');
+            } else if (statusRes.notes && statusRes.notes.length > 0) {
+                obs = statusRes.notes.join(' | ');
+            }
+
+            await dbConn.query(`
+                UPDATE guias_remision 
+                SET estado_sunat = ?, apisunat_status = ?, xml_url = ?, cdr_url = ?, pdf_url = ?, observaciones_sunat = ?
+                WHERE id = ?
+            `, [estado, estado, xml, cdr, pdf, obs, id]);
+
+            res.json({
+                ok: true,
+                estado_sunat: estado,
+                xml_url: xml,
+                cdr_url: cdr,
+                pdf_url: pdf,
+                observaciones: obs,
+                message: `Estado actualizado: ${estado}`
+            });
+        } catch (err) {
+            console.error("Error sincronizando con APISUNAT:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // 9. Ver o Redirigir a PDF Oficial de APISUNAT
+    router.get('/pdf-apisunat/:id', async (req, res) => {
+        try {
+            const dbConn = getDb(req);
+            await initTables(dbConn);
+            const { id } = req.params;
+
+            const [rows] = await dbConn.query("SELECT * FROM guias_remision WHERE id = ?", [id]);
+            if (rows.length === 0) {
+                return res.status(404).json({ ok: false, error: "Guía no encontrada." });
+            }
+
+            const guia = rows[0];
+            const docId = guia.apisunat_document_id || guia.num_ticket;
+            if (!docId) {
+                return res.status(400).json({ ok: false, error: "La guía no cuenta con Document ID en APISUNAT." });
+            }
+
+            const creds = await ApisunatService.getCredenciales(dbConn);
+            const ruc = creds.ruc_emisor || '20609532484';
+            const fileName = `${ruc}-${guia.tipo_documento || '31'}-${guia.numero_guia}`;
+            const pdfUrl = guia.pdf_url || ApisunatService.getPdfUrl(docId, fileName, 'A4');
+
+            res.redirect(pdfUrl);
+        } catch (err) {
+            console.error("Error obteniendo PDF APISUNAT:", err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });
