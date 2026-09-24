@@ -205,9 +205,7 @@
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(15, 23, 42, 0.45) !important;
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
+        background: rgba(15, 23, 42, 0.6) !important;
         z-index: 1088 !important;
         transition: opacity .25s ease;
     }
@@ -318,6 +316,78 @@
         .sal-drawer.open {
             transform: translateY(0) !important;
         }
+    }
+
+    /* ── Modal Confirmación Salidas (Diseño B - Idéntico a Reporte de Fallas) ─── */
+    .sal-confirm-dialog {
+        max-width: 350px !important;
+        width: 90% !important;
+        margin: 1.75rem auto !important;
+    }
+    .sal-confirm-card {
+        background: #ffffff !important;
+        border-radius: 28px !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12) !important;
+        padding: 2.2rem 1.6rem 1.8rem 1.6rem !important;
+        text-align: center;
+        transform: translateZ(0);
+    }
+    .sal-badge-icon {
+        font-size: 3.2rem;
+        line-height: 1;
+        margin-bottom: 0.85rem;
+        display: inline-block;
+    }
+    .sal-btn-circle {
+        width: 54px;
+        height: 54px;
+        border-radius: 50% !important;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        cursor: pointer;
+        transition: transform 0.15s ease, background-color 0.15s ease;
+        outline: none;
+        will-change: transform;
+    }
+    .sal-btn-cancel-circle {
+        background: #18181b !important;
+        color: #ffffff !important;
+    }
+    .sal-btn-cancel-circle:hover {
+        background: #09090b !important;
+        transform: scale(1.06);
+        color: #ffffff !important;
+    }
+    .sal-btn-cancel-circle:active {
+        transform: scale(0.95);
+    }
+    .sal-btn-delete-circle {
+        background: #e11d48 !important;
+        color: #ffffff !important;
+    }
+    .sal-btn-delete-circle:hover {
+        background: #be123c !important;
+        transform: scale(1.06);
+        color: #ffffff !important;
+    }
+    .sal-btn-delete-circle:active {
+        transform: scale(0.95);
+    }
+    .sal-btn-confirm-circle {
+        background: #10b981 !important;
+        color: #ffffff !important;
+    }
+    .sal-btn-confirm-circle:hover {
+        background: #059669 !important;
+        transform: scale(1.06);
+        color: #ffffff !important;
+    }
+    .sal-btn-confirm-circle:active {
+        transform: scale(0.95);
     }
 </style>
 
@@ -818,4 +888,92 @@
             <i class="bi bi-plus-circle me-1"></i> Agregar Repuestos al Formulario
         </button>
     </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 🗑️ MODAL CONFIRMACIÓN DE ANULAR (CALCA REPORTE DE FALLAS)         -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalSalidaAnularConfirm" tabindex="-1" aria-hidden="true" style="z-index: 1095;">
+  <div class="modal-dialog modal-dialog-centered sal-confirm-dialog">
+    <div class="modal-content sal-confirm-card border-0">
+      
+      <!-- Icono Alerta Rojo -->
+      <div class="sal-badge-icon text-danger">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+      </div>
+
+      <!-- Título -->
+      <h4 class="fw-bolder text-dark mb-2" style="font-size: 1.25rem; letter-spacing: -0.3px;">
+        ¿Anular esta salida?
+      </h4>
+
+      <!-- Descripción -->
+      <p class="text-secondary mb-3 px-2" style="font-size: 0.84rem; line-height: 1.45; font-weight: 500;">
+        Esta acción cancelará la solicitud de salida y no podrá ser despachada.
+      </p>
+
+      <!-- Motivo de Anulación -->
+      <div class="mb-4 text-start">
+        <label class="form-label text-muted fw-bold mb-1" style="font-size: 0.72rem; text-transform: uppercase;">
+          Motivo de anulación (Opcional):
+        </label>
+        <input type="text" class="form-control form-control-sm rounded-3 bg-light border-0 px-3 py-2" 
+               id="sal-motivo-anulacion-input" placeholder="Ej: Repuestos no requeridos / Error de tipeo" 
+               style="font-size: 0.82rem;">
+      </div>
+
+      <!-- Botones de Acción Circulares (Calca de Reporte de Fallas) -->
+      <div class="d-flex align-items-center justify-content-center gap-4">
+        <!-- Cancelar (X negro) -->
+        <button type="button" class="sal-btn-circle sal-btn-cancel-circle" data-bs-dismiss="modal" title="Cancelar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+
+        <!-- Anular (Papelera rojo) -->
+        <button type="button" class="sal-btn-circle sal-btn-delete-circle" id="btnEjecutarSalidaAnular" onclick="window._ejecutarSalidaAnularConfirmado()" title="Anular salida">
+          <i class="bi bi-trash3-fill"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 📦 MODAL CONFIRMACIÓN DE DESPACHAR (CALCA DISEÑO B)               -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalSalidaDespacharConfirm" tabindex="-1" aria-hidden="true" style="z-index: 1095;">
+  <div class="modal-dialog modal-dialog-centered sal-confirm-dialog">
+    <div class="modal-content sal-confirm-card border-0">
+      
+      <!-- Icono Despacho Verde -->
+      <div class="sal-badge-icon" style="color: #10b981;">
+        <i class="bi bi-box-seam-fill"></i>
+      </div>
+
+      <!-- Título -->
+      <h4 class="fw-bolder text-dark mb-2" style="font-size: 1.25rem; letter-spacing: -0.3px;">
+        ¿Confirmar Despacho?
+      </h4>
+
+      <!-- Descripción dinámica con items a despachar -->
+      <p class="text-secondary mb-4 px-2" id="sal-despachar-modal-msg" style="font-size: 0.84rem; line-height: 1.45; font-weight: 500;">
+        Se descontará el stock de los artículos seleccionados del inventario de almacén.
+      </p>
+
+      <!-- Botones de Acción Circulares -->
+      <div class="d-flex align-items-center justify-content-center gap-4">
+        <!-- Cancelar (X negro) -->
+        <button type="button" class="sal-btn-circle sal-btn-cancel-circle" data-bs-dismiss="modal" title="Cancelar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+
+        <!-- Despachar (Check verde) -->
+        <button type="button" class="sal-btn-circle sal-btn-confirm-circle" id="btnEjecutarSalidaDespachar" onclick="window._ejecutarSalidaDespacharConfirmado()" title="Confirmar Despacho">
+          <i class="bi bi-check-lg"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
 </div>

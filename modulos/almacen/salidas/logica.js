@@ -520,13 +520,17 @@ function salAbrirDetalle(m) {
     salRenderTabla();
 
     var bd = document.getElementById('sal-det-backdrop');
-    if (bd) bd.classList.add('open');
+    if (bd) {
+        bd.classList.add('open');
+        bd.style.display = 'block';
+    }
 
     var titulo = document.getElementById('sal-detalle-titulo');
     if (titulo) titulo.textContent = 'Salida ' + (m.id || '');
 
     var items = m.items || [];
     var totalCant = items.reduce(function (acc, it) { return acc + (parseFloat(it.cantidad) || 0); }, 0);
+    var esPendiente = (m.estado === 'Pendiente');
 
     var html = `
     <!-- Card 1: Bento Card Cabecera & Info General -->
@@ -612,42 +616,85 @@ function salAbrirDetalle(m) {
     <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
         <div class="d-flex align-items-center justify-content-between mb-2.5 pb-2 border-bottom">
             <div class="d-flex align-items-center gap-1.5 fw-bold text-dark" style="font-size: 0.82rem; text-transform: uppercase;">
-                <i class="bi bi-box-seam-fill text-primary"></i> Artículos Despachados (${items.length})
+                <i class="bi bi-box-seam-fill text-primary"></i> Artículos (${items.length})
             </div>
-            <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" style="font-size: 0.7rem; font-weight: 700;">
-                ${totalCant.toLocaleString('es-PE', { maximumFractionDigits: 3 })} Unidades
-            </span>
+            <div class="d-flex align-items-center gap-2">
+                ${esPendiente && items.length > 1 ? `
+                <div class="d-flex align-items-center gap-1">
+                    <input class="form-check-input m-0 cursor-pointer" type="checkbox" id="sal-chk-select-all" checked onchange="window._salToggleSelectAll(this.checked)" style="width: 17px; height: 17px; border-radius: 5px; cursor: pointer;">
+                    <label for="sal-chk-select-all" class="small fw-bold text-muted cursor-pointer" style="font-size: 0.72rem; user-select: none; cursor: pointer;">Todos</label>
+                </div>
+                ` : ''}
+                <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" style="font-size: 0.7rem; font-weight: 700;">
+                    ${totalCant.toLocaleString('es-PE', { maximumFractionDigits: 3 })} Unidades
+                </span>
+            </div>
         </div>
 
-        <div class="d-flex flex-column gap-2">
+        <div class="d-flex flex-column gap-2" id="sal-items-detail-list">
     `;
 
     if (items.length) {
-        items.forEach(function (it) {
+        items.forEach(function (it, idx) {
             var cant = parseFloat(it.cantidad || 0);
             var cu = parseFloat(it.costo_unitario || 0);
             var imp = parseFloat(it.importe) || (cant * cu);
 
+            // Buscar stock disponible en el inventario cargado
+            var invItem = null;
+            if (window._salInvData && Array.isArray(window._salInvData)) {
+                invItem = window._salInvData.find(function(x) {
+                    if (it.inventario_id && x.id === it.inventario_id) return true;
+                    if (it.descripcion && x.descripcion === it.descripcion) return true;
+                    if (it.descripcion && x.id && it.descripcion.startsWith(x.id)) return true;
+                    return false;
+                });
+            }
+
+            var stockDisp = (invItem && invItem.stock_actual != null) ? parseFloat(invItem.stock_actual) : null;
+            var tieneStock = (stockDisp == null || stockDisp >= cant);
+
             html += `
-            <div class="p-2.5 rounded-3 d-flex align-items-center justify-content-between gap-2" style="background: #f8fafc; border: 1px solid #f1f5f9;">
-                <div class="d-flex align-items-center gap-2.5" style="min-width: 0;">
-                    <div class="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0" style="width: 36px; height: 36px; background: #e0f2fe; color: #0284c7;">
-                        <i class="bi bi-box-seam"></i>
+            <div class="p-2.5 rounded-3 d-flex align-items-center justify-content-between gap-2.5" style="background: #ffffff; border: 1.5px solid ${tieneStock ? '#e2e8f0' : '#fecaca'}; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+                <div class="d-flex align-items-center gap-2" style="min-width: 0; flex: 1;">
+                    ${esPendiente ? `
+                    <div class="form-check m-0 p-0 d-flex align-items-center flex-shrink-0">
+                        <input class="form-check-input sal-item-chk" type="checkbox" 
+                               value="${it.id || idx}" 
+                               data-item-id="${it.id || ''}"
+                               data-cant="${cant}"
+                               data-stock="${stockDisp != null ? stockDisp : 999}"
+                               data-desc="${salEsc(it.descripcion || it.inventario_id || '')}"
+                               ${tieneStock ? 'checked' : ''}
+                               onchange="window._salActualizarContadorDespacho()"
+                               style="width: 20px; height: 20px; border-radius: 6px; cursor: pointer; border: 2px solid ${tieneStock ? '#0284c7' : '#ef4444'};">
                     </div>
-                    <div style="min-width: 0;">
-                        <div class="fw-bold text-dark text-truncate" style="font-size: 0.85rem;" title="${salEsc(it.descripcion || it.inventario_id || '—')}">
+                    ` : ''}
+
+                    <div class="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width: 36px; height: 36px; background: ${tieneStock ? '#e0f2fe' : '#fee2e2'}; color: ${tieneStock ? '#0284c7' : '#ef4444'};">
+                        <i class="bi ${tieneStock ? 'bi-box-seam' : 'bi-exclamation-triangle-fill'}"></i>
+                    </div>
+
+                    <div style="min-width: 0; flex: 1;">
+                        <div class="fw-bold text-dark text-truncate" style="font-size: 0.84rem;" title="${salEsc(it.descripcion || it.inventario_id || '—')}">
                             ${salEsc(it.descripcion || it.inventario_id || '—')}
                         </div>
-                        <div class="text-secondary small d-flex align-items-center gap-1.5 flex-wrap" style="font-size: 0.72rem;">
-                            ${it.inventario_id ? `<span class="badge bg-white text-muted border rounded-1 px-1.5 py-0.5" style="font-size:0.65rem;">${salEsc(it.inventario_id)}</span>` : ''}
-                            <span>${cant.toLocaleString('es-PE', { maximumFractionDigits: 3 })} u.</span>
+                        <div class="text-secondary small d-flex align-items-center gap-1.5 flex-wrap" style="font-size: 0.72rem; margin-top: 2px;">
+                            ${it.inventario_id ? `<span class="badge bg-light text-dark border rounded-1 px-1.5 py-0.5" style="font-size:0.65rem; font-weight:700;">${salEsc(it.inventario_id)}</span>` : ''}
+                            <span class="fw-bold text-dark">${cant.toLocaleString('es-PE', { maximumFractionDigits: 3 })} u.</span>
                             <span class="text-muted">·</span>
                             <span>S/. ${cu.toFixed(2)} c/u</span>
+                            ${stockDisp != null ? `
+                            <span class="badge ${tieneStock ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle'} rounded-pill px-2 py-0.5" style="font-size: 0.65rem; font-weight: 700;">
+                                Stock: ${stockDisp} u. ${tieneStock ? '(Disponible)' : '(Insuficiente)'}
+                            </span>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
-                <div class="text-end flex-shrink-0">
-                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.62rem;">Subtotal</span>
+
+                <div class="text-end flex-shrink-0 ps-1">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.60rem;">Subtotal</span>
                     <span class="fw-bolder text-dark" style="font-size: 0.88rem;">S/. ${imp.toFixed(2)}</span>
                 </div>
             </div>
@@ -661,8 +708,8 @@ function salAbrirDetalle(m) {
         </div>
 
         <!-- Total General -->
-        <div class="d-flex align-items-center justify-content-between mt-3 pt-2.5 border-top">
-            <span class="fw-bold text-dark" style="font-size: 0.9rem;">Monto Total:</span>
+        <div class="d-flex align-items-center justify-content-between mt-3 pt-2.5 border-top bg-white p-2.5 rounded-3 border">
+            <span class="fw-bold text-dark" style="font-size: 0.9rem;">Monto Total Solicitud:</span>
             <span class="fw-bolder text-success" style="font-size: 1.25rem;">${salFmtMoney(m.total_pen)}</span>
         </div>
     </div>
@@ -680,10 +727,10 @@ function salAbrirDetalle(m) {
 
         var btnDespachar = (puedeEditar && m.estado !== 'Despachado' && m.estado !== 'Anulado')
             ? `
-            <button type="button" class="btn w-100 fw-bold d-flex align-items-center justify-content-center gap-2"
+            <button type="button" id="btn-sal-despachar-action" class="btn w-100 fw-bold d-flex align-items-center justify-content-center gap-2"
                     style="border-radius: 9999px; height: 50px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; font-size: 0.95rem; border: none; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);"
                     onclick="window.salDespachar('${eId}')">
-                <i class="bi bi-box-seam-fill fs-6"></i> Despachar Salida
+                <i class="bi bi-box-seam-fill fs-6"></i> <span id="lbl-sal-despachar-txt">Despachar Salida</span>
             </button>
             ` : '';
 
@@ -734,69 +781,239 @@ function salAbrirDetalle(m) {
                 </div>
             </div>
         `;
+
+        if (typeof window._salActualizarContadorDespacho === 'function') {
+            window._salActualizarContadorDespacho();
+        }
     }
 
     var panel = document.getElementById('sal-panel-detalle');
-    if (panel) panel.classList.add('open');
+    if (panel) {
+        panel.classList.add('open');
+        panel.style.visibility = 'visible';
+    }
 }
 
 window.salCerrarDetalle = function () {
     var panel = document.getElementById('sal-panel-detalle');
-    if (panel) panel.classList.remove('open');
+    if (panel) {
+        panel.classList.remove('open');
+        panel.style.visibility = 'hidden';
+    }
     var bd = document.getElementById('sal-det-backdrop');
-    if (bd) bd.classList.remove('open');
+    if (bd) {
+        bd.classList.remove('open');
+        bd.style.display = 'none';
+    }
     window.salDetalleId = null;
     salRenderTabla();
 };
 
-// ── Despachar salida ──────────────────────────────────────────────
-window.salDespachar = function (id) {
-    if (!window.guardAction('sal_inv', 'e')) return;
-    if (!confirm('¿Despachar la salida ' + id + '? El stock del inventario será descontado.')) return;
-    fetch('/api/almacen/salidas/' + encodeURIComponent(id), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accion: 'despachar' })
-    })
-        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(function () {
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Salida ' + id + ' despachada — stock descontado', 'success');
-            window.salDetalleId = null;
-            var panel = document.getElementById('sal-panel-detalle');
-            if (panel) panel.classList.remove('open');
-            salCargar();
-        })
-        .catch(function (err) {
-            console.error('Error despachando salida:', err);
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al despachar la salida', 'danger');
-        });
+window._salToggleSelectAll = function(checked) {
+    var chks = document.querySelectorAll('.sal-item-chk');
+    chks.forEach(function(c) { c.checked = checked; });
+    if (typeof window._salActualizarContadorDespacho === 'function') {
+        window._salActualizarContadorDespacho();
+    }
 };
 
-// ── Anular salida ─────────────────────────────────────────────
-window.salAnular = function (id) {
-    if (!window.guardAction('sal_inv', 'd')) return;
-    var motivo = window.prompt('Motivo de anulación (obligatorio):');
-    if (motivo === null) return; // cancelado
-    motivo = motivo.trim();
-    if (!motivo) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('El motivo es obligatorio para anular', 'warning'); return; }
+window._salActualizarContadorDespacho = function() {
+    var chks = document.querySelectorAll('.sal-item-chk');
+    var total = chks.length;
+    var checkedCount = 0;
+    chks.forEach(function(c) { if (c.checked) checkedCount++; });
+
+    var lbl = document.getElementById('lbl-sal-despachar-txt');
+    if (lbl) {
+        if (total > 1 && checkedCount < total && checkedCount > 0) {
+            lbl.textContent = 'Despachar Selección (' + checkedCount + ' de ' + total + ')';
+        } else {
+            lbl.textContent = 'Despachar Salida';
+        }
+    }
+};
+
+// ── Despachar salida (Abre Modal de Confirmación Idéntico al Reporte de Fallas) ─
+window.salDespachar = function (id) {
+    if (!window.guardAction('sal_inv', 'e')) return;
+    var m = (window.salData || []).find(function(x) { return x.id === id; });
+    if (!m) return;
+
+    var chks = document.querySelectorAll('.sal-item-chk');
+    var selectedIds = [];
+    var sinStockList = [];
+
+    if (chks.length > 0) {
+        chks.forEach(function(c) {
+            if (c.checked) {
+                var itId = c.getAttribute('data-item-id');
+                if (itId) selectedIds.push(parseInt(itId, 10));
+                var cant = parseFloat(c.getAttribute('data-cant') || 0);
+                var stock = parseFloat(c.getAttribute('data-stock') || 0);
+                if (stock < cant) {
+                    sinStockList.push(c.getAttribute('data-desc') + ' (Req: ' + cant + ', Disp: ' + stock + ')');
+                }
+            }
+        });
+
+        if (selectedIds.length === 0) {
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta('Debes seleccionar al menos un repuesto para despachar.', 'warning');
+            }
+            return;
+        }
+
+        if (sinStockList.length > 0) {
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta('Los siguientes repuestos seleccionados no cuentan con stock disponible en almacén:\n• ' + sinStockList.join('\n• '), 'danger');
+            }
+            return;
+        }
+    }
+
+    window._salDespachoPendiente = {
+        id: id,
+        item_ids: selectedIds,
+        selectedCount: selectedIds.length || (m.items || []).length,
+        totalCount: (m.items || []).length
+    };
+
+    var txtResumen = document.getElementById('sal-despachar-resumen-txt');
+    if (txtResumen) {
+        if (m.items && m.items.length > 1 && selectedIds.length < m.items.length) {
+            txtResumen.innerHTML = '¿Despachar <strong>' + selectedIds.length + ' de ' + m.items.length + '</strong> repuestos seleccionados de la salida <strong class="text-dark">' + salEsc(id) + '</strong>?<br><span class="text-primary fw-bold">El resto de repuestos quedará como pendiente para despachar luego.</span>';
+        } else {
+            txtResumen.innerHTML = '¿Despachar todos los repuestos de la salida <strong class="text-dark">' + salEsc(id) + '</strong>?<br>El stock del inventario será descontado inmediatamente.';
+        }
+    }
+
+    // Cerrar el drawer de detalle
+    window.salCerrarDetalle();
+
+    // Abrir Modal de Confirmación
+    var modalEl = document.getElementById('modalSalidaDespacharConfirm');
+    if (modalEl) {
+        var modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modalInstance.show();
+    }
+};
+
+window._ejecutarSalidaDespacharConfirmado = function() {
+    if (!window._salDespachoPendiente || !window._salDespachoPendiente.id) return;
+    var info = window._salDespachoPendiente;
+    var id = info.id;
+    var itemIds = info.item_ids;
+
+    // Ocultar modal
+    var modalEl = document.getElementById('modalSalidaDespacharConfirm');
+    if (modalEl) {
+        var modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+    }
+
+    var usuario = (window.currentUser && (window.currentUser.nombre || window.currentUser.usuario)) || 'Almacén';
 
     fetch('/api/almacen/salidas/' + encodeURIComponent(id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accion: 'anular', motivo: motivo })
+        body: JSON.stringify({ accion: 'despachar', item_ids: itemIds, usuario: usuario })
     })
-        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(function () {
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Salida ' + id + ' anulada — stock restaurado', 'success');
-            window.salDetalleId = null;
-            var panel = document.getElementById('sal-panel-detalle');
-            if (panel) panel.classList.remove('open');
-            salCargar();
-        })
-        .catch(function (err) {
-            console.error('Error anulando salida:', err);
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al anular la salida', 'danger');
+    .then(function(r) {
+        return r.json().then(function(d) {
+            if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+            return d;
         });
+    })
+    .then(function(res) {
+        if (res.parcial && res.nuevo_pendiente_id) {
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta('Salida ' + id + ' despachada con éxito. Los ítems pendientes quedaron en la salida ' + res.nuevo_pendiente_id + '.', 'success');
+            }
+        } else {
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta('Salida ' + id + ' despachada con éxito — stock descontado.', 'success');
+            }
+        }
+        window._salDespachoPendiente = null;
+        salCargar();
+    })
+    .catch(function(err) {
+        console.error('Error despachando salida:', err);
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta(err.message || 'Error al despachar la salida', 'danger');
+        }
+    });
+};
+
+// ── Anular salida (Abre Modal de Confirmación Idéntico al Reporte de Fallas) ──
+window.salAnular = function (id) {
+    if (!window.guardAction('sal_inv', 'd')) return;
+    window._salAnularPendienteId = id;
+
+    var lbl = document.getElementById('sal-anular-folio-lbl');
+    if (lbl) lbl.textContent = id;
+
+    var txt = document.getElementById('sal-anular-motivo-txt');
+    if (txt) { txt.value = ''; txt.focus(); }
+
+    // Cerrar drawer de detalle
+    window.salCerrarDetalle();
+
+    // Abrir Modal de Confirmación
+    var modalEl = document.getElementById('modalSalidaAnularConfirm');
+    if (modalEl) {
+        var modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modalInstance.show();
+    }
+};
+
+window._ejecutarSalidaAnularConfirmado = function() {
+    var id = window._salAnularPendienteId;
+    if (!id) return;
+
+    var txt = document.getElementById('sal-anular-motivo-txt');
+    var motivo = (txt ? txt.value : '').trim();
+    if (!motivo) {
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('El motivo de anulación es obligatorio.', 'warning');
+        }
+        if (txt) txt.focus();
+        return;
+    }
+
+    // Ocultar modal
+    var modalEl = document.getElementById('modalSalidaAnularConfirm');
+    if (modalEl) {
+        var modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+    }
+
+    var usuario = (window.currentUser && (window.currentUser.nombre || window.currentUser.usuario)) || 'Almacén';
+
+    fetch('/api/almacen/salidas/' + encodeURIComponent(id), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'anular', motivo: motivo, usuario: usuario })
+    })
+    .then(function(r) {
+        return r.json().then(function(d) {
+            if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+            return d;
+        });
+    })
+    .then(function() {
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('Salida ' + id + ' anulada correctamente.', 'success');
+        }
+        window._salAnularPendienteId = null;
+        salCargar();
+    })
+    .catch(function(err) {
+        console.error('Error anulando salida:', err);
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta(err.message || 'Error al anular la salida', 'danger');
+        }
+    });
 };
 
 // ── Eliminar salida ───────────────────────────────────────────
