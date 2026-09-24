@@ -613,16 +613,17 @@ function salAbrirDetalle(m) {
     </div>
 
     <!-- Card 2: Lista de Artículos / Repuestos Despachados -->
-    <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
-        <div class="d-flex align-items-center justify-content-between mb-2.5 pb-2 border-bottom">
-            <div class="d-flex align-items-center gap-1.5 fw-bold text-dark" style="font-size: 0.82rem; text-transform: uppercase;">
-                <i class="bi bi-box-seam-fill text-primary"></i> Artículos (${items.length})
+    <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important; overflow: hidden;">
+        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+            <div class="d-flex align-items-center gap-2 fw-bold text-dark" style="font-size: 0.82rem; text-transform: uppercase;">
+                <i class="bi bi-box-seam-fill text-primary" style="font-size: 0.95rem;"></i>
+                <span>Artículos (${items.length})</span>
             </div>
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2.5">
                 ${esPendiente && items.length > 1 ? `
-                <div class="d-flex align-items-center gap-1">
-                    <input class="form-check-input m-0 cursor-pointer" type="checkbox" id="sal-chk-select-all" checked onchange="window._salToggleSelectAll(this.checked)" style="width: 17px; height: 17px; border-radius: 5px; cursor: pointer;">
-                    <label for="sal-chk-select-all" class="small fw-bold text-muted cursor-pointer" style="font-size: 0.72rem; user-select: none; cursor: pointer;">Todos</label>
+                <div class="d-flex align-items-center gap-1.5 bg-light px-2.5 py-1 rounded-2 border" style="cursor: pointer;" onclick="document.getElementById('sal-chk-select-all').click()">
+                    <input type="checkbox" id="sal-chk-select-all" checked onchange="window._salToggleSelectAll(this.checked)" onclick="event.stopPropagation()" style="width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: #0284c7;">
+                    <label for="sal-chk-select-all" class="small fw-bold text-secondary m-0" style="font-size: 0.72rem; user-select: none; cursor: pointer;">Todos</label>
                 </div>
                 ` : ''}
                 <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" style="font-size: 0.7rem; font-weight: 700;">
@@ -655,11 +656,11 @@ function salAbrirDetalle(m) {
             var tieneStock = (stockDisp == null || stockDisp >= cant);
 
             html += `
-            <div class="p-2.5 rounded-3 d-flex align-items-center justify-content-between gap-2.5" style="background: #ffffff; border: 1.5px solid ${tieneStock ? '#e2e8f0' : '#fecaca'}; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
-                <div class="d-flex align-items-center gap-2" style="min-width: 0; flex: 1;">
+            <div class="p-2.5 rounded-3 d-flex align-items-center justify-content-between gap-2.5" style="background: ${tieneStock ? '#ffffff' : '#fff5f5'}; border: 1.5px solid ${tieneStock ? '#e2e8f0' : '#fca5a5'}; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                <div class="d-flex align-items-center gap-2.5" style="min-width: 0; flex: 1;">
                     ${esPendiente ? `
-                    <div class="form-check m-0 p-0 d-flex align-items-center flex-shrink-0">
-                        <input class="form-check-input sal-item-chk" type="checkbox" 
+                    <div class="d-flex align-items-center justify-content-center flex-shrink-0" style="width: 26px;">
+                        <input type="checkbox" class="sal-item-chk" 
                                value="${it.id || idx}" 
                                data-item-id="${it.id || ''}"
                                data-cant="${cant}"
@@ -667,12 +668,12 @@ function salAbrirDetalle(m) {
                                data-desc="${salEsc(it.descripcion || it.inventario_id || '')}"
                                ${tieneStock ? 'checked' : ''}
                                onchange="window._salActualizarContadorDespacho()"
-                               style="width: 20px; height: 20px; border-radius: 6px; cursor: pointer; border: 2px solid ${tieneStock ? '#0284c7' : '#ef4444'};">
+                               style="width: 19px; height: 19px; margin: 0; cursor: pointer; border-radius: 4px; accent-color: #0284c7;">
                     </div>
                     ` : ''}
 
                     <div class="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width: 36px; height: 36px; background: ${tieneStock ? '#e0f2fe' : '#fee2e2'}; color: ${tieneStock ? '#0284c7' : '#ef4444'};">
-                        <i class="bi ${tieneStock ? 'bi-box-seam' : 'bi-exclamation-triangle-fill'}"></i>
+                        <i class="bi ${tieneStock ? 'bi-box-seam' : 'bi-exclamation-triangle-fill'}" style="font-size: 0.95rem;"></i>
                     </div>
 
                     <div style="min-width: 0; flex: 1;">
@@ -953,8 +954,8 @@ window.salAnular = function (id) {
     var lbl = document.getElementById('sal-anular-folio-lbl');
     if (lbl) lbl.textContent = id;
 
-    var txt = document.getElementById('sal-anular-motivo-txt');
-    if (txt) { txt.value = ''; txt.focus(); }
+    var txt = document.getElementById('sal-motivo-anulacion-input') || document.getElementById('sal-anular-motivo-txt');
+    if (txt) { txt.value = ''; }
 
     // Cerrar drawer de detalle
     window.salCerrarDetalle();
@@ -964,6 +965,9 @@ window.salAnular = function (id) {
     if (modalEl) {
         var modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
         modalInstance.show();
+        setTimeout(function() {
+            if (txt) txt.focus();
+        }, 300);
     }
 };
 
@@ -971,14 +975,10 @@ window._ejecutarSalidaAnularConfirmado = function() {
     var id = window._salAnularPendienteId;
     if (!id) return;
 
-    var txt = document.getElementById('sal-anular-motivo-txt');
-    var motivo = (txt ? txt.value : '').trim();
+    var txt = document.getElementById('sal-motivo-anulacion-input') || document.getElementById('sal-anular-motivo-txt');
+    var motivo = (txt && txt.value) ? txt.value.trim() : '';
     if (!motivo) {
-        if (typeof window.mostrarAlerta === 'function') {
-            window.mostrarAlerta('El motivo de anulación es obligatorio.', 'warning');
-        }
-        if (txt) txt.focus();
-        return;
+        motivo = 'Anulado por el usuario';
     }
 
     // Ocultar modal

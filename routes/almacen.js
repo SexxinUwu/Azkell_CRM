@@ -1552,9 +1552,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const { id } = req.params;
         const { accion, motivo } = req.body;
         if (accion === 'anular') {
-            if (!motivo || !String(motivo).trim()) return res.status(400).json({ error: 'Motivo requerido' });
-            db.query('UPDATE salidas_inv SET estado=?, motivo_anulacion=? WHERE id=?',
-                ['Anulado', String(motivo).trim(), id], (err, result) => {
+            const motivoFinal = (motivo && String(motivo).trim()) ? String(motivo).trim() : 'Anulado por el usuario';
+            const targetDb = getDb(req);
+            targetDb.query('UPDATE salidas_inv SET estado=?, motivo_anulacion=? WHERE id=?',
+                ['Anulado', motivoFinal, id], (err, result) => {
                     if (err) return res.status(500).json({ error: err.message });
                     if (!result.affectedRows) return res.status(404).json({ error: 'No encontrado' });
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
