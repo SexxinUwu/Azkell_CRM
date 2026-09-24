@@ -1454,6 +1454,7 @@
     window._grtListaGresDisponibles = [];
 
     // Abrir Modal de Emisión de GRT
+    window.greAbrirModalEmitirGrt = function(id) { return window.grtAbrirModalEmitir(id); };
     window.grtAbrirModalEmitir = async function(preselectGreId = null) {
         const modalEl = document.getElementById('grtModalEmitir');
         if (!modalEl) return;
