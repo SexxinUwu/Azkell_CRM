@@ -291,22 +291,49 @@ window._entCargarCuentasEmpresa = function(cuentaSeleccionada) {
     if (!ctaEmpSelect) return;
     ctaEmpSelect.innerHTML = '<option value="">Seleccione cuenta de empresa...</option>';
     
+    function renderCuentas(data) {
+        var list = Array.isArray(data) ? data : (data && data.data ? data.data : []);
+        ctaEmpSelect.innerHTML = '<option value="">Seleccione cuenta de empresa...</option>';
+        if (!list || !list.length) return;
+
+        list.forEach(function(c) {
+            var mon = (c.moneda || 'SOLES').toUpperCase();
+            var monLabel = (mon.includes('DOL') || mon === 'USD' || mon === 'US$') ? 'DÓLARES' : 'SOLES';
+            var tipo = c.tipo_cuenta || 'CTA CTE';
+            var detraccionTxt = c.detraccion ? ' [DETRACCIÓN]' : '';
+            var num = (c.numero_cuenta || '').trim();
+            var label = c.banco + ' - ' + tipo + ' [' + monLabel + '] - ' + num + detraccionTxt;
+            
+            var opt = document.createElement('option');
+            opt.value = label;
+            opt.textContent = label;
+            if (cuentaSeleccionada && (
+                cuentaSeleccionada === label || 
+                (num && cuentaSeleccionada.includes(num))
+            )) {
+                opt.selected = true;
+            }
+            ctaEmpSelect.appendChild(opt);
+        });
+    }
+
     fetch('/api/almacen/empresa-cuentas')
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            (data || []).forEach(function(c) {
-                var detraccionTxt = c.detraccion ? ' [DETRACCIÓN]' : '';
-                var label = c.banco + ' - ' + (c.tipo_cuenta || 'CTA CTE') + ' (' + (c.numero_cuenta || '') + ')' + detraccionTxt;
-                var opt = document.createElement('option');
-                opt.value = label;
-                opt.textContent = label;
-                if (cuentaSeleccionada && (cuentaSeleccionada === label || cuentaSeleccionada === c.numero_cuenta)) {
-                    opt.selected = true;
-                }
-                ctaEmpSelect.appendChild(opt);
-            });
+            var items = Array.isArray(data) ? data : (data && data.data ? data.data : []);
+            if (!items || !items.length) {
+                return fetch('/api/tesoreria/bancos')
+                    .then(function(r2) { return r2.json(); })
+                    .then(function(res2) {
+                        var bList = (res2 && res2.ok && Array.isArray(res2.data)) ? res2.data : [];
+                        renderCuentas(bList.filter(function(b){ return b.estado === 'ACTIVO' || !b.estado; }));
+                    });
+            }
+            renderCuentas(items);
         })
-        .catch(function() {});
+        .catch(function(err) {
+            console.warn('Error al cargar cuentas bancarias de la empresa:', err);
+        });
 };
 
 window._entOnCondicionPagoChange = function() {
