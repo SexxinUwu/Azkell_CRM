@@ -3216,8 +3216,11 @@ window.abrirModalGenerarOTs = async function(id) {
     (fallasT || []).forEach((f, idx) => {
         const isManual = f.sistema === 'MANUAL' || (f.item || '').toLowerCase().includes('falla manual');
         const itemClean = isManual ? (f.obs || 'Observación adicional') : (f.item || f.nombre || 'Falla observada');
-        const obsClean = isManual ? 'Observación reportada' : (f.obs || f.descripcion || '');
-        const motivoDesc = isManual ? (f.obs || itemClean) : `${f.sistema ? f.sistema + ' — ' : ''}${f.item || ''}${f.obs && f.obs !== f.item ? ': ' + f.obs : ''}`;
+        const obsClean = (f.obs || f.descripcion || '').trim();
+        const principalTxt = (obsClean && obsClean !== itemClean && obsClean !== 'Observado en checklist') ? obsClean : itemClean;
+        const subtituloTxt = (obsClean && obsClean !== itemClean && obsClean !== 'Observado en checklist') 
+            ? `${itemClean}${f.sistema && f.sistema !== 'MANUAL' ? ' • ' + f.sistema : ''}` 
+            : (f.sistema || 'TRACTO');
 
         window._genOT_TodasFallas.push({
             id: `ft_${idx}`,
@@ -3225,16 +3228,21 @@ window.abrirModalGenerarOTs = async function(id) {
             placa: r.placa_tracto || 'TRACTO',
             sistema: f.sistema || 'TRACTO',
             item: itemClean,
-            obs: obsClean,
+            obs: obsClean || itemClean,
             esManual: isManual,
-            motivoDesc: motivoDesc
+            motivoDesc: principalTxt,
+            principalTxt: principalTxt,
+            subtituloTxt: subtituloTxt
         });
     });
     (fallasR || []).forEach((f, idx) => {
         const isManual = f.sistema === 'MANUAL' || (f.item || '').toLowerCase().includes('falla manual');
         const itemClean = isManual ? (f.obs || 'Observación adicional') : (f.item || f.nombre || 'Falla observada');
-        const obsClean = isManual ? 'Observación reportada' : (f.obs || f.descripcion || '');
-        const motivoDesc = isManual ? (f.obs || itemClean) : `${f.sistema ? f.sistema + ' — ' : ''}${f.item || ''}${f.obs && f.obs !== f.item ? ': ' + f.obs : ''}`;
+        const obsClean = (f.obs || f.descripcion || '').trim();
+        const principalTxt = (obsClean && obsClean !== itemClean && obsClean !== 'Observado en checklist') ? obsClean : itemClean;
+        const subtituloTxt = (obsClean && obsClean !== itemClean && obsClean !== 'Observado en checklist') 
+            ? `${itemClean}${f.sistema && f.sistema !== 'MANUAL' ? ' • ' + f.sistema : ''}` 
+            : (f.sistema || 'REMOLQUE');
 
         window._genOT_TodasFallas.push({
             id: `fr_${idx}`,
@@ -3242,9 +3250,11 @@ window.abrirModalGenerarOTs = async function(id) {
             placa: r.placa_remolque || 'REMOLQUE',
             sistema: f.sistema || 'REMOLQUE',
             item: itemClean,
-            obs: obsClean,
+            obs: obsClean || itemClean,
             esManual: isManual,
-            motivoDesc: motivoDesc
+            motivoDesc: principalTxt,
+            principalTxt: principalTxt,
+            subtituloTxt: subtituloTxt
         });
     });
     if (r.fallas_libres_text && r.fallas_libres_text.trim()) {
@@ -3257,9 +3267,11 @@ window.abrirModalGenerarOTs = async function(id) {
                 placa: r.placa_tracto || r.placa_remolque || 'UNIDAD',
                 sistema: 'TRABAJO ADICIONAL',
                 item: cleanTxt,
-                obs: 'Observación reportada',
+                obs: cleanTxt,
                 esManual: true,
-                motivoDesc: cleanTxt
+                motivoDesc: cleanTxt,
+                principalTxt: cleanTxt,
+                subtituloTxt: 'Trabajo Adicional'
             });
         });
     }
@@ -3403,8 +3415,8 @@ window.ckRenderTarjetasOT = function() {
                                    ${isDisabled ? 'disabled' : ''} 
                                    onchange="window.ckToggleFallaOT(${cIdx}, '${f.id}', this.checked)">
                             <label class="form-check-label small m-0" for="chk_${cIdx}_${f.id}" style="cursor: pointer;">
-                                <strong class="text-dark d-block">${f.item}</strong>
-                                <span class="text-muted" style="font-size: 0.76rem;">${f.esManual ? 'Observación adicional' : (f.sistema + (f.obs && f.obs !== f.item && f.obs !== 'Observado en checklist' ? ' — ' + f.obs : ''))}</span>
+                                <strong class="text-dark d-block" style="font-size: 0.88rem; line-height: 1.3;">${f.principalTxt || f.obs || f.item}</strong>
+                                <span class="text-muted" style="font-size: 0.76rem;">${f.subtituloTxt || (f.item + ' • ' + f.sistema)}</span>
                                 ${isDisabled ? `<span class="badge bg-secondary-subtle text-secondary ms-1" style="font-size: 0.68rem;">Asignado en OT #${asignadaEnOtra}</span>` : ''}
                             </label>
                         </div>
@@ -3739,8 +3751,10 @@ window.enviarGeneracionOTs = function(e) {
                 }
             }
 
+            const descFalla = f.principalTxt || f.obs || f.item || 'Falla observada';
             motivosArray.push({
-                motivo: f.motivoDesc || f.item,
+                motivo: descFalla,
+                descripcion: descFalla,
                 sistema: f.sistema,
                 item: f.item,
                 obs: f.obs,
@@ -3764,7 +3778,7 @@ window.enviarGeneracionOTs = function(e) {
             subtipo_ot: c.subtipo_ot || 'Falla',
             supervisor: supVal,
             situacion: c.situacion || 'En atención',
-            fallas_seleccionadas: fallasObjs.map(f => f.motivoDesc || f.item),
+            fallas_seleccionadas: fallasObjs.map(f => f.principalTxt || f.obs || f.item),
             motivos_array: motivosArray,
             tecnicos: tecnicosUnicos.length > 0 ? tecnicosUnicos : [supVal]
         });

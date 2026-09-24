@@ -663,15 +663,21 @@ module.exports = function (db, broadcast, logAudit) {
                 let descFallasClean = '';
                 if (Array.isArray(item.motivos_array) && item.motivos_array.length > 0) {
                     descFallasClean = item.motivos_array.map(m => {
-                        const itemTxt = m.item || m.motivo || 'Falla reportada';
-                        const obsTxt = (m.obs && m.obs !== m.item && m.obs !== 'Observado en checklist') ? `: ${m.obs}` : '';
-                        const sysTxt = (m.sistema && m.sistema !== 'MANUAL' && m.sistema !== 'GENERAL') ? `${m.sistema} — ` : '';
-                        const tecTxt = m.tecnico ? ` (Técnico: ${m.tecnico})` : '';
-                        return `• ${sysTxt}${itemTxt}${obsTxt}${tecTxt}`;
+                        const desc = (m.obs && m.obs !== m.item && m.obs !== 'Observado en checklist') 
+                            ? m.obs 
+                            : (m.motivo || m.descripcion || m.item || 'Falla reportada');
+                        const cleanDesc = String(desc).replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
+                        const tecTxt = m.tecnico ? ` (Téc: ${m.tecnico})` : '';
+                        return `• ${cleanDesc}${tecTxt}`;
                     }).join('\n');
                 } else if (Array.isArray(item.fallas_seleccionadas) && item.fallas_seleccionadas.length > 0) {
                     descFallasClean = item.fallas_seleccionadas.map(f => {
-                        let clean = String(f).replace(/^\[[^\]]+\]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').replace(/^[•\-\*]\s*/, '');
+                        let clean = String(f)
+                            .replace(/^\[[^\]]+\]\s*/, '')
+                            .replace(/^[A-Z0-9\s]+—\s*/i, '')
+                            .replace(/^(Falla Manual|MANUAL):\s*/i, '')
+                            .replace(/^[•\-\*]\s*/, '')
+                            .trim();
                         return `• ` + clean;
                     }).join('\n');
                 } else {
@@ -682,9 +688,10 @@ module.exports = function (db, broadcast, logAudit) {
                     }
                     if (Array.isArray(itemsFalla) && itemsFalla.length > 0) {
                         descFallasClean = itemsFalla.map(f => {
-                            let clean = (f.sistema === 'MANUAL' || (f.item || '').toLowerCase() === 'falla manual') 
-                                ? (f.obs || 'Observación adicional') 
-                                : `${f.sistema ? f.sistema + ' — ' : ''}${f.item || 'Falla'}${f.obs && f.obs !== f.item ? ': ' + f.obs : ''}`;
+                            let clean = (f.obs && f.obs !== f.item && f.obs !== 'Observado en checklist') 
+                                ? f.obs 
+                                : (f.item || 'Falla observada');
+                            clean = String(clean).replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
                             return `• ${clean}`;
                         }).join('\n');
                     }
