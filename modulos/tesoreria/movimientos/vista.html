@@ -148,21 +148,29 @@
     background: #fee2e2;
     color: #ef4444;
     border: 1px solid #fca5a5;
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.4px;
-    padding: 3px 8px;
+    padding: 4px 10px;
     border-radius: 6px;
+    white-space: nowrap !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px;
 }
 .badge-tipo-ingreso {
     background: #dcfce7;
     color: #10b981;
     border: 1px solid #86efac;
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.4px;
-    padding: 3px 8px;
+    padding: 4px 10px;
     border-radius: 6px;
+    white-space: nowrap !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px;
 }
 </style>
 
@@ -343,12 +351,13 @@
           <tr class="text-muted text-uppercase fw-bold border-bottom">
             <th class="ps-3 text-center" style="width: 80px;">ARCHIVO</th>
             <th style="width: 120px;">MONTO</th>
-            <th style="width: 110px;">TIPO MOV.</th>
+            <th style="width: 130px; min-width: 120px;">TIPO MOV.</th>
             <th class="text-end" style="width: 100px;">DEBE</th>
             <th class="text-end" style="width: 100px;">HABER</th>
             <th style="width: 170px;">MOTIVO</th>
             <th style="width: 160px;">SUB MOTIVO</th>
-            <th style="width: 140px;">CAJA / FOLIO</th>
+            <th style="width: 160px; min-width: 150px;">TIPO ORIGEN</th>
+            <th style="width: 140px; min-width: 130px;">FOLIO / N° OC</th>
             <th style="width: 240px;">DESCRIPCIÓN</th>
             <th style="width: 95px;">TIPO CAJA</th>
             <th style="width: 140px;">FECHA DEPÓSITO</th>
@@ -356,6 +365,7 @@
             <th style="width: 120px;">N° FACTURA</th>
             <th style="width: 200px;">BENEFICIARIO</th>
             <th style="width: 120px;">TIPO PERSONA</th>
+            <th style="width: 150px; min-width: 140px;">USUARIO CREACIÓN</th>
             <th style="width: 140px;">SOLICITANTE</th>
             <th style="width: 140px;">AUTORIZA</th>
             <th style="width: 130px;">FECHA APROB.</th>
@@ -367,7 +377,7 @@
         </thead>
         <tbody id="tbodyMovimientos">
           <tr>
-            <td colspan="22" class="text-center py-5 text-muted">
+            <td colspan="24" class="text-center py-5 text-muted">
               <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
               <span class="fw-semibold">Cargando movimientos de tesorería...</span>
             </td>

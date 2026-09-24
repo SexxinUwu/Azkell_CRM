@@ -276,16 +276,31 @@
             badgeEstado = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-0.5 rounded-pill fw-bold" style="font-size:0.7rem;">ANULADO</span>`;
         }
 
+        // 7. Sub Motivo
+        const subMotivo = item.sub_motivo || '-';
+
+        // 8. Tipo Origen (Orden de Compra vs Caja Chica)
+        const esOC = (item.tipo_origen === 'ORDEN DE COMPRA') || (item.sub_motivo && item.sub_motivo.includes('REQUERIMIENTO')) || (item.descripcion && item.descripcion.includes('REQUERIMIENTO'));
+        const badgeOrigen = esOC
+            ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-bold px-2 py-1" style="font-size:0.72rem; white-space:nowrap;"><i class="bi bi-cart-check me-1"></i>ORDEN DE COMPRA</span>`
+            : `<span class="badge bg-warning bg-opacity-15 text-dark border border-warning border-opacity-50 fw-bold px-2 py-1" style="font-size:0.72rem; white-space:nowrap;"><i class="bi bi-wallet2 me-1 text-warning"></i>CAJA CHICA</span>`;
+
+        // 9. Folio / N° OC
+        const folioDisplay = item.codigo_oc || item.caja_folio || '-';
+        const badgeFolio = esOC
+            ? `<span class="badge font-monospace fw-bold" style="font-size:0.75rem; background:#eff6ff; color:#0f172a !important; border:1px solid #bfdbfe; border-radius:6px; padding:3px 8px;" title="N° Orden de Compra">${escapeHtml(folioDisplay)}</span>`
+            : `<span class="badge bg-light text-primary border fw-bold font-monospace" style="font-size:0.75rem;" title="Folio de Caja">${escapeHtml(folioDisplay)}</span>`;
+
         return `
             <tr>
                 <!-- 1. Archivo -->
                 <td class="text-center ps-3">${colArchivo}</td>
 
                 <!-- 2. Monto -->
-                <td class="fw-bolder text-dark">${montoFmt}</td>
+                <td class="fw-bolder text-dark" style="white-space:nowrap;">${montoFmt}</td>
 
                 <!-- 3. Tipo Movimiento -->
-                <td>${badgeTipo}</td>
+                <td style="white-space:nowrap;">${badgeTipo}</td>
 
                 <!-- 4. Debe -->
                 <td class="text-end fw-semibold ${esIngreso ? 'text-success' : 'text-muted'}">${debeFmt}</td>
@@ -297,51 +312,57 @@
                 <td><span class="fw-bold text-dark text-truncate d-inline-block" style="max-width: 160px;" title="${escapeHtml(item.motivo)}">${escapeHtml(item.motivo)}</span></td>
 
                 <!-- 7. Sub Motivo -->
-                <td><span class="text-secondary fw-semibold text-truncate d-inline-block" style="max-width: 150px;" title="${escapeHtml(item.sub_motivo)}">${escapeHtml(item.sub_motivo)}</span></td>
+                <td><span class="text-secondary fw-semibold text-truncate d-inline-block" style="max-width: 150px;" title="${escapeHtml(subMotivo)}">${escapeHtml(subMotivo)}</span></td>
 
-                <!-- 8. Caja / Folio -->
-                <td><span class="badge bg-light text-primary border fw-bold" style="font-size:0.75rem;">${escapeHtml(item.caja_folio)}</span></td>
+                <!-- 8. Tipo Origen -->
+                <td>${badgeOrigen}</td>
 
-                <!-- 9. Descripción -->
+                <!-- 9. Caja / Folio / N° OC -->
+                <td>${badgeFolio}</td>
+
+                <!-- 10. Descripción -->
                 <td><span class="text-muted small text-truncate d-inline-block" style="max-width: 230px;" title="${escapeHtml(item.descripcion)}">${escapeHtml(item.descripcion)}</span></td>
 
-                <!-- 10. Tipo Caja -->
+                <!-- 11. Tipo Caja -->
                 <td><span class="badge bg-light text-secondary border small">${escapeHtml(item.tipo_caja)}</span></td>
 
-                <!-- 11. Fecha Depósito -->
+                <!-- 12. Fecha Depósito -->
                 <td><span class="text-secondary fw-semibold small">${fechaDep}</span></td>
 
-                <!-- 12. N° Operación -->
+                <!-- 13. N° Operación -->
                 <td><span class="fw-bold text-dark small">${escapeHtml(item.numero_operacion)}</span></td>
 
-                <!-- 13. N° Factura -->
+                <!-- 14. N° Factura -->
                 <td><span class="text-muted small">${escapeHtml(item.numero_factura)}</span></td>
 
-                <!-- 14. Beneficiario -->
+                <!-- 15. Beneficiario -->
                 <td><span class="fw-bold text-dark text-truncate d-inline-block" style="max-width: 190px;" title="${escapeHtml(item.beneficiario)}">${escapeHtml(item.beneficiario)}</span></td>
 
-                <!-- 15. Tipo Persona -->
+                <!-- 16. Tipo Persona -->
                 <td><span class="badge bg-light text-dark border small">${escapeHtml(item.tipo_persona)}</span></td>
 
-                <!-- 16. Solicitante -->
+                <!-- 17. Usuario Creación -->
+                <td><span class="text-dark fw-semibold small text-uppercase" title="Usuario que registró el movimiento"><i class="bi bi-person me-1 text-muted"></i>${escapeHtml(item.usuario_creacion || '-')}</span></td>
+
+                <!-- 18. Solicitante -->
                 <td><span class="text-secondary small text-uppercase">${escapeHtml(item.solicitante)}</span></td>
 
-                <!-- 17. Autoriza -->
+                <!-- 19. Autoriza -->
                 <td><span class="text-dark fw-semibold small text-uppercase">${escapeHtml(item.autoriza)}</span></td>
 
-                <!-- 18. Fecha Aprobación -->
+                <!-- 20. Fecha Aprobación -->
                 <td><span class="text-muted small">${fechaAprob}</span></td>
 
-                <!-- 19. Centro Costo -->
+                <!-- 21. Centro Costo -->
                 <td><span class="badge font-monospace fw-bold" style="font-size:0.74rem; background:#eff6ff; color:#0f172a !important; border:1px solid #bfdbfe; border-radius:6px; padding:3px 8px;">${escapeHtml(item.centro_costo)}</span></td>
 
-                <!-- 20. Datos Operativos -->
+                <!-- 22. Datos Operativos -->
                 <td>${datosOp}</td>
 
-                <!-- 21. Estado -->
+                <!-- 23. Estado -->
                 <td class="text-center">${badgeEstado}</td>
 
-                <!-- 22. Banco / Cuenta -->
+                <!-- 24. Banco / Cuenta -->
                 <td class="pe-3"><span class="text-secondary small fw-semibold text-truncate d-inline-block" style="max-width: 210px;" title="${escapeHtml(item.banco_cuenta)}">${escapeHtml(item.banco_cuenta)}</span></td>
             </tr>
         `;
@@ -395,32 +416,37 @@
         }
 
         try {
-            const filas = movDataCache.map((it, idx) => ({
-                'N°': idx + 1,
-                'FOLIO / CAJA': it.caja_folio || it.id,
-                'TIPO MOVIMIENTO': it.tipo_movimiento || 'EGRESO',
-                'MONEDA': it.moneda || 'SOLES',
-                'MONTO': parseFloat(it.monto || 0),
-                'DEBE': parseFloat(it.debe || 0),
-                'HABER': parseFloat(it.haber || 0),
-                'MOTIVO': it.motivo || '',
-                'SUB MOTIVO': it.sub_motivo || '',
-                'DESCRIPCIÓN': it.descripcion || '',
-                'TIPO CAJA': it.tipo_caja || '',
-                'FECHA DEPÓSITO': it.fecha_valuta ? String(it.fecha_valuta).substring(0, 10) : '',
-                'N° OPERACIÓN': it.numero_operacion || '',
-                'N° FACTURA': it.numero_factura || '',
-                'BENEFICIARIO': it.beneficiario || '',
-                'TIPO PERSONA': it.tipo_persona || '',
-                'SOLICITANTE': it.solicitante || '',
-                'AUTORIZA': it.autoriza || '',
-                'FECHA APROBACIÓN': it.fecha_aprobacion ? String(it.fecha_aprobacion).substring(0, 10) : '',
-                'CENTRO COSTO': it.centro_costo || '',
-                'PLACA / UNIDAD': it.placa || '',
-                'ORDEN VIAJE': it.orden_viaje || '',
-                'ESTADO': it.estado || 'PROCESADO',
-                'BANCO / CUENTA': it.banco_cuenta || ''
-            }));
+            const filas = movDataCache.map((it, idx) => {
+                const esOC = (it.tipo_origen === 'ORDEN DE COMPRA') || (it.sub_motivo && it.sub_motivo.includes('REQUERIMIENTO')) || (it.descripcion && it.descripcion.includes('REQUERIMIENTO'));
+                return {
+                    'N°': idx + 1,
+                    'TIPO ORIGEN': esOC ? 'ORDEN DE COMPRA' : 'CAJA CHICA',
+                    'FOLIO / N° OC': it.codigo_oc || it.caja_folio || it.id,
+                    'TIPO MOVIMIENTO': it.tipo_movimiento || 'EGRESO',
+                    'MONEDA': it.moneda || 'SOLES',
+                    'MONTO': parseFloat(it.monto || 0),
+                    'DEBE': parseFloat(it.debe || 0),
+                    'HABER': parseFloat(it.haber || 0),
+                    'MOTIVO': it.motivo || '',
+                    'SUB MOTIVO': it.sub_motivo || '',
+                    'DESCRIPCIÓN': it.descripcion || '',
+                    'TIPO CAJA': it.tipo_caja || '',
+                    'FECHA DEPÓSITO': it.fecha_valuta ? String(it.fecha_valuta).substring(0, 10) : '',
+                    'N° OPERACIÓN': it.numero_operacion || '',
+                    'N° FACTURA': it.numero_factura || '',
+                    'BENEFICIARIO': it.beneficiario || '',
+                    'TIPO PERSONA': it.tipo_persona || '',
+                    'USUARIO CREACIÓN': it.usuario_creacion || '',
+                    'SOLICITANTE': it.solicitante || '',
+                    'AUTORIZA': it.autoriza || '',
+                    'FECHA APROBACIÓN': it.fecha_aprobacion ? String(it.fecha_aprobacion).substring(0, 10) : '',
+                    'CENTRO COSTO': it.centro_costo || '',
+                    'PLACA / UNIDAD': it.placa || '',
+                    'ORDEN VIAJE': it.orden_viaje || '',
+                    'ESTADO': it.estado || 'PROCESADO',
+                    'BANCO / CUENTA': it.banco_cuenta || ''
+                };
+            });
 
             if (window.XLSX) {
                 const ws = XLSX.utils.json_to_sheet(filas);
