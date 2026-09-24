@@ -1431,7 +1431,17 @@ window._entRender = function() {
 
         var codLimpio = String(d.id || '').replace(/^ENT-/i, '');
         var aprobadorVal = d.aprobador_nombre || d.aprobado_por;
-        var aprobadorHtml = aprobadorVal ? '<span class="text-dark fw-bold text-nowrap" style="font-size:0.78rem;"><i class="bi bi-person-check-fill text-success me-1"></i>' + _entEsc(aprobadorVal) + '</span>' : '<span class="text-muted small">—</span>';
+        var estNorm = (d.estado || 'REGISTRADA').toUpperCase();
+        var labelAccion = 'Aprobado: ';
+        var iconoAccion = 'bi-person-check-fill text-success';
+        if (estNorm.includes('RECHAZAD') || estNorm.includes('ANULAD')) {
+            labelAccion = 'Rechazado: ';
+            iconoAccion = 'bi-person-x-fill text-danger';
+        } else if (estNorm.includes('OBSERVAD')) {
+            labelAccion = 'Observado: ';
+            iconoAccion = 'bi-person-exclamation text-warning';
+        }
+        var aprobadorHtml = aprobadorVal ? '<span class="text-dark fw-bold text-nowrap" style="font-size:0.78rem;"><i class="bi ' + iconoAccion + ' me-1"></i>' + _entEsc(aprobadorVal) + '</span>' : '<span class="text-muted small">—</span>';
 
         // Construir Card Móvil
         htmlCards += `
@@ -1456,7 +1466,7 @@ window._entRender = function() {
             <!-- Motivo y Aprobación -->
             <div class="mb-2">
                 ${d.motivo_entrada ? `<div class="fw-bold text-dark" style="font-size:0.88rem;">${_entEsc(d.motivo_entrada)}</div>` : ''}
-                ${aprobadorVal ? `<div class="text-muted small" style="font-size:0.75rem;"><i class="bi bi-person-check-fill text-success me-1"></i>Aprobado: <strong>${_entEsc(aprobadorVal)}</strong></div>` : ''}
+                ${aprobadorVal ? `<div class="text-muted small" style="font-size:0.75rem;"><i class="bi ${iconoAccion} me-1"></i>${labelAccion}<strong>${_entEsc(aprobadorVal)}</strong></div>` : ''}
                 ${d.documento_referencia ? `<div class="text-muted small mt-1" style="font-size:0.75rem;"><i class="bi bi-file-text me-1"></i>Doc: ${_entEsc(d.documento_referencia)}</div>` : ''}
             </div>
 
@@ -2258,7 +2268,16 @@ window.abrirModalDetalleOC = function(id) {
 
         var aprobadorDetalle = d.aprobador_nombre || d.aprobado_por;
         if (aprobadorDetalle) {
-            badgeHtml += ' <span class="ms-2 text-dark fw-bold" style="font-size:0.8rem;"><i class="bi bi-person-check-fill text-success me-1"></i>Aprobado por: ' + _entEsc(aprobadorDetalle) + '</span>';
+            var labelAcc = 'Aprobado por: ';
+            var icoAcc = 'bi-person-check-fill text-success';
+            if (estNorm.includes('RECHAZAD') || estNorm.includes('ANULAD')) {
+                labelAcc = 'Rechazado por: ';
+                icoAcc = 'bi-person-x-fill text-danger';
+            } else if (estNorm.includes('OBSERVAD')) {
+                labelAcc = 'Observado por: ';
+                icoAcc = 'bi-person-exclamation text-warning';
+            }
+            badgeHtml += ' <span class="ms-2 text-dark fw-bold" style="font-size:0.8rem;"><i class="bi ' + icoAcc + ' me-1"></i>' + labelAcc + _entEsc(aprobadorDetalle) + '</span>';
         }
         estEl.innerHTML = badgeHtml;
     }
