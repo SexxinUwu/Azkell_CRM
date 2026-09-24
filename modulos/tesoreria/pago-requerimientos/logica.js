@@ -305,7 +305,7 @@
 
                 <!-- 4. Centro de Costo -->
                 <td>
-                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-0.5 fw-bold" style="font-size:0.72rem;">
+                    <span class="badge font-monospace fw-bold" style="font-size:0.74rem; background:#eff6ff; color:#0f172a !important; border:1px solid #bfdbfe; border-radius:6px; padding:3px 8px;">
                         ${escapeHtml(item.centro_costo || 'CC-100')}
                     </span>
                 </td>

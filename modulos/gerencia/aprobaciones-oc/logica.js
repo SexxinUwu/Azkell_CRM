@@ -109,7 +109,7 @@
                         id: d.id,
                         codigo: d.id,
                         fecha: fechaFmt,
-                        fecha_raw: d.created_at || d.fecha,
+                        fecha_raw: d.fecha || d.created_at,
                         usuario: nombreUsuario,
                         solicitante: d.solicitante || d.autoriza || d.creador_nombre || d.creado_por || 'Almacén / Mantenimiento',
                         centro_costo: d.centro_costo || 'CC-100',
@@ -140,14 +140,6 @@
             console.warn('Error cargando órdenes de compra en gerencia:', e);
         }
 
-        // Establecer fecha de hoy por defecto en los inputs si están vacíos
-        const inputDesde = document.getElementById('filtro-fecha-desde');
-        const inputHasta = document.getElementById('filtro-fecha-hasta');
-        const fechaHoy = obtenerFechaHoyISO();
-
-        if (inputDesde && !inputDesde.value) inputDesde.value = fechaHoy;
-        if (inputHasta && !inputHasta.value) inputHasta.value = fechaHoy;
-
         window.aplicarFiltrosOC();
     }
 
@@ -160,17 +152,29 @@
     // Función auxiliar para parsear fechas a formato ISO (YYYY-MM-DD)
     function normalizarFechaAISO(item) {
         if (!item) return null;
-        if (item.fecha_raw) {
-            const raw = String(item.fecha_raw);
-            if (raw.includes('T')) return raw.split('T')[0];
-            if (raw.includes(' ')) return raw.split(' ')[0];
-            if (raw.includes('/')) {
-                const p = raw.split('/');
+        const raw = item.fecha_raw || item.fecha;
+        if (!raw) return null;
+        try {
+            const s = String(raw).trim();
+            if (s.includes('T')) {
+                const d = new Date(s);
+                if (!isNaN(d.getTime())) {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${day}`;
+                }
+                return s.split('T')[0];
+            }
+            if (s.includes(' ')) {
+                return s.split(' ')[0];
+            }
+            if (s.includes('/')) {
+                const p = s.split('/');
                 if (p.length === 3) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
             }
-            return raw;
-        }
-        return null;
+            return s;
+        } catch(e) { return null; }
     }
 
     // Actualizar números de KPIs y Badges en base a los filtros/fechas seleccionados
@@ -407,7 +411,7 @@
                     <div class="d-flex align-items-center justify-content-between text-muted mb-2 pb-2 border-bottom flex-wrap gap-1" style="font-size:0.75rem;">
                         <span><i class="bi bi-calendar3 text-primary"></i> ${oc.fecha}</span>
                         <span class="fw-bold text-dark"><i class="bi bi-person-circle text-primary"></i> ${oc.usuario || 'SISTEMA'}</span>
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold" style="font-size:0.7rem;">🏢 ${oc.centro_costo || 'CC-100'}</span>
+                        <span class="badge font-monospace fw-bold" style="font-size:0.72rem; background:#eff6ff; color:#0f172a !important; border:1px solid #bfdbfe; border-radius:6px; padding:3px 8px;">🏢 ${oc.centro_costo || 'CC-100'}</span>
                         <span class="badge bg-light text-dark border">Sede ${oc.almacen || 'Principal'}</span>
                     </div>
 
@@ -947,11 +951,10 @@
         if (inp) inp.value = '';
         const sel = document.getElementById('filtro-almacen-oc');
         if (sel) sel.value = '';
-        const fechaHoy = obtenerFechaHoyISO();
         const fDesde = document.getElementById('filtro-fecha-desde');
         const fHasta = document.getElementById('filtro-fecha-hasta');
-        if (fDesde) fDesde.value = fechaHoy;
-        if (fHasta) fHasta.value = fechaHoy;
+        if (fDesde) fDesde.value = '';
+        if (fHasta) fHasta.value = '';
         window.filtrarPorTab('pendiente');
     };
 
