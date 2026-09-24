@@ -1,10 +1,12 @@
 // ================================================================
-// MÓDULO ALMACÉN / KARDEX — Lógica SPA Aislada
+// MÓDULO ALMACÉN / KARDEX — Lógica SPA Aislada (Tabla Moderna ERP)
 // ================================================================
 
 window._kdxInvData      = window._kdxInvData      || [];
 window._kdxMovData      = window._kdxMovData      || [];
+window._kdxFilasRender  = window._kdxFilasRender  || [];
 window._kdxSelId        = window._kdxSelId        || null;
+window._kdxSelItem      = window._kdxSelItem      || null;
 window._kdxStockBase    = window._kdxStockBase    || 0;
 window._kdxFechaReg     = window._kdxFechaReg     || null;
 window._kdxDropdownIdx  = window._kdxDropdownIdx  !== undefined ? window._kdxDropdownIdx : -1;
@@ -15,18 +17,6 @@ window.init_kardex = function() {
         if (wrap) window.showNoPermMsg(wrap);
         return;
     }
-    if (!window.checkPerm('kardex', 'l')) {
-        var wrap = document.getElementById('mod-kardex') || document.querySelector('.container-fluid');
-        if (wrap) window.showNoPermMsg(wrap);
-        return;
-    }
-    if (!document.getElementById('almacen-bento-css')) {
-        var lnk = document.createElement('link');
-        lnk.id = 'almacen-bento-css';
-        lnk.rel = 'stylesheet';
-        lnk.href = '/modulos/almacen/almacen-bento.css';
-        document.head.appendChild(lnk);
-    }
     window._kdxCargarInventario();
 };
 
@@ -36,7 +26,9 @@ window._kdxCargarInventario = function() {
         .then(function(data) {
             window._kdxInvData = data || [];
         })
-        .catch(function() {});
+        .catch(function(e) {
+            console.error('[Kardex] Error cargando lista de inventario:', e);
+        });
 };
 
 // ── Dropdown autocomplete moderno ────────────────────────────────
@@ -64,7 +56,7 @@ window._kdxFiltrarDropdown = function() {
                'onmouseenter="window._kdxDropdownIdx=' + i + ';window._kdxHighlight()" ' +
                'style="padding:.6rem 1rem;cursor:pointer;display:flex;align-items:center;gap:.6rem;border-bottom:1px solid #f1f5f9;">' +
                  '<span style="font-size:.7rem;font-weight:800;background:#eff6ff;color:#2563eb;padding:.15rem .45rem;border-radius:6px;white-space:nowrap;flex-shrink:0;">' + _kdxEsc(d.id) + '</span>' +
-                 '<span style="font-size:.82rem;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _kdxEsc(d.descripcion || '—') + '</span>' +
+                 '<span style="font-size:.82rem;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _kdxEsc(d.descripcion || '—') + '</span>' +
                  (d.familia ? '<span style="font-size:.65rem;color:#94a3b8;flex-shrink:0;margin-left:auto;">' + _kdxEsc(d.familia) + '</span>' : '') +
                '</div>';
     }).join('');
@@ -130,6 +122,19 @@ window._kdxLimpiarBuscar = function() {
     if (dd) dd.style.display = 'none';
 };
 
+// ── Determinar si un movimiento es de Entrada / Ingreso ────────────
+function _kdxEsEntrada(tipo) {
+    if (!tipo) return false;
+    var t = String(tipo).toLowerCase().trim();
+    return t === 'entrada' || 
+           t === 'recepción oc' || 
+           t === 'recepcion oc' || 
+           t.includes('recep') || 
+           t.includes('entrada') || 
+           t.includes('compra') || 
+           t.includes('ajuste positivo');
+}
+
 // ── Cargar kardex de artículo ─────────────────────────────────────
 window._kdxCargarKardex = function() {
     var input = document.getElementById('kdx-buscar-art');
@@ -144,49 +149,74 @@ window._kdxCargarKardex = function() {
             return (d.descripcion || '').toLowerCase().includes(val.toLowerCase());
         });
     }
-    if (!item) { alert('Artículo no encontrado.'); return; }
+    if (!item) { alert('Artículo no encontrado en el catálogo.'); return; }
 
     window._kdxSelId     = item.id;
+    window._kdxSelItem   = item;
     window._kdxStockBase = parseFloat(item.stock_regularizado || 0);
 
     var placeholder = document.getElementById('kdx-placeholder');
     if (placeholder) placeholder.style.display = 'none';
-    var timeline = document.getElementById('kdx-timeline');
-    if (timeline) { timeline.style.display = ''; timeline.innerHTML = '<div style="text-align:center;padding:2.5rem;color:#94a3b8"><div class="spinner-border spinner-border-sm me-2"></div>Cargando movimientos...</div>'; }
+
+    var tableWrap = document.getElementById('kdx-table-wrapper');
+    if (tableWrap) tableWrap.style.display = 'flex';
+
+    var tbody = document.getElementById('tbodyKardex');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Consultando movimientos del Kardex...</td></tr>';
+    }
 
     var hdr       = document.getElementById('kdx-art-header');
     var hdrNombre = document.getElementById('kdx-art-header-nombre');
     var hdrInfo   = document.getElementById('kdx-art-header-info');
+    var hdrReg    = document.getElementById('kdx-art-header-reg');
     if (hdr) hdr.style.display = '';
     if (hdrNombre) hdrNombre.textContent = item.descripcion || '—';
-    if (hdrInfo) hdrInfo.textContent = item.id + (item.familia ? ' · ' + item.familia : '') + (item.almacen ? ' · ' + item.almacen : '');
+    if (hdrInfo) {
+        hdrInfo.innerHTML = `
+            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-0.5 font-monospace fw-bold">${_kdxEsc(item.id)}</span>
+            <span><i class="bi bi-tag text-muted me-1"></i>${_kdxEsc(item.familia || 'Sin Familia')}</span>
+            <span><i class="bi bi-building text-muted me-1"></i>${_kdxEsc(item.almacen || 'ALM CENTRAL')}</span>
+            <span><i class="bi bi-rulers text-muted me-1"></i>${_kdxEsc(item.unidad || 'UND')}</span>
+        `;
+    }
 
     var kpiEl = document.getElementById('kdx-kpi-row');
     if (kpiEl) kpiEl.style.display = 'none';
     var btnExp = document.getElementById('btn-export-kardex');
     if (btnExp) btnExp.style.display = 'none';
+    var btnImp = document.getElementById('btn-imprimir-kardex');
+    if (btnImp) btnImp.style.display = 'none';
 
     fetch('/api/almacen/kardex/' + encodeURIComponent(item.id))
         .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function(res) {
             window._kdxMovData  = res.movimientos || [];
             window._kdxFechaReg = res.fecha_regularizacion || null;
+            if (hdrReg) {
+                if (res.fecha_regularizacion) {
+                    hdrReg.innerHTML = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1"><i class="bi bi-check2-circle me-1"></i>Apertura: ${_kdxFmtFecha(res.fecha_regularizacion)} (${parseFloat(res.stock_base || 0).toFixed(2)} ${item.unidad || 'UND'})</span>`;
+                } else {
+                    hdrReg.innerHTML = `<span class="text-muted small">Sin regularización de apertura registrada</span>`;
+                }
+            }
             window._kdxRenderKardex(res, item);
         })
         .catch(function(err) {
-            var t = document.getElementById('kdx-timeline');
-            if (t) t.innerHTML = '<div style="padding:2rem;text-align:center;color:#ef4444;">Error: ' + _kdxEsc(err.message) + '</div>';
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Error al consultar Kardex: ' + _kdxEsc(err.message) + '</td></tr>';
+            }
         });
 };
 
-// ── Render kardex con soporte pre-regularización ─────────────────
+// ── Render Kardex en Formato Tabla Moderna ────────────────────────
 window._kdxRenderKardex = function(res, item) {
     var movs      = res.movimientos || [];
     var stockBase = parseFloat(res.stock_base || 0);
     var fechaReg  = res.fecha_regularizacion || null;
     var fechaRegTs = fechaReg ? new Date(fechaReg).getTime() : null;
 
-    // Separar pre y post regularización usando la fecha/hora exacta del movimiento
+    // Separar pre y post regularización
     var movsPreReg  = fechaRegTs ? movs.filter(function(m) {
         var mTs = new Date(m.created_at || m.fecha).getTime();
         return mTs < fechaRegTs;
@@ -196,201 +226,337 @@ window._kdxRenderKardex = function(res, item) {
         return mTs >= fechaRegTs;
     }) : movs;
 
-    // KPIs: solo movimientos post-regularización (o todos si no hay reg)
+    // Métricas totales de entradas y salidas
     var totalEntradas = 0, totalSalidas = 0;
     movsPostReg.forEach(function(m) {
-        if (m.tipo === 'Entrada') totalEntradas += parseFloat(m.cantidad) || 0;
-        else totalSalidas += parseFloat(m.cantidad) || 0;
+        var cant = parseFloat(m.cantidad || 0);
+        if (_kdxEsEntrada(m.tipo)) {
+            totalEntradas += cant;
+        } else {
+            totalSalidas += cant;
+        }
     });
+
+    // Stock actual matemático exacto: Saldo Apertura + Entradas - Salidas
     var stockActual = stockBase + totalEntradas - totalSalidas;
 
-    // KPI row
+    // Bento KPI Row
     var kpiEl = document.getElementById('kdx-kpi-row');
     if (kpiEl) {
-        kpiEl.style.display = '';
-        kpiEl.innerHTML =
-            '<div class="bento-kpi">' +
-              '<div><div class="bento-kpi-label">Entradas Totales</div><div class="bento-kpi-num" style="color:#16a34a">+' + totalEntradas.toFixed(2) + '</div></div>' +
-              '<div class="bento-kpi-icon" style="background:#dcfce7;color:#16a34a"><i class="bi bi-box-arrow-in-down fs-4"></i></div>' +
-            '</div>' +
-            '<div class="bento-kpi">' +
-              '<div><div class="bento-kpi-label">Salidas Totales</div><div class="bento-kpi-num" style="color:#ef4444">−' + totalSalidas.toFixed(2) + '</div></div>' +
-              '<div class="bento-kpi-icon" style="background:#fee2e2;color:#ef4444"><i class="bi bi-wrench-adjustable fs-4"></i></div>' +
-            '</div>' +
-            '<div class="bento-kpi accent-dark" style="background:linear-gradient(135deg,#1e40af,#3730a3)">' +
-              '<div><div class="bento-kpi-label">Stock Actual</div><div class="bento-kpi-num" style="font-size:2rem;font-style:italic">' + stockActual.toFixed(2) + ' <span style="font-size:.8rem;font-weight:700;opacity:.7">' + _kdxEsc(item.unidad || '') + '</span></div></div>' +
-              '<div class="bento-kpi-icon"><span style="width:8px;height:8px;background:#4ade80;border-radius:50%;display:inline-block;box-shadow:0 0 6px #4ade80"></span></div>' +
-            '</div>';
+        kpiEl.style.display = 'grid';
+        kpiEl.innerHTML = `
+            <!-- 1. Entradas Totales -->
+            <div class="kdx-kpi-box">
+                <div>
+                    <div class="text-uppercase fw-bold text-secondary" style="font-size:0.68rem; letter-spacing:0.06em;">Entradas Totales</div>
+                    <div class="fw-black text-success mt-1" style="font-size:1.65rem; line-height:1;">+${totalEntradas.toFixed(2)}</div>
+                    <div class="text-muted small mt-1" style="font-size:0.75rem;">Compras & Recepciones</div>
+                </div>
+                <div class="kdx-kpi-icon-wrap" style="background:#dcfce7; color:#15803d;">
+                    <i class="bi bi-box-arrow-in-down"></i>
+                </div>
+            </div>
+
+            <!-- 2. Salidas Totales -->
+            <div class="kdx-kpi-box">
+                <div>
+                    <div class="text-uppercase fw-bold text-secondary" style="font-size:0.68rem; letter-spacing:0.06em;">Salidas Totales</div>
+                    <div class="fw-black text-danger mt-1" style="font-size:1.65rem; line-height:1;">-${totalSalidas.toFixed(2)}</div>
+                    <div class="text-muted small mt-1" style="font-size:0.75rem;">Despachos a Taller / Flota</div>
+                </div>
+                <div class="kdx-kpi-icon-wrap" style="background:#fee2e2; color:#dc2626;">
+                    <i class="bi bi-wrench-adjustable"></i>
+                </div>
+            </div>
+
+            <!-- 3. Stock Inicial Apertura -->
+            <div class="kdx-kpi-box">
+                <div>
+                    <div class="text-uppercase fw-bold text-secondary" style="font-size:0.68rem; letter-spacing:0.06em;">Stock Apertura (REG)</div>
+                    <div class="fw-black text-primary mt-1" style="font-size:1.65rem; line-height:1;">${stockBase.toFixed(2)}</div>
+                    <div class="text-muted small mt-1" style="font-size:0.75rem;">Conteo Físico Verificado</div>
+                </div>
+                <div class="kdx-kpi-icon-wrap" style="background:#eff6ff; color:#2563eb;">
+                    <i class="bi bi-clipboard2-check"></i>
+                </div>
+            </div>
+
+            <!-- 4. Stock Actual Disponible -->
+            <div class="kdx-kpi-box accent-dark">
+                <div>
+                    <div class="text-uppercase fw-bold text-white-50" style="font-size:0.68rem; letter-spacing:0.06em;">Stock Actual en Almacén</div>
+                    <div class="fw-black text-white mt-1" style="font-size:1.85rem; line-height:1;">
+                        ${stockActual.toFixed(2)} <span style="font-size:0.85rem; font-weight:700; opacity:0.8;">${_kdxEsc(item.unidad || 'UND')}</span>
+                    </div>
+                    <div class="small text-white-50 mt-1" style="font-size:0.75rem;">Saldo Operativo en Línea</div>
+                </div>
+                <div class="kdx-kpi-icon-wrap" style="background:rgba(255,255,255,0.12); color:#4ade80;">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+            </div>
+        `;
     }
 
-    var totalMovDisplay = movs.length + (fechaReg ? 1 : 0);
+    // Botones Exportar e Imprimir
     var btnExp = document.getElementById('btn-export-kardex');
-    if (btnExp) btnExp.style.display = totalMovDisplay ? '' : 'none';
+    if (btnExp) btnExp.style.display = 'inline-flex';
+    var btnImp = document.getElementById('btn-imprimir-kardex');
+    if (btnImp) btnImp.style.display = 'inline-flex';
 
-    var timeline = document.getElementById('kdx-timeline');
-    if (!timeline) return;
+    var totalMovDisplay = movs.length + (fechaReg ? 1 : 0);
+    var contEl = document.getElementById('kdx-contador-movs');
+    if (contEl) contEl.textContent = totalMovDisplay + ' movimiento' + (totalMovDisplay !== 1 ? 's' : '');
+
+    var tbody = document.getElementById('tbodyKardex');
+    if (!tbody) return;
 
     if (!movs.length && !fechaReg) {
-        timeline.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin movimientos registrados para este artículo</div>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-3 d-block mb-2"></i>Sin movimientos registrados para este artículo</td></tr>';
         return;
     }
 
-    var headerHtml = '<div style="padding:.75rem 1.25rem;background:#f8fafc;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">' +
-        '<span style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#64748b">Registro Maestro de Flujos</span>' +
-        '<span style="font-size:.7rem;color:#94a3b8;font-weight:600">' + totalMovDisplay + ' movimiento' + (totalMovDisplay !== 1 ? 's' : '') + '</span>' +
-    '</div>';
+    // Construir Filas con Saldos Acumulativos
+    var filasRender = [];
 
-    // ── Movimientos PRE-regularización (alta legibilidad) ────────
-    var preRegHtml = '';
-    if (movsPreReg.length) {
-        var saldoPre = 0;
-        preRegHtml = '<div style="padding:.6rem 1.25rem;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:.5rem;">' +
-            '<i class="bi bi-clock-history" style="font-size:.85rem;color:#0f172a;font-weight:800;"></i>' +
-            '<span style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#0f172a;">Histórico pre-regularización</span>' +
-        '</div>';
-        preRegHtml += movsPreReg.map(function(m) {
-            var esEntrada = m.tipo === 'Entrada';
-            var cant = parseFloat(m.cantidad || 0);
-            saldoPre += esEntrada ? cant : -cant;
-            var fecha = _kdxFmtFecha(m.fecha || m.created_at);
-            var titulo = esEntrada ? 'Entrada por Compra' : (m.contraparte && m.contraparte.includes('Ajuste') ? 'Ajuste de Inventario (Resta)' : 'Salida a Taller');
-            return '<div class="kdx-item" style="border-bottom:1px solid #e2e8f0;background:#ffffff;">' +
-                '<div class="kdx-icon ' + (esEntrada ? 'entrada' : 'salida') + '">' +
-                    '<i class="bi ' + (esEntrada ? 'bi-file-arrow-down' : 'bi-wrench-adjustable') + '"></i>' +
-                '</div>' +
-                '<div style="flex:1;min-width:0">' +
-                    '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">' +
-                        '<span style="font-size:.88rem;font-weight:800;color:#0f172a;">' + _kdxEsc(titulo) + '</span>' +
-                        '<span style="background:#e2e8f0;color:#0f172a;font-size:.68rem;font-weight:800;padding:.15rem .55rem;border-radius:6px">' + _kdxEsc(m.doc_id || '—') + '</span>' +
-                    '</div>' +
-                    '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#1e293b;margin-top:.2rem">' + _kdxEsc(m.contraparte || '—') + '</div>' +
-                '</div>' +
-                '<div style="text-align:center;min-width:120px">' +
-                    '<div style="font-size:1.2rem;font-weight:900;color:' + (esEntrada ? '#15803d' : '#dc2626') + '">' + (esEntrada ? '+' : '−') + cant.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
-                    '<div style="font-size:.68rem;font-weight:700;color:#0f172a;">' + fecha + '</div>' +
-                '</div>' +
-                '<div class="kdx-saldo" style="color:#0f172a;font-weight:900;">' + saldoPre.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
-            '</div>';
-        }).join('');
-    }
-
-    // ── Fila de regularización ────────────────────────────────────
-    var regHtml = '';
-    if (fechaReg) {
-        var fechaRegFmt = _kdxFmtFecha(fechaReg);
-        regHtml =
-            '<div class="kdx-item" style="background:#f0fdf4;border-left:5px solid #16a34a;border-bottom:1px solid #bbf7d0;">' +
-                '<div class="kdx-icon" style="background:#dcfce7;color:#15803d;">' +
-                    '<i class="bi bi-clipboard2-check-fill" style="font-size:1.2rem;"></i>' +
-                '</div>' +
-                '<div style="flex:1;min-width:0">' +
-                    '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">' +
-                        '<span style="font-size:.9rem;font-weight:800;color:#14532d">Regularización de Inventario</span>' +
-                        '<span style="background:#bbf7d0;color:#14532d;font-size:.68rem;font-weight:800;padding:.15rem .55rem;border-radius:6px">REG</span>' +
-                    '</div>' +
-                    '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#166534;margin-top:.2rem">Saldo de apertura — stock físico verificado</div>' +
-                '</div>' +
-                '<div style="text-align:center;min-width:120px">' +
-                    '<div style="font-size:1.2rem;font-weight:900;color:#15803d;">⊙ ' + stockBase.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
-                    '<div style="font-size:.68rem;font-weight:700;color:#0f172a;">' + fechaRegFmt + '</div>' +
-                '</div>' +
-                '<div class="kdx-saldo" style="color:#14532d;font-weight:900;">' + stockBase.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
-            '</div>';
-    }
-
-    // ── Movimientos POST-regularización (o todos si no hay reg) ───
-    var saldoAcum = stockBase;
-    var postRegHtml = movsPostReg.map(function(m) {
-        var esEntrada = m.tipo === 'Entrada';
+    // A. Movimientos Pre-Regularización
+    var saldoPre = 0;
+    movsPreReg.forEach(function(m) {
+        var esEnt = _kdxEsEntrada(m.tipo);
         var cant = parseFloat(m.cantidad || 0);
-        saldoAcum += esEntrada ? cant : -cant;
-        var fecha = _kdxFmtFecha(m.fecha || m.created_at);
-        var titulo = esEntrada ? 'Entrada por Compra' : (m.contraparte && m.contraparte.includes('Ajuste') ? 'Ajuste de Inventario (Resta)' : 'Salida a Taller');
-        return '<div class="kdx-item" style="border-bottom:1px solid #f1f5f9;">' +
-            '<div class="kdx-icon ' + (esEntrada ? 'entrada' : 'salida') + '">' +
-                '<i class="bi ' + (esEntrada ? 'bi-file-arrow-down' : 'bi-wrench-adjustable') + '"></i>' +
-            '</div>' +
-            '<div style="flex:1;min-width:0">' +
-                '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">' +
-                    '<span style="font-size:.88rem;font-weight:800;color:#0f172a;">' + _kdxEsc(titulo) + '</span>' +
-                    '<span style="background:#f1f5f9;color:#0f172a;font-size:.68rem;font-weight:800;padding:.15rem .55rem;border-radius:6px">' + _kdxEsc(m.doc_id || '—') + '</span>' +
-                '</div>' +
-                '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#1e293b;margin-top:.2rem">' + _kdxEsc(m.contraparte || '—') + '</div>' +
-            '</div>' +
-            '<div style="text-align:center;min-width:120px">' +
-                '<div style="font-size:1.2rem;font-weight:900;color:' + (esEntrada ? '#15803d' : '#dc2626') + '">' + (esEntrada ? '+' : '−') + cant.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
-                '<div style="font-size:.68rem;font-weight:700;color:#0f172a;">' + fecha + '</div>' +
-            '</div>' +
-            '<div class="kdx-saldo" style="color:#0f172a;font-weight:900;">' + (m.saldo !== undefined ? m.saldo : saldoAcum).toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
-        '</div>';
+        saldoPre += esEnt ? cant : -cant;
+        filasRender.push({
+            m: m,
+            esEntrada: esEnt,
+            esRegularizacion: false,
+            esPreReg: true,
+            cant: cant,
+            costoUnit: parseFloat(m.costo_unitario || 0),
+            importe: parseFloat(m.importe || (cant * (parseFloat(m.costo_unitario) || 0))),
+            saldoAcum: parseFloat(saldoPre.toFixed(4)),
+            nota: 'Histórico Pre-regularización'
+        });
+    });
+
+    // B. Movimiento de Regularización
+    if (fechaReg) {
+        filasRender.push({
+            m: {
+                fecha: fechaReg,
+                created_at: fechaReg,
+                tipo: 'Regularización',
+                doc_id: 'REG-INVENTARIO',
+                contraparte: 'Stock físico verificado en almacén'
+            },
+            esEntrada: true,
+            esRegularizacion: true,
+            esPreReg: false,
+            cant: stockBase,
+            costoUnit: 0,
+            importe: 0,
+            saldoAcum: stockBase,
+            nota: 'Saldo de apertura verificado'
+        });
+    }
+
+    // C. Movimientos Post-Regularización
+    var saldoPost = stockBase;
+    movsPostReg.forEach(function(m) {
+        var esEnt = _kdxEsEntrada(m.tipo);
+        var cant = parseFloat(m.cantidad || 0);
+        saldoPost += esEnt ? cant : -cant;
+        filasRender.push({
+            m: m,
+            esEntrada: esEnt,
+            esRegularizacion: false,
+            esPreReg: false,
+            cant: cant,
+            costoUnit: parseFloat(m.costo_unitario || 0),
+            importe: parseFloat(m.importe || (cant * (parseFloat(m.costo_unitario) || 0))),
+            saldoAcum: parseFloat(saldoPost.toFixed(4)),
+            nota: m.tipo === 'Recepción OC' ? 'Recepción física OC' : (esEnt ? 'Entrada directa' : 'Despacho a taller')
+        });
+    });
+
+    window._kdxFilasRender = filasRender;
+    window._kdxDibujarTabla(filasRender);
+};
+
+// ── Renderizado HTML de la Tabla ──────────────────────────────────
+window._kdxDibujarTabla = function(filas) {
+    var tbody = document.getElementById('tbodyKardex');
+    if (!tbody) return;
+
+    if (!filas || !filas.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No hay movimientos que coincidan con la búsqueda</td></tr>';
+        return;
+    }
+
+    var html = filas.map(function(item) {
+        var m = item.m;
+        var fechaFmt = _kdxFmtFecha(m.fecha || m.created_at);
+        var esEnt = item.esEntrada;
+        var esReg = item.esRegularizacion;
+        var esPre = item.esPreReg;
+
+        // Badge Tipo
+        var badgeTipo = '';
+        if (esReg) {
+            badgeTipo = `<span class="kdx-badge-tipo kdx-badge-reg"><i class="bi bi-clipboard2-check me-1"></i>REGULARIZACIÓN</span>`;
+        } else if (m.tipo === 'Recepción OC' || String(m.tipo).includes('Recep')) {
+            badgeTipo = `<span class="kdx-badge-tipo kdx-badge-rec"><i class="bi bi-cart-check me-1"></i>RECEPCIÓN OC</span>`;
+        } else if (esEnt) {
+            badgeTipo = `<span class="kdx-badge-tipo kdx-badge-ent"><i class="bi bi-box-arrow-in-down me-1"></i>ENTRADA</span>`;
+        } else {
+            badgeTipo = `<span class="kdx-badge-tipo kdx-badge-sal"><i class="bi bi-wrench-adjustable me-1"></i>SALIDA A TALLER</span>`;
+        }
+
+        // Cantidad Entrada / Salida
+        var colEntrada = '—';
+        var colSalida  = '—';
+        if (esReg) {
+            colEntrada = `<span class="fw-bold text-success font-monospace" style="font-size:0.86rem;">⊙ ${item.cant.toFixed(2)}</span>`;
+        } else if (esEnt) {
+            colEntrada = `<span class="fw-bold text-success font-monospace" style="font-size:0.86rem;">+${item.cant.toFixed(2)}</span>`;
+        } else {
+            colSalida  = `<span class="fw-bold text-danger font-monospace" style="font-size:0.86rem;">-${item.cant.toFixed(2)}</span>`;
+        }
+
+        // Costo e Importe
+        var colCosto = item.costoUnit > 0 ? `S/ ${item.costoUnit.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
+        var colImporte = item.importe > 0 ? `S/ ${item.importe.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
+
+        // Badge Documento
+        var docBadge = m.doc_id ? `<span class="badge font-monospace fw-bold" style="font-size:0.75rem; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1; border-radius:6px; padding:3px 8px;">${_kdxEsc(m.doc_id)}</span>` : '—';
+
+        // Estilo de fila
+        var trClass = esReg ? 'table-success bg-opacity-25' : (esPre ? 'bg-light' : '');
+        var borderStyle = esReg ? 'border-left: 4px solid #16a34a;' : '';
+
+        return `
+            <tr class="${trClass}" style="${borderStyle}">
+                <!-- 1. Fecha & Hora -->
+                <td class="ps-3 text-secondary fw-semibold font-monospace" style="font-size:0.78rem;">${fechaFmt}</td>
+
+                <!-- 2. Tipo Movimiento -->
+                <td>${badgeTipo}</td>
+
+                <!-- 3. Documento -->
+                <td>${docBadge}</td>
+
+                <!-- 4. Contraparte / Motivo -->
+                <td>
+                    <div class="fw-bold text-dark text-truncate" style="max-width: 280px;" title="${_kdxEsc(m.contraparte || '—')}">
+                        ${_kdxEsc(m.contraparte || '—')}
+                    </div>
+                </td>
+
+                <!-- 5. Entrada (+) -->
+                <td class="text-end">${colEntrada}</td>
+
+                <!-- 6. Salida (-) -->
+                <td class="text-end">${colSalida}</td>
+
+                <!-- 7. Costo Unitario -->
+                <td class="text-end text-secondary fw-semibold font-monospace" style="font-size:0.80rem;">${colCosto}</td>
+
+                <!-- 8. Importe Total -->
+                <td class="text-end fw-bold text-dark font-monospace" style="font-size:0.82rem;">${colImporte}</td>
+
+                <!-- 9. Saldo Físico Resultante -->
+                <td class="text-end">
+                    <span class="badge font-monospace fw-black px-2 py-1" style="font-size:0.85rem; background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; border-radius:6px;">
+                        ${item.saldoAcum.toFixed(2)}
+                    </span>
+                </td>
+
+                <!-- 10. Nota / Estado -->
+                <td class="pe-3">
+                    <span class="text-muted small text-truncate d-inline-block" style="max-width: 170px;" title="${_kdxEsc(item.nota)}">
+                        ${_kdxEsc(item.nota)}
+                    </span>
+                </td>
+            </tr>
+        `;
     }).join('');
 
-    timeline.innerHTML = headerHtml + preRegHtml + regHtml + postRegHtml;
+    tbody.innerHTML = html;
 };
 
-// ── Export Excel ──────────────────────────────────────────────────
-window.exportarKardexExcel = function() {
-    var movs    = window._kdxMovData  || [];
-    var fechaReg = window._kdxFechaReg || null;
-    var stockBase = window._kdxStockBase || 0;
-
-    if (!movs.length && !fechaReg) { alert('No hay movimientos para exportar.'); return; }
-
-    var fechaRegStr = fechaReg ? _kdxFmtISO(fechaReg) : null;
-    var cab = ['Fecha','Tipo','Documento','Contraparte','Cantidad','Costo Unit.','Importe','Saldo','Nota'];
-
-    var filas = [];
-
-    // Movimientos pre-regularización
-    var saldoPre = 0;
-    var movsPreReg = fechaRegStr ? movs.filter(function(m){
-        var mFecha = _kdxFmtISO(m.fecha);
-        return mFecha < fechaRegStr;
-    }) : [];
-    movsPreReg.forEach(function(m) {
-        var cant = parseFloat(m.cantidad || 0);
-        saldoPre += m.tipo === 'Entrada' ? cant : -cant;
-        filas.push([_kdxFmtISO(m.fecha), m.tipo, m.doc_id || '', m.contraparte || '',
-                    cant, parseFloat(m.costo_unitario || 0), parseFloat(m.importe || 0),
-                    parseFloat(saldoPre.toFixed(4)), 'Pre-regularización']);
-    });
-
-    // Fila de regularización
-    if (fechaReg) {
-        filas.push([fechaRegStr, 'Regularización', '', 'Stock físico verificado',
-                    stockBase, '', '', stockBase, 'Saldo de apertura']);
+// ── Filtro en tiempo real dentro de la tabla ───────────────────────
+window._kdxFiltrarTablaInterna = function() {
+    var input = document.getElementById('kdx-tabla-filtro');
+    if (!input || !window._kdxFilasRender) return;
+    var q = input.value.trim().toLowerCase();
+    if (!q) {
+        window._kdxDibujarTabla(window._kdxFilasRender);
+        return;
     }
 
-    // Movimientos post-regularización
-    var saldoPost = stockBase;
-    var movsPostReg = fechaRegStr ? movs.filter(function(m){
-        var mFecha = _kdxFmtISO(m.fecha);
-        return mFecha >= fechaRegStr;
-    }) : movs;
-    movsPostReg.forEach(function(m) {
-        var cant = parseFloat(m.cantidad || 0);
-        saldoPost += m.tipo === 'Entrada' ? cant : -cant;
-        filas.push([_kdxFmtISO(m.fecha), m.tipo, m.doc_id || '', m.contraparte || '',
-                    cant, parseFloat(m.costo_unitario || 0), parseFloat(m.importe || 0),
-                    parseFloat(saldoPost.toFixed(4)), '']);
+    var filtradas = window._kdxFilasRender.filter(function(it) {
+        var m = it.m;
+        return (m.doc_id && m.doc_id.toLowerCase().includes(q)) ||
+               (m.tipo && m.tipo.toLowerCase().includes(q)) ||
+               (m.contraparte && m.contraparte.toLowerCase().includes(q)) ||
+               (it.nota && it.nota.toLowerCase().includes(q)) ||
+               (m.fecha && String(m.fecha).toLowerCase().includes(q));
     });
 
-    var ws = XLSX.utils.aoa_to_sheet([cab].concat(filas));
-    var wb = XLSX.utils.book_new();
-    var sheet = 'Kardex_' + (window._kdxSelId || 'articulo');
-    XLSX.utils.book_append_sheet(wb, ws, sheet.substring(0, 31));
-    XLSX.writeFile(wb, 'Kardex_' + sheet + '.xlsx');
+    window._kdxDibujarTabla(filtradas);
 };
 
-// ── Helpers ───────────────────────────────────────────────────────
-function _kdxFmtISO(f) {
-    if (!f) return '';
-    if (f instanceof Date) return f.toISOString().split('T')[0];
-    var s = String(f);
-    if (s.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
-    return s.split('T')[0] || s;
-}
+// ── Exportación a Excel Fina y Exacta ──────────────────────────────
+window.exportarKardexExcel = function() {
+    var filas = window._kdxFilasRender || [];
+    var item  = window._kdxSelItem || { id: window._kdxSelId || 'articulo', descripcion: '' };
 
+    if (!filas.length) {
+        alert('No hay movimientos cargados en el Kardex para exportar.');
+        return;
+    }
+
+    try {
+        var dataExcel = filas.map(function(it, idx) {
+            var m = it.m;
+            return {
+                'N°': idx + 1,
+                'Fecha & Hora': _kdxFmtFecha(m.fecha || m.created_at),
+                'Tipo Movimiento': it.esRegularizacion ? 'Regularización' : m.tipo,
+                'Documento': m.doc_id || '',
+                'Contraparte / Destino': m.contraparte || '',
+                'Entrada (+)': (it.esEntrada || it.esRegularizacion) ? it.cant : 0,
+                'Salida (-)': (!it.esEntrada && !it.esRegularizacion) ? it.cant : 0,
+                'Costo Unitario': it.costoUnit,
+                'Importe Total': it.importe,
+                'Saldo Físico Resultante': it.saldoAcum,
+                'Nota / Observación': it.nota || ''
+            };
+        });
+
+        if (window.XLSX) {
+            var ws = XLSX.utils.json_to_sheet(dataExcel);
+            var wb = XLSX.utils.book_new();
+            var sheetName = ('Kardex_' + (item.id || 'Articulo')).substring(0, 31);
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            XLSX.writeFile(wb, `Kardex_${item.id || 'Articulo'}_${new Date().toISOString().substring(0, 10)}.xlsx`);
+        } else {
+            var headers = Object.keys(dataExcel[0]).join(';');
+            var rows = dataExcel.map(r => Object.values(r).map(val => `"${String(val).replace(/"/g, '""')}"`).join(';')).join('\n');
+            var csvContent = "\uFEFF" + headers + "\n" + rows;
+            var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `Kardex_${item.id || 'Articulo'}_${new Date().toISOString().substring(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    } catch (e) {
+        console.error('[Kardex] Error exportando a Excel:', e);
+        alert('Error al generar archivo Excel.');
+    }
+};
+
+// ── Helpers de Formateo ───────────────────────────────────────────
 function _kdxFmtFecha(f) {
     if (!f) return '';
     try {
@@ -417,12 +583,14 @@ function _kdxFmtFecha(f) {
         }
         if (isNaN(d.getTime())) return String(f);
         var dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
-        var timeStr = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        var timeStr = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
         if (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) {
             return dateStr;
         }
-        return dateStr + ' • ' + timeStr;
+        return dateStr + ' ' + timeStr;
     } catch(e) { return String(f); }
 }
 
-function _kdxEsc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _kdxEsc(s) { 
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); 
+}
