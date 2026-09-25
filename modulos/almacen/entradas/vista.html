@@ -908,7 +908,7 @@
         </h6>
         <div class="row g-2">
           <!-- Condición de Pago -->
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-6" id="ent-f-condicion-pago-col">
             <label class="form-label fw-semibold text-secondary small mb-1">Condición de Pago <span class="text-danger">*</span></label>
             <select id="ent-f-condicion-pago" class="form-select form-select-sm border-secondary-subtle fw-semibold" onchange="window._entOnCondicionPagoChange()">
               <option value="Al contado" selected>AL CONTADO</option>
@@ -917,7 +917,7 @@
           </div>
 
           <!-- Días a Pagar (Oculto por defecto en Al Contado) -->
-          <div class="col-12 col-md-4" id="ent-f-dias-credito-box" style="display:none;">
+          <div class="col-12 col-md-6" id="ent-f-dias-credito-box" style="display:none;">
             <label class="form-label fw-semibold text-secondary small mb-1">Días a Pagar (Crédito) <span class="text-danger">*</span></label>
             <div class="input-group input-group-sm">
               <input type="number" id="ent-f-dias-credito" class="form-control form-control-sm border-secondary-subtle fw-bold" value="30" min="0" placeholder="30">
@@ -926,28 +926,13 @@
           </div>
 
           <!-- Prioridad -->
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-6" id="ent-f-prioridad-col">
             <label class="form-label fw-semibold text-secondary small mb-1">Prioridad <span class="text-danger">*</span></label>
             <select id="ent-f-prioridad" class="form-select form-select-sm border-secondary-subtle fw-semibold">
               <option value="Normal" selected>NORMAL</option>
               <option value="Alta">ALTA</option>
               <option value="Urgente">URGENTE</option>
               <option value="Baja">BAJA</option>
-            </select>
-          </div>
-
-          <!-- N° de Factura -->
-          <div class="col-12 col-md-6">
-            <label class="form-label fw-semibold text-secondary small mb-1">N° Comprobante / Factura</label>
-            <input type="text" id="ent-f-doc-ref" class="form-control form-control-sm border-secondary-subtle" placeholder="Ej: F001-0004523">
-          </div>
-
-          <!-- Estado de la Factura -->
-          <div class="col-12 col-md-6">
-            <label class="form-label fw-semibold text-secondary small mb-1">Estado de la Factura <span class="text-danger">*</span></label>
-            <select id="ent-f-estado-factura" class="form-select form-select-sm border-secondary-subtle fw-semibold">
-              <option value="Factura Pendiente" selected>FACTURA PENDIENTE</option>
-              <option value="Factura Entregada">FACTURA ENTREGADA</option>
             </select>
           </div>
         </div>
@@ -1082,7 +1067,14 @@
                                 Subir Archivo de Factura
                             </label>
                             <div id="subir-existente-factura" class="mb-2 small text-muted"></div>
-                            <input type="file" id="subir-file-factura" class="form-control form-control-sm rounded-3 border" accept="image/*,application/pdf">
+                            <input type="file" id="subir-file-factura" class="form-control form-control-sm rounded-3 border mb-2" accept="image/*,application/pdf">
+
+                            <div class="mt-2 pt-2 border-top">
+                                <label class="form-label small fw-bold text-dark text-uppercase d-block mb-1" style="font-size:0.72rem; letter-spacing:0.03em;">
+                                    N° Comprobante / Factura <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" id="subir-factura-numero" class="form-control form-control-sm rounded-3 border fw-bold text-dark" placeholder="Ej: F001-0004523">
+                            </div>
                         </div>
                     </div>
                 </div>
