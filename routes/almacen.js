@@ -1512,11 +1512,19 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     const s3Key = `almacen/entradas/${req.params.id}/${tipo}_${Date.now()}.${ext}`;
                     const url = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
 
-                    // Si se sube el voucher, actualizar estado a Procesado
+                    // Actualizaciones según el tipo de documento
                     let updateSql = `UPDATE entradas_inv SET ${col}=? WHERE id=?`;
                     let updateParams = [url, req.params.id];
                     if (tipo === 'voucher') {
                         updateSql = `UPDATE entradas_inv SET ${col}=?, estado='Procesado' WHERE id=?`;
+                    } else if (tipo === 'factura') {
+                        const docRef = (req.body && (req.body.documento_referencia || req.body.numero_factura)) ? String(req.body.documento_referencia || req.body.numero_factura).trim() : null;
+                        if (docRef) {
+                            updateSql = `UPDATE entradas_inv SET ${col}=?, documento_referencia=?, estado_factura='Factura Entregada' WHERE id=?`;
+                            updateParams = [url, docRef, req.params.id];
+                        } else {
+                            updateSql = `UPDATE entradas_inv SET ${col}=?, estado_factura='Factura Entregada' WHERE id=?`;
+                        }
                     }
 
                     tdb.query(updateSql, updateParams, async (err2) => {
@@ -1548,7 +1556,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         const oldKey = s3KeyFromUrl(rows[0][col]);
                         if (oldKey) await deleteFromS3(oldKey).catch(() => { });
                     }
-                    tdb.query(`UPDATE entradas_inv SET ${col}=NULL WHERE id=?`, [req.params.id], (err2) => {
+                    let delSql = `UPDATE entradas_inv SET ${col}=NULL WHERE id=?`;
+                    if (tipo === 'factura') {
+                        delSql = `UPDATE entradas_inv SET ${col}=NULL, documento_referencia=NULL, estado_factura='Factura Pendiente' WHERE id=?`;
+                    }
+                    tdb.query(delSql, [req.params.id], (err2) => {
                         if (err2) return res.status(500).json({ error: 'Update Error: ' + err2.message });
                         if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'ELIMINÓ', req.path); }
                         res.json({ ok: true });

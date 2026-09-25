@@ -888,8 +888,6 @@ window.guardarEntrada = function() {
     var ctaEmpresa = (document.getElementById('ent-f-cuenta-empresa') || {}).value || '';
     var autoriza   = (document.getElementById('ent-f-autoriza') || {}).value || '';
     var solicitante= autoriza || (document.getElementById('ent-f-solicitante') || {}).value || '';
-    var docRef     = (document.getElementById('ent-f-doc-ref') || {}).value || '';
-    var estadoFact = (document.getElementById('ent-f-estado-factura') || {}).value || 'Factura Pendiente';
     var moneda     = (document.getElementById('ent-f-moneda')  || {}).value || 'PEN';
     var obs        = (document.getElementById('ent-f-obs')     || {}).value || '';
     var tipo_orden = (document.getElementById('ent-f-tipo-orden') || {}).value || 'Orden de compra';
@@ -951,6 +949,8 @@ window.guardarEntrada = function() {
         window._entGuardarSolicitanteHistorico(solicitante);
     }
 
+    var existingEnt = window._entEditId ? ((window._entData || []).find(function(e) { return e.id === window._entEditId; }) || {}) : {};
+
     var payload = {
         fecha: fecha,
         serie: serie,
@@ -963,8 +963,8 @@ window.guardarEntrada = function() {
         centro_costo: centro_costo,
         sub_motivo: sub_motivo,
         autoriza: autoriza,
-        documento_referencia: docRef || null,
-        estado_factura: estadoFact,
+        documento_referencia: existingEnt.documento_referencia || null,
+        estado_factura: existingEnt.estado_factura || 'Factura Pendiente',
         moneda: moneda,
         tipo_igv: window._entIgvMode || 'sin_igv',
         tipo_cambio: (parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.40),
@@ -1052,7 +1052,7 @@ window.abrirModalEntrada = function() {
             if (codInput) codInput.value = anioActual + '-00001';
         });
 
-    ['ent-f-doc-ref','ent-f-obs', 'ent-f-placa-txt', 'ent-f-placa', 'ent-f-motivo', 'ent-f-solicitante'].forEach(function(id) {
+    ['ent-f-obs', 'ent-f-placa-txt', 'ent-f-placa', 'ent-f-motivo', 'ent-f-solicitante'].forEach(function(id) {
         var el = document.getElementById(id); if (el) el.value = '';
     });
 
@@ -1067,8 +1067,6 @@ window.abrirModalEntrada = function() {
 
     var prio = document.getElementById('ent-f-prioridad');
     if (prio) prio.value = 'Normal';
-    var estFact = document.getElementById('ent-f-estado-factura');
-    if (estFact) estFact.value = 'Factura Pendiente';
     
     var autorizaEl = document.getElementById('ent-f-autoriza');
     if (autorizaEl) autorizaEl.value = '';
@@ -1146,9 +1144,6 @@ window.abrirModalEditarEntrada = function(id) {
     var fNum = document.getElementById('ent-f-numero');
     if (fNum) fNum.value = entrada.numero_correlativo || entrada.id || '';
 
-    var docRef = document.getElementById('ent-f-doc-ref');
-    if (docRef) docRef.value = entrada.documento_referencia || '';
-
     var fTipoOrden = document.getElementById('ent-f-tipo-orden');
     if (fTipoOrden) fTipoOrden.value = entrada.tipo_orden || 'Orden de compra';
     window._cbSet('ent-f-ot', entrada.ot_id || '', entrada.ot_id || '');
@@ -1191,16 +1186,6 @@ window.abrirModalEditarEntrada = function(id) {
     if (fMotGasto) fMotGasto.value = motGastoEncontrado;
     if (typeof window._entCambiarMotivoGasto === 'function') {
         window._entCambiarMotivoGasto(subMot);
-    }
-
-    var fEstFact = document.getElementById('ent-f-estado-factura');
-    if (fEstFact) {
-        var estRaw = String(entrada.estado_factura || 'Factura Pendiente');
-        if (estRaw.toLowerCase().includes('entregad') || estRaw.toLowerCase().includes('emitid') || estRaw.toLowerCase().includes('pagad')) {
-            fEstFact.value = 'Factura Entregada';
-        } else {
-            fEstFact.value = 'Factura Pendiente';
-        }
     }
 
     window._entCargarCuentasEmpresa(entrada.cuenta_bancaria_empresa);
@@ -2176,6 +2161,8 @@ window.abrirModalSubirArchivos = function(id) {
     renderizarArchivoExistente('subir-existente-factura', entrada.url_factura, entrada.url_factura_presigned, 'Factura', 'factura', 'text-success', 'bi-file-earmark-check');
     var fFac = document.getElementById('subir-file-factura');
     if (fFac) fFac.value = '';
+    var fNumFact = document.getElementById('subir-factura-numero');
+    if (fNumFact) fNumFact.value = entrada.documento_referencia || '';
 
     var modalEl = document.getElementById('modalSubirArchivosOC');
     if (modalEl) {
@@ -2203,6 +2190,10 @@ window.eliminarArchivoOCModal = async function(id, tipo) {
         if (entrada) {
             entrada['url_' + tipo] = null;
             entrada['url_' + tipo + '_presigned'] = null;
+            if (tipo === 'factura') {
+                entrada.documento_referencia = null;
+                entrada.estado_factura = 'Factura Pendiente';
+            }
         }
 
         alert('🗑️ Se eliminó ' + nom + ' correctamente.');
@@ -2219,9 +2210,17 @@ window.guardarArchivosOCModal = async function() {
 
     var fCot = document.getElementById('subir-file-cotizacion') ? document.getElementById('subir-file-cotizacion').files[0] : null;
     var fFac = document.getElementById('subir-file-factura') ? document.getElementById('subir-file-factura').files[0] : null;
+    var numFactura = (document.getElementById('subir-factura-numero') ? document.getElementById('subir-factura-numero').value : '').trim();
 
     if (!fCot && !fFac) {
         alert('Por favor seleccione al menos un archivo (Cotización o Factura) para subir.');
+        return;
+    }
+
+    if (fFac && !numFactura) {
+        alert('⚠️ El N° de Comprobante / Factura (Ej: F001-0004523) es OBLIGATORIO al adjuntar la Factura.');
+        var fInp = document.getElementById('subir-factura-numero');
+        if (fInp) fInp.focus();
         return;
     }
 
@@ -2236,6 +2235,9 @@ window.guardarArchivosOCModal = async function() {
         if (!file) return;
         var fd = new FormData();
         fd.append('archivo', file);
+        if (tipo === 'factura' && numFactura) {
+            fd.append('documento_referencia', numFactura);
+        }
         var r = await fetch('/api/almacen/entradas/' + encodeURIComponent(id) + '/archivo/' + tipo, {
             method: 'POST',
             body: fd
@@ -2249,6 +2251,10 @@ window.guardarArchivosOCModal = async function() {
         if (entrada && data.ok) {
             entrada['url_' + tipo] = data.url;
             entrada['url_' + tipo + '_presigned'] = data.presignedUrl || data.url;
+            if (tipo === 'factura') {
+                entrada.documento_referencia = numFactura;
+                entrada.estado_factura = 'Factura Entregada';
+            }
         }
     };
 
