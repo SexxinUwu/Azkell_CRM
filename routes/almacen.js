@@ -1413,63 +1413,80 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         );
     });
 
-    // ── Pre-signed Upload: genera URL para subir directo a S3 desde el navegador ──
-    router.post('/entradas/:id/archivo/:tipo/upload-url', async (req, res) => {
+    // ── Pre-signed Upload BATCH: genera URLs para subir directo a S3 (patrón idéntico a seguridad/unidades) ──
+    router.post('/entradas/:id/archivos/presigned', async (req, res) => {
         try {
-            const { tipo } = req.params;
-            if (!['voucher', 'cotizacion', 'factura'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
             const { getPresignedUploadUrl } = require('../utils/s3');
-            const body = req.body || {};
-            const ext = (body.fileName || 'file.pdf').split('.').pop() || 'pdf';
-            const s3Key = `almacen/entradas/${req.params.id}/${tipo}_${Date.now()}.${ext}`;
-            const uploadUrl = await getPresignedUploadUrl(s3Key, body.contentType || 'application/pdf', 600);
-            const finalUrl = `https://${(process.env.AWS_BUCKET_NAME || '').trim()}.s3.${(process.env.AWS_REGION || 'us-east-2').trim()}.amazonaws.com/${s3Key}`;
-            res.json({ ok: true, uploadUrl, s3Key, finalUrl });
+            const archivos = (req.body && req.body.archivos) || [];
+            if (!archivos.length) return res.status(400).json({ error: 'No se enviaron archivos' });
+
+            const bucket = (process.env.AWS_BUCKET_NAME || '').trim();
+            const region = (process.env.AWS_REGION || 'us-east-2').trim();
+
+            const urls = await Promise.all(archivos.map(async (arch) => {
+                const tipo = arch.tipo || 'voucher';
+                const ext = (arch.fileName || 'file.pdf').split('.').pop() || 'pdf';
+                const s3Key = `almacen/entradas/${req.params.id}/${tipo}_${Date.now()}_${Math.random().toString(36).substring(2,7)}.${ext}`;
+                const uploadUrl = await getPresignedUploadUrl(s3Key, arch.contentType || 'application/pdf', 600);
+                const finalUrl = `https://${bucket}.s3.${region}.amazonaws.com/${s3Key}`;
+                return { uploadUrl, s3Key, finalUrl, tipo };
+            }));
+
+            res.json({ ok: true, urls });
         } catch (e) {
-            console.error('Error generando presigned upload URL:', e);
+            console.error('Error generando presigned URLs batch:', e);
             res.status(500).json({ error: e.message });
         }
     });
 
-    // ── Confirmar upload directo: guarda la URL en BD después de que el navegador subió a S3 ──
-    router.post('/entradas/:id/archivo/:tipo/confirmar', async (req, res) => {
-        const { tipo } = req.params;
-        if (!['voucher', 'cotizacion', 'factura'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
-        const { finalUrl, s3Key } = req.body;
-        if (!finalUrl) return res.status(400).json({ error: 'finalUrl requerido' });
-
+    // ── Confirmar uploads batch: guarda URLs en BD después de subir directo a S3 ──
+    router.post('/entradas/:id/archivos/confirmar', async (req, res) => {
         try {
             const tdb = getDb(req);
             const { deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
-            const col = `url_${tipo}`;
+            const exitosos = (req.body && req.body.exitosos) || [];
+            if (!exitosos.length) return res.json({ ok: true });
 
-            // Borrar archivo anterior si existe
-            const [rows] = await new Promise((resolve, reject) => {
-                tdb.query(`SELECT ${col}, estado FROM entradas_inv WHERE id=?`, [req.params.id], (err, r) => err ? reject(err) : resolve([r]));
-            });
-            if (rows && rows.length > 0 && rows[0][col]) {
-                const oldKey = s3KeyFromUrl(rows[0][col]);
-                if (oldKey) await deleteFromS3(oldKey).catch(() => {});
-            }
-
-            // Actualizar en BD
-            let updateSql = `UPDATE entradas_inv SET ${col}=? WHERE id=?`;
-            let updateParams = [finalUrl, req.params.id];
-            if (tipo === 'voucher') {
-                updateSql = `UPDATE entradas_inv SET ${col}=?, estado='Procesado' WHERE id=?`;
-            }
-
-            await new Promise((resolve, reject) => {
-                tdb.query(updateSql, updateParams, (err) => err ? reject(err) : resolve());
+            // Obtener estado actual
+            const rows = await new Promise((resolve, reject) => {
+                tdb.query('SELECT url_voucher, url_cotizacion, url_factura, estado FROM entradas_inv WHERE id=?',
+                    [req.params.id], (err, r) => err ? reject(err) : resolve(r));
             });
 
-            if (typeof logAudit === 'function' && (req.body && req.body.usuario)) {
-                logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'SUBIÓ_ARCHIVO', req.path);
+            const current = rows && rows[0] ? rows[0] : {};
+            const sets = [];
+            const params = [];
+            let cambiaEstado = false;
+
+            for (const ex of exitosos) {
+                const col = `url_${ex.tipo}`;
+                if (!['url_voucher', 'url_cotizacion', 'url_factura'].includes(col)) continue;
+
+                // Borrar anterior si existe
+                if (current[col]) {
+                    const oldKey = s3KeyFromUrl(current[col]);
+                    if (oldKey) await deleteFromS3(oldKey).catch(() => {});
+                }
+
+                sets.push(`${col}=?`);
+                params.push(ex.finalUrl);
+                if (ex.tipo === 'voucher') cambiaEstado = true;
             }
 
-            res.json({ ok: true, url: finalUrl, estado: tipo === 'voucher' ? 'Procesado' : (rows && rows[0] ? rows[0].estado : 'Registrado') });
+            if (cambiaEstado) {
+                sets.push("estado='Procesado'");
+            }
+
+            if (sets.length) {
+                params.push(req.params.id);
+                await new Promise((resolve, reject) => {
+                    tdb.query(`UPDATE entradas_inv SET ${sets.join(', ')} WHERE id=?`, params, (err) => err ? reject(err) : resolve());
+                });
+            }
+
+            res.json({ ok: true, estado: cambiaEstado ? 'Procesado' : (current.estado || 'Registrado') });
         } catch (e) {
-            console.error('Error confirmando upload:', e);
+            console.error('Error confirmando uploads batch:', e);
             res.status(500).json({ error: e.message });
         }
     });
