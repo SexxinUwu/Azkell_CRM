@@ -567,6 +567,48 @@ window._entAgregarItem = function() {
     }
 };
 
+window._entInitCbItem = function(idx, cbId) {
+    var tipoEl = document.getElementById('ent-f-tipo-oc');
+    var isServicio = tipoEl && tipoEl.value === 'Servicio';
+    var dataFiltered = (window._entInvData || []).filter(function(d) {
+        var isServId = d.id && d.id.toUpperCase().startsWith('SERV-');
+        var isFamServ = d.familia === 'Servicio' || d.familia === 'Servicios';
+        var isTipoServ = d.tipo === 'Servicio';
+        var isService = isServId || isFamServ || isTipoServ;
+        return isServicio ? isService : !isService;
+    });
+    var items = dataFiltered.map(function(d) {
+        return { value: d.id, label: d.id + ' — ' + (d.descripcion || '') };
+    });
+    window._cbInit(cbId, items, 'Buscar artículo…');
+    window._cbOnSelect(cbId, function(val) {
+        var item = (window._entInvData || []).find(function(d) { return d.id === val; });
+        if (item) {
+            var ref = parseFloat(item.costo_referencial || 0);
+            var puEl = document.querySelector('.ent-item-pu[data-idx="' + idx + '"]');
+            var vuEl = document.querySelector('.ent-item-vu[data-idx="' + idx + '"]');
+            var mode = window._entIgvMode || 'incluido';
+            if (mode === 'mas_igv') {
+                if (vuEl) { vuEl.value = (ref / 1.18).toFixed(4); vuEl.dataset.oldCost = ref; }
+                window._entCalcImporte(idx, 'vu');
+            } else {
+                if (puEl) { puEl.value = ref.toFixed(2); puEl.dataset.oldCost = ref; }
+                window._entCalcImporte(idx, 'pu');
+            }
+        }
+    });
+};
+
+window._entCargarInv = function(cb) {
+    if (window._entInvData && window._entInvData.length) { if (cb) cb(); return; }
+    fetch('/api/almacen/inventario')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            window._entInvData = data || [];
+            if (cb) cb();
+        }).catch(function() { if (cb) cb(); });
+};
+
 window._entCalcImporte = function(idx, source) {
     var r2 = function(v) { return Math.round(v * 100) / 100; };
     var r4 = function(v) { return Math.round(v * 10000) / 10000; };
