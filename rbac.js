@@ -107,6 +107,9 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/almacen/recepciones-oc') || path.startsWith('/almacen/reset-recepciones')) {
         mod = ['ent_inv', 'inv', 'cfg_almacen'];
     }
+    else if (path.startsWith('/almacen/empresa-cuentas')) {
+        mod = ['ent_inv', 'inv', 'sal_inv', 'cfg_almacen', 'tesoreria'];
+    }
     else if (path.startsWith('/almacen/inventario')) mod = ['inv'];
     else if (path.startsWith('/clientes')) mod = ['clientes', 'placas'];
     else if (path.startsWith('/almacen/entradas')) mod = ['ent_inv'];

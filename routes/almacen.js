@@ -1043,89 +1043,94 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 console.error('[GET /api/almacen/entradas error]', err);
                 return res.status(500).json({ error: err.message });
             }
-            const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+            try {
+                const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
 
-            // Mapear usuarios y proveedores para nombres completos y RUC
-            const [usuariosMap, provsMap] = await Promise.all([
-                new Promise(resU => {
-                    tdb.query('SELECT nombre, correo, idUsuario FROM usuarios', (eU, rU) => {
-                        const uMap = {};
-                        if (!eU && rU) {
-                            rU.forEach(u => {
-                                if (u.correo) uMap[u.correo.toLowerCase()] = u.nombre;
-                                if (u.idUsuario) uMap[String(u.idUsuario)] = u.nombre;
-                                if (u.nombre) uMap[u.nombre.toLowerCase()] = u.nombre;
-                            });
-                        }
-                        resU(uMap);
-                    });
-                }),
-                new Promise(resP => {
-                    tdb.query('SELECT id, nombre, razon_social, numero_documento, telefono, email FROM proveedores_inv', (eP, rP) => {
-                        const pMap = {};
-                        if (!eP && rP) {
-                            rP.forEach(p => {
-                                if (p.id) pMap[p.id] = p;
-                                if (p.nombre) pMap[p.nombre.toLowerCase()] = p;
-                                if (p.razon_social) pMap[p.razon_social.toLowerCase()] = p;
-                            });
-                        }
-                        resP(pMap);
-                    });
-                })
-            ]);
+                // Mapear usuarios y proveedores para nombres completos y RUC
+                const [usuariosMap, provsMap] = await Promise.all([
+                    new Promise(resU => {
+                        tdb.query('SELECT nombre, correo, idUsuario FROM usuarios', (eU, rU) => {
+                            const uMap = {};
+                            if (!eU && rU) {
+                                rU.forEach(u => {
+                                    if (u.correo) uMap[u.correo.toLowerCase()] = u.nombre;
+                                    if (u.idUsuario) uMap[String(u.idUsuario)] = u.nombre;
+                                    if (u.nombre) uMap[u.nombre.toLowerCase()] = u.nombre;
+                                });
+                            }
+                            resU(uMap);
+                        });
+                    }),
+                    new Promise(resP => {
+                        tdb.query('SELECT id, nombre, razon_social, numero_documento, telefono, email FROM proveedores_inv', (eP, rP) => {
+                            const pMap = {};
+                            if (!eP && rP) {
+                                rP.forEach(p => {
+                                    if (p.id) pMap[p.id] = p;
+                                    if (p.nombre) pMap[p.nombre.toLowerCase()] = p;
+                                    if (p.razon_social) pMap[p.razon_social.toLowerCase()] = p;
+                                });
+                            }
+                            resP(pMap);
+                        });
+                    })
+                ]);
 
-            const signedRows = await Promise.all((rows || []).map(async (r) => {
-                // Formatear fecha exacta YYYY-MM-DD sin desfase de zona horaria
-                if (r.fecha) {
-                    if (r.fecha instanceof Date) {
-                        const y = r.fecha.getFullYear();
-                        const m = String(r.fecha.getMonth() + 1).padStart(2, '0');
-                        const day = String(r.fecha.getDate()).padStart(2, '0');
-                        r.fecha = `${y}-${m}-${day}`;
-                    } else {
-                        r.fecha = String(r.fecha).split('T')[0];
+                const signedRows = await Promise.all((rows || []).map(async (r) => {
+                    // Formatear fecha exacta YYYY-MM-DD sin desfase de zona horaria
+                    if (r.fecha) {
+                        if (r.fecha instanceof Date) {
+                            const y = r.fecha.getFullYear();
+                            const m = String(r.fecha.getMonth() + 1).padStart(2, '0');
+                            const day = String(r.fecha.getDate()).padStart(2, '0');
+                            r.fecha = `${y}-${m}-${day}`;
+                        } else {
+                            r.fecha = String(r.fecha).split('T')[0];
+                        }
                     }
-                }
 
-                // Resolver creador_nombre
-                const creadorKey = (r.creado_por || '').toLowerCase().trim();
-                r.creador_nombre = usuariosMap[creadorKey] || usuariosMap[r.creado_por] || r.creado_por || 'SISTEMA';
+                    // Resolver creador_nombre
+                    const creadorKey = (r.creado_por || '').toLowerCase().trim();
+                    r.creador_nombre = usuariosMap[creadorKey] || usuariosMap[r.creado_por] || r.creado_por || 'SISTEMA';
 
-                // Resolver aprobador_nombre
-                const aprobKey = (r.aprobado_por || '').toLowerCase().trim();
-                r.aprobador_nombre = usuariosMap[aprobKey] || usuariosMap[r.aprobado_por] || r.aprobado_por || '';
+                    // Resolver aprobador_nombre
+                    const aprobKey = (r.aprobado_por || '').toLowerCase().trim();
+                    r.aprobador_nombre = usuariosMap[aprobKey] || usuariosMap[r.aprobado_por] || r.aprobado_por || '';
 
-                // Resolver proveedor datos
-                const pInfo = (r.proveedor_id && provsMap[r.proveedor_id]) ||
-                    (r.proveedor_nombre && provsMap[r.proveedor_nombre.toLowerCase()]) || null;
-                r.proveedor_ruc = pInfo?.numero_documento || '';
-                r.proveedor_telefono = pInfo?.telefono || '';
-                r.proveedor_email = pInfo?.email || '';
+                    // Resolver proveedor datos
+                    const pInfo = (r.proveedor_id && provsMap[r.proveedor_id]) ||
+                        (r.proveedor_nombre && provsMap[r.proveedor_nombre.toLowerCase()]) || null;
+                    r.proveedor_ruc = pInfo?.numero_documento || '';
+                    r.proveedor_telefono = pInfo?.telefono || '';
+                    r.proveedor_email = pInfo?.email || '';
 
-                r.items = r.items_raw ? r.items_raw.split(';;').map(s => {
-                    const [desc, cant, cu, mon, invId, imp] = s.split('|');
-                    const cantNum = parseFloat(cant) || 0;
-                    const cuNum = parseFloat(cu) || 0;
-                    const impNum = parseFloat(imp) || (cantNum * cuNum);
-                    return {
-                        descripcion: desc || '',
-                        cantidad: cantNum,
-                        costo_unitario: cuNum,
-                        moneda: mon || r.moneda || 'PEN',
-                        inventario_id: invId || '',
-                        unidad_medida: 'UND',
-                        importe: impNum,
-                        codigo_articulo: invId || ''
-                    };
-                }) : [];
-                delete r.items_raw;
-                if (r.url_voucher) { const k = s3KeyFromUrl(r.url_voucher); if (k) r.url_voucher_presigned = await getPresignedUrl(k).catch(() => r.url_voucher); }
-                if (r.url_cotizacion) { const k = s3KeyFromUrl(r.url_cotizacion); if (k) r.url_cotizacion_presigned = await getPresignedUrl(k).catch(() => r.url_cotizacion); }
-                if (r.url_factura) { const k = s3KeyFromUrl(r.url_factura); if (k) r.url_factura_presigned = await getPresignedUrl(k).catch(() => r.url_factura); }
-                return r;
-            }));
-            res.json(signedRows);
+                    r.items = r.items_raw ? r.items_raw.split(';;').map(s => {
+                        const [desc, cant, cu, mon, invId, imp] = s.split('|');
+                        const cantNum = parseFloat(cant) || 0;
+                        const cuNum = parseFloat(cu) || 0;
+                        const impNum = parseFloat(imp) || (cantNum * cuNum);
+                        return {
+                            descripcion: desc || '',
+                            cantidad: cantNum,
+                            costo_unitario: cuNum,
+                            moneda: mon || r.moneda || 'PEN',
+                            inventario_id: invId || '',
+                            unidad_medida: 'UND',
+                            importe: impNum,
+                            codigo_articulo: invId || ''
+                        };
+                    }) : [];
+                    delete r.items_raw;
+                    if (r.url_voucher) { const k = s3KeyFromUrl(r.url_voucher); if (k) r.url_voucher_presigned = await getPresignedUrl(k).catch(() => r.url_voucher); }
+                    if (r.url_cotizacion) { const k = s3KeyFromUrl(r.url_cotizacion); if (k) r.url_cotizacion_presigned = await getPresignedUrl(k).catch(() => r.url_cotizacion); }
+                    if (r.url_factura) { const k = s3KeyFromUrl(r.url_factura); if (k) r.url_factura_presigned = await getPresignedUrl(k).catch(() => r.url_factura); }
+                    return r;
+                }));
+                res.json(signedRows);
+            } catch (innerErr) {
+                console.error('[GET /api/almacen/entradas inner error]', innerErr);
+                res.status(500).json({ error: innerErr.message });
+            }
         });
     });
     async function _ensureColumnasOC(tdb) {
