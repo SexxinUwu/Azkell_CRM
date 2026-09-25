@@ -1177,6 +1177,29 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         }
     }
 
+    // ── Endpoint rápido para obtener URL de subida directa a S3 (Mismo patrón que flota/documentos) ──
+    router.get('/entradas/upload-url', async (req, res) => {
+        try {
+            const { getPresignedUploadUrl } = require('../utils/s3');
+            const { filename, contentType, tipo } = req.query;
+            if (!filename) return res.status(400).json({ error: 'Falta filename' });
+
+            const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
+            const fileTipo = tipo || 'cotizacion';
+            const s3Key = `almacen/entradas/${fileTipo}_${Date.now()}_${safeName}`;
+            const uploadUrl = await getPresignedUploadUrl(s3Key, contentType || 'application/pdf', 600);
+
+            const region = (process.env.AWS_REGION || 'us-east-2').trim();
+            const bucket = (process.env.AWS_BUCKET_NAME || '').trim();
+            const fileUrl = `https://${bucket}.s3.${region}.amazonaws.com/${s3Key}`;
+
+            res.json({ uploadUrl, fileUrl, s3Key });
+        } catch (e) {
+            console.error('Error generando upload-url en almacén:', e);
+            res.status(500).json({ error: e.message });
+        }
+    });
+
     router.post('/entradas', (req, res) => {
         const tdb = getDb(req);
         _ensureColumnasOC(tdb);
@@ -1184,7 +1207,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv,
             observaciones, creado_por, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id,
             serie, numero_correlativo, dias_pagar, prioridad, cuenta_bancaria_proveedor, cuenta_bancaria_empresa, solicitante, estado_factura,
-            centro_costo, sub_motivo, autoriza
+            centro_costo, sub_motivo, autoriza, url_cotizacion
         } = req.body;
         const anio = new Date(fecha || Date.now()).getFullYear();
         const tc = parseFloat(tipo_cambio) || 1;
@@ -1196,8 +1219,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 id, fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, total_pen,
                 observaciones, tipo_igv, creado_por, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id, estado,
                 serie, numero_correlativo, dias_pagar, prioridad, cuenta_bancaria_proveedor, cuenta_bancaria_empresa, solicitante, estado_factura,
-                centro_costo, sub_motivo, autoriza
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                centro_costo, sub_motivo, autoriza, url_cotizacion
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
                 [
                     id, fecha || new Date().toISOString().split('T')[0], proveedor_id || null, proveedor_nombre || null,
                     documento_referencia || null, moneda || 'PEN', tc || null, total_pen, observaciones || null, tipo_igv || 'sin_igv',
@@ -1205,7 +1228,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     dias_credito || 30, ot_id || null, 'Registrado',
                     serie || String(anio), numero_correlativo || id, parseInt(dias_pagar) || 0, prioridad || 'Normal',
                     cuenta_bancaria_proveedor || null, cuenta_bancaria_empresa || null, solicitante || null, estado_factura || 'Pendiente',
-                    centro_costo || 'CC-100', sub_motivo || null, autoriza || null
+                    centro_costo || 'CC-100', sub_motivo || null, autoriza || null, url_cotizacion || null
                 ],
                 (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
@@ -1258,28 +1281,34 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv,
             observaciones, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id,
             serie, numero_correlativo, dias_pagar, prioridad, cuenta_bancaria_proveedor, cuenta_bancaria_empresa, solicitante, estado_factura,
-            centro_costo, sub_motivo, autoriza
+            centro_costo, sub_motivo, autoriza, url_cotizacion
         } = req.body;
         const tc = parseFloat(tipo_cambio) || 1;
         const total_pen = _calcularTotalPen(items || [], tc);
 
-        tdb.query(
-            `UPDATE entradas_inv SET
+        let updateSql = `UPDATE entradas_inv SET
             fecha=?, proveedor_id=?, proveedor_nombre=?, documento_referencia=?, moneda=?, tipo_cambio=?, total_pen=?,
             observaciones=?, tipo_igv=?, motivo_entrada=?, placa=?, tipo_orden=?, condicion_pago=?, dias_credito=?, ot_id=?,
             serie=?, numero_correlativo=?, dias_pagar=?, prioridad=?, cuenta_bancaria_proveedor=?, cuenta_bancaria_empresa=?, solicitante=?, estado_factura=?,
-            centro_costo=?, sub_motivo=?, autoriza=?
-         WHERE id=?`,
-            [
-                fecha || new Date().toISOString().split('T')[0], proveedor_id || null, proveedor_nombre || null,
-                documento_referencia || null, moneda || 'PEN', tc || null, total_pen,
-                observaciones || null, tipo_igv || 'sin_igv', motivo_entrada || null, placa || null, tipo_orden || 'Orden de compra', condicion_pago || 'Al contado', dias_credito || 30, ot_id || null,
-                serie || null, numero_correlativo || null, parseInt(dias_pagar) || 0, prioridad || 'Normal',
-                cuenta_bancaria_proveedor || null, cuenta_bancaria_empresa || null, solicitante || null, estado_factura || 'Pendiente',
-                centro_costo || 'CC-100', sub_motivo || null, autoriza || null,
-                id
-            ],
-            (err) => {
+            centro_costo=?, sub_motivo=?, autoriza=?`;
+        const updateParams = [
+            fecha || new Date().toISOString().split('T')[0], proveedor_id || null, proveedor_nombre || null,
+            documento_referencia || null, moneda || 'PEN', tc || null, total_pen,
+            observaciones || null, tipo_igv || 'sin_igv', motivo_entrada || null, placa || null, tipo_orden || 'Orden de compra', condicion_pago || 'Al contado', dias_credito || 30, ot_id || null,
+            serie || null, numero_correlativo || null, parseInt(dias_pagar) || 0, prioridad || 'Normal',
+            cuenta_bancaria_proveedor || null, cuenta_bancaria_empresa || null, solicitante || null, estado_factura || 'Pendiente',
+            centro_costo || 'CC-100', sub_motivo || null, autoriza || null
+        ];
+
+        if (url_cotizacion !== undefined) {
+            updateSql += `, url_cotizacion=?`;
+            updateParams.push(url_cotizacion || null);
+        }
+
+        updateSql += ` WHERE id=?`;
+        updateParams.push(id);
+
+        tdb.query(updateSql, updateParams, (err) => {
                 if (err) return res.status(500).json({ error: err.message });
 
                 // Delete old details
