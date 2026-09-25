@@ -98,6 +98,43 @@
     }
 }
 
+/* ─── Hero Dark Card High Contrast Tokens ─── */
+#det-oc-hero-card {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+    color: #ffffff !important;
+    border-radius: 24px !important;
+    box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.35) !important;
+}
+#det-oc-hero-card .hero-label-sub {
+    color: #94a3b8 !important;
+}
+#det-oc-hero-card #det-oc-hero-total {
+    color: #ffffff !important;
+}
+#det-oc-hero-card #det-oc-hero-moneda-label {
+    color: #cbd5e1 !important;
+}
+#det-oc-hero-card #det-oc-hero-badge-estado {
+    color: #34d399 !important;
+}
+#det-oc-hero-card #det-oc-hero-cc {
+    color: #f1f5f9 !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+#det-oc-hero-card #det-oc-hero-doc {
+    color: #38bdf8 !important;
+    background: rgba(2, 132, 199, 0.25) !important;
+    border: 1px solid rgba(2, 132, 199, 0.4) !important;
+}
+#det-oc-hero-card #det-oc-hero-prov-short,
+#det-oc-hero-card #det-oc-hero-dest-short {
+    color: #e2e8f0 !important;
+}
+#det-oc-hero-card .hero-route-border {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
 /* ── UI Tokens & Layout (Idéntico a Reporte de Fallas) ──── */
 .ent-app-container {
     width: 100% !important;
@@ -1182,29 +1219,29 @@
             <div class="modal-body px-3 px-md-4 py-2" style="max-height: calc(85vh - 120px); overflow-y: auto;">
                 
                 <!-- 1. TARJETA HERO DARK (TOTAL Y ESTADO EN VIVO) -->
-                <div class="p-3 p-md-4 mb-3 text-white position-relative overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 24px; box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.25);">
+                <div id="det-oc-hero-card" class="p-3 p-md-4 mb-3 text-white position-relative overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important; border-radius: 24px !important; box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.35) !important; color: #ffffff !important;">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                         <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                            <span id="det-oc-hero-badge-estado" class="badge px-3 py-1.5 rounded-pill fw-bold" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.75rem;">
+                            <span id="det-oc-hero-badge-estado" class="badge px-3 py-1.5 rounded-pill fw-bold" style="background: rgba(16, 185, 129, 0.25) !important; color: #34d399 !important; border: 1px solid rgba(16, 185, 129, 0.5) !important; font-size: 0.75rem;">
                                 🟢 100% RECEPCIONADA
                             </span>
-                            <span id="det-oc-hero-cc" class="badge px-2.5 py-1.5 rounded-pill fw-semibold" style="background: rgba(255, 255, 255, 0.1); color: #cbd5e1; font-size: 0.72rem;">
+                            <span id="det-oc-hero-cc" class="badge px-2.5 py-1.5 rounded-pill fw-semibold" style="background: rgba(255, 255, 255, 0.15) !important; color: #f1f5f9 !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; font-size: 0.72rem;">
                                 CC-OPERACIONES
                             </span>
                         </div>
-                        <span id="det-oc-hero-doc" class="badge px-2.5 py-1.5 rounded-pill fw-semibold" style="background: rgba(2, 132, 199, 0.2); color: #38bdf8; border: 1px solid rgba(2, 132, 199, 0.3); font-size: 0.72rem;">
+                        <span id="det-oc-hero-doc" class="badge px-2.5 py-1.5 rounded-pill fw-semibold" style="background: rgba(2, 132, 199, 0.25) !important; color: #38bdf8 !important; border: 1px solid rgba(2, 132, 199, 0.4) !important; font-size: 0.72rem;">
                             <i class="bi bi-receipt me-1"></i> SUNAT OC
                         </span>
                     </div>
 
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <div>
-                            <span class="text-slate-400 text-uppercase fw-bold d-block mb-1" style="font-size: 0.70rem; letter-spacing: 0.05em;">Total Liquidado</span>
+                            <span class="hero-label-sub text-uppercase fw-bold d-block mb-1" style="font-size: 0.70rem; letter-spacing: 0.05em; color: #94a3b8 !important;">Total Liquidado</span>
                             <div class="d-flex align-items-baseline gap-1">
-                                <span class="fw-bolder font-monospace" id="det-oc-hero-total" style="font-size: 2rem; letter-spacing: -0.03em; color: #ffffff;">S/ 0.00</span>
-                                <span class="small text-slate-400 font-monospace" id="det-oc-hero-moneda-label">PEN</span>
+                                <span class="fw-bolder font-monospace" id="det-oc-hero-total" style="font-size: 2rem; letter-spacing: -0.03em; color: #ffffff !important;">S/ 0.00</span>
+                                <span class="small font-monospace" id="det-oc-hero-moneda-label" style="color: #cbd5e1 !important;">PEN</span>
                             </div>
-                            <div id="det-oc-hero-status-desc" class="small fw-semibold mt-1 d-flex align-items-center gap-1" style="color: #34d399; font-size: 0.78rem;">
+                            <div id="det-oc-hero-status-desc" class="small fw-semibold mt-1 d-flex align-items-center gap-1" style="color: #34d399 !important; font-size: 0.78rem;">
                                 <i class="bi bi-check2-circle"></i> <span>Mercadería completa en Almacén Central</span>
                             </div>
                         </div>
@@ -1214,14 +1251,14 @@
                     </div>
 
                     <!-- Línea de Ruta Proveedor -> Sede Central -->
-                    <div class="pt-2 border-top border-slate-700 d-flex align-items-center justify-content-between text-slate-300" style="font-size: 0.72rem;">
-                        <span class="text-truncate fw-semibold" style="max-width: 45%;" id="det-oc-hero-prov-short">
+                    <div class="pt-2 border-top hero-route-border d-flex align-items-center justify-content-between" style="font-size: 0.72rem; border-color: rgba(255, 255, 255, 0.15) !important;">
+                        <span class="text-truncate fw-semibold" style="max-width: 45%; color: #e2e8f0 !important;" id="det-oc-hero-prov-short">
                             📍 Proveedor
                         </span>
-                        <div class="flex-grow-1 mx-2 position-relative" style="height: 3px; background: rgba(255,255,255,0.15); border-radius: 99px;">
+                        <div class="flex-grow-1 mx-2 position-relative" style="height: 3px; background: rgba(255,255,255,0.2); border-radius: 99px;">
                             <div id="det-oc-hero-route-fill" style="width: 100%; height: 100%; background: #10b981; border-radius: 99px;"></div>
                         </div>
-                        <span class="text-truncate fw-semibold" style="max-width: 45%;" id="det-oc-hero-dest-short">
+                        <span class="text-truncate fw-semibold" style="max-width: 45%; color: #e2e8f0 !important;" id="det-oc-hero-dest-short">
                             🏢 Sede Central
                         </span>
                     </div>

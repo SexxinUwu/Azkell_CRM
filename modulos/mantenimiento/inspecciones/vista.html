@@ -672,6 +672,9 @@
       <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.recargarModulo('statusMant')" title="Recargar">
         <i class="bi bi-arrow-clockwise fs-6"></i>
       </button>
+      <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5" id="btnToggleHistorial" onclick="window.toggleVistaStatus()" title="Alternar entre Últimas Inspecciones y Todo el Historial">
+        <i class="bi bi-clock-history fs-6 text-primary"></i> <span id="text-toggle-status">Historial</span>
+      </button>
       <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" id="btnToggleGraficos" onclick="window.toggleGraficosStatus()" title="Ver Gráficos">
         <i class="bi bi-bar-chart-fill fs-6 text-warning"></i> <span class="d-none d-md-inline">Gráficos</span>
       </button>
@@ -681,55 +684,66 @@
       <button class="btn btn-light bg-white border shadow-2xs text-dark rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5" onclick="window.abrirConfigInspecciones()" title="Plantilla de Inspección">
         <i class="bi bi-sliders text-warning fs-6"></i> <span class="d-none d-sm-inline">Plantilla</span>
       </button>
-      <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" onclick="window.exportarExcelInspecciones()" title="Exportar Excel">
+      <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" onclick="window.exportarExcelInspecciones()" title="Exportar Excel con formato fecha nativo">
         <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
       </button>
     </div>
   </div>
 
-  <!-- ── 2. BENTO KPIS ROW (INTERACTIVO APPLE CARDS) ────────────────── -->
+  <!-- ── 2. BENTO KPIS ROW (5 CARDS INCLUYENDO 'SIN REGISTRO') ───────── -->
   <div class="row g-2 g-md-3 mb-3" id="panelKPIsGenerales">
-    <div class="col-6 col-md-3">
-      <div class="ck-kpi-card active" id="insp-kpi-total" onclick="window.filtrarInspCard('total', this)" style="cursor: pointer;">
-        <div class="flex-grow-1 pe-2">
-          <span class="text-secondary small fw-bold ck-kpi-title">Flota Inspeccionada</span>
-          <h2 id="kpi-insp-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem; line-height: 1.1;">0</h2>
+    <div class="col-6 col-md">
+      <div class="ck-kpi-card active" id="insp-kpi-total" onclick="window.filtrarInspCard('total', this)" style="cursor: pointer;" title="Total de unidades activas en la flota">
+        <div class="flex-grow-1 pe-1 min-w-0">
+          <span class="text-secondary small fw-bold ck-kpi-title text-truncate">Flota Activa</span>
+          <h2 id="kpi-insp-total" class="fw-bolder m-0 text-dark" style="font-size: 1.55rem; line-height: 1.1;">0</h2>
         </div>
         <div class="ck-kpi-icon" style="background: #eff6ff; color: #2563eb;">
-          <i class="bi bi-clipboard2-check"></i>
+          <i class="bi bi-truck"></i>
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
-      <div class="ck-kpi-card" id="insp-kpi-conformes" onclick="window.filtrarInspCard('verde', this)" style="cursor: pointer;">
-        <div class="flex-grow-1 pe-2">
-          <span class="text-secondary small fw-bold ck-kpi-title">Conformes / Verde</span>
-          <h2 id="kpi-insp-conformes" class="fw-bolder m-0 text-success" style="font-size: 1.6rem; line-height: 1.1;">0</h2>
+    <div class="col-6 col-md">
+      <div class="ck-kpi-card" id="insp-kpi-conformes" onclick="window.filtrarInspCard('verde', this)" style="cursor: pointer;" title="Inspecciones conformes y al día">
+        <div class="flex-grow-1 pe-1 min-w-0">
+          <span class="text-secondary small fw-bold ck-kpi-title text-truncate">Conformes / Verde</span>
+          <h2 id="kpi-insp-conformes" class="fw-bolder m-0 text-success" style="font-size: 1.55rem; line-height: 1.1;">0</h2>
         </div>
         <div class="ck-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
           <i class="bi bi-check-circle-fill"></i>
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
-      <div class="ck-kpi-card" id="insp-kpi-alerta" onclick="window.filtrarInspCard('amarillo', this)" style="cursor: pointer;">
-        <div class="flex-grow-1 pe-2">
-          <span class="text-secondary small fw-bold ck-kpi-title">En Alerta / Amarillo</span>
-          <h2 id="kpi-insp-alerta" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem; line-height: 1.1;">0</h2>
+    <div class="col-6 col-md">
+      <div class="ck-kpi-card" id="insp-kpi-alerta" onclick="window.filtrarInspCard('amarillo', this)" style="cursor: pointer;" title="Próximas a vencer o con observaciones">
+        <div class="flex-grow-1 pe-1 min-w-0">
+          <span class="text-secondary small fw-bold ck-kpi-title text-truncate">En Alerta / Amarillo</span>
+          <h2 id="kpi-insp-alerta" class="fw-bolder m-0 text-warning" style="font-size: 1.55rem; line-height: 1.1;">0</h2>
         </div>
         <div class="ck-kpi-icon" style="background: #fefce8; color: #ca8a04;">
           <i class="bi bi-exclamation-circle-fill"></i>
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
-      <div class="ck-kpi-card" id="insp-kpi-criticas" onclick="window.filtrarInspCard('rojo', this)" style="cursor: pointer;">
-        <div class="flex-grow-1 pe-2">
-          <span class="text-secondary small fw-bold ck-kpi-title">Críticas / Rojo</span>
-          <h2 id="kpi-insp-criticas" class="fw-bolder m-0 text-danger" style="font-size: 1.6rem; line-height: 1.1;">0</h2>
+    <div class="col-6 col-md">
+      <div class="ck-kpi-card" id="insp-kpi-criticas" onclick="window.filtrarInspCard('rojo', this)" style="cursor: pointer;" title="Inspecciones vencidas o críticas">
+        <div class="flex-grow-1 pe-1 min-w-0">
+          <span class="text-secondary small fw-bold ck-kpi-title text-truncate">Críticas / Rojo</span>
+          <h2 id="kpi-insp-criticas" class="fw-bolder m-0 text-danger" style="font-size: 1.55rem; line-height: 1.1;">0</h2>
         </div>
         <div class="ck-kpi-icon" style="background: #fef2f2; color: #dc2626;">
           <i class="bi bi-x-circle-fill"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md">
+      <div class="ck-kpi-card" id="insp-kpi-sin-registro" onclick="window.filtrarInspCard('sin_registro', this)" style="cursor: pointer;" title="Unidades activas sin registro de inspección">
+        <div class="flex-grow-1 pe-1 min-w-0">
+          <span class="text-secondary small fw-bold ck-kpi-title text-truncate">Sin Registro</span>
+          <h2 id="kpi-insp-sin-registro" class="fw-bolder m-0 text-secondary" style="font-size: 1.55rem; line-height: 1.1;">0</h2>
+        </div>
+        <div class="ck-kpi-icon" style="background: #f1f5f9; color: #64748b;">
+          <i class="bi bi-dash-circle-dotted"></i>
         </div>
       </div>
     </div>
@@ -740,7 +754,7 @@
     <div class="col-12 col-md-4">
       <div class="card p-3 shadow-2xs border h-100" style="border-radius: 16px; background: #ffffff;">
         <div class="d-flex align-items-center justify-content-between mb-2">
-          <span class="fw-bold text-dark small"><i class="bi bi-pie-chart-fill text-primary me-1"></i> Estado Global</span>
+          <span class="fw-bold text-dark small"><i class="bi bi-pie-chart-fill text-primary me-1"></i> Estado Global Flota</span>
           <span class="badge bg-light text-secondary rounded-pill">Total</span>
         </div>
         <div style="position: relative; height: 160px; width: 100%;">
@@ -772,15 +786,54 @@
     </div>
   </div>
 
-  <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS SEGMENTED (FULL-BLEED) ──────── -->
+  <!-- ── 3. BARRA DE BÚSQUEDA, FILTRO AÑO/MES Y MÉTRICAS DE PERÍODO ─── -->
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3" id="panelHerramientasStatus">
-    <div class="position-relative flex-grow-1" style="max-width: 360px;">
-      <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
-      <input type="text" id="buscadorStatus" class="ck-apple-search" placeholder="Buscar folio, placa, técnico, cliente..." oninput="window.filtrarStatusAvanzado()">
+    <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap" style="max-width: 720px;">
+      <!-- Buscador -->
+      <div class="position-relative flex-grow-1" style="min-width: 220px;">
+        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+        <input type="text" id="buscadorStatus" class="ck-apple-search" placeholder="Buscar folio, placa, técnico, cliente..." oninput="window.filtrarStatusAvanzado()">
+      </div>
+      
+      <!-- Filtro Año -->
+      <select id="filtroInspAnio" class="form-select form-select-sm rounded-3 bg-white border fw-semibold text-secondary shadow-2xs" style="max-width: 120px; height: 38px;" onchange="window.filtrarStatusAvanzado()" title="Filtrar por Año">
+        <option value="">Año: Todos</option>
+      </select>
+
+      <!-- Filtro Mes -->
+      <select id="filtroInspMes" class="form-select form-select-sm rounded-3 bg-white border fw-semibold text-secondary shadow-2xs" style="max-width: 135px; height: 38px;" onchange="window.filtrarStatusAvanzado()" title="Filtrar por Mes">
+        <option value="">Mes: Todos</option>
+        <option value="1">Enero</option>
+        <option value="2">Febrero</option>
+        <option value="3">Marzo</option>
+        <option value="4">Abril</option>
+        <option value="5">Mayo</option>
+        <option value="6">Junio</option>
+        <option value="7">Julio</option>
+        <option value="8">Agosto</option>
+        <option value="9">Septiembre</option>
+        <option value="10">Octubre</option>
+        <option value="11">Noviembre</option>
+        <option value="12">Diciembre</option>
+      </select>
+
+      <button onclick="window.limpiarFiltrosInsp()" class="btn btn-light bg-white border text-secondary rounded-3 shadow-2xs" style="height:38px; width:38px; display:flex; align-items:center; justify-content:center;" title="Limpiar todos los filtros">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
-    <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-estados-insp">
-      <button type="button" class="ck-segment-item active" data-ubicacion="todos" onclick="window.filtrarInspUbicacion('todos', this)">Todos</button>
-      <button type="button" class="ck-segment-item" data-ubicacion="base" onclick="window.filtrarInspUbicacion('base', this)">En Base</button>
+
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <!-- Badge de métricas: Inspecciones Realizadas en el Mes vs Placas Únicas -->
+      <div class="badge bg-white text-dark border shadow-2xs px-3 py-2 rounded-3 d-flex align-items-center gap-2" id="insp-metric-resumen" style="font-size: 0.78rem; height: 38px;">
+        <span class="text-secondary fw-semibold"><i class="bi bi-clipboard2-check text-primary me-1"></i><b id="insp-metric-inspecciones" class="text-dark">0</b> Insp.</span>
+        <span class="text-muted">•</span>
+        <span class="text-secondary fw-semibold"><i class="bi bi-truck text-success me-1"></i><b id="insp-metric-placas" class="text-dark">0</b> Placas únicas</span>
+      </div>
+
+      <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-estados-insp">
+        <button type="button" class="ck-segment-item active" data-ubicacion="todos" onclick="window.filtrarInspUbicacion('todos', this)">Todos</button>
+        <button type="button" class="ck-segment-item" data-ubicacion="base" onclick="window.filtrarInspUbicacion('base', this)">En Base</button>
+      </div>
     </div>
   </div>
 
