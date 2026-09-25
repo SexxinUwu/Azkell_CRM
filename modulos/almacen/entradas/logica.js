@@ -476,92 +476,87 @@ window._entAgregarItem = function() {
     var card = document.createElement('div');
     card.id        = 'ent-item-' + idx;
     card.className = 'ent-item-card';
-    var mode = window._entIgvMode || 'incluido';
-    var vuRo = (mode === 'incluido' || mode === 'sin_igv') ? 'background:#f8fafc;color:#64748b;' : '';
-    var puRo = (mode === 'mas_igv' || mode === 'sin_igv') ? 'background:#f8fafc;color:#64748b;' : '';
     
-      var tipoOrden = ((document.getElementById('ent-f-tipo-orden') || {}).value || '').toLowerCase();
-      var isServicio = tipoOrden === 'orden de servicio';
+    var tipoOrden = ((document.getElementById('ent-f-tipo-orden') || {}).value || '').toLowerCase();
+    var isServicio = tipoOrden === 'orden de servicio';
 
-      if (isServicio) {
-          card.innerHTML =
-              '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">' +
-                  '<div style="flex:1;position:relative;">' +
-                      '<input type="text" id="' + cbId + '-txt" class="ent-input-sm ent-item-desc" data-idx="' + idx + '"' +
-                          ' placeholder="Buscar servicio…" autocomplete="off"' +
-                          ' oninput="window._entCbFiltrar(\'' + cbId + '\')"' +
-                          ' onfocus="window._entCbFiltrar(\'' + cbId + '\')"' +
-                          ' onblur="window._cbHide(\'' + cbId + '\')">' +
-                      '<input type="hidden" id="' + cbId + '" class="ent-item-inv-id" data-idx="' + idx + '">' +
-                      '<div id="' + cbId + '-dd" class="cb-dropdown"></div>' +
-                  '</div>' +
-                  '<button type="button" onclick="window._entQuitarItem(' + idx + ')"' +
-                      ' style="width:32px;height:32px;border-radius:10px;border:none;background:#fee2e2;' +
-                      'color:#ef4444;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;">' +
-                      '<i class="bi bi-x-lg"></i>' +
-                  '</button>' +
-              '</div>' +
-              '<div style="display:flex; gap:10px; align-items:center; background:#f8fafc; padding:10px; border-radius:8px;">' +
-                  '<div style="flex:1"><div class="ent-field-label">Costo Total (S/)</div>' +
-                      '<input type="number" class="ent-input-sm ent-item-imp" data-idx="' + idx + '"' +
-                          ' value="0" step="0.01" oninput="window._entSyncServiceCost(' + idx + ', this.value)">' +
-                  '</div>' +
-              '</div>' +
-              // Hidden fields to satisfy the backend
-              '<input type="hidden" class="ent-item-cant" data-idx="' + idx + '" value="1">' +
-              '<input type="hidden" class="ent-item-vu" data-idx="' + idx + '" value="0">' +
-              '<input type="hidden" class="ent-item-pu" data-idx="' + idx + '" value="0">' +
-              '<input type="hidden" class="ent-item-igv" data-idx="' + idx + '" value="0">' +
-              '<div id="ent-price-alert-' + idx + '" style="display:none;"></div>';
-      } else {
-          card.innerHTML =
-              '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">' +
-                  '<div style="flex:1;position:relative;">' +
-                      '<input type="text" id="' + cbId + '-txt" class="ent-input-sm ent-item-desc" data-idx="' + idx + '"' +
-                          ' placeholder="Buscar artículo…" autocomplete="off"' +
-                          ' oninput="window._entCbFiltrar(\'' + cbId + '\')"' +
-                          ' onfocus="window._entCbFiltrar(\'' + cbId + '\')"' +
-                          ' onblur="window._cbHide(\'' + cbId + '\')">' +
-                      '<input type="hidden" id="' + cbId + '" class="ent-item-inv-id" data-idx="' + idx + '">' +
-                      '<div id="' + cbId + '-dd" class="cb-dropdown"></div>' +
-                  '</div>' +
-                  '<button type="button" onclick="window._entAbrirQR(' + idx + ')" title="Escanear QR"' +
-                      ' style="width:32px;height:32px;border-radius:10px;border:1.5px solid #2563eb;background:#eff6ff;' +
-                      'color:#2563eb;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.82rem;">' +
-                      '<i class="bi bi-qr-code-scan"></i>' +
-                  '</button>' +
-                  '<button type="button" onclick="window._entQuitarItem(' + idx + ')"' +
-                      ' style="width:32px;height:32px;border-radius:10px;border:none;background:#fee2e2;' +
-                      'color:#ef4444;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;">' +
-                      '<i class="bi bi-x-lg"></i>' +
-                  '</button>' +
-              '</div>' +
-              '<div style="display:grid;grid-template-columns:72px 1fr 1fr 80px 1fr;gap:5px;">' +
-                  '<div><div class="ent-field-label">Cant.</div>' +
-                      '<input type="number" class="ent-input-sm ent-item-cant" data-idx="' + idx + '"' +
-                          ' value="1" min="0.001" step="0.001" oninput="window._entCalcImporte(' + idx + ',\'cant\')">' +
-                  '</div>' +
-                  '<div><div class="ent-field-label ent-lbl-vu" data-idx="' + idx + '">Valor Unit.</div>' +
-                      '<input type="number" class="ent-input-sm ent-item-vu" data-idx="' + idx + '"' +
-                          ' value="0" min="0" step="0.0001" oninput="window._entCalcImporte(' + idx + ',\'vu\')"' +
-                          ' style="' + vuRo + '">' +
-                  '</div>' +
-                  '<div><div class="ent-field-label ent-lbl-pu" data-idx="' + idx + '">Precio Unit.</div>' +
-                      '<input type="number" class="ent-input-sm ent-item-pu" data-idx="' + idx + '"' +
-                          ' value="0" min="0" step="0.0001" oninput="window._entCalcImporte(' + idx + ',\'pu\')"' +
-                          ' style="' + puRo + '">' +
-                  '</div>' +
-                  '<div><div class="ent-field-label">IGV</div>' +
-                      '<input type="number" class="ent-input-sm ent-item-igv" data-idx="' + idx + '"' +
-                          ' value="0" readonly style="background:#f1f5f9;color:#94a3b8;">' +
-                  '</div>' +
-                  '<div><div class="ent-field-label">Importe</div>' +
-                      '<input type="number" class="ent-input-sm ent-item-imp" data-idx="' + idx + '"' +
-                          ' value="0" step="0.01" oninput="window._entCalcImporte(' + idx + ',\'imp\')">' +
-                  '</div>' +
-              '</div>' +
-              '<div id="ent-price-alert-' + idx + '" style="display:none;margin-top:6px;align-items:center;gap:.4rem;"></div>';
-      }
+    if (isServicio) {
+        card.innerHTML =
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">' +
+                '<div style="flex:1;position:relative;">' +
+                    '<input type="text" id="' + cbId + '-txt" class="ent-input-sm ent-item-desc" data-idx="' + idx + '"' +
+                        ' placeholder="Buscar servicio…" autocomplete="off"' +
+                        ' oninput="window._entCbFiltrar(\'' + cbId + '\')"' +
+                        ' onfocus="window._entCbFiltrar(\'' + cbId + '\')"' +
+                        ' onblur="window._cbHide(\'' + cbId + '\')">' +
+                    '<input type="hidden" id="' + cbId + '" class="ent-item-inv-id" data-idx="' + idx + '">' +
+                    '<div id="' + cbId + '-dd" class="cb-dropdown"></div>' +
+                '</div>' +
+                '<button type="button" onclick="window._entQuitarItem(' + idx + ')"' +
+                    ' style="width:32px;height:32px;border-radius:10px;border:none;background:#fee2e2;' +
+                    'color:#ef4444;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;">' +
+                    '<i class="bi bi-x-lg"></i>' +
+                '</button>' +
+            '</div>' +
+            '<div style="display:flex; gap:10px; align-items:center; background:#f8fafc; padding:10px; border-radius:8px;">' +
+                '<div style="flex:1"><div class="ent-field-label">Costo Total (S/)</div>' +
+                    '<input type="number" class="ent-input-sm ent-item-imp" data-idx="' + idx + '"' +
+                        ' value="0" step="0.01" oninput="window._entSyncServiceCost(' + idx + ', this.value)">' +
+                '</div>' +
+            '</div>' +
+            // Hidden fields to satisfy the backend
+            '<input type="hidden" class="ent-item-cant" data-idx="' + idx + '" value="1">' +
+            '<input type="hidden" class="ent-item-vu" data-idx="' + idx + '" value="0">' +
+            '<input type="hidden" class="ent-item-pu" data-idx="' + idx + '" value="0">' +
+            '<input type="hidden" class="ent-item-igv" data-idx="' + idx + '" value="0">' +
+            '<div id="ent-price-alert-' + idx + '" style="display:none;"></div>';
+    } else {
+        card.innerHTML =
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">' +
+                '<div style="flex:1;position:relative;">' +
+                    '<input type="text" id="' + cbId + '-txt" class="ent-input-sm ent-item-desc" data-idx="' + idx + '"' +
+                        ' placeholder="Buscar artículo…" autocomplete="off"' +
+                        ' oninput="window._entCbFiltrar(\'' + cbId + '\')"' +
+                        ' onfocus="window._entCbFiltrar(\'' + cbId + '\')"' +
+                        ' onblur="window._cbHide(\'' + cbId + '\')">' +
+                    '<input type="hidden" id="' + cbId + '" class="ent-item-inv-id" data-idx="' + idx + '">' +
+                    '<div id="' + cbId + '-dd" class="cb-dropdown"></div>' +
+                '</div>' +
+                '<button type="button" onclick="window._entAbrirQR(' + idx + ')" title="Escanear QR"' +
+                    ' style="width:32px;height:32px;border-radius:10px;border:1.5px solid #2563eb;background:#eff6ff;' +
+                    'color:#2563eb;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.82rem;">' +
+                    '<i class="bi bi-qr-code-scan"></i>' +
+                '</button>' +
+                '<button type="button" onclick="window._entQuitarItem(' + idx + ')"' +
+                    ' style="width:32px;height:32px;border-radius:10px;border:none;background:#fee2e2;' +
+                    'color:#ef4444;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;">' +
+                    '<i class="bi bi-x-lg"></i>' +
+                '</button>' +
+            '</div>' +
+            '<div style="display:grid;grid-template-columns:72px 1fr 1fr 80px 1fr;gap:5px;">' +
+                '<div><div class="ent-field-label">Cant.</div>' +
+                    '<input type="number" class="ent-input-sm ent-item-cant" data-idx="' + idx + '"' +
+                        ' value="1" min="0.001" step="0.001" oninput="window._entCalcImporte(' + idx + ',\'cant\')">' +
+                '</div>' +
+                '<div><div class="ent-field-label ent-lbl-vu" data-idx="' + idx + '">Valor Unit.</div>' +
+                    '<input type="number" class="ent-input-sm ent-item-vu" data-idx="' + idx + '"' +
+                        ' value="0" min="0" step="0.0001" placeholder="0.00" oninput="window._entCalcImporte(' + idx + ',\'vu\')">' +
+                '</div>' +
+                '<div><div class="ent-field-label ent-lbl-pu" data-idx="' + idx + '">Precio Unit.</div>' +
+                    '<input type="number" class="ent-input-sm ent-item-pu" data-idx="' + idx + '"' +
+                        ' value="0" min="0" step="0.0001" placeholder="0.00" oninput="window._entCalcImporte(' + idx + ',\'pu\')">' +
+                '</div>' +
+                '<div><div class="ent-field-label">IGV</div>' +
+                    '<input type="number" class="ent-input-sm ent-item-igv" data-idx="' + idx + '"' +
+                        ' value="0" readonly style="background:#f1f5f9;color:#94a3b8;">' +
+                '</div>' +
+                '<div><div class="ent-field-label">Importe</div>' +
+                    '<input type="number" class="ent-input-sm ent-item-imp" data-idx="' + idx + '"' +
+                        ' value="0" step="0.01" placeholder="0.00" oninput="window._entCalcImporte(' + idx + ',\'imp\')">' +
+                '</div>' +
+            '</div>' +
+            '<div id="ent-price-alert-' + idx + '" style="display:none;margin-top:6px;align-items:center;gap:.4rem;"></div>';
+    }
 
     container.appendChild(card);
 
@@ -570,47 +565,6 @@ window._entAgregarItem = function() {
     } else {
         window._entInitCbItem(idx, cbId);
     }
-};
-
-window._entInitCbItem = function(idx, cbId) {
-    var isServicio = ((document.getElementById('ent-f-tipo-orden') || {}).value || '').toLowerCase() === 'orden de servicio';
-    var dataFiltered = (window._entInvData || []).filter(function(d) {
-        var isServId = d.id.toUpperCase().startsWith('SERV-');
-          var isFamServ = d.familia === 'Servicio' || d.familia === 'Servicios';
-          var isTipoServ = d.tipo === 'Servicio';
-          var isService = isServId || isFamServ || isTipoServ;
-          return isServicio ? isService : !isService;
-    });
-    var items = dataFiltered.map(function(d) {
-        return { value: d.id, label: d.id + ' — ' + (d.descripcion || '') };
-    });
-    window._cbInit(cbId, items, 'Buscar artículo…');
-    window._cbOnSelect(cbId, function(val) {
-        var item = (window._entInvData || []).find(function(d) { return d.id === val; });
-        if (item) {
-            var ref = parseFloat(item.costo_referencial || 0);
-            var puEl = document.querySelector('.ent-item-pu[data-idx="' + idx + '"]');
-            var vuEl = document.querySelector('.ent-item-vu[data-idx="' + idx + '"]');
-            var mode = window._entIgvMode || 'incluido';
-            if (mode === 'mas_igv') {
-                if (vuEl) { vuEl.value = (ref / 1.18).toFixed(4); vuEl.dataset.oldCost = ref; }
-                window._entCalcImporte(idx, 'vu');
-            } else {
-                if (puEl) { puEl.value = ref.toFixed(2); puEl.dataset.oldCost = ref; }
-                window._entCalcImporte(idx, 'pu');
-            }
-        }
-    });
-};
-
-window._entCargarInv = function(cb) {
-    if (window._entInvData.length) { if (cb) cb(); return; }
-    fetch('/api/almacen/inventario')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            window._entInvData = data || [];
-            if (cb) cb();
-        }).catch(function() { if (cb) cb(); });
 };
 
 window._entCalcImporte = function(idx, source) {
@@ -630,30 +584,81 @@ window._entCalcImporte = function(idx, source) {
     var imp  = parseFloat(impEl.value)  || 0;
 
     if (mode === 'sin_igv') {
-        if (source === 'imp')       { pu = r4(cant > 0 ? imp / cant : 0); vu = pu; }
-        else if (source === 'pu')   { vu = pu; }
-        else if (source === 'vu')   { pu = vu; }
-        vuEl.value  = vu.toFixed(4); puEl.value  = pu.toFixed(2);
+        if (source === 'imp') {
+            pu = cant > 0 ? (imp / cant) : 0;
+            vu = pu;
+            if (source !== 'pu') puEl.value = (Math.round(pu * 100) / 100).toFixed(2);
+            if (source !== 'vu') vuEl.value = (Math.round(vu * 10000) / 10000).toFixed(4);
+        } else if (source === 'pu') {
+            vu = pu;
+            if (source !== 'vu') vuEl.value = (Math.round(vu * 10000) / 10000).toFixed(4);
+            impEl.value = (Math.round(cant * pu * 100) / 100).toFixed(2);
+        } else if (source === 'vu') {
+            pu = vu;
+            if (source !== 'pu') puEl.value = (Math.round(pu * 100) / 100).toFixed(2);
+            impEl.value = (Math.round(cant * pu * 100) / 100).toFixed(2);
+        } else { // cant
+            impEl.value = (Math.round(cant * pu * 100) / 100).toFixed(2);
+        }
         igvEl.value = (0).toFixed(2);
-        if (source !== 'imp') impEl.value = r2(cant * pu).toFixed(2);
 
     } else if (mode === 'incluido') {
-        if (source === 'imp')       { pu = r4(cant > 0 ? imp / cant : 0); }
-        else if (source === 'vu')   { pu = r2(vu * 1.18); }
-        vu  = r4(pu / 1.18);
-        var igvRow = r2((source === 'imp' ? imp : r2(cant * pu)) - cant * vu);
-        vuEl.value  = vu.toFixed(4); puEl.value  = pu.toFixed(2);
-        igvEl.value = igvRow.toFixed(2);
-        if (source !== 'imp') impEl.value = r2(cant * pu).toFixed(2);
+        if (source === 'imp') {
+            pu = cant > 0 ? (imp / cant) : 0;
+            vu = pu / 1.18;
+            var igvRow = (imp) - (cant * vu);
+            if (source !== 'pu') puEl.value = (Math.round(pu * 100) / 100).toFixed(2);
+            if (source !== 'vu') vuEl.value = (Math.round(vu * 10000) / 10000).toFixed(4);
+            igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
+        } else if (source === 'pu') {
+            vu = pu / 1.18;
+            var totalRow = cant * pu;
+            var igvRow = totalRow - (cant * vu);
+            if (source !== 'vu') vuEl.value = (Math.round(vu * 10000) / 10000).toFixed(4);
+            igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
+            impEl.value = (Math.round(totalRow * 100) / 100).toFixed(2);
+        } else if (source === 'vu') {
+            pu = vu * 1.18;
+            var totalRow = cant * pu;
+            var igvRow = totalRow - (cant * vu);
+            if (source !== 'pu') puEl.value = (Math.round(pu * 100) / 100).toFixed(2);
+            igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
+            impEl.value = (Math.round(totalRow * 100) / 100).toFixed(2);
+        } else { // cant
+            var totalRow = cant * pu;
+            var igvRow = totalRow - (cant * vu);
+            igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
+            impEl.value = (Math.round(totalRow * 100) / 100).toFixed(2);
+        }
 
     } else { // mas_igv
-        if (source === 'imp')       { pu = r4(cant > 0 ? imp / cant : 0); vu = r4(pu / 1.18); }
-        else if (source === 'pu')   { vu = r4(pu / 1.18); }
-        else if (source === 'vu')   { pu = r2(vu * 1.18); }
-        var igvRow2 = r2((source === 'imp' ? imp : r2(cant * pu)) - cant * vu);
-        vuEl.value  = vu.toFixed(4); puEl.value  = pu.toFixed(2);
-        igvEl.value = igvRow2.toFixed(2);
-        if (source !== 'imp') impEl.value = r2(cant * pu).toFixed(2);
+        if (source === 'imp') {
+            pu = cant > 0 ? (imp / cant) : 0;
+            vu = pu / 1.18;
+            var igvRow = (imp) - (cant * vu);
+            if (source !== 'pu') puEl.value = (Math.round(pu * 100) / 100).toFixed(2);
+            if (source !== 'vu') vuEl.value = (Math.round(vu * 10000) / 10000).toFixed(4);
+            igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
+        } else if (source === 'pu') {
+            vu = pu / 1.18;
+            var totalRow = cant * pu;
+            var igvRow = totalRow - (cant * vu);
+            if (source !== 'vu') vuEl.value = (Math.round(vu * 10000) / 10000).toFixed(4);
+            igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
+            impEl.value = (Math.round(totalRow * 100) / 100).toFixed(2);
+        } else if (source === 'vu') {
+            pu = vu * 1.18;
+            var totalRow = cant * pu;
+            var igvRow = totalRow - (cant * vu);
+            if (source !== 'pu') puEl.value = (Math.round(pu * 100) / 100).toFixed(2);
+            igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
+            impEl.value = (Math.round(totalRow * 100) / 100).toFixed(2);
+        } else { // cant
+            var totalRow = cant * pu;
+            var igvRow = totalRow - (cant * vu);
+            igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
+            impEl.value = (Math.round(totalRow * 100) / 100).toFixed(2);
+        }
     }
 
     // Alerta comparación de precio vs referencia
@@ -814,14 +819,16 @@ window._entSetIgvMode = function(mode) {
             }
         }
         if (vuEl) {
-            var vuRo = (mode === 'incluido' || mode === 'sin_igv');
-            vuEl.readOnly = vuRo; vuEl.style.background = vuRo ? '#f8fafc' : ''; vuEl.style.color = vuRo ? '#64748b' : '';
+            vuEl.readOnly = false;
+            vuEl.style.background = '';
+            vuEl.style.color = '';
         }
         if (puEl) {
-            var puRo = (mode === 'mas_igv' || mode === 'sin_igv');
-            puEl.readOnly = puRo; puEl.style.background = puRo ? '#f8fafc' : ''; puEl.style.color = puRo ? '#64748b' : '';
+            puEl.readOnly = false;
+            puEl.style.background = '';
+            puEl.style.color = '';
         }
-        var src = mode === 'mas_igv' ? 'vu' : mode === 'sin_igv' ? 'pu' : 'pu';
+        var src = mode === 'mas_igv' ? 'vu' : 'pu';
         window._entCalcImporte(idx, src);
     });
 };
