@@ -47,92 +47,72 @@
     }
 }
 
-/* ─── Modal Detalle OC — Responsive Bottom Sheet on Mobile (82% viewport) ─── */
-@media (max-width: 991.98px) {
-    #modalDetalleEntradaOC {
-        padding: 0 !important;
-    }
+/* ─── Modal Detalle OC — Sliding Bottom Sheet (Desktop & Mobile) ─── */
+#modalDetalleEntradaOC {
+    padding: 0 !important;
+}
+#modalDetalleEntradaOC .modal-dialog,
+#modalDetalleEntradaOC.modal .modal-dialog-centered {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    right: auto !important;
+    top: auto !important;
+    margin: 0 !important;
+    max-width: 1120px !important;
+    width: 96vw !important;
+    min-height: auto !important;
+    align-items: flex-end !important;
+    display: flex !important;
+    transform: translateX(-50%) translateY(100%) !important;
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+#modalDetalleEntradaOC.show .modal-dialog,
+#modalDetalleEntradaOC.show.modal .modal-dialog-centered {
+    transform: translateX(-50%) translateY(0) !important;
+}
+#modalDetalleEntradaOC .modal-content {
+    width: 100% !important;
+    height: 90vh !important;
+    max-height: 90vh !important;
+    border-radius: 24px 24px 0 0 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-bottom: none !important;
+    box-shadow: 0 -16px 56px rgba(0, 0, 0, 0.35) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #f8fafc !important;
+    overflow: hidden !important;
+}
+#modalDetalleEntradaOC .modal-header {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.4rem !important;
+}
+#modalDetalleEntradaOC .modal-body {
+    max-height: none !important;
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 1.5rem !important;
+}
+@media (max-width: 768px) {
     #modalDetalleEntradaOC .modal-dialog,
     #modalDetalleEntradaOC.modal .modal-dialog-centered {
-        position: fixed !important;
-        bottom: 0 !important;
         left: 0 !important;
         right: 0 !important;
-        margin: 0 !important;
-        max-width: 100% !important;
-        width: 100% !important;
-        min-height: auto !important;
-        align-items: flex-end !important;
-        display: flex !important;
+        max-width: 100vw !important;
+        width: 100vw !important;
         transform: translateY(100%) !important;
-        transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
     #modalDetalleEntradaOC.show .modal-dialog,
     #modalDetalleEntradaOC.show.modal .modal-dialog-centered {
         transform: translateY(0) !important;
     }
     #modalDetalleEntradaOC .modal-content {
-        width: 100% !important;
-        height: 82vh !important;
-        max-height: 82vh !important;
-        border-radius: 26px 26px 0 0 !important;
-        border: 1px solid #e2e8f0 !important;
-        border-bottom: none !important;
-        box-shadow: 0 -16px 48px rgba(15, 23, 42, 0.35) !important;
-        display: flex !important;
-        flex-direction: column !important;
+        height: 95vh !important;
+        max-height: 95vh !important;
+        border-radius: 20px 20px 0 0 !important;
     }
-    #modalDetalleEntradaOC .modal-header {
-        padding-top: 0.6rem !important;
-        padding-bottom: 0.4rem !important;
-    }
-    #modalDetalleEntradaOC .modal-body {
-        max-height: none !important;
-        flex: 1 1 auto !important;
-        overflow-y: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        padding-bottom: 2rem !important;
-    }
-    #modalDetalleEntradaOC .modal-footer {
-        padding-bottom: 1.25rem !important;
-    }
-}
-
-/* ─── Hero Dark Card High Contrast Tokens ─── */
-#det-oc-hero-card {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
-    color: #ffffff !important;
-    border-radius: 24px !important;
-    box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.35) !important;
-}
-#det-oc-hero-card .hero-label-sub {
-    color: #94a3b8 !important;
-}
-#det-oc-hero-card #det-oc-hero-total {
-    color: #ffffff !important;
-}
-#det-oc-hero-card #det-oc-hero-moneda-label {
-    color: #cbd5e1 !important;
-}
-#det-oc-hero-card #det-oc-hero-badge-estado {
-    color: #34d399 !important;
-}
-#det-oc-hero-card #det-oc-hero-cc {
-    color: #f1f5f9 !important;
-    background: rgba(255, 255, 255, 0.15) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-}
-#det-oc-hero-card #det-oc-hero-doc {
-    color: #38bdf8 !important;
-    background: rgba(2, 132, 199, 0.25) !important;
-    border: 1px solid rgba(2, 132, 199, 0.4) !important;
-}
-#det-oc-hero-card #det-oc-hero-prov-short,
-#det-oc-hero-card #det-oc-hero-dest-short {
-    color: #e2e8f0 !important;
-}
-#det-oc-hero-card .hero-route-border {
-    border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
 /* ── UI Tokens & Layout (Idéntico a Reporte de Fallas) ──── */
@@ -441,38 +421,6 @@
     color: #0284c7;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0,0,0,0.06);
-}
-
-/* Modal Detalle OC estilo Apple (Desktop y Mobile Bottom-Sheet) */
-@media (max-width: 767.98px) {
-    #modalDetalleEntradaOC .modal-dialog {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        margin: 0;
-        max-width: 100%;
-        transform: translateY(100%);
-        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    #modalDetalleEntradaOC.show .modal-dialog {
-        transform: translateY(0);
-    }
-    #modalDetalleEntradaOC .modal-content {
-        border-bottom-left-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-        border-top-left-radius: 28px !important;
-        border-top-right-radius: 28px !important;
-        max-height: 88vh;
-    }
-}
-@media (min-width: 768px) {
-    #modalDetalleEntradaOC .modal-dialog {
-        max-width: 680px;
-    }
-    #modalDetalleEntradaOC .modal-content {
-        border-radius: 28px !important;
-    }
 }
 </style>
 
@@ -1191,219 +1139,230 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- MODAL: DETALLE COMPLETO DE LA ORDEN DE COMPRA (DISEÑO APPLE V3 HERO + LIVE) -->
+<!-- MODAL: DETALLE COMPLETO DE LA ORDEN DE COMPRA (DISEÑO CLÁSICO ERP LIMPIO) -->
 <!-- ========================================================================= -->
 <div class="modal fade" id="modalDetalleEntradaOC" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg overflow-hidden" style="border-radius: 28px; background: #f8fafc;">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow-lg overflow-hidden" style="border-radius: 24px 24px 0 0; background: #ffffff;">
             <!-- Mobile Pull Bar Indicator -->
-            <div class="d-block d-md-none mx-auto bg-secondary rounded-pill mt-2.5 mb-1" style="width: 44px; height: 5px; opacity: 0.35;"></div>
+            <div class="d-block d-md-none mx-auto bg-secondary rounded-pill mt-2 mb-1" style="width: 44px; height: 5px; opacity: 0.35;"></div>
 
-            <!-- Modal Header Minimalista -->
-            <div class="modal-header border-0 pb-1 pt-3 px-3 px-md-4 d-flex justify-content-between align-items-center bg-transparent">
-                <button type="button" class="btn btn-sm btn-white bg-white border rounded-circle shadow-2xs d-flex align-items-center justify-content-center" data-bs-dismiss="modal" style="width:36px; height:36px;" title="Cerrar">
-                    <i class="bi bi-chevron-left fs-6 text-dark"></i>
-                </button>
-                <div class="text-center">
-                    <span class="text-secondary fw-bold text-uppercase d-block" style="font-size: 0.68rem; letter-spacing: 0.08em;">Orden de Compra</span>
-                    <h5 class="fw-bolder m-0 text-dark font-monospace d-flex align-items-center justify-content-center gap-1.5" style="letter-spacing: -0.02em; font-size: 1.15rem;">
-                        <span id="det-oc-titulo-num">—</span> <span>📋</span>
-                    </h5>
+            <!-- Modal Header -->
+            <div class="modal-header border-bottom pb-2.5 pt-3 px-3 px-md-4 d-flex justify-content-between align-items-center bg-white">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="d-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary" style="width: 42px; height: 42px; font-size: 1.25rem;">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <div>
+                        <span class="text-secondary fw-bold text-uppercase d-block" style="font-size: 0.68rem; letter-spacing: 0.06em;">Orden de Compra</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="fw-bolder m-0 text-dark font-monospace" id="det-oc-titulo-num" style="letter-spacing: -0.02em; font-size: 1.2rem;">
+                                2026-00000
+                            </h5>
+                            <span class="badge border bg-light text-secondary rounded-pill font-monospace" style="font-size: 0.68rem;">ORDEN DE COMPRA</span>
+                        </div>
+                    </div>
                 </div>
-                <button type="button" class="btn btn-sm btn-white bg-white border rounded-circle shadow-2xs d-flex align-items-center justify-content-center" onclick="window.imprimirPDFDesdeDetalleOC()" style="width:36px; height:36px;" title="Imprimir PDF">
-                    <i class="bi bi-three-dots-vertical fs-6 text-dark"></i>
+                <button type="button" class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center shadow-2xs" data-bs-dismiss="modal" style="width:34px; height:34px;" title="Cerrar">
+                    <i class="bi bi-x-lg text-dark"></i>
                 </button>
             </div>
 
-            <!-- Modal Body (Desplazable con diseño bento/hero) -->
-            <div class="modal-body px-3 px-md-4 py-2" style="max-height: calc(85vh - 120px); overflow-y: auto;">
+            <!-- Modal Body -->
+            <div class="modal-body px-3 px-md-4 py-3" style="max-height: calc(88vh - 120px); overflow-y: auto; background: #f8fafc;">
                 
-                <!-- 1. TARJETA HERO DARK (TOTAL Y ESTADO EN VIVO) -->
-                <div id="det-oc-hero-card" class="p-3 p-md-4 mb-3 text-white position-relative overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important; border-radius: 24px !important; box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.35) !important; color: #ffffff !important;">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                            <span id="det-oc-hero-badge-estado" class="badge px-3 py-1.5 rounded-pill fw-bold" style="background: rgba(16, 185, 129, 0.25) !important; color: #34d399 !important; border: 1px solid rgba(16, 185, 129, 0.5) !important; font-size: 0.75rem;">
-                                🟢 100% RECEPCIONADA
-                            </span>
-                            <span id="det-oc-hero-cc" class="badge px-2.5 py-1.5 rounded-pill fw-semibold" style="background: rgba(255, 255, 255, 0.15) !important; color: #f1f5f9 !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; font-size: 0.72rem;">
-                                CC-OPERACIONES
-                            </span>
-                        </div>
-                        <span id="det-oc-hero-doc" class="badge px-2.5 py-1.5 rounded-pill fw-semibold" style="background: rgba(2, 132, 199, 0.25) !important; color: #38bdf8 !important; border: 1px solid rgba(2, 132, 199, 0.4) !important; font-size: 0.72rem;">
-                            <i class="bi bi-receipt me-1"></i> SUNAT OC
+                <!-- 1. BANNER DE ESTADO Y RECEPCIÓN -->
+                <div class="p-2.5 p-md-3 mb-3 bg-white rounded-3 border d-flex flex-wrap align-items-center justify-content-between gap-2 shadow-2xs">
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="det-oc-badge-estado" class="badge rounded-pill fw-bold" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.75rem; padding: 6px 12px;">
+                            <i class="bi bi-box-seam me-1"></i> RECEPCIONADA 100%
                         </span>
                     </div>
-
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <div>
-                            <span class="hero-label-sub text-uppercase fw-bold d-block mb-1" style="font-size: 0.70rem; letter-spacing: 0.05em; color: #94a3b8 !important;">Total Liquidado</span>
-                            <div class="d-flex align-items-baseline gap-1">
-                                <span class="fw-bolder font-monospace" id="det-oc-hero-total" style="font-size: 2rem; letter-spacing: -0.03em; color: #ffffff !important;">S/ 0.00</span>
-                                <span class="small font-monospace" id="det-oc-hero-moneda-label" style="color: #cbd5e1 !important;">PEN</span>
-                            </div>
-                            <div id="det-oc-hero-status-desc" class="small fw-semibold mt-1 d-flex align-items-center gap-1" style="color: #34d399 !important; font-size: 0.78rem;">
-                                <i class="bi bi-check2-circle"></i> <span>Mercadería completa en Almacén Central</span>
-                            </div>
-                        </div>
-                        <div class="d-flex align-items-center justify-content-center rounded-4 shadow-sm" style="width: 58px; height: 58px; background: linear-gradient(135deg, #ff6b4a 0%, #ea580c 100%); font-size: 1.8rem;">
-                            📦
-                        </div>
-                    </div>
-
-                    <!-- Línea de Ruta Proveedor -> Sede Central -->
-                    <div class="pt-2 border-top hero-route-border d-flex align-items-center justify-content-between" style="font-size: 0.72rem; border-color: rgba(255, 255, 255, 0.15) !important;">
-                        <span class="text-truncate fw-semibold" style="max-width: 45%; color: #e2e8f0 !important;" id="det-oc-hero-prov-short">
-                            📍 Proveedor
-                        </span>
-                        <div class="flex-grow-1 mx-2 position-relative" style="height: 3px; background: rgba(255,255,255,0.2); border-radius: 99px;">
-                            <div id="det-oc-hero-route-fill" style="width: 100%; height: 100%; background: #10b981; border-radius: 99px;"></div>
-                        </div>
-                        <span class="text-truncate fw-semibold" style="max-width: 45%; color: #e2e8f0 !important;" id="det-oc-hero-dest-short">
-                            🏢 Sede Central
-                        </span>
-                    </div>
+                    <span id="det-oc-desc-estado" class="text-secondary small fw-medium">
+                        Mercadería recepcionada en su totalidad en almacén central.
+                    </span>
                 </div>
 
-                <!-- 2. TRAZABILIDAD EN VIVO (CARD CAROUSEL + STEPPER) -->
-                <div class="card border-0 shadow-xs mb-3 overflow-hidden" style="border-radius: 20px; background: #ffffff; border: 1px solid #e2e8f0 !important;">
-                    <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
-                        <div>
-                            <div class="text-uppercase fw-bold text-secondary" style="font-size: 0.68rem; letter-spacing: 0.06em;">
-                                <span class="d-inline-block rounded-circle me-1" style="width:7px; height:7px; background:#10b981;"></span> Trazabilidad en Vivo
+                <!-- 2. STEPPER DE TRAZABILIDAD (4 PASOS) -->
+                <div class="card border-0 shadow-2xs mb-3 bg-white" style="border-radius: 16px; border: 1px solid #e2e8f0 !important;">
+                    <div class="p-3 p-md-4">
+                        <!-- Horizontal Nodes -->
+                        <div class="position-relative mb-4">
+                            <!-- Background line -->
+                            <div class="position-absolute top-50 start-0 w-100 translate-middle-y" style="height: 3px; background: #e2e8f0; z-index: 1;">
+                                <div id="det-oc-stepper-line" style="height: 100%; width: 100%; background: #10b981; transition: width 0.3s ease;"></div>
                             </div>
-                            <h6 class="fw-bold text-dark m-0 mt-0.5" style="font-size: 0.88rem;">
-                                Flujo de Orden <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill ms-1" id="det-oc-live-step-badge">Paso 1 de 4</span>
-                            </h6>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 text-secondary fw-bold d-flex align-items-center gap-1 shadow-2xs" id="det-oc-btn-autoplay" onclick="window.toggleAutoplayOC()" style="font-size: 0.72rem;">
-                            <i class="bi bi-pause-fill" id="det-oc-icon-autoplay"></i> <span id="det-oc-txt-autoplay">Auto</span>
-                        </button>
-                    </div>
-
-                    <div class="p-3">
-                        <!-- 4 Mini barras de progreso -->
-                        <div class="d-flex gap-1.5 mb-3">
-                            <div class="flex-fill rounded-pill" id="det-oc-prog-step-1" style="height: 4px; background: #10b981; cursor:pointer;" onclick="window.setLiveStepOC(1)"></div>
-                            <div class="flex-fill rounded-pill" id="det-oc-prog-step-2" style="height: 4px; background: #e2e8f0; cursor:pointer;" onclick="window.setLiveStepOC(2)"></div>
-                            <div class="flex-fill rounded-pill" id="det-oc-prog-step-3" style="height: 4px; background: #e2e8f0; cursor:pointer;" onclick="window.setLiveStepOC(3)"></div>
-                            <div class="flex-fill rounded-pill" id="det-oc-prog-step-4" style="height: 4px; background: #e2e8f0; cursor:pointer;" onclick="window.setLiveStepOC(4)"></div>
-                        </div>
-
-                        <!-- Tarjeta del Paso Activo -->
-                        <div class="p-3 rounded-4" style="background: #f8fafc; border: 1px solid #eef2f6;" id="det-oc-live-card-container">
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="d-flex align-items-center justify-content-center rounded-3 bg-primary text-white" id="det-oc-live-icon-box" style="width: 32px; height: 32px; font-size: 0.9rem;">
-                                        <i class="bi bi-file-earmark-text"></i>
+                            <!-- 4 Nodes -->
+                            <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                                <!-- Node 1 -->
+                                <div class="text-center" style="width: 24%;">
+                                    <div id="det-oc-step-node-1" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-white shadow-sm" style="width: 32px; height: 32px; background: #10b981; font-size: 0.85rem;">
+                                        <i class="bi bi-check-lg"></i>
                                     </div>
-                                    <div>
-                                        <div class="fw-bold text-dark" id="det-oc-live-title" style="font-size: 0.86rem;">1. Solicitud Registrada</div>
-                                        <div class="text-secondary small" id="det-oc-live-subtitle" style="font-size: 0.72rem;">Área de Mantenimiento y Repuestos</div>
-                                    </div>
+                                    <div class="fw-bold text-dark" style="font-size: 0.78rem;">Registrada</div>
+                                    <div class="text-secondary small font-monospace" id="det-oc-step-date-1" style="font-size: 0.68rem;">—</div>
                                 </div>
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold px-2.5 py-1" id="det-oc-live-status-badge" style="font-size: 0.70rem;">Registrado</span>
-                            </div>
-
-                            <p class="small text-secondary mb-2 lh-sm" id="det-oc-live-desc" style="font-size: 0.78rem;">
-                                Ingreso y requerimiento formal emitido para reposición de stock.
-                            </p>
-
-                            <div class="d-flex align-items-center justify-content-between pt-2 border-top border-slate-200 text-muted" style="font-size: 0.72rem;">
-                                <span id="det-oc-live-user"><i class="bi bi-person me-1"></i> Creador: Daniel</span>
-                                <span id="det-oc-live-date">31 jul. 2026</span>
+                                <!-- Node 2 -->
+                                <div class="text-center" style="width: 24%;">
+                                    <div id="det-oc-step-node-2" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-white shadow-sm" style="width: 32px; height: 32px; background: #10b981; font-size: 0.85rem;">
+                                        <i class="bi bi-shield-check"></i>
+                                    </div>
+                                    <div class="fw-bold text-dark" style="font-size: 0.78rem;">Aprobada</div>
+                                    <div class="text-secondary small" id="det-oc-step-user-2" style="font-size: 0.68rem;">—</div>
+                                </div>
+                                <!-- Node 3 -->
+                                <div class="text-center" style="width: 24%;">
+                                    <div id="det-oc-step-node-3" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-white shadow-sm" style="width: 32px; height: 32px; background: #10b981; font-size: 0.85rem;">
+                                        <i class="bi bi-cash-coin"></i>
+                                    </div>
+                                    <div class="fw-bold text-dark" style="font-size: 0.78rem;">Procesada</div>
+                                    <div class="text-secondary small" id="det-oc-step-status-3" style="font-size: 0.68rem;">Pago Registrado</div>
+                                </div>
+                                <!-- Node 4 -->
+                                <div class="text-center" style="width: 24%;">
+                                    <div id="det-oc-step-node-4" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-white shadow-sm" style="width: 32px; height: 32px; background: #10b981; font-size: 0.85rem;">
+                                        <i class="bi bi-box-seam"></i>
+                                    </div>
+                                    <div class="fw-bold text-dark" style="font-size: 0.78rem;">Recepcionada</div>
+                                    <div class="text-secondary small" id="det-oc-step-reception-4" style="font-size: 0.68rem;">100% Recepcionado</div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Controles de navegación manual de pasos -->
-                        <div class="d-flex justify-content-between align-items-center mt-2.5 pt-1 text-secondary" style="font-size: 0.75rem;">
-                            <button type="button" class="btn btn-sm btn-link text-decoration-none text-secondary p-0 fw-bold" onclick="window.navLiveStepOC(-1)">
-                                ← Anterior
-                            </button>
-                            <span class="badge bg-light text-secondary border fw-normal" style="cursor:pointer;" onclick="window.imprimirPDFDesdeDetalleOC()">
-                                📜 Ver Detalle Completo
+                        <!-- Barra de progreso lineal inferior -->
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span id="det-oc-prog-resumen" class="fw-bold text-dark" style="font-size: 0.74rem;">
+                                0 de 0 unidades recepcionadas
                             </span>
-                            <button type="button" class="btn btn-sm btn-link text-decoration-none text-primary p-0 fw-bold" onclick="window.navLiveStepOC(1)">
-                                Siguiente →
-                            </button>
+                            <span id="det-oc-prog-pct" class="fw-bold text-success font-monospace" style="font-size: 0.74rem;">
+                                100%
+                            </span>
+                        </div>
+                        <div class="progress" style="height: 5px; background: #e2e8f0; border-radius: 99px;">
+                            <div id="det-oc-prog-fill" class="progress-bar bg-success" style="width: 100%; border-radius: 99px;"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 3. INVENTARIO & MEDIDAS (ARTÍCULOS REQUERIDOS) -->
-                <div class="card border-0 shadow-xs mb-3 overflow-hidden" style="border-radius: 20px; background: #ffffff; border: 1px solid #e2e8f0 !important;">
-                    <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
-                        <div>
-                            <div class="text-uppercase fw-bold text-danger" style="font-size: 0.68rem; letter-spacing: 0.06em;">Inventario & Medidas</div>
-                            <h6 class="fw-bold text-dark m-0 mt-0.5" style="font-size: 0.88rem;">
-                                Artículos Requeridos (<span id="det-oc-items-count-label">1</span>)
-                            </h6>
+                <!-- 3. CUATRO BENTO CARDS DE INFORMACIÓN -->
+                <div class="row g-2.5 g-md-3 mb-3">
+                    <!-- Card 1: Solicitud -->
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <div class="p-3 bg-white rounded-3 border h-100 shadow-2xs">
+                            <div class="text-muted text-uppercase fw-bold mb-2 d-flex align-items-center gap-1" style="font-size: 0.68rem; letter-spacing: 0.05em;">
+                                <i class="bi bi-person-badge text-primary"></i> SOLICITUD
+                            </div>
+                            <div class="mb-2">
+                                <span class="text-secondary small d-block" style="font-size: 0.70rem;">Solicitante (Autoriza):</span>
+                                <strong class="text-dark d-block" id="det-oc-card-solicitante" style="font-size: 0.82rem;">—</strong>
+                            </div>
+                            <div>
+                                <span class="text-secondary small d-block" style="font-size: 0.70rem;">Usuario de Creación:</span>
+                                <strong class="text-dark d-block text-uppercase" id="det-oc-card-creador" style="font-size: 0.82rem;">—</strong>
+                            </div>
                         </div>
-                        <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" style="font-size: 0.70rem;">
-                            📐 Ver Cotas / U.M.
+                    </div>
+
+                    <!-- Card 2: Emisión & Destino -->
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <div class="p-3 bg-white rounded-3 border h-100 shadow-2xs">
+                            <div class="text-muted text-uppercase fw-bold mb-2 d-flex align-items-center gap-1" style="font-size: 0.68rem; letter-spacing: 0.05em;">
+                                <i class="bi bi-calendar-event text-primary"></i> EMISIÓN & DESTINO
+                            </div>
+                            <div class="mb-2">
+                                <span class="text-secondary small d-block" style="font-size: 0.70rem;">Fecha de Registro:</span>
+                                <strong class="text-dark d-block font-monospace" id="det-oc-card-fecha" style="font-size: 0.80rem;">—</strong>
+                            </div>
+                            <div>
+                                <span class="text-secondary small d-block" style="font-size: 0.70rem;">Destino / Unidad:</span>
+                                <strong class="text-dark d-block text-uppercase text-truncate" id="det-oc-card-destino" style="font-size: 0.82rem;">SEDE PRINCIPAL / ALMACÉN</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Proveedor -->
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <div class="p-3 bg-white rounded-3 border h-100 shadow-2xs">
+                            <div class="text-muted text-uppercase fw-bold mb-2 d-flex align-items-center gap-1" style="font-size: 0.68rem; letter-spacing: 0.05em;">
+                                <i class="bi bi-building text-primary"></i> PROVEEDOR
+                            </div>
+                            <div class="mb-2">
+                                <span class="text-secondary small d-block" style="font-size: 0.70rem;">Razón Social:</span>
+                                <strong class="text-dark d-block text-truncate" id="det-oc-card-proveedor" style="font-size: 0.82rem;" title="Proveedor">—</strong>
+                            </div>
+                            <div>
+                                <span class="text-secondary small d-block" style="font-size: 0.70rem;">Motivo / Justificación:</span>
+                                <strong class="text-dark d-block text-truncate text-uppercase" id="det-oc-card-motivo" style="font-size: 0.82rem;">—</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: Documentos & Pago -->
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <div class="p-3 bg-white rounded-3 border h-100 shadow-2xs">
+                            <div class="text-muted text-uppercase fw-bold mb-2 d-flex align-items-center gap-1" style="font-size: 0.68rem; letter-spacing: 0.05em;">
+                                <i class="bi bi-credit-card text-primary"></i> DOCUMENTOS & PAGO
+                            </div>
+                            <div class="mb-2">
+                                <span class="text-secondary small d-block" style="font-size: 0.70rem;">Condición:</span>
+                                <strong class="text-dark d-block" id="det-oc-card-pago" style="font-size: 0.80rem;">SOLES (PEN) • AL CONTADO</strong>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1" id="det-oc-card-pills-docs">
+                                <!-- Pills dinamicos de cotización, factura y voucher -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. TABLA DE ARTÍCULOS / REPUESTOS REQUERIDOS -->
+                <div class="card border-0 shadow-2xs mb-3 bg-white overflow-hidden" style="border-radius: 16px; border: 1px solid #e2e8f0 !important;">
+                    <div class="p-3 bg-light border-bottom d-flex align-items-center justify-content-between">
+                        <span class="fw-bold text-secondary text-uppercase d-flex align-items-center gap-1.5" style="font-size: 0.75rem; letter-spacing: 0.04em;">
+                            <i class="bi bi-list-ul"></i> ARTÍCULOS / REPUESTOS REQUERIDOS
+                        </span>
+                        <span class="badge bg-white text-secondary border font-monospace" id="det-oc-table-renglones-badge" style="font-size: 0.72rem;">
+                            1 Renglón (1 unids)
                         </span>
                     </div>
-
-                    <div class="p-3" id="det-oc-items-cards-container">
-                        <!-- Se llena dinámicamente con las tarjetas estilo Apple -->
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.82rem;">
+                            <thead class="bg-light text-muted" style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                <tr>
+                                    <th class="ps-3 py-2.5" style="width: 40px;">#</th>
+                                    <th class="py-2.5" style="width: 130px;">CÓD. ART.</th>
+                                    <th class="py-2.5">DESCRIPCIÓN DEL ARTÍCULO</th>
+                                    <th class="py-2.5 text-center" style="width: 80px;">U.M.</th>
+                                    <th class="py-2.5 text-center" style="width: 80px;">CANT.</th>
+                                    <th class="py-2.5 text-end" style="width: 120px;">P. UNITARIO</th>
+                                    <th class="pe-3 py-2.5 text-end" style="width: 130px;">IMPORTE</th>
+                                </tr>
+                            </thead>
+                            <tbody id="det-oc-table-tbody" class="border-top-0">
+                                <!-- Inyectado dinámicamente -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <!-- 4. PROVEEDOR VERIFICADO -->
-                <div class="card border-0 shadow-xs mb-2 overflow-hidden" style="border-radius: 20px; background: #ffffff; border: 1px solid #e2e8f0 !important;">
-                    <div class="p-3">
-                        <div class="text-uppercase fw-bold text-secondary mb-2" style="font-size: 0.68rem; letter-spacing: 0.06em;">
-                            Proveedor Verificado
-                        </div>
-                        
-                        <div class="d-flex align-items-center gap-2.5 mb-3">
-                            <div class="d-flex align-items-center justify-content-center rounded-3 shadow-2xs" style="width: 44px; height: 44px; background: #fef3c7; font-size: 1.4rem;">
-                                🏢
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <div class="fw-bold text-dark text-truncate" id="det-oc-prov-full-name" style="font-size: 0.88rem;">RODAJES Y RETENES OCHOA E.I.R.L.</div>
-                                <div class="small text-secondary font-monospace" id="det-oc-prov-full-ruc" style="font-size: 0.74rem;">RUC: 20554009035 📋</div>
-                            </div>
-                        </div>
-
-                        <!-- Botones Rápidos Llamar / WhatsApp -->
-                        <div class="d-flex gap-2 mb-3">
-                            <a href="#" id="det-oc-btn-call" class="btn btn-sm btn-outline-secondary rounded-pill flex-fill py-2 fw-bold d-flex align-items-center justify-content-center gap-1.5 shadow-2xs" style="font-size: 0.78rem;">
-                                📞 <span>Llamar</span>
-                            </a>
-                            <a href="#" id="det-oc-btn-wsp" target="_blank" class="btn btn-sm btn-outline-success rounded-pill flex-fill py-2 fw-bold d-flex align-items-center justify-content-center gap-1.5 shadow-2xs" style="font-size: 0.78rem; border-color:#86efac; background:#f0fdf4;">
-                                💬 <span>WhatsApp</span>
-                            </a>
-                        </div>
-
-                        <!-- Sub-tiles Destino y Solicitante -->
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <div class="p-2.5 rounded-3 bg-light border">
-                                    <div class="text-muted text-uppercase fw-bold" style="font-size: 0.64rem;">Destino / Almacén</div>
-                                    <div class="fw-bold text-dark text-truncate mt-0.5" id="det-oc-subtile-destino" style="font-size: 0.78rem;">Sede Principal</div>
-                                    <div class="text-secondary small text-truncate" id="det-oc-subtile-motivo" style="font-size: 0.68rem;">Stock Operativo</div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="p-2.5 rounded-3 bg-light border">
-                                    <div class="text-muted text-uppercase fw-bold" style="font-size: 0.64rem;">Solicitado Por</div>
-                                    <div class="fw-bold text-dark text-truncate mt-0.5" id="det-oc-subtile-solicitante" style="font-size: 0.78rem;">Daniel</div>
-                                    <div class="text-secondary small text-truncate" id="det-oc-subtile-condicion" style="font-size: 0.68rem;">AL CONTADO</div>
-                                </div>
-                            </div>
-                        </div>
+                <!-- 5. BARRA DE MONTO EN LETRAS Y TOTAL NETO -->
+                <div class="p-3 bg-white rounded-3 border d-flex flex-wrap align-items-center justify-content-between gap-2 shadow-2xs">
+                    <div class="text-secondary small font-monospace d-flex align-items-center gap-1.5" style="font-size: 0.78rem;">
+                        <i class="bi bi-info-circle text-primary"></i> SON: <strong id="det-oc-total-letras" class="text-dark text-uppercase">—</strong>
+                    </div>
+                    <div class="text-dark font-monospace fw-bold" style="font-size: 1.15rem;">
+                        TOTAL NETO: <span id="det-oc-total-neto" class="text-primary font-monospace">S/ 0.00</span>
                     </div>
                 </div>
 
             </div>
 
-            <!-- Modal Footer (Barra de Acción Flotante) -->
-            <div class="modal-footer border-0 p-3 bg-white d-flex gap-2">
-                <button type="button" class="btn btn-light bg-light border rounded-pill py-2.5 px-3 fw-bold text-dark shadow-2xs" data-bs-dismiss="modal" title="Cerrar">
-                    <i class="bi bi-x-lg"></i>
+            <!-- Modal Footer -->
+            <div class="modal-footer border-top p-3 bg-white d-flex justify-content-between align-items-center">
+                <button type="button" class="btn btn-light border px-4 py-2 rounded-3 fw-bold text-secondary shadow-2xs" data-bs-dismiss="modal">
+                    Cerrar
                 </button>
-                <button type="button" class="btn btn-danger flex-grow-1 py-2.5 px-4 rounded-pill fw-bold text-white shadow-sm d-flex align-items-center justify-content-center gap-2" id="det-oc-btn-pdf" onclick="window.imprimirPDFDesdeDetalleOC()" style="background: linear-gradient(135deg, #ff5722 0%, #f43f5e 100%); border:none; font-size: 0.90rem;">
-                    <i class="bi bi-file-earmark-pdf-fill"></i> <span>Descargar / Imprimir PDF</span>
+                <button type="button" class="btn text-white px-4 py-2 rounded-3 fw-bold d-flex align-items-center gap-2 shadow-sm" style="background:#0f172a;" onclick="window.imprimirPDFDesdeDetalleOC()">
+                    <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Imprimir / Ver PDF
                 </button>
             </div>
         </div>

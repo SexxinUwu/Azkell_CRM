@@ -1370,9 +1370,28 @@ window.updateGraficosEnVivo = function(dataCounts) {
         }
 
         var counts = c.counts || { vig: 0, alerta: 0, novig: 0, sinReg: 0 };
-        var labels = ['Conformes', 'En Alerta', 'Críticas / No Vig.', 'Sin Registro'];
-        var data = [counts.vig || 0, counts.alerta || 0, counts.novig || 0, counts.sinReg || 0];
-        var colors = ['#16a34a', '#ca8a04', '#dc2626', '#94a3b8'];
+        // Vigentes abarca conformes y próximos a vencer
+        var totalVigentes = (counts.vig || 0) + (counts.alerta || 0);
+        var totalNoVigentes = (counts.novig || 0);
+        var totalSinReg = (counts.sinReg || 0);
+
+        var labels = ['Conformes / Vigentes', 'Críticas / No Vig.'];
+        var data = [totalVigentes, totalNoVigentes];
+        var colors = ['#16a34a', '#dc2626'];
+
+        // Solo agregar Sin Registro si la cantidad es mayor a 0
+        if (totalSinReg > 0) {
+            labels.push('Sin Registro');
+            data.push(totalSinReg);
+            colors.push('#94a3b8');
+        }
+
+        var totalSuma = data.reduce(function(a, b) { return a + b; }, 0);
+        if (totalSuma === 0) {
+            labels = ['Sin Registros'];
+            data = [1];
+            colors = ['#e2e8f0'];
+        }
 
         window._inspCharts[c.id] = new Chart(canvas.getContext('2d'), {
             type: 'doughnut',
@@ -1401,8 +1420,8 @@ window.updateGraficosEnVivo = function(dataCounts) {
                     tooltip: {
                         callbacks: {
                             label: function(ctx) {
-                                var sum = data.reduce(function(a, b) { return a + b; }, 0);
-                                var pct = sum > 0 ? Math.round((ctx.parsed / sum) * 100) : 0;
+                                if (totalSuma === 0) return ' Sin registros en este período';
+                                var pct = Math.round((ctx.parsed / totalSuma) * 100);
                                 return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
                             }
                         }
@@ -1444,40 +1463,16 @@ function filtrarStatusAvanzado() {
         let mot = row.getAttribute('data-motor') || '';
         let esMotora = mot.toUpperCase().trim() === 'MOTORA';
 
-        // Clasificar estado semafórico global para conteo de KPIs
-        kpiTotal++;
-        if (isSinRegistro) {
-            kpiSinRegistro++;
-        } else if (isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente')) {
-            kpiCriticas++;
-        } else if (dias <= 7 || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo')) {
-            kpiAlerta++;
-        } else {
-            kpiConformes++;
-        }
-
         // A. Filtro de Texto
         let matchTxt = (!txt || textoFila.includes(txt));
 
-        // B. Filtro Card (Semáforo)
-        let matchCard = true;
-        if (filtroCard === 'verde') {
-            matchCard = !isSinRegistro && dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
-        } else if (filtroCard === 'amarillo') {
-            matchCard = !isSinRegistro && ((dias >= 0 && dias <= 7) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo'));
-        } else if (filtroCard === 'rojo') {
-            matchCard = !isSinRegistro && (isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente'));
-        } else if (filtroCard === 'sin_registro') {
-            matchCard = isSinRegistro;
-        }
-
-        // C. Filtro Ubicación (Todos vs En Base)
+        // B. Filtro Ubicación (Todos vs En Base)
         let matchUbi = true;
         if (filtroUbi === 'base') {
             matchUbi = ubi === 'base' || textoFila.includes('en base');
         }
 
-        // D. Filtro Año y Mes
+        // C. Filtro Año y Mes
         let matchFecha = true;
         if (filtroAnio || filtroMes) {
             if (!fechaStr || fechaStr === '-' || fechaStr === '—' || isSinRegistro) {
@@ -1502,8 +1497,18 @@ function filtrarStatusAvanzado() {
             }
         }
 
-        if (matchTxt && matchCard && matchUbi && matchFecha) {
-            row.style.display = '';
+        // Conteo reactivo de KPIs y Gráficos según el período/búsqueda/ubicación seleccionada
+        if (matchTxt && matchUbi && matchFecha) {
+            kpiTotal++;
+            if (isSinRegistro) {
+                kpiSinRegistro++;
+            } else if (isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente')) {
+                kpiCriticas++;
+            } else if (dias <= 7 || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo')) {
+                kpiAlerta++;
+            } else {
+                kpiConformes++;
+            }
 
             // Contabilizar métricas del período
             if (!isSinRegistro) {
@@ -1525,6 +1530,22 @@ function filtrarStatusAvanzado() {
                 cntTotalNoVig++;
                 if (esMotora) cntMotNoVig++; else cntNoMotNoVig++;
             }
+        }
+
+        // D. Filtro Card (Semáforo)
+        let matchCard = true;
+        if (filtroCard === 'verde') {
+            matchCard = !isSinRegistro && dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
+        } else if (filtroCard === 'amarillo') {
+            matchCard = !isSinRegistro && ((dias >= 0 && dias <= 7) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo'));
+        } else if (filtroCard === 'rojo') {
+            matchCard = !isSinRegistro && (isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente'));
+        } else if (filtroCard === 'sin_registro') {
+            matchCard = isSinRegistro;
+        }
+
+        if (matchTxt && matchCard && matchUbi && matchFecha) {
+            row.style.display = '';
         } else {
             row.style.display = 'none';
         }
@@ -1585,7 +1606,7 @@ function filtrarStatusAvanzado() {
         card.style.display = (matchTxt && matchCard && matchUbi && matchFecha) ? '' : 'none';
     });
 
-    // 3. Actualizar KPIs Bento
+    // 3. Actualizar KPIs Bento reactivamente
     const setKpi = (id, v) => { var el = document.getElementById(id); if (el) el.textContent = v; };
     setKpi('kpi-insp-total', kpiTotal);
     setKpi('kpi-insp-conformes', kpiConformes);
@@ -1599,7 +1620,7 @@ function filtrarStatusAvanzado() {
     if (elInsp) elInsp.textContent = totalInspeccionesPeriodo;
     if (elPlacas) elPlacas.textContent = placasUnicasPeriodoSet.size;
 
-    // 5. Actualizar Gráficos con las 4 categorías (incluyendo Sin Registro)
+    // 5. Actualizar Gráficos con las categorías vigentes/no vigentes y sin registro
     try {
         window.updateGraficosEnVivo({
             total: { vig: cntTotalVig, alerta: cntTotalAlerta, novig: cntTotalNoVig, sinReg: cntTotalSinReg },
