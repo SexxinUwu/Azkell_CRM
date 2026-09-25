@@ -596,8 +596,16 @@ module.exports = function (db, broadcast, logAudit) {
                     creado_por || 'Sistema'
                 ];
 
-                tdb.query(sql, values, (errIns, result) => {
+                tdb.query(sql, values, async (errIns, result) => {
                     if (errIns) return res.status(500).json({ error: errIns.message });
+
+                    await syncReporteConOTsYRampas(
+                        tdb, result.insertId, folio,
+                        placa_tracto, placa_remolque,
+                        fallas_tracto, fallas_remolque,
+                        fallas_libres_text,
+                        broadcast
+                    );
 
                     if (typeof broadcast === 'function') broadcast('checklist', 'crear');
                     res.json({ ok: true, id: result.insertId, folio, fotos: fotosUrls });
@@ -930,12 +938,47 @@ module.exports = function (db, broadcast, logAudit) {
             const descTractoClean = cleanListT.map(t => '• ' + t).join('\n');
             const descRemolqueClean = cleanListR.map(t => '• ' + t).join('\n');
 
-            // 1. Buscar OTs vinculadas a este reporte
-            const [ots] = await tdb.promise().query(
-                `SELECT ticket_entrada, id_ot, placa, detalles_json FROM ordenes_trabajo 
-                 WHERE detalles_json LIKE ? OR detalles_json LIKE ? OR detalles_json LIKE ?`,
-                [`%"id_reporte_falla":${repId}%`, `%"id_reporte_falla":"${repId}"%`, `%"folio_reporte":"${folio}"%`]
-            );
+            const cleanListCombined = [...cleanListT, ...cleanListR];
+            const rawFallasCombined = [...arrFallasT, ...arrFallasR];
+            const descCombinedClean = cleanListCombined.map(t => '• ' + t).join('\n');
+
+            // 1. Obtener IDs de OTs generadas registradas en el reporte
+            let otsGeneradasIds = [];
+            try {
+                const [repRows] = await tdb.promise().query('SELECT ots_generadas_json FROM reportes_fallas WHERE id = ?', [repId]);
+                if (repRows && repRows.length && repRows[0].ots_generadas_json) {
+                    const parsed = typeof repRows[0].ots_generadas_json === 'string' ? JSON.parse(repRows[0].ots_generadas_json) : repRows[0].ots_generadas_json;
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach(o => {
+                            if (o.idOt) otsGeneradasIds.push(o.idOt);
+                            if (o.ticket_entrada) otsGeneradasIds.push(o.ticket_entrada);
+                        });
+                    }
+                }
+            } catch(eOtsGen) {}
+
+            // Buscar OTs vinculadas por ID, Folio en detalles_json o por ots_generadas_json
+            let queryOts = `SELECT ticket_entrada, id_ot, placa, detalles_json FROM ordenes_trabajo 
+                            WHERE detalles_json LIKE ? OR detalles_json LIKE ? OR detalles_json LIKE ?`;
+            let paramsOts = [`%"id_reporte_falla":${repId}%`, `%"id_reporte_falla":"${repId}"%`, `%"folio_reporte":"${folio}"%`];
+            
+            if (otsGeneradasIds.length > 0) {
+                queryOts += ` OR id_ot IN (?) OR ticket_entrada IN (?)`;
+                paramsOts.push(otsGeneradasIds, otsGeneradasIds);
+            }
+
+            const [ots] = await tdb.promise().query(queryOts, paramsOts);
+
+            const hasSeparateRemolqueOt = (ots || []).some(o => {
+                let d = {};
+                try { d = typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : (o.detalles_json || {}); } catch(e){}
+                return (placaR && o.placa === placaR) || d.unidad === 'Remolque' || d.unidad === 'Carreta';
+            });
+            const hasSeparateTractoOt = (ots || []).some(o => {
+                let d = {};
+                try { d = typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : (o.detalles_json || {}); } catch(e){}
+                return (placaT && o.placa === placaT) || d.unidad === 'Tracto';
+            });
 
             if (ots && ots.length > 0) {
                 for (const ot of ots) {
@@ -943,11 +986,20 @@ module.exports = function (db, broadcast, logAudit) {
                     try { det = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); } catch(e){}
 
                     const isRemolque = (placaR && ot.placa === placaR) || det.unidad === 'Remolque' || det.unidad === 'Carreta';
-                    const descClean = isRemolque ? descRemolqueClean : descTractoClean;
-                    const cleanList = isRemolque ? cleanListR : cleanListT;
-                    const rawFallas = isRemolque ? arrFallasR : arrFallasT;
+                    
+                    let descClean = descCombinedClean;
+                    let cleanList = cleanListCombined;
+                    let rawFallas = rawFallasCombined;
+
+                    if (hasSeparateRemolqueOt && hasSeparateTractoOt) {
+                        descClean = isRemolque ? descRemolqueClean : descTractoClean;
+                        cleanList = isRemolque ? cleanListR : cleanListT;
+                        rawFallas = isRemolque ? arrFallasR : arrFallasT;
+                    }
 
                     if (descClean) {
+                        det.id_reporte_falla = repId;
+                        det.folio_reporte = folio;
                         det.motivo = `[Reporte ${folio}]\n${descClean}`;
                         det.observaciones = `[Reporte ${folio}]\n${descClean}`;
                         det.descripcion_falla = descClean;
@@ -986,7 +1038,7 @@ module.exports = function (db, broadcast, logAudit) {
             if (placas.length > 0) {
                 for (const p of placas) {
                     const isR = (placaR && p === placaR);
-                    const descRampa = isR ? descRemolqueClean : descTractoClean;
+                    const descRampa = (hasSeparateRemolqueOt && hasSeparateTractoOt) ? (isR ? descRemolqueClean : descTractoClean) : descCombinedClean;
                     if (descRampa) {
                         await tdb.promise().query(
                             `UPDATE taller_rampas SET obs = ? WHERE UPPER(placa) = UPPER(?) AND estado != 'Liberado'`,
@@ -994,6 +1046,31 @@ module.exports = function (db, broadcast, logAudit) {
                         );
                     }
                 }
+
+                // Si existen OTs activas para estas placas que no tenían aún el vínculo explícito, actualizarlas
+                try {
+                    const [activeOts] = await tdb.promise().query(
+                        `SELECT ticket_entrada, id_ot, placa, detalles_json FROM ordenes_trabajo 
+                         WHERE UPPER(placa) IN (?) AND estado NOT IN ('Finalizado', 'Cerrada', 'Anulado')`,
+                        [placas.map(p => p.toUpperCase())]
+                    );
+                    for (const aOt of (activeOts || [])) {
+                        if (!(ots || []).some(o => o.ticket_entrada === aOt.ticket_entrada || o.id_ot === aOt.id_ot)) {
+                            let det = {};
+                            try { det = typeof aOt.detalles_json === 'string' ? JSON.parse(aOt.detalles_json) : (aOt.detalles_json || {}); } catch(e){}
+                            det.id_reporte_falla = repId;
+                            det.folio_reporte = folio;
+                            det.motivo = `[Reporte ${folio}]\n${descCombinedClean}`;
+                            det.observaciones = `[Reporte ${folio}]\n${descCombinedClean}`;
+                            det.descripcion_falla = descCombinedClean;
+                            det.fallas_seleccionadas = cleanListCombined;
+                            await tdb.promise().query(
+                                `UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ? OR id_ot = ?`,
+                                [JSON.stringify(det), aOt.ticket_entrada, aOt.id_ot]
+                            );
+                        }
+                    }
+                } catch(eActOT) {}
             }
 
             if (typeof broadcast === 'function') {
