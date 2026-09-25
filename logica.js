@@ -2685,7 +2685,7 @@ window._cbFiltrar = function(id) {
             dd.style.display = 'block';
             dd.innerHTML = '<div class="p-3 text-center text-muted small" style="background:#f8fafc;">' +
                 '<div class="mb-1 fw-bold text-dark"><i class="bi bi-search me-1"></i>No se encontró "' + _escCbH(rawText) + '"</div>' +
-                '<button type="button" class="btn btn-sm btn-primary fw-bold mt-1 px-3" style="border-radius:8px;" onmousedown="window._entConfirmarNuevoProveedor(\'' + _escCbA(rawText) + '\')">' +
+                '<button type="button" class="btn btn-sm btn-primary fw-bold mt-1 px-3" style="border-radius:8px;background:#0284c7;border-color:#0284c7;" onmousedown="window.asegurarModalProveedorYAbrir(\'' + _escCbA(rawText) + '\')">' +
                 '<i class="bi bi-building-add me-1"></i>Registrar Nuevo Proveedor' +
                 '</button></div>';
             return;
@@ -2704,7 +2704,7 @@ window._cbFiltrar = function(id) {
     }).join('');
 
     if (id === 'ent-f-proveedor' && q) {
-        htmlOpts += '<div class="cb-opt text-primary fw-bold border-top mt-1 pt-2" style="background:#eff6ff;" onmousedown="window._entConfirmarNuevoProveedor(\'' + _escCbA(rawText) + '\')">' +
+        htmlOpts += '<div class="cb-opt text-primary fw-bold border-top mt-1 pt-2" style="background:#eff6ff;" onmousedown="window.asegurarModalProveedorYAbrir(\'' + _escCbA(rawText) + '\')">' +
             '<i class="bi bi-plus-circle-fill me-1"></i>+ Registrar nuevo proveedor "' + _escCbH(rawText) + '"</div>';
     }
     dd.innerHTML = htmlOpts;
