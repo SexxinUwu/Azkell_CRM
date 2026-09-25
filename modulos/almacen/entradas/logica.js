@@ -1504,8 +1504,9 @@ window._entRender = function() {
     window._entPagActual = pag;
     var pagina = datos.slice((pag - 1) * _ENT_POR_PAG, pag * _ENT_POR_PAG);
     var canDelete = window.checkPerm('ent_inv', 'd');
-    var canEdit = window.checkPerm('ent_inv', 'u');
-    var isAdmin = localStorage.getItem('fleet_role') === 'Administrador';
+    var canEdit = window.checkPerm('ent_inv', 'e') || window.checkPerm('ent_inv', 'u');
+    var userRol = (localStorage.getItem('fleet_rol') || localStorage.getItem('fleet_usuario_rol') || localStorage.getItem('fleet_role') || '').toLowerCase();
+    var isAdmin = userRol.includes('admin') || userRol === 'fundador' || userRol === 'gerente general' || window.checkPerm('admin', '');
     var todayStr = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Lima'});
 
     var cont = document.getElementById('ent-contador');
@@ -1528,11 +1529,22 @@ window._entRender = function() {
     pagina.forEach(function(d) {
         var fecha = _entFmtFechaHora(d.fecha, d.created_at);
         var fechaCorta = d.fecha ? new Date(String(d.fecha).replace(' ', 'T')).toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
-        var isAnulado = d.estado === 'Anulado';
-        var dCreated = d.created_at ? String(d.created_at).split('T')[0] : fecha;
+        var isAnulado = String(d.estado || '').toLowerCase().includes('anulad');
+
+        // Comprobación precisa si la orden corresponde al día actual
+        var esHoy = false;
+        if (d.fecha) {
+            var fStr = (d.fecha instanceof Date) ? d.fecha.toLocaleDateString('en-CA', { timeZone: 'America/Lima' }) : String(d.fecha).split('T')[0].split(' ')[0];
+            if (fStr === todayStr) esHoy = true;
+        }
+        if (!esHoy && d.created_at) {
+            var cStr = (d.created_at instanceof Date) ? d.created_at.toLocaleDateString('en-CA', { timeZone: 'America/Lima' }) : String(d.created_at).split('T')[0].split(' ')[0];
+            if (cStr === todayStr) esHoy = true;
+        }
+
         var estadoLimpio = String(d.estado || 'Registrado').toLowerCase().trim();
         var esModificable = (estadoLimpio === 'registrado' || estadoLimpio === 'registrada' || estadoLimpio === 'pendiente' || !d.estado);
-        var canEditRow = canEdit && !isAnulado && esModificable && (isAdmin || dCreated === todayStr);
+        var canEditRow = canEdit && !isAnulado && esModificable && (isAdmin || esHoy);
 
         var tp = parseFloat(d.total_pen || 0);
         var totalFmt = '<strong style="color:#16a34a;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';

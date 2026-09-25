@@ -1948,12 +1948,10 @@ window.checkPerm = function(modKey, action) {
             var m = p[k];
             if (m !== undefined && m !== null) {
                 if (typeof m === 'boolean' && m === true) return true;
-                if (typeof m === 'object') {
                     if (action === 'l' && (m.l === 1 || m.l === true || m.enabled === 1 || m.enabled === true)) return true;
                     if (action === 'c' && (m.c === 1 || m.c === true)) return true;
-                    if (action === 'e' && (m.e === 1 || m.e === true)) return true;
+                    if ((action === 'e' || action === 'u' || action === 'a') && (m.e === 1 || m.e === true || m.u === 1 || m.u === true || m.a === 1 || m.a === true)) return true;
                     if (action === 'd' && (m.d === 1 || m.d === true)) return true;
-                }
             }
         }
         return false;
