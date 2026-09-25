@@ -849,6 +849,81 @@ window._entSetIgvMode = function(mode) {
     });
 };
 
+// ── Subida directa a S3 vía Pre-signed URLs (Ultra rápida, sin timeout de servidor) ──
+window._entSubirArchivosDirectoS3 = async function(entradaId, listaArchivos) {
+    var validos = (listaArchivos || []).filter(function(a) { return a && a.file; });
+    if (!validos.length) return true;
+
+    var archivosMetadata = validos.map(function(a) {
+        return {
+            fileName: a.file.name,
+            contentType: a.file.type || 'application/pdf',
+            tipo: a.tipo
+        };
+    });
+
+    // 1. Obtener Presigned Upload URLs de S3
+    var rPresigned = await fetch('/api/almacen/entradas/' + encodeURIComponent(entradaId) + '/archivos/presigned', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (localStorage.getItem('fleet_token') || '')
+        },
+        body: JSON.stringify({ archivos: archivosMetadata })
+    });
+
+    if (!rPresigned.ok) {
+        var errTxt = await rPresigned.text().catch(function() { return ''; });
+        throw new Error('Error solicitando permisos de subida: ' + (errTxt || rPresigned.statusText));
+    }
+
+    var data = await rPresigned.json();
+    var urls = data.urls || [];
+    if (!urls.length) throw new Error('No se generaron URLs de subida');
+
+    // 2. Subir directamente a S3 en paralelo
+    var exitosos = [];
+    var uploadPromises = validos.map(async function(item, idx) {
+        var uInfo = urls[idx];
+        if (!uInfo || !uInfo.uploadUrl) return;
+
+        var putRes = await fetch(uInfo.uploadUrl, {
+            method: 'PUT',
+            body: item.file
+        });
+
+        if (!putRes.ok) {
+            throw new Error('Error al transferir ' + item.tipo + ' a AWS S3 (HTTP ' + putRes.status + ')');
+        }
+
+        exitosos.push({
+            tipo: item.tipo,
+            finalUrl: uInfo.finalUrl,
+            s3Key: uInfo.s3Key,
+            documento_referencia: item.documento_referencia || null
+        });
+    });
+
+    await Promise.all(uploadPromises);
+
+    // 3. Confirmar URLs en BD
+    if (exitosos.length > 0) {
+        var rConfirm = await fetch('/api/almacen/entradas/' + encodeURIComponent(entradaId) + '/archivos/confirmar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + (localStorage.getItem('fleet_token') || '')
+            },
+            body: JSON.stringify({ exitosos: exitosos })
+        });
+        if (!rConfirm.ok) {
+            throw new Error('Error confirmando registro de archivos en base de datos');
+        }
+    }
+
+    return true;
+};
+
 // ── Guardar ───────────────────────────────────────────────────────
 window.guardarEntrada = function() {
     if (window._isGuardandoEntrada) return;
@@ -966,81 +1041,6 @@ window.guardarEntrada = function() {
     }
     window._isGuardandoEntrada = true;
 
-// ── Subida directa a S3 vía Pre-signed URLs (Ultra rápida, sin timeout de servidor) ──
-async function _entSubirArchivosDirectoS3(entradaId, listaArchivos) {
-    var validos = (listaArchivos || []).filter(function(a) { return a && a.file; });
-    if (!validos.length) return true;
-
-    var archivosMetadata = validos.map(function(a) {
-        return {
-            fileName: a.file.name,
-            contentType: a.file.type || 'application/pdf',
-            tipo: a.tipo
-        };
-    });
-
-    // 1. Obtener Presigned Upload URLs de S3
-    var rPresigned = await fetch('/api/almacen/entradas/' + encodeURIComponent(entradaId) + '/archivos/presigned', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + (localStorage.getItem('fleet_token') || '')
-        },
-        body: JSON.stringify({ archivos: archivosMetadata })
-    });
-
-    if (!rPresigned.ok) {
-        var errTxt = await rPresigned.text().catch(function() { return ''; });
-        throw new Error('Error solicitando permisos de subida: ' + (errTxt || rPresigned.statusText));
-    }
-
-    var data = await rPresigned.json();
-    var urls = data.urls || [];
-    if (!urls.length) throw new Error('No se generaron URLs de subida');
-
-    // 2. Subir directamente a S3 en paralelo
-    var exitosos = [];
-    var uploadPromises = validos.map(async function(item, idx) {
-        var uInfo = urls[idx];
-        if (!uInfo || !uInfo.uploadUrl) return;
-
-        var putRes = await fetch(uInfo.uploadUrl, {
-            method: 'PUT',
-            body: item.file
-        });
-
-        if (!putRes.ok) {
-            throw new Error('Error al transferir ' + item.tipo + ' a AWS S3 (HTTP ' + putRes.status + ')');
-        }
-
-        exitosos.push({
-            tipo: item.tipo,
-            finalUrl: uInfo.finalUrl,
-            s3Key: uInfo.s3Key,
-            documento_referencia: item.documento_referencia || null
-        });
-    });
-
-    await Promise.all(uploadPromises);
-
-    // 3. Confirmar URLs en BD
-    if (exitosos.length > 0) {
-        var rConfirm = await fetch('/api/almacen/entradas/' + encodeURIComponent(entradaId) + '/archivos/confirmar', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + (localStorage.getItem('fleet_token') || '')
-            },
-            body: JSON.stringify({ exitosos: exitosos })
-        });
-        if (!rConfirm.ok) {
-            throw new Error('Error confirmando registro de archivos en base de datos');
-        }
-    }
-
-    return true;
-}
-
     fetch(url, { method: method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(async function(r) {
@@ -1048,7 +1048,7 @@ async function _entSubirArchivosDirectoS3(entradaId, listaArchivos) {
             var fileCot = document.getElementById('ent-f-cotizacion') ? document.getElementById('ent-f-cotizacion').files[0] : null;
             if (savedId && fileCot) {
                 try {
-                    await _entSubirArchivosDirectoS3(savedId, [{ file: fileCot, tipo: 'cotizacion' }]);
+                    await window._entSubirArchivosDirectoS3(savedId, [{ file: fileCot, tipo: 'cotizacion' }]);
                 } catch(e) {
                     console.error('Error subiendo cotización adjunta:', e);
                     alert('⚠️ La orden se guardó pero hubo un problema al subir la cotización: ' + e.message);
@@ -2296,7 +2296,7 @@ window.guardarArchivosOCModal = async function() {
         if (fCot) lista.push({ file: fCot, tipo: 'cotizacion' });
         if (fFac) lista.push({ file: fFac, tipo: 'factura', documento_referencia: numFactura });
 
-        await _entSubirArchivosDirectoS3(id, lista);
+        await window._entSubirArchivosDirectoS3(id, lista);
 
         var modalEl = document.getElementById('modalSubirArchivosOC');
         if (modalEl) {
