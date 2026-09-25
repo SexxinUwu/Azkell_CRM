@@ -1869,7 +1869,7 @@ function _entDescLimpia(desc, invId) {
 
 
 window._entGenerarHtmlPDF = function(d) {
-    var fecha = d.fecha ? String(d.fecha).split('T')[0] : '-';
+    var fecha = d.fecha ? String(d.fecha).split('T')[0] : '';
     
     var subtotalItems = 0;
     (d.items || []).forEach(function(it) {
@@ -1902,22 +1902,20 @@ window._entGenerarHtmlPDF = function(d) {
         var imp  = parseFloat(it.importe || (cant * cu) || 0);
         var bg   = i % 2 === 0 ? '#ffffff' : '#f8fafc';
         var um   = it.unidad_medida || it.unidad || 'UND';
-        var cod  = it.inventario_id || it.codigo_articulo || '—';
-        var desc = it.descripcion || it.inventario_id || '-';
+        var desc = it.descripcion || it.inventario_id || '';
 
         return '<tr style="background-color: ' + bg + ';">' +
-            '<td style="padding:10px 8px;text-align:center;border-bottom:1px solid #e2e8f0;font-weight:700;color:#0f172a;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
-            '<td style="padding:10px 8px;text-align:center;border-bottom:1px solid #e2e8f0;font-weight:600;color:#475569;font-size:11px;">' + um + '</td>' +
-            '<td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-family:monospace;font-size:11px;color:#64748b;">' + cod + '</td>' +
-            '<td style="padding:10px 8px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;font-weight:600;color:#0f172a;">' + desc + '</td>' +
-            '<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #e2e8f0;color:#334155;">' + cu.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</td>' +
-            '<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #e2e8f0;font-weight:700;color:#0f172a;">' + imp.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>' +
+            '<td style="padding:10px 12px;text-align:center;border-bottom:1px solid #e2e8f0;font-weight:700;color:#0f172a;width:55px;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
+            '<td style="padding:10px 12px;text-align:center;border-bottom:1px solid #e2e8f0;font-weight:600;color:#475569;font-size:11px;width:65px;">' + um + '</td>' +
+            '<td style="padding:10px 12px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;font-weight:600;color:#0f172a;">' + desc + '</td>' +
+            '<td style="padding:10px 12px;text-align:right;border-bottom:1px solid #e2e8f0;color:#334155;width:95px;">' + cu.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</td>' +
+            '<td style="padding:10px 12px;text-align:right;border-bottom:1px solid #e2e8f0;font-weight:700;color:#0f172a;width:115px;">' + imp.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>' +
         '</tr>';
     }).join('');
 
     var condPagoText = (d.condicion_pago || 'AL CONTADO').toUpperCase();
     if (d.condicion_pago && d.condicion_pago.toLowerCase() === 'a crédito') {
-        condPagoText = 'CRÉDITO (' + (d.dias_credito || 0) + ' DÍAS)';
+        condPagoText = 'CRÉDITO' + (d.dias_credito ? ' / ' + d.dias_credito + ' DÍAS' : '');
     }
 
     var numDisplay = (d.id || '').replace(/^ENT-/, '');
@@ -1926,8 +1924,8 @@ window._entGenerarHtmlPDF = function(d) {
     var obsBlock = '';
     if (d.observaciones && d.observaciones.trim() !== '') {
         obsBlock = '<!-- OBSERVACIONES -->' +
-        '<div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;border-radius:6px;padding:12px 15px;font-size:11px;color:#92400e;margin-bottom:25px;">' +
-            '<b style="display:block;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#b45309;">Observaciones / Especificaciones:</b>' +
+        '<div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;border-radius:6px;padding:10px 14px;font-size:11px;color:#92400e;margin-bottom:20px;">' +
+            '<b style="display:block;margin-bottom:3px;font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px;color:#b45309;">Observaciones / Especificaciones:</b>' +
             d.observaciones +
         '</div>';
     }
@@ -1941,156 +1939,116 @@ window._entGenerarHtmlPDF = function(d) {
     var empCorreo = localStorage.getItem('fleet_empresa_correo') || localStorage.getItem('empresa_correo') || '';
 
     // Header Left: Logo + Info Empresa
-    var headerLeftHtml = '<div style="display:flex;flex-direction:column;gap:4px;max-width:440px;">';
+    var headerLeftHtml = '<div style="display:flex;flex-direction:column;gap:3px;max-width:440px;">';
     if (empLogo) {
-        headerLeftHtml += '<img src="' + empLogo + '" style="max-height:55px;max-width:180px;object-fit:contain;margin-bottom:4px;display:block;" alt="Logo Empresa" />';
+        headerLeftHtml += '<img src="' + empLogo + '" style="max-height:52px;max-width:180px;object-fit:contain;margin-bottom:4px;display:block;" alt="Logo Empresa" />';
     }
     headerLeftHtml += '<div style="font-size:16px;font-weight:900;color:#0f172a;letter-spacing:-0.3px;line-height:1.2;text-transform:uppercase;">' + empNombre + '</div>';
     if (empDireccion) {
-        headerLeftHtml += '<div style="font-size:10px;color:#475569;line-height:1.35;text-transform:uppercase;">' + empDireccion + '</div>';
+        headerLeftHtml += '<div style="font-size:9.5px;color:#475569;line-height:1.35;text-transform:uppercase;">' + empDireccion + '</div>';
     }
     if (empTelefono) {
-        headerLeftHtml += '<div style="font-size:10px;color:#475569;">' + empTelefono + '</div>';
+        headerLeftHtml += '<div style="font-size:9.5px;color:#475569;">' + empTelefono + '</div>';
     }
     if (empCorreo) {
-        headerLeftHtml += '<div style="font-size:10px;color:#475569;">' + empCorreo + '</div>';
+        headerLeftHtml += '<div style="font-size:9.5px;color:#475569;">' + empCorreo + '</div>';
     }
     headerLeftHtml += '</div>';
 
     // Header Right: Tarjeta Recuadro RUC + Tipo Documento + Correlativo
     var headerRightHtml = '<div style="min-width:210px;max-width:260px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:12px 18px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">' +
-        '<div style="font-size:12px;font-weight:700;color:#0284c7;letter-spacing:0.5px;margin-bottom:4px;">' + (empRuc ? 'RUC: ' + empRuc : 'RUC: —') + '</div>' +
-        '<div style="font-size:15px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">' + tipoDocTitle + '</div>' +
+        (empRuc ? '<div style="font-size:12px;font-weight:700;color:#0284c7;letter-spacing:0.5px;margin-bottom:3px;">RUC: ' + empRuc + '</div>' : '') +
+        '<div style="font-size:15px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">' + tipoDocTitle + '</div>' +
         '<div style="font-size:14px;font-weight:800;color:#2563eb;letter-spacing:0.5px;">N° ' + numDisplay + '</div>' +
     '</div>';
 
     // Formatear Fecha y Proveedor
-    var fechaFmt = fecha.split('-').reverse().join('/');
-    var provNombre = (d.proveedor_nombre || '-').toUpperCase();
-    var provRuc = d.proveedor_ruc ? (' (RUC: ' + d.proveedor_ruc + ')') : '';
-    var provContact = [d.proveedor_telefono, d.proveedor_email].filter(Boolean).join(' • ');
+    var fechaFmt = fecha ? fecha.split('-').reverse().join('/') : '';
+    var provNombre = (d.proveedor_nombre || '').toUpperCase();
+    var provRuc = d.proveedor_ruc ? (' (' + d.proveedor_ruc + ')') : '';
 
-    var solicitante = d.solicitante || d.autoriza || '—';
-    var creadoPor   = d.creador_nombre || d.creado_por || 'SISTEMA';
-    var aprobadoPor = d.aprobador_nombre || d.aprobado_por || '—';
-    if (d.fecha_aprobacion) {
-        aprobadoPor += ' (' + String(d.fecha_aprobacion).split('T')[0].split('-').reverse().join('/') + ')';
-    }
-    var centroCosto = d.centro_costo || 'CC-OPERACIONES';
-    var placaVehiculo = d.placa || 'N/A';
-    var otVinculada = d.ot_id ? ('OT #' + d.ot_id) : 'N/A';
+    var solicitante = d.solicitante || d.autoriza || '';
+    var placaVehiculo = d.placa || '';
+    var motivoEntrada = d.motivo_entrada || '';
 
     return '' +
     '<div style="font-family:\'Plus Jakarta Sans\', \'Inter\', Arial, sans-serif;width:100%;margin:0 auto;padding:35px 40px;color:#0f172a;box-sizing:border-box;">' +
 
         '<!-- HEADER -->' +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #e2e8f0;padding-bottom:18px;margin-bottom:22px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0f172a;padding-bottom:18px;margin-bottom:24px;">' +
             headerLeftHtml +
             headerRightHtml +
         '</div>' +
 
-        '<!-- RESUMEN PROVEEDOR Y FECHA -->' +
-        '<div style="display:flex;gap:12px;margin-bottom:18px;">' +
-            '<div style="flex:0 0 28%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">' +
-                '<div style="font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:3px;">Fecha de Emisión</div>' +
-                '<div style="font-size:13px;font-weight:800;color:#0f172a;">' + fechaFmt + '</div>' +
-                '<div style="font-size:10px;color:#64748b;margin-top:4px;">Estado: <b style="color:#0284c7;text-transform:uppercase;">' + (d.estado || 'REGISTRADO') + '</b></div>' +
+        '<!-- RESUMEN FECHA Y PROVEEDOR -->' +
+        '<div style="display:flex;gap:15px;margin-bottom:22px;">' +
+            '<div style="flex:0 0 30%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;">' +
+                '<div style="font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:4px;">Fecha de Emisión</div>' +
+                '<div style="font-size:14px;font-weight:800;color:#0f172a;">' + (fechaFmt || '') + '</div>' +
             '</div>' +
-            '<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">' +
-                '<div style="font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:3px;">Proveedor / Razón Social</div>' +
-                '<div style="font-size:13px;font-weight:800;color:#0f172a;text-transform:uppercase;">' + provNombre + '<span style="font-weight:600;color:#475569;font-size:11px;">' + provRuc + '</span></div>' +
-                (provContact ? '<div style="font-size:10px;color:#64748b;margin-top:3px;"><i style="font-style:normal;">📞 Contacto:</i> ' + provContact + '</div>' : '') +
+            '<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;">' +
+                '<div style="font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:4px;">Proveedor</div>' +
+                '<div style="font-size:14px;font-weight:800;color:#0f172a;text-transform:uppercase;">' + provNombre + '<span style="font-weight:600;color:#475569;font-size:12px;">' + provRuc + '</span></div>' +
             '</div>' +
         '</div>' +
 
         '<!-- DETALLES DE LA ORDEN -->' +
-        '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:22px;overflow:hidden;">' +
-            '<div style="background:#f1f5f9;padding:8px 14px;font-size:11px;font-weight:800;color:#334155;border-bottom:1px solid #e2e8f0;text-transform:uppercase;letter-spacing:0.5px;">' +
-                'Detalles de Gestión y Trazabilidad' +
+        '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:24px;overflow:hidden;">' +
+            '<div style="background:#f1f5f9;padding:9px 15px;font-size:11px;font-weight:800;color:#334155;border-bottom:1px solid #e2e8f0;text-transform:uppercase;letter-spacing:0.5px;">' +
+                'Detalles de la Orden' +
             '</div>' +
-            '<div style="display:flex;flex-wrap:wrap;padding:12px 14px;font-size:12px;">' +
-                '<div style="width:25%;margin-bottom:10px;">' +
-                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Condición Pago</span>' +
-                    '<span style="font-weight:700;color:#0f172a;">' + condPagoText + '</span>' +
+            '<div style="display:flex;flex-wrap:wrap;padding:14px 15px;font-size:12px;">' +
+                '<div style="width:50%;margin-bottom:12px;">' +
+                    '<span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Tipo de Orden</span>' +
+                    '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + (d.tipo_orden || 'ORDEN DE COMPRA') + '</span>' +
                 '</div>' +
-                '<div style="width:25%;margin-bottom:10px;">' +
-                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Moneda</span>' +
-                    '<span style="font-weight:700;color:#0f172a;">' + txtMoneda + (d.moneda === "USD" ? " (T/C: " + parseFloat(d.tipo_cambio||3.4).toFixed(3) + ")" : "") + '</span>' +
+                '<div style="width:50%;margin-bottom:12px;">' +
+                    '<span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Condición de Pago</span>' +
+                    '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + condPagoText + '</span>' +
                 '</div>' +
-                '<div style="width:25%;margin-bottom:10px;">' +
-                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Placa / Vehículo</span>' +
-                    '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + placaVehiculo + '</span>' +
+                '<div style="width:50%;margin-bottom:12px;">' +
+                    '<span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Moneda</span>' +
+                    '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + txtMoneda + (d.moneda === "USD" ? " (T/C: " + parseFloat(d.tipo_cambio||3.4).toFixed(3) + ")" : "") + '</span>' +
                 '</div>' +
-                '<div style="width:25%;margin-bottom:10px;">' +
-                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Orden Trabajo (OT)</span>' +
-                    '<span style="font-weight:700;color:#0f172a;">' + otVinculada + '</span>' +
+                '<div style="width:50%;margin-bottom:12px;">' +
+                    '<span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Placa / Vehículo</span>' +
+                    '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + (placaVehiculo || '') + '</span>' +
                 '</div>' +
-                '<div style="width:25%;margin-bottom:6px;">' +
-                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Solicitante</span>' +
-                    '<span style="font-weight:600;color:#0f172a;text-transform:uppercase;">' + solicitante + '</span>' +
-                '</div>' +
-                '<div style="width:25%;margin-bottom:6px;">' +
-                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Registrado Por</span>' +
-                    '<span style="font-weight:600;color:#0f172a;text-transform:uppercase;">' + creadoPor + '</span>' +
-                '</div>' +
-                '<div style="width:25%;margin-bottom:6px;">' +
-                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Aprobado Por</span>' +
-                    '<span style="font-weight:600;color:#0f172a;text-transform:uppercase;">' + aprobadoPor + '</span>' +
-                '</div>' +
-                '<div style="width:25%;margin-bottom:6px;">' +
-                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Centro de Costo</span>' +
-                    '<span style="font-weight:600;color:#0f172a;text-transform:uppercase;">' + centroCosto + '</span>' +
-                '</div>' +
-                '<div style="width:100%;margin-top:6px;padding-top:6px;border-top:1px dashed #e2e8f0;">' +
-                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Motivo / Destino:</span>' +
-                    '<span style="font-weight:600;color:#0f172a;text-transform:uppercase;">' + (d.motivo_entrada || 'SIN ESPECIFICAR') + '</span>' +
-                '</div>' +
-            '</div>' +
-        '</div>' +
-
-        '<!-- TABLA DE ARTÍCULOS -->' +
-        '<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:18px;">' +
-            '<table style="width:100%;font-size:11.5px;border-collapse:collapse;">' +
-                '<thead>' +
-                    '<tr style="background:#0f172a;color:#ffffff;">' +
-                        '<th style="padding:10px 8px;text-align:center;width:55px;font-weight:700;letter-spacing:0.5px;">CANT</th>' +
-                        '<th style="padding:10px 8px;text-align:center;width:60px;font-weight:700;letter-spacing:0.5px;">U.M.</th>' +
-                        '<th style="padding:10px 8px;text-align:left;width:95px;font-weight:700;letter-spacing:0.5px;">CÓDIGO</th>' +
-                        '<th style="padding:10px 8px;text-align:left;font-weight:700;letter-spacing:0.5px;">DESCRIPCIÓN DE PRODUCTO / SERVICIO</th>' +
-                        '<th style="padding:10px 8px;text-align:right;width:90px;font-weight:700;letter-spacing:0.5px;">P. UNIT</th>' +
-                        '<th style="padding:10px 8px;text-align:right;width:110px;font-weight:700;letter-spacing:0.5px;">IMPORTE</th>' +
-                    '</tr>' +
-                '</thead>' +
-                '<tbody>' +
-                    itemsHTML +
-                '</tbody>' +
-            '</table>' +
-            '<div style="background:#f8fafc;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #e2e8f0;">' +
-                '<div style="font-size:11px;color:#64748b;max-width:380px;">' +
-                    '<b style="color:#334155;">SON:</b> ' + numeroALetras(totalReal) + ' ' + txtMoneda +
-                '</div>' +
-                '<div style="font-size:17px;color:#0f172a;">' +
-                    '<span style="font-weight:700;font-size:13px;color:#64748b;margin-right:12px;text-transform:uppercase;">Total General</span>' +
-                    '<b>' + txtMonedaS + ' ' + totalText + '</b>' +
+                (solicitante ? '<div style="width:50%;margin-bottom:12px;"><span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Solicitante</span><span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + solicitante + '</span></div>' : '') +
+                (d.centro_costo ? '<div style="width:50%;margin-bottom:12px;"><span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Centro de Costo</span><span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + d.centro_costo + '</span></div>' : '') +
+                '<div style="width:100%;margin-top:2px;">' +
+                    '<span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Motivo</span>' +
+                    '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + (motivoEntrada || '') + '</span>' +
                 '</div>' +
             '</div>' +
         '</div>' +
 
         obsBlock +
 
-        '<!-- FIRMAS DE CONFORMIDAD -->' +
-        '<div style="display:flex;justify-content:space-between;gap:20px;margin-top:40px;padding-top:10px;">' +
-            '<div style="flex:1;text-align:center;border-top:1px solid #94a3b8;padding-top:6px;">' +
-                '<div style="font-size:11px;font-weight:700;color:#0f172a;text-transform:uppercase;">' + creadoPor + '</div>' +
-                '<div style="font-size:10px;color:#64748b;">Elaborado / Solicitado</div>' +
-            '</div>' +
-            '<div style="flex:1;text-align:center;border-top:1px solid #94a3b8;padding-top:6px;">' +
-                '<div style="font-size:11px;font-weight:700;color:#0f172a;text-transform:uppercase;">' + (d.aprobador_nombre || 'Gerencia General') + '</div>' +
-                '<div style="font-size:10px;color:#64748b;">V°B° Aprobación</div>' +
-            '</div>' +
-            '<div style="flex:1;text-align:center;border-top:1px solid #94a3b8;padding-top:6px;">' +
-                '<div style="font-size:11px;font-weight:700;color:#0f172a;">ALMACÉN / RECEPCIÓN</div>' +
-                '<div style="font-size:10px;color:#64748b;">Conformidad de Entrega</div>' +
+        '<!-- TABLA DE ARTÍCULOS -->' +
+        '<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:20px;">' +
+            '<table style="width:100%;font-size:12px;border-collapse:collapse;">' +
+                '<thead>' +
+                    '<tr style="background:#0f172a;color:#ffffff;">' +
+                        '<th style="padding:11px 12px;text-align:center;width:55px;font-weight:700;letter-spacing:0.5px;">CANT</th>' +
+                        '<th style="padding:11px 12px;text-align:center;width:65px;font-weight:700;letter-spacing:0.5px;">U.M.</th>' +
+                        '<th style="padding:11px 12px;text-align:left;font-weight:700;letter-spacing:0.5px;">DESCRIPCIÓN</th>' +
+                        '<th style="padding:11px 12px;text-align:right;width:95px;font-weight:700;letter-spacing:0.5px;">P. UNIT</th>' +
+                        '<th style="padding:11px 12px;text-align:right;width:115px;font-weight:700;letter-spacing:0.5px;">IMPORTE</th>' +
+                    '</tr>' +
+                '</thead>' +
+                '<tbody>' +
+                    itemsHTML +
+                '</tbody>' +
+            '</table>' +
+            '<div style="background:#f8fafc;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #e2e8f0;">' +
+                '<div style="font-size:11.5px;color:#64748b;max-width:380px;">' +
+                    '<b style="color:#334155;">SON:</b> ' + numeroALetras(totalReal) + ' ' + txtMoneda +
+                '</div>' +
+                '<div style="font-size:18px;color:#0f172a;">' +
+                    '<span style="font-weight:700;font-size:13px;color:#64748b;margin-right:12px;text-transform:uppercase;">Total General</span>' +
+                    '<b>' + txtMonedaS + ' ' + totalText + '</b>' +
+                '</div>' +
             '</div>' +
         '</div>' +
 
@@ -2301,6 +2259,109 @@ window.guardarArchivosOCModal = async function() {
     }
 };
 
+window._liveStepTimer = null;
+window._liveCurrentStep = 1;
+window._liveStepIsPlaying = false;
+window._liveStepsData = [];
+
+window.setLiveStepOC = function(stepNum) {
+    if (!window._liveStepsData || !window._liveStepsData.length) return;
+    stepNum = Math.max(1, Math.min(4, stepNum));
+    window._liveCurrentStep = stepNum;
+
+    var stepBadge = document.getElementById('det-oc-live-step-badge');
+    if (stepBadge) stepBadge.innerText = 'Paso ' + stepNum + ' de 4';
+
+    // Update the 4 progress indicators
+    for (var i = 1; i <= 4; i++) {
+        var progEl = document.getElementById('det-oc-prog-step-' + i);
+        if (progEl) {
+            if (i < stepNum) {
+                progEl.style.background = '#10b981'; // Completed
+                progEl.style.opacity = '1';
+            } else if (i === stepNum) {
+                progEl.style.background = '#0284c7'; // Active
+                progEl.style.opacity = '1';
+            } else {
+                progEl.style.background = '#e2e8f0'; // Inactive
+                progEl.style.opacity = '0.7';
+            }
+        }
+    }
+
+    var data = window._liveStepsData[stepNum - 1];
+    if (!data) return;
+
+    var iconBox = document.getElementById('det-oc-live-icon-box');
+    var titleEl = document.getElementById('det-oc-live-title');
+    var subtitleEl = document.getElementById('det-oc-live-subtitle');
+    var statusBadgeEl = document.getElementById('det-oc-live-status-badge');
+    var descEl = document.getElementById('det-oc-live-desc');
+    var userEl = document.getElementById('det-oc-live-user');
+    var dateEl = document.getElementById('det-oc-live-date');
+
+    if (iconBox) {
+        iconBox.innerHTML = data.iconHtml;
+        iconBox.style.background = data.iconBg || '#0284c7';
+    }
+    if (titleEl) titleEl.innerText = data.title;
+    if (subtitleEl) subtitleEl.innerText = data.subtitle;
+    if (statusBadgeEl) {
+        statusBadgeEl.className = 'badge rounded-pill fw-bold px-2.5 py-1 ' + (data.badgeClass || 'bg-primary-subtle text-primary border border-primary-subtle');
+        statusBadgeEl.innerText = data.badgeText;
+    }
+    if (descEl) descEl.innerText = data.desc;
+    if (userEl) userEl.innerHTML = '<i class="bi bi-person me-1"></i> ' + _entEsc(data.user);
+    if (dateEl) dateEl.innerText = data.date || '—';
+};
+
+window.navLiveStepOC = function(delta) {
+    window.pauseAutoplayOC();
+    var next = window._liveCurrentStep + delta;
+    if (next < 1) next = 4;
+    if (next > 4) next = 1;
+    window.setLiveStepOC(next);
+};
+
+window.pauseAutoplayOC = function() {
+    if (window._liveStepTimer) {
+        clearInterval(window._liveStepTimer);
+        window._liveStepTimer = null;
+    }
+    window._liveStepIsPlaying = false;
+    var btn = document.getElementById('det-oc-btn-autoplay');
+    var icon = document.getElementById('det-oc-icon-autoplay');
+    var txt = document.getElementById('det-oc-txt-autoplay');
+    if (btn) btn.className = 'btn btn-sm btn-light border rounded-pill px-2.5 py-1 text-muted fw-bold d-flex align-items-center gap-1 shadow-2xs';
+    if (icon) icon.className = 'bi bi-play-fill';
+    if (txt) txt.innerText = 'Pausado';
+};
+
+window.startAutoplayOC = function() {
+    window.pauseAutoplayOC();
+    window._liveStepIsPlaying = true;
+    var btn = document.getElementById('det-oc-btn-autoplay');
+    var icon = document.getElementById('det-oc-icon-autoplay');
+    var txt = document.getElementById('det-oc-txt-autoplay');
+    if (btn) btn.className = 'btn btn-sm btn-light border rounded-pill px-2.5 py-1 text-secondary fw-bold d-flex align-items-center gap-1 shadow-2xs';
+    if (icon) icon.className = 'bi bi-pause-fill';
+    if (txt) txt.innerText = 'Auto';
+
+    window._liveStepTimer = setInterval(function() {
+        var next = window._liveCurrentStep + 1;
+        if (next > 4) next = 1;
+        window.setLiveStepOC(next);
+    }, 4500);
+};
+
+window.toggleAutoplayOC = function() {
+    if (window._liveStepIsPlaying) {
+        window.pauseAutoplayOC();
+    } else {
+        window.startAutoplayOC();
+    }
+};
+
 window.abrirModalDetalleOC = function(id) {
     var d = (window._entData || []).find(function(e) { return e.id === id; });
     if (!d) return alert('No se encontró la orden de compra ' + id);
@@ -2311,11 +2372,7 @@ window.abrirModalDetalleOC = function(id) {
     var titEl = document.getElementById('det-oc-titulo-num');
     if (titEl) titEl.innerText = codLimpio;
 
-    var tipoBadgeEl = document.getElementById('det-oc-tipo-badge');
-    var tipoOrdText = (d.tipo_orden || 'ORDEN DE COMPRA').toUpperCase();
-    if (tipoBadgeEl) tipoBadgeEl.innerText = tipoOrdText;
-
-    // Items y cantidades
+    // Items y cálculos
     var items = d.items || [];
     var totalCalc = 0;
     var totalItemsOC = 0;
@@ -2331,8 +2388,9 @@ window.abrirModalDetalleOC = function(id) {
 
     var totalRecibido = parseFloat(d.total_recibido || 0);
     var receptionPct = (totalItemsOC > 0) ? Math.min(100, Math.round((totalRecibido / totalItemsOC) * 100)) : 0;
+    var totalReal = (d.total_pen != null && parseFloat(d.total_pen) > 0) ? parseFloat(d.total_pen) : totalCalc;
 
-    // Estados normalizados
+    // Normalización de Estados
     var estNorm = (d.estado || 'REGISTRADA').toUpperCase().trim();
     var isAnulado = estNorm.includes('ANULAD') || estNorm.includes('RECHAZAD');
     var isObservado = estNorm.includes('OBSERVAD');
@@ -2341,303 +2399,282 @@ window.abrirModalDetalleOC = function(id) {
     var isRecepcionadoCompleto = isProcesado && totalItemsOC > 0 && totalRecibido >= totalItemsOC;
     var isRecepcionadoParcial = isProcesado && totalRecibido > 0 && totalRecibido < totalItemsOC;
 
-    // Tracker Header (Pills & Description)
-    var pillEstEl = document.getElementById('det-oc-pill-estado');
-    var pillPagoEl = document.getElementById('det-oc-pill-pago');
-    var descEl = document.getElementById('det-oc-tracker-desc');
+    // 1. HERO DARK CARD POPULATION
+    var heroTotalEl = document.getElementById('det-oc-hero-total');
+    if (heroTotalEl) heroTotalEl.innerText = sym + totalReal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    var pagoText = (d.condicion_pago || 'Al contado').toUpperCase();
-    var esCredito = pagoText.includes('CRÉDITO') || pagoText.includes('CREDITO');
-    if (esCredito && d.dias_credito) pagoText += ' (' + d.dias_credito + ' DÍAS)';
-    if (pillPagoEl) {
-        pillPagoEl.innerHTML = '<i class="bi bi-credit-card-2-front"></i> ' + _entEsc(pagoText);
-    }
+    var heroMonedaLabel = document.getElementById('det-oc-hero-moneda-label');
+    if (heroMonedaLabel) heroMonedaLabel.innerText = d.moneda === 'USD' ? 'USD' : 'PEN';
 
-    // Determinar nivel de avance (1: Registrada, 2: Aprobada, 3: Procesada, 4: Recepcionada)
-    var stageLevel = 1;
-    var stageLineWidth = '0%';
+    var heroBadgeEstado = document.getElementById('det-oc-hero-badge-estado');
+    var heroStatusDesc = document.getElementById('det-oc-hero-status-desc');
+    var heroRouteFill = document.getElementById('det-oc-hero-route-fill');
 
     if (isAnulado) {
-        stageLevel = 1.5;
-        stageLineWidth = '33%';
-        if (pillEstEl) {
-            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; gap:8px;';
-            pillEstEl.innerHTML = '<i class="bi bi-x-circle-fill" style="font-size:0.95rem; margin-right:4px;"></i> <span>' + _entEsc(estNorm) + '</span>';
+        if (heroBadgeEstado) {
+            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
+            heroBadgeEstado.style.cssText = 'background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 0.75rem;';
+            heroBadgeEstado.innerHTML = '🔴 ANULADA';
         }
-        if (descEl) descEl.innerText = 'La orden de compra ha sido anulada o rechazada.';
+        if (heroStatusDesc) {
+            heroStatusDesc.style.color = '#f87171';
+            heroStatusDesc.innerHTML = '<i class="bi bi-x-circle"></i> <span>Orden de compra anulada</span>';
+        }
+        if (heroRouteFill) heroRouteFill.style.width = '25%';
     } else if (isObservado) {
-        stageLevel = 1.5;
-        stageLineWidth = '33%';
-        if (pillEstEl) {
-            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#fef3c7; color:#b45309; border:1px solid #fde68a; gap:8px;';
-            pillEstEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill" style="font-size:0.95rem; margin-right:4px;"></i> <span>OBSERVADA</span>';
+        if (heroBadgeEstado) {
+            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
+            heroBadgeEstado.style.cssText = 'background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.75rem;';
+            heroBadgeEstado.innerHTML = '🟡 OBSERVADA';
         }
-        if (descEl) descEl.innerText = 'La orden requiere revisión o subsanación según lo indicado por Gerencia.';
+        if (heroStatusDesc) {
+            heroStatusDesc.style.color = '#fbbf24';
+            heroStatusDesc.innerHTML = '<i class="bi bi-exclamation-triangle"></i> <span>Requiere subsanación de Gerencia</span>';
+        }
+        if (heroRouteFill) heroRouteFill.style.width = '35%';
     } else if (isRecepcionadoCompleto) {
-        stageLevel = 4;
-        stageLineWidth = '100%';
-        if (pillEstEl) {
-            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#dcfce7; color:#15803d; border:1px solid #86efac; gap:8px;';
-            pillEstEl.innerHTML = '<i class="bi bi-box-seam-fill" style="font-size:0.95rem; margin-right:4px;"></i> <span>RECEPCIONADA 100%</span>';
+        if (heroBadgeEstado) {
+            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
+            heroBadgeEstado.style.cssText = 'background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.75rem;';
+            heroBadgeEstado.innerHTML = '🟢 100% RECEPCIONADA';
         }
-        if (descEl) descEl.innerText = 'Mercadería recepcionada en su totalidad en almacén central.';
+        if (heroStatusDesc) {
+            heroStatusDesc.style.color = '#34d399';
+            heroStatusDesc.innerHTML = '<i class="bi bi-check2-circle"></i> <span>Mercadería completa en Almacén Central</span>';
+        }
+        if (heroRouteFill) heroRouteFill.style.width = '100%';
     } else if (isRecepcionadoParcial) {
-        stageLevel = 3.5;
-        stageLineWidth = Math.round(66 + (34 * (totalRecibido / totalItemsOC))) + '%';
-        if (pillEstEl) {
-            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc; gap:8px;';
-            pillEstEl.innerHTML = '<i class="bi bi-boxes" style="font-size:0.95rem; margin-right:4px;"></i> <span>RECEPCIÓN PARCIAL (' + receptionPct + '%)</span>';
+        if (heroBadgeEstado) {
+            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
+            heroBadgeEstado.style.cssText = 'background: rgba(2, 132, 199, 0.2); color: #38bdf8; border: 1px solid rgba(2, 132, 199, 0.4); font-size: 0.75rem;';
+            heroBadgeEstado.innerHTML = '🔵 PARCIAL (' + receptionPct + '%)';
         }
-        if (descEl) descEl.innerText = 'Mercadería en curso de recepción física en almacén (' + totalRecibido.toLocaleString('es-PE') + ' de ' + totalItemsOC.toLocaleString('es-PE') + ' unidades).';
+        if (heroStatusDesc) {
+            heroStatusDesc.style.color = '#38bdf8';
+            heroStatusDesc.innerHTML = '<i class="bi bi-boxes"></i> <span>Recepción en curso: ' + totalRecibido + ' de ' + totalItemsOC + ' unids</span>';
+        }
+        if (heroRouteFill) heroRouteFill.style.width = '75%';
     } else if (isProcesado) {
-        stageLevel = 3;
-        stageLineWidth = '66%';
-        if (pillEstEl) {
-            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#e0f2fe; color:#0284c7; border:1px solid rgba(2, 132, 199, 0.3); gap:8px;';
-            pillEstEl.innerHTML = '<i class="bi bi-cash-coin" style="font-size:0.95rem; margin-right:4px;"></i> <span>PROCESADA</span>';
+        if (heroBadgeEstado) {
+            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
+            heroBadgeEstado.style.cssText = 'background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.4); font-size: 0.75rem;';
+            heroBadgeEstado.innerHTML = '💳 PROCESADA';
         }
-        if (descEl) descEl.innerText = 'Tesorería registró el pago. Lista para recepcionar la mercadería en almacén.';
+        if (heroStatusDesc) {
+            heroStatusDesc.style.color = '#38bdf8';
+            heroStatusDesc.innerHTML = '<i class="bi bi-cash-coin"></i> <span>Pago registrado por Tesorería · En camino</span>';
+        }
+        if (heroRouteFill) heroRouteFill.style.width = '65%';
     } else if (isAprobado) {
-        stageLevel = 2;
-        stageLineWidth = '33%';
-        if (pillEstEl) {
-            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#dcfce7; color:#15803d; border:1px solid #86efac; gap:8px;';
-            pillEstEl.innerHTML = '<i class="bi bi-patch-check-fill" style="font-size:0.95rem; margin-right:4px;"></i> <span>APROBADA</span>';
+        if (heroBadgeEstado) {
+            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
+            heroBadgeEstado.style.cssText = 'background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.75rem;';
+            heroBadgeEstado.innerHTML = '✅ APROBADA';
         }
-        if (descEl) descEl.innerText = 'Gerencia aprobó la orden de compra. Pendiente de registro de pago por Tesorería.';
+        if (heroStatusDesc) {
+            heroStatusDesc.style.color = '#34d399';
+            heroStatusDesc.innerHTML = '<i class="bi bi-shield-check"></i> <span>Aprobado por Gerencia · Pendiente de pago</span>';
+        }
+        if (heroRouteFill) heroRouteFill.style.width = '45%';
     } else {
-        stageLevel = 1;
-        stageLineWidth = '0%';
-        if (pillEstEl) {
-            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; gap:8px;';
-            pillEstEl.innerHTML = '<i class="bi bi-clock-history" style="font-size:0.95rem; margin-right:4px;"></i> <span>REGISTRADA</span>';
+        if (heroBadgeEstado) {
+            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
+            heroBadgeEstado.style.cssText = 'background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.75rem;';
+            heroBadgeEstado.innerHTML = '⏱️ REGISTRADA';
         }
-        if (descEl) descEl.innerText = 'Orden registrada y emitida. En espera de aprobación por Gerencia.';
+        if (heroStatusDesc) {
+            heroStatusDesc.style.color = '#94a3b8';
+            heroStatusDesc.innerHTML = '<i class="bi bi-clock"></i> <span>En espera de aprobación presupuestaria</span>';
+        }
+        if (heroRouteFill) heroRouteFill.style.width = '25%';
     }
 
-    // Actualizar línea de progreso del Stepper
-    var activeLineEl = document.getElementById('det-oc-stepper-active-line');
-    if (activeLineEl) activeLineEl.style.width = stageLineWidth;
+    var heroCc = document.getElementById('det-oc-hero-cc');
+    if (heroCc) heroCc.innerText = 'CC-' + (d.centro_costo || d.placa || 'ALMACÉN').toUpperCase();
 
-    // Render Step Discs & Subtitles
-    var setNodeState = function(stepId, isActive, isComplete, isError, isWarn, iconHtml, subText) {
-        var nodeEl = document.getElementById(stepId);
-        if (!nodeEl) return;
-        var disc = nodeEl.querySelector('.step-disc');
-        var sub = nodeEl.querySelector('.step-sub');
-        var title = nodeEl.querySelector('.step-title');
-
-        if (disc) {
-            if (isError) {
-                disc.style.background = '#ef4444';
-                disc.style.color = '#ffffff';
-                disc.innerHTML = '<i class="bi bi-x-lg fw-bold"></i>';
-            } else if (isWarn) {
-                disc.style.background = '#f59e0b';
-                disc.style.color = '#ffffff';
-                disc.innerHTML = '<i class="bi bi-exclamation-lg fw-bold"></i>';
-            } else if (isComplete || isActive) {
-                disc.style.background = isComplete ? '#10b981' : '#0284c7';
-                disc.style.color = '#ffffff';
-                disc.innerHTML = iconHtml || '<i class="bi bi-check-lg fw-bold"></i>';
-            } else {
-                disc.style.background = '#f1f5f9';
-                disc.style.color = '#94a3b8';
-                disc.innerHTML = iconHtml || '<i class="bi bi-circle"></i>';
-            }
-        }
-        if (title) {
-            title.className = (isActive || isComplete) ? 'step-title fw-bold text-dark' : 'step-title fw-semibold text-secondary';
-        }
-        if (sub) {
-            sub.innerText = subText || '—';
-        }
-    };
-
-    // Step 1: Registrada
-    setNodeState('det-oc-step-1', true, stageLevel > 1, false, false, '<i class="bi bi-check-lg fw-bold"></i>', _entFmtFechaHora(d.fecha, d.created_at));
-
-    // Step 2: Aprobada
-    var aprobadorTxt = d.aprobador_nombre || d.aprobado_por || 'Gerencia';
-    if (isAnulado) {
-        setNodeState('det-oc-step-2', false, false, true, false, '<i class="bi bi-x-lg"></i>', 'Rechazada');
-    } else if (isObservado) {
-        setNodeState('det-oc-step-2', false, false, false, true, '<i class="bi bi-exclamation-lg"></i>', 'Observada');
-    } else if (stageLevel >= 2) {
-        setNodeState('det-oc-step-2', stageLevel === 2, stageLevel > 2, false, false, '<i class="bi bi-shield-check"></i>', aprobadorTxt);
-    } else {
-        setNodeState('det-oc-step-2', false, false, false, false, '<i class="bi bi-shield-check"></i>', 'Pendiente');
+    var heroDoc = document.getElementById('det-oc-hero-doc');
+    if (heroDoc) {
+        var docText = d.documento_referencia ? ('DOC: ' + d.documento_referencia) : 'SUNAT OC';
+        heroDoc.innerHTML = '<i class="bi bi-receipt me-1"></i> ' + _entEsc(docText);
     }
 
-    // Step 3: Procesada
-    if (stageLevel >= 3) {
-        setNodeState('det-oc-step-3', stageLevel === 3, stageLevel > 3, false, false, '<i class="bi bi-cash-stack"></i>', 'Pago Registrado');
-    } else {
-        setNodeState('det-oc-step-3', false, false, false, false, '<i class="bi bi-cash-stack"></i>', 'Pendiente Pago');
-    }
+    var heroProvShort = document.getElementById('det-oc-hero-prov-short');
+    if (heroProvShort) heroProvShort.innerText = '📍 ' + (d.proveedor_nombre || 'Proveedor').substring(0, 24);
 
-    // Step 4: Recepcionada
-    if (stageLevel >= 4) {
-        setNodeState('det-oc-step-4', true, true, false, false, '<i class="bi bi-box-seam-fill"></i>', '100% Recepcionado');
-    } else if (stageLevel > 3) {
-        setNodeState('det-oc-step-4', true, false, false, false, '<i class="bi bi-boxes"></i>', receptionPct + '% Recepcionado');
-    } else {
-        setNodeState('det-oc-step-4', false, false, false, false, '<i class="bi bi-box-seam"></i>', 'Sin Recepcionar');
-    }
+    var heroDestShort = document.getElementById('det-oc-hero-dest-short');
+    if (heroDestShort) heroDestShort.innerText = '🏢 ' + (d.placa ? ('Unidad ' + d.placa) : 'Sede Central');
 
-    // Interacción manual al tacto / clic en los 4 hitos del Stepper
-    var bindStepInteraction = function(stepId, stepNum, detailText) {
-        var el = document.getElementById(stepId);
-        if (!el) return;
-        el.style.cursor = 'pointer';
-        el.onclick = function(ev) {
-            ev.stopPropagation();
-            if (typeof window.azkellHaptic === 'function') window.azkellHaptic('tap');
-            if (descEl) {
-                descEl.innerHTML = '<span class="fw-bold text-dark"><i class="bi bi-info-circle me-1 text-primary"></i>Paso ' + stepNum + ':</span> ' + detailText;
-            }
-        };
-    };
-
-    var creadorNombre = d.creador_nombre || d.creado_por || 'SISTEMA';
+    // 2. LIVE STEPPER DATA DEFINITION
+    var creadorTxt = d.creador_nombre || d.creado_por || 'SISTEMA';
     var fechaFmt = _entFmtFechaHora(d.fecha, d.created_at);
-    bindStepInteraction('det-oc-step-1', 1, 'Orden emitida por ' + _entEsc(creadorNombre) + ' el ' + fechaFmt + (d.motivo_entrada ? ' · Motivo: ' + _entEsc(d.motivo_entrada) : '') + '.');
-    bindStepInteraction('det-oc-step-2', 2, (isAprobado || stageLevel >= 2) ? ('Aprobación concedida por Gerencia (' + _entEsc(aprobadorTxt) + ').') : (isAnulado ? 'Orden rechazada o anulada por Gerencia.' : (isObservado ? 'Orden observada con observaciones de Gerencia.' : 'Pendiente de aprobación presupuestaria por Gerencia.')));
-    bindStepInteraction('det-oc-step-3', 3, (stageLevel >= 3) ? ('Comprobante de pago procesado por Tesorería (' + _entEsc(pagoText) + ').') : 'Pendiente de liquidación o pago en Tesorería.');
-    bindStepInteraction('det-oc-step-4', 4, (stageLevel >= 4) ? 'Mercadería 100% ingresada físicamente en almacén con acta de conformidad.' : (stageLevel > 3 ? ('Recepción física parcial en curso: ' + totalRecibido.toLocaleString('es-PE') + ' de ' + totalItemsOC.toLocaleString('es-PE') + ' unidades (' + receptionPct + '%).') : 'Pendiente de recepción física en almacén central.'));
-
-    // Reception Progress Bar & Counter
-    var progTxtEl = document.getElementById('det-oc-progress-text');
-    var progPctEl = document.getElementById('det-oc-progress-pct');
-    var progBarEl = document.getElementById('det-oc-progress-bar');
-
-    if (progTxtEl) {
-        progTxtEl.innerText = totalRecibido.toLocaleString('es-PE', { maximumFractionDigits: 2 }) + ' de ' + totalItemsOC.toLocaleString('es-PE', { maximumFractionDigits: 2 }) + ' unidades recepcionadas (' + totalRenglones + ' renglón' + (totalRenglones !== 1 ? 'es' : '') + ')';
-    }
-    if (progPctEl) {
-        progPctEl.innerText = receptionPct + '%';
-    }
-    if (progBarEl) {
-        progBarEl.style.width = receptionPct + '%';
-        progBarEl.setAttribute('aria-valuenow', receptionPct);
+    var aprobadorTxt = d.aprobador_nombre || d.aprobado_por || 'Gerencia';
+    var fechaAprobFmt = d.fecha_aprobacion ? _entFmtFechaHora(d.fecha_aprobacion) : fechaFmt;
+    var pagoTxt = (d.condicion_pago || 'Al contado').toUpperCase();
+    if (d.dias_credito && (pagoTxt.includes('CRÉDITO') || pagoTxt.includes('CREDITO'))) {
+        pagoTxt += ' (' + d.dias_credito + ' DÍAS)';
     }
 
-    // Metadata Bento Grid
-    var solEl = document.getElementById('det-oc-solicitante');
-    if (solEl) solEl.innerText = (d.solicitante || d.autoriza || '—').toUpperCase();
+    window._liveStepsData = [
+        {
+            title: '1. Solicitud Registrada',
+            subtitle: d.centro_costo || 'Área de Mantenimiento y Repuestos',
+            badgeText: 'Registrado',
+            badgeClass: 'bg-primary-subtle text-primary border border-primary-subtle',
+            desc: 'Ingreso y requerimiento formal emitido' + (d.motivo_entrada ? ' para ' + d.motivo_entrada.toLowerCase() : ' para reposición de inventario.') + '.',
+            user: 'Creador: ' + creadorTxt,
+            date: fechaFmt,
+            iconHtml: '<i class="bi bi-file-earmark-text"></i>',
+            iconBg: '#0284c7'
+        },
+        {
+            title: '2. Autorización / Aprobación',
+            subtitle: 'Dirección / Gerencia',
+            badgeText: isAprobado || isProcesado || isRecepcionadoCompleto ? 'Aprobado' : (isAnulado ? 'Rechazada' : (isObservado ? 'Observada' : 'Pendiente')),
+            badgeClass: isAprobado || isProcesado || isRecepcionadoCompleto ? 'bg-success-subtle text-success border border-success-subtle' : (isAnulado ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle'),
+            desc: isAprobado || isProcesado || isRecepcionadoCompleto ? ('V°B° presupuestario concedido por Gerencia (' + aprobadorTxt + ').') : (isAnulado ? 'Orden anulada o denegada.' : 'Pendiente de visto bueno presupuestario por Gerencia.'),
+            user: 'Autoriza: ' + (isAprobado || isProcesado ? aprobadorTxt : 'En espera'),
+            date: fechaAprobFmt,
+            iconHtml: '<i class="bi bi-shield-check"></i>',
+            iconBg: '#10b981'
+        },
+        {
+            title: '3. Liquidación y Pago',
+            subtitle: 'Tesorería & Finanzas',
+            badgeText: isProcesado || isRecepcionadoCompleto ? 'Procesado' : 'Por Liquidar',
+            badgeClass: isProcesado || isRecepcionadoCompleto ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle',
+            desc: (isProcesado || isRecepcionadoCompleto) ? ('Trámite de compra procesado y programado bajo modalidad ' + pagoTxt + '.') : ('Pendiente de procesamiento contable y desembolso (' + pagoTxt + ').'),
+            user: 'Modalidad: ' + pagoTxt,
+            date: fechaFmt,
+            iconHtml: '<i class="bi bi-cash-stack"></i>',
+            iconBg: '#0ea5e9'
+        },
+        {
+            title: '4. Recepción en Almacén',
+            subtitle: 'Almacén Central / Bodega',
+            badgeText: isRecepcionadoCompleto ? '100% Recibido' : (isRecepcionadoParcial ? (receptionPct + '% Recibido') : 'En Tránsito'),
+            badgeClass: isRecepcionadoCompleto ? 'bg-success-subtle text-success border border-success-subtle' : (isRecepcionadoParcial ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-light text-secondary border'),
+            desc: isRecepcionadoCompleto ? 'Mercadería recepcionada en su totalidad con conformidad de almacén.' : (isRecepcionadoParcial ? ('Recepción física en curso: ' + totalRecibido + ' de ' + totalItemsOC + ' unidades.') : 'Mercadería pendiente de recepción física e internamiento.'),
+            user: 'Custodio: Almacén Principal',
+            date: fechaFmt,
+            iconHtml: '<i class="bi bi-box-seam"></i>',
+            iconBg: '#8b5cf6'
+        }
+    ];
 
-    var creadorEl = document.getElementById('det-oc-creador');
-    if (creadorEl) creadorEl.innerText = (d.creador_nombre || d.creado_por || 'SISTEMA').toUpperCase();
+    // Determine default active step based on progress
+    var initialStep = 1;
+    if (isRecepcionadoCompleto) initialStep = 4;
+    else if (isRecepcionadoParcial || isProcesado) initialStep = 3;
+    else if (isAprobado) initialStep = 2;
 
-    var fecEl = document.getElementById('det-oc-fecha');
-    if (fecEl) fecEl.innerText = _entFmtFechaHora(d.fecha, d.created_at);
+    window.setLiveStepOC(initialStep);
+    window.pauseAutoplayOC(); // Safe default, user can click or toggle autoplay
 
-    var motEl = document.getElementById('det-oc-motivo');
-    if (motEl) {
-        var mText = (d.motivo_entrada || 'Sin motivo especificado').toUpperCase();
-        motEl.innerText = mText;
-        motEl.title = mText;
+    // Touch/click on card container pauses autoplay
+    var liveCard = document.getElementById('det-oc-live-card-container');
+    if (liveCard) {
+        liveCard.onmouseenter = window.pauseAutoplayOC;
+        liveCard.ontouchstart = window.pauseAutoplayOC;
     }
 
-    var monPagoEl = document.getElementById('det-oc-moneda-pago');
-    if (monPagoEl) {
-        var monText = (d.moneda === 'USD') ? 'DÓLARES (USD)' : 'SOLES (PEN)';
-        monPagoEl.innerText = monText + ' • ' + pagoText;
-    }
+    // 3. INVENTARIO & MEDIDAS (ITEMS CARDS CONTAINER)
+    var itemsCountLabel = document.getElementById('det-oc-items-count-label');
+    if (itemsCountLabel) itemsCountLabel.innerText = items.length;
 
-    var desEl = document.getElementById('det-oc-destino');
-    if (desEl) {
-        var desText = '';
-        if (d.placa) desText += 'UNIDAD ' + d.placa;
-        if (d.ot_id) desText += (desText ? ' | ' : '') + 'OT: ' + d.ot_id;
-        if (!desText) desText = 'SEDE PRINCIPAL / ALMACÉN';
-        desEl.innerText = desText;
-    }
-
-    var provEl = document.getElementById('det-oc-proveedor');
-    if (provEl) {
-        var pText = d.proveedor_nombre || 'Sin Proveedor';
-        if (d.proveedor_ruc) pText += ' (RUC: ' + d.proveedor_ruc + ')';
-        provEl.innerText = pText;
-        provEl.title = pText;
-    }
-
-    // Adjuntos
-    var cotAdjEl = document.getElementById('det-oc-adj-cotizacion');
-    if (cotAdjEl) {
-        var urlCot = d.url_cotizacion_presigned || d.url_cotizacion;
-        cotAdjEl.innerHTML = urlCot 
-            ? '<a href="' + urlCot + '" target="_blank" class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 fw-bold text-primary d-inline-flex align-items-center gap-1 shadow-xs" style="font-size:0.75rem;"><i class="bi bi-file-earmark-text text-primary"></i> Cotización</a>' 
-            : '<span class="badge rounded-pill bg-light text-muted border px-2 py-1" style="font-size:0.70rem; font-weight:normal;">Sin cotización</span>';
-    }
-
-    var facAdjEl = document.getElementById('det-oc-adj-factura');
-    if (facAdjEl) {
-        var urlFac = d.url_factura_presigned || d.url_factura;
-        facAdjEl.innerHTML = urlFac 
-            ? '<a href="' + urlFac + '" target="_blank" class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 fw-bold text-success d-inline-flex align-items-center gap-1 shadow-xs" style="font-size:0.75rem;"><i class="bi bi-file-earmark-check text-success"></i> Factura</a>' 
-            : '<span class="badge rounded-pill bg-light text-muted border px-2 py-1" style="font-size:0.70rem; font-weight:normal;">Sin factura</span>';
-    }
-
-    var vouAdjEl = document.getElementById('det-oc-adj-voucher');
-    if (vouAdjEl) {
-        var urlVou = d.url_voucher_presigned || d.url_voucher;
-        vouAdjEl.innerHTML = urlVou 
-            ? '<a href="' + urlVou + '" target="_blank" class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 fw-bold text-danger d-inline-flex align-items-center gap-1 shadow-xs" style="font-size:0.75rem;"><i class="bi bi-file-earmark-pdf text-danger"></i> Voucher</a>' 
-            : '<span class="badge rounded-pill bg-light text-muted border px-2 py-1" style="font-size:0.70rem; font-weight:normal;">Sin voucher</span>';
-    }
-
-    // Badge Total Items en header de tabla
-    var totItemsBadgeEl = document.getElementById('det-oc-total-items-badge');
-    if (totItemsBadgeEl) {
-        totItemsBadgeEl.innerText = totalRenglones + ' Renglón' + (totalRenglones !== 1 ? 'es' : '') + ' (' + totalItemsOC.toLocaleString('es-PE', { maximumFractionDigits: 2 }) + ' unids)';
-    }
-
-    // Tabla de Artículos
-    var tbody = document.getElementById('det-oc-items-tbody');
-    if (tbody) {
+    var itemsContainer = document.getElementById('det-oc-items-cards-container');
+    if (itemsContainer) {
         if (!items.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4 fst-italic">No hay artículos registrados en esta orden.</td></tr>';
+            itemsContainer.innerHTML = '<div class="text-center text-muted py-3 fst-italic">No hay artículos registrados.</div>';
         } else {
-            tbody.innerHTML = items.map(function(it, idx) {
+            itemsContainer.innerHTML = items.map(function(it, idx) {
                 var cant = parseFloat(it.cantidad || 0);
                 var cu = parseFloat(it.costo_unitario || 0);
                 var imp = cant * cu;
                 var nombre = _entDescLimpia(it.descripcion, it.inventario_id);
-                var invId = it.inventario_id || '—';
+                var invId = it.inventario_id || ('ART-' + (idx + 1));
                 var um = (it.unidad_medida || it.unidad || 'UND').toUpperCase();
+                var cantRecibida = isRecepcionadoCompleto ? cant : 0;
+                var recibBadge = isRecepcionadoCompleto 
+                    ? '<span class="badge rounded-pill fw-bold" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.68rem;">' + cant + '/' + cant + ' recibidos</span>'
+                    : '<span class="badge rounded-pill fw-semibold text-secondary bg-light border" style="font-size:0.68rem;">0/' + cant + ' recibidos</span>';
 
-                return '<tr>' +
-                    '<td class="text-center fw-bold text-secondary py-2.5">' + (idx + 1) + '</td>' +
-                    '<td class="text-center font-monospace fw-bold text-dark py-2.5"><span class="badge bg-light text-dark border px-2 py-1 rounded-pill" style="font-size:0.75rem;">' + invId + '</span></td>' +
-                    '<td class="fw-semibold text-dark py-2.5">' + _entEsc(nombre) + '</td>' +
-                    '<td class="text-center font-monospace fw-semibold text-secondary py-2.5"><span class="badge bg-light text-secondary border px-2 py-0.5 rounded" style="font-size:0.72rem;">' + _entEsc(um) + '</span></td>' +
-                    '<td class="text-center fw-bold text-dark py-2.5">' + cant.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + '</td>' +
-                    '<td class="text-end fw-semibold text-dark py-2.5">' + sym + cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
-                    '<td class="text-end fw-bold text-dark pe-3 py-2.5">' + sym + imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
-                '</tr>';
+                // Buscar cotas técnicas o dimensiones en la descripción
+                var cotasHtml = '';
+                var matchDim = nombre.match(/(\d+(?:\.\d+)?)\s*[*xX]\s*(\d+(?:\.\d+)?)\s*(?:[*xX]\s*(\d+(?:\.\d+)?))?/);
+                if (matchDim) {
+                    var d1 = matchDim[1] || '—';
+                    var d2 = matchDim[2] || '—';
+                    var d3 = matchDim[3] || '—';
+                    cotasHtml = '<div class="mt-2 pt-2 border-top border-slate-100 d-flex flex-wrap align-items-center justify-content-between text-secondary font-monospace" style="font-size:0.68rem;">' +
+                        '<span>Ø Int: <b>' + d1 + ' mm</b></span>' +
+                        '<span>Ø Ext: <b>' + d2 + ' mm</b></span>' +
+                        '<span>Espesor: <b>' + d3 + ' mm</b></span>' +
+                        '<span class="text-danger fw-bold" style="cursor:pointer;" onclick="window.imprimirPDFDesdeDetalleOC()">Ver plano →</span>' +
+                    '</div>';
+                } else {
+                    cotasHtml = '<div class="mt-2 pt-2 border-top border-slate-100 d-flex align-items-center justify-content-between text-secondary font-monospace" style="font-size:0.68rem;">' +
+                        '<span>U.M.: <b>' + _entEsc(um) + '</b></span>' +
+                        '<span>Cant: <b>' + cant.toLocaleString('es-PE') + ' ' + _entEsc(um) + '</b></span>' +
+                        '<span class="text-primary fw-semibold">Ficha Técnica</span>' +
+                    '</div>';
+                }
+
+                return '<div class="p-3 mb-2.5 rounded-4 border bg-white shadow-2xs" style="border-color:#e2e8f0 !important;">' +
+                    '<div class="d-flex align-items-start gap-2.5">' +
+                        '<div class="d-flex align-items-center justify-content-center rounded-3 bg-light text-secondary flex-shrink-0" style="width: 44px; height: 44px; font-size: 1.3rem;">' +
+                            '⚙️' +
+                        '</div>' +
+                        '<div class="flex-grow-1 min-w-0">' +
+                            '<div class="d-flex align-items-center gap-1.5 mb-1">' +
+                                '<span class="badge bg-light text-dark border rounded font-monospace" style="font-size: 0.68rem; font-weight:700;">' + _entEsc(invId) + '</span>' +
+                                recibBadge +
+                            '</div>' +
+                            '<div class="fw-bolder text-dark lh-sm" style="font-size: 0.86rem;">' + _entEsc(nombre) + '</div>' +
+                            '<div class="text-muted small mt-0.5" style="font-size: 0.72rem;">Repuesto de alta rotación · Flota operativa</div>' +
+                        '</div>' +
+                        '<div class="text-end flex-shrink-0 ps-1">' +
+                            '<div class="fw-bolder text-dark font-monospace" style="font-size: 0.95rem;">' + sym + imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</div>' +
+                            '<div class="text-muted small font-monospace" style="font-size: 0.70rem;">' + sym + cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' c/u</div>' +
+                        '</div>' +
+                    '</div>' +
+                    cotasHtml +
+                '</div>';
             }).join('');
         }
     }
 
-    var totalReal = (d.total_pen != null && parseFloat(d.total_pen) > 0) ? parseFloat(d.total_pen) : totalCalc;
-    var totGenEl = document.getElementById('det-oc-total-general');
-    if (totGenEl) {
-        totGenEl.innerText = sym + totalReal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // 4. PROVEEDOR VERIFICADO POPULATION
+    var provFullName = document.getElementById('det-oc-prov-full-name');
+    if (provFullName) provFullName.innerText = d.proveedor_nombre || 'PROVEEDOR GENERAL';
+
+    var provFullRuc = document.getElementById('det-oc-prov-full-ruc');
+    if (provFullRuc) provFullRuc.innerText = 'RUC: ' + (d.proveedor_ruc || '20000000000') + ' 📋';
+
+    var btnCall = document.getElementById('det-oc-btn-call');
+    if (btnCall) {
+        var tel = d.proveedor_telefono || '';
+        btnCall.href = tel ? ('tel:' + tel) : 'javascript:void(0)';
+        btnCall.onclick = tel ? null : function() { alert('Teléfono no registrado para este proveedor.'); };
     }
 
-    var totLetEl = document.getElementById('det-oc-total-letras');
-    if (totLetEl) {
-        var monedaTxt = (d.moneda === 'USD') ? 'DÓLARES AMERICANOS' : 'SOLES';
-        totLetEl.innerText = numeroALetras(totalReal) + ' ' + monedaTxt;
+    var btnWsp = document.getElementById('det-oc-btn-wsp');
+    if (btnWsp) {
+        var telWsp = (d.proveedor_telefono || '').replace(/\D/g, '');
+        btnWsp.href = telWsp ? ('https://wa.me/51' + telWsp + '?text=' + encodeURIComponent('Hola, nos comunicamos sobre la Orden de Compra ' + codLimpio)) : 'javascript:void(0)';
+        btnWsp.onclick = telWsp ? null : function() { alert('Número de WhatsApp no registrado para este proveedor.'); };
     }
+
+    var subDestino = document.getElementById('det-oc-subtile-destino');
+    if (subDestino) subDestino.innerText = d.placa ? ('Unidad ' + d.placa) : 'Sede Principal';
+
+    var subMotivo = document.getElementById('det-oc-subtile-motivo');
+    if (subMotivo) subMotivo.innerText = d.motivo_entrada || 'Stock Operativo';
+
+    var subSolicitante = document.getElementById('det-oc-subtile-solicitante');
+    if (subSolicitante) subSolicitante.innerText = d.solicitante || d.autoriza || creadorTxt;
+
+    var subCondicion = document.getElementById('det-oc-subtile-condicion');
+    if (subCondicion) subCondicion.innerText = pagoTxt;
 
     var modalEl = document.getElementById('modalDetalleEntradaOC');
     if (modalEl) {
