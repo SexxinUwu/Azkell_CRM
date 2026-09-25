@@ -130,12 +130,28 @@ window._entToggleFiltrosMobile = function() {
     el.style.display = el.style.display === 'none' ? 'flex' : 'none';
 };
 
-window.cargarEntradas = function() {
+window.cargarEntradas = function(retryCount) {
+    retryCount = retryCount || 0;
     var tbody = document.getElementById('tbody-entradas');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
+    if (tbody && retryCount === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
+    }
     fetch('/api/almacen/entradas')
-        .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+        .then(function(r) { 
+            if (!r.ok) {
+                if ((r.status === 502 || r.status === 503 || r.status === 504) && retryCount < 2) {
+                    return new Promise(function(resolve) {
+                        setTimeout(function() {
+                            resolve(window.cargarEntradas(retryCount + 1));
+                        }, 1200);
+                    });
+                }
+                throw new Error('HTTP '+r.status);
+            }
+            return r.json(); 
+        })
         .then(function(data) {
+            if (!data || !Array.isArray(data)) return;
             window._entData = data;
             window._entFiltrados = data;
             window._entRenderKPIs(data);
@@ -143,7 +159,7 @@ window.cargarEntradas = function() {
         })
         .catch(function(err) {
             var t = document.getElementById('tbody-entradas');
-            if (t) t.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger">Error: '+err.message+'</td></tr>';
+            if (t) t.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger"><i class="bi bi-exclamation-circle me-1"></i> Error al cargar: '+err.message+' <button class="btn btn-sm btn-outline-primary ms-2" onclick="window.cargarEntradas()">Reintentar</button></td></tr>';
         });
 };
 
