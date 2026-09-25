@@ -7,11 +7,8 @@ const pool = mysql.createPool({
     port: 3306
 });
 
-pool.query("SELECT id, fecha, serie, numero_correlativo, url_cotizacion, url_factura, url_voucher, total_pen FROM entradas_inv ORDER BY id DESC LIMIT 5", (err, rows) => {
-    if (err) {
-        console.error('Error:', err);
-    } else {
-        console.log('Marsisa entradas:', JSON.stringify(rows, null, 2));
-    }
+pool.query("SELECT idUsuario, nombre, rol, rol_id, permisos_json FROM usuarios WHERE nombre LIKE '%Daniel%'", (err, rows) => {
+    if (err) console.error('Error:', err);
+    else console.log('Daniel:', JSON.stringify(rows, null, 2));
     pool.end();
 });
