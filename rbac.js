@@ -10,7 +10,7 @@ module.exports = function globalRBAC(req, res, next) {
         '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read', '/checklist/presign-read',
         '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos', '/combustible/vales'
     ];
-    if (ignoredPaths.some(ip => path === ip || path.startsWith(ip)) || path.endsWith('/presign-read') || path.endsWith('/presigned')) return next();
+    if (ignoredPaths.some(ip => path === ip || path.startsWith(ip)) || path.endsWith('/presign-read') || path.endsWith('/presigned') || path.endsWith('/ver') || (path.includes('/archivo/') && path.endsWith('/ver'))) return next();
 
     if (!req.user) return res.status(401).json({ error: 'No autenticado' });
 

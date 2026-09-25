@@ -5,10 +5,10 @@
 (function() {
     'use strict';
 
-    // Detección inicial: en móvil inicia en 'cards', en escritorio en 'table'
+    // Modo por defecto: 'cards' (tarjetas) para todas las pantallas
     const isMobile = window.innerWidth <= 768;
     const modoGuardado = localStorage.getItem('erp_gerencia_oc_vista');
-    const modoInicial = modoGuardado || (isMobile ? 'cards' : 'table');
+    const modoInicial = modoGuardado || 'cards';
 
     // Estado local del módulo (Inicia vacío para datos reales del ERP)
     window._gerenciaOC = window._gerenciaOC || {
