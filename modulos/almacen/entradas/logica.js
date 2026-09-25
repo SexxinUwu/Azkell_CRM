@@ -2,6 +2,17 @@
 // MÓDULO ALMACÉN / ENTRADAS — Lógica SPA Aislada
 // ================================================================
 
+// ── azkellHaptic: Feedback háptico nativo silencioso (vibración física)
+window.azkellHaptic = function(type) {
+    try {
+        if (!navigator.vibrate) return;
+        if (type === 'tap') navigator.vibrate(12);
+        else if (type === 'pop') navigator.vibrate(20);
+        else if (type === 'success') navigator.vibrate([15, 45, 25]);
+        else if (type === 'error') navigator.vibrate([35, 50, 35]);
+    } catch(e) {}
+};
+
 // ── _entCbFiltrar: asegura apertura y estilo de dropdown inmediato
 window._entCbFiltrar = function(id) {
     window._cbFiltrar(id);
@@ -2265,63 +2276,63 @@ window.abrirModalDetalleOC = function(id) {
         stageLevel = 1.5;
         stageLineWidth = '33%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm';
+            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
             pillEstEl.style.cssText = 'font-size:0.82rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;';
-            pillEstEl.innerHTML = '<i class="bi bi-x-circle-fill"></i> ' + _entEsc(estNorm);
+            pillEstEl.innerHTML = '<i class="bi bi-x-circle-fill"></i> <span>' + _entEsc(estNorm) + '</span>';
         }
         if (descEl) descEl.innerText = 'La orden de compra ha sido anulada o rechazada.';
     } else if (isObservado) {
         stageLevel = 1.5;
         stageLineWidth = '33%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm';
+            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
             pillEstEl.style.cssText = 'font-size:0.82rem; background:#fef3c7; color:#b45309; border:1px solid #fde68a;';
-            pillEstEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> OBSERVADA';
+            pillEstEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> <span>OBSERVADA</span>';
         }
         if (descEl) descEl.innerText = 'La orden requiere revisión o subsanación según lo indicado por Gerencia.';
     } else if (isRecepcionadoCompleto) {
         stageLevel = 4;
         stageLineWidth = '100%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm';
+            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
             pillEstEl.style.cssText = 'font-size:0.82rem; background:#dcfce7; color:#15803d; border:1px solid #86efac;';
-            pillEstEl.innerHTML = '<i class="bi bi-box-seam-fill"></i> RECEPCIONADA 100%';
+            pillEstEl.innerHTML = '<i class="bi bi-box-seam-fill"></i> <span>RECEPCIONADA 100%</span>';
         }
         if (descEl) descEl.innerText = 'Mercadería recepcionada en su totalidad en almacén central.';
     } else if (isRecepcionadoParcial) {
         stageLevel = 3.5;
         stageLineWidth = Math.round(66 + (34 * (totalRecibido / totalItemsOC))) + '%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm';
+            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
             pillEstEl.style.cssText = 'font-size:0.82rem; background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc;';
-            pillEstEl.innerHTML = '<i class="bi bi-boxes"></i> RECEPCIÓN PARCIAL (' + receptionPct + '%)';
+            pillEstEl.innerHTML = '<i class="bi bi-boxes"></i> <span>RECEPCIÓN PARCIAL (' + receptionPct + '%)</span>';
         }
         if (descEl) descEl.innerText = 'Mercadería en curso de recepción física en almacén (' + totalRecibido.toLocaleString('es-PE') + ' de ' + totalItemsOC.toLocaleString('es-PE') + ' unidades).';
     } else if (isProcesado) {
         stageLevel = 3;
         stageLineWidth = '66%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm';
+            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
             pillEstEl.style.cssText = 'font-size:0.82rem; background:#e0f2fe; color:#0284c7; border:1px solid rgba(2, 132, 199, 0.3);';
-            pillEstEl.innerHTML = '<i class="bi bi-cash-coin"></i> PROCESADA';
+            pillEstEl.innerHTML = '<i class="bi bi-cash-coin"></i> <span>PROCESADA</span>';
         }
         if (descEl) descEl.innerText = 'Tesorería registró el pago. Lista para recepcionar la mercadería en almacén.';
     } else if (isAprobado) {
         stageLevel = 2;
         stageLineWidth = '33%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm';
+            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
             pillEstEl.style.cssText = 'font-size:0.82rem; background:#dcfce7; color:#15803d; border:1px solid #86efac;';
-            pillEstEl.innerHTML = '<i class="bi bi-patch-check-fill"></i> APROBADA';
+            pillEstEl.innerHTML = '<i class="bi bi-patch-check-fill"></i> <span>APROBADA</span>';
         }
         if (descEl) descEl.innerText = 'Gerencia aprobó la orden de compra. Pendiente de registro de pago por Tesorería.';
     } else {
         stageLevel = 1;
         stageLineWidth = '0%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm';
+            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
             pillEstEl.style.cssText = 'font-size:0.82rem; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;';
-            pillEstEl.innerHTML = '<i class="bi bi-clock-history"></i> REGISTRADA';
+            pillEstEl.innerHTML = '<i class="bi bi-clock-history"></i> <span>REGISTRADA</span>';
         }
         if (descEl) descEl.innerText = 'Orden registrada y emitida. En espera de aprobación por Gerencia.';
     }
@@ -2395,6 +2406,27 @@ window.abrirModalDetalleOC = function(id) {
     } else {
         setNodeState('det-oc-step-4', false, false, false, false, '<i class="bi bi-box-seam"></i>', 'Sin Recepcionar');
     }
+
+    // Interacción manual al tacto / clic en los 4 hitos del Stepper
+    var bindStepInteraction = function(stepId, stepNum, detailText) {
+        var el = document.getElementById(stepId);
+        if (!el) return;
+        el.style.cursor = 'pointer';
+        el.onclick = function(ev) {
+            ev.stopPropagation();
+            if (typeof window.azkellHaptic === 'function') window.azkellHaptic('tap');
+            if (descEl) {
+                descEl.innerHTML = '<span class="fw-bold text-dark"><i class="bi bi-info-circle me-1 text-primary"></i>Paso ' + stepNum + ':</span> ' + detailText;
+            }
+        };
+    };
+
+    var creadorNombre = d.creador_nombre || d.creado_por || 'SISTEMA';
+    var fechaFmt = _entFmtFechaHora(d.fecha, d.created_at);
+    bindStepInteraction('det-oc-step-1', 1, 'Orden emitida por ' + _entEsc(creadorNombre) + ' el ' + fechaFmt + (d.motivo_entrada ? ' · Motivo: ' + _entEsc(d.motivo_entrada) : '') + '.');
+    bindStepInteraction('det-oc-step-2', 2, (isAprobado || stageLevel >= 2) ? ('Aprobación concedida por Gerencia (' + _entEsc(aprobadorTxt) + ').') : (isAnulado ? 'Orden rechazada o anulada por Gerencia.' : (isObservado ? 'Orden observada con observaciones de Gerencia.' : 'Pendiente de aprobación presupuestaria por Gerencia.')));
+    bindStepInteraction('det-oc-step-3', 3, (stageLevel >= 3) ? ('Comprobante de pago procesado por Tesorería (' + _entEsc(pagoText) + ').') : 'Pendiente de liquidación o pago en Tesorería.');
+    bindStepInteraction('det-oc-step-4', 4, (stageLevel >= 4) ? 'Mercadería 100% ingresada físicamente en almacén con acta de conformidad.' : (stageLevel > 3 ? ('Recepción física parcial en curso: ' + totalRecibido.toLocaleString('es-PE') + ' de ' + totalItemsOC.toLocaleString('es-PE') + ' unidades (' + receptionPct + '%).') : 'Pendiente de recepción física en almacén central.'));
 
     // Reception Progress Bar & Counter
     var progTxtEl = document.getElementById('det-oc-progress-text');
@@ -2487,7 +2519,7 @@ window.abrirModalDetalleOC = function(id) {
     var tbody = document.getElementById('det-oc-items-tbody');
     if (tbody) {
         if (!items.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4 fst-italic">No hay artículos registrados en esta orden.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4 fst-italic">No hay artículos registrados en esta orden.</td></tr>';
         } else {
             tbody.innerHTML = items.map(function(it, idx) {
                 var cant = parseFloat(it.cantidad || 0);
@@ -2495,11 +2527,13 @@ window.abrirModalDetalleOC = function(id) {
                 var imp = cant * cu;
                 var nombre = _entDescLimpia(it.descripcion, it.inventario_id);
                 var invId = it.inventario_id || '—';
+                var um = (it.unidad_medida || it.unidad || 'UND').toUpperCase();
 
                 return '<tr>' +
                     '<td class="text-center fw-bold text-secondary py-2.5">' + (idx + 1) + '</td>' +
                     '<td class="text-center font-monospace fw-bold text-dark py-2.5"><span class="badge bg-light text-dark border px-2 py-1 rounded-pill" style="font-size:0.75rem;">' + invId + '</span></td>' +
                     '<td class="fw-semibold text-dark py-2.5">' + _entEsc(nombre) + '</td>' +
+                    '<td class="text-center font-monospace fw-semibold text-secondary py-2.5"><span class="badge bg-light text-secondary border px-2 py-0.5 rounded" style="font-size:0.72rem;">' + _entEsc(um) + '</span></td>' +
                     '<td class="text-center fw-bold text-dark py-2.5">' + cant.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + '</td>' +
                     '<td class="text-end fw-semibold text-dark py-2.5">' + sym + cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
                     '<td class="text-end fw-bold text-dark pe-3 py-2.5">' + sym + imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
