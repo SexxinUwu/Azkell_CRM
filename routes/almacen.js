@@ -303,8 +303,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
           SUM(dr.cantidad_recibida) AS total_recepciones
       FROM detalle_recepciones_oc dr
       JOIN recepciones_oc r ON r.id = dr.recepcion_id
+      JOIN entradas_inv e ON e.id = r.oc_id
       JOIN inventario inv ON inv.id = dr.inventario_id
-      WHERE (inv.fecha_regularizacion IS NULL OR COALESCE(r.created_at, r.fecha_recepcion) > inv.fecha_regularizacion)
+      WHERE (e.estado IS NULL OR (e.estado != 'Anulado' AND LOWER(e.estado) NOT LIKE '%anul%' AND LOWER(e.estado) NOT LIKE '%rechaz%'))
+        AND (inv.fecha_regularizacion IS NULL OR COALESCE(r.created_at, r.fecha_recepcion) > inv.fecha_regularizacion)
       GROUP BY dr.inventario_id
   ) rec ON rec.inventario_id = i.id
   LEFT JOIN (
@@ -1017,10 +1019,19 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     router.get('/entradas', (req, res) => {
         const tdb = getDb(req);
-        let q = `SELECT e.*, GROUP_CONCAT(CONCAT(COALESCE(i.descripcion, d.descripcion, ''),'|',COALESCE(d.cantidad,0),'|',COALESCE(d.costo_unitario,0),'|',COALESCE(d.moneda,'PEN'),'|',COALESCE(d.inventario_id,''),'|',COALESCE(d.importe,0)) SEPARATOR ';;') AS items_raw
+        let q = `SELECT e.*, 
+                    COALESCE(rec.total_recibido, 0) AS total_recibido,
+                    COALESCE(rec.cant_recepciones, 0) AS cant_recepciones,
+                    GROUP_CONCAT(CONCAT(COALESCE(i.descripcion, d.descripcion, ''),'|',COALESCE(d.cantidad,0),'|',COALESCE(d.costo_unitario,0),'|',COALESCE(d.moneda,'PEN'),'|',COALESCE(d.inventario_id,''),'|',COALESCE(d.importe,0)) SEPARATOR ';;') AS items_raw
              FROM entradas_inv e
              LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
-             LEFT JOIN inventario i ON d.inventario_id = i.id`;
+             LEFT JOIN inventario i ON d.inventario_id = i.id
+             LEFT JOIN (
+                 SELECT r.oc_id, SUM(dr.cantidad_recibida) AS total_recibido, COUNT(DISTINCT r.id) AS cant_recepciones
+                 FROM recepciones_oc r
+                 JOIN detalle_recepciones_oc dr ON dr.recepcion_id = r.id
+                 GROUP BY r.oc_id
+             ) rec ON rec.oc_id = e.id`;
         let params = [];
         if (req.query.ot_id) {
             q += ` WHERE e.ot_id = ?`;
@@ -1290,11 +1301,24 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     router.delete('/entradas/:id', (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;
-        tdb.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            tdb.query('DELETE FROM entradas_inv WHERE id=?', [id], (err2) => {
-                if (err2) return res.status(500).json({ error: err2.message });
-                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+        // 1. Eliminar detalles de recepciones de la OC
+        tdb.query('DELETE dr FROM detalle_recepciones_oc dr JOIN recepciones_oc r ON r.id = dr.recepcion_id WHERE r.oc_id = ?', [id], (errRecDet) => {
+            if (errRecDet) console.warn('Error borrando detalle_recepciones_oc al eliminar OC:', errRecDet.message);
+            // 2. Eliminar cabeceras de recepciones de la OC
+            tdb.query('DELETE FROM recepciones_oc WHERE oc_id = ?', [id], (errRec) => {
+                if (errRec) console.warn('Error borrando recepciones_oc al eliminar OC:', errRec.message);
+                // 3. Eliminar detalle de la entrada
+                tdb.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (err) => {
+                    if (err) return res.status(500).json({ error: err.message });
+                    // 4. Eliminar entrada/OC principal
+                    tdb.query('DELETE FROM entradas_inv WHERE id=?', [id], (err2) => {
+                        if (err2) return res.status(500).json({ error: err2.message });
+                        if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
+                            logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); 
+                        } 
+                        res.json({ ok: true });
+                    });
+                });
             });
         });
     });
@@ -1585,6 +1609,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 LEFT JOIN (
                     SELECT dr.inventario_id, SUM(dr.cantidad_recibida) AS total_recepciones
                     FROM detalle_recepciones_oc dr
+                    JOIN recepciones_oc r ON r.id = dr.recepcion_id
+                    JOIN entradas_inv e ON e.id = r.oc_id
+                    WHERE (e.estado IS NULL OR (e.estado != 'Anulado' AND LOWER(e.estado) NOT LIKE '%anul%' AND LOWER(e.estado) NOT LIKE '%rechaz%'))
                     GROUP BY dr.inventario_id
                 ) rec ON rec.inventario_id = i.id
                 LEFT JOIN (
@@ -1767,8 +1794,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             WHERE d.inventario_id=? AND (e.estado IS NULL OR e.estado != 'Anulado') AND (e.tipo_orden = 'Entrada directa' OR e.tipo_orden = 'Ajuste')
             UNION ALL
             SELECT 'Recepción OC' AS tipo, DATE(r.fecha_recepcion) AS fecha, r.fecha_recepcion AS created_at, r.oc_id AS doc_id, CONCAT('Recepción OC / ', COALESCE(r.almacen,'ALM CENTRAL'), ' - ', COALESCE(r.usuario,'')) AS contraparte, dr.cantidad_recibida AS cantidad, dr.costo_unitario, dr.moneda, (dr.cantidad_recibida * dr.costo_unitario) AS importe
-            FROM detalle_recepciones_oc dr JOIN recepciones_oc r ON r.id=dr.recepcion_id
-            WHERE dr.inventario_id=?
+            FROM detalle_recepciones_oc dr 
+            JOIN recepciones_oc r ON r.id=dr.recepcion_id
+            JOIN entradas_inv e ON e.id=r.oc_id
+            WHERE dr.inventario_id=? AND (e.estado IS NULL OR (e.estado != 'Anulado' AND LOWER(e.estado) NOT LIKE '%anul%' AND LOWER(e.estado) NOT LIKE '%rechaz%'))
             UNION ALL
             SELECT 'Salida' AS tipo, s.fecha, s.created_at, s.id AS doc_id, CONCAT(s.tipo_destino,' / ',COALESCE(s.placa,s.responsable,'—')) AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
             FROM detalle_salidas_inv d JOIN salidas_inv s ON s.id=d.salida_id
