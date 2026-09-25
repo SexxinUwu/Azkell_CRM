@@ -2893,8 +2893,9 @@ window._entConfirmarNuevoProveedor = function(typedText) {
 };
 
 window.asegurarModalProveedorYAbrir = function(rucTyped) {
-    var cleanRuc = (rucTyped || '').replace(/\D/g, '');
-    var docNum = cleanRuc.length >= 8 ? cleanRuc : (rucTyped || '').trim();
+    var raw = (rucTyped || '').trim();
+    var cleanRuc = raw.replace(/\D/g, '');
+    var isNumericDoc = cleanRuc.length >= 8;
 
     var openForm = function() {
         if (typeof window.abrirModalProveedor === 'function') {
@@ -2915,15 +2916,29 @@ window.asegurarModalProveedorYAbrir = function(rucTyped) {
 
             window.abrirModalProveedor();
 
+            var mEl = document.getElementById('modal-proveedor');
+            if (mEl) {
+                mEl.style.zIndex = '1150';
+            }
+            var bEl = document.getElementById('prov-backdrop');
+            if (bEl) {
+                bEl.style.zIndex = '1140';
+            }
+
             setTimeout(function() {
                 var docEl = document.getElementById('prov-f-num-doc');
                 var tipoEl = document.getElementById('prov-f-tipo-doc');
-                if (tipoEl && docNum.length >= 8) tipoEl.value = 'RUC';
-                if (docEl && docNum) {
-                    docEl.value = docNum;
-                    if (typeof window.consultarDocProveedor === 'function') {
-                        window.consultarDocProveedor();
+                var nomEl = document.getElementById('prov-f-nombre');
+                if (isNumericDoc) {
+                    if (tipoEl) tipoEl.value = (cleanRuc.length === 11) ? 'RUC' : (cleanRuc.length === 8 ? 'DNI' : 'RUC');
+                    if (docEl) {
+                        docEl.value = cleanRuc;
+                        if (typeof window.consultarDocProveedor === 'function') {
+                            window.consultarDocProveedor();
+                        }
                     }
+                } else if (nomEl && raw) {
+                    nomEl.value = raw;
                 }
             }, 150);
         }
@@ -2949,10 +2964,12 @@ window.asegurarModalProveedorYAbrir = function(rucTyped) {
                     }
                     var backdropEl = tempDiv.querySelector('#prov-backdrop');
                     if (backdropEl && !document.getElementById('prov-backdrop')) {
+                        backdropEl.style.zIndex = '1140';
                         document.body.appendChild(backdropEl.cloneNode(true));
                     }
                     var modalEl = tempDiv.querySelector('#modal-proveedor');
                     if (modalEl && !document.getElementById('modal-proveedor')) {
+                        modalEl.style.zIndex = '1150';
                         document.body.appendChild(modalEl.cloneNode(true));
                     }
                 }

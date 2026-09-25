@@ -497,12 +497,12 @@ window.abrirModalProveedor = function(id, soloDetalle) {
     window._provRenderTags();
     var mEl = document.getElementById('modal-proveedor');
     if (mEl) {
-        mEl.style.zIndex = '1080';
+        mEl.style.zIndex = '1150';
         mEl.classList.add('open');
     }
     var b = document.getElementById('prov-backdrop');
     if (b) {
-        b.style.zIndex = '1075';
+        b.style.zIndex = '1140';
         b.style.display = 'block';
     }
 };
