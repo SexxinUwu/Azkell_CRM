@@ -828,6 +828,7 @@ window._entSetIgvMode = function(mode) {
 
 // ── Guardar ───────────────────────────────────────────────────────
 window.guardarEntrada = function() {
+    if (window._isGuardandoEntrada) return;
     if (!window.guardAction('ent_inv', 'c')) return;
     var fecha      = (document.getElementById('ent-f-fecha')  || {}).value || '';
     var serie      = (document.getElementById('ent-f-serie')  || {}).value || '';
@@ -940,47 +941,52 @@ window.guardarEntrada = function() {
         btnGuardar.disabled = true;
         btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" style="width: 1rem; height: 1rem;"></span>Procesando...';
     }
+    window._isGuardandoEntrada = true;
+
+    // Obtener archivos adjuntos antes de cerrar el modal
+    var fVoucher = document.getElementById('ent-f-voucher') ? document.getElementById('ent-f-voucher').files[0] : null;
+    var fCotizacion = document.getElementById('ent-f-cotizacion') ? document.getElementById('ent-f-cotizacion').files[0] : null;
+    var fFactura = document.getElementById('ent-f-factura') ? document.getElementById('ent-f-factura').files[0] : null;
+    var isEdit = !!window._entEditId;
 
     fetch(url, { method: method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-        .then(async function(r) {
-            var entId = window._entEditId || r.id;
-            var fVoucher = document.getElementById('ent-f-voucher') ? document.getElementById('ent-f-voucher').files[0] : null;
-            var fCotizacion = document.getElementById('ent-f-cotizacion') ? document.getElementById('ent-f-cotizacion').files[0] : null;
-            var fFactura = document.getElementById('ent-f-factura') ? document.getElementById('ent-f-factura').files[0] : null;
+        .then(function(r) {
+            var entId = isEdit ? window._entEditId : r.id;
+            
+            // Cierre instantáneo del formulario en milisegundos para fluidez total
+            window._entCerrarModal();
+            window._entEditId = null;
+            window.cargarEntradas();
 
+            // Subida de archivos en segundo plano con notificación si corresponde
+            var promesas = [];
             var uploadFile = async function(file, tipo) {
                 if (!file) return;
                 var fd = new FormData();
                 fd.append('archivo', file);
                 try {
-                    var res = await fetch('/api/almacen/entradas/'+entId+'/archivo/'+tipo, { method: 'POST', body: fd });
-                    if (!res.ok) {
-                        var text = await res.text();
-                        console.warn('Error subiendo ' + tipo + ': ' + text);
-                    }
+                    await fetch('/api/almacen/entradas/'+entId+'/archivo/'+tipo, { method: 'POST', body: fd });
                 } catch (err) {
-                    console.warn('Fallo de conexión o subida para ' + tipo + ': ' + err.message);
+                    console.warn('Fallo al subir ' + tipo + ': ' + err.message);
                 }
             };
 
-            // Subir archivos en paralelo simultáneamente
-            var promesas = [];
             if (fVoucher) promesas.push(uploadFile(fVoucher, 'voucher'));
             if (fCotizacion) promesas.push(uploadFile(fCotizacion, 'cotizacion'));
             if (fFactura) promesas.push(uploadFile(fFactura, 'factura'));
 
             if (promesas.length) {
-                await Promise.all(promesas);
+                Promise.all(promesas).then(function() {
+                    window.cargarEntradas();
+                });
             }
-
-            window._entCerrarModal();
-            alert('📦 Orden ' + (window._entEditId ? 'actualizada' : 'registrada') + ': ' + entId);
-            window._entEditId = null;
-            window.cargarEntradas();
         })
-        .catch(function(err) { alert('Error: '+err.message); })
+        .catch(function(err) { 
+            alert('Error: ' + err.message); 
+        })
         .finally(function() {
+            window._isGuardandoEntrada = false;
             if (btnGuardar) {
                 btnGuardar.disabled = false;
                 btnGuardar.innerHTML = originalBtnHtml;
@@ -1441,18 +1447,21 @@ window._entRender = function() {
         if (isAnulado) activeCls += ' text-muted opacity-75';
 
         var codLimpio = String(d.id || '').replace(/^ENT-/i, '');
-        var aprobadorVal = d.aprobador_nombre || d.aprobado_por;
         var estNorm = (d.estado || 'REGISTRADA').toUpperCase();
+        var isAprobadoRow = estNorm === 'APROBADO' || estNorm === 'APROBADA' || estNorm === 'AUTORIZADO' || estNorm === 'AUTORIZADA' || estNorm === 'PROCESADO' || estNorm === 'PROCESADA' || estNorm === 'PAGADO' || estNorm === 'PAGADA';
+        var isAnuladoRow = estNorm.includes('RECHAZAD') || estNorm.includes('ANULAD');
+        var isObservadoRow = estNorm.includes('OBSERVAD');
+        var aprobadorVal = (isAprobadoRow || isAnuladoRow || isObservadoRow) ? (d.aprobador_nombre || d.aprobado_por || '') : '';
         var labelAccion = 'Aprobado: ';
         var iconoAccion = 'bi-person-check-fill text-success';
-        if (estNorm.includes('RECHAZAD') || estNorm.includes('ANULAD')) {
+        if (isAnuladoRow) {
             labelAccion = 'Rechazado: ';
             iconoAccion = 'bi-person-x-fill text-danger';
-        } else if (estNorm.includes('OBSERVAD')) {
+        } else if (isObservadoRow) {
             labelAccion = 'Observado: ';
             iconoAccion = 'bi-person-exclamation text-warning';
         }
-        var aprobadorHtml = aprobadorVal ? '<span class="text-dark fw-bold text-nowrap" style="font-size:0.78rem;"><i class="bi ' + iconoAccion + ' me-1"></i>' + _entEsc(aprobadorVal) + '</span>' : '<span class="text-muted small">—</span>';
+        var aprobadorHtml = (aprobadorVal && (isAprobadoRow || isAnuladoRow || isObservadoRow)) ? '<span class="text-dark fw-bold text-nowrap" style="font-size:0.78rem;"><i class="bi ' + iconoAccion + ' me-1"></i>' + _entEsc(aprobadorVal) + '</span>' : '<span class="text-muted small">—</span>';
 
         // Construir Card Móvil
         htmlCards += `
@@ -2413,102 +2422,113 @@ window.abrirModalDetalleOC = function(id) {
     if (isAnulado) {
         if (heroBadgeEstado) {
             heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 0.75rem;';
+            heroBadgeEstado.style.cssText = 'background: rgba(239, 68, 68, 0.25) !important; color: #f87171 !important; border: 1px solid rgba(239, 68, 68, 0.5) !important; font-size: 0.75rem;';
             heroBadgeEstado.innerHTML = '🔴 ANULADA';
         }
         if (heroStatusDesc) {
-            heroStatusDesc.style.color = '#f87171';
+            heroStatusDesc.style.cssText = 'color: #f87171 !important; font-size: 0.78rem;';
             heroStatusDesc.innerHTML = '<i class="bi bi-x-circle"></i> <span>Orden de compra anulada</span>';
         }
         if (heroRouteFill) heroRouteFill.style.width = '25%';
     } else if (isObservado) {
         if (heroBadgeEstado) {
             heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.75rem;';
+            heroBadgeEstado.style.cssText = 'background: rgba(245, 158, 11, 0.25) !important; color: #fbbf24 !important; border: 1px solid rgba(245, 158, 11, 0.5) !important; font-size: 0.75rem;';
             heroBadgeEstado.innerHTML = '🟡 OBSERVADA';
         }
         if (heroStatusDesc) {
-            heroStatusDesc.style.color = '#fbbf24';
+            heroStatusDesc.style.cssText = 'color: #fbbf24 !important; font-size: 0.78rem;';
             heroStatusDesc.innerHTML = '<i class="bi bi-exclamation-triangle"></i> <span>Requiere subsanación de Gerencia</span>';
         }
         if (heroRouteFill) heroRouteFill.style.width = '35%';
     } else if (isRecepcionadoCompleto) {
         if (heroBadgeEstado) {
             heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.75rem;';
+            heroBadgeEstado.style.cssText = 'background: rgba(16, 185, 129, 0.25) !important; color: #34d399 !important; border: 1px solid rgba(16, 185, 129, 0.5) !important; font-size: 0.75rem;';
             heroBadgeEstado.innerHTML = '🟢 100% RECEPCIONADA';
         }
         if (heroStatusDesc) {
-            heroStatusDesc.style.color = '#34d399';
+            heroStatusDesc.style.cssText = 'color: #34d399 !important; font-size: 0.78rem;';
             heroStatusDesc.innerHTML = '<i class="bi bi-check2-circle"></i> <span>Mercadería completa en Almacén Central</span>';
         }
         if (heroRouteFill) heroRouteFill.style.width = '100%';
     } else if (isRecepcionadoParcial) {
         if (heroBadgeEstado) {
             heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(2, 132, 199, 0.2); color: #38bdf8; border: 1px solid rgba(2, 132, 199, 0.4); font-size: 0.75rem;';
+            heroBadgeEstado.style.cssText = 'background: rgba(2, 132, 199, 0.25) !important; color: #38bdf8 !important; border: 1px solid rgba(2, 132, 199, 0.5) !important; font-size: 0.75rem;';
             heroBadgeEstado.innerHTML = '🔵 PARCIAL (' + receptionPct + '%)';
         }
         if (heroStatusDesc) {
-            heroStatusDesc.style.color = '#38bdf8';
+            heroStatusDesc.style.cssText = 'color: #38bdf8 !important; font-size: 0.78rem;';
             heroStatusDesc.innerHTML = '<i class="bi bi-boxes"></i> <span>Recepción en curso: ' + totalRecibido + ' de ' + totalItemsOC + ' unids</span>';
         }
         if (heroRouteFill) heroRouteFill.style.width = '75%';
     } else if (isProcesado) {
         if (heroBadgeEstado) {
             heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.4); font-size: 0.75rem;';
+            heroBadgeEstado.style.cssText = 'background: rgba(14, 165, 233, 0.25) !important; color: #38bdf8 !important; border: 1px solid rgba(14, 165, 233, 0.5) !important; font-size: 0.75rem;';
             heroBadgeEstado.innerHTML = '💳 PROCESADA';
         }
         if (heroStatusDesc) {
-            heroStatusDesc.style.color = '#38bdf8';
+            heroStatusDesc.style.cssText = 'color: #38bdf8 !important; font-size: 0.78rem;';
             heroStatusDesc.innerHTML = '<i class="bi bi-cash-coin"></i> <span>Pago registrado por Tesorería · En camino</span>';
         }
         if (heroRouteFill) heroRouteFill.style.width = '65%';
     } else if (isAprobado) {
         if (heroBadgeEstado) {
             heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.75rem;';
+            heroBadgeEstado.style.cssText = 'background: rgba(16, 185, 129, 0.25) !important; color: #34d399 !important; border: 1px solid rgba(16, 185, 129, 0.5) !important; font-size: 0.75rem;';
             heroBadgeEstado.innerHTML = '✅ APROBADA';
         }
         if (heroStatusDesc) {
-            heroStatusDesc.style.color = '#34d399';
+            heroStatusDesc.style.cssText = 'color: #34d399 !important; font-size: 0.78rem;';
             heroStatusDesc.innerHTML = '<i class="bi bi-shield-check"></i> <span>Aprobado por Gerencia · Pendiente de pago</span>';
         }
         if (heroRouteFill) heroRouteFill.style.width = '45%';
     } else {
         if (heroBadgeEstado) {
             heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.75rem;';
+            heroBadgeEstado.style.cssText = 'background: rgba(148, 163, 184, 0.2) !important; color: #cbd5e1 !important; border: 1px solid rgba(148, 163, 184, 0.4) !important; font-size: 0.75rem;';
             heroBadgeEstado.innerHTML = '⏱️ REGISTRADA';
         }
         if (heroStatusDesc) {
-            heroStatusDesc.style.color = '#94a3b8';
-            heroStatusDesc.innerHTML = '<i class="bi bi-clock"></i> <span>En espera de aprobación presupuestaria</span>';
+            heroStatusDesc.style.cssText = 'color: #94a3b8 !important; font-size: 0.78rem;';
+            heroStatusDesc.innerHTML = '<i class="bi bi-clock"></i> <span>En espera de visto bueno presupuestario</span>';
         }
         if (heroRouteFill) heroRouteFill.style.width = '25%';
     }
 
     var heroCc = document.getElementById('det-oc-hero-cc');
-    if (heroCc) heroCc.innerText = 'CC-' + (d.centro_costo || d.placa || 'ALMACÉN').toUpperCase();
+    if (heroCc) {
+        heroCc.style.cssText = 'background: rgba(255, 255, 255, 0.15) !important; color: #f1f5f9 !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; font-size: 0.72rem;';
+        heroCc.innerText = 'CC-' + (d.centro_costo || d.placa || 'ALMACÉN').toUpperCase();
+    }
 
     var heroDoc = document.getElementById('det-oc-hero-doc');
     if (heroDoc) {
+        heroDoc.style.cssText = 'background: rgba(2, 132, 199, 0.25) !important; color: #38bdf8 !important; border: 1px solid rgba(2, 132, 199, 0.4) !important; font-size: 0.72rem;';
         var docText = d.documento_referencia ? ('DOC: ' + d.documento_referencia) : 'SUNAT OC';
         heroDoc.innerHTML = '<i class="bi bi-receipt me-1"></i> ' + _entEsc(docText);
     }
 
     var heroProvShort = document.getElementById('det-oc-hero-prov-short');
-    if (heroProvShort) heroProvShort.innerText = '📍 ' + (d.proveedor_nombre || 'Proveedor').substring(0, 24);
+    if (heroProvShort) {
+        heroProvShort.style.color = '#e2e8f0';
+        heroProvShort.innerText = '📍 ' + (d.proveedor_nombre || 'Proveedor').substring(0, 24);
+    }
 
     var heroDestShort = document.getElementById('det-oc-hero-dest-short');
-    if (heroDestShort) heroDestShort.innerText = '🏢 ' + (d.placa ? ('Unidad ' + d.placa) : 'Sede Central');
+    if (heroDestShort) {
+        heroDestShort.style.color = '#e2e8f0';
+        heroDestShort.innerText = '🏢 ' + (d.placa ? ('Unidad ' + d.placa) : 'Sede Central');
+    }
 
     // 2. LIVE STEPPER DATA DEFINITION
     var creadorTxt = d.creador_nombre || d.creado_por || 'SISTEMA';
     var fechaFmt = _entFmtFechaHora(d.fecha, d.created_at);
-    var aprobadorTxt = d.aprobador_nombre || d.aprobado_por || 'Gerencia';
-    var fechaAprobFmt = d.fecha_aprobacion ? _entFmtFechaHora(d.fecha_aprobacion) : fechaFmt;
+    var isAprobadoReal = isAprobado || isProcesado || isRecepcionadoCompleto;
+    var aprobadorTxt = isAprobadoReal ? (d.aprobador_nombre || d.aprobado_por || '') : '';
+    var fechaAprobFmt = (isAprobadoReal && d.fecha_aprobacion) ? _entFmtFechaHora(d.fecha_aprobacion) : '';
     var pagoTxt = (d.condicion_pago || 'Al contado').toUpperCase();
     if (d.dias_credito && (pagoTxt.includes('CRÉDITO') || pagoTxt.includes('CREDITO'))) {
         pagoTxt += ' (' + d.dias_credito + ' DÍAS)';
@@ -2528,12 +2548,12 @@ window.abrirModalDetalleOC = function(id) {
         },
         {
             title: '2. Autorización / Aprobación',
-            subtitle: 'Dirección / Gerencia',
-            badgeText: isAprobado || isProcesado || isRecepcionadoCompleto ? 'Aprobado' : (isAnulado ? 'Rechazada' : (isObservado ? 'Observada' : 'Pendiente')),
-            badgeClass: isAprobado || isProcesado || isRecepcionadoCompleto ? 'bg-success-subtle text-success border border-success-subtle' : (isAnulado ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle'),
-            desc: isAprobado || isProcesado || isRecepcionadoCompleto ? ('V°B° presupuestario concedido por Gerencia (' + aprobadorTxt + ').') : (isAnulado ? 'Orden anulada o denegada.' : 'Pendiente de visto bueno presupuestario por Gerencia.'),
-            user: 'Autoriza: ' + (isAprobado || isProcesado ? aprobadorTxt : 'En espera'),
-            date: fechaAprobFmt,
+            subtitle: isAprobadoReal ? 'V°B° Aprobado' : (isAnulado ? 'Rechazado' : (isObservado ? 'Observado' : 'Pendiente de Aprobación')),
+            badgeText: isAprobadoReal ? 'Aprobado' : (isAnulado ? 'Rechazada' : (isObservado ? 'Observada' : 'Pendiente')),
+            badgeClass: isAprobadoReal ? 'bg-success-subtle text-success border border-success-subtle' : (isAnulado ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle'),
+            desc: isAprobadoReal ? ('V°B° presupuestario concedido' + (aprobadorTxt ? ' por ' + aprobadorTxt : '') + '.') : (isAnulado ? 'Orden anulada o rechazada.' : 'Pendiente de autorización presupuestaria por Gerencia.'),
+            user: isAprobadoReal && aprobadorTxt ? ('Autorizado por: ' + aprobadorTxt) : (isAprobadoReal ? 'Autorizado' : 'Pendiente'),
+            date: fechaAprobFmt || '—',
             iconHtml: '<i class="bi bi-shield-check"></i>',
             iconBg: '#10b981'
         },

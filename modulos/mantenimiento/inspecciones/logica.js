@@ -332,13 +332,26 @@ window.toggleGraficosStatus = function() {
         filtrarStatusAvanzado();
     }
 };
-function toggleVistaStatus() { 
+
+window.toggleVistaStatus = function() { 
     isHistorialStatus = !isHistorialStatus; 
     window.inspPaginaActual = 1; 
     let textBtn = document.getElementById('text-toggle-status'); 
+    let btnH = document.getElementById('btnToggleHistorial');
     if (textBtn) { 
-        textBtn.innerText = isHistorialStatus ? "Ver Últimos Registros" : "Ver Historial"; 
+        textBtn.innerText = isHistorialStatus ? "Últimos Registros" : "Historial"; 
     } 
+    if (btnH) {
+        if (isHistorialStatus) {
+            btnH.className = 'btn btn-primary rounded-3 px-3 py-2 fw-bold text-white shadow-2xs d-flex align-items-center gap-1.5';
+            btnH.style.background = '#0284c7';
+            btnH.style.borderColor = '#0284c7';
+        } else {
+            btnH.className = 'btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5';
+            btnH.style.background = '';
+            btnH.style.borderColor = '';
+        }
+    }
     var btnMob = document.getElementById('btnMobileHistorial');
     if (btnMob) {
         if (isHistorialStatus) {
@@ -359,11 +372,76 @@ function toggleVistaStatus() {
     }
     expandAllStatusState = false; 
     expandStatusMap = {}; 
-    mostrarStatusInspecciones(dataGlobalInspecciones); 
-}
+    mostrarStatusInspecciones(window.dataGlobalInspecciones || []); 
+};
 
 window._inspFiltroCard = 'total';
 window._inspFiltroUbicacion = 'todos';
+
+window.poblarSelectoresAnioMes = function() {
+    const selAnio = document.getElementById('filtroInspAnio');
+    if (!selAnio) return;
+    
+    const anioActual = new Date().getFullYear();
+    const aniosSet = new Set();
+    aniosSet.add(anioActual);
+    aniosSet.add(anioActual - 1);
+
+    const list = window.dataGlobalInspecciones || [];
+    list.forEach(i => {
+        let fStr = i.fecha_ingreso || i.fecha_inspeccion || i.fecha;
+        if (fStr) {
+            let a = null;
+            if (fStr.includes('-')) a = parseInt(fStr.split('-')[0]);
+            else if (fStr.includes('/')) {
+                let parts = fStr.split('/');
+                if (parts.length === 3) a = parseInt(parts[2]);
+            }
+            if (a && a > 2000 && a < 2100) aniosSet.add(a);
+        }
+    });
+
+    const neuList = window.dataGlobalNeumaticos || [];
+    neuList.forEach(n => {
+        let fStr = n.fecha_inspeccion;
+        if (fStr) {
+            let a = parseInt(String(fStr).slice(0, 4));
+            if (a && a > 2000 && a < 2100) aniosSet.add(a);
+        }
+    });
+
+    const valPrevio = selAnio.value;
+    const aniosArr = Array.from(aniosSet).sort((a, b) => b - a);
+
+    let opts = '<option value="">Año: Todos</option>';
+    aniosArr.forEach(a => {
+        opts += `<option value="${a}">${a}</option>`;
+    });
+    selAnio.innerHTML = opts;
+    if (valPrevio && aniosSet.has(parseInt(valPrevio))) {
+        selAnio.value = valPrevio;
+    }
+};
+
+window.limpiarFiltrosInsp = function() {
+    const b = document.getElementById('buscadorStatus');
+    if (b) b.value = '';
+    const ya = document.getElementById('filtroInspAnio');
+    if (ya) ya.value = '';
+    const ym = document.getElementById('filtroInspMes');
+    if (ym) ym.value = '';
+    window._inspFiltroCard = 'total';
+    window._inspFiltroUbicacion = 'todos';
+    
+    document.querySelectorAll('#moduloStatus .ck-kpi-card').forEach(function(el) {
+        el.classList.toggle('active', el.id === 'insp-kpi-total');
+    });
+    document.querySelectorAll('#btn-group-estados-insp .ck-segment-item').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-ubicacion') === 'todos');
+    });
+    
+    filtrarStatusAvanzado();
+};
 
 window.filtrarInspCard = function(tipo, cardEl) {
     window._inspFiltroCard = tipo || 'total';
@@ -372,8 +450,8 @@ window.filtrarInspCard = function(tipo, cardEl) {
 
     // Actualizar clase activa en cards superiores
     document.querySelectorAll('#moduloStatus .ck-kpi-card').forEach(function(el) {
-        var cardId = 'insp-kpi-' + (tipo === 'verde' ? 'conformes' : (tipo === 'amarillo' ? 'alerta' : (tipo === 'rojo' ? 'criticas' : 'total')));
-        el.classList.toggle('active', el.id === cardId);
+        var cardId = 'insp-kpi-' + (tipo === 'verde' ? 'conformes' : (tipo === 'amarillo' ? 'alerta' : (tipo === 'rojo' ? 'criticas' : (tipo === 'sin_registro' ? 'sin-registro' : 'total'))));
+        el.classList.toggle('active', el.id === cardId || el === cardEl);
     });
 
     // Resetear segmented control inferior a "todos"
@@ -1158,7 +1236,7 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
 
             // 1. Desktop Row
             htmlTable += `
-            <tr class="clickable-row data-row-status" data-cliente="${ec.cli}" data-marca="${ec.mar}" data-estado-v2="${ec.txtEstadoGlobal}" data-motor="${ec.motora}" data-dias="${ec.diasRestantesGlobal}" data-ubicacion="${ubicacionInfo.tipo}" onclick="${rowClickAction}">
+            <tr class="clickable-row data-row-status" data-placa="${ec.placa}" data-fecha-raw="${ec.fechaMasRecienteBonita}" data-sin-registro="${ec.tipoCobertura === 'SIN_REGISTRO' ? '1' : '0'}" data-cliente="${ec.cli}" data-marca="${ec.mar}" data-estado-v2="${ec.txtEstadoGlobal}" data-motor="${ec.motora}" data-dias="${ec.diasRestantesGlobal}" data-ubicacion="${ubicacionInfo.tipo}" onclick="${rowClickAction}">
                 <td class="ps-3 py-1.5 fw-bold text-dark">
                     <div class="d-flex align-items-center gap-1.5">
                         ${checkHtml}
@@ -1195,7 +1273,7 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
 
             // 2. Mobile Native Card
             htmlCards += `
-            <div class="ck-mobile-card data-card-insp" data-cliente="${ec.cli}" data-marca="${ec.mar}" data-estado-v2="${ec.txtEstadoGlobal}" data-motor="${ec.motora}" data-dias="${ec.diasRestantesGlobal}" data-ubicacion="${ubicacionInfo.tipo}">
+            <div class="ck-mobile-card data-card-insp" data-placa="${ec.placa}" data-fecha-raw="${ec.fechaMasRecienteBonita}" data-sin-registro="${ec.tipoCobertura === 'SIN_REGISTRO' ? '1' : '0'}" data-cliente="${ec.cli}" data-marca="${ec.mar}" data-estado-v2="${ec.txtEstadoGlobal}" data-motor="${ec.motora}" data-dias="${ec.diasRestantesGlobal}" data-ubicacion="${ubicacionInfo.tipo}">
                 <div class="d-flex align-items-center justify-content-between mb-1.5">
                     <div class="d-flex align-items-center gap-2">
                         <span class="fw-bolder text-primary font-monospace" style="font-size:0.92rem;">${ec.tipoCobertura === 'SOLO_NEU_VIGENTE' && neuInsp ? neuInsp.id_inspeccion : (insp && insp.id ? insp.id : (neuInsp && neuInsp.id_inspeccion ? neuInsp.id_inspeccion : 'SIN REGISTRO'))}</span>
@@ -1264,20 +1342,94 @@ window.renderizarTablaYCardsStatus = function(dataFinal, inspeccionesGeneral) {
     if (_tablaBody) _tablaBody.innerHTML = htmlTable;
     if (_cardCont) _cardCont.innerHTML = htmlCards;
 
+    if (typeof window.poblarSelectoresAnioMes === 'function') {
+        window.poblarSelectoresAnioMes();
+    }
+
     filtrarStatusAvanzado();
     window.actualizarIconosOrdenInsp();
+};
+
+window._inspCharts = window._inspCharts || {};
+
+window.updateGraficosEnVivo = function(dataCounts) {
+    if (typeof Chart === 'undefined') return;
+
+    var configCharts = [
+        { id: 'chartTotal', counts: dataCounts.total, title: 'Estado Global' },
+        { id: 'chartMotoras', counts: dataCounts.mot, title: 'Motoras' },
+        { id: 'chartNoMotoras', counts: dataCounts.noMot, title: 'No Motoras' }
+    ];
+
+    configCharts.forEach(function(c) {
+        var canvas = document.getElementById(c.id);
+        if (!canvas) return;
+        
+        if (window._inspCharts[c.id]) {
+            try { window._inspCharts[c.id].destroy(); } catch(e){}
+        }
+
+        var counts = c.counts || { vig: 0, alerta: 0, novig: 0, sinReg: 0 };
+        var labels = ['Conformes', 'En Alerta', 'Críticas / No Vig.', 'Sin Registro'];
+        var data = [counts.vig || 0, counts.alerta || 0, counts.novig || 0, counts.sinReg || 0];
+        var colors = ['#16a34a', '#ca8a04', '#dc2626', '#94a3b8'];
+
+        window._inspCharts[c.id] = new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 10,
+                            font: { size: 10, weight: '600' },
+                            padding: 6
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                var sum = data.reduce(function(a, b) { return a + b; }, 0);
+                                var pct = sum > 0 ? Math.round((ctx.parsed / sum) * 100) : 0;
+                                return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+                            }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    });
 };
 
 function filtrarStatusAvanzado() {
     const txt = (document.getElementById('buscadorStatus')?.value || '').toLowerCase().trim();
     const filtroCard = window._inspFiltroCard || 'total';
     const filtroUbi = window._inspFiltroUbicacion || 'todos';
+    const filtroAnio = (document.getElementById('filtroInspAnio')?.value || '').trim();
+    const filtroMes = (document.getElementById('filtroInspMes')?.value || '').trim();
 
-    let cntTotalVig = 0, cntTotalNoVig = 0;
-    let cntMotVig = 0, cntMotNoVig = 0;
-    let cntNoMotVig = 0, cntNoMotNoVig = 0;
+    let cntTotalVig = 0, cntTotalAlerta = 0, cntTotalNoVig = 0, cntTotalSinReg = 0;
+    let cntMotVig = 0, cntMotAlerta = 0, cntMotNoVig = 0, cntMotSinReg = 0;
+    let cntNoMotVig = 0, cntNoMotAlerta = 0, cntNoMotNoVig = 0, cntNoMotSinReg = 0;
 
-    let kpiTotal = 0, kpiConformes = 0, kpiAlerta = 0, kpiCriticas = 0;
+    let kpiTotal = 0, kpiConformes = 0, kpiAlerta = 0, kpiCriticas = 0, kpiSinRegistro = 0;
+    let totalInspeccionesPeriodo = 0;
+    let placasUnicasPeriodoSet = new Set();
+
+    const cleanPlaca = str => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
     // 1. Filtrar filas de tabla escritorio
     const rows = document.querySelectorAll('#cuerpoTablaStatus tr.data-row-status');
@@ -1286,10 +1438,17 @@ function filtrarStatusAvanzado() {
         let textoFila = row.textContent.toLowerCase();
         let dias = parseInt(row.getAttribute('data-dias'));
         let ubi = (row.getAttribute('data-ubicacion') || '').toLowerCase();
+        let fechaStr = row.getAttribute('data-fecha-raw') || '';
+        let placa = row.getAttribute('data-placa') || '';
+        let isSinRegistro = row.getAttribute('data-sin-registro') === '1' || dias === -9999 || est.includes('sin registro');
+        let mot = row.getAttribute('data-motor') || '';
+        let esMotora = mot.toUpperCase().trim() === 'MOTORA';
 
-        // Clasificar estado semafórico para conteo de KPIs
+        // Clasificar estado semafórico global para conteo de KPIs
         kpiTotal++;
-        if (isNaN(dias) || dias < 0 || dias === -9999 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente')) {
+        if (isSinRegistro) {
+            kpiSinRegistro++;
+        } else if (isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente')) {
             kpiCriticas++;
         } else if (dias <= 7 || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo')) {
             kpiAlerta++;
@@ -1303,11 +1462,13 @@ function filtrarStatusAvanzado() {
         // B. Filtro Card (Semáforo)
         let matchCard = true;
         if (filtroCard === 'verde') {
-            matchCard = dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente') && dias !== -9999;
+            matchCard = !isSinRegistro && dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
         } else if (filtroCard === 'amarillo') {
-            matchCard = (dias >= 0 && dias <= 7 && dias !== -9999) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo');
+            matchCard = !isSinRegistro && ((dias >= 0 && dias <= 7) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo'));
         } else if (filtroCard === 'rojo') {
-            matchCard = isNaN(dias) || dias < 0 || dias === -9999 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente');
+            matchCard = !isSinRegistro && (isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente'));
+        } else if (filtroCard === 'sin_registro') {
+            matchCard = isSinRegistro;
         }
 
         // C. Filtro Ubicación (Todos vs En Base)
@@ -1316,18 +1477,53 @@ function filtrarStatusAvanzado() {
             matchUbi = ubi === 'base' || textoFila.includes('en base');
         }
 
-        if (matchTxt && matchCard && matchUbi) {
-            row.style.display = '';
-            if (!isHistorialStatus) {
-                let mot = row.getAttribute('data-motor') || '';
-                let esMotora = mot.toUpperCase().trim() === 'MOTORA';
-                if (dias >= 0 && dias !== -9999) {
-                    cntTotalVig++;
-                    if (esMotora) cntMotVig++; else cntNoMotVig++;
-                } else {
-                    cntTotalNoVig++;
-                    if (esMotora) cntMotNoVig++; else cntNoMotNoVig++;
+        // D. Filtro Año y Mes
+        let matchFecha = true;
+        if (filtroAnio || filtroMes) {
+            if (!fechaStr || fechaStr === '-' || fechaStr === '—' || isSinRegistro) {
+                matchFecha = false;
+            } else {
+                let y = null, m = null;
+                if (fechaStr.includes('/')) {
+                    let p = fechaStr.split('/');
+                    if (p.length === 3) {
+                        m = parseInt(p[1]);
+                        y = parseInt(p[2]);
+                    }
+                } else if (fechaStr.includes('-')) {
+                    let p = fechaStr.split('T')[0].split('-');
+                    if (p.length === 3) {
+                        y = parseInt(p[0]);
+                        m = parseInt(p[1]);
+                    }
                 }
+                if (filtroAnio && y !== parseInt(filtroAnio)) matchFecha = false;
+                if (filtroMes && m !== parseInt(filtroMes)) matchFecha = false;
+            }
+        }
+
+        if (matchTxt && matchCard && matchUbi && matchFecha) {
+            row.style.display = '';
+
+            // Contabilizar métricas del período
+            if (!isSinRegistro) {
+                totalInspeccionesPeriodo++;
+                if (placa && placa !== '-') placasUnicasPeriodoSet.add(cleanPlaca(placa));
+            }
+
+            // Conteo para gráficos en vivo
+            if (isSinRegistro) {
+                cntTotalSinReg++;
+                if (esMotora) cntMotSinReg++; else cntNoMotSinReg++;
+            } else if (dias >= 0 && dias <= 7) {
+                cntTotalAlerta++;
+                if (esMotora) cntMotAlerta++; else cntNoMotAlerta++;
+            } else if (dias > 7) {
+                cntTotalVig++;
+                if (esMotora) cntMotVig++; else cntNoMotVig++;
+            } else {
+                cntTotalNoVig++;
+                if (esMotora) cntMotNoVig++; else cntNoMotNoVig++;
             }
         } else {
             row.style.display = 'none';
@@ -1341,16 +1537,20 @@ function filtrarStatusAvanzado() {
         let ubi = (card.getAttribute('data-ubicacion') || '').toLowerCase();
         let textoCard = card.textContent.toLowerCase();
         let dias = parseInt(card.getAttribute('data-dias'));
+        let fechaStr = card.getAttribute('data-fecha-raw') || '';
+        let isSinRegistro = card.getAttribute('data-sin-registro') === '1' || dias === -9999 || est.includes('sin registro');
 
         let matchTxt = (!txt || textoCard.includes(txt));
 
         let matchCard = true;
         if (filtroCard === 'verde') {
-            matchCard = dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente') && dias !== -9999;
+            matchCard = !isSinRegistro && dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
         } else if (filtroCard === 'amarillo') {
-            matchCard = (dias >= 0 && dias <= 7 && dias !== -9999) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo');
+            matchCard = !isSinRegistro && ((dias >= 0 && dias <= 7) || est.includes('alert') || est.includes('observ') || est.includes('próximo') || est.includes('proximo'));
         } else if (filtroCard === 'rojo') {
-            matchCard = isNaN(dias) || dias < 0 || dias === -9999 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente');
+            matchCard = !isSinRegistro && (isNaN(dias) || dias < 0 || est.includes('vencid') || est.includes('crit') || est.includes('no vigente'));
+        } else if (filtroCard === 'sin_registro') {
+            matchCard = isSinRegistro;
         }
 
         let matchUbi = true;
@@ -1358,7 +1558,31 @@ function filtrarStatusAvanzado() {
             matchUbi = ubi === 'base' || textoCard.includes('en base');
         }
 
-        card.style.display = (matchTxt && matchCard && matchUbi) ? '' : 'none';
+        let matchFecha = true;
+        if (filtroAnio || filtroMes) {
+            if (!fechaStr || fechaStr === '-' || fechaStr === '—' || isSinRegistro) {
+                matchFecha = false;
+            } else {
+                let y = null, m = null;
+                if (fechaStr.includes('/')) {
+                    let p = fechaStr.split('/');
+                    if (p.length === 3) {
+                        m = parseInt(p[1]);
+                        y = parseInt(p[2]);
+                    }
+                } else if (fechaStr.includes('-')) {
+                    let p = fechaStr.split('T')[0].split('-');
+                    if (p.length === 3) {
+                        y = parseInt(p[0]);
+                        m = parseInt(p[1]);
+                    }
+                }
+                if (filtroAnio && y !== parseInt(filtroAnio)) matchFecha = false;
+                if (filtroMes && m !== parseInt(filtroMes)) matchFecha = false;
+            }
+        }
+
+        card.style.display = (matchTxt && matchCard && matchUbi && matchFecha) ? '' : 'none';
     });
 
     // 3. Actualizar KPIs Bento
@@ -1367,9 +1591,23 @@ function filtrarStatusAvanzado() {
     setKpi('kpi-insp-conformes', kpiConformes);
     setKpi('kpi-insp-alerta', kpiAlerta);
     setKpi('kpi-insp-criticas', kpiCriticas);
+    setKpi('kpi-insp-sin-registro', kpiSinRegistro);
 
-    if (!isHistorialStatus) {
-        try { updateGraficosEnVivo(cntTotalVig, cntTotalNoVig, cntMotVig, cntMotNoVig, cntNoMotVig, cntNoMotNoVig); } catch(e) { }
+    // 4. Actualizar métricas del período (Total Insp vs Placas Únicas)
+    const elInsp = document.getElementById('insp-metric-inspecciones');
+    const elPlacas = document.getElementById('insp-metric-placas');
+    if (elInsp) elInsp.textContent = totalInspeccionesPeriodo;
+    if (elPlacas) elPlacas.textContent = placasUnicasPeriodoSet.size;
+
+    // 5. Actualizar Gráficos con las 4 categorías (incluyendo Sin Registro)
+    try {
+        window.updateGraficosEnVivo({
+            total: { vig: cntTotalVig, alerta: cntTotalAlerta, novig: cntTotalNoVig, sinReg: cntTotalSinReg },
+            mot: { vig: cntMotVig, alerta: cntMotAlerta, novig: cntMotNoVig, sinReg: cntMotSinReg },
+            noMot: { vig: cntNoMotVig, alerta: cntNoMotAlerta, novig: cntNoMotNoVig, sinReg: cntNoMotSinReg }
+        });
+    } catch(e) {
+        console.warn("Error actualizando gráficos de inspecciones:", e);
     }
 
     // Filtrar también tabla Frenos y cards móviles si están renderizadas
@@ -1390,6 +1628,8 @@ function filtrarStatusAvanzado() {
         });
     }
 }
+
+
 
 window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
     if (typeof idBusqueda === 'string' && idBusqueda.startsWith('NEU-')) {
@@ -3058,44 +3298,7 @@ window.descargarPlantillaInspecciones = function () {
     XLSX.writeFile(wb, "Plantilla_Importacion_Inspecciones.xlsx");
 };
 
-window.exportarExcelInspecciones = function () {
-    if (!dataGlobalInspecciones || dataGlobalInspecciones.length === 0) {
-        alert("No hay inspecciones cargadas para exportar.");
-        return;
-    }
-
-    const baseHeaders = ['ID', 'FECHA INGRESO', 'PLACA', 'KM TABLERO', 'CLIENTE', 'TECNICO', 'DIAS PROPUESTOS'];
-    const dynamicHeaders = obtenerCabecerasDinamicas();
-    const ws_data = [[...baseHeaders, ...dynamicHeaders]];
-
-    dataGlobalInspecciones.forEach(i => {
-        if (i.estado === 'Eliminada') return;
-
-        let row = [i.id || '', i.fecha_ingreso || '', i.placa || '', i.km_tablero || '', i.cliente || '', i.tecnico || '', i.dias_propuestos || ''];
-
-        let detMap = {};
-        try {
-            let dArr = typeof i.detalles_json === 'string' ? JSON.parse(i.detalles_json) : i.detalles_json;
-            if (Array.isArray(dArr)) dArr.forEach(d => detMap[d.item] = d);
-        } catch (e) { }
-
-        dynamicHeaders.forEach(h => {
-            let d = detMap[h];
-            if (d && d.estado && d.estado !== 'SIN DATOS') {
-                row.push(d.observacion ? `${d.estado} | ${d.observacion}` : d.estado);
-            } else {
-                row.push('');
-            }
-        });
-
-        ws_data.push(row);
-    });
-
-    const ws = XLSX.utils.aoa_to_sheet(ws_data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Base_Inspecciones");
-    XLSX.writeFile(wb, "Reporte_Inspecciones_Completas.xlsx");
-};
+        
 
 window.importarExcelInspecciones = function (event) {
     const file = event.target.files[0];
@@ -4152,4 +4355,174 @@ window._ejecutarEliminarInspeccionConfirmado = async function() {
         if (btn) btn.disabled = false;
         window._inspeccionIdAEliminar = null;
     }
+};
+
+window.exportarExcelInspecciones = function () {
+    const list = window.dataGlobalInspecciones || [];
+    if (!list || list.length === 0) {
+        alert("No hay inspecciones cargadas para exportar.");
+        return;
+    }
+
+    if (typeof XLSX === 'undefined') {
+        alert("La librería de Excel (SheetJS) no está disponible en este momento.");
+        return;
+    }
+
+    const filtroAnio = (document.getElementById('filtroInspAnio')?.value || '').trim();
+    const filtroMes = (document.getElementById('filtroInspMes')?.value || '').trim();
+    const txtSearch = (document.getElementById('buscadorStatus')?.value || '').toLowerCase().trim();
+    const filtroCard = window._inspFiltroCard || 'total';
+
+    const parseToDate = (val) => {
+        if (!val) return null;
+        if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+        let s = String(val).trim();
+        if (!s || s === '-' || s === '—') return null;
+        if (s.includes('/')) {
+            let p = s.split('/');
+            if (p.length === 3) {
+                let d = new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+                if (!isNaN(d.getTime())) return d;
+            }
+        } else if (s.includes('-')) {
+            let p = s.split('T')[0].split('-');
+            if (p.length === 3) {
+                let d = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+                if (!isNaN(d.getTime())) return d;
+            }
+        }
+        let d = new Date(val);
+        return isNaN(d.getTime()) ? null : d;
+    };
+
+    // Filtrar inspecciones según selección de año, mes o búsqueda
+    let inspeccionesAExportar = list.filter(i => {
+        if (i.estado === 'Eliminada') return false;
+
+        let dObj = parseToDate(i.fecha_ingreso || i.fecha_inspeccion || i.fecha);
+        if (filtroAnio) {
+            if (!dObj || dObj.getFullYear() !== parseInt(filtroAnio)) return false;
+        }
+        if (filtroMes) {
+            if (!dObj || (dObj.getMonth() + 1) !== parseInt(filtroMes)) return false;
+        }
+        if (txtSearch) {
+            let txtFila = `${i.id || ''} ${i.placa || ''} ${i.cliente || ''} ${i.tecnico || ''}`.toLowerCase();
+            if (!txtFila.includes(txtSearch)) return false;
+        }
+        return true;
+    });
+
+    if (inspeccionesAExportar.length === 0) {
+        alert("No se encontraron inspecciones que coincidan con los filtros seleccionados (Año / Mes / Búsqueda).");
+        return;
+    }
+
+    // Cabeceras fijas y dinámicas
+    const baseHeaders = [
+        'ID INSPECCIÓN',
+        'FECHA INGRESO',
+        'PLACA',
+        'TIPO VEHÍCULO',
+        'KM TABLERO',
+        'CLIENTE / DUEÑO',
+        'TÉCNICO RESPONSABLE',
+        'DÍAS PROPUESTOS',
+        'PRÓXIMA INSPECCIÓN',
+        'ESTADO SEMÁFORO'
+    ];
+
+    let dynamicHeaders = [];
+    if (typeof obtenerCabecerasDinamicas === 'function') {
+        dynamicHeaders = obtenerCabecerasDinamicas();
+    } else if (window.DYNAMIC_INSP_SCHEMA) {
+        window.DYNAMIC_INSP_SCHEMA.forEach(sec => {
+            if (sec.items) sec.items.forEach(it => {
+                let label = (it.label || it.texto || it).trim();
+                if (label && !dynamicHeaders.includes(label)) dynamicHeaders.push(label);
+            });
+        });
+    }
+
+    const allHeaders = [...baseHeaders, ...dynamicHeaders];
+    const ws_data = [allHeaders];
+
+    inspeccionesAExportar.forEach(i => {
+        let fIngresoDate = parseToDate(i.fecha_ingreso || i.fecha_inspeccion || i.fecha);
+        let dProp = parseInt(i.dias_propuestos) || 30;
+        let fProximaDate = null;
+        if (fIngresoDate) {
+            fProximaDate = new Date(fIngresoDate.getTime());
+            fProximaDate.setDate(fProximaDate.getDate() + dProp);
+        }
+
+        let semaforoText = 'VIGENTE';
+        if (fProximaDate) {
+            let hoy = new Date(); hoy.setHours(0,0,0,0);
+            let diffDays = Math.ceil((fProximaDate - hoy) / (1000 * 60 * 60 * 24));
+            if (diffDays < 0) semaforoText = 'NO VIGENTE / VENCIDO';
+            else if (diffDays <= 7) semaforoText = 'PRÓXIMO A VENCER';
+            else semaforoText = 'VIGENTE';
+        }
+
+        let row = [
+            i.id || '',
+            fIngresoDate || (i.fecha_ingreso || ''),
+            (i.placa || '').toUpperCase(),
+            (i.tipo_vehiculo || '').toUpperCase(),
+            i.km_tablero ? Number(i.km_tablero) : '',
+            (i.cliente || '').toUpperCase(),
+            (i.tecnico || '').toUpperCase(),
+            dProp,
+            fProximaDate || '',
+            semaforoText
+        ];
+
+        let detMap = {};
+        try {
+            let dArr = typeof i.detalles_json === 'string' ? JSON.parse(i.detalles_json) : i.detalles_json;
+            if (Array.isArray(dArr)) dArr.forEach(d => detMap[(d.item || d.label || '').trim()] = d);
+        } catch (e) { }
+
+        dynamicHeaders.forEach(h => {
+            let d = detMap[h];
+            if (d && d.estado && d.estado !== 'SIN DATOS') {
+                row.push(d.observacion ? `${d.estado} | ${d.observacion}` : d.estado);
+            } else {
+                row.push('');
+            }
+        });
+
+        ws_data.push(row);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data, { cellDates: true, dateNF: 'yyyy-mm-dd' });
+
+    // Ajuste de ancho de columnas
+    const colWidths = allHeaders.map((h, idx) => {
+        let maxLen = h.length;
+        for (let r = 1; r < Math.min(ws_data.length, 30); r++) {
+            let val = ws_data[r][idx];
+            if (val instanceof Date) maxLen = Math.max(maxLen, 10);
+            else if (val) maxLen = Math.max(maxLen, String(val).length);
+        }
+        return { wch: Math.min(Math.max(maxLen + 3, 12), 45) };
+    });
+    ws['!cols'] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Inspecciones");
+
+    let nombreArchivo = "Reporte_Inspecciones_Completas.xlsx";
+    if (filtroAnio && filtroMes) {
+        let mesPad = String(filtroMes).padStart(2, '0');
+        nombreArchivo = `Inspecciones_${filtroAnio}_${mesPad}.xlsx`;
+    } else if (filtroAnio) {
+        nombreArchivo = `Inspecciones_${filtroAnio}.xlsx`;
+    } else if (isHistorialStatus) {
+        nombreArchivo = "Historial_Inspecciones_Flota.xlsx";
+    }
+
+    XLSX.writeFile(wb, nombreArchivo);
 };
