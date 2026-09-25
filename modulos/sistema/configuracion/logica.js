@@ -205,15 +205,27 @@ function _mostrarToast(msg) {
 window._tempLogoBase64 = null;
 
 function _cargarDatosEmpresaEnFormulario() {
-    const inputNombre = document.getElementById('cfg-empresa-nombre');
-    const previewImg  = document.getElementById('cfg-empresa-logo-preview');
-    const placeholder = document.getElementById('cfg-empresa-logo-placeholder');
-    const delBtn      = document.getElementById('cfg-empresa-logo-del-btn');
+    const inputRuc       = document.getElementById('cfg-empresa-ruc');
+    const inputNombre    = document.getElementById('cfg-empresa-nombre');
+    const inputDireccion = document.getElementById('cfg-empresa-direccion');
+    const inputTelefono  = document.getElementById('cfg-empresa-telefono');
+    const inputCorreo    = document.getElementById('cfg-empresa-correo');
+    const previewImg     = document.getElementById('cfg-empresa-logo-preview');
+    const placeholder    = document.getElementById('cfg-empresa-logo-placeholder');
+    const delBtn         = document.getElementById('cfg-empresa-logo-del-btn');
 
-    const nombreGuardado = localStorage.getItem('fleet_empresa_nombre') || '';
-    const logoGuardado   = localStorage.getItem('fleet_empresa_logo') || '';
+    const rucGuardado       = localStorage.getItem('fleet_empresa_ruc') || '';
+    const nombreGuardado    = localStorage.getItem('fleet_empresa_nombre') || '';
+    const direccionGuardada = localStorage.getItem('fleet_empresa_direccion') || '';
+    const telefonoGuardado  = localStorage.getItem('fleet_empresa_telefono') || '';
+    const correoGuardado    = localStorage.getItem('fleet_empresa_correo') || '';
+    const logoGuardado      = localStorage.getItem('fleet_empresa_logo') || '';
 
-    if (inputNombre) inputNombre.value = nombreGuardado;
+    if (inputRuc)       inputRuc.value       = rucGuardado;
+    if (inputNombre)    inputNombre.value    = nombreGuardado;
+    if (inputDireccion) inputDireccion.value = direccionGuardada;
+    if (inputTelefono)  inputTelefono.value  = telefonoGuardado;
+    if (inputCorreo)    inputCorreo.value    = correoGuardado;
 
     if (previewImg && logoGuardado) {
         previewImg.src = logoGuardado;
@@ -226,15 +238,31 @@ function _cargarDatosEmpresaEnFormulario() {
         if (delBtn) delBtn.style.display = 'none';
     }
 
-    // Sincronizar desde API en background si hace falta
+    // Sincronizar desde API en background
     fetch('/api/configuracion')
         .then(r => r.json())
         .then(data => {
-            if (data.empresa_nombre !== undefined && inputNombre && !inputNombre.value) {
-                inputNombre.value = data.empresa_nombre;
-                localStorage.setItem('fleet_empresa_nombre', data.empresa_nombre);
+            if (data.empresa_ruc !== undefined && inputRuc) {
+                inputRuc.value = data.empresa_ruc || '';
+                localStorage.setItem('fleet_empresa_ruc', data.empresa_ruc || '');
             }
-            if (data.empresa_logo !== undefined && data.empresa_logo && previewImg && !previewImg.src) {
+            if (data.empresa_nombre !== undefined && inputNombre) {
+                inputNombre.value = data.empresa_nombre || '';
+                localStorage.setItem('fleet_empresa_nombre', data.empresa_nombre || '');
+            }
+            if (data.empresa_direccion !== undefined && inputDireccion) {
+                inputDireccion.value = data.empresa_direccion || '';
+                localStorage.setItem('fleet_empresa_direccion', data.empresa_direccion || '');
+            }
+            if (data.empresa_telefono !== undefined && inputTelefono) {
+                inputTelefono.value = data.empresa_telefono || '';
+                localStorage.setItem('fleet_empresa_telefono', data.empresa_telefono || '');
+            }
+            if (data.empresa_correo !== undefined && inputCorreo) {
+                inputCorreo.value = data.empresa_correo || '';
+                localStorage.setItem('fleet_empresa_correo', data.empresa_correo || '');
+            }
+            if (data.empresa_logo !== undefined && data.empresa_logo && previewImg) {
                 previewImg.src = data.empresa_logo;
                 previewImg.style.display = 'inline-block';
                 if (placeholder) placeholder.style.display = 'none';
@@ -244,6 +272,100 @@ function _cargarDatosEmpresaEnFormulario() {
         })
         .catch(e => console.warn("Error obteniendo config empresa:", e));
 }
+
+window.buscarRucEmpresa = async function() {
+    const inputBuscar = document.getElementById('cfg-empresa-buscar-ruc');
+    const inputRuc = document.getElementById('cfg-empresa-ruc');
+    const inputNombre = document.getElementById('cfg-empresa-nombre');
+    const inputDireccion = document.getElementById('cfg-empresa-direccion');
+    const statusEl = document.getElementById('cfg-ruc-search-status');
+    const btn = document.getElementById('btn-buscar-ruc-empresa');
+
+    let ruc = (inputBuscar ? inputBuscar.value : '').trim();
+    if (!ruc && inputRuc) ruc = inputRuc.value.trim();
+
+    if (!ruc || ruc.length !== 11 || !/^\d+$/.test(ruc)) {
+        if (statusEl) {
+            statusEl.className = 'small mt-2 text-danger d-block fw-semibold';
+            statusEl.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i> Por favor ingrese un número de RUC válido de 11 dígitos.';
+        }
+        return;
+    }
+
+    const origBtnHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Consultando...';
+    }
+    if (statusEl) {
+        statusEl.className = 'small mt-2 text-primary d-block fw-semibold';
+        statusEl.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Consultando datos en SUNAT...';
+    }
+
+    try {
+        const res = await fetch(`/api/proxy/documento?tipo=RUC&numero=${encodeURIComponent(ruc)}`);
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+            throw new Error(data.error || 'No se encontró información para el RUC ingresado.');
+        }
+
+        // 1. RUC
+        if (inputRuc) inputRuc.value = data.numeroDocumento || data.ruc || ruc;
+        if (inputBuscar) inputBuscar.value = data.numeroDocumento || data.ruc || ruc;
+
+        // 2. Razón Social
+        const razonSocial = (data.razon_social || data.nombre || data.razonSocial || '').trim();
+        if (inputNombre && razonSocial) {
+            inputNombre.value = razonSocial;
+        }
+
+        // 3. Dirección Fiscal completa
+        let dirCompleta = (data.direccion || '').trim();
+        const dist = (data.distrito || '').trim();
+        const prov = (data.provincia || '').trim();
+        const dpto = (data.departamento || '').trim();
+        
+        // Si no incluye el ubigeo o nombres de distrito/provincia, anexar
+        if (dirCompleta && dist && !dirCompleta.toUpperCase().includes(dist.toUpperCase())) {
+            dirCompleta += `, ${dist}`;
+        }
+        if (dirCompleta && prov && !dirCompleta.toUpperCase().includes(prov.toUpperCase())) {
+            dirCompleta += `, ${prov}`;
+        }
+        if (dirCompleta && dpto && !dirCompleta.toUpperCase().includes(dpto.toUpperCase())) {
+            dirCompleta += `, ${dpto}`;
+        }
+        if (!dirCompleta && (dist || prov || dpto)) {
+            dirCompleta = [dist, prov, dpto].filter(Boolean).join(', ');
+        }
+
+        if (inputDireccion && dirCompleta) {
+            inputDireccion.value = dirCompleta.toUpperCase();
+        }
+
+        const estadoSunat = (data.estado || 'ACTIVO').toUpperCase();
+        const condSunat = (data.condicion || 'HABIDO').toUpperCase();
+
+        if (statusEl) {
+            statusEl.className = 'small mt-2 text-success d-block fw-semibold';
+            statusEl.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> RUC encontrado con éxito: <b>${razonSocial}</b> (${estadoSunat} - ${condSunat})`;
+        }
+
+        _mostrarToast('Datos SUNAT cargados');
+    } catch (err) {
+        console.error("Error consultando RUC:", err);
+        if (statusEl) {
+            statusEl.className = 'small mt-2 text-danger d-block fw-semibold';
+            statusEl.innerHTML = `<i class="bi bi-x-circle-fill me-1"></i> Error al consultar SUNAT: ${err.message || 'Servicio no disponible'}`;
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origBtnHtml;
+        }
+    }
+};
 
 window.handleEmpresaLogoSelected = function(input) {
     const file = input.files && input.files[0];
@@ -298,11 +420,24 @@ window.guardarDatosEmpresa = async function() {
     }
 
     try {
-        const inputNombre = document.getElementById('cfg-empresa-nombre');
-        const nombreVal = inputNombre ? inputNombre.value.trim() : '';
+        const inputRuc       = document.getElementById('cfg-empresa-ruc');
+        const inputNombre    = document.getElementById('cfg-empresa-nombre');
+        const inputDireccion = document.getElementById('cfg-empresa-direccion');
+        const inputTelefono  = document.getElementById('cfg-empresa-telefono');
+        const inputCorreo    = document.getElementById('cfg-empresa-correo');
+
+        const rucVal       = inputRuc ? inputRuc.value.trim() : '';
+        const nombreVal    = inputNombre ? inputNombre.value.trim() : '';
+        const direccionVal = inputDireccion ? inputDireccion.value.trim() : '';
+        const telefonoVal  = inputTelefono ? inputTelefono.value.trim() : '';
+        const correoVal    = inputCorreo ? inputCorreo.value.trim() : '';
 
         const payload = {
-            empresa_nombre: nombreVal
+            empresa_ruc: rucVal,
+            empresa_nombre: nombreVal,
+            empresa_direccion: direccionVal,
+            empresa_telefono: telefonoVal,
+            empresa_correo: correoVal
         };
 
         if (window._tempLogoBase64 !== null) {
@@ -317,7 +452,12 @@ window.guardarDatosEmpresa = async function() {
         const data = await res.json();
 
         if (data.success || res.ok) {
+            localStorage.setItem('fleet_empresa_ruc', rucVal);
             localStorage.setItem('fleet_empresa_nombre', nombreVal);
+            localStorage.setItem('fleet_empresa_direccion', direccionVal);
+            localStorage.setItem('fleet_empresa_telefono', telefonoVal);
+            localStorage.setItem('fleet_empresa_correo', correoVal);
+
             const savedLogo = data.empresa_logo || window._tempLogoBase64 || '';
             if (window._tempLogoBase64 !== null) {
                 localStorage.setItem('fleet_empresa_logo', savedLogo);
