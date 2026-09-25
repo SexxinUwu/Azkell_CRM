@@ -1870,7 +1870,6 @@ function _entDescLimpia(desc, invId) {
 
 window._entGenerarHtmlPDF = function(d) {
     var fecha = d.fecha ? String(d.fecha).split('T')[0] : '-';
-    // Use the original total, not the PEN converted total
     
     var subtotalItems = 0;
     (d.items || []).forEach(function(it) {
@@ -1884,7 +1883,6 @@ window._entGenerarHtmlPDF = function(d) {
         totalReal = subtotalItems * 1.18;
     }
     
-    // Fallback if no items for some reason
     if (totalReal === 0 && d.total_pen) {
         totalReal = parseFloat(d.total_pen);
         if (d.moneda === 'USD') {
@@ -1894,27 +1892,32 @@ window._entGenerarHtmlPDF = function(d) {
     }
     
     var monSimbolo = d.moneda === 'USD' ? 'USD' : 'PEN';
+    var txtMoneda = monSimbolo === 'USD' ? 'DÓLARES' : 'SOLES';
+    var txtMonedaS = monSimbolo === 'USD' ? 'US$' : 'S/';
+    var totalText = totalReal.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
     var itemsHTML = (d.items || []).map(function(it, i) {
         var cant = parseFloat(it.cantidad || 0);
         var cu   = parseFloat(it.costo_unitario || 0);
-        var imp  = parseFloat(it.importe || cant * cu || 0);
-        var bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+        var imp  = parseFloat(it.importe || (cant * cu) || 0);
+        var bg   = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+        var um   = it.unidad_medida || it.unidad || 'UND';
+        var cod  = it.inventario_id || it.codigo_articulo || '—';
+        var desc = it.descripcion || it.inventario_id || '-';
+
         return '<tr style="background-color: ' + bg + ';">' +
-            '<td style="padding:12px;text-align:center;border-bottom:1px solid #e2e8f0;color:#475569;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
-            '<td style="padding:12px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;font-weight:500;color:#0f172a;">' + (it.descripcion || it.inventario_id || '-') + '</td>' +
-            '<td style="padding:12px;text-align:right;border-bottom:1px solid #e2e8f0;color:#475569;">' + cu.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</td>' +
-            '<td style="padding:12px;text-align:right;border-bottom:1px solid #e2e8f0;font-weight:600;color:#0f172a;">' + imp.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>' +
+            '<td style="padding:10px 8px;text-align:center;border-bottom:1px solid #e2e8f0;font-weight:700;color:#0f172a;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
+            '<td style="padding:10px 8px;text-align:center;border-bottom:1px solid #e2e8f0;font-weight:600;color:#475569;font-size:11px;">' + um + '</td>' +
+            '<td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-family:monospace;font-size:11px;color:#64748b;">' + cod + '</td>' +
+            '<td style="padding:10px 8px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;font-weight:600;color:#0f172a;">' + desc + '</td>' +
+            '<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #e2e8f0;color:#334155;">' + cu.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</td>' +
+            '<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #e2e8f0;font-weight:700;color:#0f172a;">' + imp.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>' +
         '</tr>';
     }).join('');
 
-    var txtMoneda = monSimbolo === 'USD' ? 'DÓLARES' : 'SOLES';
-    var txtMonedaS = monSimbolo === 'USD' ? 'US$' : 'S/';
-    var totalText = totalReal.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
-
     var condPagoText = (d.condicion_pago || 'AL CONTADO').toUpperCase();
     if (d.condicion_pago && d.condicion_pago.toLowerCase() === 'a crédito') {
-        condPagoText = 'CRÉDITO / ' + (d.dias_credito||0) + ' DÍAS';
+        condPagoText = 'CRÉDITO (' + (d.dias_credito || 0) + ' DÍAS)';
     }
 
     var numDisplay = (d.id || '').replace(/^ENT-/, '');
@@ -1923,103 +1926,151 @@ window._entGenerarHtmlPDF = function(d) {
     var obsBlock = '';
     if (d.observaciones && d.observaciones.trim() !== '') {
         obsBlock = '<!-- OBSERVACIONES -->' +
-        '<div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;border-radius:4px;padding:15px;font-size:12px;color:#92400e;">' +
-            '<b style="display:block;margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#b45309;">Observaciones Adicionales</b>' +
+        '<div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;border-radius:6px;padding:12px 15px;font-size:11px;color:#92400e;margin-bottom:25px;">' +
+            '<b style="display:block;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#b45309;">Observaciones / Especificaciones:</b>' +
             d.observaciones +
         '</div>';
     }
 
+    // Datos de la Empresa emisora
     var empLogo = localStorage.getItem('fleet_empresa_logo') || localStorage.getItem('empresa_logo') || window._LOGO_BASE64 || '';
-    var empNombre = (localStorage.getItem('fleet_empresa_nombre') || localStorage.getItem('empresa_nombre') || window._EMPRESA_NOMBRE || 'ROSYMAR PERÚ S.A.C.').toUpperCase();
+    var empNombre = (localStorage.getItem('fleet_empresa_nombre') || localStorage.getItem('empresa_nombre') || window._EMPRESA_NOMBRE || 'ROSYMAR PERU S.A.C.').toUpperCase();
+    var empRuc = localStorage.getItem('fleet_empresa_ruc') || localStorage.getItem('empresa_ruc') || window._EMPRESA_RUC || '';
+    var empDireccion = (localStorage.getItem('fleet_empresa_direccion') || localStorage.getItem('empresa_direccion') || '').toUpperCase();
+    var empTelefono = localStorage.getItem('fleet_empresa_telefono') || localStorage.getItem('empresa_telefono') || '';
+    var empCorreo = localStorage.getItem('fleet_empresa_correo') || localStorage.getItem('empresa_correo') || '';
 
-    var headerBrandHtml = '';
+    // Header Left: Logo + Info Empresa
+    var headerLeftHtml = '<div style="display:flex;flex-direction:column;gap:4px;max-width:440px;">';
     if (empLogo) {
-        headerBrandHtml = '<div style="display:flex;align-items:center;gap:15px;">' +
-            '<img src="' + empLogo + '" style="max-height:65px;max-width:200px;object-fit:contain;" alt="Logo" />' +
-            '<div>' +
-                '<div style="font-size:20px;font-weight:900;color:#0f172a;letter-spacing:-0.5px;line-height:1.2;">' + empNombre + '</div>' +
-            '</div>' +
-        '</div>';
-    } else {
-        headerBrandHtml = '<div style="font-size:26px;font-weight:900;color:#0f172a;letter-spacing:-0.5px;">' +
-            empNombre +
-        '</div>';
+        headerLeftHtml += '<img src="' + empLogo + '" style="max-height:55px;max-width:180px;object-fit:contain;margin-bottom:4px;display:block;" alt="Logo Empresa" />';
     }
+    headerLeftHtml += '<div style="font-size:16px;font-weight:900;color:#0f172a;letter-spacing:-0.3px;line-height:1.2;text-transform:uppercase;">' + empNombre + '</div>';
+    if (empDireccion) {
+        headerLeftHtml += '<div style="font-size:10px;color:#475569;line-height:1.35;text-transform:uppercase;">' + empDireccion + '</div>';
+    }
+    if (empTelefono) {
+        headerLeftHtml += '<div style="font-size:10px;color:#475569;">' + empTelefono + '</div>';
+    }
+    if (empCorreo) {
+        headerLeftHtml += '<div style="font-size:10px;color:#475569;">' + empCorreo + '</div>';
+    }
+    headerLeftHtml += '</div>';
+
+    // Header Right: Tarjeta Recuadro RUC + Tipo Documento + Correlativo
+    var headerRightHtml = '<div style="min-width:210px;max-width:260px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:12px 18px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">' +
+        '<div style="font-size:12px;font-weight:700;color:#0284c7;letter-spacing:0.5px;margin-bottom:4px;">' + (empRuc ? 'RUC: ' + empRuc : 'RUC: —') + '</div>' +
+        '<div style="font-size:15px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">' + tipoDocTitle + '</div>' +
+        '<div style="font-size:14px;font-weight:800;color:#2563eb;letter-spacing:0.5px;">N° ' + numDisplay + '</div>' +
+    '</div>';
+
+    // Formatear Fecha y Proveedor
+    var fechaFmt = fecha.split('-').reverse().join('/');
+    var provNombre = (d.proveedor_nombre || '-').toUpperCase();
+    var provRuc = d.proveedor_ruc ? (' (RUC: ' + d.proveedor_ruc + ')') : '';
+    var provContact = [d.proveedor_telefono, d.proveedor_email].filter(Boolean).join(' • ');
+
+    var solicitante = d.solicitante || d.autoriza || '—';
+    var creadoPor   = d.creador_nombre || d.creado_por || 'SISTEMA';
+    var aprobadoPor = d.aprobador_nombre || d.aprobado_por || '—';
+    if (d.fecha_aprobacion) {
+        aprobadoPor += ' (' + String(d.fecha_aprobacion).split('T')[0].split('-').reverse().join('/') + ')';
+    }
+    var centroCosto = d.centro_costo || 'CC-OPERACIONES';
+    var placaVehiculo = d.placa || 'N/A';
+    var otVinculada = d.ot_id ? ('OT #' + d.ot_id) : 'N/A';
 
     return '' +
-    '<div style="font-family:\'Inter\', Arial, sans-serif;width:100%;margin:0 auto;padding:40px;color:#0f172a;box-sizing:border-box;">' +
+    '<div style="font-family:\'Plus Jakarta Sans\', \'Inter\', Arial, sans-serif;width:100%;margin:0 auto;padding:35px 40px;color:#0f172a;box-sizing:border-box;">' +
 
         '<!-- HEADER -->' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1e293b;padding-bottom:20px;margin-bottom:30px;">' +
-            '<div>' +
-                headerBrandHtml +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #e2e8f0;padding-bottom:18px;margin-bottom:22px;">' +
+            headerLeftHtml +
+            headerRightHtml +
+        '</div>' +
+
+        '<!-- RESUMEN PROVEEDOR Y FECHA -->' +
+        '<div style="display:flex;gap:12px;margin-bottom:18px;">' +
+            '<div style="flex:0 0 28%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">' +
+                '<div style="font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:3px;">Fecha de Emisión</div>' +
+                '<div style="font-size:13px;font-weight:800;color:#0f172a;">' + fechaFmt + '</div>' +
+                '<div style="font-size:10px;color:#64748b;margin-top:4px;">Estado: <b style="color:#0284c7;text-transform:uppercase;">' + (d.estado || 'REGISTRADO') + '</b></div>' +
             '</div>' +
-            '<div style="text-align:right;">' +
-                '<div style="font-size:24px;font-weight:800;color:#1e293b;letter-spacing:-0.5px;text-transform:uppercase;">' + tipoDocTitle + '</div>' +
-                '<div style="font-size:16px;font-weight:700;color:#2563eb;margin-top:5px;">N° ' + numDisplay + '</div>' +
+            '<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">' +
+                '<div style="font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:3px;">Proveedor / Razón Social</div>' +
+                '<div style="font-size:13px;font-weight:800;color:#0f172a;text-transform:uppercase;">' + provNombre + '<span style="font-weight:600;color:#475569;font-size:11px;">' + provRuc + '</span></div>' +
+                (provContact ? '<div style="font-size:10px;color:#64748b;margin-top:3px;"><i style="font-style:normal;">📞 Contacto:</i> ' + provContact + '</div>' : '') +
             '</div>' +
         '</div>' +
 
-        '<!-- SUMMARY CARDS -->' +
-        '<div style="display:flex;gap:15px;margin-bottom:25px;">' +
-            '<div style="flex:0 0 30%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:15px;">' +
-                '<div style="font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:5px;">Fecha de Emisión</div>' +
-                '<div style="font-size:14px;font-weight:700;color:#0f172a;">' + fecha.split('-').reverse().join('/') + '</div>' +
+        '<!-- DETALLES DE LA ORDEN -->' +
+        '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:22px;overflow:hidden;">' +
+            '<div style="background:#f1f5f9;padding:8px 14px;font-size:11px;font-weight:800;color:#334155;border-bottom:1px solid #e2e8f0;text-transform:uppercase;letter-spacing:0.5px;">' +
+                'Detalles de Gestión y Trazabilidad' +
             '</div>' +
-            '<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:15px;">' +
-                '<div style="font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:5px;">Proveedor</div>' +
-                '<div style="font-size:14px;font-weight:700;color:#0f172a;text-transform:uppercase;">' + (d.proveedor_nombre || '-') + '</div>' +
+            '<div style="display:flex;flex-wrap:wrap;padding:12px 14px;font-size:12px;">' +
+                '<div style="width:25%;margin-bottom:10px;">' +
+                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Condición Pago</span>' +
+                    '<span style="font-weight:700;color:#0f172a;">' + condPagoText + '</span>' +
+                '</div>' +
+                '<div style="width:25%;margin-bottom:10px;">' +
+                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Moneda</span>' +
+                    '<span style="font-weight:700;color:#0f172a;">' + txtMoneda + (d.moneda === "USD" ? " (T/C: " + parseFloat(d.tipo_cambio||3.4).toFixed(3) + ")" : "") + '</span>' +
+                '</div>' +
+                '<div style="width:25%;margin-bottom:10px;">' +
+                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Placa / Vehículo</span>' +
+                    '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + placaVehiculo + '</span>' +
+                '</div>' +
+                '<div style="width:25%;margin-bottom:10px;">' +
+                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Orden Trabajo (OT)</span>' +
+                    '<span style="font-weight:700;color:#0f172a;">' + otVinculada + '</span>' +
+                '</div>' +
+                '<div style="width:25%;margin-bottom:6px;">' +
+                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Solicitante</span>' +
+                    '<span style="font-weight:600;color:#0f172a;text-transform:uppercase;">' + solicitante + '</span>' +
+                '</div>' +
+                '<div style="width:25%;margin-bottom:6px;">' +
+                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Registrado Por</span>' +
+                    '<span style="font-weight:600;color:#0f172a;text-transform:uppercase;">' + creadoPor + '</span>' +
+                '</div>' +
+                '<div style="width:25%;margin-bottom:6px;">' +
+                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Aprobado Por</span>' +
+                    '<span style="font-weight:600;color:#0f172a;text-transform:uppercase;">' + aprobadoPor + '</span>' +
+                '</div>' +
+                '<div style="width:25%;margin-bottom:6px;">' +
+                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Centro de Costo</span>' +
+                    '<span style="font-weight:600;color:#0f172a;text-transform:uppercase;">' + centroCosto + '</span>' +
+                '</div>' +
+                '<div style="width:100%;margin-top:6px;padding-top:6px;border-top:1px dashed #e2e8f0;">' +
+                    '<span style="font-size:10px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;">Motivo / Destino:</span>' +
+                    '<span style="font-weight:600;color:#0f172a;text-transform:uppercase;">' + (d.motivo_entrada || 'SIN ESPECIFICAR') + '</span>' +
+                '</div>' +
             '</div>' +
         '</div>' +
 
-        '<!-- ORDER DETAILS -->' +
-        '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:30px;overflow:hidden;">' +
-            '<div style="background:#f1f5f9;padding:10px 15px;font-size:12px;font-weight:700;color:#334155;border-bottom:1px solid #e2e8f0;text-transform:uppercase;letter-spacing:0.5px;">Detalles de la Orden</div>' +
-            '<div style="display:flex;flex-wrap:wrap;padding:15px;">' +
-                '<div style="width:50%;margin-bottom:12px;">' +
-                    '<span style="font-size:11px;color:#64748b;display:block;margin-bottom:2px;">TIPO DE ORDEN</span>' +
-                    '<span style="font-size:13px;font-weight:600;color:#0f172a;text-transform:uppercase;">' + (d.tipo_orden || 'ORDEN DE COMPRA') + '</span>' +
-                '</div>' +
-                '<div style="width:50%;margin-bottom:12px;">' +
-                    '<span style="font-size:11px;color:#64748b;display:block;margin-bottom:2px;">CONDICIÓN DE PAGO</span>' +
-                    '<span style="font-size:13px;font-weight:600;color:#0f172a;text-transform:uppercase;">' + condPagoText + '</span>' +
-                '</div>' +
-                '<div style="width:50%;margin-bottom:12px;">' +
-                    '<span style="font-size:11px;color:#64748b;display:block;margin-bottom:2px;">MONEDA</span>' +
-                    '<span style="font-size:13px;font-weight:600;color:#0f172a;text-transform:uppercase;">' + txtMoneda + (d.moneda === "USD" ? " (T/C: " + parseFloat(d.tipo_cambio||3.4).toFixed(3) + ")" : "") + '</span>' +
-                '</div>' +
-                '<div style="width:50%;margin-bottom:12px;">' +
-                    '<span style="font-size:11px;color:#64748b;display:block;margin-bottom:2px;">PLACA / VEHÍCULO</span>' +
-                    '<span style="font-size:13px;font-weight:600;color:#0f172a;text-transform:uppercase;">' + (d.placa || 'N/A') + '</span>' +
-                '</div>' +
-                '<div style="width:100%;margin-bottom:0;">' +
-                    '<span style="font-size:11px;color:#64748b;display:block;margin-bottom:2px;">MOTIVO</span>' +
-                    '<span style="font-size:13px;font-weight:600;color:#0f172a;text-transform:uppercase;">' + (d.motivo_entrada || 'SIN ESPECIFICAR') + '</span>' +
-                '</div>' +
-            '</div>' +
-        '</div>' +
-
-        '<!-- TABLE -->' +
-        '<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:20px;">' +
-            '<table style="width:100%;font-size:12px;border-collapse:collapse;">' +
+        '<!-- TABLA DE ARTÍCULOS -->' +
+        '<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:18px;">' +
+            '<table style="width:100%;font-size:11.5px;border-collapse:collapse;">' +
                 '<thead>' +
-                    '<tr style="background:#1e293b;color:#ffffff;">' +
-                        '<th style="padding:12px;text-align:center;width:60px;font-weight:600;letter-spacing:0.5px;">CANT</th>' +
-                        '<th style="padding:12px;text-align:left;font-weight:600;letter-spacing:0.5px;">DESCRIPCIÓN</th>' +
-                        '<th style="padding:12px;text-align:right;width:100px;font-weight:600;letter-spacing:0.5px;">P. UNIT</th>' +
-                        '<th style="padding:12px;text-align:right;width:120px;font-weight:600;letter-spacing:0.5px;">IMPORTE</th>' +
+                    '<tr style="background:#0f172a;color:#ffffff;">' +
+                        '<th style="padding:10px 8px;text-align:center;width:55px;font-weight:700;letter-spacing:0.5px;">CANT</th>' +
+                        '<th style="padding:10px 8px;text-align:center;width:60px;font-weight:700;letter-spacing:0.5px;">U.M.</th>' +
+                        '<th style="padding:10px 8px;text-align:left;width:95px;font-weight:700;letter-spacing:0.5px;">CÓDIGO</th>' +
+                        '<th style="padding:10px 8px;text-align:left;font-weight:700;letter-spacing:0.5px;">DESCRIPCIÓN DE PRODUCTO / SERVICIO</th>' +
+                        '<th style="padding:10px 8px;text-align:right;width:90px;font-weight:700;letter-spacing:0.5px;">P. UNIT</th>' +
+                        '<th style="padding:10px 8px;text-align:right;width:110px;font-weight:700;letter-spacing:0.5px;">IMPORTE</th>' +
                     '</tr>' +
                 '</thead>' +
                 '<tbody>' +
                     itemsHTML +
                 '</tbody>' +
             '</table>' +
-            '<div style="background:#f8fafc;padding:15px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #e2e8f0;">' +
-                '<div style="font-size:11px;color:#64748b;max-width:350px;">' +
-                    '<b>SON:</b> ' + numeroALetras(totalReal) + ' ' + txtMoneda +
+            '<div style="background:#f8fafc;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #e2e8f0;">' +
+                '<div style="font-size:11px;color:#64748b;max-width:380px;">' +
+                    '<b style="color:#334155;">SON:</b> ' + numeroALetras(totalReal) + ' ' + txtMoneda +
                 '</div>' +
-                '<div style="font-size:18px;color:#0f172a;">' +
-                    '<span style="font-weight:600;font-size:14px;color:#64748b;margin-right:15px;">TOTAL GENERAL</span>' +
+                '<div style="font-size:17px;color:#0f172a;">' +
+                    '<span style="font-weight:700;font-size:13px;color:#64748b;margin-right:12px;text-transform:uppercase;">Total General</span>' +
                     '<b>' + txtMonedaS + ' ' + totalText + '</b>' +
                 '</div>' +
             '</div>' +
@@ -2027,27 +2078,61 @@ window._entGenerarHtmlPDF = function(d) {
 
         obsBlock +
 
+        '<!-- FIRMAS DE CONFORMIDAD -->' +
+        '<div style="display:flex;justify-content:space-between;gap:20px;margin-top:40px;padding-top:10px;">' +
+            '<div style="flex:1;text-align:center;border-top:1px solid #94a3b8;padding-top:6px;">' +
+                '<div style="font-size:11px;font-weight:700;color:#0f172a;text-transform:uppercase;">' + creadoPor + '</div>' +
+                '<div style="font-size:10px;color:#64748b;">Elaborado / Solicitado</div>' +
+            '</div>' +
+            '<div style="flex:1;text-align:center;border-top:1px solid #94a3b8;padding-top:6px;">' +
+                '<div style="font-size:11px;font-weight:700;color:#0f172a;text-transform:uppercase;">' + (d.aprobador_nombre || 'Gerencia General') + '</div>' +
+                '<div style="font-size:10px;color:#64748b;">V°B° Aprobación</div>' +
+            '</div>' +
+            '<div style="flex:1;text-align:center;border-top:1px solid #94a3b8;padding-top:6px;">' +
+                '<div style="font-size:11px;font-weight:700;color:#0f172a;">ALMACÉN / RECEPCIÓN</div>' +
+                '<div style="font-size:10px;color:#64748b;">Conformidad de Entrega</div>' +
+            '</div>' +
+        '</div>' +
+
     '</div>';
 };
 
-
-window.generarComprobanteEntrada = function(id) {
+window.generarComprobanteEntrada = async function(id) {
     var d = (window._entData || []).find(function(e) { return e.id === id; });
     if (!d) { alert('No se encontró la entrada ' + id); return; }
+
+    // Sincronizar datos de empresa si no están en localStorage
+    try {
+        if (!localStorage.getItem('fleet_empresa_ruc') || !localStorage.getItem('fleet_empresa_direccion')) {
+            const r = await fetch('/api/configuracion');
+            if (r.ok) {
+                const cfg = await r.json();
+                if (cfg.empresa_ruc) localStorage.setItem('fleet_empresa_ruc', cfg.empresa_ruc);
+                if (cfg.empresa_nombre) localStorage.setItem('fleet_empresa_nombre', cfg.empresa_nombre);
+                if (cfg.empresa_direccion) localStorage.setItem('fleet_empresa_direccion', cfg.empresa_direccion);
+                if (cfg.empresa_telefono) localStorage.setItem('fleet_empresa_telefono', cfg.empresa_telefono);
+                if (cfg.empresa_correo) localStorage.setItem('fleet_empresa_correo', cfg.empresa_correo);
+                if (cfg.empresa_logo) localStorage.setItem('fleet_empresa_logo', cfg.empresa_logo);
+            }
+        }
+    } catch(e) {}
 
     var htmlContent = window._entGenerarHtmlPDF(d);
     
     var htmlCompleto = '<!DOCTYPE html><html><head><title>Orden de Compra ' + d.id + '</title>' +
+        '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+        '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">' +
         '<style>' +
-        'body { background-color: #cbd5e1; margin: 0; padding: 40px 20px; font-family: "Inter", Arial, sans-serif; }' +
-        '#btnPrint { position: fixed; top: 20px; right: 20px; background-color: #0f172a; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 1000; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }' +
-        '#btnPrint:hover { background-color: #1e293b; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.4); }' +
-        '.page-container { background: #fff; padding: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.15); margin: 0 auto; width: 210mm; min-height: 297mm; box-sizing: border-box; }' +
+        'body { background-color: #cbd5e1; margin: 0; padding: 30px 20px; font-family: "Plus Jakarta Sans", "Inter", Arial, sans-serif; }' +
+        '#btnPrint { position: fixed; top: 20px; right: 20px; background-color: #0f172a; color: #fff; border: none; padding: 12px 24px; border-radius: 50px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 1000; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }' +
+        '#btnPrint:hover { background-color: #1e293b; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.35); }' +
+        '.page-container { background: #fff; padding: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.12); margin: 0 auto; width: 210mm; min-height: 297mm; box-sizing: border-box; border-radius: 4px; }' +
         '@media print { ' +
         '  @page { size: A4 portrait; margin: 0; }' +
         '  body { background: none; padding: 0; margin: 0; }' +
         '  #btnPrint { display: none; }' +
-        '  .page-container { box-shadow: none; width: 100%; height: auto; margin: 0; }' +
+        '  .page-container { box-shadow: none; width: 100%; height: auto; margin: 0; border-radius: 0; }' +
         '}' +
         '</style>' +
         '</head><body>' +
@@ -2276,63 +2361,63 @@ window.abrirModalDetalleOC = function(id) {
         stageLevel = 1.5;
         stageLineWidth = '33%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;';
-            pillEstEl.innerHTML = '<i class="bi bi-x-circle-fill"></i> <span>' + _entEsc(estNorm) + '</span>';
+            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
+            pillEstEl.style.cssText = 'font-size:0.82rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; gap:8px;';
+            pillEstEl.innerHTML = '<i class="bi bi-x-circle-fill" style="font-size:0.95rem; margin-right:4px;"></i> <span>' + _entEsc(estNorm) + '</span>';
         }
         if (descEl) descEl.innerText = 'La orden de compra ha sido anulada o rechazada.';
     } else if (isObservado) {
         stageLevel = 1.5;
         stageLineWidth = '33%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#fef3c7; color:#b45309; border:1px solid #fde68a;';
-            pillEstEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> <span>OBSERVADA</span>';
+            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
+            pillEstEl.style.cssText = 'font-size:0.82rem; background:#fef3c7; color:#b45309; border:1px solid #fde68a; gap:8px;';
+            pillEstEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill" style="font-size:0.95rem; margin-right:4px;"></i> <span>OBSERVADA</span>';
         }
         if (descEl) descEl.innerText = 'La orden requiere revisión o subsanación según lo indicado por Gerencia.';
     } else if (isRecepcionadoCompleto) {
         stageLevel = 4;
         stageLineWidth = '100%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#dcfce7; color:#15803d; border:1px solid #86efac;';
-            pillEstEl.innerHTML = '<i class="bi bi-box-seam-fill"></i> <span>RECEPCIONADA 100%</span>';
+            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
+            pillEstEl.style.cssText = 'font-size:0.82rem; background:#dcfce7; color:#15803d; border:1px solid #86efac; gap:8px;';
+            pillEstEl.innerHTML = '<i class="bi bi-box-seam-fill" style="font-size:0.95rem; margin-right:4px;"></i> <span>RECEPCIONADA 100%</span>';
         }
         if (descEl) descEl.innerText = 'Mercadería recepcionada en su totalidad en almacén central.';
     } else if (isRecepcionadoParcial) {
         stageLevel = 3.5;
         stageLineWidth = Math.round(66 + (34 * (totalRecibido / totalItemsOC))) + '%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc;';
-            pillEstEl.innerHTML = '<i class="bi bi-boxes"></i> <span>RECEPCIÓN PARCIAL (' + receptionPct + '%)</span>';
+            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
+            pillEstEl.style.cssText = 'font-size:0.82rem; background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc; gap:8px;';
+            pillEstEl.innerHTML = '<i class="bi bi-boxes" style="font-size:0.95rem; margin-right:4px;"></i> <span>RECEPCIÓN PARCIAL (' + receptionPct + '%)</span>';
         }
         if (descEl) descEl.innerText = 'Mercadería en curso de recepción física en almacén (' + totalRecibido.toLocaleString('es-PE') + ' de ' + totalItemsOC.toLocaleString('es-PE') + ' unidades).';
     } else if (isProcesado) {
         stageLevel = 3;
         stageLineWidth = '66%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#e0f2fe; color:#0284c7; border:1px solid rgba(2, 132, 199, 0.3);';
-            pillEstEl.innerHTML = '<i class="bi bi-cash-coin"></i> <span>PROCESADA</span>';
+            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
+            pillEstEl.style.cssText = 'font-size:0.82rem; background:#e0f2fe; color:#0284c7; border:1px solid rgba(2, 132, 199, 0.3); gap:8px;';
+            pillEstEl.innerHTML = '<i class="bi bi-cash-coin" style="font-size:0.95rem; margin-right:4px;"></i> <span>PROCESADA</span>';
         }
         if (descEl) descEl.innerText = 'Tesorería registró el pago. Lista para recepcionar la mercadería en almacén.';
     } else if (isAprobado) {
         stageLevel = 2;
         stageLineWidth = '33%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#dcfce7; color:#15803d; border:1px solid #86efac;';
-            pillEstEl.innerHTML = '<i class="bi bi-patch-check-fill"></i> <span>APROBADA</span>';
+            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
+            pillEstEl.style.cssText = 'font-size:0.82rem; background:#dcfce7; color:#15803d; border:1px solid #86efac; gap:8px;';
+            pillEstEl.innerHTML = '<i class="bi bi-patch-check-fill" style="font-size:0.95rem; margin-right:4px;"></i> <span>APROBADA</span>';
         }
         if (descEl) descEl.innerText = 'Gerencia aprobó la orden de compra. Pendiente de registro de pago por Tesorería.';
     } else {
         stageLevel = 1;
         stageLineWidth = '0%';
         if (pillEstEl) {
-            pillEstEl.className = 'badge px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-2 shadow-sm';
-            pillEstEl.style.cssText = 'font-size:0.82rem; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;';
-            pillEstEl.innerHTML = '<i class="bi bi-clock-history"></i> <span>REGISTRADA</span>';
+            pillEstEl.className = 'badge px-3.5 py-2 rounded-pill fw-bold d-inline-flex align-items-center shadow-sm';
+            pillEstEl.style.cssText = 'font-size:0.82rem; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; gap:8px;';
+            pillEstEl.innerHTML = '<i class="bi bi-clock-history" style="font-size:0.95rem; margin-right:4px;"></i> <span>REGISTRADA</span>';
         }
         if (descEl) descEl.innerText = 'Orden registrada y emitida. En espera de aprobación por Gerencia.';
     }
