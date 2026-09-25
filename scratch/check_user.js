@@ -7,8 +7,25 @@ const pool = mysql.createPool({
     port: 3306
 });
 
-pool.query("SELECT idUsuario, nombre, rol, rol_id, permisos_json FROM usuarios WHERE nombre LIKE '%Daniel%'", (err, rows) => {
+console.time('Query entradas');
+let q = `SELECT e.*, 
+            COALESCE(rec.total_recibido, 0) AS total_recibido,
+            COALESCE(rec.cant_recepciones, 0) AS cant_recepciones,
+            GROUP_CONCAT(CONCAT(COALESCE(i.descripcion, d.descripcion, ''),'|',COALESCE(d.cantidad,0),'|',COALESCE(d.costo_unitario,0),'|',COALESCE(d.moneda,'PEN'),'|',COALESCE(d.inventario_id,''),'|',COALESCE(d.importe,0)) SEPARATOR ';;') AS items_raw
+     FROM entradas_inv e
+     LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
+     LEFT JOIN inventario i ON d.inventario_id = i.id
+     LEFT JOIN (
+         SELECT r.oc_id, SUM(dr.cantidad_recibida) AS total_recibido, COUNT(DISTINCT r.id) AS cant_recepciones
+         FROM recepciones_oc r
+         JOIN detalle_recepciones_oc dr ON dr.recepcion_id = r.id
+         GROUP BY r.oc_id
+     ) rec ON rec.oc_id = e.id
+     GROUP BY e.id ORDER BY e.fecha DESC, e.id DESC LIMIT 300`;
+
+pool.query(q, (err, rows) => {
+    console.timeEnd('Query entradas');
     if (err) console.error('Error:', err);
-    else console.log('Daniel:', JSON.stringify(rows, null, 2));
+    else console.log('Rows returned:', rows.length);
     pool.end();
 });

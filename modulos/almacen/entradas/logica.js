@@ -134,16 +134,16 @@ window.cargarEntradas = function(retryCount) {
     retryCount = retryCount || 0;
     var tbody = document.getElementById('tbody-entradas');
     if (tbody && retryCount === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="18" class="text-center py-5"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
     }
     fetch('/api/almacen/entradas')
         .then(function(r) { 
             if (!r.ok) {
-                if ((r.status === 502 || r.status === 503 || r.status === 504) && retryCount < 2) {
+                if ((r.status === 502 || r.status === 503 || r.status === 504) && retryCount < 3) {
                     return new Promise(function(resolve) {
                         setTimeout(function() {
                             resolve(window.cargarEntradas(retryCount + 1));
-                        }, 1200);
+                        }, 1000);
                     });
                 }
                 throw new Error('HTTP '+r.status);
@@ -159,7 +159,7 @@ window.cargarEntradas = function(retryCount) {
         })
         .catch(function(err) {
             var t = document.getElementById('tbody-entradas');
-            if (t) t.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger"><i class="bi bi-exclamation-circle me-1"></i> Error al cargar: '+err.message+' <button class="btn btn-sm btn-outline-primary ms-2" onclick="window.cargarEntradas()">Reintentar</button></td></tr>';
+            if (t) t.innerHTML = '<tr><td colspan="18" class="text-center py-4 text-danger"><i class="bi bi-exclamation-circle me-1"></i> Error al cargar: '+err.message+' <button class="btn btn-sm btn-outline-primary ms-2" onclick="window.cargarEntradas()">Reintentar</button></td></tr>';
         });
 };
 
@@ -401,20 +401,31 @@ window._entCargarProveedores = function() {
             return { value: idOt, label: placa ? idOt + ' — ' + placa : idOt };
         }).filter(Boolean);
         window._cbInit('ent-f-ot', otItems, 'Buscar OT...');
-    fetch('/api/placas-lista').then(function(r){return r.json();}).then(function(d){
-        var items = (d||[]).map(function(p){
-            var placa = (p.placa||'').toUpperCase();
-            return {value:placa, label:placa};
-        }).filter(function(x){return x.value;}).sort(function(a,b){return a.label.localeCompare(b.label);});
-        window._cbInit('ent-f-ot-placa', items, 'Buscar placa...');
-    }).catch(function(){});
+        fetch('/api/placas-lista').then(function(r){return r.json();}).then(function(d){
+            var items = (d||[]).map(function(p){
+                var placa = (p.placa||'').toUpperCase();
+                return {value:placa, label:placa};
+            }).filter(function(x){return x.value;}).sort(function(a,b){return a.label.localeCompare(b.label);});
+            window._cbInit('ent-f-ot-placa', items, 'Buscar placa...');
+            if (window._entEditId) {
+                var curOt = window._cbGet('ent-f-ot');
+                var curPlaca = window._cbGet('ent-f-ot-placa');
+                if (curOt && !curPlaca && window._entCacheOT) {
+                    var found = window._entCacheOT.find(function(x) { return (x.id_ot || '').toUpperCase() === curOt.toUpperCase(); });
+                    if (found && found.placa) {
+                        window._cbSet('ent-f-ot-placa', found.placa, found.placa);
+                        window._cbSet('ent-f-placa', found.placa, found.placa);
+                    }
+                }
+            }
+        }).catch(function(){});
 
-        
         window._cbOnSelect('ent-f-ot', function(val) {
             var ot = window._entCacheOT.find(function(x) { return (x.id_ot||'').toUpperCase() === val; });
             if (ot && ot.placa) {
                 if (typeof window._cbSet === 'function') {
                     window._cbSet('ent-f-ot-placa', ot.placa, ot.placa);
+                    window._cbSet('ent-f-placa', ot.placa, ot.placa);
                 }
             } else {
                 if (typeof window._cbReset === 'function') {
@@ -1321,14 +1332,27 @@ window.abrirModalEditarEntrada = function(id) {
     var fMotivo = document.getElementById('ent-f-motivo');
     if (fMotivo) fMotivo.value = entrada.motivo_entrada || '';
     
-    if (entrada.placa) {
-        window._cbSet('ent-f-placa', entrada.placa, entrada.placa);
+    var placaVal = (entrada.placa || '').trim();
+    if (!placaVal && entrada.ot_id && window._entCacheOT && window._entCacheOT.length) {
+        var otFound = window._entCacheOT.find(function(x) { 
+            return (x.id_ot || '').toUpperCase() === String(entrada.ot_id).toUpperCase(); 
+        });
+        if (otFound && otFound.placa) {
+            placaVal = otFound.placa;
+        }
+    }
+
+    if (placaVal) {
+        window._cbSet('ent-f-placa', placaVal, placaVal);
+        window._cbSet('ent-f-ot-placa', placaVal, placaVal);
     }
 
     if (entrada.ot_id) {
-        window._cbSet('ent-f-ot', entrada.ot_id, entrada.ot_id + (entrada.placa ? ' — ' + entrada.placa : ''));
-        var placaInput = document.getElementById('ent-f-ot-placa');
-        if (placaInput) placaInput.value = entrada.placa || '';
+        var otLabel = entrada.ot_id + (placaVal ? ' — ' + placaVal : '');
+        window._cbSet('ent-f-ot', entrada.ot_id, otLabel);
+        if (placaVal) {
+            window._cbSet('ent-f-ot-placa', placaVal, placaVal);
+        }
     }
       
     if (entrada.proveedor_id) {
