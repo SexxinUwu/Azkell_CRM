@@ -1000,22 +1000,20 @@ window.guardarEntrada = function() {
 
     fetch(url, { method: method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-        .then(function(r) {
+        .then(async function(r) {
             var entId = isEdit ? window._entEditId : r.id;
             
-            // Cierre instantáneo del formulario en milisegundos para fluidez total
-            window._entCerrarModal();
-            window._entEditId = null;
-            window.cargarEntradas();
-
-            // Subida de archivos en segundo plano con notificación si corresponde
+            // Subida de archivos adjuntos antes de cerrar para garantizar persistencia
             var promesas = [];
             var uploadFile = async function(file, tipo) {
                 if (!file) return;
                 var fd = new FormData();
                 fd.append('archivo', file);
                 try {
-                    await fetch('/api/almacen/entradas/'+entId+'/archivo/'+tipo, { method: 'POST', body: fd });
+                    var upRes = await fetch('/api/almacen/entradas/'+encodeURIComponent(entId)+'/archivo/'+tipo, { method: 'POST', body: fd });
+                    if (!upRes.ok) {
+                        console.warn('Advertencia subiendo ' + tipo + ': HTTP ' + upRes.status);
+                    }
                 } catch (err) {
                     console.warn('Fallo al subir ' + tipo + ': ' + err.message);
                 }
@@ -1026,13 +1024,19 @@ window.guardarEntrada = function() {
             if (fFactura) promesas.push(uploadFile(fFactura, 'factura'));
 
             if (promesas.length) {
-                Promise.all(promesas).then(function() {
-                    window.cargarEntradas();
-                });
+                if (btnGuardar) {
+                    btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" style="width: 1rem; height: 1rem;"></span>Subiendo documentos...';
+                }
+                await Promise.all(promesas);
             }
+
+            // Cierre del formulario y recarga inmediata
+            window._entCerrarModal();
+            window._entEditId = null;
+            window.cargarEntradas();
         })
         .catch(function(err) { 
-            alert('Error: ' + err.message); 
+            alert('Error al guardar orden de compra: ' + err.message); 
         })
         .finally(function() {
             window._isGuardandoEntrada = false;
