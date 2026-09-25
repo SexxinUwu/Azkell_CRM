@@ -1003,49 +1003,67 @@ window.guardarEntrada = function() {
         .then(async function(r) {
             var entId = isEdit ? window._entEditId : r.id;
             
-            // Subida DIRECTA a S3 via pre-signed URL (evita 504 de NGINX)
-            var promesas = [];
-            var uploadFile = async function(file, tipo) {
-                if (!file) return;
-                try {
-                    // 1) Pedir URL pre-firmada al servidor (request liviano, sin archivo)
-                    var urlRes = await fetch('/api/almacen/entradas/'+encodeURIComponent(entId)+'/archivo/'+tipo+'/upload-url', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ fileName: file.name, contentType: file.type || 'application/pdf' })
-                    });
-                    if (!urlRes.ok) throw new Error('No se pudo obtener URL de subida: HTTP ' + urlRes.status);
-                    var urlData = await urlRes.json();
+            // ── Subida DIRECTA a S3 (patrón batch idéntico a seguridad/unidades) ──
+            var archivosParaSubir = [];
+            if (fVoucher) archivosParaSubir.push({ file: fVoucher, tipo: 'voucher' });
+            if (fCotizacion) archivosParaSubir.push({ file: fCotizacion, tipo: 'cotizacion' });
+            if (fFactura) archivosParaSubir.push({ file: fFactura, tipo: 'factura' });
 
-                    // 2) Subir archivo DIRECTO a S3 (PUT al bucket, sin pasar por NGINX/Node)
-                    var s3Res = await fetch(urlData.uploadUrl, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': file.type || 'application/pdf' },
-                        body: file
-                    });
-                    if (!s3Res.ok) throw new Error('Error subiendo a S3: HTTP ' + s3Res.status);
-
-                    // 3) Confirmar al servidor que el archivo se subió (request liviano, sin archivo)
-                    var confRes = await fetch('/api/almacen/entradas/'+encodeURIComponent(entId)+'/archivo/'+tipo+'/confirmar', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ finalUrl: urlData.finalUrl, s3Key: urlData.s3Key })
-                    });
-                    if (!confRes.ok) console.warn('Advertencia confirmando ' + tipo + ': HTTP ' + confRes.status);
-                } catch (err) {
-                    console.warn('Fallo al subir ' + tipo + ': ' + err.message);
-                }
-            };
-
-            if (fVoucher) promesas.push(uploadFile(fVoucher, 'voucher'));
-            if (fCotizacion) promesas.push(uploadFile(fCotizacion, 'cotizacion'));
-            if (fFactura) promesas.push(uploadFile(fFactura, 'factura'));
-
-            if (promesas.length) {
+            if (archivosParaSubir.length) {
                 if (btnGuardar) {
                     btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" style="width: 1rem; height: 1rem;"></span>Subiendo documentos...';
                 }
-                await Promise.all(promesas);
+
+                try {
+                    // 1) Pedir TODAS las URLs pre-firmadas en UN solo request
+                    var presignBody = archivosParaSubir.map(function(a) {
+                        return { tipo: a.tipo, fileName: a.file.name, contentType: a.file.type || 'application/pdf' };
+                    });
+                    var presignRes = await fetch('/api/almacen/entradas/' + encodeURIComponent(entId) + '/archivos/presigned', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ archivos: presignBody })
+                    });
+                    if (!presignRes.ok) throw new Error('Error obteniendo URLs: HTTP ' + presignRes.status);
+                    var presignData = await presignRes.json();
+                    var urls = presignData.urls || [];
+
+                    // 2) Subir TODOS los archivos en paralelo directo a S3 con retry
+                    var exitosos = [];
+                    async function subirConRetry(file, urlInfo, maxRetries) {
+                        for (var intento = 1; intento <= (maxRetries || 3); intento++) {
+                            try {
+                                var s3Res = await fetch(urlInfo.uploadUrl, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': file.type || 'application/pdf' },
+                                    body: file
+                                });
+                                if (s3Res.ok) return { ok: true, tipo: urlInfo.tipo, finalUrl: urlInfo.finalUrl, s3Key: urlInfo.s3Key };
+                            } catch (e) {
+                                console.warn('Reintentando ' + urlInfo.tipo + ' (' + intento + '/' + maxRetries + '):', e.message);
+                                if (intento < maxRetries) await new Promise(function(r) { setTimeout(r, 300 * intento); });
+                            }
+                        }
+                        return { ok: false, tipo: urlInfo.tipo };
+                    }
+
+                    var uploadPromises = archivosParaSubir.map(function(a, idx) {
+                        return urls[idx] ? subirConRetry(a.file, urls[idx], 3) : Promise.resolve({ ok: false, tipo: a.tipo });
+                    });
+                    var results = await Promise.all(uploadPromises);
+                    results.forEach(function(r) { if (r && r.ok) exitosos.push(r); });
+
+                    // 3) Confirmar TODOS en UN solo request al servidor
+                    if (exitosos.length) {
+                        await fetch('/api/almacen/entradas/' + encodeURIComponent(entId) + '/archivos/confirmar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ exitosos: exitosos })
+                        });
+                    }
+                } catch (uploadErr) {
+                    console.warn('Error en subida de archivos:', uploadErr.message);
+                }
             }
 
             // Cierre del formulario y recarga inmediata
