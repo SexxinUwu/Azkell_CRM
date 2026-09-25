@@ -1076,7 +1076,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     })
                 ]);
 
-                const signedRows = await Promise.all((rows || []).map(async (r) => {
+                const signedRows = (rows || []).map((r) => {
                     // Formatear fecha exacta YYYY-MM-DD sin desfase de zona horaria
                     if (r.fecha) {
                         if (r.fecha instanceof Date) {
@@ -1121,15 +1121,39 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         };
                     }) : [];
                     delete r.items_raw;
-                    if (r.url_voucher) { const k = s3KeyFromUrl(r.url_voucher); if (k) r.url_voucher_presigned = await getPresignedUrl(k).catch(() => r.url_voucher); }
-                    if (r.url_cotizacion) { const k = s3KeyFromUrl(r.url_cotizacion); if (k) r.url_cotizacion_presigned = await getPresignedUrl(k).catch(() => r.url_cotizacion); }
-                    if (r.url_factura) { const k = s3KeyFromUrl(r.url_factura); if (k) r.url_factura_presigned = await getPresignedUrl(k).catch(() => r.url_factura); }
+                    r.url_voucher_presigned = r.url_voucher ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/voucher/ver') : null;
+                    r.url_cotizacion_presigned = r.url_cotizacion ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/cotizacion/ver') : null;
+                    r.url_factura_presigned = r.url_factura ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/factura/ver') : null;
                     return r;
-                }));
+                });
                 res.json(signedRows);
             } catch (innerErr) {
                 console.error('[GET /api/almacen/entradas inner error]', innerErr);
                 res.status(500).json({ error: innerErr.message });
+            }
+        });
+    });
+
+    router.get('/entradas/:id/archivo/:tipo/ver', async (req, res) => {
+        const { id, tipo } = req.params;
+        if (!['voucher', 'cotizacion', 'factura'].includes(tipo)) return res.status(400).send('Tipo de archivo inválido');
+        const tdb = getDb(req);
+        const col = `url_${tipo}`;
+        tdb.query(`SELECT ${col} FROM entradas_inv WHERE id=?`, [id], async (err, rows) => {
+            if (err || !rows || !rows.length || !rows[0][col]) {
+                return res.status(404).send('Archivo no encontrado');
+            }
+            const rawUrl = rows[0][col];
+            try {
+                const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+                const key = s3KeyFromUrl(rawUrl);
+                if (key) {
+                    const signed = await getPresignedUrl(key, 7200);
+                    return res.redirect(signed);
+                }
+                res.redirect(rawUrl);
+            } catch(e) {
+                res.redirect(rawUrl);
             }
         });
     });
