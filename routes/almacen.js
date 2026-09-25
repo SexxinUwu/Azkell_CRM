@@ -1415,13 +1415,14 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     // ── Pre-signed Upload: genera URL para subir directo a S3 desde el navegador ──
     router.post('/entradas/:id/archivo/:tipo/upload-url', async (req, res) => {
-        const { tipo } = req.params;
-        if (!['voucher', 'cotizacion', 'factura'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
         try {
+            const { tipo } = req.params;
+            if (!['voucher', 'cotizacion', 'factura'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
             const { getPresignedUploadUrl } = require('../utils/s3');
-            const ext = (req.body.fileName || 'file.pdf').split('.').pop() || 'pdf';
+            const body = req.body || {};
+            const ext = (body.fileName || 'file.pdf').split('.').pop() || 'pdf';
             const s3Key = `almacen/entradas/${req.params.id}/${tipo}_${Date.now()}.${ext}`;
-            const uploadUrl = await getPresignedUploadUrl(s3Key, req.body.contentType || 'application/pdf', 600);
+            const uploadUrl = await getPresignedUploadUrl(s3Key, body.contentType || 'application/pdf', 600);
             const finalUrl = `https://${(process.env.AWS_BUCKET_NAME || '').trim()}.s3.${(process.env.AWS_REGION || 'us-east-2').trim()}.amazonaws.com/${s3Key}`;
             res.json({ ok: true, uploadUrl, s3Key, finalUrl });
         } catch (e) {
