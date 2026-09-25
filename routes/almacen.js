@@ -1471,6 +1471,14 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 sets.push(`${col}=?`);
                 params.push(ex.finalUrl);
                 if (ex.tipo === 'voucher') cambiaEstado = true;
+                if (ex.tipo === 'factura') {
+                    sets.push("estado_factura='Factura Entregada'");
+                    const docRef = (ex.documento_referencia || (req.body && req.body.documento_referencia) || '').trim();
+                    if (docRef) {
+                        sets.push("documento_referencia=?");
+                        params.push(docRef);
+                    }
+                }
             }
 
             if (cambiaEstado) {
