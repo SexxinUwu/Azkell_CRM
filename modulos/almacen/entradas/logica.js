@@ -479,88 +479,58 @@ window._entAgregarItem = function() {
     
     var tipoOrden = ((document.getElementById('ent-f-tipo-orden') || {}).value || '').toLowerCase();
     var isServicio = tipoOrden === 'orden de servicio';
+    var placeholderTxt = isServicio ? 'Buscar servicio…' : 'Buscar artículo…';
 
-    if (isServicio) {
-        card.innerHTML =
-            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">' +
-                '<div style="flex:1;position:relative;">' +
-                    '<input type="text" id="' + cbId + '-txt" class="ent-input-sm ent-item-desc" data-idx="' + idx + '"' +
-                        ' placeholder="Buscar servicio…" autocomplete="off"' +
-                        ' oninput="window._entCbFiltrar(\'' + cbId + '\')"' +
-                        ' onfocus="window._entCbFiltrar(\'' + cbId + '\')"' +
-                        ' onblur="window._cbHide(\'' + cbId + '\')">' +
-                    '<input type="hidden" id="' + cbId + '" class="ent-item-inv-id" data-idx="' + idx + '">' +
-                    '<div id="' + cbId + '-dd" class="cb-dropdown"></div>' +
-                '</div>' +
-                '<button type="button" onclick="window._entQuitarItem(' + idx + ')"' +
-                    ' style="width:32px;height:32px;border-radius:10px;border:none;background:#fee2e2;' +
-                    'color:#ef4444;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;">' +
-                    '<i class="bi bi-x-lg"></i>' +
-                '</button>' +
+    card.innerHTML =
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">' +
+            '<div style="flex:1;position:relative;">' +
+                '<input type="text" id="' + cbId + '-txt" class="ent-input-sm ent-item-desc" data-idx="' + idx + '"' +
+                    ' placeholder="' + placeholderTxt + '" autocomplete="off"' +
+                    ' oninput="window._entCbFiltrar(\'' + cbId + '\')"' +
+                    ' onfocus="window._entCbFiltrar(\'' + cbId + '\')"' +
+                    ' onblur="window._cbHide(\'' + cbId + '\')">' +
+                '<input type="hidden" id="' + cbId + '" class="ent-item-inv-id" data-idx="' + idx + '">' +
+                '<div id="' + cbId + '-dd" class="cb-dropdown"></div>' +
             '</div>' +
-            '<div style="display:flex; gap:10px; align-items:center; background:#f8fafc; padding:10px; border-radius:8px;">' +
-                '<div style="flex:1"><div class="ent-field-label">Costo Total (S/)</div>' +
-                    '<input type="number" class="ent-input-sm ent-item-imp" data-idx="' + idx + '"' +
-                        ' value="0" step="0.01" oninput="window._entSyncServiceCost(' + idx + ', this.value)">' +
-                '</div>' +
+            (!isServicio ? 
+            '<button type="button" onclick="window._entAbrirQR(' + idx + ')" title="Escanear QR"' +
+                ' style="width:32px;height:32px;border-radius:10px;border:1.5px solid #2563eb;background:#eff6ff;' +
+                'color:#2563eb;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.82rem;">' +
+                '<i class="bi bi-qr-code-scan"></i>' +
+            '</button>' : '') +
+            '<button type="button" onclick="window._entQuitarItem(' + idx + ')"' +
+                ' style="width:32px;height:32px;border-radius:10px;border:none;background:#fee2e2;' +
+                'color:#ef4444;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;">' +
+                '<i class="bi bi-x-lg"></i>' +
+            '</button>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:72px 1fr 1fr 80px 1fr;gap:5px;">' +
+            '<div><div class="ent-field-label">Cant.</div>' +
+                '<input type="number" class="ent-input-sm ent-item-cant" data-idx="' + idx + '"' +
+                    ' value="1" min="0.001" step="0.001" oninput="window._entCalcImporte(' + idx + ',\'cant\')">' +
             '</div>' +
-            // Hidden fields to satisfy the backend
-            '<input type="hidden" class="ent-item-cant" data-idx="' + idx + '" value="1">' +
-            '<input type="hidden" class="ent-item-vu" data-idx="' + idx + '" value="0">' +
-            '<input type="hidden" class="ent-item-pu" data-idx="' + idx + '" value="0">' +
-            '<input type="hidden" class="ent-item-igv" data-idx="' + idx + '" value="0">' +
-            '<div id="ent-price-alert-' + idx + '" style="display:none;"></div>';
-    } else {
-        card.innerHTML =
-            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">' +
-                '<div style="flex:1;position:relative;">' +
-                    '<input type="text" id="' + cbId + '-txt" class="ent-input-sm ent-item-desc" data-idx="' + idx + '"' +
-                        ' placeholder="Buscar artículo…" autocomplete="off"' +
-                        ' oninput="window._entCbFiltrar(\'' + cbId + '\')"' +
-                        ' onfocus="window._entCbFiltrar(\'' + cbId + '\')"' +
-                        ' onblur="window._cbHide(\'' + cbId + '\')">' +
-                    '<input type="hidden" id="' + cbId + '" class="ent-item-inv-id" data-idx="' + idx + '">' +
-                    '<div id="' + cbId + '-dd" class="cb-dropdown"></div>' +
-                '</div>' +
-                '<button type="button" onclick="window._entAbrirQR(' + idx + ')" title="Escanear QR"' +
-                    ' style="width:32px;height:32px;border-radius:10px;border:1.5px solid #2563eb;background:#eff6ff;' +
-                    'color:#2563eb;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.82rem;">' +
-                    '<i class="bi bi-qr-code-scan"></i>' +
-                '</button>' +
-                '<button type="button" onclick="window._entQuitarItem(' + idx + ')"' +
-                    ' style="width:32px;height:32px;border-radius:10px;border:none;background:#fee2e2;' +
-                    'color:#ef4444;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;">' +
-                    '<i class="bi bi-x-lg"></i>' +
-                '</button>' +
+            '<div><div class="ent-field-label ent-lbl-vu" data-idx="' + idx + '">Valor Unit.</div>' +
+                '<input type="number" class="ent-input-sm ent-item-vu" data-idx="' + idx + '"' +
+                    ' value="0" min="0" step="0.0001" placeholder="0.00" oninput="window._entCalcImporte(' + idx + ',\'vu\')">' +
             '</div>' +
-            '<div style="display:grid;grid-template-columns:72px 1fr 1fr 80px 1fr;gap:5px;">' +
-                '<div><div class="ent-field-label">Cant.</div>' +
-                    '<input type="number" class="ent-input-sm ent-item-cant" data-idx="' + idx + '"' +
-                        ' value="1" min="0.001" step="0.001" oninput="window._entCalcImporte(' + idx + ',\'cant\')">' +
-                '</div>' +
-                '<div><div class="ent-field-label ent-lbl-vu" data-idx="' + idx + '">Valor Unit.</div>' +
-                    '<input type="number" class="ent-input-sm ent-item-vu" data-idx="' + idx + '"' +
-                        ' value="0" min="0" step="0.0001" placeholder="0.00" oninput="window._entCalcImporte(' + idx + ',\'vu\')">' +
-                '</div>' +
-                '<div><div class="ent-field-label ent-lbl-pu" data-idx="' + idx + '">Precio Unit.</div>' +
-                    '<input type="number" class="ent-input-sm ent-item-pu" data-idx="' + idx + '"' +
-                        ' value="0" min="0" step="0.0001" placeholder="0.00" oninput="window._entCalcImporte(' + idx + ',\'pu\')">' +
-                '</div>' +
-                '<div><div class="ent-field-label">IGV</div>' +
-                    '<input type="number" class="ent-input-sm ent-item-igv" data-idx="' + idx + '"' +
-                        ' value="0" readonly style="background:#f1f5f9;color:#94a3b8;">' +
-                '</div>' +
-                '<div><div class="ent-field-label">Importe</div>' +
-                    '<input type="number" class="ent-input-sm ent-item-imp" data-idx="' + idx + '"' +
-                        ' value="0" step="0.01" placeholder="0.00" oninput="window._entCalcImporte(' + idx + ',\'imp\')">' +
-                '</div>' +
+            '<div><div class="ent-field-label ent-lbl-pu" data-idx="' + idx + '">Precio Unit.</div>' +
+                '<input type="number" class="ent-input-sm ent-item-pu" data-idx="' + idx + '"' +
+                    ' value="0" min="0" step="0.0001" placeholder="0.00" oninput="window._entCalcImporte(' + idx + ',\'pu\')">' +
             '</div>' +
-            '<div id="ent-price-alert-' + idx + '" style="display:none;margin-top:6px;align-items:center;gap:.4rem;"></div>';
-    }
+            '<div><div class="ent-field-label">IGV</div>' +
+                '<input type="number" class="ent-input-sm ent-item-igv" data-idx="' + idx + '"' +
+                    ' value="0" readonly style="background:#f1f5f9;color:#94a3b8;">' +
+            '</div>' +
+            '<div><div class="ent-field-label">Importe</div>' +
+                '<input type="number" class="ent-input-sm ent-item-imp" data-idx="' + idx + '"' +
+                    ' value="0" step="0.01" placeholder="0.00" oninput="window._entCalcImporte(' + idx + ',\'imp\')">' +
+            '</div>' +
+        '</div>' +
+        '<div id="ent-price-alert-' + idx + '" style="display:none;margin-top:6px;align-items:center;gap:.4rem;"></div>';
 
     container.appendChild(card);
 
-    if (!window._entInvData.length) {
+    if (!window._entInvData || !window._entInvData.length) {
         window._entCargarInv(function() { window._entInitCbItem(idx, cbId); });
     } else {
         window._entInitCbItem(idx, cbId);
@@ -568,25 +538,29 @@ window._entAgregarItem = function() {
 };
 
 window._entInitCbItem = function(idx, cbId) {
-    var tipoEl = document.getElementById('ent-f-tipo-oc');
-    var isServicio = tipoEl && tipoEl.value === 'Servicio';
+    var tipoEl = document.getElementById('ent-f-tipo-orden') || document.getElementById('ent-f-tipo-oc');
+    var isServicio = tipoEl && ((tipoEl.value || '').toLowerCase() === 'orden de servicio' || tipoEl.value === 'Servicio');
     var dataFiltered = (window._entInvData || []).filter(function(d) {
-        var isServId = d.id && d.id.toUpperCase().startsWith('SERV-');
-        var isFamServ = d.familia === 'Servicio' || d.familia === 'Servicios';
-        var isTipoServ = d.tipo === 'Servicio';
+        var isServId = d.id && String(d.id).toUpperCase().startsWith('SERV');
+        var isFamServ = d.familia === 'Servicio' || d.familia === 'Servicios' || (d.tipo && String(d.tipo).toLowerCase() === 'servicio');
+        var isTipoServ = d.es_servicio === 1 || d.es_servicio === true || d.tipo === 'Servicio' || (d.tipo && String(d.tipo).toLowerCase() === 'servicio');
         var isService = isServId || isFamServ || isTipoServ;
         return isServicio ? isService : !isService;
     });
     var items = dataFiltered.map(function(d) {
         return { value: d.id, label: d.id + ' — ' + (d.descripcion || '') };
     });
-    window._cbInit(cbId, items, 'Buscar artículo…');
+    window._cbInit(cbId, items, isServicio ? 'Buscar servicio…' : 'Buscar artículo…');
     window._cbOnSelect(cbId, function(val) {
         var item = (window._entInvData || []).find(function(d) { return d.id === val; });
         if (item) {
-            var ref = parseFloat(item.costo_referencial || 0);
+            var ref = parseFloat(item.costo_referencial || item.precio_referencial || item.costo_unitario || item.precio || 0);
             var puEl = document.querySelector('.ent-item-pu[data-idx="' + idx + '"]');
             var vuEl = document.querySelector('.ent-item-vu[data-idx="' + idx + '"]');
+            var cantEl = document.querySelector('.ent-item-cant[data-idx="' + idx + '"]');
+            if (cantEl && (!cantEl.value || parseFloat(cantEl.value) <= 0)) {
+                cantEl.value = '1';
+            }
             var mode = window._entIgvMode || 'incluido';
             if (mode === 'mas_igv') {
                 if (vuEl) { vuEl.value = (ref / 1.18).toFixed(4); vuEl.dataset.oldCost = ref; }
@@ -994,7 +968,21 @@ window.guardarEntrada = function() {
 
     fetch(url, { method: method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-        .then(function(r) {
+        .then(async function(r) {
+            var savedId = window._entEditId || (r && r.id);
+            var fileCot = document.getElementById('ent-f-cotizacion') ? document.getElementById('ent-f-cotizacion').files[0] : null;
+            if (savedId && fileCot) {
+                try {
+                    var fd = new FormData();
+                    fd.append('archivo', fileCot);
+                    await fetch('/api/almacen/entradas/' + encodeURIComponent(savedId) + '/archivo/cotizacion', {
+                        method: 'POST',
+                        body: fd
+                    });
+                } catch(e) {
+                    console.error('Error subiendo cotización adjunta:', e);
+                }
+            }
             // Cierre del formulario y recarga inmediata
             window._entCerrarModal();
             window._entEditId = null;
@@ -1010,6 +998,18 @@ window.guardarEntrada = function() {
                 btnGuardar.innerHTML = originalBtnHtml;
             }
         });
+};
+
+// ── Preview de selección de archivo en formulario ──────────────────
+window._entOnFileChange = function(input, previewId) {
+    var preview = document.getElementById(previewId);
+    if (!preview) return;
+    if (input.files && input.files[0]) {
+        var file = input.files[0];
+        preview.innerHTML = '<span class="badge bg-danger-subtle text-danger fw-bold"><i class="bi bi-file-earmark-pdf me-1"></i>' + _entEsc(file.name) + ' (' + (file.size / 1024).toFixed(1) + ' KB)</span>';
+    } else {
+        preview.textContent = 'Ningún archivo seleccionado';
+    }
 };
 
 // ── Abrir panel ───────────────────────────────────────────────────
@@ -1085,18 +1085,12 @@ window.abrirModalEntrada = function() {
     window._entOnCondicionPagoChange();
     setTimeout(window._entToggleTipoOrden, 50);
 
-    ['ent-f-voucher', 'ent-f-cotizacion', 'ent-f-factura'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if(el) {
-            el.value = '';
-            if(el.nextElementSibling) el.nextElementSibling.textContent = 'Ningún archivo';
-            if(el.parentElement) {
-                el.parentElement.style.borderColor = 'var(--border)';
-                el.parentElement.style.background = '#f8fafc';
-                el.parentElement.style.borderStyle = 'dashed';
-            }
-        }
-    });
+    var fCot = document.getElementById('ent-f-cotizacion');
+    if (fCot) fCot.value = '';
+    var fCotPrev = document.getElementById('ent-cotizacion-preview');
+    if (fCotPrev) fCotPrev.textContent = 'Ningún archivo seleccionado';
+    var fCotExist = document.getElementById('ent-cotizacion-existente');
+    if (fCotExist) { fCotExist.style.display = 'none'; fCotExist.innerHTML = ''; }
 
     window._cbReset('ent-f-proveedor');
     var fecha = document.getElementById('ent-f-fecha');
@@ -1221,26 +1215,21 @@ window.abrirModalEditarEntrada = function(id) {
     window._entSetIgvMode(entrada.tipo_igv || 'sin_igv');
 
     // Cargar visualmente los archivos adjuntos existentes
-    var setupFilePreview = function(inputId, url, urlPresigned, nombreTipo) {
-        var el = document.getElementById(inputId);
-        if (!el) return;
-        var fileUrl = urlPresigned || url;
-        if (fileUrl) {
-            var fileNameSpan = el.parentElement ? el.parentElement.querySelector('.file-name') : el.nextElementSibling;
-            if (fileNameSpan) {
-                fileNameSpan.innerHTML = '<a href="' + fileUrl + '" target="_blank" onclick="event.stopPropagation();" style="color:#0284c7;text-decoration:underline;font-weight:bold;"><i class="bi bi-file-earmark-check"></i> ' + nombreTipo + ' Guardado</a>';
-            }
-            if (el.parentElement) {
-                el.parentElement.style.borderColor = '#16a34a';
-                el.parentElement.style.background = 'rgba(22, 163, 74, 0.05)';
-                el.parentElement.style.borderStyle = 'solid';
-            }
+    var fCot = document.getElementById('ent-f-cotizacion');
+    if (fCot) fCot.value = '';
+    var fCotPrev = document.getElementById('ent-cotizacion-preview');
+    if (fCotPrev) fCotPrev.textContent = 'Ningún archivo nuevo seleccionado';
+    var fCotExist = document.getElementById('ent-cotizacion-existente');
+    if (fCotExist) {
+        var cotUrl = entrada.url_cotizacion_presigned || entrada.url_cotizacion;
+        if (cotUrl) {
+            fCotExist.style.display = 'block';
+            fCotExist.innerHTML = '<a href="' + cotUrl + '" target="_blank" class="btn btn-sm btn-outline-danger fw-bold" style="border-radius:8px; font-size:0.75rem;"><i class="bi bi-file-earmark-pdf me-1"></i> Ver Cotización Guardada</a>';
+        } else {
+            fCotExist.style.display = 'none';
+            fCotExist.innerHTML = '';
         }
-    };
-
-    setupFilePreview('ent-f-voucher', entrada.url_voucher, entrada.url_voucher_presigned, 'Voucher');
-    setupFilePreview('ent-f-cotizacion', entrada.url_cotizacion, entrada.url_cotizacion_presigned, 'Cotización');
-    setupFilePreview('ent-f-factura', entrada.url_factura, entrada.url_factura_presigned, 'Factura');
+    }
 
     var cards = document.getElementById('ent-items-cards');
     if (cards) cards.innerHTML = '';
@@ -2759,24 +2748,32 @@ window._entRenderKPIs = function(data) {
         '</div>';
 };
 
-window._entToggleTipoOrden = function() { var tipo = document.getElementById('ent-f-tipo-orden').value; var elPlaca = document.getElementById('ent-placa-container'); var elOt = document.getElementById('ent-ot-container'); if (!elPlaca || !elOt) return; 
-        var titleEl = document.getElementById('ent-modal-title');
-        if (titleEl) {
-            titleEl.textContent = tipo.toLowerCase() === 'orden de servicio' ? 'Nueva Orden de Servicio' : 'Nueva Orden de Compra';
-        }
+window._entToggleTipoOrden = function() {
+    var tipo = ((document.getElementById('ent-f-tipo-orden') || {}).value || '').toLowerCase();
+    var isServicio = tipo === 'orden de servicio';
+    var elPlaca = document.getElementById('ent-placa-container');
+    var elOt = document.getElementById('ent-ot-container');
+    var titleEl = document.getElementById('ent-modal-title');
+    if (titleEl) {
+        titleEl.textContent = isServicio ? (window._entEditId ? 'Editar Orden de Servicio' : 'Nueva Orden de Servicio') : (window._entEditId ? 'Editar Orden de Compra' : 'Nueva Orden de Compra');
+    }
 
-        if (tipo.toLowerCase() === 'orden de servicio') { elPlaca.style.display = 'none'; elOt.style.display = 'block'; } else { elPlaca.style.display = 'block'; elOt.style.display = 'none'; }  
-          var itemsDesc = document.querySelectorAll('.ent-item-desc');
-          for (var i = 0; i < itemsDesc.length; i++) {
-              var idx = itemsDesc[i].getAttribute('data-idx');
-              var cbId = 'ent-art-' + idx;
-              if (typeof window._entInitCbItem === 'function') {
-                  window._entInitCbItem(idx, cbId);
-                  window._cbReset(cbId);
-                  window._entCalcImporte(idx, 'pu'); // Reset calculations if needed
-              }
-          }
-     };
+    if (elPlaca && elOt) {
+        if (isServicio) { elPlaca.style.display = 'none'; elOt.style.display = 'block'; }
+        else { elPlaca.style.display = 'block'; elOt.style.display = 'none'; }
+    }
+
+    var itemsDesc = document.querySelectorAll('.ent-item-desc');
+    for (var i = 0; i < itemsDesc.length; i++) {
+        var idx = itemsDesc[i].getAttribute('data-idx');
+        var cbId = 'ent-art-' + idx;
+        itemsDesc[i].placeholder = isServicio ? 'Buscar servicio…' : 'Buscar artículo…';
+        if (typeof window._entInitCbItem === 'function') {
+            window._entInitCbItem(idx, cbId);
+        }
+    }
+    window._entActualizarTotal();
+};
 
 window._entSyncServiceCost = function(idx, val) {
     var v = parseFloat(val) || 0;

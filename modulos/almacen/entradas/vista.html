@@ -938,6 +938,26 @@
         </div>
       </div>
 
+      <!-- ── SECCIÓN 5: COTIZACIÓN ADJUNTA ── -->
+      <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+        <h6 class="fw-bold text-dark d-flex align-items-center justify-content-between mb-2 border-bottom pb-2" style="font-size:0.92rem;">
+          <span class="d-flex align-items-center gap-2"><i class="bi bi-file-earmark-pdf text-danger"></i> Cotización del Proveedor</span>
+          <span class="badge bg-secondary-subtle text-secondary small fw-medium" style="font-size:0.7rem;">Opcional / Recomendado</span>
+        </h6>
+        <div class="row g-2">
+          <div class="col-12">
+            <div class="d-flex align-items-center gap-2 p-2 rounded-3 border bg-light" id="ent-cotizacion-container">
+              <label for="ent-f-cotizacion" class="btn btn-sm btn-outline-danger fw-bold d-flex align-items-center gap-1 mb-0 px-3" style="border-radius:10px; cursor:pointer;">
+                <i class="bi bi-upload"></i> Seleccionar Cotización
+              </label>
+              <input type="file" id="ent-f-cotizacion" class="d-none" accept=".pdf,.png,.jpg,.jpeg,.webp" onchange="window._entOnFileChange(this, 'ent-cotizacion-preview')">
+              <span id="ent-cotizacion-preview" class="text-muted small text-truncate flex-grow-1">Ningún archivo seleccionado</span>
+            </div>
+            <div id="ent-cotizacion-existente" style="display:none; margin-top:6px;"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
 
