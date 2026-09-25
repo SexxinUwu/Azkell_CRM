@@ -992,48 +992,9 @@ window.guardarEntrada = function() {
     }
     window._isGuardandoEntrada = true;
 
-    // Obtener archivos adjuntos antes de cerrar el modal
-    var fVoucher = document.getElementById('ent-f-voucher') ? document.getElementById('ent-f-voucher').files[0] : null;
-    var fCotizacion = document.getElementById('ent-f-cotizacion') ? document.getElementById('ent-f-cotizacion').files[0] : null;
-    var fFactura = document.getElementById('ent-f-factura') ? document.getElementById('ent-f-factura').files[0] : null;
-    var isEdit = !!window._entEditId;
-
     fetch(url, { method: method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-        .then(async function(r) {
-            var entId = isEdit ? window._entEditId : r.id;
-            
-            // ── Subida de archivos en paralelo (misma vía que el modal de Subir Archivos) ──
-            var archivosParaSubir = [];
-            if (fVoucher) archivosParaSubir.push({ file: fVoucher, tipo: 'voucher' });
-            if (fCotizacion) archivosParaSubir.push({ file: fCotizacion, tipo: 'cotizacion' });
-            if (fFactura) archivosParaSubir.push({ file: fFactura, tipo: 'factura' });
-
-            if (archivosParaSubir.length) {
-                if (btnGuardar) {
-                    btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" style="width: 1rem; height: 1rem;"></span>Subiendo documentos...';
-                }
-
-                try {
-                    var subirArchivo = async function(item) {
-                        var fd = new FormData();
-                        fd.append('archivo', item.file);
-                        var r = await fetch('/api/almacen/entradas/' + encodeURIComponent(entId) + '/archivo/' + item.tipo, {
-                            method: 'POST',
-                            body: fd
-                        });
-                        if (!r.ok) {
-                            var txt = await r.text().catch(function() { return ''; });
-                            console.warn('Error subiendo ' + item.tipo + ':', txt);
-                        }
-                    };
-
-                    await Promise.all(archivosParaSubir.map(subirArchivo));
-                } catch (uploadErr) {
-                    console.warn('Error en subida de archivos:', uploadErr.message);
-                }
-            }
-
+        .then(function(r) {
             // Cierre del formulario y recarga inmediata
             window._entCerrarModal();
             window._entEditId = null;
@@ -2216,11 +2177,6 @@ window.abrirModalSubirArchivos = function(id) {
     var fFac = document.getElementById('subir-file-factura');
     if (fFac) fFac.value = '';
 
-    // Voucher
-    renderizarArchivoExistente('subir-existente-voucher', entrada.url_voucher, entrada.url_voucher_presigned, 'Voucher', 'voucher', 'text-danger', 'bi-file-earmark-pdf');
-    var fVou = document.getElementById('subir-file-voucher');
-    if (fVou) fVou.value = '';
-
     var modalEl = document.getElementById('modalSubirArchivosOC');
     if (modalEl) {
         var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -2229,7 +2185,7 @@ window.abrirModalSubirArchivos = function(id) {
 };
 
 window.eliminarArchivoOCModal = async function(id, tipo) {
-    var nombres = { voucher: 'el Voucher', cotizacion: 'la Cotización', factura: 'la Factura' };
+    var nombres = { cotizacion: 'la Cotización', factura: 'la Factura' };
     var nom = nombres[tipo] || 'el archivo';
     if (!confirm('¿Está seguro de eliminar ' + nom + ' de esta Orden de Compra?')) return;
 
@@ -2263,10 +2219,9 @@ window.guardarArchivosOCModal = async function() {
 
     var fCot = document.getElementById('subir-file-cotizacion') ? document.getElementById('subir-file-cotizacion').files[0] : null;
     var fFac = document.getElementById('subir-file-factura') ? document.getElementById('subir-file-factura').files[0] : null;
-    var fVou = document.getElementById('subir-file-voucher') ? document.getElementById('subir-file-voucher').files[0] : null;
 
-    if (!fCot && !fFac && !fVou) {
-        alert('Por favor seleccione al menos un archivo (Cotización, Factura o Voucher) para subir.');
+    if (!fCot && !fFac) {
+        alert('Por favor seleccione al menos un archivo (Cotización o Factura) para subir.');
         return;
     }
 
@@ -2294,9 +2249,6 @@ window.guardarArchivosOCModal = async function() {
         if (entrada && data.ok) {
             entrada['url_' + tipo] = data.url;
             entrada['url_' + tipo + '_presigned'] = data.presignedUrl || data.url;
-            if (tipo === 'voucher' && data.estado) {
-                entrada.estado = data.estado;
-            }
         }
     };
 
@@ -2304,7 +2256,6 @@ window.guardarArchivosOCModal = async function() {
         var promesas = [];
         if (fCot) promesas.push(uploadTipo(fCot, 'cotizacion'));
         if (fFac) promesas.push(uploadTipo(fFac, 'factura'));
-        if (fVou) promesas.push(uploadTipo(fVou, 'voucher'));
 
         await Promise.all(promesas);
 

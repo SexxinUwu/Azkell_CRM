@@ -1734,7 +1734,7 @@ const sseClients = new Set();
 // ============================================================
 function verifyToken(req, res, next) {
     const PUBLIC_PATHS = ['/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas'];
-    if (PUBLIC_PATHS.includes(req.path)) return next();
+    if (PUBLIC_PATHS.includes(req.path) || req.path.endsWith('/ver') || (req.path.includes('/archivo/') && req.path.endsWith('/ver'))) return next();
     const auth = req.headers['authorization'];
     if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'No autorizado' });
     try {
