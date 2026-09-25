@@ -999,6 +999,7 @@ window.guardarEntrada = function() {
     }
 
     var existingEnt = window._entEditId ? ((window._entData || []).find(function(e) { return e.id === window._entEditId; }) || {}) : {};
+    var urlCotValue = document.getElementById('ent-f-url-cotizacion') ? document.getElementById('ent-f-url-cotizacion').value : '';
 
     var payload = {
         fecha: fecha,
@@ -1027,6 +1028,7 @@ window.guardarEntrada = function() {
         dias_credito: dias_credito,
         dias_pagar: dias_credito,
         creado_por: localStorage.getItem('fleet_nombre_usuario') || localStorage.getItem('fleet_user') || 'Daniel',
+        url_cotizacion: urlCotValue || (window._entEditId ? undefined : null),
         items: items
     };
 
@@ -1043,17 +1045,7 @@ window.guardarEntrada = function() {
 
     fetch(url, { method: method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-        .then(async function(r) {
-            var savedId = window._entEditId || (r && r.id);
-            var fileCot = document.getElementById('ent-f-cotizacion') ? document.getElementById('ent-f-cotizacion').files[0] : null;
-            if (savedId && fileCot) {
-                try {
-                    await window._entSubirArchivosDirectoS3(savedId, [{ file: fileCot, tipo: 'cotizacion' }]);
-                } catch(e) {
-                    console.error('Error subiendo cotización adjunta:', e);
-                    alert('⚠️ La orden se guardó pero hubo un problema al subir la cotización: ' + e.message);
-                }
-            }
+        .then(function(r) {
             // Cierre del formulario y recarga inmediata
             window._entCerrarModal();
             window._entEditId = null;
@@ -1071,16 +1063,66 @@ window.guardarEntrada = function() {
         });
 };
 
-// ── Preview de selección de archivo en formulario ──────────────────
-window._entOnFileChange = function(input, previewId) {
-    var preview = document.getElementById(previewId);
-    if (!preview) return;
-    if (input.files && input.files[0]) {
-        var file = input.files[0];
-        preview.innerHTML = '<span class="badge bg-danger-subtle text-danger fw-bold"><i class="bi bi-file-earmark-pdf me-1"></i>' + _entEsc(file.name) + ' (' + (file.size / 1024).toFixed(1) + ' KB)</span>';
-    } else {
-        preview.textContent = 'Ningún archivo seleccionado';
+// ── Subida inmediata de cotización al seleccionar archivo (Mismo patrón ultrarrápido que Documentos de Flota) ──
+window._entSubirCotizacionInput = async function(input) {
+    var preview = document.getElementById('ent-cotizacion-preview');
+    var btnSel = document.getElementById('ent-btn-sel-cotizacion');
+    var hiddenUrl = document.getElementById('ent-f-url-cotizacion');
+    if (!input.files || !input.files[0]) return;
+
+    var file = input.files[0];
+    if (preview) {
+        preview.innerHTML = '<span class="spinner-border spinner-border-sm text-danger me-1" style="width:0.85rem; height:0.85rem;"></span> <span class="text-primary fw-medium small">Subiendo ' + _entEsc(file.name) + ' a la nube...</span>';
     }
+    if (btnSel) btnSel.classList.add('disabled');
+
+    try {
+        var token = localStorage.getItem('fleet_token') || localStorage.getItem('token') || '';
+        var resUrl = await fetch('/api/almacen/entradas/upload-url?filename=' + encodeURIComponent(file.name) + '&contentType=' + encodeURIComponent(file.type || 'application/pdf') + '&tipo=cotizacion', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!resUrl.ok) throw new Error('Error solicitando permisos de subida');
+        var urlData = await resUrl.json();
+        if (!urlData.uploadUrl) throw new Error(urlData.error || 'No se obtuvo URL de subida');
+
+        var resUp = await fetch(urlData.uploadUrl, {
+            method: 'PUT',
+            body: file,
+            headers: { 'Content-Type': file.type || 'application/pdf' }
+        });
+        if (!resUp.ok) throw new Error('Error transfiriendo archivo a AWS S3');
+
+        if (hiddenUrl) hiddenUrl.value = urlData.fileUrl;
+
+        if (preview) {
+            preview.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold d-inline-flex align-items-center gap-1 py-1 px-2" style="border-radius:8px;">' +
+                '<i class="bi bi-check2-circle"></i> ' + _entEsc(file.name) + ' (' + (file.size / 1024).toFixed(1) + ' KB)' +
+                '</span>' +
+                '<button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2 text-decoration-none" title="Quitar archivo" onclick="window._entEliminarCotizacionTemp()"><i class="bi bi-x-circle-fill"></i></button>';
+        }
+    } catch(e) {
+        console.error('Error al subir cotización:', e);
+        if (hiddenUrl) hiddenUrl.value = '';
+        if (preview) {
+            preview.innerHTML = '<span class="text-danger small fw-semibold"><i class="bi bi-exclamation-triangle me-1"></i> Error al subir: ' + _entEsc(e.message) + '</span>';
+        }
+        alert('Error al subir cotización: ' + e.message);
+    } finally {
+        if (btnSel) btnSel.classList.remove('disabled');
+    }
+};
+
+window._entEliminarCotizacionTemp = function() {
+    var f = document.getElementById('ent-f-cotizacion');
+    if (f) f.value = '';
+    var hiddenUrl = document.getElementById('ent-f-url-cotizacion');
+    if (hiddenUrl) hiddenUrl.value = '';
+    var preview = document.getElementById('ent-cotizacion-preview');
+    if (preview) preview.innerHTML = '<span class="text-muted small">Ningún archivo seleccionado</span>';
+};
+
+window._entOnFileChange = function(input, previewId) {
+    window._entSubirCotizacionInput(input);
 };
 
 // ── Abrir panel ───────────────────────────────────────────────────
@@ -1158,6 +1200,8 @@ window.abrirModalEntrada = function() {
 
     var fCot = document.getElementById('ent-f-cotizacion');
     if (fCot) fCot.value = '';
+    var fCotUrl = document.getElementById('ent-f-url-cotizacion');
+    if (fCotUrl) fCotUrl.value = '';
     var fCotPrev = document.getElementById('ent-cotizacion-preview');
     if (fCotPrev) fCotPrev.textContent = 'Ningún archivo seleccionado';
     var fCotExist = document.getElementById('ent-cotizacion-existente');
@@ -1288,8 +1332,10 @@ window.abrirModalEditarEntrada = function(id) {
     // Cargar visualmente los archivos adjuntos existentes
     var fCot = document.getElementById('ent-f-cotizacion');
     if (fCot) fCot.value = '';
+    var fCotUrl = document.getElementById('ent-f-url-cotizacion');
+    if (fCotUrl) fCotUrl.value = entrada.url_cotizacion || '';
     var fCotPrev = document.getElementById('ent-cotizacion-preview');
-    if (fCotPrev) fCotPrev.textContent = 'Ningún archivo nuevo seleccionado';
+    if (fCotPrev) fCotPrev.textContent = entrada.url_cotizacion ? 'Cotización actual conservada' : 'Ningún archivo seleccionado';
     var fCotExist = document.getElementById('ent-cotizacion-existente');
     if (fCotExist) {
         var cotUrl = entrada.url_cotizacion_presigned || entrada.url_cotizacion;
