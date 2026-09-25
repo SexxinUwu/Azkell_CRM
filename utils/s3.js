@@ -10,7 +10,8 @@ const s3 = new S3Client({
     credentials: {
         accessKeyId:     (process.env.AWS_ACCESS_KEY_ID || '').trim(),
         secretAccessKey: (process.env.AWS_SECRET_ACCESS_KEY || '').trim()
-    }
+    },
+    maxAttempts: 1
 });
 
 const BUCKET = (process.env.AWS_BUCKET_NAME || '').trim();

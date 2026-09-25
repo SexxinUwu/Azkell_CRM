@@ -1003,7 +1003,7 @@ window.guardarEntrada = function() {
         .then(async function(r) {
             var entId = isEdit ? window._entEditId : r.id;
             
-            // ── Subida DIRECTA a S3 (patrón batch idéntico a seguridad/unidades) ──
+            // ── Subida de archivos en paralelo (misma vía que el modal de Subir Archivos) ──
             var archivosParaSubir = [];
             if (fVoucher) archivosParaSubir.push({ file: fVoucher, tipo: 'voucher' });
             if (fCotizacion) archivosParaSubir.push({ file: fCotizacion, tipo: 'cotizacion' });
@@ -1015,52 +1015,20 @@ window.guardarEntrada = function() {
                 }
 
                 try {
-                    // 1) Pedir TODAS las URLs pre-firmadas en UN solo request
-                    var presignBody = archivosParaSubir.map(function(a) {
-                        return { tipo: a.tipo, fileName: a.file.name, contentType: a.file.type || 'application/pdf' };
-                    });
-                    var presignRes = await fetch('/api/almacen/entradas/' + encodeURIComponent(entId) + '/archivos/presigned', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ archivos: presignBody })
-                    });
-                    if (!presignRes.ok) throw new Error('Error obteniendo URLs: HTTP ' + presignRes.status);
-                    var presignData = await presignRes.json();
-                    var urls = presignData.urls || [];
-
-                    // 2) Subir TODOS los archivos en paralelo directo a S3 con retry
-                    var exitosos = [];
-                    async function subirConRetry(file, urlInfo, maxRetries) {
-                        for (var intento = 1; intento <= (maxRetries || 3); intento++) {
-                            try {
-                                var s3Res = await fetch(urlInfo.uploadUrl, {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': file.type || 'application/pdf' },
-                                    body: file
-                                });
-                                if (s3Res.ok) return { ok: true, tipo: urlInfo.tipo, finalUrl: urlInfo.finalUrl, s3Key: urlInfo.s3Key };
-                            } catch (e) {
-                                console.warn('Reintentando ' + urlInfo.tipo + ' (' + intento + '/' + maxRetries + '):', e.message);
-                                if (intento < maxRetries) await new Promise(function(r) { setTimeout(r, 300 * intento); });
-                            }
-                        }
-                        return { ok: false, tipo: urlInfo.tipo };
-                    }
-
-                    var uploadPromises = archivosParaSubir.map(function(a, idx) {
-                        return urls[idx] ? subirConRetry(a.file, urls[idx], 3) : Promise.resolve({ ok: false, tipo: a.tipo });
-                    });
-                    var results = await Promise.all(uploadPromises);
-                    results.forEach(function(r) { if (r && r.ok) exitosos.push(r); });
-
-                    // 3) Confirmar TODOS en UN solo request al servidor
-                    if (exitosos.length) {
-                        await fetch('/api/almacen/entradas/' + encodeURIComponent(entId) + '/archivos/confirmar', {
+                    var subirArchivo = async function(item) {
+                        var fd = new FormData();
+                        fd.append('archivo', item.file);
+                        var r = await fetch('/api/almacen/entradas/' + encodeURIComponent(entId) + '/archivo/' + item.tipo, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ exitosos: exitosos })
+                            body: fd
                         });
-                    }
+                        if (!r.ok) {
+                            var txt = await r.text().catch(function() { return ''; });
+                            console.warn('Error subiendo ' + item.tipo + ':', txt);
+                        }
+                    };
+
+                    await Promise.all(archivosParaSubir.map(subirArchivo));
                 } catch (uploadErr) {
                     console.warn('Error en subida de archivos:', uploadErr.message);
                 }
