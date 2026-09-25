@@ -2407,294 +2407,188 @@ window.abrirModalDetalleOC = function(id) {
     var isProcesado = estNorm === 'PROCESADO' || estNorm === 'PROCESADA' || estNorm === 'PAGADO' || estNorm === 'PAGADA';
     var isRecepcionadoCompleto = isProcesado && totalItemsOC > 0 && totalRecibido >= totalItemsOC;
     var isRecepcionadoParcial = isProcesado && totalRecibido > 0 && totalRecibido < totalItemsOC;
-
-    // 1. HERO DARK CARD POPULATION
-    var heroTotalEl = document.getElementById('det-oc-hero-total');
-    if (heroTotalEl) heroTotalEl.innerText = sym + totalReal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-    var heroMonedaLabel = document.getElementById('det-oc-hero-moneda-label');
-    if (heroMonedaLabel) heroMonedaLabel.innerText = d.moneda === 'USD' ? 'USD' : 'PEN';
-
-    var heroBadgeEstado = document.getElementById('det-oc-hero-badge-estado');
-    var heroStatusDesc = document.getElementById('det-oc-hero-status-desc');
-    var heroRouteFill = document.getElementById('det-oc-hero-route-fill');
-
-    if (isAnulado) {
-        if (heroBadgeEstado) {
-            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(239, 68, 68, 0.25) !important; color: #f87171 !important; border: 1px solid rgba(239, 68, 68, 0.5) !important; font-size: 0.75rem;';
-            heroBadgeEstado.innerHTML = '🔴 ANULADA';
-        }
-        if (heroStatusDesc) {
-            heroStatusDesc.style.cssText = 'color: #f87171 !important; font-size: 0.78rem;';
-            heroStatusDesc.innerHTML = '<i class="bi bi-x-circle"></i> <span>Orden de compra anulada</span>';
-        }
-        if (heroRouteFill) heroRouteFill.style.width = '25%';
-    } else if (isObservado) {
-        if (heroBadgeEstado) {
-            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(245, 158, 11, 0.25) !important; color: #fbbf24 !important; border: 1px solid rgba(245, 158, 11, 0.5) !important; font-size: 0.75rem;';
-            heroBadgeEstado.innerHTML = '🟡 OBSERVADA';
-        }
-        if (heroStatusDesc) {
-            heroStatusDesc.style.cssText = 'color: #fbbf24 !important; font-size: 0.78rem;';
-            heroStatusDesc.innerHTML = '<i class="bi bi-exclamation-triangle"></i> <span>Requiere subsanación de Gerencia</span>';
-        }
-        if (heroRouteFill) heroRouteFill.style.width = '35%';
-    } else if (isRecepcionadoCompleto) {
-        if (heroBadgeEstado) {
-            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(16, 185, 129, 0.25) !important; color: #34d399 !important; border: 1px solid rgba(16, 185, 129, 0.5) !important; font-size: 0.75rem;';
-            heroBadgeEstado.innerHTML = '🟢 100% RECEPCIONADA';
-        }
-        if (heroStatusDesc) {
-            heroStatusDesc.style.cssText = 'color: #34d399 !important; font-size: 0.78rem;';
-            heroStatusDesc.innerHTML = '<i class="bi bi-check2-circle"></i> <span>Mercadería completa en Almacén Central</span>';
-        }
-        if (heroRouteFill) heroRouteFill.style.width = '100%';
-    } else if (isRecepcionadoParcial) {
-        if (heroBadgeEstado) {
-            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(2, 132, 199, 0.25) !important; color: #38bdf8 !important; border: 1px solid rgba(2, 132, 199, 0.5) !important; font-size: 0.75rem;';
-            heroBadgeEstado.innerHTML = '🔵 PARCIAL (' + receptionPct + '%)';
-        }
-        if (heroStatusDesc) {
-            heroStatusDesc.style.cssText = 'color: #38bdf8 !important; font-size: 0.78rem;';
-            heroStatusDesc.innerHTML = '<i class="bi bi-boxes"></i> <span>Recepción en curso: ' + totalRecibido + ' de ' + totalItemsOC + ' unids</span>';
-        }
-        if (heroRouteFill) heroRouteFill.style.width = '75%';
-    } else if (isProcesado) {
-        if (heroBadgeEstado) {
-            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(14, 165, 233, 0.25) !important; color: #38bdf8 !important; border: 1px solid rgba(14, 165, 233, 0.5) !important; font-size: 0.75rem;';
-            heroBadgeEstado.innerHTML = '💳 PROCESADA';
-        }
-        if (heroStatusDesc) {
-            heroStatusDesc.style.cssText = 'color: #38bdf8 !important; font-size: 0.78rem;';
-            heroStatusDesc.innerHTML = '<i class="bi bi-cash-coin"></i> <span>Pago registrado por Tesorería · En camino</span>';
-        }
-        if (heroRouteFill) heroRouteFill.style.width = '65%';
-    } else if (isAprobado) {
-        if (heroBadgeEstado) {
-            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(16, 185, 129, 0.25) !important; color: #34d399 !important; border: 1px solid rgba(16, 185, 129, 0.5) !important; font-size: 0.75rem;';
-            heroBadgeEstado.innerHTML = '✅ APROBADA';
-        }
-        if (heroStatusDesc) {
-            heroStatusDesc.style.cssText = 'color: #34d399 !important; font-size: 0.78rem;';
-            heroStatusDesc.innerHTML = '<i class="bi bi-shield-check"></i> <span>Aprobado por Gerencia · Pendiente de pago</span>';
-        }
-        if (heroRouteFill) heroRouteFill.style.width = '45%';
-    } else {
-        if (heroBadgeEstado) {
-            heroBadgeEstado.className = 'badge px-3 py-1.5 rounded-pill fw-bold';
-            heroBadgeEstado.style.cssText = 'background: rgba(148, 163, 184, 0.2) !important; color: #cbd5e1 !important; border: 1px solid rgba(148, 163, 184, 0.4) !important; font-size: 0.75rem;';
-            heroBadgeEstado.innerHTML = '⏱️ REGISTRADA';
-        }
-        if (heroStatusDesc) {
-            heroStatusDesc.style.cssText = 'color: #94a3b8 !important; font-size: 0.78rem;';
-            heroStatusDesc.innerHTML = '<i class="bi bi-clock"></i> <span>En espera de visto bueno presupuestario</span>';
-        }
-        if (heroRouteFill) heroRouteFill.style.width = '25%';
-    }
-
-    var heroCc = document.getElementById('det-oc-hero-cc');
-    if (heroCc) {
-        heroCc.style.cssText = 'background: rgba(255, 255, 255, 0.15) !important; color: #f1f5f9 !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; font-size: 0.72rem;';
-        heroCc.innerText = 'CC-' + (d.centro_costo || d.placa || 'ALMACÉN').toUpperCase();
-    }
-
-    var heroDoc = document.getElementById('det-oc-hero-doc');
-    if (heroDoc) {
-        heroDoc.style.cssText = 'background: rgba(2, 132, 199, 0.25) !important; color: #38bdf8 !important; border: 1px solid rgba(2, 132, 199, 0.4) !important; font-size: 0.72rem;';
-        var docText = d.documento_referencia ? ('DOC: ' + d.documento_referencia) : 'SUNAT OC';
-        heroDoc.innerHTML = '<i class="bi bi-receipt me-1"></i> ' + _entEsc(docText);
-    }
-
-    var heroProvShort = document.getElementById('det-oc-hero-prov-short');
-    if (heroProvShort) {
-        heroProvShort.style.color = '#e2e8f0';
-        heroProvShort.innerText = '📍 ' + (d.proveedor_nombre || 'Proveedor').substring(0, 24);
-    }
-
-    var heroDestShort = document.getElementById('det-oc-hero-dest-short');
-    if (heroDestShort) {
-        heroDestShort.style.color = '#e2e8f0';
-        heroDestShort.innerText = '🏢 ' + (d.placa ? ('Unidad ' + d.placa) : 'Sede Central');
-    }
-
-    // 2. LIVE STEPPER DATA DEFINITION
-    var creadorTxt = d.creador_nombre || d.creado_por || 'SISTEMA';
-    var fechaFmt = _entFmtFechaHora(d.fecha, d.created_at);
     var isAprobadoReal = isAprobado || isProcesado || isRecepcionadoCompleto;
-    var aprobadorTxt = isAprobadoReal ? (d.aprobador_nombre || d.aprobado_por || '') : '';
-    var fechaAprobFmt = (isAprobadoReal && d.fecha_aprobacion) ? _entFmtFechaHora(d.fecha_aprobacion) : '';
-    var pagoTxt = (d.condicion_pago || 'Al contado').toUpperCase();
+
+    // 1. Banner de Estado y Recepción
+    var badgeEstado = document.getElementById('det-oc-badge-estado');
+    var descEstado = document.getElementById('det-oc-desc-estado');
+    if (isAnulado) {
+        if (badgeEstado) {
+            badgeEstado.style.cssText = 'background: #fee2e2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; font-size: 0.75rem; padding: 6px 12px;';
+            badgeEstado.innerHTML = '<i class="bi bi-x-circle me-1"></i> ANULADA';
+        }
+        if (descEstado) descEstado.innerText = 'Orden de compra anulada o rechazada.';
+    } else if (isObservado) {
+        if (badgeEstado) {
+            badgeEstado.style.cssText = 'background: #fef3c7 !important; color: #d97706 !important; border: 1px solid #fcd34d !important; font-size: 0.75rem; padding: 6px 12px;';
+            badgeEstado.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> OBSERVADA';
+        }
+        if (descEstado) descEstado.innerText = 'Requiere subsanación o visto bueno directivo.';
+    } else if (isRecepcionadoCompleto) {
+        if (badgeEstado) {
+            badgeEstado.style.cssText = 'background: #dcfce7 !important; color: #15803d !important; border: 1px solid #86efac !important; font-size: 0.75rem; padding: 6px 12px;';
+            badgeEstado.innerHTML = '<i class="bi bi-box-seam me-1"></i> RECEPCIONADA 100%';
+        }
+        if (descEstado) descEstado.innerText = 'Mercadería recepcionada en su totalidad en almacén central.';
+    } else if (isRecepcionadoParcial) {
+        if (badgeEstado) {
+            badgeEstado.style.cssText = 'background: #e0f2fe !important; color: #0369a1 !important; border: 1px solid #7dd3fc !important; font-size: 0.75rem; padding: 6px 12px;';
+            badgeEstado.innerHTML = '<i class="bi bi-boxes me-1"></i> RECEPCIÓN PARCIAL (' + receptionPct + '%)';
+        }
+        if (descEstado) descEstado.innerText = 'Recepción física en curso: ' + totalRecibido + ' de ' + totalItemsOC + ' unidades recibidas.';
+    } else if (isProcesado) {
+        if (badgeEstado) {
+            badgeEstado.style.cssText = 'background: #e0f2fe !important; color: #0284c7 !important; border: 1px solid #38bdf8 !important; font-size: 0.75rem; padding: 6px 12px;';
+            badgeEstado.innerHTML = '<i class="bi bi-credit-card me-1"></i> PROCESADA';
+        }
+        if (descEstado) descEstado.innerText = 'Pago registrado por Tesorería · En camino a almacén.';
+    } else if (isAprobado) {
+        if (badgeEstado) {
+            badgeEstado.style.cssText = 'background: #dcfce7 !important; color: #15803d !important; border: 1px solid #86efac !important; font-size: 0.75rem; padding: 6px 12px;';
+            badgeEstado.innerHTML = '<i class="bi bi-shield-check me-1"></i> APROBADA';
+        }
+        if (descEstado) descEstado.innerText = 'V°B° presupuestario concedido por Gerencia.';
+    } else {
+        if (badgeEstado) {
+            badgeEstado.style.cssText = 'background: #f1f5f9 !important; color: #475569 !important; border: 1px solid #cbd5e1 !important; font-size: 0.75rem; padding: 6px 12px;';
+            badgeEstado.innerHTML = '<i class="bi bi-clock me-1"></i> REGISTRADA';
+        }
+        if (descEstado) descEstado.innerText = 'En espera de visto bueno presupuestario por Gerencia.';
+    }
+
+    // 2. Stepper de Trazabilidad (4 Nodos)
+    var fechaFmt = _entFmtFechaHora(d.fecha, d.created_at);
+    var dateEl1 = document.getElementById('det-oc-step-date-1');
+    if (dateEl1) dateEl1.innerText = fechaFmt;
+
+    var aprobadorTxt = isAprobadoReal ? (d.aprobador_nombre || d.aprobado_por || 'Gerencia') : '—';
+    var userEl2 = document.getElementById('det-oc-step-user-2');
+    if (userEl2) userEl2.innerText = aprobadorTxt;
+
+    var node2 = document.getElementById('det-oc-step-node-2');
+    if (node2) node2.style.background = isAprobadoReal ? '#10b981' : '#cbd5e1';
+
+    var statusEl3 = document.getElementById('det-oc-step-status-3');
+    if (statusEl3) statusEl3.innerText = (isProcesado || isRecepcionadoCompleto) ? 'Pago Registrado' : 'Por Liquidar';
+    var node3 = document.getElementById('det-oc-step-node-3');
+    if (node3) node3.style.background = (isProcesado || isRecepcionadoCompleto) ? '#10b981' : '#cbd5e1';
+
+    var recepEl4 = document.getElementById('det-oc-step-reception-4');
+    if (recepEl4) recepEl4.innerText = isRecepcionadoCompleto ? '100% Recepcionado' : (isRecepcionadoParcial ? (receptionPct + '% Recepcionado') : '0% Recepcionado');
+    var node4 = document.getElementById('det-oc-step-node-4');
+    if (node4) node4.style.background = isRecepcionadoCompleto ? '#10b981' : (isRecepcionadoParcial ? '#0284c7' : '#cbd5e1');
+
+    var stepLine = document.getElementById('det-oc-stepper-line');
+    if (stepLine) {
+        var lineWidth = isRecepcionadoCompleto ? '100%' : (isProcesado ? '66%' : (isAprobadoReal ? '33%' : '0%'));
+        stepLine.style.width = lineWidth;
+    }
+
+    var progResumen = document.getElementById('det-oc-prog-resumen');
+    if (progResumen) progResumen.innerText = totalRecibido + ' de ' + totalItemsOC + ' unidades recepcionadas (' + totalRenglones + ' ' + (totalRenglones === 1 ? 'renglón' : 'renglones') + ')';
+
+    var progPct = document.getElementById('det-oc-prog-pct');
+    if (progPct) progPct.innerText = receptionPct + '%';
+
+    var progFill = document.getElementById('det-oc-prog-fill');
+    if (progFill) {
+        progFill.style.width = receptionPct + '%';
+        progFill.style.background = receptionPct === 100 ? '#10b981' : '#0284c7';
+    }
+
+    // 3. Cuatro Bento Cards de Información
+    var cardSolicitante = document.getElementById('det-oc-card-solicitante');
+    if (cardSolicitante) cardSolicitante.innerText = d.solicitante || d.autoriza || '—';
+
+    var cardCreador = document.getElementById('det-oc-card-creador');
+    if (cardCreador) cardCreador.innerText = (d.creador_nombre || d.creado_por || 'DANIEL').toUpperCase();
+
+    var cardFecha = document.getElementById('det-oc-card-fecha');
+    if (cardFecha) cardFecha.innerText = fechaFmt;
+
+    var cardDestino = document.getElementById('det-oc-card-destino');
+    if (cardDestino) cardDestino.innerText = d.placa ? ('UNIDAD ' + d.placa) : (d.centro_costo || 'SEDE PRINCIPAL / ALMACÉN').toUpperCase();
+
+    var cardProveedor = document.getElementById('det-oc-card-proveedor');
+    if (cardProveedor) {
+        var provText = d.proveedor_nombre || 'PROVEEDOR GENERAL';
+        if (d.proveedor_ruc) provText += ' (' + d.proveedor_ruc + ')';
+        cardProveedor.innerText = provText;
+        cardProveedor.title = provText;
+    }
+
+    var cardMotivo = document.getElementById('det-oc-card-motivo');
+    if (cardMotivo) cardMotivo.innerText = (d.motivo_entrada || 'STOCK - COMPRA DE CONSUMIBLES').toUpperCase();
+
+    var pagoTxt = (d.moneda === 'USD' ? 'DÓLARES (USD)' : 'SOLES (PEN)') + ' • ' + (d.condicion_pago || 'AL CONTADO').toUpperCase();
     if (d.dias_credito && (pagoTxt.includes('CRÉDITO') || pagoTxt.includes('CREDITO'))) {
         pagoTxt += ' (' + d.dias_credito + ' DÍAS)';
     }
+    var cardPago = document.getElementById('det-oc-card-pago');
+    if (cardPago) cardPago.innerText = pagoTxt;
 
-    window._liveStepsData = [
-        {
-            title: '1. Solicitud Registrada',
-            subtitle: d.centro_costo || 'Área de Mantenimiento y Repuestos',
-            badgeText: 'Registrado',
-            badgeClass: 'bg-primary-subtle text-primary border border-primary-subtle',
-            desc: 'Ingreso y requerimiento formal emitido' + (d.motivo_entrada ? ' para ' + d.motivo_entrada.toLowerCase() : ' para reposición de inventario.') + '.',
-            user: 'Creador: ' + creadorTxt,
-            date: fechaFmt,
-            iconHtml: '<i class="bi bi-file-earmark-text"></i>',
-            iconBg: '#0284c7'
-        },
-        {
-            title: '2. Autorización / Aprobación',
-            subtitle: isAprobadoReal ? 'V°B° Aprobado' : (isAnulado ? 'Rechazado' : (isObservado ? 'Observado' : 'Pendiente de Aprobación')),
-            badgeText: isAprobadoReal ? 'Aprobado' : (isAnulado ? 'Rechazada' : (isObservado ? 'Observada' : 'Pendiente')),
-            badgeClass: isAprobadoReal ? 'bg-success-subtle text-success border border-success-subtle' : (isAnulado ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle'),
-            desc: isAprobadoReal ? ('V°B° presupuestario concedido' + (aprobadorTxt ? ' por ' + aprobadorTxt : '') + '.') : (isAnulado ? 'Orden anulada o rechazada.' : 'Pendiente de autorización presupuestaria por Gerencia.'),
-            user: isAprobadoReal && aprobadorTxt ? ('Autorizado por: ' + aprobadorTxt) : (isAprobadoReal ? 'Autorizado' : 'Pendiente'),
-            date: fechaAprobFmt || '—',
-            iconHtml: '<i class="bi bi-shield-check"></i>',
-            iconBg: '#10b981'
-        },
-        {
-            title: '3. Liquidación y Pago',
-            subtitle: 'Tesorería & Finanzas',
-            badgeText: isProcesado || isRecepcionadoCompleto ? 'Procesado' : 'Por Liquidar',
-            badgeClass: isProcesado || isRecepcionadoCompleto ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle',
-            desc: (isProcesado || isRecepcionadoCompleto) ? ('Trámite de compra procesado y programado bajo modalidad ' + pagoTxt + '.') : ('Pendiente de procesamiento contable y desembolso (' + pagoTxt + ').'),
-            user: 'Modalidad: ' + pagoTxt,
-            date: fechaFmt,
-            iconHtml: '<i class="bi bi-cash-stack"></i>',
-            iconBg: '#0ea5e9'
-        },
-        {
-            title: '4. Recepción en Almacén',
-            subtitle: 'Almacén Central / Bodega',
-            badgeText: isRecepcionadoCompleto ? '100% Recibido' : (isRecepcionadoParcial ? (receptionPct + '% Recibido') : 'En Tránsito'),
-            badgeClass: isRecepcionadoCompleto ? 'bg-success-subtle text-success border border-success-subtle' : (isRecepcionadoParcial ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-light text-secondary border'),
-            desc: isRecepcionadoCompleto ? 'Mercadería recepcionada en su totalidad con conformidad de almacén.' : (isRecepcionadoParcial ? ('Recepción física en curso: ' + totalRecibido + ' de ' + totalItemsOC + ' unidades.') : 'Mercadería pendiente de recepción física e internamiento.'),
-            user: 'Custodio: Almacén Principal',
-            date: fechaFmt,
-            iconHtml: '<i class="bi bi-box-seam"></i>',
-            iconBg: '#8b5cf6'
-        }
-    ];
+    var pillsDocs = document.getElementById('det-oc-card-pills-docs');
+    if (pillsDocs) {
+        var cotUrl = d.url_cotizacion_presigned || d.url_cotizacion;
+        var facUrl = d.url_factura_presigned || d.url_factura;
+        var vouUrl = d.url_voucher_presigned || d.url_voucher;
 
-    // Determine default active step based on progress
-    var initialStep = 1;
-    if (isRecepcionadoCompleto) initialStep = 4;
-    else if (isRecepcionadoParcial || isProcesado) initialStep = 3;
-    else if (isAprobado) initialStep = 2;
+        var pillCot = cotUrl 
+            ? '<a href="' + _entEsc(cotUrl) + '" target="_blank" class="badge rounded-pill fw-bold text-decoration-none" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.70rem;"><i class="bi bi-file-earmark-check me-1"></i> Cotización</a>'
+            : '<span class="badge rounded-pill text-muted bg-light border fw-normal" style="font-size:0.70rem;">Sin cotización</span>';
 
-    window.setLiveStepOC(initialStep);
-    window.pauseAutoplayOC(); // Safe default, user can click or toggle autoplay
+        var pillFac = facUrl 
+            ? '<a href="' + _entEsc(facUrl) + '" target="_blank" class="badge rounded-pill fw-bold text-decoration-none" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.70rem;"><i class="bi bi-file-earmark-check me-1"></i> Factura</a>'
+            : '<span class="badge rounded-pill text-muted bg-light border fw-normal" style="font-size:0.70rem;">Sin factura</span>';
 
-    // Touch/click on card container pauses autoplay
-    var liveCard = document.getElementById('det-oc-live-card-container');
-    if (liveCard) {
-        liveCard.onmouseenter = window.pauseAutoplayOC;
-        liveCard.ontouchstart = window.pauseAutoplayOC;
+        var pillVou = vouUrl 
+            ? '<a href="' + _entEsc(vouUrl) + '" target="_blank" class="badge rounded-pill fw-bold text-decoration-none" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.70rem;"><i class="bi bi-file-earmark-check me-1"></i> Voucher</a>'
+            : '<span class="badge rounded-pill text-muted bg-light border fw-normal" style="font-size:0.70rem;">Sin voucher</span>';
+
+        pillsDocs.innerHTML = pillCot + ' ' + pillFac + ' ' + pillVou;
     }
 
-    // 3. INVENTARIO & MEDIDAS (ITEMS CARDS CONTAINER)
-    var itemsCountLabel = document.getElementById('det-oc-items-count-label');
-    if (itemsCountLabel) itemsCountLabel.innerText = items.length;
+    // 4. Tabla de Artículos Requeridos
+    var tblRenglonesBadge = document.getElementById('det-oc-table-renglones-badge');
+    if (tblRenglonesBadge) tblRenglonesBadge.innerText = totalRenglones + ' ' + (totalRenglones === 1 ? 'Renglón' : 'Renglones') + ' (' + totalItemsOC + ' unids)';
 
-    var itemsContainer = document.getElementById('det-oc-items-cards-container');
-    if (itemsContainer) {
+    var tbodyEl = document.getElementById('det-oc-table-tbody');
+    if (tbodyEl) {
         if (!items.length) {
-            itemsContainer.innerHTML = '<div class="text-center text-muted py-3 fst-italic">No hay artículos registrados.</div>';
+            tbodyEl.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">No hay artículos en esta orden.</td></tr>';
         } else {
-            itemsContainer.innerHTML = items.map(function(it, idx) {
+            tbodyEl.innerHTML = items.map(function(it, idx) {
                 var cant = parseFloat(it.cantidad || 0);
                 var cu = parseFloat(it.costo_unitario || 0);
                 var imp = cant * cu;
                 var nombre = _entDescLimpia(it.descripcion, it.inventario_id);
                 var invId = it.inventario_id || ('ART-' + (idx + 1));
                 var um = (it.unidad_medida || it.unidad || 'UND').toUpperCase();
-                var cantRecibida = isRecepcionadoCompleto ? cant : 0;
-                var recibBadge = isRecepcionadoCompleto 
-                    ? '<span class="badge rounded-pill fw-bold" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.68rem;">' + cant + '/' + cant + ' recibidos</span>'
-                    : '<span class="badge rounded-pill fw-semibold text-secondary bg-light border" style="font-size:0.68rem;">0/' + cant + ' recibidos</span>';
 
-                // Buscar cotas técnicas o dimensiones en la descripción
-                var cotasHtml = '';
-                var matchDim = nombre.match(/(\d+(?:\.\d+)?)\s*[*xX]\s*(\d+(?:\.\d+)?)\s*(?:[*xX]\s*(\d+(?:\.\d+)?))?/);
-                if (matchDim) {
-                    var d1 = matchDim[1] || '—';
-                    var d2 = matchDim[2] || '—';
-                    var d3 = matchDim[3] || '—';
-                    cotasHtml = '<div class="mt-2 pt-2 border-top border-slate-100 d-flex flex-wrap align-items-center justify-content-between text-secondary font-monospace" style="font-size:0.68rem;">' +
-                        '<span>Ø Int: <b>' + d1 + ' mm</b></span>' +
-                        '<span>Ø Ext: <b>' + d2 + ' mm</b></span>' +
-                        '<span>Espesor: <b>' + d3 + ' mm</b></span>' +
-                        '<span class="text-danger fw-bold" style="cursor:pointer;" onclick="window.imprimirPDFDesdeDetalleOC()">Ver plano →</span>' +
-                    '</div>';
-                } else {
-                    cotasHtml = '<div class="mt-2 pt-2 border-top border-slate-100 d-flex align-items-center justify-content-between text-secondary font-monospace" style="font-size:0.68rem;">' +
-                        '<span>U.M.: <b>' + _entEsc(um) + '</b></span>' +
-                        '<span>Cant: <b>' + cant.toLocaleString('es-PE') + ' ' + _entEsc(um) + '</b></span>' +
-                        '<span class="text-primary fw-semibold">Ficha Técnica</span>' +
-                    '</div>';
-                }
-
-                return '<div class="p-3 mb-2.5 rounded-4 border bg-white shadow-2xs" style="border-color:#e2e8f0 !important;">' +
-                    '<div class="d-flex align-items-start gap-2.5">' +
-                        '<div class="d-flex align-items-center justify-content-center rounded-3 bg-light text-secondary flex-shrink-0" style="width: 44px; height: 44px; font-size: 1.3rem;">' +
-                            '⚙️' +
-                        '</div>' +
-                        '<div class="flex-grow-1 min-w-0">' +
-                            '<div class="d-flex align-items-center gap-1.5 mb-1">' +
-                                '<span class="badge bg-light text-dark border rounded font-monospace" style="font-size: 0.68rem; font-weight:700;">' + _entEsc(invId) + '</span>' +
-                                recibBadge +
-                            '</div>' +
-                            '<div class="fw-bolder text-dark lh-sm" style="font-size: 0.86rem;">' + _entEsc(nombre) + '</div>' +
-                            '<div class="text-muted small mt-0.5" style="font-size: 0.72rem;">Repuesto de alta rotación · Flota operativa</div>' +
-                        '</div>' +
-                        '<div class="text-end flex-shrink-0 ps-1">' +
-                            '<div class="fw-bolder text-dark font-monospace" style="font-size: 0.95rem;">' + sym + imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</div>' +
-                            '<div class="text-muted small font-monospace" style="font-size: 0.70rem;">' + sym + cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' c/u</div>' +
-                        '</div>' +
-                    '</div>' +
-                    cotasHtml +
-                '</div>';
+                return '<tr>' +
+                    '<td class="ps-3 text-muted fw-bold">' + (idx + 1) + '</td>' +
+                    '<td><span class="badge bg-light text-dark border font-monospace fw-bold" style="font-size:0.75rem;">' + _entEsc(invId) + '</span></td>' +
+                    '<td class="fw-bold text-dark">' + _entEsc(nombre) + '</td>' +
+                    '<td class="text-center"><span class="badge bg-light text-secondary border font-monospace" style="font-size:0.70rem;">' + _entEsc(um) + '</span></td>' +
+                    '<td class="text-center fw-bold font-monospace">' + cant.toLocaleString('es-PE') + '</td>' +
+                    '<td class="text-end font-monospace text-secondary">' + sym + cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+                    '<td class="pe-3 text-end fw-bold font-monospace text-dark">' + sym + imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+                '</tr>';
             }).join('');
         }
     }
 
-    // 4. PROVEEDOR VERIFICADO POPULATION
-    var provFullName = document.getElementById('det-oc-prov-full-name');
-    if (provFullName) provFullName.innerText = d.proveedor_nombre || 'PROVEEDOR GENERAL';
-
-    var provFullRuc = document.getElementById('det-oc-prov-full-ruc');
-    if (provFullRuc) provFullRuc.innerText = 'RUC: ' + (d.proveedor_ruc || '20000000000') + ' 📋';
-
-    var btnCall = document.getElementById('det-oc-btn-call');
-    if (btnCall) {
-        var tel = d.proveedor_telefono || '';
-        btnCall.href = tel ? ('tel:' + tel) : 'javascript:void(0)';
-        btnCall.onclick = tel ? null : function() { alert('Teléfono no registrado para este proveedor.'); };
+    // 5. Total en Letras y Total Neto
+    var letrasEl = document.getElementById('det-oc-total-letras');
+    if (letrasEl) {
+        var monedaTxt = d.moneda === 'USD' ? 'DÓLARES AMERICANOS' : 'SOLES';
+        letrasEl.innerText = (typeof window.numeroALetras === 'function' ? window.numeroALetras(totalReal) : '') + ' ' + monedaTxt;
     }
 
-    var btnWsp = document.getElementById('det-oc-btn-wsp');
-    if (btnWsp) {
-        var telWsp = (d.proveedor_telefono || '').replace(/\D/g, '');
-        btnWsp.href = telWsp ? ('https://wa.me/51' + telWsp + '?text=' + encodeURIComponent('Hola, nos comunicamos sobre la Orden de Compra ' + codLimpio)) : 'javascript:void(0)';
-        btnWsp.onclick = telWsp ? null : function() { alert('Número de WhatsApp no registrado para este proveedor.'); };
+    var totalNetoEl = document.getElementById('det-oc-total-neto');
+    if (totalNetoEl) {
+        totalNetoEl.innerText = sym + totalReal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-
-    var subDestino = document.getElementById('det-oc-subtile-destino');
-    if (subDestino) subDestino.innerText = d.placa ? ('Unidad ' + d.placa) : 'Sede Principal';
-
-    var subMotivo = document.getElementById('det-oc-subtile-motivo');
-    if (subMotivo) subMotivo.innerText = d.motivo_entrada || 'Stock Operativo';
-
-    var subSolicitante = document.getElementById('det-oc-subtile-solicitante');
-    if (subSolicitante) subSolicitante.innerText = d.solicitante || d.autoriza || creadorTxt;
-
-    var subCondicion = document.getElementById('det-oc-subtile-condicion');
-    if (subCondicion) subCondicion.innerText = pagoTxt;
 
     var modalEl = document.getElementById('modalDetalleEntradaOC');
     if (modalEl) {
