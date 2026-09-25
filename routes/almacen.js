@@ -1019,11 +1019,22 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     router.get('/entradas', (req, res) => {
         const tdb = getDb(req);
+        let where = '';
+        let params = [];
+        if (req.query.ot_id) {
+            where = ` WHERE e.ot_id = ?`;
+            params.push(req.query.ot_id);
+        }
         let q = `SELECT e.*, 
                     COALESCE(rec.total_recibido, 0) AS total_recibido,
                     COALESCE(rec.cant_recepciones, 0) AS cant_recepciones,
                     GROUP_CONCAT(CONCAT(COALESCE(i.descripcion, d.descripcion, ''),'|',COALESCE(d.cantidad,0),'|',COALESCE(d.costo_unitario,0),'|',COALESCE(d.moneda,'PEN'),'|',COALESCE(d.inventario_id,''),'|',COALESCE(d.importe,0)) SEPARATOR ';;') AS items_raw
-             FROM entradas_inv e
+             FROM (
+                 SELECT * FROM entradas_inv e
+                 ${where}
+                 ORDER BY e.fecha DESC, e.id DESC
+                 LIMIT 300
+             ) e
              LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
              LEFT JOIN inventario i ON d.inventario_id = i.id
              LEFT JOIN (
@@ -1031,13 +1042,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                  FROM recepciones_oc r
                  JOIN detalle_recepciones_oc dr ON dr.recepcion_id = r.id
                  GROUP BY r.oc_id
-             ) rec ON rec.oc_id = e.id`;
-        let params = [];
-        if (req.query.ot_id) {
-            q += ` WHERE e.ot_id = ?`;
-            params.push(req.query.ot_id);
-        }
-        q += ` GROUP BY e.id ORDER BY e.fecha DESC, e.id DESC LIMIT 300`;
+             ) rec ON rec.oc_id = e.id
+             GROUP BY e.id
+             ORDER BY e.fecha DESC, e.id DESC`;
         tdb.query(q, params, async (err, rows) => {
             if (err) {
                 console.error('[GET /api/almacen/entradas error]', err);
@@ -1157,11 +1164,16 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             }
         });
     });
+
+    let _columnasOCChecked = false;
     async function _ensureColumnasOC(tdb) {
+        if (_columnasOCChecked) return;
+        _columnasOCChecked = true;
         const cols = [
             { col: 'centro_costo', def: 'VARCHAR(60) NULL' },
             { col: 'sub_motivo', def: 'VARCHAR(150) NULL' },
-            { col: 'autoriza', def: 'VARCHAR(150) NULL' }
+            { col: 'autoriza', def: 'VARCHAR(150) NULL' },
+            { col: 'url_cotizacion', def: 'TEXT NULL' }
         ];
         for (const c of cols) {
             try {
