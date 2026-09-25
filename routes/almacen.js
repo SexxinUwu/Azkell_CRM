@@ -1413,6 +1413,67 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         );
     });
 
+    // ── Pre-signed Upload: genera URL para subir directo a S3 desde el navegador ──
+    router.post('/entradas/:id/archivo/:tipo/upload-url', async (req, res) => {
+        const { tipo } = req.params;
+        if (!['voucher', 'cotizacion', 'factura'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
+        try {
+            const { getPresignedUploadUrl } = require('../utils/s3');
+            const ext = (req.body.fileName || 'file.pdf').split('.').pop() || 'pdf';
+            const s3Key = `almacen/entradas/${req.params.id}/${tipo}_${Date.now()}.${ext}`;
+            const uploadUrl = await getPresignedUploadUrl(s3Key, req.body.contentType || 'application/pdf', 600);
+            const finalUrl = `https://${(process.env.AWS_BUCKET_NAME || '').trim()}.s3.${(process.env.AWS_REGION || 'us-east-2').trim()}.amazonaws.com/${s3Key}`;
+            res.json({ ok: true, uploadUrl, s3Key, finalUrl });
+        } catch (e) {
+            console.error('Error generando presigned upload URL:', e);
+            res.status(500).json({ error: e.message });
+        }
+    });
+
+    // ── Confirmar upload directo: guarda la URL en BD después de que el navegador subió a S3 ──
+    router.post('/entradas/:id/archivo/:tipo/confirmar', async (req, res) => {
+        const { tipo } = req.params;
+        if (!['voucher', 'cotizacion', 'factura'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
+        const { finalUrl, s3Key } = req.body;
+        if (!finalUrl) return res.status(400).json({ error: 'finalUrl requerido' });
+
+        try {
+            const tdb = getDb(req);
+            const { deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
+            const col = `url_${tipo}`;
+
+            // Borrar archivo anterior si existe
+            const [rows] = await new Promise((resolve, reject) => {
+                tdb.query(`SELECT ${col}, estado FROM entradas_inv WHERE id=?`, [req.params.id], (err, r) => err ? reject(err) : resolve([r]));
+            });
+            if (rows && rows.length > 0 && rows[0][col]) {
+                const oldKey = s3KeyFromUrl(rows[0][col]);
+                if (oldKey) await deleteFromS3(oldKey).catch(() => {});
+            }
+
+            // Actualizar en BD
+            let updateSql = `UPDATE entradas_inv SET ${col}=? WHERE id=?`;
+            let updateParams = [finalUrl, req.params.id];
+            if (tipo === 'voucher') {
+                updateSql = `UPDATE entradas_inv SET ${col}=?, estado='Procesado' WHERE id=?`;
+            }
+
+            await new Promise((resolve, reject) => {
+                tdb.query(updateSql, updateParams, (err) => err ? reject(err) : resolve());
+            });
+
+            if (typeof logAudit === 'function' && (req.body && req.body.usuario)) {
+                logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'SUBIÓ_ARCHIVO', req.path);
+            }
+
+            res.json({ ok: true, url: finalUrl, estado: tipo === 'voucher' ? 'Procesado' : (rows && rows[0] ? rows[0].estado : 'Registrado') });
+        } catch (e) {
+            console.error('Error confirmando upload:', e);
+            res.status(500).json({ error: e.message });
+        }
+    });
+
+    // ── Upload legacy (fallback via servidor) ──
     router.post('/entradas/:id/archivo/:tipo', _multerInv.single('archivo'), (req, res) => {
         const { tipo } = req.params;
         if (!['voucher', 'cotizacion', 'factura'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });

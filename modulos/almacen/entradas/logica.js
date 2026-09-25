@@ -1003,17 +1003,35 @@ window.guardarEntrada = function() {
         .then(async function(r) {
             var entId = isEdit ? window._entEditId : r.id;
             
-            // Subida de archivos adjuntos antes de cerrar para garantizar persistencia
+            // Subida DIRECTA a S3 via pre-signed URL (evita 504 de NGINX)
             var promesas = [];
             var uploadFile = async function(file, tipo) {
                 if (!file) return;
-                var fd = new FormData();
-                fd.append('archivo', file);
                 try {
-                    var upRes = await fetch('/api/almacen/entradas/'+encodeURIComponent(entId)+'/archivo/'+tipo, { method: 'POST', body: fd });
-                    if (!upRes.ok) {
-                        console.warn('Advertencia subiendo ' + tipo + ': HTTP ' + upRes.status);
-                    }
+                    // 1) Pedir URL pre-firmada al servidor (request liviano, sin archivo)
+                    var urlRes = await fetch('/api/almacen/entradas/'+encodeURIComponent(entId)+'/archivo/'+tipo+'/upload-url', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fileName: file.name, contentType: file.type || 'application/pdf' })
+                    });
+                    if (!urlRes.ok) throw new Error('No se pudo obtener URL de subida: HTTP ' + urlRes.status);
+                    var urlData = await urlRes.json();
+
+                    // 2) Subir archivo DIRECTO a S3 (PUT al bucket, sin pasar por NGINX/Node)
+                    var s3Res = await fetch(urlData.uploadUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': file.type || 'application/pdf' },
+                        body: file
+                    });
+                    if (!s3Res.ok) throw new Error('Error subiendo a S3: HTTP ' + s3Res.status);
+
+                    // 3) Confirmar al servidor que el archivo se subió (request liviano, sin archivo)
+                    var confRes = await fetch('/api/almacen/entradas/'+encodeURIComponent(entId)+'/archivo/'+tipo+'/confirmar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ finalUrl: urlData.finalUrl, s3Key: urlData.s3Key })
+                    });
+                    if (!confRes.ok) console.warn('Advertencia confirmando ' + tipo + ': HTTP ' + confRes.status);
                 } catch (err) {
                     console.warn('Fallo al subir ' + tipo + ': ' + err.message);
                 }
