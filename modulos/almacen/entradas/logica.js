@@ -628,79 +628,88 @@ window._entCalcImporte = function(idx, source) {
 
     if (mode === 'sin_igv') {
         if (source === 'imp') {
-            pu = cant > 0 ? (imp / cant) : 0;
+            pu = cant > 0 ? (Math.round((imp / cant) * 100) / 100) : 0;
             vu = pu;
-            if (source !== 'pu') puEl.value = (Math.round(pu * 100) / 100).toFixed(2);
-            if (source !== 'vu') vuEl.value = (Math.round(vu * 10000) / 10000).toFixed(4);
+            if (source !== 'pu') puEl.value = pu.toFixed(2);
+            if (source !== 'vu') vuEl.value = vu.toFixed(4);
         } else if (source === 'pu') {
+            pu = Math.round(pu * 100) / 100;
             vu = pu;
-            if (source !== 'vu') vuEl.value = (Math.round(vu * 10000) / 10000).toFixed(4);
+            if (source !== 'vu') vuEl.value = vu.toFixed(4);
             impEl.value = (Math.round(cant * pu * 100) / 100).toFixed(2);
         } else if (source === 'vu') {
-            pu = vu;
-            if (source !== 'pu') puEl.value = (Math.round(pu * 100) / 100).toFixed(2);
+            pu = Math.round(vu * 100) / 100;
+            vu = pu;
+            if (source !== 'pu') puEl.value = pu.toFixed(2);
             impEl.value = (Math.round(cant * pu * 100) / 100).toFixed(2);
         } else { // cant
+            pu = Math.round(pu * 100) / 100;
             impEl.value = (Math.round(cant * pu * 100) / 100).toFixed(2);
         }
         igvEl.value = (0).toFixed(2);
 
     } else if (mode === 'incluido') {
         if (source === 'imp') {
-            pu = cant > 0 ? (imp / cant) : 0;
-            vu = pu / 1.18;
+            pu = cant > 0 ? (Math.round((imp / cant) * 100) / 100) : 0;
+            vu = Math.round((pu / 1.18) * 10000) / 10000;
             var igvRow = (imp) - (cant * vu);
-            if (source !== 'pu') puEl.value = (Math.round(pu * 100) / 100).toFixed(2);
-            if (source !== 'vu') vuEl.value = (Math.round(vu * 10000) / 10000).toFixed(4);
+            if (source !== 'pu') puEl.value = pu.toFixed(2);
+            if (source !== 'vu') vuEl.value = vu.toFixed(4);
             igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
         } else if (source === 'pu') {
-            vu = pu / 1.18;
-            var totalRow = cant * pu;
+            pu = Math.round(pu * 100) / 100;
+            vu = Math.round((pu / 1.18) * 10000) / 10000;
+            var totalRow = Math.round(cant * pu * 100) / 100;
             var igvRow = totalRow - (cant * vu);
-            if (source !== 'vu') vuEl.value = (Math.round(vu * 10000) / 10000).toFixed(4);
+            if (source !== 'vu') vuEl.value = vu.toFixed(4);
             igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
-            impEl.value = (Math.round(totalRow * 100) / 100).toFixed(2);
+            impEl.value = totalRow.toFixed(2);
         } else if (source === 'vu') {
-            pu = vu * 1.18;
-            var totalRow = cant * pu;
+            pu = Math.round(vu * 1.18 * 100) / 100;
+            var totalRow = Math.round(cant * pu * 100) / 100;
             var igvRow = totalRow - (cant * vu);
-            if (source !== 'pu') puEl.value = (Math.round(pu * 100) / 100).toFixed(2);
+            if (source !== 'pu') puEl.value = pu.toFixed(2);
             igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
-            impEl.value = (Math.round(totalRow * 100) / 100).toFixed(2);
+            impEl.value = totalRow.toFixed(2);
         } else { // cant
-            var totalRow = cant * pu;
+            pu = Math.round(pu * 100) / 100;
+            vu = Math.round((pu / 1.18) * 10000) / 10000;
+            var totalRow = Math.round(cant * pu * 100) / 100;
             var igvRow = totalRow - (cant * vu);
             igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
-            impEl.value = (Math.round(totalRow * 100) / 100).toFixed(2);
+            impEl.value = totalRow.toFixed(2);
         }
 
     } else { // mas_igv
         if (source === 'imp') {
-            pu = cant > 0 ? (imp / cant) : 0;
-            vu = pu / 1.18;
+            pu = cant > 0 ? (Math.round((imp / cant) * 100) / 100) : 0;
+            vu = Math.round((pu / 1.18) * 10000) / 10000;
             var igvRow = (imp) - (cant * vu);
-            if (source !== 'pu') puEl.value = (Math.round(pu * 100) / 100).toFixed(2);
-            if (source !== 'vu') vuEl.value = (Math.round(vu * 10000) / 10000).toFixed(4);
+            if (source !== 'pu') puEl.value = pu.toFixed(2);
+            if (source !== 'vu') vuEl.value = vu.toFixed(4);
             igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
         } else if (source === 'pu') {
-            vu = pu / 1.18;
-            var totalRow = cant * pu;
+            pu = Math.round(pu * 100) / 100;
+            vu = Math.round((pu / 1.18) * 10000) / 10000;
+            var totalRow = Math.round(cant * pu * 100) / 100;
             var igvRow = totalRow - (cant * vu);
-            if (source !== 'vu') vuEl.value = (Math.round(vu * 10000) / 10000).toFixed(4);
+            if (source !== 'vu') vuEl.value = vu.toFixed(4);
             igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
-            impEl.value = (Math.round(totalRow * 100) / 100).toFixed(2);
+            impEl.value = totalRow.toFixed(2);
         } else if (source === 'vu') {
-            pu = vu * 1.18;
-            var totalRow = cant * pu;
+            pu = Math.round(vu * 1.18 * 100) / 100;
+            var totalRow = Math.round(cant * pu * 100) / 100;
             var igvRow = totalRow - (cant * vu);
-            if (source !== 'pu') puEl.value = (Math.round(pu * 100) / 100).toFixed(2);
+            if (source !== 'pu') puEl.value = pu.toFixed(2);
             igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
-            impEl.value = (Math.round(totalRow * 100) / 100).toFixed(2);
+            impEl.value = totalRow.toFixed(2);
         } else { // cant
-            var totalRow = cant * pu;
+            pu = Math.round(pu * 100) / 100;
+            vu = Math.round((pu / 1.18) * 10000) / 10000;
+            var totalRow = Math.round(cant * pu * 100) / 100;
             var igvRow = totalRow - (cant * vu);
             igvEl.value = (Math.round(igvRow * 100) / 100).toFixed(2);
-            impEl.value = (Math.round(totalRow * 100) / 100).toFixed(2);
+            impEl.value = totalRow.toFixed(2);
         }
     }
 
@@ -2045,12 +2054,22 @@ window._entGenerarHtmlPDF = function(d) {
     (d.items || []).forEach(function(it) {
         var cant = parseFloat(it.cantidad || 0);
         var cu   = parseFloat(it.costo_unitario || 0);
-        subtotalItems += (cant * cu);
+        var imp  = parseFloat(it.importe);
+        subtotalItems += (!isNaN(imp) && imp > 0) ? imp : (cant * cu);
     });
     
     var totalReal = subtotalItems;
     if (d.tipo_igv === 'mas_igv') {
         totalReal = subtotalItems * 1.18;
+    }
+    
+    if (d.total_pen && parseFloat(d.total_pen) > 0) {
+        var tp = parseFloat(d.total_pen);
+        if (d.moneda === 'USD') {
+            var tc = parseFloat(d.tipo_cambio || 3.4);
+            if (tc > 0) tp = tp / tc;
+        }
+        totalReal = tp;
     }
     
     if (totalReal === 0 && d.total_pen) {
@@ -2090,15 +2109,6 @@ window._entGenerarHtmlPDF = function(d) {
 
     var numDisplay = (d.id || '').replace(/^ENT-/, '');
     var tipoDocTitle = (d.tipo_orden || 'ORDEN DE COMPRA').toUpperCase();
-
-    var obsBlock = '';
-    if (d.observaciones && d.observaciones.trim() !== '') {
-        obsBlock = '<!-- OBSERVACIONES -->' +
-        '<div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;border-radius:6px;padding:10px 14px;font-size:11px;color:#92400e;margin-bottom:20px;">' +
-            '<b style="display:block;margin-bottom:3px;font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px;color:#b45309;">Observaciones / Especificaciones:</b>' +
-            d.observaciones +
-        '</div>';
-    }
 
     // Datos de la Empresa emisora
     var empLogo = localStorage.getItem('fleet_empresa_logo') || localStorage.getItem('empresa_logo') || window._LOGO_BASE64 || '';
@@ -2192,8 +2202,6 @@ window._entGenerarHtmlPDF = function(d) {
                 '</div>' +
             '</div>' +
         '</div>' +
-
-        obsBlock +
 
         '<!-- TABLA DE ARTÍCULOS -->' +
         '<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:20px;">' +
