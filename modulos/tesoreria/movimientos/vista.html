@@ -127,20 +127,39 @@
     box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
     min-height: 340px;
 }
-#tablaMovimientos tbody tr td {
-    padding-top: 0.45rem !important;
-    padding-bottom: 0.45rem !important;
-    padding-left: 0.6rem !important;
-    padding-right: 0.6rem !important;
-    vertical-align: middle !important;
+#tablaMovimientos {
+    white-space: nowrap !important;
+    width: max-content !important;
+    min-width: 100% !important;
 }
-#tablaMovimientos thead tr th {
+#tablaMovimientos tbody tr {
+    height: 48px !important;
+}
+#tablaMovimientos tbody tr td {
     padding-top: 0.55rem !important;
     padding-bottom: 0.55rem !important;
-    padding-left: 0.6rem !important;
-    padding-right: 0.6rem !important;
+    padding-left: 0.85rem !important;
+    padding-right: 0.85rem !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+    line-height: 1.35 !important;
+}
+#tablaMovimientos thead tr th {
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+    padding-left: 0.85rem !important;
+    padding-right: 0.85rem !important;
     font-size: 0.72rem !important;
     background: #f8fafc !important;
+    white-space: nowrap !important;
+    vertical-align: middle !important;
+    letter-spacing: 0.4px;
+}
+#tablaMovimientos td span,
+#tablaMovimientos td div,
+#tablaMovimientos td p,
+#tablaMovimientos th span {
+    white-space: nowrap !important;
 }
 
 /* ── Badges & Chips ───────────────────────────────────────────────── */

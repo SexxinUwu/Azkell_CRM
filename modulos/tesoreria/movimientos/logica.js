@@ -297,10 +297,10 @@
                 <td class="text-center ps-3">${colArchivo}</td>
 
                 <!-- 2. Monto -->
-                <td class="fw-bolder text-dark" style="white-space:nowrap;">${montoFmt}</td>
+                <td class="fw-bolder text-dark">${montoFmt}</td>
 
                 <!-- 3. Tipo Movimiento -->
-                <td style="white-space:nowrap;">${badgeTipo}</td>
+                <td>${badgeTipo}</td>
 
                 <!-- 4. Debe -->
                 <td class="text-end fw-semibold ${esIngreso ? 'text-success' : 'text-muted'}">${debeFmt}</td>
@@ -309,10 +309,10 @@
                 <td class="text-end fw-semibold ${!esIngreso ? 'text-danger' : 'text-muted'}">${haberFmt}</td>
 
                 <!-- 6. Motivo -->
-                <td><span class="fw-bold text-dark text-truncate d-inline-block" style="max-width: 160px;" title="${escapeHtml(item.motivo)}">${escapeHtml(item.motivo)}</span></td>
+                <td><span class="fw-bold text-dark" title="${escapeHtml(item.motivo)}">${escapeHtml(item.motivo)}</span></td>
 
                 <!-- 7. Sub Motivo -->
-                <td><span class="text-secondary fw-semibold text-truncate d-inline-block" style="max-width: 150px;" title="${escapeHtml(subMotivo)}">${escapeHtml(subMotivo)}</span></td>
+                <td><span class="text-secondary fw-semibold" title="${escapeHtml(subMotivo)}">${escapeHtml(subMotivo)}</span></td>
 
                 <!-- 8. Tipo Origen -->
                 <td>${badgeOrigen}</td>
@@ -321,22 +321,22 @@
                 <td>${badgeFolio}</td>
 
                 <!-- 10. Descripción -->
-                <td><span class="text-muted small text-truncate d-inline-block" style="max-width: 230px;" title="${escapeHtml(item.descripcion)}">${escapeHtml(item.descripcion)}</span></td>
+                <td><span class="text-muted small" title="${escapeHtml(item.descripcion)}">${escapeHtml(item.descripcion)}</span></td>
 
                 <!-- 11. Tipo Caja -->
                 <td><span class="badge bg-light text-secondary border small">${escapeHtml(item.tipo_caja)}</span></td>
 
                 <!-- 12. Fecha Depósito -->
-                <td><span class="text-secondary fw-semibold small">${fechaDep}</span></td>
+                <td><span class="text-secondary fw-semibold small font-monospace">${fechaDep}</span></td>
 
                 <!-- 13. N° Operación -->
-                <td><span class="fw-bold text-dark small">${escapeHtml(item.numero_operacion)}</span></td>
+                <td><span class="fw-bold text-dark small font-monospace">${escapeHtml(item.numero_operacion)}</span></td>
 
                 <!-- 14. N° Factura -->
                 <td><span class="text-muted small">${escapeHtml(item.numero_factura)}</span></td>
 
                 <!-- 15. Beneficiario -->
-                <td><span class="fw-bold text-dark text-truncate d-inline-block" style="max-width: 190px;" title="${escapeHtml(item.beneficiario)}">${escapeHtml(item.beneficiario)}</span></td>
+                <td><span class="fw-bold text-dark" title="${escapeHtml(item.beneficiario)}">${escapeHtml(item.beneficiario)}</span></td>
 
                 <!-- 16. Tipo Persona -->
                 <td><span class="badge bg-light text-dark border small">${escapeHtml(item.tipo_persona)}</span></td>
@@ -345,13 +345,13 @@
                 <td><span class="text-dark fw-semibold small text-uppercase" title="Usuario que registró el movimiento"><i class="bi bi-person me-1 text-muted"></i>${escapeHtml(item.usuario_creacion || '-')}</span></td>
 
                 <!-- 18. Solicitante -->
-                <td><span class="text-secondary small text-uppercase">${escapeHtml(item.solicitante)}</span></td>
+                <td><span class="text-secondary small text-uppercase fw-semibold">${escapeHtml(item.solicitante)}</span></td>
 
                 <!-- 19. Autoriza -->
                 <td><span class="text-dark fw-semibold small text-uppercase">${escapeHtml(item.autoriza)}</span></td>
 
                 <!-- 20. Fecha Aprobación -->
-                <td><span class="text-muted small">${fechaAprob}</span></td>
+                <td><span class="text-muted small font-monospace">${fechaAprob}</span></td>
 
                 <!-- 21. Centro Costo -->
                 <td><span class="badge font-monospace fw-bold" style="font-size:0.74rem; background:#eff6ff; color:#0f172a !important; border:1px solid #bfdbfe; border-radius:6px; padding:3px 8px;">${escapeHtml(item.centro_costo)}</span></td>
@@ -363,7 +363,7 @@
                 <td class="text-center">${badgeEstado}</td>
 
                 <!-- 24. Banco / Cuenta -->
-                <td class="pe-3"><span class="text-secondary small fw-semibold text-truncate d-inline-block" style="max-width: 210px;" title="${escapeHtml(item.banco_cuenta)}">${escapeHtml(item.banco_cuenta)}</span></td>
+                <td class="pe-3"><span class="text-secondary small fw-semibold" title="${escapeHtml(item.banco_cuenta)}">${escapeHtml(item.banco_cuenta)}</span></td>
             </tr>
         `;
     }
