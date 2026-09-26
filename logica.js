@@ -4490,10 +4490,12 @@ window.cargarModuloAislado = async function(rutaModulo) {
         root.innerHTML = ''; // limpieza explícita — evita solapamiento si dos navegaciones se solapan
         // Cerrar y remover drawers zombies y backdrops residuales
         document.querySelectorAll('.offcanvas-backdrop, .modal-backdrop, #rotDrawerBackdrop').forEach(b => b.remove());
-        document.querySelectorAll('.rot-drawer, .rot-sub-drawer, .sr-drawer-global, #drawerFleetrun, #drawerEditarFleetrun, #drawerInspeccion, [id^="rot-drawer-"]').forEach(function(el) {
+        document.querySelectorAll('.rot-drawer, .rot-sub-drawer, .sr-drawer-global, #drawerFleetrun, #drawerEditarFleetrun, #drawerInspeccion, [id^="rot-drawer-"], #modalOsForm, #modalOsSelectorGre, #modalOsExpressCochera, #modalIniciarServicioConfirm').forEach(function(el) {
             if (el && !root.contains(el)) {
-                var inst = typeof bootstrap !== 'undefined' && bootstrap.Offcanvas ? bootstrap.Offcanvas.getInstance(el) : null;
-                if (inst) inst.hide();
+                var inst = typeof bootstrap !== 'undefined' ? (bootstrap.Modal ? bootstrap.Modal.getInstance(el) : null) || (bootstrap.Offcanvas ? bootstrap.Offcanvas.getInstance(el) : null) : null;
+                if (inst) {
+                    try { inst.hide(); inst.dispose(); } catch(e) {}
+                }
                 el.remove();
             }
         });
