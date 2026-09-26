@@ -1371,26 +1371,39 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     router.delete('/entradas/:id', (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;
-        // 1. Eliminar detalles de recepciones de la OC
-        tdb.query('DELETE dr FROM detalle_recepciones_oc dr JOIN recepciones_oc r ON r.id = dr.recepcion_id WHERE r.oc_id = ?', [id], (errRecDet) => {
-            if (errRecDet) console.warn('Error borrando detalle_recepciones_oc al eliminar OC:', errRecDet.message);
-            // 2. Eliminar cabeceras de recepciones de la OC
-            tdb.query('DELETE FROM recepciones_oc WHERE oc_id = ?', [id], (errRec) => {
-                if (errRec) console.warn('Error borrando recepciones_oc al eliminar OC:', errRec.message);
-                // 3. Eliminar detalle de la entrada
-                tdb.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (err) => {
-                    if (err) return res.status(500).json({ error: err.message });
-                    // 4. Eliminar entrada/OC principal
-                    tdb.query('DELETE FROM entradas_inv WHERE id=?', [id], (err2) => {
-                        if (err2) return res.status(500).json({ error: err2.message });
-                        if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
-                            logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); 
-                        } 
-                        res.json({ ok: true });
+        const cleanId = String(id).replace(/^ENT-/i, '');
+
+        // 1. Eliminar movimientos de tesorería asociados a la OC (pagos / egresos)
+        tdb.query(
+            `DELETE FROM tesoreria_caja 
+             WHERE (tipo_comprobante = 'ORDEN DE COMPRA' OR sub_motivo = 'PAGO REQUERIMIENTO' OR descripcion LIKE '%PAGO DE REQUERIMIENTO OC%')
+               AND (descripcion LIKE ? OR descripcion LIKE ? OR observacion LIKE ? OR observacion LIKE ?)`,
+            [`%${id}%`, `%${cleanId}%`, `%${id}%`, `%${cleanId}%`],
+            (errTes) => {
+                if (errTes) console.warn('Error borrando movimientos tesoreria_caja al eliminar OC:', errTes.message);
+
+                // 2. Eliminar detalles de recepciones de la OC
+                tdb.query('DELETE dr FROM detalle_recepciones_oc dr JOIN recepciones_oc r ON r.id = dr.recepcion_id WHERE r.oc_id = ?', [id], (errRecDet) => {
+                    if (errRecDet) console.warn('Error borrando detalle_recepciones_oc al eliminar OC:', errRecDet.message);
+                    // 3. Eliminar cabeceras de recepciones de la OC
+                    tdb.query('DELETE FROM recepciones_oc WHERE oc_id = ?', [id], (errRec) => {
+                        if (errRec) console.warn('Error borrando recepciones_oc al eliminar OC:', errRec.message);
+                        // 4. Eliminar detalle de la entrada
+                        tdb.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (err) => {
+                            if (err) return res.status(500).json({ error: err.message });
+                            // 5. Eliminar entrada/OC principal
+                            tdb.query('DELETE FROM entradas_inv WHERE id=?', [id], (err2) => {
+                                if (err2) return res.status(500).json({ error: err2.message });
+                                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
+                                    logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); 
+                                } 
+                                res.json({ ok: true });
+                            });
+                        });
                     });
                 });
-            });
-        });
+            }
+        );
     });
 
     router.put('/entradas/:id/estado', (req, res) => {
@@ -1991,14 +2004,14 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     router.get('/recepciones-oc', async (req, res) => {
         try {
             const targetDb = req.db || db;
-            // 1. Obtener SOLO las órdenes de compra que ya fueron APROBADAS Y PAGADAS / PROCESADAS
+            // 1. Obtener SOLO las órdenes de compra que ya fueron APROBADAS Y PAGADAS / PROCESADAS (con voucher/pago en tesorería)
             const sqlOCs = `
             SELECT e.*, 
                    COALESCE(SUM(de.cantidad), 0) AS total_items_oc,
                    COUNT(DISTINCT de.id) AS total_renglones
             FROM entradas_inv e
             LEFT JOIN detalle_entradas_inv de ON de.entrada_id = e.id
-            WHERE LOWER(COALESCE(e.estado, 'registrado')) NOT IN ('anulado', 'anulada', 'rechazado', 'rechazada')
+            WHERE LOWER(COALESCE(e.estado, '')) IN ('procesado', 'procesada', 'pagado', 'pagada')
             GROUP BY e.id
             ORDER BY e.fecha DESC, e.id DESC
         `;

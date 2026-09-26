@@ -2639,6 +2639,23 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
     // 📊 MOVIMIENTOS DE TESORERÍA (Libro Banco & Caja Unificado)
     // ============================================================
+    router.delete('/movimientos/:id', async (req, res) => {
+        try {
+            await ensureTableCaja(req);
+            const tdb = getDb(req);
+            const { id } = req.params;
+            const [rows] = await tdb.query('SELECT voucher_url, sustento_url FROM tesoreria_caja WHERE id = ?', [id]);
+            await tdb.query('DELETE FROM tesoreria_caja WHERE id = ?', [id]);
+            if (rows && rows.length) {
+                if (rows[0].voucher_url) deleteFromS3(s3KeyFromUrl(rows[0].voucher_url)).catch(() => {});
+                if (rows[0].sustento_url) deleteFromS3(s3KeyFromUrl(rows[0].sustento_url)).catch(() => {});
+            }
+            res.json({ ok: true, message: 'Movimiento eliminado correctamente' });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     router.get('/movimientos', async (req, res) => {
         try {
             const tdb = getDb(req);
@@ -2646,6 +2663,21 @@ module.exports = function (db, broadcast, logAudit) {
             await ensureTableCaja(req);
             await ensureTableCentrosCostos(req);
             await _ensureColumnasPagoRequerimientos(tdb);
+
+            // Limpieza preventiva de movimientos huérfanos de OCs que ya fueron eliminadas del sistema
+            try {
+                await tdb.query(`
+                    DELETE c FROM tesoreria_caja c
+                    LEFT JOIN entradas_inv e ON (
+                        c.descripcion LIKE CONCAT('%', e.id, '%') 
+                        OR c.descripcion LIKE CONCAT('%', REPLACE(e.id, 'ENT-', ''), '%')
+                        OR c.observacion LIKE CONCAT('%', e.id, '%')
+                        OR c.observacion LIKE CONCAT('%', REPLACE(e.id, 'ENT-', ''), '%')
+                    )
+                    WHERE (c.tipo_comprobante = 'ORDEN DE COMPRA' OR c.sub_motivo = 'PAGO REQUERIMIENTO' OR c.descripcion LIKE '%PAGO DE REQUERIMIENTO OC%')
+                      AND e.id IS NULL
+                `);
+            } catch (errPurge) {}
 
             const { banco, estado, fecha_desde, fecha_hasta, tipo_movimiento, search } = req.query;
 

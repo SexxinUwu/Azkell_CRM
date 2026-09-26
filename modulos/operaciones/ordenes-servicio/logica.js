@@ -13,6 +13,15 @@
 
     // Inicialización del módulo
     window.init_operaciones_ordenes_servicio = function () {
+        // Limpieza de modales huérfanos residuales en document.body para evitar elementos duplicados en el DOM
+        document.querySelectorAll('body > #modalOsForm, body > #modalOsSelectorGre, body > #modalOsExpressCochera, body > #modalIniciarServicioConfirm').forEach(el => {
+            try {
+                const inst = bootstrap.Modal.getInstance(el);
+                if (inst) inst.dispose();
+            } catch(e) {}
+            el.remove();
+        });
+
         initFechasPorDefecto();
         window.osCargarClientesDatalist();
         window.osCargarTabla();
@@ -283,17 +292,20 @@
 
     // ── Botón Atrás Contextual ──────────────────────────────────────
     window.osRegresarAtras = function () {
-        const modalEl = document.getElementById('modalOsForm');
-        if (modalEl) {
+        const modalEls = document.querySelectorAll('#modalOsForm');
+        modalEls.forEach(modalEl => {
             try {
-                const modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
-                if (modal) modal.hide();
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) {
+                    modal.hide();
+                    modal.dispose();
+                }
             } catch (e) {}
             modalEl.classList.remove('show');
             modalEl.style.display = 'none';
             modalEl.setAttribute('aria-hidden', 'true');
             modalEl.removeAttribute('aria-modal');
-        }
+        });
         document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
         document.body.classList.remove('modal-open');
         document.body.style.removeProperty('overflow');

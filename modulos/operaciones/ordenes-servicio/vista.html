@@ -766,14 +766,14 @@
             <!-- Modal Header con Botón Atrás Contextual -->
             <div class="modal-header d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow-2xs" onclick="window.osRegresarAtras()" title="Regresar">
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow-2xs" data-bs-dismiss="modal" onclick="window.osRegresarAtras()" title="Regresar">
                         <i class="bi bi-arrow-left fs-6"></i>
                         <span>Atrás</span>
                     </button>
                     <h5 class="modal-title m-0 fw-bold" id="modalOsFormLabel" style="color: #0284c7; font-size: 1.15rem;">Nueva Orden</h5>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn-close" onclick="window.osRegresarAtras()" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="window.osRegresarAtras()" aria-label="Close"></button>
                 </div>
             </div>
 
@@ -1127,7 +1127,7 @@
 
             <!-- Modal Footer con Botones de Cierre y Guardar -->
             <div class="modal-footer d-flex align-items-center justify-content-between px-4 py-2 border-top bg-white">
-                <button type="button" class="btn btn-sm btn-light border px-3 fw-bold" onclick="window.osRegresarAtras()">Cerrar</button>
+                <button type="button" class="btn btn-sm btn-light border px-3 fw-bold" data-bs-dismiss="modal" onclick="window.osRegresarAtras()">Cerrar</button>
                 <button type="button" class="btn btn-sm os-btn-guardar" onclick="window.osGuardarOrdenDirecto()">Guardar</button>
             </div>
 
