@@ -105,7 +105,7 @@ module.exports = function globalRBAC(req, res, next) {
         mod = (req.method === 'GET') ? ['inv', 'ent_inv', 'sal_inv', 'kardex', 'cfg_almacen', 'almacenes'] : ['cfg_almacen', 'almacenes', 'inv'];
     }
     else if (path.startsWith('/almacen/recepciones-oc') || path.startsWith('/almacen/reset-recepciones')) {
-        mod = ['ent_inv', 'inv', 'cfg_almacen'];
+        mod = ['rec_compras', 'ent_inv', 'inv', 'cfg_almacen'];
     }
     else if (path.startsWith('/almacen/empresa-cuentas')) {
         mod = ['ent_inv', 'inv', 'sal_inv', 'cfg_almacen', 'tesoreria'];

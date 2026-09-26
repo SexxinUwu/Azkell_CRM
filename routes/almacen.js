@@ -1998,7 +1998,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                    COUNT(DISTINCT de.id) AS total_renglones
             FROM entradas_inv e
             LEFT JOIN detalle_entradas_inv de ON de.entrada_id = e.id
-            WHERE LOWER(e.estado) IN ('pagado', 'procesado')
+            WHERE LOWER(COALESCE(e.estado, 'registrado')) NOT IN ('anulado', 'anulada', 'rechazado', 'rechazada')
             GROUP BY e.id
             ORDER BY e.fecha DESC, e.id DESC
         `;

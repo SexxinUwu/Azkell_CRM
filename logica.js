@@ -336,6 +336,7 @@ window.verificarSesionGuardada = function() {
     var vDashAlm = showAlmacenHub && _cL('dash_alm');
     var vInv     = showAlmacenHub && _cL('inv');
     var vEnt     = showAlmacenHub && _cL('ent_inv');
+    var vRec     = showAlmacenHub && (_cL('rec_compras') || _cL('ent_inv') || _cL('inv'));
     var vSal     = showAlmacenHub && _cL('sal_inv');
     var vKardex  = showAlmacenHub && _cL('kardex');
     var vProv    = showAlmacenHub && _cL('prov_inv');
@@ -346,8 +347,8 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-inventario',    vInv);
     safe('nav-entradas-inv',    vEnt);
     safe('mbnav-entradas-inv',  vEnt);
-    safe('nav-recepcion-compras', vEnt);
-    safe('mbnav-recepcion-compras', vEnt);
+    safe('nav-recepcion-compras', vRec);
+    safe('mbnav-recepcion-compras', vRec);
     safe('nav-salidas-inv',     vSal);
     safe('mbnav-salidas-inv',   vSal);
     safe('nav-kardex',          vKardex);
@@ -355,7 +356,7 @@ window.verificarSesionGuardada = function() {
     safe('nav-proveedores-inv', vProv);
     safe('mbnav-proveedores-inv', vProv);
 
-    var showAlm = vDashAlm || vInv || vEnt || vSal || vKardex || vProv;
+    var showAlm = vDashAlm || vInv || vEnt || vRec || vSal || vKardex || vProv;
     safe('wrap-almacen', showAlm);
     safe('bnav-almacen', showAlm);
 
@@ -710,6 +711,7 @@ window.verificarSesionGuardada = function() {
             'flota/ubicacion': 'gps',
             'flota/documentos': 'docs_flota',
             'flota/placas': 'placas',
+            'flota/entrega-vehiculos': 'entrega_vehiculos',
             'mantenimiento/status-rampa': 'status_rampa',
             'mantenimiento/checklist': 'checklist',
             'mantenimiento/inspecciones': 'insp',
@@ -724,12 +726,20 @@ window.verificarSesionGuardada = function() {
             'mantenimiento/neumaticos-ultimas': 'neumaticos',
             'mantenimiento/incidencias-ruta': 'incidencias_ruta',
             'mantenimiento/otros': 'otros_mant',
+            'mantenimiento/planificacion': 'otros_mant',
+            'mantenimiento/backlog-taller': 'otros_mant',
+            'mantenimiento/kpis-taller': 'otros_mant',
+            'mantenimiento/productividad': 'otros_mant',
+            'mantenimiento/finanzas-taller': 'otros_mant',
             'almacen/dashboard-financiero': 'dash_alm',
             'almacen/inventario': 'inv',
             'almacen/entradas': 'ent_inv',
+            'almacen/recepcion-compras': 'rec_compras',
             'almacen/salidas': 'sal_inv',
             'almacen/kardex': 'kardex',
             'almacen/proveedores': 'prov_inv',
+            'gerencia/aprobaciones-oc': 'gerencia_aprobaciones_oc',
+            'gerencia/aprobaciones-caja': 'gerencia_aprobaciones_caja',
             'directorio/conductores': 'cond',
             'directorio/clientes': 'clientes',
             'operaciones/marsisa-ordenes-viaje': 'op_guias_remision',
@@ -757,6 +767,8 @@ window.verificarSesionGuardada = function() {
             'operaciones/conductor-portal': 'conductor_portal',
             'tesoreria/caja': 'tesoreria_caja',
             'tesoreria/caja-chica': 'tesoreria_caja',
+            'tesoreria/pago-requerimientos': 'tesoreria_pago_req',
+            'tesoreria/movimientos': 'tesoreria_movimientos',
             'tesoreria/liquidaciones': 'tesoreria_liquidaciones',
             'tesoreria/cuentas': 'tesoreria_cuentas',
             'tesoreria/bancos': 'tesoreria_bancos',
@@ -771,6 +783,24 @@ window.verificarSesionGuardada = function() {
         };
 
         // Fallbacks inteligentes para submódulos
+        if (r === 'almacen/recepcion-compras') {
+            return window.checkPerm('rec_compras', 'l') || window.checkPerm('ent_inv', 'l') || window.checkPerm('inv', 'l');
+        }
+        if (r === 'gerencia/aprobaciones-oc') {
+            return window.checkPerm('gerencia_aprobaciones_oc', 'l') || window.checkPerm('aprobaciones_oc', 'l') || isAdm;
+        }
+        if (r === 'gerencia/aprobaciones-caja') {
+            return window.checkPerm('gerencia_aprobaciones_caja', 'l') || window.checkPerm('aprobaciones_caja', 'l') || isAdm;
+        }
+        if (r === 'tesoreria/pago-requerimientos') {
+            return window.checkPerm('tesoreria_pago_req', 'l') || window.checkPerm('tesoreria_caja', 'l');
+        }
+        if (r === 'tesoreria/movimientos') {
+            return window.checkPerm('tesoreria_movimientos', 'l') || window.checkPerm('tesoreria_caja', 'l');
+        }
+        if (r === 'flota/entrega-vehiculos') {
+            return window.checkPerm('entrega_vehiculos', 'l') || window.checkPerm('placas', 'l') || window.checkPerm('seguridad_unidades', 'l');
+        }
         if (r === 'operaciones/programacion') {
             return window.checkPerm('op_programacion', 'l') || window.checkPerm('op_guias_remision', 'l') || window.checkPerm('guias_remision', 'l');
         }
