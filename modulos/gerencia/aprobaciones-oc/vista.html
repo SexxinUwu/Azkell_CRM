@@ -61,12 +61,7 @@
         font-size: 1.35rem !important;
     }
     .kpi-bento-card .kpi-footer-row {
-        font-size: 0.68rem !important;
-        margin-top: 0.35rem !important;
-        padding-top: 0.35rem !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 1px !important;
+        display: none !important;
     }
 }
 
@@ -339,7 +334,7 @@
                 </span>
                 <h4 class="fw-bolder text-dark m-0" style="letter-spacing:-0.02em;">Aprobación de Órdenes de Compra</h4>
             </div>
-            <p class="text-secondary m-0" style="font-size:0.83rem;">
+            <p class="text-secondary m-0 d-none d-md-block" style="font-size:0.83rem;">
                 Bandeja gerencial para autorización, validación de presupuestos y toma de decisiones en compras y adquisiciones
             </p>
         </div>
@@ -405,7 +400,7 @@
 
         <!-- Observadas -->
         <div class="col-6 col-xl-3">
-            <div class="kpi-bento-card kpi-obs" style="cursor:pointer;" onclick="window.filtrarPorTab('observado')">
+            <div class="kpi-bento-card kpi-obs" style="cursor:pointer;" onclick="window.filtrarPorTab('pendiente')">
                 <div class="d-flex align-items-center justify-content-between mb-1 mb-md-2">
                     <span class="text-secondary fw-bold kpi-header-title" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Observadas</span>
                     <span class="badge bg-indigo-subtle text-indigo border border-indigo-subtle rounded-pill fw-bold badge-kpi-status" style="font-size:0.7rem; background:#e0e7ff; color:#4338ca;">
@@ -465,22 +460,14 @@
                 </div>
             </div>
 
-            <!-- Buscador y Selector de Sede -->
+            <!-- Buscador Rápido -->
             <div class="col-12 col-md-6 col-xl-8">
                 <label class="form-label text-secondary fw-bold mb-1" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em;">
                     Búsqueda Rápida & Filtros
                 </label>
-                <div class="d-flex gap-2">
-                    <div class="position-relative flex-grow-1">
-                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
-                        <input type="text" id="filtro-buscar-oc" class="form-control ps-5 py-1.5 rounded-3 border bg-light" placeholder="Buscar por N° OC, Proveedor, Solicitante o Placa..." style="font-size:0.83rem;" oninput="window.aplicarFiltrosOC()">
-                    </div>
-                    <select id="filtro-almacen-oc" class="form-select rounded-3 border bg-light py-1.5" style="font-size:0.83rem; width:160px;" onchange="window.aplicarFiltrosOC()">
-                        <option value="">Todas las Sedes</option>
-                        <option value="Lurín">Sede Lurín</option>
-                        <option value="Callao">Sede Callao</option>
-                        <option value="Arequipa">Sede Arequipa</option>
-                    </select>
+                <div class="position-relative flex-grow-1">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" style="font-size:0.85rem;"></i>
+                    <input type="text" id="filtro-buscar-oc" class="form-control ps-5 py-1.5 rounded-3 border bg-light" placeholder="Buscar por N° OC, Proveedor, Solicitante o Placa..." style="font-size:0.83rem;" oninput="window.aplicarFiltrosOC()">
                 </div>
             </div>
         </div>
@@ -492,13 +479,10 @@
                     <i class="bi bi-collection"></i> Todos <span class="badge-pill" id="tab-badge-todos">0</span>
                 </button>
                 <button class="aprob-tab-btn active" data-tab="pendiente" onclick="window.filtrarPorTab('pendiente')">
-                    <i class="bi bi-hourglass-split text-warning"></i> Pendientes <span class="badge-pill" id="tab-badge-pendiente">0</span>
+                    <i class="bi bi-hourglass-split text-warning"></i> Pendientes / Observadas <span class="badge-pill" id="tab-badge-pendiente">0</span>
                 </button>
                 <button class="aprob-tab-btn" data-tab="aprobado" onclick="window.filtrarPorTab('aprobado')">
                     <i class="bi bi-check2-circle text-success"></i> Aprobadas <span class="badge-pill" id="tab-badge-aprobado">0</span>
-                </button>
-                <button class="aprob-tab-btn" data-tab="observado" onclick="window.filtrarPorTab('observado')">
-                    <i class="bi bi-chat-dots text-primary"></i> Observadas <span class="badge-pill" id="tab-badge-observado">0</span>
                 </button>
                 <button class="aprob-tab-btn" data-tab="rechazado" onclick="window.filtrarPorTab('rechazado')">
                     <i class="bi bi-x-circle text-danger"></i> Rechazadas <span class="badge-pill" id="tab-badge-rechazado">0</span>
