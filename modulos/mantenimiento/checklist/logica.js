@@ -2968,17 +2968,62 @@ window.abrirDetalleChecklist = async function(id) {
         </div>
     `;
 
-    // ── 5. ÓRDENES DE TRABAJO GENERADAS ──
+    // ── 5. ÓRDENES DE TRABAJO GENERADAS (ESTADO DINÁMICO EN VIVO) ──
     let otsHtml = '<div class="text-muted small">Sin órdenes de trabajo generadas.</div>';
     if (r.ots_generadas_json) {
         try {
             const ots = typeof r.ots_generadas_json === 'string' ? JSON.parse(r.ots_generadas_json) : r.ots_generadas_json;
             if (Array.isArray(ots) && ots.length) {
-                otsHtml = ots.map(o => `
-                    <span class="badge bg-primary px-3 py-2 fs-6 rounded-3 me-2">
-                        ${o.idOt} <span class="badge bg-info text-dark ms-1">EN PROCESO</span>
-                    </span>
-                `).join('');
+                // Consultar listado de OTs en vivo para obtener el estado real
+                let liveOtsMap = {};
+                try {
+                    const resOts = await fetch('/api/ordenes-trabajo');
+                    if (resOts.ok) {
+                        const listaOts = await resOts.json();
+                        (Array.isArray(listaOts) ? listaOts : (listaOts.data || [])).forEach(otItem => {
+                            const tk = String(otItem.ticket_entrada || otItem.id_ot || '').trim();
+                            if (tk) liveOtsMap[tk] = otItem;
+                        });
+                    }
+                } catch(eOtFetch) {
+                    console.warn('Error obteniendo estado de OTs en detalle RF:', eOtFetch);
+                }
+
+                otsHtml = ots.map(o => {
+                    const otId = String(o.idOt || o.ticket_entrada || o.id_ot || '').trim();
+                    const otLive = liveOtsMap[otId];
+                    
+                    let rawEstado = (otLive ? (otLive.situacion || otLive.estado || otLive.estado_ot) : null) || o.estado || (r.estado === 'Finalizado' ? 'Finalizado' : 'En Proceso');
+                    let rawLower = String(rawEstado).toLowerCase().trim();
+
+                    let estadoReal = 'EN PROCESO';
+                    let badgeClass = 'bg-primary text-white';
+
+                    if (['finalizado', 'finalizada', 'cerrada', 'cerrado', 'completada', 'completado', 'terminada', 'terminado'].includes(rawLower) || r.estado === 'Finalizado') {
+                        estadoReal = 'FINALIZADO';
+                        badgeClass = 'bg-success text-white';
+                    } else if (['anulado', 'anulada', 'cancelado', 'cancelada'].includes(rawLower)) {
+                        estadoReal = 'ANULADO';
+                        badgeClass = 'bg-danger text-white';
+                    } else if (['pendiente', 'sin iniciar', 'espera'].some(st => rawLower.includes(st))) {
+                        estadoReal = 'PENDIENTE';
+                        badgeClass = 'bg-warning text-dark';
+                    } else if (rawLower.includes('paus')) {
+                        estadoReal = 'PAUSADO';
+                        badgeClass = 'bg-warning text-dark';
+                    } else {
+                        estadoReal = 'EN PROCESO';
+                        badgeClass = 'bg-primary text-white';
+                    }
+
+                    return `
+                        <div class="d-inline-flex align-items-center gap-2 p-2 px-3 me-2 mb-2 bg-light border rounded-3 shadow-2xs">
+                            <span class="fw-bold font-monospace text-primary" style="font-size:0.9rem;">${otId}</span>
+                            ${o.placa ? `<span class="badge bg-white text-dark border fw-bold px-2 py-1" style="font-size:0.75rem;">${o.placa}</span>` : ''}
+                            <span class="badge ${badgeClass} px-2 py-1 fw-bold text-uppercase" style="font-size:0.7rem; border-radius:6px;">${estadoReal}</span>
+                        </div>
+                    `;
+                }).join('');
             }
         } catch(e) {}
     }
