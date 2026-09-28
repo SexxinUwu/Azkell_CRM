@@ -1,8 +1,16 @@
 <!-- ================================================================ -->
-<!-- ☀️ DASHBOARD MANTENIMIENTO — CLIMA DINÁMICO & FLEETRUN (APPLE UI) -->
+<!-- ☀️ DASHBOARD MANTENIMIENTO — CLIMA DINÁMICO & FLEETRUN (APPLE FULL-BLEED) -->
 <!-- ================================================================ -->
 <style>
-/* ── Plus Jakarta Sans & Apple Reset ────────────────────────────── */
+/* ── Reset root-dinamico & main-area para 100% PANTALLA COMPLETA ── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    overflow-x: hidden !important;
+}
+
+/* ── Plus Jakarta Sans & Apple Tokens ────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 #moduloMantenimientoDashboard {
@@ -13,7 +21,8 @@
     font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     position: relative;
     overflow-x: hidden;
-    transition: background 1s ease-in-out;
+    transition: background 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-font-smoothing: antialiased;
 }
 
 /* ── PALETAS ATMOSFÉRICAS DINÁMICAS (Degradado fluido a blanco) ── */
@@ -24,9 +33,9 @@
         #4995df 26%, 
         #72b0ee 38%, 
         #a6d0f7 50%, 
-        #d6e9fc 62%, 
-        #edf5fd 74%, 
-        #f8fafc 86%, 
+        #d6e9fc 64%, 
+        #edf5fd 78%, 
+        #f8fafc 90%, 
         #ffffff 100%
     );
 }
@@ -38,9 +47,9 @@
         #e07e3a 26%, 
         #f1a461 38%, 
         #fbcda5 50%, 
-        #fde8d4 62%, 
-        #fef5ee 74%, 
-        #fffaf7 86%, 
+        #fde8d4 64%, 
+        #fef5ee 78%, 
+        #fffaf7 90%, 
         #ffffff 100%
     );
 }
@@ -52,121 +61,121 @@
         #9b2c6e 26%, 
         #d14d59 38%, 
         #f17c58 50%, 
-        #fbc19c 62%, 
-        #fbe6d5 74%, 
-        #fdf5ef 86%, 
+        #fbc19c 64%, 
+        #fbe6d5 78%, 
+        #fdf5ef 90%, 
         #ffffff 100%
     );
 }
 
 #moduloMantenimientoDashboard.theme-night {
     background: linear-gradient(180deg, 
-        #0b162c 0%, 
-        #112347 14%, 
-        #193566 26%, 
-        #284e88 38%, 
-        #4671ad 50%, 
-        #82a8db 62%, 
-        #bfd5f0 74%, 
-        #eef4fb 86%, 
+        #091326 0%, 
+        #0f2042 14%, 
+        #162f5e 26%, 
+        #21437c 38%, 
+        #36619e 50%, 
+        #6892c9 64%, 
+        #a8c7ed 78%, 
+        #e4effb 90%, 
         #ffffff 100%
     );
 }
 
-/* ── Resplandor Luminoso Dinámico ──────────────────────────────── */
+/* ── Resplandor Luminoso Atmosférico ───────────────────────────── */
 .mant-sky-glow {
     position: absolute;
-    top: 25px;
-    left: 8%;
-    width: 190px;
-    height: 190px;
-    filter: blur(34px);
+    top: 20px;
+    left: 6%;
+    width: 200px;
+    height: 200px;
+    filter: blur(36px);
     pointer-events: none;
-    transition: background 1s ease, transform 1s ease;
+    transition: background 0.8s ease, transform 0.8s ease;
     z-index: 1;
 }
 
 #moduloMantenimientoDashboard.theme-day .mant-sky-glow {
-    background: radial-gradient(circle, rgba(254, 240, 138, 0.5) 0%, rgba(251, 191, 36, 0.25) 45%, transparent 70%);
+    background: radial-gradient(circle, rgba(254, 240, 138, 0.55) 0%, rgba(251, 191, 36, 0.28) 45%, transparent 70%);
 }
 #moduloMantenimientoDashboard.theme-dawn .mant-sky-glow {
-    background: radial-gradient(circle, rgba(254, 215, 170, 0.55) 0%, rgba(249, 115, 22, 0.35) 45%, transparent 70%);
+    background: radial-gradient(circle, rgba(254, 215, 170, 0.6) 0%, rgba(249, 115, 22, 0.38) 45%, transparent 70%);
 }
 #moduloMantenimientoDashboard.theme-sunset .mant-sky-glow {
-    background: radial-gradient(circle, rgba(251, 146, 60, 0.55) 0%, rgba(236, 72, 153, 0.4) 45%, transparent 70%);
+    background: radial-gradient(circle, rgba(251, 146, 60, 0.6) 0%, rgba(236, 72, 153, 0.45) 45%, transparent 70%);
 }
 #moduloMantenimientoDashboard.theme-night .mant-sky-glow {
-    background: radial-gradient(circle, rgba(186, 230, 253, 0.45) 0%, rgba(56, 189, 248, 0.25) 45%, transparent 70%);
+    background: radial-gradient(circle, rgba(186, 230, 253, 0.5) 0%, rgba(56, 189, 248, 0.3) 45%, transparent 70%);
 }
 
 /* ── Arco Celeste Continuo Punteado ────────────────────────────── */
 .mant-sky-arc {
     position: absolute;
-    top: 50px;
+    top: 48px;
     left: 50%;
     transform: translateX(-50%);
-    width: 92%;
-    max-width: 480px;
-    height: 110px;
-    border: 1.5px dashed rgba(255, 255, 255, 0.55);
+    width: 90%;
+    max-width: 440px;
+    height: 105px;
+    border: 1.5px dashed rgba(255, 255, 255, 0.5);
     border-bottom: none;
-    border-radius: 240px 240px 0 0;
+    border-radius: 220px 220px 0 0;
     pointer-events: none;
     z-index: 2;
 }
 
 /* ── Esfera Celeste 3D (Sol/Luna) ──────────────────────────────── */
 .mant-celestial-sphere {
-    width: 54px;
-    height: 54px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     transition: background 0.8s ease, box-shadow 0.8s ease, transform 0.8s ease;
 }
 
 #moduloMantenimientoDashboard.theme-day .mant-celestial-sphere {
     background: radial-gradient(circle at 35% 35%, #fffbeb 0%, #fef08a 30%, #f59e0b 85%);
-    box-shadow: 0 0 28px 8px rgba(251, 191, 36, 0.8), 0 0 55px 20px rgba(253, 224, 71, 0.4);
+    box-shadow: 0 0 30px 8px rgba(251, 191, 36, 0.85), 0 0 60px 20px rgba(253, 224, 71, 0.45);
 }
 #moduloMantenimientoDashboard.theme-dawn .mant-celestial-sphere {
     background: radial-gradient(circle at 35% 35%, #fff7ed 0%, #fdba74 35%, #ea580c 90%);
-    box-shadow: 0 0 28px 8px rgba(249, 115, 22, 0.8), 0 0 50px 18px rgba(253, 186, 116, 0.45);
+    box-shadow: 0 0 30px 8px rgba(249, 115, 22, 0.85), 0 0 55px 20px rgba(253, 186, 116, 0.5);
 }
 #moduloMantenimientoDashboard.theme-sunset .mant-celestial-sphere {
     background: radial-gradient(circle at 35% 35%, #fff1f2 0%, #fb7185 40%, #e11d48 90%);
-    box-shadow: 0 0 30px 10px rgba(225, 29, 72, 0.75), 0 0 55px 20px rgba(251, 146, 60, 0.45);
+    box-shadow: 0 0 32px 10px rgba(225, 29, 72, 0.8), 0 0 60px 20px rgba(251, 146, 60, 0.5);
 }
 #moduloMantenimientoDashboard.theme-night .mant-celestial-sphere {
-    background: radial-gradient(circle at 35% 35%, #f8fafc 0%, #e2e8f0 40%, #94a3b8 85%);
-    box-shadow: 0 0 26px 8px rgba(226, 232, 240, 0.7), 0 0 50px 16px rgba(56, 189, 248, 0.35);
+    background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e2e8f0 40%, #94a3b8 85%);
+    box-shadow: 0 0 28px 8px rgba(255, 255, 255, 0.85), 0 0 55px 18px rgba(186, 230, 253, 0.45);
 }
 
 .mant-sun-marker {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(6px);
-    box-shadow: 0 0 14px rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 12px 3px rgba(255, 255, 255, 0.9);
 }
 
 /* ── Tarjetas Smart Card (Glassmorphism Apple) ─────────────────── */
 .mant-smart-card {
-    background: rgba(255, 255, 255, 0.88);
-    backdrop-filter: blur(26px) saturate(190%);
-    -webkit-backdrop-filter: blur(26px) saturate(190%);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(28px) saturate(200%);
+    -webkit-backdrop-filter: blur(28px) saturate(200%);
     border: 1px solid rgba(255, 255, 255, 0.95);
-    border-radius: 24px;
+    border-radius: 22px;
     box-shadow: 
-        0 10px 28px -5px rgba(20, 50, 90, 0.06),
-        0 4px 10px -2px rgba(20, 50, 90, 0.03),
+        0 8px 24px -4px rgba(15, 35, 70, 0.06),
+        0 2px 8px -2px rgba(15, 35, 70, 0.03),
         inset 0 1px 1px rgba(255, 255, 255, 0.95);
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease;
     cursor: pointer;
 }
 
 .mant-smart-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 16px 36px -6px rgba(20, 50, 90, 0.1);
+    box-shadow: 0 16px 36px -6px rgba(15, 35, 70, 0.1);
 }
 
 .mant-smart-card:active {
@@ -184,6 +193,7 @@
     padding: 3px 9px;
     border-radius: 999px;
     transition: all 0.2s ease;
+    cursor: pointer;
 }
 
 .mant-time-chip.active {
@@ -193,37 +203,54 @@
     border-color: #ffffff;
 }
 
+/* ── Botón / Badge GPS Activo con Alto Contraste Negro ─────────── */
+.mant-gps-badge {
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 1) !important;
+    color: #0f172a !important;
+    font-weight: 800 !important;
+    font-size: 0.72rem !important;
+    padding: 4px 12px !important;
+    border-radius: 999px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.mant-gps-badge span {
+    color: #0f172a !important;
+    font-weight: 800 !important;
+}
+
 /* Niebla de transición suave */
 .mant-cloud-mist {
     position: absolute;
-    top: 260px;
+    top: 250px;
     left: 0;
     right: 0;
-    height: 190px;
+    height: 200px;
     background: radial-gradient(ellipse at 50% 60%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.2) 60%, transparent 85%);
     filter: blur(36px);
     pointer-events: none;
     z-index: 2;
 }
 
-/* Responsive containers */
-.mant-container-fluid {
+/* Layout container full-bleed */
+.mant-app-viewport {
     width: 100%;
-    max-width: 520px;
+    max-width: 680px;
     margin: 0 auto;
-    padding: 1rem 1.25rem 6.5rem 1.25rem;
+    padding: 1.25rem 1.25rem 7rem 1.25rem;
     position: relative;
     z-index: 10;
 }
 
 @media (min-width: 992px) {
-    .mant-container-fluid {
-        max-width: 960px;
-    }
-    .mant-desktop-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1rem;
+    .mant-app-viewport {
+        max-width: 1100px;
+        padding: 1.5rem 2rem 5rem 2rem;
     }
 }
 </style>
@@ -234,50 +261,48 @@
     <div class="mant-sky-glow"></div>
     <div class="mant-cloud-mist"></div>
 
-    <div class="mant-container-fluid">
+    <div class="mant-app-viewport">
 
         <!-- ── HEADER ATMOSFÉRICO APPLE ────────────────────────── -->
-        <header class="relative pt-2 pb-4">
+        <header class="relative pt-1 pb-4">
             
             <!-- Arco celeste continuo punteado -->
             <div class="mant-sky-arc"></div>
 
-            <!-- Barra superior de estado -->
-            <div class="d-flex justify-content-between align-items-center text-white mb-3 px-1">
-                <span id="mant-reloj-sistema" class="fw-bold fs-6 tracking-tight">--:--</span>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-white bg-opacity-20 backdrop-blur text-white border border-white border-opacity-30 rounded-pill px-2 py-1" style="font-size: 0.7rem;">
-                        <i class="bi bi-broadcast me-1"></i> GPS Activo
-                    </span>
-                    <div class="rounded-circle bg-white bg-opacity-25 border border-white border-opacity-40 d-flex align-items-center justify-content-center fw-bold text-white shadow-2xs" style="width: 32px; height: 32px; font-size: 0.75rem;">
-                        SA
-                    </div>
-                </div>
-            </div>
-
-            <!-- Selector de Fase y Ubicación -->
+            <!-- Fila Superior: Ubicación, Selector de Fase y Usuario/GPS -->
             <div class="d-flex justify-content-between align-items-center mb-3">
                 
                 <!-- Píldora de Ubicación -->
-                <div class="d-flex align-items-center gap-1 bg-white bg-opacity-20 text-white rounded-pill px-3 py-1 border border-white border-opacity-30 shadow-2xs" style="font-size: 0.75rem; font-weight: 600;">
-                    <i class="bi bi-geo-alt-fill"></i>
+                <div class="d-flex align-items-center gap-1.5 bg-white bg-opacity-20 text-white rounded-pill px-3 py-1.5 border border-white border-opacity-30 shadow-2xs" style="font-size: 0.75rem; font-weight: 700;">
+                    <i class="bi bi-geo-alt-fill text-white"></i>
                     <span id="mant-clima-ciudad">Lurigancho, Lima</span>
                 </div>
 
-                <!-- Selector de fase horaria interactivo -->
-                <div class="d-flex align-items-center gap-1 bg-dark bg-opacity-25 p-1 rounded-pill border border-white border-opacity-20">
+                <!-- Selector de fase climática interactivo -->
+                <div class="d-flex align-items-center gap-1 bg-dark bg-opacity-30 p-1 rounded-pill border border-white border-opacity-20 backdrop-blur">
                     <button onclick="window.mantCambiarFaseClima('auto')" id="mant-btn-auto" title="Automático según hora real" class="mant-time-chip active border-0">Auto</button>
                     <button onclick="window.mantCambiarFaseClima('dawn')" id="mant-btn-dawn" title="Amanecer (07:00)" class="mant-time-chip border-0">🌅</button>
                     <button onclick="window.mantCambiarFaseClima('day')" id="mant-btn-day" title="Día (12:00)" class="mant-time-chip border-0">☀️</button>
                     <button onclick="window.mantCambiarFaseClima('sunset')" id="mant-btn-sunset" title="Atardecer (18:15)" class="mant-time-chip border-0">🌇</button>
                     <button onclick="window.mantCambiarFaseClima('night')" id="mant-btn-night" title="Noche (21:30)" class="mant-time-chip border-0">🌙</button>
                 </div>
+
+                <!-- Avatar Usuario & GPS Activo (Letras Negras) -->
+                <div class="d-flex align-items-center gap-2">
+                    <div class="mant-gps-badge d-none d-sm-inline-flex">
+                        <i class="bi bi-broadcast text-primary"></i>
+                        <span>GPS Activo</span>
+                    </div>
+                    <div class="rounded-circle bg-white bg-opacity-30 border border-white border-opacity-40 d-flex align-items-center justify-content-center fw-bold text-white shadow-2xs" style="width: 34px; height: 34px; font-size: 0.75rem;">
+                        SA
+                    </div>
+                </div>
             </div>
 
             <!-- Centro Atmosférico: Sol/Luna 3D + Marcador Horario + Fecha -->
-            <div class="row align-items-end pt-1 pb-1">
+            <div class="row align-items-end pt-2 pb-1">
                 <!-- Cuerpo Celeste 3D -->
-                <div class="col-4 d-flex flex-column align-items-start pl-2">
+                <div class="col-4 d-flex flex-column align-items-start ps-2">
                     <div id="mant-astro-orb" class="mant-celestial-sphere mb-1"></div>
                 </div>
 
@@ -288,7 +313,7 @@
                 </div>
 
                 <!-- Fecha a la derecha -->
-                <div class="col-4 d-flex flex-column align-items-end pr-2 pb-1">
+                <div class="col-4 d-flex flex-column align-items-end pe-2 pb-1">
                     <span id="mant-clima-fecha" class="text-white text-opacity-90 fw-semibold" style="font-size: 0.75rem;">—</span>
                 </div>
             </div>
@@ -316,7 +341,7 @@
 
         </header>
 
-        <!-- ── SECCIÓN 1: OPERACIONES DE FLOTA (GRID 2x2) ────────── -->
+        <!-- ── SECCIÓN 1: OPERACIONES DE FLOTA (GRID 2x2 APPLE) ──── -->
         <div class="mt-4">
             <div class="d-flex justify-content-between align-items-center px-1 mb-2">
                 <span class="fw-bold text-dark text-uppercase small" style="font-size: 0.75rem; letter-spacing: 0.05em;">Operaciones de Flota</span>
@@ -414,7 +439,7 @@
             <div class="mant-smart-card overflow-hidden p-0">
                 <div class="p-3 d-flex justify-content-between align-items-center border-bottom" onclick="localStorage.setItem('fleet_fleetrun_nav_filter','VENCIDO'); cargarModuloAislado('mantenimiento/fleetrun')">
                     <div class="d-flex align-items-center gap-3">
-                        <div style="width: 9px; height: 9px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.6);"></div>
+                        <div style="width: 9px; height: 9px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.7);"></div>
                         <span class="fw-bold text-dark" style="font-size: 0.82rem;">MP Fleetrun Vencidos</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -425,7 +450,7 @@
 
                 <div class="p-3 d-flex justify-content-between align-items-center" onclick="localStorage.setItem('fleet_fleetrun_nav_filter','POR VENCER'); cargarModuloAislado('mantenimiento/fleetrun')">
                     <div class="d-flex align-items-center gap-3">
-                        <div style="width: 9px; height: 9px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.6);"></div>
+                        <div style="width: 9px; height: 9px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.7);"></div>
                         <span class="fw-bold text-dark" style="font-size: 0.82rem;">MP Fleetrun Por Vencer</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -436,7 +461,7 @@
             </div>
         </div>
 
-        <!-- ── SECCIÓN 3: ACCESO DIRECTO A MÓDULOS DE TALLER ──────── -->
+        <!-- ── SECCIÓN 3: HERRAMIENTAS DE MANTENIMIENTO ─────────── -->
         <div class="mt-4 pt-2">
             <div class="d-flex justify-content-between align-items-center px-1 mb-2">
                 <span class="fw-bold text-dark text-uppercase small" style="font-size: 0.75rem; letter-spacing: 0.05em;">Herramientas de Mantenimiento</span>
