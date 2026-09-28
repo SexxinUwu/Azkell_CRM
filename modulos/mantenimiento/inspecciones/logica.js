@@ -758,16 +758,22 @@ function mostrarStatusInspecciones(inspecciones) {
     window.renderizarTablaYCardsStatus(dataFinal, inspeccionesGeneral);
 
     // Aplicar filtro pendiente desde navegación (ej: click en card del dashboard)
-    if (window._pendingInspFilter) {
-        var _pf = String(window._pendingInspFilter).toUpperCase();
+    var navInspFilter = localStorage.getItem('fleet_insp_nav_filter') || window._pendingInspFilter;
+    if (navInspFilter) {
+        localStorage.removeItem('fleet_insp_nav_filter');
         window._pendingInspFilter = null;
+        var _pf = String(navInspFilter).toUpperCase();
         var targetSem = 'total';
         if (_pf.includes('VIGENTE') || _pf.includes('CONFORME') || _pf === 'VERDE') targetSem = 'verde';
         else if (_pf.includes('PROXIMO') || _pf.includes('PRÓXIMO') || _pf.includes('ALERTA') || _pf === 'AMARILLO') targetSem = 'amarillo';
         else if (_pf.includes('NO VIGENTE') || _pf.includes('VENCID') || _pf.includes('CRIT') || _pf === 'ROJO') targetSem = 'rojo';
         else targetSem = 'total';
 
-        window.filtrarInspSemaforoSegment(targetSem);
+        setTimeout(function() {
+            if (typeof window.filtrarInspCard === 'function') {
+                window.filtrarInspCard(targetSem);
+            }
+        }, 120);
     }
     
     // Renderizar tabla de frenos

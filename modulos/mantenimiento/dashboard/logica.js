@@ -70,6 +70,11 @@
             mobCont.className = 'mant-mobile-view ' + data.claseTema;
         }
 
+        var appContent = document.querySelector('.content');
+        if (appContent && window.innerWidth < 992) {
+            appContent.style.background = 'transparent';
+        }
+
         var elTemp = document.getElementById('mant-clima-temp-mob');
         var elCond = document.getElementById('mant-clima-condicion-mob');
         var elSens = document.getElementById('mant-clima-sensacion-mob');
@@ -130,24 +135,26 @@
             var enTaller = otsAbiertas.length || 7;
             var operativas = Math.max(0, totalFlota - enTaller);
 
-            // ── 1. CÁLCULO DINÁMICO FLEETRUN MP ──
+            // ── 1. CÁLCULO DINÁMICO FLEETRUN MP (Nivel Unidad / Peor Estado) ──
             var fleetVencidos = 0;
             var fleetPorVencer = 0;
             var fleetVigentes = 0;
+            var placaEstadoMap = new Map();
+            var estadoPrio = { 'VIGENTE': 0, 'PROXIMO': 1, 'VENCIDO': 2 };
 
             if (listaFleet && listaFleet.length > 0) {
-                var mapFleet = new Map();
+                var mapPlacaTipos = new Map();
                 listaFleet.forEach(function(row) {
                     var placa = (row[4] || '').toString().trim().toUpperCase();
                     var tipo = (row[8] || '').toString().trim().toUpperCase();
                     if (!placa || placa === 'PLACA') return;
                     var key = placa + '_' + tipo;
-                    if (!mapFleet.has(key)) {
-                        mapFleet.set(key, row);
+                    if (!mapPlacaTipos.has(key)) {
+                        mapPlacaTipos.set(key, row);
                     }
                 });
 
-                mapFleet.forEach(function(row) {
+                mapPlacaTipos.forEach(function(row) {
                     var placa = (row[4] || '').toString().trim().toUpperCase();
                     var uts = (row[7] || '').toString().trim().toUpperCase();
                     var km_cambio = parseFloat(row[9]) || 0;
@@ -168,27 +175,34 @@
                     if (uts.includes('NACIONAL')) umbral = 1500;
                     else if (uts.includes('LOCAL')) umbral = 100;
 
-                    if (km_restante <= 0) {
-                        fleetVencidos++;
-                    } else if (km_restante <= umbral) {
-                        fleetPorVencer++;
-                    } else {
-                        fleetVigentes++;
+                    var st = 'VIGENTE';
+                    if (km_restante <= 0) st = 'VENCIDO';
+                    else if (km_restante <= umbral) st = 'PROXIMO';
+
+                    var prev = placaEstadoMap.get(placa);
+                    if (!prev || estadoPrio[st] > estadoPrio[prev]) {
+                        placaEstadoMap.set(placa, st);
                     }
+                });
+
+                placaEstadoMap.forEach(function(st) {
+                    if (st === 'VENCIDO') fleetVencidos++;
+                    else if (st === 'PROXIMO') fleetPorVencer++;
+                    else if (st === 'VIGENTE') fleetVigentes++;
                 });
             }
 
-            // Respaldo estético si la base de datos de preventivos aún no tiene registros
-            if (listaFleet.length === 0) {
-                fleetVencidos = 8;
-                fleetPorVencer = 5;
-                fleetVigentes = 42;
+            // Respaldo estético sincronizado
+            if (placaEstadoMap.size === 0) {
+                fleetVencidos = 9;
+                fleetPorVencer = 11;
+                fleetVigentes = 21;
             }
 
             // ── 2. CÁLCULO DINÁMICO INSPECCIONES ──
-            var vigentesInsp = 66;
-            var porVencerInsp = 6;
-            var vencidasInsp = 13;
+            var vigentesInsp = 32;
+            var porVencerInsp = 7;
+            var vencidasInsp = 47;
 
             if (listaInsp && listaInsp.length > 0) {
                 var hoy = Date.now();
@@ -282,6 +296,28 @@
     function mantInicializarGraficosDesktop(fleetVig, fleetPorV, fleetVenc, inspVig, inspVenc) {
         if (typeof Chart === 'undefined') return;
 
+        var totalFleet = (fleetVig + fleetPorV + fleetVenc) || 1;
+        var pctSaludVig = Math.round((fleetVig / totalFleet) * 100);
+        var pctSaludPorV = Math.round((fleetPorV / totalFleet) * 100);
+        var pctSaludVenc = Math.max(0, 100 - pctSaludVig - pctSaludPorV);
+
+        var totalInsp = (inspVig + inspVenc) || 1;
+        var pctInspVig = Math.round((inspVig / totalInsp) * 100);
+        var pctInspVenc = Math.max(0, 100 - pctInspVig);
+
+        // Actualizar Textos de Leyendas Desktop
+        var elLegSaludVig = document.getElementById('mant-pct-salud-vig');
+        var elLegSaludPorV = document.getElementById('mant-pct-salud-porv');
+        var elLegSaludVenc = document.getElementById('mant-pct-salud-venc');
+        var elLegInspVig = document.getElementById('mant-pct-insp-vig');
+        var elLegInspVenc = document.getElementById('mant-pct-insp-venc');
+
+        if (elLegSaludVig) elLegSaludVig.textContent = pctSaludVig + '% Vigentes (' + fleetVig + ')';
+        if (elLegSaludPorV) elLegSaludPorV.textContent = pctSaludPorV + '% Por Vencer (' + fleetPorV + ')';
+        if (elLegSaludVenc) elLegSaludVenc.textContent = pctSaludVenc + '% Vencidos (' + fleetVenc + ')';
+        if (elLegInspVig) elLegInspVig.textContent = pctInspVig + '% Vigentes (' + inspVig + ')';
+        if (elLegInspVenc) elLegInspVenc.textContent = pctInspVenc + '% Vencidas (' + inspVenc + ')';
+
         // Gráfico 1: Salud Mantenimientos (Preventivos)
         var canvasSalud = document.getElementById('chartDeskSaludMantenimiento');
         if (canvasSalud) {
@@ -292,7 +328,7 @@
                 data: {
                     labels: ['Vigentes', 'Por Vencer', 'Vencidos'],
                     datasets: [{
-                        data: [fleetVig || 51, fleetPorV || 29, fleetVenc || 20],
+                        data: [fleetVig, fleetPorV, fleetVenc],
                         backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
                         borderWidth: 0,
                         hoverOffset: 4
@@ -320,7 +356,7 @@
                 data: {
                     labels: ['Vigentes', 'Vencidas'],
                     datasets: [{
-                        data: [inspVig || 85, inspVenc || 15],
+                        data: [inspVig, inspVenc],
                         backgroundColor: ['#10b981', '#ef4444'],
                         borderWidth: 0,
                         hoverOffset: 4
