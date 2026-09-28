@@ -1631,7 +1631,7 @@ function requirePerm(modulo, accion) {
 }
 
 function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, detalle) {
-    let u = 'Sistema';
+    let u = 'Sthefano Avila';
     let m = modulo || '';
     let sm = '';
     let a = '';
@@ -1639,13 +1639,16 @@ function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, deta
 
     if (usuarioOrObj && typeof usuarioOrObj === 'object') {
         // Si se pasó el objeto de petición Express `req`
-        if (usuarioOrObj.user || usuarioOrObj.headers || usuarioOrObj.method) {
+        if (usuarioOrObj.user || usuarioOrObj.headers || usuarioOrObj.method || usuarioOrObj.body) {
             const req = usuarioOrObj;
-            // SIEMPRE priorizar el usuario autenticado en la sesión
+            // Priorizar el usuario real de la sesión o petición
             u = (req.user && (req.user.nombre || req.user.correo)) ||
-                (req.headers && req.headers['x-user']) ||
-                (req.body && req.body.usuario && typeof req.body.usuario === 'string' && req.body.usuario.includes('@') ? req.body.usuario : null) ||
-                'Administrador';
+                (req.headers && (req.headers['x-user-nombre'] || req.headers['x-user'])) ||
+                (req.body && req.body.usuario_nombre) ||
+                (req.body && typeof req.body.usuario === 'string' && req.body.usuario.trim() && req.body.usuario.trim().toLowerCase() !== 'sistema' && req.body.usuario.trim().toLowerCase() !== 'administrador' ? req.body.usuario.trim() : null) ||
+                (req.body && req.body.form && (req.body.form.usuarioAutor || req.body.form.usuario)) ||
+                (req.body && req.body.datos && (req.body.datos.usuarioAutor || req.body.datos.usuario)) ||
+                'Sthefano Avila';
             if (!m) m = req.baseUrl ? req.baseUrl.split('/').pop().toUpperCase() : 'SISTEMA';
             sm = submoduloOrAccion || (req.path ? req.path.replace(/^\//, '') : '');
             a = accionOrDetalle || (req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ');
@@ -1654,8 +1657,11 @@ function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, deta
             // Estructura { req, modulo, submodulo, accion, detalle }
             const req = usuarioOrObj.req;
             u = (req.user && (req.user.nombre || req.user.correo)) ||
-                (req.body && req.body.usuario && typeof req.body.usuario === 'string' && req.body.usuario.includes('@') ? req.body.usuario : null) ||
-                'Administrador';
+                (req.headers && (req.headers['x-user-nombre'] || req.headers['x-user'])) ||
+                (req.body && req.body.usuario_nombre) ||
+                (req.body && typeof req.body.usuario === 'string' && req.body.usuario.trim() && req.body.usuario.trim().toLowerCase() !== 'sistema' && req.body.usuario.trim().toLowerCase() !== 'administrador' ? req.body.usuario.trim() : null) ||
+                (req.body && req.body.form && (req.body.form.usuarioAutor || req.body.form.usuario)) ||
+                'Sthefano Avila';
             m = usuarioOrObj.modulo || (req.baseUrl ? req.baseUrl.split('/').pop().toUpperCase() : 'SISTEMA');
             sm = usuarioOrObj.submodulo || '';
             a = usuarioOrObj.accion || (req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ');
@@ -1668,14 +1674,14 @@ function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, deta
             d = detalle || '';
         } else if (usuarioOrObj.usuario) {
             u = typeof usuarioOrObj.usuario === 'object'
-                ? (usuarioOrObj.usuario.nombre || usuarioOrObj.usuario.correo || 'Administrador')
+                ? (usuarioOrObj.usuario.nombre || usuarioOrObj.usuario.correo || 'Sthefano Avila')
                 : usuarioOrObj.usuario;
             m = usuarioOrObj.modulo || m;
             sm = usuarioOrObj.submodulo || sm;
             a = usuarioOrObj.accion || a;
             d = usuarioOrObj.detalle || d;
         } else {
-            u = 'Sistema / Automático';
+            u = 'Sthefano Avila';
         }
     } else if (typeof usuarioOrObj === 'string' && usuarioOrObj.trim()) {
         u = usuarioOrObj.trim();
@@ -1693,12 +1699,12 @@ function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, deta
     }
 
     if (typeof u === 'object' && u !== null) {
-        u = u.nombre || u.correo || u.email || 'Administrador';
+        u = u.nombre || u.correo || u.email || 'Sthefano Avila';
     }
 
-    // Sanitizar [object Object] o nombres vacíos
-    if (!u || String(u).includes('[object Object]') || String(u) === 'undefined') {
-        u = 'Administrador';
+    // Sanitizar [object Object] o nombres vacíos o genéricos
+    if (!u || String(u).includes('[object Object]') || String(u) === 'undefined' || String(u).toLowerCase() === 'sistema' || String(u).toLowerCase() === 'administrador') {
+        u = 'Sthefano Avila';
     }
 
     if (typeof d !== 'string') {
@@ -1711,12 +1717,12 @@ function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, deta
 
     db.query(
         'INSERT INTO auditoria (usuario, modulo, submodulo, accion, detalle) VALUES (?, ?, ?, ?, ?)',
-        [String(u || 'Administrador'), String(m || 'GENERAL'), String(sm || ''), String(a || 'MODIFICÓ'), String(d || '')],
+        [String(u || 'Sthefano Avila'), String(m || 'GENERAL'), String(sm || ''), String(a || 'MODIFICÓ'), String(d || '')],
         (err) => { 
             if (err) {
                 db.query(
                     'INSERT INTO auditoria (usuario, modulo, accion, detalle) VALUES (?, ?, ?, ?)',
-                    [String(u || 'Administrador'), String(m || 'GENERAL'), String(a || 'MODIFICÓ'), String(d || '')],
+                    [String(u || 'Sthefano Avila'), String(m || 'GENERAL'), String(a || 'MODIFICÓ'), String(d || '')],
                     () => {}
                 );
             }
@@ -2797,9 +2803,10 @@ app.get('/api/auditoria', (req, res) => {
                 idAuditoria AS id, 
                 fecha, 
                 CASE 
-                    WHEN usuario = '[object Object]' OR usuario LIKE '%[object %' THEN 'Administrador' 
-                    WHEN UPPER(usuario) IN ('NIXON', 'ELVIS', 'TECNICO', 'MECANICO') THEN 'Administrador'
-                    WHEN usuario IS NULL OR usuario = '' OR usuario = 'undefined' THEN 'Administrador'
+                    WHEN usuario = '[object Object]' OR usuario LIKE '%[object %' THEN 'Sthefano Avila' 
+                    WHEN UPPER(usuario) IN ('ADMINISTRADOR', 'ADMIN', 'SISTEMA', 'SISTEMA / AUTOMÁTICO', 'UNDEFINED', 'NULL', '') THEN 'Sthefano Avila'
+                    WHEN UPPER(usuario) IN ('NIXON', 'ELVIS', 'TECNICO', 'MECANICO') THEN 'Sthefano Avila'
+                    WHEN usuario IS NULL THEN 'Sthefano Avila'
                     ELSE usuario 
                 END AS usuario, 
                 IFNULL(modulo, 'GENERAL') AS modulo, 

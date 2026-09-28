@@ -797,7 +797,7 @@ router.post('/:metodo', async (req, res) => {
                         _inspeccionesCache = null;
                         console.log("✅ Inspección creada correctamente con ID:", nextId);
                         broadcast('inspecciones', metodo);
-                        const usuario = (req.body && req.body.usuario) || datos.tecnico || 'sistema';
+                        const usuario = (req.body && (req.body.usuario || req.body.usuarioAutor)) || (datos && (datos.usuarioAutor || datos.usuario)) || (req.user && (req.user.nombre || req.user.correo)) || 'Sthefano Avila';
                         logAudit(usuario, 'inspecciones', 'CREÓ', `${datos.placa || '?'} · ${datos.fecha_ingreso || '?'}`);
                         
                         // Sincronización automática de hallazgos hacia Reportes de Fallas y OT activa
@@ -830,7 +830,7 @@ router.post('/:metodo', async (req, res) => {
                 _inspeccionesCache = null;
                 console.log("✅ Inspección actualizada correctamente:", datos.id);
                 broadcast('inspecciones', metodo);
-                const usuario = (req.body && req.body.usuario) || datos.tecnico || 'sistema';
+                const usuario = (req.body && (req.body.usuario || req.body.usuarioAutor)) || (datos && (datos.usuarioAutor || datos.usuario)) || (req.user && (req.user.nombre || req.user.correo)) || 'Sthefano Avila';
                 logAudit(usuario, 'inspecciones', 'MODIFICÓ', `${datos.placa || '?'} · ${datos.fecha_ingreso || '?'}`);
                 
                 // Sincronización automática de hallazgos hacia Reportes de Fallas y OT activa
@@ -950,7 +950,7 @@ router.post('/:metodo', async (req, res) => {
             console.log(`✅ Eliminados definitivamente ${listaIds.length} registros de ${coleccion}`);
             const COLECCION_MODULO = { Placas:'placas', Inspecciones:'inspecciones', statusMant:'inspecciones', Fleetrun:'fleetrun', Mantenimientos:'fleetrun', Usuarios:'usuarios', VehiculosFlota:'vehiculos_flota' };
             broadcast(COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'eliminar');
-            const usuario = (req.body && req.body.usuario) || 'sistema';
+            const usuario = (req.body && (req.body.usuario || req.body.usuarioAutor)) || (req.user && (req.user.nombre || req.user.correo)) || 'Sthefano Avila';
             logAudit(usuario, COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'ELIMINÓ', `${listaIds.length} reg. de ${coleccion}`);
 
             // Al eliminar Fleetrun: revertir planes Completadas que referenciaban esos registros

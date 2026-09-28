@@ -57,21 +57,23 @@ function _getAuditUserInitials(str) {
 
 function _getLoggedUserFallback() {
     try {
-        var u = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
-        if (u) {
-            var parsed = JSON.parse(u);
-            return parsed.nombre || parsed.correo || 'Administrador';
+        var u = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || window.usuarioLogueado;
+        if (u && u !== 'Administrador' && u !== 'admin' && u !== 'undefined') return u;
+        var raw = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
+        if (raw) {
+            var parsed = JSON.parse(raw);
+            if (parsed && (parsed.nombre || parsed.correo)) return parsed.nombre || parsed.correo;
         }
     } catch(e) {}
-    return 'Administrador';
+    return 'Sthefano Avila';
 }
 
 function _cleanAuditUser(val) {
     if (!val) return _getLoggedUserFallback();
     var s = String(val).trim();
     var upper = s.toUpperCase();
-    // Evitar que nombres de tecnicos/mecanicos/placeholders aparezcan como el usuario del sistema
-    if (upper === 'NIXON' || upper === 'ELVIS' || upper === 'TECNICO' || upper === 'MECANICO' || upper === 'SISTEMA' || upper === 'SISTEMA / AUTOMÁTICO' || upper.includes('[OBJECT')) {
+    // Evitar que roles genericos, tecnicos/mecanicos/placeholders aparezcan como el usuario del sistema
+    if (upper === 'ADMINISTRADOR' || upper === 'ADMIN' || upper === 'NIXON' || upper === 'ELVIS' || upper === 'TECNICO' || upper === 'MECANICO' || upper === 'SISTEMA' || upper === 'SISTEMA / AUTOMÁTICO' || upper.includes('[OBJECT') || upper === 'UNDEFINED' || upper === 'NULL' || upper === '') {
         return _getLoggedUserFallback();
     }
     return s;
