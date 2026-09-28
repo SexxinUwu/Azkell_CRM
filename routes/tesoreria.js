@@ -2364,13 +2364,18 @@ module.exports = function (db, broadcast, logAudit) {
             (ctasRows || []).forEach(c => {
                 if (!ctasProvMap[c.proveedor_id]) ctasProvMap[c.proveedor_id] = [];
                 const monStr = (c.moneda || 'SOLES').toUpperCase();
-                const monLabel = (monStr.includes('DOL') || monStr === 'USD' || monStr === 'US$') ? 'USD' : 'PEN';
+                const esUSD = (monStr.includes('DOL') || monStr.includes('DÓL') || monStr === 'USD' || monStr === 'US$');
+                const monLabel = esUSD ? 'USD' : 'PEN';
+                const monTexto = esUSD ? 'DÓLARES' : 'SOLES';
+                const tipo = (c.tipo_cuenta || 'CUENTA CORRIENTE').toUpperCase();
+                const detraccionTxt = c.detraccion ? ' [DETRACCIÓN]' : '';
+                const num = (c.numero_cuenta || '').trim();
                 ctasProvMap[c.proveedor_id].push({
                     banco: c.banco,
-                    tipo_cuenta: c.tipo_cuenta,
-                    numero_cuenta: c.numero_cuenta,
+                    tipo_cuenta: tipo,
+                    numero_cuenta: num,
                     moneda: monLabel,
-                    texto: `${c.banco} - ${c.tipo_cuenta} [${monLabel === 'USD' ? 'DÓLARES' : 'SOLES'}] - ${c.numero_cuenta}`
+                    texto: `${c.banco} - ${tipo} [${monTexto}] - ${num}${detraccionTxt}`
                 });
             });
 
@@ -2394,12 +2399,41 @@ module.exports = function (db, broadcast, logAudit) {
                               (oc.proveedor_nombre && provsMap[oc.proveedor_nombre.toLowerCase()]) || null;
                 const proveedorRuc = pInfo ? pInfo.numero_documento : '';
 
-                // Cuenta bancaria de destino
+                // Cuenta bancaria de destino (Proveedor)
                 let cuentaDestino = oc.cuenta_bancaria_proveedor || '';
-                let cuentaDestinoMoneda = (oc.moneda || 'PEN').toUpperCase();
-                if (!cuentaDestino && oc.proveedor_id && ctasProvMap[oc.proveedor_id] && ctasProvMap[oc.proveedor_id].length > 0) {
-                    cuentaDestino = ctasProvMap[oc.proveedor_id][0].texto;
-                    cuentaDestinoMoneda = ctasProvMap[oc.proveedor_id][0].moneda;
+                let cuentaDestinoMoneda = '';
+                const provCuentas = (oc.proveedor_id && ctasProvMap[oc.proveedor_id]) ? ctasProvMap[oc.proveedor_id] : [];
+
+                if (cuentaDestino) {
+                    const ctaUpper = cuentaDestino.toUpperCase();
+                    // Buscar coincidencia en cuentas registradas del proveedor para asegurar formato uniforme
+                    const matchCta = provCuentas.find(c => c.numero_cuenta && ctaUpper.includes(c.numero_cuenta.toUpperCase()));
+                    if (matchCta) {
+                        cuentaDestino = matchCta.texto;
+                        cuentaDestinoMoneda = matchCta.moneda;
+                    } else if (ctaUpper.includes('DÓLAR') || ctaUpper.includes('DOLAR') || ctaUpper.includes('USD') || ctaUpper.includes('US$')) {
+                        cuentaDestinoMoneda = 'USD';
+                    } else if (ctaUpper.includes('SOL') || ctaUpper.includes('PEN') || ctaUpper.includes('S/')) {
+                        cuentaDestinoMoneda = 'PEN';
+                    }
+                } else if (provCuentas.length > 0) {
+                    cuentaDestino = provCuentas[0].texto;
+                    cuentaDestinoMoneda = provCuentas[0].moneda;
+                }
+
+                if (!cuentaDestinoMoneda) {
+                    const ocMonUpper = (oc.moneda || 'PEN').toUpperCase();
+                    cuentaDestinoMoneda = (ocMonUpper.includes('DOL') || ocMonUpper.includes('DÓL') || ocMonUpper === 'USD' || ocMonUpper === 'US$') ? 'USD' : 'PEN';
+                }
+
+                // Cuenta bancaria de origen (Empresa)
+                const cuentaOrigen = oc.cuenta_bancaria_empresa || '';
+                let cuentaOrigenMoneda = 'PEN';
+                if (cuentaOrigen) {
+                    const ctaOrigUpper = cuentaOrigen.toUpperCase();
+                    if (ctaOrigUpper.includes('DÓLAR') || ctaOrigUpper.includes('DOLAR') || ctaOrigUpper.includes('USD') || ctaOrigUpper.includes('US$')) {
+                        cuentaOrigenMoneda = 'USD';
+                    }
                 }
 
                 // Desglosar ítems
@@ -2480,6 +2514,7 @@ module.exports = function (db, broadcast, logAudit) {
                     cuenta_bancaria_proveedor: cuentaDestino,
                     cuenta_destino_moneda: cuentaDestinoMoneda,
                     cuenta_bancaria_empresa: oc.cuenta_bancaria_empresa || '',
+                    cuenta_origen_moneda: cuentaOrigenMoneda,
                     estado: oc.estado || 'Aprobado',
                     numero_operacion: oc.numero_operacion || '',
                     fecha_pago: oc.fecha_pago || null,

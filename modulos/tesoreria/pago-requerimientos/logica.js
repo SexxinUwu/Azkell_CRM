@@ -273,13 +273,38 @@
         const motivoOC = item.motivo_entrada || item.motivo || `ORDEN DE COMPRA: ${folioOC}`;
 
         // 5. Cuentas bancarias formateadas con monedas
-        const cuentaDestino = item.cuenta_bancaria || item.cuenta_bancaria_proveedor || 'No especificada';
-        const cuentaDestinoMoneda = (item.cuenta_destino_moneda || item.moneda || 'PEN').toUpperCase();
-        const esUSDDestino = cuentaDestinoMoneda.includes('DOL') || cuentaDestinoMoneda === 'USD' || cuentaDestinoMoneda === 'US$';
+        let cuentaDestino = item.cuenta_bancaria || item.cuenta_bancaria_proveedor || 'No especificada';
+        let ctaDestinoUpper = cuentaDestino.toUpperCase();
+        
+        // Detectar si la cuenta destino es en Dólares (con o sin tilde)
+        let esUSDDestino = false;
+        if (ctaDestinoUpper.includes('DÓLAR') || ctaDestinoUpper.includes('DOLAR') || ctaDestinoUpper.includes('USD') || ctaDestinoUpper.includes('US$')) {
+            esUSDDestino = true;
+        } else if (item.cuenta_destino_moneda) {
+            const m = String(item.cuenta_destino_moneda).toUpperCase();
+            esUSDDestino = m.includes('DOL') || m.includes('DÓL') || m === 'USD' || m === 'US$';
+        } else {
+            const m = String(item.moneda || 'PEN').toUpperCase();
+            esUSDDestino = m.includes('DOL') || m.includes('DÓL') || m === 'USD' || m === 'US$';
+        }
 
-        const cuentaOrigen = item.cuenta_bancaria_empresa || '';
-        const cuentaOrigenMoneda = (cuentaOrigen.toUpperCase().includes('DOL') || cuentaOrigen.toUpperCase().includes('USD')) ? 'USD' : 'PEN';
-        const esUSDOrigen = cuentaOrigenMoneda === 'USD';
+        // Si la cuenta destino viene en formato antiguo sin [MONEDA], normalizarla visualmente
+        if (cuentaDestino !== 'No especificada' && !cuentaDestino.includes('[SOLES]') && !cuentaDestino.includes('[DÓLARES]') && !cuentaDestino.includes('[DOLARES]')) {
+            const monLabelDestino = esUSDDestino ? 'DÓLARES' : 'SOLES';
+            if (cuentaDestino.includes('(') && cuentaDestino.includes(')')) {
+                cuentaDestino = cuentaDestino.replace(/\(([^)]+)\)$/, `[${monLabelDestino}] - $1`);
+            }
+        }
+
+        let cuentaOrigen = item.cuenta_bancaria_empresa || '';
+        let ctaOrigenUpper = cuentaOrigen.toUpperCase();
+        let esUSDOrigen = false;
+        if (ctaOrigenUpper.includes('DÓLAR') || ctaOrigenUpper.includes('DOLAR') || ctaOrigenUpper.includes('USD') || ctaOrigenUpper.includes('US$')) {
+            esUSDOrigen = true;
+        } else if (item.cuenta_origen_moneda) {
+            const m = String(item.cuenta_origen_moneda).toUpperCase();
+            esUSDOrigen = m.includes('DOL') || m.includes('DÓL') || m === 'USD' || m === 'US$';
+        }
 
         // 6. Fechas
         const fechaReg = item.fecha ? String(item.fecha).substring(0, 10) : '-';
@@ -360,11 +385,11 @@
 
                 <!-- 13. Cuenta Destino (Proveedor) -->
                 <td>
-                    <div class="d-inline-flex align-items-center gap-1.5">
-                        <span class="badge ${esUSDDestino ? 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-success bg-opacity-10 text-success border border-success border-opacity-25'} fw-bold" style="font-size:0.68rem;">
+                    <div class="d-flex align-items-start gap-1.5" style="min-width:280px;">
+                        <span class="badge ${esUSDDestino ? 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-success bg-opacity-10 text-success border border-success border-opacity-25'} fw-bold flex-shrink-0 mt-0.5" style="font-size:0.68rem; padding: 2px 6px;">
                             ${esUSDDestino ? 'USD' : 'PEN'}
                         </span>
-                        <span class="text-dark fw-semibold" style="font-size:0.75rem;">
+                        <span class="text-dark fw-semibold" style="font-size:0.75rem; white-space: normal; word-break: break-word; line-height: 1.35;">
                             ${escapeHtml(cuentaDestino)}
                         </span>
                     </div>
@@ -372,12 +397,12 @@
 
                 <!-- 14. Cuenta Origen (Empresa) -->
                 <td>
-                    <div class="d-inline-flex align-items-center gap-1.5">
+                    <div class="d-flex align-items-start gap-1.5" style="min-width:280px;">
                         ${cuentaOrigen ? `
-                            <span class="badge ${esUSDOrigen ? 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-success bg-opacity-10 text-success border border-success border-opacity-25'} fw-bold" style="font-size:0.68rem;">
+                            <span class="badge ${esUSDOrigen ? 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-success bg-opacity-10 text-success border border-success border-opacity-25'} fw-bold flex-shrink-0 mt-0.5" style="font-size:0.68rem; padding: 2px 6px;">
                                 ${esUSDOrigen ? 'USD' : 'PEN'}
                             </span>
-                            <span class="text-secondary fw-semibold" style="font-size:0.75rem;">
+                            <span class="text-secondary fw-semibold" style="font-size:0.75rem; white-space: normal; word-break: break-word; line-height: 1.35;">
                                 ${escapeHtml(cuentaOrigen)}
                             </span>
                         ` : `
@@ -461,7 +486,7 @@
             let matched = false;
             bancos.forEach((b) => {
                 const mon = (b.moneda || 'SOLES').toUpperCase();
-                const monLabel = (mon.includes('DOL') || mon === 'USD' || mon === 'US$') ? 'DÓLARES' : 'SOLES';
+                const monLabel = (mon.includes('DOL') || mon.includes('DÓL') || mon === 'USD' || mon === 'US$') ? 'DÓLARES' : 'SOLES';
                 const num = (b.numero_cuenta || '').trim();
                 const tipo = b.tipo_cuenta || 'CTA CTE';
                 const label = `${b.banco} - ${tipo} [${monLabel}] - ${num}`;
@@ -516,7 +541,7 @@
         // Llenar campos del modal
         const folioOC = item.folio || item.codigo_oc || item.id || '-';
         const monedaRaw = (item.moneda || 'SOLES').toUpperCase();
-        const esUSD = monedaRaw.includes('DOL') || monedaRaw === 'USD' || monedaRaw === 'US$';
+        const esUSD = monedaRaw.includes('DOL') || monedaRaw.includes('DÓL') || monedaRaw === 'USD' || monedaRaw === 'US$';
         const simbolo = esUSD ? 'US$' : 'S/';
         const importeNum = parseFloat(item.importe || item.total_pen || item.monto_total || item.importe_total || 0) || 0;
         const importeFormateado = importeNum.toLocaleString(esUSD ? 'en-US' : 'es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -529,7 +554,17 @@
         document.getElementById('pago_txt_solicitante').value = item.solicitante || 'NO ESPECIFICADO';
         document.getElementById('pago_txt_proveedor').value = item.proveedor_nombre || item.proveedor || '-';
         document.getElementById('pago_num_constancia').value = '';
-        document.getElementById('pago_txt_cuenta_destino').value = item.cuenta_bancaria || item.cuenta_bancaria_proveedor || 'No especificada';
+
+        let modalCuentaDestino = item.cuenta_bancaria || item.cuenta_bancaria_proveedor || 'No especificada';
+        if (modalCuentaDestino !== 'No especificada' && !modalCuentaDestino.includes('[SOLES]') && !modalCuentaDestino.includes('[DÓLARES]') && !modalCuentaDestino.includes('[DOLARES]')) {
+            const m = String(item.cuenta_destino_moneda || item.moneda || 'PEN').toUpperCase();
+            const esUSDCta = m.includes('DOL') || m.includes('DÓL') || m === 'USD' || m === 'US$' || modalCuentaDestino.toUpperCase().includes('DOL') || modalCuentaDestino.toUpperCase().includes('DÓL');
+            const monLabelDestino = esUSDCta ? 'DÓLARES' : 'SOLES';
+            if (modalCuentaDestino.includes('(') && modalCuentaDestino.includes(')')) {
+                modalCuentaDestino = modalCuentaDestino.replace(/\(([^)]+)\)$/, `[${monLabelDestino}] - $1`);
+            }
+        }
+        document.getElementById('pago_txt_cuenta_destino').value = modalCuentaDestino;
         document.getElementById('pago_txt_descripcion').value = item.motivo_entrada || item.motivo || `ORDEN DE COMPRA: ${folioOC}`;
         document.getElementById('pago_badge_importe').textContent = `${simbolo} ${importeFormateado}`;
 

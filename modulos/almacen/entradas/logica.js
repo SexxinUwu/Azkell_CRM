@@ -458,17 +458,31 @@ window._entCargarCuentasProveedor = function(provId, cuentaSeleccionada) {
     ctaSelect.innerHTML = '<option value="">Seleccione cuenta de proveedor...</option>';
 
     if (!provId) return;
+
+    function _armarLabelProv(c) {
+        var mon = (c.moneda || 'SOLES').toUpperCase();
+        var monLabel = (mon.includes('DOL') || mon.includes('DÓL') || mon === 'USD' || mon === 'US$') ? 'DÓLARES' : 'SOLES';
+        var tipo = (c.tipo_cuenta || 'CUENTA CORRIENTE').toUpperCase();
+        var detraccionTxt = c.detraccion ? ' [DETRACCIÓN]' : '';
+        var num = (c.numero_cuenta || '').trim();
+        return c.banco + ' - ' + tipo + ' [' + monLabel + '] - ' + num + detraccionTxt;
+    }
+
     var prov = (window._entProveedoresRaw || []).find(function(p) { return p.id === provId; });
     var cuentas = (prov && prov.cuentas) ? prov.cuentas : [];
 
     if (cuentas.length) {
         cuentas.forEach(function(c) {
-            var detraccionTxt = c.detraccion ? ' [DETRACCIÓN]' : '';
-            var label = c.banco + ' - ' + c.tipo_cuenta + ' (' + c.numero_cuenta + ')' + detraccionTxt;
+            var label = _armarLabelProv(c);
             var opt = document.createElement('option');
             opt.value = label;
             opt.textContent = label;
-            if (cuentaSeleccionada && (cuentaSeleccionada === label || cuentaSeleccionada === c.numero_cuenta)) {
+            var num = (c.numero_cuenta || '').trim();
+            if (cuentaSeleccionada && (
+                cuentaSeleccionada === label || 
+                cuentaSeleccionada === num ||
+                (num && cuentaSeleccionada.includes(num))
+            )) {
                 opt.selected = true;
             }
             ctaSelect.appendChild(opt);
@@ -478,13 +492,18 @@ window._entCargarCuentasProveedor = function(provId, cuentaSeleccionada) {
         fetch('/api/almacen/proveedores/' + encodeURIComponent(provId) + '/cuentas')
             .then(function(r) { return r.json(); })
             .then(function(cuentasApi) {
+                ctaSelect.innerHTML = '<option value="">Seleccione cuenta de proveedor...</option>';
                 (cuentasApi || []).forEach(function(c) {
-                    var detraccionTxt = c.detraccion ? ' [DETRACCIÓN]' : '';
-                    var label = c.banco + ' - ' + c.tipo_cuenta + ' (' + c.numero_cuenta + ')' + detraccionTxt;
+                    var label = _armarLabelProv(c);
                     var opt = document.createElement('option');
                     opt.value = label;
                     opt.textContent = label;
-                    if (cuentaSeleccionada && (cuentaSeleccionada === label || cuentaSeleccionada === c.numero_cuenta)) {
+                    var num = (c.numero_cuenta || '').trim();
+                    if (cuentaSeleccionada && (
+                        cuentaSeleccionada === label || 
+                        cuentaSeleccionada === num ||
+                        (num && cuentaSeleccionada.includes(num))
+                    )) {
                         opt.selected = true;
                     }
                     ctaSelect.appendChild(opt);
