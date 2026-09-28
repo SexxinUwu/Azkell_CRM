@@ -1918,14 +1918,24 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
     var finDT = formatDT(ot.fecha_hora_salida);
 
     var htmlMotivos = '';
-    if (det.trabajos_det && Array.isArray(det.trabajos_det) && det.trabajos_det.length > 0) {
-        htmlMotivos = det.trabajos_det.map(function(td, idx) {
-            var descClean = String(td.desc || '').replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim();
-            var tecName = td.tecnico || det.supervisor || '—';
+    // Obtener la lista completa de motivos de ingreso
+    var motivosTextoRaw = rotGetCleanMotivoDisplay(det, ot);
+    var lineasMotivos = (motivosTextoRaw || '')
+        .split('\n')
+        .map(function(l) { return l.replace(/^[•\-\*]\s*/, '').trim(); })
+        .filter(function(l) {
+            if (!l) return false;
+            var low = l.toLowerCase();
+            return low !== 'sin observaciones registradas' && low !== 'sin observación' && low !== 'sin observacion';
+        });
+
+    if (lineasMotivos.length > 0) {
+        htmlMotivos = lineasMotivos.map(function(mText, idx) {
+            var tec = det.supervisor || ot.supervisor || '—';
             return '<tr>'
                 + '<td class="text-center">' + (idx + 1) + '</td>'
-                + '<td>' + rotEscHtml(rotCleanObsText(descClean)) + '</td>'
-                + '<td class="text-center">' + rotEscHtml(tecName) + '</td>'
+                + '<td>' + rotEscHtml(mText) + '</td>'
+                + '<td class="text-center">' + rotEscHtml(tec) + '</td>'
                 + '</tr>';
         }).join('');
     } else if (det.motivos_array && Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
@@ -1939,21 +1949,16 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
                 + '<td class="text-center">' + rotEscHtml(tecText) + '</td>'
                 + '</tr>';
         }).join('');
-    } else if (det.motivo) {
-        var lineas = String(det.motivo).split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
-        if (lineas.length > 1) {
-            htmlMotivos = lineas.map(function(l, idx) {
-                var cleanL = l.replace(/^[•\-\*]\s*/, '').replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim();
-                return '<tr>'
-                    + '<td class="text-center">' + (idx + 1) + '</td>'
-                    + '<td>' + rotEscHtml(rotCleanObsText(cleanL)) + '</td>'
-                    + '<td class="text-center">' + rotEscHtml(det.supervisor || '—') + '</td>'
-                    + '</tr>';
-            }).join('');
-        } else {
-            var cleanSingle = String(det.motivo).replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim();
-            htmlMotivos = '<tr><td class="text-center">1</td><td>' + rotEscHtml(rotCleanObsText(cleanSingle)) + '</td><td class="text-center">' + rotEscHtml(det.supervisor || '—') + '</td></tr>';
-        }
+    } else if (det.trabajos_det && Array.isArray(det.trabajos_det) && det.trabajos_det.length > 0) {
+        htmlMotivos = det.trabajos_det.map(function(td, idx) {
+            var descClean = String(td.desc || '').replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim();
+            var tecName = td.tecnico || det.supervisor || '—';
+            return '<tr>'
+                + '<td class="text-center">' + (idx + 1) + '</td>'
+                + '<td>' + rotEscHtml(rotCleanObsText(descClean)) + '</td>'
+                + '<td class="text-center">' + rotEscHtml(tecName) + '</td>'
+                + '</tr>';
+        }).join('');
     } else {
         htmlMotivos = '<tr><td colspan="3" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay motivos de ingreso registrados.</td></tr>';
     }
