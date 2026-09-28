@@ -151,13 +151,14 @@ window.cajaCargarMovimientos = async function() {
     var params = new URLSearchParams();
     if (fDesde) params.append('fecha_desde', fDesde);
     if (fHasta) params.append('fecha_hasta', fHasta);
-    if (estado) params.append('estado', estado);
+    if (estado && estado !== 'TODOS') params.append('estado', estado);
 
     try {
         var resp = await fetch('/api/tesoreria/caja?' + params.toString());
         var res = await resp.json();
         if (res.ok) {
             window._cajaData = res.data || [];
+            window.cajaCalcularKPIs(window._cajaData);
             window.cajaFiltrarEnTabla();
         } else {
             if (tbody) {
@@ -172,13 +173,83 @@ window.cajaCargarMovimientos = async function() {
     }
 };
 
+// ── 1.1 Calcular Bento KPIs ──────────────────────────────────────
+window.cajaCalcularKPIs = function(items) {
+    items = items || [];
+    var total = items.length;
+    var pendientes = 0;
+    var procesadas = 0;
+    var montoTotal = 0;
+
+    items.forEach(function(r) {
+        var est = (r.estado || 'REGISTRADO').toUpperCase();
+        var imp = parseFloat(r.importe_total || 0) || 0;
+        montoTotal += imp;
+
+        if (est === 'PENDIENTE' || est === 'REGISTRADO') {
+            pendientes++;
+        } else if (est === 'PROCESADO' || est === 'PAGADO' || est === 'APROBADO') {
+            procesadas++;
+        }
+    });
+
+    var elTotal = document.getElementById('kpi-total-cajas');
+    var elPend = document.getElementById('kpi-cajas-pendientes');
+    var elProc = document.getElementById('kpi-cajas-procesadas');
+    var elMonto = document.getElementById('kpi-cajas-monto');
+
+    if (elTotal) elTotal.textContent = total;
+    if (elPend) elPend.textContent = pendientes;
+    if (elProc) elProc.textContent = procesadas;
+    if (elMonto) elMonto.textContent = 'S/ ' + montoTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+// ── 1.2 Filtrado por Bento KPI Card ─────────────────────────────
+window.cajaFiltrarPorKPI = function(tipo) {
+    // Actualizar clases activas en las tarjetas
+    var cards = {
+        'ALL': 'kpi-card-total',
+        'PENDIENTE': 'kpi-card-pendientes',
+        'PROCESADO': 'kpi-card-procesadas',
+        'MONTO': 'kpi-card-monto'
+    };
+
+    Object.keys(cards).forEach(function(key) {
+        var el = document.getElementById(cards[key]);
+        if (el) {
+            if (key === tipo) el.classList.add('active');
+            else el.classList.remove('active');
+        }
+    });
+
+    if (tipo === 'ALL') {
+        window._cajaDataFiltrada = (window._cajaData || []).slice();
+    } else if (tipo === 'PENDIENTE') {
+        window._cajaDataFiltrada = (window._cajaData || []).filter(function(r) {
+            var est = (r.estado || '').toUpperCase();
+            return est === 'PENDIENTE' || est === 'REGISTRADO';
+        });
+    } else if (tipo === 'PROCESADO') {
+        window._cajaDataFiltrada = (window._cajaData || []).filter(function(r) {
+            var est = (r.estado || '').toUpperCase();
+            return est === 'PROCESADO' || est === 'PAGADO' || est === 'APROBADO';
+        });
+    } else if (tipo === 'MONTO') {
+        window._cajaDataFiltrada = (window._cajaData || []).slice().sort(function(a, b) {
+            return (parseFloat(b.importe_total || 0) || 0) - (parseFloat(a.importe_total || 0) || 0);
+        });
+    }
+
+    window.cajaRenderizarTabla();
+};
+
 // ── 2. Filtrado en tiempo real en tabla ─────────────────────────
 window.cajaFiltrarEnTabla = function() {
     var term = ((document.getElementById('caja-filtro-tabla') || {}).value || '').toLowerCase().trim();
     if (!term) {
-        window._cajaDataFiltrada = window._cajaData.slice();
+        window._cajaDataFiltrada = (window._cajaData || []).slice();
     } else {
-        window._cajaDataFiltrada = window._cajaData.filter(function(r) {
+        window._cajaDataFiltrada = (window._cajaData || []).filter(function(r) {
             return (r.numero || '').toLowerCase().includes(term) ||
                 (r.serie || '').toLowerCase().includes(term) ||
                 (r.orden_viaje || '').toLowerCase().includes(term) ||
@@ -204,7 +275,7 @@ window.cajaRenderizarTabla = function() {
 
     var rows = window._cajaDataFiltrada || [];
     if (rows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="28" class="text-center py-4 text-muted">No hay datos disponibles en la tabla</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="28" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-4 d-block mb-1 opacity-50"></i>No hay registros de caja disponibles</td></tr>';
         return;
     }
 
@@ -221,49 +292,51 @@ window.cajaRenderizarTabla = function() {
 
     var html = '';
     rows.forEach(function(r) {
-        var badgeEstadoClass = 'bg-secondary';
+        var badgeEstadoHtml = '';
         var est = (r.estado || 'REGISTRADO').toUpperCase();
-        if (est === 'APROBADO') badgeEstadoClass = 'bg-primary text-white';
-        else if (est === 'PROCESADO' || est === 'PAGADO') badgeEstadoClass = 'bg-success text-white';
-        else if (est === 'REGISTRADO' || est === 'PENDIENTE') badgeEstadoClass = 'bg-warning text-dark';
-        else if (est === 'RECHAZADO' || est === 'ANULADO') badgeEstadoClass = 'bg-danger text-white';
+        if (est === 'APROBADO') {
+            badgeEstadoHtml = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold px-2.5 py-1" style="font-size:0.72rem;">APROBADO</span>';
+        } else if (est === 'PROCESADO' || est === 'PAGADO') {
+            badgeEstadoHtml = '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold px-2.5 py-1" style="font-size:0.72rem;">PROCESADO</span>';
+        } else if (est === 'REGISTRADO' || est === 'PENDIENTE') {
+            badgeEstadoHtml = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill fw-bold px-2.5 py-1" style="font-size:0.72rem;">PENDIENTE</span>';
+        } else {
+            badgeEstadoHtml = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fw-bold px-2.5 py-1" style="font-size:0.72rem;">' + esc(est) + '</span>';
+        }
 
         var numDoc = (r.serie && r.numero) ? (r.serie + '-' + r.numero) : (r.numero || '—');
 
-        var archivoHtml = r.voucher_signed ? 
-            '<a href="' + r.voucher_signed + '" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-1.5" title="Ver Voucher" style="font-size:0.7rem;"><i class="bi bi-file-earmark-image"></i></a>' : '—';
+        var vUrl = r.voucher_view_url || r.voucher_signed || r.voucher_url;
+        var archivoHtml = vUrl ? 
+            '<a href="' + vUrl + '" target="_blank" class="btn btn-sm btn-outline-primary py-0.5 px-2 rounded-pill fw-semibold" title="Ver Voucher" style="font-size:0.72rem;"><i class="bi bi-file-earmark-image me-1"></i>Voucher</a>' : '<span class="text-muted">—</span>';
         
-        var sustentoHtml = r.sustento_signed ? 
-            '<a href="' + r.sustento_signed + '" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-1.5" title="Ver Sustento" style="font-size:0.7rem;"><i class="bi bi-paperclip"></i></a>' : '—';
+        var sUrl = r.sustento_view_url || r.sustento_signed || r.sustento_url;
+        var sustentoHtml = sUrl ? 
+            '<a href="' + sUrl + '" target="_blank" class="btn btn-sm btn-outline-secondary py-0.5 px-2 rounded-pill fw-semibold" title="Ver Sustento" style="font-size:0.72rem;"><i class="bi bi-paperclip me-1"></i>Doc</a>' : '<span class="text-muted">—</span>';
 
         // Acciones según estado:
-        // En Caja NO se aprueba (la aprobación es exclusiva del módulo Gerencia > Aprobación de Caja).
-        // Si está REGISTRADO o PENDIENTE: Editar, Eliminar
-        // Si está APROBADO o PROCESADO: Subir Documentos, Eliminar (edición bloqueada)
-        // Si está ANULADO: Bloqueado (solo eliminar)
-        var accionesHtml = '<div class="d-flex align-items-center justify-content-center gap-1">';
+        var accionesHtml = '<div class="d-flex align-items-center justify-content-center gap-1.5">';
         if (est === 'REGISTRADO' || est === 'PENDIENTE') {
             accionesHtml += 
-                '<button type="button" class="btn btn-sm btn-outline-primary p-1 rounded-circle lh-1" onclick="window.cajaAbrirModalEditar(' + r.id + ')" title="Editar Caja">' +
-                    '<i class="bi bi-pencil" style="font-size:0.75rem;"></i>' +
+                '<button type="button" class="btn btn-sm btn-outline-primary p-1 rounded-circle lh-1 shadow-2xs" onclick="window.cajaAbrirModalEditar(' + r.id + ')" title="Editar Caja">' +
+                    '<i class="bi bi-pencil" style="font-size:0.78rem;"></i>' +
                 '</button>';
-        } else if (est === 'APROBADO' || est === 'PROCESADO') {
-            // Ya está aprobada: Botón Subir Documentos
+        } else if (est === 'APROBADO' || est === 'PROCESADO' || est === 'PAGADO') {
             accionesHtml += 
-                '<button type="button" class="btn btn-xs btn-outline-info py-0 px-1.5 fw-bold" onclick="window.cajaAbrirModalSubirDocs(' + r.id + ')" title="Subir Documentos" style="font-size:0.68rem;">' +
-                    '<i class="bi bi-upload me-0.5"></i> Subir Docs' +
+                '<button type="button" class="btn btn-sm btn-outline-info py-0.5 px-2 rounded-pill fw-bold shadow-2xs" onclick="window.cajaAbrirModalSubirDocs(' + r.id + ')" title="Subir Documentos" style="font-size:0.7rem;">' +
+                    '<i class="bi bi-upload me-1"></i>Subir Docs' +
                 '</button>';
         }
         accionesHtml += 
-            '<button type="button" class="btn btn-outline-danger btn-sm p-1 rounded-circle lh-1" onclick="window.cajaEliminarRegistro(' + r.id + ')" title="Eliminar">' +
-                '<i class="bi bi-trash" style="font-size:0.75rem;"></i>' +
+            '<button type="button" class="btn btn-outline-danger btn-sm p-1 rounded-circle lh-1 shadow-2xs" onclick="window.cajaEliminarRegistro(' + r.id + ')" title="Eliminar">' +
+                '<i class="bi bi-trash" style="font-size:0.78rem;"></i>' +
             '</button>' +
         '</div>';
 
         html += '<tr>' +
             '<td class="text-center">' + accionesHtml + '</td>' +
             '<td>' + fmtDate(r.fecha) + '</td>' +
-            '<td><span class="badge ' + badgeEstadoClass + ' px-2 py-1" style="font-size:0.68rem;">' + esc(est) + '</span></td>' +
+            '<td>' + badgeEstadoHtml + '</td>' +
             '<td class="font-monospace fw-bold text-primary">' + esc(numDoc) + '</td>' +
             '<td>' + esc(r.orden_viaje || '—') + '</td>' +
             '<td>' + esc(r.conductor || '—') + '</td>' +
@@ -272,11 +345,11 @@ window.cajaRenderizarTabla = function() {
             '<td>' + esc(r.autoriza || '—') + '</td>' +
             '<td>' + esc(r.motivo || '—') + '</td>' +
             '<td>' + esc(r.sub_motivo || '—') + '</td>' +
-            '<td><span class="badge bg-indigo-subtle text-indigo border fw-semibold" style="font-size:0.7rem; background:#eef2ff; color:#4f46e5;">' + esc(r.centro_costo || '—') + '</span></td>' +
+            '<td><span class="badge bg-light text-dark border rounded-pill fw-bold px-2 py-0.5" style="font-size:0.72rem;">' + esc(r.centro_costo || '—') + '</span></td>' +
             '<td>' + esc(r.tipo_persona || '—') + '</td>' +
             '<td class="fw-semibold">' + esc(r.persona || '—') + '</td>' +
-            '<td><span class="badge bg-light text-dark border">' + esc(r.moneda || 'SOLES') + '</span></td>' +
-            '<td class="text-end font-monospace fw-bold text-dark">' + fmtMoney(r.importe_total) + '</td>' +
+            '<td><span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill fw-bold px-2 py-0.5" style="font-size:0.7rem;">' + esc(r.moneda || 'SOLES') + '</span></td>' +
+            '<td class="text-end font-monospace fw-bolder text-dark" style="font-size:0.85rem;">' + fmtMoney(r.importe_total) + '</td>' +
             '<td class="text-center font-monospace">' + fmtMoney(r.tipo_cambio) + '</td>' +
             '<td>' + esc(r.modalidad_pago || '—') + '</td>' +
             '<td>' + esc(r.cuenta_bancaria_persona || '—') + '</td>' +
