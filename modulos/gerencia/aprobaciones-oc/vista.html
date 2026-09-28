@@ -124,9 +124,22 @@
         margin: 0 !important;
         z-index: 2100 !important;
     }
-    #modalDetalleOC ~ .modal-backdrop,
     .modal-backdrop {
-        z-index: 2090 !important;
+        z-index: 2050 !important;
+    }
+    #modalAutorizarOC,
+    #modalConfirmarAccionOC {
+        z-index: 2200 !important;
+    }
+    #modalAutorizarOC .modal-dialog,
+    #modalConfirmarAccionOC .modal-dialog {
+        z-index: 2205 !important;
+    }
+    #modalAutorizarOC .modal-content,
+    #modalConfirmarAccionOC .modal-content {
+        background: #ffffff !important;
+        position: relative !important;
+        z-index: 2210 !important;
     }
     .modal-dialog.ck-floating-drawer-dialog,
     .modal.show .modal-dialog.ck-floating-drawer-dialog,
@@ -766,9 +779,9 @@
 <!-- ========================================================================= -->
 <!-- MODAL: AUTORIZAR ORDEN DE COMPRA (DISEÑO IMAGEN 1) -->
 <!-- ========================================================================= -->
-<div class="modal fade" id="modalAutorizarOC" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
-    <div class="modal-dialog modal-dialog-centered" style="max-width: 360px;">
-        <div class="modal-content rounded-4 border-0 shadow-lg p-2 bg-white">
+<div class="modal fade" id="modalAutorizarOC" tabindex="-1" aria-hidden="true" style="z-index: 2200 !important;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 360px; z-index: 2205 !important;">
+        <div class="modal-content rounded-4 border-0 shadow-lg p-2 bg-white" style="z-index: 2210 !important;">
             <!-- Header -->
             <div class="modal-header border-0 pb-0 pt-2 px-3 d-flex justify-content-between align-items-center">
                 <h5 class="modal-title fw-bold m-0" style="color: #0284c7; font-size: 1.15rem; letter-spacing: -0.01em;">Autorizar Orden de Compra</h5>
@@ -826,9 +839,9 @@
 <!-- ========================================================================= -->
 <!-- MODAL: CONFIRMACIÓN DE ACCIÓN GERENCIAL (Rechazar / Observar) -->
 <!-- ========================================================================= -->
-<div class="modal fade" id="modalConfirmarAccionOC" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
-    <div class="modal-dialog modal-dialog-centered modal-md">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
+<div class="modal fade" id="modalConfirmarAccionOC" tabindex="-1" aria-hidden="true" style="z-index: 2200 !important;">
+    <div class="modal-dialog modal-dialog-centered modal-md" style="z-index: 2205 !important;">
+        <div class="modal-content rounded-4 border-0 shadow-lg" style="z-index: 2210 !important;">
             <div class="modal-header border-0 pb-0 pt-4 px-4">
                 <div class="d-flex align-items-center gap-2">
                     <div class="rounded-circle p-2 d-flex align-items-center justify-content-center" id="modal-accion-icon-wrap" style="width:40px;height:40px;">
