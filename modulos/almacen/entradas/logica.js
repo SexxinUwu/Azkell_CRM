@@ -619,14 +619,26 @@ window._entInitCbItem = function(idx, cbId) {
     });
 };
 
-window._entCargarInv = function(cb) {
-    if (window._entInvData && window._entInvData.length) { if (cb) cb(); return; }
-    fetch('/api/almacen/inventario')
+window._entCargarInv = function(cb, force) {
+    if (!force && window._entInvData && window._entInvData.length) { if (cb) cb(window._entInvData); return; }
+    fetch('/api/almacen/inventario?_t=' + Date.now())
         .then(function(r) { return r.json(); })
         .then(function(data) {
             window._entInvData = data || [];
-            if (cb) cb();
-        }).catch(function() { if (cb) cb(); });
+            // Refrescar los selectores de artículos existentes en el formulario
+            var cards = document.querySelectorAll('.ent-item-card');
+            cards.forEach(function(card) {
+                var descInput = card.querySelector('.ent-item-desc');
+                if (descInput) {
+                    var idx = descInput.getAttribute('data-idx');
+                    var cbId = 'ent-art-' + idx;
+                    if (typeof window._entInitCbItem === 'function') {
+                        window._entInitCbItem(idx, cbId);
+                    }
+                }
+            });
+            if (cb) cb(window._entInvData);
+        }).catch(function() { if (cb) cb([]); });
 };
 
 window._entCalcImporte = function(idx, source) {
@@ -1232,6 +1244,8 @@ window.abrirModalEntrada = function() {
     
     // Cargar cuentas bancarias de la empresa limpias desde BD
     window._entCargarCuentasEmpresa();
+    window._entCargarInv(null, true);
+    window._entCargarProveedores();
 
     var prio = document.getElementById('ent-f-prioridad');
     if (prio) prio.value = 'Normal';
@@ -3164,6 +3178,110 @@ window.asegurarModalProveedorYAbrir = function(rucTyped) {
             })
             .catch(function(err) {
                 alert('No se pudo cargar el formulario de Proveedores: ' + err.message);
+            });
+    }
+};
+
+window.asegurarModalArticuloYAbrir = function(articuloTyped, itemIdx) {
+    var raw = (articuloTyped || '').trim();
+
+    var openForm = function() {
+        if (typeof window.abrirModalInventario === 'function') {
+            window._onArticuloCreado = function(newId, artNombre, res, payload) {
+                window._entCargarInv(function() {
+                    var fullDesc = artNombre;
+                    var found = (window._entInvData || []).find(function(it) { return it.id === newId; });
+                    if (found && found.descripcion) {
+                        fullDesc = found.descripcion;
+                    }
+                    var displayTxt = newId + ' — ' + fullDesc;
+                    if (itemIdx != null) {
+                        var cbId = 'ent-art-' + itemIdx;
+                        if (typeof window._cbSet === 'function') {
+                            window._cbSet(cbId, newId, displayTxt);
+                        }
+                        if (payload) {
+                            var refCost = parseFloat(payload.costo_referencial) || 0;
+                            var vuEl = document.querySelector('.ent-item-vu[data-idx="' + itemIdx + '"]');
+                            var puEl = document.querySelector('.ent-item-pu[data-idx="' + itemIdx + '"]');
+                            var mode = window._entIgvMode || 'incluido';
+                            if (refCost > 0) {
+                                if (mode === 'mas_igv') {
+                                    if (vuEl) { vuEl.value = (refCost / 1.18).toFixed(4); vuEl.dataset.oldCost = refCost; }
+                                    window._entCalcImporte(itemIdx, 'vu');
+                                } else {
+                                    if (puEl) { puEl.value = refCost.toFixed(2); puEl.dataset.oldCost = refCost; }
+                                    window._entCalcImporte(itemIdx, 'pu');
+                                }
+                            }
+                        }
+                    }
+                    if (typeof window.rotToast === 'function') {
+                        window.rotToast('Artículo "' + fullDesc + '" registrado y seleccionado.', 'bg-success');
+                    }
+                }, true);
+            };
+
+            window.abrirModalInventario();
+
+            var drawerEl = document.getElementById('inv-form-drawer');
+            if (drawerEl) {
+                drawerEl.style.zIndex = '1150';
+            }
+            var bdEl = document.getElementById('inv-drawer-backdrop');
+            if (bdEl) {
+                bdEl.style.zIndex = '1140';
+            }
+
+            setTimeout(function() {
+                var artEl = document.getElementById('inv-f-articulo');
+                if (artEl && raw) {
+                    artEl.value = raw;
+                    if (typeof window._invActualizarPreview === 'function') {
+                        window._invActualizarPreview();
+                    }
+                }
+            }, 150);
+        }
+    };
+
+    if (document.getElementById('inv-form-drawer')) {
+        openForm();
+    } else {
+        fetch('/modulos/almacen/inventario/vista.html')
+            .then(function(r) { return r.text(); })
+            .then(function(htmlText) {
+                if (!document.getElementById('inv-form-drawer')) {
+                    var tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = htmlText;
+                    
+                    var styleEl = tempDiv.querySelector('style');
+                    if (styleEl) {
+                        document.head.appendChild(styleEl.cloneNode(true));
+                    }
+                    var backdropEl = tempDiv.querySelector('#inv-drawer-backdrop');
+                    if (backdropEl && !document.getElementById('inv-drawer-backdrop')) {
+                        backdropEl.style.zIndex = '1140';
+                        document.body.appendChild(backdropEl.cloneNode(true));
+                    }
+                    var drawerEl = tempDiv.querySelector('#inv-form-drawer');
+                    if (drawerEl && !document.getElementById('inv-form-drawer')) {
+                        drawerEl.style.zIndex = '1150';
+                        document.body.appendChild(drawerEl.cloneNode(true));
+                    }
+                }
+
+                if (typeof window.abrirModalInventario === 'function') {
+                    openForm();
+                } else {
+                    var script = document.createElement('script');
+                    script.src = '/modulos/almacen/inventario/logica.js?v=' + Date.now();
+                    script.onload = openForm;
+                    document.body.appendChild(script);
+                }
+            })
+            .catch(function(err) {
+                alert('No se pudo cargar el formulario de Inventario: ' + err.message);
             });
     }
 };

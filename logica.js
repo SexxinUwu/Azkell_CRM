@@ -2718,6 +2718,16 @@ window._cbFiltrar = function(id) {
                 '</button></div>';
             return;
         }
+        if (String(id).startsWith('ent-art-') && q) {
+            var itemIdx = id.replace('ent-art-', '');
+            dd.style.display = 'block';
+            dd.innerHTML = '<div class="p-3 text-center text-muted small" style="background:#f8fafc;">' +
+                '<div class="mb-1 fw-bold text-dark"><i class="bi bi-search me-1"></i>No se encontró "' + _escCbH(rawText) + '"</div>' +
+                '<button type="button" class="btn btn-sm btn-primary fw-bold mt-1 px-3" style="border-radius:8px;background:#0284c7;border-color:#0284c7;" onmousedown="window.asegurarModalArticuloYAbrir(\'' + _escCbA(rawText) + '\', ' + itemIdx + ')">' +
+                '<i class="bi bi-box-seam me-1"></i>Registrar Nuevo Artículo' +
+                '</button></div>';
+            return;
+        }
         dd.style.display = 'none';
         return;
     }
@@ -2734,6 +2744,11 @@ window._cbFiltrar = function(id) {
     if (id === 'ent-f-proveedor' && q) {
         htmlOpts += '<div class="cb-opt text-primary fw-bold border-top mt-1 pt-2" style="background:#eff6ff;" onmousedown="window.asegurarModalProveedorYAbrir(\'' + _escCbA(rawText) + '\')">' +
             '<i class="bi bi-plus-circle-fill me-1"></i>+ Registrar nuevo proveedor "' + _escCbH(rawText) + '"</div>';
+    }
+    if (String(id).startsWith('ent-art-') && q) {
+        var itemIdx = id.replace('ent-art-', '');
+        htmlOpts += '<div class="cb-opt text-primary fw-bold border-top mt-1 pt-2" style="background:#eff6ff;" onmousedown="window.asegurarModalArticuloYAbrir(\'' + _escCbA(rawText) + '\', ' + itemIdx + ')">' +
+            '<i class="bi bi-plus-circle-fill me-1"></i>+ Registrar nuevo artículo "' + _escCbH(rawText) + '"</div>';
     }
     dd.innerHTML = htmlOpts;
 };

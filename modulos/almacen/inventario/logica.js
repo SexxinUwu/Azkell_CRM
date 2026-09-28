@@ -2111,9 +2111,15 @@ window.guardarArticuloInv = function(event) {
                 return data;
             });
         })
-        .then(function() {
+        .then(function(res) {
             window._invCerrarDrawer();
-            window.cargarInventario();
+            if (typeof window.cargarInventario === 'function') window.cargarInventario();
+            if (typeof window._onArticuloCreado === 'function') {
+                var newItemId = (res && res.id) ? res.id : (id || null);
+                var callbackFn = window._onArticuloCreado;
+                window._onArticuloCreado = null;
+                callbackFn(newItemId, payload.articulo, res, payload);
+            }
         })
         .catch(function(err) { alert('Error al guardar: ' + err.message); });
 };
