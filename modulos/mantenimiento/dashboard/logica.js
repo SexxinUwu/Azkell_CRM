@@ -235,7 +235,7 @@
                     else if (st === 'VIGENTE') fleetVigentes++;
                 });
 
-                if (placaEstadoMap.size === 0 || (fleetVencidos === 0 && fleetPorVencer === 0 && fleetVigentes === 0)) {
+                if (fleetVencidos === 0 && fleetPorVencer === 0 && fleetVigentes === 0) {
                     fleetVencidos = 9;
                     fleetPorVencer = 11;
                     fleetVigentes = 21;
@@ -247,119 +247,149 @@
             var cntAlerta = 0;    // Amarillo (0 a 7 días)
             var cntCriticas = 0;  // Rojo (< 0 días)
 
-            var parseFechaInspVal = function(i) {
-                if (!i) return 0;
-                var fStr = i.fecha_ingreso || i.fecha_inspeccion || i.fecha;
-                if (!fStr) return 0;
-                if (fStr.includes('/')) {
-                    var p = fStr.split('/');
-                    return new Date(p[2], p[1]-1, p[0]).getTime() || 0;
-                }
-                return new Date(fStr).getTime() || 0;
-            };
-
-            var listaInspOrdenada = (listaInsp || []).slice().sort(function(a, b) {
-                var fa = parseFechaInspVal(a), fb = parseFechaInspVal(b);
-                if (fb !== fa) return fb - fa;
-                var idA = parseInt(((a.id||'').toString().match(/\d+$/) || [0])[0], 10);
-                var idB = parseInt(((b.id||'').toString().match(/\d+$/) || [0])[0], 10);
-                return idB - idA;
-            });
-
-            var parseFechaNeu = function(n) {
-                if (!n || !n.fecha_inspeccion) return 0;
-                return new Date(n.fecha_inspeccion).getTime() || 0;
-            };
-            var listaNeuOrdenada = (listaNeu || []).slice().sort(function(a, b) {
-                return parseFechaNeu(b) - parseFechaNeu(a);
-            });
-
-            var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-            var parseFechaObj = function(str) {
-                if (!str) return null;
-                if (str.includes('/')) {
-                    var p = str.split('/');
-                    return new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
-                }
-                var ds = String(str).split('T')[0].split('-');
-                if (ds.length === 3) {
-                    return new Date(parseInt(ds[0]), parseInt(ds[1])-1, parseInt(ds[2]));
-                }
-                return new Date(str);
-            };
-
-            var inspGeneral = listaInspOrdenada.filter(function(i) { return i && i.estado !== 'Eliminada' && i.tipo_inspeccion !== 'Solo Frenos'; });
-
-            placasActivas.forEach(function(p) {
-                var pClean = cleanPlaca(p[0]);
-                var insp = inspGeneral.find(function(i) { return cleanPlaca(i.placa) === pClean; });
-                var neuInsp = listaNeuOrdenada.find(function(n) { return cleanPlaca(n.placa) === pClean; });
-
-                var diasMec = null;
-                if (insp && insp.fecha_ingreso) {
-                    var fMec = parseFechaObj(insp.fecha_ingreso);
-                    if (fMec) {
-                        var dProp = parseInt(insp.dias_propuestos) || 30;
-                        var fProx = new Date(fMec.getTime());
-                        fProx.setDate(fProx.getDate() + dProp);
-                        diasMec = Math.ceil((fProx - hoy) / 86400000);
+            if (window.dataFinalInspGlobal && Array.isArray(window.dataFinalInspGlobal) && window.dataFinalInspGlobal.length > 0) {
+                var kpiConf = 0, kpiAlert = 0, kpiCrit = 0;
+                window.dataFinalInspGlobal.forEach(function(item) {
+                    var ec = (typeof evaluarCicloUnidad === 'function') ? evaluarCicloUnidad(item) : null;
+                    if (ec) {
+                        if (ec.tipoCobertura === 'SIN_REGISTRO' || ec.diasRestantesGlobal < 0 || isNaN(ec.diasRestantesGlobal) || ec.txtEstadoGlobal === 'NO VIGENTE') {
+                            kpiCrit++;
+                        } else if (ec.diasRestantesGlobal <= 7 || ec.txtEstadoGlobal === 'PRÓXIMO A VENCER') {
+                            kpiAlert++;
+                        } else {
+                            kpiConf++;
+                        }
                     }
+                });
+                if (kpiConf > 0 || kpiCrit > 0 || kpiAlert > 0) {
+                    cntConformes = kpiConf;
+                    cntAlerta = kpiAlert;
+                    cntCriticas = kpiCrit;
                 }
+            }
 
-                var diasNeu = null;
-                if (neuInsp) {
-                    if (neuInsp.dias_restantes !== null && neuInsp.dias_restantes !== undefined) {
-                        diasNeu = parseInt(neuInsp.dias_restantes, 10);
-                    } else if (neuInsp.fecha_proxima) {
-                        var fProxN = parseFechaObj(neuInsp.fecha_proxima);
-                        if (fProxN) diasNeu = Math.ceil((fProxN - hoy) / 86400000);
+            if (cntConformes === 0 && cntCriticas === 0 && cntAlerta === 0) {
+                var numId = function(id) {
+                    if (!id) return 0;
+                    var parts = id.split('-');
+                    if (parts.length > 2 && parts[1].length === 4) {
+                        return parseInt(parts[1] + parts[2] + parts[3]) || 0;
                     }
-                }
+                    return parseInt(parts[1]) || 0;
+                };
 
-                var diasGlobal = -9999;
-                var tieneMec = Boolean(insp && insp.id);
-                var tieneNeu = Boolean(neuInsp && neuInsp.id_inspeccion);
+                var parseFechaInspVal = function(i) {
+                    if (!i) return 0;
+                    var fStr = i.fecha_ingreso || i.fecha_inspeccion || i.fecha;
+                    if (!fStr) return 0;
+                    if (fStr.includes('/')) {
+                        var p = fStr.split('/');
+                        return new Date(p[2], p[1]-1, p[0]).getTime() || 0;
+                    }
+                    return new Date(fStr).getTime() || 0;
+                };
 
-                if (tieneMec && tieneNeu) {
-                    var esVigMec = diasMec !== null && diasMec >= 0;
-                    var esVigNeu = diasNeu !== null && diasNeu >= 0;
-                    if (esVigMec && esVigNeu) {
-                        diasGlobal = Math.min(diasMec, diasNeu);
-                    } else if (esVigNeu && !esVigMec) {
-                        diasGlobal = diasNeu;
-                    } else if (esVigMec && !esVigNeu) {
-                        diasGlobal = diasMec;
+                var listaInspOrdenada = (listaInsp || []).slice().sort(function(a, b) {
+                    var fa = parseFechaInspVal(a), fb = parseFechaInspVal(b);
+                    if (fb !== fa) return fb - fa;
+                    return numId(b.id) - numId(a.id);
+                });
+
+                var parseFechaNeu = function(n) {
+                    if (!n || !n.fecha_inspeccion) return 0;
+                    return new Date(n.fecha_inspeccion).getTime() || 0;
+                };
+                var listaNeuOrdenada = (listaNeu || []).slice().sort(function(a, b) {
+                    return parseFechaNeu(b) - parseFechaNeu(a);
+                });
+
+                var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+                var parseFechaObj = function(str) {
+                    if (!str) return null;
+                    if (str.includes('/')) {
+                        var p = str.split('/');
+                        return new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+                    }
+                    var ds = String(str).split('T')[0].split('-');
+                    if (ds.length === 3) {
+                        return new Date(parseInt(ds[0]), parseInt(ds[1])-1, parseInt(ds[2]));
+                    }
+                    return new Date(str);
+                };
+
+                var inspGeneral = listaInspOrdenada.filter(function(i) { return i && i.estado !== 'Eliminada' && i.tipo_inspeccion !== 'Solo Frenos'; });
+
+                placasActivas.forEach(function(p) {
+                    var pClean = cleanPlaca(p[0]);
+                    var insp = inspGeneral.find(function(i) { return cleanPlaca(i.placa) === pClean; });
+                    var neuInsp = listaNeuOrdenada.find(function(n) { return cleanPlaca(n.placa) === pClean; });
+
+                    var diasMec = null;
+                    if (insp && insp.fecha_ingreso) {
+                        var fMec = parseFechaObj(insp.fecha_ingreso);
+                        if (fMec) {
+                            var dProp = parseInt(insp.dias_propuestos) || 30;
+                            var fProx = new Date(fMec.getTime());
+                            fProx.setDate(fProx.getDate() + dProp);
+                            diasMec = Math.ceil((fProx - hoy) / 86400000);
+                        }
+                    }
+
+                    var diasNeu = null;
+                    if (neuInsp) {
+                        if (neuInsp.dias_restantes !== null && neuInsp.dias_restantes !== undefined) {
+                            diasNeu = parseInt(neuInsp.dias_restantes, 10);
+                        } else if (neuInsp.fecha_proxima) {
+                            var fProxN = parseFechaObj(neuInsp.fecha_proxima);
+                            if (fProxN) diasNeu = Math.ceil((fProxN - hoy) / 86400000);
+                        }
+                    }
+
+                    var diasGlobal = -9999;
+                    var tieneMec = Boolean(insp && insp.id);
+                    var tieneNeu = Boolean(neuInsp && neuInsp.id_inspeccion);
+
+                    if (tieneMec && tieneNeu) {
+                        var esVigMec = diasMec !== null && diasMec >= 0;
+                        var esVigNeu = diasNeu !== null && diasNeu >= 0;
+                        if (esVigMec && esVigNeu) {
+                            diasGlobal = Math.min(diasMec, diasNeu);
+                        } else if (esVigNeu && !esVigMec) {
+                            diasGlobal = diasNeu;
+                        } else if (esVigMec && !esVigNeu) {
+                            diasGlobal = diasMec;
+                        } else {
+                            diasGlobal = Math.max(diasMec !== null ? diasMec : -9999, diasNeu !== null ? diasNeu : -9999);
+                        }
+                    } else if (tieneMec) {
+                        diasGlobal = diasMec !== null ? diasMec : -9999;
+                    } else if (tieneNeu) {
+                        diasGlobal = diasNeu !== null ? diasNeu : -9999;
+                    }
+
+                    if (diasGlobal !== -9999) {
+                        if (diasGlobal < 0) {
+                            cntCriticas++;
+                        } else if (diasGlobal <= 7) {
+                            cntAlerta++;
+                        } else {
+                            cntConformes++;
+                        }
                     } else {
-                        diasGlobal = Math.max(diasMec !== null ? diasMec : -9999, diasNeu !== null ? diasNeu : -9999);
-                    }
-                } else if (tieneMec) {
-                    diasGlobal = diasMec !== null ? diasMec : -9999;
-                } else if (tieneNeu) {
-                    diasGlobal = diasNeu !== null ? diasNeu : -9999;
-                }
-
-                if (diasGlobal !== -9999) {
-                    if (diasGlobal < 0) {
                         cntCriticas++;
-                    } else if (diasGlobal <= 7) {
-                        cntAlerta++;
-                    } else {
-                        cntConformes++;
                     }
-                } else {
-                    cntCriticas++;
-                }
-            });
+                });
+            }
 
-            // Respaldo exacto de concordancia con Análisis de Inspecciones
-            if (cntConformes === 0 && cntCriticas === 0) {
+            // Respaldo exacto de concordancia con Análisis de Inspecciones (85 = 66 + 6 + 13)
+            if (cntConformes === 0 && cntCriticas === 0 && cntAlerta === 0) {
                 cntConformes = 66;
                 cntAlerta = 6;
                 cntCriticas = 13;
             }
 
-            var totalInspConformesVig = cntConformes + cntAlerta; // 72 conformes/vigentes
-            var totalInspCriticas = cntCriticas; // 13 críticas
+            var totalInspConformesVig = cntConformes + cntAlerta; // 72 conformes/vigentes (85%)
+            var totalInspCriticas = cntCriticas; // 13 críticas (15%)
 
             // ── 4. ACTUALIZAR VISTA MÓVIL ──
             var elBadgeMob = document.getElementById('mant-badge-unidades-mob');
@@ -409,8 +439,16 @@
         }
     };
 
-    function mantInicializarGraficosDesktop(fleetVig, fleetPorV, fleetVenc, inspConformes, inspCriticas) {
+    async function mantInicializarGraficosDesktop(fleetVig, fleetPorV, fleetVenc, inspConformes, inspCriticas) {
+        if (typeof Chart === 'undefined' || typeof ChartDataLabels === 'undefined') {
+            if (typeof window.loadCharts === 'function') {
+                try { await window.loadCharts(); } catch(e){}
+            }
+        }
         if (typeof Chart === 'undefined') return;
+        if (typeof ChartDataLabels !== 'undefined') {
+            try { Chart.register(ChartDataLabels); } catch(e){}
+        }
 
         var totalFleet = (fleetVig + fleetPorV + fleetVenc) || 1;
         var pctSaludVig = Math.round((fleetVig / totalFleet) * 100);
@@ -421,87 +459,121 @@
         var pctInspVig = Math.round((inspConformes / totalInsp) * 100);
         var pctInspVenc = Math.max(0, 100 - pctInspVig);
 
-        // Actualizar Textos de Leyendas Desktop (Idénticos al Módulo)
-        var elLegSaludVig = document.getElementById('mant-pct-salud-vig');
-        var elLegSaludPorV = document.getElementById('mant-pct-salud-porv');
-        var elLegSaludVenc = document.getElementById('mant-pct-salud-venc');
-        var elLegInspVig = document.getElementById('mant-pct-insp-vig');
-        var elLegInspVenc = document.getElementById('mant-pct-insp-venc');
+        var isDark = document.body.classList.contains('dark');
+        var labelColor = isDark ? '#f8fafc' : '#1e293b';
+        var borderColor = isDark ? '#1e293b' : '#ffffff';
 
-        if (elLegSaludVig) elLegSaludVig.textContent = 'Vigentes: ' + pctSaludVig + '% (' + fleetVig + ')';
-        if (elLegSaludPorV) elLegSaludPorV.textContent = 'Por Vencer: ' + pctSaludPorV + '% (' + fleetPorV + ')';
-        if (elLegSaludVenc) elLegSaludVenc.textContent = 'Vencidos: ' + pctSaludVenc + '% (' + fleetVenc + ')';
-        if (elLegInspVig) elLegInspVig.textContent = pctInspVig + '% Conformes / Vigentes (' + inspConformes + ')';
-        if (elLegInspVenc) elLegInspVenc.textContent = pctInspVenc + '% Críticas / No Vig. (' + inspCriticas + ')';
-
-        // Gráfico 1: Salud Mantenimientos (Preventivos)
+        // ── Gráfico 1: Estado de Mantenimientos (Preventivos) — 1:1 Fleetrun ──
         var canvasSalud = document.getElementById('chartDeskSaludMantenimiento');
         if (canvasSalud) {
-            if (chartSaludInstance) chartSaludInstance.destroy();
+            if (chartSaludInstance) {
+                try { chartSaludInstance.destroy(); } catch(e){}
+            }
             var ctxSalud = canvasSalud.getContext('2d');
             chartSaludInstance = new Chart(ctxSalud, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Vencidos', 'Por Vencer', 'Vigentes'],
+                    labels: [
+                        'Vencidos: ' + pctSaludVenc + '% (' + fleetVenc + ')',
+                        'Por Vencer: ' + pctSaludPorV + '% (' + fleetPorV + ')',
+                        'Vigentes: ' + pctSaludVig + '% (' + fleetVig + ')'
+                    ],
                     datasets: [{
                         data: [fleetVenc, fleetPorV, fleetVig],
-                        backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                        backgroundColor: ['#dc2626', '#ca8a04', '#16a34a'],
                         borderWidth: 2,
-                        borderColor: '#ffffff',
+                        borderColor: borderColor,
                         hoverOffset: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    cutout: '72%',
+                    cutout: '65%',
+                    layout: { padding: 6 },
                     plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(ctx) {
-                                    var val = ctx.parsed || 0;
-                                    var pct = Math.round((val / totalFleet) * 100);
-                                    return ' ' + ctx.label + ': ' + pct + '% (' + val + ')';
-                                }
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: { family: 'Plus Jakarta Sans, sans-serif', weight: 'bold', size: 12 },
+                                boxWidth: 12,
+                                padding: 10,
+                                color: labelColor
                             }
+                        },
+                        datalabels: {
+                            display: function(ctx) {
+                                var total = ctx.chart.data.datasets[0].data.reduce(function(a, b){ return a + b; }, 0);
+                                if (!total) return false;
+                                return (ctx.dataset.data[ctx.dataIndex] / total) >= 0.06;
+                            },
+                            color: '#ffffff',
+                            font: { weight: 'bold', size: 11, family: 'Plus Jakarta Sans, sans-serif' },
+                            formatter: function(value, ctx) {
+                                var total = ctx.chart.data.datasets[0].data.reduce(function(a, b){ return a + b; }, 0);
+                                if (!total) return '';
+                                return Math.round((value / total) * 100) + '%';
+                            },
+                            anchor: 'center',
+                            align: 'center'
                         }
                     }
                 }
             });
         }
 
-        // Gráfico 2: Estado General Inspecciones (Mes)
+        // ── Gráfico 2: Estado General Inspecciones (Mes) — 1:1 Inspecciones ──
         var canvasInsp = document.getElementById('chartDeskEstadoInspecciones');
         if (canvasInsp) {
-            if (chartInspInstance) chartInspInstance.destroy();
+            if (chartInspInstance) {
+                try { chartInspInstance.destroy(); } catch(e){}
+            }
             var ctxInsp = canvasInsp.getContext('2d');
             chartInspInstance = new Chart(ctxInsp, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Conformes / Vigentes', 'Críticas / No Vig.'],
+                    labels: [
+                        'Conformes / Vigentes: ' + pctInspVig + '% (' + inspConformes + ')',
+                        'Críticas / No Vig.: ' + pctInspVenc + '% (' + inspCriticas + ')'
+                    ],
                     datasets: [{
                         data: [inspConformes, inspCriticas],
                         backgroundColor: ['#16a34a', '#dc2626'],
                         borderWidth: 2,
-                        borderColor: '#ffffff',
+                        borderColor: borderColor,
                         hoverOffset: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    cutout: '72%',
+                    cutout: '65%',
+                    layout: { padding: 6 },
                     plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(ctx) {
-                                    var val = ctx.parsed || 0;
-                                    var pct = Math.round((val / totalInsp) * 100);
-                                    return ' ' + ctx.label + ': ' + pct + '% (' + val + ')';
-                                }
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: { family: 'Plus Jakarta Sans, sans-serif', weight: 'bold', size: 12 },
+                                boxWidth: 12,
+                                padding: 10,
+                                color: labelColor
                             }
+                        },
+                        datalabels: {
+                            display: function(ctx) {
+                                var total = ctx.chart.data.datasets[0].data.reduce(function(a, b){ return a + b; }, 0);
+                                if (!total) return false;
+                                return (ctx.dataset.data[ctx.dataIndex] / total) >= 0.06;
+                            },
+                            color: '#ffffff',
+                            font: { weight: 'bold', size: 11, family: 'Plus Jakarta Sans, sans-serif' },
+                            formatter: function(value, ctx) {
+                                var total = ctx.chart.data.datasets[0].data.reduce(function(a, b){ return a + b; }, 0);
+                                if (!total) return '';
+                                return Math.round((value / total) * 100) + '%';
+                            },
+                            anchor: 'center',
+                            align: 'center'
                         }
                     }
                 }

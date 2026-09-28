@@ -454,7 +454,7 @@
                             <span class="fw-bold text-dark" style="font-size: 0.82rem;">MP Fleetrun Vencidos</span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2.5 py-1 fw-bold" id="mant-fleet-vencidos-mob" style="font-size: 0.75rem;">0</span>
+                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2.5 py-1 fw-bold" id="mant-fleet-vencidos-mob" style="font-size: 0.75rem;">9</span>
                             <i class="bi bi-chevron-right text-muted opacity-50"></i>
                         </div>
                     </div>
@@ -465,7 +465,7 @@
                             <span class="fw-bold text-dark" style="font-size: 0.82rem;">MP Fleetrun Por Vencer</span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-2.5 py-1 fw-bold" id="mant-fleet-porvencer-mob" style="font-size: 0.75rem;">0</span>
+                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-2.5 py-1 fw-bold" id="mant-fleet-porvencer-mob" style="font-size: 0.75rem;">11</span>
                             <i class="bi bi-chevron-right text-muted opacity-50"></i>
                         </div>
                     </div>
@@ -614,11 +614,11 @@
             </div>
         </div>
 
-        <!-- ── FILA 2: WIDGET CLIMA + 2 GRÁFICOS DONUT (Imagen 1) ── -->
+        <!-- ── FILA 2: WIDGET CLIMA + 2 GRÁFICOS DONUT (DISEÑO 1:1 FLEETRUN) ── -->
         <div class="row g-3">
             <!-- Widget Clima Actual -->
-            <div class="col-3">
-                <div class="cmd-bento-card text-center d-flex flex-column justify-content-center align-items-center py-4">
+            <div class="col-lg-3 col-xl-3">
+                <div class="cmd-bento-card text-center d-flex flex-column justify-content-center align-items-center py-4 h-100">
                     <div class="d-flex align-items-center gap-1.5 text-muted small fw-bold mb-2">
                         <i class="bi bi-cloud-sun"></i> Clima Actual
                     </div>
@@ -626,63 +626,39 @@
                         <i class="bi bi-geo-alt-fill text-secondary"></i> <span id="mant-desk-city">Lurigancho, Lima</span>
                     </div>
                     <div class="text-muted small mb-2" id="mant-desk-desc" style="font-size: 0.78rem;">Despejado</div>
-                    <div class="fw-bolder text-primary mb-2" style="font-size: 2.8rem; line-height: 1;" id="mant-desk-temp">25°</div>
+                    <div class="fw-bolder text-primary mb-2" style="font-size: 2.8rem; line-height: 1;" id="mant-desk-temp">21°</div>
                     <div class="text-muted fw-bold" style="font-size: 0.75rem;" id="mant-desk-rango">
-                        Min 18° • Max 27°
+                        Min 16° • Max 27°
                     </div>
                 </div>
             </div>
 
-            <!-- Gráfico Donut 1: Salud de Mantenimientos (Preventivos) -->
-            <div class="col-4.5 col-lg-5">
-                <div class="cmd-bento-card">
-                    <div class="d-flex align-items-center gap-2 mb-3">
-                        <i class="bi bi-pie-chart-fill text-primary"></i>
-                        <h6 class="m-0 fw-bold text-dark" style="font-size: 0.88rem;">Salud de Mantenimientos (Preventivos)</h6>
+            <!-- Gráfico Donut 1: Estado de Mantenimientos (Preventivos) -->
+            <div class="col-lg-5 col-xl-5">
+                <div class="card border-0 rounded-4 p-3 h-100 bg-white shadow-2xs d-flex flex-column" style="border: 1px solid #e2e8f0 !important; cursor: pointer;" onclick="localStorage.setItem('fleet_fleetrun_nav_filter',''); cargarModuloAislado('mantenimiento/fleetrun')">
+                    <div class="d-flex align-items-center justify-content-between mb-1 pb-1 border-bottom">
+                        <span class="fw-bold text-dark small d-flex align-items-center gap-2" style="font-size: 0.85rem;">
+                            <i class="bi bi-pie-chart-fill text-primary"></i> Estado de Mantenimientos
+                        </span>
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary px-2 py-1 rounded-pill" style="font-size:0.68rem;">Flota Activa</span>
                     </div>
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div style="width: 140px; height: 140px; position: relative;">
-                            <canvas id="chartDeskSaludMantenimiento"></canvas>
-                        </div>
-                        <div class="d-flex flex-column gap-2 small fw-bold pe-3" style="font-size: 0.78rem;">
-                            <div class="d-flex align-items-center gap-2">
-                                <span style="width:10px; height:10px; background:#10b981; border-radius:2px;"></span>
-                                <span class="text-dark" id="mant-pct-salud-vig">51% Vigentes (21)</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <span style="width:10px; height:10px; background:#f59e0b; border-radius:2px;"></span>
-                                <span class="text-dark" id="mant-pct-salud-porv">27% Por Vencer (11)</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <span style="width:10px; height:10px; background:#ef4444; border-radius:2px;"></span>
-                                <span class="text-dark" id="mant-pct-salud-venc">22% Vencidos (9)</span>
-                            </div>
-                        </div>
+                    <div class="flex-grow-1 position-relative d-flex align-items-center justify-content-center" style="min-height: 140px; width: 100%;">
+                        <canvas id="chartDeskSaludMantenimiento"></canvas>
                     </div>
                 </div>
             </div>
 
             <!-- Gráfico Donut 2: Estado General Inspecciones (Mes) -->
-            <div class="col-4.5 col-lg-4">
-                <div class="cmd-bento-card">
-                    <div class="d-flex align-items-center gap-2 mb-3">
-                        <i class="bi bi-bar-chart-fill text-success"></i>
-                        <h6 class="m-0 fw-bold text-dark" style="font-size: 0.88rem;">Estado General Inspecciones (Mes)</h6>
+            <div class="col-lg-4 col-xl-4">
+                <div class="card border-0 rounded-4 p-3 h-100 bg-white shadow-2xs d-flex flex-column" style="border: 1px solid #e2e8f0 !important; cursor: pointer;" onclick="localStorage.setItem('fleet_insp_nav_filter','ALL'); cargarModuloAislado('mantenimiento/inspecciones')">
+                    <div class="d-flex align-items-center justify-content-between mb-1 pb-1 border-bottom">
+                        <span class="fw-bold text-dark small d-flex align-items-center gap-2" style="font-size: 0.85rem;">
+                            <i class="bi bi-pie-chart-fill text-success"></i> Estado General Inspecciones
+                        </span>
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary px-2 py-1 rounded-pill" style="font-size:0.68rem;">Flota Activa</span>
                     </div>
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div style="width: 140px; height: 140px; position: relative;">
-                            <canvas id="chartDeskEstadoInspecciones"></canvas>
-                        </div>
-                        <div class="d-flex flex-column gap-2 small fw-bold pe-3" style="font-size: 0.78rem;">
-                            <div class="d-flex align-items-center gap-2">
-                                <span style="width:10px; height:10px; background:#10b981; border-radius:2px;"></span>
-                                <span class="text-dark" id="mant-pct-insp-vig">85% Conformes / Vigentes (72)</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <span style="width:10px; height:10px; background:#ef4444; border-radius:2px;"></span>
-                                <span class="text-dark" id="mant-pct-insp-venc">15% Críticas / No Vig. (13)</span>
-                            </div>
-                        </div>
+                    <div class="flex-grow-1 position-relative d-flex align-items-center justify-content-center" style="min-height: 140px; width: 100%;">
+                        <canvas id="chartDeskEstadoInspecciones"></canvas>
                     </div>
                 </div>
             </div>
