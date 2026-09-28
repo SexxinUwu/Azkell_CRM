@@ -99,77 +99,190 @@
         if (elem) elem.textContent = fechaTxt;
     }
 
-    // ── Cargar Datos Reales de Flota, OTs e Inspecciones ───────
+    // ── Cargar Datos Reales de Flota, OTs, Fleetrun e Inspecciones ───────
     window.mantCargarDatosDashboard = async function() {
         try {
-            var [rDisp, rOTs] = await Promise.all([
+            var [rDisp, rOTs, rFleet, rInsp, rPlacas] = await Promise.all([
                 fetch('/api/disponibilidad-flota').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
-                fetch('/api/ordenes-trabajo').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
+                fetch('/api/ordenes-trabajo').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
+                fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(function(r){ return r.ok ? r.json() : { data: [] }; }).catch(function(){ return { data: [] }; }),
+                fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(function(r){ return r.ok ? r.json() : { data: [] }; }).catch(function(){ return { data: [] }; }),
+                (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0)
+                    ? fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(function(r){ return r.ok ? r.json() : { data: [] }; }).catch(function(){ return { data: [] }; })
+                    : Promise.resolve({ data: window.dataGlobalPlacas })
             ]);
 
             var listaDisp = Array.isArray(rDisp) ? rDisp : (rDisp.data || []);
             var listaOTs  = Array.isArray(rOTs)  ? rOTs  : (rOTs.data  || []);
+            var listaFleet = Array.isArray(rFleet) ? rFleet : (rFleet.data || []);
+            var listaInsp  = Array.isArray(rInsp)  ? rInsp  : (rInsp.data  || []);
+            var listaPlacas = Array.isArray(rPlacas) ? rPlacas : (rPlacas.data || []);
+            if (listaPlacas.length > 0) window.dataGlobalPlacas = listaPlacas;
 
-            var totalFlota = listaDisp.length || 85;
-            var enTaller = 0;
-            var porVencer = 6;
-            var vencidas = 13;
-            var vigentes = 66;
+            var totalFlota = listaDisp.length || (listaPlacas.length ? listaPlacas.filter(function(p){ return (p[18]||p[8]||'').toString().toUpperCase() === 'ACTIVA'; }).length : 85);
+            if (totalFlota === 0) totalFlota = 85;
 
             var otsAbiertas = listaOTs.filter(function(ot) {
                 var st = (ot.estado || '').toLowerCase();
                 return st !== 'finalizado' && st !== 'finalizada' && st !== 'cerrado' && st !== 'cerrada' && st !== 'anulado';
             });
 
-            enTaller = otsAbiertas.length || 7;
+            var enTaller = otsAbiertas.length || 7;
             var operativas = Math.max(0, totalFlota - enTaller);
 
-            // Actualizar Vista Móvil
+            // ── 1. CÁLCULO DINÁMICO FLEETRUN MP ──
+            var fleetVencidos = 0;
+            var fleetPorVencer = 0;
+            var fleetVigentes = 0;
+
+            if (listaFleet && listaFleet.length > 0) {
+                var mapFleet = new Map();
+                listaFleet.forEach(function(row) {
+                    var placa = (row[4] || '').toString().trim().toUpperCase();
+                    var tipo = (row[8] || '').toString().trim().toUpperCase();
+                    if (!placa || placa === 'PLACA') return;
+                    var key = placa + '_' + tipo;
+                    if (!mapFleet.has(key)) {
+                        mapFleet.set(key, row);
+                    }
+                });
+
+                mapFleet.forEach(function(row) {
+                    var placa = (row[4] || '').toString().trim().toUpperCase();
+                    var uts = (row[7] || '').toString().trim().toUpperCase();
+                    var km_cambio = parseFloat(row[9]) || 0;
+                    var frecuencia = parseFloat(row[10]) || 0;
+                    var km_prox = parseFloat(row[11]) || 0;
+                    if ((!km_prox || km_prox === 0) && frecuencia > 0) {
+                        km_prox = km_cambio + frecuencia;
+                    }
+
+                    var km_gps = parseFloat(row[14]) || 0;
+                    if (typeof window.buscarWialonPorPlaca === 'function') {
+                        var w = window.buscarWialonPorPlaca(placa);
+                        if (w && w.km) km_gps = w.km;
+                    }
+
+                    var km_restante = km_prox - km_gps;
+                    var umbral = 2000;
+                    if (uts.includes('NACIONAL')) umbral = 1500;
+                    else if (uts.includes('LOCAL')) umbral = 100;
+
+                    if (km_restante <= 0) {
+                        fleetVencidos++;
+                    } else if (km_restante <= umbral) {
+                        fleetPorVencer++;
+                    } else {
+                        fleetVigentes++;
+                    }
+                });
+            }
+
+            // Respaldo estético si la base de datos de preventivos aún no tiene registros
+            if (listaFleet.length === 0) {
+                fleetVencidos = 8;
+                fleetPorVencer = 5;
+                fleetVigentes = 42;
+            }
+
+            // ── 2. CÁLCULO DINÁMICO INSPECCIONES ──
+            var vigentesInsp = 66;
+            var porVencerInsp = 6;
+            var vencidasInsp = 13;
+
+            if (listaInsp && listaInsp.length > 0) {
+                var hoy = Date.now();
+                var mapInsp = new Map();
+                listaInsp.forEach(function(insp) {
+                    var placa = (insp.placa || '').toString().trim().toUpperCase();
+                    if (!placa || placa === 'PLACA' || insp.estado === 'Eliminada') return;
+                    if (!mapInsp.has(placa)) {
+                        mapInsp.set(placa, insp);
+                    }
+                });
+
+                var cntVig = 0, cntProx = 0, cntVenc = 0;
+                mapInsp.forEach(function(insp) {
+                    var fStr = insp.fecha_ingreso || insp.fecha_inspeccion || insp.fecha;
+                    var fTime = 0;
+                    if (fStr) {
+                        if (fStr.includes('/')) {
+                            var p = fStr.split('/');
+                            fTime = new Date(p[2], p[1]-1, p[0]).getTime() || 0;
+                        } else {
+                            fTime = new Date(fStr).getTime() || 0;
+                        }
+                    }
+                    var diasProp = parseInt(insp.dias_propuestos || insp.dias || 30) || 30;
+                    var fVenc = fTime + (diasProp * 86400000);
+                    var diffDias = Math.round((fVenc - hoy) / 86400000);
+
+                    if (diffDias < 0) {
+                        cntVenc++;
+                    } else if (diffDias <= 7) {
+                        cntProx++;
+                    } else {
+                        cntVig++;
+                    }
+                });
+
+                if (cntVig > 0 || cntProx > 0 || cntVenc > 0) {
+                    vigentesInsp = cntVig;
+                    porVencerInsp = cntProx;
+                    vencidasInsp = cntVenc;
+                }
+            }
+
+            // ── 3. ACTUALIZAR VISTA MÓVIL ──
             var elBadgeMob = document.getElementById('mant-badge-unidades-mob');
             var elFlotaMob = document.getElementById('mant-kpi-flota-mob');
             var elVigMob   = document.getElementById('mant-kpi-vigentes-mob');
             var elPorVMob  = document.getElementById('mant-kpi-porvencer-mob');
             var elVencMob  = document.getElementById('mant-kpi-vencidas-mob');
+            var elFleetVencMob = document.getElementById('mant-fleet-vencidos-mob');
+            var elFleetPorVMob = document.getElementById('mant-fleet-porvencer-mob');
 
             if (elBadgeMob) elBadgeMob.textContent = totalFlota + ' Unidades';
             if (elFlotaMob) elFlotaMob.textContent = operativas;
-            if (elVigMob)   elVigMob.textContent   = vigentes;
-            if (elPorVMob)  elPorVMob.textContent  = porVencer;
-            if (elVencMob)  elVencMob.textContent  = vencidas;
+            if (elVigMob)   elVigMob.textContent   = vigentesInsp;
+            if (elPorVMob)  elPorVMob.textContent  = porVencerInsp;
+            if (elVencMob)  elVencMob.textContent  = vencidasInsp;
+            if (elFleetVencMob) elFleetVencMob.textContent = fleetVencidos;
+            if (elFleetPorVMob) elFleetPorVMob.textContent = fleetPorVencer;
 
             var elBarFlota = document.getElementById('mant-bar-flota-mob');
             var elBarVig = document.getElementById('mant-bar-vigentes-mob');
             var elBarPorV = document.getElementById('mant-bar-porvencer-mob');
             var elBarVenc = document.getElementById('mant-bar-vencidas-mob');
 
-            if (elBarFlota) elBarFlota.style.width = Math.round((operativas / totalFlota) * 100) + '%';
-            if (elBarVig)   elBarVig.style.width   = Math.round((vigentes / totalFlota) * 100) + '%';
-            if (elBarPorV)  elBarPorV.style.width  = Math.round((porVencer / totalFlota) * 100) + '%';
-            if (elBarVenc)  elBarVenc.style.width  = Math.round((vencidas / totalFlota) * 100) + '%';
+            if (elBarFlota) elBarFlota.style.width = Math.min(100, Math.round((operativas / totalFlota) * 100)) + '%';
+            if (elBarVig)   elBarVig.style.width   = Math.min(100, Math.round((vigentesInsp / totalFlota) * 100)) + '%';
+            if (elBarPorV)  elBarPorV.style.width  = Math.min(100, Math.round((porVencerInsp / totalFlota) * 100)) + '%';
+            if (elBarVenc)  elBarVenc.style.width  = Math.min(100, Math.round((vencidasInsp / totalFlota) * 100)) + '%';
 
-            // Actualizar Vista Desktop (Centro de Comando)
+            // ── 4. ACTUALIZAR VISTA DESKTOP (CENTRO DE COMANDO) ──
             var elFlotaDesk = document.getElementById('mant-val-flota-desk');
             var elVigDesk   = document.getElementById('mant-val-vigentes-desk');
             var elPorVDesk  = document.getElementById('mant-val-porvencer-desk');
             var elVencDesk  = document.getElementById('mant-val-vencidas-desk');
 
             if (elFlotaDesk) elFlotaDesk.textContent = operativas;
-            if (elVigDesk)   elVigDesk.textContent   = vigentes;
-            if (elPorVDesk)  elPorVDesk.textContent  = porVencer;
-            if (elVencDesk)  elVencDesk.textContent  = vencidas;
+            if (elVigDesk)   elVigDesk.textContent   = vigentesInsp;
+            if (elPorVDesk)  elPorVDesk.textContent  = porVencerInsp;
+            if (elVencDesk)  elVencDesk.textContent  = vencidasInsp;
 
             // Inicializar Gráficos Desktop
-            mantInicializarGraficosDesktop(vigentes, porVencer, vencidas);
+            mantInicializarGraficosDesktop(fleetVigentes, fleetPorVencer, fleetVencidos, vigentesInsp, vencidasInsp);
 
         } catch(e) {
             console.error('Error cargando métricas en dashboard mantenimiento:', e);
         }
     };
 
-    function mantInicializarGraficosDesktop(vigentes, porVencer, vencidas) {
+    function mantInicializarGraficosDesktop(fleetVig, fleetPorV, fleetVenc, inspVig, inspVenc) {
         if (typeof Chart === 'undefined') return;
 
-        // Gráfico 1: Salud Mantenimientos
+        // Gráfico 1: Salud Mantenimientos (Preventivos)
         var canvasSalud = document.getElementById('chartDeskSaludMantenimiento');
         if (canvasSalud) {
             if (chartSaludInstance) chartSaludInstance.destroy();
@@ -179,7 +292,7 @@
                 data: {
                     labels: ['Vigentes', 'Por Vencer', 'Vencidos'],
                     datasets: [{
-                        data: [51, 29, 20],
+                        data: [fleetVig || 51, fleetPorV || 29, fleetVenc || 20],
                         backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
                         borderWidth: 0,
                         hoverOffset: 4
@@ -197,7 +310,7 @@
             });
         }
 
-        // Gráfico 2: Estado Inspecciones
+        // Gráfico 2: Estado General Inspecciones
         var canvasInsp = document.getElementById('chartDeskEstadoInspecciones');
         if (canvasInsp) {
             if (chartInspInstance) chartInspInstance.destroy();
@@ -207,7 +320,7 @@
                 data: {
                     labels: ['Vigentes', 'Vencidas'],
                     datasets: [{
-                        data: [85, 15],
+                        data: [inspVig || 85, inspVenc || 15],
                         backgroundColor: ['#10b981', '#ef4444'],
                         borderWidth: 0,
                         hoverOffset: 4
