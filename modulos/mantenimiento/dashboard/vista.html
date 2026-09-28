@@ -2,12 +2,23 @@
 <!-- 🛠️ DASHBOARD MANTENIMIENTO: WEB (CENTRO DE COMANDO) + MÓVIL (APPLE 1:1) -->
 <!-- ================================================================ -->
 <style>
-/* ── Reset root-dinamico & main-area para 100% Pantalla Completa ── */
-#root-dinamico, .main-area {
+/* ── Reset root-dinamico & main-area para 100% Pantalla Completa & Scroll Suave ── */
+#root-dinamico {
     padding: 0 !important;
     margin: 0 !important;
     background: transparent !important;
+    overflow: visible !important;
+    height: auto !important;
+}
+
+.main-area {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    overflow-y: auto !important;
     overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
@@ -19,8 +30,57 @@
     min-height: 100vh;
     font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     position: relative;
-    overflow-x: hidden;
+    overflow: visible;
     -webkit-font-smoothing: antialiased;
+}
+
+/* ── Fusión Completa del Topbar Móvil con el Cielo Atmosférico ── */
+@media (max-width: 991.98px) {
+    .topbar {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        position: absolute !important;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 50 !important;
+        padding: 0.85rem 1.15rem !important;
+    }
+    #tituloTopBar {
+        color: #ffffff !important;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+        font-weight: 800 !important;
+        font-size: 1.15rem !important;
+    }
+    .btn-hamburger-mobile {
+        color: #ffffff !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    .fake-search-bar {
+        background: rgba(255, 255, 255, 0.22) !important;
+        border: 1px solid rgba(255, 255, 255, 0.35) !important;
+        color: #ffffff !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    .fake-search-bar i {
+        color: #ffffff !important;
+    }
+    #btn-modo-revisor {
+        display: none !important;
+    }
+}
+@media (min-width: 992px) {
+    .topbar {
+        position: relative !important;
+        background: var(--surface) !important;
+        border-bottom: 1px solid var(--border) !important;
+    }
+    #tituloTopBar {
+        color: var(--text) !important;
+        text-shadow: none !important;
+    }
 }
 
 /* =========================================================================
@@ -31,7 +91,7 @@
     width: 100%;
     min-height: 100vh;
     position: relative;
-    padding: 1.25rem 1.15rem calc(115px + env(safe-area-inset-bottom, 24px)) 1.15rem;
+    padding: calc(65px + env(safe-area-inset-top, 0px)) 1.15rem calc(115px + env(safe-area-inset-bottom, 24px)) 1.15rem;
     transition: background 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -52,7 +112,7 @@
 /* Resplandor Luminoso Móvil */
 .mant-sky-glow {
     position: absolute;
-    top: 25px;
+    top: 65px;
     left: 4%;
     width: 220px;
     height: 220px;
@@ -69,7 +129,7 @@
 /* Arco Celeste Punteado */
 .mant-sky-arc {
     position: absolute;
-    top: 38px;
+    top: 40px;
     left: 50%;
     transform: translateX(-50%);
     width: 90%;
@@ -277,8 +337,8 @@
                     </div>
 
                     <div class="text-end">
-                        <span id="mant-clima-rango-mob" class="badge bg-white bg-opacity-20 mant-clima-text-white border border-white border-opacity-30 rounded-3 px-3 py-1.5 shadow-2xs fw-bold" style="font-size: 0.75rem;">
-                            ↑ 25° / ↓ 18°
+                        <span id="mant-clima-rango-mob" class="fw-bold mant-clima-text-white d-block" style="font-size: 0.92rem; letter-spacing: 0.02em;">
+                            25° / 18°
                         </span>
                         <span id="mant-clima-desc-mob" class="d-block mant-clima-text-white text-opacity-90 mt-1" style="font-size: 0.72rem;">Cielo prácticamente cubierto</span>
                     </div>
@@ -378,7 +438,6 @@
             <div class="mt-4 pt-2">
                 <div class="d-flex justify-content-between align-items-center px-1 mb-2">
                     <span class="fw-bold text-dark text-uppercase small" style="font-size: 0.75rem; letter-spacing: 0.05em;">Mantenimiento Preventivo</span>
-                    <span class="text-muted fw-bold" style="font-size: 0.7rem;">Fleetrun v2.4</span>
                 </div>
 
                 <div class="mant-smart-card overflow-hidden p-0">

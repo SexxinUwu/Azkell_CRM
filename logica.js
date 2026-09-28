@@ -187,6 +187,19 @@ window.verificarSesionGuardada = function() {
             avatarTopWrap.outerHTML = window.generarAvatar(nomUser, 32).replace('class="user-avatar"','class="user-avatar" id="topbar-avatar-icon"');
         }
     }
+
+    // Avatar circular en topbar móvil
+    var mobAvatarWrap = document.getElementById('topbar-avatar-mobile-wrap');
+    if (mobAvatarWrap) {
+        if (hasValidAvatarImg) {
+            mobAvatarWrap.innerHTML = '<div class="user-avatar" id="topbar-avatar-mobile" style="width:34px;height:34px;border-radius:50%;background:url('+cachedAvatar+') center/cover no-repeat;flex-shrink:0;border:2px solid rgba(255,255,255,0.7);box-shadow:0 2px 6px rgba(0,0,0,0.15);"></div>';
+        } else if (typeof window.generarAvatar === 'function') {
+            mobAvatarWrap.innerHTML = window.generarAvatar(nomUser, 34).replace(
+                'border-radius:' + Math.round(34/3.2) + 'px',
+                'border-radius:50%;border:2px solid rgba(255,255,255,0.7);box-shadow:0 2px 6px rgba(0,0,0,0.15);'
+            );
+        }
+    }
     
     // Avatar grande en dropdown de perfil
     var avatarDrop = document.getElementById('perfil-avatar-dropdown');
