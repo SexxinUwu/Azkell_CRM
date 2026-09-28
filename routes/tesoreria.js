@@ -1112,6 +1112,8 @@ module.exports = function (db, broadcast, logAudit) {
                     creado_en
                 FROM tesoreria_caja
                 WHERE 1=1
+                  AND COALESCE(sub_motivo, '') NOT LIKE '%PAGO REQUERIMIENTO%'
+                  AND COALESCE(tipo_comprobante, '') NOT LIKE '%ORDEN DE COMPRA%'
             `;
             const params = [];
 

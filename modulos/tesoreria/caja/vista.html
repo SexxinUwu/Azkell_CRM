@@ -14,6 +14,7 @@
     flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
+    color: #1e293b;
 }
 
 @media (max-width: 768px) {
@@ -22,149 +23,186 @@
     }
 }
 
-/* ── Estilos de Tarjeta Bento y Filtros Superiores ─────────────────────── */
-.caja-top-filter-card {
+/* ── Bento KPI Cards (1:1 Idéntico a Reporte de Fallas) ───────────────── */
+.caja-kpi-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    position: relative;
+}
+.caja-kpi-clickable {
+    cursor: pointer;
+}
+.caja-kpi-clickable:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.12);
+    border-color: #94a3b8;
+}
+.caja-kpi-clickable:hover .caja-kpi-chevron {
+    color: #0284c7 !important;
+    transform: translateX(3px);
+}
+.caja-kpi-clickable.active {
+    background: #f8fafc;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2), 0 8px 20px -4px rgba(15, 23, 42, 0.1);
+}
+.caja-kpi-chevron {
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+.caja-kpi-icon {
+    width: 44px;
+    height: 44px;
     border-radius: 12px;
-    padding: 0.85rem 1.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+.caja-kpi-clickable:hover .caja-kpi-icon {
+    transform: scale(1.08);
+}
+
+/* ── Barra de Filtros Inteligente ─────────────────────────────────────── */
+.caja-filter-bar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 0.75rem 1rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     margin-bottom: 1rem;
 }
+.caja-search-input {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.5rem 0.85rem 0.5rem 2.25rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    width: 100%;
+}
+.caja-search-input:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+    outline: none;
+}
+.caja-select {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+    transition: all 0.2s;
+}
+.caja-select:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    outline: none;
+}
 
 .caja-btn-buscar {
-    background-color: #e67e22 !important;
-    border-color: #d35400 !important;
+    background-color: #0284c7 !important;
+    border-color: #0284c7 !important;
     color: #ffffff !important;
     font-weight: 700;
     font-size: 0.82rem;
-    border-radius: 8px;
-    padding: 0.45rem 1.25rem;
+    border-radius: 10px;
+    padding: 0.5rem 1.25rem;
     transition: all 0.2s ease;
 }
 .caja-btn-buscar:hover {
-    background-color: #d35400 !important;
+    background-color: #0369a1 !important;
+    border-color: #0369a1 !important;
     color: #ffffff !important;
-    box-shadow: 0 2px 8px rgba(211, 84, 0, 0.25);
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
 }
 
-.caja-btn-importacion {
-    background-color: #10b981 !important;
-    border-color: #059669 !important;
-    color: #ffffff !important;
-    font-weight: 700;
-    font-size: 0.82rem;
-    border-radius: 6px;
-    padding: 0.45rem 1rem;
-}
-
-.caja-btn-nuevo {
-    background-color: #f59e0b !important;
-    border-color: #d97706 !important;
-    color: #ffffff !important;
-    font-weight: 700;
-    font-size: 0.82rem;
-    border-radius: 6px;
-    padding: 0.45rem 1.1rem;
-}
-
-/* ── Barra de Botones de Tabla (Imprimir, Excel, Mostrar Columnas) ──────── */
-.caja-table-toolbar {
-    border-top: 2px solid #e67e22;
-    padding-top: 0.75rem;
-    margin-bottom: 0.65rem;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-}
-
-.caja-toolbar-btn {
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    color: #334155;
-    font-size: 0.78rem;
-    font-weight: 600;
-    padding: 0.35rem 0.75rem;
-    border-radius: 6px;
-    transition: all 0.15s ease;
-}
-.caja-toolbar-btn:hover {
-    background: #f8fafc;
-    border-color: #94a3b8;
-    color: #0f172a;
-}
-
-/* ── Tabla Horizontal Profesional ─────────────────────────────────────── */
+/* ── Tabla Bento Card ─────────────────────────────────────────────────── */
 .caja-table-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     overflow: hidden;
 }
 
 .caja-scroll-table {
     width: 100%;
     overflow-x: auto;
-    max-height: calc(100vh - 290px);
+    max-height: calc(100vh - 310px);
 }
 
 .caja-table {
     width: 100%;
-    border-collapse: collapse;
-    font-size: 0.74rem;
-    white-space: nowrap;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.82rem;
 }
 
 .caja-table thead th {
-    background-color: #ffffff;
-    color: #1e293b;
+    background: #f8fafc;
+    color: #475569;
     font-weight: 800;
+    font-size: 0.72rem;
     text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.4px;
-    padding: 0.65rem 0.85rem;
+    letter-spacing: 0.5px;
+    padding: 0.75rem 0.85rem;
     border-bottom: 2px solid #cbd5e1;
+    white-space: nowrap !important;
+    position: sticky;
+    top: 0;
+    z-index: 10;
     user-select: none;
     cursor: pointer;
     vertical-align: middle;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.caja-table thead th:hover {
+    background: #e2e8f0 !important;
+    color: #0284c7 !important;
 }
 
 .caja-table thead th i.sort-icon {
-    opacity: 0.4;
-    font-size: 0.68rem;
+    font-size: 0.75rem;
+    opacity: 0.45;
     margin-left: 3px;
+    transition: opacity 0.2s ease;
 }
 .caja-table thead th:hover i.sort-icon {
     opacity: 1;
-    color: #e67e22;
+    color: #0284c7;
 }
 
-.caja-table tbody td {
-    padding: 0.55rem 0.85rem;
-    border-bottom: 1px solid #f1f5f9;
-    vertical-align: middle;
-    color: #334155;
-    font-weight: 500;
+.caja-table tbody tr {
+    transition: background 0.15s ease;
 }
 
 .caja-table tbody tr:hover {
-    background-color: #fffaf5;
+    background: #f8fafc;
 }
 
-/* ── Formulario Modal (Estilo Exacto de la Imagen 3) ───────────────────── */
-#modalCajaForm .modal-header {
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 0.85rem 1.25rem;
-}
-
-#modalCajaForm .modal-title {
-    color: #0284c7;
-    font-weight: 700;
-    font-size: 1.1rem;
+.caja-table tbody td {
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #1e293b;
+    white-space: nowrap !important;
+    font-size: 0.81rem;
 }
 
 /* ── Floating Drawer Modal & Inputs Styling (1:1 Idéntico a Reporte de Fallas) ── */
@@ -182,7 +220,8 @@
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-#modalCajaForm.show .caja-floating-drawer-dialog {
+#modalCajaForm.show .caja-floating-drawer-dialog,
+#modalCajaGestionMotivos.show .caja-floating-drawer-dialog {
     transform: translateX(-50%) translateY(0) !important;
 }
 
@@ -196,11 +235,6 @@
     background: #f8fafc !important;
     display: flex !important;
     flex-direction: column !important;
-}
-
-#modalCajaForm.show .caja-floating-drawer-dialog,
-#modalCajaGestionMotivos.show .caja-floating-drawer-dialog {
-    transform: translateX(-50%) translateY(0) !important;
 }
 
 /* Checkbox con borde azul visible y marcado */
@@ -217,28 +251,31 @@
     box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.3) !important;
 }
 
-#modalCajaForm .modal-header {
+#modalCajaForm .modal-header,
+#modalCajaGestionMotivos .modal-header {
     background: #ffffff !important;
     border-bottom: 1px solid #e2e8f0 !important;
     padding: 0.85rem 1.4rem !important;
     flex-shrink: 0;
 }
 
-#modalCajaForm .modal-title {
+#modalCajaForm .modal-title,
+#modalCajaGestionMotivos .modal-title {
     color: #0284c7;
     font-weight: 800;
     font-size: 1.18rem;
     letter-spacing: -0.2px;
 }
 
-#modalCajaForm .modal-body {
+#modalCajaForm .modal-body,
+#modalCajaGestionMotivos .modal-body {
     flex: 1 1 auto;
     overflow-y: auto !important;
     padding: 1.25rem 1.4rem !important;
     background: #f8fafc !important;
 }
 
-/* Modal Form Inputs: Enlarge & Beautify (Idéntico a Reporte de Fallas) */
+/* Modal Form Inputs */
 #modalCajaForm .form-control,
 #modalCajaForm .form-select {
     min-height: 44px !important;
@@ -282,7 +319,7 @@
     font-weight: bold;
 }
 
-/* Tarjetas segmentadas y numeradas (Idéntico a Reporte de Fallas) */
+/* Tarjetas segmentadas y numeradas */
 .caja-segmento-card {
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
@@ -357,75 +394,133 @@
 
 <div id="mod-tesoreria-caja" class="modulo-wrapper">
 
-    <!-- ── 1. ENCABEZADO OFICIAL DE CAJA (Imagen 1) ─────────────────────── -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2">
+    <!-- ── 1. ENCABEZADO PRINCIPAL (Idéntico a Reporte de Fallas) ────────── -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
         <div>
-            <h4 class="fw-bold text-dark m-0" style="font-size: 1.35rem; letter-spacing: -0.01em;">
-                Caja <span class="text-muted fw-normal fs-6 ms-1">Tesorería</span>
-            </h4>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h4 class="fw-bolder text-dark m-0" style="letter-spacing:-0.02em;">Caja</h4>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold" style="font-size:0.7rem;">Tesorería</span>
+            </div>
+            <p class="text-secondary m-0" style="font-size:0.83rem;">Registro y liquidación de caja chica, rendiciones de gastos y entregas operativas</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-sm caja-btn-importacion d-flex align-items-center gap-1.5" onclick="window.cajaAbrirImportacion()">
-                <i class="bi bi-plus-lg"></i> Importación
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;" onclick="window.cajaExportarExcel()">
+                <i class="bi bi-file-earmark-excel text-success"></i> Excel
             </button>
-            <button type="button" class="btn btn-sm caja-btn-nuevo d-flex align-items-center gap-1.5" onclick="window.cajaAbrirModalNuevo()">
-                <i class="bi bi-plus-lg"></i> Nuevo
+            <button class="btn btn-outline-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" style="font-size:0.82rem;" onclick="window.cajaCargarMovimientos()">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            </button>
+            <button class="btn btn-primary rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-1 shadow-sm" style="font-size:0.82rem; background:#0284c7; border:none;" onclick="window.cajaAbrirModalNuevo()">
+                <i class="bi bi-plus-lg"></i> Registrar Caja
             </button>
         </div>
     </div>
 
-    <!-- ── 2. FILTROS SUPERIORES (Fecha Desde, Fecha Hasta, Estado, Buscar) ─ -->
-    <div class="caja-top-filter-card">
-        <div class="row g-3 align-items-end">
-            <div class="col-12 col-sm-6 col-md-3">
-                <label class="form-label small fw-bold text-secondary mb-1">Fecha Desde</label>
-                <div class="input-group input-group-sm">
-                    <input type="date" id="caja-filtro-desde" class="form-control" title="Fecha Desde">
+    <!-- ── 2. BENTO KPI CARDS INTERACTIVOS (1:1 Idéntico a Reporte de Fallas) ─ -->
+    <div class="row g-3 mb-3">
+        
+        <!-- Total Cajas -->
+        <div class="col-6 col-md-3">
+            <div class="caja-kpi-card caja-kpi-clickable active" id="kpi-card-total" onclick="window.cajaFiltrarPorKPI('ALL')" title="Ver todas las cajas">
+                <div class="caja-kpi-icon" style="background:#e0f2fe; color:#0284c7;">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Total Cajas</div>
+                    <div class="fw-bolder text-dark" id="kpi-total-cajas" style="font-size:1.35rem; line-height:1.2;">0</div>
+                </div>
+                <i class="bi bi-chevron-right ms-auto caja-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
+            </div>
+        </div>
+
+        <!-- Pendientes de Aprobación -->
+        <div class="col-6 col-md-3">
+            <div class="caja-kpi-card caja-kpi-clickable" id="kpi-card-pendientes" onclick="window.cajaFiltrarPorKPI('PENDIENTE')" style="border-left:4px solid #ef4444 !important;" title="Filtrar pendientes de aprobación">
+                <div class="caja-kpi-icon" style="background:#fee2e2; color:#ef4444;">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Pendientes</div>
+                    <div class="fw-bolder text-danger" id="kpi-cajas-pendientes" style="font-size:1.35rem; line-height:1.2;">0</div>
+                </div>
+                <i class="bi bi-chevron-right ms-auto caja-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
+            </div>
+        </div>
+
+        <!-- Procesadas / Aprobadas -->
+        <div class="col-6 col-md-3">
+            <div class="caja-kpi-card caja-kpi-clickable" id="kpi-card-procesadas" onclick="window.cajaFiltrarPorKPI('PROCESADO')" style="border-left:4px solid #16a34a !important;" title="Filtrar procesadas / aprobadas">
+                <div class="caja-kpi-icon" style="background:#dcfce7; color:#16a34a;">
+                    <i class="bi bi-check2-circle"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Procesadas / Pagadas</div>
+                    <div class="fw-bolder text-success" id="kpi-cajas-procesadas" style="font-size:1.35rem; line-height:1.2;">0</div>
+                </div>
+                <i class="bi bi-chevron-right ms-auto caja-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
+            </div>
+        </div>
+
+        <!-- Total Monto Acumulado -->
+        <div class="col-6 col-md-3">
+            <div class="caja-kpi-card caja-kpi-clickable" id="kpi-card-monto" onclick="window.cajaFiltrarPorKPI('MONTO')" style="border-left:4px solid #7c3aed !important;" title="Ordenar por monto acumulado">
+                <div class="caja-kpi-icon" style="background:#ede9fe; color:#7c3aed;">
+                    <i class="bi bi-currency-dollar"></i>
+                </div>
+                <div>
+                    <div class="text-secondary fw-semibold" style="font-size:0.72rem; text-transform:uppercase;">Monto Total Acumulado</div>
+                    <div class="fw-bolder text-dark" id="kpi-cajas-monto" style="font-size:1.35rem; line-height:1.2;">S/ 0.00</div>
+                </div>
+                <i class="bi bi-chevron-right ms-auto caja-kpi-chevron text-muted" style="font-size:0.8rem;"></i>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── 3. BARRA DE FILTROS INTELIGENTE (Idéntico a Reporte de Fallas) ── -->
+    <div class="caja-filter-bar mb-3">
+        <div class="row g-2 align-items-center">
+            
+            <!-- Buscador en tiempo real -->
+            <div class="col-12 col-md-4">
+                <div class="position-relative">
+                    <i class="bi bi-search position-absolute text-muted" style="left:0.75rem; top:50%; transform:translateY(-50%); font-size:0.85rem;"></i>
+                    <input type="text" id="caja-filtro-tabla" class="caja-search-input" placeholder="Buscar por número, placa, beneficiario, motivo..." oninput="window.cajaFiltrarEnTabla()">
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-md-3">
-                <label class="form-label small fw-bold text-secondary mb-1">Fecha Hasta</label>
-                <div class="input-group input-group-sm">
-                    <input type="date" id="caja-filtro-hasta" class="form-control" title="Fecha Hasta">
-                </div>
+
+            <!-- Rango Fechas -->
+            <div class="col-6 col-md-2">
+                <input type="date" id="caja-filtro-desde" class="form-control form-control-sm caja-select w-100" title="Fecha Desde">
             </div>
-            <div class="col-12 col-sm-8 col-md-4">
-                <label class="form-label small fw-bold text-secondary mb-1">Estado</label>
-                <select id="caja-filtro-estado" class="form-select form-select-sm fw-semibold">
-                    <option value="TODOS" selected>TODOS</option>
+            <div class="col-6 col-md-2">
+                <input type="date" id="caja-filtro-hasta" class="form-control form-control-sm caja-select w-100" title="Fecha Hasta">
+            </div>
+
+            <!-- Filtro Estado -->
+            <div class="col-8 col-md-2">
+                <select id="caja-filtro-estado" class="form-select form-select-sm caja-select w-100" onchange="window.cajaCargarMovimientos()">
+                    <option value="TODOS" selected>Todos los estados</option>
                     <option value="PENDIENTE">PENDIENTE</option>
                     <option value="APROBADO">APROBADO</option>
-                    <option value="RECHAZADO">RECHAZADO</option>
+                    <option value="PROCESADO">PROCESADO</option>
                     <option value="PAGADO">PAGADO</option>
                     <option value="ANULADO">ANULADO</option>
                 </select>
             </div>
-            <div class="col-12 col-sm-4 col-md-2">
+
+            <!-- Botón Buscar / Actualizar -->
+            <div class="col-4 col-md-2">
                 <button type="button" class="btn btn-sm caja-btn-buscar w-100 d-flex align-items-center justify-content-center gap-1.5" onclick="window.cajaCargarMovimientos()">
                     <i class="bi bi-search"></i> Buscar
                 </button>
             </div>
+
         </div>
     </div>
 
-    <!-- ── 3. TOOLBAR DE TABLA (Imprimir, Excel, Buscar en tabla) ── -->
-    <div class="caja-table-toolbar">
-        <div class="d-flex align-items-center gap-1.5 flex-wrap">
-            <button type="button" class="btn btn-sm caja-toolbar-btn d-flex align-items-center gap-1" onclick="window.cajaImprimirTabla()">
-                <i class="bi bi-printer"></i> Imprimir
-            </button>
-            <button type="button" class="btn btn-sm caja-toolbar-btn d-flex align-items-center gap-1" onclick="window.cajaExportarExcel()">
-                <i class="bi bi-file-earmark-excel text-success"></i> Excel
-            </button>
-        </div>
-
-        <div class="d-flex align-items-center gap-2 ms-auto">
-            <span class="small fw-semibold text-secondary">Buscar en tabla:</span>
-            <input type="text" id="caja-filtro-tabla" class="form-control form-control-sm" style="width: 170px; border-radius: 6px;" oninput="window.cajaFiltrarEnTabla()">
-        </div>
-    </div>
-
-    <!-- ── 4. TABLA CON COLUMNAS EXACTAS DEL FORMULARIO ─────── -->
+    <!-- ── 4. TABLA BENTO CARD CON COLUMNAS EXACTAS ─────────────────────── -->
     <div class="caja-table-card">
         <div class="caja-scroll-table">
             <table class="caja-table" id="caja-tabla-principal">
@@ -462,7 +557,7 @@
                 </thead>
                 <tbody id="caja-tbody">
                     <tr>
-                        <td colspan="25" class="text-center py-4 text-muted">
+                        <td colspan="27" class="text-center py-4 text-muted">
                             No hay datos disponibles en la tabla
                         </td>
                     </tr>
