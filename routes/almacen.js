@@ -7,6 +7,32 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         return (req && req.db) ? req.db : db;
     }
 
+    // ── Middleware de Auditoría Automática para Almacén ────────────────
+    router.use((req, res, next) => {
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+            const originalJson = res.json.bind(res);
+            res.json = function (data) {
+                if (data && (data.ok === true || data.data === 'Éxito' || data.success || data.id || res.statusCode < 400)) {
+                    if (typeof logAudit === 'function') {
+                        const accion = req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ';
+                        let sub = req.path.replace(/^\//, '').split('/')[0] || 'General';
+                        sub = sub.toUpperCase();
+                        let desc = `Operación de ${accion.toLowerCase()} en Almacén (${req.path})`;
+                        if (req.body) {
+                            if (req.body.descripcion) desc = `${accion} item/artículo: ${req.body.descripcion}`;
+                            else if (req.body.id || req.params.id) desc = `${accion} registro ${req.body.id || req.params.id} en ${sub}`;
+                            else if (req.body.razon_social) desc = `${accion} proveedor ${req.body.razon_social}`;
+                            else if (req.body.categoria) desc = `${accion} categoría ${req.body.categoria}`;
+                        }
+                        logAudit(req, 'ALMACEN', sub, accion, desc);
+                    }
+                }
+                return originalJson(data);
+            };
+        }
+        next();
+    });
+
     // ── Helper: sumar total_pen de detalle (convierte USD con tipo_cambio) ───
     function _calcularTotalPen(detalles, tc) {
         return detalles.reduce((acc, d) => {

@@ -31,6 +31,28 @@ module.exports = function (db, broadcast, logAudit) {
         return (typeof d.promise === 'function') ? d.promise() : d;
     }
 
+    // ── Middleware de Auditoría Automática para RRHH ────────────────
+    router.use((req, res, next) => {
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+            const originalJson = res.json.bind(res);
+            res.json = function (data) {
+                if (data && (data.ok === true || data.data === 'Éxito' || data.success || data.id || res.statusCode < 400)) {
+                    if (typeof logAudit === 'function') {
+                        const accion = req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ';
+                        let desc = `Operación de ${accion.toLowerCase()} en RRHH (${req.path})`;
+                        if (req.body) {
+                            if (req.body.nombres || req.body.apellidos) desc = `${accion} colaborador: ${(req.body.nombres || '')} ${(req.body.apellidos || '')}`.trim();
+                            else if (req.params.id) desc = `${accion} registro RRHH ID: ${req.params.id}`;
+                        }
+                        logAudit(req, 'RRHH', 'Personal', accion, desc);
+                    }
+                }
+                return originalJson(data);
+            };
+        }
+        next();
+    });
+
 // Auto-creación de tablas del módulo RRHH
 async function ensureTablesRRHH(req) {
     const tdb = getDb(req);

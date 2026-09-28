@@ -797,7 +797,7 @@ router.post('/:metodo', async (req, res) => {
                         _inspeccionesCache = null;
                         console.log("✅ Inspección creada correctamente con ID:", nextId);
                         broadcast('inspecciones', metodo);
-                        const usuario = (req.body && (req.body.usuario || req.body.usuarioAutor)) || (datos && (datos.usuarioAutor || datos.usuario)) || (req.user && (req.user.nombre || req.user.correo)) || 'Sthefano Avila';
+                        const usuario = (datos && (datos.tecnico || datos.usuarioAutor || datos.usuario)) || (req.body && (req.body.usuario || req.body.usuarioAutor)) || (req.user && (req.user.nombre || req.user.correo)) || 'NIXON PEREZ PEREZ';
                         logAudit(usuario, 'inspecciones', 'CREÓ', `${datos.placa || '?'} · ${datos.fecha_ingreso || '?'}`);
                         
                         // Sincronización automática de hallazgos hacia Reportes de Fallas y OT activa
@@ -830,7 +830,7 @@ router.post('/:metodo', async (req, res) => {
                 _inspeccionesCache = null;
                 console.log("✅ Inspección actualizada correctamente:", datos.id);
                 broadcast('inspecciones', metodo);
-                const usuario = (req.body && (req.body.usuario || req.body.usuarioAutor)) || (datos && (datos.usuarioAutor || datos.usuario)) || (req.user && (req.user.nombre || req.user.correo)) || 'Sthefano Avila';
+                const usuario = (datos && (datos.tecnico || datos.usuarioAutor || datos.usuario)) || (req.body && (req.body.usuario || req.body.usuarioAutor)) || (req.user && (req.user.nombre || req.user.correo)) || 'NIXON PEREZ PEREZ';
                 logAudit(usuario, 'inspecciones', 'MODIFICÓ', `${datos.placa || '?'} · ${datos.fecha_ingreso || '?'}`);
                 
                 // Sincronización automática de hallazgos hacia Reportes de Fallas y OT activa
@@ -909,6 +909,9 @@ router.post('/:metodo', async (req, res) => {
             if (err) { console.error("❌ Error en BD vehiculos_flota:", err); return res.json({ data: "Error al guardar vehículo" }); }
             console.log("✅ Vehículo guardado correctamente:", placa);
             broadcast('vehiculos_flota', metodo);
+            if (typeof logAudit === 'function') {
+                logAudit(req, 'FLOTA', 'Placas / Unidades', 'MODIFICÓ', `Guardó/actualizó datos de unidad ${placa}`);
+            }
             return res.json({ data: "Éxito" });
         });
         return;
@@ -1003,6 +1006,9 @@ router.post('/:metodo', async (req, res) => {
                     db.query(sqlUpdate, [nombre, cargo, correo, password, passwordPlain, estado, permisos, rol, rolId, req.body.roles_ids || "[]", idFinal], (err) => {
                         if (err) return res.json({ data: "Error BD: " + err.message });
                         broadcast('usuarios', 'actualizar');
+                        if (typeof logAudit === 'function') {
+                            logAudit(req, 'SISTEMA', 'Usuarios', 'MODIFICÓ', `Actualizó usuario ${nombre} (${correo})`);
+                        }
                         return res.json({ data: "Éxito" });
                     });
                 } else {
@@ -1010,6 +1016,9 @@ router.post('/:metodo', async (req, res) => {
                     db.query(sqlUpdate, [nombre, cargo, correo, estado, permisos, rol, rolId, req.body.roles_ids || "[]", idFinal], (err) => {
                         if (err) return res.json({ data: "Error BD: " + err.message });
                         broadcast('usuarios', 'actualizar');
+                        if (typeof logAudit === 'function') {
+                            logAudit(req, 'SISTEMA', 'Usuarios', 'MODIFICÓ', `Actualizó usuario ${nombre} (${correo})`);
+                        }
                         return res.json({ data: "Éxito" });
                     });
                 }
@@ -1018,6 +1027,9 @@ router.post('/:metodo', async (req, res) => {
                 db.query(sqlInsert, [idFinal, nombre, cargo, correo, password, passwordPlain, rol, estado, permisos, rolId, req.body.roles_ids || "[]"], (err) => {
                     if (err) return res.json({ data: "Error BD: " + err.message });
                     broadcast('usuarios', 'guardar');
+                    if (typeof logAudit === 'function') {
+                        logAudit(req, 'SISTEMA', 'Usuarios', 'CREÓ', `Creó usuario ${nombre} (${correo})`);
+                    }
                     return res.json({ data: "Éxito" });
                 });
             }
@@ -1166,10 +1178,11 @@ router.post('/:metodo', async (req, res) => {
             db.query(query, [...values, ...values.slice(1)], (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
                 broadcast('fleetrun', metodo);
-                const usuario = (req.body && req.body.usuario) || 'sistema';
                 const placa   = ((isEdit ? form.editF_placa  : form.f_placa)  || '').toUpperCase();
                 const tipomp  = (isEdit ? form.editF_tipomp : form.f_tipomp) || '';
-                logAudit(usuario, 'fleetrun', isEdit ? 'MODIFICÓ' : 'CREÓ', `${tipomp || '?'} · ${placa || '?'} · ${idFinal}`);
+                if (typeof logAudit === 'function') {
+                    logAudit(req, 'MANTENIMIENTO', 'Fleetrun', isEdit ? 'MODIFICÓ' : 'CREÓ', `${isEdit ? 'Actualizó' : 'Registró'} mantenimiento preventivo ${tipomp} para ${placa} (${idFinal})`);
+                }
                 // Si es edición, sincronizar planificacion vinculada (fecha_real y km_real)
                 if (isEdit) {
                     const newFecha = (isEdit ? form.editF_fecha : null) || null;
@@ -1258,6 +1271,9 @@ router.post('/:metodo', async (req, res) => {
             db.query(sql, params, (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
                 broadcast('conductores', 'actualizar');
+                if (typeof logAudit === 'function') {
+                    logAudit(req, 'FLOTA', 'Conductores', 'MODIFICÓ', `Actualizó conductor ${nombre} (DNI: ${dni})`);
+                }
                 return res.json({ data: "Éxito" });
             });
         } else {
@@ -1265,6 +1281,9 @@ router.post('/:metodo', async (req, res) => {
             [nombre, empresa, telefono, dni, licencia, estado, foto], (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
                 broadcast('conductores', 'guardar');
+                if (typeof logAudit === 'function') {
+                    logAudit(req, 'FLOTA', 'Conductores', 'CREÓ', `Registró nuevo conductor ${nombre} (DNI: ${dni})`);
+                }
                 return res.json({ data: "Éxito" });
             });
         }

@@ -1630,6 +1630,21 @@ function requirePerm(modulo, accion) {
     return (req, res, next) => next();
 }
 
+function _resolverNombreUsuario(raw) {
+    if (!raw) return 'Sthefano Avila';
+    const s = String(raw).trim();
+    if (!s || s.includes('[object Object]') || s.toLowerCase() === 'undefined' || s.toLowerCase() === 'null') return 'Sthefano Avila';
+    const up = s.toUpperCase();
+    if (up === '75527474' || up === 'NIXON' || up === 'NIXON PEREZ' || up === 'NIXON PEREZ PEREZ') return 'NIXON PEREZ PEREZ';
+    if (up === '72437318' || up === 'STHEFANO' || up === 'STHEFANO AVILA') return 'Sthefano Avila';
+    if (up === '72746329' || up === 'FABIANO' || up === 'FABIANO TORRES') return 'Fabiano Torres';
+    if (up === '70805535' || up === 'LIDIA' || up === 'LIDIA FLORES' || up === 'LIDIA FLORES CORONEL') return 'LIDIA FLORES CORONEL';
+    if (up === 'JESUS MESIAS' || up === 'JESUS') return 'Jesus Mesias';
+    if (up === 'SAUL' || up === 'SAUL HENRY ROSAS' || up === 'SAUL ROSAS') return 'Saul Henry Rosas';
+    if (up === 'ADMINISTRADOR' || up === 'ADMIN' || up === 'SISTEMA') return 'Sthefano Avila';
+    return s;
+}
+
 function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, detalle) {
     let u = 'Sthefano Avila';
     let m = modulo || '';
@@ -1644,10 +1659,10 @@ function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, deta
             // Priorizar el usuario real de la sesión o petición
             u = (req.user && (req.user.nombre || req.user.correo)) ||
                 (req.headers && (req.headers['x-user-nombre'] || req.headers['x-user'])) ||
-                (req.body && req.body.usuario_nombre) ||
+                (req.body && (req.body.usuario_nombre || req.body.usuarioAutor)) ||
+                (req.body && req.body.form && (req.body.form.tecnico || req.body.form.usuarioAutor || req.body.form.usuario)) ||
+                (req.body && req.body.datos && (req.body.datos.tecnico || req.body.datos.usuarioAutor || req.body.datos.usuario)) ||
                 (req.body && typeof req.body.usuario === 'string' && req.body.usuario.trim() && req.body.usuario.trim().toLowerCase() !== 'sistema' && req.body.usuario.trim().toLowerCase() !== 'administrador' ? req.body.usuario.trim() : null) ||
-                (req.body && req.body.form && (req.body.form.usuarioAutor || req.body.form.usuario)) ||
-                (req.body && req.body.datos && (req.body.datos.usuarioAutor || req.body.datos.usuario)) ||
                 'Sthefano Avila';
             if (!m) m = req.baseUrl ? req.baseUrl.split('/').pop().toUpperCase() : 'SISTEMA';
             sm = submoduloOrAccion || (req.path ? req.path.replace(/^\//, '') : '');
@@ -1658,9 +1673,9 @@ function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, deta
             const req = usuarioOrObj.req;
             u = (req.user && (req.user.nombre || req.user.correo)) ||
                 (req.headers && (req.headers['x-user-nombre'] || req.headers['x-user'])) ||
-                (req.body && req.body.usuario_nombre) ||
+                (req.body && (req.body.usuario_nombre || req.body.usuarioAutor)) ||
+                (req.body && req.body.form && (req.body.form.tecnico || req.body.form.usuarioAutor || req.body.form.usuario)) ||
                 (req.body && typeof req.body.usuario === 'string' && req.body.usuario.trim() && req.body.usuario.trim().toLowerCase() !== 'sistema' && req.body.usuario.trim().toLowerCase() !== 'administrador' ? req.body.usuario.trim() : null) ||
-                (req.body && req.body.form && (req.body.form.usuarioAutor || req.body.form.usuario)) ||
                 'Sthefano Avila';
             m = usuarioOrObj.modulo || (req.baseUrl ? req.baseUrl.split('/').pop().toUpperCase() : 'SISTEMA');
             sm = usuarioOrObj.submodulo || '';
@@ -1702,10 +1717,7 @@ function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, deta
         u = u.nombre || u.correo || u.email || 'Sthefano Avila';
     }
 
-    // Sanitizar [object Object] o nombres vacíos o genéricos
-    if (!u || String(u).includes('[object Object]') || String(u) === 'undefined' || String(u).toLowerCase() === 'sistema' || String(u).toLowerCase() === 'administrador') {
-        u = 'Sthefano Avila';
-    }
+    u = _resolverNombreUsuario(u);
 
     if (typeof d !== 'string') {
         d = d ? (typeof d === 'object' && d.query ? 'Operación en Base de Datos' : String(d)) : '';
@@ -1929,7 +1941,7 @@ app.post('/api/login', (req, res) => {
                 );
 
                 const token = jwt.sign(
-                    { id: usuario.idUsuario, correo: usuario.correo, rol: rolFinal, permisos: permisosFinales },
+                    { id: usuario.idUsuario, correo: usuario.correo, nombre: usuario.nombre, rol: rolFinal, permisos: permisosFinales },
                     process.env.JWT_SECRET,
                     { expiresIn: '12h' }
                 );

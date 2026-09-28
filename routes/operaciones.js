@@ -11,6 +11,30 @@ module.exports = function (db, broadcast, logAudit) {
         return (typeof d.promise === 'function') ? d.promise() : d;
     }
 
+    // ── Middleware de Auditoría Automática para Operaciones ────────────────
+    router.use((req, res, next) => {
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+            const originalJson = res.json.bind(res);
+            res.json = function (data) {
+                if (data && (data.ok === true || data.data === 'Éxito' || data.success || data.id || res.statusCode < 400)) {
+                    if (typeof logAudit === 'function') {
+                        const accion = req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ';
+                        let sub = 'Órdenes de Viaje';
+                        let desc = `Operación de ${accion.toLowerCase()} en Operaciones (${req.path})`;
+                        if (req.body) {
+                            if (req.body.orden_servicio || req.body.numero_orden) desc = `${accion} Orden de Servicio: ${req.body.orden_servicio || req.body.numero_orden}`;
+                            else if (req.body.tracto || req.body.placa) desc = `${accion} operación para unidad ${req.body.tracto || req.body.placa}`;
+                            else if (req.params.id) desc = `${accion} registro ID: ${req.params.id}`;
+                        }
+                        logAudit(req, 'OPERACIONES', sub, accion, desc);
+                    }
+                }
+                return originalJson(data);
+            };
+        }
+        next();
+    });
+
     // Configuración de conexión al host remoto de la empresa de transporte
     const REMOTE_CONFIG = {
         host: process.env.REMOTE_FUEL_HOST || '168.231.98.23',

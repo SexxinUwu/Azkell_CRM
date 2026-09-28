@@ -6,6 +6,28 @@ module.exports = function (db, logAudit) {
     // ── Función helper para obtener la conexión correcta (multi-tenant) ──
     function getDb(req) { return req.db || db; }
 
+    // ── Middleware de Auditoría Automática para Clientes ────────────────
+    router.use((req, res, next) => {
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+            const originalJson = res.json.bind(res);
+            res.json = function (data) {
+                if (data && (data.ok === true || data.data === 'Éxito' || data.success || data.id || res.statusCode < 400)) {
+                    if (typeof logAudit === 'function') {
+                        const accion = req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ';
+                        let desc = `Operación de ${accion.toLowerCase()} en Clientes (${req.path})`;
+                        if (req.body) {
+                            if (req.body.razon_social) desc = `${accion} cliente: ${req.body.razon_social}`;
+                            else if (req.params.id) desc = `${accion} cliente ID: ${req.params.id}`;
+                        }
+                        logAudit(req, 'CLIENTES', 'Directorio', accion, desc);
+                    }
+                }
+                return originalJson(data);
+            };
+        }
+        next();
+    });
+
     // ── Middleware: asegurar tabla clientes existe y uniformizar collation ──
     router.use((req, res, next) => {
         const tdb = getDb(req);

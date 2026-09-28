@@ -321,9 +321,10 @@ module.exports = function (db, broadcast, logAudit) {
                             tdb.query("UPDATE reportes_fallas SET estado = 'Pendiente' WHERE id = ?", [r.id]);
                         }
                     } else {
+                        const FINISHED_STATUSES = ['finalizado', 'finalizada', 'cerrada', 'cerrado', 'completada', 'completado', 'terminada', 'terminado', 'anulado', 'anulada'];
                         const todasFinalizadas = otsActivasEnBd.every(o => {
-                            const st = String(o.estado || '').toLowerCase();
-                            return st === 'finalizado' || st === 'cerrada' || st === 'anulado';
+                            const st = String(o.estado || '').toLowerCase().trim();
+                            return FINISHED_STATUSES.includes(st);
                         });
 
                         const nuevoEstado = todasFinalizadas ? 'Finalizado' : 'En Proceso';
@@ -608,6 +609,9 @@ module.exports = function (db, broadcast, logAudit) {
                     );
 
                     if (typeof broadcast === 'function') broadcast('checklist', 'crear');
+                    if (typeof logAudit === 'function') {
+                        logAudit(req, 'MANTENIMIENTO', 'Checklist', 'CREÓ', `Creó Reporte de Fallas ${folio} para ${placa_tracto || ''} ${placa_remolque ? '/ ' + placa_remolque : ''}`);
+                    }
                     res.json({ ok: true, id: result.insertId, folio, fotos: fotosUrls });
                 });
             }
@@ -679,20 +683,27 @@ module.exports = function (db, broadcast, logAudit) {
 
                 // Descripción de fallas limpia y concisa para impresión y detalle
                 let descFallasClean = '';
+                const esObsGen = txt => {
+                    if (!txt) return true;
+                    const up = String(txt).trim().toUpperCase();
+                    return up === 'OBSERVADO EN CHECKLIST' || up === 'OBSERVACION REPORTADA' || up === 'OBSERVACIÓN REPORTADA' 
+                        || up === 'FALLA OBSERVADA' || up === 'FALLA REPORTADA' || up === 'SIN OBSERVACIÓN' || up === 'SIN OBSERVACION'
+                        || up === 'OBSERVACIÓN' || up === 'OBSERVACION';
+                };
+
                 if (Array.isArray(item.motivos_array) && item.motivos_array.length > 0) {
-                    const esObsGen = txt => {
-                        if (!txt) return true;
-                        const up = String(txt).trim().toUpperCase();
-                        return up === 'OBSERVADO EN CHECKLIST' || up === 'OBSERVACION REPORTADA' || up === 'OBSERVACIÓN REPORTADA' 
-                            || up === 'FALLA OBSERVADA' || up === 'FALLA REPORTADA' || up === 'SIN OBSERVACIÓN' || up === 'SIN OBSERVACION'
-                            || up === 'OBSERVACIÓN' || up === 'OBSERVACION';
-                    };
                     descFallasClean = item.motivos_array.map(m => {
-                        const desc = (!esObsGen(m.obs) && m.obs !== m.item) 
-                            ? m.obs 
-                            : (m.motivo || m.item || m.descripcion || 'Falla reportada');
-                        const cleanDesc = String(desc).replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
-                        return `• ${cleanDesc}`;
+                        const rawItem = String(m.item || '').replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
+                        const itemClean = rawItem.replace(/^\d+[\.\)\-]?\s*/, '').trim() || rawItem;
+                        const obsClean = String(m.obs || m.descripcion || m.motivo || '').replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
+
+                        let line = itemClean;
+                        if (obsClean && !esObsGen(obsClean) && obsClean.toLowerCase() !== itemClean.toLowerCase()) {
+                            line = itemClean ? `${itemClean} : ${obsClean}` : obsClean;
+                        } else if (!itemClean && obsClean) {
+                            line = obsClean;
+                        }
+                        return `• ${line}`;
                     }).join('\n');
                 } else if (Array.isArray(item.fallas_seleccionadas) && item.fallas_seleccionadas.length > 0) {
                     descFallasClean = item.fallas_seleccionadas.map(f => {
@@ -702,7 +713,15 @@ module.exports = function (db, broadcast, logAudit) {
                             .replace(/^(Falla Manual|MANUAL):\s*/i, '')
                             .replace(/^[•\-\*]\s*/, '')
                             .trim();
-                        return `• ` + clean;
+                        if (clean.includes(':')) {
+                            const parts = clean.split(':');
+                            const itm = parts[0].replace(/^\d+[\.\)\-]?\s*/, '').trim();
+                            const obs = parts.slice(1).join(':').trim();
+                            clean = (itm && obs) ? `${itm} : ${obs}` : (itm || obs);
+                        } else {
+                            clean = clean.replace(/^\d+[\.\)\-]?\s*/, '').trim();
+                        }
+                        return `• ${clean}`;
                     }).join('\n');
                 } else {
                     const isRemolque = (item.unidad === 'Remolque' || item.unidad === 'Carreta' || (rep.placa_remolque && placa === rep.placa_remolque));
@@ -712,11 +731,17 @@ module.exports = function (db, broadcast, logAudit) {
                     }
                     if (Array.isArray(itemsFalla) && itemsFalla.length > 0) {
                         descFallasClean = itemsFalla.map(f => {
-                            let clean = (f.obs && f.obs !== f.item && f.obs !== 'Observado en checklist') 
-                                ? f.obs 
-                                : (f.item || 'Falla observada');
-                            clean = String(clean).replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
-                            return `• ${clean}`;
+                            const rawItem = String(f.item || '').replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
+                            const itemClean = rawItem.replace(/^\d+[\.\)\-]?\s*/, '').trim() || rawItem;
+                            const obsClean = String(f.obs || f.descripcion || '').replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
+
+                            let line = itemClean;
+                            if (obsClean && !esObsGen(obsClean) && obsClean.toLowerCase() !== itemClean.toLowerCase()) {
+                                line = itemClean ? `${itemClean} : ${obsClean}` : obsClean;
+                            } else if (!itemClean && obsClean) {
+                                line = obsClean;
+                            }
+                            return `• ${line}`;
                         }).join('\n');
                     }
                 }
@@ -899,6 +924,10 @@ module.exports = function (db, broadcast, logAudit) {
                     broadcast('checklist', 'actualizar');
                     broadcast('ordenes', 'crear');
                     broadcast('status', 'actualizar');
+                }
+
+                if (typeof logAudit === 'function') {
+                    logAudit(req, 'MANTENIMIENTO', 'Checklist', 'CREÓ', `Generó ${otsCreadas.length} OT(s) desde Reporte de Fallas ${idReporte}`);
                 }
 
                 return res.json({ ok: true, otsCreadas, total: otsCreadas.length });
@@ -1187,6 +1216,10 @@ module.exports = function (db, broadcast, logAudit) {
                     broadcast
                 );
 
+                if (typeof logAudit === 'function') {
+                    logAudit(req, 'MANTENIMIENTO', 'Checklist', 'MODIFICÓ', `Modificó Reporte de Fallas ${folio || id}`);
+                }
+
                 res.json({ ok: true, id, folio, fotos: fotosUrls });
             });
         });
@@ -1199,6 +1232,9 @@ module.exports = function (db, broadcast, logAudit) {
         tdb.query('DELETE FROM reportes_fallas WHERE id = ?', [id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             if (typeof broadcast === 'function') broadcast('checklist', 'eliminar');
+            if (typeof logAudit === 'function') {
+                logAudit(req, 'MANTENIMIENTO', 'Checklist', 'ELIMINÓ', `Eliminó Reporte de Fallas ID ${id}`);
+            }
             res.json({ ok: true });
         });
     });
