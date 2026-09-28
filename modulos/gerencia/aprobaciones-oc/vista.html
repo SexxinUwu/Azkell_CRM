@@ -10,7 +10,7 @@
     .mod-wrap-gerencia-aprobaciones { padding: 0.75rem 0.75rem 90px 0.75rem; }
 }
 
-/* Bento Cards Header */
+/* KPIs Apple Cards & Bento */
 .kpi-bento-card {
     background: var(--surface, #ffffff);
     border: 1px solid var(--border, #e2e8f0);
@@ -19,6 +19,10 @@
     transition: all 0.2s ease;
     position: relative;
     overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 .kpi-bento-card:hover {
     transform: translateY(-2px);
@@ -36,6 +40,92 @@
 .kpi-bento-card.kpi-aprob::before { background: #10b981; }
 .kpi-bento-card.kpi-obs::before { background: #6366f1; }
 .kpi-bento-card.kpi-rech::before { background: #ef4444; }
+
+@media (max-width: 768px) {
+    .kpi-bento-card {
+        padding: 0.75rem 0.85rem !important;
+        border-radius: 14px !important;
+    }
+    .kpi-bento-card .kpi-header-title {
+        font-size: 0.65rem !important;
+        margin-bottom: 2px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+    }
+    .kpi-bento-card .badge-kpi-status {
+        display: none !important;
+    }
+    .kpi-bento-card h3 {
+        font-size: 1.35rem !important;
+    }
+    .kpi-bento-card .kpi-footer-row {
+        font-size: 0.68rem !important;
+        margin-top: 0.35rem !important;
+        padding-top: 0.35rem !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1px !important;
+    }
+}
+
+/* ── Mobile Bottom Sheet Drawer para Modal Detalle OC (80% altura, sube de abajo hacia arriba) ── */
+@media (max-width: 768px) {
+    #modalDetalleOC .modal-dialog {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        height: 80vh !important;
+        max-height: 80vh !important;
+        margin: 0 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        top: auto !important;
+        left: 0 !important;
+        right: 0 !important;
+        transform: translateY(100%) !important;
+        transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        border-radius: 22px 22px 0 0 !important;
+        padding: 0 !important;
+    }
+    #modalDetalleOC.show .modal-dialog,
+    #modalDetalleOC.fade.show .modal-dialog {
+        transform: translateY(0) !important;
+    }
+    #modalDetalleOC .modal-content {
+        width: 100vw !important;
+        min-width: 100vw !important;
+        height: 80vh !important;
+        max-height: 80vh !important;
+        border-radius: 22px 22px 0 0 !important;
+        border: none !important;
+        box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.28) !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
+        display: flex !important;
+        flex-direction: column !important;
+        margin: 0 !important;
+    }
+    #modalDetalleOC .modal-header {
+        padding: 0.85rem 1rem !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        flex-shrink: 0;
+        background: #ffffff !important;
+    }
+    #modalDetalleOC .modal-body {
+        padding: 1rem !important;
+        overflow-y: auto !important;
+        flex-grow: 1;
+        -webkit-overflow-scrolling: touch;
+    }
+    #modalDetalleOC .modal-footer {
+        padding: 0.75rem 1rem !important;
+        flex-shrink: 0;
+        background: #f8fafc !important;
+        border-top: 1px solid #e2e8f0 !important;
+    }
+}
 
 /* Filter Tabs */
 .aprob-tabs-nav {
@@ -271,84 +361,84 @@
         </div>
     </div>
 
-    <!-- Bento KPI Summary -->
-    <div class="row g-3 mb-4">
+    <!-- Bento KPI Summary (2x2 en móvil, 4 en desktop como en reporte de fallas) -->
+    <div class="row g-2 g-md-3 mb-3 mb-md-4">
         <!-- Pendientes -->
-        <div class="col-12 col-sm-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="kpi-bento-card kpi-pend" style="cursor:pointer;" onclick="window.filtrarPorTab('pendiente')">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Pendientes de Aprobación</span>
-                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill fw-bold" style="font-size:0.7rem;">
+                <div class="d-flex align-items-center justify-content-between mb-1 mb-md-2">
+                    <span class="text-secondary fw-bold kpi-header-title" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Pendientes</span>
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill fw-bold badge-kpi-status" style="font-size:0.7rem;">
                         <i class="bi bi-clock-history"></i> Por Revisar
                     </span>
                 </div>
-                <div class="d-flex align-items-baseline gap-2">
-                    <h3 class="fw-black text-dark m-0" id="kpi-count-pendientes" style="font-size:1.6rem; letter-spacing:-0.03em;">4</h3>
-                    <span class="text-muted fw-semibold" style="font-size:0.8rem;">órdenes</span>
+                <div class="d-flex align-items-baseline gap-1.5 gap-md-2">
+                    <h3 class="fw-black text-dark m-0" id="kpi-count-pendientes" style="font-size:1.6rem; letter-spacing:-0.03em;">0</h3>
+                    <span class="text-muted fw-semibold" style="font-size:0.75rem;">órdenes</span>
                 </div>
-                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size:0.78rem;">
+                <div class="mt-1 mt-md-2 pt-1.5 pt-md-2 border-top d-flex justify-content-between align-items-center kpi-footer-row" style="font-size:0.78rem;">
                     <span class="text-secondary">Importe Acumulado:</span>
-                    <strong class="text-warning-emphasis fw-bold" id="kpi-monto-pendientes">S/ 38,450.00</strong>
+                    <strong class="text-warning-emphasis fw-bold font-monospace" id="kpi-monto-pendientes">S/ 0.00</strong>
                 </div>
             </div>
         </div>
 
         <!-- Aprobadas -->
-        <div class="col-12 col-sm-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="kpi-bento-card kpi-aprob" style="cursor:pointer;" onclick="window.filtrarPorTab('aprobado')">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Aprobadas este Mes</span>
-                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold" style="font-size:0.7rem;">
+                <div class="d-flex align-items-center justify-content-between mb-1 mb-md-2">
+                    <span class="text-secondary fw-bold kpi-header-title" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Aprobadas</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold badge-kpi-status" style="font-size:0.7rem;">
                         <i class="bi bi-check-circle-fill"></i> Autorizadas
                     </span>
                 </div>
-                <div class="d-flex align-items-baseline gap-2">
-                    <h3 class="fw-black text-dark m-0" id="kpi-count-aprobadas" style="font-size:1.6rem; letter-spacing:-0.03em;">18</h3>
-                    <span class="text-muted fw-semibold" style="font-size:0.8rem;">órdenes</span>
+                <div class="d-flex align-items-baseline gap-1.5 gap-md-2">
+                    <h3 class="fw-black text-dark m-0" id="kpi-count-aprobadas" style="font-size:1.6rem; letter-spacing:-0.03em;">0</h3>
+                    <span class="text-muted fw-semibold" style="font-size:0.75rem;">órdenes</span>
                 </div>
-                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size:0.78rem;">
+                <div class="mt-1 mt-md-2 pt-1.5 pt-md-2 border-top d-flex justify-content-between align-items-center kpi-footer-row" style="font-size:0.78rem;">
                     <span class="text-secondary">Monto Autorizado:</span>
-                    <strong class="text-success fw-bold" id="kpi-monto-aprobadas">S/ 142,800.00</strong>
+                    <strong class="text-success fw-bold font-monospace" id="kpi-monto-aprobadas">S/ 0.00</strong>
                 </div>
             </div>
         </div>
 
         <!-- Observadas -->
-        <div class="col-12 col-sm-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="kpi-bento-card kpi-obs" style="cursor:pointer;" onclick="window.filtrarPorTab('observado')">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">En Observación / Sustento</span>
-                    <span class="badge bg-indigo-subtle text-indigo border border-indigo-subtle rounded-pill fw-bold" style="font-size:0.7rem; background:#e0e7ff; color:#4338ca;">
+                <div class="d-flex align-items-center justify-content-between mb-1 mb-md-2">
+                    <span class="text-secondary fw-bold kpi-header-title" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Observadas</span>
+                    <span class="badge bg-indigo-subtle text-indigo border border-indigo-subtle rounded-pill fw-bold badge-kpi-status" style="font-size:0.7rem; background:#e0e7ff; color:#4338ca;">
                         <i class="bi bi-chat-left-dots-fill"></i> Esperando Datos
                     </span>
                 </div>
-                <div class="d-flex align-items-baseline gap-2">
-                    <h3 class="fw-black text-dark m-0" id="kpi-count-observadas" style="font-size:1.6rem; letter-spacing:-0.03em;">2</h3>
-                    <span class="text-muted fw-semibold" style="font-size:0.8rem;">órdenes</span>
+                <div class="d-flex align-items-baseline gap-1.5 gap-md-2">
+                    <h3 class="fw-black text-dark m-0" id="kpi-count-observadas" style="font-size:1.6rem; letter-spacing:-0.03em;">0</h3>
+                    <span class="text-muted fw-semibold" style="font-size:0.75rem;">órdenes</span>
                 </div>
-                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size:0.78rem;">
+                <div class="mt-1 mt-md-2 pt-1.5 pt-md-2 border-top d-flex justify-content-between align-items-center kpi-footer-row" style="font-size:0.78rem;">
                     <span class="text-secondary">En Evaluación:</span>
-                    <strong class="text-indigo fw-bold" style="color:#4338ca;" id="kpi-monto-observadas">S/ 8,650.00</strong>
+                    <strong class="text-indigo fw-bold font-monospace" style="color:#4338ca;" id="kpi-monto-observadas">S/ 0.00</strong>
                 </div>
             </div>
         </div>
 
         <!-- Rechazadas -->
-        <div class="col-12 col-sm-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="kpi-bento-card kpi-rech" style="cursor:pointer;" onclick="window.filtrarPorTab('rechazado')">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Rechazadas</span>
-                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fw-bold" style="font-size:0.7rem;">
+                <div class="d-flex align-items-center justify-content-between mb-1 mb-md-2">
+                    <span class="text-secondary fw-bold kpi-header-title" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Rechazadas</span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fw-bold badge-kpi-status" style="font-size:0.7rem;">
                         <i class="bi bi-x-circle-fill"></i> Desestimadas
                     </span>
                 </div>
-                <div class="d-flex align-items-baseline gap-2">
-                    <h3 class="fw-black text-dark m-0" id="kpi-count-rechazadas" style="font-size:1.6rem; letter-spacing:-0.03em;">1</h3>
-                    <span class="text-muted fw-semibold" style="font-size:0.8rem;">orden</span>
+                <div class="d-flex align-items-baseline gap-1.5 gap-md-2">
+                    <h3 class="fw-black text-dark m-0" id="kpi-count-rechazadas" style="font-size:1.6rem; letter-spacing:-0.03em;">0</h3>
+                    <span class="text-muted fw-semibold" style="font-size:0.75rem;">orden</span>
                 </div>
-                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size:0.78rem;">
+                <div class="mt-1 mt-md-2 pt-1.5 pt-md-2 border-top d-flex justify-content-between align-items-center kpi-footer-row" style="font-size:0.78rem;">
                     <span class="text-secondary">Ahorro / No ejecutado:</span>
-                    <strong class="text-danger fw-bold" id="kpi-monto-rechazadas">S/ 4,200.00</strong>
+                    <strong class="text-danger fw-bold font-monospace" id="kpi-monto-rechazadas">S/ 0.00</strong>
                 </div>
             </div>
         </div>
@@ -474,12 +564,12 @@
             <!-- Header Modal -->
             <div class="modal-header border-bottom py-3 px-4 bg-light">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-primary text-white p-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                    <div class="rounded-3 bg-primary text-white p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width:40px;height:40px;">
                         <i class="bi bi-file-earmark-text-fill fs-5"></i>
                     </div>
                     <div>
-                        <div class="d-flex align-items-center gap-2">
-                            <h5 class="modal-title fw-black text-dark m-0" id="det-codigo-oc">OC-2026-0142</h5>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h5 class="modal-title fw-black text-dark m-0 font-monospace" id="det-codigo-oc">OC-2026-0142</h5>
                             <span class="badge rounded-pill fw-bold" id="det-badge-prioridad">NORMAL</span>
                             <span class="badge rounded-pill fw-bold" id="det-badge-estado">PENDIENTE</span>
                         </div>
@@ -490,22 +580,22 @@
             </div>
 
             <!-- Body Modal -->
-            <div class="modal-body p-4">
-                <div class="row g-4">
+            <div class="modal-body p-3 p-md-4">
+                <div class="row g-3 g-md-4">
                     <!-- Columna Izquierda: Información de Compra y Proveedor -->
                     <div class="col-12 col-lg-8">
                         <!-- Card Proveedor & Destino -->
-                        <div class="p-3 rounded-3 bg-light border mb-4">
+                        <div class="p-3 rounded-3 bg-light border mb-3 mb-md-4">
                             <div class="row g-3">
                                 <div class="col-12 col-md-6">
                                     <div class="text-secondary fw-semibold mb-1" style="font-size:0.75rem; text-transform:uppercase;">Proveedor Seleccionado</div>
-                                    <div class="fw-bold text-dark" id="det-proveedor-nombre" style="font-size:0.95rem;">-</div>
+                                    <div class="fw-bold text-dark text-truncate" id="det-proveedor-nombre" style="font-size:0.95rem;">-</div>
                                     <div class="text-secondary" style="font-size:0.82rem;" id="det-proveedor-ruc">RUC: -</div>
                                     <div class="text-secondary" style="font-size:0.8rem;" id="det-proveedor-contacto">Contacto: No especificado</div>
                                 </div>
                                 <div class="col-12 col-md-6 border-start-md">
                                     <div class="text-secondary fw-semibold mb-1" style="font-size:0.75rem; text-transform:uppercase;">Destino & Solicitante</div>
-                                    <div class="fw-bold text-dark" id="det-destino-almacen" style="font-size:0.95rem;">Sede / Almacén: Principal</div>
+                                    <div class="fw-bold text-dark text-truncate" id="det-destino-almacen" style="font-size:0.95rem;">Sede / Almacén: Principal</div>
                                     <div class="text-secondary" style="font-size:0.82rem;" id="det-solicitante">Solicitado por: -</div>
                                     <div class="text-secondary" style="font-size:0.8rem;" id="det-unidad-destino">Destino: -</div>
                                 </div>
@@ -513,7 +603,7 @@
                         </div>
 
                         <!-- Justificación Técnica -->
-                        <div class="mb-4">
+                        <div class="mb-3 mb-md-4">
                             <h6 class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
                                 <i class="bi bi-info-circle-fill text-primary"></i> Justificación Técnica del Requerimiento
                             </h6>
@@ -522,28 +612,30 @@
                             </div>
                         </div>
 
-                        <!-- Tabla de Ítems Requeridos -->
+                        <!-- Tabla de Ítems Requeridos con Scroll Horizontal y encabezados en 1 fila -->
                         <div>
                             <h6 class="fw-bold text-dark mb-2 d-flex align-items-center justify-content-between">
                                 <span><i class="bi bi-box-seam-fill text-primary me-1"></i> Desglose de Artículos / Servicios</span>
                                 <span class="badge bg-secondary-subtle text-secondary fw-bold rounded-pill" id="det-items-count">0 ítems</span>
                             </h6>
-                            <div class="border rounded-3 overflow-hidden">
-                                <table class="table table-sm table-striped m-0" style="font-size:0.82rem;">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Código</th>
-                                            <th>Descripción</th>
-                                            <th class="text-center">Cant.</th>
-                                            <th class="text-center">U.M.</th>
-                                            <th class="text-end">P. Unitario</th>
-                                            <th class="text-end">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="det-tabla-items-body">
-                                        <!-- Renderizado dinámico -->
-                                    </tbody>
-                                </table>
+                            <div class="border rounded-3 overflow-hidden bg-white">
+                                <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                                    <table class="table table-sm table-striped m-0 align-middle" style="font-size:0.82rem; min-width: 580px;">
+                                        <thead class="table-light text-muted" style="font-size:0.75rem; letter-spacing:0.02em;">
+                                            <tr style="white-space: nowrap !important;">
+                                                <th style="min-width: 90px; white-space: nowrap !important; padding: 9px 10px;">Código</th>
+                                                <th style="min-width: 220px; white-space: nowrap !important; padding: 9px 10px;">Descripción</th>
+                                                <th class="text-center" style="min-width: 60px; white-space: nowrap !important; padding: 9px 10px;">Cant.</th>
+                                                <th class="text-center" style="min-width: 55px; white-space: nowrap !important; padding: 9px 10px;">U.M.</th>
+                                                <th class="text-end" style="min-width: 105px; white-space: nowrap !important; padding: 9px 10px;">P. Unitario</th>
+                                                <th class="text-end" style="min-width: 110px; white-space: nowrap !important; padding: 9px 10px;">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="det-tabla-items-body">
+                                            <!-- Renderizado dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>

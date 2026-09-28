@@ -1576,7 +1576,7 @@ window._entRender = function() {
         }
 
         var estadoLimpio = String(d.estado || 'Registrado').toLowerCase().trim();
-        var esModificable = (estadoLimpio === 'registrado' || estadoLimpio === 'registrada' || estadoLimpio === 'pendiente' || !d.estado);
+        var esModificable = (estadoLimpio === 'registrado' || estadoLimpio === 'registrada' || estadoLimpio === 'pendiente' || estadoLimpio === 'observado' || estadoLimpio === 'observada' || !d.estado);
         var canEditRow = canEdit && !isAnulado && esModificable && (isAdmin || esHoy);
 
         var tp = parseFloat(d.total_pen || 0);

@@ -152,12 +152,28 @@
             console.warn('Error cargando órdenes de compra en gerencia:', e);
         }
 
-        // Establecer por defecto la fecha de hoy en ambos selectores si están vacíos
+        // Establecer por defecto el rango de fechas inteligente:
+        // Si hay órdenes pendientes u observadas, fecha_desde arranca desde la más antigua entre ellas.
         const inputDesde = document.getElementById('filtro-fecha-desde');
         const inputHasta = document.getElementById('filtro-fecha-hasta');
         const fechaHoy = obtenerFechaHoyISO();
 
-        if (inputDesde && !inputDesde.value) inputDesde.value = fechaHoy;
+        const ordenesActivas = (window._gerenciaOC.ordenes || []).filter(o => o.estado === 'pendiente' || o.estado === 'observado');
+        let fechaDesdeDefecto = fechaHoy;
+        if (ordenesActivas.length > 0) {
+            let fechasISO = ordenesActivas.map(o => normalizarFechaAISO(o)).filter(Boolean);
+            if (fechasISO.length > 0) {
+                fechasISO.sort();
+                fechaDesdeDefecto = fechasISO[0];
+            }
+        } else {
+            const hoy = new Date();
+            const yyyy = hoy.getFullYear();
+            const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+            fechaDesdeDefecto = `${yyyy}-${mm}-01`;
+        }
+
+        if (inputDesde && !inputDesde.value) inputDesde.value = fechaDesdeDefecto;
         if (inputHasta && !inputHasta.value) inputHasta.value = fechaHoy;
 
         window.aplicarFiltrosOC();
@@ -458,11 +474,11 @@
                         </button>
                     </div>
                     <div class="d-flex align-items-center gap-1">
-                        ${oc.estado === 'pendiente' ? `
-                            <button class="btn-oc-autorizar" onclick="window.abrirAccionRapida('${oc.id}', 'aprobar')">
+                        ${(oc.estado === 'pendiente' || oc.estado === 'observado') ? `
+                            <button class="btn-oc-autorizar" onclick="window.abrirAccionRapida('${oc.id}', 'aprobar')" title="Autorizar Orden de Compra">
                                 <i class="bi bi-check-lg"></i> AUTORIZAR
                             </button>
-                            <button class="btn-oc-denegar" onclick="window.abrirAccionRapida('${oc.id}', 'rechazar')">
+                            <button class="btn-oc-denegar" onclick="window.abrirAccionRapida('${oc.id}', 'rechazar')" title="Denegar Orden de Compra">
                                 <i class="bi bi-x-lg"></i> DENEGAR
                             </button>
                         ` : `
@@ -481,7 +497,7 @@
         <tr>
             <!-- Columna ACCIÓN -->
             <td class="text-nowrap" style="width: 1%;">
-                ${oc.estado === 'pendiente' ? `
+                ${(oc.estado === 'pendiente' || oc.estado === 'observado') ? `
                     <div class="d-inline-flex align-items-center gap-1.5">
                         <button class="btn-oc-autorizar" onclick="window.abrirAccionRapida('${oc.id}', 'aprobar')" title="Autorizar Orden de Compra">
                             <i class="bi bi-check-lg"></i> AUTORIZAR
@@ -654,12 +670,12 @@
             } else {
                 cuerpoItems.innerHTML = items.map(it => `
                     <tr>
-                        <td class="fw-bold text-dark font-monospace" style="font-size:0.8rem;">${it.codigo}</td>
-                        <td class="text-dark">${it.descripcion}</td>
-                        <td class="text-center fw-bold">${it.cant}</td>
-                        <td class="text-center text-secondary fw-semibold">${it.um}</td>
-                        <td class="text-end">${oc.moneda || 'S/'} ${(it.pu || 0).toFixed(2)}</td>
-                        <td class="text-end fw-bold text-dark">${oc.moneda || 'S/'} ${(it.total || 0).toFixed(2)}</td>
+                        <td class="fw-bold text-dark font-monospace text-nowrap" style="font-size:0.78rem; padding: 8px 10px; vertical-align:middle;">${it.codigo || '—'}</td>
+                        <td class="text-dark fw-medium" style="min-width:220px; padding: 8px 10px; vertical-align:middle;">${it.descripcion || '—'}</td>
+                        <td class="text-center fw-bold text-nowrap" style="padding: 8px 10px; vertical-align:middle;">${it.cant}</td>
+                        <td class="text-center text-secondary fw-semibold text-nowrap" style="padding: 8px 10px; vertical-align:middle;">${it.um || 'UND'}</td>
+                        <td class="text-end text-nowrap font-monospace text-secondary" style="padding: 8px 10px; vertical-align:middle;">${oc.moneda || 'S/'} ${(it.pu || 0).toFixed(2)}</td>
+                        <td class="text-end fw-bold text-dark text-nowrap font-monospace" style="padding: 8px 10px; vertical-align:middle;">${oc.moneda || 'S/'} ${(it.total || 0).toFixed(2)}</td>
                     </tr>
                 `).join('');
             }
@@ -710,12 +726,12 @@
             }
         }
 
-        // Mostrar / ocultar botones de acción en footer si ya no está pendiente
+        // Mostrar / ocultar botones de acción en footer si está pendiente u observada
         const actBtns = document.getElementById('det-modal-action-buttons');
         if (actBtns) {
             const estActual = (oc.estado || '').toLowerCase();
-            const esPendiente = (estActual === 'pendiente' || estActual === 'registrado' || estActual === 'registrada');
-            if (esPendiente) {
+            const esGestionable = (estActual === 'pendiente' || estActual === 'registrado' || estActual === 'registrada' || estActual === 'observado' || estActual === 'observada');
+            if (esGestionable) {
                 actBtns.style.setProperty('display', 'flex', 'important');
             } else {
                 actBtns.style.setProperty('display', 'none', 'important');
@@ -967,7 +983,23 @@
         const fechaHoy = obtenerFechaHoyISO();
         const fDesde = document.getElementById('filtro-fecha-desde');
         const fHasta = document.getElementById('filtro-fecha-hasta');
-        if (fDesde) fDesde.value = fechaHoy;
+
+        const ordenesActivas = (window._gerenciaOC.ordenes || []).filter(o => o.estado === 'pendiente' || o.estado === 'observado');
+        let fechaDesdeDefecto = fechaHoy;
+        if (ordenesActivas.length > 0) {
+            let fechasISO = ordenesActivas.map(o => normalizarFechaAISO(o)).filter(Boolean);
+            if (fechasISO.length > 0) {
+                fechasISO.sort();
+                fechaDesdeDefecto = fechasISO[0];
+            }
+        } else {
+            const hoy = new Date();
+            const yyyy = hoy.getFullYear();
+            const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+            fechaDesdeDefecto = `${yyyy}-${mm}-01`;
+        }
+
+        if (fDesde) fDesde.value = fechaDesdeDefecto;
         if (fHasta) fHasta.value = fechaHoy;
         window.filtrarPorTab('pendiente');
     };
