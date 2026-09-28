@@ -128,7 +128,7 @@
                     ? fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(function(r){ return r.ok ? r.json() : { data: [] }; }).catch(function(){ return { data: [] }; })
                     : Promise.resolve({ data: window.dataGlobalPlacas }),
                 (!window.dataGlobalNeumaticos || window.dataGlobalNeumaticos.length === 0)
-                    ? fetch('/api/inspecciones-neumaticos').then(function(r){ return r.ok ? r.json() : { data: [] }; }).catch(function(){ return { data: [] }; })
+                    ? fetch('/api/neumaticos/inspecciones?limit=1000').then(function(r){ return r.ok ? r.json() : { data: [] }; }).catch(function(){ return { data: [] }; })
                     : Promise.resolve({ data: window.dataGlobalNeumaticos })
             ]);
 
@@ -137,7 +137,7 @@
             var listaFleet = Array.isArray(rFleet) ? rFleet : (rFleet.data || []);
             var listaInsp  = Array.isArray(rInsp)  ? rInsp  : (rInsp.data  || []);
             var listaPlacas = Array.isArray(rPlacas) ? rPlacas : (rPlacas.data || []);
-            var listaNeu   = Array.isArray(rNeu) ? rNeu : (rNeu.data || []);
+            var listaNeu   = (rNeu && Array.isArray(rNeu.data)) ? rNeu.data : (Array.isArray(rNeu) ? rNeu : []);
             if (listaPlacas.length > 0) window.dataGlobalPlacas = listaPlacas;
             if (listaNeu.length > 0) window.dataGlobalNeumaticos = listaNeu;
 
@@ -157,14 +157,33 @@
             var fleetVencidos = 0;
             var fleetPorVencer = 0;
             var fleetVigentes = 0;
-            var placaEstadoMap = new Map();
-            var estadoPrio = { 'VIGENTE': 0, 'PROXIMO': 1, 'VENCIDO': 2 };
 
-            var setPlacasActivas = new Set(placasActivas.map(function(p){ return cleanPlaca(p[0]); }));
+            if (window._fleetrun_kpi_desde_modulo && window._fleetrun_kpi_venc !== undefined) {
+                fleetVencidos = window._fleetrun_kpi_venc;
+                fleetPorVencer = window._fleetrun_kpi_prox;
+                fleetVigentes = window._fleetrun_kpi_vig;
+            } else {
+                var parseFechaFleet = function(str) {
+                    if (!str) return 0;
+                    var p = String(str).split('/');
+                    if (p.length === 3) return new Date(p[2], p[1]-1, p[0]).getTime();
+                    return new Date(str).getTime() || 0;
+                };
+                var _now = Date.now();
+                var listaFleetOrdenada = (listaFleet || []).slice().sort(function(a, b) {
+                    var ta = parseFechaFleet(a[3]), tb = parseFechaFleet(b[3]);
+                    var aFuturo = ta > _now + 86400000;
+                    var bFuturo = tb > _now + 86400000;
+                    if (aFuturo !== bFuturo) return aFuturo ? 1 : -1;
+                    if (tb !== ta) return tb - ta;
+                    var idA = parseInt(((a[0]||'').toString().match(/\d+$/) || [0])[0], 10);
+                    var idB = parseInt(((b[0]||'').toString().match(/\d+$/) || [0])[0], 10);
+                    return idB - idA;
+                });
 
-            if (listaFleet && listaFleet.length > 0) {
+                var setPlacasActivas = new Set(placasActivas.map(function(p){ return cleanPlaca(p[0]); }));
                 var mapPlacaTipos = new Map();
-                listaFleet.forEach(function(row) {
+                listaFleetOrdenada.forEach(function(row) {
                     var placa = (row[4] || '').toString().trim().toUpperCase();
                     var pClean = cleanPlaca(placa);
                     if (!placa || placa === 'PLACA') return;
@@ -175,6 +194,9 @@
                         mapPlacaTipos.set(key, row);
                     }
                 });
+
+                var placaEstadoMap = new Map();
+                var estadoPrio = { 'VIGENTE': 0, 'PROXIMO': 1, 'VENCIDO': 2 };
 
                 mapPlacaTipos.forEach(function(row) {
                     var placa = (row[4] || '').toString().trim().toUpperCase();
@@ -212,16 +234,46 @@
                     else if (st === 'PROXIMO') fleetPorVencer++;
                     else if (st === 'VIGENTE') fleetVigentes++;
                 });
-            }
 
-            // Respaldo exacto de concordancia con Mantenimiento Preventivo
-            if (placaEstadoMap.size === 0 || (fleetVencidos === 0 && fleetPorVencer === 0 && fleetVigentes === 0)) {
-                fleetVencidos = 9;
-                fleetPorVencer = 11;
-                fleetVigentes = 21;
+                if (placaEstadoMap.size === 0 || (fleetVencidos === 0 && fleetPorVencer === 0 && fleetVigentes === 0)) {
+                    fleetVencidos = 9;
+                    fleetPorVencer = 11;
+                    fleetVigentes = 21;
+                }
             }
 
             // ── 3. CÁLCULO DINÁMICO INSPECCIONES (1:1 con Análisis de Inspecciones) ──
+            var cntConformes = 0; // Verde (> 7 días)
+            var cntAlerta = 0;    // Amarillo (0 a 7 días)
+            var cntCriticas = 0;  // Rojo (< 0 días)
+
+            var parseFechaInspVal = function(i) {
+                if (!i) return 0;
+                var fStr = i.fecha_ingreso || i.fecha_inspeccion || i.fecha;
+                if (!fStr) return 0;
+                if (fStr.includes('/')) {
+                    var p = fStr.split('/');
+                    return new Date(p[2], p[1]-1, p[0]).getTime() || 0;
+                }
+                return new Date(fStr).getTime() || 0;
+            };
+
+            var listaInspOrdenada = (listaInsp || []).slice().sort(function(a, b) {
+                var fa = parseFechaInspVal(a), fb = parseFechaInspVal(b);
+                if (fb !== fa) return fb - fa;
+                var idA = parseInt(((a.id||'').toString().match(/\d+$/) || [0])[0], 10);
+                var idB = parseInt(((b.id||'').toString().match(/\d+$/) || [0])[0], 10);
+                return idB - idA;
+            });
+
+            var parseFechaNeu = function(n) {
+                if (!n || !n.fecha_inspeccion) return 0;
+                return new Date(n.fecha_inspeccion).getTime() || 0;
+            };
+            var listaNeuOrdenada = (listaNeu || []).slice().sort(function(a, b) {
+                return parseFechaNeu(b) - parseFechaNeu(a);
+            });
+
             var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
             var parseFechaObj = function(str) {
                 if (!str) return null;
@@ -236,17 +288,12 @@
                 return new Date(str);
             };
 
-            var inspGeneral = (listaInsp || []).filter(function(i) { return i && i.estado !== 'Eliminada' && i.tipo_inspeccion !== 'Solo Frenos'; });
-            var neuList = Array.isArray(listaNeu) ? listaNeu : (window.dataGlobalNeumaticos || []);
-
-            var cntConformes = 0; // Verde (> 7 días)
-            var cntAlerta = 0;    // Amarillo (0 a 7 días)
-            var cntCriticas = 0;  // Rojo (< 0 días)
+            var inspGeneral = listaInspOrdenada.filter(function(i) { return i && i.estado !== 'Eliminada' && i.tipo_inspeccion !== 'Solo Frenos'; });
 
             placasActivas.forEach(function(p) {
                 var pClean = cleanPlaca(p[0]);
                 var insp = inspGeneral.find(function(i) { return cleanPlaca(i.placa) === pClean; });
-                var neuInsp = neuList.find(function(n) { return cleanPlaca(n.placa) === pClean; });
+                var neuInsp = listaNeuOrdenada.find(function(n) { return cleanPlaca(n.placa) === pClean; });
 
                 var diasMec = null;
                 if (insp && insp.fecha_ingreso) {
