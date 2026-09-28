@@ -1,308 +1,630 @@
+<!-- ================================================================ -->
+<!-- 🍎 DASHBOARD PRINCIPAL — CENTRO DE CONTROL EJECUTIVO (APPLE UI) -->
+<!-- ================================================================ -->
 <style>
-/* ─── DASHBOARD MOBILE GROUPED INSET CARDS (DISEÑO OPCIÓN A) ─── */
-@media (max-width: 767.98px) {
-    .topbar { display: none !important; }
-    #root-dinamico, .main-area { 
-        padding: 0 !important; 
-        overflow-y: auto !important; 
-        display: flex !important;
-        flex-direction: column !important;
-        background: var(--bg, #f8fafc) !important;
-    }
+/* ── Apple Inspired Typography & Design Tokens ─────────────────── */
+:root {
+    --ap-bg: #f8fafc;
+    --ap-card-bg: rgba(255, 255, 255, 0.92);
+    --ap-card-border: rgba(226, 232, 240, 0.85);
+    --ap-text-title: #0f172a;
+    --ap-text-body: #475569;
+    --ap-text-muted: #94a3b8;
+    --ap-primary: #0284c7;
+    --ap-success: #10b981;
+    --ap-warning: #f59e0b;
+    --ap-danger: #ef4444;
+    --ap-indigo: #6366f1;
+    --ap-purple: #8b5cf6;
+}
 
-    #moduloDashboard {
-        padding: 1rem !important;
-        margin: 0 !important;
-        background: var(--bg, #f8fafc) !important;
-        flex: 1 1 0;
-        padding-bottom: 6rem !important;
-    }
-    #moduloDashboard .controls-row {
-        display: none !important;
-    }
-    #kpi-metrics-row {
-        padding: 0 !important;
-        margin: 0 0 1.25rem 0 !important;
-    }
-    
-    /* Hero Greeting Header */
-    .dash-mob-header-wrap {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.25rem;
-    }
-    .dash-mob-avatar-badge {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #38bdf8, #2563eb);
-        color: #ffffff;
-        font-weight: 800;
-        font-size: 1.1rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 10px rgba(37,99,235,0.22);
-        flex-shrink: 0;
-    }
-    .dash-mob-greeting-title {
-        font-size: 1.2rem;
-        font-weight: 800;
-        color: var(--text, #0f172a);
-        margin: 0;
-        line-height: 1.2;
-    }
-    .dash-mob-greeting-sub {
-        font-size: 0.78rem;
-        color: var(--subtext, #64748b);
-        font-weight: 600;
-        margin: 2px 0 0 0;
-    }
-    .dash-mob-btn-reload {
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        background: var(--surface, #ffffff);
-        border: 1px solid var(--border, #e2e8f0);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--text, #1e293b);
-        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-        cursor: pointer;
-        transition: transform 0.1s;
-    }
-    .dash-mob-btn-reload:active { transform: scale(0.95); }
+#moduloDashboard {
+    background: #f8fafc;
+    min-height: 100%;
+    padding: 1.5rem 1.75rem 4rem 1.75rem !important;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    color: var(--ap-text-title);
+    -webkit-font-smoothing: antialiased;
+}
 
-    /* KPI Grid Cards al estilo Inset */
-    .kpi-metric-card {
-        background: var(--surface, #ffffff) !important;
-        border: 1px solid var(--border, #e2e8f0) !important;
-        border-radius: 20px !important;
-        padding: 1.1rem !important;
-        box-shadow: 0 3px 12px rgba(0,0,0,0.02) !important;
-        border-top: 1px solid var(--border, #e2e8f0) !important; /* Reemplaza la barra superior gruesa */
-        transition: transform 0.1s;
-    }
-    .kpi-metric-card:active { transform: scale(0.98); }
-    .kpi-metric-value {
-        font-size: 1.65rem !important;
-        font-weight: 800 !important;
-        color: var(--text, #0f172a) !important;
-        margin: 0.35rem 0 0.15rem 0 !important;
-        letter-spacing: -0.02em;
-    }
-    .kpi-metric-label {
-        font-size: 0.74rem !important;
-        font-weight: 700 !important;
-        color: var(--subtext, #64748b) !important;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-    }
-    
-    .kpi-metric-icon-wrap {
-        border-radius: 12px !important;
-        width: 36px !important; 
-        height: 36px !important;
-        font-size: 1.15rem !important;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .kpi-metric-icon-wrap.primary { background: rgba(37,99,235,0.08) !important; color: #2563eb !important; }
-    .kpi-metric-icon-wrap.success { background: rgba(16,185,129,0.08) !important; color: #10b981 !important; }
-    .kpi-metric-icon-wrap.warning { background: rgba(245,158,11,0.08) !important; color: #f59e0b !important; }
-    .kpi-metric-icon-wrap.danger  { background: rgba(239,68,68,0.08) !important; color: #ef4444 !important; }
+/* ── Apple Glass Bento Card ────────────────────────────────────── */
+.ap-bento-card {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 24px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease;
+    position: relative;
+    overflow: hidden;
+}
 
-    /* Grouped Inset Section */
-    .dash-section-title {
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: var(--subtext, #94a3b8);
-        text-transform: capitalize;
-        letter-spacing: 0.02em;
-        margin: 0 0 0.5rem 0.25rem;
-    }
+.ap-bento-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.03);
+    border-color: rgba(203, 213, 225, 1);
+}
 
-    #dash-mob-alerts-wrap {
-        padding: 0 !important;
-        margin-bottom: 1.25rem !important;
-    }
-    .dash-mob-alert-list {
-        background: var(--surface, #ffffff) !important;
-        border-radius: 20px !important;
-        border: 1px solid var(--border, #e2e8f0) !important;
-        box-shadow: 0 3px 12px rgba(0,0,0,0.02) !important;
-        overflow: hidden;
-    }
-    .dash-mob-alert-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem 1.25rem !important;
-        text-decoration: none;
-        color: var(--text, #1e293b) !important;
-        border-bottom: 1px solid var(--border, #f1f5f9) !important;
-        transition: background 0.15s;
-    }
-    .dash-mob-alert-item:active { background: rgba(0,0,0,0.03); }
-    .dash-mob-alert-item:last-child { border-bottom: none !important; }
+.ap-card-clickable {
+    cursor: pointer;
+}
 
-    /* Clima Card Móvil Grouped Inset */
-    #dash-weather-card {
-        background: var(--surface, #ffffff) !important;
-        border: 1px solid var(--border, #e2e8f0) !important;
-        border-radius: 20px !important;
-        box-shadow: 0 3px 12px rgba(0,0,0,0.02) !important;
+/* Gradients sutiles estilo Apple */
+.ap-tint-blue {
+    background: radial-gradient(circle at top right, rgba(2, 132, 199, 0.06), transparent 70%), #ffffff;
+}
+.ap-tint-emerald {
+    background: radial-gradient(circle at top right, rgba(16, 185, 129, 0.06), transparent 70%), #ffffff;
+}
+.ap-tint-amber {
+    background: radial-gradient(circle at top right, rgba(245, 158, 11, 0.06), transparent 70%), #ffffff;
+}
+.ap-tint-indigo {
+    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.06), transparent 70%), #ffffff;
+}
+
+/* ── Apple Hero Header ─────────────────────────────────────────── */
+.ap-hero-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.15;
+    color: #0f172a;
+    margin: 0;
+}
+
+.ap-hero-sub {
+    font-size: 0.95rem;
+    color: #64748b;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin: 0.35rem 0 0 0;
+}
+
+.ap-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+/* ── Macro KPI Pill Cards ──────────────────────────────────────── */
+.ap-kpi-pill {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.22s ease;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
+}
+.ap-kpi-pill:hover {
+    border-color: #cbd5e1;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -2px rgba(15, 23, 42, 0.06);
+}
+
+.ap-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.ap-kpi-val {
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: #0f172a;
+}
+
+.ap-kpi-lbl {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ── Apple Mini Badges & Links ─────────────────────────────────── */
+.ap-link-btn {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #0284c7;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: gap 0.15s ease, color 0.15s ease;
+}
+.ap-link-btn:hover {
+    color: #0369a1;
+    gap: 8px;
+}
+
+.ap-progress-bar-apple {
+    height: 8px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    overflow: hidden;
+    display: flex;
+}
+
+.ap-stat-box {
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 16px;
+    padding: 0.85rem 1rem;
+}
+
+/* Responsive adjustments: Mobile, Tablet & Desktop */
+@media (max-width: 991.98px) {
+    .ap-bento-card {
         padding: 1.25rem !important;
-        margin-bottom: 1.25rem;
+        border-radius: 20px !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    #moduloDashboard {
+        padding: 1rem 0.85rem 6.5rem 0.85rem !important;
+    }
+    .ap-hero-title {
+        font-size: 1.55rem !important;
+    }
+    .ap-hero-sub {
+        font-size: 0.84rem !important;
+    }
+    .ap-kpi-pill {
+        padding: 0.85rem 0.95rem !important;
+        border-radius: 16px !important;
+    }
+    .ap-kpi-icon {
+        width: 38px !important;
+        height: 38px !important;
+        font-size: 1.1rem !important;
+        border-radius: 12px !important;
+    }
+    .ap-kpi-val {
+        font-size: 1.35rem !important;
+    }
+    .ap-kpi-lbl {
+        font-size: 0.68rem !important;
+    }
+    .ap-bento-card {
+        padding: 1.1rem !important;
+        border-radius: 18px !important;
     }
 }
 </style>
-<div id="moduloDashboard" class="modulo-wrapper" style="display: flex; flex-direction: column;">
 
-    <!-- Mobile Hero Header Dinámico -->
-    <div class="d-flex d-md-none dash-mob-header-wrap align-items-center" id="dash-mob-header">
-        <div class="d-flex align-items-center gap-3">
-            <div class="dash-mob-avatar-badge" id="dash-mob-avatar">SA</div>
-            <div>
-                <h2 class="dash-mob-greeting-title" id="dash-mob-greeting">Hola, Sthefano 👋</h2>
-                <div class="d-flex align-items-center gap-2 mt-1">
-                    <span class="badge bg-success-subtle text-success fw-bold rounded-pill px-2 py-1" style="font-size: 0.65rem; letter-spacing: 0.02em;">
-                        <i class="bi bi-circle-fill me-1" style="font-size: 0.45rem;"></i> Sistema Operativo
+<div id="moduloDashboard" class="modulo-wrapper">
+
+    <!-- ── Apple Hero Header ───────────────────────────────────── -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4 pb-2">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="ap-pill-badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20">
+                    <i class="bi bi-shield-lock-fill"></i> Control Ejecutivo 360°
+                </span>
+                <span class="ap-pill-badge bg-success bg-opacity-10 text-success border border-success border-opacity-20" id="ap-live-badge">
+                    <i class="bi bi-circle-fill" style="font-size: 0.45rem;"></i> En Vivo
+                </span>
+            </div>
+            <h1 class="ap-hero-title">Centro de Control Ejecutivo.</h1>
+            <p class="ap-hero-sub">El pulso integral de flota, operaciones en carretera, abastecimiento y finanzas.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2 align-self-stretch align-self-md-auto">
+            <div class="ap-stat-box py-2 px-3 d-flex align-items-center gap-3 bg-white shadow-2xs">
+                <div class="text-end">
+                    <div class="small text-muted fw-bold" id="ap-header-time" style="font-size: 0.72rem; text-transform: uppercase;">Hoy</div>
+                    <div class="fw-bold text-dark" id="ap-header-date" style="font-size: 0.88rem;">—</div>
+                </div>
+                <button class="btn btn-sm btn-light rounded-circle p-2 border" onclick="window.apRecargarDashboardEjecutivo()" title="Actualizar datos" style="width: 34px; height: 34px; display:flex; align-items:center; justify-content:center;">
+                    <i class="bi bi-arrow-clockwise fs-6 text-dark" id="ap-reload-spin"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 4 Macro KPIs (Top Row — Responsive 2x2 on Mobile/Tablet, 4x1 on Desktop) ──────────────── -->
+    <div class="row g-2 g-md-3 mb-4">
+        <!-- 1. Disponibilidad de Flota -->
+        <div class="col-6 col-md-6 col-xl-3">
+            <div class="ap-kpi-pill ap-card-clickable ap-tint-emerald" onclick="cargarModuloAislado('flota/disponibilidad')">
+                <div>
+                    <div class="ap-kpi-lbl">Disponibilidad Flota</div>
+                    <div class="ap-kpi-val text-success" id="ap-val-disp">—%</div>
+                    <div class="small text-muted mt-1 text-truncate" id="ap-sub-disp"><span class="fw-bold text-dark" id="ap-cant-operativas">—</span> operativas</div>
+                </div>
+                <div class="ap-kpi-icon bg-success bg-opacity-10 text-success d-none d-sm-flex">
+                    <i class="bi bi-truck-front-fill"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Operaciones & Combustible -->
+        <div class="col-6 col-md-6 col-xl-3">
+            <div class="ap-kpi-pill ap-card-clickable ap-tint-blue" onclick="cargarModuloAislado('operaciones/combustible-vales')">
+                <div>
+                    <div class="ap-kpi-lbl">Combustible (Mes)</div>
+                    <div class="ap-kpi-val text-primary" id="ap-val-fuel-gls">— <span style="font-size: 0.85rem; font-weight: 700;">GL</span></div>
+                    <div class="small text-muted mt-1 text-truncate" id="ap-sub-fuel">S/ <span class="fw-bold text-dark" id="ap-fuel-monto">—</span> ejec.</div>
+                </div>
+                <div class="ap-kpi-icon bg-primary bg-opacity-10 text-primary d-none d-sm-flex">
+                    <i class="bi bi-fuel-pump-fill"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Taller & Mantenimiento -->
+        <div class="col-6 col-md-6 col-xl-3">
+            <div class="ap-kpi-pill ap-card-clickable ap-tint-amber" onclick="cargarModuloAislado('mantenimiento/dashboard')">
+                <div>
+                    <div class="ap-kpi-lbl">Taller & OTs</div>
+                    <div class="ap-kpi-val text-warning" id="ap-val-ot-abiertas">—</div>
+                    <div class="small text-muted mt-1 text-truncate" id="ap-sub-ot"><span class="fw-bold text-danger" id="ap-ot-urgentes">—</span> urgentes</div>
+                </div>
+                <div class="ap-kpi-icon bg-warning bg-opacity-10 text-warning d-none d-sm-flex">
+                    <i class="bi bi-tools"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Tesorería / Requerimientos -->
+        <div class="col-6 col-md-6 col-xl-3">
+            <div class="ap-kpi-pill ap-card-clickable ap-tint-indigo" onclick="cargarModuloAislado('tesoreria/pago-requerimientos')">
+                <div>
+                    <div class="ap-kpi-lbl">Tesorería (Por Pagar)</div>
+                    <div class="ap-kpi-val text-indigo" style="color: #6366f1;" id="ap-val-tesoreria">S/ —</div>
+                    <div class="small text-muted mt-1 text-truncate" id="ap-sub-tesoreria"><span class="fw-bold text-dark" id="ap-req-pendientes">—</span> requerim. pend.</div>
+                </div>
+                <div class="ap-kpi-icon bg-indigo bg-opacity-10 text-indigo d-none d-sm-flex" style="background: rgba(99,102,241,0.1); color:#6366f1;">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Bento Grid: Sección 1 (Flota en Vivo & Operaciones) ─── -->
+    <div class="row g-4 mb-4">
+        
+        <!-- Bento 1: Salud de Flota en Vivo -->
+        <div class="col-12 col-lg-7">
+            <div class="ap-bento-card ap-tint-emerald h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success bg-opacity-10 text-success p-2 rounded-3 fs-6">
+                                <i class="bi bi-speedometer"></i>
+                            </span>
+                            <div>
+                                <h5 class="m-0 fw-bold text-dark">Disponibilidad Operativa 360°</h5>
+                                <span class="text-muted small">Estado activo de las unidades de carga y carreta</span>
+                            </div>
+                        </div>
+                        <a href="#" class="ap-link-btn" onclick="event.preventDefault(); cargarModuloAislado('flota/disponibilidad')">
+                            Ver Módulo <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+
+                    <!-- Progress Multi-barra -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between text-muted small fw-bold mb-2" style="font-size: 0.76rem;">
+                            <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i> Operativas: <span id="ap-bar-lbl-op">—%</span></span>
+                            <span class="text-warning"><i class="bi bi-tools me-1"></i> En Taller/Rampa: <span id="ap-bar-lbl-rampa">—</span></span>
+                            <span class="text-danger"><i class="bi bi-clock-history me-1"></i> Por Regularizar: <span id="ap-bar-lbl-reg">—</span></span>
+                        </div>
+                        <div class="ap-progress-bar-apple">
+                            <div class="bg-success" id="ap-bar-op" style="width: 80%; transition: width 0.6s ease;"></div>
+                            <div class="bg-warning" id="ap-bar-rampa" style="width: 15%; transition: width 0.6s ease;"></div>
+                            <div class="bg-danger" id="ap-bar-reg" style="width: 5%; transition: width 0.6s ease;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Mini Tarjetas de Distribución -->
+                    <div class="row g-2 mt-2" id="ap-flota-breakdown">
+                        <div class="col-4">
+                            <div class="ap-stat-box text-center">
+                                <div class="text-muted fw-bold small text-uppercase" style="font-size:0.68rem;">Flota Total</div>
+                                <div class="fw-bold text-dark fs-5 mt-1" id="ap-box-total-flota">—</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="ap-stat-box text-center">
+                                <div class="text-muted fw-bold small text-uppercase" style="font-size:0.68rem;">En Operación</div>
+                                <div class="fw-bold text-success fs-5 mt-1" id="ap-box-operativas">—</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="ap-stat-box text-center">
+                                <div class="text-muted fw-bold small text-uppercase" style="font-size:0.68rem;">En Taller</div>
+                                <div class="fw-bold text-warning fs-5 mt-1" id="ap-box-taller">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Unidades de atención inmediata -->
+                <div class="mt-4 pt-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Unidades actualmente en taller / rampa</span>
+                        <span class="badge bg-light text-dark border" id="ap-rampa-count-badge">0 placas</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2" id="ap-placas-rampa-list">
+                        <span class="text-muted small py-1">Cargando unidades...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bento 2: Operaciones & Carretera -->
+        <div class="col-12 col-lg-5">
+            <div class="ap-bento-card ap-tint-blue h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary bg-opacity-10 text-primary p-2 rounded-3 fs-6">
+                                <i class="bi bi-geo-alt-fill"></i>
+                            </span>
+                            <div>
+                                <h5 class="m-0 fw-bold text-dark">Operaciones & Rutas</h5>
+                                <span class="text-muted small">Viajes y consumo de combustible</span>
+                            </div>
+                        </div>
+                        <a href="#" class="ap-link-btn" onclick="event.preventDefault(); cargarModuloAislado('operaciones/programacion')">
+                            Explorar <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="ap-stat-box">
+                                <div class="text-muted small fw-bold" style="font-size:0.72rem;">VALES REGISTRADOS</div>
+                                <div class="fs-4 fw-bold text-dark mt-1" id="ap-op-vales-count">—</div>
+                                <div class="text-muted small" style="font-size:0.7rem;">Este mes</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="ap-stat-box">
+                                <div class="text-muted small fw-bold" style="font-size:0.72rem;">ESTACIONES ACTIVAS</div>
+                                <div class="fs-4 fw-bold text-primary mt-1" id="ap-op-estaciones-count">—</div>
+                                <div class="text-muted small" style="font-size:0.7rem;">Proveedores D2</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ap-stat-box p-3 bg-white border">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-dark small">Accesos Rápidos Operaciones:</span>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-sm btn-light border text-start d-flex justify-content-between align-items-center py-2 px-3 rounded-3" onclick="cargarModuloAislado('operaciones/ordenes-viaje')">
+                                <span class="fw-bold small text-dark"><i class="bi bi-diagram-3-fill text-primary me-2"></i> Órdenes de Viaje & Fletes</span>
+                                <i class="bi bi-chevron-right text-muted opacity-50"></i>
+                            </button>
+                            <button class="btn btn-sm btn-light border text-start d-flex justify-content-between align-items-center py-2 px-3 rounded-3" onclick="cargarModuloAislado('operaciones/guias-remision')">
+                                <span class="fw-bold small text-dark"><i class="bi bi-file-earmark-text-fill text-info me-2"></i> Guías de Remisión SUNAT</span>
+                                <i class="bi bi-chevron-right text-muted opacity-50"></i>
+                            </button>
+                            <button class="btn btn-sm btn-light border text-start d-flex justify-content-between align-items-center py-2 px-3 rounded-3" onclick="cargarModuloAislado('operaciones/combustible-matriz')">
+                                <span class="fw-bold small text-dark"><i class="bi bi-speedometer2 text-warning me-2"></i> Matriz de Rendimiento D2</span>
+                                <i class="bi bi-chevron-right text-muted opacity-50"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-2 text-center text-muted small" style="font-size: 0.74rem;">
+                    <i class="bi bi-broadcast text-success me-1"></i> Integración satelital y GPS activa
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── Bento Grid: Sección 2 (Taller, Almacén y Tesorería) ─── -->
+    <div class="row g-3 g-md-4 mb-4">
+
+        <!-- Bento 3: Taller & Mantenimiento Preventivo -->
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="ap-bento-card ap-tint-amber h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-warning bg-opacity-10 text-warning p-2 rounded-3 fs-6">
+                                <i class="bi bi-gear-wide-connected"></i>
+                            </span>
+                            <div>
+                                <h6 class="m-0 fw-bold text-dark">Taller & OTs</h6>
+                                <span class="text-muted small">Carga de trabajo y preventivos</span>
+                            </div>
+                        </div>
+                        <a href="#" class="ap-link-btn text-warning" onclick="event.preventDefault(); cargarModuloAislado('mantenimiento/reportes-ot')">
+                            Ver OTs <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+
+                    <div class="ap-stat-box mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small fw-bold">ESTADO DE ÓRDENES</span>
+                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill" id="ap-ot-total-badge">— OTs</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-1 border-bottom">
+                            <span class="small text-dark">En Atención / Proceso</span>
+                            <span class="fw-bold text-primary" id="ap-ot-enproceso">—</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-1 border-bottom">
+                            <span class="small text-dark">Por Regularizar</span>
+                            <span class="fw-bold text-danger" id="ap-ot-por-regularizar">—</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-1">
+                            <span class="small text-dark">Finalizadas / Cerradas</span>
+                            <span class="fw-bold text-success" id="ap-ot-cerradas">—</span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                        <span class="small text-muted fw-bold">Costo Invertido (Mes):</span>
+                        <span class="fw-bold text-dark" id="ap-ot-costo-total">S/ —</span>
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-2">
+                    <button class="btn btn-sm btn-outline-warning w-100 fw-bold rounded-pill" onclick="cargarModuloAislado('mantenimiento/dashboard')">
+                        <i class="bi bi-speedometer2 me-1"></i> Ir al Dashboard de Mantenimiento
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bento 4: Almacén & Inventario -->
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="ap-bento-card ap-tint-blue h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-info bg-opacity-10 text-info p-2 rounded-3 fs-6" style="color:#0284c7;">
+                                <i class="bi bi-box-seam-fill"></i>
+                            </span>
+                            <div>
+                                <h6 class="m-0 fw-bold text-dark">Almacén & Stock</h6>
+                                <span class="text-muted small">Insumos, repuestos y compras</span>
+                            </div>
+                        </div>
+                        <a href="#" class="ap-link-btn" onclick="event.preventDefault(); cargarModuloAislado('almacen/inventario')">
+                            Inventario <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+
+                    <div class="ap-stat-box mb-3">
+                        <div class="text-muted small fw-bold">VALORIZACIÓN TOTAL STOCK</div>
+                        <div class="fs-4 fw-bold text-dark mt-1" id="ap-inv-val-total">S/ —</div>
+                        <div class="text-muted small" id="ap-inv-articulos-count"><span class="fw-bold text-dark">—</span> artículos registrados</div>
+                    </div>
+
+                    <div class="ap-stat-box mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-danger small fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i> Stock Crítico / Mínimo</div>
+                                <div class="small text-muted">Artículos que requieren reposición</div>
+                            </div>
+                            <span class="fs-4 fw-bold text-danger" id="ap-inv-criticos-count">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-2">
+                    <button class="btn btn-sm btn-outline-primary w-100 fw-bold rounded-pill" onclick="cargarModuloAislado('almacen/entradas')">
+                        <i class="bi bi-cart-plus me-1"></i> Nueva Orden de Compra / Servicio
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bento 5: Tesorería & Finanzas -->
+        <div class="col-12 col-md-12 col-xl-4">
+            <div class="ap-bento-card ap-tint-indigo h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-indigo bg-opacity-10 text-indigo p-2 rounded-3 fs-6" style="background: rgba(99,102,241,0.1); color:#6366f1;">
+                                <i class="bi bi-cash-stack"></i>
+                            </span>
+                            <div>
+                                <h6 class="m-0 fw-bold text-dark">Tesorería</h6>
+                                <span class="text-muted small">Pagos y cuentas de la empresa</span>
+                            </div>
+                        </div>
+                        <a href="#" class="ap-link-btn" style="color:#6366f1;" onclick="event.preventDefault(); cargarModuloAislado('tesoreria/cuentas')">
+                            Finanzas <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+
+                    <div class="ap-stat-box mb-3">
+                        <div class="text-muted small fw-bold">REQUERIMIENTOS POR PAGAR</div>
+                        <div class="fs-4 fw-bold mt-1" style="color:#6366f1;" id="ap-teso-monto-pen">S/ —</div>
+                        <div class="text-muted small" id="ap-teso-monto-usd">$ — USD pendientes</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                        <span class="small text-dark fw-bold"><i class="bi bi-bank me-1 text-primary"></i> Bancos vinculados:</span>
+                        <span class="badge bg-white text-dark border fw-bold">BCP • BBVA • Interbank</span>
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-2">
+                    <button class="btn btn-sm w-100 fw-bold rounded-pill text-white" style="background:#6366f1;" onclick="cargarModuloAislado('tesoreria/pago-requerimientos')">
+                        <i class="bi bi-check2-circle me-1"></i> Procesar Pagos Pendientes
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── Bento Grid: Sección 3 (Alertas Críticas del ERP) ───── -->
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="ap-bento-card">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-danger bg-opacity-10 text-danger p-2 rounded-3 fs-6">
+                            <i class="bi bi-bell-fill"></i>
+                        </span>
+                        <div>
+                            <h5 class="m-0 fw-bold text-dark">Torre de Alertas & Vencimientos</h5>
+                            <span class="text-muted small">Acciones preventivas que requieren atención inmediata</span>
+                        </div>
+                    </div>
+                    <span class="badge bg-light text-dark border px-3 py-1 rounded-pill small" id="ap-alertas-total-badge">
+                        Verificando alertas...
                     </span>
                 </div>
-            </div>
-        </div>
-        <div class="dash-mob-btn-reload" onclick="recargarDashboard()" title="Actualizar">
-            <i class="bi bi-arrow-clockwise"></i>
-        </div>
-    </div>
 
-    <!-- Header Desktop -->
-    <div class="controls-row d-flex justify-content-between align-items-center mb-3">
-        <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-grid-1x2-fill fs-4 text-primary"></i>
-            <h5 class="m-0 fw-bold text-dark-theme" data-i18n="dash.title">Centro de Comando</h5>
-        </div>
-        <div class="d-flex gap-2 align-items-center">
-            <span class="badge bg-success shadow-sm" id="badge-dash-status"><i class="bi bi-check-circle"></i> <span data-i18n="dash.system.active">Sistema Activo</span></span>
-            <button class="btn btn-outline-primary fw-bold btn-sm shadow-sm btn-reload-cache" onclick="recargarDashboard()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-        </div>
-    </div>
-
-    <!-- ── KPI METRIC CARDS ─────────────────────────────── -->
-    <div class="row g-3 mb-4" id="kpi-metrics-row">
-        <div class="col-6 col-md-3">
-            <div class="kpi-metric-card" style="cursor:pointer;" title="Ver todas las inspecciones" onclick="localStorage.setItem('fleet_insp_nav_filter','ALL');cargarModuloAislado('mantenimiento/inspecciones')">
-                <div class="kpi-metric-top">
-                    <div class="kpi-metric-icon-wrap primary"><i class="bi bi-truck-front"></i></div>
-                    <div class="kpi-metric-trend-wrap" id="kpi-trend-flota"></div>
-                </div>
-                <div class="kpi-metric-value" id="kpi-val-flota">—</div>
-                <div class="kpi-metric-label">Flota Activa</div>
-                <div class="kpi-metric-sparkline" id="kpi-spark-flota"></div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="kpi-metric-card success" style="cursor:pointer;" title="Ver inspecciones vigentes" onclick="localStorage.setItem('fleet_insp_nav_filter','VIGENTE');cargarModuloAislado('mantenimiento/inspecciones')">
-                <div class="kpi-metric-top">
-                    <div class="kpi-metric-icon-wrap success"><i class="bi bi-shield-check"></i></div>
-                    <div class="kpi-metric-trend-wrap" id="kpi-trend-vigentes"></div>
-                </div>
-                <div class="kpi-metric-value" id="kpi-val-vigentes">—</div>
-                <div class="kpi-metric-label">Insp. Vigentes</div>
-                <div class="kpi-metric-sparkline" id="kpi-spark-vigentes"></div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="kpi-metric-card warning" style="cursor:pointer;" title="Ver inspecciones por vencer" onclick="localStorage.setItem('fleet_insp_nav_filter','PRÓXIMO A VENCER');cargarModuloAislado('mantenimiento/inspecciones')">
-                <div class="kpi-metric-top">
-                    <div class="kpi-metric-icon-wrap warning"><i class="bi bi-clock"></i></div>
-                    <div class="kpi-metric-trend-wrap" id="kpi-trend-porvencer"></div>
-                </div>
-                <div class="kpi-metric-value" id="kpi-val-porvencer">—</div>
-                <div class="kpi-metric-label">Por Vencer (7d)</div>
-                <div class="kpi-metric-sparkline" id="kpi-spark-porvencer"></div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="kpi-metric-card danger" style="cursor:pointer;" title="Ver inspecciones vencidas" onclick="localStorage.setItem('fleet_insp_nav_filter','NO VIGENTE');cargarModuloAislado('mantenimiento/inspecciones')">
-                <div class="kpi-metric-top">
-                    <div class="kpi-metric-icon-wrap danger"><i class="bi bi-exclamation-triangle"></i></div>
-                    <div class="kpi-metric-trend-wrap" id="kpi-trend-vencidas"></div>
-                </div>
-                <div class="kpi-metric-value" id="kpi-val-vencidas">—</div>
-                <div class="kpi-metric-label">Vencidas</div>
-                <div class="kpi-metric-sparkline" id="kpi-spark-vencidas"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ── ACCIONES RÁPIDAS MÓVIL (d-block d-md-none) ─── -->
-    <div class="d-block d-md-none" id="dash-mob-alerts-wrap">
-        <h3 class="dash-section-title">Mantenimiento Preventivo</h3>
-        <div class="dash-mob-alert-list">
-            <a href="#" class="dash-mob-alert-item" onclick="event.preventDefault(); localStorage.setItem('fleet_fleetrun_nav_filter','VENCIDO'); cargarModuloAislado('mantenimiento/fleetrun')">
-                <div class="d-flex align-items-center gap-3">
-                    <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></div>
-                    <span class="fw-semibold" style="font-size:0.9rem;">MP Fleetrun Vencidos</span>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-danger-subtle text-danger fw-bold rounded-pill px-2" id="dash-mob-fleet-vencidos" style="font-size:0.75rem;">—</span>
-                    <i class="bi bi-chevron-right text-muted opacity-50"></i>
-                </div>
-            </a>
-            <a href="#" class="dash-mob-alert-item" onclick="event.preventDefault(); localStorage.setItem('fleet_fleetrun_nav_filter','POR VENCER'); cargarModuloAislado('mantenimiento/fleetrun')">
-                <div class="d-flex align-items-center gap-3">
-                    <div style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></div>
-                    <span class="fw-semibold" style="font-size:0.9rem;">MP Fleetrun Por Vencer</span>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-warning-subtle text-warning fw-bold rounded-pill px-2" id="dash-mob-fleet-porvencer" style="font-size:0.75rem;">—</span>
-                    <i class="bi bi-chevron-right text-muted opacity-50"></i>
-                </div>
-            </a>
-        </div>
-    </div>
-
-    <!-- ── GRÁFICOS + ACTIVIDAD RECIENTE ───────────────── -->
-    <div class="row g-3 mb-4">
-
-        <!-- Widget Clima -->
-        <div class="col-12 col-md-4 col-xl-2 d-flex align-items-stretch">
-            <div class="kpi-card w-100 p-3 mb-0 text-center d-flex flex-column justify-content-center align-items-center" id="dash-weather-card" style="min-height:160px; position:relative; overflow:hidden;">
-                <!-- the content -->
-                <h6 class="fw-bold text-muted mb-2"><i class="bi bi-cloud-sun"></i> Clima Actual</h6>
-                <div class="fw-bold fs-6" id="dash-weather-city">Obteniendo...</div>
-                <div class="mb-2 text-muted" style="font-size:0.8rem;" id="dash-weather-desc">—</div>
-                <div class="fs-1 fw-bold text-primary mb-1" id="dash-weather-temp">—°</div>
-                <div class="text-muted" style="font-size:0.75rem;">
-                    <span>Min <span id="dash-weather-min">—°</span></span> • 
-                    <span>Max <span id="dash-weather-max">—°</span></span>
+                <div class="row g-3" id="ap-alertas-container">
+                    <div class="col-12 col-md-4">
+                        <div class="ap-stat-box border-danger border-opacity-25 bg-danger bg-opacity-10">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-danger small"><i class="bi bi-card-checklist me-1"></i> Fallas Reportadas Pendientes</span>
+                                <span class="badge bg-danger text-white rounded-pill" id="ap-alert-fallas-count">—</span>
+                            </div>
+                            <div class="small text-muted mt-1">Checklists con observaciones sin OT</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="ap-stat-box border-warning border-opacity-25 bg-warning bg-opacity-10">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-warning small"><i class="bi bi-calendar-x me-1"></i> Documentos por Vencer (&lt;7d)</span>
+                                <span class="badge bg-warning text-dark rounded-pill" id="ap-alert-docs-count">—</span>
+                            </div>
+                            <div class="small text-muted mt-1">SOAT, Revisiones Técnicas y Pólizas</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="ap-stat-box border-primary border-opacity-25 bg-primary bg-opacity-10">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-primary small"><i class="bi bi-pencil-square me-1"></i> Aprobaciones Gerencia</span>
+                                <span class="badge bg-primary text-white rounded-pill" id="ap-alert-gerencia-count">—</span>
+                            </div>
+                            <div class="small text-muted mt-1">Órdenes de compra esperando firma</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-12 col-md-4 d-none d-md-block">
-            <div class="kpi-card h-100 p-3 chart-card-dashboard">
-                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pie-chart-fill"></i> <span data-i18n="dash.maint.health">Salud Mantenimientos</span></h6>
-                <div class="chart-container-dashboard">
-                    <canvas id="chartDashFleetrunStatus"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-md-4 d-none d-md-block">
-            <div class="kpi-card h-100 p-3 chart-card-dashboard">
-                <h6 class="fw-bold text-success mb-3"><i class="bi bi-bar-chart-fill"></i> <span data-i18n="dash.insp.status">Estado Inspecciones</span></h6>
-                <div class="chart-container-dashboard">
-                    <canvas id="chartGeneralInspecciones"></canvas>
-                </div>
-            </div>
-        </div>
-
     </div>
 
 </div>

@@ -3977,7 +3977,8 @@ document.addEventListener('click', function(e) {
 // =====================================================================
 
 const TITULOS_MODULOS = {
-    'dashboard':                   'Centro de Comando',
+    'dashboard':                   'Centro de Control Ejecutivo',
+    'mantenimiento/dashboard':     'Dashboard Mantenimiento',
     'mantenimiento/inspecciones':  'Análisis de Inspecciones',
     'flota/placas':        'Gestión de Placas',
     'mantenimiento/fleetrun':      'Sistema Fleetrun',
@@ -4049,6 +4050,7 @@ const MENU_IDS = {
     'operaciones/marsisa-combustible-matriz': 'nav-marsisa-combustible-matriz',
     'operaciones/marsisa-combustible-analisis': 'nav-marsisa-combustible-analisis',
     'operaciones/marsisa-urea-analisis': 'nav-marsisa-urea-analisis',
+    'mantenimiento/dashboard':    'nav-mantenimiento-dashboard',
     'mantenimiento/inspecciones':  'nav-inspecciones',
     'flota/placas':       'nav-placas',
     'mantenimiento/fleetrun':      'nav-fleetrun',
@@ -4109,6 +4111,7 @@ const MENU_IDS = {
 };
 
 const MENU_SECTION = {
+    'mantenimiento/dashboard':    'mantenimiento',
     'directorio/conductores':     'directorio',
     'directorio/clientes':        'directorio',
     'mantenimiento/inspecciones': 'mantenimiento',
@@ -4181,6 +4184,7 @@ const MENU_SECTION = {
 
 const BREADCRUMB_MAP = {
     'dashboard':                  [],
+    'mantenimiento/dashboard':    ['Mantenimiento','Dashboard'],
     'tesoreria/caja':             ['Tesorería','Caja'],
     'tesoreria/caja-chica':       ['Tesorería','Caja'],
     'tesoreria/liquidaciones':    ['Tesorería','Liquidaciones'],
