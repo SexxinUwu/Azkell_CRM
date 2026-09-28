@@ -33,7 +33,7 @@ class GoogleRunner {
 
             let res = await fetch('/api/script/' + method, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ args: parsedArgs, usuario: localStorage.getItem('fleet_correo') || 'sistema' })
+                body: JSON.stringify({ args: parsedArgs, usuario: localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || localStorage.getItem('fleet_correo') || 'Sthefano Avila' })
             });
             let json = await res.json();
 

@@ -40,12 +40,12 @@ window.ensureInspConfig = function() {
                     return { tab: (d.titulo || 'SISTEMA').toUpperCase(), template_id: d.template_id, items: parsedItems };
                 });
             } else {
-                window.DYNAMIC_INSP_SCHEMA = DEFAULT_INSP_SCHEMA;
+                window.DYNAMIC_INSP_SCHEMA = window.DEFAULT_INSP_SCHEMA;
             }
         }).catch(e => {
             console.warn("Advertencia cargando cfg inspecciones:", e);
             if (!window.DYNAMIC_INSP_SCHEMA || window.DYNAMIC_INSP_SCHEMA.length === 0) {
-                window.DYNAMIC_INSP_SCHEMA = DEFAULT_INSP_SCHEMA;
+                window.DYNAMIC_INSP_SCHEMA = window.DEFAULT_INSP_SCHEMA;
             }
         });
 };
@@ -1685,11 +1685,11 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                     return { tab: (d.titulo || d.tab || 'SISTEMA').toUpperCase(), template_id: d.template_id, items: Array.isArray(items) ? items : [] };
                 });
             } else {
-                window.DYNAMIC_INSP_SCHEMA = DEFAULT_INSP_SCHEMA;
+                window.DYNAMIC_INSP_SCHEMA = window.DEFAULT_INSP_SCHEMA;
             }
         } catch (e) {
             console.error("Error loading schema", e);
-            window.DYNAMIC_INSP_SCHEMA = DEFAULT_INSP_SCHEMA;
+            window.DYNAMIC_INSP_SCHEMA = window.DEFAULT_INSP_SCHEMA;
         }
     }
 
@@ -2341,9 +2341,9 @@ function generarPDFInspeccion() {
 // 🔥 GUARDADO DEL WIZARD DE INSPECCIONES 🔥
 // ==========================================
 
-async function procesarGuardadoInspeccion() {
+window.procesarGuardadoInspeccion = async function() {
     var isNew = !document.getElementById('i_id_inspeccion').value;
-    if (!window.guardAction('insp', isNew ? 'c' : 'e')) return;
+    if (typeof window.guardAction === 'function' && !window.guardAction('insp', isNew ? 'c' : 'e')) return;
     const btn = document.getElementById('btnWizGuardar');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando Evidencias...';
@@ -2455,9 +2455,10 @@ async function procesarGuardadoInspeccion() {
     if (iIdOt) idOt = iIdOt.value;
 
     let datos = {
+        usuario: window.usuarioLogueado || localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || 'Sthefano Avila',
         form: {
             id: idInsp, id_ot: idOt, fecha_ingreso: fecha, placa: placa, km_tablero: km, cliente: cliente, tecnico: tecnico, dias_propuestos: dias,
-            detalles_json: JSON.stringify(detalles), firma_base64: firmaData, usuarioAutor: usuarioLogueado
+            detalles_json: JSON.stringify(detalles), firma_base64: firmaData, usuarioAutor: window.usuarioLogueado || localStorage.getItem('fleet_user') || 'Sthefano Avila'
         }
     };
 
@@ -2813,8 +2814,15 @@ window.inspAbrirFormulario = function() {
     var selModal = document.getElementById('modalTipoInspeccionSeleccion');
 
     if (selModal) selModal.classList.remove('open');
-    if (backdrop) backdrop.classList.add('open');
-    if (drawer) drawer.classList.add('open');
+    if (backdrop) {
+        backdrop.classList.add('open');
+        backdrop.style.setProperty('z-index', '1199', 'important');
+    }
+    if (drawer) {
+        drawer.classList.add('open');
+        drawer.style.setProperty('z-index', '1200', 'important');
+        drawer.style.setProperty('pointer-events', 'auto', 'important');
+    }
 };
 
 window.inspCerrarFormulario = function() {
@@ -2911,6 +2919,20 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
             let html = await res.text();
             let tmp = document.createElement('div');
             tmp.innerHTML = html;
+
+            // Inyectar estilos CSS si no están cargados
+            if (!document.getElementById('insp-injected-styles')) {
+                let styleTags = tmp.querySelectorAll('style');
+                let combinedCss = '';
+                styleTags.forEach(st => { combinedCss += st.textContent + '\n'; });
+                if (combinedCss) {
+                    let styleEl = document.createElement('style');
+                    styleEl.id = 'insp-injected-styles';
+                    styleEl.textContent = combinedCss;
+                    document.head.appendChild(styleEl);
+                }
+            }
+
             let drawer = tmp.querySelector('#drawerInspeccion');
             let backdrop = tmp.querySelector('#inspDrawerBackdrop');
             if (backdrop && !document.getElementById('inspDrawerBackdrop')) document.body.appendChild(backdrop);
@@ -3020,6 +3042,19 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
             let html = await res.text();
             let tmp = document.createElement('div');
             tmp.innerHTML = html;
+
+            if (!document.getElementById('insp-injected-styles')) {
+                let styleTags = tmp.querySelectorAll('style');
+                let combinedCss = '';
+                styleTags.forEach(st => { combinedCss += st.textContent + '\n'; });
+                if (combinedCss) {
+                    let styleEl = document.createElement('style');
+                    styleEl.id = 'insp-injected-styles';
+                    styleEl.textContent = combinedCss;
+                    document.head.appendChild(styleEl);
+                }
+            }
+
             let drawer = tmp.querySelector('#drawerInspeccion');
             let backdrop = tmp.querySelector('#inspDrawerBackdrop');
             if (backdrop && !document.getElementById('inspDrawerBackdrop')) document.body.appendChild(backdrop);
@@ -3927,7 +3962,10 @@ window.guardarRegistroFrenos = async function() {
         let res = await fetch('/api/script/guardarInspeccion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ form: payload })
+            body: JSON.stringify({ 
+                form: payload,
+                usuario: window.usuarioLogueado || localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || 'Sthefano Avila'
+            })
         });
         let json = await res.json();
         if (json.data === 'Éxito') {
@@ -4347,7 +4385,10 @@ window._ejecutarEliminarInspeccionConfirmado = async function() {
         var resp = await fetch('/api/script/eliminarRegistro', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ args: [id, 'Inspecciones'] })
+            body: JSON.stringify({ 
+                args: [id, 'Inspecciones'],
+                usuario: window.usuarioLogueado || localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || 'Sthefano Avila'
+            })
         });
         var data = await resp.json();
         
