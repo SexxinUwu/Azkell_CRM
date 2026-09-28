@@ -788,11 +788,11 @@ body.dark .table-custom th {
 
 /* 2. Botón GPS (Píldora Translúcida) */
 #btn-wialon-status {
-    background-color: #eff6ff !important;
-    color: #2563eb !important;
-    border: 1px solid #bfdbfe !important;
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
     font-weight: 700 !important;
-    padding: 6px 16px !important;
+    padding: 5px 14px !important;
     border-radius: 20px !important;
     box-shadow: none !important;
     display: flex;
@@ -800,16 +800,29 @@ body.dark .table-custom th {
     gap: 6px;
     transition: var(--apple-transition);
 }
-#btn-wialon-status:hover { background-color: #dbeafe !important; }
-#btn-wialon-status i { font-size: 0.7rem; }
+#btn-wialon-status span, #wialon-text {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+}
+#btn-wialon-status:hover { background-color: #e2e8f0 !important; color: #0f172a !important; }
+#btn-wialon-status i { font-size: 0.75rem; }
 @keyframes pulseGps {
     0% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.5; transform: scale(1.2); }
     100% { opacity: 1; transform: scale(1); }
 }
+#btn-wialon-status.btn-primary {
+    background-color: #e0f2fe !important;
+    color: #0f172a !important;
+    border-color: #7dd3fc !important;
+}
+#btn-wialon-status.btn-primary span, #btn-wialon-status.btn-primary #wialon-text {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+}
 #btn-wialon-status.btn-primary i {
     animation: pulseGps 2s infinite;
-    color: #2563eb !important;
+    color: #0284c7 !important;
 }
 
 /* 3. Buscador Falso en Topbar (Estilo Figma) */
@@ -1195,33 +1208,42 @@ body.dark #sidebarMenu a.active { background-color: #2563eb !important; color: #
 
 /* 3. BOTÓN GPS MINI */
 #btn-wialon-status {
-    background-color: transparent !important;
-    color: var(--subtext) !important;
-    border: 1px solid var(--border) !important;
-    font-weight: 600 !important;
-    padding: 2px 10px !important;
-    height: 26px !important;
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    font-weight: 700 !important;
+    padding: 3px 12px !important;
+    height: 28px !important;
     border-radius: 14px !important;
-    box-shadow: none !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.65rem !important;
+    font-size: 0.72rem !important;
     transition: all 0.3s ease;
 }
-#btn-wialon-status i { font-size: 0.6rem !important; }
+#btn-wialon-status span, #btn-wialon-status #wialon-text {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+}
+#btn-wialon-status i { font-size: 0.7rem !important; }
 
 #btn-wialon-status.btn-outline-warning {
-    background-color: rgba(245, 158, 11, 0.1) !important;
-    color: #f59e0b !important;
-    border-color: rgba(245, 158, 11, 0.2) !important;
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    color: #0f172a !important;
+    border-color: rgba(245, 158, 11, 0.4) !important;
 }
+#btn-wialon-status.btn-outline-warning span, #btn-wialon-status.btn-outline-warning #wialon-text { color: #0f172a !important; font-weight: 700 !important; }
 #btn-wialon-status.btn-outline-warning i { color: #f59e0b !important; }
 
 #btn-wialon-status.btn-primary {
-    background-color: rgba(37, 99, 235, 0.08) !important;
-    color: #2563eb !important;
-    border-color: rgba(37, 99, 235, 0.2) !important;
+    background-color: #e0f2fe !important;
+    color: #0f172a !important;
+    border-color: #7dd3fc !important;
+}
+#btn-wialon-status.btn-primary span, #btn-wialon-status.btn-primary #wialon-text {
+    color: #0f172a !important;
+    font-weight: 700 !important;
 }
 
 @keyframes pulseGpsDot {
@@ -1230,16 +1252,20 @@ body.dark #sidebarMenu a.active { background-color: #2563eb !important; color: #
     100% { opacity: 1; transform: scale(1); }
 }
 #btn-wialon-status.btn-primary i {
-    color: #2563eb !important;
+    color: #0284c7 !important;
     animation: pulseGpsDot 1.5s infinite;
 }
 
 body.dark #btn-wialon-status.btn-primary {
-    background-color: rgba(59, 130, 246, 0.15) !important;
-    color: #60a5fa !important;
-    border-color: rgba(59, 130, 246, 0.3) !important;
+    background-color: #e0f2fe !important;
+    color: #0f172a !important;
+    border-color: #7dd3fc !important;
 }
-body.dark #btn-wialon-status.btn-primary i { color: #60a5fa !important; }
+body.dark #btn-wialon-status.btn-primary span, body.dark #btn-wialon-status.btn-primary #wialon-text {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+}
+body.dark #btn-wialon-status.btn-primary i { color: #0284c7 !important; }
 
 /* ============================================================
    🎯 ALTO CONTRASTE PARA MODALES — ver reglas en "5. MODALES LIMPIOS"
