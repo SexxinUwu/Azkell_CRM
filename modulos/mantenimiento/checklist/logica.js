@@ -2725,18 +2725,18 @@ window.abrirDetalleChecklist = async function(id) {
     // ── 1. DATOS DEL REPORTE ──
     let html = `
         <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
-            <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                 <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size:1rem;">
                     <i class="bi bi-file-earmark-text-fill text-primary"></i> Datos del Reporte
                 </h6>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-1.5 ms-auto">
                     ${r.estado !== 'Finalizado' ? `
-                    <button type="button" class="btn btn-outline-primary btn-sm fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.abrirEditarChecklist(${r.id})">
-                        <i class="bi bi-pencil-square"></i> Editar Reporte
+                    <button type="button" class="btn btn-outline-primary btn-sm fw-bold d-flex align-items-center justify-content-center shadow-2xs px-2.5 py-1.5" onclick="window.abrirEditarChecklist(${r.id})" title="Editar Reporte" style="border-radius:10px;">
+                        <i class="bi bi-pencil-square fs-6"></i><span class="d-none d-md-inline ms-1">Editar Reporte</span>
                     </button>
                     ` : ''}
-                    <button type="button" class="btn btn-outline-danger btn-sm fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.generarPDF_Checklist(${r.id})">
-                        <i class="bi bi-printer-fill"></i> Imprimir PDF (F-MAN-001)
+                    <button type="button" class="btn btn-outline-danger btn-sm fw-bold d-flex align-items-center justify-content-center shadow-2xs px-2.5 py-1.5" onclick="window.generarPDF_Checklist(${r.id})" title="Imprimir PDF (F-MAN-001)" style="border-radius:10px;">
+                        <i class="bi bi-file-earmark-pdf-fill fs-6"></i><span class="d-none d-md-inline ms-1">Imprimir PDF (F-MAN-001)</span>
                     </button>
                     <div>${badgeEstado}</div>
                 </div>
