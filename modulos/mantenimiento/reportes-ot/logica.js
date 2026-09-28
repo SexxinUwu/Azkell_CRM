@@ -813,6 +813,7 @@ window.rotAbrirDetalle = function(idOT) {
                     </h6>
                     <span class="badge bg-info bg-opacity-10 text-info fw-bold rounded-pill px-2 py-1" id="rot-srv-count" style="font-size: 0.7rem;">0</span>
                 </div>
+                ${esAprobada ? `<button class="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 py-1" style="font-size: 0.72rem;" onclick="event.stopPropagation();window.rotAbrirNuevaOrdenServicio('${rotEscHtml(idOT)}','${rotEscHtml(ot.placa||'')}')"><i class="bi bi-plus-lg me-1"></i>Agregar</button>` : ''}
             </div>
             <div id="rot-srv-body"><div class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>
         </div>
@@ -964,6 +965,7 @@ window.rotAbrirDetalle = function(idOT) {
     // Fetch trabajos + materiales + backlog + inspecciones + neumáticos en paralelo
     window.rotOtTrabajosActivos   = [];
     window.rotOtMaterialesActivos = [];
+    window.rotOtServiciosActivos  = [];
     window.rotOtInspeccionesActivas = [];
     window.rotOtNeumaticosActivos = [];
 
@@ -976,38 +978,71 @@ window.rotAbrirDetalle = function(idOT) {
         fetch('/api/neumaticos/inspecciones?id_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : { ok:false, data:[] }; }).catch(function(){ return { ok:false, data:[] }; })
     ]).then(function(res) {
         window.rotOtTrabajosActivos   = Array.isArray(res[0]) ? res[0] : [];
-        window.rotOtMaterialesActivos = Array.isArray(res[1]) ? res[1] : [];
+        var rawMateriales             = Array.isArray(res[1]) ? res[1] : [];
         var backlogItems              = Array.isArray(res[2]) ? res[2] : [];
         window.rotOtInspeccionesActivas = Array.isArray(res[3]) ? res[3] : [];
-        var servicios = Array.isArray(res[4]) ? res[4] : [];
+        var rawEntradas               = Array.isArray(res[4]) ? res[4] : [];
         window.rotOtNeumaticosActivos = (res[5] && res[5].ok && Array.isArray(res[5].data)) ? res[5].data : (Array.isArray(res[5]) ? res[5] : []);
 
-        servicios = servicios.filter(function(s) { return (s.tipo_orden||'').toLowerCase() === 'orden de servicio' && (s.estado || '').toLowerCase() !== 'anulado' && (s.estado || '').toLowerCase() !== 'anulada'; });
-        var srvBody = document.getElementById('rot-srv-body');
-        var srvCount = document.getElementById('rot-srv-count');
-        if (srvCount) srvCount.textContent = servicios.length;
-        if (srvBody) {
-            if (!servicios.length) {
-                srvBody.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay servicios de terceros registrados.</div>';
-            } else {
-                var sHTML = '';
-                servicios.forEach(function(srv) {
-                    var svcNames = (srv.items && srv.items.length > 0) ? srv.items.map(function(it) { return it.descripcion; }).join(', ') : 'Servicio sin descripción';
-                    sHTML += '<div style="padding:10px 12px; border-bottom:1px solid var(--border); font-size:0.8rem;">' +
-                             '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-                                '<strong>' + rotEscHtml(svcNames) + '</strong>' +
-                                '<span style="color:#16a34a; font-weight:bold;">S/ ' + Number(srv.total_pen || 0).toLocaleString('es-PE', {minimumFractionDigits:2}) + '</span>' +
-                             '</div>' +
-                             '</div>';
-                });
-                srvBody.innerHTML = sHTML;
-            }
+        // Helper para identificar ítems de servicio (SERV-XXXX o palabras clave de servicios tercerizados)
+        function rotEsItemServicio(it) {
+            if (!it) return false;
+            var cod = String(it.inventario_id || it.codigo || '').toUpperCase();
+            var desc = String(it.descripcion || it.producto || it.trabajo_realizado || '').toUpperCase();
+            if (cod.startsWith('SERV') || cod.startsWith('SRV')) return true;
+            if (desc.includes('SERVICIO') || desc.includes('TORNO') || desc.includes('SOLDADURA') || desc.includes('RECTIFICAC') || desc.includes('MANTENIMIENTO EXTERNO') || desc.includes('REPARACION DE TANQUE') || desc.includes('REPARACIÓN DE TANQUE') || desc.includes('ALINEAMIENTO') || desc.includes('BALANCEO') || desc.includes('VULCANIZADO') || desc.includes('LABORATORIO DIESEL')) return true;
+            return false;
         }
+
+        // Separar salidas físicas de almacén vs servicios registrados en vales
+        var pureMateriales = [];
+        var serviciosDeVales = [];
+
+        rawMateriales.forEach(function(m) {
+            var items = Array.isArray(m.items) ? m.items : [];
+            var serviceItems = items.filter(rotEsItemServicio);
+            var partItems = items.filter(function(it){ return !rotEsItemServicio(it); });
+
+            if (partItems.length > 0 || !items.length) {
+                var mCloned = Object.assign({}, m);
+                mCloned.items = partItems.length > 0 ? partItems : items;
+                mCloned.total_pen = (partItems.length > 0)
+                    ? partItems.reduce(function(s, it){ return s + (parseFloat(it.importe) || (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0))); }, 0)
+                    : parseFloat(m.total_pen || m.costo_total || 0);
+                pureMateriales.push(mCloned);
+            }
+
+            if (serviceItems.length > 0) {
+                var sCloned = Object.assign({}, m);
+                sCloned.tipo_orden = 'Servicio (Vale)';
+                sCloned.items = serviceItems;
+                sCloned.total_pen = serviceItems.reduce(function(s, it){ return s + (parseFloat(it.importe) || (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0))); }, 0);
+                serviciosDeVales.push(sCloned);
+            }
+        });
+
+        window.rotOtMaterialesActivos = pureMateriales;
+
+        // Filtrar y estructurar Órdenes de Servicio de entradas_inv
+        var ordenesServicios = rawEntradas.filter(function(s) {
+            var tipo = (s.tipo_orden || '').toLowerCase();
+            var est = (s.estado || '').toLowerCase();
+            if (est === 'anulado' || est === 'anulada' || est === 'rechazado' || est === 'rechazada') return false;
+            if (tipo === 'orden de servicio') return true;
+            if (Array.isArray(s.items) && s.items.some(rotEsItemServicio)) return true;
+            return false;
+        });
+
+        // Combinar todas las fuentes de servicios de terceros
+        window.rotOtServiciosActivos = [].concat(ordenesServicios, serviciosDeVales);
+
         rotRenderSecTrabajos(idOT, esAprobada);
         rotRenderSecMateriales(idOT, puedeAgregarMaterial);
+        rotRenderSecServicios(idOT, esAprobada);
         rotRenderSecBacklog(backlogItems, idOT);
         rotRenderSecInspecciones(idOT);
         rotRenderSecNeumaticos(idOT);
+
         // Actualizar costo total dinámico
         var costoTr = window.rotOtTrabajosActivos
             .reduce(function(s, t) {
@@ -1017,8 +1052,9 @@ window.rotAbrirDetalle = function(idOT) {
         var costoMat = window.rotOtMaterialesActivos
             .filter(function(m){ return (m.estado || '').toLowerCase() !== 'anulado'; })
             .reduce(function(s, m){ return s + parseFloat(m.total_pen || m.costo_total || 0); }, 0);
-        var costoServ = servicios
-            .reduce(function(s, srv){ return s + parseFloat(srv.total_pen || 0); }, 0);
+        var costoServ = (window.rotOtServiciosActivos || [])
+            .filter(function(srv){ return (srv.estado || '').toLowerCase() !== 'anulado' && (srv.estado || '').toLowerCase() !== 'anulada'; })
+            .reduce(function(s, srv){ return s + parseFloat(srv.total_pen || srv.costo_total || 0); }, 0);
         var elCosto = document.getElementById('rot-ot-costo-total');
         if (elCosto) elCosto.textContent = 'S/ ' + (costoTr + costoMat + costoServ).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     });
@@ -3050,6 +3086,112 @@ function rotRenderSecMateriales(idOt, esAprobada) {
     }
     body.innerHTML = html;
 }
+
+// ── Render dinámico: sección Servicios de Terceros ───────────────
+function rotRenderSecServicios(idOt, esAprobada) {
+    var body = document.getElementById('rot-srv-body');
+    var count = document.getElementById('rot-srv-count');
+    if (!body) return;
+    var lista = window.rotOtServiciosActivos || [];
+    if (count) count.textContent = lista.length;
+
+    if (!lista.length) {
+        body.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay servicios de terceros registrados.</div>';
+        return;
+    }
+
+    var totalServicios = 0;
+    var html = '';
+
+    lista.forEach(function(srv) {
+        var estado = (srv.estado || 'Pendiente').trim();
+        var estadoLower = estado.toLowerCase();
+        var badge = '';
+
+        if (estadoLower === 'procesado' || estadoLower === 'pagado' || srv.nro_operacion || srv.estado_pago === 'PAGADO') {
+            badge = '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill" style="font-size:0.7rem;"><i class="bi bi-check-all me-1"></i>' + (srv.nro_operacion ? 'Pagado (Op: ' + rotEscHtml(srv.nro_operacion) + ')' : 'Pagado / Procesado') + '</span>';
+        } else if (estadoLower === 'aprobado' || estadoLower === 'aprobada') {
+            badge = '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 rounded-pill" style="font-size:0.7rem;"><i class="bi bi-check-circle me-1"></i>Aprobado</span>';
+        } else if (estadoLower === 'despachado') {
+            badge = '<span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2 py-1 rounded-pill" style="font-size:0.7rem;"><i class="bi bi-box-seam me-1"></i>Despachado</span>';
+        } else if (estadoLower === 'anulado' || estadoLower === 'anulada') {
+            badge = '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1 rounded-pill" style="font-size:0.7rem;"><i class="bi bi-x-circle me-1"></i>Anulado</span>';
+        } else {
+            badge = '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1 rounded-pill" style="font-size:0.7rem;"><i class="bi bi-clock-history me-1"></i>' + rotEscHtml(estado) + '</span>';
+        }
+
+        var items = srv.items || [];
+        var srvDesc = items.length > 0 
+            ? items.map(function(it) { return (it.inventario_id ? '[' + it.inventario_id + '] ' : '') + (it.descripcion || 'Servicio'); }).join(', ')
+            : (srv.descripcion || 'Servicio de Terceros');
+
+        var monto = parseFloat(srv.total_pen || srv.costo_total || 0);
+        totalServicios += monto;
+        var moneda = srv.moneda === 'USD' ? '$' : 'S/';
+
+        var prov = srv.proveedor || srv.razon_social || '';
+
+        html += '<div style="padding:10px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;">'
+              + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+              + '  <div>'
+              + '    <span style="font-weight:700;color:var(--text);font-size:0.78rem;">' + rotEscHtml(srv.id || srv.codigo || 'OS') + '</span> '
+              +      badge
+              + '  </div>'
+              + '  <span style="color:#16a34a;font-weight:800;font-size:0.85rem;white-space:nowrap;">' + moneda + ' ' + monto.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</span>'
+              + '</div>'
+              + '<div style="color:var(--text);margin-top:4px;font-weight:600;">' + rotEscHtml(srvDesc) + '</div>'
+              + (prov ? '<div style="font-size:0.75rem;color:var(--subtext);margin-top:2px;"><i class="bi bi-building me-1"></i>' + rotEscHtml(prov) + '</div>' : '')
+              + (srv.fecha_creacion || srv.fecha ? '<div style="font-size:0.72rem;color:var(--subtext);margin-top:1px;"><i class="bi bi-calendar3 me-1"></i>' + String(srv.fecha_creacion || srv.fecha).slice(0,10) + '</div>' : '')
+              + '</div>';
+    });
+
+    if (totalServicios > 0) {
+        html += '<div style="padding:8px 12px;font-size:0.82rem;font-weight:700;text-align:right;color:#16a34a;">Total Servicios: S/ ' + totalServicios.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</div>';
+    }
+
+    body.innerHTML = html;
+}
+
+window.rotAbrirNuevaOrdenServicio = function(idOt, placa) {
+    if (typeof window.abrirModalNuevaEntrada === 'function') {
+        window.abrirModalNuevaEntrada();
+        var tipoOrdEl = document.getElementById('ent-f-tipo-orden');
+        if (tipoOrdEl) {
+            tipoOrdEl.value = 'Orden de servicio';
+            if (typeof window._entToggleTipoOrden === 'function') window._entToggleTipoOrden();
+        }
+        var otPlacaEl = document.getElementById('ent-f-ot-placa');
+        if (otPlacaEl && placa) otPlacaEl.value = placa;
+        if (typeof window._cbSet === 'function' && idOt) {
+            window._cbSet('ent-f-ot', idOt, idOt);
+        }
+    } else {
+        if (typeof window.rotToast === 'function') window.rotToast('Cargando módulo de Órdenes de Servicio...', 'bg-info');
+        var script = document.createElement('script');
+        script.src = '/modulos/almacen/entradas/logica.js?v=' + Date.now();
+        script.onload = function() {
+            if (typeof window.abrirModalNuevaEntrada === 'function') {
+                window.abrirModalNuevaEntrada();
+                var tipoOrdEl = document.getElementById('ent-f-tipo-orden');
+                if (tipoOrdEl) {
+                    tipoOrdEl.value = 'Orden de servicio';
+                    if (typeof window._entToggleTipoOrden === 'function') window._entToggleTipoOrden();
+                }
+                var otPlacaEl = document.getElementById('ent-f-ot-placa');
+                if (otPlacaEl && placa) otPlacaEl.value = placa;
+                if (typeof window._cbSet === 'function' && idOt) {
+                    window._cbSet('ent-f-ot', idOt, idOt);
+                }
+            } else {
+                alert('No se pudo abrir el formulario de Orden de Servicio.');
+            }
+        };
+        script.onerror = function() {
+            alert('Error al cargar la lógica de Órdenes de Servicio.');
+        };
+        document.body.appendChild(script);
+    }
+};
 
 // ── Agregar Trabajo ───────────────────────────────────────────────
 window.rotAgregarTrabajo = function(idOt) {
