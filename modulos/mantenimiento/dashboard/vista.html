@@ -1,0 +1,308 @@
+<style>
+/* ─── DASHBOARD MOBILE GROUPED INSET CARDS (DISEÑO OPCIÓN A) ─── */
+@media (max-width: 767.98px) {
+    .topbar { display: none !important; }
+    #root-dinamico, .main-area { 
+        padding: 0 !important; 
+        overflow-y: auto !important; 
+        display: flex !important;
+        flex-direction: column !important;
+        background: var(--bg, #f8fafc) !important;
+    }
+
+    #moduloDashboard {
+        padding: 1rem !important;
+        margin: 0 !important;
+        background: var(--bg, #f8fafc) !important;
+        flex: 1 1 0;
+        padding-bottom: 6rem !important;
+    }
+    #moduloDashboard .controls-row {
+        display: none !important;
+    }
+    #kpi-metrics-row {
+        padding: 0 !important;
+        margin: 0 0 1.25rem 0 !important;
+    }
+    
+    /* Hero Greeting Header */
+    .dash-mob-header-wrap {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+    }
+    .dash-mob-avatar-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #38bdf8, #2563eb);
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px rgba(37,99,235,0.22);
+        flex-shrink: 0;
+    }
+    .dash-mob-greeting-title {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: var(--text, #0f172a);
+        margin: 0;
+        line-height: 1.2;
+    }
+    .dash-mob-greeting-sub {
+        font-size: 0.78rem;
+        color: var(--subtext, #64748b);
+        font-weight: 600;
+        margin: 2px 0 0 0;
+    }
+    .dash-mob-btn-reload {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: var(--surface, #ffffff);
+        border: 1px solid var(--border, #e2e8f0);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text, #1e293b);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        cursor: pointer;
+        transition: transform 0.1s;
+    }
+    .dash-mob-btn-reload:active { transform: scale(0.95); }
+
+    /* KPI Grid Cards al estilo Inset */
+    .kpi-metric-card {
+        background: var(--surface, #ffffff) !important;
+        border: 1px solid var(--border, #e2e8f0) !important;
+        border-radius: 20px !important;
+        padding: 1.1rem !important;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.02) !important;
+        border-top: 1px solid var(--border, #e2e8f0) !important; /* Reemplaza la barra superior gruesa */
+        transition: transform 0.1s;
+    }
+    .kpi-metric-card:active { transform: scale(0.98); }
+    .kpi-metric-value {
+        font-size: 1.65rem !important;
+        font-weight: 800 !important;
+        color: var(--text, #0f172a) !important;
+        margin: 0.35rem 0 0.15rem 0 !important;
+        letter-spacing: -0.02em;
+    }
+    .kpi-metric-label {
+        font-size: 0.74rem !important;
+        font-weight: 700 !important;
+        color: var(--subtext, #64748b) !important;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    
+    .kpi-metric-icon-wrap {
+        border-radius: 12px !important;
+        width: 36px !important; 
+        height: 36px !important;
+        font-size: 1.15rem !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .kpi-metric-icon-wrap.primary { background: rgba(37,99,235,0.08) !important; color: #2563eb !important; }
+    .kpi-metric-icon-wrap.success { background: rgba(16,185,129,0.08) !important; color: #10b981 !important; }
+    .kpi-metric-icon-wrap.warning { background: rgba(245,158,11,0.08) !important; color: #f59e0b !important; }
+    .kpi-metric-icon-wrap.danger  { background: rgba(239,68,68,0.08) !important; color: #ef4444 !important; }
+
+    /* Grouped Inset Section */
+    .dash-section-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--subtext, #94a3b8);
+        text-transform: capitalize;
+        letter-spacing: 0.02em;
+        margin: 0 0 0.5rem 0.25rem;
+    }
+
+    #dash-mob-alerts-wrap {
+        padding: 0 !important;
+        margin-bottom: 1.25rem !important;
+    }
+    .dash-mob-alert-list {
+        background: var(--surface, #ffffff) !important;
+        border-radius: 20px !important;
+        border: 1px solid var(--border, #e2e8f0) !important;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.02) !important;
+        overflow: hidden;
+    }
+    .dash-mob-alert-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem !important;
+        text-decoration: none;
+        color: var(--text, #1e293b) !important;
+        border-bottom: 1px solid var(--border, #f1f5f9) !important;
+        transition: background 0.15s;
+    }
+    .dash-mob-alert-item:active { background: rgba(0,0,0,0.03); }
+    .dash-mob-alert-item:last-child { border-bottom: none !important; }
+
+    /* Clima Card Móvil Grouped Inset */
+    #dash-weather-card {
+        background: var(--surface, #ffffff) !important;
+        border: 1px solid var(--border, #e2e8f0) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.02) !important;
+        padding: 1.25rem !important;
+        margin-bottom: 1.25rem;
+    }
+}
+</style>
+<div id="moduloDashboard" class="modulo-wrapper" style="display: flex; flex-direction: column;">
+
+    <!-- Mobile Hero Header Dinámico -->
+    <div class="d-flex d-md-none dash-mob-header-wrap align-items-center" id="dash-mob-header">
+        <div class="d-flex align-items-center gap-3">
+            <div class="dash-mob-avatar-badge" id="dash-mob-avatar">SA</div>
+            <div>
+                <h2 class="dash-mob-greeting-title" id="dash-mob-greeting">Hola, Sthefano 👋</h2>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <span class="badge bg-success-subtle text-success fw-bold rounded-pill px-2 py-1" style="font-size: 0.65rem; letter-spacing: 0.02em;">
+                        <i class="bi bi-circle-fill me-1" style="font-size: 0.45rem;"></i> Sistema Operativo
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="dash-mob-btn-reload" onclick="recargarDashboard()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+        </div>
+    </div>
+
+    <!-- Header Desktop -->
+    <div class="controls-row d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-grid-1x2-fill fs-4 text-primary"></i>
+            <h5 class="m-0 fw-bold text-dark-theme" data-i18n="dash.title">Centro de Comando</h5>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-success shadow-sm" id="badge-dash-status"><i class="bi bi-check-circle"></i> <span data-i18n="dash.system.active">Sistema Activo</span></span>
+            <button class="btn btn-outline-primary fw-bold btn-sm shadow-sm btn-reload-cache" onclick="recargarDashboard()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+        </div>
+    </div>
+
+    <!-- ── KPI METRIC CARDS ─────────────────────────────── -->
+    <div class="row g-3 mb-4" id="kpi-metrics-row">
+        <div class="col-6 col-md-3">
+            <div class="kpi-metric-card" style="cursor:pointer;" title="Ver todas las inspecciones" onclick="localStorage.setItem('fleet_insp_nav_filter','ALL');cargarModuloAislado('mantenimiento/inspecciones')">
+                <div class="kpi-metric-top">
+                    <div class="kpi-metric-icon-wrap primary"><i class="bi bi-truck-front"></i></div>
+                    <div class="kpi-metric-trend-wrap" id="kpi-trend-flota"></div>
+                </div>
+                <div class="kpi-metric-value" id="kpi-val-flota">—</div>
+                <div class="kpi-metric-label">Flota Activa</div>
+                <div class="kpi-metric-sparkline" id="kpi-spark-flota"></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-metric-card success" style="cursor:pointer;" title="Ver inspecciones vigentes" onclick="localStorage.setItem('fleet_insp_nav_filter','VIGENTE');cargarModuloAislado('mantenimiento/inspecciones')">
+                <div class="kpi-metric-top">
+                    <div class="kpi-metric-icon-wrap success"><i class="bi bi-shield-check"></i></div>
+                    <div class="kpi-metric-trend-wrap" id="kpi-trend-vigentes"></div>
+                </div>
+                <div class="kpi-metric-value" id="kpi-val-vigentes">—</div>
+                <div class="kpi-metric-label">Insp. Vigentes</div>
+                <div class="kpi-metric-sparkline" id="kpi-spark-vigentes"></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-metric-card warning" style="cursor:pointer;" title="Ver inspecciones por vencer" onclick="localStorage.setItem('fleet_insp_nav_filter','PRÓXIMO A VENCER');cargarModuloAislado('mantenimiento/inspecciones')">
+                <div class="kpi-metric-top">
+                    <div class="kpi-metric-icon-wrap warning"><i class="bi bi-clock"></i></div>
+                    <div class="kpi-metric-trend-wrap" id="kpi-trend-porvencer"></div>
+                </div>
+                <div class="kpi-metric-value" id="kpi-val-porvencer">—</div>
+                <div class="kpi-metric-label">Por Vencer (7d)</div>
+                <div class="kpi-metric-sparkline" id="kpi-spark-porvencer"></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-metric-card danger" style="cursor:pointer;" title="Ver inspecciones vencidas" onclick="localStorage.setItem('fleet_insp_nav_filter','NO VIGENTE');cargarModuloAislado('mantenimiento/inspecciones')">
+                <div class="kpi-metric-top">
+                    <div class="kpi-metric-icon-wrap danger"><i class="bi bi-exclamation-triangle"></i></div>
+                    <div class="kpi-metric-trend-wrap" id="kpi-trend-vencidas"></div>
+                </div>
+                <div class="kpi-metric-value" id="kpi-val-vencidas">—</div>
+                <div class="kpi-metric-label">Vencidas</div>
+                <div class="kpi-metric-sparkline" id="kpi-spark-vencidas"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── ACCIONES RÁPIDAS MÓVIL (d-block d-md-none) ─── -->
+    <div class="d-block d-md-none" id="dash-mob-alerts-wrap">
+        <h3 class="dash-section-title">Mantenimiento Preventivo</h3>
+        <div class="dash-mob-alert-list">
+            <a href="#" class="dash-mob-alert-item" onclick="event.preventDefault(); localStorage.setItem('fleet_fleetrun_nav_filter','VENCIDO'); cargarModuloAislado('mantenimiento/fleetrun')">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></div>
+                    <span class="fw-semibold" style="font-size:0.9rem;">MP Fleetrun Vencidos</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-danger-subtle text-danger fw-bold rounded-pill px-2" id="dash-mob-fleet-vencidos" style="font-size:0.75rem;">—</span>
+                    <i class="bi bi-chevron-right text-muted opacity-50"></i>
+                </div>
+            </a>
+            <a href="#" class="dash-mob-alert-item" onclick="event.preventDefault(); localStorage.setItem('fleet_fleetrun_nav_filter','POR VENCER'); cargarModuloAislado('mantenimiento/fleetrun')">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></div>
+                    <span class="fw-semibold" style="font-size:0.9rem;">MP Fleetrun Por Vencer</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-warning-subtle text-warning fw-bold rounded-pill px-2" id="dash-mob-fleet-porvencer" style="font-size:0.75rem;">—</span>
+                    <i class="bi bi-chevron-right text-muted opacity-50"></i>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- ── GRÁFICOS + ACTIVIDAD RECIENTE ───────────────── -->
+    <div class="row g-3 mb-4">
+
+        <!-- Widget Clima -->
+        <div class="col-12 col-md-4 col-xl-2 d-flex align-items-stretch">
+            <div class="kpi-card w-100 p-3 mb-0 text-center d-flex flex-column justify-content-center align-items-center" id="dash-weather-card" style="min-height:160px; position:relative; overflow:hidden;">
+                <!-- the content -->
+                <h6 class="fw-bold text-muted mb-2"><i class="bi bi-cloud-sun"></i> Clima Actual</h6>
+                <div class="fw-bold fs-6" id="dash-weather-city">Obteniendo...</div>
+                <div class="mb-2 text-muted" style="font-size:0.8rem;" id="dash-weather-desc">—</div>
+                <div class="fs-1 fw-bold text-primary mb-1" id="dash-weather-temp">—°</div>
+                <div class="text-muted" style="font-size:0.75rem;">
+                    <span>Min <span id="dash-weather-min">—°</span></span> • 
+                    <span>Max <span id="dash-weather-max">—°</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4 d-none d-md-block">
+            <div class="kpi-card h-100 p-3 chart-card-dashboard">
+                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pie-chart-fill"></i> <span data-i18n="dash.maint.health">Salud Mantenimientos</span></h6>
+                <div class="chart-container-dashboard">
+                    <canvas id="chartDashFleetrunStatus"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4 d-none d-md-block">
+            <div class="kpi-card h-100 p-3 chart-card-dashboard">
+                <h6 class="fw-bold text-success mb-3"><i class="bi bi-bar-chart-fill"></i> <span data-i18n="dash.insp.status">Estado Inspecciones</span></h6>
+                <div class="chart-container-dashboard">
+                    <canvas id="chartGeneralInspecciones"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
