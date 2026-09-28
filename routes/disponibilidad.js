@@ -8,8 +8,7 @@ module.exports = function (db, logAudit) {
     // Helper auditoría seguro
     function auditar(req, accion, detalle) {
         if (typeof logAudit === 'function') {
-            const user = req.user?.correo || req.user?.nombre || req.headers['x-user-email'] || req.body?.creado_por || req.body?.actualizado_por || 'Sistema';
-            logAudit(user, 'Disponibilidad Flota', accion, String(detalle || ''));
+            logAudit(req, 'FLOTA', 'Status Flota', accion, String(detalle || ''));
         }
     }
 

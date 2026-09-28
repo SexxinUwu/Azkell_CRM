@@ -39,6 +39,51 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ inspecciones.id_ot verificada');
         else console.warn('ALTER inspecciones.id_ot:', e.message);
     });
+    // ── Helper: sincronizar estado de reportes_fallas según OTs vinculadas ─────
+    function _sincronizarEstadoReportesFallas(targetDb) {
+        if (!targetDb) return;
+        const pool = targetDb;
+        pool.query("SELECT id, folio, ots_generadas_json, estado FROM reportes_fallas", (errRf, rowsRf) => {
+            if (errRf || !rowsRf || !rowsRf.length) return;
+            pool.query("SELECT ticket_entrada, id_ot, estado, detalles_json FROM ordenes_trabajo", (errOt, rowsOt) => {
+                if (errOt || !rowsOt) return;
+                const FINISHED_STATUSES = ['finalizado', 'finalizada', 'cerrada', 'cerrado', 'completada', 'completado', 'terminada', 'terminado', 'anulado', 'anulada'];
+
+                rowsRf.forEach(r => {
+                    let otsArr = [];
+                    try { otsArr = typeof r.ots_generadas_json === 'string' ? JSON.parse(r.ots_generadas_json) : (r.ots_generadas_json || []); } catch (e) { }
+                    if (!Array.isArray(otsArr)) otsArr = [];
+
+                    const otsVinculadas = (rowsOt || []).filter(o => {
+                        let d = {};
+                        try { d = typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : (o.detalles_json || {}); } catch (e) { }
+                        const oId = String(o.ticket_entrada || o.id_ot || '').trim();
+                        const isMatchOt = otsArr.some(otItem => String(otItem.idOt || otItem.ticket_entrada || '').trim() === oId);
+                        const isMatchRep = (d.id_reporte_falla && String(d.id_reporte_falla) === String(r.id)) ||
+                            (d.folio_reporte && String(d.folio_reporte) === String(r.folio));
+                        return isMatchOt || isMatchRep;
+                    });
+
+                    if (otsVinculadas.length === 0) {
+                        if (r.estado !== 'Pendiente') {
+                            pool.query("UPDATE reportes_fallas SET estado = 'Pendiente' WHERE id = ?", [r.id]);
+                        }
+                    } else {
+                        const todasFinalizadas = otsVinculadas.every(o => {
+                            const st = String(o.estado || '').toLowerCase().trim();
+                            return FINISHED_STATUSES.includes(st);
+                        });
+
+                        const nuevoEstado = todasFinalizadas ? 'Finalizado' : 'En Proceso';
+                        if (r.estado !== nuevoEstado) {
+                            pool.query("UPDATE reportes_fallas SET estado = ? WHERE id = ?", [nuevoEstado, r.id]);
+                        }
+                    }
+                });
+            });
+        });
+    }
+
     // ── Helper: genera ID secuencial por año  (ej. OT-2026-0001) ─────
     // Solo busca IDs con sufijo de exactamente 4 dígitos (nuevo formato),
     // ignorando los IDs legacy con sufijos largos.
@@ -111,13 +156,18 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         const anio = new Date().getFullYear();
         const detJson = typeof detalles_json === 'string' ? detalles_json : JSON.stringify(detalles_json || {});
         generarId('ordenes_trabajo', 'id_ot', 'OT', anio, (nuevoId) => {
-            db.query(
+            const targetDb = req.db || db;
+            targetDb.query(
                 `INSERT INTO ordenes_trabajo (ticket_entrada, id_ot, placa, estado, detalles_json, creado_por, fecha_ingreso, id_rampa)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [nuevoId, nuevoId, placa.toUpperCase(), estado || 'Pendiente', detJson, creado_por || '', fecha_ingreso || new Date(), id_rampa || null],
                 (err, result) => {
                     if (err) return res.status(500).json({ error: err.message });
-                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId, id_ot: nuevoId });
+                    if (typeof logAudit === 'function') {
+                        logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'CREÓ', `Creó Orden de Trabajo ${nuevoId} para unidad ${placa.toUpperCase()}`);
+                    }
+                    _sincronizarEstadoReportesFallas(targetDb);
+                    res.json({ ok: true, id: result.insertId, id_ot: nuevoId });
                 }
             );
         });
@@ -130,14 +180,15 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         // Convert undefined to null for SQL
         const fInicio = fecha_inicio_ot ? fecha_inicio_ot : null;
         const fSalida = fecha_hora_salida ? fecha_hora_salida : null;
+        const targetDb = req.db || db;
 
-        db.query(
+        targetDb.query(
             "UPDATE ordenes_trabajo SET fecha_inicio_ot=?, fecha_hora_salida=? WHERE ticket_entrada=?",
             [fInicio, fSalida, ticketId],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if (typeof logAudit === 'function' && req.body && req.body.usuario) {
-                    logAudit(req.body.usuario, 'ot', 'MODIFICÓ', `Editó fechas de OT ${ticketId}`);
+                if (typeof logAudit === 'function') {
+                    logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'MODIFICÓ', `Editó fechas de OT ${ticketId}`);
                 }
                 res.json({ ok: true });
             }
@@ -147,6 +198,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.put('/ordenes-trabajo/:id', (req, res) => {
         const ticketId = req.params.id;
         const { accion, estado, detalles_json, fecha_hora_salida, detalles_cierre, usuario } = req.body;
+        const targetDb = req.db || db;
 
         if (accion === 'iniciar') {
             const { iniciado_por, fecha_inicio } = req.body;
@@ -158,12 +210,16 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 params = [fecha_inicio, iniciado_por || null, ticketId];
             }
 
-            db.query(
+            targetDb.query(
                 q,
                 params,
                 (err) => {
                     if (err) return res.status(500).json({ error: err.message });
-                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                    if (typeof logAudit === 'function') {
+                        logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'INICIÓ', `Inició trabajos de OT ${ticketId}`);
+                    }
+                    _sincronizarEstadoReportesFallas(targetDb);
+                    res.json({ ok: true });
                 }
             );
             return;
@@ -172,7 +228,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         if (accion === 'pausar') {
             const { motivo, pausado_por } = req.body;
             if (!motivo || !motivo.trim()) return res.status(400).json({ error: 'El motivo de pausa es requerido' });
-            db.query('SELECT fecha_pausa1,fecha_pausa2,fecha_pausa3 FROM ordenes_trabajo WHERE ticket_entrada=?', [ticketId], (err, rows) => {
+            targetDb.query('SELECT fecha_pausa1,fecha_pausa2,fecha_pausa3 FROM ordenes_trabajo WHERE ticket_entrada=?', [ticketId], (err, rows) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
                 const r = rows[0];
@@ -181,12 +237,15 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 else if (!r.fecha_pausa2) slot = 2;
                 else if (!r.fecha_pausa3) slot = 3;
                 else return res.status(400).json({ error: 'Límite de 3 pausas alcanzado' });
-                db.query(
+                targetDb.query(
                     `UPDATE ordenes_trabajo SET estado='Pausada', fecha_pausa${slot}=NOW(), motivo_pausa${slot}=?, pausado_por${slot}=? WHERE ticket_entrada=?`,
                     [motivo.trim(), pausado_por || null, ticketId],
                     (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });
-                        if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, slot });
+                        if (typeof logAudit === 'function') {
+                            logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'PAUSÓ', `Pausó OT ${ticketId} - Motivo: ${motivo.trim()}`);
+                        }
+                        res.json({ ok: true, slot });
                     }
                 );
             });
@@ -194,7 +253,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         }
 
         if (accion === 'reanudar') {
-            db.query('SELECT fecha_pausa1,fecha_fin_pausa1,fecha_pausa2,fecha_fin_pausa2,fecha_pausa3,fecha_fin_pausa3 FROM ordenes_trabajo WHERE ticket_entrada=?', [ticketId], (err, rows) => {
+            targetDb.query('SELECT fecha_pausa1,fecha_fin_pausa1,fecha_pausa2,fecha_fin_pausa2,fecha_pausa3,fecha_fin_pausa3 FROM ordenes_trabajo WHERE ticket_entrada=?', [ticketId], (err, rows) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
                 const r = rows[0];
@@ -203,12 +262,16 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 else if (r.fecha_pausa2 && !r.fecha_fin_pausa2) slot = 2;
                 else if (r.fecha_pausa3 && !r.fecha_fin_pausa3) slot = 3;
                 else return res.status(400).json({ error: 'No hay pausa activa' });
-                db.query(
+                targetDb.query(
                     `UPDATE ordenes_trabajo SET estado='En Proceso', fecha_fin_pausa${slot}=NOW() WHERE ticket_entrada=?`,
                     [ticketId],
                     (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });
-                        if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, slot });
+                        if (typeof logAudit === 'function') {
+                            logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'REANUDÓ', `Reanudó trabajos de OT ${ticketId}`);
+                        }
+                        _sincronizarEstadoReportesFallas(targetDb);
+                        res.json({ ok: true, slot });
                     }
                 );
             });
@@ -216,33 +279,44 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         }
 
         if (accion === 'anular') {
-            db.query("UPDATE ordenes_trabajo SET estado = 'Anulado' WHERE ticket_entrada = ?", [ticketId], (err) => {
+            targetDb.query("UPDATE ordenes_trabajo SET estado = 'Anulado' WHERE ticket_entrada = ?", [ticketId], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if (typeof logAudit === 'function') {
+                    logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'CANCELÓ', `Anuló OT ${ticketId}`);
+                }
+                _sincronizarEstadoReportesFallas(targetDb);
+                res.json({ ok: true });
             });
             return;
         }
 
         if (accion === 'reactivar') {
-            db.query("UPDATE ordenes_trabajo SET estado = 'En Proceso' WHERE ticket_entrada = ?", [ticketId], (err) => {
+            targetDb.query("UPDATE ordenes_trabajo SET estado = 'En Proceso' WHERE ticket_entrada = ?", [ticketId], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if (typeof logAudit === 'function') {
+                    logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'REACTIVÓ', `Reactivó OT ${ticketId}`);
+                }
+                _sincronizarEstadoReportesFallas(targetDb);
+                res.json({ ok: true });
             });
             return;
         }
 
         if (accion === 'aprobar') {
-            db.query('SELECT detalles_json FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
+            targetDb.query('SELECT detalles_json FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
                 const raw = rows[0].detalles_json;
                 let det = {};
                 try { det = typeof raw === 'string' ? JSON.parse(raw) : (raw || {}); } catch (e) { det = {}; }
                 det.aprobacion = 'Aprobada';
-                db.query('UPDATE ordenes_trabajo SET estado = \'Aprobada\', detalles_json = ? WHERE ticket_entrada = ?',
+                targetDb.query('UPDATE ordenes_trabajo SET estado = \'Aprobada\', detalles_json = ? WHERE ticket_entrada = ?',
                     [JSON.stringify(det), ticketId], (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });
-                        if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                        if (typeof logAudit === 'function') {
+                            logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'APROBÓ', `Aprobó OT ${ticketId}`);
+                        }
+                        res.json({ ok: true });
                     }
                 );
             });
@@ -251,7 +325,6 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
         if (accion === 'cerrar') {
             const { comentario_cierre, cerrado_por, motivos_checklist, km_actual } = req.body;
-            const targetDb = req.db || db;
             targetDb.query('SELECT detalles_json, placa FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], async (err, rows) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
@@ -315,7 +388,11 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                         cerrado_por || null, ticketId],
                     (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });
-                        if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                        if (typeof logAudit === 'function') {
+                            logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'FINALIZÓ', `Finalizó y cerró OT ${ticketId} para unidad ${placaOT}`);
+                        }
+                        _sincronizarEstadoReportesFallas(targetDb);
+                        res.json({ ok: true });
                     }
                 );
             });
@@ -324,7 +401,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
         if (accion === 'editar') {
             const { tipo_ot, sub_tipo, supervisor, situacion_inicial, motivo, km, tecnicos, trabajos_det } = req.body;
-            db.query('SELECT detalles_json, id_rampa, placa FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
+            targetDb.query('SELECT detalles_json, id_rampa, placa FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
                 const raw = rows[0].detalles_json;
@@ -348,12 +425,12 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                     det.trabajos_det = trabajos_det;
                 }
 
-                db.query('UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ?',
+                targetDb.query('UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ?',
                     [JSON.stringify(det), ticketId], (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });
 
                         if (Array.isArray(trabajos_det) && trabajos_det.length > 0) {
-                            db.query('DELETE FROM trabajos_ot WHERE ticket_visita = ? OR id_ot = ?', [ticketId, ticketId], () => {
+                            targetDb.query('DELETE FROM trabajos_ot WHERE ticket_visita = ? OR id_ot = ?', [ticketId, ticketId], () => {
                                 const insVals = trabajos_det.map((td, idx) => [
                                     `${ticketId}-${idx + 1}`,
                                     ticketId,
@@ -363,19 +440,22 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                                     'En Proceso'
                                 ]);
                                 if (insVals.length > 0) {
-                                    db.query('INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, trabajo_realizado, tecnico, estado) VALUES ?', [insVals], () => { });
+                                    targetDb.query('INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, trabajo_realizado, tecnico, estado) VALUES ?', [insVals], () => { });
                                 }
                             });
                         }
 
                         if (motivo !== undefined) {
                             if (idRampa) {
-                                db.query('UPDATE taller_rampas SET obs = ? WHERE id = ?', [motivo, idRampa]);
+                                targetDb.query('UPDATE taller_rampas SET obs = ? WHERE id = ?', [motivo, idRampa]);
                             } else if (placaOT) {
-                                db.query('UPDATE taller_rampas SET obs = ? WHERE UPPER(placa) = UPPER(?) AND (situacion != "Finalizado" OR situacion IS NULL) ORDER BY id DESC LIMIT 1', [motivo, placaOT]);
+                                targetDb.query('UPDATE taller_rampas SET obs = ? WHERE UPPER(placa) = UPPER(?) AND (situacion != "Finalizado" OR situacion IS NULL) ORDER BY id DESC LIMIT 1', [motivo, placaOT]);
                             }
                         }
-                        if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                        if (typeof logAudit === 'function') {
+                            logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'MODIFICÓ', `Editó datos de OT ${ticketId}`);
+                        }
+                        res.json({ ok: true });
                     }
                 );
             });
@@ -390,23 +470,28 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         if (fecha_hora_salida) { sets.push('fecha_hora_salida = ?'); params.push(new Date(fecha_hora_salida).toISOString().slice(0, 19).replace('T', ' ')); }
         if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
         params.push(ticketId);
-        db.query('UPDATE ordenes_trabajo SET ' + sets.join(', ') + ' WHERE ticket_entrada = ?', params, (err) => {
+        targetDb.query('UPDATE ordenes_trabajo SET ' + sets.join(', ') + ' WHERE ticket_entrada = ?', params, (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+            if (typeof logAudit === 'function') {
+                logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'MODIFICÓ', `Actualizó estado a ${estado || 'actualizado'} en OT ${ticketId}`);
+            }
+            _sincronizarEstadoReportesFallas(targetDb);
+            res.json({ ok: true });
         });
     });
 
     router.delete('/ordenes-trabajo/:id', (req, res) => {
         const ticketId = req.params.id;
+        const targetDb = req.db || db;
         // Cascade: borrar trabajos, salidas de inv e inspecciones
-        db.query('DELETE FROM trabajos_ot WHERE ticket_visita = ?', [ticketId], (err1) => {
-            db.query('DELETE FROM salidas_inv WHERE ticket_ot = ?', [ticketId], (err2) => {
-                db.query('DELETE FROM inspecciones WHERE id_ot = ?', [ticketId], (err3) => {
-                    db.query('DELETE FROM ordenes_trabajo WHERE ticket_entrada = ? OR id_ot = ?', [ticketId, ticketId], (err4) => {
+        targetDb.query('DELETE FROM trabajos_ot WHERE ticket_visita = ?', [ticketId], (err1) => {
+            targetDb.query('DELETE FROM salidas_inv WHERE ticket_ot = ?', [ticketId], (err2) => {
+                targetDb.query('DELETE FROM inspecciones WHERE id_ot = ?', [ticketId], (err3) => {
+                    targetDb.query('DELETE FROM ordenes_trabajo WHERE ticket_entrada = ? OR id_ot = ?', [ticketId, ticketId], (err4) => {
                         if (err4) return res.status(500).json({ error: err4.message });
 
                         // Desvincular OT eliminada de reportes_fallas
-                        db.query("SELECT id, ots_generadas_json FROM reportes_fallas WHERE ots_generadas_json IS NOT NULL", (errRf, rowsRf) => {
+                        targetDb.query("SELECT id, ots_generadas_json FROM reportes_fallas WHERE ots_generadas_json IS NOT NULL", (errRf, rowsRf) => {
                             if (!errRf && rowsRf && rowsRf.length) {
                                 rowsRf.forEach(rf => {
                                     try {
@@ -416,7 +501,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                                             otsArr = otsArr.filter(o => o.idOt !== ticketId && o.id_ot !== ticketId && o.ticket_entrada !== ticketId);
                                             if (otsArr.length !== lenAntes) {
                                                 const nuevoEstado = otsArr.length === 0 ? 'Pendiente' : 'En Proceso';
-                                                db.query("UPDATE reportes_fallas SET ots_generadas_json = ?, estado = ? WHERE id = ?", [JSON.stringify(otsArr), nuevoEstado, rf.id]);
+                                                targetDb.query("UPDATE reportes_fallas SET ots_generadas_json = ?, estado = ? WHERE id = ?", [JSON.stringify(otsArr), nuevoEstado, rf.id]);
                                             }
                                         }
                                     } catch (e) { }
@@ -424,7 +509,10 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                             }
                         });
 
-                        if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                        _sincronizarEstadoReportesFallas(targetDb);
+                        if (typeof logAudit === 'function') {
+                            logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'ELIMINÓ', `Eliminó Orden de Trabajo ${ticketId}`);
+                        }
                         res.json({ ok: true });
                     });
                 });

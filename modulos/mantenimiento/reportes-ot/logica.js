@@ -313,10 +313,6 @@ function rotCleanObsText(text) {
     var raw = String(text)
         .replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '')
         .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
-        .replace(/(?:^|\n)\s*(?:\d+[\.\)\-]?\s*)?(?:FALLA\s*MANUAL|MANUAL)\s*:\s*/gim, function(match) {
-            return match.startsWith('\n') ? '\n' : '';
-        })
-        .replace(/^(?:FALLA\s*MANUAL|MANUAL)\s*:\s*/gim, '')
         .trim();
 
     var lines = raw.split('\n');
@@ -328,9 +324,18 @@ function rotCleanObsText(text) {
             .replace(/^[-*•]\s*/, '')
             .replace(/^\[[^\]]+\]\s*/, '')
             .replace(/^[A-Z0-9\s]+—\s*/i, '')
-            .replace(/^\d+\s+[^:]+:\s*/i, '')
             .replace(/\s*\((?:Téc|Tec|TÉC|TEC):[^\)]*\)/gi, '')
             .trim();
+        
+        if (clean.includes(':')) {
+            var parts = clean.split(':');
+            var itm = parts[0].replace(/^\d+[\.\)\-]?\s*/, '').trim();
+            var obs = parts.slice(1).join(':').trim();
+            clean = (itm && obs) ? (itm + ' : ' + obs) : (itm || obs);
+        } else {
+            clean = clean.replace(/^\d+[\.\)\-]?\s*/, '').trim();
+        }
+
         if (clean) cleanedLines.push('• ' + clean);
     });
     return cleanedLines.join('\n');
@@ -348,20 +353,20 @@ function rotGetCleanMotivoDisplay(det, ot) {
             || up === 'OBSERVACIÓN' || up === 'OBSERVACION';
     };
 
-    // 1. Si tiene motivos_array estructurado, formatear únicamente la descripción puntual de cada falla
+    // 1. Si tiene motivos_array estructurado, formatear con Item : Descripción sin números
     if (Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
         return det.motivos_array.map(function(m) {
-            var desc = (!esTextoGenerico(m.obs) && m.obs !== m.item) 
-                ? m.obs 
-                : (m.motivo || m.item || m.descripcion || 'Falla observada');
-            var clean = String(desc)
-                .replace(/^\[[^\]]+\]\s*/, '')
-                .replace(/^[A-Z0-9\s]+—\s*/i, '')
-                .replace(/^\d+\s+[^:]+:\s*/i, '')
-                .replace(/\s*\((?:Téc|Tec|TÉC|TEC):[^\)]*\)/gi, '')
-                .replace(/^[•\-\*]\s*/, '')
-                .trim();
-            return '• ' + clean;
+            var rawItem = String(m.item || '').replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
+            var itemClean = rawItem.replace(/^\d+[\.\)\-]?\s*/, '').trim() || rawItem;
+            var obsClean = String(m.obs || m.descripcion || m.motivo || '').replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').replace(/\s*\((?:Téc|Tec|TÉC|TEC):[^\)]*\)/gi, '').trim();
+
+            var line = itemClean;
+            if (obsClean && !esTextoGenerico(obsClean) && obsClean.toLowerCase() !== itemClean.toLowerCase()) {
+                line = itemClean ? (itemClean + ' : ' + obsClean) : obsClean;
+            } else if (!itemClean && obsClean) {
+                line = obsClean;
+            }
+            return '• ' + line;
         }).join('\n');
     }
 
@@ -371,11 +376,17 @@ function rotGetCleanMotivoDisplay(det, ot) {
             var clean = String(f)
                 .replace(/^\[[^\]]+\]\s*/, '')
                 .replace(/^[A-Z0-9\s]+—\s*/i, '')
-                .replace(/^\d+\s+[^:]+:\s*/i, '')
                 .replace(/\s*\((?:Téc|Tec|TÉC|TEC):[^\)]*\)/gi, '')
-                .replace(/^(Falla Manual|MANUAL):\s*/i, '')
                 .replace(/^[•\-\*]\s*/, '')
                 .trim();
+            if (clean.includes(':')) {
+                var parts = clean.split(':');
+                var itm = parts[0].replace(/^\d+[\.\)\-]?\s*/, '').trim();
+                var obs = parts.slice(1).join(':').trim();
+                clean = (itm && obs) ? (itm + ' : ' + obs) : (itm || obs);
+            } else {
+                clean = clean.replace(/^\d+[\.\)\-]?\s*/, '').trim();
+            }
             return '• ' + clean;
         }).join('\n');
     }

@@ -13,6 +13,29 @@ module.exports = (db, logAudit) => {
         return (req && req.db) ? req.db : db;
     }
 
+    // ── Middleware de Auditoría Automática para Seguridad ────────────────
+    router.use((req, res, next) => {
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+            const originalJson = res.json.bind(res);
+            res.json = function (data) {
+                if (data && (data.ok === true || data.data === 'Éxito' || data.success || data.id || res.statusCode < 400)) {
+                    if (typeof logAudit === 'function') {
+                        const accion = req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ';
+                        let sub = req.path.includes('garita') ? 'Garita' : 'Checklist Salida';
+                        let desc = `Operación de ${accion.toLowerCase()} en Seguridad (${req.path})`;
+                        if (req.body) {
+                            if (req.body.placa) desc = `${accion} inspección seguridad para unidad ${req.body.placa}`;
+                            else if (req.params.id) desc = `${accion} registro ID: ${req.params.id}`;
+                        }
+                        logAudit(req, 'SEGURIDAD', sub, accion, desc);
+                    }
+                }
+                return originalJson(data);
+            };
+        }
+        next();
+    });
+
     // ── Cargar helper S3 ──────────────────────────────────────────
     const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl } = require('../utils/s3');
 

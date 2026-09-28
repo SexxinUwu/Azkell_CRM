@@ -2455,10 +2455,10 @@ window.procesarGuardadoInspeccion = async function() {
     if (iIdOt) idOt = iIdOt.value;
 
     let datos = {
-        usuario: window.usuarioLogueado || localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || 'Sthefano Avila',
+        usuario: window.usuarioLogueado || localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || tecnico || 'NIXON PEREZ PEREZ',
         form: {
             id: idInsp, id_ot: idOt, fecha_ingreso: fecha, placa: placa, km_tablero: km, cliente: cliente, tecnico: tecnico, dias_propuestos: dias,
-            detalles_json: JSON.stringify(detalles), firma_base64: firmaData, usuarioAutor: window.usuarioLogueado || localStorage.getItem('fleet_user') || 'Sthefano Avila'
+            detalles_json: JSON.stringify(detalles), firma_base64: firmaData, usuarioAutor: window.usuarioLogueado || localStorage.getItem('fleet_user') || tecnico || 'NIXON PEREZ PEREZ'
         }
     };
 
@@ -3964,7 +3964,7 @@ window.guardarRegistroFrenos = async function() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 form: payload,
-                usuario: window.usuarioLogueado || localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || 'Sthefano Avila'
+                usuario: window.usuarioLogueado || localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || 'NIXON PEREZ PEREZ'
             })
         });
         let json = await res.json();

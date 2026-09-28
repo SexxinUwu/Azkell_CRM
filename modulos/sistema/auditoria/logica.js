@@ -72,8 +72,13 @@ function _cleanAuditUser(val) {
     if (!val) return _getLoggedUserFallback();
     var s = String(val).trim();
     var upper = s.toUpperCase();
-    // Evitar que roles genericos, tecnicos/mecanicos/placeholders aparezcan como el usuario del sistema
-    if (upper === 'ADMINISTRADOR' || upper === 'ADMIN' || upper === 'NIXON' || upper === 'ELVIS' || upper === 'TECNICO' || upper === 'MECANICO' || upper === 'SISTEMA' || upper === 'SISTEMA / AUTOMÁTICO' || upper.includes('[OBJECT') || upper === 'UNDEFINED' || upper === 'NULL' || upper === '') {
+    if (upper === '75527474' || upper === 'NIXON' || upper === 'NIXON PEREZ' || upper === 'NIXON PEREZ PEREZ') return 'NIXON PEREZ PEREZ';
+    if (upper === '72437318' || upper === 'STHEFANO' || upper === 'STHEFANO AVILA') return 'Sthefano Avila';
+    if (upper === '72746329' || upper === 'FABIANO' || upper === 'FABIANO TORRES') return 'Fabiano Torres';
+    if (upper === '70805535' || upper === 'LIDIA' || upper === 'LIDIA FLORES' || upper === 'LIDIA FLORES CORONEL') return 'LIDIA FLORES CORONEL';
+    if (upper === 'JESUS' || upper === 'JESUS MESIAS') return 'Jesus Mesias';
+    if (upper === 'SAUL' || upper === 'SAUL HENRY ROSAS' || upper === 'SAUL ROSAS') return 'Saul Henry Rosas';
+    if (upper === 'ADMINISTRADOR' || upper === 'ADMIN' || upper === 'SISTEMA' || upper === 'SISTEMA / AUTOMÁTICO' || upper.includes('[OBJECT') || upper === 'UNDEFINED' || upper === 'NULL' || upper === '') {
         return _getLoggedUserFallback();
     }
     return s;

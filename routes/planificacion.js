@@ -3,6 +3,30 @@ const router = express.Router();
 
 module.exports = (db, broadcast, logAudit) => {
 
+    // ── Middleware de Auditoría Automática para Planificación ────────────────
+    router.use((req, res, next) => {
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+            const originalJson = res.json.bind(res);
+            res.json = function (data) {
+                if (data && (data.ok === true || data.data === 'Éxito' || data.success || data.id || res.statusCode < 400)) {
+                    if (typeof logAudit === 'function') {
+                        const accion = req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ';
+                        let sub = 'Planificación MP';
+                        let desc = `Operación de ${accion.toLowerCase()} en Planificación MP (${req.path})`;
+                        if (req.body) {
+                            if (req.body.placa && req.body.tipo_mp) desc = `${accion} plan preventivo ${req.body.tipo_mp} para unidad ${req.body.placa}`;
+                            else if (req.body.placa) desc = `${accion} planificación para unidad ${req.body.placa}`;
+                            else if (req.params.id) desc = `${accion} plan ID: ${req.params.id}`;
+                        }
+                        logAudit(req, 'MANTENIMIENTO', sub, accion, desc);
+                    }
+                }
+                return originalJson(data);
+            };
+        }
+        next();
+    });
+
 // MÓDULO PLANIFICACIÓN PREVENTIVOS
 // ============================================================
 // GENERADORES DE ID

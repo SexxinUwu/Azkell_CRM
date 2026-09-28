@@ -2114,7 +2114,7 @@ window.renderizarTablaChecklist = function(lista) {
         const viajeBadge = r.orden_viaje ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1" style="font-size:0.7rem; font-weight:700;"><i class="bi bi-diagram-3-fill me-1"></i>${r.orden_viaje}</span>` : '';
 
         htmlTable += `
-        <tr>
+        <tr class="ck-fila-reporte" style="cursor: pointer;" onclick="window.abrirDetalleChecklist(${r.id})" title="Clic para ver detalle del reporte">
             <td class="ps-4 fw-bold text-primary font-monospace" style="min-width: 120px; font-size:0.9rem;">
                 <div>${r.folio}</div>
                 ${viajeBadge ? `<div class="mt-1">${viajeBadge}</div>` : ''}
@@ -2132,15 +2132,15 @@ window.renderizarTablaChecklist = function(lista) {
             </td>
             <td class="text-center" style="min-width: 110px;">${badgeEstado}</td>
             <td class="text-center" style="min-width: 130px;">${otsHtml}</td>
-            <td class="pe-4 text-end" style="min-width: 110px;">
+            <td class="pe-4 text-end" style="min-width: 110px;" onclick="event.stopPropagation();">
                 <div class="d-inline-flex align-items-center justify-content-end gap-1">
                     <!-- Botón PDF directo afuera -->
-                    <button type="button" class="ck-action-btn ck-btn-pdf" onclick="window.generarPDF_Checklist(${r.id})" title="Imprimir Formato PDF F-MAN-001">
+                    <button type="button" class="ck-action-btn ck-btn-pdf" onclick="event.stopPropagation(); window.generarPDF_Checklist(${r.id})" title="Imprimir Formato PDF F-MAN-001">
                         <i class="bi bi-file-earmark-pdf"></i>
                     </button>
 
                     <!-- Menú Desplegable 3 Puntos (Opciones adicionales) -->
-                    <div class="dropstart d-inline-block">
+                    <div class="dropstart d-inline-block" onclick="event.stopPropagation();">
                         <button class="btn btn-light border shadow-2xs rounded-3 p-0 d-flex align-items-center justify-content-center" 
                                 type="button" 
                                 data-bs-toggle="dropdown" 
@@ -2188,7 +2188,7 @@ window.renderizarTablaChecklist = function(lista) {
 
         // 2. Mobile Native Card
         htmlCards += `
-        <div class="ck-mobile-card">
+        <div class="ck-mobile-card" style="cursor: pointer;" onclick="window.abrirDetalleChecklist(${r.id})">
             <!-- Header Card: Folio + Fecha + Estado -->
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="d-flex align-items-center gap-2">
@@ -2218,7 +2218,7 @@ window.renderizarTablaChecklist = function(lista) {
             </div>
 
             <!-- Botones de Acción Móvil -->
-            <div class="d-flex align-items-center justify-content-between gap-1 pt-2 border-top">
+            <div class="d-flex align-items-center justify-content-between gap-1 pt-2 border-top" onclick="event.stopPropagation();">
                 <button type="button" class="btn btn-sm btn-outline-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.abrirDetalleChecklist(${r.id})" style="border-radius:8px; font-size:0.78rem;">
                     <i class="bi bi-eye"></i> Detalle
                 </button>
@@ -3213,14 +3213,26 @@ window.abrirModalGenerarOTs = async function(id) {
     } catch(e) {}
 
     window._genOT_TodasFallas = [];
+    const esObsGenerica = function(txt) {
+        if (!txt) return true;
+        const up = String(txt).trim().toUpperCase();
+        return up === 'OBSERVADO EN CHECKLIST' || up === 'OBSERVACION REPORTADA' || up === 'OBSERVACIÓN REPORTADA' 
+            || up === 'FALLA OBSERVADA' || up === 'FALLA REPORTADA' || up === 'SIN OBSERVACIÓN' || up === 'SIN OBSERVACION'
+            || up === 'OBSERVACIÓN' || up === 'OBSERVACION';
+    };
+
     (fallasT || []).forEach((f, idx) => {
         const isManual = f.sistema === 'MANUAL' || (f.item || '').toLowerCase().includes('falla manual');
-        const itemClean = isManual ? (f.obs || 'Observación adicional') : (f.item || f.nombre || 'Falla observada');
+        const rawItem = (f.item || f.nombre || (isManual ? 'Falla Manual' : 'Falla observada')).trim();
+        const itemClean = rawItem.replace(/^\d+[\.\)\-]?\s*/, '').trim() || rawItem;
         const obsClean = (f.obs || f.descripcion || '').trim();
-        const principalTxt = (obsClean && obsClean !== itemClean && obsClean !== 'Observado en checklist') ? obsClean : itemClean;
-        const subtituloTxt = (obsClean && obsClean !== itemClean && obsClean !== 'Observado en checklist') 
-            ? `${itemClean}${f.sistema && f.sistema !== 'MANUAL' ? ' • ' + f.sistema : ''}` 
-            : (f.sistema || 'TRACTO');
+        
+        let principalTxt = itemClean;
+        if (obsClean && !esObsGenerica(obsClean) && obsClean.toLowerCase() !== itemClean.toLowerCase()) {
+            principalTxt = `${itemClean} : ${obsClean}`;
+        }
+
+        const subtituloTxt = f.sistema ? `${f.sistema}` : 'TRACTO';
 
         window._genOT_TodasFallas.push({
             id: `ft_${idx}`,
@@ -3237,12 +3249,16 @@ window.abrirModalGenerarOTs = async function(id) {
     });
     (fallasR || []).forEach((f, idx) => {
         const isManual = f.sistema === 'MANUAL' || (f.item || '').toLowerCase().includes('falla manual');
-        const itemClean = isManual ? (f.obs || 'Observación adicional') : (f.item || f.nombre || 'Falla observada');
+        const rawItem = (f.item || f.nombre || (isManual ? 'Falla Manual' : 'Falla observada')).trim();
+        const itemClean = rawItem.replace(/^\d+[\.\)\-]?\s*/, '').trim() || rawItem;
         const obsClean = (f.obs || f.descripcion || '').trim();
-        const principalTxt = (obsClean && obsClean !== itemClean && obsClean !== 'Observado en checklist') ? obsClean : itemClean;
-        const subtituloTxt = (obsClean && obsClean !== itemClean && obsClean !== 'Observado en checklist') 
-            ? `${itemClean}${f.sistema && f.sistema !== 'MANUAL' ? ' • ' + f.sistema : ''}` 
-            : (f.sistema || 'REMOLQUE');
+        
+        let principalTxt = itemClean;
+        if (obsClean && !esObsGenerica(obsClean) && obsClean.toLowerCase() !== itemClean.toLowerCase()) {
+            principalTxt = `${itemClean} : ${obsClean}`;
+        }
+
+        const subtituloTxt = f.sistema ? `${f.sistema}` : 'REMOLQUE';
 
         window._genOT_TodasFallas.push({
             id: `fr_${idx}`,
@@ -3260,17 +3276,18 @@ window.abrirModalGenerarOTs = async function(id) {
     if (r.fallas_libres_text && r.fallas_libres_text.trim()) {
         const lineasLibres = r.fallas_libres_text.split('\n').map(l => l.trim()).filter(Boolean);
         lineasLibres.forEach((ll, lIdx) => {
-            const cleanTxt = ll.replace(/^[•\-\*]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '');
+            const cleanTxt = ll.replace(/^[•\-\*]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').trim();
+            const itemSinNum = cleanTxt.replace(/^\d+[\.\)\-]?\s*/, '').trim() || cleanTxt;
             window._genOT_TodasFallas.push({
                 id: `fl_${lIdx}`,
                 unidad: r.placa_tracto ? 'Tracto' : 'Remolque',
                 placa: r.placa_tracto || r.placa_remolque || 'UNIDAD',
                 sistema: 'TRABAJO ADICIONAL',
-                item: cleanTxt,
+                item: itemSinNum,
                 obs: cleanTxt,
                 esManual: true,
-                motivoDesc: cleanTxt,
-                principalTxt: cleanTxt,
+                motivoDesc: itemSinNum,
+                principalTxt: itemSinNum,
                 subtituloTxt: 'Trabajo Adicional'
             });
         });

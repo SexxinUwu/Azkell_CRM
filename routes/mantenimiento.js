@@ -3,6 +3,30 @@ const express = require('express');
 module.exports = function (db, logAudit) {
     const router = express.Router();
 
+    // ── Middleware de Auditoría Automática para Mantenimiento ────────────────
+    router.use((req, res, next) => {
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+            const originalJson = res.json.bind(res);
+            res.json = function (data) {
+                if (data && (data.ok === true || data.data === 'Éxito' || data.success || data.id || res.statusCode < 400)) {
+                    if (typeof logAudit === 'function') {
+                        const accion = req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ';
+                        let sub = 'Inspecciones';
+                        let desc = `Operación de ${accion.toLowerCase()} en Mantenimiento (${req.path})`;
+                        if (req.body) {
+                            if (req.body.placa) desc = `${accion} inspección técnica para unidad ${req.body.placa}`;
+                            else if (req.body.titulo) desc = `${accion} plantilla de inspección: ${req.body.titulo}`;
+                            else if (req.params.id) desc = `${accion} registro ID: ${req.params.id}`;
+                        }
+                        logAudit(req, 'MANTENIMIENTO', sub, accion, desc);
+                    }
+                }
+                return originalJson(data);
+            };
+        }
+        next();
+    });
+
     const DEFAULT_INSP_TEMPLATES = [
         { template_id: 'cat_llanta', titulo: 'LLANTA', items_json: [{ id: 'i_1', label: 'Cortes o Averías', type: 'okfalla' }, { id: 'i_2', label: 'PSI del Neumático', type: 'okfalla' }, { id: 'i_3', label: 'Otros', type: 'okfalla' }] },
         { template_id: 'cat_motor', titulo: 'MOTOR', items_json: [{ id: 'i_4', label: 'Niveles de Motor', type: 'okfalla' }, { id: 'i_5', label: 'Sistema de Lubricación Fugas', type: 'okfalla' }, { id: 'i_6', label: 'Sistema de Combustible', type: 'okfalla' }, { id: 'i_7', label: 'Sistema de Refrigeración', type: 'okfalla' }, { id: 'i_8', label: 'Correas, Ventilador y Accesorios', type: 'okfalla' }, { id: 'i_9', label: 'Código de Falla', type: 'okfalla' }, { id: 'i_10', label: 'Otros', type: 'okfalla' }] },

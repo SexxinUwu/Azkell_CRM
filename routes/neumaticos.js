@@ -10,6 +10,30 @@ module.exports = function (db, broadcast, logAudit) {
         return (typeof d.promise === 'function') ? d.promise() : d;
     }
 
+    // ── Middleware de Auditoría Automática para Neumáticos ────────────────
+    router.use((req, res, next) => {
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+            const originalJson = res.json.bind(res);
+            res.json = function (data) {
+                if (data && (data.ok === true || data.data === 'Éxito' || data.success || data.id || res.statusCode < 400)) {
+                    if (typeof logAudit === 'function') {
+                        const accion = req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ';
+                        let sub = 'Neumáticos';
+                        let desc = `Operación de ${accion.toLowerCase()} en Neumáticos (${req.path})`;
+                        if (req.body) {
+                            if (req.body.codigo_neumatico) desc = `${accion} neumático: ${req.body.codigo_neumatico}`;
+                            else if (req.body.placa) desc = `${accion} registro neumáticos para ${req.body.placa}`;
+                            else if (req.params.id) desc = `${accion} registro ID: ${req.params.id}`;
+                        }
+                        logAudit(req, 'MANTENIMIENTO', sub, accion, desc);
+                    }
+                }
+                return originalJson(data);
+            };
+        }
+        next();
+    });
+
     const _tenantsInitSet = new Set();
 
     const TABLES_SQL = [
