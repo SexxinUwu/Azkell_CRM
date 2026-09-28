@@ -809,7 +809,7 @@
             }
         }
 
-        const totalReal = (item.importe != null && parseFloat(item.importe) > 0) ? parseFloat(item.importe) : ((item.total_pen != null && parseFloat(item.total_pen) > 0) ? parseFloat(item.total_pen) : totalCalc);
+        const totalReal = totalCalc > 0 ? totalCalc : ((item.importe != null && parseFloat(item.importe) > 0) ? parseFloat(item.importe) : (esUSD && item.tipo_cambio ? (parseFloat(item.total_pen || 0) / parseFloat(item.tipo_cambio)) : parseFloat(item.total_pen || 0)));
         const totGenEl = document.getElementById('pr-det-oc-total-general');
         if (totGenEl) {
             totGenEl.textContent = sym + totalReal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

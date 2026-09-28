@@ -105,6 +105,14 @@
                         };
                     });
 
+                    const isUSD = (d.moneda === 'USD');
+                    const sumItems = itemsParsed.reduce((acc, it) => acc + (it.total || 0), 0);
+                    const totalOrden = sumItems > 0 ? sumItems : (
+                        isUSD 
+                            ? (d.total_pen && parseFloat(d.tipo_cambio) > 0 ? (parseFloat(d.total_pen) / parseFloat(d.tipo_cambio)) : parseFloat(d.total_pen || 0))
+                            : parseFloat(d.total_pen || 0)
+                    );
+
                     return {
                         id: d.id,
                         codigo: d.id,
@@ -120,14 +128,18 @@
                         contacto: contactoArr.join(' • ') || 'No especificado',
                         almacen: d.almacen || 'Principal',
                         destino: destinoStr,
-                        total: parseFloat(d.total_pen || 0),
-                        moneda: d.moneda === 'USD' ? '$' : 'S/',
+                        total: totalOrden,
+                        total_pen: parseFloat(d.total_pen || 0),
+                        moneda: isUSD ? '$' : 'S/',
+                        moneda_raw: d.moneda || 'PEN',
+                        tipo_cambio: parseFloat(d.tipo_cambio || 3.4),
                         tipo_igv: d.tipo_igv || 'incluido',
                         condicionPago: d.condicion_pago ? (d.condicion_pago + (d.dias_credito && d.condicion_pago.toLowerCase().includes('crédito') ? ` (${d.dias_credito} días)` : '')) : 'Al contado',
                         estado: estadoMap,
                         estado_raw: d.estado || 'REGISTRADA',
                         motivo: d.motivo_entrada || d.observaciones || 'Adquisición de artículos / repuestos',
                         justificacion: d.motivo_entrada || d.observaciones || 'Sin motivo especificado',
+                        observaciones: d.observaciones || '',
                         tipo_orden: d.tipo_orden || 'Orden de compra',
                         items: itemsParsed,
                         url_voucher: d.url_voucher_presigned || d.url_voucher,
@@ -211,7 +223,7 @@
         const obs = ordenes.filter(o => o.estado === 'observado');
         const rech = ordenes.filter(o => o.estado === 'rechazado');
 
-        const sumMontoSoles = (arr) => arr.reduce((acc, cur) => acc + (cur.moneda === 'S/' ? (cur.total || 0) : (cur.total || 0) * 3.75), 0);
+        const sumMontoSoles = (arr) => arr.reduce((acc, cur) => acc + (cur.total_pen != null && cur.total_pen > 0 ? cur.total_pen : (cur.moneda === 'S/' ? (cur.total || 0) : (cur.total || 0) * (cur.tipo_cambio || 3.75))), 0);
 
         // Actualizar contadores Bento
         const elPend = document.getElementById('kpi-count-pendientes');

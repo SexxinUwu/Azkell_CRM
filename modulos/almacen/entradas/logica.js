@@ -2539,18 +2539,26 @@ window.abrirModalDetalleOC = function(id) {
     var totalCalc = 0;
     var totalItemsOC = 0;
     var totalRenglones = items.length;
-    var sym = d.moneda === 'USD' ? '$ ' : 'S/ ';
+    var isUSD = (d.moneda === 'USD');
+    var sym = isUSD ? '$ ' : 'S/ ';
 
     items.forEach(function(it) {
         var cant = parseFloat(it.cantidad || 0);
         var cu = parseFloat(it.costo_unitario || 0);
+        var imp = parseFloat(it.importe);
         totalItemsOC += cant;
-        totalCalc += (cant * cu);
+        totalCalc += (!isNaN(imp) && imp > 0) ? imp : (cant * cu);
     });
 
     var totalRecibido = parseFloat(d.total_recibido || 0);
     var receptionPct = (totalItemsOC > 0) ? Math.min(100, Math.round((totalRecibido / totalItemsOC) * 100)) : 0;
-    var totalReal = (d.total_pen != null && parseFloat(d.total_pen) > 0) ? parseFloat(d.total_pen) : totalCalc;
+    
+    // Monto real en la moneda de la orden: si es USD no usar total_pen (que es la conversión a Soles)
+    var totalReal = totalCalc > 0 ? totalCalc : (
+        isUSD
+            ? (d.total_pen && parseFloat(d.tipo_cambio) > 0 ? (parseFloat(d.total_pen) / parseFloat(d.tipo_cambio)) : parseFloat(d.total_pen || 0))
+            : parseFloat(d.total_pen || 0)
+    );
 
     // Normalización de Estados
     var estNorm = (d.estado || 'REGISTRADA').toUpperCase().trim();
@@ -2562,21 +2570,51 @@ window.abrirModalDetalleOC = function(id) {
     var isRecepcionadoParcial = isProcesado && totalRecibido > 0 && totalRecibido < totalItemsOC;
     var isAprobadoReal = isAprobado || isProcesado || isRecepcionadoCompleto;
 
+    var aprobadorTxt = isAprobadoReal 
+        ? (d.aprobador_nombre || d.aprobado_por || 'Gerencia') 
+        : (isObservado ? (d.aprobador_nombre || d.aprobado_por || '') : (isAnulado ? (d.aprobador_nombre || d.aprobado_por || '') : '—'));
+
     // 1. Banner de Estado y Recepción
     var badgeEstado = document.getElementById('det-oc-badge-estado');
     var descEstado = document.getElementById('det-oc-desc-estado');
     if (isAnulado) {
+        var motivoAnul = (d.motivo_anulacion || d.observaciones || '').trim();
+        var matchNotaAnul = motivoAnul.match(/\[Nota Gerencia:\s*([^\]]+)\]/i);
+        var motivoAnulLimpio = matchNotaAnul ? matchNotaAnul[1].trim() : motivoAnul;
+        if (!matchNotaAnul && motivoAnul) {
+            motivoAnulLimpio = motivoAnul.replace(/\[Nota Gerencia:\s*/gi, '').replace(/\]/g, '').trim();
+        }
+
         if (badgeEstado) {
             badgeEstado.style.cssText = 'background: #fee2e2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; font-size: 0.75rem; padding: 6px 12px;';
             badgeEstado.innerHTML = '<i class="bi bi-x-circle me-1"></i> ANULADA';
         }
-        if (descEstado) descEstado.innerText = 'Orden de compra anulada o rechazada.';
+        if (descEstado) {
+            if (motivoAnulLimpio) {
+                descEstado.innerHTML = '<span class="text-danger fw-bold"><i class="bi bi-x-circle-fill me-1"></i> Motivo rechazo' + (aprobadorTxt ? ' (' + _entEsc(aprobadorTxt) + ')' : '') + ':</span> <span class="text-dark fw-semibold">"' + _entEsc(motivoAnulLimpio) + '"</span>';
+            } else {
+                descEstado.innerText = 'Orden de compra anulada o rechazada.';
+            }
+        }
     } else if (isObservado) {
+        var obsRaw = (d.observaciones || '').trim();
+        var matchNota = obsRaw.match(/\[Nota Gerencia:\s*([^\]]+)\]/i);
+        var obsLimpia = matchNota ? matchNota[1].trim() : obsRaw;
+        if (!matchNota && obsRaw) {
+            obsLimpia = obsRaw.replace(/\[Nota Gerencia:\s*/gi, '').replace(/\]/g, '').trim();
+        }
+
         if (badgeEstado) {
             badgeEstado.style.cssText = 'background: #fef3c7 !important; color: #d97706 !important; border: 1px solid #fcd34d !important; font-size: 0.75rem; padding: 6px 12px;';
             badgeEstado.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> OBSERVADA';
         }
-        if (descEstado) descEstado.innerText = 'Requiere subsanación o visto bueno directivo.';
+        if (descEstado) {
+            if (obsLimpia) {
+                descEstado.innerHTML = '<span class="text-warning-emphasis fw-bold"><i class="bi bi-chat-left-dots-fill me-1 text-warning"></i> Observación' + (aprobadorTxt ? ' (' + _entEsc(aprobadorTxt) + ')' : '') + ':</span> <span class="text-dark fw-semibold">"' + _entEsc(obsLimpia) + '"</span>';
+            } else {
+                descEstado.innerText = 'Requiere subsanación o visto bueno directivo.' + (aprobadorTxt ? ' (Observado por: ' + aprobadorTxt + ')' : '');
+            }
+        }
     } else if (isRecepcionadoCompleto) {
         if (badgeEstado) {
             badgeEstado.style.cssText = 'background: #dcfce7 !important; color: #15803d !important; border: 1px solid #86efac !important; font-size: 0.75rem; padding: 6px 12px;';
@@ -2614,12 +2652,25 @@ window.abrirModalDetalleOC = function(id) {
     var dateEl1 = document.getElementById('det-oc-step-date-1');
     if (dateEl1) dateEl1.innerText = fechaFmt;
 
-    var aprobadorTxt = isAprobadoReal ? (d.aprobador_nombre || d.aprobado_por || 'Gerencia') : '—';
     var userEl2 = document.getElementById('det-oc-step-user-2');
-    if (userEl2) userEl2.innerText = aprobadorTxt;
+    if (userEl2) userEl2.innerText = aprobadorTxt || '—';
 
     var node2 = document.getElementById('det-oc-step-node-2');
-    if (node2) node2.style.background = isAprobadoReal ? '#10b981' : '#cbd5e1';
+    if (node2) {
+        if (isAprobadoReal) {
+            node2.style.background = '#10b981';
+            node2.innerHTML = '<i class="bi bi-shield-check"></i>';
+        } else if (isObservado) {
+            node2.style.background = '#f59e0b';
+            node2.innerHTML = '<i class="bi bi-exclamation-triangle"></i>';
+        } else if (isAnulado) {
+            node2.style.background = '#dc2626';
+            node2.innerHTML = '<i class="bi bi-x-lg"></i>';
+        } else {
+            node2.style.background = '#cbd5e1';
+            node2.innerHTML = '<i class="bi bi-shield-check"></i>';
+        }
+    }
 
     var statusEl3 = document.getElementById('det-oc-step-status-3');
     if (statusEl3) statusEl3.innerText = (isProcesado || isRecepcionadoCompleto) ? 'Pago Registrado' : 'Por Liquidar';
@@ -2713,7 +2764,8 @@ window.abrirModalDetalleOC = function(id) {
             tbodyEl.innerHTML = items.map(function(it, idx) {
                 var cant = parseFloat(it.cantidad || 0);
                 var cu = parseFloat(it.costo_unitario || 0);
-                var imp = cant * cu;
+                var imp = parseFloat(it.importe);
+                if (isNaN(imp) || imp <= 0) imp = cant * cu;
                 var nombre = _entDescLimpia(it.descripcion, it.inventario_id);
                 var invId = it.inventario_id || ('ART-' + (idx + 1));
                 var um = (it.unidad_medida || it.unidad || 'UND').toUpperCase();
@@ -2734,7 +2786,7 @@ window.abrirModalDetalleOC = function(id) {
     // 5. Total en Letras y Total Neto
     var letrasEl = document.getElementById('det-oc-total-letras');
     if (letrasEl) {
-        var monedaTxt = d.moneda === 'USD' ? 'DÓLARES AMERICANOS' : 'SOLES';
+        var monedaTxt = isUSD ? 'DÓLARES AMERICANOS' : 'SOLES';
         letrasEl.innerText = (typeof window.numeroALetras === 'function' ? window.numeroALetras(totalReal) : '') + ' ' + monedaTxt;
     }
 
