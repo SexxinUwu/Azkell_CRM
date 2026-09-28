@@ -50,30 +50,31 @@
         left: 0;
         right: 0;
         z-index: 50 !important;
-        padding: 0.85rem 1.15rem !important;
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+        padding-bottom: 2px !important;
+        padding-left: 1.15rem !important;
+        padding-right: 1.15rem !important;
     }
     #tituloTopBar {
-        color: #ffffff !important;
-        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-        font-weight: 800 !important;
-        font-size: 1.15rem !important;
+        display: none !important;
+    }
+    #breadcrumb-nav {
+        display: none !important;
     }
     .btn-hamburger-mobile {
         color: #ffffff !important;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        font-size: 1.45rem !important;
     }
     .fake-search-bar {
-        background: rgba(255, 255, 255, 0.22) !important;
-        border: 1px solid rgba(255, 255, 255, 0.35) !important;
-        color: #ffffff !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-    }
-    .fake-search-bar i {
-        color: #ffffff !important;
+        display: none !important;
     }
     #btn-modo-revisor {
         display: none !important;
+    }
+    #topbar-avatar-mobile {
+        border: 2px solid rgba(255, 255, 255, 0.85) !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25) !important;
     }
 }
 @media (min-width: 992px) {
@@ -85,6 +86,7 @@
     #tituloTopBar {
         color: var(--text) !important;
         text-shadow: none !important;
+        display: block !important;
     }
 }
 
@@ -96,7 +98,7 @@
     width: 100%;
     min-height: 100vh;
     position: relative;
-    padding: calc(65px + env(safe-area-inset-top, 0px)) 1.15rem calc(115px + env(safe-area-inset-bottom, 24px)) 1.15rem;
+    padding: calc(48px + env(safe-area-inset-top, 0px)) 1.15rem calc(115px + env(safe-area-inset-bottom, 24px)) 1.15rem;
     transition: background 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

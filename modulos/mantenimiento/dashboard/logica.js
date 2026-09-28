@@ -3,10 +3,11 @@
 // ================================================================
 
 (function() {
-    // Fases climáticas para móvil
+    // Fases climáticas para móvil con color de fusión para la barra de estado del teléfono
     var FASES_CLIMATICAS = {
         dawn: {
             claseTema: 'theme-dawn',
+            topColor: '#a84b16',
             condicion: 'Amanecer dorado',
             sensacion: 'Sensación 17°',
             temp: '17',
@@ -16,6 +17,7 @@
         },
         day: {
             claseTema: 'theme-day',
+            topColor: '#1c6ab6',
             condicion: 'Nublado fresco',
             sensacion: 'Sensación 20°',
             temp: '20',
@@ -25,6 +27,7 @@
         },
         sunset: {
             claseTema: 'theme-sunset',
+            topColor: '#3b185f',
             condicion: 'Atardecer cálido',
             sensacion: 'Sensación 19°',
             temp: '19',
@@ -34,6 +37,7 @@
         },
         night: {
             claseTema: 'theme-night',
+            topColor: '#091326',
             condicion: 'Noche serena',
             sensacion: 'Sensación 15°',
             temp: '15',
@@ -73,6 +77,14 @@
         var appContent = document.querySelector('.content');
         if (appContent && window.innerWidth < 992) {
             appContent.style.background = 'transparent';
+        }
+
+        // Fusión de color nativo de la barra de estado (Android/iOS Edge-to-Edge)
+        if (window.innerWidth < 992 && data.topColor) {
+            var metaTheme = document.getElementById('meta-theme-color') || document.querySelector('meta[name="theme-color"]');
+            if (metaTheme) {
+                metaTheme.setAttribute('content', data.topColor);
+            }
         }
 
         var elTemp = document.getElementById('mant-clima-temp-mob');

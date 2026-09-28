@@ -4443,6 +4443,12 @@ window.cargarModuloAislado = async function(rutaModulo) {
     window.moduloActual = rutaModulo;
     window._moduloActual = rutaModulo;
 
+    // Restaurar barra de estado estándar si no es el dashboard atmosférico
+    if (rutaModulo !== 'mantenimiento/dashboard') {
+        var metaTheme = document.getElementById('meta-theme-color') || document.querySelector('meta[name="theme-color"]');
+        if (metaTheme) metaTheme.setAttribute('content', '#0f172a');
+    }
+
     // 1. Ocultar TODOS los módulos antiguos que siguen en el Index.html
     document.querySelectorAll('.modulo-wrapper, .container-fluid').forEach(el => {
         if(el.id && el.id.startsWith('modulo')) el.style.display = 'none';
