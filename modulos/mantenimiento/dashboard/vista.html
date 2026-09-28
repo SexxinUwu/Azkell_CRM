@@ -1,8 +1,8 @@
 <!-- ================================================================ -->
-<!-- ☀️ DASHBOARD MANTENIMIENTO — CLIMA DINÁMICO & FLEETRUN (APPLE MOBILE 1:1) -->
+<!-- 🛠️ DASHBOARD MANTENIMIENTO: WEB (CENTRO DE COMANDO) + MÓVIL (APPLE 1:1) -->
 <!-- ================================================================ -->
 <style>
-/* ── Reset root-dinamico & main-area para 100% PANTALLA COMPLETA ── */
+/* ── Reset root-dinamico & main-area para 100% Pantalla Completa ── */
 #root-dinamico, .main-area {
     padding: 0 !important;
     margin: 0 !important;
@@ -10,7 +10,6 @@
     overflow-x: hidden !important;
 }
 
-/* ── Plus Jakarta Sans & Apple Tokens ────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 #moduloMantenimientoDashboard {
@@ -21,68 +20,36 @@
     font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     position: relative;
     overflow-x: hidden;
-    transition: background 0.8s cubic-bezier(0.16, 1, 0.3, 1);
     -webkit-font-smoothing: antialiased;
 }
 
-/* ── PALETAS ATMOSFÉRICAS DINÁMICAS (Degradado fluido a blanco) ── */
-#moduloMantenimientoDashboard.theme-day {
-    background: linear-gradient(180deg, 
-        #1c6ab6 0%, 
-        #2a7ecc 14%, 
-        #4995df 26%, 
-        #72b0ee 38%, 
-        #a6d0f7 50%, 
-        #d6e9fc 64%, 
-        #edf5fd 78%, 
-        #f8fafc 90%, 
-        #ffffff 100%
-    );
+/* =========================================================================
+   📱 1. VISTA MÓVIL (IMAGEN 2 — 100% PANTALLA COMPLETA & CLIMA DINÁMICO)
+   ========================================================================= */
+.mant-mobile-view {
+    display: block;
+    width: 100%;
+    min-height: 100vh;
+    position: relative;
+    padding: 1.25rem 1.15rem calc(115px + env(safe-area-inset-bottom, 24px)) 1.15rem;
+    transition: background 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-#moduloMantenimientoDashboard.theme-dawn {
-    background: linear-gradient(180deg, 
-        #a84b16 0%, 
-        #c95f24 14%, 
-        #e07e3a 26%, 
-        #f1a461 38%, 
-        #fbcda5 50%, 
-        #fde8d4 64%, 
-        #fef5ee 78%, 
-        #fffaf7 90%, 
-        #ffffff 100%
-    );
+/* Paletas Atmosféricas Móvil */
+.mant-mobile-view.theme-day {
+    background: linear-gradient(180deg, #1c6ab6 0%, #2a7ecc 14%, #4995df 26%, #72b0ee 38%, #a6d0f7 50%, #d6e9fc 64%, #edf5fd 78%, #f8fafc 90%, #ffffff 100%);
+}
+.mant-mobile-view.theme-dawn {
+    background: linear-gradient(180deg, #a84b16 0%, #c95f24 14%, #e07e3a 26%, #f1a461 38%, #fbcda5 50%, #fde8d4 64%, #fef5ee 78%, #fffaf7 90%, #ffffff 100%);
+}
+.mant-mobile-view.theme-sunset {
+    background: linear-gradient(180deg, #3b185f 0%, #61216d 14%, #9b2c6e 26%, #d14d59 38%, #f17c58 50%, #fbc19c 64%, #fbe6d5 78%, #fdf5ef 90%, #ffffff 100%);
+}
+.mant-mobile-view.theme-night {
+    background: linear-gradient(180deg, #091326 0%, #0e1f40 14%, #142c58 26%, #1c3e74 38%, #2e558f 50%, #547eb6 64%, #8eb5e5 78%, #d8e8fa 90%, #ffffff 100%);
 }
 
-#moduloMantenimientoDashboard.theme-sunset {
-    background: linear-gradient(180deg, 
-        #3b185f 0%, 
-        #61216d 14%, 
-        #9b2c6e 26%, 
-        #d14d59 38%, 
-        #f17c58 50%, 
-        #fbc19c 64%, 
-        #fbe6d5 78%, 
-        #fdf5ef 90%, 
-        #ffffff 100%
-    );
-}
-
-#moduloMantenimientoDashboard.theme-night {
-    background: linear-gradient(180deg, 
-        #091326 0%, 
-        #0f2042 14%, 
-        #162f5e 26%, 
-        #21437c 38%, 
-        #36619e 50%, 
-        #6892c9 64%, 
-        #a8c7ed 78%, 
-        #e4effb 90%, 
-        #ffffff 100%
-    );
-}
-
-/* ── Resplandor Luminoso Atmosférico ───────────────────────────── */
+/* Resplandor Luminoso Móvil */
 .mant-sky-glow {
     position: absolute;
     top: 25px;
@@ -91,462 +58,566 @@
     height: 220px;
     filter: blur(38px);
     pointer-events: none;
-    transition: background 0.8s ease, transform 0.8s ease;
+    transition: background 0.8s ease;
     z-index: 1;
 }
+.mant-mobile-view.theme-day .mant-sky-glow { background: radial-gradient(circle, rgba(254, 240, 138, 0.6) 0%, rgba(251, 191, 36, 0.3) 45%, transparent 70%); }
+.mant-mobile-view.theme-dawn .mant-sky-glow { background: radial-gradient(circle, rgba(254, 215, 170, 0.65) 0%, rgba(249, 115, 22, 0.4) 45%, transparent 70%); }
+.mant-mobile-view.theme-sunset .mant-sky-glow { background: radial-gradient(circle, rgba(251, 146, 60, 0.65) 0%, rgba(236, 72, 153, 0.45) 45%, transparent 70%); }
+.mant-mobile-view.theme-night .mant-sky-glow { background: radial-gradient(circle, rgba(214, 235, 255, 0.4) 0%, rgba(96, 165, 250, 0.2) 45%, transparent 70%); }
 
-#moduloMantenimientoDashboard.theme-day .mant-sky-glow {
-    background: radial-gradient(circle, rgba(254, 240, 138, 0.6) 0%, rgba(251, 191, 36, 0.3) 45%, transparent 70%);
-}
-#moduloMantenimientoDashboard.theme-dawn .mant-sky-glow {
-    background: radial-gradient(circle, rgba(254, 215, 170, 0.65) 0%, rgba(249, 115, 22, 0.4) 45%, transparent 70%);
-}
-#moduloMantenimientoDashboard.theme-sunset .mant-sky-glow {
-    background: radial-gradient(circle, rgba(251, 146, 60, 0.65) 0%, rgba(236, 72, 153, 0.45) 45%, transparent 70%);
-}
-#moduloMantenimientoDashboard.theme-night .mant-sky-glow {
-    background: radial-gradient(circle, rgba(186, 230, 253, 0.5) 0%, rgba(56, 189, 248, 0.3) 45%, transparent 70%);
-}
-
-/* ── Arco Celeste Continuo Punteado ────────────────────────────── */
+/* Arco Celeste Punteado */
 .mant-sky-arc {
     position: absolute;
-    top: 44px;
+    top: 38px;
     left: 50%;
     transform: translateX(-50%);
     width: 90%;
     max-width: 440px;
-    height: 110px;
-    border: 1.5px dashed rgba(255, 255, 255, 0.55);
+    height: 105px;
+    border: 1.5px dashed rgba(255, 255, 255, 0.45);
     border-bottom: none;
     border-radius: 220px 220px 0 0;
     pointer-events: none;
     z-index: 2;
 }
 
-/* ── Esfera Celeste 3D (Sol/Luna) ──────────────────────────────── */
+/* Esfera Celeste 3D (Sol y Luna Limpia Natural) */
 .mant-celestial-sphere {
     width: 54px;
     height: 54px;
     border-radius: 50%;
-    transition: background 0.8s ease, box-shadow 0.8s ease, transform 0.8s ease;
+    transition: all 0.8s ease;
 }
-
-#moduloMantenimientoDashboard.theme-day .mant-celestial-sphere {
+.mant-mobile-view.theme-day .mant-celestial-sphere {
     background: radial-gradient(circle at 35% 35%, #fffbeb 0%, #fef08a 30%, #f59e0b 85%);
     box-shadow: 0 0 32px 10px rgba(251, 191, 36, 0.85), 0 0 65px 22px rgba(253, 224, 71, 0.45);
 }
-#moduloMantenimientoDashboard.theme-dawn .mant-celestial-sphere {
+.mant-mobile-view.theme-dawn .mant-celestial-sphere {
     background: radial-gradient(circle at 35% 35%, #fff7ed 0%, #fdba74 35%, #ea580c 90%);
     box-shadow: 0 0 32px 10px rgba(249, 115, 22, 0.85), 0 0 60px 22px rgba(253, 186, 116, 0.5);
 }
-#moduloMantenimientoDashboard.theme-sunset .mant-celestial-sphere {
+.mant-mobile-view.theme-sunset .mant-celestial-sphere {
     background: radial-gradient(circle at 35% 35%, #fff1f2 0%, #fb7185 40%, #e11d48 90%);
     box-shadow: 0 0 34px 12px rgba(225, 29, 72, 0.8), 0 0 65px 22px rgba(251, 146, 60, 0.5);
 }
-#moduloMantenimientoDashboard.theme-night .mant-celestial-sphere {
-    background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e2e8f0 40%, #94a3b8 85%);
-    box-shadow: 0 0 30px 10px rgba(255, 255, 255, 0.85), 0 0 58px 20px rgba(186, 230, 253, 0.45);
+/* Luna Limpia y Realista */
+.mant-mobile-view.theme-night .mant-celestial-sphere {
+    background: radial-gradient(circle at 35% 35%, #ffffff 0%, #f1f5f9 45%, #cbd5e1 80%, #94a3b8 100%);
+    box-shadow: 0 0 24px 6px rgba(255, 255, 255, 0.75), 0 0 45px 14px rgba(186, 230, 253, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
 .mant-sun-marker {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(6px);
-    box-shadow: 0 0 14px 4px rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 12px 3px rgba(255, 255, 255, 0.9);
 }
 
-/* ── Tarjetas Smart Card (Glassmorphism Apple) ─────────────────── */
+/* Textos de Temperatura y Clima Siempre Blancos */
+.mant-clima-text-white {
+    color: #ffffff !important;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+/* Tarjetas Apple Móvil */
 .mant-smart-card {
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(28px) saturate(200%);
-    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     border: 1px solid rgba(255, 255, 255, 0.95);
-    border-radius: 24px;
-    box-shadow: 
-        0 8px 24px -4px rgba(15, 35, 70, 0.06),
-        0 2px 8px -2px rgba(15, 35, 70, 0.03),
-        inset 0 1px 1px rgba(255, 255, 255, 0.95);
-    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease;
+    border-radius: 22px;
+    box-shadow: 0 8px 24px -4px rgba(15, 35, 70, 0.06), 0 2px 8px -2px rgba(15, 35, 70, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     cursor: pointer;
 }
+.mant-smart-card:active { transform: scale(0.985); }
 
-.mant-smart-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 16px 36px -6px rgba(15, 35, 70, 0.1);
-}
-
-.mant-smart-card:active {
-    transform: scale(0.985);
-}
-
-/* ── Selectores de fase climática ──────────────────────────────── */
-.mant-time-chip {
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #ffffff;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 9px;
-    border-radius: 999px;
-    transition: all 0.2s ease;
-    cursor: pointer;
-}
-
-.mant-time-chip.active {
-    background: #ffffff;
-    color: #0f172a;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    border-color: #ffffff;
-}
-
-/* ── Botón / Badge GPS Activo con Alto Contraste Negro ─────────── */
-.mant-gps-badge {
-    background: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 1) !important;
-    color: #0f172a !important;
-    font-weight: 800 !important;
-    font-size: 0.72rem !important;
-    padding: 4px 12px !important;
-    border-radius: 999px !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-.mant-gps-badge span {
-    color: #0f172a !important;
-    font-weight: 800 !important;
-}
-
-/* Niebla de transición suave */
-.mant-cloud-mist {
-    position: absolute;
-    top: 250px;
-    left: 0;
-    right: 0;
-    height: 200px;
-    background: radial-gradient(ellipse at 50% 60%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.2) 60%, transparent 85%);
-    filter: blur(36px);
-    pointer-events: none;
-    z-index: 2;
-}
-
-/* Layout container full-bleed */
-.mant-app-viewport {
+/* =========================================================================
+   🖥️ 2. VISTA WEB DESKTOP (CENTRO DE COMANDO — IMAGEN 1)
+   ========================================================================= */
+.mant-desktop-view {
+    display: none;
     width: 100%;
-    max-width: 520px;
-    margin: 0 auto;
-    padding: 1.25rem 1.15rem 7.5rem 1.15rem;
+    background: #f8fafc;
+    padding: 1.5rem 1.75rem 4rem 1.75rem !important;
+    min-height: 100vh;
+}
+
+/* Tarjetas KPI Clásicas Centro de Comando con Borde Superior */
+.kpi-cmd-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 1.15rem 1.25rem;
+    border: 1px solid #e2e8f0;
     position: relative;
-    z-index: 10;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-
-@media (min-width: 992px) {
-    .mant-app-viewport {
-        max-width: 1120px;
-        padding: 1.5rem 2rem 5rem 2rem;
-    }
-    .mant-desktop-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
+.kpi-cmd-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
 }
+.kpi-cmd-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: #2563eb;
+    border-radius: 14px 14px 0 0;
+}
+.kpi-cmd-card.border-success::before { background: #10b981; }
+.kpi-cmd-card.border-warning::before { background: #f59e0b; }
+.kpi-cmd-card.border-danger::before  { background: #ef4444; }
 
-/* ── Barra de Navegación Flotante Inferior (Dock Apple Móvil) ─── */
-.mant-floating-dock {
-    position: fixed;
-    bottom: 22px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(24, 28, 36, 0.92);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 999px;
-    padding: 6px 10px;
+.kpi-cmd-icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-}
-
-.mant-dock-item {
-    display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 6px 18px;
-    border-radius: 999px;
-    color: #94a3b8;
-    text-decoration: none;
-    font-size: 0.68rem;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    border: none;
-    background: transparent;
+    font-size: 1.1rem;
 }
 
-.mant-dock-item i {
-    font-size: 1.15rem;
-    line-height: 1;
-    margin-bottom: 2px;
+.kpi-cmd-value {
+    font-size: 2.1rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin: 0.35rem 0 0.15rem 0;
 }
 
-.mant-dock-item.active {
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.25);
+.kpi-cmd-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Gráficos y Widgets Bento Web */
+.cmd-bento-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 1.35rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.03);
+    height: 100%;
+}
+
+/* Responsividad: Mostrar Desktop en >= 992px y Móvil en < 992px */
+@media (min-width: 992px) {
+    .mant-desktop-view { display: block !important; }
+    .mant-mobile-view  { display: none !important; }
+}
+@media (max-width: 991.98px) {
+    .mant-desktop-view { display: none !important; }
+    .mant-mobile-view  { display: block !important; }
 }
 </style>
 
-<div id="moduloMantenimientoDashboard" class="theme-day">
+<div id="moduloMantenimientoDashboard">
 
-    <!-- Capas Atmosféricas de Resplandor y Niebla -->
-    <div class="mant-sky-glow"></div>
-    <div class="mant-cloud-mist"></div>
+    <!-- ===================================================================== -->
+    <!-- 📱 SECCIÓN A: VISTA MÓVIL (COPIA FIEL IMAGEN 2 — PANTALLA COMPLETA)   -->
+    <!-- ===================================================================== -->
+    <div class="mant-mobile-view theme-day" id="mant-mobile-container">
+        
+        <!-- Capas Atmosféricas -->
+        <div class="mant-sky-glow"></div>
 
-    <div class="mant-app-viewport">
-
-        <!-- ── HEADER ATMOSFÉRICO APPLE ────────────────────────── -->
-        <header class="relative pt-1 pb-3">
+        <div style="max-width: 480px; margin: 0 auto; position: relative; z-index: 10;">
             
-            <!-- Arco celeste continuo punteado -->
-            <div class="mant-sky-arc"></div>
-
-            <!-- Fila Superior: Ubicación, Selector de Fase y Usuario/GPS -->
-            <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+            <!-- ── HEADER ATMOSFÉRICO APPLE ── -->
+            <header class="relative pt-1 pb-2">
                 
-                <!-- Píldora de Ubicación (Imagen 2) -->
-                <div class="d-flex align-items-center gap-1.5 bg-white bg-opacity-20 text-white rounded-pill px-3 py-1.5 border border-white border-opacity-30 shadow-2xs backdrop-blur" style="font-size: 0.75rem; font-weight: 700;">
-                    <i class="bi bi-geo-alt-fill text-white"></i>
-                    <span id="mant-clima-ciudad">Lurigancho, Lima</span>
-                </div>
+                <!-- Arco celeste continuo punteado -->
+                <div class="mant-sky-arc"></div>
 
-                <!-- Selector de fase climática interactivo (Imagen 2) -->
-                <div class="d-flex align-items-center gap-1 bg-dark bg-opacity-30 p-1 rounded-pill border border-white border-opacity-20 backdrop-blur">
-                    <button onclick="window.mantCambiarFaseClima('auto')" id="mant-btn-auto" title="Automático según hora real" class="mant-time-chip active border-0">Auto</button>
-                    <button onclick="window.mantCambiarFaseClima('dawn')" id="mant-btn-dawn" title="Amanecer (07:00)" class="mant-time-chip border-0">🌅</button>
-                    <button onclick="window.mantCambiarFaseClima('day')" id="mant-btn-day" title="Día (12:00)" class="mant-time-chip border-0">☀️</button>
-                    <button onclick="window.mantCambiarFaseClima('sunset')" id="mant-btn-sunset" title="Atardecer (18:15)" class="mant-time-chip border-0">🌇</button>
-                    <button onclick="window.mantCambiarFaseClima('night')" id="mant-btn-night" title="Noche (21:30)" class="mant-time-chip border-0">🌙</button>
-                </div>
-
-                <!-- Avatar Usuario & GPS Activo (Letras Negras) -->
-                <div class="d-flex align-items-center gap-2">
-                    <div class="mant-gps-badge d-none d-md-inline-flex">
-                        <i class="bi bi-broadcast text-primary"></i>
-                        <span>GPS Activo</span>
-                    </div>
-                    <div class="rounded-circle bg-white bg-opacity-30 border border-white border-opacity-40 d-flex align-items-center justify-content-center fw-bold text-white shadow-2xs" style="width: 34px; height: 34px; font-size: 0.75rem;">
-                        SA
-                    </div>
-                </div>
-            </div>
-
-            <!-- Centro Atmosférico: Sol/Luna 3D + Marcador Horario + Fecha (Imagen 2) -->
-            <div class="row align-items-end pt-2 pb-1">
-                <!-- Cuerpo Celeste 3D -->
-                <div class="col-4 d-flex flex-column align-items-start ps-2">
-                    <div id="mant-astro-orb" class="mant-celestial-sphere mb-1"></div>
-                </div>
-
-                <!-- Marcador sobre el arco en el centro -->
-                <div class="col-4 d-flex flex-column align-items-center justify-content-center pb-1">
-                    <div class="mant-sun-marker mb-1"></div>
-                    <span id="mant-clima-hora-indicador" class="text-white text-opacity-95 fw-bold font-monospace" style="font-size: 0.75rem;">12:00 PM</span>
-                </div>
-
-                <!-- Fecha a la derecha -->
-                <div class="col-4 d-flex flex-column align-items-end pe-2 pb-1">
-                    <span id="mant-clima-fecha" class="text-white text-opacity-90 fw-semibold" style="font-size: 0.75rem;">—</span>
-                </div>
-            </div>
-
-            <!-- Temperatura Grande y Condición del Cielo (Imagen 2) -->
-            <div class="d-flex justify-content-between align-items-baseline mt-2 px-1 text-white">
-                <div>
-                    <div class="d-flex align-items-baseline">
-                        <span id="mant-clima-temp" class="fw-bolder" style="font-size: 3.8rem; line-height: 1; letter-spacing: -0.04em;">20</span>
-                        <span class="fs-1 fw-light ms-1">°</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 mt-1">
-                        <span id="mant-clima-condicion" class="fw-bold fs-6">Nublado fresco</span>
-                        <span id="mant-clima-sensacion" class="text-white text-opacity-85 small">Sensación 20°</span>
+                <!-- Fila Superior: Ubicación limpia a la izquierda -->
+                <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+                    <div class="d-flex align-items-center gap-1.5 bg-white bg-opacity-20 mant-clima-text-white rounded-pill px-3 py-1.5 border border-white border-opacity-30 shadow-2xs backdrop-blur" style="font-size: 0.75rem; font-weight: 700;">
+                        <i class="bi bi-geo-alt-fill"></i>
+                        <span id="mant-clima-ciudad-mob">Lurigancho, Lima</span>
                     </div>
                 </div>
 
-                <div class="text-end">
-                    <span id="mant-clima-rango" class="badge bg-white bg-opacity-20 text-white border border-white border-opacity-25 rounded-3 px-3 py-1.5 shadow-2xs fw-bold" style="font-size: 0.75rem;">
-                        ↑ 25° / ↓ 18°
+                <!-- Centro Atmosférico: Sol/Luna 3D + Marcador Horario + Fecha -->
+                <div class="row align-items-end pt-1 pb-1">
+                    <div class="col-4 d-flex flex-column align-items-start ps-2">
+                        <div id="mant-astro-orb" class="mant-celestial-sphere mb-1"></div>
+                    </div>
+
+                    <div class="col-4 d-flex flex-column align-items-center justify-content-center pb-1">
+                        <div class="mant-sun-marker mb-1"></div>
+                        <span id="mant-clima-hora-indicador" class="mant-clima-text-white fw-bold font-monospace" style="font-size: 0.75rem;">12:00 PM</span>
+                    </div>
+
+                    <div class="col-4 d-flex flex-column align-items-end pe-2 pb-1">
+                        <span id="mant-clima-fecha-mob" class="mant-clima-text-white fw-semibold" style="font-size: 0.75rem;">—</span>
+                    </div>
+                </div>
+
+                <!-- Temperatura Grande (Color Blanco) y Condición del Cielo -->
+                <div class="d-flex justify-content-between align-items-baseline mt-2 px-1 mant-clima-text-white">
+                    <div>
+                        <div class="d-flex align-items-baseline">
+                            <span id="mant-clima-temp-mob" class="fw-bolder mant-clima-text-white" style="font-size: 4rem; line-height: 1; letter-spacing: -0.04em;">20</span>
+                            <span class="fs-1 fw-light ms-1 mant-clima-text-white">°</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            <span id="mant-clima-condicion-mob" class="fw-bold fs-6 mant-clima-text-white">Nublado fresco</span>
+                            <span id="mant-clima-sensacion-mob" class="mant-clima-text-white text-opacity-90 small">Sensación 20°</span>
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <span id="mant-clima-rango-mob" class="badge bg-white bg-opacity-20 mant-clima-text-white border border-white border-opacity-30 rounded-3 px-3 py-1.5 shadow-2xs fw-bold" style="font-size: 0.75rem;">
+                            ↑ 25° / ↓ 18°
+                        </span>
+                        <span id="mant-clima-desc-mob" class="d-block mant-clima-text-white text-opacity-90 mt-1" style="font-size: 0.72rem;">Cielo prácticamente cubierto</span>
+                    </div>
+                </div>
+
+            </header>
+
+            <!-- ── SECCIÓN 1: OPERACIONES DE FLOTA (GRID 2x2 APPLE) ── -->
+            <div class="mt-4">
+                <div class="d-flex justify-content-between align-items-center px-1 mb-2">
+                    <span class="fw-bold text-dark text-uppercase small" style="font-size: 0.75rem; letter-spacing: 0.05em;">Operaciones de Flota</span>
+                    <span class="badge bg-white text-dark border shadow-2xs px-2.5 py-1 rounded-pill fw-bold" style="font-size: 0.7rem;" id="mant-badge-unidades-mob">
+                        85 Unidades
                     </span>
-                    <span id="mant-clima-desc" class="d-block text-white text-opacity-80 mt-1" style="font-size: 0.72rem;">Cielo prácticamente cubierto</span>
+                </div>
+
+                <div class="row g-3">
+                    <!-- Flota Activa -->
+                    <div class="col-6">
+                        <div class="mant-smart-card p-3 d-flex flex-column justify-content-between" style="min-height: 136px;" onclick="localStorage.setItem('fleet_insp_nav_filter','ALL');cargarModuloAislado('mantenimiento/inspecciones')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-dark" style="font-size: 0.78rem;">Flota Activa</span>
+                                <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-1.5 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                    <i class="bi bi-truck-front-fill" style="font-size: 0.85rem;"></i>
+                                </div>
+                            </div>
+                            <div class="fs-2 fw-bolder text-dark my-1" id="mant-kpi-flota-mob">85</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted fw-bold" style="font-size: 0.7rem;">Operativas</span>
+                                <div class="bg-light rounded-pill overflow-hidden border" style="width: 50px; height: 6px;">
+                                    <div class="bg-primary h-100 rounded-pill" id="mant-bar-flota-mob" style="width: 100%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Insp. Vigentes -->
+                    <div class="col-6">
+                        <div class="mant-smart-card p-3 d-flex flex-column justify-content-between" style="min-height: 136px;" onclick="localStorage.setItem('fleet_insp_nav_filter','VIGENTE');cargarModuloAislado('mantenimiento/inspecciones')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-dark" style="font-size: 0.78rem;">Insp. Vigentes</span>
+                                <div class="rounded-3 bg-success bg-opacity-10 text-success p-1.5 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                    <i class="bi bi-shield-check" style="font-size: 0.85rem;"></i>
+                                </div>
+                            </div>
+                            <div class="fs-2 fw-bolder text-dark my-1" id="mant-kpi-vigentes-mob">66</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted fw-bold" style="font-size: 0.7rem;">Al día</span>
+                                <div class="bg-light rounded-pill overflow-hidden border" style="width: 50px; height: 6px;">
+                                    <div class="bg-success h-100 rounded-pill" id="mant-bar-vigentes-mob" style="width: 78%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Por Vencer -->
+                    <div class="col-6">
+                        <div class="mant-smart-card p-3 d-flex flex-column justify-content-between" style="min-height: 136px;" onclick="localStorage.setItem('fleet_insp_nav_filter','PRÓXIMO A VENCER');cargarModuloAislado('mantenimiento/inspecciones')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-dark" style="font-size: 0.78rem;">Por Vencer</span>
+                                <div class="rounded-3 bg-warning bg-opacity-10 text-warning p-1.5 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                    <i class="bi bi-clock-history" style="font-size: 0.85rem;"></i>
+                                </div>
+                            </div>
+                            <div class="fs-2 fw-bolder text-dark my-1" id="mant-kpi-porvencer-mob">6</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted fw-bold" style="font-size: 0.7rem;">Próx. 7 días</span>
+                                <div class="bg-light rounded-pill overflow-hidden border" style="width: 50px; height: 6px;">
+                                    <div class="bg-warning h-100 rounded-pill" id="mant-bar-porvencer-mob" style="width: 25%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vencidas -->
+                    <div class="col-6">
+                        <div class="mant-smart-card p-3 d-flex flex-column justify-content-between" style="min-height: 136px;" onclick="localStorage.setItem('fleet_insp_nav_filter','NO VIGENTE');cargarModuloAislado('mantenimiento/inspecciones')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-dark" style="font-size: 0.78rem;">Vencidas</span>
+                                <div class="rounded-3 bg-danger bg-opacity-10 text-danger p-1.5 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 0.85rem;"></i>
+                                </div>
+                            </div>
+                            <div class="fs-2 fw-bolder text-danger my-1" id="mant-kpi-vencidas-mob">13</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-danger fw-bold" style="font-size: 0.7rem;">Urgente</span>
+                                <div class="bg-light rounded-pill overflow-hidden border" style="width: 50px; height: 6px;">
+                                    <div class="bg-danger h-100 rounded-pill" id="mant-bar-vencidas-mob" style="width: 60%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-        </header>
+            <!-- ── SECCIÓN 2: MANTENIMIENTO PREVENTIVO FLEETRUN ── -->
+            <div class="mt-4 pt-2">
+                <div class="d-flex justify-content-between align-items-center px-1 mb-2">
+                    <span class="fw-bold text-dark text-uppercase small" style="font-size: 0.75rem; letter-spacing: 0.05em;">Mantenimiento Preventivo</span>
+                    <span class="text-muted fw-bold" style="font-size: 0.7rem;">Fleetrun v2.4</span>
+                </div>
 
-        <!-- ── SECCIÓN 1: OPERACIONES DE FLOTA (GRID 2x2 APPLE - IMAGEN 2) ──── -->
-        <div class="mt-4">
-            <div class="d-flex justify-content-between align-items-center px-1 mb-2">
-                <span class="fw-bold text-dark text-uppercase small" style="font-size: 0.75rem; letter-spacing: 0.05em;">Operaciones de Flota</span>
-                <span class="badge bg-white text-dark border shadow-2xs px-2.5 py-1 rounded-pill fw-bold" style="font-size: 0.7rem;" id="mant-badge-unidades-total">
-                    85 Unidades
+                <div class="mant-smart-card overflow-hidden p-0">
+                    <div class="p-3 d-flex justify-content-between align-items-center border-bottom" onclick="localStorage.setItem('fleet_fleetrun_nav_filter','VENCIDO'); cargarModuloAislado('mantenimiento/fleetrun')">
+                        <div class="d-flex align-items-center gap-3">
+                            <div style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.8);"></div>
+                            <span class="fw-bold text-dark" style="font-size: 0.82rem;">MP Fleetrun Vencidos</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2.5 py-1 fw-bold" id="mant-fleet-vencidos-mob" style="font-size: 0.75rem;">0</span>
+                            <i class="bi bi-chevron-right text-muted opacity-50"></i>
+                        </div>
+                    </div>
+
+                    <div class="p-3 d-flex justify-content-between align-items-center" onclick="localStorage.setItem('fleet_fleetrun_nav_filter','POR VENCER'); cargarModuloAislado('mantenimiento/fleetrun')">
+                        <div class="d-flex align-items-center gap-3">
+                            <div style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.8);"></div>
+                            <span class="fw-bold text-dark" style="font-size: 0.82rem;">MP Fleetrun Por Vencer</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-2.5 py-1 fw-bold" id="mant-fleet-porvencer-mob" style="font-size: 0.75rem;">0</span>
+                            <i class="bi bi-chevron-right text-muted opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── SECCIÓN 3: HERRAMIENTAS DE MANTENIMIENTO ── -->
+            <div class="mt-4 pt-2">
+                <div class="d-flex justify-content-between align-items-center px-1 mb-2">
+                    <span class="fw-bold text-dark text-uppercase small" style="font-size: 0.75rem; letter-spacing: 0.05em;">Herramientas de Mantenimiento</span>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button class="btn btn-white w-100 p-2.5 rounded-4 border bg-white shadow-2xs d-flex align-items-center gap-2 text-start" onclick="cargarModuloAislado('mantenimiento/checklist')">
+                            <i class="bi bi-clipboard2-check text-warning fs-5"></i>
+                            <div>
+                                <div class="fw-bold text-dark small" style="font-size: 0.75rem;">Reporte Fallas</div>
+                                <div class="text-muted" style="font-size: 0.68rem;">Checklist móvil</div>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-white w-100 p-2.5 rounded-4 border bg-white shadow-2xs d-flex align-items-center gap-2 text-start" onclick="cargarModuloAislado('mantenimiento/status-rampa')">
+                            <i class="bi bi-grid-3x3-gap-fill text-primary fs-5"></i>
+                            <div>
+                                <div class="fw-bold text-dark small" style="font-size: 0.75rem;">Status Rampa</div>
+                                <div class="text-muted" style="font-size: 0.68rem;">Control taller</div>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-12 mt-2">
+                        <button class="btn btn-white w-100 p-2.5 rounded-4 border bg-white shadow-2xs d-flex align-items-center gap-2 text-start" onclick="cargarModuloAislado('mantenimiento/reportes-ot')">
+                            <i class="bi bi-file-earmark-text-fill text-info fs-5"></i>
+                            <div>
+                                <div class="fw-bold text-dark small" style="font-size: 0.75rem;">Reportes OT</div>
+                                <div class="text-muted" style="font-size: 0.68rem;">Órdenes y costos</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 🖥️ SECCIÓN B: VISTA WEB DESKTOP (CENTRO DE COMANDO — IMAGEN 1)       -->
+    <!-- ===================================================================== -->
+    <div class="mant-desktop-view">
+        
+        <!-- Header Desktop -->
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+            <div class="d-flex align-items-center gap-2.5">
+                <i class="bi bi-grid-1x2-fill fs-4 text-primary"></i>
+                <h4 class="m-0 fw-bold text-dark" style="font-size: 1.35rem; letter-spacing: -0.02em;">Centro de Comando</h4>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1.5 rounded-pill fw-bold" style="font-size: 0.75rem;">
+                    <i class="bi bi-check-circle-fill me-1"></i> Sistema Activo
                 </span>
+                <button class="btn btn-sm btn-white bg-white border rounded-circle shadow-2xs p-2 d-flex align-items-center justify-content-center" style="width:34px; height:34px;" onclick="window.mantCargarDatosDashboard()" title="Actualizar">
+                    <i class="bi bi-arrow-clockwise text-dark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ── 4 Tarjetas KPI Clásicas Centro de Comando (Imagen 1) ── -->
+        <div class="row g-3 mb-4">
+            <!-- 1. Flota Activa -->
+            <div class="col-3">
+                <div class="kpi-cmd-card border-success" style="cursor:pointer;" onclick="localStorage.setItem('fleet_insp_nav_filter','ALL');cargarModuloAislado('mantenimiento/inspecciones')">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="kpi-cmd-icon-wrap" style="background: rgba(16,185,129,0.1); color:#10b981;">
+                            <i class="bi bi-truck-front-fill"></i>
+                        </div>
+                    </div>
+                    <div class="kpi-cmd-value text-dark" id="mant-val-flota-desk">85</div>
+                    <div class="kpi-cmd-label">Flota Activa</div>
+                    <!-- Sparkline SVG -->
+                    <div class="mt-2" style="height: 24px;">
+                        <svg viewBox="0 0 100 24" class="w-100 h-100" preserveAspectRatio="none">
+                            <path d="M0,20 L100,20" stroke="#10b981" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                </div>
             </div>
 
-            <div class="row g-3">
-                <!-- Card 1: Flota Activa -->
-                <div class="col-6 col-lg-3">
-                    <div class="mant-smart-card p-3 d-flex flex-column justify-content-between" style="min-height: 138px;" onclick="localStorage.setItem('fleet_insp_nav_filter','ALL');cargarModuloAislado('mantenimiento/inspecciones')">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark" style="font-size: 0.78rem;">Flota Activa</span>
-                            <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-1.5 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                                <i class="bi bi-truck-front-fill" style="font-size: 0.85rem;"></i>
-                            </div>
+            <!-- 2. Insp. Vigentes -->
+            <div class="col-3">
+                <div class="kpi-cmd-card border-success" style="cursor:pointer;" onclick="localStorage.setItem('fleet_insp_nav_filter','VIGENTE');cargarModuloAislado('mantenimiento/inspecciones')">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="kpi-cmd-icon-wrap" style="background: rgba(16,185,129,0.1); color:#10b981;">
+                            <i class="bi bi-shield-check"></i>
                         </div>
-                        <div class="fs-2 fw-bolder text-dark my-1" id="mant-kpi-flota">85</div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted fw-bold" style="font-size: 0.7rem;">Operativas</span>
-                            <div class="bg-light rounded-pill overflow-hidden border" style="width: 50px; height: 6px;">
-                                <div class="bg-primary h-100 rounded-pill" id="mant-bar-flota" style="width: 100%;"></div>
-                            </div>
-                        </div>
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 rounded-pill px-2 py-0.5 fw-bold" style="font-size:0.68rem;">↑ 37</span>
+                    </div>
+                    <div class="kpi-cmd-value text-dark" id="mant-val-vigentes-desk">66</div>
+                    <div class="kpi-cmd-label">Insp. Vigentes</div>
+                    <!-- Sparkline SVG -->
+                    <div class="mt-2" style="height: 24px;">
+                        <svg viewBox="0 0 100 24" class="w-100 h-100" preserveAspectRatio="none">
+                            <path d="M0,22 Q30,22 50,14 T100,6" stroke="#10b981" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        </svg>
                     </div>
                 </div>
+            </div>
 
-                <!-- Card 2: Insp. Vigentes -->
-                <div class="col-6 col-lg-3">
-                    <div class="mant-smart-card p-3 d-flex flex-column justify-content-between" style="min-height: 138px;" onclick="localStorage.setItem('fleet_insp_nav_filter','VIGENTE');cargarModuloAislado('mantenimiento/inspecciones')">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark" style="font-size: 0.78rem;">Insp. Vigentes</span>
-                            <div class="rounded-3 bg-success bg-opacity-10 text-success p-1.5 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                                <i class="bi bi-shield-check" style="font-size: 0.85rem;"></i>
-                            </div>
-                        </div>
-                        <div class="fs-2 fw-bolder text-dark my-1" id="mant-kpi-vigentes">66</div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted fw-bold" style="font-size: 0.7rem;">Al día</span>
-                            <div class="bg-light rounded-pill overflow-hidden border" style="width: 50px; height: 6px;">
-                                <div class="bg-success h-100 rounded-pill" id="mant-bar-vigentes" style="width: 78%;"></div>
-                            </div>
+            <!-- 3. Por Vencer -->
+            <div class="col-3">
+                <div class="kpi-cmd-card border-warning" style="cursor:pointer;" onclick="localStorage.setItem('fleet_insp_nav_filter','PRÓXIMO A VENCER');cargarModuloAislado('mantenimiento/inspecciones')">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="kpi-cmd-icon-wrap" style="background: rgba(245,158,11,0.1); color:#f59e0b;">
+                            <i class="bi bi-clock-history"></i>
                         </div>
                     </div>
-                </div>
-
-                <!-- Card 3: Por Vencer -->
-                <div class="col-6 col-lg-3">
-                    <div class="mant-smart-card p-3 d-flex flex-column justify-content-between" style="min-height: 138px;" onclick="localStorage.setItem('fleet_insp_nav_filter','PRÓXIMO A VENCER');cargarModuloAislado('mantenimiento/inspecciones')">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark" style="font-size: 0.78rem;">Por Vencer</span>
-                            <div class="rounded-3 bg-warning bg-opacity-10 text-warning p-1.5 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                                <i class="bi bi-clock-history" style="font-size: 0.85rem;"></i>
-                            </div>
-                        </div>
-                        <div class="fs-2 fw-bolder text-dark my-1" id="mant-kpi-porvencer">6</div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted fw-bold" style="font-size: 0.7rem;">Próx. 7 días</span>
-                            <div class="bg-light rounded-pill overflow-hidden border" style="width: 50px; height: 6px;">
-                                <div class="bg-warning h-100 rounded-pill" id="mant-bar-porvencer" style="width: 25%;"></div>
-                            </div>
-                        </div>
+                    <div class="kpi-cmd-value text-dark" id="mant-val-porvencer-desk">6</div>
+                    <div class="kpi-cmd-label">Por Vencer (7d)</div>
+                    <!-- Sparkline SVG -->
+                    <div class="mt-2" style="height: 24px;">
+                        <svg viewBox="0 0 100 24" class="w-100 h-100" preserveAspectRatio="none">
+                            <path d="M0,22 L35,8 L100,22" stroke="#f59e0b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        </svg>
                     </div>
                 </div>
+            </div>
 
-                <!-- Card 4: Vencidas -->
-                <div class="col-6 col-lg-3">
-                    <div class="mant-smart-card p-3 d-flex flex-column justify-content-between" style="min-height: 138px;" onclick="localStorage.setItem('fleet_insp_nav_filter','NO VIGENTE');cargarModuloAislado('mantenimiento/inspecciones')">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark" style="font-size: 0.78rem;">Vencidas</span>
-                            <div class="rounded-3 bg-danger bg-opacity-10 text-danger p-1.5 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                                <i class="bi bi-exclamation-triangle-fill" style="font-size: 0.85rem;"></i>
-                            </div>
+            <!-- 4. Vencidas -->
+            <div class="col-3">
+                <div class="kpi-cmd-card border-danger" style="cursor:pointer;" onclick="localStorage.setItem('fleet_insp_nav_filter','NO VIGENTE');cargarModuloAislado('mantenimiento/inspecciones')">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="kpi-cmd-icon-wrap" style="background: rgba(239,68,68,0.1); color:#ef4444;">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
                         </div>
-                        <div class="fs-2 fw-bolder text-danger my-1" id="mant-kpi-vencidas">13</div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-danger fw-bold" style="font-size: 0.7rem;">Urgente</span>
-                            <div class="bg-light rounded-pill overflow-hidden border" style="width: 50px; height: 6px;">
-                                <div class="bg-danger h-100 rounded-pill" id="mant-bar-vencidas" style="width: 60%;"></div>
-                            </div>
-                        </div>
+                    </div>
+                    <div class="kpi-cmd-value text-dark" id="mant-val-vencidas-desk">13</div>
+                    <div class="kpi-cmd-label">Vencidas</div>
+                    <!-- Sparkline SVG -->
+                    <div class="mt-2" style="height: 24px;">
+                        <svg viewBox="0 0 100 24" class="w-100 h-100" preserveAspectRatio="none">
+                            <path d="M0,8 L40,14 L100,22" stroke="#ef4444" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        </svg>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ── SECCIÓN 2: MANTENIMIENTO PREVENTIVO FLEETRUN (IMAGEN 2) ─── -->
-        <div class="mt-4 pt-2">
-            <div class="d-flex justify-content-between align-items-center px-1 mb-2">
-                <span class="fw-bold text-dark text-uppercase small" style="font-size: 0.75rem; letter-spacing: 0.05em;">Mantenimiento Preventivo</span>
-                <span class="text-muted fw-bold" style="font-size: 0.7rem;">Fleetrun v2.4</span>
-            </div>
-
-            <div class="mant-smart-card overflow-hidden p-0">
-                <div class="p-3 d-flex justify-content-between align-items-center border-bottom" onclick="localStorage.setItem('fleet_fleetrun_nav_filter','VENCIDO'); cargarModuloAislado('mantenimiento/fleetrun')">
-                    <div class="d-flex align-items-center gap-3">
-                        <div style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.8);"></div>
-                        <span class="fw-bold text-dark" style="font-size: 0.82rem;">MP Fleetrun Vencidos</span>
+        <!-- ── FILA 2: WIDGET CLIMA + 2 GRÁFICOS DONUT (Imagen 1) ── -->
+        <div class="row g-3">
+            <!-- Widget Clima Actual -->
+            <div class="col-3">
+                <div class="cmd-bento-card text-center d-flex flex-column justify-content-center align-items-center py-4">
+                    <div class="d-flex align-items-center gap-1.5 text-muted small fw-bold mb-2">
+                        <i class="bi bi-cloud-sun"></i> Clima Actual
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2.5 py-1 fw-bold" id="mant-fleet-vencidos" style="font-size: 0.75rem;">0</span>
-                        <i class="bi bi-chevron-right text-muted opacity-50"></i>
+                    <div class="d-flex align-items-center gap-1 text-dark fw-bold mb-1" style="font-size: 0.88rem;">
+                        <i class="bi bi-geo-alt-fill text-secondary"></i> <span id="mant-desk-city">Lurigancho, Lima</span>
                     </div>
-                </div>
-
-                <div class="p-3 d-flex justify-content-between align-items-center" onclick="localStorage.setItem('fleet_fleetrun_nav_filter','POR VENCER'); cargarModuloAislado('mantenimiento/fleetrun')">
-                    <div class="d-flex align-items-center gap-3">
-                        <div style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.8);"></div>
-                        <span class="fw-bold text-dark" style="font-size: 0.82rem;">MP Fleetrun Por Vencer</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-2.5 py-1 fw-bold" id="mant-fleet-porvencer" style="font-size: 0.75rem;">0</span>
-                        <i class="bi bi-chevron-right text-muted opacity-50"></i>
+                    <div class="text-muted small mb-2" id="mant-desk-desc" style="font-size: 0.78rem;">Despejado</div>
+                    <div class="fw-bolder text-primary mb-2" style="font-size: 2.8rem; line-height: 1;" id="mant-desk-temp">25°</div>
+                    <div class="text-muted fw-bold" style="font-size: 0.75rem;" id="mant-desk-rango">
+                        Min 18° • Max 27°
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- ── SECCIÓN 3: HERRAMIENTAS DE MANTENIMIENTO ─────────── -->
-        <div class="mt-4 pt-2">
-            <div class="d-flex justify-content-between align-items-center px-1 mb-2">
-                <span class="fw-bold text-dark text-uppercase small" style="font-size: 0.75rem; letter-spacing: 0.05em;">Herramientas de Mantenimiento</span>
+            <!-- Gráfico Donut 1: Salud de Mantenimientos (Preventivos) -->
+            <div class="col-4.5 col-lg-5">
+                <div class="cmd-bento-card">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-pie-chart-fill text-primary"></i>
+                        <h6 class="m-0 fw-bold text-dark" style="font-size: 0.88rem;">Salud de Mantenimientos (Preventivos)</h6>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div style="width: 140px; height: 140px; position: relative;">
+                            <canvas id="chartDeskSaludMantenimiento"></canvas>
+                        </div>
+                        <div class="d-flex flex-column gap-2 small fw-bold pe-3" style="font-size: 0.78rem;">
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="width:10px; height:10px; background:#10b981; border-radius:2px;"></span>
+                                <span class="text-dark">51% Vigentes</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="width:10px; height:10px; background:#f59e0b; border-radius:2px;"></span>
+                                <span class="text-dark">29% Por Vencer</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="width:10px; height:10px; background:#ef4444; border-radius:2px;"></span>
+                                <span class="text-dark">20% Vencidos</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="row g-2">
-                <div class="col-6 col-md-4">
-                    <button class="btn btn-white w-100 p-2.5 rounded-4 border bg-white shadow-2xs d-flex align-items-center gap-2 text-start" onclick="cargarModuloAislado('mantenimiento/checklist')">
-                        <i class="bi bi-clipboard2-check text-warning fs-5"></i>
-                        <div>
-                            <div class="fw-bold text-dark small" style="font-size: 0.75rem;">Reporte Fallas</div>
-                            <div class="text-muted" style="font-size: 0.68rem;">Checklist móvil</div>
+            <!-- Gráfico Donut 2: Estado General Inspecciones (Mes) -->
+            <div class="col-4.5 col-lg-4">
+                <div class="cmd-bento-card">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-bar-chart-fill text-success"></i>
+                        <h6 class="m-0 fw-bold text-dark" style="font-size: 0.88rem;">Estado General Inspecciones (Mes)</h6>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div style="width: 140px; height: 140px; position: relative;">
+                            <canvas id="chartDeskEstadoInspecciones"></canvas>
                         </div>
-                    </button>
-                </div>
-                <div class="col-6 col-md-4">
-                    <button class="btn btn-white w-100 p-2.5 rounded-4 border bg-white shadow-2xs d-flex align-items-center gap-2 text-start" onclick="cargarModuloAislado('mantenimiento/status-rampa')">
-                        <i class="bi bi-grid-3x3-gap-fill text-primary fs-5"></i>
-                        <div>
-                            <div class="fw-bold text-dark small" style="font-size: 0.75rem;">Status Rampa</div>
-                            <div class="text-muted" style="font-size: 0.68rem;">Control taller</div>
+                        <div class="d-flex flex-column gap-2 small fw-bold pe-3" style="font-size: 0.78rem;">
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="width:10px; height:10px; background:#10b981; border-radius:2px;"></span>
+                                <span class="text-dark">85% Vigentes</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="width:10px; height:10px; background:#ef4444; border-radius:2px;"></span>
+                                <span class="text-dark">15% Vencidas</span>
+                            </div>
                         </div>
-                    </button>
-                </div>
-                <div class="col-6 col-md-4">
-                    <button class="btn btn-white w-100 p-2.5 rounded-4 border bg-white shadow-2xs d-flex align-items-center gap-2 text-start" onclick="cargarModuloAislado('mantenimiento/reportes-ot')">
-                        <i class="bi bi-file-earmark-text-fill text-info fs-5"></i>
-                        <div>
-                            <div class="fw-bold text-dark small" style="font-size: 0.75rem;">Reportes OT</div>
-                            <div class="text-muted" style="font-size: 0.68rem;">Órdenes y costos</div>
-                        </div>
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>

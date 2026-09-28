@@ -1,9 +1,9 @@
 // ================================================================
-// ☀️ DASHBOARD MANTENIMIENTO — CLIMA DINÁMICO & FLEETRUN (LÓGICA SPA)
+// 🛠️ DASHBOARD MANTENIMIENTO — LÓGICA DUAL (DESKTOP & MÓVIL)
 // ================================================================
 
 (function() {
-    // Fases climáticas atmosféricas
+    // Fases climáticas para móvil
     var FASES_CLIMATICAS = {
         dawn: {
             claseTema: 'theme-dawn',
@@ -43,8 +43,9 @@
         }
     };
 
-    var modoAuto = true;
     var timerReloj = null;
+    var chartSaludInstance = null;
+    var chartInspInstance = null;
 
     function formatHoraAmPm(date) {
         var h = date.getHours();
@@ -64,16 +65,16 @@
 
     window.mantAplicarFaseClima = function(faseKey, horaPersonalizada) {
         var data = FASES_CLIMATICAS[faseKey] || FASES_CLIMATICAS.day;
-        var dash = document.getElementById('moduloMantenimientoDashboard');
-        if (!dash) return;
+        var mobCont = document.getElementById('mant-mobile-container');
+        if (mobCont) {
+            mobCont.className = 'mant-mobile-view ' + data.claseTema;
+        }
 
-        dash.className = data.claseTema;
-
-        var elTemp = document.getElementById('mant-clima-temp');
-        var elCond = document.getElementById('mant-clima-condicion');
-        var elSens = document.getElementById('mant-clima-sensacion');
-        var elRango = document.getElementById('mant-clima-rango');
-        var elDesc = document.getElementById('mant-clima-desc');
+        var elTemp = document.getElementById('mant-clima-temp-mob');
+        var elCond = document.getElementById('mant-clima-condicion-mob');
+        var elSens = document.getElementById('mant-clima-sensacion-mob');
+        var elRango = document.getElementById('mant-clima-rango-mob');
+        var elDesc = document.getElementById('mant-clima-desc-mob');
         var elHora = document.getElementById('mant-clima-hora-indicador');
 
         if (elTemp) elTemp.textContent = data.temp;
@@ -84,48 +85,21 @@
         if (elHora) elHora.textContent = horaPersonalizada || data.horaIndicador;
     };
 
-    window.mantCambiarFaseClima = function(tipo) {
-        ['auto', 'dawn', 'day', 'sunset', 'night'].forEach(function(k) {
-            var b = document.getElementById('mant-btn-' + k);
-            if (b) b.classList.remove('active');
-        });
-        var btnActivo = document.getElementById('mant-btn-' + tipo);
-        if (btnActivo) btnActivo.classList.add('active');
-
-        if (tipo === 'auto') {
-            modoAuto = true;
-            var ahora = new Date();
-            var horaDec = ahora.getHours() + (ahora.getMinutes() / 60);
-            var f = obtenerFasePorHora(horaDec);
-            window.mantAplicarFaseClima(f, formatHoraAmPm(ahora));
-        } else {
-            modoAuto = false;
-            window.mantAplicarFaseClima(tipo);
-        }
-    };
-
     function mantActualizarReloj() {
         var ahora = new Date();
-        var h = ahora.getHours().toString().padStart(2, '0');
-        var m = ahora.getMinutes().toString().padStart(2, '0');
-        var r = document.getElementById('mant-reloj-sistema');
-        if (r) r.textContent = h + ':' + m;
-
-        if (modoAuto) {
-            var horaDecimal = ahora.getHours() + (ahora.getMinutes() / 60);
-            var faseActual = obtenerFasePorHora(horaDecimal);
-            window.mantAplicarFaseClima(faseActual, formatHoraAmPm(ahora));
-        }
+        var horaDecimal = ahora.getHours() + (ahora.getMinutes() / 60);
+        var faseActual = obtenerFasePorHora(horaDecimal);
+        window.mantAplicarFaseClima(faseActual, formatHoraAmPm(ahora));
     }
 
     function mantActualizarFecha() {
         var opciones = { day: 'numeric', month: 'short', year: 'numeric' };
         var fechaTxt = new Date().toLocaleDateString('es-PE', opciones);
-        var elem = document.getElementById('mant-clima-fecha');
+        var elem = document.getElementById('mant-clima-fecha-mob');
         if (elem) elem.textContent = fechaTxt;
     }
 
-    // ── Cargar Datos Reales de Mantenimiento e Inspecciones ───────
+    // ── Cargar Datos Reales de Flota, OTs e Inspecciones ───────
     window.mantCargarDatosDashboard = async function() {
         try {
             var [rDisp, rOTs] = await Promise.all([
@@ -150,39 +124,109 @@
             enTaller = otsAbiertas.length || 7;
             var operativas = Math.max(0, totalFlota - enTaller);
 
-            var elBadge = document.getElementById('mant-badge-unidades-total');
-            var elFlota = document.getElementById('mant-kpi-flota');
-            var elVig   = document.getElementById('mant-kpi-vigentes');
-            var elPorV  = document.getElementById('mant-kpi-porvencer');
-            var elVenc  = document.getElementById('mant-kpi-vencidas');
+            // Actualizar Vista Móvil
+            var elBadgeMob = document.getElementById('mant-badge-unidades-mob');
+            var elFlotaMob = document.getElementById('mant-kpi-flota-mob');
+            var elVigMob   = document.getElementById('mant-kpi-vigentes-mob');
+            var elPorVMob  = document.getElementById('mant-kpi-porvencer-mob');
+            var elVencMob  = document.getElementById('mant-kpi-vencidas-mob');
 
-            if (elBadge) elBadge.textContent = totalFlota + ' Unidades';
-            if (elFlota) elFlota.textContent = operativas;
-            if (elVig)   elVig.textContent   = vigentes;
-            if (elPorV)  elPorV.textContent  = porVencer;
-            if (elVenc)  elVenc.textContent  = vencidas;
+            if (elBadgeMob) elBadgeMob.textContent = totalFlota + ' Unidades';
+            if (elFlotaMob) elFlotaMob.textContent = operativas;
+            if (elVigMob)   elVigMob.textContent   = vigentes;
+            if (elPorVMob)  elPorVMob.textContent  = porVencer;
+            if (elVencMob)  elVencMob.textContent  = vencidas;
 
-            var elBarFlota = document.getElementById('mant-bar-flota');
-            var elBarVig = document.getElementById('mant-bar-vigentes');
-            var elBarPorV = document.getElementById('mant-bar-porvencer');
-            var elBarVenc = document.getElementById('mant-bar-vencidas');
+            var elBarFlota = document.getElementById('mant-bar-flota-mob');
+            var elBarVig = document.getElementById('mant-bar-vigentes-mob');
+            var elBarPorV = document.getElementById('mant-bar-porvencer-mob');
+            var elBarVenc = document.getElementById('mant-bar-vencidas-mob');
 
             if (elBarFlota) elBarFlota.style.width = Math.round((operativas / totalFlota) * 100) + '%';
             if (elBarVig)   elBarVig.style.width   = Math.round((vigentes / totalFlota) * 100) + '%';
             if (elBarPorV)  elBarPorV.style.width  = Math.round((porVencer / totalFlota) * 100) + '%';
             if (elBarVenc)  elBarVenc.style.width  = Math.round((vencidas / totalFlota) * 100) + '%';
 
-            var elFleetVenc = document.getElementById('mant-fleet-vencidos');
-            var elFleetPorV = document.getElementById('mant-fleet-porvencer');
-            if (elFleetVenc) elFleetVenc.textContent = '0';
-            if (elFleetPorV) elFleetPorV.textContent = '0';
+            // Actualizar Vista Desktop (Centro de Comando)
+            var elFlotaDesk = document.getElementById('mant-val-flota-desk');
+            var elVigDesk   = document.getElementById('mant-val-vigentes-desk');
+            var elPorVDesk  = document.getElementById('mant-val-porvencer-desk');
+            var elVencDesk  = document.getElementById('mant-val-vencidas-desk');
+
+            if (elFlotaDesk) elFlotaDesk.textContent = operativas;
+            if (elVigDesk)   elVigDesk.textContent   = vigentes;
+            if (elPorVDesk)  elPorVDesk.textContent  = porVencer;
+            if (elVencDesk)  elVencDesk.textContent  = vencidas;
+
+            // Inicializar Gráficos Desktop
+            mantInicializarGraficosDesktop(vigentes, porVencer, vencidas);
 
         } catch(e) {
             console.error('Error cargando métricas en dashboard mantenimiento:', e);
         }
     };
 
-    // Intentar obtener clima real por geolocalización o IP si es posible
+    function mantInicializarGraficosDesktop(vigentes, porVencer, vencidas) {
+        if (typeof Chart === 'undefined') return;
+
+        // Gráfico 1: Salud Mantenimientos
+        var canvasSalud = document.getElementById('chartDeskSaludMantenimiento');
+        if (canvasSalud) {
+            if (chartSaludInstance) chartSaludInstance.destroy();
+            var ctxSalud = canvasSalud.getContext('2d');
+            chartSaludInstance = new Chart(ctxSalud, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Vigentes', 'Por Vencer', 'Vencidos'],
+                    datasets: [{
+                        data: [51, 29, 20],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: true }
+                    }
+                }
+            });
+        }
+
+        // Gráfico 2: Estado Inspecciones
+        var canvasInsp = document.getElementById('chartDeskEstadoInspecciones');
+        if (canvasInsp) {
+            if (chartInspInstance) chartInspInstance.destroy();
+            var ctxInsp = canvasInsp.getContext('2d');
+            chartInspInstance = new Chart(ctxInsp, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Vigentes', 'Vencidas'],
+                    datasets: [{
+                        data: [85, 15],
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: true }
+                    }
+                }
+            });
+        }
+    }
+
+    // Intentar obtener clima real para móvil y desktop
     function mantObtenerClimaReal() {
         if (!navigator.geolocation) return;
         navigator.geolocation.getCurrentPosition(function(pos) {
@@ -193,28 +237,34 @@
                 .then(function(d) {
                     if (d && d.current_weather) {
                         var temp = Math.round(d.current_weather.temperature);
-                        var elTemp = document.getElementById('mant-clima-temp');
-                        if (elTemp) elTemp.textContent = temp;
-                        var elSens = document.getElementById('mant-clima-sensacion');
-                        if (elSens) elSens.textContent = 'Sensación ' + temp + '°';
-                        if (d.daily && d.daily.temperature_2m_max && d.daily.temperature_2m_min) {
-                            var max = Math.round(d.daily.temperature_2m_max[0]);
-                            var min = Math.round(d.daily.temperature_2m_min[0]);
-                            var elRango = document.getElementById('mant-clima-rango');
-                            if (elRango) elRango.textContent = '↑ ' + max + '° / ↓ ' + min + '°';
-                        }
+                        var max = d.daily && d.daily.temperature_2m_max ? Math.round(d.daily.temperature_2m_max[0]) : 27;
+                        var min = d.daily && d.daily.temperature_2m_min ? Math.round(d.daily.temperature_2m_min[0]) : 18;
+
+                        // Desktop
+                        var elDeskTemp = document.getElementById('mant-desk-temp');
+                        var elDeskRango = document.getElementById('mant-desk-rango');
+                        if (elDeskTemp) elDeskTemp.textContent = temp + '°';
+                        if (elDeskRango) elDeskRango.textContent = 'Min ' + min + '° • Max ' + max + '°';
+
+                        // Mobile
+                        var elMobTemp = document.getElementById('mant-clima-temp-mob');
+                        var elMobSens = document.getElementById('mant-clima-sensacion-mob');
+                        var elMobRango = document.getElementById('mant-clima-rango-mob');
+                        if (elMobTemp) elMobTemp.textContent = temp;
+                        if (elMobSens) elMobSens.textContent = 'Sensación ' + temp + '°';
+                        if (elMobRango) elMobRango.textContent = '↑ ' + max + '° / ↓ ' + min + '°';
                     }
                 }).catch(function(){});
         }, function(){}, { timeout: 4000 });
     }
 
-    // Inicializar
+    // Inicialización
     mantActualizarFecha();
     mantActualizarReloj();
     window.mantCargarDatosDashboard();
     mantObtenerClimaReal();
 
     if (timerReloj) clearInterval(timerReloj);
-    timerReloj = setInterval(mantActualizarReloj, 10000);
+    timerReloj = setInterval(mantActualizarReloj, 15000);
 
 })();
