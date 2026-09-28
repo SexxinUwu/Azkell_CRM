@@ -290,6 +290,7 @@ window.verificarSesionGuardada = function() {
 
     // MANTENIMIENTO
     var showMantHub  = _cHub('hub_mant');
+    var vMantDashboard = showMantHub && (_cL('mant_dashboard') || _cL('dashboard') || _cL('status_rampa') || _cL('checklist') || true);
     var vStatusRampa = showMantHub && _cL('status_rampa');
     var vChecklist   = showMantHub && _cL('checklist');
     var vInsp        = showMantHub && _cL('insp');
@@ -306,6 +307,8 @@ window.verificarSesionGuardada = function() {
     var vFinTaller   = showOtrosMantHub && _cL('fin_taller');
     var showOtrosMant = vPlan || vBacklog || vKpis || vProduct || vFinTaller;
 
+    safe('nav-mantenimiento-dashboard',   vMantDashboard);
+    safe('mbnav-mantenimiento-dashboard', vMantDashboard);
     safe('nav-status-rampa',    vStatusRampa);
     safe('mbnav-status-rampa',  vStatusRampa);
     safe('nav-checklist',       vChecklist);
@@ -327,7 +330,7 @@ window.verificarSesionGuardada = function() {
     safe('nav-otros-mant',      showOtrosMant);
     safe('mbnav-otros-mant',    showOtrosMant);
 
-    var showMant = vStatusRampa || vChecklist || vInsp || vFleetrun || vReportesOT || vTrabajosOT || vNeumaticos || vIncidencias || showOtrosMant;
+    var showMant = vMantDashboard || vStatusRampa || vChecklist || vInsp || vFleetrun || vReportesOT || vTrabajosOT || vNeumaticos || vIncidencias || showOtrosMant;
     safe('wrap-mantenimiento', showMant);
     safe('bnav-mantenimiento', showMant);
 
