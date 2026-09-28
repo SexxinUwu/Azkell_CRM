@@ -211,7 +211,6 @@
         const todasOrdenes = window._gerenciaOC.ordenes || [];
         const fDesde = document.getElementById('filtro-fecha-desde')?.value || '';
         const fHasta = document.getElementById('filtro-fecha-hasta')?.value || '';
-        const selAlmacen = (document.getElementById('filtro-almacen-oc')?.value || '').toLowerCase();
         const txtBuscar = (document.getElementById('filtro-buscar-oc')?.value || '').toLowerCase().trim();
 
         // Filtrar órdenes por el rango de fechas y filtros activos (sin filtrar por pestaña de estado)
@@ -221,7 +220,6 @@
                 if (fDesde && fechaItemISO < fDesde) return false;
                 if (fHasta && fechaItemISO > fHasta) return false;
             }
-            if (selAlmacen && item.almacen && !item.almacen.toLowerCase().includes(selAlmacen)) return false;
             if (txtBuscar) {
                 const matchTexto = 
                     (item.id && item.id.toLowerCase().includes(txtBuscar)) ||
@@ -266,7 +264,7 @@
         const bTodos = document.getElementById('tab-badge-todos');
         if (bTodos) bTodos.innerText = ordenes.length;
         const bPend = document.getElementById('tab-badge-pendiente');
-        if (bPend) bPend.innerText = pend.length;
+        if (bPend) bPend.innerText = pend.length + obs.length;
         const bAprob = document.getElementById('tab-badge-aprobado');
         if (bAprob) bAprob.innerText = aprob.length;
         const bObs = document.getElementById('tab-badge-observado');
@@ -277,8 +275,9 @@
         // Actualizar badge en sidebar para Aprobación de O/C
         const elBadgeOC = document.getElementById('badge-count-oc-pend');
         if (elBadgeOC) {
-            if (pend.length > 0) {
-                elBadgeOC.textContent = `${pend.length} Pend.`;
+            const totalPorRevisar = pend.length + obs.length;
+            if (totalPorRevisar > 0) {
+                elBadgeOC.textContent = `${totalPorRevisar} Pend.`;
                 elBadgeOC.style.display = 'inline-block';
             } else {
                 elBadgeOC.textContent = '';
@@ -331,17 +330,15 @@
 
         const tab = window._gerenciaOC.tabActivo || 'pendiente';
         const txtBuscar = (document.getElementById('filtro-buscar-oc')?.value || '').toLowerCase().trim();
-        const selAlmacen = (document.getElementById('filtro-almacen-oc')?.value || '').toLowerCase();
         const fDesde = document.getElementById('filtro-fecha-desde')?.value || '';
         const fHasta = document.getElementById('filtro-fecha-hasta')?.value || '';
 
         const ordenes = window._gerenciaOC.ordenes || [];
 
         let filtradas = ordenes.filter(item => {
-            // Filtro por tab
-            if (tab === 'pendiente' && item.estado !== 'pendiente') return false;
+            // Filtro por tab (Pendientes y Observadas unificadas en el tab 'pendiente')
+            if (tab === 'pendiente' && item.estado !== 'pendiente' && item.estado !== 'observado') return false;
             if (tab === 'aprobado' && item.estado !== 'aprobado') return false;
-            if (tab === 'observado' && item.estado !== 'observado') return false;
             if (tab === 'rechazado' && item.estado !== 'rechazado') return false;
 
             // Filtro por rango de fechas
@@ -350,9 +347,6 @@
                 if (fDesde && fechaItemISO < fDesde) return false;
                 if (fHasta && fechaItemISO > fHasta) return false;
             }
-
-            // Filtro por almacén
-            if (selAlmacen && item.almacen && !item.almacen.toLowerCase().includes(selAlmacen)) return false;
 
             // Filtro por texto
             if (txtBuscar) {
@@ -978,8 +972,6 @@
     window.limpiarFiltrosOC = function() {
         const inp = document.getElementById('filtro-buscar-oc');
         if (inp) inp.value = '';
-        const sel = document.getElementById('filtro-almacen-oc');
-        if (sel) sel.value = '';
         const fechaHoy = obtenerFechaHoyISO();
         const fDesde = document.getElementById('filtro-fecha-desde');
         const fHasta = document.getElementById('filtro-fecha-hasta');
