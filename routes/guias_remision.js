@@ -1604,18 +1604,31 @@ module.exports = function(db, tenantStorage) {
             const colorTema = req.query.color || '#008037';
 
             const creds = await ApisunatService.getCredenciales(dbConn);
-            const emisorRuc = esGrt ? (guia.transportista_ruc || creds.ruc_emisor || '20609532484') : (guia.remitente_ruc || '20609532484');
-            const emisorNombre = esGrt ? (guia.transportista_razon_social || creds.razon_social || 'YOGUI TRANSPORT S.A.C.') : (guia.remitente_razon_social || 'YOGUI TRANSPORT S.A.C.');
+
+            // Obtener configuración de empresa del ERP
+            let cfgEmpresa = {};
+            try {
+                const [cfgRows] = await dbConn.query("SELECT clave, valor FROM configuracion_erp");
+                (cfgRows || []).forEach(r => { cfgEmpresa[r.clave] = r.valor; });
+            } catch (e) {}
+
+            const emisorRuc = esGrt 
+                ? (guia.transportista_ruc || cfgEmpresa.empresa_ruc || creds.ruc_emisor || '20609532484') 
+                : (guia.remitente_ruc || cfgEmpresa.empresa_ruc || '20609532484');
+            const emisorNombre = esGrt 
+                ? (guia.transportista_razon_social || cfgEmpresa.empresa_nombre || creds.razon_social || 'YOGUI TRANSPORT S.A.C.') 
+                : (guia.remitente_razon_social || cfgEmpresa.empresa_nombre || 'YOGUI TRANSPORT S.A.C.');
 
             // Datos de dirección de empresa
             const esYogui = emisorRuc === '20609532484' || emisorNombre.includes('YOGUI');
-            const emisorDir = esYogui ? 'AV. LIBERTADORES SAN MARTIN MZA. 14 LOTE. 1B URB. SEMI RURAL PACHACUTEC' : 'CAL. HUASCAR LOTE. 20 APV. PEQUENOS AGRICULTORES';
-            const emisorDist = esYogui ? 'Cerro Colorado' : 'Ate';
-            const emisorProv = esYogui ? 'Arequipa' : 'Lima';
-            const emisorDept = esYogui ? 'Arequipa' : 'Lima';
-            const emisorTel = esYogui ? '987654321' : '919473276';
-            const emisorEmail = esYogui ? 'operaciones@yoguitransport.com' : 'contabilidad@marsisa.com';
-            const emisorWeb = esYogui ? 'https://yoguitransport.azkell.com' : 'https://www.marsisa.com';
+            const emisorDir = cfgEmpresa.empresa_direccion || (esYogui ? 'AV. LIBERTADORES SAN MARTIN MZA. 14 LOTE. 1B URB. SEMI RURAL PACHACUTEC' : 'CAL. HUASCAR LOTE. 20 APV. PEQUENOS AGRICULTORES');
+            const emisorDist = cfgEmpresa.empresa_distrito || (esYogui ? 'Cerro Colorado' : 'Ate');
+            const emisorProv = cfgEmpresa.empresa_provincia || (esYogui ? 'Arequipa' : 'Lima');
+            const emisorDept = cfgEmpresa.empresa_departamento || (esYogui ? 'Arequipa' : 'Lima');
+            const emisorTel = cfgEmpresa.empresa_telefono || (esYogui ? '987654321' : '919473276');
+            const emisorEmail = cfgEmpresa.empresa_correo || (esYogui ? 'operaciones@yoguitransport.com' : 'contabilidad@marsisa.com');
+            const emisorWeb = cfgEmpresa.empresa_web || (esYogui ? 'https://yoguitransport.azkell.com' : 'https://www.marsisa.com');
+            const emisorLogo = cfgEmpresa.empresa_logo || '/api/tenant-logo';
 
             // Formatear fechas en formato estándar YYYY-MM-DD
             const fmtDate = (d) => {
@@ -1878,8 +1891,9 @@ module.exports = function(db, tenantStorage) {
             <tr>
                 <!-- Logo y Datos de la Empresa -->
                 <td style="width: 55%; vertical-align: middle; padding-right: 15px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-                        <div style="font-size: 24px; font-weight: 900; letter-spacing: -0.5px; color: #0f172a;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+                        <img src="${emisorLogo}" alt="Logo Empresa" style="max-height: 55px; max-width: 190px; object-fit: contain;" onerror="this.style.display='none'; document.getElementById('brandLogoTextFallback').style.display='block';">
+                        <div id="brandLogoTextFallback" style="display: none; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; color: #0f172a;">
                             <span class="theme-color" id="brandLogoText" style="transition: color 0.2s;">${emisorNombre.slice(0, 5)}</span>${emisorNombre.slice(5)}
                         </div>
                     </div>
