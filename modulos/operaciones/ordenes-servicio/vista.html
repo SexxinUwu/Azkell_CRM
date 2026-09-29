@@ -880,23 +880,31 @@
                                         </div>
                                         <div class="row g-2">
                                             <div class="col-12 col-sm-6">
-                                                <label class="form-label">Tipo Contratación <span class="req">(*)</span></label>
-                                                <select id="os-input-tipo-contratacion" class="form-select" onchange="window.osToggleBloqueTercerizado()" required>
+                                                <label class="form-label">1. Tipo Contratación (Comercial) <span class="req">(*)</span></label>
+                                                <select id="os-input-tipo-contratacion" class="form-select fw-semibold" onchange="window.osToggleBloqueTercerizado()" required>
                                                     <option value="CLIENTE DIRECTO" selected>CLIENTE DIRECTO</option>
                                                     <option value="TERCERO">TERCERO (INTERMEDIARIO)</option>
                                                 </select>
                                             </div>
                                             <div class="col-12 col-sm-6">
-                                                <label class="form-label">Modalidad Ejecución <span class="req">(*)</span></label>
-                                                <select id="os-input-modalidad-ejecucion" class="form-select" onchange="window.osToggleBloqueTercerizado()" required>
-                                                    <option value="PROPIO" selected>PROPIO (FLOTA PROPIA)</option>
-                                                    <option value="TERCERIZADO">TERCERIZADO (SUBCONTRATADO)</option>
+                                                <label class="form-label">2. Modalidad Ejecución (Operativa) <span class="req">(*)</span></label>
+                                                <select id="os-input-modalidad-ejecucion" class="form-select fw-semibold" onchange="window.osToggleBloqueTercerizado()" required>
+                                                    <option value="PROPIO" selected>FLOTA PROPIA</option>
+                                                    <option value="TERCERIZADO">FLOTA TERCERIZADA (SUBCONTRATO)</option>
                                                 </select>
+                                            </div>
+
+                                            <!-- Banner Resumen de Flujo Inteligente -->
+                                            <div class="col-12">
+                                                <div id="os-resumen-flujo-banner" class="p-2 rounded-2 border border-secondary-subtle bg-light text-muted d-flex align-items-center gap-2" style="font-size: 0.74rem;">
+                                                    <i class="bi bi-info-circle-fill text-primary"></i>
+                                                    <span id="os-resumen-flujo-texto"><b>Flujo Directo Estándar:</b> Facturación directa al cliente con unidad propia de nuestra flota.</span>
+                                                </div>
                                             </div>
 
                                             <!-- 1. Cliente Principal a Quien se le Factura -->
                                             <div class="col-12">
-                                                <label class="form-label">Cliente (A Quien se Factura) <span class="req">(*)</span></label>
+                                                <label class="form-label" id="os-lbl-cliente">Cliente (A Quien se Factura) <span class="req">(*)</span></label>
                                                 <input type="text" id="os-input-cliente" list="os-clientes-datalist" class="form-control text-uppercase" placeholder="ESCRIBA O SELECCIONE CLIENTE COMERCIAL..." required>
                                                 <datalist id="os-clientes-datalist"></datalist>
                                             </div>
