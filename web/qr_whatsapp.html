@@ -16,6 +16,7 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
+      background-image: radial-gradient(circle at 50% 10%, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
     }
     .card {
       background: rgba(255, 255, 255, 0.05);
@@ -23,7 +24,7 @@
       backdrop-filter: blur(20px);
       border-radius: 24px;
       padding: 32px;
-      max-width: 440px;
+      max-width: 460px;
       width: 100%;
       text-align: center;
       box-shadow: 0 20px 50px rgba(0,0,0,0.5);
@@ -32,20 +33,23 @@
       display: inline-block;
       background: rgba(59, 130, 246, 0.15);
       color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
       padding: 6px 14px;
       border-radius: 999px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
-      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
     }
-    h1 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
-    p { font-size: 14px; color: #94a3b8; line-height: 1.5; margin-bottom: 24px; }
+    h1 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .company-title { font-size: 15px; color: #38bdf8; font-weight: 700; margin-bottom: 12px; }
+    p { font-size: 13px; color: #94a3b8; line-height: 1.5; margin-bottom: 20px; }
     .qr-box {
       background: #ffffff;
       padding: 16px;
       border-radius: 18px;
       display: inline-block;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       min-width: 250px;
       min-height: 250px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
@@ -55,13 +59,18 @@
       height: 220px;
       display: block;
     }
+    .instance-info {
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 16px;
+    }
     .steps {
       text-align: left;
       background: rgba(255,255,255,0.02);
       border: 1px solid rgba(255,255,255,0.05);
       border-radius: 14px;
-      padding: 16px;
-      font-size: 13px;
+      padding: 14px 16px;
+      font-size: 12px;
       color: #cbd5e1;
       margin-bottom: 20px;
     }
@@ -71,31 +80,36 @@
       background: #3b82f6;
       color: #fff;
       border: none;
-      padding: 12px 24px;
-      border-radius: 12px;
+      padding: 14px 24px;
+      border-radius: 14px;
       font-weight: 700;
       cursor: pointer;
       font-size: 14px;
       width: 100%;
+      transition: all 0.2s;
     }
+    .btn-refresh:active { transform: scale(0.98); }
   </style>
 </head>
 <body>
   <div class="card">
-    <span class="badge">VINCULACIÓN WHATSAPP</span>
-    <h1>Escanear Código QR</h1>
-    <p>Conecta el número emisor del sistema para enviar las aprobaciones de Órdenes de Compra.</p>
+    <span class="badge" id="badgeTag">WHATSAPP MULTI-TENANT</span>
+    <h1>Vincular Número Emisor</h1>
+    <div class="company-title" id="companyName">Cargando empresa...</div>
+    <p>Escanea este código con el WhatsApp corporativo asignado a esta empresa para enviar las aprobaciones de Órdenes de Compra.</p>
 
     <div class="qr-box" id="qrContainer">
-      <div style="padding-top: 100px; color: #64748b; font-size: 13px;">Cargando QR...</div>
+      <div style="padding-top: 100px; color: #64748b; font-size: 13px;">Generando QR...</div>
     </div>
+
+    <div class="instance-info" id="instanceInfo">Instancia: --</div>
 
     <div class="steps">
       <ol>
-        <li>Abre <b>WhatsApp</b> en el teléfono emisor.</li>
+        <li>Abre <b>WhatsApp</b> en el teléfono emisor de la empresa.</li>
         <li>Toca los <b>3 puntos</b> o <b>Configuración</b>.</li>
         <li>Selecciona <b>Dispositivos vinculados</b>.</li>
-        <li>Toca <b>Vincular un dispositivo</b> y apunta la cámara a este QR.</li>
+        <li>Toca <b>Vincular un dispositivo</b> y apunta la cámara a este código QR.</li>
       </ol>
     </div>
 
@@ -110,12 +124,22 @@
         const res = await fetch('/api/whatsapp/qr');
         const data = await res.json();
         
+        if (data.empresa_nombre) {
+          document.getElementById('companyName').innerText = data.empresa_nombre;
+        } else {
+          document.getElementById('companyName').innerText = 'Azkell ERP';
+        }
+
+        if (data.instance) {
+          document.getElementById('instanceInfo').innerText = `Instancia WhatsApp: ${data.instance}`;
+        }
+
         if (data.status === 'CONNECTED') {
           container.innerHTML = `
-            <div style="padding: 60px 20px; color: #10b981;">
-              <div style="font-size: 48px; margin-bottom: 8px;">✅</div>
+            <div style="padding: 50px 16px; color: #10b981;">
+              <div style="font-size: 52px; margin-bottom: 8px;">✅</div>
               <b style="font-size: 16px;">¡WhatsApp Conectado!</b>
-              <p style="color: #64748b; margin-top: 4px; font-size: 12px;">El bot ya está listo para enviar mensajes.</p>
+              <p style="color: #64748b; margin-top: 6px; font-size: 12px;">Esta empresa ya tiene su número emisor activo y vinculado.</p>
             </div>
           `;
           return;
@@ -124,7 +148,7 @@
         if (data.base64) {
           container.innerHTML = `<img src="${data.base64}" alt="Código QR WhatsApp" />`;
         } else {
-          container.innerHTML = `<div style="padding-top: 90px; color: #ef4444; font-size: 12px;">${data.error || 'No se pudo obtener el QR. Intenta de nuevo.'}</div>`;
+          container.innerHTML = `<div style="padding-top: 90px; color: #ef4444; font-size: 12px;">${data.error || 'Generando sesión... Haz clic en Actualizar en 3 segundos.'}</div>`;
         }
       } catch (err) {
         container.innerHTML = `<div style="padding-top: 90px; color: #ef4444; font-size: 12px;">Error: ${err.message}</div>`;
@@ -132,7 +156,6 @@
     }
 
     fetchQR();
-    // Auto refrescar cada 20 segundos por si expira el QR de WhatsApp
     setInterval(fetchQR, 20000);
   </script>
 </body>
