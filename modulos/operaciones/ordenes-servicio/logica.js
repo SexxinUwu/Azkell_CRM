@@ -340,30 +340,74 @@
         }
     };
 
-    // ── Toggle Dinámico de Bloques Condicionales (Sin duplicidades) ──
+    // ── Toggle Dinámico de Bloques Condicionales y Resumen de Flujo Inteligente ──
     window.osToggleBloqueTercerizado = function () {
         const tipoCont = document.getElementById('os-input-tipo-contratacion')?.value || 'CLIENTE DIRECTO';
         const modEjec = document.getElementById('os-input-modalidad-ejecucion')?.value || 'PROPIO';
         
         const bloqueRemitente = document.getElementById('os-bloque-remitente-generador');
         const bloqueProveedor = document.getElementById('os-bloque-proveedor-tercerizado');
+        const bannerTexto = document.getElementById('os-resumen-flujo-texto');
+        const bannerEl = document.getElementById('os-resumen-flujo-banner');
+        const lblCliente = document.getElementById('os-lbl-cliente');
+        const inpCliente = document.getElementById('os-input-cliente');
+        const inpTracto = document.getElementById('os-input-tracto');
+        const inpCarreta = document.getElementById('os-input-carreta');
 
-        // Bloque A: Si nos contrata un tercero intermediario (ej. Rosymar), mostramos quién es el Dueño de la Carga (ej. Bimbo)
+        const esDirecto = (tipoCont === 'CLIENTE DIRECTO');
+        const esPropio = (modEjec === 'PROPIO');
+
+        // 1. Visibilidad Bloque A: Remitente Generador de la Carga (Solo si nos contrata un tercero)
         if (bloqueRemitente) {
-            if (tipoCont === 'TERCERO') {
+            if (!esDirecto) {
                 bloqueRemitente.classList.remove('d-none');
             } else {
                 bloqueRemitente.classList.add('d-none');
             }
         }
 
-        // Bloque B: Si nosotros tercerizamos el viaje (camión de otra empresa), mostramos datos del Proveedor y Costo
+        // 2. Visibilidad Bloque B: Proveedor Transportista Subcontratado (Solo si subcontratamos camión)
         if (bloqueProveedor) {
-            if (modEjec === 'TERCERIZADO') {
+            if (!esPropio) {
                 bloqueProveedor.classList.remove('d-none');
             } else {
                 bloqueProveedor.classList.add('d-none');
             }
+        }
+
+        // 3. Textos reactivos del banner explicativo
+        if (bannerTexto && bannerEl) {
+            if (esDirecto && esPropio) {
+                bannerEl.className = 'p-2 rounded-2 border border-primary-subtle bg-primary-subtle/20 text-primary-emphasis d-flex align-items-center gap-2';
+                bannerTexto.innerHTML = '<b>1. Directo + Flota Propia:</b> Facturación directa al cliente dueño de la carga con unidades de nuestra empresa.';
+            } else if (esDirecto && !esPropio) {
+                bannerEl.className = 'p-2 rounded-2 border border-warning-subtle bg-warning-subtle/30 text-warning-emphasis d-flex align-items-center gap-2';
+                bannerTexto.innerHTML = '<b>2. Directo + Tercerizado:</b> Facturación a nuestro cliente directo y flete pagado a un transportista externo subcontratado.';
+            } else if (!esDirecto && esPropio) {
+                bannerEl.className = 'p-2 rounded-2 border border-info-subtle bg-info-subtle/30 text-info-emphasis d-flex align-items-center gap-2';
+                bannerTexto.innerHTML = '<b>3. Intermediario + Flota Propia:</b> Facturación al operador/agencia contratante y viaje realizado con nuestro camión propio.';
+            } else {
+                bannerEl.className = 'p-2 rounded-2 border border-purple-subtle bg-light text-dark d-flex align-items-center gap-2';
+                bannerTexto.innerHTML = '<b>4. Agenciamiento / Corretaje:</b> Facturación al operador y servicio subcontratado a un transportista tercero.';
+            }
+        }
+
+        // 4. Actualizar Labels y Placeholders
+        if (lblCliente) {
+            lblCliente.innerHTML = esDirecto 
+                ? 'Cliente Comercial / Facturar a <span class="req">(*)</span>'
+                : 'Cliente Intermediario / Facturar a <span class="req">(*)</span>';
+        }
+        if (inpCliente) {
+            inpCliente.placeholder = esDirecto
+                ? 'ESCRIBA O SELECCIONE CLIENTE DIRECTO...'
+                : 'ESCRIBA EMPRESA/AGENCIA A QUIEN FACTURAR...';
+        }
+        if (inpTracto) {
+            inpTracto.placeholder = esPropio ? 'PLACA TRACTO (PROPIO)' : 'PLACA TRACTO (TERCERO)';
+        }
+        if (inpCarreta) {
+            inpCarreta.placeholder = esPropio ? 'PLACA CARRETA (PROPIO)' : 'PLACA CARRETA (TERCERO)';
         }
     };
 
