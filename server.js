@@ -1752,11 +1752,25 @@ const sseClients = new Set();
 // ============================================================
 function verifyToken(req, res, next) {
     const PUBLIC_PATHS = ['/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas'];
-    if (PUBLIC_PATHS.includes(req.path) || req.path.endsWith('/ver') || (req.path.includes('/archivo/') && req.path.endsWith('/ver'))) return next();
+    if (
+        PUBLIC_PATHS.includes(req.path) || 
+        req.path.endsWith('/ver') || 
+        (req.path.includes('/archivo/') && req.path.endsWith('/ver')) ||
+        req.path.includes('/pdf-apisunat/') ||
+        req.path.includes('/pdf/') ||
+        req.path.includes('/imprimir/')
+    ) return next();
+
+    let token = null;
     const auth = req.headers['authorization'];
-    if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'No autorizado' });
+    if (auth && auth.startsWith('Bearer ')) {
+        token = auth.slice(7);
+    } else if (req.query && req.query.token) {
+        token = req.query.token;
+    }
+
+    if (!token) return res.status(401).json({ error: 'No autorizado' });
     try {
-        const token = auth.slice(7);
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = decoded;
 
