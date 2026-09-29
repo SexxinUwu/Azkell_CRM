@@ -1596,36 +1596,83 @@ module.exports = function(db, tenantStorage) {
                 return res.redirect(pdfUrl);
             }
 
-            // ── RENDERIZADO DE PLANTILLA OFICIAL SUNAT A4 PARA IMPRESIÓN / PDF ──
-            const esGrt = (guia.tipo_documento === '31' || (guia.numero_guia && guia.numero_guia.startsWith('V')));
-            const tituloDoc = esGrt ? 'GUÍA DE REMISIÓN ELECTRÓNICA - TRANSPORTISTA' : 'GUÍA DE REMISIÓN ELECTRÓNICA - REMITENTE';
-            const emisorRuc = esGrt ? (guia.transportista_ruc || '20609532484') : (guia.remitente_ruc || '—');
-            const emisorNombre = esGrt ? (guia.transportista_razon_social || 'YOGUI TRANSPORT S.A.C.') : (guia.remitente_razon_social || '—');
+            // ── RENDERIZADO DE PLANTILLA OFICIAL 1:1 ESTILO NUBEFACT / MARSISA (A4) ──
+            const esGrt = (guia.tipo_documento === '31' || (guia.numero_guia && (guia.numero_guia.startsWith('V') || guia.numero_guia.startsWith('T001'))));
+            const tituloDoc = esGrt ? 'GUIA REMISIÓN TRANSPORTISTA ELECTRÓNICA' : 'GUIA REMISIÓN REMITENTE ELECTRÓNICA';
+            
+            // Color corporativo inicial (configurable vía query ?color=... o default verde Marsisa #008037)
+            const colorTema = req.query.color || '#008037';
+
+            const creds = await ApisunatService.getCredenciales(dbConn);
+            const emisorRuc = esGrt ? (guia.transportista_ruc || creds.ruc_emisor || '20609532484') : (guia.remitente_ruc || '20609532484');
+            const emisorNombre = esGrt ? (guia.transportista_razon_social || creds.razon_social || 'YOGUI TRANSPORT S.A.C.') : (guia.remitente_razon_social || 'YOGUI TRANSPORT S.A.C.');
+
+            // Datos de dirección de empresa
+            const esYogui = emisorRuc === '20609532484' || emisorNombre.includes('YOGUI');
+            const emisorDir = esYogui ? 'AV. LIBERTADORES SAN MARTIN MZA. 14 LOTE. 1B URB. SEMI RURAL PACHACUTEC' : 'CAL. HUASCAR LOTE. 20 APV. PEQUENOS AGRICULTORES';
+            const emisorDist = esYogui ? 'Cerro Colorado' : 'Ate';
+            const emisorProv = esYogui ? 'Arequipa' : 'Lima';
+            const emisorDept = esYogui ? 'Arequipa' : 'Lima';
+            const emisorTel = esYogui ? '987654321' : '919473276';
+            const emisorEmail = esYogui ? 'operaciones@yoguitransport.com' : 'contabilidad@marsisa.com';
+            const emisorWeb = esYogui ? 'https://yoguitransport.azkell.com' : 'https://www.marsisa.com';
+
+            // Formatear fechas en formato estándar YYYY-MM-DD
+            const fmtDate = (d) => {
+                if (!d) return '—';
+                if (typeof d === 'string' && d.includes('-') && d.length <= 10) return d;
+                const dt = new Date(d);
+                if (isNaN(dt.getTime())) return String(d);
+                const y = dt.getFullYear();
+                const m = String(dt.getMonth() + 1).padStart(2, '0');
+                const day = String(dt.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            };
+
+            const fEmision = fmtDate(guia.fecha_emision);
+            const fTraslado = fmtDate(guia.fecha_traslado || guia.fecha_emision);
 
             let filasItemsHtml = '';
             if (items && items.length > 0) {
                 items.forEach((it, idx) => {
+                    const bgRow = (idx % 2 === 0) ? '#ffffff' : '#f8fafc';
                     filasItemsHtml += `
-                        <tr>
-                            <td style="text-align:center; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px;">${idx + 1}</td>
-                            <td style="text-align:center; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-family: monospace;">${it.codigo || '—'}</td>
-                            <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 500;">${it.descripcion || 'MERCADERÍA'}</td>
-                            <td style="text-align:center; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px;">${it.unidad_medida || 'NIU'}</td>
-                            <td style="text-align:right; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: bold; font-family: monospace;">${Number(it.cantidad || 1).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
-                            <td style="text-align:right; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-family: monospace;">${Number(it.peso_unitario || 0).toFixed(2)}</td>
+                        <tr style="background-color: ${bgRow};">
+                            <td style="text-align:center; padding: 6px 10px; font-size: 11px; font-weight: 500;">${it.unidad_medida || 'KGM'}</td>
+                            <td style="text-align:center; padding: 6px 10px; font-size: 11px; font-family: monospace; font-weight: 600;">${it.codigo || 'A1A'}</td>
+                            <td style="padding: 6px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${it.descripcion || 'CARGA GENERAL SEGÚN GUÍA'}</td>
+                            <td style="text-align:right; padding: 6px 10px; font-size: 11px; font-weight: bold; font-family: monospace;">${Number(it.cantidad || it.peso_unitario || guia.peso_bruto_total || 1).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>
                         </tr>
                     `;
                 });
             } else {
                 filasItemsHtml = `
-                    <tr>
-                        <td colspan="6" style="text-align:center; padding: 16px; color: #64748b; font-size: 12px;">Carga General Registrada en Guía Electrónica</td>
+                    <tr style="background-color: #ffffff;">
+                        <td style="text-align:center; padding: 8px 10px; font-size: 11px;">${guia.unidad_medida || 'KGM'}</td>
+                        <td style="text-align:center; padding: 8px 10px; font-size: 11px; font-family: monospace;">A1A</td>
+                        <td style="padding: 8px 10px; font-size: 11px; font-weight: 600;">${guia.descripcion_motivo ? guia.descripcion_motivo.toUpperCase() : 'SEGÚN GUÍA DE REMISIÓN / MERCADERÍA GENERAL'}</td>
+                        <td style="text-align:right; padding: 8px 10px; font-size: 11px; font-weight: bold; font-family: monospace;">${Number(guia.peso_bruto_total || 1).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>
                     </tr>
                 `;
             }
 
-            const qrData = encodeURIComponent(`${emisorRuc}|${guia.tipo_documento || '09'}|${guia.numero_guia}|${guia.peso_bruto_total || 0}|${guia.fecha_emision || ''}|${guia.destinatario_ruc || ''}|`);
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${qrData}`;
+            // Filas vacías para completar el tamaño de la tabla estilo Nubefact
+            const cantFilas = (items && items.length > 0) ? items.length : 1;
+            const filasExtra = Math.max(0, 5 - cantFilas);
+            for (let i = 0; i < filasExtra; i++) {
+                const bgRow = ((cantFilas + i) % 2 === 0) ? '#ffffff' : '#f8fafc';
+                filasItemsHtml += `
+                    <tr style="background-color: ${bgRow};">
+                        <td style="padding: 10px; font-size: 11px;">&nbsp;</td>
+                        <td style="padding: 10px; font-size: 11px;">&nbsp;</td>
+                        <td style="padding: 10px; font-size: 11px;">&nbsp;</td>
+                        <td style="padding: 10px; font-size: 11px;">&nbsp;</td>
+                    </tr>
+                `;
+            }
+
+            const qrData = encodeURIComponent(`${emisorRuc}|${guia.tipo_documento || '31'}|${guia.numero_guia}|${guia.peso_bruto_total || 0}|${fEmision}|${guia.destinatario_ruc || guia.remitente_ruc || ''}|`);
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${qrData}`;
 
             const html = `
 <!DOCTYPE html>
@@ -1634,183 +1681,399 @@ module.exports = function(db, tenantStorage) {
     <meta charset="UTF-8">
     <title>${guia.numero_guia} - ${tituloDoc}</title>
     <style>
+        :root {
+            --theme-color: ${colorTema};
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #525659; padding: 20px 0; color: #1e293b; }
-        .page { background: #ffffff; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 14mm 15mm; box-shadow: 0 4px 15px rgba(0,0,0,0.25); border-radius: 4px; position: relative; }
-        .no-print-bar { position: fixed; top: 12px; right: 20px; z-index: 1000; display: flex; gap: 8px; }
-        .btn-print { background: #0284c7; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-        .btn-print:hover { background: #0369a1; }
+        body { font-family: Arial, Helvetica, sans-serif; background: #525659; padding: 20px 0; color: #000000; font-size: 11px; line-height: 1.3; }
+        .page { background: #ffffff; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 12mm 14mm; box-shadow: 0 4px 15px rgba(0,0,0,0.25); border-radius: 2px; position: relative; }
+        
+        /* Barra de herramientas flotante */
+        .no-print-bar {
+            position: fixed;
+            top: 12px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            padding: 8px 14px;
+            border-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+            color: #ffffff;
+            font-size: 12px;
+        }
+        .color-presets { display: flex; align-items: center; gap: 6px; }
+        .color-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #ffffff;
+            transition: transform 0.15s ease;
+        }
+        .color-dot:hover { transform: scale(1.2); }
+        .color-input {
+            width: 26px;
+            height: 26px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            background: transparent;
+            padding: 0;
+        }
+        .btn-print {
+            background: var(--theme-color);
+            color: #ffffff;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-print:hover { opacity: 0.9; transform: translateY(-1px); }
+        
+        /* Paleta y Contenedores */
+        .theme-bg { background-color: var(--theme-color) !important; color: #ffffff !important; }
+        .theme-color { color: var(--theme-color) !important; }
+        
         .header-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-        .box-ruc { border: 2px solid #0f172a; border-radius: 8px; text-align: center; padding: 10px 14px; background: #fafafa; }
-        .box-ruc h3 { font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
-        .box-ruc h2 { font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px; letter-spacing: 0.3px; }
-        .box-ruc .num { font-size: 16px; font-weight: 800; color: #dc2626; font-family: monospace; letter-spacing: 0.5px; }
-        .card-section { border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; background: #ffffff; }
-        .card-title { font-size: 10.5px; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; letter-spacing: 0.3px; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; }
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 11px; }
-        .lbl { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 1px; }
-        .val { font-size: 11px; font-weight: 600; color: #0f172a; word-break: break-word; }
-        .items-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
-        .items-table th { background: #f1f5f9; color: #334155; font-size: 10px; font-weight: 800; text-transform: uppercase; padding: 6px 8px; border-bottom: 2px solid #cbd5e1; letter-spacing: 0.3px; }
-        .footer-box { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 16px; font-size: 10px; color: #64748b; }
+        
+        /* Caja RUC Estilo Nubefact */
+        .box-ruc-nubefact {
+            background: var(--theme-color);
+            color: #ffffff;
+            border-radius: 12px;
+            text-align: center;
+            padding: 12px 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: background-color 0.2s ease;
+        }
+        .box-ruc-nubefact .ruc { font-size: 14.5px; font-weight: bold; letter-spacing: 0.5px; margin-bottom: 3px; }
+        .box-ruc-nubefact .tipo { font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; line-height: 1.2; }
+        .box-ruc-nubefact .numero { font-size: 16px; font-weight: 900; letter-spacing: 1px; font-family: monospace; }
+
+        /* Cajas de Datos con Bordes Redondeados */
+        .box-rounded {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            background: #ffffff;
+        }
+        .box-title {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #0f172a;
+            margin-bottom: 6px;
+            letter-spacing: 0.2px;
+        }
+
+        /* Grillas de 2 columnas de datos */
+        .data-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .row-kv {
+            display: flex;
+            margin-bottom: 3px;
+            font-size: 10.5px;
+        }
+        .row-kv .k {
+            font-weight: bold;
+            color: #1e293b;
+            min-width: 130px;
+            text-transform: uppercase;
+        }
+        .row-kv .v {
+            flex: 1;
+            color: #000000;
+            word-break: break-word;
+        }
+
+        /* Tabla de Ítems Nubefact */
+        .table-items-nubefact {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+        }
+        .table-items-nubefact th {
+            background-color: var(--theme-color);
+            color: #ffffff;
+            font-size: 10.5px;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 6px 10px;
+            border: none;
+            letter-spacing: 0.3px;
+            transition: background-color 0.2s ease;
+        }
+        .table-items-nubefact td {
+            border: none;
+        }
+
+        /* Sección Footer / Notas y QR */
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1fr 140px;
+            gap: 14px;
+            margin-top: 10px;
+            align-items: stretch;
+        }
+        .box-notas {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 120px;
+        }
+        .box-qr {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+        }
+
         @media print {
             body { background: #ffffff; padding: 0; }
-            .page { width: 100%; box-shadow: none; padding: 8mm; margin: 0; }
-            .no-print-bar { display: none; }
+            .page { width: 100%; box-shadow: none; padding: 6mm 8mm; margin: 0; }
+            .no-print-bar { display: none !important; }
         }
     </style>
 </head>
 <body>
+    <!-- Barra de Herramientas Interactiva -->
     <div class="no-print-bar">
-        <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+        <span>🎨 <b>Color Corporativo:</b></span>
+        <div class="color-presets">
+            <span class="color-dot" style="background:#008037;" title="Verde Nubefact / Marsisa" onclick="cambiarColor('#008037')"></span>
+            <span class="color-dot" style="background:#0d6efd;" title="Azul Eléctrico / Yogui" onclick="cambiarColor('#0d6efd')"></span>
+            <span class="color-dot" style="background:#0f3460;" title="Azul Marino Oficial" onclick="cambiarColor('#0f3460')"></span>
+            <span class="color-dot" style="background:#b91c1c;" title="Rojo Carmesí" onclick="cambiarColor('#b91c1c')"></span>
+            <span class="color-dot" style="background:#1e293b;" title="Gris Oscuro / Carbón" onclick="cambiarColor('#1e293b')"></span>
+            <input type="color" id="customColor" class="color-input" title="Elegir Color Personalizado" value="${colorTema}" onchange="cambiarColor(this.value)">
+        </div>
+        <button class="btn-print" onclick="window.print()">🖨️ Imprimir / PDF</button>
     </div>
 
     <div class="page">
-        <!-- CABECERA -->
+        <!-- 1. CABECERA CON LOGO Y CUADRO RUC -->
         <table class="header-table">
             <tr>
-                <td style="width: 58%; vertical-align: top; padding-right: 15px;">
-                    <div style="font-size: 18px; font-weight: 900; color: #0f172a; line-height: 1.15; margin-bottom: 4px;">
+                <!-- Logo y Datos de la Empresa -->
+                <td style="width: 55%; vertical-align: middle; padding-right: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                        <div style="font-size: 24px; font-weight: 900; letter-spacing: -0.5px; color: #0f172a;">
+                            <span class="theme-color" id="brandLogoText" style="transition: color 0.2s;">${emisorNombre.slice(0, 5)}</span>${emisorNombre.slice(5)}
+                        </div>
+                    </div>
+                    <div style="font-size: 11.5px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">
                         ${emisorNombre}
                     </div>
-                    <div style="font-size: 11px; color: #475569; margin-bottom: 2px;">
-                        <b>RUC:</b> ${emisorRuc}
-                    </div>
-                    <div style="font-size: 10.5px; color: #64748b; line-height: 1.3;">
-                        ${guia.punto_partida_direccion || 'Dirección Fiscal Principal'}
+                    <div style="font-size: 10px; color: #334155; line-height: 1.35;">
+                        <div><b>DIRECCION:</b> ${emisorDir}</div>
+                        <div><b>DISTRITO:</b> ${emisorDist} &nbsp;&nbsp;<b>PROVINCIA:</b> ${emisorProv} &nbsp;&nbsp;<b>DEPARTAMENTO:</b> ${emisorDept}</div>
+                        <div><b>TEL:</b> ${emisorTel} &nbsp;&nbsp;<b>CORREO:</b> ${emisorEmail} &nbsp;&nbsp;<b>WEB:</b> ${emisorWeb}</div>
                     </div>
                 </td>
-                <td style="width: 42%; vertical-align: top;">
-                    <div class="box-ruc">
-                        <h3>RUC N° ${emisorRuc}</h3>
-                        <h2>${tituloDoc}</h2>
-                        <div class="num">${guia.numero_guia}</div>
+
+                <!-- Cuadro RUC Nubefact -->
+                <td style="width: 45%; vertical-align: top;">
+                    <div class="box-ruc-nubefact">
+                        <div class="ruc">RUC: ${emisorRuc}</div>
+                        <div class="tipo">${tituloDoc}</div>
+                        <div class="numero">${guia.numero_guia}</div>
                     </div>
                 </td>
             </tr>
         </table>
 
-        <!-- DATOS DEL TRASLADO -->
-        <div class="card-section">
-            <div class="card-title">1. Datos del Traslado y Emisión</div>
-            <div class="grid-3">
-                <div>
-                    <div class="lbl">Fecha de Emisión:</div>
-                    <div class="val font-monospace">${guia.fecha_emision ? String(guia.fecha_emision).slice(0, 10) : '—'}</div>
+        <!-- 2. DATOS DEL CLIENTE Y FECHAS (2 Cajas en Paralelo) -->
+        <div class="data-grid-2">
+            <!-- Caja Izquierda: Datos del Cliente -->
+            <div class="box-rounded">
+                <div class="box-title">DATOS DEL CLIENTE</div>
+                <div class="row-kv">
+                    <div class="k" style="min-width: 80px;">RUC</div>
+                    <div class="v">: ${guia.destinatario_ruc || guia.remitente_ruc || '—'}</div>
                 </div>
-                <div>
-                    <div class="lbl">Fecha Inicio Traslado:</div>
-                    <div class="val font-monospace">${guia.fecha_traslado ? String(guia.fecha_traslado).slice(0, 10) : '—'}</div>
+                <div class="row-kv">
+                    <div class="k" style="min-width: 80px;">CLIENTE</div>
+                    <div class="v">: <b>${guia.destinatario_razon_social || guia.remitente_razon_social || '—'}</b></div>
                 </div>
-                <div>
-                    <div class="lbl">Motivo de Traslado:</div>
-                    <div class="val">${guia.descripcion_motivo || (guia.motivo_traslado === '01' ? 'VENTA' : 'TRASLADO ENTRE ESTABLECIMIENTOS')}</div>
+                <div class="row-kv">
+                    <div class="k" style="min-width: 80px;">DIRECCIÓN</div>
+                    <div class="v">: ${guia.punto_llegada_direccion || '—'}</div>
                 </div>
             </div>
-            <div class="grid-3" style="margin-top: 6px;">
-                <div>
-                    <div class="lbl">Modalidad de Transporte:</div>
-                    <div class="val">${guia.modalidad_traslado || (esGrt ? 'TRANSPORTE PÚBLICO' : 'TRANSPORTE PRIVADO')}</div>
+
+            <!-- Caja Derecha: Fechas y Registro MTC -->
+            <div class="box-rounded">
+                <div class="row-kv">
+                    <div class="k" style="min-width: 110px;">FECHA EMISIÓN</div>
+                    <div class="v font-monospace">: ${fEmision}</div>
                 </div>
-                <div>
-                    <div class="lbl">Peso Bruto Total:</div>
-                    <div class="val" style="color:#0284c7;">${Number(guia.peso_bruto_total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })} ${guia.unidad_medida || 'KGM'}</div>
+                <div class="row-kv">
+                    <div class="k" style="min-width: 110px;">FECHA TRASLADO</div>
+                    <div class="v font-monospace">: ${fTraslado}</div>
                 </div>
-                <div>
-                    <div class="lbl">Estado Tributario:</div>
-                    <div class="val" style="color:#16a34a; font-weight:800;">● ${guia.estado_sunat || 'ACEPTADO'}</div>
+                <div class="row-kv">
+                    <div class="k" style="min-width: 110px;">REGISTRO MTC</div>
+                    <div class="v">: ${guia.registro_mtc || '15149928CNG'}</div>
                 </div>
             </div>
         </div>
 
-        <!-- REMITENTE Y DESTINATARIO -->
-        <div class="card-section">
-            <div class="card-title">2. Actores Comerciales (Remitente y Destinatario)</div>
-            <div class="grid-2">
-                <div style="border-right: 1px solid #f1f5f9; padding-right: 8px;">
-                    <div class="lbl">Datos del Remitente:</div>
-                    <div class="val fw-bold">${guia.remitente_razon_social || '—'}</div>
-                    <div style="font-size:10px; color:#475569; margin-top:2px;"><b>RUC:</b> ${guia.remitente_ruc || '—'}</div>
+        <!-- 3. DATOS DE LA GUIA (Partida, Llegada, Remitente, Destinatario, Vehículo) -->
+        <div style="margin-bottom: 10px;">
+            <div class="box-title" style="margin-bottom: 4px;">DATOS DE LA GUIA</div>
+            <div class="data-grid-2" style="margin-bottom: 0;">
+                <div>
+                    <div class="row-kv">
+                        <div class="k">PUNTO DE PARTIDA</div>
+                        <div class="v">: ${guia.punto_partida_direccion || '—'}</div>
+                    </div>
+                    <div class="row-kv">
+                        <div class="k">UBIGEO DE PARTIDA</div>
+                        <div class="v">: ${guia.punto_partida_ubigeo || '—'}</div>
+                    </div>
+                    <div class="row-kv">
+                        <div class="k">REMITENTE</div>
+                        <div class="v">: <b>${guia.remitente_razon_social || '—'}</b></div>
+                    </div>
+                    <div class="row-kv">
+                        <div class="k">NUMERO DOC.</div>
+                        <div class="v">: ${guia.remitente_ruc || '—'}</div>
+                    </div>
+                    <div class="row-kv">
+                        <div class="k">VEHICULO</div>
+                        <div class="v font-monospace fw-bold">: ${guia.placa_tracto || '—'} ${guia.placa_carreta ? ' / ' + guia.placa_carreta : ''}</div>
+                    </div>
+                    <div class="row-kv">
+                        <div class="k">PESO TOTAL</div>
+                        <div class="v fw-bold">: ${Number(guia.peso_bruto_total || 0).toLocaleString('es-PE', { minimumFractionDigits: 0 })} kg</div>
+                    </div>
                 </div>
-                <div style="padding-left: 8px;">
-                    <div class="lbl">Datos del Destinatario:</div>
-                    <div class="val fw-bold">${guia.destinatario_razon_social || '—'}</div>
-                    <div style="font-size:10px; color:#475569; margin-top:2px;"><b>RUC / Doc:</b> ${guia.destinatario_ruc || '—'}</div>
+                <div>
+                    <div class="row-kv">
+                        <div class="k">PUNTO DE LLEGADA</div>
+                        <div class="v">: ${guia.punto_llegada_direccion || '—'}</div>
+                    </div>
+                    <div class="row-kv">
+                        <div class="k">UBIGEO DE LLEGADA</div>
+                        <div class="v">: ${guia.punto_llegada_ubigeo || '—'}</div>
+                    </div>
+                    <div class="row-kv">
+                        <div class="k">DESTINATARIO</div>
+                        <div class="v">: <b>${guia.destinatario_razon_social || '—'}</b></div>
+                    </div>
+                    <div class="row-kv">
+                        <div class="k">NUMERO DOC.</div>
+                        <div class="v">: ${guia.destinatario_ruc || '—'}</div>
+                    </div>
+                    <div class="row-kv">
+                        <div class="k">INSCRIPCION MTC</div>
+                        <div class="v">: ${guia.registro_mtc || '15M26003679E'}</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- PUNTOS DE PARTIDA Y LLEGADA -->
-        <div class="card-section">
-            <div class="card-title">3. Puntos de Partida y Llegada</div>
-            <div class="grid-2">
+        <!-- 4. DATOS DEL CHOFER -->
+        <div style="margin-bottom: 12px;">
+            <div class="box-title" style="margin-bottom: 4px;">DATOS DEL CHOFER</div>
+            <div class="data-grid-2" style="margin-bottom: 0;">
                 <div>
-                    <div class="lbl">Punto de Partida:</div>
-                    <div class="val">${guia.punto_partida_direccion || '—'}</div>
-                    <div style="font-size:10px; color:#64748b; margin-top:1px;"><b>Ubigeo:</b> ${guia.punto_partida_ubigeo || '—'}</div>
+                    <div class="row-kv">
+                        <div class="k">TIPO</div>
+                        <div class="v">: Principal</div>
+                    </div>
+                    <div class="row-kv">
+                        <div class="k">LICENCIA</div>
+                        <div class="v font-monospace">: ${guia.conductor_licencia || '—'}</div>
+                    </div>
                 </div>
                 <div>
-                    <div class="lbl">Punto de Llegada:</div>
-                    <div class="val">${guia.punto_llegada_direccion || '—'}</div>
-                    <div style="font-size:10px; color:#64748b; margin-top:1px;"><b>Ubigeo:</b> ${guia.punto_llegada_ubigeo || '—'}</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- DATOS DE LA UNIDAD Y CONDUCTOR -->
-        <div class="card-section">
-            <div class="card-title">4. Datos del Vehículo y Conductor</div>
-            <div class="grid-3">
-                <div>
-                    <div class="lbl">Placa Tracto:</div>
-                    <div class="val font-monospace fw-bold">${guia.placa_tracto || '—'}</div>
-                </div>
-                <div>
-                    <div class="lbl">Placa Carreta / Remolque:</div>
-                    <div class="val font-monospace fw-bold">${guia.placa_carreta || '—'}</div>
-                </div>
-                <div>
-                    <div class="lbl">Conductor:</div>
-                    <div class="val">${guia.conductor_nombre || '—'}</div>
-                    <div style="font-size:10px; color:#64748b;"><b>${guia.conductor_tipo_doc || 'DNI'}:</b> ${guia.conductor_num_doc || '—'} | <b>Lic:</b> ${guia.conductor_licencia || '—'}</div>
+                    <div class="row-kv">
+                        <div class="k">DOCUMENTO</div>
+                        <div class="v">: ${guia.conductor_tipo_doc || 'DNI'} - ${guia.conductor_num_doc || '—'}</div>
+                    </div>
+                    <div class="row-kv">
+                        <div class="k">NOMBRE COMPLETO</div>
+                        <div class="v">: <b>${guia.conductor_nombre || '—'}</b></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- TABLA DE BIENES -->
-        <div class="card-section" style="min-height: 120px;">
-            <div class="card-title">5. Detalle de Bienes Transportados</div>
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th style="width: 5%; text-align: center;">Item</th>
-                        <th style="width: 15%; text-align: center;">Código</th>
-                        <th style="width: 50%;">Descripción del Bien</th>
-                        <th style="width: 10%; text-align: center;">U.M.</th>
-                        <th style="width: 10%; text-align: right;">Cantidad</th>
-                        <th style="width: 10%; text-align: right;">Peso (KG)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${filasItemsHtml}
-                </tbody>
-            </table>
-        </div>
+        <!-- 5. TABLA DE BIENES TRANSPORTADOS (Estilo Nubefact con Fondo Personalizado) -->
+        <table class="table-items-nubefact">
+            <thead>
+                <tr>
+                    <th style="width: 15%; text-align: center;">UNIDAD</th>
+                    <th style="width: 15%; text-align: center;">COD</th>
+                    <th style="width: 50%; text-align: left;">DESCRIPCION</th>
+                    <th style="width: 20%; text-align: right;">CANTIDAD</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${filasItemsHtml}
+            </tbody>
+        </table>
 
-        <!-- PIE DE PÁGINA CON QR Y HASH -->
-        <div class="footer-box">
-            <div style="max-width: 75%;">
-                <div style="font-weight: bold; margin-bottom: 2px; color: #0f172a;">Representación Impresa de la Guía de Remisión Electrónica</div>
-                <div>Documento emitido conforme a las especificaciones técnicas de SUNAT (UBL 2.1).</div>
-                ${guia.xml_hash ? `<div style="font-family: monospace; font-size: 9px; margin-top: 3px; color: #64748b;"><b>Código Hash:</b> ${guia.xml_hash}</div>` : ''}
-                ${guia.observaciones_sunat ? `<div style="font-size: 9.5px; margin-top: 2px; color: #475569;"><b>Observaciones:</b> ${guia.observaciones_sunat}</div>` : ''}
+        <!-- 6. PIE DE PÁGINA: NOTAS Y CÓDIGO QR -->
+        <div class="footer-grid">
+            <div class="box-notas">
+                <div>
+                    <div class="box-title" style="margin-bottom: 4px;">NOTAS</div>
+                    <div style="font-size: 10px; color: #334155; line-height: 1.35;">
+                        ${guia.observaciones_sunat || (guia.gre_relacionada_numero ? `VINCULADA A GUÍA REMITENTE: ${guia.gre_relacionada_numero}` : 'DOCUMENTO ELECTRÓNICO CON VALIDEZ TRIBUTARIA SUNAT.')}
+                    </div>
+                </div>
+                <div style="font-size: 9.5px; font-weight: bold; color: #0f172a; text-transform: uppercase; margin-top: 10px;">
+                    REPRESENTACIÓN IMPRESA DE LA GUIA DE REMISIÓN ELECTRÓNICA
+                </div>
             </div>
-            <div>
-                <img src="${qrUrl}" alt="Código QR SUNAT" style="width: 90px; height: 90px; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px;">
+
+            <div class="box-qr">
+                <img src="${qrUrl}" alt="Código QR SUNAT" style="width: 120px; height: 120px; display: block;">
             </div>
         </div>
     </div>
+
+    <script>
+        // Función para cambiar color en vivo y recordar la preferencia
+        function cambiarColor(nuevoColor) {
+            document.documentElement.style.setProperty('--theme-color', nuevoColor);
+            const customInput = document.getElementById('customColor');
+            if (customInput) customInput.value = nuevoColor;
+            localStorage.setItem('azkell_pdf_theme_color', nuevoColor);
+        }
+
+        // Cargar color guardado si existe
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedColor = localStorage.getItem('azkell_pdf_theme_color');
+            if (savedColor && !window.location.search.includes('color=')) {
+                cambiarColor(savedColor);
+            }
+        });
+    </script>
 </body>
 </html>
             `;

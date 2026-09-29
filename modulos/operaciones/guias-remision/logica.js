@@ -330,11 +330,9 @@
                     </td>
                     <td class="text-center text-nowrap">
                         <div class="d-inline-flex align-items-center gap-1">
-                            ${(g.pdf_url || g.apisunat_document_id) ? `
-                                <a href="/api/guias-remision/pdf-apisunat/${g.id}" target="_blank" class="btn btn-outline-danger btn-sm rounded-pill py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1 shadow-2xs" style="font-size:0.7rem; line-height: 1.5;" title="Ver PDF Oficial generado por APISUNAT">
-                                    <i class="bi bi-file-earmark-pdf-fill text-danger"></i> PDF
-                                </a>
-                            ` : ''}
+                            <a href="/api/guias-remision/pdf-apisunat/${g.id}" target="_blank" class="btn btn-outline-danger btn-sm rounded-pill py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1 shadow-2xs" style="font-size:0.7rem; line-height: 1.5;" title="Ver e Imprimir Guía Oficial (A4)">
+                                <i class="bi bi-file-earmark-pdf-fill text-danger"></i> PDF
+                            </a>
                             ${g.cdr_url ? `
                                 <a href="${esc(g.cdr_url)}" target="_blank" class="btn btn-outline-success btn-sm rounded-pill py-0 px-1.5 fw-semibold d-inline-flex align-items-center gap-1 shadow-2xs" style="font-size:0.7rem; line-height: 1.5;" title="Descargar CDR (Constancia de Recepción SUNAT)">
                                     <i class="bi bi-file-earmark-check-fill text-success"></i> CDR
