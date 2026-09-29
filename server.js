@@ -3947,18 +3947,39 @@ app.get('/qr-whatsapp', (req, res) => {
 });
 app.get('/api/whatsapp/qr', async (req, res) => {
     try {
+        const { ensureInstanceExists } = require('./services/whatsappService');
         const evoUrl = process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085';
         const evoKey = process.env.EVOLUTION_API_KEY || 'AZKELL_ERP_WA_SECRET_2026';
-        const evoInstance = process.env.EVOLUTION_INSTANCE || 'azkell_erp_bot';
+        
+        // Modelo A: Instancia por cada empresa / tenant (ej: marsisa_bot)
+        const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
+        const evoInstance = (tenantSlug && !['admin', 'master', 'localhost', '82'].includes(tenantSlug)) 
+            ? `${tenantSlug}_bot` 
+            : (process.env.EVOLUTION_INSTANCE || 'azkell_erp_bot');
+
+        // Asegurar que la instancia de esta empresa esté creada en Evolution API
+        await ensureInstanceExists(evoInstance);
+
+        // Obtener nombre de la empresa para mostrar en la interfaz
+        let empresaNombre = req.tenantInfo?.nombre_empresa || (tenantSlug ? tenantSlug.toUpperCase() : 'Azkell ERP');
+        if (req.db) {
+            try {
+                const [cfg] = await req.db.promise().query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_nombre' LIMIT 1");
+                if (cfg && cfg[0] && cfg[0].valor) empresaNombre = cfg[0].valor;
+            } catch(e) {}
+        }
+
         const response = await fetch(`${evoUrl.replace(/\/$/, '')}/instance/connect/${evoInstance}`, {
             headers: { 'apikey': evoKey }
         });
         const data = await response.json();
+        
         if (data && data.instance && data.instance.state === 'open') {
-            return res.json({ status: 'CONNECTED' });
+            return res.json({ status: 'CONNECTED', instance: evoInstance, empresa_nombre: empresaNombre });
         }
-        res.json(data);
+        res.json({ ...data, instance: evoInstance, empresa_nombre: empresaNombre });
     } catch(err) {
+        console.error('Error generando QR de WhatsApp:', err.message);
         res.status(500).json({ error: err.message });
     }
 });

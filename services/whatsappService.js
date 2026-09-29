@@ -1,11 +1,11 @@
 /**
- * whatsappService.js - Integración con Evolution API v2 para el ERP Azkell
- * Permite despachar alertas de aprobación, confirmaciones y mensajes transaccionales.
+ * whatsappService.js - Integración Multi-Tenant con Evolution API v2 para el ERP Azkell
+ * Soporta instancias y números independientes por cada empresa (Tenant).
  */
 
-const EVOLUTION_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
+const EVOLUTION_URL = process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085';
 const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY || 'AZKELL_ERP_WA_SECRET_2026';
-const INSTANCE = process.env.EVOLUTION_INSTANCE || 'azkell_erp_bot';
+const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || 'azkell_erp_bot';
 
 /**
  * Normaliza y formatea el número de teléfono (por defecto formato Perú 51XXXXXXXXX)
@@ -20,20 +20,49 @@ function formatPhone(phone) {
 }
 
 /**
+ * Asegura que la instancia de WhatsApp de la empresa exista en Evolution API
+ */
+async function ensureInstanceExists(instanceName) {
+    const target = instanceName || DEFAULT_INSTANCE;
+    const url = `${EVOLUTION_URL.replace(/\/$/, '')}/instance/create`;
+    try {
+        await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': EVOLUTION_KEY
+            },
+            body: JSON.stringify({
+                instanceName: target,
+                qrcode: true,
+                integration: 'WHATSAPP-BAILEYS'
+            })
+        });
+    } catch(e) {
+        // Ignorar si ya existe
+    }
+    return target;
+}
+
+/**
  * Envía el mensaje con el Magic Link de aprobación de Orden de Compra
  */
-async function sendApprovalWhatsapp({ phone, ocCode, supplier, total, currency, approvalUrl, solicitadoPor, motivo }) {
+async function sendApprovalWhatsapp({ phone, ocCode, supplier, total, currency, approvalUrl, solicitadoPor, motivo, tenantSlug, instanceName, empresaNombre }) {
     const recipient = formatPhone(phone);
     if (!recipient) throw new Error('Número de teléfono inválido para WhatsApp');
 
+    const finalInstance = instanceName || (tenantSlug ? `${tenantSlug}_bot` : DEFAULT_INSTANCE);
+    await ensureInstanceExists(finalInstance);
+
     const monedaSym = currency === 'USD' ? '$' : 'S/';
     const montoFormateado = `${monedaSym} ${parseFloat(total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const headerEmpresa = empresaNombre ? `🏢 *[${empresaNombre}]*\n` : '';
 
     const messageText = 
-`🔔 *NUEVA ORDEN DE COMPRA PENDIENTE DE APROBACIÓN*
+`${headerEmpresa}🔔 *NUEVA ORDEN DE COMPRA PENDIENTE DE APROBACIÓN*
 
 📋 *N° Orden:* ${ocCode}
-🏢 *Proveedor:* ${supplier}
+🤝 *Proveedor:* ${supplier}
 💰 *Monto Total:* ${montoFormateado}
 👤 *Solicitado por:* ${solicitadoPor || 'Área de Compras / Taller'}
 ${motivo ? `📝 *Motivo:* ${motivo}\n` : ''}
@@ -53,7 +82,7 @@ ${approvalUrl}
         linkPreview: true
     };
 
-    const url = `${EVOLUTION_URL.replace(/\/$/, '')}/message/sendText/${INSTANCE}`;
+    const url = `${EVOLUTION_URL.replace(/\/$/, '')}/message/sendText/${finalInstance}`;
     
     try {
         const res = await fetch(url, {
@@ -67,14 +96,14 @@ ${approvalUrl}
 
         if (!res.ok) {
             const errText = await res.text();
-            console.error(`⚠️ [Evolution API Error] Status: ${res.status}`, errText);
+            console.error(`⚠️ [Evolution API Error - ${finalInstance}] Status: ${res.status}`, errText);
             return { success: false, error: errText, status: res.status };
         }
 
         const data = await res.json();
         return { success: true, data };
     } catch (err) {
-        console.error('❌ [WhatsApp Service Error]:', err.message);
+        console.error(`❌ [WhatsApp Service Error - ${finalInstance}]:`, err.message);
         return { success: false, error: err.message };
     }
 }
@@ -82,10 +111,11 @@ ${approvalUrl}
 /**
  * Envía confirmación al dueño / solicitante cuando la OC fue aprobada o rechazada
  */
-async function sendDecisionConfirmationWhatsapp({ phone, ocCode, status, reason }) {
+async function sendDecisionConfirmationWhatsapp({ phone, ocCode, status, reason, tenantSlug, instanceName }) {
     const recipient = formatPhone(phone);
     if (!recipient) return;
 
+    const finalInstance = instanceName || (tenantSlug ? `${tenantSlug}_bot` : DEFAULT_INSTANCE);
     const isApproved = status === 'APROBADA';
     const messageText = isApproved
         ? `✅ *ORDEN DE COMPRA APROBADA*\n\nLa orden *#${ocCode}* ha sido autorizada satisfactoriamente en el ERP.`
@@ -98,7 +128,7 @@ async function sendDecisionConfirmationWhatsapp({ phone, ocCode, status, reason 
         linkPreview: false
     };
 
-    const url = `${EVOLUTION_URL.replace(/\/$/, '')}/message/sendText/${INSTANCE}`;
+    const url = `${EVOLUTION_URL.replace(/\/$/, '')}/message/sendText/${finalInstance}`;
     try {
         await fetch(url, {
             method: 'POST',
@@ -115,6 +145,7 @@ async function sendDecisionConfirmationWhatsapp({ phone, ocCode, status, reason 
 
 module.exports = {
     formatPhone,
+    ensureInstanceExists,
     sendApprovalWhatsapp,
     sendDecisionConfirmationWhatsapp
 };
