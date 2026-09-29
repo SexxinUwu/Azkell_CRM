@@ -881,81 +881,13 @@
                                         </div>
                                         <div class="row g-2">
                                             <div class="col-12 col-sm-6">
-                                                <label class="form-label">1. Tipo Contratación (Comercial) <span class="req">(*)</span></label>
-                                                <select id="os-input-tipo-contratacion" class="form-select fw-semibold" onchange="window.osToggleBloqueTercerizado()" required>
-                                                    <option value="CLIENTE DIRECTO" selected>CLIENTE DIRECTO</option>
-                                                    <option value="TERCERO">TERCERO (INTERMEDIARIO)</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-12 col-sm-6">
-                                                <label class="form-label">2. Modalidad Ejecución (Operativa) <span class="req">(*)</span></label>
-                                                <select id="os-input-modalidad-ejecucion" class="form-select fw-semibold" onchange="window.osToggleBloqueTercerizado()" required>
+                                                <label class="form-label">Modalidad de Servicio <span class="req">(*)</span></label>
+                                                <select id="os-input-modalidad-ejecucion" class="form-select fw-bold" onchange="window.osToggleBloqueTercerizado()" required>
                                                     <option value="PROPIO" selected>FLOTA PROPIA</option>
-                                                    <option value="TERCERIZADO">FLOTA TERCERIZADA (SUBCONTRATO)</option>
+                                                    <option value="TERCERIZADO">FLOTA TERCERIZADA</option>
                                                 </select>
+                                                <input type="hidden" id="os-input-tipo-contratacion" value="CLIENTE DIRECTO">
                                             </div>
-
-                                            <!-- Banner Resumen de Flujo Inteligente -->
-                                            <div class="col-12">
-                                                <div id="os-resumen-flujo-banner" class="p-2 rounded-2 border border-secondary-subtle bg-light text-muted d-flex align-items-center gap-2" style="font-size: 0.74rem;">
-                                                    <i class="bi bi-info-circle-fill text-primary"></i>
-                                                    <span id="os-resumen-flujo-texto"><b>Flujo Directo Estándar:</b> Facturación directa al cliente con unidad propia de nuestra flota.</span>
-                                                </div>
-                                            </div>
-
-                                            <!-- 1. Cliente Principal a Quien se le Factura -->
-                                            <div class="col-12">
-                                                <label class="form-label" id="os-lbl-cliente">Cliente (A Quien se Factura) <span class="req">(*)</span></label>
-                                                <input type="text" id="os-input-cliente" list="os-clientes-datalist" class="form-control text-uppercase" placeholder="ESCRIBA O SELECCIONE CLIENTE COMERCIAL..." required>
-                                                <datalist id="os-clientes-datalist"></datalist>
-                                            </div>
-
-                                            <!-- 2. Bloque Dinámico A: Remitente Generador (Solo cuando Tipo Contratación = TERCERO) -->
-                                            <div class="col-12 d-none" id="os-bloque-remitente-generador">
-                                                <div class="p-2.5 rounded-3 border border-info-subtle" style="background: rgba(224, 242, 254, 0.45);">
-                                                    <div class="d-flex align-items-center gap-1.5 mb-1.5 text-info-emphasis fw-bold" style="font-size: 0.8rem;">
-                                                        <i class="bi bi-box-seam-fill"></i>
-                                                        <span>Dueño Real de la Carga (Generador / Remitente)</span>
-                                                    </div>
-                                                    <input type="text" id="os-input-remitente-generador" list="os-clientes-datalist" class="form-control form-control-sm text-uppercase" placeholder="EJ: BIMBO S.A. / ALICORP (QUIEN REMITE LA CARGA)">
-                                                    <div class="text-muted mt-1" style="font-size:0.72rem;">* La factura de venta saldrá a nombre del Cliente intermediario y la guía referenciará a este remitente.</div>
-                                                </div>
-                                            </div>
-
-                                            <!-- 3. Bloque Dinámico B: Transportista Subcontratado (Solo cuando Modalidad = TERCERIZADO) -->
-                                            <div class="col-12 d-none" id="os-bloque-proveedor-tercerizado">
-                                                <div class="p-2.5 rounded-3 border border-warning-subtle" style="background: rgba(254, 243, 199, 0.4);">
-                                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                                        <div class="d-flex align-items-center gap-1.5 text-warning-emphasis fw-bold" style="font-size: 0.82rem;">
-                                                            <i class="bi bi-truck-flatbed"></i>
-                                                            <span>Transportista Subcontratado (Proveedor)</span>
-                                                        </div>
-                                                        <span class="badge bg-warning-subtle text-warning-emphasis font-monospace" style="font-size:0.68rem;">Flete Compra / Gasto</span>
-                                                    </div>
-                                                    <div class="row g-2">
-                                                        <div class="col-12 col-sm-8">
-                                                            <label class="form-label" style="font-size:0.75rem;">Empresa Transportista Proveedora</label>
-                                                            <input type="text" id="os-input-proveedor-tercero" class="form-control form-control-sm text-uppercase" placeholder="EJ: TRANSPORTES EXPRESS S.A.C.">
-                                                        </div>
-                                                        <div class="col-12 col-sm-4">
-                                                            <label class="form-label" style="font-size:0.75rem;">RUC Transportista</label>
-                                                            <input type="text" id="os-input-proveedor-ruc" class="form-control form-control-sm font-monospace" placeholder="20XXXXXXXXX" maxlength="11">
-                                                        </div>
-                                                        <div class="col-12 col-sm-6">
-                                                            <label class="form-label" style="font-size:0.75rem;">Flete a Pagar al Tercero</label>
-                                                            <div class="input-group input-group-sm">
-                                                                <span class="input-group-text bg-light text-muted" style="font-size:0.75rem;">M</span>
-                                                                <input type="number" step="0.01" id="os-input-costo-tercero" class="form-control form-control-sm font-monospace fw-bold text-danger" placeholder="0.00">
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-12 col-sm-6">
-                                                            <label class="form-label" style="font-size:0.75rem;">N° Factura / Guía del Tercero</label>
-                                                            <input type="text" id="os-input-doc-tercero" class="form-control form-control-sm text-uppercase font-monospace" placeholder="F001-000123 / GRT">
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
                                             <div class="col-12 col-sm-6">
                                                 <label class="form-label">Tipo Servicio <span class="req">(*)</span></label>
                                                 <select id="os-input-tipo-servicio" class="form-select" required>
@@ -963,6 +895,34 @@
                                                     <option value="TRANSPORTE LOCAL">LOCAL</option>
                                                 </select>
                                             </div>
+
+                                            <!-- 1. Cliente Principal (A quien se le Factura el flete) -->
+                                            <div class="col-12">
+                                                <label class="form-label">Cliente (*)</label>
+                                                <input type="text" id="os-input-cliente" list="os-clientes-datalist" class="form-control text-uppercase fw-semibold" placeholder="SELECCIONE O ESCRIBA CLIENTE..." required>
+                                                <datalist id="os-clientes-datalist"></datalist>
+                                            </div>
+
+                                            <!-- Bloque Compacto: Transportista Subcontratado (Solo si Modalidad = TERCERIZADO) -->
+                                            <div class="col-12 d-none" id="os-bloque-proveedor-tercerizado">
+                                                <div class="p-2.5 rounded-3 border border-warning-subtle" style="background: rgba(254, 243, 199, 0.4);">
+                                                    <div class="d-flex align-items-center gap-1.5 mb-2 text-warning-emphasis fw-bold" style="font-size: 0.8rem;">
+                                                        <i class="bi bi-truck-flatbed"></i>
+                                                        <span>Transportista Subcontratado (Proveedor)</span>
+                                                    </div>
+                                                    <div class="row g-2">
+                                                        <div class="col-12 col-sm-8">
+                                                            <label class="form-label" style="font-size:0.75rem;">Empresa Transportista</label>
+                                                            <input type="text" id="os-input-proveedor-tercero" class="form-control form-control-sm text-uppercase" placeholder="EJ: TRANSPORTES EXPRESS S.A.C.">
+                                                        </div>
+                                                        <div class="col-12 col-sm-4">
+                                                            <label class="form-label" style="font-size:0.75rem;">RUC Transportista</label>
+                                                            <input type="text" id="os-input-proveedor-ruc" class="form-control form-control-sm font-monospace" placeholder="20XXXXXXXXX" maxlength="11">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <div class="col-12 col-sm-6">
                                                 <label class="form-label">Sentido del Servicio <span class="req">(*)</span></label>
                                                 <select id="os-input-es-retorno" class="form-select" required>
@@ -970,6 +930,7 @@
                                                     <option value="1">SERVICIO DE RETORNO</option>
                                                 </select>
                                             </div>
+
                                             <div class="col-12 col-sm-6">
                                                 <label class="form-label"># Puntos Carga <span class="req">(*)</span></label>
                                                 <select id="os-input-puntos-carga" class="form-select" required>
@@ -983,10 +944,12 @@
                                                     <option value="8">8</option>
                                                 </select>
                                             </div>
-                                            <div class="col-12 col-sm-6">
+
+                                            <div class="col-12">
                                                 <label class="form-label">Subir Sustento</label>
-                                                <input type="file" id="os-input-sustento" class="form-control">
+                                                <input type="file" id="os-input-sustento" class="form-control form-control-sm">
                                             </div>
+                                        </div>
                                         </div>
                                     </div>
                                 </div>

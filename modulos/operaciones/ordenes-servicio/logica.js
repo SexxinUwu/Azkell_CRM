@@ -361,33 +361,15 @@
         }
     };
 
-    // ── Toggle Dinámico de Bloques Condicionales y Resumen de Flujo Inteligente ──
+    // ── Toggle Dinámico: Flota Propia vs Tercerizada ──
     window.osToggleBloqueTercerizado = function () {
-        const tipoCont = document.getElementById('os-input-tipo-contratacion')?.value || 'CLIENTE DIRECTO';
         const modEjec = document.getElementById('os-input-modalidad-ejecucion')?.value || 'PROPIO';
-        
-        const bloqueRemitente = document.getElementById('os-bloque-remitente-generador');
         const bloqueProveedor = document.getElementById('os-bloque-proveedor-tercerizado');
-        const bannerTexto = document.getElementById('os-resumen-flujo-texto');
-        const bannerEl = document.getElementById('os-resumen-flujo-banner');
-        const lblCliente = document.getElementById('os-lbl-cliente');
-        const inpCliente = document.getElementById('os-input-cliente');
         const inpTracto = document.getElementById('os-input-tracto');
         const inpCarreta = document.getElementById('os-input-carreta');
 
-        const esDirecto = (tipoCont === 'CLIENTE DIRECTO');
         const esPropio = (modEjec === 'PROPIO');
 
-        // 1. Visibilidad Bloque A: Remitente Generador de la Carga (Solo si nos contrata un tercero)
-        if (bloqueRemitente) {
-            if (!esDirecto) {
-                bloqueRemitente.classList.remove('d-none');
-            } else {
-                bloqueRemitente.classList.add('d-none');
-            }
-        }
-
-        // 2. Visibilidad Bloque B: Proveedor Transportista Subcontratado (Solo si subcontratamos camión)
         if (bloqueProveedor) {
             if (!esPropio) {
                 bloqueProveedor.classList.remove('d-none');
@@ -396,39 +378,11 @@
             }
         }
 
-        // 3. Textos reactivos del banner explicativo
-        if (bannerTexto && bannerEl) {
-            if (esDirecto && esPropio) {
-                bannerEl.className = 'p-2 rounded-2 border border-primary-subtle bg-primary-subtle/20 text-primary-emphasis d-flex align-items-center gap-2';
-                bannerTexto.innerHTML = '<b>1. Directo + Flota Propia:</b> Facturación directa al cliente dueño de la carga con unidades de nuestra empresa.';
-            } else if (esDirecto && !esPropio) {
-                bannerEl.className = 'p-2 rounded-2 border border-warning-subtle bg-warning-subtle/30 text-warning-emphasis d-flex align-items-center gap-2';
-                bannerTexto.innerHTML = '<b>2. Directo + Tercerizado:</b> Facturación a nuestro cliente directo y flete pagado a un transportista externo subcontratado.';
-            } else if (!esDirecto && esPropio) {
-                bannerEl.className = 'p-2 rounded-2 border border-info-subtle bg-info-subtle/30 text-info-emphasis d-flex align-items-center gap-2';
-                bannerTexto.innerHTML = '<b>3. Intermediario + Flota Propia:</b> Facturación al operador/agencia contratante y viaje realizado con nuestro camión propio.';
-            } else {
-                bannerEl.className = 'p-2 rounded-2 border border-purple-subtle bg-light text-dark d-flex align-items-center gap-2';
-                bannerTexto.innerHTML = '<b>4. Agenciamiento / Corretaje:</b> Facturación al operador y servicio subcontratado a un transportista tercero.';
-            }
-        }
-
-        // 4. Actualizar Labels y Placeholders
-        if (lblCliente) {
-            lblCliente.innerHTML = esDirecto 
-                ? 'Cliente Comercial / Facturar a <span class="req">(*)</span>'
-                : 'Cliente Intermediario / Facturar a <span class="req">(*)</span>';
-        }
-        if (inpCliente) {
-            inpCliente.placeholder = esDirecto
-                ? 'ESCRIBA O SELECCIONE CLIENTE DIRECTO...'
-                : 'ESCRIBA EMPRESA/AGENCIA A QUIEN FACTURAR...';
-        }
         if (inpTracto) {
-            inpTracto.placeholder = esPropio ? 'PLACA TRACTO (PROPIO)' : 'PLACA TRACTO (TERCERO)';
+            inpTracto.placeholder = esPropio ? 'PLACA TRACTO' : 'PLACA TRACTO (TERCERO)';
         }
         if (inpCarreta) {
-            inpCarreta.placeholder = esPropio ? 'PLACA CARRETA (PROPIO)' : 'PLACA CARRETA (TERCERO)';
+            inpCarreta.placeholder = esPropio ? 'PLACA CARRETA' : 'PLACA CARRETA (TERCERO)';
         }
     };
 
@@ -448,17 +402,9 @@
         // Limpiar campos de tercero / subcontratista
         const inpProvTercero = document.getElementById('os-input-proveedor-tercero');
         const inpProvRuc = document.getElementById('os-input-proveedor-ruc');
-        const inpCostoTercero = document.getElementById('os-input-costo-tercero');
-        const inpDocTercero = document.getElementById('os-input-doc-tercero');
-        const inpRemitenteGen = document.getElementById('os-input-remitente-generador');
         if (inpProvTercero) inpProvTercero.value = '';
         if (inpProvRuc) inpProvRuc.value = '';
-        if (inpCostoTercero) inpCostoTercero.value = '';
-        if (inpDocTercero) inpDocTercero.value = '';
-        if (inpRemitenteGen) inpRemitenteGen.value = '';
 
-        const selTipoCont = document.getElementById('os-input-tipo-contratacion');
-        if (selTipoCont) selTipoCont.value = 'CLIENTE DIRECTO';
         const selModEjec = document.getElementById('os-input-modalidad-ejecucion');
         if (selModEjec) selModEjec.value = 'PROPIO';
         window.osToggleBloqueTercerizado();
@@ -667,19 +613,12 @@
             document.getElementById('os-input-tracto').value = item.placa_tracto || '';
             document.getElementById('os-input-carreta').value = item.placa_carreta || '';
 
-            document.getElementById('os-input-tipo-contratacion').value = item.tipo_contratacion || 'CLIENTE DIRECTO';
             document.getElementById('os-input-modalidad-ejecucion').value = item.modalidad_ejecucion || 'PROPIO';
 
             const inpProvTercero = document.getElementById('os-input-proveedor-tercero');
             const inpProvRuc = document.getElementById('os-input-proveedor-ruc');
-            const inpCostoTercero = document.getElementById('os-input-costo-tercero');
-            const inpDocTercero = document.getElementById('os-input-doc-tercero');
-            const inpRemitenteGen = document.getElementById('os-input-remitente-generador');
             if (inpProvTercero) inpProvTercero.value = item.proveedor_tercero_nombre || '';
             if (inpProvRuc) inpProvRuc.value = item.proveedor_tercero_ruc || '';
-            if (inpCostoTercero) inpCostoTercero.value = item.costo_tercero || '';
-            if (inpDocTercero) inpDocTercero.value = item.doc_tercero || '';
-            if (inpRemitenteGen) inpRemitenteGen.value = item.remitente_generador || '';
 
             window.osToggleBloqueTercerizado();
 
@@ -1039,14 +978,11 @@
         const fecha = document.getElementById('os-input-fecha')?.value;
         const moneda = document.getElementById('os-input-moneda')?.value;
         const tipo_cambio = document.getElementById('os-input-tipo-cambio')?.value;
-        const tipo_contratacion = document.getElementById('os-input-tipo-contratacion')?.value;
-        const modalidad_ejecucion = document.getElementById('os-input-modalidad-ejecucion')?.value;
+        const modalidad_ejecucion = document.getElementById('os-input-modalidad-ejecucion')?.value || 'PROPIO';
+        const tipo_contratacion = (modalidad_ejecucion === 'TERCERIZADO') ? 'TERCERO' : 'CLIENTE DIRECTO';
 
         const proveedor_tercero_nombre = document.getElementById('os-input-proveedor-tercero')?.value?.trim() || null;
         const proveedor_tercero_ruc = document.getElementById('os-input-proveedor-ruc')?.value?.trim() || null;
-        const costo_tercero = parseFloat(document.getElementById('os-input-costo-tercero')?.value) || 0;
-        const doc_tercero = document.getElementById('os-input-doc-tercero')?.value?.trim() || null;
-        const remitente_generador = document.getElementById('os-input-remitente-generador')?.value?.trim() || null;
 
         const cliente_nombre = document.getElementById('os-input-cliente')?.value?.trim();
         const tipo_servicio = document.getElementById('os-input-tipo-servicio')?.value;
@@ -1064,9 +1000,9 @@
 
         if (!cliente_nombre) {
             if (typeof window.mostrarAlerta === 'function') {
-                window.mostrarAlerta("Por favor ingrese o seleccione el Cliente/Remitente (*)", "warning");
+                window.mostrarAlerta("Por favor ingrese o seleccione el Cliente (*)", "warning");
             } else {
-                alert("Por favor seleccione un Cliente/Remitente (*).");
+                alert("Por favor seleccione un Cliente (*).");
             }
             activarTab('tab-os-orden-link');
             setTimeout(() => document.getElementById('os-input-cliente')?.focus(), 200);
@@ -1085,9 +1021,6 @@
             modalidad_ejecucion,
             proveedor_tercero_nombre,
             proveedor_tercero_ruc,
-            costo_tercero,
-            doc_tercero,
-            remitente_generador,
             cliente_nombre,
             tipo_servicio,
             es_retorno,
