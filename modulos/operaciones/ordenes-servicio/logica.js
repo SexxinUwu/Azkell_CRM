@@ -340,18 +340,30 @@
         }
     };
 
-    // ── Toggle Dinámico de Bloque Proveedor Tercero / Subcontratista ──
+    // ── Toggle Dinámico de Bloques Condicionales (Sin duplicidades) ──
     window.osToggleBloqueTercerizado = function () {
         const tipoCont = document.getElementById('os-input-tipo-contratacion')?.value || 'CLIENTE DIRECTO';
         const modEjec = document.getElementById('os-input-modalidad-ejecucion')?.value || 'PROPIO';
-        const bloque = document.getElementById('os-bloque-tercerizado');
-        if (!bloque) return;
+        
+        const bloqueRemitente = document.getElementById('os-bloque-remitente-generador');
+        const bloqueProveedor = document.getElementById('os-bloque-proveedor-tercerizado');
 
-        const esTercerizado = (tipoCont === 'TERCERO' || modEjec === 'TERCERIZADO');
-        if (esTercerizado) {
-            bloque.classList.remove('d-none');
-        } else {
-            bloque.classList.add('d-none');
+        // Bloque A: Si nos contrata un tercero intermediario (ej. Rosymar), mostramos quién es el Dueño de la Carga (ej. Bimbo)
+        if (bloqueRemitente) {
+            if (tipoCont === 'TERCERO') {
+                bloqueRemitente.classList.remove('d-none');
+            } else {
+                bloqueRemitente.classList.add('d-none');
+            }
+        }
+
+        // Bloque B: Si nosotros tercerizamos el viaje (camión de otra empresa), mostramos datos del Proveedor y Costo
+        if (bloqueProveedor) {
+            if (modEjec === 'TERCERIZADO') {
+                bloqueProveedor.classList.remove('d-none');
+            } else {
+                bloqueProveedor.classList.add('d-none');
+            }
         }
     };
 
