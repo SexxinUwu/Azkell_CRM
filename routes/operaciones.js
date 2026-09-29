@@ -335,11 +335,11 @@ module.exports = function (db, broadcast, logAudit) {
                 const params = [];
 
                 if (fecha_desde) {
-                    sql += ` AND DATE(ov.fecha_viaje) >= ?`;
+                    sql += ` AND DATE(COALESCE(ov.fecha_viaje, ov.fecha_inicio, ov.creado_en)) >= ?`;
                     params.push(fecha_desde);
                 }
                 if (fecha_hasta) {
-                    sql += ` AND DATE(ov.fecha_viaje) <= ?`;
+                    sql += ` AND DATE(COALESCE(ov.fecha_viaje, ov.fecha_inicio, ov.creado_en)) <= ?`;
                     params.push(fecha_hasta);
                 }
 
@@ -354,7 +354,7 @@ module.exports = function (db, broadcast, logAudit) {
                     params.push(String(placa).trim(), String(placa).trim());
                 }
 
-                sql += ` ORDER BY ov.fecha_viaje DESC, r.viaje DESC, r.es_retorno ASC, r.id ASC LIMIT ?`;
+                sql += ` ORDER BY COALESCE(ov.fecha_viaje, ov.creado_en) DESC, r.viaje DESC, r.es_retorno ASC, r.id ASC LIMIT ?`;
                 params.push(parseInt(limit, 10) || 2000);
 
                 const [rows] = await tdb.query(sql, params);
@@ -419,11 +419,11 @@ module.exports = function (db, broadcast, logAudit) {
             const params = [];
 
             if (fecha_desde) {
-                sql += ` AND DATE(ov.fecha_viaje) >= ?`;
+                sql += ` AND DATE(COALESCE(ov.fecha_viaje, ov.fecha_inicio, ov.creado_en)) >= ?`;
                 params.push(fecha_desde);
             }
             if (fecha_hasta) {
-                sql += ` AND DATE(ov.fecha_viaje) <= ?`;
+                sql += ` AND DATE(COALESCE(ov.fecha_viaje, ov.fecha_inicio, ov.creado_en)) <= ?`;
                 params.push(fecha_hasta);
             }
 
@@ -438,7 +438,7 @@ module.exports = function (db, broadcast, logAudit) {
                 params.push(String(placa).trim(), String(placa).trim());
             }
 
-            sql += ` ORDER BY ov.fecha_viaje DESC, ov.id DESC LIMIT ?`;
+            sql += ` ORDER BY COALESCE(ov.fecha_viaje, ov.creado_en) DESC, ov.id DESC LIMIT ?`;
             params.push(parseInt(limit, 10) || 2500);
 
             let rows = [];
@@ -468,11 +468,11 @@ module.exports = function (db, broadcast, logAudit) {
                     `;
                     const fallbackParams = [];
                     if (fecha_desde) {
-                        fallbackSql += ` AND DATE(ov.fecha_viaje) >= ?`;
+                        fallbackSql += ` AND DATE(COALESCE(ov.fecha_viaje, ov.creado_en)) >= ?`;
                         fallbackParams.push(fecha_desde);
                     }
                     if (fecha_hasta) {
-                        fallbackSql += ` AND DATE(ov.fecha_viaje) <= ?`;
+                        fallbackSql += ` AND DATE(COALESCE(ov.fecha_viaje, ov.creado_en)) <= ?`;
                         fallbackParams.push(fecha_hasta);
                     }
                     if (q && String(q).trim()) {
@@ -484,7 +484,7 @@ module.exports = function (db, broadcast, logAudit) {
                         fallbackSql += ` AND (ov.placa_tracto = ? OR ov.placa_remolque = ?)`;
                         fallbackParams.push(String(placa).trim(), String(placa).trim());
                     }
-                    fallbackSql += ` ORDER BY ov.fecha_viaje DESC, ov.id DESC LIMIT ?`;
+                    fallbackSql += ` ORDER BY COALESCE(ov.fecha_viaje, ov.creado_en) DESC, ov.id DESC LIMIT ?`;
                     fallbackParams.push(parseInt(limit, 10) || 2500);
 
                     const [fbRows] = await tdb.query(fallbackSql, fallbackParams);

@@ -38,13 +38,70 @@ function _ovObtenerFechaHoyString() {
     return `${yyyy}-${mm}-${dd}`;
 }
 
+// Formateador seguro de fecha y hora que no sufre desfase por zona horaria
+function _ovFormatearFechaHora(str) {
+    if (!str) return '---';
+    var limpio = String(str).trim().replace('T', ' ');
+    var partes = limpio.split(' ');
+    var fPartes = partes[0].split('-');
+    if (fPartes.length === 3) {
+        var y = fPartes[0];
+        var m = fPartes[1].padStart(2, '0');
+        var d = fPartes[2].padStart(2, '0');
+        var hPart = partes[1] || '00:00:00';
+        var hSub = hPart.split(':');
+        var hh = (hSub[0] || '00').padStart(2, '0');
+        var mm = (hSub[1] || '00').padStart(2, '0');
+        var ss = (hSub[2] || '00').substring(0, 2).padStart(2, '0');
+        return `${d}/${m}/${y} ${hh}:${mm}:${ss}`;
+    }
+    var dt = new Date(str);
+    if (!isNaN(dt.getTime())) {
+        var d = String(dt.getDate()).padStart(2, '0');
+        var m = String(dt.getMonth() + 1).padStart(2, '0');
+        var y = dt.getFullYear();
+        var hh = String(dt.getHours()).padStart(2, '0');
+        var mm = String(dt.getMinutes()).padStart(2, '0');
+        var ss = String(dt.getSeconds()).padStart(2, '0');
+        return `${d}/${m}/${y} ${hh}:${mm}:${ss}`;
+    }
+    return str;
+}
+
+// Timestamp numérico seguro para ordenamiento
+function _ovTimestampParaSort(str) {
+    if (!str) return 0;
+    var limpio = String(str).trim().replace('T', ' ');
+    var partes = limpio.split(' ');
+    var fPartes = partes[0].split('-');
+    if (fPartes.length === 3) {
+        var y = parseInt(fPartes[0], 10);
+        var m = parseInt(fPartes[1], 10) - 1;
+        var d = parseInt(fPartes[2], 10);
+        var hPart = partes[1] || '00:00:00';
+        var hSub = hPart.split(':');
+        var hh = parseInt(hSub[0] || '0', 10);
+        var mm = parseInt(hSub[1] || '0', 10);
+        var ss = parseInt(hSub[2] || '0', 10);
+        return new Date(y, m, d, hh, mm, ss).getTime() || 0;
+    }
+    var dt = new Date(str);
+    return !isNaN(dt.getTime()) ? dt.getTime() : 0;
+}
+
 window.init_ordenes_viaje = function() {
-    // Inicializar inputs de fechas pastel con la fecha de hoy si están vacíos
+    // Inicializar filtros con el mes actual (del 1ero de este mes a hoy)
     var inputDesde = document.getElementById('ov-filtro-fecha-desde');
     var inputHasta = document.getElementById('ov-filtro-fecha-hasta');
-    var hoyStr = _ovObtenerFechaHoyString();
+    
+    var d = new Date();
+    var yyyy = d.getFullYear();
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    var primerDiaMes = `${yyyy}-${mm}-01`;
+    var hoyStr = `${yyyy}-${mm}-${dd}`;
 
-    if (inputDesde && !inputDesde.value) inputDesde.value = hoyStr;
+    if (inputDesde && !inputDesde.value) inputDesde.value = primerDiaMes;
     if (inputHasta && !inputHasta.value) inputHasta.value = hoyStr;
 
     window.ovCargarDatos();
@@ -98,7 +155,7 @@ window.ovConfigurarThead = function() {
             <tr>
                 <th class="ov-col-sticky-action text-center" style="width: 50px; min-width: 50px; max-width: 50px;">ACCIÓN</th>
                 <th style="min-width: 95px;">ESTADO ${_sortIcon('estado')}</th>
-                <th style="min-width: 140px;">F. Y HORA CREACIÓN ${_sortIcon('fecha_creacion')}</th>
+                <th style="min-width: 140px;">F. Y HORA VIAJE ${_sortIcon('fecha_viaje')}</th>
                 <th style="min-width: 145px;">N° VIAJE ${_sortIcon('viaje')}</th>
                 <th style="min-width: 170px;">CONDUCTOR ${_sortIcon('conductor')}</th>
                 <th style="min-width: 100px;">VEHÍCULO (TRACTO) ${_sortIcon('tracto')}</th>
@@ -319,17 +376,18 @@ window.ovAplicarFiltros = function() {
                 var valB = '';
 
                 switch (_ovSortCol) {
+                    case 'fecha_viaje':
                     case 'fecha_creacion':
-                        valA = new Date(a.fecha_registro || a.creado_en || 0).getTime() || 0;
-                        valB = new Date(b.fecha_registro || b.creado_en || 0).getTime() || 0;
+                        valA = _ovTimestampParaSort(a.fecha_viaje || a.fecha_inicio || a.fecha_registro || a.creado_en);
+                        valB = _ovTimestampParaSort(b.fecha_viaje || b.fecha_inicio || b.fecha_registro || b.creado_en);
                         break;
                     case 'fecha_inicio':
-                        valA = new Date(a.fecha_inicio || a.fecha_viaje || 0).getTime() || 0;
-                        valB = new Date(b.fecha_inicio || b.fecha_viaje || 0).getTime() || 0;
+                        valA = _ovTimestampParaSort(a.fecha_inicio || a.fecha_viaje);
+                        valB = _ovTimestampParaSort(b.fecha_inicio || b.fecha_viaje);
                         break;
                     case 'fecha_fin':
-                        valA = new Date(a.fecha_fin || 0).getTime() || 0;
-                        valB = new Date(b.fecha_fin || 0).getTime() || 0;
+                        valA = _ovTimestampParaSort(a.fecha_fin);
+                        valB = _ovTimestampParaSort(b.fecha_fin);
                         break;
                     case 'viaje':
                         valA = (a.viaje || '').toUpperCase();
@@ -534,70 +592,18 @@ window.ovRenderizarTabla = function() {
 
     if (_ovModoVistaActual === 'viajes') {
         pageItems.forEach(function(v) {
-            // 1. Fechas y Timestamps
-            var fechaStr = '---';
-            var fechaInicioStr = '';
+            // 1. Fechas y Timestamps formateados con precisión
+            var fechaViajeStr = _ovFormatearFechaHora(v.fecha_viaje || v.fecha_inicio || v.fecha_registro || v.creado_en);
+            var fechaStr = fechaViajeStr;
+            var fechaInicioStr = (v.fecha_viaje || '').slice(0, 10);
             var fechaFinStr = '';
             var duracionStr = '0 días';
 
-            if (v.fecha_viaje) {
-                var dt = new Date(v.fecha_viaje);
-                if (!isNaN(dt.getTime())) {
-                    var d = String(dt.getDate()).padStart(2, '0');
-                    var m = String(dt.getMonth() + 1).padStart(2, '0');
-                    var y = dt.getFullYear();
-                    var hh = String(dt.getHours()).padStart(2, '0');
-                    var mm = String(dt.getMinutes()).padStart(2, '0');
-                    var ss = String(dt.getSeconds()).padStart(2, '0');
-                    fechaStr = `${d}/${m}/${y} ${hh}:${mm}:${ss}`;
-                    fechaInicioStr = `${d}/${m}/${y}`;
-                }
-            }
-
-            var fechaRegistroStr = '---';
-            if (v.fecha_registro || v.creado_en) {
-                var dtReg = new Date(v.fecha_registro || v.creado_en);
-                if (!isNaN(dtReg.getTime())) {
-                    var dR = String(dtReg.getDate()).padStart(2, '0');
-                    var mR = String(dtReg.getMonth() + 1).padStart(2, '0');
-                    var yR = dtReg.getFullYear();
-                    var hhR = String(dtReg.getHours()).padStart(2, '0');
-                    var mmR = String(dtReg.getMinutes()).padStart(2, '0');
-                    var ssR = String(dtReg.getSeconds()).padStart(2, '0');
-                    fechaRegistroStr = `${dR}/${mR}/${yR} ${hhR}:${mmR}:${ssR}`;
-                }
-            }
-
+            var fechaRegistroStr = _ovFormatearFechaHora(v.fecha_registro || v.creado_en);
             var fechaCreacionStr = fechaRegistroStr;
-            var fechaInicioFmt = '---';
-            if (v.fecha_inicio) {
-                var dtIni = new Date(v.fecha_inicio);
-                if (!isNaN(dtIni.getTime())) {
-                    var dI = String(dtIni.getDate()).padStart(2, '0');
-                    var mI = String(dtIni.getMonth() + 1).padStart(2, '0');
-                    var yI = dtIni.getFullYear();
-                    var hhI = String(dtIni.getHours()).padStart(2, '0');
-                    var mmI = String(dtIni.getMinutes()).padStart(2, '0');
-                    var ssI = String(dtIni.getSeconds()).padStart(2, '0');
-                    fechaInicioFmt = `${dI}/${mI}/${yI} ${hhI}:${mmI}:${ssI}`;
-                }
-            } else if (v.fecha_viaje && (esIniciado || esFinalizado)) {
-                fechaInicioFmt = fechaStr;
-            }
 
-            var fechaCierreFmt = '---';
-            if (v.fecha_fin) {
-                var dtFin = new Date(v.fecha_fin);
-                if (!isNaN(dtFin.getTime())) {
-                    var dF = String(dtFin.getDate()).padStart(2, '0');
-                    var mF = String(dtFin.getMonth() + 1).padStart(2, '0');
-                    var yF = dtFin.getFullYear();
-                    var hhF = String(dtFin.getHours()).padStart(2, '0');
-                    var mmF = String(dtFin.getMinutes()).padStart(2, '0');
-                    var ssF = String(dtFin.getSeconds()).padStart(2, '0');
-                    fechaCierreFmt = `${dF}/${mF}/${yF} ${hhF}:${mmF}:${ssF}`;
-                }
-            }
+            var fechaInicioFmt = v.fecha_inicio ? _ovFormatearFechaHora(v.fecha_inicio) : (esIniciado || esFinalizado ? fechaViajeStr : '---');
+            var fechaCierreFmt = v.fecha_fin ? _ovFormatearFechaHora(v.fecha_fin) : '---';
 
             var estadoUpper = (v.estado || 'REGISTRADO').toUpperCase();
             var esFinalizado = estadoUpper === 'FINALIZADO';
@@ -685,8 +691,8 @@ window.ovRenderizarTabla = function() {
                     <!-- 2. ESTADO -->
                     <td>${estadoBadge}</td>
 
-                    <!-- 4. F. Y HORA CREACIÓN -->
-                    <td class="font-monospace text-secondary" style="font-size:0.75rem;">${fechaCreacionStr}</td>
+                    <!-- 4. F. Y HORA VIAJE -->
+                    <td class="font-monospace text-dark fw-semibold" style="font-size:0.75rem;" title="Fecha y Hora de Viaje seleccionada">${fechaViajeStr}</td>
 
                     <!-- 5. N° VIAJE -->
                     <td>
