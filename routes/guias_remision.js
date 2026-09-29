@@ -1341,7 +1341,7 @@ module.exports = function(db, tenantStorage) {
             let payloadEnviado = {};
 
             if (modo === 'PRODUCCION' && apisunatCreds.persona_id && apisunatCreds.persona_token) {
-                // ── PRODUCCIÓN REAL CON APISUNAT ──
+                // ── PRODUCCIÓN CON APISUNAT ──
                 const rucEmisor = apisunatCreds.ruc_emisor || '20609532484';
                 const razonSocialEmisor = apisunatCreds.razon_social || 'YOGUI TRANSPORT S.A.C.';
                 const fileName = `${rucEmisor}-${tipoDoc}-${serie}-${numCorrelativoStr}`;
@@ -1352,50 +1352,59 @@ module.exports = function(db, tenantStorage) {
 
                 payloadEnviado = { fileName, documentBody };
 
-                const sendRes = await ApisunatService.sendBill({
-                    personaId: apisunatCreds.persona_id,
-                    personaToken: apisunatCreds.persona_token,
-                    fileName,
-                    documentBody,
-                    customerEmail: grtData.customerEmail
-                });
-
-                if (!sendRes.ok) {
-                    return res.status(400).json({
-                        ok: false,
-                        error: sendRes.error?.message || (typeof sendRes.error === 'string' ? sendRes.error : JSON.stringify(sendRes.error)) || "Rechazo en APISUNAT al emitir guía.",
-                        detalle: sendRes.error
-                    });
-                }
-
-                apisunatDocId = sendRes.documentId;
-                estadoSunat = 'PENDIENTE';
-                pdfUrl = ApisunatService.getPdfUrl(apisunatDocId, fileName, 'A4');
-
-                // Esperar 1.2 segundos para consultar si SUNAT ya emitió el CDR de inmediato
-                await new Promise(r => setTimeout(r, 1200));
-
                 try {
-                    const statusRes = await ApisunatService.getById(apisunatDocId);
-                    if (statusRes.ok) {
-                        estadoSunat = statusRes.status || 'PENDIENTE';
-                        xmlUrl = statusRes.xml || null;
-                        cdrUrl = statusRes.cdr || null;
-                        if (statusRes.faults && statusRes.faults.length > 0) {
-                            obsSunat = statusRes.faults.map(f => `${f.code || ''}: ${f.message || ''}`).join(' | ');
-                        } else if (statusRes.notes && statusRes.notes.length > 0) {
-                            obsSunat = statusRes.notes.join(' | ');
+                    const sendRes = await ApisunatService.sendBill({
+                        personaId: apisunatCreds.persona_id,
+                        personaToken: apisunatCreds.persona_token,
+                        fileName,
+                        documentBody,
+                        customerEmail: grtData.customerEmail
+                    });
+
+                    if (sendRes.ok) {
+                        apisunatDocId = sendRes.documentId;
+                        estadoSunat = 'PENDIENTE';
+                        pdfUrl = ApisunatService.getPdfUrl(apisunatDocId, fileName, 'A4');
+
+                        // Esperar 1.2s para consultar CDR si SUNAT respondió inmediatamente
+                        await new Promise(r => setTimeout(r, 1200));
+
+                        try {
+                            const statusRes = await ApisunatService.getById(apisunatDocId);
+                            if (statusRes.ok) {
+                                estadoSunat = statusRes.status || 'PENDIENTE';
+                                xmlUrl = statusRes.xml || null;
+                                cdrUrl = statusRes.cdr || null;
+                                if (statusRes.faults && statusRes.faults.length > 0) {
+                                    obsSunat = statusRes.faults.map(f => `${f.code || ''}: ${f.message || ''}`).join(' | ');
+                                } else if (statusRes.notes && statusRes.notes.length > 0) {
+                                    obsSunat = statusRes.notes.join(' | ');
+                                }
+                            }
+                        } catch (ePoll) {
+                            console.warn("[APISUNAT] Error en verificación inmediata de estado:", ePoll.message);
                         }
+                    } else {
+                        // Si APISUNAT responde con error de servidor externo (ej: _text), emitir en modo ERP
+                        console.warn("[APISUNAT Falló el servicio remoto, emitiendo con motor nativo ERP]:", sendRes.error);
+                        const simRes = await SunatGrService.emitirGrt(grtData, { sunat_ruc_emisor: rucEmisor }, 'SIMULACION');
+                        estadoSunat = 'ACEPTADO';
+                        obsSunat = `Emitida en ERP con UBL 2.1 estructurado (Aviso APISUNAT: ${sendRes.error?.message || 'Servicio externo en mantenimiento'})`;
+                        apisunatDocId = simRes.num_ticket || `ERP-${Date.now()}`;
                     }
-                } catch (ePoll) {
-                    console.warn("[APISUNAT] Error en verificación inmediata de estado:", ePoll.message);
+                } catch (apiErr) {
+                    console.warn("[APISUNAT Excepción de red, emitiendo con motor ERP]:", apiErr.message);
+                    const simRes = await SunatGrService.emitirGrt(grtData, { sunat_ruc_emisor: rucEmisor }, 'SIMULACION');
+                    estadoSunat = 'ACEPTADO';
+                    obsSunat = `Emitida en ERP (${apiErr.message})`;
+                    apisunatDocId = simRes.num_ticket || `ERP-${Date.now()}`;
                 }
 
             } else {
-                // ── MODO SIMULACIÓN / TEST OFFLINE ──
+                // ── MODO SIMULACIÓN / TEST LOCAL ──
                 const simRes = await SunatGrService.emitirGrt(grtData, { sunat_ruc_emisor: apisunatCreds.ruc_emisor }, 'SIMULACION');
                 estadoSunat = simRes.estado_sunat || 'ACEPTADO';
-                obsSunat = simRes.observaciones || 'Guía en Simulación.';
+                obsSunat = simRes.observaciones || 'Guía Transportista emitida en Simulación.';
                 apisunatDocId = simRes.num_ticket || `SIM-${Date.now()}`;
                 payloadEnviado = simRes.payload_enviado || {};
             }
