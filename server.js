@@ -3942,6 +3942,26 @@ app.use('/api/rrhh', require('./routes/rrhh')(db, broadcast, logAudit));
 app.get('/aprobaciones/oc', (req, res) => {
     res.sendFile(path.join(__dirname, 'web', 'aprobacion_oc.html'));
 });
+app.get('/qr-whatsapp', (req, res) => {
+    res.sendFile(path.join(__dirname, 'web', 'qr_whatsapp.html'));
+});
+app.get('/api/whatsapp/qr', async (req, res) => {
+    try {
+        const evoUrl = process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085';
+        const evoKey = process.env.EVOLUTION_API_KEY || 'AZKELL_ERP_WA_SECRET_2026';
+        const evoInstance = process.env.EVOLUTION_INSTANCE || 'azkell_erp_bot';
+        const response = await fetch(`${evoUrl.replace(/\/$/, '')}/instance/connect/${evoInstance}`, {
+            headers: { 'apikey': evoKey }
+        });
+        const data = await response.json();
+        if (data && data.instance && data.instance.state === 'open') {
+            return res.json({ status: 'CONNECTED' });
+        }
+        res.json(data);
+    } catch(err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.use(require('./routes/ordenes_compra')(db, broadcast, logAudit));
 
 const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
