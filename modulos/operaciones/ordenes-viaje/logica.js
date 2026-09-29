@@ -106,6 +106,41 @@ window.init_ordenes_viaje = function() {
 
     window.ovCargarDatos();
 
+    // ⚡ Asegurar que el menú de 3 puntos flote por encima de todas las filas y columnas sticky
+    if (!window._ovDropdownEventsAttached) {
+        window._ovDropdownEventsAttached = true;
+        document.addEventListener('show.bs.dropdown', function(e) {
+            var btn = e.target;
+            if (btn && btn.classList && btn.classList.contains('ov-btn-action-dots')) {
+                var td = btn.closest('td');
+                var tr = btn.closest('tr');
+                if (td) {
+                    td.classList.add('ov-dropdown-open');
+                    td.style.setProperty('z-index', '1060', 'important');
+                }
+                if (tr) {
+                    tr.classList.add('ov-row-dropdown-open');
+                    tr.style.setProperty('z-index', '1055', 'important');
+                }
+            }
+        });
+        document.addEventListener('hidden.bs.dropdown', function(e) {
+            var btn = e.target;
+            if (btn && btn.classList && btn.classList.contains('ov-btn-action-dots')) {
+                var td = btn.closest('td');
+                var tr = btn.closest('tr');
+                if (td) {
+                    td.classList.remove('ov-dropdown-open');
+                    td.style.removeProperty('z-index');
+                }
+                if (tr) {
+                    tr.classList.remove('ov-row-dropdown-open');
+                    tr.style.removeProperty('z-index');
+                }
+            }
+        });
+    }
+
     // ⚡ Precargar módulos de OS y Vales en segundo plano para apertura inmediata (0ms lag)
     setTimeout(() => {
         if (typeof asegurarModuloOrdenesServicioCargado === 'function') {

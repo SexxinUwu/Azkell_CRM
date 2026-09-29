@@ -881,18 +881,54 @@
                                         <div class="row g-2">
                                             <div class="col-12 col-sm-6">
                                                 <label class="form-label">Tipo Contratación <span class="req">(*)</span></label>
-                                                <select id="os-input-tipo-contratacion" class="form-select" required>
+                                                <select id="os-input-tipo-contratacion" class="form-select" onchange="window.osToggleBloqueTercerizado()" required>
                                                     <option value="CLIENTE DIRECTO" selected>CLIENTE DIRECTO</option>
                                                     <option value="TERCERO">TERCERO</option>
                                                 </select>
                                             </div>
                                             <div class="col-12 col-sm-6">
                                                 <label class="form-label">Modalidad Ejecución <span class="req">(*)</span></label>
-                                                <select id="os-input-modalidad-ejecucion" class="form-select" required>
+                                                <select id="os-input-modalidad-ejecucion" class="form-select" onchange="window.osToggleBloqueTercerizado()" required>
                                                     <option value="PROPIO" selected>PROPIO</option>
                                                     <option value="TERCERIZADO">TERCERIZADO</option>
                                                 </select>
                                             </div>
+
+                                            <!-- Bloque Dinámico: Subcontratación / Proveedor Tercero -->
+                                            <div class="col-12 d-none" id="os-bloque-tercerizado">
+                                                <div class="p-2.5 rounded-3 border border-warning-subtle bg-warning-subtle/30" style="background: rgba(254, 243, 199, 0.35);">
+                                                    <div class="d-flex align-items-center gap-1.5 mb-2 text-warning-emphasis fw-bold" style="font-size: 0.82rem;">
+                                                        <i class="bi bi-truck-flatbed"></i>
+                                                        <span>Datos del Proveedor / Subcontratista</span>
+                                                    </div>
+                                                    <div class="row g-2">
+                                                        <div class="col-12 col-sm-8">
+                                                            <label class="form-label" style="font-size:0.75rem;">Empresa / Proveedor Tercero</label>
+                                                            <input type="text" id="os-input-proveedor-tercero" class="form-control form-control-sm text-uppercase" placeholder="Ej: ROSYMAR S.A.C. / TRANSPORTES XYZ">
+                                                        </div>
+                                                        <div class="col-12 col-sm-4">
+                                                            <label class="form-label" style="font-size:0.75rem;">RUC Proveedor</label>
+                                                            <input type="text" id="os-input-proveedor-ruc" class="form-control form-control-sm font-monospace" placeholder="20XXXXXXXXX" maxlength="11">
+                                                        </div>
+                                                        <div class="col-12 col-sm-4">
+                                                            <label class="form-label" style="font-size:0.75rem;">Costo Tercero (Pactado)</label>
+                                                            <div class="input-group input-group-sm">
+                                                                <span class="input-group-text bg-light text-muted" style="font-size:0.75rem;">M</span>
+                                                                <input type="number" step="0.01" id="os-input-costo-tercero" class="form-control form-control-sm font-monospace fw-bold" placeholder="0.00">
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-12 col-sm-4">
+                                                            <label class="form-label" style="font-size:0.75rem;">N° Doc / Factura Tercero</label>
+                                                            <input type="text" id="os-input-doc-tercero" class="form-control form-control-sm text-uppercase font-monospace" placeholder="F001-00123 / GRT">
+                                                        </div>
+                                                        <div class="col-12 col-sm-4">
+                                                            <label class="form-label" style="font-size:0.75rem;">Dueño Real Carga (Remitente)</label>
+                                                            <input type="text" id="os-input-remitente-generador" class="form-control form-control-sm text-uppercase" placeholder="Ej: BIMBO / ALICORP">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <div class="col-12">
                                                 <label class="form-label">Cliente/Remitente <span class="req">(*)</span></label>
                                                 <input type="text" id="os-input-cliente" list="os-clientes-datalist" class="form-control text-uppercase" placeholder="ESCRIBA O SELECCIONE CLIENTE/REMITENTE..." required>
@@ -1081,29 +1117,16 @@
                             </div>
 
                             <datalist id="os-rutas-datalist">
-                                <option value="LIMA - PIURA">
-                                <option value="PIURA - LIMA">
-                                <option value="LIMA - AREQUIPA">
-                                <option value="AREQUIPA - LIMA">
-                                <option value="LIMA - TRUJILLO">
-                                <option value="TRUJILLO - LIMA">
-                                <option value="LIMA - CHICLAYO">
-                                <option value="CHICLAYO - LIMA">
-                                <option value="LIMA - CUSCO">
-                                <option value="CUSCO - LIMA">
-                                <option value="LIMA - HUANCAYO">
-                                <option value="HUANCAYO - LIMA">
-                                <option value="CALLAO - LIMA">
-                                <option value="LIMA - CALLAO">
+                                <!-- Poblado dinámicamente desde Matriz de Combustible D2 -->
                             </datalist>
 
                             <div class="table-responsive border rounded-3 bg-white mb-3" style="max-height: 400px; overflow-y: auto;">
                                 <table class="table table-sm os-table align-middle mb-0" id="tablaOsRutasForm">
                                     <thead class="table-light">
                                         <tr class="text-uppercase" style="font-size: 0.72rem;">
-                                            <th style="min-width: 320px;">RUTA</th>
-                                            <th style="width: 220px;">DISTANCIA KM</th>
-                                            <th style="width: 220px;">GALONES</th>
+                                            <th style="min-width: 320px;">RUTA (MATRIZ D2)</th>
+                                            <th style="width: 220px;">DISTANCIA KM (RECORRIDO)</th>
+                                            <th style="width: 220px;">GALONES ESTIMADOS</th>
                                             <th class="text-center" style="width: 60px;"></th>
                                         </tr>
                                     </thead>

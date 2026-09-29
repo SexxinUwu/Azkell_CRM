@@ -9,6 +9,8 @@
     let _docsAdjuntosActuales = [];
     let _gresDisponiblesCache = [];
     let _osRutasActuales = [];
+    let _osMatrizRutasCache = [];
+    let _osMatrizRutasMap = new Map();
     window._osOrigenApertura = 'modulo_propio';
 
     // Inicialización del módulo
@@ -24,6 +26,7 @@
 
         initFechasPorDefecto();
         window.osCargarClientesDatalist();
+        window.osCargarRutasMatriz();
         window.osCargarTabla();
     };
 
@@ -337,6 +340,21 @@
         }
     };
 
+    // ── Toggle Dinámico de Bloque Proveedor Tercero / Subcontratista ──
+    window.osToggleBloqueTercerizado = function () {
+        const tipoCont = document.getElementById('os-input-tipo-contratacion')?.value || 'CLIENTE DIRECTO';
+        const modEjec = document.getElementById('os-input-modalidad-ejecucion')?.value || 'PROPIO';
+        const bloque = document.getElementById('os-bloque-tercerizado');
+        if (!bloque) return;
+
+        const esTercerizado = (tipoCont === 'TERCERO' || modEjec === 'TERCERIZADO');
+        if (esTercerizado) {
+            bloque.classList.remove('d-none');
+        } else {
+            bloque.classList.add('d-none');
+        }
+    };
+
     // ── Abrir Modal para Nuevo (Instantáneo 3x más rápido) ────────────
     window.osAbrirModalNuevo = function (viajeAsignado = '', origen = 'modulo_propio', datosExtra = {}) {
         window._osOrigenApertura = origen;
@@ -349,6 +367,24 @@
         if (inpId) inpId.value = '';
         _docsAdjuntosActuales = [];
         renderizarDocsAdjuntos();
+
+        // Limpiar campos de tercero / subcontratista
+        const inpProvTercero = document.getElementById('os-input-proveedor-tercero');
+        const inpProvRuc = document.getElementById('os-input-proveedor-ruc');
+        const inpCostoTercero = document.getElementById('os-input-costo-tercero');
+        const inpDocTercero = document.getElementById('os-input-doc-tercero');
+        const inpRemitenteGen = document.getElementById('os-input-remitente-generador');
+        if (inpProvTercero) inpProvTercero.value = '';
+        if (inpProvRuc) inpProvRuc.value = '';
+        if (inpCostoTercero) inpCostoTercero.value = '';
+        if (inpDocTercero) inpDocTercero.value = '';
+        if (inpRemitenteGen) inpRemitenteGen.value = '';
+
+        const selTipoCont = document.getElementById('os-input-tipo-contratacion');
+        if (selTipoCont) selTipoCont.value = 'CLIENTE DIRECTO';
+        const selModEjec = document.getElementById('os-input-modalidad-ejecucion');
+        if (selModEjec) selModEjec.value = 'PROPIO';
+        window.osToggleBloqueTercerizado();
 
         // Moneda por defecto SOLES y Tipo de Cambio oculto
         const selMoneda = document.getElementById('os-input-moneda');
@@ -463,8 +499,9 @@
             });
         }
 
-        // Cargar clientes en datalist de inmediato
+        // Cargar clientes y rutas de matriz en datalists de inmediato
         window.osCargarClientesDatalist();
+        window.osCargarRutasMatriz();
 
         // Mostrar modal al instante
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -555,6 +592,20 @@
 
             document.getElementById('os-input-tipo-contratacion').value = item.tipo_contratacion || 'CLIENTE DIRECTO';
             document.getElementById('os-input-modalidad-ejecucion').value = item.modalidad_ejecucion || 'PROPIO';
+
+            const inpProvTercero = document.getElementById('os-input-proveedor-tercero');
+            const inpProvRuc = document.getElementById('os-input-proveedor-ruc');
+            const inpCostoTercero = document.getElementById('os-input-costo-tercero');
+            const inpDocTercero = document.getElementById('os-input-doc-tercero');
+            const inpRemitenteGen = document.getElementById('os-input-remitente-generador');
+            if (inpProvTercero) inpProvTercero.value = item.proveedor_tercero_nombre || '';
+            if (inpProvRuc) inpProvRuc.value = item.proveedor_tercero_ruc || '';
+            if (inpCostoTercero) inpCostoTercero.value = item.costo_tercero || '';
+            if (inpDocTercero) inpDocTercero.value = item.doc_tercero || '';
+            if (inpRemitenteGen) inpRemitenteGen.value = item.remitente_generador || '';
+
+            window.osToggleBloqueTercerizado();
+
             document.getElementById('os-input-cliente').value = item.cliente_nombre || '';
             const tServ = String(item.tipo_servicio || '').toUpperCase();
             document.getElementById('os-input-tipo-servicio').value = (tServ.includes('LOCAL')) ? 'TRANSPORTE LOCAL' : 'TRANSPORTE NACIONAL';
@@ -601,6 +652,9 @@
                 }
                 if (helpText) helpText.textContent = 'Puede ingresar o vincular la orden de viaje aquí.';
             }
+
+            // Precargar rutas de la matriz de combustible
+            window.osCargarRutasMatriz();
 
             // Rutas asociadas a esta orden
             _osRutasActuales = (item.rutas || []).map(r => ({
@@ -676,8 +730,77 @@
         return window.osAbrirModalEditar(codigo, origen);
     };
 
-    // ── GESTIÓN DE FILAS DE RUTAS (Imagen 1) ────────────────────────
+    // ── Cargar Rutas de la Matriz de Combustible D2 para Datalist y Autocompletado ──
+    window.osCargarRutasMatriz = async function (force = false) {
+        if (_osMatrizRutasCache && _osMatrizRutasCache.length > 0 && !force) {
+            poblarDatalistRutasMatriz(_osMatrizRutasCache);
+            return _osMatrizRutasCache;
+        }
+        try {
+            const resp = await fetch('/api/operaciones/rutas-matriz');
+            const data = await resp.json();
+            if (data && data.ok && Array.isArray(data.data)) {
+                _osMatrizRutasCache = data.data;
+            } else {
+                const fb = await fetch('/api/combustible/matriz');
+                const fbData = await fb.json();
+                _osMatrizRutasCache = (fbData && fbData.ok && Array.isArray(fbData.data)) ? fbData.data : [];
+            }
+            _osMatrizRutasMap.clear();
+            _osMatrizRutasCache.forEach(r => {
+                const key = (r.ruta || '').trim().toUpperCase();
+                if (key) {
+                    const kmVal = parseFloat(r.km) || 0;
+                    if (!_osMatrizRutasMap.has(key) || kmVal > (_osMatrizRutasMap.get(key).km || 0)) {
+                        _osMatrizRutasMap.set(key, {
+                            ruta: key,
+                            km: kmVal,
+                            sentido: r.sentido || 'IDA'
+                        });
+                    }
+                }
+            });
+            poblarDatalistRutasMatriz(_osMatrizRutasCache);
+            return _osMatrizRutasCache;
+        } catch (e) {
+            console.warn("Error cargando rutas de la matriz:", e);
+            return [];
+        }
+    };
+
+    function poblarDatalistRutasMatriz(rutas) {
+        const dl = document.getElementById('os-rutas-datalist');
+        if (!dl) return;
+        const unicas = [];
+        const seen = new Set();
+        (rutas || []).forEach(r => {
+            const key = (r.ruta || '').trim().toUpperCase();
+            if (key && !seen.has(key)) {
+                seen.add(key);
+                unicas.push({
+                    ruta: key,
+                    km: parseFloat(r.km) || 0,
+                    sentido: r.sentido || 'IDA'
+                });
+            }
+        });
+        unicas.sort((a, b) => a.ruta.localeCompare(b.ruta));
+        dl.innerHTML = unicas.map(r => {
+            const kmLabel = r.km > 0 ? ` (${Number(r.km).toLocaleString()} Km)` : '';
+            return `<option value="${escapeHtml(r.ruta)}" label="${escapeHtml(r.ruta + kmLabel)}">${escapeHtml(r.ruta + kmLabel)}</option>`;
+        }).join('');
+    }
+
+    // ── GESTIÓN DE FILAS DE RUTAS (Matriz de Combustible Integrada) ────────────────────────
     window.osAgregarFilaRuta = function (rutaVal = '', distVal = '', galVal = '') {
+        // Si viene ruta y no viene distancia, autocompletar desde la matriz si existe
+        if (rutaVal && (!distVal || distVal === '0')) {
+            const key = String(rutaVal).trim().toUpperCase();
+            const matched = _osMatrizRutasMap.get(key);
+            if (matched && matched.km > 0) {
+                distVal = matched.km;
+            }
+        }
         _osRutasActuales.push({
             ruta: rutaVal,
             distancia_km: distVal,
@@ -697,6 +820,19 @@
     window.osActualizarRutaCampo = function (idx, campo, valor) {
         if (_osRutasActuales[idx]) {
             _osRutasActuales[idx][campo] = valor;
+
+            // Si se modifica la ruta, buscar si coincide con una ruta de la matriz para autocompletar la distancia (KM)
+            if (campo === 'ruta') {
+                const key = (valor || '').trim().toUpperCase();
+                const matched = _osMatrizRutasMap.get(key);
+                if (matched && matched.km > 0) {
+                    _osRutasActuales[idx].distancia_km = matched.km;
+                    const inpDist = document.getElementById(`os-ruta-dist-${idx}`);
+                    if (inpDist) {
+                        inpDist.value = matched.km;
+                    }
+                }
+            }
         }
     };
 
@@ -720,13 +856,19 @@
             html += `
                 <tr>
                     <td>
-                        <input type="text" list="os-rutas-datalist" class="form-control form-control-sm text-uppercase fw-semibold" placeholder="Ej: LIMA - PIURA" value="${escapeHtml(r.ruta || '')}" oninput="window.osActualizarRutaCampo(${idx}, 'ruta', this.value)">
+                        <input type="text" list="os-rutas-datalist" id="os-ruta-name-${idx}" class="form-control form-control-sm text-uppercase fw-semibold" placeholder="Seleccione o escriba ruta de la matriz..." value="${escapeHtml(r.ruta || '')}" oninput="window.osActualizarRutaCampo(${idx}, 'ruta', this.value)" onchange="window.osActualizarRutaCampo(${idx}, 'ruta', this.value)">
                     </td>
                     <td>
-                        <input type="number" step="0.1" class="form-control form-control-sm font-monospace" placeholder="0" value="${escapeHtml(String(r.distancia_km !== undefined ? r.distancia_km : ''))}" oninput="window.osActualizarRutaCampo(${idx}, 'distancia_km', this.value)">
+                        <div class="input-group input-group-sm">
+                            <input type="number" step="0.1" id="os-ruta-dist-${idx}" class="form-control form-control-sm font-monospace fw-bold text-primary" placeholder="0" value="${escapeHtml(String(r.distancia_km !== undefined && r.distancia_km !== null ? r.distancia_km : ''))}" oninput="window.osActualizarRutaCampo(${idx}, 'distancia_km', this.value)">
+                            <span class="input-group-text bg-light text-muted font-monospace" style="font-size:0.75rem;">KM</span>
+                        </div>
                     </td>
                     <td>
-                        <input type="number" step="0.1" class="form-control form-control-sm font-monospace" placeholder="0" value="${escapeHtml(String(r.galones !== undefined ? r.galones : ''))}" oninput="window.osActualizarRutaCampo(${idx}, 'galones', this.value)">
+                        <div class="input-group input-group-sm">
+                            <input type="number" step="0.1" id="os-ruta-gal-${idx}" class="form-control form-control-sm font-monospace" placeholder="0" value="${escapeHtml(String(r.galones !== undefined && r.galones !== null ? r.galones : ''))}" oninput="window.osActualizarRutaCampo(${idx}, 'galones', this.value)">
+                            <span class="input-group-text bg-light text-muted font-monospace" style="font-size:0.75rem;">GL</span>
+                        </div>
                     </td>
                     <td class="text-center">
                         <button type="button" class="btn btn-danger btn-sm p-1 px-2.5 rounded-2 shadow-2xs" onclick="window.osEliminarFilaRuta(${idx})" title="Eliminar fila">
@@ -822,6 +964,13 @@
         const tipo_cambio = document.getElementById('os-input-tipo-cambio')?.value;
         const tipo_contratacion = document.getElementById('os-input-tipo-contratacion')?.value;
         const modalidad_ejecucion = document.getElementById('os-input-modalidad-ejecucion')?.value;
+
+        const proveedor_tercero_nombre = document.getElementById('os-input-proveedor-tercero')?.value?.trim() || null;
+        const proveedor_tercero_ruc = document.getElementById('os-input-proveedor-ruc')?.value?.trim() || null;
+        const costo_tercero = parseFloat(document.getElementById('os-input-costo-tercero')?.value) || 0;
+        const doc_tercero = document.getElementById('os-input-doc-tercero')?.value?.trim() || null;
+        const remitente_generador = document.getElementById('os-input-remitente-generador')?.value?.trim() || null;
+
         const cliente_nombre = document.getElementById('os-input-cliente')?.value?.trim();
         const tipo_servicio = document.getElementById('os-input-tipo-servicio')?.value;
         const es_retorno = parseInt(document.getElementById('os-input-es-retorno')?.value || '0', 10);
@@ -857,6 +1006,11 @@
             tipo_cambio,
             tipo_contratacion,
             modalidad_ejecucion,
+            proveedor_tercero_nombre,
+            proveedor_tercero_ruc,
+            costo_tercero,
+            doc_tercero,
+            remitente_generador,
             cliente_nombre,
             tipo_servicio,
             es_retorno,
