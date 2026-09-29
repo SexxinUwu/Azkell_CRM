@@ -908,6 +908,61 @@ const TABLAS = [
             INDEX idx_correlativo (correlativo),
             INDEX idx_estado (estado)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+    },
+    {
+        nombre: 'ordenes_compra',
+        sql: `CREATE TABLE IF NOT EXISTS ordenes_compra (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            codigo VARCHAR(50) NOT NULL UNIQUE,
+            proveedor_nombre VARCHAR(200) NOT NULL,
+            proveedor_ruc VARCHAR(20) NULL,
+            monto_total DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+            moneda VARCHAR(10) NOT NULL DEFAULT 'PEN',
+            motivo_solicitud TEXT NULL,
+            sustento_cotizacion_url TEXT NULL,
+            estado ENUM('BORRADOR', 'PENDIENTE_APROBACION', 'APROBADA', 'RECHAZADA', 'RECIBIDA') DEFAULT 'PENDIENTE_APROBACION',
+            motivo_rechazo TEXT NULL,
+            aprobado_por VARCHAR(100) NULL,
+            aprobado_en DATETIME NULL,
+            solicitado_por VARCHAR(100) NULL,
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_oc_codigo (codigo),
+            INDEX idx_oc_estado (estado)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+        nombre: 'ordenes_compra_items',
+        sql: `CREATE TABLE IF NOT EXISTS ordenes_compra_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            orden_compra_id INT NOT NULL,
+            descripcion TEXT NOT NULL,
+            cantidad DECIMAL(12, 2) NOT NULL DEFAULT 1.00,
+            unidad_medida VARCHAR(20) DEFAULT 'UND',
+            precio_unitario DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+            subtotal DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_items_oc_id (orden_compra_id),
+            FOREIGN KEY (orden_compra_id) REFERENCES ordenes_compra(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    },
+    {
+        nombre: 'oc_approval_tokens',
+        sql: `CREATE TABLE IF NOT EXISTS oc_approval_tokens (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            orden_compra_id INT NOT NULL,
+            token VARCHAR(128) NOT NULL UNIQUE,
+            aprobador_telefono VARCHAR(20) NOT NULL,
+            aprobador_nombre VARCHAR(100) NULL,
+            estado ENUM('PENDIENTE', 'APROBADO', 'RECHAZADO') DEFAULT 'PENDIENTE',
+            motivo_rechazo TEXT NULL,
+            expira_en DATETIME NOT NULL,
+            usado_en DATETIME NULL,
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_token (token),
+            INDEX idx_token_estado (estado),
+            FOREIGN KEY (orden_compra_id) REFERENCES ordenes_compra(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
     }
 ];
 
