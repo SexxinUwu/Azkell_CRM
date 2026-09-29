@@ -8,9 +8,19 @@ module.exports = function globalRBAC(req, res, next) {
         '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/notificaciones',
         '/script/obtener', '/script/buscar', '/integraciones', '/catalogos_taller',
         '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read', '/checklist/presign-read',
-        '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos', '/combustible/vales'
+        '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos', '/combustible/vales',
+        '/guias-remision/pdf-apisunat', '/guias-remision/pdf'
     ];
-    if (ignoredPaths.some(ip => path === ip || path.startsWith(ip)) || path.endsWith('/presign-read') || path.endsWith('/presigned') || path.endsWith('/ver') || (path.includes('/archivo/') && path.endsWith('/ver'))) return next();
+    if (
+        ignoredPaths.some(ip => path === ip || path.startsWith(ip)) || 
+        path.endsWith('/presign-read') || 
+        path.endsWith('/presigned') || 
+        path.endsWith('/ver') || 
+        (path.includes('/archivo/') && path.endsWith('/ver')) ||
+        path.includes('/pdf-apisunat/') ||
+        path.includes('/pdf/') ||
+        path.includes('/imprimir/')
+    ) return next();
 
     if (!req.user) return res.status(401).json({ error: 'No autenticado' });
 
