@@ -229,6 +229,20 @@ thead .ov-col-sticky-action {
 .ov-table tbody tr:hover .ov-col-sticky-action {
     background: #f8fafc !important;
 }
+/* Elevar z-index de la fila y celda cuando el dropdown esté abierto */
+.ov-table tbody tr:has(.dropdown.show),
+.ov-table tbody tr:has(.show),
+.ov-table tbody tr:focus-within,
+.ov-table tbody tr.ov-row-dropdown-open {
+    position: relative !important;
+    z-index: 1055 !important;
+}
+.ov-table tbody td.ov-col-sticky-action:has(.dropdown.show),
+.ov-table tbody td.ov-col-sticky-action:has(.show),
+.ov-table tbody td.ov-col-sticky-action:focus-within,
+.ov-table tbody td.ov-col-sticky-action.ov-dropdown-open {
+    z-index: 1060 !important;
+}
 
 /* ── BOTÓN 3 PUNTOS Y MENÚ FLOTANTE DE ACCIONES (PASTEL) ── */
 .ov-btn-action-dots {
@@ -258,7 +272,7 @@ thead .ov-col-sticky-action {
     border: 1px solid #e2e8f0;
     box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
     padding: 6px;
-    z-index: 1060;
+    z-index: 99999 !important;
 }
 .ov-actions-dropdown-menu .dropdown-item {
     border-radius: 8px;

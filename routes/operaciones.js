@@ -283,7 +283,12 @@ module.exports = function (db, broadcast, logAudit) {
                 "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN usuario_creacion VARCHAR(100) DEFAULT 'ADMINISTRADOR'",
                 "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN factura VARCHAR(60) NULL",
                 "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN es_retorno TINYINT(1) DEFAULT 0",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN estado_liquidacion VARCHAR(30) DEFAULT 'PENDIENTE'"
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN estado_liquidacion VARCHAR(30) DEFAULT 'PENDIENTE'",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN proveedor_tercero_nombre VARCHAR(200) NULL",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN proveedor_tercero_ruc VARCHAR(20) NULL",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN costo_tercero DECIMAL(12,2) DEFAULT 0.00",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN doc_tercero VARCHAR(100) NULL",
+                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN remitente_generador VARCHAR(255) NULL"
             ];
             for (const sql of osCols) {
                 try { await tdb.query(sql); } catch (_) {}
@@ -1637,6 +1642,31 @@ module.exports = function (db, broadcast, logAudit) {
     // 💼 ENDPOINTS: ÓRDENES DE SERVICIO (ERP AZKELL FLEET)
     // =========================================================================
 
+    // 0. Rutas disponibles de la Matriz de Combustible D2 para listas desplegables y autocompletado de recorrido (KM)
+    router.get('/rutas-matriz', async (req, res) => {
+        try {
+            await ensureTables(req);
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+
+            const [rows] = await tdb.query(`
+                SELECT 
+                    TRIM(UPPER(ruta)) AS ruta,
+                    COALESCE(sentido, 'IDA') AS sentido,
+                    COALESCE(MAX(km), 0) AS km,
+                    COUNT(*) AS total_variantes
+                FROM combustible_matriz_d2
+                WHERE estado = 'ACTIVO' AND ruta IS NOT NULL AND TRIM(ruta) != ''
+                GROUP BY TRIM(UPPER(ruta)), COALESCE(sentido, 'IDA')
+                ORDER BY ruta ASC, sentido ASC
+            `);
+            res.json({ ok: true, data: rows || [] });
+        } catch (err) {
+            console.error('Error al obtener rutas de matriz:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     // 1. Correlativo para nueva Orden de Servicio
     router.get('/ordenes-servicio/correlativo', async (req, res) => {
         try {
@@ -1810,7 +1840,12 @@ module.exports = function (db, broadcast, logAudit) {
                 documentos,
                 rutas,
                 placa_tracto,
-                placa_carreta
+                placa_carreta,
+                proveedor_tercero_nombre,
+                proveedor_tercero_ruc,
+                costo_tercero,
+                doc_tercero,
+                remitente_generador
             } = req.body;
 
             const yearSerie = serie || new Date().getFullYear().toString();
@@ -1832,8 +1867,9 @@ module.exports = function (db, broadcast, logAudit) {
                     serie, numero, codigo_orden, viaje_asignado, fecha, fecha_fin, moneda, tipo_cambio,
                     tipo_contratacion, modalidad_ejecucion, cliente_id, cliente_nombre,
                     tipo_servicio, es_retorno, tipo_costo, impuesto, costo_flete, puntos_carga,
-                    puntos_destino, destinatario, observaciones, placa_tracto, placa_carreta, estado_servicio, estado_liquidacion
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'PENDIENTE'), 'PENDIENTE')
+                    puntos_destino, destinatario, observaciones, placa_tracto, placa_carreta, estado_servicio, estado_liquidacion,
+                    proveedor_tercero_nombre, proveedor_tercero_ruc, costo_tercero, doc_tercero, remitente_generador
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'PENDIENTE'), 'PENDIENTE', ?, ?, ?, ?, ?)
             `, [
                 yearSerie,
                 numFinal,
@@ -1858,7 +1894,12 @@ module.exports = function (db, broadcast, logAudit) {
                 observaciones || null,
                 placa_tracto || null,
                 placa_carreta || null,
-                req.body.estado_servicio || 'PENDIENTE'
+                req.body.estado_servicio || 'PENDIENTE',
+                proveedor_tercero_nombre || null,
+                proveedor_tercero_ruc || null,
+                parseFloat(costo_tercero) || 0.00,
+                doc_tercero || null,
+                remitente_generador || null
             ]);
 
             const osId = ins.insertId;
@@ -2064,7 +2105,12 @@ module.exports = function (db, broadcast, logAudit) {
                 documentos,
                 rutas,
                 placa_tracto,
-                placa_carreta
+                placa_carreta,
+                proveedor_tercero_nombre,
+                proveedor_tercero_ruc,
+                costo_tercero,
+                doc_tercero,
+                remitente_generador
             } = req.body;
 
             const [prev] = await tdb.query(`SELECT codigo_orden, viaje_asignado FROM operaciones_ordenes_servicio WHERE id = ?`, [osId]);
@@ -2095,7 +2141,12 @@ module.exports = function (db, broadcast, logAudit) {
                     observaciones = ?,
                     placa_tracto = COALESCE(?, placa_tracto),
                     placa_carreta = COALESCE(?, placa_carreta),
-                    estado_servicio = COALESCE(?, estado_servicio)
+                    estado_servicio = COALESCE(?, estado_servicio),
+                    proveedor_tercero_nombre = ?,
+                    proveedor_tercero_ruc = ?,
+                    costo_tercero = COALESCE(?, costo_tercero, 0.00),
+                    doc_tercero = ?,
+                    remitente_generador = ?
                 WHERE id = ?
             `, [
                 viaje_asignado !== undefined ? viaje_asignado : null,
@@ -2119,6 +2170,11 @@ module.exports = function (db, broadcast, logAudit) {
                 placa_tracto || null,
                 placa_carreta || null,
                 estado_servicio || null,
+                proveedor_tercero_nombre !== undefined ? proveedor_tercero_nombre : null,
+                proveedor_tercero_ruc !== undefined ? proveedor_tercero_ruc : null,
+                costo_tercero !== undefined ? parseFloat(costo_tercero) || 0.00 : 0.00,
+                doc_tercero !== undefined ? doc_tercero : null,
+                remitente_generador !== undefined ? remitente_generador : null,
                 osId
             ]);
 
