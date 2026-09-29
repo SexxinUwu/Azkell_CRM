@@ -1547,7 +1547,7 @@ module.exports = function(db, tenantStorage) {
         }
     });
 
-    // 9. Ver o Redirigir a PDF Oficial de APISUNAT
+    // 9. Ver o Redirigir a PDF Oficial de Guía de Remisión (APISUNAT / Plantilla Oficial SUNAT)
     router.get('/pdf-apisunat/:id', async (req, res) => {
         try {
             const dbConn = getDb(req);
@@ -1556,24 +1556,251 @@ module.exports = function(db, tenantStorage) {
 
             const [rows] = await dbConn.query("SELECT * FROM guias_remision WHERE id = ?", [id]);
             if (rows.length === 0) {
-                return res.status(404).json({ ok: false, error: "Guía no encontrada." });
+                return res.status(404).send("<h2>Guía de remisión no encontrada.</h2>");
             }
 
             const guia = rows[0];
+            const [items] = await dbConn.query("SELECT * FROM guias_remision_items WHERE guia_id = ? ORDER BY id ASC", [id]);
+
             const docId = guia.apisunat_document_id || guia.num_ticket;
-            if (!docId) {
-                return res.status(400).json({ ok: false, error: "La guía no cuenta con Document ID en APISUNAT." });
+
+            // Si tiene PDF directo registrado o Document ID de APISUNAT y no es de simulación/XML
+            if (guia.pdf_url && guia.pdf_url.startsWith('http') && guia.modo_emision !== 'SIMULACION' && guia.modo_emision !== 'XML_SUNAT') {
+                return res.redirect(guia.pdf_url);
             }
 
-            const creds = await ApisunatService.getCredenciales(dbConn);
-            const ruc = creds.ruc_emisor || '20609532484';
-            const fileName = `${ruc}-${guia.tipo_documento || '31'}-${guia.numero_guia}`;
-            const pdfUrl = guia.pdf_url || ApisunatService.getPdfUrl(docId, fileName, 'A4');
+            if (docId && typeof docId === 'string' && docId.length > 20 && !docId.startsWith('SIM-') && guia.modo_emision !== 'XML_SUNAT') {
+                const creds = await ApisunatService.getCredenciales(dbConn);
+                const ruc = creds.ruc_emisor || '20609532484';
+                const fileName = `${ruc}-${guia.tipo_documento || '31'}-${guia.numero_guia}`;
+                const pdfUrl = ApisunatService.getPdfUrl(docId, fileName, 'A4');
+                return res.redirect(pdfUrl);
+            }
 
-            res.redirect(pdfUrl);
+            // ── RENDERIZADO DE PLANTILLA OFICIAL SUNAT A4 PARA IMPRESIÓN / PDF ──
+            const esGrt = (guia.tipo_documento === '31' || (guia.numero_guia && guia.numero_guia.startsWith('V')));
+            const tituloDoc = esGrt ? 'GUÍA DE REMISIÓN ELECTRÓNICA - TRANSPORTISTA' : 'GUÍA DE REMISIÓN ELECTRÓNICA - REMITENTE';
+            const emisorRuc = esGrt ? (guia.transportista_ruc || '20609532484') : (guia.remitente_ruc || '—');
+            const emisorNombre = esGrt ? (guia.transportista_razon_social || 'YOGUI TRANSPORT S.A.C.') : (guia.remitente_razon_social || '—');
+
+            let filasItemsHtml = '';
+            if (items && items.length > 0) {
+                items.forEach((it, idx) => {
+                    filasItemsHtml += `
+                        <tr>
+                            <td style="text-align:center; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px;">${idx + 1}</td>
+                            <td style="text-align:center; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-family: monospace;">${it.codigo || '—'}</td>
+                            <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 500;">${it.descripcion || 'MERCADERÍA'}</td>
+                            <td style="text-align:center; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px;">${it.unidad_medida || 'NIU'}</td>
+                            <td style="text-align:right; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: bold; font-family: monospace;">${Number(it.cantidad || 1).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
+                            <td style="text-align:right; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-family: monospace;">${Number(it.peso_unitario || 0).toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                filasItemsHtml = `
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding: 16px; color: #64748b; font-size: 12px;">Carga General Registrada en Guía Electrónica</td>
+                    </tr>
+                `;
+            }
+
+            const qrData = encodeURIComponent(`${emisorRuc}|${guia.tipo_documento || '09'}|${guia.numero_guia}|${guia.peso_bruto_total || 0}|${guia.fecha_emision || ''}|${guia.destinatario_ruc || ''}|`);
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${qrData}`;
+
+            const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>${guia.numero_guia} - ${tituloDoc}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #525659; padding: 20px 0; color: #1e293b; }
+        .page { background: #ffffff; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 14mm 15mm; box-shadow: 0 4px 15px rgba(0,0,0,0.25); border-radius: 4px; position: relative; }
+        .no-print-bar { position: fixed; top: 12px; right: 20px; z-index: 1000; display: flex; gap: 8px; }
+        .btn-print { background: #0284c7; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .btn-print:hover { background: #0369a1; }
+        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        .box-ruc { border: 2px solid #0f172a; border-radius: 8px; text-align: center; padding: 10px 14px; background: #fafafa; }
+        .box-ruc h3 { font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+        .box-ruc h2 { font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px; letter-spacing: 0.3px; }
+        .box-ruc .num { font-size: 16px; font-weight: 800; color: #dc2626; font-family: monospace; letter-spacing: 0.5px; }
+        .card-section { border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; background: #ffffff; }
+        .card-title { font-size: 10.5px; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; letter-spacing: 0.3px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 11px; }
+        .lbl { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 1px; }
+        .val { font-size: 11px; font-weight: 600; color: #0f172a; word-break: break-word; }
+        .items-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+        .items-table th { background: #f1f5f9; color: #334155; font-size: 10px; font-weight: 800; text-transform: uppercase; padding: 6px 8px; border-bottom: 2px solid #cbd5e1; letter-spacing: 0.3px; }
+        .footer-box { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 16px; font-size: 10px; color: #64748b; }
+        @media print {
+            body { background: #ffffff; padding: 0; }
+            .page { width: 100%; box-shadow: none; padding: 8mm; margin: 0; }
+            .no-print-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print-bar">
+        <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+    </div>
+
+    <div class="page">
+        <!-- CABECERA -->
+        <table class="header-table">
+            <tr>
+                <td style="width: 58%; vertical-align: top; padding-right: 15px;">
+                    <div style="font-size: 18px; font-weight: 900; color: #0f172a; line-height: 1.15; margin-bottom: 4px;">
+                        ${emisorNombre}
+                    </div>
+                    <div style="font-size: 11px; color: #475569; margin-bottom: 2px;">
+                        <b>RUC:</b> ${emisorRuc}
+                    </div>
+                    <div style="font-size: 10.5px; color: #64748b; line-height: 1.3;">
+                        ${guia.punto_partida_direccion || 'Dirección Fiscal Principal'}
+                    </div>
+                </td>
+                <td style="width: 42%; vertical-align: top;">
+                    <div class="box-ruc">
+                        <h3>RUC N° ${emisorRuc}</h3>
+                        <h2>${tituloDoc}</h2>
+                        <div class="num">${guia.numero_guia}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- DATOS DEL TRASLADO -->
+        <div class="card-section">
+            <div class="card-title">1. Datos del Traslado y Emisión</div>
+            <div class="grid-3">
+                <div>
+                    <div class="lbl">Fecha de Emisión:</div>
+                    <div class="val font-monospace">${guia.fecha_emision ? String(guia.fecha_emision).slice(0, 10) : '—'}</div>
+                </div>
+                <div>
+                    <div class="lbl">Fecha Inicio Traslado:</div>
+                    <div class="val font-monospace">${guia.fecha_traslado ? String(guia.fecha_traslado).slice(0, 10) : '—'}</div>
+                </div>
+                <div>
+                    <div class="lbl">Motivo de Traslado:</div>
+                    <div class="val">${guia.descripcion_motivo || (guia.motivo_traslado === '01' ? 'VENTA' : 'TRASLADO ENTRE ESTABLECIMIENTOS')}</div>
+                </div>
+            </div>
+            <div class="grid-3" style="margin-top: 6px;">
+                <div>
+                    <div class="lbl">Modalidad de Transporte:</div>
+                    <div class="val">${guia.modalidad_traslado || (esGrt ? 'TRANSPORTE PÚBLICO' : 'TRANSPORTE PRIVADO')}</div>
+                </div>
+                <div>
+                    <div class="lbl">Peso Bruto Total:</div>
+                    <div class="val" style="color:#0284c7;">${Number(guia.peso_bruto_total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })} ${guia.unidad_medida || 'KGM'}</div>
+                </div>
+                <div>
+                    <div class="lbl">Estado Tributario:</div>
+                    <div class="val" style="color:#16a34a; font-weight:800;">● ${guia.estado_sunat || 'ACEPTADO'}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REMITENTE Y DESTINATARIO -->
+        <div class="card-section">
+            <div class="card-title">2. Actores Comerciales (Remitente y Destinatario)</div>
+            <div class="grid-2">
+                <div style="border-right: 1px solid #f1f5f9; padding-right: 8px;">
+                    <div class="lbl">Datos del Remitente:</div>
+                    <div class="val fw-bold">${guia.remitente_razon_social || '—'}</div>
+                    <div style="font-size:10px; color:#475569; margin-top:2px;"><b>RUC:</b> ${guia.remitente_ruc || '—'}</div>
+                </div>
+                <div style="padding-left: 8px;">
+                    <div class="lbl">Datos del Destinatario:</div>
+                    <div class="val fw-bold">${guia.destinatario_razon_social || '—'}</div>
+                    <div style="font-size:10px; color:#475569; margin-top:2px;"><b>RUC / Doc:</b> ${guia.destinatario_ruc || '—'}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PUNTOS DE PARTIDA Y LLEGADA -->
+        <div class="card-section">
+            <div class="card-title">3. Puntos de Partida y Llegada</div>
+            <div class="grid-2">
+                <div>
+                    <div class="lbl">Punto de Partida:</div>
+                    <div class="val">${guia.punto_partida_direccion || '—'}</div>
+                    <div style="font-size:10px; color:#64748b; margin-top:1px;"><b>Ubigeo:</b> ${guia.punto_partida_ubigeo || '—'}</div>
+                </div>
+                <div>
+                    <div class="lbl">Punto de Llegada:</div>
+                    <div class="val">${guia.punto_llegada_direccion || '—'}</div>
+                    <div style="font-size:10px; color:#64748b; margin-top:1px;"><b>Ubigeo:</b> ${guia.punto_llegada_ubigeo || '—'}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DATOS DE LA UNIDAD Y CONDUCTOR -->
+        <div class="card-section">
+            <div class="card-title">4. Datos del Vehículo y Conductor</div>
+            <div class="grid-3">
+                <div>
+                    <div class="lbl">Placa Tracto:</div>
+                    <div class="val font-monospace fw-bold">${guia.placa_tracto || '—'}</div>
+                </div>
+                <div>
+                    <div class="lbl">Placa Carreta / Remolque:</div>
+                    <div class="val font-monospace fw-bold">${guia.placa_carreta || '—'}</div>
+                </div>
+                <div>
+                    <div class="lbl">Conductor:</div>
+                    <div class="val">${guia.conductor_nombre || '—'}</div>
+                    <div style="font-size:10px; color:#64748b;"><b>${guia.conductor_tipo_doc || 'DNI'}:</b> ${guia.conductor_num_doc || '—'} | <b>Lic:</b> ${guia.conductor_licencia || '—'}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLA DE BIENES -->
+        <div class="card-section" style="min-height: 120px;">
+            <div class="card-title">5. Detalle de Bienes Transportados</div>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%; text-align: center;">Item</th>
+                        <th style="width: 15%; text-align: center;">Código</th>
+                        <th style="width: 50%;">Descripción del Bien</th>
+                        <th style="width: 10%; text-align: center;">U.M.</th>
+                        <th style="width: 10%; text-align: right;">Cantidad</th>
+                        <th style="width: 10%; text-align: right;">Peso (KG)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasItemsHtml}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PIE DE PÁGINA CON QR Y HASH -->
+        <div class="footer-box">
+            <div style="max-width: 75%;">
+                <div style="font-weight: bold; margin-bottom: 2px; color: #0f172a;">Representación Impresa de la Guía de Remisión Electrónica</div>
+                <div>Documento emitido conforme a las especificaciones técnicas de SUNAT (UBL 2.1).</div>
+                ${guia.xml_hash ? `<div style="font-family: monospace; font-size: 9px; margin-top: 3px; color: #64748b;"><b>Código Hash:</b> ${guia.xml_hash}</div>` : ''}
+                ${guia.observaciones_sunat ? `<div style="font-size: 9.5px; margin-top: 2px; color: #475569;"><b>Observaciones:</b> ${guia.observaciones_sunat}</div>` : ''}
+            </div>
+            <div>
+                <img src="${qrUrl}" alt="Código QR SUNAT" style="width: 90px; height: 90px; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px;">
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            `;
+
+            res.send(html);
+
         } catch (err) {
-            console.error("Error obteniendo PDF APISUNAT:", err);
-            res.status(500).json({ ok: false, error: err.message });
+            console.error("Error obteniendo PDF / Vista de Guía:", err);
+            res.status(500).send("Error generando documento: " + err.message);
         }
     });
 
