@@ -3938,6 +3938,12 @@ app.use('/api/guias-remision', require('./routes/guias_remision')(db, broadcast,
 app.use('/api/tesoreria', require('./routes/tesoreria')(db, broadcast, logAudit));
 app.use('/api/rrhh', require('./routes/rrhh')(db, broadcast, logAudit));
 
+// Módulo Órdenes de Compra y Aprobación Móvil vía WhatsApp (Magic Link)
+app.get('/aprobaciones/oc', (req, res) => {
+    res.sendFile(path.join(__dirname, 'web', 'aprobacion_oc.html'));
+});
+app.use(require('./routes/ordenes_compra')(db, broadcast, logAudit));
+
 const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
 app.use('/api/script', legacyRoutes);
 app.use('/api', legacyRoutes);
