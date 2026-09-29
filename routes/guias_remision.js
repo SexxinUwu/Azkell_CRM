@@ -1503,9 +1503,28 @@ module.exports = function(db, tenantStorage) {
             }
 
             const guia = rows[0];
+
+            // Caso 1: Guías importadas desde XML oficial de SUNAT (GRE de clientes)
+            if (guia.modo_emision === 'XML_SUNAT' || (guia.numero_guia && (guia.numero_guia.startsWith('T') || guia.tipo_documento === '09'))) {
+                return res.json({
+                    ok: true,
+                    estado_sunat: 'ACEPTADO',
+                    message: 'Guía de Remitente (GRE) importada desde XML oficial. Cuenta con validez y firma digital de SUNAT.'
+                });
+            }
+
+            // Caso 2: Guías emitidas en modo Simulación / Prueba interna
+            if (guia.modo_emision === 'SIMULACION' || (guia.num_ticket && String(guia.num_ticket).startsWith('SIM-'))) {
+                return res.json({
+                    ok: true,
+                    estado_sunat: 'ACEPTADO',
+                    message: 'Guía emitida en Modo Simulación / Prueba. No requiere consulta a los servidores de SUNAT.'
+                });
+            }
+
             const docId = guia.apisunat_document_id || guia.num_ticket;
-            if (!docId) {
-                return res.json({ ok: true, estado_sunat: guia.estado_sunat, mensaje: "Esta guía no tiene ID de APISUNAT." });
+            if (!docId || String(docId).trim() === '') {
+                return res.json({ ok: true, estado_sunat: guia.estado_sunat, message: "Esta guía no cuenta con Document ID en APISUNAT." });
             }
 
             const statusRes = await ApisunatService.getById(docId);
