@@ -228,9 +228,25 @@
                     <td class="text-nowrap">${badgeViaje}</td>
                     <td class="text-nowrap font-monospace fw-semibold">${escapeHtml(item.placa_tracto || '—')}</td>
                     <td class="text-nowrap font-monospace fw-semibold">${escapeHtml(item.placa_carreta || '—')}</td>
-                    <td class="text-nowrap fw-bold text-dark">${escapeHtml(item.cliente_nombre || '—')}</td>
+                    <td class="text-nowrap">
+                        <div class="fw-bold text-dark">${escapeHtml(item.cliente_nombre || '—')}</div>
+                        ${item.remitente_generador ? `<div class="text-info-emphasis font-monospace fw-semibold" style="font-size:0.7rem;" title="Dueño Real Carga / Remitente"><i class="bi bi-box-seam me-1"></i>Carga: ${escapeHtml(item.remitente_generador)}</div>` : ''}
+                    </td>
                     <td class="text-nowrap">${escapeHtml(item.tipo_contratacion || 'CLIENTE DIRECTO')}</td>
-                    <td class="text-nowrap">${escapeHtml(item.modalidad_ejecucion || 'PROPIO')}</td>
+                    <td class="text-nowrap">
+                        ${item.modalidad_ejecucion === 'TERCERIZADO' 
+                            ? `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-0.5 rounded-pill font-monospace" style="font-size:0.7rem;"><i class="bi bi-truck-flatbed me-1"></i>TERCERIZADO</span>`
+                            : `<span class="badge bg-light text-secondary border px-2 py-0.5 rounded-pill font-monospace" style="font-size:0.7rem;">PROPIO</span>`
+                        }
+                    </td>
+                    <td class="text-nowrap">
+                        ${item.modalidad_ejecucion === 'TERCERIZADO' && item.proveedor_tercero_nombre
+                            ? `<div class="fw-semibold text-dark font-monospace">${escapeHtml(item.proveedor_tercero_nombre)}</div>
+                               ${parseFloat(item.costo_tercero) > 0 ? `<div class="font-monospace text-danger fw-bold" style="font-size:0.7rem;"><i class="bi bi-cash-stack me-0.5"></i>Gasto: S/ ${parseFloat(item.costo_tercero).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>` : ''}
+                               ${item.doc_tercero ? `<div class="text-muted font-monospace" style="font-size:0.68rem;">Doc: ${escapeHtml(item.doc_tercero)}</div>` : ''}`
+                            : `<span class="text-muted opacity-50">—</span>`
+                        }
+                    </td>
                     <td class="text-nowrap">${(item.es_retorno === 1 || item.es_retorno === '1' || item.es_retorno === true) ? '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-0.5 rounded-pill font-monospace" style="font-size:0.7rem;"><i class="bi bi-arrow-left me-0.5"></i>RETORNO</span>' : '<span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2 py-0.5 rounded-pill font-monospace" style="font-size:0.7rem;"><i class="bi bi-arrow-right me-0.5"></i>IDA</span>'}</td>
                     <td class="text-nowrap">${escapeHtml(item.tipo_servicio || 'CARGA GENERAL')}</td>
                     <td class="text-nowrap">${escapeHtml(item.destinatario || '—')}</td>
@@ -284,8 +300,13 @@
                 (i.conductor || '').toLowerCase().includes(q) ||
                 (i.viaje_asignado || '').toLowerCase().includes(q) ||
                 (i.placa_tracto || '').toLowerCase().includes(q) ||
+                (i.placa_carreta || '').toLowerCase().includes(q) ||
                 (i.destinatario || '').toLowerCase().includes(q) ||
-                (i.tipo_servicio || '').toLowerCase().includes(q)
+                (i.tipo_servicio || '').toLowerCase().includes(q) ||
+                (i.proveedor_tercero_nombre || '').toLowerCase().includes(q) ||
+                (i.proveedor_tercero_ruc || '').toLowerCase().includes(q) ||
+                (i.remitente_generador || '').toLowerCase().includes(q) ||
+                (i.doc_tercero || '').toLowerCase().includes(q)
             );
         }
 
