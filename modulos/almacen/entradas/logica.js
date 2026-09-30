@@ -1076,75 +1076,76 @@ window._entSetIgvMode = function(mode) {
 };
 
 // ── Subida directa a S3 vía Pre-signed URLs (Ultra rápida, sin timeout de servidor) ──
-window._entSubirArchivosDirectoS3 = async function(entradaId, listaArchivos) {
+window._entSubirArchivosDirectoS3 = async function(entradaId, listaArchivos, extraBody) {
     var validos = (listaArchivos || []).filter(function(a) { return a && a.file; });
-    if (!validos.length) return true;
-
-    var archivosMetadata = validos.map(function(a) {
-        return {
-            fileName: a.file.name,
-            contentType: a.file.type || 'application/pdf',
-            tipo: a.tipo
-        };
-    });
-
-    // 1. Obtener Presigned Upload URLs de S3
-    var rPresigned = await fetch('/api/almacen/entradas/' + encodeURIComponent(entradaId) + '/archivos/presigned', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + (localStorage.getItem('fleet_token') || '')
-        },
-        body: JSON.stringify({ archivos: archivosMetadata })
-    });
-
-    if (!rPresigned.ok) {
-        var errTxt = await rPresigned.text().catch(function() { return ''; });
-        throw new Error('Error solicitando permisos de subida: ' + (errTxt || rPresigned.statusText));
-    }
-
-    var data = await rPresigned.json();
-    var urls = data.urls || [];
-    if (!urls.length) throw new Error('No se generaron URLs de subida');
-
-    // 2. Subir directamente a S3 en paralelo
     var exitosos = [];
-    var uploadPromises = validos.map(async function(item, idx) {
-        var uInfo = urls[idx];
-        if (!uInfo || !uInfo.uploadUrl) return;
 
-        var putRes = await fetch(uInfo.uploadUrl, {
-            method: 'PUT',
-            body: item.file
+    if (validos.length > 0) {
+        var archivosMetadata = validos.map(function(a) {
+            return {
+                fileName: a.file.name,
+                contentType: a.file.type || 'application/pdf',
+                tipo: a.tipo
+            };
         });
 
-        if (!putRes.ok) {
-            throw new Error('Error al transferir ' + item.tipo + ' a AWS S3 (HTTP ' + putRes.status + ')');
-        }
-
-        exitosos.push({
-            tipo: item.tipo,
-            finalUrl: uInfo.finalUrl,
-            s3Key: uInfo.s3Key,
-            documento_referencia: item.documento_referencia || null
-        });
-    });
-
-    await Promise.all(uploadPromises);
-
-    // 3. Confirmar URLs en BD
-    if (exitosos.length > 0) {
-        var rConfirm = await fetch('/api/almacen/entradas/' + encodeURIComponent(entradaId) + '/archivos/confirmar', {
+        // 1. Obtener Presigned Upload URLs de S3
+        var rPresigned = await fetch('/api/almacen/entradas/' + encodeURIComponent(entradaId) + '/archivos/presigned', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + (localStorage.getItem('fleet_token') || '')
             },
-            body: JSON.stringify({ exitosos: exitosos })
+            body: JSON.stringify({ archivos: archivosMetadata })
         });
-        if (!rConfirm.ok) {
-            throw new Error('Error confirmando registro de archivos en base de datos');
+
+        if (!rPresigned.ok) {
+            var errTxt = await rPresigned.text().catch(function() { return ''; });
+            throw new Error('Error solicitando permisos de subida: ' + (errTxt || rPresigned.statusText));
         }
+
+        var data = await rPresigned.json();
+        var urls = data.urls || [];
+        if (!urls.length) throw new Error('No se generaron URLs de subida');
+
+        // 2. Subir directamente a S3 en paralelo
+        var uploadPromises = validos.map(async function(item, idx) {
+            var uInfo = urls[idx];
+            if (!uInfo || !uInfo.uploadUrl) return;
+
+            var putRes = await fetch(uInfo.uploadUrl, {
+                method: 'PUT',
+                body: item.file
+            });
+
+            if (!putRes.ok) {
+                throw new Error('Error al transferir ' + item.tipo + ' a AWS S3 (HTTP ' + putRes.status + ')');
+            }
+
+            exitosos.push({
+                tipo: item.tipo,
+                finalUrl: uInfo.finalUrl,
+                s3Key: uInfo.s3Key,
+                documento_referencia: item.documento_referencia || null,
+                numero_operacion: item.numero_operacion || null
+            });
+        });
+
+        await Promise.all(uploadPromises);
+    }
+
+    // 3. Confirmar URLs y metadatos en BD
+    var bodyConfirm = Object.assign({ exitosos: exitosos }, extraBody || {});
+    var rConfirm = await fetch('/api/almacen/entradas/' + encodeURIComponent(entradaId) + '/archivos/confirmar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (localStorage.getItem('fleet_token') || '')
+        },
+        body: JSON.stringify(bodyConfirm)
+    });
+    if (!rConfirm.ok) {
+        throw new Error('Error confirmando registro de archivos en base de datos');
     }
 
     return true;
@@ -2605,6 +2606,13 @@ window.abrirModalSubirArchivos = function(id) {
     var fNumFact = document.getElementById('subir-factura-numero');
     if (fNumFact) fNumFact.value = entrada.documento_referencia || '';
 
+    // Constancia / Voucher
+    renderizarArchivoExistente('subir-existente-voucher', entrada.url_voucher, entrada.url_voucher_presigned, 'Constancia', 'voucher', 'text-danger', 'bi-credit-card-2-front');
+    var fVou = document.getElementById('subir-file-voucher');
+    if (fVou) fVou.value = '';
+    var fNumVou = document.getElementById('subir-voucher-numero');
+    if (fNumVou) fNumVou.value = entrada.numero_operacion || '';
+
     var modalEl = document.getElementById('modalSubirArchivosOC');
     if (modalEl) {
         var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -2613,7 +2621,7 @@ window.abrirModalSubirArchivos = function(id) {
 };
 
 window.eliminarArchivoOCModal = async function(id, tipo) {
-    var nombres = { cotizacion: 'la Cotización', factura: 'la Factura' };
+    var nombres = { cotizacion: 'la Cotización', factura: 'la Factura', voucher: 'la Constancia / Voucher' };
     var nom = nombres[tipo] || 'el archivo';
     if (!confirm('¿Está seguro de eliminar ' + nom + ' de esta Orden de Compra?')) return;
 
@@ -2634,6 +2642,8 @@ window.eliminarArchivoOCModal = async function(id, tipo) {
             if (tipo === 'factura') {
                 entrada.documento_referencia = null;
                 entrada.estado_factura = 'Factura Pendiente';
+            } else if (tipo === 'voucher') {
+                entrada.numero_operacion = null;
             }
         }
 
@@ -2651,10 +2661,15 @@ window.guardarArchivosOCModal = async function() {
 
     var fCot = document.getElementById('subir-file-cotizacion') ? document.getElementById('subir-file-cotizacion').files[0] : null;
     var fFac = document.getElementById('subir-file-factura') ? document.getElementById('subir-file-factura').files[0] : null;
+    var fVou = document.getElementById('subir-file-voucher') ? document.getElementById('subir-file-voucher').files[0] : null;
     var numFactura = (document.getElementById('subir-factura-numero') ? document.getElementById('subir-factura-numero').value : '').trim();
+    var numVoucher = (document.getElementById('subir-voucher-numero') ? document.getElementById('subir-voucher-numero').value : '').trim();
 
-    if (!fCot && !fFac) {
-        alert('Por favor seleccione al menos un archivo (Cotización o Factura) para subir.');
+    var entrada = (window._entData || []).find(function(e) { return e.id === id; });
+    var hasChanges = fCot || fFac || fVou || (numFactura !== ((entrada && entrada.documento_referencia) || '')) || (numVoucher !== ((entrada && entrada.numero_operacion) || ''));
+
+    if (!hasChanges) {
+        alert('No se detectaron archivos nuevos ni modificaciones en los números de documento.');
         return;
     }
 
@@ -2676,18 +2691,22 @@ window.guardarArchivosOCModal = async function() {
         var lista = [];
         if (fCot) lista.push({ file: fCot, tipo: 'cotizacion' });
         if (fFac) lista.push({ file: fFac, tipo: 'factura', documento_referencia: numFactura });
+        if (fVou) lista.push({ file: fVou, tipo: 'voucher', numero_operacion: numVoucher });
 
-        await window._entSubirArchivosDirectoS3(id, lista);
+        await window._entSubirArchivosDirectoS3(id, lista, {
+            documento_referencia: numFactura,
+            numero_operacion: numVoucher
+        });
 
         var modalEl = document.getElementById('modalSubirArchivosOC');
         if (modalEl) {
             bootstrap.Modal.getInstance(modalEl)?.hide();
         }
 
-        alert('✅ Archivos adjuntados exitosamente a la Orden ' + id);
+        alert('✅ Documentación actualizada exitosamente para la Orden ' + id);
         window.cargarEntradas();
     } catch(e) {
-        alert('Error al subir archivos: ' + e.message);
+        alert('Error al actualizar archivos: ' + e.message);
     } finally {
         if (btn) {
             btn.disabled = false;
