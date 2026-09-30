@@ -380,46 +380,65 @@ window._inspFiltroUbicacion = 'todos';
 
 window.poblarSelectoresAnioMes = function() {
     const selAnio = document.getElementById('filtroInspAnio');
-    if (!selAnio) return;
-    
-    const anioActual = new Date().getFullYear();
-    const aniosSet = new Set();
-    aniosSet.add(anioActual);
-    aniosSet.add(anioActual - 1);
+    if (selAnio) {
+        const anioActual = new Date().getFullYear();
+        const aniosSet = new Set();
+        aniosSet.add(anioActual);
+        aniosSet.add(anioActual - 1);
 
-    const list = window.dataGlobalInspecciones || [];
-    list.forEach(i => {
-        let fStr = i.fecha_ingreso || i.fecha_inspeccion || i.fecha;
-        if (fStr) {
-            let a = null;
-            if (fStr.includes('-')) a = parseInt(fStr.split('-')[0]);
-            else if (fStr.includes('/')) {
-                let parts = fStr.split('/');
-                if (parts.length === 3) a = parseInt(parts[2]);
+        const list = window.dataGlobalInspecciones || [];
+        list.forEach(i => {
+            let fStr = i.fecha_ingreso || i.fecha_inspeccion || i.fecha;
+            if (fStr) {
+                let a = null;
+                if (fStr.includes('-')) a = parseInt(fStr.split('-')[0]);
+                else if (fStr.includes('/')) {
+                    let parts = fStr.split('/');
+                    if (parts.length === 3) a = parseInt(parts[2]);
+                }
+                if (a && a > 2000 && a < 2100) aniosSet.add(a);
             }
-            if (a && a > 2000 && a < 2100) aniosSet.add(a);
+        });
+
+        const neuList = window.dataGlobalNeumaticos || [];
+        neuList.forEach(n => {
+            let fStr = n.fecha_inspeccion;
+            if (fStr) {
+                let a = parseInt(String(fStr).slice(0, 4));
+                if (a && a > 2000 && a < 2100) aniosSet.add(a);
+            }
+        });
+
+        const valPrevio = selAnio.value;
+        const aniosArr = Array.from(aniosSet).sort((a, b) => b - a);
+
+        let opts = '<option value="">Año: Todos</option>';
+        aniosArr.forEach(a => {
+            opts += `<option value="${a}">${a}</option>`;
+        });
+        selAnio.innerHTML = opts;
+        if (valPrevio && aniosSet.has(parseInt(valPrevio))) {
+            selAnio.value = valPrevio;
         }
-    });
+    }
 
-    const neuList = window.dataGlobalNeumaticos || [];
-    neuList.forEach(n => {
-        let fStr = n.fecha_inspeccion;
-        if (fStr) {
-            let a = parseInt(String(fStr).slice(0, 4));
-            if (a && a > 2000 && a < 2100) aniosSet.add(a);
-        }
-    });
-
-    const valPrevio = selAnio.value;
-    const aniosArr = Array.from(aniosSet).sort((a, b) => b - a);
-
-    let opts = '<option value="">Año: Todos</option>';
-    aniosArr.forEach(a => {
-        opts += `<option value="${a}">${a}</option>`;
-    });
-    selAnio.innerHTML = opts;
-    if (valPrevio && aniosSet.has(parseInt(valPrevio))) {
-        selAnio.value = valPrevio;
+    // Poblar Selector de Empresa / Cliente dinámicamente
+    const selEmp = document.getElementById('filtroInspEmpresa');
+    if (selEmp) {
+        const empSet = new Set();
+        (window.dataGlobalPlacas || []).forEach(p => {
+            const emp = (p[1] || '').trim();
+            if (emp && emp !== '-' && emp.toUpperCase() !== 'CLIENTE') empSet.add(emp);
+        });
+        const empArr = Array.from(empSet).sort();
+        const prevEmp = selEmp.value;
+        let empOpts = '<option value="">Empresa: Todas</option>';
+        empArr.forEach(e => {
+            let short = e.replace(/S\.A\.C\.?/i, '').replace(/S\.A\.?/i, '').trim() || e;
+            empOpts += `<option value="${_escHtml(e)}">${_escHtml(short)}</option>`;
+        });
+        selEmp.innerHTML = empOpts;
+        if (prevEmp && empSet.has(prevEmp)) selEmp.value = prevEmp;
     }
 };
 
@@ -430,6 +449,8 @@ window.limpiarFiltrosInsp = function() {
     if (ya) ya.value = '';
     const ym = document.getElementById('filtroInspMes');
     if (ym) ym.value = '';
+    const ye = document.getElementById('filtroInspEmpresa');
+    if (ye) ye.value = '';
     window._inspFiltroCard = 'total';
     window._inspFiltroUbicacion = 'todos';
     
@@ -1445,6 +1466,7 @@ function filtrarStatusAvanzado() {
     const filtroUbi = window._inspFiltroUbicacion || 'todos';
     const filtroAnio = (document.getElementById('filtroInspAnio')?.value || '').trim();
     const filtroMes = (document.getElementById('filtroInspMes')?.value || '').trim();
+    const filtroEmp = (document.getElementById('filtroInspEmpresa')?.value || '').toUpperCase().trim();
 
     let cntTotalVig = 0, cntTotalAlerta = 0, cntTotalNoVig = 0, cntTotalSinReg = 0;
     let cntMotVig = 0, cntMotAlerta = 0, cntMotNoVig = 0, cntMotSinReg = 0;
@@ -1468,6 +1490,7 @@ function filtrarStatusAvanzado() {
         let isSinRegistro = row.getAttribute('data-sin-registro') === '1' || dias === -9999 || est.includes('sin registro');
         let mot = row.getAttribute('data-motor') || '';
         let esMotora = mot.toUpperCase().trim() === 'MOTORA';
+        let cli = (row.getAttribute('data-cliente') || '').toUpperCase().trim();
 
         // A. Filtro de Texto
         let matchTxt = (!txt || textoFila.includes(txt));
@@ -1478,7 +1501,13 @@ function filtrarStatusAvanzado() {
             matchUbi = ubi === 'base' || textoFila.includes('en base');
         }
 
-        // C. Filtro Año y Mes
+        // C. Filtro Empresa / Cliente
+        let matchEmp = true;
+        if (filtroEmp) {
+            matchEmp = (cli === filtroEmp || cli.includes(filtroEmp) || textoFila.includes(filtroEmp.toLowerCase()));
+        }
+
+        // D. Filtro Año y Mes
         let matchFecha = true;
         if (filtroAnio || filtroMes) {
             if (!fechaStr || fechaStr === '-' || fechaStr === '—' || isSinRegistro) {
@@ -1503,8 +1532,8 @@ function filtrarStatusAvanzado() {
             }
         }
 
-        // Conteo reactivo de KPIs y Gráficos según el período/búsqueda/ubicación seleccionada
-        if (matchTxt && matchUbi && matchFecha) {
+        // Conteo reactivo de KPIs y Gráficos según el período/búsqueda/ubicación/empresa seleccionada
+        if (matchTxt && matchUbi && matchFecha && matchEmp) {
             kpiTotal++;
             if (isSinRegistro) {
                 kpiSinRegistro++;
@@ -1538,7 +1567,7 @@ function filtrarStatusAvanzado() {
             }
         }
 
-        // D. Filtro Card (Semáforo)
+        // E. Filtro Card (Semáforo)
         let matchCard = true;
         if (filtroCard === 'verde') {
             matchCard = !isSinRegistro && dias > 7 && !est.includes('vencid') && !est.includes('alert') && !est.includes('no vigente');
@@ -1550,7 +1579,7 @@ function filtrarStatusAvanzado() {
             matchCard = isSinRegistro;
         }
 
-        if (matchTxt && matchCard && matchUbi && matchFecha) {
+        if (matchTxt && matchCard && matchUbi && matchFecha && matchEmp) {
             row.style.display = '';
         } else {
             row.style.display = 'none';
@@ -1566,6 +1595,7 @@ function filtrarStatusAvanzado() {
         let dias = parseInt(card.getAttribute('data-dias'));
         let fechaStr = card.getAttribute('data-fecha-raw') || '';
         let isSinRegistro = card.getAttribute('data-sin-registro') === '1' || dias === -9999 || est.includes('sin registro');
+        let cli = (card.getAttribute('data-cliente') || '').toUpperCase().trim();
 
         let matchTxt = (!txt || textoCard.includes(txt));
 
@@ -1583,6 +1613,11 @@ function filtrarStatusAvanzado() {
         let matchUbi = true;
         if (filtroUbi === 'base') {
             matchUbi = ubi === 'base' || textoCard.includes('en base');
+        }
+
+        let matchEmp = true;
+        if (filtroEmp) {
+            matchEmp = (cli === filtroEmp || cli.includes(filtroEmp) || textoCard.includes(filtroEmp.toLowerCase()));
         }
 
         let matchFecha = true;
@@ -1609,7 +1644,7 @@ function filtrarStatusAvanzado() {
             }
         }
 
-        card.style.display = (matchTxt && matchCard && matchUbi && matchFecha) ? '' : 'none';
+        card.style.display = (matchTxt && matchCard && matchUbi && matchFecha && matchEmp) ? '' : 'none';
     });
 
     // 3. Actualizar KPIs Bento reactivamente

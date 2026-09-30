@@ -48,15 +48,29 @@ window.dispCargarDatos = async function (forzarRefresh = false) {
     }
 
     try {
-        const [resDisp, resPlacas, resCond] = await Promise.all([
+        const [resDisp, resPlacas, resCond, resGps] = await Promise.all([
             fetch('/api/disponibilidad-flota').then(r => r.json()).catch(() => []),
             fetch('/api/placas-lista').then(r => r.json()).catch(() => []),
-            fetch('/api/conductores-lista').then(r => r.json()).catch(() => [])
+            fetch('/api/conductores-lista').then(r => r.json()).catch(() => []),
+            (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0)
+                ? Promise.resolve({ data: CACHE.wialon })
+                : fetch('/api/script/obtenerDatosWialon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).catch(() => ({ data: [] }))
         ]);
 
         window.dispDatos = Array.isArray(resDisp) ? resDisp : (resDisp.data || []);
         window.dispPlacas = Array.isArray(resPlacas) ? resPlacas : (resPlacas.data || []);
         window.dispConductores = Array.isArray(resCond) ? resCond : (resCond.data || []);
+        
+        window._dispGpsData = (resGps && resGps.data && Array.isArray(resGps.data)) ? resGps.data : [];
+        if (typeof CACHE !== 'undefined' && window._dispGpsData.length > 0) {
+            CACHE.wialon = window._dispGpsData;
+        }
+
+        window._dispGpsMap = {};
+        window._dispGpsData.forEach(g => {
+            const p = (g.placa || '').replace(/[^A-Z0-9]/g, '');
+            if (p) window._dispGpsMap[p] = g;
+        });
 
         window.dispRenderizarSegmentedEmpresas();
         window.dispActualizarKPIs();
@@ -66,7 +80,7 @@ window.dispCargarDatos = async function (forzarRefresh = false) {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center py-4 text-danger">
+                    <td colspan="11" class="text-center py-4 text-danger">
                         <i class="bi bi-exclamation-triangle-fill me-1"></i> Error al cargar datos: ${err.message}
                     </td>
                 </tr>
@@ -812,7 +826,7 @@ window.dispRenderizarTabla = function (datos) {
     if (!datos || datos.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center py-5 text-muted">
+                <td colspan="11" class="text-center py-5 text-muted">
                     <i class="bi bi-inbox fs-3 d-block mb-2 text-secondary"></i>
                     No se encontraron unidades registradas con los filtros seleccionados.
                 </td>
@@ -820,6 +834,8 @@ window.dispRenderizarTabla = function (datos) {
         `;
         return;
     }
+
+    const cleanPlc = str => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
     let html = '';
     datos.forEach((item, index) => {
@@ -836,6 +852,31 @@ window.dispRenderizarTabla = function (datos) {
         const capTanque = item.capacidad_tanque || '—';
         const conductor = item.conductor_asignado ? _dispEsc(item.conductor_asignado) : '<span class="text-muted">—</span>';
         const obs = item.observaciones ? _dispEsc(item.observaciones) : '<span class="text-muted">—</span>';
+
+        // Mapeo Telemetría GPS en Vivo
+        const targetPlaca = cleanPlc(item.placa_camion || item.placa_carreta);
+        const gps = (window._dispGpsMap && targetPlaca) ? window._dispGpsMap[targetPlaca] : null;
+        let gpsHtml = '<span class="badge bg-light text-secondary border px-2 py-1" style="font-size:0.7rem; border-radius:6px;">Sin Señal</span>';
+
+        if (gps && gps.lat && gps.lng) {
+            const speed = (gps.velocidad != null ? Number(gps.velocidad) : (gps.pos && gps.pos.s != null ? Number(gps.pos.s) : 0)) || 0;
+            const isMoving = speed > 3;
+            const mapsUrl = `https://maps.google.com/maps?q=${gps.lat},${gps.lng}`;
+            const coordsStr = `${gps.lat.toFixed(4)}, ${gps.lng.toFixed(4)}`;
+
+            const pillStatus = isMoving
+                ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold" style="font-size:0.70rem; border-radius:6px;"><i class="bi bi-speedometer2 me-1"></i>${speed} km/h</span>`
+                : `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-bold" style="font-size:0.70rem; border-radius:6px;"><i class="bi bi-geo-alt-fill me-1"></i>Detenido</span>`;
+
+            gpsHtml = `
+                <div class="d-inline-flex align-items-center gap-1.5" title="GPS: ${coordsStr}">
+                    ${pillStatus}
+                    <a href="${mapsUrl}" target="_blank" class="btn btn-sm btn-light border p-1 rounded-2 text-primary shadow-2xs d-inline-flex align-items-center justify-content-center" style="width:24px; height:24px;" title="Ver en Google Maps (${coordsStr})">
+                        <i class="bi bi-box-arrow-up-right" style="font-size:0.72rem;"></i>
+                    </a>
+                </div>
+            `;
+        }
 
         html += `
             <tr data-disp-id="${item.id || ''}">
@@ -882,6 +923,9 @@ window.dispRenderizarTabla = function (datos) {
                         ${obs}
                     </span>
                 </td>
+                <td style="min-width: 170px; white-space: nowrap;">
+                    ${gpsHtml}
+                </td>
                 <td class="pe-4 text-end" style="min-width: 90px;">
                     <div class="d-inline-flex align-items-center justify-content-end gap-1">
                         <button type="button" class="ck-action-btn ck-btn-edit" onclick="window.dispEditarFila(${index})" title="Editar registro">
@@ -916,6 +960,8 @@ window.dispRenderizarCardsMobile = function (datos) {
         return;
     }
 
+    const cleanPlc = str => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
     let html = '';
     datos.forEach((item, index) => {
         const est = item.estado || 'En Base';
@@ -925,6 +971,24 @@ window.dispRenderizarCardsMobile = function (datos) {
             badgeEstadoMobile = '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">En Mantenimiento</span>';
         } else if (est === 'En Ruta') {
             badgeEstadoMobile = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">En Ruta</span>';
+        }
+
+        // GPS status para móvil
+        const targetPlaca = cleanPlc(item.placa_camion || item.placa_carreta);
+        const gps = (window._dispGpsMap && targetPlaca) ? window._dispGpsMap[targetPlaca] : null;
+        let gpsMobileBadge = '';
+
+        if (gps && gps.lat && gps.lng) {
+            const speed = (gps.velocidad != null ? Number(gps.velocidad) : (gps.pos && gps.pos.s != null ? Number(gps.pos.s) : 0)) || 0;
+            const isMoving = speed > 3;
+            const mapsUrl = `https://maps.google.com/maps?q=${gps.lat},${gps.lng}`;
+            gpsMobileBadge = `
+                <a href="${mapsUrl}" target="_blank" class="badge bg-light text-primary border text-decoration-none px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:0.72rem; border-radius:6px;">
+                    <i class="bi ${isMoving ? 'bi-speedometer2 text-primary' : 'bi-geo-alt-fill text-success'}"></i>
+                    <span>${isMoving ? speed + ' km/h' : 'GPS Detenido'}</span>
+                    <i class="bi bi-box-arrow-up-right ms-1 text-muted" style="font-size:0.65rem;"></i>
+                </a>
+            `;
         }
 
         html += `
@@ -948,6 +1012,9 @@ window.dispRenderizarCardsMobile = function (datos) {
                         ${item.capacidad_tanque ? `<span>• Tanque: ${item.capacidad_tanque}</span>` : ''}
                     </div>
                 </div>
+
+                <!-- Ubicación GPS Móvil si está disponible -->
+                ${gpsMobileBadge ? `<div class="mb-2">${gpsMobileBadge}</div>` : ''}
 
                 ${item.observaciones ? `
                     <div class="p-2 bg-light rounded-3 text-secondary small mb-2" style="font-size:0.75rem;">
@@ -1221,17 +1288,31 @@ window.dispExportarExcel = function () {
         return;
     }
 
-    const rows = (window.dispDatos || []).map((d, i) => ({
-        '#': i + 1,
-        'CAMIÓN': d.placa_camion || '—',
-        'CARRETA': d.placa_carreta || '—',
-        'CONDUCTOR': d.conductor_asignado || '—',
-        'ESTADO': d.estado || 'En Base',
-        'MARCA': d.marca || '—',
-        'CAPACIDAD DE TANQUE': d.capacidad_tanque || '—',
-        'TIPO UNIDAD': d.tipo_unidad || '—',
-        'OBSERVACIONES': d.observaciones || '—'
-    }));
+    const cleanPlc = str => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    const rows = (window.dispDatos || []).map((d, i) => {
+        const targetPlaca = cleanPlc(d.placa_camion || d.placa_carreta);
+        const gps = (window._dispGpsMap && targetPlaca) ? window._dispGpsMap[targetPlaca] : null;
+        let gpsText = 'Sin Señal';
+        if (gps && gps.lat && gps.lng) {
+            const speed = (gps.velocidad != null ? Number(gps.velocidad) : (gps.pos && gps.pos.s != null ? Number(gps.pos.s) : 0)) || 0;
+            gpsText = (speed > 3 ? `En Ruta (${speed} km/h)` : 'Detenido') + ` [${gps.lat.toFixed(4)}, ${gps.lng.toFixed(4)}]`;
+        }
+
+        return {
+            '#': i + 1,
+            'CAMIÓN': d.placa_camion || '—',
+            'CARRETA': d.placa_carreta || '—',
+            'CONDUCTOR': d.conductor_asignado || '—',
+            'ESTADO': d.estado || 'En Base',
+            'EMPRESA': d.empresa || d.cliente || '—',
+            'MARCA': d.marca || '—',
+            'CAPACIDAD DE TANQUE': d.capacidad_tanque || '—',
+            'TIPO UNIDAD': d.tipo_unidad || '—',
+            'OBSERVACIONES': d.observaciones || '—',
+            'UBICACIÓN GPS': gpsText
+        };
+    });
 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
