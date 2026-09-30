@@ -151,7 +151,7 @@
 
 /* ── Floating Drawer Modal & Inputs Styling (1:1 Reporte de Fallas) ── */
 .ck-floating-drawer-dialog {
-    max-width: 780px !important;
+    max-width: 860px !important;
     width: 100% !important;
     height: 94vh !important;
     max-height: 94vh !important;
@@ -172,16 +172,82 @@
     background: #f8fafc !important;
 }
 
+#modalNuevoKitMP .form-control, 
+#modalNuevoKitMP .form-select {
+    border-radius: 12px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    font-size: 0.90rem !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+    padding: 9px 14px !important;
+    min-height: 42px !important;
+}
+#modalNuevoKitMP .form-control:focus, 
+#modalNuevoKitMP .form-select:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+    background-color: #ffffff !important;
+}
+
+#modalNuevoKitMP .cb-dropdown {
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 999999 !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.25) !important;
+    max-height: 230px !important;
+    overflow-y: auto !important;
+}
+#modalNuevoKitMP .cb-opt {
+    padding: 10px 14px !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+    cursor: pointer !important;
+    transition: background 0.15s ease !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+#modalNuevoKitMP .cb-opt:hover {
+    background: #eff6ff !important;
+    color: #0284c7 !important;
+}
+
+.kit-model-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #eff6ff;
+    color: #0284c7;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    padding: 3px 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.kit-model-chip .btn-remove-chip {
+    cursor: pointer;
+    color: #0284c7;
+    font-size: 0.85rem;
+    line-height: 1;
+}
+.kit-model-chip .btn-remove-chip:hover {
+    color: #dc2626;
+}
+
 .kit-item-row-card {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 12px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 14px;
     transition: all 0.2s ease;
 }
 .kit-item-row-card:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    border-color: #94a3b8;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
 }
 
 /* Modal confirmación circular (Reporte de Fallas) */
@@ -266,118 +332,188 @@
 
 <div id="mod-kits-mp" class="ck-app-container d-flex flex-column h-100 flex-grow-1">
 
-  <!-- ── 1. ENCABEZADO PRINCIPAL (RESPONSIVE) ───────────────────────── -->
-  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-    <div class="d-flex align-items-center gap-2 gap-md-3">
-      <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
-        <i class="bi bi-tools text-amber-500 fs-5" style="color: #d97706;"></i>
+  <!-- ========================================================================= -->
+  <!-- 🖥️ VISTA ESCRITORIO (>= 768px) MASTER-DETAIL                             -->
+  <!-- ========================================================================= -->
+  <div class="d-none d-md-block w-100">
+    <!-- Header Desktop -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="p-2 rounded-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+          <i class="bi bi-tools text-amber-500 fs-5" style="color: #d97706;"></i>
+        </div>
+        <div>
+          <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+            Kits de Mantenimiento
+          </h4>
+          <small class="text-muted fw-medium" style="font-size: 0.8rem;">Configuración de repuestos, lubricantes y materiales segmentados por tipo de servicio MP</small>
+        </div>
       </div>
-      <div>
-        <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.3rem; letter-spacing: -0.3px;">
-          Kits de Mantenimiento
-        </h4>
-        <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">Configuración de repuestos, lubricantes y materiales segmentados por tipo de servicio MP</small>
-      </div>
-    </div>
-    <div class="d-flex align-items-center gap-2">
-      <!-- Botón Recargar -->
-      <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.kitsCargarTabla(true)" title="Recargar">
-        <i class="bi bi-arrow-clockwise fs-6"></i>
-      </button>
-
-      <!-- Dropdown Importar -->
-      <div class="dropdown">
-        <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1.5" type="button" data-bs-toggle="dropdown">
-          <i class="bi bi-upload text-primary"></i> <span class="d-none d-sm-inline">Importar</span>
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.kitsCargarTabla(true)" title="Recargar">
+          <i class="bi bi-arrow-clockwise fs-6"></i>
         </button>
-        <ul class="dropdown-menu shadow border" style="border-radius:14px; min-width: 210px;">
-          <li><a class="dropdown-item fw-bold text-success py-2 d-flex align-items-center gap-2" href="javascript:void(0)" onclick="window.kitsDescargarPlantilla()"><i class="bi bi-file-earmark-spreadsheet"></i> 1. Descargar Plantilla</a></li>
-          <li><hr class="dropdown-divider my-1"></li>
-          <li><a class="dropdown-item fw-bold text-primary py-2 d-flex align-items-center gap-2" href="javascript:void(0)" onclick="document.getElementById('inputFileKitsNew').click()"><i class="bi bi-cloud-arrow-up"></i> 2. Subir Excel</a></li>
-        </ul>
+        <div class="dropdown">
+          <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1.5" type="button" data-bs-toggle="dropdown">
+            <i class="bi bi-upload text-primary"></i> <span>Importar</span>
+          </button>
+          <ul class="dropdown-menu shadow border" style="border-radius:14px; min-width: 210px;">
+            <li><a class="dropdown-item fw-bold text-success py-2 d-flex align-items-center gap-2" href="javascript:void(0)" onclick="window.kitsDescargarPlantilla()"><i class="bi bi-file-earmark-spreadsheet"></i> 1. Descargar Plantilla</a></li>
+            <li><hr class="dropdown-divider my-1"></li>
+            <li><a class="dropdown-item fw-bold text-primary py-2 d-flex align-items-center gap-2" href="javascript:void(0)" onclick="document.getElementById('inputFileKitsNew').click()"><i class="bi bi-cloud-arrow-up"></i> 2. Subir Excel</a></li>
+          </ul>
+        </div>
+        <input type="file" id="inputFileKitsNew" accept=".xlsx,.xls" style="display:none;" onchange="window.kitsImportarExcel(event)">
+
+        <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5" onclick="window.kitsExportarExcel()" title="Exportar a Excel">
+          <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span>Exportar Excel</span>
+        </button>
+
+        <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-1.5 rounded-3" onclick="window.kitsAbrirModal()" style="background: #0284c7; border-color: #0284c7;">
+          <i class="bi bi-plus-lg fs-6"></i> <span>+ Nuevo Kit</span>
+        </button>
       </div>
-      <input type="file" id="inputFileKitsNew" accept=".xlsx,.xls" style="display:none;" onchange="window.kitsImportarExcel(event)">
-
-      <!-- Exportar Excel -->
-      <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5" onclick="window.kitsExportarExcel()" title="Exportar a Excel">
-        <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
-      </button>
-
-      <!-- Botón Nuevo Kit -->
-      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-1.5 rounded-3" onclick="window.kitsAbrirModal()" style="background: #0284c7; border-color: #0284c7;">
-        <i class="bi bi-plus-lg fs-6"></i> <span class="d-none d-sm-inline">+ Nuevo Kit</span>
-      </button>
     </div>
-  </div>
 
-  <!-- ── 2. CONTENEDOR MASTER-DETAIL (SIDEBAR DE MARCAS MOTORAS + TABLA SEGMENTADA) ── -->
-  <div class="row g-3 flex-grow-1">
-    
-    <!-- 3A. PANEL LATERAL IZQUIERDO: MARCAS MOTORAS Y MODELOS -->
-    <div class="col-12 col-md-3 col-lg-2">
-      <div class="kits-sidebar-card">
-        <!-- Lista de Marcas Motoras y Modelos -->
-        <div class="kits-nav-list custom-scrollbar flex-grow-1" id="kits-nav-sidebar-list">
-          <div class="kits-nav-item active" data-marca="" data-modelo="" onclick="window.kitsSeleccionarMarcaSidebar('', this)">
-            <span class="fw-bold">Todos</span>
-            <span class="badge bg-light text-secondary rounded-pill font-monospace" id="badge-count-sidebar-todos">0</span>
+    <!-- Master-Detail Desktop Layout -->
+    <div class="row g-3">
+      <!-- Sidebar Desktop -->
+      <div class="col-12 col-md-3 col-lg-2">
+        <div class="kits-sidebar-card">
+          <div class="kits-nav-list custom-scrollbar flex-grow-1" id="kits-nav-sidebar-list">
+            <div class="kits-nav-item active" data-marca="" data-modelo="" onclick="window.kitsSeleccionarMarcaSidebar('', this)">
+              <span class="fw-bold">Todos</span>
+              <span class="badge bg-light text-secondary rounded-pill font-monospace" id="badge-count-sidebar-todos">0</span>
+            </div>
           </div>
-          <!-- Inyectado dinámicamente con marcas y modelos -->
+        </div>
+      </div>
+
+      <!-- Main Desktop Table -->
+      <div class="col-12 col-md-9 col-lg-10 d-flex flex-column">
+        <div class="d-flex align-items-center mb-4 pb-1">
+          <div class="position-relative w-100">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.95rem;"></i>
+            <input type="text" id="buscadorKitsLive" class="ck-apple-search" placeholder="Buscar por repuesto, código, marca, modelo, notas..." oninput="window.kitsFiltrar()">
+          </div>
+        </div>
+
+        <div id="kits-tabla-wrap" class="flex-grow-1">
+          <div class="custom-scrollbar overflow-x-auto" style="overflow-y: visible; min-height: 480px;">
+            <table class="table table-hover align-middle m-0" id="tablaKitsDesktop" style="font-size: 0.88rem;">
+              <thead class="bg-light sticky-top shadow-2xs border-bottom">
+                <tr class="text-secondary" style="font-size: 0.74rem; letter-spacing: 0.5px;">
+                  <th class="ps-4 py-3" style="width: 140px;">CÓDIGO</th>
+                  <th class="py-3" style="min-width: 280px;">DESCRIPCIÓN</th>
+                  <th class="py-3 text-center" style="width: 120px;">CANTIDAD</th>
+                  <th class="py-3 text-center" style="width: 140px;">STOCK ALMACÉN</th>
+                  <th class="pe-4 py-3 text-end" style="width: 60px;"></th>
+                </tr>
+              </thead>
+              <tbody id="kits-tbody">
+                <tr>
+                  <td colspan="5" class="text-center py-5 text-muted">
+                    <div class="spinner-border spinner-border-sm me-2 text-primary" role="status"></div> Cargando kits de mantenimiento...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- 3B. PANEL PRINCIPAL DERECHO: BUSCADOR ÚNICO & TABLA SEGMENTADA -->
-    <div class="col-12 col-md-9 col-lg-10 d-flex flex-column">
-      
-      <!-- Barra de herramientas con Buscador ÚNICO -->
-      <div class="d-flex align-items-center mb-2.5">
+  <!-- ========================================================================= -->
+  <!-- 📱 VISTA MÓVIL NATIVA (< 768px - 1:1 CON IMÁGENES 2 Y 3)                   -->
+  <!-- ========================================================================= -->
+  <div class="d-md-none w-100" id="mod-kits-mobile-container">
+    
+    <!-- PANTALLA 1 MÓVIL: LISTA DE MARCAS (1:1 CON IMAGEN 2) -->
+    <div id="kits-mobile-view-marcas" style="display: block;">
+      <!-- Header Móvil Marcas -->
+      <div class="d-flex align-items-center justify-content-between p-2.5 bg-white border-bottom shadow-2xs rounded-3 mb-2">
+        <div class="d-flex align-items-center gap-2">
+          <div class="p-1.5 rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+            <i class="bi bi-truck" style="color: #0284c7; font-size: 1.1rem;"></i>
+          </div>
+          <h5 class="fw-bolder m-0 text-dark" style="font-size: 1.1rem; letter-spacing:-0.2px;">Filtros / Kits</h5>
+        </div>
+        <div class="d-flex align-items-center gap-1.5">
+          <button type="button" class="btn btn-light btn-sm rounded-circle p-1.5 border" onclick="window.kitsCargarTabla(true)" title="Recargar">
+            <i class="bi bi-arrow-clockwise fs-6"></i>
+          </button>
+          <button type="button" class="btn btn-light btn-sm rounded-circle p-1.5 border text-success" onclick="window.kitsExportarExcel()" title="Exportar">
+            <i class="bi bi-file-earmark-excel-fill fs-6"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Sección Título: Marca -->
+      <div class="px-2 pt-2 pb-1.5 fw-bold text-primary" style="font-size: 0.92rem; letter-spacing: 0.3px;">
+        Marca
+      </div>
+
+      <!-- Lista de Marcas Móvil -->
+      <div class="bg-white rounded-4 border border-slate-200 overflow-hidden shadow-2xs mb-4" id="kits-mobile-marcas-list">
+        <!-- Inyectado dinámicamente -->
+      </div>
+    </div>
+
+    <!-- PANTALLA 2 MÓVIL: DETALLE DE KITS/FILTROS DE LA MARCA (1:1 CON IMAGEN 3) -->
+    <div id="kits-mobile-view-detalle" style="display: none;">
+      <!-- Header Móvil Detalle -->
+      <div class="d-flex align-items-center justify-content-between p-2.5 bg-white border-bottom shadow-2xs rounded-3 mb-1">
+        <div class="d-flex align-items-center gap-2" style="cursor: pointer;" onclick="window.kitsMobileMostrarMarcas()">
+          <i class="bi bi-arrow-left fs-5 text-dark fw-bold"></i>
+          <div class="p-1.5 rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+            <i class="bi bi-tools" style="color: #0284c7; font-size: 0.95rem;"></i>
+          </div>
+          <span class="fw-bolder text-dark text-truncate" style="font-size: 1.05rem;" id="kits-mobile-detalle-brand-title">Filtros</span>
+        </div>
+        <div class="d-flex align-items-center gap-1.5">
+          <button type="button" class="btn btn-light btn-sm rounded-circle p-1.5 border" onclick="window.kitsMobileToggleSearch()" title="Buscar">
+            <i class="bi bi-search fs-6"></i>
+          </button>
+          <button type="button" class="btn btn-light btn-sm rounded-circle p-1.5 border" onclick="window.kitsCargarTabla(true)" title="Recargar">
+            <i class="bi bi-arrow-clockwise fs-6"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Subheader Breadcrumb (< Tipo de Mantt) -->
+      <div class="px-3 py-2 bg-light border-bottom rounded-2 d-flex align-items-center justify-content-between mb-2" style="cursor: pointer;" onclick="window.kitsMobileMostrarMarcas()">
+        <div class="d-flex align-items-center gap-1 text-secondary fw-bold small">
+          <i class="bi bi-chevron-left" style="font-size: 0.72rem;"></i>
+          <span id="kits-mobile-detalle-subbrand-title">Tipo de Mantt</span>
+        </div>
+        <span class="badge bg-white text-secondary border font-monospace" id="kits-mobile-items-count">0 ítems</span>
+      </div>
+
+      <!-- Barra de búsqueda móvil desplegable -->
+      <div class="p-2 bg-white rounded-3 border mb-2" id="kits-mobile-search-bar-wrap" style="display: none;">
         <div class="position-relative w-100">
           <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
-          <input type="text" id="buscadorKitsLive" class="ck-apple-search" placeholder="Buscar por repuesto, código, marca, modelo, notas..." oninput="window.kitsFiltrar()">
+          <input type="text" id="buscadorKitsMobile" class="form-control ps-5 rounded-3 border-secondary-subtle" placeholder="Buscar repuesto, código..." oninput="window.kitsFiltrarMobile(this.value)" style="font-size: 0.88rem; min-height: 38px;">
         </div>
       </div>
 
-      <!-- Tabla Segmentada de Kits (Columnas: Código, Descripción, Cantidad, Stock Almacén, Acción) -->
-      <div id="kits-tabla-wrap" class="flex-grow-1">
-        <div class="custom-scrollbar overflow-x-auto" style="overflow-y: visible; min-height: 480px;">
-          <table class="table table-hover align-middle m-0" id="tablaKitsDesktop" style="font-size: 0.88rem;">
-            <thead class="bg-light sticky-top shadow-2xs border-bottom">
-              <tr class="text-secondary" style="font-size: 0.74rem; letter-spacing: 0.5px;">
-                <th class="ps-4 py-3" style="width: 140px;">CÓDIGO</th>
-                <th class="py-3" style="min-width: 280px;">DESCRIPCIÓN</th>
-                <th class="py-3 text-center" style="width: 120px;">CANTIDAD</th>
-                <th class="py-3 text-center" style="width: 140px;">STOCK ALMACÉN</th>
-                <th class="pe-4 py-3 text-end" style="width: 60px;"></th>
-              </tr>
-            </thead>
-            <tbody id="kits-tbody">
-              <tr>
-                <td colspan="5" class="text-center py-5 text-muted">
-                  <div class="spinner-border spinner-border-sm me-2 text-primary" role="status"></div> Cargando kits de mantenimiento...
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <!-- Tabla Segmentada Móvil (Imagen 3) -->
+      <div class="bg-white rounded-4 border border-slate-200 overflow-hidden shadow-2xs mb-4" id="kits-mobile-table-container">
+        <!-- Inyectado dinámicamente con las columnas Codigo / Descripcion | Cantidad | Stock Almacen -->
       </div>
-
-      <!-- Vista Móvil Alternativa -->
-      <div id="kitsCardContainer" class="d-md-none mt-3">
-        <!-- Renderizado dinámicamente para pantallas pequeñas -->
-      </div>
-
     </div>
-  </div>
 
-  <!-- ── 4. BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
-  <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1040;">
-    <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
-            onclick="window.kitsAbrirModal()"
-            title="Nuevo Kit de Mantenimiento"
-            style="width: 56px; height: 56px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.55rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;">
-      <i class="bi bi-plus-lg"></i>
-    </button>
+    <!-- Botón Flotante FAB en Móvil -->
+    <div class="position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1040;">
+      <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+              onclick="window.kitsAbrirModal(window.kitsSidebarMarcaSeleccionada, window.kitsSidebarModeloSeleccionado)"
+              title="Nuevo Kit"
+              style="width: 56px; height: 56px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.55rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;">
+        <i class="bi bi-plus-lg"></i>
+      </button>
+    </div>
+
   </div>
 
   <div class="ck-bottom-spacer" style="height: 60px; width: 100%;"></div>
@@ -398,7 +534,7 @@
             <i class="bi bi-tools text-primary"></i>
             <span id="lblTituloModalKit">Nuevo Kit de Mantenimiento</span>
           </h5>
-          <small class="text-muted fw-medium" id="lblSubtituloModalKit">Configuración de repuestos, lubricantes y costos por tipo de servicio</small>
+          <small class="text-muted fw-medium" id="lblSubtituloModalKit">Configuración de repuestos, lubricantes y materiales por vehículo</small>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
@@ -408,76 +544,110 @@
         <form id="formNuevoKitMP" onsubmit="event.preventDefault(); window.kitsModalGuardar();">
           
           <!-- SECCIÓN 1: DATOS DEL VEHÍCULO Y TIPO DE SERVICIO -->
-          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 80; overflow: visible !important;">
+          <div class="card border-0 shadow-2xs rounded-4 p-3.5 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 80; overflow: visible !important;">
             <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
-              <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-2.5 py-1 fw-bold" style="font-size:0.75rem; color:#0284c7 !important;">1</span>
+              <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-2.5 py-1 fw-bold" style="font-size:0.78rem; color:#0284c7 !important;">1</span>
               <span>Datos del Vehículo y Tipo de Servicio</span>
             </h6>
-            <div class="row g-2">
+            <div class="row g-3">
+              <!-- 1. Marca del Vehículo (Combobox con Búsqueda en Vivo) -->
               <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold text-secondary small mb-1">Marca del Vehículo (<span class="text-danger">*</span>)</label>
-                <select id="modalKitMarca" class="form-select form-select-sm border-secondary-subtle bg-light fw-bold" onchange="window.kitsModalMarcaCambiada()" required>
-                  <option value="">SELECCIONE MARCA...</option>
-                </select>
+                <label class="form-label fw-bold text-secondary small mb-1" style="font-size:0.78rem; text-transform:uppercase; letter-spacing:0.4px;">
+                  Marca del Vehículo (<span class="text-danger">*</span>)
+                </label>
+                <div class="position-relative" style="z-index: 95;">
+                  <input type="text" id="modalKitMarca-txt" class="form-control text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE MARCA..." autocomplete="off" oninput="window._cbFiltrar('modalKitMarca'); window.kitsModalMarcaCambiada();" onfocus="window._cbFiltrar('modalKitMarca')" onblur="window._cbHide('modalKitMarca')">
+                  <input type="hidden" id="modalKitMarca" name="marca_vehiculo" required>
+                  <div id="modalKitMarca-dd" class="cb-dropdown"></div>
+                </div>
               </div>
+
+              <!-- 2. Modelo del Vehículo (Multi-Select con Pills y Selección Múltiple) -->
               <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold text-secondary small mb-1">Modelo del Vehículo</label>
-                <select id="modalKitModelo" class="form-select form-select-sm border-secondary-subtle bg-light fw-bold">
-                  <option value="TODOS LOS MODELOS">TODOS LOS MODELOS</option>
-                </select>
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <label class="form-label fw-bold text-secondary small m-0" style="font-size:0.78rem; text-transform:uppercase; letter-spacing:0.4px;">
+                    Modelos (<span class="text-danger">*</span>)
+                  </label>
+                  <div class="d-flex align-items-center gap-1">
+                    <button type="button" class="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none" style="font-size:0.72rem;" onclick="window.kitsModalModelosSeleccionarTodos()">Todos</button>
+                    <span class="text-muted small">|</span>
+                    <button type="button" class="btn btn-link btn-sm p-0 text-secondary fw-bold text-decoration-none" style="font-size:0.72rem;" onclick="window.kitsModalModelosLimpiar()">Limpiar</button>
+                  </div>
+                </div>
+                <div class="position-relative" style="z-index: 94;">
+                  <div class="form-control p-2 d-flex flex-wrap align-items-center gap-1.5 border-secondary-subtle bg-white" id="modalKitModelosChipsContainer" style="min-height: 42px; cursor: pointer;" onclick="window.kitsModalToggleDropdownModelos(event)">
+                    <span id="modalKitModelosPlaceholder" class="text-muted fw-normal" style="font-size:0.86rem;">Seleccione modelos...</span>
+                    <div id="modalKitModelosChips" class="d-flex flex-wrap gap-1"></div>
+                    <i class="bi bi-chevron-down ms-auto text-muted" style="font-size:0.78rem;"></i>
+                  </div>
+                  <!-- Dropdown con checkboxes -->
+                  <div id="modalKitModelosDropdown" class="cb-dropdown shadow-lg p-2" style="display:none; max-height:220px; overflow-y:auto; background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:999999;">
+                    <!-- Lista inyectada dinámicamente con checkboxes de modelos -->
+                  </div>
+                </div>
               </div>
+
+              <!-- 3. Tipo de Preventivo (Combobox con Búsqueda en Vivo) -->
               <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold text-secondary small mb-1">Tipo de Preventivo (<span class="text-danger">*</span>)</label>
-                <select id="modalKitTipoMP" class="form-select form-select-sm border-secondary-subtle bg-light fw-bold" onchange="window.kitsModalActualizarTitulo()" required>
-                  <option value="">SELECCIONE TIPO...</option>
-                </select>
+                <label class="form-label fw-bold text-secondary small mb-1" style="font-size:0.78rem; text-transform:uppercase; letter-spacing:0.4px;">
+                  Tipo de Preventivo (<span class="text-danger">*</span>)
+                </label>
+                <div class="position-relative" style="z-index: 93;">
+                  <input type="text" id="modalKitTipoMP-txt" class="form-control text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE TIPO..." autocomplete="off" oninput="window._cbFiltrar('modalKitTipoMP'); window.kitsModalActualizarTitulo();" onfocus="window._cbFiltrar('modalKitTipoMP')" onblur="window._cbHide('modalKitTipoMP')">
+                  <input type="hidden" id="modalKitTipoMP" name="tipo_mp" required>
+                  <div id="modalKitTipoMP-dd" class="cb-dropdown"></div>
+                </div>
               </div>
-              <div class="col-12 mt-2">
-                <label class="form-label fw-semibold text-secondary small mb-1">Nombre / Alias Descriptivo del Kit <span class="text-muted fw-normal">(Opcional)</span></label>
-                <input type="text" id="modalKitNombreAlias" class="form-control form-control-sm border-secondary-subtle" placeholder="Ej: Kit Completo Filtros y Aceite Motor 15W-40">
+
+              <!-- 4. Nombre / Alias Descriptivo del Kit -->
+              <div class="col-12 mt-1">
+                <label class="form-label fw-bold text-secondary small mb-1" style="font-size:0.78rem; text-transform:uppercase; letter-spacing:0.4px;">
+                  Nombre / Alias Descriptivo del Kit <span class="text-muted fw-normal">(Opcional)</span>
+                </label>
+                <input type="text" id="modalKitNombreAlias" class="form-control border-secondary-subtle" placeholder="Ej: Kit Completo Filtros y Aceite Motor 15W-40">
               </div>
             </div>
           </div>
 
           <!-- SECCIÓN 2: REPUESTOS, LUBRICANTES Y MATERIALES -->
-          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 70; overflow: visible !important;">
+          <div class="card border-0 shadow-2xs rounded-4 p-3.5 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 70; overflow: visible !important;">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
               <h6 class="fw-bold text-dark d-flex align-items-center gap-2 m-0" style="font-size:1rem;">
-                <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-2.5 py-1 fw-bold" style="font-size:0.75rem; color:#0284c7 !important;">2</span>
+                <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-2.5 py-1 fw-bold" style="font-size:0.78rem; color:#0284c7 !important;">2</span>
                 <span>Repuestos, Lubricantes y Materiales del Kit</span>
               </h6>
-              <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 py-1.5 rounded-3 d-flex align-items-center gap-1.5 shadow-2xs" onclick="window.kitsModalAgregarFila()">
+              <button type="button" class="btn btn-primary btn-sm fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-1.5 shadow-sm" onclick="window.kitsModalAgregarFila()" style="background:#0284c7; border-color:#0284c7;">
                 <i class="bi bi-plus-lg"></i> Agregar Ítem
               </button>
             </div>
 
             <!-- Contenedor dinámico de filas de repuestos -->
             <div id="modalKitItemsContainer" class="d-flex flex-column gap-2 mb-3">
-              <!-- Renderizado dinámico de filas -->
+              <!-- Renderizado dinámico de filas con inputs cómodos y funcionales -->
             </div>
 
             <!-- Contador de Ítems del Kit -->
-            <div class="p-2.5 rounded-3 bg-light border border-slate-200 d-flex align-items-center justify-content-between gap-2">
+            <div class="p-3 rounded-3 bg-light border border-slate-200 d-flex align-items-center justify-content-between gap-2">
               <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-secondary px-2.5 py-1.5 rounded-pill font-monospace" id="modalKitItemsCounter">0 Ítems</span>
-                <span class="text-muted small">Repuestos y materiales vinculados al catálogo oficial de Almacén</span>
+                <span class="badge bg-secondary px-3 py-1.5 rounded-pill font-monospace" id="modalKitItemsCounter" style="font-size:0.85rem;">0 Ítems</span>
+                <span class="text-muted small">Los códigos y descripciones se vinculan en tiempo real al catálogo oficial de Almacén</span>
               </div>
             </div>
           </div>
 
           <!-- SECCIÓN 3: NOTAS U OBSERVACIONES -->
-          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+          <div class="card border-0 shadow-2xs rounded-4 p-3.5 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
             <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-2" style="font-size:1rem;">
-              <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-2.5 py-1 fw-bold" style="font-size:0.75rem; color:#0284c7 !important;">3</span>
+              <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-2.5 py-1 fw-bold" style="font-size:0.78rem; color:#0284c7 !important;">3</span>
               <span>Notas u Observaciones Técnicas</span>
             </h6>
-            <textarea id="modalKitObservaciones" class="form-control form-control-sm border-secondary-subtle" rows="2" placeholder="Indicaciones para taller o detalles de instalación..."></textarea>
+            <textarea id="modalKitObservaciones" class="form-control border-secondary-subtle" rows="2" placeholder="Indicaciones para taller o detalles de instalación..."></textarea>
           </div>
 
           <!-- Footer Buttons 1:1 Reporte de Fallas -->
           <div class="d-flex align-items-center justify-content-end gap-2 pt-2">
-            <button type="button" class="btn btn-light fw-bold rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm rounded-3 d-flex align-items-center gap-2" id="btnGuardarKitMP" style="background:#0284c7; border-color:#0284c7;">
+            <button type="button" class="btn btn-light fw-bold rounded-3 px-3 py-2" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary fw-bold px-4 py-2 shadow-sm rounded-3 d-flex align-items-center gap-2" id="btnGuardarKitMP" style="background:#0284c7; border-color:#0284c7; min-height:42px;">
               <i class="bi bi-check-circle-fill"></i> Guardar Kit
             </button>
           </div>

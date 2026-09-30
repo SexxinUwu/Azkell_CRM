@@ -1,5 +1,5 @@
 // =========================================================================
-// MÓDULO: KITS DE MANTENIMIENTO PREVENTIVO — LÓGICA REDISEÑADA (1:1 MASTER-DETAIL)
+// MÓDULO: KITS DE MANTENIMIENTO PREVENTIVO — LÓGICA REDISEÑADA (1:1 MASTER-DETAIL & DRILL-DOWN MÓVIL)
 // =========================================================================
 
 window.kitsData = window.kitsData || [];
@@ -9,6 +9,8 @@ window._kitsTiposMPList = window._kitsTiposMPList || [];
 window._marcasMotorasFlota = window._marcasMotorasFlota || [];
 window._modelosPorMarcaMap = window._modelosPorMarcaMap || new Map();
 window._marcasExpandedSet = window._marcasExpandedSet || new Set();
+window._kitsModalModelosSeleccionados = window._kitsModalModelosSeleccionados || new Set();
+window._kitsMobileVistaActual = 'marcas'; // 'marcas' | 'detalle'
 window.kitsRowCounter = 0;
 window.kitsDeletedItemIds = [];
 window._kitEditandoGrupo = null;
@@ -33,7 +35,7 @@ window['init_kits-mp'] = function () {
  */
 window.kitsCargarTabla = function (forzarRecarga) {
     const tbody = document.getElementById('kits-tbody');
-    const mobileContainer = document.getElementById('kitsCardContainer');
+    const mobileTableContainer = document.getElementById('kits-mobile-table-container');
 
     if (tbody) {
         tbody.innerHTML = `
@@ -44,10 +46,10 @@ window.kitsCargarTabla = function (forzarRecarga) {
             </tr>
         `;
     }
-    if (mobileContainer) {
-        mobileContainer.innerHTML = `
+    if (mobileTableContainer) {
+        mobileTableContainer.innerHTML = `
             <div class="text-center py-5 text-muted">
-                <div class="spinner-border spinner-border-sm text-primary me-2"></div> Cargando kits de mantenimiento...
+                <div class="spinner-border spinner-border-sm text-primary me-2"></div> Cargando información...
             </div>
         `;
     }
@@ -115,7 +117,7 @@ window.kitsCargarTabla = function (forzarRecarga) {
             return {
                 id: k.id,
                 marca_vehiculo: (k.marca_vehiculo || 'GENERAL').trim().toUpperCase(),
-                modelo_vehiculo: (k.modelo_vehiculo || 'TODOS LOS MODELOS').trim(),
+                modelo_vehiculo: (k.modelo_vehiculo || 'TODOS LOS MODELOS').trim().toUpperCase(),
                 tipo_mp: (k.tipo_mp || 'MP1').trim().toUpperCase(),
                 nombre_kit: (k.nombre_kit || '').trim(),
                 item_codigo: codFinal || '-',
@@ -184,7 +186,7 @@ window.kitsCargarTabla = function (forzarRecarga) {
 
         window.kitsDataFil = window.kitsData.slice();
 
-        // 5. Poblar sidebar lateral de Marcas Motoras y Modelos
+        // 5. Poblar sidebar Desktop y lista de marcas Móvil
         window.kitsPoblarSidebarMarcas();
 
         // 6. Renderizar vista
@@ -268,11 +270,11 @@ window.kitsBuscarItemAlmacen = function (kCod, kNom) {
 };
 
 /**
- * Poblar lista del Sidebar Lateral Izquierdo (Todos + Marcas Motoras y sus Modelos)
+ * Poblar lista del Sidebar Desktop y Lista de Marcas Móvil (1:1 Imagen 2)
  */
 window.kitsPoblarSidebarMarcas = function () {
-    const listContainer = document.getElementById('kits-nav-sidebar-list');
-    if (!listContainer) return;
+    const listDesktop = document.getElementById('kits-nav-sidebar-list');
+    const listMobile = document.getElementById('kits-mobile-marcas-list');
 
     // Calcular marcas motoras disponibles y cuántos ítems de kit tienen configurados (1 sola entrada por marca)
     const marcasMap = new Map(); // key: UPPERCASE, value: { display: string, count: number }
@@ -300,58 +302,167 @@ window.kitsPoblarSidebarMarcas = function () {
     });
 
     const marcasSorted = Array.from(marcasMap.values()).sort((a, b) => a.display.localeCompare(b.display));
-
     const isTodosActive = !window.kitsSidebarMarcaSeleccionada && !window.kitsSidebarModeloSeleccionado;
 
-    let html = `
-        <div class="kits-nav-item ${isTodosActive ? 'active' : ''}" data-marca="" data-modelo="" onclick="window.kitsSeleccionarMarcaSidebar('', this)">
-            <span class="fw-bold">Todos</span>
-            <span class="badge bg-light text-secondary rounded-pill font-monospace" id="badge-count-sidebar-todos">${window.kitsData.length}</span>
-        </div>
-    `;
-
-    marcasSorted.forEach(item => {
-        const marca = item.display;
-        const count = item.count;
-        const isBrandSelected = window.kitsSidebarMarcaSeleccionada.toUpperCase() === marca.toUpperCase();
-        const isExactBrandActive = isBrandSelected && !window.kitsSidebarModeloSeleccionado;
-        const isExpanded = isBrandSelected || (window._marcasExpandedSet && window._marcasExpandedSet.has(marca));
-
-        const modelosSet = window._modelosPorMarcaMap ? (window._modelosPorMarcaMap.get(marca) || new Set()) : new Set();
-        const modelosArr = Array.from(modelosSet).sort();
-        const hasModels = modelosArr.length > 0;
-
-        html += `
-            <div class="kits-nav-item ${isExactBrandActive ? 'active' : ''}" data-marca="${escapeHtml(marca)}" data-modelo="" onclick="window.kitsSeleccionarMarcaSidebar('${escapeHtml(marca)}', this)">
-                <div class="d-flex align-items-center gap-1.5 text-truncate">
-                    ${hasModels ? `<i class="bi bi-chevron-${isExpanded ? 'down' : 'right'} text-muted" style="font-size: 0.68rem;"></i>` : ''}
-                    <span class="text-truncate">${escapeHtml(marca)}</span>
-                </div>
-                ${count > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace" style="font-size: 0.70rem;">${count}</span>` : '<span class="badge text-muted font-monospace" style="font-size: 0.65rem; opacity: 0.5;">0</span>'}
+    // A. Renderizar Sidebar Desktop
+    if (listDesktop) {
+        let htmlDesktop = `
+            <div class="kits-nav-item ${isTodosActive ? 'active' : ''}" data-marca="" data-modelo="" onclick="window.kitsSeleccionarMarcaSidebar('', this)">
+                <span class="fw-bold">Todos</span>
+                <span class="badge bg-light text-secondary rounded-pill font-monospace" id="badge-count-sidebar-todos">${window.kitsData.length}</span>
             </div>
         `;
 
-        // Renderizar sub-ítems de modelos si la marca está expandida
-        if (hasModels && isExpanded) {
-            modelosArr.forEach(mod => {
-                const countMod = window.kitsData.filter(k => 
-                    k.marca_vehiculo.toUpperCase() === marca.toUpperCase() && 
-                    k.modelo_vehiculo.toUpperCase() === mod.toUpperCase()
-                ).length;
+        marcasSorted.forEach(item => {
+            const marca = item.display;
+            const count = item.count;
+            const isBrandSelected = window.kitsSidebarMarcaSeleccionada.toUpperCase() === marca.toUpperCase();
+            const isExactBrandActive = isBrandSelected && !window.kitsSidebarModeloSeleccionado;
+            const isExpanded = window._marcasExpandedSet && window._marcasExpandedSet.has(marca);
 
-                const isModelActive = isBrandSelected && window.kitsSidebarModeloSeleccionado.toUpperCase() === mod.toUpperCase();
+            const modelosSet = window._modelosPorMarcaMap ? (window._modelosPorMarcaMap.get(marca) || new Set()) : new Set();
+            const modelosArr = Array.from(modelosSet).sort();
+            const hasModels = modelosArr.length > 0;
 
-                html += `
-                    <div class="kits-nav-subitem ${isModelActive ? 'active' : ''}" data-marca="${escapeHtml(marca)}" data-modelo="${escapeHtml(mod)}" onclick="window.kitsSeleccionarModeloSidebar('${escapeHtml(marca)}', '${escapeHtml(mod)}', this)">
-                        <span class="text-truncate"><i class="bi bi-arrow-return-right me-1 text-muted" style="font-size:0.65rem;"></i>${escapeHtml(mod)}</span>
-                        ${countMod > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace" style="font-size: 0.68rem;">${countMod}</span>` : '<span class="badge text-muted font-monospace" style="font-size: 0.62rem; opacity: 0.4;">0</span>'}
+            htmlDesktop += `
+                <div class="kits-nav-item ${isExactBrandActive ? 'active' : ''}" data-marca="${escapeHtml(marca)}" data-modelo="" onclick="window.kitsSeleccionarMarcaSidebar('${escapeHtml(marca)}', this)">
+                    <div class="d-flex align-items-center gap-1 text-truncate">
+                        ${hasModels ? `
+                            <span class="p-1 text-secondary d-inline-flex align-items-center justify-content-center" style="width:20px; cursor:pointer;" onclick="window.kitsToggleMarcaChevron('${escapeHtml(marca)}', event)" title="${isExpanded ? 'Ocultar modelos' : 'Ver modelos'}">
+                                <i class="bi bi-chevron-${isExpanded ? 'down' : 'right'}" style="font-size: 0.72rem; color:#64748b;"></i>
+                            </span>
+                        ` : '<span style="width:14px; display:inline-block;"></span>'}
+                        <span class="text-truncate">${escapeHtml(marca)}</span>
                     </div>
-                `;
-            });
-        }
-    });
+                    ${count > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace" style="font-size: 0.70rem;">${count}</span>` : '<span class="badge text-muted font-monospace" style="font-size: 0.65rem; opacity: 0.5;">0</span>'}
+                </div>
+            `;
 
-    listContainer.innerHTML = html;
+            // Renderizar sub-ítems de modelos si la marca está expandida en desktop
+            if (hasModels && isExpanded) {
+                modelosArr.forEach(mod => {
+                    const countMod = window.kitsData.filter(k => 
+                        k.marca_vehiculo.toUpperCase() === marca.toUpperCase() && 
+                        k.modelo_vehiculo.toUpperCase() === mod.toUpperCase()
+                    ).length;
+
+                    const isModelActive = isBrandSelected && window.kitsSidebarModeloSeleccionado.toUpperCase() === mod.toUpperCase();
+
+                    htmlDesktop += `
+                        <div class="kits-nav-subitem ${isModelActive ? 'active' : ''}" data-marca="${escapeHtml(marca)}" data-modelo="${escapeHtml(mod)}" onclick="window.kitsSeleccionarModeloSidebar('${escapeHtml(marca)}', '${escapeHtml(mod)}', this)">
+                            <span class="text-truncate"><i class="bi bi-arrow-return-right me-1 text-muted" style="font-size:0.65rem;"></i>${escapeHtml(mod)}</span>
+                            ${countMod > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace" style="font-size: 0.68rem;">${countMod}</span>` : '<span class="badge text-muted font-monospace" style="font-size: 0.62rem; opacity: 0.4;">0</span>'}
+                        </div>
+                    `;
+                });
+            }
+        });
+
+        listDesktop.innerHTML = htmlDesktop;
+    }
+
+    // B. Renderizar Lista Móvil NATIVA (1:1 Imagen 2)
+    if (listMobile) {
+        let htmlMobile = `
+            <div class="kits-mobile-row" onclick="window.kitsMobileSeleccionarMarca('')">
+                <span class="fw-bold">Todos</span>
+                <div class="d-flex align-items-center gap-2">
+                    ${window.kitsData.length > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace">${window.kitsData.length}</span>` : ''}
+                    <i class="bi bi-chevron-right text-muted" style="font-size: 0.85rem;"></i>
+                </div>
+            </div>
+        `;
+
+        marcasSorted.forEach(item => {
+            const marca = item.display;
+            const count = item.count;
+
+            htmlMobile += `
+                <div class="kits-mobile-row" onclick="window.kitsMobileSeleccionarMarca('${escapeHtml(marca)}')">
+                    <span class="fw-bold text-dark">${escapeHtml(marca)}</span>
+                    <div class="d-flex align-items-center gap-2">
+                        ${count > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace">${count}</span>` : ''}
+                        <i class="bi bi-chevron-right text-muted" style="font-size: 0.85rem;"></i>
+                    </div>
+                </div>
+            `;
+        });
+
+        listMobile.innerHTML = htmlMobile;
+    }
+};
+
+/**
+ * Navegación Móvil: Mostrar Pantalla 1 (Lista de Marcas)
+ */
+window.kitsMobileMostrarMarcas = function () {
+    window._kitsMobileVistaActual = 'marcas';
+    const viewMarcas = document.getElementById('kits-mobile-view-marcas');
+    const viewDetalle = document.getElementById('kits-mobile-view-detalle');
+    if (viewMarcas) viewMarcas.style.display = 'block';
+    if (viewDetalle) viewDetalle.style.display = 'none';
+};
+
+/**
+ * Navegación Móvil: Seleccionar Marca y Mostrar Pantalla 2 (Detalle Imagen 3)
+ */
+window.kitsMobileSeleccionarMarca = function (marca, modelo) {
+    window.kitsSidebarMarcaSeleccionada = (marca || '').trim();
+    window.kitsSidebarModeloSeleccionado = (modelo || '').trim();
+    window._kitsMobileVistaActual = 'detalle';
+
+    const viewMarcas = document.getElementById('kits-mobile-view-marcas');
+    const viewDetalle = document.getElementById('kits-mobile-view-detalle');
+    if (viewMarcas) viewMarcas.style.display = 'none';
+    if (viewDetalle) viewDetalle.style.display = 'block';
+
+    const brandTitleEl = document.getElementById('kits-mobile-detalle-brand-title');
+    const subbrandTitleEl = document.getElementById('kits-mobile-detalle-subbrand-title');
+    if (brandTitleEl) brandTitleEl.textContent = marca ? marca : 'Todos los Filtros';
+    if (subbrandTitleEl) subbrandTitleEl.textContent = marca ? marca : 'Tipo de Mantt';
+
+    window.kitsFiltrar();
+};
+
+/**
+ * Toggle de buscador en la vista móvil
+ */
+window.kitsMobileToggleSearch = function () {
+    const wrap = document.getElementById('kits-mobile-search-bar-wrap');
+    if (!wrap) return;
+    if (wrap.style.display === 'none' || !wrap.style.display) {
+        wrap.style.display = 'block';
+        const input = document.getElementById('buscadorKitsMobile');
+        if (input) input.focus();
+    } else {
+        wrap.style.display = 'none';
+    }
+};
+
+/**
+ * Filtro desde el buscador móvil
+ */
+window.kitsFiltrarMobile = function (query) {
+    const desktopSearch = document.getElementById('buscadorKitsLive');
+    if (desktopSearch) desktopSearch.value = query || '';
+    window.kitsFiltrar();
+};
+
+/**
+ * Toggle para expandir/ocultar los modelos de una marca en el sidebar desktop
+ */
+window.kitsToggleMarcaChevron = function (marca, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    if (!marca) return;
+    if (window._marcasExpandedSet.has(marca)) {
+        window._marcasExpandedSet.delete(marca);
+    } else {
+        window._marcasExpandedSet.add(marca);
+    }
+    window.kitsPoblarSidebarMarcas();
 };
 
 /**
@@ -411,7 +522,10 @@ window.kitsResetFiltros = function () {
  * Filtro unificado en vivo (Buscador Único + Sidebar Marca / Modelo)
  */
 window.kitsFiltrar = function () {
-    const q = ((document.getElementById('buscadorKitsLive') || {}).value || '').toLowerCase().trim();
+    const qDesktop = ((document.getElementById('buscadorKitsLive') || {}).value || '').toLowerCase().trim();
+    const qMobile = ((document.getElementById('buscadorKitsMobile') || {}).value || '').toLowerCase().trim();
+    const q = qMobile || qDesktop;
+
     const selMarca = (window.kitsSidebarMarcaSeleccionada || '').toUpperCase().trim();
     const selModelo = (window.kitsSidebarModeloSeleccionado || '').toUpperCase().trim();
 
@@ -419,7 +533,7 @@ window.kitsFiltrar = function () {
         const kMarca = (k.marca_vehiculo || '').toUpperCase().trim();
         const kMod = (k.modelo_vehiculo || '').toUpperCase().trim();
 
-        // Filtro por Marca seleccionada en Sidebar
+        // Filtro por Marca seleccionada
         if (selMarca) {
             if (kMarca !== selMarca) return false;
         }
@@ -572,97 +686,113 @@ window.kitsRenderizarTablaDesktop = function () {
 };
 
 /**
- * Renderizar Tarjetas Nativas para Móvil
+ * Renderizar Tabla Segmentada para Móvil (1:1 con Imagen 3)
+ * Columnas: Codigo / Descripción | Cantidad | Stock Almacen
  */
 window.kitsRenderizarCardsMobile = function () {
-    const container = document.getElementById('kitsCardContainer');
+    const container = document.getElementById('kits-mobile-table-container');
+    const counterEl = document.getElementById('kits-mobile-items-count');
     if (!container) return;
 
+    if (counterEl) {
+        counterEl.textContent = `${window.kitsDataFil.length} ${window.kitsDataFil.length === 1 ? 'ítem' : 'ítems'}`;
+    }
+
     if (!window.kitsDataFil.length) {
+        const targetLabel = window.kitsSidebarModeloSeleccionado
+            ? `${window.kitsSidebarMarcaSeleccionada} • ${window.kitsSidebarModeloSeleccionado}`
+            : window.kitsSidebarMarcaSeleccionada;
+
         container.innerHTML = `
-            <div class="text-center py-5 text-muted">
+            <div class="text-center py-5 text-muted p-4">
                 <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-                Sin kits de mantenimiento encontrados.
+                ${targetLabel ? `No hay filtros o kits registrados para <strong>${escapeHtml(targetLabel)}</strong>.` : 'No se encontraron repuestos con los criterios actuales.'}
+                <div class="mt-3">
+                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-2 fw-bold" onclick="window.kitsAbrirModal('${escapeHtml(window.kitsSidebarMarcaSeleccionada)}', '${escapeHtml(window.kitsSidebarModeloSeleccionado)}')" style="background:#0284c7; border-color:#0284c7;">
+                        <i class="bi bi-plus-lg me-1"></i> Configurar Filtros
+                    </button>
+                </div>
             </div>
         `;
         return;
     }
 
-    // Agrupar por Kit
-    const kitsAgrupados = {};
+    // Agrupar ítems por Sección / Tipo de MP
+    const grupos = new Map();
     window.kitsDataFil.forEach(k => {
-        const kitKey = `${k.marca_vehiculo}__${k.modelo_vehiculo}__${k.tipo_mp}`;
-        if (!kitsAgrupados[kitKey]) {
-            kitsAgrupados[kitKey] = {
-                marca: k.marca_vehiculo,
-                modelo: k.modelo_vehiculo,
-                tipo_mp: k.tipo_mp,
-                nombre_kit: k.nombre_kit,
-                items: []
-            };
+        const groupTitle = (k.nombre_kit || k.tipo_mp || 'GENERAL').trim();
+        if (!grupos.has(groupTitle)) {
+            grupos.set(groupTitle, []);
         }
-        kitsAgrupados[kitKey].items.push(k);
+        grupos.get(groupTitle).push(k);
     });
 
-    let html = '';
-    Object.values(kitsAgrupados).forEach(g => {
-        const totalCosto = g.items.reduce((acc, it) => acc + parseFloat(it.costo_total || 0), 0);
+    let html = `
+        <table class="kits-mobile-table">
+            <thead>
+                <tr>
+                    <th style="width: 52%;">Codigo / Descripción</th>
+                    <th class="text-center" style="width: 22%;">Cantidad</th>
+                    <th class="text-center" style="width: 26%;">Stock Almacen</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
 
-        let badgeTipoStyle = 'background:#eff6ff; color:#0284c7; border:1px solid #bae6fd;';
-        if (g.tipo_mp === 'MP2') badgeTipoStyle = 'background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;';
-        else if (g.tipo_mp === 'MP3') badgeTipoStyle = 'background:#fffbeb; color:#d97706; border:1px solid #fde68a;';
-
+    grupos.forEach((items, groupTitle) => {
+        // Fila Encabezado de Sección en Negrita (1:1 Imagen 3)
         html += `
-            <div class="ck-mobile-card mb-3" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; padding:14px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
-                <!-- Encabezado de la Tarjeta Móvil -->
-                <div class="d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom border-slate-100">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="p-2 rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
-                            <i class="bi bi-truck"></i>
-                        </div>
-                        <div>
-                            <div class="fw-black text-dark" style="font-size: 0.95rem;">${escapeHtml(g.marca)}</div>
-                            <div class="text-secondary small fw-bold">${escapeHtml(g.modelo)}</div>
-                        </div>
+            <tr>
+                <td colspan="3" class="kits-mobile-type-title">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span class="fw-black text-dark text-uppercase">${escapeHtml(groupTitle)}</span>
                     </div>
-                    <span class="badge rounded-pill fw-bold text-uppercase px-2.5 py-1" style="${badgeTipoStyle} font-size: 0.72rem;">
-                        ${escapeHtml(g.tipo_mp)}
-                    </span>
-                </div>
-
-                ${g.nombre_kit ? `<div class="fw-black text-dark small mb-2" style="font-size:0.85rem;"><strong>${escapeHtml(g.nombre_kit)}</strong></div>` : ''}
-
-                <!-- Desglose de Ítems -->
-                <div class="d-flex flex-column gap-2 my-2.5">
-                    ${g.items.map(it => `
-                        <div class="d-flex align-items-center justify-content-between p-2 rounded-2 bg-light/70 border border-slate-100">
-                            <div style="min-width:0; flex:1;" class="pe-2">
-                                <div class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;">${escapeHtml(it.item_nombre)}</div>
-                                <div class="text-secondary small font-monospace" style="font-size: 0.72rem;">
-                                    Cant: ${it.cantidad.toFixed(2)} | Stock: ${it.stock_almacen || 0}
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-
-                <!-- Pie de la Tarjeta Móvil -->
-                <div class="d-flex align-items-center justify-content-between pt-2 border-top border-slate-100">
-                    <div>
-                        <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size: 0.65rem;">Costo Estimado</span>
-                        <span class="fw-black text-dark font-monospace" style="font-size: 0.95rem;">
-                            S/ ${totalCosto.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm"
-                            onclick="window.kitsEditarKit('${escapeHtml(g.marca)}', '${escapeHtml(g.modelo)}', '${escapeHtml(g.tipo_mp)}')"
-                            style="background: #0284c7; border-color: #0284c7; font-size: 0.78rem;">
-                        <i class="bi bi-pencil-square"></i> Editar Kit
-                    </button>
-                </div>
-            </div>
+                </td>
+            </tr>
         `;
+
+        // Filas de repuestos
+        items.forEach(it => {
+            const kCod = (it.item_codigo || '').toString().trim();
+            const kNom = (it.item_nombre || '').toString().trim();
+
+            const invItem = window.kitsBuscarItemAlmacen(kCod, kNom);
+
+            let displayCodigo = invItem ? (invItem.codInv || invItem.codigo || invItem.codigo_articulo) : kCod;
+            if (!displayCodigo || displayCodigo === '-') {
+                displayCodigo = '—';
+            } else if (/^\d+$/.test(displayCodigo)) {
+                displayCodigo = 'INV-' + displayCodigo.padStart(4, '0');
+            }
+
+            const displayNombre = (invItem ? invItem.nombre : kNom) || '—';
+            const stockNum = invItem != null ? invItem.stock : (it.stock_almacen != null ? it.stock_almacen : 0);
+
+            html += `
+                <tr onclick="window.kitsEditarKit('${escapeHtml(it.marca_vehiculo)}', '${escapeHtml(it.modelo_vehiculo)}', '${escapeHtml(it.tipo_mp)}')" style="cursor: pointer;">
+                    <td class="align-middle">
+                        <div class="d-flex flex-column gap-0.5">
+                            ${displayCodigo && displayCodigo !== '—' ? `<span class="badge bg-light text-dark border font-monospace fw-bold px-1.5 py-0.5 me-auto mb-1" style="font-size: 0.72rem; border-color: #cbd5e1 !important;">${escapeHtml(displayCodigo)}</span>` : ''}
+                            <span class="fw-bold text-dark" style="font-size: 0.82rem; line-height: 1.3;">
+                                ${escapeHtml(displayNombre)}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="text-center align-middle font-monospace fw-bold" style="font-size: 0.85rem; color: #334155;">
+                        ${it.cantidad.toFixed(2)}
+                    </td>
+                    <td class="text-center align-middle font-monospace fw-bold" style="font-size: 0.85rem; color: ${stockNum > 0 ? '#0f172a' : '#94a3b8'};">
+                        ${stockNum}
+                    </td>
+                </tr>
+            `;
+        });
     });
+
+    html += `
+            </tbody>
+        </table>
+    `;
 
     container.innerHTML = html;
 };
@@ -685,21 +815,13 @@ window.kitsAbrirModal = function (presetMarca, presetModelo) {
     if (lblSub) lblSub.textContent = 'Configure el vehículo, tipo de preventivo y agregue repuestos requeridos';
 
     const pMarca = presetMarca || window.kitsSidebarMarcaSeleccionada || '';
-    const pModelo = presetModelo || window.kitsSidebarModeloSeleccionado || 'TODOS LOS MODELOS';
+    const pModelo = presetModelo || window.kitsSidebarModeloSeleccionado || '';
 
-    // Poblar selects del modal con las marcas motoras y modelo seleccionado
-    window.kitsPoblarSelectsModal(pMarca, pModelo);
+    // Poblar selects y comboboxes del modal
+    window.kitsPoblarSelectsModal(pMarca, pModelo, '');
 
-    // Limpiar campos
-    const selMarca = document.getElementById('modalKitMarca');
-    const selModelo = document.getElementById('modalKitModelo');
-    const selTipo = document.getElementById('modalKitTipoMP');
     const txtAlias = document.getElementById('modalKitNombreAlias');
     const txtObs = document.getElementById('modalKitObservaciones');
-
-    if (selMarca && pMarca) selMarca.value = pMarca;
-    if (selModelo && pModelo) selModelo.value = pModelo;
-    if (selTipo) selTipo.value = '';
     if (txtAlias) txtAlias.value = '';
     if (txtObs) txtObs.value = '';
 
@@ -764,41 +886,48 @@ window.kitsEditarKit = function (marca, modelo, tipo) {
 };
 
 /**
- * Poblar selects dentro del Modal (Marcas Motoras Sin Repetir, Modelos, Tipos MP)
+ * Poblar comboboxes y selectores del Modal (Marcas Motoras, Modelos Multi-Select, Tipos MP)
  */
 window.kitsPoblarSelectsModal = function (presetMarca, presetModelo, presetTipo) {
-    const selMarca = document.getElementById('modalKitMarca');
-    const selModelo = document.getElementById('modalKitModelo');
-    const selTipo = document.getElementById('modalKitTipoMP');
+    // 1. Combobox Marca
+    const marcasArr = Array.from(new Set(
+        (window._marcasMotorasFlota && window._marcasMotorasFlota.length
+            ? window._marcasMotorasFlota
+            : window.kitsData.map(k => k.marca_vehiculo))
+        .filter(Boolean)
+        .map(m => m.trim().toUpperCase())
+    )).sort();
 
-    if (selMarca) {
-        const marcasArr = Array.from(new Set(
-            (window._marcasMotorasFlota && window._marcasMotorasFlota.length
-                ? window._marcasMotorasFlota
-                : window.kitsData.map(k => k.marca_vehiculo))
-            .filter(Boolean)
-            .map(m => m.trim().toUpperCase())
-        )).sort();
-
-        selMarca.innerHTML = '<option value="">Seleccione marca motora...</option>' +
-            marcasArr.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
-
-        if (presetMarca) {
-            const match = marcasArr.find(m => m.toUpperCase() === presetMarca.toUpperCase());
-            if (match) selMarca.value = match;
-            else selMarca.value = presetMarca.toUpperCase();
-        }
+    const itemsMarca = marcasArr.map(m => ({ value: m, label: m }));
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('modalKitMarca', itemsMarca, 'SELECCIONE MARCA...');
+        window._cbOnSelect('modalKitMarca', function (val) {
+            window.kitsModalMarcaCambiada();
+        });
     }
 
-    if (selTipo) {
-        selTipo.innerHTML = '<option value="">Seleccione tipo...</option>' +
-            window._kitsTiposMPList.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
-
-        if (presetTipo && window._kitsTiposMPList.includes(presetTipo.toUpperCase())) {
-            selTipo.value = presetTipo.toUpperCase();
-        }
+    if (presetMarca) {
+        if (typeof window._cbSet === 'function') window._cbSet('modalKitMarca', presetMarca, presetMarca);
+    } else {
+        if (typeof window._cbSet === 'function') window._cbSet('modalKitMarca', '', '');
     }
 
+    // 2. Combobox Tipo MP (Con buscador escribible en vivo)
+    const itemsTipo = (window._kitsTiposMPList || []).map(t => ({ value: t, label: t }));
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('modalKitTipoMP', itemsTipo, 'SELECCIONE TIPO...');
+        window._cbOnSelect('modalKitTipoMP', function (val) {
+            window.kitsModalActualizarTitulo();
+        });
+    }
+
+    if (presetTipo) {
+        if (typeof window._cbSet === 'function') window._cbSet('modalKitTipoMP', presetTipo, presetTipo);
+    } else {
+        if (typeof window._cbSet === 'function') window._cbSet('modalKitTipoMP', '', '');
+    }
+
+    // 3. Poblar dropdown de modelos multi-select
     window.kitsModalMarcaCambiada(presetModelo);
 };
 
@@ -806,64 +935,217 @@ window.kitsPoblarSelectsModal = function (presetMarca, presetModelo, presetTipo)
  * Evento al cambiar la Marca dentro del Modal
  */
 window.kitsModalMarcaCambiada = function (presetModelo) {
-    const selMarca = document.getElementById('modalKitMarca');
-    const selModelo = document.getElementById('modalKitModelo');
-    if (!selModelo) return;
+    let marca = '';
+    if (typeof window._cbGet === 'function') {
+        marca = window._cbGet('modalKitMarca');
+    }
+    if (!marca) {
+        const inputMarca = document.getElementById('modalKitMarca');
+        marca = inputMarca ? inputMarca.value : '';
+    }
 
-    const marca = selMarca ? selMarca.value : '';
-    const modelosSet = new Set(['TODOS LOS MODELOS']);
+    window.kitsModalPoblarDropdownModelos(marca, presetModelo);
+    window.kitsModalActualizarTitulo();
+};
 
+/**
+ * Toggle de visualización del dropdown de modelos con checkboxes
+ */
+window.kitsModalToggleDropdownModelos = function (event) {
+    if (event) event.stopPropagation();
+    const dd = document.getElementById('modalKitModelosDropdown');
+    if (!dd) return;
+    dd.style.display = (dd.style.display === 'none' || !dd.style.display) ? 'block' : 'none';
+};
+
+/**
+ * Poblar el dropdown de modelos multi-select según la marca seleccionada
+ */
+window.kitsModalPoblarDropdownModelos = function (marca, presetModelos) {
+    const dd = document.getElementById('modalKitModelosDropdown');
+    if (!dd) return;
+
+    const modelosSet = new Set();
     if (marca) {
+        const fromMap = window._modelosPorMarcaMap ? window._modelosPorMarcaMap.get(marca.toUpperCase()) : null;
+        if (fromMap && fromMap.size > 0) {
+            fromMap.forEach(m => modelosSet.add(m));
+        }
         if (window.dataGlobalPlacas && Array.isArray(window.dataGlobalPlacas)) {
             window.dataGlobalPlacas.forEach(p => {
-                const mMarca = (p[3] || '').trim().toUpperCase();
-                const mMod = (p[4] || '').trim().toUpperCase();
-                if (mMarca === marca.toUpperCase() && mMod && mMod !== '-') {
-                    modelosSet.add(mMod);
+                const pMarca = (p[3] || '').trim().toUpperCase();
+                const pMod = (p[4] || '').trim().toUpperCase();
+                if (pMarca === marca.toUpperCase() && pMod && pMod !== '-') {
+                    modelosSet.add(pMod);
                 }
             });
         }
         window.kitsData.forEach(k => {
-            if (k.marca_vehiculo.toUpperCase() === marca.toUpperCase() && k.modelo_vehiculo) {
-                modelosSet.add(k.modelo_vehiculo);
+            if (k.marca_vehiculo.toUpperCase() === marca.toUpperCase() && k.modelo_vehiculo && k.modelo_vehiculo !== 'TODOS LOS MODELOS' && k.modelo_vehiculo !== 'TODOS') {
+                modelosSet.add(k.modelo_vehiculo.toUpperCase());
             }
         });
     }
 
     const modelosArr = Array.from(modelosSet).sort();
-    selModelo.innerHTML = modelosArr.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
 
-    if (presetModelo && modelosArr.includes(presetModelo.toUpperCase())) {
-        selModelo.value = presetModelo.toUpperCase();
+    // Establecer selección inicial
+    window._kitsModalModelosSeleccionados.clear();
+    if (presetModelos) {
+        if (Array.isArray(presetModelos)) {
+            presetModelos.forEach(m => { if (m) window._kitsModalModelosSeleccionados.add(m.toUpperCase()); });
+        } else if (typeof presetModelos === 'string' && presetModelos.trim()) {
+            if (presetModelos.toUpperCase() !== 'TODOS LOS MODELOS' && presetModelos.toUpperCase() !== 'TODOS') {
+                window._kitsModalModelosSeleccionados.add(presetModelos.toUpperCase());
+            }
+        }
     }
 
+    if (!modelosArr.length) {
+        dd.innerHTML = `
+            <div class="p-3 text-center text-muted small">
+                <i class="bi bi-info-circle me-1"></i>No hay modelos específicos registrados para <strong>${escapeHtml(marca || 'esta marca')}</strong>.
+                <div class="mt-1 fw-semibold text-primary">Se aplicará a "TODOS LOS MODELOS".</div>
+            </div>
+        `;
+        window.kitsModalRenderModelosChips();
+        return;
+    }
+
+    let html = '';
+    modelosArr.forEach(mod => {
+        const isChecked = window._kitsModalModelosSeleccionados.has(mod.toUpperCase());
+        html += `
+            <label class="d-flex align-items-center gap-2 p-2 rounded-2 hover:bg-slate-100" style="cursor:pointer; font-size:0.88rem; font-weight:600; color:#1e293b; user-select:none;">
+                <input type="checkbox" class="form-check-input mt-0 kit-cb-modelo" value="${escapeHtml(mod)}" ${isChecked ? 'checked' : ''} onchange="window.kitsModalToggleModeloCheckbox('${escapeHtml(mod)}', this.checked)">
+                <span class="flex-grow-1">${escapeHtml(mod)}</span>
+            </label>
+        `;
+    });
+
+    dd.innerHTML = html;
+    window.kitsModalRenderModelosChips();
+};
+
+/**
+ * Toggle de checkbox de modelo individual
+ */
+window.kitsModalToggleModeloCheckbox = function (modelo, isChecked) {
+    const modUpper = (modelo || '').trim().toUpperCase();
+    if (!modUpper) return;
+
+    if (isChecked) {
+        window._kitsModalModelosSeleccionados.add(modUpper);
+    } else {
+        window._kitsModalModelosSeleccionados.delete(modUpper);
+    }
+
+    window.kitsModalRenderModelosChips();
     window.kitsModalActualizarTitulo();
 };
 
 /**
- * Actualizar título dinámico del modal en edición
+ * Renderizar pastillas / chips de modelos seleccionados
+ */
+window.kitsModalRenderModelosChips = function () {
+    const chipsContainer = document.getElementById('modalKitModelosChips');
+    const placeholder = document.getElementById('modalKitModelosPlaceholder');
+    if (!chipsContainer || !placeholder) return;
+
+    if (!window._kitsModalModelosSeleccionados.size) {
+        chipsContainer.innerHTML = '';
+        placeholder.style.display = 'inline';
+        placeholder.textContent = 'TODOS LOS MODELOS (O elija varios)';
+    } else {
+        placeholder.style.display = 'none';
+        const chipsHtml = Array.from(window._kitsModalModelosSeleccionados).map(mod => `
+            <span class="kit-model-chip">
+                <span>${escapeHtml(mod)}</span>
+                <span class="btn-remove-chip" onclick="event.stopPropagation(); window.kitsModalRemoverModeloChip('${escapeHtml(mod)}')">&times;</span>
+            </span>
+        `).join('');
+        chipsContainer.innerHTML = chipsHtml;
+    }
+};
+
+/**
+ * Quitar un chip de modelo
+ */
+window.kitsModalRemoverModeloChip = function (modelo) {
+    const modUpper = (modelo || '').trim().toUpperCase();
+    window._kitsModalModelosSeleccionados.delete(modUpper);
+
+    // Desmarcar checkbox en el dropdown
+    const dd = document.getElementById('modalKitModelosDropdown');
+    if (dd) {
+        const cbs = dd.querySelectorAll('.kit-cb-modelo');
+        cbs.forEach(cb => {
+            if (cb.value.toUpperCase() === modUpper) {
+                cb.checked = false;
+            }
+        });
+    }
+
+    window.kitsModalRenderModelosChips();
+    window.kitsModalActualizarTitulo();
+};
+
+/**
+ * Seleccionar todos los modelos disponibles para la marca
+ */
+window.kitsModalModelosSeleccionarTodos = function () {
+    const dd = document.getElementById('modalKitModelosDropdown');
+    if (!dd) return;
+    const cbs = dd.querySelectorAll('.kit-cb-modelo');
+    cbs.forEach(cb => {
+        cb.checked = true;
+        window._kitsModalModelosSeleccionados.add(cb.value.toUpperCase());
+    });
+    window.kitsModalRenderModelosChips();
+    window.kitsModalActualizarTitulo();
+};
+
+/**
+ * Limpiar todos los modelos seleccionados
+ */
+window.kitsModalModelosLimpiar = function () {
+    const dd = document.getElementById('modalKitModelosDropdown');
+    if (dd) {
+        const cbs = dd.querySelectorAll('.kit-cb-modelo');
+        cbs.forEach(cb => { cb.checked = false; });
+    }
+    window._kitsModalModelosSeleccionados.clear();
+    window.kitsModalRenderModelosChips();
+    window.kitsModalActualizarTitulo();
+};
+
+/**
+ * Actualizar título dinámico del modal
  */
 window.kitsModalActualizarTitulo = function () {
-    const selMarca = document.getElementById('modalKitMarca');
-    const selModelo = document.getElementById('modalKitModelo');
-    const selTipo = document.getElementById('modalKitTipoMP');
+    let m = (typeof window._cbGet === 'function' ? window._cbGet('modalKitMarca') : '') || (document.getElementById('modalKitMarca')?.value || '');
+    let t = (typeof window._cbGet === 'function' ? window._cbGet('modalKitTipoMP') : '') || (document.getElementById('modalKitTipoMP')?.value || '');
     const lblTitulo = document.getElementById('lblTituloModalKit');
 
     if (!window._kitEditandoGrupo && lblTitulo) {
-        const m = selMarca ? selMarca.value : '';
-        const mod = selModelo ? selModelo.value : '';
-        const t = selTipo ? selTipo.value : '';
+        const modCount = window._kitsModalModelosSeleccionados.size;
+        let modStr = '';
+        if (modCount === 1) {
+            modStr = ' • ' + Array.from(window._kitsModalModelosSeleccionados)[0];
+        } else if (modCount > 1) {
+            modStr = ` • ${modCount} Modelos`;
+        }
+
         if (m || t) {
-            lblTitulo.textContent = `Configurar Kit: ${m || 'Vehículo'} ${mod && mod !== 'TODOS LOS MODELOS' ? '• ' + mod : ''} (${t || 'MP'})`;
+            lblTitulo.textContent = `Configurar Kit: ${m || 'Vehículo'}${modStr} (${t || 'MP'})`;
         } else {
-            lblTitulo.textContent = 'Configurar Kit de Mantenimiento';
+            lblTitulo.textContent = 'Nuevo Kit de Mantenimiento';
         }
     }
 };
 
 /**
- * Agregar Fila Dinámica de Repuesto/Material en el Modal
- * Solo campos necesarios: Código Artículo | Repuesto (Descripción) | Cantidad | Eliminar
+ * Agregar Fila Dinámica de Repuesto/Material en el Modal (1:1 Con Reporte de Fallas - Casillas Cómodas y Espaciosas)
  */
 window.kitsModalAgregarFila = function (data = {}) {
     const container = document.getElementById('modalKitItemsContainer');
@@ -894,7 +1176,7 @@ window.kitsModalAgregarFila = function (data = {}) {
 
     const row = document.createElement('div');
     row.id = rowId;
-    row.className = 'kit-item-row-card p-2.5 rounded-3 mb-2 bg-white border border-slate-200 shadow-2xs';
+    row.className = 'kit-item-row-card p-3 rounded-4 mb-2 bg-white border border-slate-200 shadow-2xs';
     if (data.id) row.dataset.id = data.id;
     row.dataset.unidad = unidVal;
     row.dataset.costo = cu;
@@ -902,15 +1184,16 @@ window.kitsModalAgregarFila = function (data = {}) {
     row.innerHTML = `
         <div class="row g-2 align-items-center">
             <!-- 1. Código del Artículo (con Datalist de Almacén) -->
-            <div class="col-12 col-md-4">
-                <label class="form-label d-block mb-1 text-secondary fw-semibold" style="font-size:0.75rem;">Código Artículo</label>
+            <div class="col-12 col-md-3">
+                <label class="form-label d-block mb-1 text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.4px;">Código Artículo</label>
                 <div class="position-relative">
-                    <input type="text" class="form-control form-control-sm font-monospace fw-bold kit-input-codigo text-uppercase"
+                    <input type="text" class="form-control font-monospace fw-bold kit-input-codigo text-uppercase border-secondary-subtle"
                            list="${listCodId}"
                            placeholder="CÓDIGO..."
                            value="${escapeHtml(codigoVal)}"
                            oninput="window.kitsModalItemCodigoCambiado(this, '${rowId}')"
-                           autocomplete="off">
+                           autocomplete="off"
+                           style="min-height: 42px; font-size: 0.90rem;">
                     <datalist id="${listCodId}">
                         ${(window._kitsAlmacenItems || []).map(it => `<option value="${escapeHtml(it.codInv || it.codigo)}">${escapeHtml(it.nombre)}</option>`).join('')}
                     </datalist>
@@ -918,15 +1201,16 @@ window.kitsModalAgregarFila = function (data = {}) {
             </div>
 
             <!-- 2. Repuesto / Descripción Completa del Artículo -->
-            <div class="col-12 col-md-5">
-                <label class="form-label d-block mb-1 text-secondary fw-semibold" style="font-size:0.75rem;">Repuesto / Lubricante / Material</label>
+            <div class="col-12 col-md-6">
+                <label class="form-label d-block mb-1 text-secondary fw-bold" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.4px;">Repuesto / Lubricante / Material</label>
                 <div class="position-relative">
-                    <input type="text" class="form-control form-control-sm fw-bold kit-input-nombre"
+                    <input type="text" class="form-control fw-bold kit-input-nombre border-secondary-subtle"
                            list="${listNomId}"
                            placeholder="Escriba o elija del inventario..."
                            value="${escapeHtml(nombreVal)}"
                            oninput="window.kitsModalItemNombreCambiado(this, '${rowId}')"
-                           autocomplete="off">
+                           autocomplete="off"
+                           style="min-height: 42px; font-size: 0.90rem;">
                     <datalist id="${listNomId}">
                         ${(window._kitsAlmacenItems || []).map(it => `<option value="${escapeHtml(it.nombre)}">${escapeHtml(it.codInv || it.codigo)}</option>`).join('')}
                     </datalist>
@@ -935,24 +1219,26 @@ window.kitsModalAgregarFila = function (data = {}) {
 
             <!-- 3. Cantidad -->
             <div class="col-8 col-md-2">
-                <label class="form-label d-block mb-1 text-secondary fw-semibold text-center" style="font-size:0.75rem;">Cantidad</label>
-                <input type="number" class="form-control form-control-sm text-center font-monospace fw-bold kit-input-cant"
+                <label class="form-label d-block mb-1 text-secondary fw-bold text-center" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.4px;">Cantidad</label>
+                <input type="number" class="form-control text-center font-monospace fw-bold kit-input-cant border-secondary-subtle"
                        value="${cant}" step="0.01" min="0.01"
-                       oninput="window.kitsModalRecalcularTotales()">
+                       oninput="window.kitsModalRecalcularTotales()"
+                       style="min-height: 42px; font-size: 0.90rem;">
             </div>
 
             <!-- 4. Botón Eliminar Fila -->
             <div class="col-4 col-md-1 text-end pt-md-4">
-                <button type="button" class="btn btn-sm btn-outline-danger rounded-2 p-1 px-2"
-                        title="Quitar ítem" onclick="window.kitsModalEliminarFila('${rowId}')">
-                    <i class="bi bi-trash"></i>
+                <button type="button" class="btn btn-outline-danger border-danger-subtle rounded-3 p-0 d-inline-flex align-items-center justify-content-center"
+                        title="Quitar ítem" onclick="window.kitsModalEliminarFila('${rowId}')"
+                        style="width: 42px; height: 42px; font-size: 1.1rem;">
+                    <i class="bi bi-trash3"></i>
                 </button>
             </div>
         </div>
 
         <!-- Hint de Stock en Almacén -->
-        <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top border-slate-100">
-            <small class="text-muted font-monospace kit-stock-hint" style="font-size:0.74rem;">
+        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-slate-100">
+            <small class="text-muted font-monospace kit-stock-hint" style="font-size:0.75rem;">
                 ${invItem ? `<i class="bi bi-box-seam me-1 text-primary"></i>Stock Almacén: <strong>${invItem.stock}</strong> ${invItem.unidad}` : '<span class="text-muted fst-italic">Ingrese código o nombre para vincular a Almacén</span>'}
             </small>
         </div>
@@ -1042,18 +1328,16 @@ window.kitsModalRecalcularTotales = function () {
 };
 
 /**
- * Guardar Kit (Crear / Actualizar en lote)
+ * Guardar Kit (Soporta Generación Independiente Multi-Modelo)
  */
 window.kitsModalGuardar = function () {
-    const selMarca = document.getElementById('modalKitMarca');
-    const selModelo = document.getElementById('modalKitModelo');
-    const selTipo = document.getElementById('modalKitTipoMP');
+    let marca = (typeof window._cbGet === 'function' ? window._cbGet('modalKitMarca') : '') || (document.getElementById('modalKitMarca')?.value || '');
+    let tipo = (typeof window._cbGet === 'function' ? window._cbGet('modalKitTipoMP') : '') || (document.getElementById('modalKitTipoMP')?.value || '');
     const txtAlias = document.getElementById('modalKitNombreAlias');
     const txtObs = document.getElementById('modalKitObservaciones');
 
-    const marca = (selMarca ? selMarca.value : '').trim().toUpperCase();
-    const modelo = (selModelo ? selModelo.value : 'TODOS LOS MODELOS').trim().toUpperCase() || 'TODOS LOS MODELOS';
-    const tipo = (selTipo ? selTipo.value : '').trim().toUpperCase();
+    marca = (marca || '').trim().toUpperCase();
+    tipo = (tipo || '').trim().toUpperCase();
     const alias = (txtAlias ? txtAlias.value : '').trim();
     const obs = (txtObs ? txtObs.value : '').trim();
 
@@ -1067,7 +1351,7 @@ window.kitsModalGuardar = function () {
     const container = document.getElementById('modalKitItemsContainer');
     const rows = container ? container.querySelectorAll('.kit-item-row-card') : [];
 
-    const itemsToSave = [];
+    const baseItems = [];
     for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
         const itemCodigo = (r.querySelector('.kit-input-codigo')?.value || '').trim();
@@ -1091,11 +1375,8 @@ window.kitsModalGuardar = function () {
         let codFinal = invMatch ? (invMatch.codInv || invMatch.codigo || invMatch.codigo_articulo) : itemCodigo;
         if (/^\d+$/.test(codFinal)) codFinal = 'INV-' + codFinal.padStart(4, '0');
 
-        itemsToSave.push({
+        baseItems.push({
             id,
-            marca_vehiculo: marca,
-            modelo_vehiculo: modelo,
-            tipo_mp: tipo,
             nombre_kit: alias,
             item_codigo: codFinal || '-',
             item_nombre: invMatch ? invMatch.nombre : itemNombre,
@@ -1103,15 +1384,15 @@ window.kitsModalGuardar = function () {
             unidad_medida: unid,
             costo_unitario: cu,
             costo_total: ct,
-            observaciones: obs
+            observaciones: obs,
+            orden: i + 1
         });
     }
 
-    if (!itemsToSave.length && !window.kitsDeletedItemIds.length) {
+    if (!baseItems.length && !window.kitsDeletedItemIds.length) {
         return alert('Debe registrar al menos un ítem o repuesto en el kit.');
     }
 
-    // Ejecutar promesas de guardado y eliminación
     const promises = [];
 
     // 1. Eliminar ítems quitados
@@ -1119,19 +1400,67 @@ window.kitsModalGuardar = function () {
         promises.push(fetch(`/api/mantenimiento-kits/${id}`, { method: 'DELETE' }));
     });
 
-    // 2. Guardar o actualizar ítems
-    itemsToSave.forEach(it => {
-        const method = it.id ? 'PUT' : 'POST';
-        const url = it.id ? `/api/mantenimiento-kits/${it.id}` : '/api/mantenimiento-kits';
+    // 2. Determinar modelos a generar independientemente
+    let modelosToSave = Array.from(window._kitsModalModelosSeleccionados);
+    if (!modelosToSave.length) {
+        modelosToSave = ['TODOS LOS MODELOS'];
+    }
 
-        promises.push(
-            fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(it)
-            })
-        );
-    });
+    if (window._kitEditandoGrupo) {
+        // En modo edición de un grupo existente
+        baseItems.forEach(it => {
+            const payload = {
+                ...it,
+                marca_vehiculo: marca,
+                modelo_vehiculo: window._kitEditandoGrupo.modelo || modelosToSave[0] || 'TODOS LOS MODELOS',
+                tipo_mp: tipo
+            };
+            const method = it.id ? 'PUT' : 'POST';
+            const url = it.id ? `/api/mantenimiento-kits/${it.id}` : '/api/mantenimiento-kits';
+
+            promises.push(
+                fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+            );
+        });
+    } else {
+        // En modo nuevo: Para cada modelo seleccionado, generar kit de forma independiente
+        modelosToSave.forEach(mod => {
+            baseItems.forEach(it => {
+                const payload = {
+                    marca_vehiculo: marca,
+                    modelo_vehiculo: mod,
+                    tipo_mp: tipo,
+                    nombre_kit: it.nombre_kit,
+                    item_codigo: it.item_codigo,
+                    item_nombre: it.item_nombre,
+                    cantidad: it.cantidad,
+                    unidad_medida: it.unidad_medida,
+                    costo_unitario: it.costo_unitario,
+                    costo_total: it.costo_total,
+                    orden: it.orden,
+                    observaciones: it.observaciones
+                };
+
+                promises.push(
+                    fetch('/api/mantenimiento-kits', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                );
+            });
+        });
+    }
+
+    const btnGuardar = document.getElementById('btnGuardarKitMP');
+    if (btnGuardar) {
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
+    }
 
     Promise.all(promises)
         .then(() => {
@@ -1148,6 +1477,12 @@ window.kitsModalGuardar = function () {
         .catch(err => {
             console.error('Error guardando kit de mantenimiento:', err);
             alert('Ocurrió un error al guardar los cambios del kit.');
+        })
+        .finally(() => {
+            if (btnGuardar) {
+                btnGuardar.disabled = false;
+                btnGuardar.innerHTML = '<i class="bi bi-check-circle-fill"></i> Guardar Kit';
+            }
         });
 };
 
@@ -1329,6 +1664,15 @@ window.kitsImportarExcel = function (event) {
     };
     reader.readAsArrayBuffer(file);
 };
+
+// Listener global para cerrar dropdowns de selección múltiple al hacer clic fuera
+document.addEventListener('click', function (e) {
+    const chipContainer = document.getElementById('modalKitModelosChipsContainer');
+    const dropdown = document.getElementById('modalKitModelosDropdown');
+    if (chipContainer && dropdown && !chipContainer.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.style.display = 'none';
+    }
+});
 
 // Helper de escape HTML
 function escapeHtml(str) {
