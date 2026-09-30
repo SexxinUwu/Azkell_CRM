@@ -187,6 +187,36 @@
     font-weight: 700 !important;
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.10), 0 1px 2px rgba(15, 23, 42, 0.06) !important;
 }
+.ck-segment-item .badge {
+    background: #cbd5e1 !important;
+    color: #334155 !important;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    padding: 2px 6px !important;
+    border-radius: 9999px !important;
+    transition: all 0.18s ease !important;
+}
+.ck-segment-item.active .badge {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+}
+@media (max-width: 768px) {
+    .ck-apple-segmented {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        scrollbar-width: none;
+    }
+    .ck-apple-segmented::-webkit-scrollbar {
+        display: none;
+    }
+    .ck-segment-item {
+        padding: 5px 10px !important;
+        font-size: 0.76rem !important;
+        white-space: nowrap;
+    }
+}
 
 /* Control Bar (Search + Apple Search) */
 .ent-app-container .ck-apple-search {
@@ -555,32 +585,59 @@
         </div>
     </div>
 
-    <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS RÁPIDOS ────────────────────── -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap" style="max-width: 620px;">
-            <!-- Selector de Vista: Por Artículos vs Por Órdenes (Desktop) -->
-            <div class="ck-apple-segmented d-none d-md-inline-flex flex-shrink-0" id="ent-view-switcher">
-                <button type="button" class="ck-segment-item active" id="ent-btn-view-articulos" onclick="window._entCambiarModoVista('articulos', this)" title="Ver cada artículo detallado">
-                    <i class="bi bi-list-nested me-1"></i> Por Artículos
-                </button>
-                <button type="button" class="ck-segment-item" id="ent-btn-view-ordenes" onclick="window._entCambiarModoVista('ordenes', this)" title="Ver una fila consolidada por orden">
-                    <i class="bi bi-card-list me-1"></i> Por Órdenes
-                </button>
-            </div>
-
-            <!-- Buscador -->
-            <div class="position-relative flex-grow-1" style="min-width: 200px;">
-                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
-                <input type="text" id="ent-buscar" class="ck-apple-search" placeholder="Código, proveedor, documento..." oninput="window.filtrarEntradas()">
-            </div>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-            <input type="date" id="ent-fil-desde" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:130px; height:38px;" title="Desde" onchange="window.filtrarEntradas()">
-            <input type="date" id="ent-fil-hasta" class="form-control form-control-sm rounded-3 bg-white border" style="max-width:130px; height:38px;" title="Hasta" onchange="window.filtrarEntradas()">
-            <button onclick="window._entLimpiarFechas()" class="btn btn-light bg-white border text-secondary rounded-3" style="height:38px; width:38px; display:flex; align-items:center; justify-content:center;" title="Limpiar fechas">
-                <i class="bi bi-x-lg"></i>
+    <!-- ── 3. FILTROS DE ESTADO Y VISTA (SEGMENTED PILLS) ──────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <!-- Selector de Estados Dinámico (Registradas, Aprobadas, Procesadas, Todas) -->
+        <div class="ck-apple-segmented flex-wrap" id="ent-status-switcher">
+            <button type="button" class="ck-segment-item active" id="ent-btn-status-registradas" onclick="window._entCambiarEstadoFiltro('registradas', this)" title="Órdenes pendientes de aprobación">
+                <i class="bi bi-clock-history text-secondary"></i> <span>Registradas</span>
+                <span class="badge" id="ent-badge-registradas">0</span>
             </button>
-            <span id="ent-contador" class="text-secondary small fw-bold ms-1"></span>
+            <button type="button" class="ck-segment-item" id="ent-btn-status-aprobadas" onclick="window._entCambiarEstadoFiltro('aprobadas', this)" title="Órdenes aprobadas pendientes de recepción/procesamiento">
+                <i class="bi bi-check2-circle text-success"></i> <span>Aprobadas</span>
+                <span class="badge" id="ent-badge-aprobadas">0</span>
+            </button>
+            <button type="button" class="ck-segment-item" id="ent-btn-status-procesadas" onclick="window._entCambiarEstadoFiltro('procesadas', this)" title="Órdenes procesadas y recepcionadas (por defecto fecha actual)">
+                <i class="bi bi-box-seam text-primary"></i> <span>Procesadas</span>
+                <span class="badge" id="ent-badge-procesadas">0</span>
+            </button>
+            <button type="button" class="ck-segment-item" id="ent-btn-status-todas" onclick="window._entCambiarEstadoFiltro('todas', this)" title="Ver todas las órdenes sin importar estado">
+                <i class="bi bi-collection text-dark"></i> <span>Todas</span>
+                <span class="badge" id="ent-badge-todas">0</span>
+            </button>
+        </div>
+
+        <!-- Selector de Vista: Por Artículos vs Por Órdenes (Desktop) -->
+        <div class="ck-apple-segmented d-none d-md-inline-flex flex-shrink-0" id="ent-view-switcher">
+            <button type="button" class="ck-segment-item active" id="ent-btn-view-articulos" onclick="window._entCambiarModoVista('articulos', this)" title="Ver cada artículo detallado">
+                <i class="bi bi-list-nested me-1"></i> Por Artículos
+            </button>
+            <button type="button" class="ck-segment-item" id="ent-btn-view-ordenes" onclick="window._entCambiarModoVista('ordenes', this)" title="Ver una fila consolidada por orden">
+                <i class="bi bi-card-list me-1"></i> Por Órdenes
+            </button>
+        </div>
+    </div>
+
+    <!-- ── 4. BARRA DE BÚSQUEDA Y RANGO DE FECHAS ─────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <!-- Buscador -->
+        <div class="position-relative flex-grow-1" style="min-width: 220px; max-width: 520px;">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+            <input type="text" id="ent-buscar" class="ck-apple-search" placeholder="Código, proveedor, documento, placa..." oninput="window.filtrarEntradas()">
+        </div>
+
+        <!-- Filtros de Fecha y Contador -->
+        <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
+            <div class="d-flex align-items-center gap-1 bg-white border rounded-3 px-2 py-1 shadow-2xs">
+                <i class="bi bi-calendar3 text-primary me-1" style="font-size:0.85rem;"></i>
+                <input type="date" id="ent-fil-desde" class="form-control form-control-sm border-0 p-0 fw-semibold text-dark" style="width:118px; height:28px; font-size:0.82rem; background:transparent;" title="Fecha Desde" onchange="window.filtrarEntradas()">
+                <span class="text-muted small fw-bold px-1">—</span>
+                <input type="date" id="ent-fil-hasta" class="form-control form-control-sm border-0 p-0 fw-semibold text-dark" style="width:118px; height:28px; font-size:0.82rem; background:transparent;" title="Fecha Hasta" onchange="window.filtrarEntradas()">
+                <button onclick="window._entLimpiarFechas()" class="btn btn-sm btn-link text-secondary p-0 ms-1 d-flex align-items-center" style="text-decoration:none;" title="Limpiar fechas">
+                    <i class="bi bi-x-circle-fill fs-6 text-muted"></i>
+                </button>
+            </div>
+            <span id="ent-contador" class="badge bg-white text-secondary border fw-bold px-2.5 py-2 shadow-2xs" style="font-size:0.78rem;">0 registros</span>
         </div>
     </div>
 
