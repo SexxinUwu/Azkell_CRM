@@ -1764,11 +1764,40 @@ window._entRender = function() {
         `;
 
         var accionesHtml =
-            '<div class="d-flex gap-1 justify-content-center align-items-center">' +
-                '<button class="btn btn-xs btn-outline-info" onclick="event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\')" title="Subir / Adjuntar Archivos"><i class="bi bi-paperclip"></i></button>' +
-                '<button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver PDF"><i class="bi bi-eye"></i></button>' +
-                (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="event.stopPropagation(); window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-pencil"></i></button>') +
-                (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="event.stopPropagation(); window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-trash"></i></button>') +
+            '<div class="dropdown d-inline-block" onclick="event.stopPropagation();">' +
+                '<button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1 text-secondary" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="border-radius:8px; width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center;" title="Acciones">' +
+                    '<i class="bi bi-three-dots-vertical"></i>' +
+                '</button>' +
+                '<ul class="dropdown-menu dropdown-menu-start shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 175px; z-index: 1060;">' +
+                    '<li>' +
+                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalDetalleOC(\'' + _entEsc(d.id) + '\')">' +
+                            '<i class="bi bi-eye text-primary fs-6"></i> Ver Detalle' +
+                        '</a>' +
+                    '</li>' +
+                    '<li>' +
+                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\')">' +
+                            '<i class="bi bi-paperclip text-info fs-6"></i> Adjuntos / Sustentos' +
+                        '</a>' +
+                    '</li>' +
+                    '<li>' +
+                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')">' +
+                            '<i class="bi bi-file-earmark-pdf text-danger fs-6"></i> Imprimir PDF' +
+                        '</a>' +
+                    '</li>' +
+                    (canEditRow ? 
+                    '<li>' +
+                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')">' +
+                            '<i class="bi bi-pencil text-warning fs-6"></i> Editar Orden' +
+                        '</a>' +
+                    '</li>' : '') +
+                    (canDelete ? 
+                    '<li><hr class="dropdown-divider my-1"></li>' +
+                    '<li>' +
+                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')">' +
+                            '<i class="bi bi-trash text-danger fs-6"></i> Eliminar' +
+                        '</a>' +
+                    '</li>' : '') +
+                '</ul>' +
             '</div>';
 
         var provHtml = d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>';
