@@ -1084,7 +1084,7 @@ window.rotAbrirDetalle = function(idOT) {
 
 // ── Cerrar drawer ─────────────────────────────────────────────────
 window.rotCerrarDetalle = function() {
-    ['rot-drawer-trabajo', 'rot-drawer-material', 'drawerInspeccion', 'rot-drawer-backlog', 'rot-drawer-editar-ot', 'rot-drawer-editar-fechas', 'rot-drawer-kit'].forEach(function(id) {
+    ['rot-drawer-trabajo', 'rot-drawer-material', 'drawerInspeccion', 'rot-drawer-backlog', 'rot-drawer-editar-ot', 'rot-drawer-editar-fechas', 'rot-drawer-kit', 'rot-drawer-oc'].forEach(function(id) {
         var d = document.getElementById(id); if (d) d.classList.remove('open');
     });
     var back1  = document.getElementById('rotDrawerBackdrop');
@@ -3911,6 +3911,367 @@ window._rotInsertarKit = function() {
         window.rotToast('Se agregaron ' + items.length + ' repuestos del kit ' + kit.tipo, 'bg-success text-white');
     } else if (typeof window.mostrarAlerta === 'function') {
         window.mostrarAlerta('Se agregaron ' + items.length + ' repuestos del kit ' + kit.tipo, 'success');
+    }
+};
+
+// ══════════════════════════════════════════════════════════════════
+// LÓGICA ORDEN DE COMPRA (REPORTES OT - SOLICITUDES DE SALIDA)
+// ══════════════════════════════════════════════════════════════════
+window._rotOCsDisponibles = [];
+window._rotOCSeleccionada = null;
+
+window._rotAbrirModalOC = async function () {
+    var inputCod = document.getElementById('rot-oc-input-codigo');
+    var datalist = document.getElementById('rot-oc-datalist');
+    var badgeCount = document.getElementById('rot-oc-count-badge');
+    var infoCard = document.getElementById('rot-oc-info-card');
+    var prevWrap = document.getElementById('rot-oc-preview-wrap');
+    var noMatch = document.getElementById('rot-oc-no-match');
+    var btnInsertar = document.getElementById('rot-btn-insertar-oc');
+
+    if (inputCod) inputCod.value = '';
+    if (infoCard) infoCard.classList.add('d-none');
+    if (prevWrap) prevWrap.classList.add('d-none');
+    if (noMatch) noMatch.classList.remove('d-none');
+    if (btnInsertar) btnInsertar.disabled = true;
+    window._rotOCSeleccionada = null;
+
+    // Abrir Drawer al frente
+    window.rotAbrirSubDrawer('rot-drawer-oc');
+
+    // Asegurar inventario cargado para verificación de stock y asociación
+    if (!window._rotInvData || !window._rotInvData.length) {
+        try {
+            var rInv = await fetch('/api/almacen/inventario');
+            if (rInv.ok) window._rotInvData = await rInv.json();
+        } catch (e) { }
+    }
+
+    // Cargar listado de órdenes de compra
+    try {
+        if (badgeCount) badgeCount.textContent = 'Cargando...';
+        var resp = await fetch('/api/ordenes-compra');
+        var ocs = resp.ok ? await resp.json() : [];
+        window._rotOCsDisponibles = Array.isArray(ocs) ? ocs : [];
+
+        if (badgeCount) {
+            badgeCount.textContent = window._rotOCsDisponibles.length + ' O/C disponibles';
+        }
+
+        if (datalist) {
+            datalist.innerHTML = window._rotOCsDisponibles.map(function (oc) {
+                var prov = oc.proveedor_nombre ? ' — ' + oc.proveedor_nombre : '';
+                var total = (oc.moneda === 'USD' ? '$' : 'S/.') + parseFloat(oc.monto_total || 0).toFixed(2);
+                return '<option value="' + rotEscHtml(oc.codigo || '') + '">' + rotEscHtml((oc.codigo || '') + prov + ' (' + total + ')') + '</option>';
+            }).join('');
+        }
+    } catch (err) {
+        console.error('Error cargando OCs en reportes-ot:', err);
+        if (badgeCount) badgeCount.textContent = 'Error al cargar';
+    }
+
+    if (inputCod) setTimeout(function () { inputCod.focus(); }, 150);
+};
+
+window._rotOnOCInputChanged = async function (val) {
+    var raw = (val || '').trim().toUpperCase();
+    var infoCard = document.getElementById('rot-oc-info-card');
+    var prevWrap = document.getElementById('rot-oc-preview-wrap');
+    var noMatch = document.getElementById('rot-oc-no-match');
+    var btnInsertar = document.getElementById('rot-btn-insertar-oc');
+
+    if (!raw) {
+        if (infoCard) infoCard.classList.add('d-none');
+        if (prevWrap) prevWrap.classList.add('d-none');
+        if (noMatch) noMatch.classList.remove('d-none');
+        if (btnInsertar) btnInsertar.disabled = true;
+        window._rotOCSeleccionada = null;
+        return;
+    }
+
+    // Buscar coincidencia exacta o por código que empiece / contenga
+    var match = (window._rotOCsDisponibles || []).find(function (oc) {
+        var cod = (oc.codigo || '').toUpperCase().trim();
+        return cod === raw;
+    });
+
+    if (!match) {
+        match = (window._rotOCsDisponibles || []).find(function (oc) {
+            var cod = (oc.codigo || '').toUpperCase().trim();
+            var prov = (oc.proveedor_nombre || '').toUpperCase().trim();
+            return cod.includes(raw) || prov.includes(raw);
+        });
+    }
+
+    if (!match) {
+        // Si no está en la lista previa, intentar consultar directo al endpoint por código
+        try {
+            var r = await fetch('/api/ordenes-compra/' + encodeURIComponent(raw));
+            if (r.ok) {
+                match = await r.json();
+            }
+        } catch (e) { }
+    }
+
+    if (!match) {
+        if (infoCard) infoCard.classList.add('d-none');
+        if (prevWrap) prevWrap.classList.add('d-none');
+        if (noMatch) {
+            noMatch.classList.remove('d-none');
+            noMatch.innerHTML = '<i class="bi bi-exclamation-circle text-warning fs-3 d-block mb-2"></i>No se encontró ninguna Orden de Compra con: <strong>' + rotEscHtml(raw) + '</strong>';
+        }
+        if (btnInsertar) btnInsertar.disabled = true;
+        window._rotOCSeleccionada = null;
+        return;
+    }
+
+    // Cargar detalle completo si no vienen items
+    var fullOC = match;
+    if (!Array.isArray(fullOC.items)) {
+        try {
+            var respDet = await fetch('/api/ordenes-compra/' + (match.id || match.codigo));
+            if (respDet.ok) fullOC = await respDet.json();
+        } catch (e) { }
+    }
+
+    window._rotOCSeleccionada = fullOC;
+    window._rotRenderOCPreview(fullOC);
+};
+
+window._rotRenderOCPreview = function (oc) {
+    var infoCard = document.getElementById('rot-oc-info-card');
+    var prevWrap = document.getElementById('rot-oc-preview-wrap');
+    var noMatch = document.getElementById('rot-oc-no-match');
+    var tb = document.getElementById('rot-oc-preview-tbody');
+    var countEl = document.getElementById('rot-oc-items-count');
+    var btnInsertar = document.getElementById('rot-btn-insertar-oc');
+
+    // Llenar card de info
+    var codEl = document.getElementById('rot-oc-info-codigo');
+    var estEl = document.getElementById('rot-oc-info-estado');
+    var monEl = document.getElementById('rot-oc-info-monto');
+    var prvEl = document.getElementById('rot-oc-info-proveedor');
+    var rucEl = document.getElementById('rot-oc-info-ruc');
+    var solEl = document.getElementById('rot-oc-info-solicitante');
+    var motEl = document.getElementById('rot-oc-info-motivo');
+
+    if (codEl) codEl.textContent = oc.codigo || '—';
+    if (estEl) {
+        var st = (oc.estado || 'REGISTRADA').toUpperCase();
+        var badgeCls = st.includes('APROB') ? 'bg-success-subtle text-success border border-success-subtle' :
+            st.includes('RECIB') ? 'bg-primary-subtle text-primary border border-primary-subtle' :
+            st.includes('RECHAZ') || st.includes('ANUL') ? 'bg-danger-subtle text-danger border border-danger-subtle' :
+            'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+        estEl.className = 'badge ms-2 px-2 py-1 ' + badgeCls;
+        estEl.textContent = st;
+    }
+    if (monEl) monEl.textContent = (oc.moneda === 'USD' ? '$ ' : 'S/ ') + parseFloat(oc.monto_total || 0).toFixed(2);
+    if (prvEl) prvEl.textContent = oc.proveedor_nombre || '—';
+    if (rucEl) rucEl.textContent = oc.proveedor_ruc ? 'RUC: ' + oc.proveedor_ruc : '';
+    if (solEl) solEl.textContent = oc.solicitado_por || '—';
+    if (motEl) motEl.textContent = oc.motivo_solicitud || '';
+
+    if (infoCard) infoCard.classList.remove('d-none');
+    if (noMatch) noMatch.classList.add('d-none');
+
+    var items = Array.isArray(oc.items) ? oc.items : [];
+    if (countEl) countEl.textContent = items.length;
+
+    if (!items.length) {
+        if (tb) {
+            tb.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">Esta Orden de Compra no contiene ítems registrados.</td></tr>';
+        }
+        if (prevWrap) prevWrap.classList.remove('d-none');
+        if (btnInsertar) btnInsertar.disabled = true;
+        return;
+    }
+
+    if (tb) {
+        tb.innerHTML = items.map(function (it, idx) {
+            var desc = it.descripcion || it.nombre || it.articulo || '—';
+            var cantReq = parseFloat(it.cantidad || 1);
+
+            // Buscar stock en almacén para este ítem
+            var invItem = (window._rotInvData || []).find(function (x) {
+                var invNom = (x.descripcion || x.articulo || x.nombre || '').trim().toUpperCase();
+                var ocNom = desc.trim().toUpperCase();
+                return invNom === ocNom || invNom.includes(ocNom) || ocNom.includes(invNom);
+            });
+
+            var stock = invItem ? parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : 0)) : null;
+            var stockBadge = '';
+
+            if (stock === null) {
+                stockBadge = '<span class="badge bg-light text-muted border">No inventariado</span>';
+            } else if (stock >= cantReq) {
+                stockBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>' + stock + ' ' + (it.unidad_medida || 'UND') + '</span>';
+            } else if (stock > 0) {
+                stockBadge = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Stock bajo: ' + stock + '</span>';
+            } else {
+                stockBadge = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="bi bi-x-circle-fill me-1"></i>Sin Stock (0)</span>';
+            }
+
+            return `
+                <tr>
+                    <td class="text-center" style="padding: 8px 4px;">
+                        <input class="form-check-input rot-oc-item-check" type="checkbox" data-idx="${idx}" checked>
+                    </td>
+                    <td class="fw-bold text-dark" style="padding: 8px 12px;">
+                        <i class="bi bi-box text-secondary me-1"></i> ${rotEscHtml(desc)}
+                    </td>
+                    <td class="text-center fw-bold text-primary" style="padding: 8px 12px;">
+                        ${cantReq}
+                    </td>
+                    <td class="text-center text-muted fw-medium" style="padding: 8px 12px; font-size: 0.76rem;">
+                        ${rotEscHtml(it.unidad_medida || 'UND')}
+                    </td>
+                    <td class="text-center" style="padding: 8px 12px;">
+                        ${stockBadge}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    if (prevWrap) prevWrap.classList.remove('d-none');
+    if (btnInsertar) btnInsertar.disabled = false;
+};
+
+window._rotToggleCheckAllOC = function (checked) {
+    var cbs = document.querySelectorAll('.rot-oc-item-check');
+    cbs.forEach(function (cb) { cb.checked = checked; });
+};
+
+window._rotInsertarOC = function () {
+    if (!window._rotOCSeleccionada || !window._rotOCSeleccionada.items || !window._rotOCSeleccionada.items.length) {
+        return;
+    }
+
+    var oc = window._rotOCSeleccionada;
+    var allItems = oc.items;
+    var cbs = document.querySelectorAll('.rot-oc-item-check');
+    var selectedIndexes = [];
+    cbs.forEach(function (cb) {
+        if (cb.checked) {
+            selectedIndexes.push(parseInt(cb.getAttribute('data-idx'), 10));
+        }
+    });
+
+    var items = allItems.filter(function (_, i) {
+        return selectedIndexes.includes(i);
+    });
+
+    if (!items.length) {
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('Selecciona al menos un producto para agregar', 'warning');
+        } else {
+            alert('Selecciona al menos un producto para agregar');
+        }
+        return;
+    }
+
+    // Limpiar fila vacía por defecto si existe
+    var descs = document.querySelectorAll('.rot-mat-item-desc');
+    if (descs.length === 1 && !descs[0].value.trim()) {
+        var singleTr = document.getElementById('rot-mat-item-0');
+        if (singleTr) singleTr.remove();
+    }
+
+    // Inyectar productos de la OC
+    items.forEach(function (it) {
+        var idx = window._rotMatIdx++;
+        var tbody = document.getElementById('rot-mat-items-tbody');
+        if (!tbody) return;
+
+        var tr = document.createElement('tr');
+        tr.id = 'rot-mat-item-' + idx;
+        tr.innerHTML = `
+            <td style="padding:6px 8px;">
+                <div style="display:flex;gap:4px;align-items:center;">
+                    <input type="text" class="form-control form-control-sm rot-mat-item-desc bg-white fw-medium" list="rot-mat-inv-list" placeholder="Buscar artículo…" 
+                        data-idx="${idx}" oninput="window._rotBuscarArtMat(this, ${idx})" style="border-radius:8px; font-size:0.8rem;">
+                    <button type="button" class="btn btn-sm btn-light border text-primary shadow-2xs" style="flex-shrink:0; padding:3px 8px; border-radius:8px;" 
+                        onclick="window._rotAbrirQR(${idx})" title="Escanear código de barras o QR">
+                        <i class="bi bi-upc-scan"></i>
+                    </button>
+                </div>
+                <input type="hidden" class="rot-mat-item-inv-id" data-idx="${idx}">
+                <input type="hidden" class="rot-mat-item-stock" data-idx="${idx}" value="">
+                <input type="hidden" class="rot-mat-item-cu" data-idx="${idx}" value="0">
+                <input type="hidden" class="rot-mat-item-imp" data-idx="${idx}" value="0">
+                <div class="rot-mat-item-stock-lbl" data-idx="${idx}" style="font-size:0.75rem;margin-top:4px;display:none;"></div>
+            </td>
+            <td style="padding:6px 8px; width:120px; text-align:center;">
+                <input type="number" class="form-control form-control-sm rot-mat-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="${parseFloat(it.cantidad || 1)}" min="0.001" step="0.001" oninput="window._rotCalcItemMat(${idx})" style="border-radius:8px; font-size:0.82rem;">
+            </td>
+            <td style="padding:6px 8px; width:44px; text-align:center;">
+                <button type="button" class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1" onclick="window._rotQuitarItemMat(${idx})" title="Eliminar fila">
+                    <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        var itDesc = it.descripcion || it.nombre || it.articulo || '';
+
+        // Buscar correspondencia en almacén
+        var invItem = (window._rotInvData || []).find(function (x) {
+            var invNom = (x.descripcion || x.articulo || x.nombre || '').trim().toUpperCase();
+            var ocNom = itDesc.trim().toUpperCase();
+            return invNom === ocNom || invNom.includes(ocNom) || ocNom.includes(invNom);
+        });
+
+        var descEl  = tr.querySelector('.rot-mat-item-desc');
+        var hidEl   = tr.querySelector('.rot-mat-item-inv-id');
+        var cuEl    = tr.querySelector('.rot-mat-item-cu');
+        var stockEl = tr.querySelector('.rot-mat-item-stock');
+        var lblEl   = tr.querySelector('.rot-mat-item-stock-lbl');
+
+        if (invItem) {
+            if (descEl) descEl.value = invItem.id + ' — ' + (invItem.descripcion || itDesc);
+            if (hidEl) hidEl.value = invItem.id;
+            var costo = parseFloat(invItem.costo_referencial || invItem.costo || it.precio_unitario || 0);
+            if (cuEl) cuEl.value = costo.toFixed(2);
+            var stock = parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : -1));
+            if (stockEl) stockEl.value = stock;
+            if (lblEl) {
+                lblEl.style.display = 'block';
+                if (stock <= 0) {
+                    lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock disponible</span>';
+                } else if (stock < parseFloat(it.cantidad || 1)) {
+                    lblEl.innerHTML = '<span style="color:#d97706;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Stock insuficiente: ' + stock + ' ' + (invItem.unidad || 'und') + '</span>';
+                } else {
+                    lblEl.innerHTML = '<span style="color:#16a34a;"><i class="bi bi-check-circle-fill me-1"></i>Stock disponible: <strong>' + stock + '</strong> ' + (invItem.unidad || 'und') + '</span>';
+                }
+            }
+        } else {
+            if (descEl) descEl.value = itDesc;
+            if (cuEl) cuEl.value = parseFloat(it.precio_unitario || 0).toFixed(2);
+        }
+
+        window._rotCalcItemMat(idx);
+    });
+
+    // Anexar referencia de la OC en Observaciones de la solicitud si aplica
+    var obsEl = document.getElementById('rot-mat-obs');
+    if (obsEl) {
+        var refOC = 'Atención según O/C ' + (oc.codigo || '');
+        if (!obsEl.value.trim()) {
+            obsEl.value = refOC;
+        } else if (!obsEl.value.includes(oc.codigo)) {
+            obsEl.value = obsEl.value.trim() + ' | ' + refOC;
+        }
+    }
+
+    _rotActualizarTotalMat();
+
+    // Cerrar sub-drawer
+    window.rotCerrarSubDrawer('rot-drawer-oc');
+
+    if (typeof window.rotToast === 'function') {
+        window.rotToast('Se agregaron ' + items.length + ' productos de la Orden de Compra ' + oc.codigo, 'bg-success text-white');
+    } else if (typeof window.mostrarAlerta === 'function') {
+        window.mostrarAlerta('Se agregaron ' + items.length + ' productos de la Orden de Compra ' + oc.codigo, 'success');
     }
 };
 

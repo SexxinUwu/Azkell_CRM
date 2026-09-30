@@ -264,9 +264,9 @@
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, .45) !important;
+        background: rgba(15, 23, 42, 0.55) !important;
         z-index: 1089 !important;
-        backdrop-filter: blur(2px);
+        transition: opacity .2s ease;
     }
 
     #salNuevoBackdrop.open {
@@ -725,6 +725,11 @@
                         <i class="bi bi-box-seam"></i> Agregar Kit
                     </button>
                     <button type="button"
+                        class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1"
+                        style="font-size: 0.72rem;" onclick="window._salAbrirModalOC()">
+                        <i class="bi bi-file-earmark-text"></i> Agregar Orden de Compra
+                    </button>
+                    <button type="button"
                         class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1"
                         style="font-size: 0.72rem;" onclick="window._salAgregarItem()">
                         <i class="bi bi-plus-lg"></i> Agregar Ítem
@@ -886,6 +891,131 @@
         <button type="button" class="btn btn-primary fw-bold rounded-3 px-4 py-2 shadow-2xs" id="sal-btn-insertar-kit"
             onclick="window._salInsertarKit()" disabled>
             <i class="bi bi-plus-circle me-1"></i> Agregar Repuestos al Formulario
+        </button>
+    </div>
+</div>
+
+<!-- ═══════════════ SUB-DRAWER: Cargar Orden de Compra (Almacén Salidas) ═══════════════ -->
+<div class="sal-drawer" id="sal-drawer-oc" style="max-width: 760px; width: 100%; z-index: 1150 !important;">
+    <div class="sal-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white"
+        style="height: auto; min-height: 54px;">
+        <div class="d-flex align-items-center gap-2">
+            <button
+                class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs"
+                onclick="window.salCerrarSubDrawer('sal-drawer-oc')" title="Volver"
+                style="width: 34px; height: 34px; color: #64748b;">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <div>
+                <span class="sal-drawer-title fw-bold text-dark d-flex align-items-center gap-2"
+                    style="font-size: 1.05rem;">
+                    <i class="bi bi-file-earmark-text-fill text-primary"></i> Cargar Productos de Orden de Compra
+                </span>
+                <small class="text-muted d-block" style="font-size: 0.72rem;">Busca o digita el N° de O/C para despachar sus productos rápidamente</small>
+            </div>
+        </div>
+        <button class="btn btn-sm btn-light border-0 rounded-circle p-1"
+            onclick="window.salCerrarSubDrawer('sal-drawer-oc')" style="color:#64748b;">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="sal-drawer-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc;">
+        <!-- Card 1: Búsqueda / Selector de O/C -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <label class="form-label fw-bold text-dark d-flex justify-content-between align-items-center"
+                style="font-size: 0.74rem; text-transform: uppercase; margin-bottom: 6px;">
+                <span><i class="bi bi-search me-1 text-primary"></i> Escribir o Seleccionar N° de Orden de Compra:</span>
+                <span class="badge bg-light text-muted border fw-normal" id="sal-oc-count-badge">0 O/C registradas</span>
+            </label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted" style="border-radius: 8px 0 0 8px; border-color: #cbd5e1;">
+                    <i class="bi bi-hash"></i>
+                </span>
+                <input type="text" class="form-control fw-bold bg-white border-start-0" id="sal-oc-input-codigo"
+                    list="sal-oc-datalist" placeholder="Ej: OC-2026-0001 o nombre de proveedor..."
+                    oninput="window._salOnOCInputChanged(this.value)"
+                    autocomplete="off"
+                    style="border-radius: 0 8px 8px 0; min-height: 42px; font-size: 0.88rem; border-color: #cbd5e1;">
+            </div>
+            <datalist id="sal-oc-datalist"></datalist>
+        </div>
+
+        <!-- Card 2: Información de la O/C Seleccionada -->
+        <div id="sal-oc-info-card" class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs d-none" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                <div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold fs-6" id="sal-oc-info-codigo">—</span>
+                    <span class="badge ms-2" id="sal-oc-info-estado">—</span>
+                </div>
+                <div class="text-end">
+                    <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.65rem;">Monto Total O/C</small>
+                    <span class="fw-bold text-dark fs-6" id="sal-oc-info-monto">—</span>
+                </div>
+            </div>
+            <div class="row g-2">
+                <div class="col-sm-6">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.65rem;">Proveedor</span>
+                    <span class="fw-bold text-dark d-block" style="font-size: 0.82rem;" id="sal-oc-info-proveedor">—</span>
+                    <small class="text-muted" id="sal-oc-info-ruc"></small>
+                </div>
+                <div class="col-sm-6">
+                    <span class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.65rem;">Solicitado Por / Motivo</span>
+                    <span class="text-dark d-block fw-semibold" style="font-size: 0.80rem;" id="sal-oc-info-solicitante">—</span>
+                    <small class="text-muted text-truncate d-block" id="sal-oc-info-motivo"></small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Previsualización de Productos de la OC -->
+        <div id="sal-oc-preview-wrap" class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs d-none"
+            style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                <span class="fw-bold text-dark d-flex align-items-center gap-1"
+                    style="font-size: 0.76rem; text-transform: uppercase;">
+                    <i class="bi bi-box-seam text-success"></i> Productos en la Orden (<span id="sal-oc-items-count">0</span>):
+                </span>
+                <div class="form-check form-check-inline m-0" style="font-size: 0.75rem;">
+                    <input class="form-check-input" type="checkbox" id="sal-oc-check-all" checked onchange="window._salToggleCheckAllOC(this.checked)">
+                    <label class="form-check-label fw-bold text-muted" for="sal-oc-check-all">Seleccionar todos</label>
+                </div>
+            </div>
+            <div class="table-responsive rounded-3 border bg-white">
+                <table class="table table-sm align-middle mb-0" style="font-size: 0.8rem; min-width: 440px;">
+                    <thead style="background: #f8fafc;">
+                        <tr>
+                            <th style="width:36px; text-align:center; padding:8px 4px;">#</th>
+                            <th style="padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569;">
+                                Descripción / Producto</th>
+                            <th style="width:75px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">
+                                Cant.</th>
+                            <th style="width:75px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">
+                                Unidad</th>
+                            <th style="width:105px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">
+                                P. Unit</th>
+                            <th style="width:120px; padding:8px 12px; font-size:.70rem; text-transform:uppercase; font-weight:800; color:#475569; text-align:center;">
+                                Stock Almacén</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sal-oc-preview-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Alerta no encontrada / cargando -->
+        <div id="sal-oc-no-match" class="alert alert-light border rounded-4 d-none mb-3 shadow-2xs text-center py-4"
+            style="font-size: 0.85rem; color: #64748b;">
+            <i class="bi bi-search fs-3 d-block mb-2 text-muted"></i>
+            Escribe o selecciona un número de Orden de Compra para ver sus ítems.
+        </div>
+    </div>
+    <div class="sal-drawer-footer bg-white border-top px-3 py-2 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2"
+            onclick="window.salCerrarSubDrawer('sal-drawer-oc')">
+            Cancelar
+        </button>
+        <button type="button" class="btn btn-primary fw-bold rounded-3 px-4 py-2 shadow-2xs" id="sal-btn-insertar-oc"
+            onclick="window._salInsertarOC()" disabled>
+            <i class="bi bi-plus-circle me-1"></i> Agregar Productos al Formulario
         </button>
     </div>
 </div>
