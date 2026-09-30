@@ -1,0 +1,660 @@
+<style>
+/* ── Reset root padding for full-bleed ──────────────────────── */
+#root-dinamico, .main-area { padding: 0 !important; }
+
+/* ── App Container ──────────────────────────────────────────── */
+.grt-app {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem 1.25rem 7.5rem 1.25rem !important;
+    background: transparent;
+    min-height: 100%;
+}
+
+/* ── KPI Cards ──────────────────────────────────────────────── */
+.grt-kpi {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    transition: transform 0.2s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+.grt-kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(15,23,42,0.08);
+}
+.grt-kpi-icon {
+    width: 46px; height: 46px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+}
+
+/* ── Segmented Control ──────────────────────────────────────── */
+.grt-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+.grt-seg-item {
+    border: none;
+    background: transparent;
+    padding: 6px 16px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+}
+.grt-seg-item:hover { color: #0f172a; }
+.grt-seg-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12) !important;
+}
+
+/* ── Search Input ───────────────────────────────────────────── */
+.grt-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 14px 8px 38px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+.grt-search:focus {
+    background: #ffffff;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.15);
+    outline: none;
+}
+
+/* ── Table Wrap ─────────────────────────────────────────────── */
+#grt-tabla-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.02);
+    min-height: 320px;
+}
+
+/* ── Action Buttons ─────────────────────────────────────────── */
+.grt-act-btn {
+    width: 32px; height: 32px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
+    cursor: pointer;
+    font-size: 0.88rem;
+    text-decoration: none;
+}
+.grt-btn-view { background: #fffbeb; color: #b45309; }
+.grt-btn-view:hover { background: #f59e0b; color: #fff; transform: translateY(-1px); }
+.grt-btn-emit { background: #ecfdf5; color: #059669; }
+.grt-btn-emit:hover { background: #059669; color: #fff; transform: translateY(-1px); }
+.grt-btn-edit { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
+.grt-btn-edit:hover { background: #0f172a; color: #fff; border-color: #0f172a; transform: translateY(-1px); }
+.grt-btn-pdf { background: #fef2f2; color: #dc2626; }
+.grt-btn-pdf:hover { background: #dc2626; color: #fff; transform: translateY(-1px); }
+.grt-btn-sync { background: #eff6ff; color: #2563eb; }
+.grt-btn-sync:hover { background: #2563eb; color: #fff; transform: translateY(-1px); }
+.grt-btn-dup { background: #f5f3ff; color: #7c3aed; }
+.grt-btn-dup:hover { background: #7c3aed; color: #fff; transform: translateY(-1px); }
+.grt-btn-del { background: transparent; color: #94a3b8; }
+.grt-btn-del:hover { background: #fee2e2; color: #ef4444; transform: translateY(-1px); }
+
+/* ── Status Badges ──────────────────────────────────────────── */
+.grt-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.grt-badge-borrador { background: #f1f5f9; color: #64748b; }
+.grt-badge-emitida { background: #fefce8; color: #ca8a04; }
+.grt-badge-aceptada { background: #ecfdf5; color: #059669; }
+.grt-badge-rechazada { background: #fef2f2; color: #dc2626; }
+
+/* ── Mobile Cards ───────────────────────────────────────────── */
+.grt-mobile-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 14px rgba(15,23,42,0.03);
+    transition: transform 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+.grt-mobile-card:active { transform: scale(0.99); }
+
+/* ── Floating Drawer Modal ──────────────────────────────────── */
+.grt-drawer-dialog {
+    max-width: 780px !important;
+    width: 100% !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+    margin: 0 auto !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: auto !important;
+}
+.grt-drawer-content {
+    height: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 28px 28px 0 0 !important;
+    border-bottom: none !important;
+    box-shadow: 0 -12px 48px rgba(0,0,0,0.25) !important;
+    overflow: hidden !important;
+    background: #f8fafc !important;
+}
+
+/* ── Form Inputs Inside Drawer ──────────────────────────────── */
+#modalNuevaGRT .form-control,
+#modalNuevaGRT .form-select {
+    min-height: 44px !important;
+    border-radius: 12px !important;
+    font-size: 0.92rem !important;
+    font-weight: 600 !important;
+    border-color: #cbd5e1 !important;
+    padding: 0.55rem 0.9rem !important;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+#modalNuevaGRT .form-control:focus,
+#modalNuevaGRT .form-select:focus {
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.15) !important;
+}
+#modalNuevaGRT .form-label {
+    font-size: 0.74rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    color: #475569 !important;
+    margin-bottom: 0.35rem !important;
+}
+#modalNuevaGRT .card {
+    border-radius: 18px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .grt-app { padding: 0.5rem 0.5rem 100px 0.5rem !important; }
+    #grt-tabla-wrap { display: none !important; }
+    #grtCardContainer { display: block !important; }
+    .grt-kpi { padding: 0.75rem 0.85rem !important; border-radius: 14px !important; }
+    .grt-kpi h2 { font-size: 1.35rem !important; }
+    .grt-kpi-icon { width: 36px !important; height: 36px !important; font-size: 1rem !important; border-radius: 10px !important; }
+    .grt-segmented { width: 100% !important; display: flex !important; justify-content: space-between !important; }
+    .grt-seg-item { flex: 1 !important; text-align: center !important; padding: 6px 4px !important; font-size: 0.75rem !important; }
+    .grt-drawer-dialog {
+        max-width: 100vw !important; width: 100vw !important; min-width: 100vw !important;
+        height: 96vh !important; max-height: 96vh !important;
+        margin: 0 !important; left: 0 !important; right: 0 !important;
+        transform: none !important; border-radius: 24px 24px 0 0 !important;
+    }
+    .grt-drawer-content {
+        width: 100vw !important; min-width: 100vw !important;
+        height: 100% !important; max-height: 96vh !important;
+        border-radius: 24px 24px 0 0 !important; border: none !important; margin: 0 !important;
+    }
+}
+@media (min-width: 769px) {
+    #grtCardContainer { display: none !important; }
+    #grt-tabla-wrap { display: block !important; }
+}
+
+/* ── Toast ──────────────────────────────────────────────────── */
+.grt-toast {
+    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+    background: #0f172a; color: #fff; padding: 12px 24px;
+    border-radius: 14px; font-size: 0.85rem; font-weight: 600;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3); z-index: 99999;
+    opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+}
+.grt-toast.show { opacity: 1; pointer-events: auto; }
+</style>
+
+<div class="grt-app d-flex flex-column" id="grt-app-container">
+
+  <!-- ═══ ENCABEZADO ══════════════════════════════════════════ -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="d-flex align-items-center gap-2 gap-md-3">
+      <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width:42px;height:42px;">
+        <i class="bi bi-truck-flatbed text-warning fs-5"></i>
+      </div>
+      <div>
+        <h4 class="fw-bolder m-0 text-dark" style="font-size:1.3rem; letter-spacing:-0.3px;">
+          Guía de Remisión Transportista
+        </h4>
+        <small class="text-muted fw-medium d-none d-md-inline" style="font-size:0.8rem;">Tipo 31 • Serie V • Emisión electrónica via APISUNAT</small>
+      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.grtRecargar()" title="Recargar">
+        <i class="bi bi-arrow-clockwise fs-6"></i>
+      </button>
+      <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" onclick="window.grtExportarExcel()" title="Exportar Excel">
+        <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Excel</span>
+      </button>
+      <button class="btn shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-1.5 rounded-3" onclick="window.grtAbrirNueva()" style="background:#f59e0b; border-color:#f59e0b; color:#fff;">
+        <i class="bi bi-plus-lg fs-6"></i> <span class="d-none d-sm-inline">Nueva GRT</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ KPIs ════════════════════════════════════════════════ -->
+  <div class="row g-2 g-md-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="grt-kpi">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing:0.5px;">Total GRTs</span>
+          <h2 id="kpi-grt-total" class="fw-bolder m-0 text-dark" style="font-size:1.6rem;">0</h2>
+        </div>
+        <div class="grt-kpi-icon" style="background:#fffbeb; color:#f59e0b;"><i class="bi bi-file-earmark-text"></i></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="grt-kpi">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing:0.5px;">Borradores</span>
+          <h2 id="kpi-grt-borradores" class="fw-bolder m-0 text-muted" style="font-size:1.6rem;">0</h2>
+        </div>
+        <div class="grt-kpi-icon" style="background:#f1f5f9; color:#64748b;"><i class="bi bi-pencil-square"></i></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="grt-kpi">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing:0.5px;">Aceptadas SUNAT</span>
+          <h2 id="kpi-grt-aceptadas" class="fw-bolder m-0 text-success" style="font-size:1.6rem;">0</h2>
+        </div>
+        <div class="grt-kpi-icon" style="background:#ecfdf5; color:#059669;"><i class="bi bi-check2-circle"></i></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="grt-kpi">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing:0.5px;">Rechazadas</span>
+          <h2 id="kpi-grt-rechazadas" class="fw-bolder m-0 text-danger" style="font-size:1.6rem;">0</h2>
+        </div>
+        <div class="grt-kpi-icon" style="background:#fef2f2; color:#dc2626;"><i class="bi bi-x-circle"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BARRA DE BÚSQUEDA + FILTROS ═════════════════════════ -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="position-relative flex-grow-1" style="max-width:360px;">
+      <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+      <input type="text" id="grtBuscador" class="grt-search" placeholder="Buscar guía, placa, conductor..." oninput="window.grtFiltrar()">
+    </div>
+    <div class="grt-segmented flex-grow-1 flex-md-grow-0" id="grt-filtros-estado">
+      <button type="button" class="grt-seg-item active" onclick="window.grtFiltrarEstado('TODOS', this)">Todos</button>
+      <button type="button" class="grt-seg-item" onclick="window.grtFiltrarEstado('BORRADOR', this)">Borradores</button>
+      <button type="button" class="grt-seg-item" onclick="window.grtFiltrarEstado('EMITIDA', this)">Emitidas</button>
+      <button type="button" class="grt-seg-item" onclick="window.grtFiltrarEstado('ACEPTADA', this)">Aceptadas</button>
+      <button type="button" class="grt-seg-item" onclick="window.grtFiltrarEstado('RECHAZADA', this)">Rechazadas</button>
+    </div>
+  </div>
+
+  <!-- ═══ MOBILE CARDS ════════════════════════════════════════ -->
+  <div id="grtCardContainer" class="d-md-none">
+    <div class="text-center py-5 text-muted">
+      <div class="spinner-border spinner-border-sm me-2 text-warning"></div> Cargando guías...
+    </div>
+  </div>
+
+  <!-- ═══ DESKTOP TABLE ═══════════════════════════════════════ -->
+  <div id="grt-tabla-wrap" class="flex-grow-1 d-none d-md-block" style="min-height:320px;">
+    <div class="custom-scrollbar overflow-x-auto" style="overflow-y:visible; min-height:320px;">
+      <table class="table table-hover align-middle m-0" id="tablaGRT" style="font-size:0.88rem;">
+        <thead class="bg-light sticky-top shadow-2xs border-bottom">
+          <tr class="text-secondary" style="font-size:0.75rem; letter-spacing:0.5px;">
+            <th class="ps-4 py-3" style="min-width:140px; white-space:nowrap;">Nº GUÍA</th>
+            <th class="py-3" style="min-width:100px; white-space:nowrap;">FECHA</th>
+            <th class="py-3" style="min-width:180px; white-space:nowrap;">REMITENTE</th>
+            <th class="py-3" style="min-width:180px; white-space:nowrap;">DESTINATARIO</th>
+            <th class="py-3" style="min-width:90px; white-space:nowrap;">PLACA</th>
+            <th class="py-3" style="min-width:150px; white-space:nowrap;">CONDUCTOR</th>
+            <th class="py-3 text-center" style="min-width:110px; white-space:nowrap;">ESTADO</th>
+            <th class="pe-4 py-3 text-end" style="min-width:160px; white-space:nowrap;">ACCIONES</th>
+          </tr>
+        </thead>
+        <tbody id="grtTbody">
+          <tr><td colspan="8" class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm me-2 text-warning" role="status"></div> Cargando guías transportista...
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ FAB MOBILE ══════════════════════════════════════════ -->
+  <div class="d-md-none position-fixed" style="bottom:96px; right:1.25rem; z-index:1040;">
+    <button type="button" class="btn rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+            onclick="window.grtAbrirNueva()"
+            title="Nueva GRT"
+            style="width:56px; height:56px; border-radius:50% !important; background:#f59e0b; border:none; color:#fff; font-size:1.55rem; box-shadow:0 8px 24px rgba(245,158,11,0.45) !important;">
+        <i class="bi bi-plus-lg"></i>
+    </button>
+  </div>
+
+  <div style="height:90px; width:100%;"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MODAL: NUEVA / EDITAR GRT (Floating Drawer) -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalNuevaGRT" tabindex="-1">
+  <div class="modal-dialog grt-drawer-dialog">
+    <div class="modal-content grt-drawer-content">
+      <!-- Header -->
+      <div class="modal-header border-0 px-4 pt-4 pb-2" style="flex-shrink:0;">
+        <div>
+          <h5 class="fw-bolder m-0 text-dark" id="grtModalTitle" style="font-size:1.15rem;">Nueva Guía Transportista</h5>
+          <small class="text-muted fw-medium" style="font-size:0.78rem;">Tipo 31 • Emisión electrónica</small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <!-- Body -->
+      <div class="modal-body px-4 py-3" style="overflow-y:auto; flex:1;">
+        <form id="formGRT" onsubmit="return window.grtGuardar(event);">
+          <!-- BARRA RÁPIDA: Autocompletar desde Orden de Viaje -->
+          <div class="card p-3 mb-3 border-warning bg-warning-subtle shadow-sm">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
+                <div>
+                  <div class="fw-bold small text-dark">Autocompletar con 1-Click desde Orden de Viaje (OV)</div>
+                  <div class="text-muted" style="font-size:0.75rem;">Importa automáticamente Placas, Conductor, Licencia, Ubigeos, Direcciones y Peso</div>
+                </div>
+              </div>
+              <div class="d-flex align-items-center gap-1">
+                <input type="text" id="grt_buscar_ov_input" class="form-control form-control-sm bg-white" placeholder="Ej: OV-2026-001" style="max-width: 150px;">
+                <button type="button" class="btn btn-sm btn-warning fw-bold text-dark" onclick="window.grtAutocompletarDesdeOV()">
+                  <i class="bi bi-cloud-arrow-down-fill"></i> Importar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 1: Datos Generales -->
+          <div class="card p-3 mb-3">
+            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size:0.88rem;">
+              <i class="bi bi-calendar3 text-warning"></i> Datos Generales
+            </h6>
+            <div class="row g-2">
+              <div class="col-6 col-md-3">
+                <label class="form-label">Serie</label>
+                <input type="text" id="grt_serie" class="form-control" value="V001" maxlength="4" readonly>
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Correlativo</label>
+                <input type="text" id="grt_correlativo" class="form-control" placeholder="Auto" readonly>
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">F. Emisión</label>
+                <input type="date" id="grt_fecha_emision" class="form-control" required>
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">F. Traslado</label>
+                <input type="date" id="grt_fecha_traslado" class="form-control" required>
+              </div>
+            </div>
+            <div class="row g-2 mt-1">
+              <div class="col-6 col-md-4">
+                <label class="form-label">Motivo Traslado</label>
+                <select id="grt_motivo_traslado" class="form-select">
+                  <option value="01">01 - Venta</option>
+                  <option value="02">02 - Compra</option>
+                  <option value="04">04 - Traslado entre establecimientos</option>
+                  <option value="08">08 - Importación</option>
+                  <option value="09">09 - Exportación</option>
+                  <option value="13">13 - Otros</option>
+                  <option value="14">14 - Venta sujeta a confirmación</option>
+                  <option value="17">17 - Traslado de bienes para transformación</option>
+                  <option value="18">18 - Traslado emisor itinerante</option>
+                </select>
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label">Peso Total (Kg)</label>
+                <input type="number" id="grt_peso_total" class="form-control" step="0.01" value="1" min="0.01" required>
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label">Nro. Reg. MTC</label>
+                <input type="text" id="grt_registro_mtc" class="form-control" placeholder="Ej: 000000">
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: Remitente -->
+          <div class="card p-3 mb-3">
+            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size:0.88rem;">
+              <i class="bi bi-person-badge text-info"></i> Remitente (Cliente)
+            </h6>
+            <div class="row g-2">
+              <div class="col-12 col-md-4">
+                <label class="form-label">RUC / DNI</label>
+                <div class="input-group">
+                  <input type="text" id="grt_remitente_ruc" class="form-control" placeholder="20XXXXXXXXX" maxlength="11" required>
+                  <button type="button" class="btn btn-outline-secondary" onclick="window.grtBuscarRuc('remitente')" title="Buscar"><i class="bi bi-search"></i></button>
+                </div>
+              </div>
+              <div class="col-12 col-md-8">
+                <label class="form-label">Razón Social</label>
+                <input type="text" id="grt_remitente_razon_social" class="form-control" placeholder="Se autocompleta al buscar RUC" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 3: Destinatario -->
+          <div class="card p-3 mb-3">
+            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size:0.88rem;">
+              <i class="bi bi-geo-alt text-danger"></i> Destinatario
+            </h6>
+            <div class="row g-2">
+              <div class="col-12 col-md-4">
+                <label class="form-label">RUC / DNI</label>
+                <div class="input-group">
+                  <input type="text" id="grt_destinatario_ruc" class="form-control" placeholder="20XXXXXXXXX" maxlength="11" required>
+                  <button type="button" class="btn btn-outline-secondary" onclick="window.grtBuscarRuc('destinatario')" title="Buscar"><i class="bi bi-search"></i></button>
+                </div>
+              </div>
+              <div class="col-12 col-md-8">
+                <label class="form-label">Razón Social</label>
+                <input type="text" id="grt_destinatario_razon_social" class="form-control" placeholder="Se autocompleta al buscar RUC" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 4: Ruta (Partida → Llegada) -->
+          <div class="card p-3 mb-3">
+            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size:0.88rem;">
+              <i class="bi bi-signpost-2 text-primary"></i> Ruta de Traslado
+            </h6>
+            <div class="row g-2">
+              <div class="col-12 col-md-3">
+                <label class="form-label">Ubigeo Partida</label>
+                <input type="text" id="grt_partida_ubigeo" class="form-control" placeholder="040104" maxlength="6" required>
+              </div>
+              <div class="col-12 col-md-9">
+                <label class="form-label">Dirección Partida</label>
+                <input type="text" id="grt_partida_direccion" class="form-control" placeholder="Dirección completa de origen" required>
+              </div>
+            </div>
+            <div class="row g-2 mt-1">
+              <div class="col-12 col-md-3">
+                <label class="form-label">Ubigeo Llegada</label>
+                <input type="text" id="grt_llegada_ubigeo" class="form-control" placeholder="150101" maxlength="6" required>
+              </div>
+              <div class="col-12 col-md-9">
+                <label class="form-label">Dirección Llegada</label>
+                <input type="text" id="grt_llegada_direccion" class="form-control" placeholder="Dirección completa de destino" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 5: Vehículo y Conductor -->
+          <div class="card p-3 mb-3">
+            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size:0.88rem;">
+              <i class="bi bi-truck text-success"></i> Vehículo y Conductor
+            </h6>
+            <div class="row g-2">
+              <div class="col-6 col-md-3">
+                <label class="form-label">Placa Tracto</label>
+                <input type="text" id="grt_vehiculo_placa" class="form-control" placeholder="ABC123" maxlength="10" required style="text-transform:uppercase;">
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Placa Carreta</label>
+                <input type="text" id="grt_vehiculo_secundario_placa" class="form-control" placeholder="XYZ789" maxlength="10" style="text-transform:uppercase;">
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">DNI Conductor</label>
+                <input type="text" id="grt_conductor_num_doc" class="form-control" placeholder="12345678" maxlength="11" required>
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Licencia</label>
+                <input type="text" id="grt_conductor_licencia" class="form-control" placeholder="Q12345678" required>
+              </div>
+            </div>
+            <div class="row g-2 mt-1">
+              <div class="col-12 col-md-6">
+                <label class="form-label">Nombres Conductor</label>
+                <input type="text" id="grt_conductor_nombres" class="form-control" placeholder="Nombres completos" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Apellidos</label>
+                <input type="text" id="grt_conductor_apellidos" class="form-control" placeholder="Apellidos">
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 6: Carga / Items -->
+          <div class="card p-3 mb-3">
+            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size:0.88rem;">
+              <i class="bi bi-box-seam text-secondary"></i> Detalle de Carga
+            </h6>
+            <div class="row g-2">
+              <div class="col-12 col-md-8">
+                <label class="form-label">Descripción de Carga</label>
+                <input type="text" id="grt_descripcion_carga" class="form-control" value="CARGA GENERAL" required>
+              </div>
+              <div class="col-6 col-md-2">
+                <label class="form-label">Cantidad</label>
+                <input type="number" id="grt_cantidad" class="form-control" value="1" min="1">
+              </div>
+              <div class="col-6 col-md-2">
+                <label class="form-label">Und. Medida</label>
+                <select id="grt_unidad_item" class="form-select">
+                  <option value="NIU">NIU - Unidad</option>
+                  <option value="KGM">KGM - Kilogramo</option>
+                  <option value="TNE">TNE - Tonelada</option>
+                  <option value="LTR">LTR - Litro</option>
+                  <option value="GLL">GLL - Galón</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 7: Observaciones -->
+          <div class="card p-3 mb-3">
+            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size:0.88rem;">
+              <i class="bi bi-chat-left-text text-muted"></i> Adicional
+            </h6>
+            <div class="row g-2">
+              <div class="col-12 col-md-4">
+                <label class="form-label">Costo Flete (S/.)</label>
+                <input type="number" id="grt_costo_flete" class="form-control" step="0.01" value="0">
+              </div>
+              <div class="col-12 col-md-8">
+                <label class="form-label">Observaciones</label>
+                <input type="text" id="grt_observaciones" class="form-control" placeholder="Opcional">
+              </div>
+            </div>
+            <div class="row g-2 mt-1">
+              <div class="col-12 col-md-6">
+                <label class="form-label">Orden de Servicio</label>
+                <input type="text" id="grt_orden_servicio" class="form-control" placeholder="OS-001">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">GRE Vinculada (Nº)</label>
+                <input type="text" id="grt_gre_vinculada" class="form-control" placeholder="T001-00000001">
+              </div>
+            </div>
+          </div>
+
+        </form>
+      </div>
+      <!-- Footer -->
+      <div class="modal-footer border-0 px-4 py-3 d-flex gap-2" style="flex-shrink:0; background:#f8fafc;">
+        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn fw-bold rounded-3 px-4" onclick="window.grtGuardar()" style="background:#f59e0b; border-color:#f59e0b; color:#fff;">
+          <i class="bi bi-save me-1"></i> Guardar Borrador
+        </button>
+        <button type="button" class="btn btn-success fw-bold rounded-3 px-4" onclick="window.grtGuardarYEmitir()">
+          <i class="bi bi-lightning-charge-fill me-1"></i> Guardar y Emitir
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: DETALLE GRT ════════════════════════════════════ -->
+<div class="modal fade" id="modalDetalleGRT" tabindex="-1">
+  <div class="modal-dialog grt-drawer-dialog">
+    <div class="modal-content grt-drawer-content">
+      <div class="modal-header border-0 px-4 pt-4 pb-2" style="flex-shrink:0;">
+        <div>
+          <h5 class="fw-bolder m-0 text-dark" id="grtDetalleTitle" style="font-size:1.15rem;">Detalle GRT</h5>
+          <small class="text-muted fw-medium" style="font-size:0.78rem;" id="grtDetalleSubtitle"></small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 py-3" style="overflow-y:auto; flex:1;" id="grtDetalleBody">
+      </div>
+      <div class="modal-footer border-0 px-4 py-3 d-flex gap-2" style="flex-shrink:0; background:#f8fafc;" id="grtDetalleFooter">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: CONFIRMACIÓN ELIMINAR ══════════════════════════ -->
+<div class="modal fade" id="modalEliminarGRT" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:350px;">
+    <div class="modal-content" style="background:#fff; border-radius:28px; border:1px solid #e2e8f0; box-shadow:0 12px 30px rgba(0,0,0,0.12); padding:2.2rem 1.6rem 1.8rem; text-align:center;">
+      <div style="font-size:3.2rem; color:#e11d48; line-height:1; margin-bottom:0.85rem;">⚠️</div>
+      <h6 class="fw-bold text-dark mb-2">¿Eliminar este borrador?</h6>
+      <p class="text-muted small mb-3" id="grtEliminarMsg">Esta acción no se puede deshacer.</p>
+      <div class="d-flex justify-content-center gap-3">
+        <button type="button" class="btn btn-dark rounded-circle d-flex align-items-center justify-content-center" style="width:54px;height:54px;font-size:1.35rem;" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+        <button type="button" class="btn rounded-circle d-flex align-items-center justify-content-center" style="width:54px;height:54px;font-size:1.35rem;background:#e11d48;color:#fff;" onclick="window.grtConfirmarEliminar()"><i class="bi bi-trash3"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="grt-toast" id="grtToast"></div>

@@ -96,11 +96,11 @@
                                 <i class="bi bi-chevron-down nav-sub-chevron" id="chev-guias-remision" style="font-size:0.75rem; transition: transform 0.2s ease;"></i>
                             </a>
                             <div class="nav-submenu-items d-none ps-3" id="submenu-guias-remision">
-                                <a id="nav-op-guias-remitente" class="nav-item py-1 text-sm" onclick="window.navegarGuiasModo('GRE')">
+                                <a id="nav-op-guias-remitente" class="nav-item py-1 text-sm" onclick="window.cargarModuloAislado('operaciones/guia-remitente')">
                                     <i class="bi bi-file-earmark-arrow-up-fill nav-icon me-1 text-info" style="font-size: 0.82rem;"></i>
                                     <span class="link-text" style="font-size: 0.82rem;">Guía de Remisión Electrónica</span>
                                 </a>
-                                <a id="nav-op-guias-transportista" class="nav-item py-1 text-sm" onclick="window.navegarGuiasModo('GRT')">
+                                <a id="nav-op-guias-transportista" class="nav-item py-1 text-sm" onclick="window.cargarModuloAislado('operaciones/guia-transportista')">
                                     <i class="bi bi-truck-flatbed nav-icon me-1 text-warning" style="font-size: 0.82rem;"></i>
                                     <span class="link-text" style="font-size: 0.82rem;">Guía de Remisión de Transportista</span>
                                 </a>
@@ -1316,7 +1316,7 @@
                     <i class="bi bi-chevron-down bnav-row-chevron" id="mbchev-guias-remision"></i>
                 </div>
                 <div class="d-none ps-3 d-flex flex-column gap-2" id="mbnav-submenu-guias-remision">
-                    <div id="mbnav-op-guias-remitente" class="bnav-row-item" style="border-left: 3px solid #0284c7;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); window.navegarGuiasModo('GRE'); setBottomNavActive('bnav-operaciones');">
+                    <div id="mbnav-op-guias-remitente" class="bnav-row-item" style="border-left: 3px solid #0284c7;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/guia-remitente'); setBottomNavActive('bnav-operaciones');">
                         <div class="bnav-row-icon" style="color: #0284c7;"><i class="bi bi-file-earmark-arrow-up-fill"></i></div>
                         <div class="bnav-row-content">
                             <p class="bnav-row-title">Guía de Remisión Electrónica</p>
@@ -1324,7 +1324,7 @@
                         </div>
                         <i class="bi bi-chevron-right bnav-row-chevron"></i>
                     </div>
-                    <div id="mbnav-op-guias-transportista" class="bnav-row-item" style="border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); window.navegarGuiasModo('GRT'); setBottomNavActive('bnav-operaciones');">
+                    <div id="mbnav-op-guias-transportista" class="bnav-row-item" style="border-left: 3px solid #f59e0b;" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetOperaciones')).hide(); cargarModuloAislado('operaciones/guia-transportista'); setBottomNavActive('bnav-operaciones');">
                         <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-truck-flatbed"></i></div>
                         <div class="bnav-row-content">
                             <p class="bnav-row-title">Guía de Remisión de Transportista</p>

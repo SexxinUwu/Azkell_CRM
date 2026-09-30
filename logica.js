@@ -767,6 +767,8 @@ window.verificarSesionGuardada = function() {
             'operaciones/ordenes-viaje': 'op_guias_remision',
             'operaciones/ordenes-servicio': 'op_guias_remision',
             'operaciones/guias-remision': 'op_guias_remision',
+            'operaciones/guia-remitente': 'op_guias_remision',
+            'operaciones/guia-transportista': 'op_guias_remision',
             'operaciones/rutas': 'op_rutas',
             'operaciones/asignacion': 'op_asignacion',
             'operaciones/monitoreo': 'op_monitoreo',
@@ -901,6 +903,7 @@ window.verificarSesionGuardada = function() {
     var MAPA_RUTAS_VALIDAS = {
         'dashboard': 1, 'operaciones/programacion': 1, 'operaciones/ordenes-viaje': 1,
         'operaciones/ordenes-servicio': 1, 'operaciones/reporte-viajes': 1, 'operaciones/guias-remision': 1,
+        'operaciones/guia-remitente': 1, 'operaciones/guia-transportista': 1,
         'operaciones/combustible-vales': 1, 'operaciones/combustible-estaciones': 1, 'operaciones/combustible-analisis': 1,
         'operaciones/urea-analisis': 1, 'operaciones/combustible-matriz': 1, 'operaciones/conductor-portal': 1,
         'operaciones/marsisa-ordenes-viaje': 1, 'operaciones/marsisa-combustible-vales': 1,
@@ -4037,6 +4040,9 @@ const TITULOS_MODULOS = {
     'operaciones/marsisa-combustible-matriz': 'Matriz de Combustible (D2) (Marsisa)',
     'operaciones/marsisa-combustible-analisis': 'Análisis de Combustible (D2) (Marsisa)',
     'operaciones/marsisa-urea-analisis': 'Análisis de Urea (Marsisa)',
+    'operaciones/guia-remitente':       'Guías de Remisión Electrónica',
+    'operaciones/guia-transportista':   'Guías de Remisión de Transportista',
+    'operaciones/guias-remision':       'Guías de Remisión',
     'almacen/recepcion-compras':   'Recepción de Compras',
     'tesoreria/caja':                   'Caja',
     'tesoreria/caja-chica':             'Caja',
@@ -4055,6 +4061,8 @@ const MENU_IDS = {
     'operaciones/ordenes-viaje':   'nav-op-ordenes-viaje',
     'operaciones/ordenes-servicio': 'nav-op-ordenes-servicio',
     'operaciones/reporte-viajes':  'nav-op-reporte-viajes',
+    'operaciones/guia-remitente':  'nav-op-guias-remitente',
+    'operaciones/guia-transportista': 'nav-op-guias-transportista',
     'operaciones/guias-remision':  'nav-op-guias-remision',
     'operaciones/combustible-vales': 'nav-combustible-vales',
     'operaciones/combustible-estaciones': 'nav-combustible-estaciones',
@@ -4183,7 +4191,9 @@ const MENU_SECTION = {
     'operaciones/urea-analisis':        'operaciones',
     'operaciones/combustible-matriz':   'operaciones',
     'operaciones/marsisa-ordenes-viaje': 'operaciones-marsisa',
-    'operaciones/guias-remision':  'operaciones-marsisa',
+    'operaciones/guia-remitente':  'operaciones',
+    'operaciones/guia-transportista': 'operaciones',
+    'operaciones/guias-remision':  'operaciones',
     'operaciones/marsisa-combustible-vales': 'operaciones-marsisa',
     'operaciones/marsisa-combustible-matriz': 'operaciones-marsisa',
     'operaciones/marsisa-combustible-analisis': 'operaciones-marsisa',
@@ -4215,6 +4225,9 @@ const BREADCRUMB_MAP = {
     'operaciones/ordenes-viaje':   ['Operaciones','Órdenes de Viaje'],
     'operaciones/ordenes-servicio': ['Operaciones','Órdenes de Servicio'],
     'operaciones/reporte-viajes':  ['Operaciones','Reporte de Viajes'],
+    'operaciones/guia-remitente':  ['Operaciones','Guía de Remisión Electrónica'],
+    'operaciones/guia-transportista': ['Operaciones','Guía de Remisión de Transportista'],
+    'operaciones/guias-remision':  ['Operaciones','Guías de Remisión'],
     'operaciones/combustible-vales': ['Operaciones','Combustible','Vales'],
     'operaciones/combustible-estaciones': ['Operaciones','Combustible','Estaciones de Proveedores'],
     'operaciones/combustible-analisis': ['Operaciones','Combustible','Análisis D2'],
@@ -4310,9 +4323,11 @@ function marcarMenuActivo(ruta) {
     document.querySelectorAll('.nav-section-toggle').forEach(b => b.classList.remove('section-has-active'));
     
     let idActivo = MENU_IDS[ruta];
-    if (ruta === 'operaciones/guias-remision') {
-        const modo = window._greModoActivo || sessionStorage.getItem('gre_modo_activo') || 'GRE';
-        idActivo = (modo === 'GRT') ? 'nav-op-guias-transportista' : 'nav-op-guias-remitente';
+    if (ruta === 'operaciones/guias-remision' || ruta === 'operaciones/guia-remitente' || ruta === 'operaciones/guia-transportista') {
+        if (ruta === 'operaciones/guias-remision') {
+            const modo = window._greModoActivo || sessionStorage.getItem('gre_modo_activo') || 'GRE';
+            idActivo = (modo === 'GRT') ? 'nav-op-guias-transportista' : 'nav-op-guias-remitente';
+        }
         
         // Auto-expandir submenú de Guías de Remisión en el sidebar
         const subGuias = document.getElementById('submenu-guias-remision');
@@ -6959,8 +6974,10 @@ window.exportarStatusExcel = function() {
 // ─── SOPORTE DE PESTAÑAS NUEVAS (Ctrl+Click, Cmd+Click, Clic Central y Clic Derecho) ─────
 (function initNavLinksParaPestanas() {
     const rutasEspeciales = {
-        'nav-op-guias-remitente': 'operaciones/guias-remision',
-        'nav-op-guias-transportista': 'operaciones/guias-remision',
+        'nav-op-guias-remitente': 'operaciones/guia-remitente',
+        'nav-op-guias-transportista': 'operaciones/guia-transportista',
+        'mbnav-op-guias-remitente': 'operaciones/guia-remitente',
+        'mbnav-op-guias-transportista': 'operaciones/guia-transportista',
         'nav-cfg-empresa': 'sistema/configuracion',
         'nav-cfg-apariencia': 'sistema/configuracion',
         'nav-cfg-accesibilidad': 'sistema/configuracion',
