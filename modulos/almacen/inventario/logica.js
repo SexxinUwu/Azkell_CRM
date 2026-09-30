@@ -2114,6 +2114,13 @@ window.guardarArticuloInv = function(event) {
         .then(function(res) {
             window._invCerrarDrawer();
             if (typeof window.cargarInventario === 'function') window.cargarInventario();
+            if (typeof window.rotToast === 'function') {
+                if (res && res.migrado) {
+                    window.rotToast('Código actualizado de ' + res.old_id + ' a ' + res.id + ' correctamente.', 'bg-success');
+                } else {
+                    window.rotToast(id ? 'Guardado con éxito' : 'Registrado con éxito', 'bg-success');
+                }
+            }
             if (typeof window._onArticuloCreado === 'function') {
                 var newItemId = (res && res.id) ? res.id : (id || null);
                 var callbackFn = window._onArticuloCreado;
