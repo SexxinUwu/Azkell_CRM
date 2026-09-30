@@ -3014,16 +3014,16 @@ window.abrirModalDetalleOC = function(id) {
         var vouUrl = d.url_voucher_presigned || d.url_voucher;
 
         var pillCot = cotUrl 
-            ? '<a href="' + _entEsc(cotUrl) + '" target="_blank" class="badge rounded-pill fw-bold text-decoration-none" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.70rem;"><i class="bi bi-file-earmark-check me-1"></i> Cotización</a>'
-            : '<span class="badge rounded-pill text-muted bg-light border fw-normal" style="font-size:0.70rem;">Sin cotización</span>';
+            ? '<a href="' + _entEsc(cotUrl) + '" target="_blank" class="badge text-decoration-none d-inline-flex align-items-center gap-1" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.68rem; font-weight:700; border-radius:8px; padding:3px 8px;"><i class="bi bi-file-earmark-check"></i> Cotización</a>'
+            : '<span class="badge" style="font-size:0.68rem; font-weight:600; background:#f1f5f9; color:#94a3b8; border:1px solid #e2e8f0; border-radius:8px; padding:3px 8px; font-style:italic;">Sin cotización</span>';
 
         var pillFac = facUrl 
-            ? '<a href="' + _entEsc(facUrl) + '" target="_blank" class="badge rounded-pill fw-bold text-decoration-none" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.70rem;"><i class="bi bi-file-earmark-check me-1"></i> Factura</a>'
-            : '<span class="badge rounded-pill text-muted bg-light border fw-normal" style="font-size:0.70rem;">Sin factura</span>';
+            ? '<a href="' + _entEsc(facUrl) + '" target="_blank" class="badge text-decoration-none d-inline-flex align-items-center gap-1" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.68rem; font-weight:700; border-radius:8px; padding:3px 8px;"><i class="bi bi-file-earmark-check"></i> Factura</a>'
+            : '<span class="badge" style="font-size:0.68rem; font-weight:600; background:#fef2f2; color:#ef4444; border:1px solid #fecaca; border-radius:8px; padding:3px 8px; font-style:italic;">Sin factura</span>';
 
         var pillVou = vouUrl 
-            ? '<a href="' + _entEsc(vouUrl) + '" target="_blank" class="badge rounded-pill fw-bold text-decoration-none" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.70rem;"><i class="bi bi-file-earmark-check me-1"></i> Voucher</a>'
-            : '<span class="badge rounded-pill text-muted bg-light border fw-normal" style="font-size:0.70rem;">Sin voucher</span>';
+            ? '<a href="' + _entEsc(vouUrl) + '" target="_blank" class="badge text-decoration-none d-inline-flex align-items-center gap-1" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.68rem; font-weight:700; border-radius:8px; padding:3px 8px;"><i class="bi bi-file-earmark-check"></i> Voucher</a>'
+            : '<span class="badge" style="font-size:0.68rem; font-weight:600; background:#fffbeb; color:#d97706; border:1px solid #fef3c7; border-radius:8px; padding:3px 8px; font-style:italic;">Sin voucher</span>';
 
         pillsDocs.innerHTML = pillCot + ' ' + pillFac + ' ' + pillVou;
     }
@@ -3046,14 +3046,14 @@ window.abrirModalDetalleOC = function(id) {
                 var invId = it.inventario_id || ('ART-' + (idx + 1));
                 var um = (it.unidad_medida || it.unidad || 'UND').toUpperCase();
 
-                return '<tr>' +
-                    '<td class="ps-3 text-muted fw-bold">' + (idx + 1) + '</td>' +
-                    '<td><span class="badge bg-light text-dark border font-monospace fw-bold" style="font-size:0.75rem;">' + _entEsc(invId) + '</span></td>' +
-                    '<td class="fw-bold text-dark">' + _entEsc(nombre) + '</td>' +
-                    '<td class="text-center"><span class="badge bg-light text-secondary border font-monospace" style="font-size:0.70rem;">' + _entEsc(um) + '</span></td>' +
-                    '<td class="text-center fw-bold font-monospace">' + cant.toLocaleString('es-PE') + '</td>' +
-                    '<td class="text-end font-monospace text-secondary">' + sym + cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
-                    '<td class="pe-3 text-end fw-bold font-monospace text-dark">' + sym + imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+                return '<tr class="align-middle">' +
+                    '<td class="ps-4 py-3 text-center text-muted fw-bold" style="font-size:0.78rem;">' + (idx + 1) + '</td>' +
+                    '<td class="py-3"><span class="badge bg-white text-dark border font-monospace fw-bold" style="font-size:0.75rem; border-color:#e2e8f0; color:#0f172a; padding:3px 8px; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,0.03);">' + _entEsc(invId) + '</span></td>' +
+                    '<td class="py-3 fw-bold text-dark text-uppercase" style="font-size:0.80rem; color:#0f172a;">' + _entEsc(nombre) + '</td>' +
+                    '<td class="py-3 text-center"><span class="badge bg-light text-secondary border font-monospace" style="font-size:0.68rem; color:#64748b; background:#f8fafc !important; border-color:#e2e8f0 !important; border-radius:4px; padding:2px 6px;">' + _entEsc(um) + '</span></td>' +
+                    '<td class="py-3 text-center fw-bold font-monospace text-dark" style="font-size:0.82rem; color:#0f172a;">' + cant.toLocaleString('es-PE') + '</td>' +
+                    '<td class="py-3 text-end font-monospace text-secondary" style="font-size:0.80rem; color:#64748b;">' + sym + cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+                    '<td class="pe-4 py-3 text-end fw-bold font-monospace text-dark" style="font-size:0.82rem; color:#0f172a;">' + sym + imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
                 '</tr>';
             }).join('');
         }
