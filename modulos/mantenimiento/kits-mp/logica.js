@@ -1,5 +1,5 @@
 // =========================================================================
-// MÓDULO: KITS DE MANTENIMIENTO PREVENTIVO — LÓGICA REDISEÑADA (1:1 RF)
+// MÓDULO: KITS DE MANTENIMIENTO PREVENTIVO — LÓGICA REDISEÑADA (1:1 RF & MASTER-DETAIL)
 // =========================================================================
 
 window.kitsData = window.kitsData || [];
@@ -9,6 +9,8 @@ window._kitsTiposMPList = window._kitsTiposMPList || [];
 window.kitsRowCounter = 0;
 window.kitsDeletedItemIds = [];
 window._kitEditandoGrupo = null;
+window.kitsSidebarMarcaSeleccionada = '';
+window.kitsFiltroSegmentoActual = 'TODOS';
 
 /**
  * Entry point del módulo
@@ -33,8 +35,8 @@ window.kitsCargarTabla = function (forzarRecarga) {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center py-5 text-muted">
-                    <div class="spinner-border spinner-border-sm text-primary me-2"></div> Cargando configuración de kits...
+                <td colspan="4" class="text-center py-5 text-muted">
+                    <div class="spinner-border spinner-border-sm text-primary me-2"></div> Cargando kits de mantenimiento...
                 </td>
             </tr>
         `;
@@ -52,12 +54,19 @@ window.kitsCargarTabla = function (forzarRecarga) {
         fetch('/api/almacen/inventario').then(r => r.ok ? r.json() : []),
         fetch('/api/tipos-preventivo').then(r => r.ok ? r.json() : { data: [] })
     ]).then(([kitsResp, invData, tiposResp]) => {
-        // 1. Mapear inventario para autocompletado y sincronización de costos
-        window._kitsAlmacenItems = (invData || []).map(x => ({
-            nombre: x.descripcion || x.articulo || x.nombre || '',
-            unidad: (x.unidad || x.unidad_medida || 'UND').toUpperCase(),
-            costo: parseFloat(x.costo_soles != null ? x.costo_soles : (x.costo_referencial != null ? x.costo_referencial : (x.costo_unitario || 0))) || 0
-        })).filter(x => x.nombre.trim() !== '');
+        // 1. Mapear inventario para autocompletado, stock en vivo y sincronización de costos
+        window._kitsAlmacenItems = (invData || []).map(x => {
+            const nom = (x.descripcion || x.articulo || x.nombre || '').trim();
+            const unid = (x.unidad || x.unidad_medida || 'UND').toUpperCase();
+            const cu = parseFloat(x.costo_soles != null ? x.costo_soles : (x.costo_referencial != null ? x.costo_referencial : (x.costo_unitario || 0))) || 0;
+            const stk = parseFloat(x.stock != null ? x.stock : (x.stock_actual != null ? x.stock_actual : (x.cantidad != null ? x.cantidad : 0))) || 0;
+            return {
+                nombre: nom,
+                unidad: unid,
+                costo: cu,
+                stock: stk
+            };
+        }).filter(x => x.nombre !== '');
 
         // 2. Mapear tipos de preventivo
         window._kitsTiposMPList = (tiposResp.data || []).map(t => t.nombre || t.tipo || t).filter(Boolean);
@@ -65,22 +74,23 @@ window.kitsCargarTabla = function (forzarRecarga) {
             window._kitsTiposMPList = ['MP1', 'MP2', 'MP3', 'MP4', 'INSPECCION'];
         }
 
-        // 3. Procesar datos de kits con costos actualizados
+        // 3. Procesar datos de kits con costos y stock sincronizados
         window.kitsData = (kitsResp.data || []).map(k => {
             const cant = parseFloat(k.cantidad || 1);
             let cu = parseFloat(k.costo_unitario || 0);
 
-            // Sincronizar con el costo actual de inventario si existe
+            // Sincronizar con el costo y stock actual de inventario si existe
             const invItem = window._kitsAlmacenItems.find(x => x.nombre.toLowerCase() === (k.item_nombre || '').toLowerCase());
             if (invItem && invItem.costo > 0) {
                 cu = invItem.costo;
             }
+            const stockActual = invItem ? invItem.stock : 0;
             const ct = parseFloat(k.costo_total || (cant * cu));
 
             return {
                 id: k.id,
-                marca_vehiculo: (k.marca_vehiculo || 'GENERAL').trim().toUpperCase(),
-                modelo_vehiculo: (k.modelo_vehiculo || 'TODOS LOS MODELOS').trim().toUpperCase(),
+                marca_vehiculo: (k.marca_vehiculo || 'GENERAL').trim(),
+                modelo_vehiculo: (k.modelo_vehiculo || 'TODOS LOS MODELOS').trim(),
                 tipo_mp: (k.tipo_mp || 'MP1').trim().toUpperCase(),
                 nombre_kit: (k.nombre_kit || '').trim(),
                 item_nombre: (k.item_nombre || '').trim(),
@@ -88,14 +98,15 @@ window.kitsCargarTabla = function (forzarRecarga) {
                 unidad_medida: (k.unidad_medida || (invItem ? invItem.unidad : 'UND')).toUpperCase(),
                 costo_unitario: cu,
                 costo_total: ct,
+                stock_almacen: stockActual,
                 observaciones: k.observaciones || ''
             };
         });
 
         window.kitsDataFil = window.kitsData.slice();
 
-        // 4. Poblar selects de filtros superiores
-        window.kitsPoblarSelectsFiltro();
+        // 4. Poblar sidebar lateral de Marcas / Modelos / Placas
+        window.kitsPoblarSidebarMarcas();
 
         // 5. Renderizar vista y actualizar KPIs
         window.kitsFiltrar();
@@ -105,7 +116,7 @@ window.kitsCargarTabla = function (forzarRecarga) {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="text-center py-5 text-danger">
+                    <td colspan="4" class="text-center py-5 text-danger">
                         <i class="bi bi-exclamation-triangle fs-4 d-block mb-2"></i>
                         Error al cargar la información de kits.
                     </td>
@@ -116,75 +127,83 @@ window.kitsCargarTabla = function (forzarRecarga) {
 };
 
 /**
- * Poblar selects de Filtros Superiores (Marca y Modelo)
+ * Poblar lista del Sidebar Lateral Izquierdo (Todos + Marcas/Modelos)
  */
-window.kitsPoblarSelectsFiltro = function () {
-    const selMarca = document.getElementById('filtroSelectMarca');
-    const selModelo = document.getElementById('filtroSelectModelo');
-    if (!selMarca || !selModelo) return;
+window.kitsPoblarSidebarMarcas = function () {
+    const listContainer = document.getElementById('kits-nav-sidebar-list');
+    if (!listContainer) return;
 
-    const valorMarcaActual = selMarca.value;
-    const valorModeloActual = selModelo.value;
+    // Calcular marcas/modelos disponibles con sus conteos
+    const marcasMap = new Map();
 
-    const marcasSet = new Set();
-    // Extraer de la flota global del ERP si existe
+    // 1. Agregar marcas de la flota global si están presentes
     if (window.dataGlobalPlacas && Array.isArray(window.dataGlobalPlacas)) {
         window.dataGlobalPlacas.forEach(p => {
-            const m = (p[3] || '').trim().toUpperCase();
-            if (m && m !== '-') marcasSet.add(m);
-        });
-    }
-    // Extraer de los kits existentes
-    window.kitsData.forEach(k => {
-        if (k.marca_vehiculo) marcasSet.add(k.marca_vehiculo);
-    });
-
-    const marcasArr = Array.from(marcasSet).sort();
-    selMarca.innerHTML = '<option value="">Todas las marcas</option>' +
-        marcasArr.map(m => `<option value="${m}">${m}</option>`).join('');
-
-    if (valorMarcaActual && marcasArr.includes(valorMarcaActual)) {
-        selMarca.value = valorMarcaActual;
-    }
-
-    window.kitsMarcaFiltroCambiada(valorModeloActual);
-};
-
-/**
- * Evento al cambiar la marca en el filtro superior
- */
-window.kitsMarcaFiltroCambiada = function (modeloPreset) {
-    const selMarca = document.getElementById('filtroSelectMarca');
-    const selModelo = document.getElementById('filtroSelectModelo');
-    if (!selModelo) return;
-
-    const marcaSeleccionada = selMarca ? selMarca.value : '';
-    const modelosSet = new Set(['TODOS LOS MODELOS']);
-
-    if (marcaSeleccionada) {
-        if (window.dataGlobalPlacas && Array.isArray(window.dataGlobalPlacas)) {
-            window.dataGlobalPlacas.forEach(p => {
-                const mMarca = (p[3] || '').trim().toUpperCase();
-                const mMod = (p[4] || '').trim().toUpperCase();
-                if (mMarca === marcaSeleccionada && mMod && mMod !== '-') {
-                    modelosSet.add(mMod);
-                }
-            });
-        }
-        window.kitsData.forEach(k => {
-            if (k.marca_vehiculo === marcaSeleccionada && k.modelo_vehiculo) {
-                modelosSet.add(k.modelo_vehiculo);
+            const m = (p[3] || '').trim();
+            if (m && m !== '-') {
+                if (!marcasMap.has(m)) marcasMap.set(m, 0);
             }
         });
     }
 
-    const modelosArr = Array.from(modelosSet).sort();
-    selModelo.innerHTML = '<option value="">Todos los modelos</option>' +
-        modelosArr.map(m => `<option value="${m}">${m}</option>`).join('');
+    // 2. Agregar marcas de los kits configurados y contar ítems
+    window.kitsData.forEach(k => {
+        const m = (k.marca_vehiculo || 'GENERAL').trim();
+        if (m) {
+            marcasMap.set(m, (marcasMap.get(m) || 0) + 1);
+        }
+    });
 
-    if (modeloPreset && modelosArr.includes(modeloPreset)) {
-        selModelo.value = modeloPreset;
-    }
+    const marcasSorted = Array.from(marcasMap.keys()).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+    let html = `
+        <div class="kits-nav-item ${!window.kitsSidebarMarcaSeleccionada ? 'active' : ''}" data-marca="" onclick="window.kitsSeleccionarMarcaSidebar('', this)">
+            <span>Todos</span>
+            <span class="badge bg-light text-secondary rounded-pill font-monospace" id="badge-count-sidebar-todos">${window.kitsData.length}</span>
+        </div>
+    `;
+
+    marcasSorted.forEach(marca => {
+        const count = marcasMap.get(marca) || 0;
+        const isActive = window.kitsSidebarMarcaSeleccionada.toUpperCase() === marca.toUpperCase();
+        html += `
+            <div class="kits-nav-item ${isActive ? 'active' : ''}" data-marca="${escapeHtml(marca)}" onclick="window.kitsSeleccionarMarcaSidebar('${escapeHtml(marca)}', this)">
+                <span class="text-truncate">${escapeHtml(marca)}</span>
+                ${count > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace" style="font-size: 0.70rem;">${count}</span>` : ''}
+            </div>
+        `;
+    });
+
+    listContainer.innerHTML = html;
+};
+
+/**
+ * Filtrar ítems de la lista del sidebar
+ */
+window.kitsFiltrarSidebarMarcas = function () {
+    const q = ((document.getElementById('buscadorSidebarMarcas') || {}).value || '').toLowerCase().trim();
+    const items = document.querySelectorAll('#kits-nav-sidebar-list .kits-nav-item');
+
+    items.forEach(it => {
+        const marca = (it.getAttribute('data-marca') || '').toLowerCase();
+        const text = it.textContent.toLowerCase();
+        if (!q || !marca || text.includes(q)) {
+            it.style.display = 'flex';
+        } else {
+            it.style.display = 'none';
+        }
+    });
+};
+
+/**
+ * Seleccionar marca del sidebar lateral
+ */
+window.kitsSeleccionarMarcaSidebar = function (marca, el) {
+    window.kitsSidebarMarcaSeleccionada = (marca || '').trim();
+
+    const items = document.querySelectorAll('#kits-nav-sidebar-list .kits-nav-item');
+    items.forEach(it => it.classList.remove('active'));
+    if (el) el.classList.add('active');
 
     window.kitsFiltrar();
 };
@@ -192,7 +211,6 @@ window.kitsMarcaFiltroCambiada = function (modeloPreset) {
 /**
  * Filtrar por segmento rápido de Tipo MP (TODOS, MP1, MP2, MP3, OTROS)
  */
-window.kitsFiltroSegmentoActual = 'TODOS';
 window.kitsFiltrarSegmento = function (tipo, btnEl) {
     window.kitsFiltroSegmentoActual = tipo;
 
@@ -212,22 +230,25 @@ window.kitsResetFiltros = function (cardEl) {
     const searchInput = document.getElementById('buscadorKitsLive');
     if (searchInput) searchInput.value = '';
 
-    const selMarca = document.getElementById('filtroSelectMarca');
-    if (selMarca) selMarca.value = '';
+    const sidebarSearch = document.getElementById('buscadorSidebarMarcas');
+    if (sidebarSearch) sidebarSearch.value = '';
 
-    const selModelo = document.getElementById('filtroSelectModelo');
-    if (selModelo) selModelo.value = '';
+    window.kitsSidebarMarcaSeleccionada = '';
+    const todosSidebarItem = document.querySelector('#kits-nav-sidebar-list .kits-nav-item:first-child');
+    if (todosSidebarItem) {
+        document.querySelectorAll('#kits-nav-sidebar-list .kits-nav-item').forEach(b => b.classList.remove('active'));
+        todosSidebarItem.classList.add('active');
+    }
 
     window.kitsFiltrarSegmento('TODOS', document.querySelector('#btn-group-tipos-mp button:first-child'));
 };
 
 /**
- * Filtro unificado en vivo (Búsqueda + Segmento + Selects)
+ * Filtro unificado en vivo (Búsqueda + Sidebar Marca + Segmento)
  */
 window.kitsFiltrar = function () {
     const q = ((document.getElementById('buscadorKitsLive') || {}).value || '').toLowerCase().trim();
-    const selMarca = ((document.getElementById('filtroSelectMarca') || {}).value || '').toUpperCase().trim();
-    const selModelo = ((document.getElementById('filtroSelectModelo') || {}).value || '').toUpperCase().trim();
+    const selMarca = (window.kitsSidebarMarcaSeleccionada || '').toUpperCase().trim();
     const segTipo = window.kitsFiltroSegmentoActual || 'TODOS';
 
     window.kitsDataFil = window.kitsData.filter(k => {
@@ -240,11 +261,12 @@ window.kitsFiltrar = function () {
             }
         }
 
-        // Filtro por Marca
-        if (selMarca && k.marca_vehiculo !== selMarca) return false;
-
-        // Filtro por Modelo
-        if (selModelo && selModelo !== 'TODOS LOS MODELOS' && k.modelo_vehiculo !== selModelo) return false;
+        // Filtro por Marca seleccionada en Sidebar
+        if (selMarca) {
+            const m = (k.marca_vehiculo || '').toUpperCase().trim();
+            const mod = (k.modelo_vehiculo || '').toUpperCase().trim();
+            if (m !== selMarca && mod !== selMarca) return false;
+        }
 
         // Búsqueda en texto libre
         if (q) {
@@ -305,7 +327,8 @@ window.kitsActualizarKPIs = function () {
 };
 
 /**
- * Renderizar Tabla de Escritorio (Desktop) agrupada por Kit
+ * Renderizar Tabla de Escritorio (Desktop)
+ * Segmentada por tipo de mantenimiento / kit con encabezados en negrita (1:1 a la imagen de referencia)
  */
 window.kitsRenderizarTablaDesktop = function () {
     const tbody = document.getElementById('kits-tbody');
@@ -314,100 +337,79 @@ window.kitsRenderizarTablaDesktop = function () {
     if (!window.kitsDataFil.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center py-5 text-muted">
+                <td colspan="4" class="text-center py-5 text-muted">
                     <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-                    No se encontraron kits de mantenimiento con los criterios de búsqueda.
+                    No se encontraron repuestos o kits con los criterios de búsqueda.
                 </td>
             </tr>
         `;
         return;
     }
 
-    let html = '';
-    let lastGroupKey = null;
+    // Agrupar ítems por (nombre_kit o tipo_mp) para crear las secciones segmentadas en negrita
+    const grupos = new Map();
 
-    // Agrupar visualmente por Marca + Modelo + Tipo MP
-    window.kitsDataFil.forEach((k, idx) => {
-        const groupKey = `${k.marca_vehiculo}__${k.modelo_vehiculo}__${k.tipo_mp}`;
-
-        if (groupKey !== lastGroupKey) {
-            // Calcular resumen del grupo actual
-            const itemsGrupo = window.kitsDataFil.filter(x =>
-                x.marca_vehiculo === k.marca_vehiculo &&
-                x.modelo_vehiculo === k.modelo_vehiculo &&
-                x.tipo_mp === k.tipo_mp
-            );
-            const totalCostoGrupo = itemsGrupo.reduce((acc, it) => acc + parseFloat(it.costo_total || 0), 0);
-
-            // Badge de estilo según el tipo MP
-            let badgeTipoStyle = 'background:#eff6ff; color:#0284c7; border:1px solid #bae6fd;';
-            if (k.tipo_mp === 'MP2') badgeTipoStyle = 'background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;';
-            else if (k.tipo_mp === 'MP3') badgeTipoStyle = 'background:#fffbeb; color:#d97706; border:1px solid #fde68a;';
-            else if (k.tipo_mp === 'MP4') badgeTipoStyle = 'background:#faf5ff; color:#9333ea; border:1px solid #e9d5ff;';
-
-            html += `
-                <tr class="kits-group-row">
-                    <td colspan="6" class="py-2.5 px-4">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="d-flex align-items-center justify-content-center rounded-3 bg-white border shadow-2xs text-primary" style="width: 32px; height: 32px; font-size: 1rem;">
-                                    <i class="bi bi-truck"></i>
-                                </div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="fw-black text-dark" style="font-size: 0.95rem;">${escapeHtml(k.marca_vehiculo)}</span>
-                                    <span class="text-secondary fw-bold" style="font-size: 0.82rem;">• ${escapeHtml(k.modelo_vehiculo)}</span>
-                                    <span class="badge rounded-pill fw-bold text-uppercase px-2.5 py-1 ms-2" style="${badgeTipoStyle} font-size:0.72rem;">${escapeHtml(k.tipo_mp)}</span>
-                                    ${k.nombre_kit ? `<span class="badge bg-light text-secondary border font-sans fw-semibold ms-1" style="font-size:0.72rem;">${escapeHtml(k.nombre_kit)}</span>` : ''}
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="badge bg-white text-secondary border font-monospace px-2.5 py-1" style="font-size:0.75rem;">
-                                    ${itemsGrupo.length} ${itemsGrupo.length === 1 ? 'ítem' : 'ítems'} • S/ ${totalCostoGrupo.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                                <button type="button" class="btn btn-sm btn-light border shadow-2xs text-primary rounded-3 px-3 py-1 fw-bold d-flex align-items-center gap-1.5"
-                                        onclick="window.kitsEditarKit('${escapeHtml(k.marca_vehiculo)}', '${escapeHtml(k.modelo_vehiculo)}', '${escapeHtml(k.tipo_mp)}')"
-                                        style="font-size: 0.78rem; background: #fff;">
-                                    <i class="bi bi-pencil-square"></i> Editar Kit
-                                </button>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-            `;
-
-            lastGroupKey = groupKey;
+    window.kitsDataFil.forEach(k => {
+        // Título del grupo: Alias del kit si existe, o el tipo MP
+        const groupTitle = (k.nombre_kit || k.tipo_mp || 'GENERAL').trim();
+        if (!grupos.has(groupTitle)) {
+            grupos.set(groupTitle, []);
         }
+        grupos.get(groupTitle).push(k);
+    });
 
-        // Fila de Ítem individual
+    let html = '';
+
+    grupos.forEach((items, groupTitle) => {
+        // Fila Encabezado de Tipo / Sección de Mantenimiento (En Negrita como en la imagen)
         html += `
-            <tr class="kits-item-row hover:bg-slate-50 transition-colors">
-                <td class="ps-4 py-2.5">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-gear-fill text-muted" style="font-size:0.75rem;"></i>
-                        <span class="fw-bold text-dark" style="font-size: 0.85rem;">${escapeHtml(k.item_nombre || '—')}</span>
+            <tr class="kits-type-header-row">
+                <td colspan="4" class="py-3 px-4" style="background: #ffffff; border-top: 1.5px solid #e2e8f0; border-bottom: 1px solid #f1f5f9;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span class="fw-black text-dark" style="font-size: 0.92rem; letter-spacing: -0.2px; font-weight: 800;">
+                            ${escapeHtml(groupTitle)}
+                        </span>
                     </div>
-                </td>
-                <td class="py-2.5 text-center font-monospace fw-bold text-dark" style="font-size: 0.85rem;">
-                    ${k.cantidad.toLocaleString('es-PE', { maximumFractionDigits: 2 })}
-                </td>
-                <td class="py-2.5 text-center">
-                    <span class="badge bg-light text-secondary border font-monospace" style="font-size: 0.70rem;">
-                        ${escapeHtml(k.unidad_medida || 'UND')}
-                    </span>
-                </td>
-                <td class="py-2.5 text-end font-monospace text-secondary" style="font-size: 0.85rem;">
-                    S/ ${k.costo_unitario.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td class="py-2.5 text-end font-monospace fw-bold text-success" style="font-size: 0.88rem;">
-                    S/ ${k.costo_total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td class="pe-4 py-2.5 text-end">
-                    <button type="button" class="ck-action-btn ck-btn-delete" title="Eliminar ítem" onclick="window.kitsEliminarItem(${k.id}, '${escapeHtml(k.item_nombre)}')">
-                        <i class="bi bi-trash"></i>
-                    </button>
                 </td>
             </tr>
         `;
+
+        // Filas de repuestos dentro de esta sección
+        items.forEach(it => {
+            const stockNum = it.stock_almacen != null ? it.stock_almacen : 0;
+            const stockColorClass = stockNum > 0 ? 'text-dark fw-bold' : 'text-muted';
+
+            html += `
+                <tr class="kits-item-row hover:bg-slate-50 transition-colors" style="cursor: default;">
+                    <!-- Columna 1: Codigo / Descripción del repuesto -->
+                    <td class="ps-4 py-3 align-middle" style="border-bottom: 1px solid #f8fafc;">
+                        <span class="fw-bold text-dark" style="font-size: 0.88rem; color: #1e293b;">
+                            ${escapeHtml(it.item_nombre || '—')}
+                        </span>
+                    </td>
+
+                    <!-- Columna 2: Cantidad -->
+                    <td class="py-3 text-center align-middle font-monospace" style="border-bottom: 1px solid #f8fafc; font-size: 0.88rem; color: #334155;">
+                        ${it.cantidad.toFixed(2)}
+                    </td>
+
+                    <!-- Columna 3: Stock Almacen -->
+                    <td class="py-3 text-center align-middle font-monospace ${stockColorClass}" style="border-bottom: 1px solid #f8fafc; font-size: 0.88rem;">
+                        ${stockNum}
+                    </td>
+
+                    <!-- Columna 4: Botón de Acción Chevron > -->
+                    <td class="pe-4 py-3 text-end align-middle" style="border-bottom: 1px solid #f8fafc;">
+                        <button type="button" class="btn btn-sm btn-link text-secondary p-1 text-decoration-none"
+                                title="Editar configuración del kit"
+                                onclick="window.kitsEditarKit('${escapeHtml(it.marca_vehiculo)}', '${escapeHtml(it.modelo_vehiculo)}', '${escapeHtml(it.tipo_mp)}')"
+                                style="font-size: 1rem; color: #64748b;">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
     });
 
     tbody.innerHTML = html;
@@ -455,9 +457,9 @@ window.kitsRenderizarCardsMobile = function () {
         else if (g.tipo_mp === 'MP3') badgeTipoStyle = 'background:#fffbeb; color:#d97706; border:1px solid #fde68a;';
 
         html += `
-            <div class="ck-mobile-card">
+            <div class="ck-mobile-card mb-3" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; padding:14px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                 <!-- Encabezado de la Tarjeta Móvil -->
-                <div class="d-flex items-center justify-content-between pb-2 mb-2 border-bottom border-slate-100">
+                <div class="d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom border-slate-100">
                     <div class="d-flex align-items-center gap-2">
                         <div class="p-2 rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
                             <i class="bi bi-truck"></i>
@@ -472,7 +474,7 @@ window.kitsRenderizarCardsMobile = function () {
                     </span>
                 </div>
 
-                ${g.nombre_kit ? `<div class="text-muted small fw-semibold mb-2">${escapeHtml(g.nombre_kit)}</div>` : ''}
+                ${g.nombre_kit ? `<div class="fw-black text-dark small mb-2" style="font-size:0.85rem;"><strong>${escapeHtml(g.nombre_kit)}</strong></div>` : ''}
 
                 <!-- Desglose de Ítems -->
                 <div class="d-flex flex-column gap-2 my-2.5">
@@ -481,11 +483,8 @@ window.kitsRenderizarCardsMobile = function () {
                             <div style="min-width:0; flex:1;" class="pe-2">
                                 <div class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;">${escapeHtml(it.item_nombre)}</div>
                                 <div class="text-secondary small font-monospace" style="font-size: 0.72rem;">
-                                    ${it.cantidad} ${escapeHtml(it.unidad_medida)} x S/ ${it.costo_unitario.toFixed(2)}
+                                    Cant: ${it.cantidad.toFixed(2)} | Stock: ${it.stock_almacen || 0}
                                 </div>
-                            </div>
-                            <div class="text-end font-monospace fw-bold text-success" style="font-size: 0.85rem;">
-                                S/ ${it.costo_total.toFixed(2)}
                             </div>
                         </div>
                     `).join('')}
@@ -494,8 +493,8 @@ window.kitsRenderizarCardsMobile = function () {
                 <!-- Pie de la Tarjeta Móvil -->
                 <div class="d-flex align-items-center justify-content-between pt-2 border-top border-slate-100">
                     <div>
-                        <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size: 0.65rem;">Costo Total</span>
-                        <span class="fw-black text-dark font-monospace" style="font-size: 1.05rem;">
+                        <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size: 0.65rem;">Costo Estimado</span>
+                        <span class="fw-black text-dark font-monospace" style="font-size: 0.95rem;">
                             S/ ${totalCosto.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                     </div>
@@ -539,7 +538,7 @@ window.kitsAbrirModal = function () {
     const txtAlias = document.getElementById('modalKitNombreAlias');
     const txtObs = document.getElementById('modalKitObservaciones');
 
-    if (selMarca) selMarca.value = '';
+    if (selMarca) selMarca.value = window.kitsSidebarMarcaSeleccionada || '';
     if (selModelo) selModelo.value = 'TODOS LOS MODELOS';
     if (selTipo) selTipo.value = '';
     if (txtAlias) txtAlias.value = '';
@@ -622,7 +621,7 @@ window.kitsPoblarSelectsModal = function (presetMarca, presetModelo, presetTipo)
             });
         }
         window.kitsData.forEach(k => {
-            if (k.marca_vehiculo) marcasSet.add(k.marca_vehiculo);
+            if (k.marca_vehiculo) marcasSet.add(k.marca_vehiculo.toUpperCase());
         });
 
         const marcasArr = Array.from(marcasSet).sort();
