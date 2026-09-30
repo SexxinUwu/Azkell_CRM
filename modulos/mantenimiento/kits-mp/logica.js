@@ -58,17 +58,21 @@ window.kitsCargarTabla = function (forzarRecarga) {
     ]).then(([kitsResp, invData, tiposResp, placasResp]) => {
         // 1. Mapear inventario para autocompletado, stock en vivo y sincronización de costos
         window._kitsAlmacenItems = (invData || []).map(x => {
-            const nom = (x.descripcion || x.articulo || x.nombre || '').trim();
-            const unid = (x.unidad || x.unidad_medida || 'UND').toUpperCase();
+            const id = x.id;
+            const cod = (x.codigo_articulo || x.codigo_item || x.codigo || x.codigo_barras || (id ? `ART-${id}` : '')).toString().trim();
+            const nom = (x.descripcion || x.articulo || x.nombre || '').toString().trim();
+            const unid = (x.unidad || x.unidad_medida || 'UND').toString().toUpperCase().trim();
             const cu = parseFloat(x.costo_soles != null ? x.costo_soles : (x.costo_referencial != null ? x.costo_referencial : (x.costo_unitario || 0))) || 0;
-            const stk = parseFloat(x.stock != null ? x.stock : (x.stock_actual != null ? x.stock_actual : (x.cantidad != null ? x.cantidad : 0))) || 0;
+            const stk = parseFloat(x.stock_actual != null ? x.stock_actual : (x.stock != null ? x.stock : (x.cantidad != null ? x.cantidad : 0))) || 0;
             return {
+                id: id,
+                codigo: cod,
                 nombre: nom,
                 unidad: unid,
                 costo: cu,
                 stock: stk
             };
-        }).filter(x => x.nombre !== '');
+        }).filter(x => x.nombre !== '' || x.codigo !== '');
 
         // 2. Mapear tipos de preventivo
         window._kitsTiposMPList = (tiposResp.data || []).map(t => t.nombre || t.tipo || t).filter(Boolean);
@@ -76,13 +80,20 @@ window.kitsCargarTabla = function (forzarRecarga) {
             window._kitsTiposMPList = ['MP1', 'MP2', 'MP3', 'MP4', 'INSPECCION'];
         }
 
-        // 3. Procesar datos de kits con costos y stock sincronizados
+        // 3. Procesar datos de kits con sincronización en tiempo real desde Almacén
         window.kitsData = (kitsResp.data || []).map(k => {
             const cant = parseFloat(k.cantidad || 1);
             let cu = parseFloat(k.costo_unitario || 0);
 
-            // Sincronizar con el costo y stock actual de inventario si existe
-            const invItem = window._kitsAlmacenItems.find(x => x.nombre.toLowerCase() === (k.item_nombre || '').toLowerCase());
+            const kCod = (k.item_codigo || '').toString().trim();
+            const kNom = (k.item_nombre || '').toString().trim();
+
+            // Sincronizar en vivo con Almacén por código de inventario o por nombre
+            const invItem = window._kitsAlmacenItems.find(x => 
+                (kCod && kCod !== '-' && x.codigo.toLowerCase() === kCod.toLowerCase()) ||
+                (kNom && x.nombre.toLowerCase() === kNom.toLowerCase())
+            );
+
             if (invItem && invItem.costo > 0) {
                 cu = invItem.costo;
             }
@@ -95,7 +106,8 @@ window.kitsCargarTabla = function (forzarRecarga) {
                 modelo_vehiculo: (k.modelo_vehiculo || 'TODOS LOS MODELOS').trim(),
                 tipo_mp: (k.tipo_mp || 'MP1').trim().toUpperCase(),
                 nombre_kit: (k.nombre_kit || '').trim(),
-                item_nombre: (k.item_nombre || '').trim(),
+                item_codigo: (invItem ? invItem.codigo : kCod) || '-',
+                item_nombre: (invItem ? invItem.nombre : kNom),
                 cantidad: cant,
                 unidad_medida: (k.unidad_medida || (invItem ? invItem.unidad : 'UND')).toUpperCase(),
                 costo_unitario: cu,
@@ -335,7 +347,7 @@ window.kitsFiltrar = function () {
 
 /**
  * Renderizar Tabla de Escritorio (Desktop)
- * Segmentada por tipo de mantenimiento / kit con encabezados en negrita (1:1 a la imagen de referencia)
+ * Columnas: CÓDIGO | DESCRIPCIÓN | CANTIDAD | STOCK ALMACÉN | ACCIÓN
  */
 window.kitsRenderizarTablaDesktop = function () {
     const tbody = document.getElementById('kits-tbody');
@@ -344,7 +356,7 @@ window.kitsRenderizarTablaDesktop = function () {
     if (!window.kitsDataFil.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="4" class="text-center py-5 text-muted">
+                <td colspan="5" class="text-center py-5 text-muted">
                     <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
                     ${window.kitsSidebarMarcaSeleccionada ? `No hay kits configurados para la marca <strong>${escapeHtml(window.kitsSidebarMarcaSeleccionada)}</strong>.` : 'No se encontraron repuestos o kits con los criterios de búsqueda.'}
                     <div class="mt-3">
@@ -375,7 +387,7 @@ window.kitsRenderizarTablaDesktop = function () {
         // Fila Encabezado de Tipo / Sección de Mantenimiento (En Negrita como en la imagen)
         html += `
             <tr class="kits-type-header-row">
-                <td colspan="4" class="py-3 px-4" style="background: #ffffff; border-top: 1.5px solid #e2e8f0; border-bottom: 1px solid #f1f5f9;">
+                <td colspan="5" class="py-3 px-4" style="background: #ffffff; border-top: 1.5px solid #e2e8f0; border-bottom: 1px solid #f1f5f9;">
                     <div class="d-flex align-items-center justify-content-between">
                         <span class="fw-black text-dark" style="font-size: 0.92rem; letter-spacing: -0.2px; font-weight: 800;">
                             ${escapeHtml(groupTitle)}
@@ -387,30 +399,48 @@ window.kitsRenderizarTablaDesktop = function () {
 
         // Filas de repuestos dentro de esta sección
         items.forEach(it => {
-            const stockNum = it.stock_almacen != null ? it.stock_almacen : 0;
+            const kCod = (it.item_codigo || '').toString().trim();
+            const kNom = (it.item_nombre || '').toString().trim();
+
+            // Sincronización en tiempo real con inventario
+            const invItem = window._kitsAlmacenItems.find(x => 
+                (kCod && kCod !== '-' && x.codigo.toLowerCase() === kCod.toLowerCase()) ||
+                (kNom && x.nombre.toLowerCase() === kNom.toLowerCase())
+            );
+
+            const displayCodigo = (invItem ? invItem.codigo : kCod) || '—';
+            const displayNombre = (invItem ? invItem.nombre : kNom) || '—';
+            const stockNum = invItem != null ? invItem.stock : (it.stock_almacen != null ? it.stock_almacen : 0);
             const stockColorClass = stockNum > 0 ? 'text-dark fw-bold' : 'text-muted';
 
             html += `
                 <tr class="kits-item-row hover:bg-slate-50 transition-colors" style="cursor: default;">
-                    <!-- Columna 1: Codigo / Descripción del repuesto -->
-                    <td class="ps-4 py-3 align-middle" style="border-bottom: 1px solid #f8fafc;">
-                        <span class="fw-bold text-dark" style="font-size: 0.88rem; color: #1e293b;">
-                            ${escapeHtml(it.item_nombre || '—')}
+                    <!-- Columna 1: Código del artículo -->
+                    <td class="ps-4 py-3 align-middle" style="border-bottom: 1px solid #f8fafc; width: 140px;">
+                        <span class="badge bg-white text-dark border font-monospace fw-bold px-2 py-1" style="font-size: 0.80rem; border-color: #cbd5e1 !important; letter-spacing: 0.3px;">
+                            ${escapeHtml(displayCodigo !== '-' ? displayCodigo : '—')}
                         </span>
                     </td>
 
-                    <!-- Columna 2: Cantidad -->
-                    <td class="py-3 text-center align-middle font-monospace" style="border-bottom: 1px solid #f8fafc; font-size: 0.88rem; color: #334155;">
+                    <!-- Columna 2: Descripción completa tal cual sale en Inventario -->
+                    <td class="py-3 align-middle" style="border-bottom: 1px solid #f8fafc;">
+                        <span class="fw-bold text-dark" style="font-size: 0.88rem; color: #1e293b;">
+                            ${escapeHtml(displayNombre)}
+                        </span>
+                    </td>
+
+                    <!-- Columna 3: Cantidad -->
+                    <td class="py-3 text-center align-middle font-monospace" style="border-bottom: 1px solid #f8fafc; font-size: 0.88rem; color: #334155; width: 120px;">
                         ${it.cantidad.toFixed(2)}
                     </td>
 
-                    <!-- Columna 3: Stock Almacen -->
-                    <td class="py-3 text-center align-middle font-monospace ${stockColorClass}" style="border-bottom: 1px solid #f8fafc; font-size: 0.88rem;">
+                    <!-- Columna 4: Stock Almacén en vivo -->
+                    <td class="py-3 text-center align-middle font-monospace ${stockColorClass}" style="border-bottom: 1px solid #f8fafc; font-size: 0.88rem; width: 140px;">
                         ${stockNum}
                     </td>
 
-                    <!-- Columna 4: Botón de Acción Chevron > -->
-                    <td class="pe-4 py-3 text-end align-middle" style="border-bottom: 1px solid #f8fafc;">
+                    <!-- Columna 5: Botón de Acción Chevron > -->
+                    <td class="pe-4 py-3 text-end align-middle" style="border-bottom: 1px solid #f8fafc; width: 60px;">
                         <button type="button" class="btn btn-sm btn-link text-secondary p-1 text-decoration-none"
                                 title="Editar configuración del kit"
                                 onclick="window.kitsEditarKit('${escapeHtml(it.marca_vehiculo)}', '${escapeHtml(it.modelo_vehiculo)}', '${escapeHtml(it.tipo_mp)}')"
@@ -711,17 +741,34 @@ window.kitsModalActualizarTitulo = function () {
 };
 
 /**
- * Agregar Fila Dinámica de Repuesto/Material en el Modal
+ * Agregar Fila Dinámica de Repuesto/Material en el Modal con Código + Descripción vinculados
  */
 window.kitsModalAgregarFila = function (data = {}) {
     const container = document.getElementById('modalKitItemsContainer');
     if (!container) return;
 
     const rowId = `kit_row_${++window.kitsRowCounter}`;
-    const listId = `dl_inv_${rowId}`;
+    const listCodId = `dl_cod_${rowId}`;
+    const listNomId = `dl_nom_${rowId}`;
 
     const cant = parseFloat(data.cantidad || 1);
-    const cu = parseFloat(data.costo_unitario || 0);
+    let cu = parseFloat(data.costo_unitario || 0);
+
+    const kCod = (data.item_codigo || '').toString().trim();
+    const kNom = (data.item_nombre || '').toString().trim();
+
+    // Sincronizar con inventario en vivo si existe
+    const invItem = window._kitsAlmacenItems.find(x => 
+        (kCod && kCod !== '-' && x.codigo.toLowerCase() === kCod.toLowerCase()) ||
+        (kNom && x.nombre.toLowerCase() === kNom.toLowerCase())
+    );
+
+    const codigoVal = (invItem ? invItem.codigo : kCod) !== '-' ? (invItem ? invItem.codigo : kCod) : '';
+    const nombreVal = invItem ? invItem.nombre : kNom;
+    const unidVal = data.unidad_medida || (invItem ? invItem.unidad : 'UND');
+    if (invItem && invItem.costo > 0 && cu <= 0) {
+        cu = invItem.costo;
+    }
     const ct = parseFloat(data.costo_total || (cant * cu));
 
     const row = document.createElement('div');
@@ -731,63 +778,110 @@ window.kitsModalAgregarFila = function (data = {}) {
 
     row.innerHTML = `
         <div class="row g-2 align-items-center">
-            <!-- Repuesto / Nombre con Datalist de Almacén -->
-            <div class="col-12 col-md-5">
-                <label class="form-label d-block mb-1 text-muted" style="font-size:0.65rem;">Repuesto / Lubricante / Material</label>
+            <!-- 1. Código del Artículo (con Datalist de Almacén) -->
+            <div class="col-12 col-md-3">
+                <label class="form-label d-block mb-1 text-secondary fw-semibold" style="font-size:0.72rem;">Código Artículo</label>
                 <div class="position-relative">
-                    <input type="text" class="form-control form-control-sm fw-bold kit-input-nombre"
-                           list="${listId}"
-                           placeholder="Escriba o elija del inventario..."
-                           value="${escapeHtml(data.item_nombre || '')}"
-                           oninput="window.kitsModalItemNombreCambiado(this, '${rowId}')"
+                    <input type="text" class="form-control form-control-sm font-monospace fw-bold kit-input-codigo text-uppercase"
+                           list="${listCodId}"
+                           placeholder="CÓDIGO..."
+                           value="${escapeHtml(codigoVal)}"
+                           oninput="window.kitsModalItemCodigoCambiado(this, '${rowId}')"
                            autocomplete="off">
-                    <datalist id="${listId}">
-                        ${window._kitsAlmacenItems.map(it => `<option value="${escapeHtml(it.nombre)}"></option>`).join('')}
+                    <datalist id="${listCodId}">
+                        ${window._kitsAlmacenItems.map(it => `<option value="${escapeHtml(it.codigo)}">${escapeHtml(it.nombre)}</option>`).join('')}
                     </datalist>
                 </div>
             </div>
 
-            <!-- Cantidad -->
-            <div class="col-4 col-md-2">
-                <label class="form-label d-block mb-1 text-muted" style="font-size:0.65rem;">Cantidad</label>
+            <!-- 2. Repuesto / Descripción Completa del Artículo -->
+            <div class="col-12 col-md-4">
+                <label class="form-label d-block mb-1 text-secondary fw-semibold" style="font-size:0.72rem;">Repuesto / Lubricante / Material</label>
+                <div class="position-relative">
+                    <input type="text" class="form-control form-control-sm fw-bold kit-input-nombre"
+                           list="${listNomId}"
+                           placeholder="Escriba o elija del inventario..."
+                           value="${escapeHtml(nombreVal)}"
+                           oninput="window.kitsModalItemNombreCambiado(this, '${rowId}')"
+                           autocomplete="off">
+                    <datalist id="${listNomId}">
+                        ${window._kitsAlmacenItems.map(it => `<option value="${escapeHtml(it.nombre)}">${escapeHtml(it.codigo)}</option>`).join('')}
+                    </datalist>
+                </div>
+            </div>
+
+            <!-- 3. Cantidad -->
+            <div class="col-4 col-md-1" style="flex: 0 0 12%; max-width: 12%;">
+                <label class="form-label d-block mb-1 text-secondary fw-semibold text-center" style="font-size:0.72rem;">Cantidad</label>
                 <input type="number" class="form-control form-control-sm text-center font-monospace fw-bold kit-input-cant"
                        value="${cant}" step="0.01" min="0.01"
                        oninput="window.kitsModalRecalcularFila('${rowId}')">
             </div>
 
-            <!-- Unidad -->
-            <div class="col-4 col-md-2">
-                <label class="form-label d-block mb-1 text-muted" style="font-size:0.65rem;">Unidad</label>
+            <!-- 4. Unidad -->
+            <div class="col-4 col-md-1" style="flex: 0 0 12%; max-width: 12%;">
+                <label class="form-label d-block mb-1 text-secondary fw-semibold text-center" style="font-size:0.72rem;">Unidad</label>
                 <input type="text" class="form-control form-control-sm text-center font-monospace fw-bold kit-input-unid text-uppercase"
-                       value="${escapeHtml(data.unidad_medida || 'UND')}" placeholder="UND">
+                       value="${escapeHtml(unidVal)}" placeholder="UND">
             </div>
 
-            <!-- Costo Unitario -->
-            <div class="col-4 col-md-2">
-                <label class="form-label d-block mb-1 text-muted" style="font-size:0.65rem;">C. Unitario (S/)</label>
+            <!-- 5. Costo Unitario -->
+            <div class="col-4 col-md-2" style="flex: 0 0 18%; max-width: 18%;">
+                <label class="form-label d-block mb-1 text-secondary fw-semibold text-end" style="font-size:0.72rem;">C. Unitario (S/)</label>
                 <input type="number" class="form-control form-control-sm text-end font-monospace kit-input-costo"
                        value="${cu.toFixed(2)}" step="0.01" min="0"
                        oninput="window.kitsModalRecalcularFila('${rowId}')">
             </div>
 
-            <!-- Botón Eliminar Fila -->
-            <div class="col-12 col-md-1 text-end pt-md-3">
-                <button type="button" class="btn btn-sm btn-outline-danger rounded-2 p-1 px-2 w-100 w-md-auto"
+            <!-- 6. Botón Eliminar Fila -->
+            <div class="col-12 col-md-auto text-end pt-md-3 ms-auto">
+                <button type="button" class="btn btn-sm btn-outline-danger rounded-2 p-1 px-2"
                         title="Quitar ítem" onclick="window.kitsModalEliminarFila('${rowId}')">
                     <i class="bi bi-trash"></i>
                 </button>
             </div>
         </div>
 
-        <!-- Subtotal de la fila -->
-        <div class="d-flex justify-content-end align-items-center gap-2 mt-1 pt-1 border-top border-slate-200">
-            <span class="text-secondary small" style="font-size:0.70rem;">Subtotal:</span>
-            <span class="fw-bold text-success font-monospace small kit-span-subtotal">S/ ${ct.toFixed(2)}</span>
+        <!-- Subtotal de la fila & stock hint -->
+        <div class="d-flex justify-content-between align-items-center mt-1.5 pt-1 border-top border-slate-200">
+            <small class="text-muted font-monospace kit-stock-hint" style="font-size:0.72rem;">
+                ${invItem ? `<i class="bi bi-box-seam me-1"></i>Stock Almacén: <strong>${invItem.stock}</strong> ${invItem.unidad}` : ''}
+            </small>
+            <div class="d-flex align-items-center gap-1">
+                <span class="text-secondary small" style="font-size:0.72rem;">Subtotal:</span>
+                <span class="fw-bold text-success font-monospace kit-span-subtotal" style="font-size:0.80rem;">S/ ${ct.toFixed(2)}</span>
+            </div>
         </div>
     `;
 
     container.appendChild(row);
     window.kitsModalRecalcularTotales();
+};
+
+/**
+ * Evento al escribir o elegir un Código del datalist
+ */
+window.kitsModalItemCodigoCambiado = function (inputEl, rowId) {
+    const val = (inputEl.value || '').trim();
+    if (!val) return;
+
+    const matched = window._kitsAlmacenItems.find(x => x.codigo.toLowerCase() === val.toLowerCase());
+    if (matched) {
+        const row = document.getElementById(rowId);
+        if (row) {
+            const nomInput = row.querySelector('.kit-input-nombre');
+            const unidInput = row.querySelector('.kit-input-unid');
+            const costoInput = row.querySelector('.kit-input-costo');
+            const hintEl = row.querySelector('.kit-stock-hint');
+
+            if (nomInput) nomInput.value = matched.nombre;
+            if (unidInput && matched.unidad) unidInput.value = matched.unidad;
+            if (costoInput && matched.costo > 0) costoInput.value = matched.costo.toFixed(2);
+            if (hintEl) hintEl.innerHTML = `<i class="bi bi-box-seam me-1"></i>Stock Almacén: <strong>${matched.stock}</strong> ${matched.unidad}`;
+
+            window.kitsModalRecalcularFila(rowId);
+        }
+    }
 };
 
 /**
@@ -801,10 +895,16 @@ window.kitsModalItemNombreCambiado = function (inputEl, rowId) {
     if (matched) {
         const row = document.getElementById(rowId);
         if (row) {
+            const codInput = row.querySelector('.kit-input-codigo');
             const unidInput = row.querySelector('.kit-input-unid');
             const costoInput = row.querySelector('.kit-input-costo');
+            const hintEl = row.querySelector('.kit-stock-hint');
+
+            if (codInput && matched.codigo) codInput.value = matched.codigo;
             if (unidInput && matched.unidad) unidInput.value = matched.unidad;
             if (costoInput && matched.costo > 0) costoInput.value = matched.costo.toFixed(2);
+            if (hintEl) hintEl.innerHTML = `<i class="bi bi-box-seam me-1"></i>Stock Almacén: <strong>${matched.stock}</strong> ${matched.unidad}`;
+
             window.kitsModalRecalcularFila(rowId);
         }
     }
@@ -902,6 +1002,7 @@ window.kitsModalGuardar = function () {
     const itemsToSave = [];
     for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
+        const itemCodigo = (r.querySelector('.kit-input-codigo')?.value || '').trim();
         const itemNombre = (r.querySelector('.kit-input-nombre')?.value || '').trim();
         const cant = parseFloat(r.querySelector('.kit-input-cant')?.value || 0) || 0;
         const unid = (r.querySelector('.kit-input-unid')?.value || 'UND').trim().toUpperCase();
@@ -922,6 +1023,7 @@ window.kitsModalGuardar = function () {
             modelo_vehiculo: modelo,
             tipo_mp: tipo,
             nombre_kit: alias,
+            item_codigo: itemCodigo || '-',
             item_nombre: itemNombre,
             cantidad: cant,
             unidad_medida: unid,
