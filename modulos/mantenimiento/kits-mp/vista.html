@@ -299,28 +299,117 @@
     box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
 }
 
-/* Mobile responsive drawer */
+/* Mobile responsive styles (1:1 con Imágenes 2 y 3) */
 @media (max-width: 768px) {
     #mod-kits-mp.ck-app-container {
-        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+        padding: 0 0 100px 0 !important;
+        background: #ffffff !important;
     }
-    #mod-kits-mp .kits-sidebar-card {
-        min-height: auto !important;
-        margin-bottom: 12px !important;
+    .kits-mobile-view-wrap {
+        width: 100% !important;
+        max-width: 100% !important;
+        background: #ffffff;
+        min-height: 100vh;
     }
-    #mod-kits-mp .kits-nav-list {
-        display: flex !important;
-        flex-direction: row !important;
-        overflow-x: auto !important;
-        max-height: none !important;
-        gap: 6px !important;
-        padding-bottom: 4px !important;
+    /* Pantalla 1: Lista de Marcas (1:1 Imagen 2) */
+    .kits-m-brand-list {
+        display: flex;
+        flex-direction: column;
+        padding: 6px 12px 100px 12px;
+        gap: 2px;
+        background: #ffffff;
     }
-    #mod-kits-mp .kits-nav-item {
-        white-space: nowrap !important;
-        flex-shrink: 0 !important;
-        margin-bottom: 0 !important;
+    .kits-m-brand-item {
+        display: block;
+        width: 100%;
+        padding: 10px 18px;
+        font-size: 15px;
+        font-weight: 500;
+        color: #1e293b;
+        border-radius: 9999px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        text-align: left;
     }
+    .kits-m-brand-item:hover, .kits-m-brand-item:active {
+        background: #f1f5f9;
+    }
+    .kits-m-brand-item.active {
+        background: #e8ecf8 !important;
+        color: #3b5998 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Pantalla 2: Tabla de Filtros / Kits (1:1 Imagen 3) */
+    .kits-m-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+        background: #ffffff;
+        border-top: 1px solid #e2e8f0;
+    }
+    .kits-m-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #ffffff;
+        font-size: 13px;
+    }
+    .kits-m-table thead th {
+        padding: 10px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
+        white-space: nowrap;
+    }
+    .kits-m-table thead th.text-center {
+        text-align: center;
+    }
+    .kits-m-section-header {
+        background: #ffffff !important;
+        border-top: 1px solid #e2e8f0 !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        padding: 10px 14px !important;
+        font-weight: 700 !important;
+        font-size: 13.5px !important;
+        color: #0f172a !important;
+    }
+    .kits-m-row {
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.12s ease;
+    }
+    .kits-m-row:active {
+        background: #f8fafc;
+    }
+    .kits-m-cell-name {
+        padding: 10px 14px;
+        font-weight: 700;
+        font-size: 13px;
+        color: #0f172a;
+        line-height: 1.35;
+        vertical-align: middle;
+    }
+    .kits-m-cell-cant {
+        padding: 10px 8px;
+        font-size: 13px;
+        color: #334155;
+        text-align: center;
+        vertical-align: middle;
+        width: 85px;
+        font-variant-numeric: tabular-nums;
+    }
+    .kits-m-cell-stock {
+        padding: 10px 8px;
+        font-size: 13px;
+        color: #334155;
+        text-align: center;
+        vertical-align: middle;
+        width: 95px;
+        font-variant-numeric: tabular-nums;
+    }
+
     .ck-floating-drawer-dialog {
         max-width: 100% !important;
         width: 100% !important;
@@ -427,17 +516,17 @@
   <!-- ========================================================================= -->
   <!-- 📱 VISTA MÓVIL NATIVA (< 768px - 1:1 CON IMÁGENES 2 Y 3)                   -->
   <!-- ========================================================================= -->
-  <div class="d-md-none w-100" id="mod-kits-mobile-container">
+  <div class="d-md-none w-100 kits-mobile-view-wrap" id="mod-kits-mobile-container">
     
     <!-- PANTALLA 1 MÓVIL: LISTA DE MARCAS (1:1 CON IMAGEN 2) -->
     <div id="kits-mobile-view-marcas" style="display: block;">
       <!-- Header Móvil Marcas -->
-      <div class="d-flex align-items-center justify-content-between p-2.5 bg-white border-bottom shadow-2xs rounded-3 mb-2">
+      <div class="d-flex align-items-center justify-content-between px-3 py-2.5 bg-white border-bottom mb-2">
         <div class="d-flex align-items-center gap-2">
-          <div class="p-1.5 rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-            <i class="bi bi-truck" style="color: #0284c7; font-size: 1.1rem;"></i>
+          <div class="p-1.5 rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+            <i class="bi bi-truck" style="color: #0284c7; font-size: 1.05rem;"></i>
           </div>
-          <h5 class="fw-bolder m-0 text-dark" style="font-size: 1.1rem; letter-spacing:-0.2px;">Filtros / Kits</h5>
+          <h5 class="fw-bolder m-0 text-dark" style="font-size: 1.05rem;">Filtros / Kits</h5>
         </div>
         <div class="d-flex align-items-center gap-1.5">
           <button type="button" class="btn btn-light btn-sm rounded-circle p-1.5 border" onclick="window.kitsCargarTabla(true)" title="Recargar">
@@ -449,28 +538,20 @@
         </div>
       </div>
 
-      <!-- Sección Título: Marca -->
-      <div class="px-2 pt-2 pb-1.5 fw-bold text-primary" style="font-size: 0.92rem; letter-spacing: 0.3px;">
-        Marca
-      </div>
-
-      <!-- Lista de Marcas Móvil -->
-      <div class="bg-white rounded-4 border border-slate-200 overflow-hidden shadow-2xs mb-4" id="kits-mobile-marcas-list">
-        <!-- Inyectado dinámicamente -->
+      <!-- Lista de Marcas Móvil (1:1 Imagen 2) -->
+      <div class="kits-m-brand-list" id="kits-mobile-marcas-list">
+        <!-- Inyectado dinámicamente como lista limpia sin cajitas ni bordes raros -->
       </div>
     </div>
 
     <!-- PANTALLA 2 MÓVIL: DETALLE DE KITS/FILTROS DE LA MARCA (1:1 CON IMAGEN 3) -->
     <div id="kits-mobile-view-detalle" style="display: none;">
-      <!-- Header Móvil Detalle -->
-      <div class="d-flex align-items-center justify-content-between p-2.5 bg-white border-bottom shadow-2xs rounded-3 mb-1">
-        <div class="d-flex align-items-center gap-2" style="cursor: pointer;" onclick="window.kitsMobileMostrarMarcas()">
+      <!-- Header Móvil Detalle con botón Volver -->
+      <div class="d-flex align-items-center justify-content-between px-3 py-2.5 bg-white border-bottom mb-1">
+        <button type="button" class="btn btn-link p-0 text-dark fw-bold text-decoration-none d-flex align-items-center gap-2" onclick="window.kitsMobileMostrarMarcas()">
           <i class="bi bi-arrow-left fs-5 text-dark fw-bold"></i>
-          <div class="p-1.5 rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-            <i class="bi bi-tools" style="color: #0284c7; font-size: 0.95rem;"></i>
-          </div>
-          <span class="fw-bolder text-dark text-truncate" style="font-size: 1.05rem;" id="kits-mobile-detalle-brand-title">Filtros</span>
-        </div>
+          <span class="fw-bolder text-dark" style="font-size: 1.05rem;" id="kits-mobile-detalle-brand-title">Volver a Marcas</span>
+        </button>
         <div class="d-flex align-items-center gap-1.5">
           <button type="button" class="btn btn-light btn-sm rounded-circle p-1.5 border" onclick="window.kitsMobileToggleSearch()" title="Buscar">
             <i class="bi bi-search fs-6"></i>
@@ -481,26 +562,17 @@
         </div>
       </div>
 
-      <!-- Subheader Breadcrumb (< Tipo de Mantt) -->
-      <div class="px-3 py-2 bg-light border-bottom rounded-2 d-flex align-items-center justify-content-between mb-2" style="cursor: pointer;" onclick="window.kitsMobileMostrarMarcas()">
-        <div class="d-flex align-items-center gap-1 text-secondary fw-bold small">
-          <i class="bi bi-chevron-left" style="font-size: 0.72rem;"></i>
-          <span id="kits-mobile-detalle-subbrand-title">Tipo de Mantt</span>
-        </div>
-        <span class="badge bg-white text-secondary border font-monospace" id="kits-mobile-items-count">0 ítems</span>
-      </div>
-
       <!-- Barra de búsqueda móvil desplegable -->
-      <div class="p-2 bg-white rounded-3 border mb-2" id="kits-mobile-search-bar-wrap" style="display: none;">
+      <div class="p-2 bg-white border-bottom mb-2" id="kits-mobile-search-bar-wrap" style="display: none;">
         <div class="position-relative w-100">
           <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
           <input type="text" id="buscadorKitsMobile" class="form-control ps-5 rounded-3 border-secondary-subtle" placeholder="Buscar repuesto, código..." oninput="window.kitsFiltrarMobile(this.value)" style="font-size: 0.88rem; min-height: 38px;">
         </div>
       </div>
 
-      <!-- Tabla Segmentada Móvil (Imagen 3) -->
-      <div class="bg-white rounded-4 border border-slate-200 overflow-hidden shadow-2xs mb-4" id="kits-mobile-table-container">
-        <!-- Inyectado dinámicamente con las columnas Codigo / Descripcion | Cantidad | Stock Almacen -->
+      <!-- Tabla Segmentada Móvil (1:1 Imagen 3) -->
+      <div id="kits-mobile-table-container">
+        <!-- Inyectado dinámicamente -->
       </div>
     </div>
 
