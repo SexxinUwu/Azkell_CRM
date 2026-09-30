@@ -1,57 +1,76 @@
-
-<!-- Módulo Kits de Mantenimiento — Azkell ERP (Apple & Bento ERP) -->
+<!-- ========================================================================= -->
+<!-- MÓDULO: KITS DE MANTENIMIENTO PREVENTIVO (REDESIGNED 1:1 REPORTE DE FALLAS) -->
+<!-- ========================================================================= -->
 <style>
-#mod-kits-mp {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 0.75rem 1.25rem 3rem 1.25rem !important;
-    width: 100% !important;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 0;
-    min-height: 0;
-    overflow-y: auto;
+/* ── Reset root-dinamico padding for 100% full-bleed ─────────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
 }
 
-/* ── KPIs Apple Compact Bento Cards ─────────────── */
+/* ── Apple-like UI Tokens & Layout (1:1 Reporte de Fallas) ────────── */
+#mod-kits-mp.ck-app-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem 1.25rem 7.5rem 1.25rem !important;
+    background: transparent;
+    min-height: 100%;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    box-sizing: border-box;
+}
+
+/* KPIs Apple Cards */
 #mod-kits-mp .ck-kpi-card {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 14px !important;
-    padding: 0.55rem 0.85rem !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 0.75rem !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
     cursor: pointer;
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
     user-select: none;
-    min-height: 56px !important;
 }
 #mod-kits-mp .ck-kpi-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08) !important;
+    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
 }
 #mod-kits-mp .ck-kpi-card.active {
-    border-color: #d97706 !important;
-    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.25) !important;
-    background: #f8fafc !important;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
+    background: #f8fafc;
 }
 #mod-kits-mp .ck-kpi-icon {
-    width: 38px !important;
-    height: 38px !important;
-    border-radius: 10px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 1.15rem !important;
-    flex-shrink: 0 !important;
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
 }
 
-/* ── Control Bar & Filter Inputs ─────────────────── */
-#mod-kits-mp .kits-filter-input {
+/* Control Bar (Search + Apple Segmented Pill) */
+#mod-kits-mp .ck-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 14px 8px 38px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+#mod-kits-mp .ck-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+#mod-kits-mp .ck-apple-select {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
@@ -61,394 +80,654 @@
     transition: all 0.2s ease;
     color: #1e293b;
     outline: none;
-    min-width: 170px;
+    cursor: pointer;
+    min-width: 150px;
 }
-#mod-kits-mp .kits-filter-input:focus {
-    border-color: #d97706;
-    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15);
+#mod-kits-mp .ck-apple-select:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+#mod-kits-mp .ck-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+#mod-kits-mp .ck-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 0.80rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+#mod-kits-mp .ck-segment-item:hover { color: #0f172a; }
+#mod-kits-mp .ck-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
 }
 
-/* ── Tabla Bento ─────────────────────────────────── */
-#mod-kits-mp .kits-table-wrap {
+/* Desktop Table Styling */
+#mod-kits-mp #kits-tabla-wrap {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
+    min-height: 340px;
     overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
 }
 #mod-kits-mp table th {
-    background: var(--bg, #f8fafc);
-    color: var(--subtext, #64748b);
-    font-size: 0.68rem;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.70rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    padding: 10px 14px;
-    border-bottom: 1.5px solid var(--border, #e2e8f0);
+    padding: 12px 16px;
+    border-bottom: 1.5px solid #e2e8f0;
     white-space: nowrap;
 }
 #mod-kits-mp table td {
-    padding: 10px 14px;
-    font-size: 0.82rem;
-    color: var(--text, #0f172a);
+    padding: 11px 16px;
+    font-size: 0.84rem;
+    color: #0f172a;
     vertical-align: middle;
-    border-bottom: 1px solid var(--border, #f1f5f9);
+    border-bottom: 1px solid #f1f5f9;
 }
-#mod-kits-mp tbody tr.kits-item-row:hover {
-    background: rgba(217, 119, 6, 0.04);
+
+/* Group Headers in Table */
+#mod-kits-mp .kits-group-row {
+    background: #f8fafc !important;
+    border-top: 2px solid #e2e8f0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+#mod-kits-mp .kits-subgroup-row {
+    background: #ffffff !important;
+    border-bottom: 1px dashed #e2e8f0 !important;
+}
+
+/* Action Buttons (Capsules) */
+#mod-kits-mp .ck-action-btn {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    font-size: 0.88rem;
+    text-decoration: none;
+}
+#mod-kits-mp .ck-btn-edit { background: #eff6ff; color: #0284c7; border-color: #bae6fd; }
+#mod-kits-mp .ck-btn-edit:hover { background: #0284c7; color: #ffffff; border-color: #0284c7; transform: translateY(-1px); }
+#mod-kits-mp .ck-btn-delete { background: transparent; color: #94a3b8; }
+#mod-kits-mp .ck-btn-delete:hover { background: #fee2e2; color: #ef4444; transform: translateY(-1px); }
+
+/* Universal Modern Card (Mobile) */
+#mod-kits-mp .ck-mobile-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 14px rgba(15, 23, 42, 0.03);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#mod-kits-mp .ck-mobile-card:active {
+    transform: scale(0.99);
+}
+
+/* ── Mobile View Adaptations (@media max-width: 768px) ─────────────── */
+@media (max-width: 768px) {
+    #mod-kits-mp.ck-app-container {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+        background: transparent !important;
+    }
+    #mod-kits-mp #kits-tabla-wrap {
+        display: none !important;
+    }
+    #mod-kits-mp #kitsCardContainer {
+        display: block !important;
+    }
+    #mod-kits-mp .ck-kpi-card {
+        padding: 0.75rem 0.85rem !important;
+        border-radius: 14px !important;
+    }
+    #mod-kits-mp .ck-kpi-card h2 {
+        font-size: 1.35rem !important;
+    }
+    #mod-kits-mp .ck-kpi-icon {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1rem !important;
+        border-radius: 10px !important;
+    }
+    #mod-kits-mp .ck-apple-segmented {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        overflow-x: auto;
+    }
+    #mod-kits-mp .ck-segment-item {
+        flex: 1 !important;
+        text-align: center !important;
+        padding: 6px 8px !important;
+        font-size: 0.74rem !important;
+    }
+}
+@media (min-width: 769px) {
+    #mod-kits-mp #kitsCardContainer {
+        display: none !important;
+    }
+    #mod-kits-mp #kits-tabla-wrap {
+        display: block !important;
+    }
+}
+
+/* ── Floating Drawer Modal & Inputs Styling (1:1 Reporte de Fallas) ── */
+.kits-floating-drawer-dialog {
+    max-width: 760px !important;
+    width: 100% !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+    margin: 0 auto !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: auto !important;
+}
+.kits-floating-drawer-content {
+    height: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 28px 28px 0 0 !important;
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.22) !important;
+    overflow: hidden !important;
+    background: #f8fafc !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+.kits-floating-drawer-content .modal-body {
+    padding: 1.25rem 1.5rem !important;
+    overflow-y: auto !important;
+    flex: 1 1 auto !important;
+}
+.kits-floating-drawer-content .card {
+    border-radius: 18px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02) !important;
+    margin-bottom: 1rem !important;
+    padding: 1.25rem !important;
+}
+.kits-floating-drawer-content .form-label {
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    color: #64748b !important;
+    margin-bottom: 0.35rem !important;
+}
+.kits-floating-drawer-content .form-control,
+.kits-floating-drawer-content .form-select {
+    min-height: 42px !important;
+    border-radius: 12px !important;
+    font-size: 0.90rem !important;
+    font-weight: 600 !important;
+    border-color: #cbd5e1 !important;
+    padding: 0.50rem 0.85rem !important;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+.kits-floating-drawer-content .form-control:focus,
+.kits-floating-drawer-content .form-select:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+/* Dynamic Item Card inside Modal Drawer */
+.kit-item-row-card {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+}
+.kit-item-row-card:hover {
+    border-color: #cbd5e1;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+/* ── Modal Confirmación Eliminación (Diseño B - Ultra Optimizado) ─── */
+.kits-delete-dialog {
+    max-width: 350px !important;
+    width: 90% !important;
+    margin: 1.75rem auto !important;
+}
+.kits-delete-card {
+    background: #ffffff !important;
+    border-radius: 28px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12) !important;
+    padding: 2.2rem 1.6rem 1.8rem 1.6rem !important;
+    text-align: center;
+}
+.kits-delete-badge-icon {
+    font-size: 3.2rem;
+    color: #e11d48;
+    line-height: 1;
+    margin-bottom: 0.85rem;
+    display: inline-block;
+}
+.kits-btn-circle {
+    width: 54px;
+    height: 54px;
+    border-radius: 50% !important;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    outline: none;
+}
+.kits-btn-cancel-circle {
+    background: #18181b !important;
+    color: #ffffff !important;
+}
+.kits-btn-cancel-circle:hover {
+    background: #09090b !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.kits-btn-cancel-circle:active {
+    transform: scale(0.95);
+}
+.kits-btn-delete-circle {
+    background: #e11d48 !important;
+    color: #ffffff !important;
+}
+.kits-btn-delete-circle:hover {
+    background: #be123c !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.kits-btn-delete-circle:active {
+    transform: scale(0.95);
+}
+
+/* Mobile full width drawer */
+@media (max-width: 768px) {
+    .modal-dialog.kits-floating-drawer-dialog,
+    .modal.show .modal-dialog.kits-floating-drawer-dialog,
+    #modalNuevoKitMP .modal-dialog.kits-floating-drawer-dialog,
+    .kits-floating-drawer-dialog {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        height: 96vh !important;
+        max-height: 96vh !important;
+        margin: 0 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        transform: none !important;
+        border-radius: 24px 24px 0 0 !important;
+    }
+    .kits-floating-drawer-content,
+    #modalNuevoKitMP .kits-floating-drawer-content {
+        width: 100vw !important;
+        min-width: 100vw !important;
+        height: 100% !important;
+        max-height: 96vh !important;
+        border-radius: 24px 24px 0 0 !important;
+        border: none !important;
+        margin: 0 !important;
+    }
+    .kits-floating-drawer-content .modal-body {
+        padding: 0.85rem 0.75rem !important;
+    }
+    .kits-floating-drawer-content .card {
+        padding: 0.95rem 0.85rem !important;
+        margin-bottom: 0.75rem !important;
+        border-radius: 16px !important;
+    }
 }
 </style>
 
-<div id="mod-kits-mp" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
+<div id="mod-kits-mp" class="ck-app-container d-flex flex-column h-100 flex-grow-1">
 
-  <!-- ── 1. ENCABEZADO OFICIAL ERP ───────────────────────────────── -->
-  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-    <div class="d-flex align-items-center gap-3">
-      <div style="width: 44px; height: 44px; background: #fef3c7; color: #d97706; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
-        <i class="bi bi-tools"></i>
+  <!-- ── 1. ENCABEZADO PRINCIPAL (RESPONSIVE) ───────────────────────── -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="d-flex align-items-center gap-2 gap-md-3">
+      <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+        <i class="bi bi-tools text-amber-500 fs-5" style="color: #d97706;"></i>
       </div>
       <div>
-        <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Kits de Mantenimiento</h4>
-        <span class="text-secondary small">Configuración de materiales, repuestos y costos por tipo de servicio MP</span>
+        <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+          Kits de Mantenimiento
+        </h4>
+        <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">Configuración de repuestos, lubricantes y materiales por tipo de servicio MP</small>
       </div>
     </div>
-    <div class="d-flex align-items-center gap-2 flex-wrap">
-      <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" title="Actualizar" onclick="window.kitsCargarTabla()">
+    <div class="d-flex align-items-center gap-2">
+      <!-- Botón Recargar -->
+      <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.kitsCargarTabla(true)" title="Recargar">
         <i class="bi bi-arrow-clockwise fs-6"></i>
       </button>
-      <!-- Importar -->
+
+      <!-- Dropdown Importar -->
       <div class="dropdown">
-        <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">
-          <i class="bi bi-upload"></i> <span class="d-none d-md-inline">Importar</span>
+        <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1.5" type="button" data-bs-toggle="dropdown">
+          <i class="bi bi-upload text-primary"></i> <span class="d-none d-sm-inline">Importar</span>
         </button>
-        <ul class="dropdown-menu shadow border" style="border-radius:12px;">
-          <li><a class="dropdown-item fw-bold text-success py-2" href="#" onclick="window.kitsDescargarPlantilla()"><i class="bi bi-file-earmark-spreadsheet me-2"></i>1. Descargar Plantilla</a></li>
+        <ul class="dropdown-menu shadow border" style="border-radius:14px; min-width: 210px;">
+          <li><a class="dropdown-item fw-bold text-success py-2 d-flex align-items-center gap-2" href="javascript:void(0)" onclick="window.kitsDescargarPlantilla()"><i class="bi bi-file-earmark-spreadsheet"></i> 1. Descargar Plantilla</a></li>
           <li><hr class="dropdown-divider my-1"></li>
-          <li><a class="dropdown-item fw-bold text-primary py-2" href="#" onclick="document.getElementById('inputFileKits').click()"><i class="bi bi-cloud-upload me-2"></i>2. Subir Excel Lleno</a></li>
+          <li><a class="dropdown-item fw-bold text-primary py-2 d-flex align-items-center gap-2" href="javascript:void(0)" onclick="document.getElementById('inputFileKitsNew').click()"><i class="bi bi-cloud-arrow-up"></i> 2. Subir Excel</a></li>
         </ul>
       </div>
-      <input type="file" id="inputFileKits" accept=".xlsx,.xls" style="display:none;" onchange="window.kitsImportarExcel(event)">
-      <!-- Exportar -->
-      <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.kitsExportarExcel()">
-        <i class="bi bi-file-earmark-excel text-success"></i> <span class="d-none d-md-inline">Excel</span>
+      <input type="file" id="inputFileKitsNew" accept=".xlsx,.xls" style="display:none;" onchange="window.kitsImportarExcel(event)">
+
+      <!-- Exportar Excel -->
+      <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5" onclick="window.kitsExportarExcel()" title="Exportar a Excel">
+        <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
       </button>
-      <button class="btn btn-primary fw-bold text-white rounded-3 px-3 py-2 shadow-2xs d-flex align-items-center gap-1" onclick="window.kitsAbrirModal()" style="background:#2563eb; border-color:#2563eb;">
-        <i class="bi bi-plus-lg"></i> <span>+ Nuevo Ítem de Kit</span>
+
+      <!-- Botón Nuevo Kit (visible en Móvil y Desktop) -->
+      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-1.5 rounded-3" onclick="window.kitsAbrirModal()" style="background: #0284c7; border-color: #0284c7;">
+        <i class="bi bi-plus-lg fs-6"></i> <span class="d-none d-sm-inline">+ Nuevo Kit</span>
       </button>
     </div>
   </div>
 
-  <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO 56px) ──────── -->
-  <div class="row g-2 mb-3">
+  <!-- ── 2. BENTO KPIS ROW (INTERACTIVOS 1:1 REPORTE DE FALLAS) ─────── -->
+  <div class="row g-2 g-md-3 mb-3">
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card active" onclick="if(window._cbSet){window._cbSet('kits-fil-marca','',''); window._cbSet('kits-fil-modelo','',''); window._cbSet('kits-fil-tipo','',''); window.kitsFiltrar();}">
-        <div class="ck-kpi-icon" style="background:#fef3c7; color:#d97706;">
+      <div class="ck-kpi-card active" id="kpi-card-kits-total" onclick="window.kitsResetFiltros(this)">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Kits Configurados</span>
+          <h2 id="kits-kpi-total-kits" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
+        </div>
+        <div class="ck-kpi-icon" style="background: #fef3c7; color: #d97706;">
           <i class="bi bi-tools"></i>
         </div>
-        <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-          <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Kits Configurados</span>
-          <h2 id="kits-kpi-total-kits" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.35rem;">0</h2>
-        </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card">
-        <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+      <div class="ck-kpi-card" id="kpi-card-kits-items">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Repuestos / Ítems</span>
+          <h2 id="kits-kpi-total-items" class="fw-bolder m-0 text-primary" style="font-size: 1.6rem; color: #0284c7;">0</h2>
+        </div>
+        <div class="ck-kpi-icon" style="background: #eff6ff; color: #0284c7;">
           <i class="bi bi-boxes"></i>
         </div>
-        <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-          <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Repuestos / Ítems</span>
-          <h2 id="kits-kpi-total-items" class="fw-bolder m-0 text-primary lh-1" style="font-size: 1.35rem;">0</h2>
-        </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card">
-        <div class="ck-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+      <div class="ck-kpi-card" id="kpi-card-kits-marcas">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Marcas / Modelos</span>
+          <h2 id="kits-kpi-total-marcas" class="fw-bolder m-0 text-success" style="font-size: 1.6rem; color: #16a34a;">0</h2>
+        </div>
+        <div class="ck-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
           <i class="bi bi-truck"></i>
         </div>
-        <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-          <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Marcas / Modelos</span>
-          <h2 id="kits-kpi-total-marcas" class="fw-bolder m-0 text-success lh-1" style="font-size: 1.35rem;">0</h2>
-        </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card">
-        <div class="ck-kpi-icon" style="background:#faf5ff; color:#9333ea;">
-          <i class="bi bi-cash-stack"></i>
+      <div class="ck-kpi-card" id="kpi-card-kits-costo">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Inversión Referencial</span>
+          <h2 id="kits-kpi-costo-total" class="fw-bolder m-0 text-dark font-monospace" style="font-size: 1.4rem;">S/ 0.00</h2>
         </div>
-        <div class="d-flex flex-column justify-content-center" style="min-width: 0;">
-          <span class="text-secondary small fw-bold text-uppercase d-block lh-1 mb-1" style="font-size:0.68rem; letter-spacing: 0.5px; white-space: nowrap;">Inversión Referencial</span>
-          <h2 id="kits-kpi-costo-total" class="fw-bolder m-0 text-dark lh-1" style="font-size: 1.15rem;">S/ 0.00</h2>
+        <div class="ck-kpi-icon" style="background: #faf5ff; color: #9333ea;">
+          <i class="bi bi-cash-stack"></i>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ── 3. FILTROS MODERNOS ─────────────────────────────────────── -->
-  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-    <div class="position-relative" style="max-width:200px;">
-      <input type="text" id="kits-fil-marca-txt" class="kits-filter-input" placeholder="Todas las marcas"
-        autocomplete="off" oninput="window._cbFiltrarFilter('kits-fil-marca')"
-        onfocus="window._cbFiltrar('kits-fil-marca')" onblur="window._cbHideFilter('kits-fil-marca')">
-      <input type="hidden" id="kits-fil-marca">
-      <div id="kits-fil-marca-dd" class="cb-dropdown"></div>
+  <!-- ── 3. BARRA DE BÚSQUEDA APPLE & FILTROS INTELIGENTES ──────────── -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <!-- Buscador en vivo -->
+    <div class="position-relative flex-grow-1" style="max-width: 360px;">
+      <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+      <input type="text" id="buscadorKitsLive" class="ck-apple-search" placeholder="Buscar marca, modelo, tipo MP, repuesto..." oninput="window.kitsFiltrar()">
     </div>
-    <div class="position-relative" style="max-width:200px;">
-      <input type="text" id="kits-fil-modelo-txt" class="kits-filter-input" placeholder="Todos los modelos"
-        autocomplete="off" oninput="window._cbFiltrarFilter('kits-fil-modelo')"
-        onfocus="window._cbFiltrar('kits-fil-modelo')" onblur="window._cbHideFilter('kits-fil-modelo')">
-      <input type="hidden" id="kits-fil-modelo">
-      <div id="kits-fil-modelo-dd" class="cb-dropdown"></div>
+
+    <!-- Filtros segmentados por Tipo de MP -->
+    <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-tipos-mp">
+      <button type="button" class="ck-segment-item active" onclick="window.kitsFiltrarSegmento('TODOS', this)">Todos</button>
+      <button type="button" class="ck-segment-item" onclick="window.kitsFiltrarSegmento('MP1', this)">MP1</button>
+      <button type="button" class="ck-segment-item" onclick="window.kitsFiltrarSegmento('MP2', this)">MP2</button>
+      <button type="button" class="ck-segment-item" onclick="window.kitsFiltrarSegmento('MP3', this)">MP3</button>
+      <button type="button" class="ck-segment-item" onclick="window.kitsFiltrarSegmento('OTROS', this)">Otros</button>
     </div>
-    <div class="position-relative" style="max-width:180px;">
-      <input type="text" id="kits-fil-tipo-txt" class="kits-filter-input" placeholder="Todo MP"
-        autocomplete="off" oninput="window._cbFiltrarFilter('kits-fil-tipo')"
-        onfocus="window._cbFiltrar('kits-fil-tipo')" onblur="window._cbHideFilter('kits-fil-tipo')">
-      <input type="hidden" id="kits-fil-tipo">
-      <div id="kits-fil-tipo-dd" class="cb-dropdown"></div>
+
+    <!-- Selects de Marca y Modelo -->
+    <div class="d-flex align-items-center gap-2">
+      <select id="filtroSelectMarca" class="ck-apple-select" onchange="window.kitsMarcaFiltroCambiada()">
+        <option value="">Todas las marcas</option>
+      </select>
+      <select id="filtroSelectModelo" class="ck-apple-select" onchange="window.kitsFiltrar()">
+        <option value="">Todos los modelos</option>
+      </select>
     </div>
   </div>
 
-  <!-- ── 4. TABLA BENTO ──────────────────────────────────────────── -->
-  <div class="kits-table-wrap flex-grow-1 d-flex flex-column overflow-hidden kits-desktop-table">
-    <div class="table-responsive flex-grow-1 overflow-auto">
-      <table class="table table-borderless m-0 align-middle">
-        <thead>
-          <tr>
-            <th style="min-width:220px">Ítem / Repuesto</th>
-            <th>Cantidad</th>
-            <th>Unidad</th>
-            <th>Costo Unitario</th>
-            <th>Costo Total</th>
-            <th class="text-end">Acciones</th>
+  <!-- ── 4. VISTA MÓVIL NATIVA (CARDS) ──────────────────────────────── -->
+  <div id="kitsCardContainer" class="d-md-none">
+    <div class="text-center py-5 text-muted">
+      <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando kits de mantenimiento...
+    </div>
+  </div>
+
+  <!-- ── 5. VISTA ESCRITORIO (TABLA FLUIDA BENTO) ───────────────────── -->
+  <div id="kits-tabla-wrap" class="flex-grow-1 d-none d-md-block" style="min-height: 340px;">
+    <div class="custom-scrollbar overflow-x-auto" style="overflow-y: visible; min-height: 340px;">
+      <table class="table table-hover align-middle m-0" id="tablaKitsDesktop" style="font-size: 0.88rem;">
+        <thead class="bg-light sticky-top shadow-2xs border-bottom">
+          <tr class="text-secondary" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+            <th class="ps-4 py-3" style="min-width: 280px;">ÍTEM / REPUESTO / LUBRICANTE</th>
+            <th class="py-3 text-center" style="width: 110px;">CANTIDAD</th>
+            <th class="py-3 text-center" style="width: 100px;">UNIDAD</th>
+            <th class="py-3 text-end" style="width: 140px;">COSTO UNIT.</th>
+            <th class="py-3 text-end" style="width: 150px;">COSTO TOTAL</th>
+            <th class="pe-4 py-3 text-end" style="width: 100px;">ACCIONES</th>
           </tr>
         </thead>
         <tbody id="kits-tbody">
-          <tr><td colspan="6" class="text-center py-4 text-muted">Cargando kits...</td></tr>
+          <tr>
+            <td colspan="6" class="text-center py-5 text-muted">
+              <div class="spinner-border spinner-border-sm me-2 text-primary" role="status"></div> Cargando kits...
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- ── MOBILE GRID ─────────────────────────────────────────────── -->
-  <div class="d-md-none flex-1 overflow-auto" style="padding: .75rem .75rem 120px .75rem; background:transparent;">
-    <div id="kits-grid-mobile"></div>
-  </div>
-
-  <!-- FAB Mobile -->
-  <div id="kits-fab-wrap" style="display:none;position:fixed;bottom:104px;right:1rem;z-index:1041;">
-    <button class="kits-fab-btn" onclick="window.kitsAbrirModal()">
+  <!-- ── 6. BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
+  <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1040;">
+    <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+            onclick="window.kitsAbrirModal()"
+            title="Nuevo Kit de Mantenimiento"
+            style="width: 56px; height: 56px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.55rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;">
       <i class="bi bi-plus-lg"></i>
     </button>
   </div>
 
+  <div class="ck-bottom-spacer" style="height: 90px; width: 100%;"></div>
+
 </div>
 
-<!-- ======= PANEL MODAL KITS (Entradas Style) ======= -->
-<style>
-/* ─── Kits: Panel fullscreen (slide desde abajo) ────────── */
-.kits-panel-full {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%) translateY(100%);
-    width: 100%;
-    max-width: 700px;
-    height: 92vh;
-    background: #f4f7fe;
-    border-radius: 28px 28px 0 0;
-    z-index: 1059;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    transition: transform .28s ease;
-    box-shadow: 0 -12px 48px rgba(0,0,0,.18);
-}
-.kits-panel-full.open {
-    transform: translateX(-50%) translateY(0);
-}
-@media (max-width: 767.98px) {
-    .kits-panel-full { max-width: 100%; left: 0; transform: translateY(100%); border-radius: 28px 28px 0 0; }
-    .kits-panel-full.open { transform: translateY(0); }
-}
-.kits-item-card {
-    background: #fff;
-    border-radius: 20px;
-    padding: 12px;
-    border: 1.5px solid #e2e8f0;
-    margin-bottom: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.04);
-}
-.kits-doc-card {
-    background: #fff;
-    border-radius: 24px;
-    padding: 14px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 2px 8px rgba(0,0,0,.04);
-    margin-bottom: 12px;
-}
-.kits-field-label {
-    font-size: .56rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: .09em;
-    color: #94a3b8;
-    margin-bottom: 3px;
-}
-.kits-input-sm {
-    width: 100%;
-    height: 38px;
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 0 11px;
-    font-size: 12px;
-    font-weight: 700;
-    outline: none;
-    transition: all .2s;
-    color: #0f172a;
-}
-.kits-input-sm:focus { border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+<!-- ========================================================================= -->
+<!-- 📄 MODAL / FORMULARIO DRAWER: NUEVO / EDITAR KIT (1:1 REPORTE DE FALLAS) -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalNuevoKitMP" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+  <div class="modal-dialog kits-floating-drawer-dialog">
+    <div class="modal-content kits-floating-drawer-content">
 
-/* ─── Mobile Kits View ─────────────────────────────────────────── */
-@media (max-width: 767.98px) {
-    .topbar { display: none !important; }
-    .main-area { padding: 0 !important; overflow: auto !important; overscroll-behavior: contain; }
-    #kits-desktop-header { display: none !important; }
-    #kits-m-header { display: flex !important; }
-    #kits-fab-wrap { display: flex !important; flex-direction: column; align-items: flex-end; }
-    .kits-desktop-table { display: none !important; }
-}
-/* ─── Kits List Card Mobile ────────────────────────────────────── */
-.kits-list-card {
-    background: #fff; border: 1.5px solid #e2e8f0;
-    border-radius: 16px; padding: .85rem 1rem; margin-bottom: .65rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,.04); position: relative;
-}
-.kits-list-card-header {
-    display: flex; justify-content: space-between; align-items: center;
-    border-bottom: 1px dashed #e2e8f0; padding-bottom: .5rem; margin-bottom: .5rem;
-}
-.kits-fab-btn {
-    width: 56px; height: 56px; border-radius: 18px;
-    background: #2563eb; color: #fff; border: none;
-    box-shadow: 0 6px 16px rgba(37,99,235,.4);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem; cursor: pointer; transition: transform .2s, box-shadow .2s;
-}
-.kits-fab-btn:active { transform: scale(.92); }
-</style>
+      <!-- Drawer Drag Handle Indicator -->
+      <div class="d-block d-md-none mx-auto bg-secondary rounded-pill mt-2 mb-1" style="width: 44px; height: 5px; opacity: 0.35;"></div>
 
-<!-- ═══ PANEL KIT (fullscreen slide) ═══════════════════ -->
-<div id="kits-panel-detalle" class="kits-panel-full">
-
-  <!-- Header fijo -->
-  <div style="display:flex;align-items:center;justify-content:space-between;
-              padding:1rem 1.25rem .75rem;flex-shrink:0;border-bottom:1.5px solid #e2e8f0;
-              background:#fff;">
-    <div style="display:flex;align-items:center;gap:.6rem;">
-      <div style="width:38px;height:38px;border-radius:14px;background:#dbeafe;
-                  display:flex;align-items:center;justify-content:center;">
-        <i class="bi bi-tools" style="color:#2563eb;font-size:1.1rem;"></i>
-      </div>
-      <div>
-        <div id="kitsModal-titulo" style="font-size:.95rem;font-weight:900;color:#0f172a;line-height:1.1;">Configurar Kit de Mantenimiento</div>
-        <div style="font-size:.6rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Mantenimiento Preventivo</div>
-      </div>
-    </div>
-    <button onclick="window._kitsCerrarModal()"
-            style="width:34px;height:34px;border-radius:10px;background:#f1f5f9;border:none;
-                   color:#64748b;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">
-      <i class="bi bi-x-lg"></i>
-    </button>
-  </div>
-
-  <!-- Cuerpo scrollable -->
-  <div style="flex:1;overflow-y:auto;padding:1rem 1rem 0;">
-    
-    <!-- Doc card -->
-    <div class="kits-doc-card">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <div style="grid-column:1/-1;">
-          <div class="kits-field-label">Marca Vehículo <span style="color:#ef4444;">*</span></div>
-          <div class="position-relative">
-            <input type="text" id="kits-marca-txt" class="kits-input-sm fw-bold text-uppercase"
-                   placeholder="Ej: VOLVO" autocomplete="off"
-                   oninput="window._cbFiltrar('kits-marca'); window.kitsActualizarTituloModal();"
-                   onfocus="window._cbFiltrar('kits-marca')"
-                   onblur="window._kitsHideCombo('kits-marca'); setTimeout(function(){window.kitsMarcaCambiada(document.getElementById('kits-marca').value)}, 200);">
-            <input type="hidden" id="kits-marca">
-            <div id="kits-marca-dd" class="cb-dropdown"></div>
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+          <div class="p-2 rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; font-size: 1.25rem; color:#0284c7 !important;">
+            <i class="bi bi-tools"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bolder text-dark m-0" id="lblTituloModalKit">
+              Configurar Kit de Mantenimiento
+            </h5>
+            <small class="text-muted fw-medium" id="lblSubtituloModalKit">Asignación de repuestos y costos por tipo de servicio</small>
           </div>
         </div>
-        <div style="grid-column:1/-1;">
-          <div class="kits-field-label">Modelo Vehículo</div>
-          <div class="position-relative">
-            <input type="text" id="kits-modelo-txt" class="kits-input-sm fw-bold text-uppercase"
-                   placeholder="TODOS LOS MODELOS" autocomplete="off"
-                   oninput="window._cbFiltrar('kits-modelo'); window.kitsActualizarTituloModal();"
-                   onfocus="window._cbFiltrar('kits-modelo')"
-                   onblur="window._kitsHideCombo('kits-modelo')">
-            <input type="hidden" id="kits-modelo">
-            <div id="kits-modelo-dd" class="cb-dropdown"></div>
+        <button type="button" class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center shadow-2xs" data-bs-dismiss="modal" style="width:34px; height:34px;" title="Cerrar">
+          <i class="bi bi-x-lg text-dark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body custom-scrollbar">
+
+        <!-- CARD 1: DATOS GENERALES (VEHÍCULO & SERVICIO) -->
+        <div class="card border-0">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-2.5 py-1 fw-bold" style="font-size:0.72rem; color:#0284c7 !important;">1</span>
+            <h6 class="fw-bold text-dark m-0" style="font-size: 0.92rem;">Datos del Vehículo y Tipo de Servicio</h6>
+          </div>
+
+          <div class="row g-2.5">
+            <!-- Marca -->
+            <div class="col-12 col-md-4">
+              <label class="form-label">Marca del Vehículo <span class="text-danger">*</span></label>
+              <select id="modalKitMarca" class="form-select" onchange="window.kitsModalMarcaCambiada()">
+                <option value="">Seleccione marca...</option>
+              </select>
+            </div>
+
+            <!-- Modelo -->
+            <div class="col-12 col-md-4">
+              <label class="form-label">Modelo del Vehículo</label>
+              <select id="modalKitModelo" class="form-select">
+                <option value="TODOS LOS MODELOS">TODOS LOS MODELOS</option>
+              </select>
+            </div>
+
+            <!-- Tipo de Preventivo -->
+            <div class="col-12 col-md-4">
+              <label class="form-label">Tipo de Preventivo <span class="text-danger">*</span></label>
+              <select id="modalKitTipoMP" class="form-select" onchange="window.kitsModalActualizarTitulo()">
+                <option value="">Seleccione tipo...</option>
+              </select>
+            </div>
+
+            <!-- Nombre / Alias del Kit -->
+            <div class="col-12">
+              <label class="form-label">Nombre / Alias Descriptivo del Kit <span class="text-muted fw-normal">(Opcional)</span></label>
+              <input type="text" id="modalKitNombreAlias" class="form-control" placeholder="Ej: Kit Completo Filtros y Aceite Motor 15W-40">
+            </div>
           </div>
         </div>
-        <div style="grid-column:1/-1;">
-          <div class="kits-field-label">Tipo de Mantenimiento <span style="color:#ef4444;">*</span></div>
-          <div class="position-relative">
-            <input type="text" id="kits-tipomp-txt" class="kits-input-sm fw-bold text-uppercase"
-                   placeholder="Ej: MP1" autocomplete="off"
-                   oninput="window._cbFiltrar('kits-tipomp'); window.kitsActualizarTituloModal();"
-                   onfocus="window._cbFiltrar('kits-tipomp')"
-                   onblur="window._kitsHideCombo('kits-tipomp')">
-            <input type="hidden" id="kits-tipomp">
-            <div id="kits-tipomp-dd" class="cb-dropdown"></div>
+
+        <!-- CARD 2: REPUESTOS, LUBRICANTES Y MATERIALES (TABLA DINÁMICA) -->
+        <div class="card border-0">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-2.5 py-1 fw-bold" style="font-size:0.72rem; color:#0284c7 !important;">2</span>
+              <h6 class="fw-bold text-dark m-0" style="font-size: 0.92rem;">Repuestos, Lubricantes y Materiales del Kit</h6>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3 py-1 d-flex align-items-center gap-1.5" onclick="window.kitsModalAgregarFila()">
+              <i class="bi bi-plus-circle-fill"></i> Agregar Ítem
+            </button>
+          </div>
+
+          <!-- Contenedor dinámico de filas de ítems -->
+          <div id="modalKitItemsContainer" class="d-flex flex-column gap-2 mb-3">
+            <!-- Inyectado dinámicamente -->
+          </div>
+
+          <!-- Barra de Totales del Kit en vivo -->
+          <div class="p-3 rounded-3 bg-light border d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-secondary rounded-pill font-monospace" id="modalKitItemsCounter">0 Ítems</span>
+              <small class="text-muted fw-semibold">Precios referenciales tomados de Almacén</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-secondary fw-bold small text-uppercase">Costo Total del Kit:</span>
+              <span class="fs-5 fw-black text-success font-monospace" id="modalKitCostoTotalPreview">S/ 0.00</span>
+            </div>
           </div>
         </div>
+
+        <!-- CARD 3: OBSERVACIONES -->
+        <div class="card border-0">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-2.5 py-1 fw-bold" style="font-size:0.72rem; color:#0284c7 !important;">3</span>
+            <h6 class="fw-bold text-dark m-0" style="font-size: 0.92rem;">Notas u Observaciones Técnicas</h6>
+          </div>
+          <textarea id="modalKitObservaciones" class="form-control" rows="2" placeholder="Indicaciones para taller o detalles de instalación..."></textarea>
+        </div>
+
       </div>
-    </div>
 
-    <!-- Encabezado artículos -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:.2rem 0 .65rem;">
-      <div style="font-size:.68rem;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:.08em;">
-        <i class="bi bi-list-ul me-1" style="color:#2563eb;"></i>Artículos
+      <!-- Modal Footer -->
+      <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-between align-items-center">
+        <button type="button" class="btn btn-light border px-4 py-2 rounded-3 fw-bold text-secondary shadow-2xs" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-primary px-4 py-2 rounded-3 fw-bold text-white d-flex align-items-center gap-2 shadow-sm" style="background:#0284c7; border-color:#0284c7;" onclick="window.kitsModalGuardar()">
+          <i class="bi bi-check2-circle fs-5"></i> Guardar Kit
+        </button>
       </div>
-      <button type="button" onclick="window.kitsAgregarFila()"
-              style="display:flex;align-items:center;gap:.35rem;padding:.35rem .85rem;
-                     border-radius:12px;border:1.5px solid #2563eb;background:#eff6ff;
-                     color:#2563eb;font-weight:800;font-size:.72rem;cursor:pointer;">
-        <i class="bi bi-plus-lg"></i>Agregar
-      </button>
-    </div>
 
-    <!-- Cards de artículos -->
-    <div id="kits-form-container" style="padding-bottom:1rem;"></div>
-  </div>
-
-  <!-- Footer fijo -->
-  <div style="flex-shrink:0;padding:.85rem 1rem;border-top:1.5px solid #e2e8f0;background:#fff;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
-      <div style="font-size:.6rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;">Total Kit</div>
-      <div style="font-size:1.3rem;font-weight:900;color:#2563eb;">S/ <span id="kits-form-grand-total">0.00</span></div>
-    </div>
-    <div style="display:flex;gap:.6rem;">
-      <button type="button" onclick="window._kitsCerrarModal()"
-              style="flex:1;height:48px;border-radius:14px;border:1.5px solid #e2e8f0;
-                     background:#f8fafc;color:#64748b;font-weight:700;font-size:.88rem;cursor:pointer;">
-        Cancelar
-      </button>
-      <button type="button" onclick="window.kitsGuardar()" id="kits-btn-guardar"
-              style="flex:2;height:48px;border-radius:14px;border:none;
-                     background:linear-gradient(135deg,#2563eb,#1d4ed8);
-                     color:#fff;font-weight:800;font-size:.92rem;cursor:pointer;
-                     display:flex;align-items:center;justify-content:center;gap:.4rem;
-                     box-shadow:0 4px 16px rgba(37,99,235,.35);">
-        <i class="bi bi-save"></i>Guardar Kit
-      </button>
     </div>
   </div>
 </div>
-<!-- BACKDROP -->
-<div id="kits-backdrop" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.6);z-index:1058;transition:opacity .2s;" onclick="window._kitsCerrarModal()"></div>
+
+<!-- ========================================================================= -->
+<!-- 🛑 MODAL: CONFIRMACIÓN ELIMINACIÓN (DISEÑO B - 1:1 REPORTE DE FALLAS)    -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalEliminarKitConfirm" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+  <div class="modal-dialog kits-delete-dialog modal-dialog-centered">
+    <div class="modal-content kits-delete-card">
+      <div class="kits-delete-badge-icon">
+        <i class="bi bi-trash3-fill"></i>
+      </div>
+      <h5 class="fw-bolder text-dark mb-1" id="lblEliminarKitTitulo">¿Eliminar elemento?</h5>
+      <p class="text-secondary small mb-4" id="lblEliminarKitMsg">
+        Esta acción eliminará el registro de la configuración de kits de forma permanente.
+      </p>
+      <div class="d-flex align-items-center justify-content-center gap-4">
+        <button type="button" class="kits-btn-circle kits-btn-cancel-circle" data-bs-dismiss="modal" title="Cancelar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+        <button type="button" class="kits-btn-circle kits-btn-delete-circle" id="btnConfirmarEliminarKitAccion" title="Eliminar definitivamente">
+          <i class="bi bi-trash3"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
