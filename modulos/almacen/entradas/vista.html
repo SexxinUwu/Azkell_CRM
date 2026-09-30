@@ -1155,53 +1155,50 @@
 <!-- MODAL: DETALLE COMPLETO DE LA ORDEN DE COMPRA (LIGHT LIQUID GLASS)        -->
 <!-- ========================================================================= -->
 <div class="modal fade" id="modalDetalleEntradaOC" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
-    <div class="modal-dialog modal-dialog-centered modal-xl" style="max-width: 1100px;">
-        <div class="modal-content border-0 shadow-2xl overflow-hidden" style="border-radius: 28px; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(40px) saturate(190%); -webkit-backdrop-filter: blur(40px) saturate(190%); border: 1.5px solid rgba(255, 255, 255, 0.95); box-shadow: 0 28px 64px -12px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(255, 255, 255, 0.85), inset 0 2px 3px rgba(255, 255, 255, 1);">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 1060px; width: 94vw; margin: 1.5rem auto;">
+        <div class="modal-content border-0 shadow-2xl overflow-hidden" style="border-radius: 28px; background: #f8fafc; border: 1.5px solid #e2e8f0; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.22); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
             
-            <!-- Mobile Pull Bar Indicator -->
-            <div class="d-block d-md-none mx-auto bg-secondary rounded-pill mt-2 mb-1" style="width: 44px; height: 5px; opacity: 0.35;"></div>
-
             <!-- Modal Header -->
-            <div class="modal-header border-bottom border-slate-200/60 pb-3 pt-4 px-4 px-md-5 d-flex justify-content-between align-items-center" style="background: transparent;">
+            <div class="modal-header border-bottom pb-3 pt-4 px-4 px-md-5 d-flex justify-content-between align-items-center" style="background: #ffffff; border-color: #f1f5f9 !important;">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="d-flex align-items-center justify-content-center rounded-2xl bg-sky-50 text-sky-500 border border-sky-100 shadow-sm" style="width: 48px; height: 48px; font-size: 1.35rem;">
+                    <div class="d-flex align-items-center justify-content-center rounded-2xl shadow-2xs" style="width: 48px; height: 48px; background: #eff6ff; border: 1.5px solid #dbeafe; color: #0284c7; font-size: 1.35rem; border-radius: 16px;">
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
                     <div>
                         <span class="text-secondary fw-bold text-uppercase d-block" style="font-size: 0.68rem; letter-spacing: 0.08em; color: #94a3b8;">Órden de Compra</span>
                         <div class="d-flex align-items-center gap-2.5">
-                            <h4 class="fw-black m-0 text-dark font-sans" id="det-oc-titulo-num" style="letter-spacing: -0.02em; font-size: 1.45rem;">
+                            <h3 class="fw-bolder m-0 text-dark" id="det-oc-titulo-num" style="letter-spacing: -0.02em; font-size: 1.55rem; font-weight: 800; color: #0f172a;">
                                 2026-00000
-                            </h4>
-                            <span class="badge border bg-light text-secondary rounded-pill font-sans fw-bold px-2.5 py-1" style="font-size: 0.68rem; letter-spacing: 0.04em;">ORDEN DE COMPRA</span>
+                            </h3>
+                            <span class="badge bg-light text-secondary border rounded-pill font-sans fw-bold px-2.5 py-1" style="font-size: 0.68rem; letter-spacing: 0.04em; background: #f1f5f9 !important; border-color: #e2e8f0 !important; color: #64748b !important;">ORDEN DE COMPRA</span>
                         </div>
                     </div>
                 </div>
-                <button type="button" class="btn btn-sm btn-light border rounded-2xl d-flex align-items-center justify-content-center shadow-sm" data-bs-dismiss="modal" style="width:38px; height:38px; background: rgba(255,255,255,0.8);" title="Cerrar">
-                    <i class="bi bi-x-lg text-dark"></i>
+                <button type="button" class="btn btn-sm btn-light border d-flex align-items-center justify-content-center shadow-2xs" data-bs-dismiss="modal" style="width:38px; height:38px; border-radius: 14px; background: #ffffff; border-color: #e2e8f0;" title="Cerrar">
+                    <i class="bi bi-x-lg text-secondary" style="font-size: 0.95rem;"></i>
                 </button>
             </div>
 
             <!-- Modal Body -->
-            <div class="modal-body px-4 px-md-5 py-4 d-flex flex-column gap-3.5" style="max-height: calc(88vh - 120px); overflow-y: auto; background: transparent;">
+            <div class="modal-body px-4 px-md-5 py-4 d-flex flex-column gap-3.5" style="max-height: calc(88vh - 120px); overflow-y: auto; background: #f8fafc;">
                 
                 <!-- 1. STEPPER DE TRAZABILIDAD (4 PASOS) & RESUMEN -->
-                <div class="card border-0 mb-2" style="border-radius: 20px; background: rgba(255, 255, 255, 0.85); border: 1.5px solid rgba(255, 255, 255, 0.95) !important; box-shadow: 0 4px 18px -2px rgba(148, 163, 184, 0.12), inset 0 1.5px 1.5px rgba(255, 255, 255, 1);">
-                    <div class="p-3.5 p-md-4">
+                <div class="card border-0 mb-1" style="border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6 !important; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);">
+                    <div class="p-4">
                         <!-- Fila superior: Badge y descripción -->
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                             <div class="d-flex align-items-center gap-2">
-                                <span id="det-oc-badge-estado" class="badge rounded-pill fw-bold" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.75rem; padding: 6px 14px;">
+                                <span id="det-oc-badge-estado" class="badge rounded-pill fw-bold" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.75rem; padding: 6px 14px; letter-spacing: 0.04em;">
                                     <i class="bi bi-clock me-1"></i> REGISTRADA
                                 </span>
                             </div>
-                            <span id="det-oc-desc-estado" class="text-secondary small fw-medium" style="font-size: 0.78rem;">
+                            <span id="det-oc-desc-estado" class="text-secondary small fw-medium" style="font-size: 0.78rem; color: #64748b;">
                                 En espera de visto bueno presupuestario por Gerencia.
                             </span>
                         </div>
 
                         <!-- Horizontal Nodes -->
-                        <div class="position-relative my-3">
+                        <div class="position-relative my-3 py-1">
                             <!-- Background line -->
                             <div class="position-absolute top-50 start-0 w-100 translate-middle-y" style="height: 2px; background: #e2e8f0; z-index: 1;">
                                 <div id="det-oc-stepper-line" style="height: 100%; width: 25%; background: #10b981; transition: width 0.3s ease;"></div>
@@ -1210,115 +1207,115 @@
                             <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
                                 <!-- Node 1 -->
                                 <div class="text-center" style="width: 24%;">
-                                    <div id="det-oc-step-node-1" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-white shadow-sm" style="width: 36px; height: 36px; background: #10b981; font-size: 0.95rem; border: 3px solid #fff;">
+                                    <div id="det-oc-step-node-1" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-white shadow-sm" style="width: 40px; height: 40px; background: #10b981; font-size: 1.1rem; border: 3px solid #fff;">
                                         <i class="bi bi-check-lg"></i>
                                     </div>
-                                    <div class="fw-bold text-dark" style="font-size: 0.76rem;">Registrada</div>
-                                    <div class="text-secondary small font-monospace" id="det-oc-step-date-1" style="font-size: 0.68rem;">—</div>
+                                    <div class="fw-bold" style="font-size: 0.78rem; color: #0f172a;">Registrada</div>
+                                    <div class="text-secondary small" id="det-oc-step-date-1" style="font-size: 0.68rem; color: #64748b;">—</div>
                                 </div>
                                 <!-- Node 2 -->
                                 <div class="text-center" style="width: 24%;">
-                                    <div id="det-oc-step-node-2" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-secondary shadow-sm" style="width: 36px; height: 36px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.85rem;">
+                                    <div id="det-oc-step-node-2" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-secondary shadow-sm" style="width: 40px; height: 40px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.95rem;">
                                         <i class="bi bi-shield-check"></i>
                                     </div>
-                                    <div class="fw-bold text-dark" style="font-size: 0.76rem;">Aprobada</div>
-                                    <div class="text-secondary small" id="det-oc-step-user-2" style="font-size: 0.68rem;">—</div>
+                                    <div class="fw-bold" style="font-size: 0.78rem; color: #0f172a;">Aprobada</div>
+                                    <div class="text-secondary small" id="det-oc-step-user-2" style="font-size: 0.68rem; color: #64748b;">—</div>
                                 </div>
                                 <!-- Node 3 -->
                                 <div class="text-center" style="width: 24%;">
-                                    <div id="det-oc-step-node-3" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-secondary shadow-sm" style="width: 36px; height: 36px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.85rem;">
+                                    <div id="det-oc-step-node-3" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-secondary shadow-sm" style="width: 40px; height: 40px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.95rem;">
                                         <i class="bi bi-credit-card"></i>
                                     </div>
-                                    <div class="fw-bold text-dark" style="font-size: 0.76rem;">Procesada</div>
-                                    <div class="text-secondary small" id="det-oc-step-status-3" style="font-size: 0.68rem;">Por Liquidar</div>
+                                    <div class="fw-bold" style="font-size: 0.78rem; color: #0f172a;">Procesada</div>
+                                    <div class="text-secondary small" id="det-oc-step-status-3" style="font-size: 0.68rem; color: #64748b;">Por Liquidar</div>
                                 </div>
                                 <!-- Node 4 -->
                                 <div class="text-center" style="width: 24%;">
-                                    <div id="det-oc-step-node-4" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-secondary shadow-sm" style="width: 36px; height: 36px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.85rem;">
+                                    <div id="det-oc-step-node-4" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-secondary shadow-sm" style="width: 40px; height: 40px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.95rem;">
                                         <i class="bi bi-box-seam"></i>
                                     </div>
-                                    <div class="fw-bold text-dark" style="font-size: 0.76rem;">Recepcionada</div>
-                                    <div class="text-secondary small" id="det-oc-step-reception-4" style="font-size: 0.68rem;">0% Recepcionado</div>
+                                    <div class="fw-bold" style="font-size: 0.78rem; color: #0f172a;">Recepcionada</div>
+                                    <div class="text-secondary small" id="det-oc-step-reception-4" style="font-size: 0.68rem; color: #64748b;">0% Recepcionado</div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Barra de progreso lineal inferior -->
-                        <div class="d-flex justify-content-between align-items-center pt-2 border-top border-slate-100">
-                            <span id="det-oc-prog-resumen" class="fw-bold text-slate-700" style="font-size: 0.74rem;">
+                        <div class="d-flex justify-content-between align-items-center pt-2.5 border-top" style="border-color: #f1f5f9 !important;">
+                            <span id="det-oc-prog-resumen" class="fw-medium" style="font-size: 0.76rem; color: #475569;">
                                 0 de 0 unidades recepcionadas
                             </span>
-                            <span id="det-oc-prog-pct" class="fw-bold text-success font-monospace" style="font-size: 0.74rem;">
-                                0%
+                            <span id="det-oc-prog-pct" class="fw-bold" style="font-size: 0.76rem; color: #10b981;">
+                                ● 0%
                             </span>
                         </div>
                     </div>
                 </div>
 
                 <!-- 2. CUATRO CHUNKY SLABS DE INFORMACIÓN -->
-                <div class="row g-3 mb-2">
+                <div class="row g-3 mb-1">
                     <!-- Card 1: Solicitud -->
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="p-3.5 rounded-2xl h-100 d-flex flex-column justify-content-between" style="min-height: 140px; border-radius: 20px; background: rgba(255, 255, 255, 0.85); border: 1.5px solid rgba(255, 255, 255, 0.95); box-shadow: 0 4px 18px -2px rgba(148, 163, 184, 0.12), inset 0 1.5px 1.5px rgba(255, 255, 255, 1);">
-                            <div class="text-uppercase fw-bold mb-2 d-flex align-items-center gap-1.5" style="font-size: 0.68rem; letter-spacing: 0.06em; color: #0284c7;">
-                                <i class="bi bi-person-badge"></i> SOLICITUD
+                        <div class="p-3.5 h-100 d-flex flex-column justify-content-between" style="min-height: 145px; border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);">
+                            <div class="fw-bold mb-2.5 d-flex align-items-center gap-1.5" style="font-size: 0.72rem; letter-spacing: 0.06em; color: #0284c7; text-transform: uppercase;">
+                                <i class="bi bi-person-fill" style="font-size: 0.85rem;"></i> SOLICITUD
                             </div>
-                            <div class="mb-1.5">
-                                <span class="text-muted small d-block" style="font-size: 0.68rem;">Solicitante (Autoriza):</span>
-                                <strong class="text-dark d-block" id="det-oc-card-solicitante" style="font-size: 0.80rem;">—</strong>
+                            <div class="mb-2">
+                                <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Solicitante (Autoriza):</span>
+                                <span class="d-block text-dark fw-bold" id="det-oc-card-solicitante" style="font-size: 0.82rem; color: #0f172a;">—</span>
                             </div>
                             <div>
-                                <span class="text-muted small d-block" style="font-size: 0.68rem;">Usuario de Creación:</span>
-                                <strong class="text-dark d-block text-uppercase" id="det-oc-card-creador" style="font-size: 0.80rem;">—</strong>
+                                <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Usuario de Creación:</span>
+                                <span class="d-block text-dark fw-bold text-uppercase" id="det-oc-card-creador" style="font-size: 0.82rem; color: #0f172a;">—</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Card 2: Emisión & Destino -->
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="p-3.5 rounded-2xl h-100 d-flex flex-column justify-content-between" style="min-height: 140px; border-radius: 20px; background: rgba(255, 255, 255, 0.85); border: 1.5px solid rgba(255, 255, 255, 0.95); box-shadow: 0 4px 18px -2px rgba(148, 163, 184, 0.12), inset 0 1.5px 1.5px rgba(255, 255, 255, 1);">
-                            <div class="text-uppercase fw-bold mb-2 d-flex align-items-center gap-1.5" style="font-size: 0.68rem; letter-spacing: 0.06em; color: #d97706;">
-                                <i class="bi bi-calendar-event"></i> EMISIÓN & DESTINO
+                        <div class="p-3.5 h-100 d-flex flex-column justify-content-between" style="min-height: 145px; border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);">
+                            <div class="fw-bold mb-2.5 d-flex align-items-center gap-1.5" style="font-size: 0.72rem; letter-spacing: 0.06em; color: #d97706; text-transform: uppercase;">
+                                <i class="bi bi-calendar-event-fill" style="font-size: 0.85rem;"></i> EMISIÓN & DESTINO
                             </div>
-                            <div class="mb-1.5">
-                                <span class="text-muted small d-block" style="font-size: 0.68rem;">Fecha de Registro:</span>
-                                <strong class="text-dark d-block font-monospace" id="det-oc-card-fecha" style="font-size: 0.78rem;">—</strong>
+                            <div class="mb-2">
+                                <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Fecha de Registro:</span>
+                                <span class="d-block text-dark fw-bold" id="det-oc-card-fecha" style="font-size: 0.80rem; font-family: ui-monospace, monospace; color: #0f172a;">—</span>
                             </div>
                             <div>
-                                <span class="text-muted small d-block" style="font-size: 0.68rem;">Destino / Unidad:</span>
-                                <strong class="text-dark d-block text-uppercase text-truncate" id="det-oc-card-destino" style="font-size: 0.80rem;">SEDE PRINCIPAL / ALMACÉN</strong>
+                                <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Destino / Unidad:</span>
+                                <span class="d-block text-dark fw-bold text-uppercase text-truncate" id="det-oc-card-destino" style="font-size: 0.82rem; color: #0f172a;">SEDE PRINCIPAL / ALMACÉN</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Card 3: Proveedor -->
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="p-3.5 rounded-2xl h-100 d-flex flex-column justify-content-between" style="min-height: 140px; border-radius: 20px; background: rgba(255, 255, 255, 0.85); border: 1.5px solid rgba(255, 255, 255, 0.95); box-shadow: 0 4px 18px -2px rgba(148, 163, 184, 0.12), inset 0 1.5px 1.5px rgba(255, 255, 255, 1);">
-                            <div class="text-uppercase fw-bold mb-2 d-flex align-items-center gap-1.5" style="font-size: 0.68rem; letter-spacing: 0.06em; color: #059669;">
-                                <i class="bi bi-building"></i> PROVEEDOR
+                        <div class="p-3.5 h-100 d-flex flex-column justify-content-between" style="min-height: 145px; border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);">
+                            <div class="fw-bold mb-2.5 d-flex align-items-center gap-1.5" style="font-size: 0.72rem; letter-spacing: 0.06em; color: #059669; text-transform: uppercase;">
+                                <i class="bi bi-building-fill" style="font-size: 0.85rem;"></i> PROVEEDOR
                             </div>
-                            <div class="mb-1.5">
-                                <span class="text-muted small d-block" style="font-size: 0.68rem;">Razón Social:</span>
-                                <strong class="text-dark d-block text-truncate" id="det-oc-card-proveedor" style="font-size: 0.80rem;" title="Proveedor">—</strong>
+                            <div class="mb-2">
+                                <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Razón Social:</span>
+                                <span class="d-block text-dark fw-bold text-truncate" id="det-oc-card-proveedor" style="font-size: 0.82rem; color: #0f172a;" title="Proveedor">—</span>
                             </div>
                             <div>
-                                <span class="text-muted small d-block" style="font-size: 0.68rem;">Motivo / Justificación:</span>
-                                <strong class="text-dark d-block text-truncate text-uppercase" id="det-oc-card-motivo" style="font-size: 0.80rem;">—</strong>
+                                <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Motivo / Justificación:</span>
+                                <span class="d-block text-dark fw-bold text-truncate text-uppercase" id="det-oc-card-motivo" style="font-size: 0.82rem; color: #0f172a;">—</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Card 4: Documentos & Pago -->
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="p-3.5 rounded-2xl h-100 d-flex flex-column justify-content-between" style="min-height: 140px; border-radius: 20px; background: rgba(255, 255, 255, 0.85); border: 1.5px solid rgba(255, 255, 255, 0.95); box-shadow: 0 4px 18px -2px rgba(148, 163, 184, 0.12), inset 0 1.5px 1.5px rgba(255, 255, 255, 1);">
-                            <div class="text-uppercase fw-bold mb-2 d-flex align-items-center gap-1.5" style="font-size: 0.68rem; letter-spacing: 0.06em; color: #4f46e5;">
-                                <i class="bi bi-credit-card"></i> DOCUMENTOS & PAGO
+                        <div class="p-3.5 h-100 d-flex flex-column justify-content-between" style="min-height: 145px; border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);">
+                            <div class="fw-bold mb-2.5 d-flex align-items-center gap-1.5" style="font-size: 0.72rem; letter-spacing: 0.06em; color: #4f46e5; text-transform: uppercase;">
+                                <i class="bi bi-credit-card-2-front-fill" style="font-size: 0.85rem;"></i> DOCUMENTOS & PAGO
                             </div>
-                            <div class="mb-1.5">
-                                <span class="text-muted small d-block" style="font-size: 0.68rem;">Condición:</span>
-                                <strong class="text-dark d-block" id="det-oc-card-pago" style="font-size: 0.78rem;">SOLES (PEN) • AL CONTADO</strong>
+                            <div class="mb-2">
+                                <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Condición:</span>
+                                <span class="d-block text-dark fw-bold" id="det-oc-card-pago" style="font-size: 0.80rem; color: #0f172a;">SOLES (PEN) • AL CONTADO</span>
                             </div>
-                            <div class="d-flex flex-wrap gap-1" id="det-oc-card-pills-docs">
+                            <div class="d-flex flex-wrap gap-1.5 pt-0.5" id="det-oc-card-pills-docs">
                                 <!-- Pills dinamicos de cotización, factura y voucher -->
                             </div>
                         </div>
@@ -1326,26 +1323,26 @@
                 </div>
 
                 <!-- 3. TABLA DE ARTÍCULOS / REPUESTOS REQUERIDOS (UNA SOLA FILA ESTRICTA) -->
-                <div class="card border-0 mb-2 overflow-hidden" style="border-radius: 20px; background: rgba(255, 255, 255, 0.85); border: 1.5px solid rgba(255, 255, 255, 0.95) !important; box-shadow: 0 4px 18px -2px rgba(148, 163, 184, 0.12), inset 0 1.5px 1.5px rgba(255, 255, 255, 1);">
-                    <div class="p-3 bg-light/70 border-bottom border-slate-200/70 d-flex align-items-center justify-content-between">
-                        <span class="fw-bold text-dark text-uppercase d-flex align-items-center gap-1.5" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+                <div class="card border-0 mb-1 overflow-hidden" style="border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6 !important; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);">
+                    <div class="p-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between" style="border-color: #f1f5f9 !important;">
+                        <span class="fw-bold text-dark text-uppercase d-flex align-items-center gap-2" style="font-size: 0.76rem; letter-spacing: 0.05em; color: #0f172a;">
                             <i class="bi bi-list-ul text-secondary"></i> ARTÍCULOS / REPUESTOS REQUERIDOS
                         </span>
-                        <span class="badge bg-white text-secondary border font-monospace" id="det-oc-table-renglones-badge" style="font-size: 0.70rem;">
+                        <span class="badge rounded-pill fw-bold" id="det-oc-table-renglones-badge" style="font-size: 0.70rem; background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; padding: 4px 10px;">
                             1 Renglón (1 unids)
                         </span>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0" style="font-size: 0.82rem; white-space: nowrap;">
-                            <thead class="text-muted" style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(248,250,252,0.85);">
+                            <thead style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; background: #ffffff; border-bottom: 1.5px solid #e2e8f0; color: #94a3b8;">
                                 <tr>
-                                    <th class="ps-3 py-2.5 text-center" style="width: 45px;">#</th>
+                                    <th class="ps-4 py-2.5 text-center" style="width: 45px;">#</th>
                                     <th class="py-2.5" style="width: 130px;">CÓD. ART.</th>
                                     <th class="py-2.5">DESCRIPCIÓN DEL ARTÍCULO</th>
                                     <th class="py-2.5 text-center" style="width: 80px;">U.M.</th>
                                     <th class="py-2.5 text-center" style="width: 80px;">CANT.</th>
                                     <th class="py-2.5 text-end" style="width: 120px;">P. UNITARIO</th>
-                                    <th class="pe-3 py-2.5 text-end" style="width: 130px;">IMPORTE</th>
+                                    <th class="pe-4 py-2.5 text-end" style="width: 130px;">IMPORTE</th>
                                 </tr>
                             </thead>
                             <tbody id="det-oc-table-tbody" class="border-top-0">
@@ -1356,24 +1353,24 @@
                 </div>
 
                 <!-- 4. BARRA DE MONTO EN LETRAS Y TOTAL NETO -->
-                <div class="p-3.5 rounded-2xl d-flex flex-wrap align-items-center justify-content-between gap-3" style="border-radius: 20px; background: rgba(255, 255, 255, 0.85); border: 1.5px solid rgba(255, 255, 255, 0.95); box-shadow: 0 4px 18px -2px rgba(148, 163, 184, 0.12), inset 0 1.5px 1.5px rgba(255, 255, 255, 1);">
-                    <div class="text-secondary small font-monospace d-flex align-items-center gap-2" style="font-size: 0.78rem;">
-                        <i class="bi bi-info-circle text-primary"></i> SON: <strong id="det-oc-total-letras" class="text-dark text-uppercase">—</strong>
+                <div class="p-3.5 px-4 rounded-2xl d-flex flex-wrap align-items-center justify-content-between gap-3" style="border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);">
+                    <div class="d-flex align-items-center gap-2" style="font-size: 0.76rem; color: #475569; font-weight: 600;">
+                        <i class="bi bi-info-circle text-primary" style="font-size: 0.90rem;"></i> SON: <strong id="det-oc-total-letras" class="text-dark text-uppercase" style="color: #0f172a;">—</strong>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-secondary text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.05em;">TOTAL NETO:</span>
-                        <span id="det-oc-total-neto" class="font-monospace fw-black" style="font-size: 1.35rem; color: #0284c7;">S/ 0.00</span>
+                        <span class="text-secondary text-uppercase fw-bold" style="font-size: 0.74rem; letter-spacing: 0.06em; color: #64748b;">TOTAL NETO:</span>
+                        <span id="det-oc-total-neto" class="fw-black" style="font-size: 1.60rem; color: #0284c7; font-family: ui-monospace, monospace; font-weight: 900; letter-spacing: -0.02em;">S/ 0.00</span>
                     </div>
                 </div>
 
             </div>
 
             <!-- Modal Footer -->
-            <div class="modal-footer border-0 p-3.5 px-4 px-md-5 d-flex justify-content-between align-items-center" style="background: transparent;">
-                <button type="button" class="btn btn-light border px-4 py-2 rounded-2xl fw-bold text-secondary shadow-sm" data-bs-dismiss="modal" style="background: rgba(255,255,255,0.9); font-size:0.80rem;">
+            <div class="modal-footer border-0 p-3.5 px-4 px-md-5 d-flex justify-content-between align-items-center" style="background: #ffffff; border-top: 1px solid #f1f5f9 !important;">
+                <button type="button" class="btn btn-light border px-4 py-2 rounded-2xl fw-bold text-secondary shadow-2xs" data-bs-dismiss="modal" style="background: #ffffff; border-color: #e2e8f0; font-size:0.80rem; border-radius: 14px;">
                     Cerrar
                 </button>
-                <button type="button" class="btn text-white px-4 py-2 rounded-2xl fw-bold d-flex align-items-center gap-2 shadow-sm" style="background:#0f172a; font-size:0.80rem;" onclick="window.imprimirPDFDesdeDetalleOC()">
+                <button type="button" class="btn text-white px-4 py-2 rounded-2xl fw-bold d-flex align-items-center gap-2 shadow-sm" style="background:#0f172a; font-size:0.80rem; border-radius: 14px;" onclick="window.imprimirPDFDesdeDetalleOC()">
                     <i class="bi bi-file-earmark-pdf-fill"></i> Imprimir / Ver PDF
                 </button>
             </div>
