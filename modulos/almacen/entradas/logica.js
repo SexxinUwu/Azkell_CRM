@@ -2929,6 +2929,120 @@ window.exportarEntradasExcel = function() {
     var datos = window._entFiltrados || window._entData || [];
     if (!datos.length) { alert('No hay datos para exportar.'); return; }
 
+    var modo = window._entVistaModo || 'articulos';
+    var fechaHoyStr = new Date().toISOString().split('T')[0];
+
+    if (modo === 'ordenes') {
+        // MODO CONSOLIDADO: 1 FILA POR ORDEN
+        var headersOrd = [
+            'Código Orden',
+            'Fecha',
+            'Tipo Orden',
+            'Estado',
+            'Aprobador / Solicitante',
+            'Placa',
+            'Motivo',
+            'Proveedor',
+            'Ítems (Cant.)',
+            'Resumen Artículos',
+            'Total Unidades',
+            'Total Monto PEN',
+            'Centro de Costo',
+            'Condición Pago',
+            'Días Crédito',
+            'Moneda',
+            'Voucher',
+            'Cotización',
+            'Factura',
+            'Observaciones'
+        ];
+
+        var rowsOrd = [headersOrd];
+
+        datos.forEach(function(d) {
+            var codLimpio = String(d.id || '').replace(/^ENT-/i, '');
+            var estNorm = (d.estado || 'REGISTRADA').toUpperCase();
+            var fechaObj = null;
+            if (d.fecha) {
+                try {
+                    var fStr = String(d.fecha).split('T')[0].split(' ')[0];
+                    fechaObj = new Date(fStr + 'T00:00:00');
+                    if (isNaN(fechaObj.getTime())) fechaObj = fStr;
+                } catch(e) { fechaObj = String(d.fecha); }
+            }
+
+            var aprobador = d.aprobador_nombre || d.aprobado_por || d.autoriza || d.solicitante || '';
+            var vUrl = d.url_voucher_presigned || d.url_voucher || '';
+            var cUrl = d.url_cotizacion_presigned || d.url_cotizacion || '';
+            var fUrl = d.url_factura_presigned || d.url_factura || '';
+
+            var items = d.items || [];
+            var countItems = items.length;
+            var totalCant = items.reduce(function(acc, it) { return acc + (parseFloat(it.cantidad) || 0); }, 0);
+            var resumenArticulos = 'Sin artículos';
+            if (items.length > 0) {
+                resumenArticulos = items.map(function(it) {
+                    var n = _entDescLimpia(it.descripcion, it.inventario_id);
+                    var c = parseFloat(it.cantidad || 0);
+                    return n + ' (' + c + ')';
+                }).join('; ');
+            }
+
+            rowsOrd.push([
+                codLimpio,
+                fechaObj || '',
+                d.tipo_orden || 'Orden de compra',
+                estNorm,
+                aprobador,
+                d.placa || '',
+                d.motivo_entrada || '',
+                d.proveedor_nombre || '',
+                countItems,
+                resumenArticulos,
+                totalCant,
+                parseFloat(d.total_pen || 0),
+                d.centro_costo || 'CC-100',
+                d.condicion_pago || 'Al contado',
+                d.condicion_pago === 'A crédito' ? (parseInt(d.dias_credito, 10) || 30) : 0,
+                d.moneda || 'PEN',
+                vUrl ? { t: 's', v: 'Ver Voucher', l: { Target: vUrl } } : '',
+                cUrl ? { t: 's', v: 'Ver Cotización', l: { Target: cUrl } } : '',
+                fUrl ? { t: 's', v: 'Ver Factura', l: { Target: fUrl } } : '',
+                d.observaciones || ''
+            ]);
+        });
+
+        var wsOrd = XLSX.utils.aoa_to_sheet(rowsOrd, { cellDates: true });
+        wsOrd['!cols'] = [
+            { wch: 14 }, // Código
+            { wch: 14 }, // Fecha
+            { wch: 18 }, // Tipo Orden
+            { wch: 14 }, // Estado
+            { wch: 22 }, // Aprobador
+            { wch: 12 }, // Placa
+            { wch: 25 }, // Motivo
+            { wch: 28 }, // Proveedor
+            { wch: 12 }, // Ítems
+            { wch: 38 }, // Resumen Artículos
+            { wch: 14 }, // Total Unidades
+            { wch: 16 }, // Total Monto PEN
+            { wch: 14 }, // Centro Costo
+            { wch: 16 }, // Condición Pago
+            { wch: 12 }, // Días Crédito
+            { wch: 10 }, // Moneda
+            { wch: 18 }, // Voucher Link
+            { wch: 18 }, // Cotización Link
+            { wch: 18 }, // Factura Link
+            { wch: 30 }  // Observaciones
+        ];
+
+        var wbOrd = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wbOrd, wsOrd, 'Órdenes (Consolidado)');
+        XLSX.writeFile(wbOrd, 'Ordenes_Compra_Consolidado_Azkell_' + fechaHoyStr + '.xlsx');
+        return;
+    }
+
+    // MODO POR ARTÍCULOS: DETALLE COMPLETO (1 FILA POR ARTÍCULO)
     var headers = [
         'Código Orden',
         'Tipo Orden',
@@ -3061,9 +3175,8 @@ window.exportarEntradasExcel = function() {
     ];
 
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Órdenes de Compra');
-    var fechaHoyStr = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(wb, 'Ordenes_Compra_Azkell_' + fechaHoyStr + '.xlsx');
+    XLSX.utils.book_append_sheet(wb, ws, 'Órdenes (Por Artículos)');
+    XLSX.writeFile(wb, 'Ordenes_Compra_Detalle_Articulos_Azkell_' + fechaHoyStr + '.xlsx');
 };
 
 window.descargarPlantillaEntradas = function() {
