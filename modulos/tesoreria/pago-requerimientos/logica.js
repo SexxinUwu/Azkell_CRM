@@ -731,7 +731,7 @@
 
         const codLimpio = String(item.id || item.folio || '').replace(/^ENT-/i, '');
         const lblFolio = document.getElementById('lblDetalleOCFolio');
-        if (lblFolio) lblFolio.textContent = `Órden de Compra: ${codLimpio}`;
+        if (lblFolio) lblFolio.textContent = codLimpio;
 
         const solEl = document.getElementById('pr-det-oc-solicitante');
         if (solEl) solEl.textContent = (item.solicitante || item.autoriza || '—').toUpperCase();
