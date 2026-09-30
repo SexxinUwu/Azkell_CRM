@@ -571,6 +571,10 @@ window.kitsFiltrar = function () {
  * Renderizar Tabla de Escritorio (Desktop)
  * Columnas: CÓDIGO | DESCRIPCIÓN | CANTIDAD | STOCK ALMACÉN | ACCIÓN
  */
+/**
+ * Renderizar Tabla de Escritorio (Desktop)
+ * Columnas: CÓDIGO | DESCRIPCIÓN | CANTIDAD | STOCK ALMACÉN | ACCIÓN
+ */
 window.kitsRenderizarTablaDesktop = function () {
     const tbody = document.getElementById('kits-tbody');
     if (!tbody) return;
@@ -610,7 +614,13 @@ window.kitsRenderizarTablaDesktop = function () {
     let html = '';
 
     grupos.forEach((items, groupTitle) => {
-        // Fila Encabezado de Tipo / Sección de Mantenimiento (En Negrita como en la imagen)
+        const firstItem = items[0] || {};
+        const itemMarca = firstItem.marca_vehiculo || window.kitsSidebarMarcaSeleccionada || '';
+        const itemModelo = firstItem.modelo_vehiculo || window.kitsSidebarModeloSeleccionado || 'TODOS LOS MODELOS';
+        const itemTipo = firstItem.tipo_mp || 'MP1';
+        const itemAlias = firstItem.nombre_kit || '';
+
+        // Fila Encabezado de Tipo / Sección de Mantenimiento con acciones rápidas
         html += `
             <tr class="kits-type-header-row">
                 <td colspan="5" class="py-3 px-4" style="background: #ffffff; border-top: 1.5px solid #e2e8f0; border-bottom: 1px solid #f1f5f9;">
@@ -618,6 +628,14 @@ window.kitsRenderizarTablaDesktop = function () {
                         <span class="fw-black text-dark" style="font-size: 0.92rem; letter-spacing: -0.2px; font-weight: 800;">
                             ${escapeHtml(groupTitle)}
                         </span>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-light border border-slate-200 text-secondary fw-bold rounded-3 px-2.5 py-1 d-inline-flex align-items-center gap-1 hover:bg-slate-100 shadow-2xs" style="font-size: 0.78rem;" onclick="window.kitsEditarKit('${escapeHtml(itemMarca)}', '${escapeHtml(itemModelo)}', '${escapeHtml(itemTipo)}', '${escapeHtml(itemAlias)}')" title="Editar configuración de este kit">
+                                <i class="bi bi-pencil-square text-primary"></i> <span>Editar Kit</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light border border-danger-subtle text-danger fw-bold rounded-3 px-2.5 py-1 d-inline-flex align-items-center gap-1 hover:bg-danger-subtle shadow-2xs" style="font-size: 0.78rem;" onclick="window.kitsConfirmarEliminarKitGrupo('${escapeHtml(itemMarca)}', '${escapeHtml(itemModelo)}', '${escapeHtml(itemTipo)}', '${escapeHtml(itemAlias)}', false)" title="Eliminar este kit completo">
+                                <i class="bi bi-trash3"></i> <span>Eliminar Kit</span>
+                            </button>
+                        </div>
                     </div>
                 </td>
             </tr>
@@ -672,7 +690,7 @@ window.kitsRenderizarTablaDesktop = function () {
                     <td class="pe-4 py-3 text-end align-middle" style="border-bottom: 1px solid #f8fafc; width: 60px;">
                         <button type="button" class="btn btn-sm btn-link text-secondary p-1 text-decoration-none"
                                 title="Editar configuración del kit"
-                                onclick="window.kitsEditarKit('${escapeHtml(it.marca_vehiculo)}', '${escapeHtml(it.modelo_vehiculo)}', '${escapeHtml(it.tipo_mp)}')"
+                                onclick="window.kitsEditarKit('${escapeHtml(it.marca_vehiculo)}', '${escapeHtml(it.modelo_vehiculo)}', '${escapeHtml(it.tipo_mp)}', '${escapeHtml(it.nombre_kit || '')}')"
                                 style="font-size: 1rem; color: #64748b;">
                             <i class="bi bi-chevron-right"></i>
                         </button>
@@ -740,12 +758,26 @@ window.kitsRenderizarCardsMobile = function () {
     `;
 
     grupos.forEach((items, groupTitle) => {
-        // Fila Encabezado de Sección en Negrita (1:1 Imagen 3)
+        const firstItem = items[0] || {};
+        const itemMarca = firstItem.marca_vehiculo || window.kitsSidebarMarcaSeleccionada || '';
+        const itemModelo = firstItem.modelo_vehiculo || window.kitsSidebarModeloSeleccionado || 'TODOS LOS MODELOS';
+        const itemTipo = firstItem.tipo_mp || 'MP1';
+        const itemAlias = firstItem.nombre_kit || '';
+
+        // Fila Encabezado de Sección en Negrita (1:1 Imagen 3) con acciones
         html += `
             <tr>
                 <td colspan="3" class="kits-mobile-type-title">
                     <div class="d-flex align-items-center justify-content-between">
                         <span class="fw-black text-dark text-uppercase">${escapeHtml(groupTitle)}</span>
+                        <div class="d-flex align-items-center gap-1.5">
+                            <button type="button" class="btn btn-sm btn-light border border-slate-200 text-secondary px-2 py-0.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-2xs" style="font-size: 0.72rem;" onclick="event.stopPropagation(); window.kitsEditarKit('${escapeHtml(itemMarca)}', '${escapeHtml(itemModelo)}', '${escapeHtml(itemTipo)}', '${escapeHtml(itemAlias)}')" title="Editar kit">
+                                <i class="bi bi-pencil-square text-primary"></i> <span>Editar</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light border border-danger-subtle text-danger px-2 py-0.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-2xs" style="font-size: 0.72rem;" onclick="event.stopPropagation(); window.kitsConfirmarEliminarKitGrupo('${escapeHtml(itemMarca)}', '${escapeHtml(itemModelo)}', '${escapeHtml(itemTipo)}', '${escapeHtml(itemAlias)}', false)" title="Eliminar kit">
+                                <i class="bi bi-trash3"></i> <span>Eliminar</span>
+                            </button>
+                        </div>
                     </div>
                 </td>
             </tr>
@@ -769,7 +801,7 @@ window.kitsRenderizarCardsMobile = function () {
             const stockNum = invItem != null ? invItem.stock : (it.stock_almacen != null ? it.stock_almacen : 0);
 
             html += `
-                <tr onclick="window.kitsEditarKit('${escapeHtml(it.marca_vehiculo)}', '${escapeHtml(it.modelo_vehiculo)}', '${escapeHtml(it.tipo_mp)}')" style="cursor: pointer;">
+                <tr onclick="window.kitsEditarKit('${escapeHtml(it.marca_vehiculo)}', '${escapeHtml(it.modelo_vehiculo)}', '${escapeHtml(it.tipo_mp)}', '${escapeHtml(it.nombre_kit || '')}')" style="cursor: pointer;">
                     <td class="align-middle">
                         <div class="d-flex flex-column gap-0.5">
                             ${displayCodigo && displayCodigo !== '—' ? `<span class="badge bg-light text-dark border font-monospace fw-bold px-1.5 py-0.5 me-auto mb-1" style="font-size: 0.72rem; border-color: #cbd5e1 !important;">${escapeHtml(displayCodigo)}</span>` : ''}
@@ -809,6 +841,13 @@ window.kitsAbrirModal = function (presetMarca, presetModelo) {
     window.kitsDeletedItemIds = [];
     window.kitsRowCounter = 0;
 
+    // Ocultar botón "Eliminar Kit" en modo nuevo
+    const btnEliminar = document.getElementById('btnModalEliminarKit');
+    if (btnEliminar) {
+        btnEliminar.classList.remove('d-inline-flex');
+        btnEliminar.classList.add('d-none');
+    }
+
     const lblTitulo = document.getElementById('lblTituloModalKit');
     const lblSub = document.getElementById('lblSubtituloModalKit');
     if (lblTitulo) lblTitulo.textContent = 'Nuevo Kit de Mantenimiento';
@@ -843,28 +882,43 @@ window.kitsAbrirModal = function (presetMarca, presetModelo) {
 /**
  * Abrir Drawer para Editar un Kit existente
  */
-window.kitsEditarKit = function (marca, modelo, tipo) {
-    window._kitEditandoGrupo = { marca, modelo, tipo };
+window.kitsEditarKit = function (marca, modelo, tipo, alias) {
+    window._kitEditandoGrupo = { 
+        marca: (marca || '').trim().toUpperCase(), 
+        modelo: (modelo || 'TODOS LOS MODELOS').trim().toUpperCase(), 
+        tipo: (tipo || 'MP1').trim().toUpperCase(),
+        nombre_kit: (alias || '').trim()
+    };
     window.kitsDeletedItemIds = [];
     window.kitsRowCounter = 0;
 
+    // Mostrar botón "Eliminar Kit" en modo edición
+    const btnEliminar = document.getElementById('btnModalEliminarKit');
+    if (btnEliminar) {
+        btnEliminar.classList.remove('d-none');
+        btnEliminar.classList.add('d-inline-flex');
+    }
+
     const lblTitulo = document.getElementById('lblTituloModalKit');
     const lblSub = document.getElementById('lblSubtituloModalKit');
-    if (lblTitulo) lblTitulo.textContent = `Editar Kit: ${marca} • ${modelo} (${tipo})`;
-    if (lblSub) lblSub.textContent = 'Modifique los repuestos, cantidades o costos asignados al kit';
+    const displayName = alias || tipo || 'Kit';
+    if (lblTitulo) lblTitulo.textContent = `Editar Kit: ${marca} • ${modelo} (${displayName})`;
+    if (lblSub) lblSub.textContent = 'Modifique los repuestos, cantidades o modelos asignados al kit';
 
     window.kitsPoblarSelectsModal(marca, modelo, tipo);
 
-    // Obtener los ítems pertenecientes al kit
-    const items = window.kitsData.filter(x =>
-        x.marca_vehiculo.toUpperCase() === (marca || '').toUpperCase() &&
-        x.modelo_vehiculo.toUpperCase() === (modelo || 'TODOS LOS MODELOS').toUpperCase() &&
-        x.tipo_mp.toUpperCase() === (tipo || '').toUpperCase()
-    );
+    // Obtener los ítems pertenecientes al kit exacto
+    const items = window.kitsData.filter(x => {
+        const matchMarca = x.marca_vehiculo.toUpperCase() === (marca || '').toUpperCase();
+        const matchMod = x.modelo_vehiculo.toUpperCase() === (modelo || 'TODOS LOS MODELOS').toUpperCase();
+        const matchAlias = alias ? (x.nombre_kit || '').toUpperCase() === alias.toUpperCase() : false;
+        const matchTipo = (x.tipo_mp || '').toUpperCase() === (tipo || '').toUpperCase();
+        return matchMarca && matchMod && (matchAlias || matchTipo);
+    });
 
     const txtAlias = document.getElementById('modalKitNombreAlias');
     const txtObs = document.getElementById('modalKitObservaciones');
-    if (txtAlias) txtAlias.value = items[0]?.nombre_kit || '';
+    if (txtAlias) txtAlias.value = alias || items[0]?.nombre_kit || '';
     if (txtObs) txtObs.value = items[0]?.observaciones || '';
 
     const container = document.getElementById('modalKitItemsContainer');
@@ -1328,7 +1382,7 @@ window.kitsModalRecalcularTotales = function () {
 };
 
 /**
- * Guardar Kit (Soporta Generación Independiente Multi-Modelo)
+ * Guardar Kit (Sincronización Atómica y Sin Duplicados Multi-Modelo)
  */
 window.kitsModalGuardar = function () {
     let marca = (typeof window._cbGet === 'function' ? window._cbGet('modalKitMarca') : '') || (document.getElementById('modalKitMarca')?.value || '');
@@ -1357,7 +1411,6 @@ window.kitsModalGuardar = function () {
         const itemCodigo = (r.querySelector('.kit-input-codigo')?.value || '').trim();
         const itemNombre = (r.querySelector('.kit-input-nombre')?.value || '').trim();
         const cant = parseFloat(r.querySelector('.kit-input-cant')?.value || 0) || 0;
-        const id = r.dataset.id ? parseInt(r.dataset.id) : null;
 
         if (!itemNombre) {
             return alert(`El ítem #${i + 1} no tiene nombre de repuesto.`);
@@ -1370,124 +1423,42 @@ window.kitsModalGuardar = function () {
         const invMatch = window.kitsBuscarItemAlmacen(itemCodigo, itemNombre);
         const unid = (invMatch ? invMatch.unidad : (r.dataset.unidad || 'UND')).toUpperCase();
         const cu = invMatch ? (invMatch.costo || 0) : (parseFloat(r.dataset.costo || 0) || 0);
-        const ct = cant * cu;
 
         let codFinal = invMatch ? (invMatch.codInv || invMatch.codigo || invMatch.codigo_articulo) : itemCodigo;
         if (/^\d+$/.test(codFinal)) codFinal = 'INV-' + codFinal.padStart(4, '0');
 
         baseItems.push({
-            id,
-            nombre_kit: alias,
             item_codigo: codFinal || '-',
             item_nombre: invMatch ? invMatch.nombre : itemNombre,
             cantidad: cant,
             unidad_medida: unid,
-            costo_unitario: cu,
-            costo_total: ct,
-            observaciones: obs,
-            orden: i + 1
+            costo_unitario: cu
         });
     }
 
-    if (!baseItems.length && !window.kitsDeletedItemIds.length) {
+    if (!baseItems.length) {
         return alert('Debe registrar al menos un ítem o repuesto en el kit.');
     }
 
-    const promises = [];
-
-    // 1. Eliminar ítems quitados
-    window.kitsDeletedItemIds.forEach(id => {
-        promises.push(fetch(`/api/mantenimiento-kits/${id}`, { method: 'DELETE' }));
-    });
-
-    // 2. Determinar modelos a generar independientemente
+    // Modelos seleccionados
     let modelosToSave = Array.from(window._kitsModalModelosSeleccionados);
     if (!modelosToSave.length) {
         modelosToSave = ['TODOS LOS MODELOS'];
     }
 
-    if (window._kitEditandoGrupo) {
-        // En modo edición: Determinar cuál es el modelo principal editado
-        const origModel = (window._kitEditandoGrupo.modelo || '').toUpperCase();
-        const targetPrimary = modelosToSave.includes(origModel) ? origModel : modelosToSave[0];
-
-        // A. Actualizar/guardar los ítems del modelo principal
-        baseItems.forEach(it => {
-            const payload = {
-                ...it,
-                marca_vehiculo: marca,
-                modelo_vehiculo: targetPrimary,
-                tipo_mp: tipo
-            };
-            const method = it.id ? 'PUT' : 'POST';
-            const url = it.id ? `/api/mantenimiento-kits/${it.id}` : '/api/mantenimiento-kits';
-
-            promises.push(
-                fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                })
-            );
-        });
-
-        // B. Para todos los DEMÁS modelos seleccionados (ej: P-410 A4X2, R-500, etc.), generar de forma independiente
-        const otherModels = modelosToSave.filter(m => m !== targetPrimary);
-        otherModels.forEach(otherMod => {
-            baseItems.forEach(it => {
-                const payload = {
-                    marca_vehiculo: marca,
-                    modelo_vehiculo: otherMod,
-                    tipo_mp: tipo,
-                    nombre_kit: it.nombre_kit,
-                    item_codigo: it.item_codigo,
-                    item_nombre: it.item_nombre,
-                    cantidad: it.cantidad,
-                    unidad_medida: it.unidad_medida,
-                    costo_unitario: it.costo_unitario,
-                    costo_total: it.costo_total,
-                    orden: it.orden,
-                    observaciones: it.observaciones
-                };
-
-                promises.push(
-                    fetch('/api/mantenimiento-kits', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    })
-                );
-            });
-        });
-    } else {
-        // En modo nuevo: Para cada modelo seleccionado, generar kit de forma independiente
-        modelosToSave.forEach(mod => {
-            baseItems.forEach(it => {
-                const payload = {
-                    marca_vehiculo: marca,
-                    modelo_vehiculo: mod,
-                    tipo_mp: tipo,
-                    nombre_kit: it.nombre_kit,
-                    item_codigo: it.item_codigo,
-                    item_nombre: it.item_nombre,
-                    cantidad: it.cantidad,
-                    unidad_medida: it.unidad_medida,
-                    costo_unitario: it.costo_unitario,
-                    costo_total: it.costo_total,
-                    orden: it.orden,
-                    observaciones: it.observaciones
-                };
-
-                promises.push(
-                    fetch('/api/mantenimiento-kits', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    })
-                );
-            });
-        });
-    }
+    const payload = {
+        marca_vehiculo: marca,
+        modelos: modelosToSave,
+        tipo_mp: tipo,
+        nombre_kit: alias || null,
+        items: baseItems,
+        kitOrig: window._kitEditandoGrupo ? {
+            marca: window._kitEditandoGrupo.marca,
+            modelo: window._kitEditandoGrupo.modelo,
+            tipo_mp: window._kitEditandoGrupo.tipo,
+            nombre_kit: window._kitEditandoGrupo.nombre_kit || null
+        } : null
+    };
 
     const btnGuardar = document.getElementById('btnGuardarKitMP');
     if (btnGuardar) {
@@ -1495,36 +1466,124 @@ window.kitsModalGuardar = function () {
         btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
     }
 
-    Promise.all(promises)
-        .then(() => {
-            // Cerrar modal
-            const modalEl = document.getElementById('modalNuevoKitMP');
-            if (modalEl) {
-                const m = bootstrap.Modal.getInstance(modalEl);
-                if (m) m.hide();
-            }
+    fetch('/api/mantenimiento-kits/guardarKitLote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.error) throw new Error(res.error);
 
-            // Recargar tabla
-            window.kitsCargarTabla(true);
-        })
-        .catch(err => {
-            console.error('Error guardando kit de mantenimiento:', err);
-            alert('Ocurrió un error al guardar los cambios del kit.');
-        })
-        .finally(() => {
-            if (btnGuardar) {
-                btnGuardar.disabled = false;
-                btnGuardar.innerHTML = '<i class="bi bi-check-circle-fill"></i> Guardar Kit';
-            }
-        });
+        // Cerrar modal
+        const modalEl = document.getElementById('modalNuevoKitMP');
+        if (modalEl) {
+            const m = bootstrap.Modal.getInstance(modalEl);
+            if (m) m.hide();
+        }
+
+        // Recargar tabla
+        window.kitsCargarTabla(true);
+    })
+    .catch(err => {
+        console.error('Error guardando kit de mantenimiento:', err);
+        alert('Ocurrió un error al guardar los cambios del kit: ' + (err.message || ''));
+    })
+    .finally(() => {
+        if (btnGuardar) {
+            btnGuardar.disabled = false;
+            btnGuardar.innerHTML = '<i class="bi bi-check-circle-fill"></i> Guardar Kit';
+        }
+    });
 };
 
 // =========================================================================
-// ELIMINACIÓN DE ÍTEMS (MODAL CONFIRMACIÓN 1:1 REPORTE DE FALLAS)
+// ELIMINACIÓN DE KITS E ÍTEMS (MODAL CONFIRMACIÓN 1:1 REPORTE DE FALLAS)
 // =========================================================================
 
 /**
- * Abrir diálogo de confirmación para eliminar un ítem
+ * Eliminar Kit Completo desde el botón del Drawer
+ */
+window.kitsModalEliminarKitCompleto = function () {
+    if (!window._kitEditandoGrupo) return;
+    const { marca, modelo, tipo, nombre_kit } = window._kitEditandoGrupo;
+    window.kitsConfirmarEliminarKitGrupo(marca, modelo, tipo, nombre_kit, true);
+};
+
+/**
+ * Confirmar y Ejecutar Eliminación de un Kit Completo (y todos sus ítems)
+ */
+window.kitsConfirmarEliminarKitGrupo = function (marca, modelo, tipo, nombreKit, cerrarModalDrawer) {
+    const lblTitulo = document.getElementById('lblEliminarKitTitulo');
+    const lblMsg = document.getElementById('lblEliminarKitMsg');
+    const btnConfirm = document.getElementById('btnConfirmarEliminarKitAccion');
+
+    const nombreMostrar = nombreKit || tipo || 'este kit';
+    const vehiculoMostrar = [marca, modelo].filter(Boolean).join(' • ');
+
+    if (lblTitulo) lblTitulo.textContent = '¿Eliminar Kit Completo?';
+    if (lblMsg) {
+        lblMsg.innerHTML = `¿Está seguro de eliminar el kit <strong>"${escapeHtml(nombreMostrar)}"</strong> para <strong>${escapeHtml(vehiculoMostrar)}</strong>?<br><span class="text-danger small mt-1 d-block">Se borrarán todos sus repuestos asociados.</span>`;
+    }
+
+    if (btnConfirm) {
+        btnConfirm.onclick = function () {
+            btnConfirm.disabled = true;
+            btnConfirm.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            fetch('/api/mantenimiento-kits/eliminarGrupo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    marca_vehiculo: marca,
+                    modelo_vehiculo: modelo,
+                    tipo_mp: tipo,
+                    nombre_kit: nombreKit
+                })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.error) throw new Error(res.error);
+
+                // Cerrar modal de confirmación
+                const modalConfirmEl = document.getElementById('modalEliminarKitConfirm');
+                if (modalConfirmEl) {
+                    const mC = bootstrap.Modal.getInstance(modalConfirmEl);
+                    if (mC) mC.hide();
+                }
+
+                // Cerrar modal drawer si estaba abierto
+                if (cerrarModalDrawer) {
+                    const modalDrawerEl = document.getElementById('modalNuevoKitMP');
+                    if (modalDrawerEl) {
+                        const mD = bootstrap.Modal.getInstance(modalDrawerEl);
+                        if (mD) mD.hide();
+                    }
+                }
+
+                // Recargar tabla
+                window.kitsCargarTabla(true);
+            })
+            .catch(err => {
+                console.error('Error eliminando grupo de kit:', err);
+                alert('No se pudo eliminar el kit: ' + (err.message || 'Error de conexión'));
+            })
+            .finally(() => {
+                btnConfirm.disabled = false;
+                btnConfirm.innerHTML = '<i class="bi bi-trash3"></i>';
+            });
+        };
+    }
+
+    const modalConfirmEl = document.getElementById('modalEliminarKitConfirm');
+    if (modalConfirmEl) {
+        const m = bootstrap.Modal.getOrCreateInstance(modalConfirmEl);
+        m.show();
+    }
+};
+
+/**
+ * Abrir diálogo de confirmación para eliminar un ítem individual
  */
 window.kitsEliminarItem = function (id, nombre) {
     const lblTitulo = document.getElementById('lblEliminarKitTitulo');
