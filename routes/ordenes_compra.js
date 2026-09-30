@@ -154,11 +154,13 @@ module.exports = function (db, broadcast, logAudit) {
     router.get('/api/ordenes-compra/:id', async (req, res) => {
         try {
             const tdb = getDb(req);
-            const [rows] = await tdb.query('SELECT * FROM ordenes_compra WHERE id = ?', [req.params.id]);
+            const term = req.params.id;
+            const [rows] = await tdb.query('SELECT * FROM ordenes_compra WHERE id = ? OR codigo = ?', [term, term]);
             if (!rows.length) return res.status(404).json({ error: 'Orden de compra no encontrada' });
 
-            const [items] = await tdb.query('SELECT * FROM ordenes_compra_items WHERE orden_compra_id = ?', [req.params.id]);
-            const [tokens] = await tdb.query('SELECT * FROM oc_approval_tokens WHERE orden_compra_id = ? ORDER BY id DESC', [req.params.id]);
+            const ocId = rows[0].id;
+            const [items] = await tdb.query('SELECT * FROM ordenes_compra_items WHERE orden_compra_id = ?', [ocId]);
+            const [tokens] = await tdb.query('SELECT * FROM oc_approval_tokens WHERE orden_compra_id = ? ORDER BY id DESC', [ocId]);
 
             return res.json({ ...rows[0], items, tokens });
         } catch (err) {

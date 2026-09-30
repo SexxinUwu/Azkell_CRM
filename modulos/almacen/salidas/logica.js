@@ -1315,6 +1315,7 @@ window.salCerrarNuevo = function () {
     var bd = document.getElementById('salNuevoBackdrop');
     if (bd) bd.classList.remove('open');
     window.salCerrarSubDrawer('sal-drawer-kit');
+    window.salCerrarSubDrawer('sal-drawer-oc');
 };
 
 // ── Auto-completar Placa al ingresar N° OT ────────────────────
@@ -1676,6 +1677,359 @@ window._salInsertarKit = function () {
         window.mostrarToast('Se agregaron ' + items.length + ' repuestos del kit ' + kit.tipo, 'success');
     } else if (typeof window.mostrarAlerta === 'function') {
         window.mostrarAlerta('Se agregaron ' + items.length + ' repuestos del kit ' + kit.tipo, 'success');
+    }
+};
+
+// ══════════════════════════════════════════════════════════════════
+// LÓGICA ORDEN DE COMPRA (ALMACÉN SALIDAS)
+// ══════════════════════════════════════════════════════════════════
+window._salOCsDisponibles = [];
+window._salOCSeleccionada = null;
+
+window._salAbrirModalOC = async function () {
+    var inputCod = document.getElementById('sal-oc-input-codigo');
+    var datalist = document.getElementById('sal-oc-datalist');
+    var badgeCount = document.getElementById('sal-oc-count-badge');
+    var infoCard = document.getElementById('sal-oc-info-card');
+    var prevWrap = document.getElementById('sal-oc-preview-wrap');
+    var noMatch = document.getElementById('sal-oc-no-match');
+    var btnInsertar = document.getElementById('sal-btn-insertar-oc');
+
+    if (inputCod) inputCod.value = '';
+    if (infoCard) infoCard.classList.add('d-none');
+    if (prevWrap) prevWrap.classList.add('d-none');
+    if (noMatch) noMatch.classList.remove('d-none');
+    if (btnInsertar) btnInsertar.disabled = true;
+    window._salOCSeleccionada = null;
+
+    // Abrir Drawer al frente
+    window.salAbrirSubDrawer('sal-drawer-oc');
+
+    // Asegurar inventario cargado para verificación de stock y asociación
+    if (!window._salInvData || !window._salInvData.length) {
+        try {
+            var rInv = await fetch('/api/almacen/inventario');
+            if (rInv.ok) window._salInvData = await rInv.json();
+        } catch (e) { }
+    }
+
+    // Cargar listado de órdenes de compra
+    try {
+        if (badgeCount) badgeCount.textContent = 'Cargando...';
+        var resp = await fetch('/api/ordenes-compra');
+        var ocs = resp.ok ? await resp.json() : [];
+        window._salOCsDisponibles = Array.isArray(ocs) ? ocs : [];
+
+        if (badgeCount) {
+            badgeCount.textContent = window._salOCsDisponibles.length + ' O/C disponibles';
+        }
+
+        if (datalist) {
+            datalist.innerHTML = window._salOCsDisponibles.map(function (oc) {
+                var prov = oc.proveedor_nombre ? ' — ' + oc.proveedor_nombre : '';
+                var total = (oc.moneda === 'USD' ? '$' : 'S/.') + parseFloat(oc.monto_total || 0).toFixed(2);
+                return '<option value="' + salEsc(oc.codigo || '') + '">' + salEsc((oc.codigo || '') + prov + ' (' + total + ')') + '</option>';
+            }).join('');
+        }
+    } catch (err) {
+        console.error('Error cargando OCs en salidas:', err);
+        if (badgeCount) badgeCount.textContent = 'Error al cargar';
+    }
+
+    if (inputCod) setTimeout(function () { inputCod.focus(); }, 150);
+};
+
+window._salOnOCInputChanged = async function (val) {
+    var raw = (val || '').trim().toUpperCase();
+    var infoCard = document.getElementById('sal-oc-info-card');
+    var prevWrap = document.getElementById('sal-oc-preview-wrap');
+    var noMatch = document.getElementById('sal-oc-no-match');
+    var btnInsertar = document.getElementById('sal-btn-insertar-oc');
+
+    if (!raw) {
+        if (infoCard) infoCard.classList.add('d-none');
+        if (prevWrap) prevWrap.classList.add('d-none');
+        if (noMatch) noMatch.classList.remove('d-none');
+        if (btnInsertar) btnInsertar.disabled = true;
+        window._salOCSeleccionada = null;
+        return;
+    }
+
+    // Buscar coincidencia exacta o por código que empiece / contenga
+    var match = (window._salOCsDisponibles || []).find(function (oc) {
+        var cod = (oc.codigo || '').toUpperCase().trim();
+        return cod === raw;
+    });
+
+    if (!match) {
+        match = (window._salOCsDisponibles || []).find(function (oc) {
+            var cod = (oc.codigo || '').toUpperCase().trim();
+            var prov = (oc.proveedor_nombre || '').toUpperCase().trim();
+            return cod.includes(raw) || prov.includes(raw);
+        });
+    }
+
+    if (!match) {
+        // Si no está en la lista previa, intentar consultar directo al endpoint por código
+        try {
+            var r = await fetch('/api/ordenes-compra/' + encodeURIComponent(raw));
+            if (r.ok) {
+                match = await r.json();
+            }
+        } catch (e) { }
+    }
+
+    if (!match) {
+        if (infoCard) infoCard.classList.add('d-none');
+        if (prevWrap) prevWrap.classList.add('d-none');
+        if (noMatch) {
+            noMatch.classList.remove('d-none');
+            noMatch.innerHTML = '<i class="bi bi-exclamation-circle text-warning fs-3 d-block mb-2"></i>No se encontró ninguna Orden de Compra con: <strong>' + salEsc(raw) + '</strong>';
+        }
+        if (btnInsertar) btnInsertar.disabled = true;
+        window._salOCSeleccionada = null;
+        return;
+    }
+
+    // Cargar detalle completo si no vienen items
+    var fullOC = match;
+    if (!Array.isArray(fullOC.items)) {
+        try {
+            var respDet = await fetch('/api/ordenes-compra/' + (match.id || match.codigo));
+            if (respDet.ok) fullOC = await respDet.json();
+        } catch (e) { }
+    }
+
+    window._salOCSeleccionada = fullOC;
+    window._salRenderOCPreview(fullOC);
+};
+
+window._salRenderOCPreview = function (oc) {
+    var infoCard = document.getElementById('sal-oc-info-card');
+    var prevWrap = document.getElementById('sal-oc-preview-wrap');
+    var noMatch = document.getElementById('sal-oc-no-match');
+    var tb = document.getElementById('sal-oc-preview-tbody');
+    var countEl = document.getElementById('sal-oc-items-count');
+    var btnInsertar = document.getElementById('sal-btn-insertar-oc');
+
+    // Llenar card de info
+    var codEl = document.getElementById('sal-oc-info-codigo');
+    var estEl = document.getElementById('sal-oc-info-estado');
+    var monEl = document.getElementById('sal-oc-info-monto');
+    var prvEl = document.getElementById('sal-oc-info-proveedor');
+    var rucEl = document.getElementById('sal-oc-info-ruc');
+    var solEl = document.getElementById('sal-oc-info-solicitante');
+    var motEl = document.getElementById('sal-oc-info-motivo');
+
+    if (codEl) codEl.textContent = oc.codigo || '—';
+    if (estEl) {
+        var st = (oc.estado || 'REGISTRADA').toUpperCase();
+        var badgeCls = st.includes('APROB') ? 'bg-success-subtle text-success border border-success-subtle' :
+            st.includes('RECIB') ? 'bg-primary-subtle text-primary border border-primary-subtle' :
+            st.includes('RECHAZ') || st.includes('ANUL') ? 'bg-danger-subtle text-danger border border-danger-subtle' :
+            'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+        estEl.className = 'badge ms-2 px-2 py-1 ' + badgeCls;
+        estEl.textContent = st;
+    }
+    if (monEl) monEl.textContent = (oc.moneda === 'USD' ? '$ ' : 'S/ ') + parseFloat(oc.monto_total || 0).toFixed(2);
+    if (prvEl) prvEl.textContent = oc.proveedor_nombre || '—';
+    if (rucEl) rucEl.textContent = oc.proveedor_ruc ? 'RUC: ' + oc.proveedor_ruc : '';
+    if (solEl) solEl.textContent = oc.solicitado_por || '—';
+    if (motEl) motEl.textContent = oc.motivo_solicitud || '';
+
+    if (infoCard) infoCard.classList.remove('d-none');
+    if (noMatch) noMatch.classList.add('d-none');
+
+    var items = Array.isArray(oc.items) ? oc.items : [];
+    if (countEl) countEl.textContent = items.length;
+
+    if (!items.length) {
+        if (tb) {
+            tb.innerHTML = '<tr><td colspan="6" class="text-center py-3 text-muted">Esta Orden de Compra no contiene ítems registrados.</td></tr>';
+        }
+        if (prevWrap) prevWrap.classList.remove('d-none');
+        if (btnInsertar) btnInsertar.disabled = true;
+        return;
+    }
+
+    if (tb) {
+        tb.innerHTML = items.map(function (it, idx) {
+            var desc = it.descripcion || it.nombre || it.articulo || '—';
+            var cantReq = parseFloat(it.cantidad || 1);
+            var pu = parseFloat(it.precio_unitario || it.costo_unitario || 0);
+
+            // Buscar stock en almacén para este ítem
+            var invItem = (window._salInvData || []).find(function (x) {
+                var invNom = (x.descripcion || x.articulo || x.nombre || '').trim().toUpperCase();
+                var ocNom = desc.trim().toUpperCase();
+                return invNom === ocNom || invNom.includes(ocNom) || ocNom.includes(invNom);
+            });
+
+            var stock = invItem ? parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : 0)) : null;
+            var stockBadge = '';
+
+            if (stock === null) {
+                stockBadge = '<span class="badge bg-light text-muted border">No inventariado</span>';
+            } else if (stock >= cantReq) {
+                stockBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>' + stock + ' ' + (it.unidad_medida || 'UND') + '</span>';
+            } else if (stock > 0) {
+                stockBadge = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Stock bajo: ' + stock + '</span>';
+            } else {
+                stockBadge = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="bi bi-x-circle-fill me-1"></i>Sin Stock (0)</span>';
+            }
+
+            return `
+                <tr>
+                    <td class="text-center" style="padding: 8px 4px;">
+                        <input class="form-check-input sal-oc-item-check" type="checkbox" data-idx="${idx}" checked>
+                    </td>
+                    <td class="fw-bold text-dark" style="padding: 8px 12px;">
+                        <i class="bi bi-box text-secondary me-1"></i> ${salEsc(desc)}
+                    </td>
+                    <td class="text-center fw-bold text-primary" style="padding: 8px 12px;">
+                        ${cantReq}
+                    </td>
+                    <td class="text-center text-muted fw-medium" style="padding: 8px 12px; font-size: 0.76rem;">
+                        ${salEsc(it.unidad_medida || 'UND')}
+                    </td>
+                    <td class="text-center text-dark fw-semibold" style="padding: 8px 12px; font-size: 0.80rem;">
+                        ${(oc.moneda === 'USD' ? '$ ' : 'S/ ') + pu.toFixed(2)}
+                    </td>
+                    <td class="text-center" style="padding: 8px 12px;">
+                        ${stockBadge}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    if (prevWrap) prevWrap.classList.remove('d-none');
+    if (btnInsertar) btnInsertar.disabled = false;
+};
+
+window._salToggleCheckAllOC = function (checked) {
+    var cbs = document.querySelectorAll('.sal-oc-item-check');
+    cbs.forEach(function (cb) { cb.checked = checked; });
+};
+
+window._salInsertarOC = function () {
+    if (!window._salOCSeleccionada || !window._salOCSeleccionada.items || !window._salOCSeleccionada.items.length) {
+        return;
+    }
+
+    var oc = window._salOCSeleccionada;
+    var allItems = oc.items;
+    var cbs = document.querySelectorAll('.sal-oc-item-check');
+    var selectedIndexes = [];
+    cbs.forEach(function (cb) {
+        if (cb.checked) {
+            selectedIndexes.push(parseInt(cb.getAttribute('data-idx'), 10));
+        }
+    });
+
+    var items = allItems.filter(function (_, i) {
+        return selectedIndexes.includes(i);
+    });
+
+    if (!items.length) {
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('Selecciona al menos un producto para agregar', 'warning');
+        } else {
+            alert('Selecciona al menos un producto para agregar');
+        }
+        return;
+    }
+
+    // Limpiar fila vacía por defecto si existe
+    var descs = document.querySelectorAll('.sal-item-desc');
+    if (descs.length === 1 && !descs[0].value.trim()) {
+        var singleTr = document.getElementById('sal-item-0');
+        if (singleTr) singleTr.remove();
+    }
+
+    // Inyectar productos de la OC
+    items.forEach(function (it) {
+        var idx = window._salItemIdx++;
+        var tbody = document.getElementById('sal-items-tbody');
+        if (!tbody) return;
+
+        var tr = document.createElement('tr');
+        tr.id = 'sal-item-' + idx;
+        tr.innerHTML = `
+            <td style="padding:6px 8px;">
+                <div style="display:flex;gap:4px;align-items:center;">
+                    <input type="text" class="form-control form-control-sm sal-item-desc bg-white fw-medium" list="sal-inv-list" placeholder="Buscar artículo…" 
+                        data-idx="${idx}" oninput="window._salBuscarArt(this, ${idx})" style="border-radius:8px; font-size:0.8rem;">
+                    <button type="button" class="btn btn-sm btn-light border text-primary shadow-2xs" style="flex-shrink:0; padding:3px 8px; border-radius:8px;" 
+                        onclick="window._salAbrirQR(${idx})" title="Escanear código de barras o QR">
+                        <i class="bi bi-upc-scan"></i>
+                    </button>
+                </div>
+                <input type="hidden" class="sal-item-inv-id" data-idx="${idx}">
+            </td>
+            <td style="padding:6px 8px; width:75px;">
+                <input type="number" class="form-control form-control-sm sal-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="${parseFloat(it.cantidad || 1)}" min="0.001" step="0.001" oninput="window._salCalcItem(${idx})" style="border-radius:8px; font-size:0.8rem;">
+            </td>
+            <td style="padding:6px 8px; width:105px;">
+                <input type="number" class="form-control form-control-sm sal-item-cu bg-white fw-semibold" data-idx="${idx}" value="0" min="0" step="0.01" oninput="window._salCalcItem(${idx})" style="border-radius:8px; font-size:0.8rem;">
+            </td>
+            <td style="padding:6px 8px; width:100px;">
+                <input type="number" class="form-control form-control-sm sal-item-imp bg-light fw-bold text-success" data-idx="${idx}" value="0" readonly style="border-radius:8px; font-size:0.8rem;">
+            </td>
+            <td style="padding:6px 8px; width:38px; text-align:center;">
+                <button type="button" class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1" onclick="window._salQuitarItem(${idx})" title="Eliminar fila">
+                    <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        var itDesc = it.descripcion || it.nombre || it.articulo || '';
+
+        // Buscar correspondencia en almacén
+        var invItem = (window._salInvData || []).find(function (x) {
+            var invNom = (x.descripcion || x.articulo || x.nombre || '').trim().toUpperCase();
+            var ocNom = itDesc.trim().toUpperCase();
+            return invNom === ocNom || invNom.includes(ocNom) || ocNom.includes(invNom);
+        });
+
+        var descEl = tr.querySelector('.sal-item-desc');
+        var hidEl = tr.querySelector('.sal-item-inv-id');
+        var cuEl = tr.querySelector('.sal-item-cu');
+
+        if (invItem) {
+            if (descEl) descEl.value = invItem.id + ' — ' + (invItem.descripcion || itDesc);
+            if (hidEl) hidEl.value = invItem.id;
+            var costoSoles = parseFloat(invItem.costo_soles != null ? invItem.costo_soles : (invItem.costo_referencial || it.precio_unitario || 0));
+            if (cuEl) cuEl.value = costoSoles.toFixed(2);
+        } else {
+            if (descEl) descEl.value = itDesc;
+            if (cuEl) cuEl.value = parseFloat(it.precio_unitario || 0).toFixed(2);
+        }
+
+        window._salCalcItem(idx);
+    });
+
+    // Anexar referencia de la OC en Observaciones si no tiene
+    var obsEl = document.getElementById('sal-f-obs');
+    if (obsEl) {
+        var refOC = 'Atención según O/C ' + (oc.codigo || '');
+        if (!obsEl.value.trim()) {
+            obsEl.value = refOC;
+        } else if (!obsEl.value.includes(oc.codigo)) {
+            obsEl.value = obsEl.value.trim() + ' | ' + refOC;
+        }
+    }
+
+    _salActualizarTotal();
+
+    // Cerrar sub-drawer
+    window.salCerrarSubDrawer('sal-drawer-oc');
+
+    if (typeof window.mostrarToast === 'function') {
+        window.mostrarToast('Se agregaron ' + items.length + ' productos de la Orden de Compra ' + oc.codigo, 'success');
+    } else if (typeof window.mostrarAlerta === 'function') {
+        window.mostrarAlerta('Se agregaron ' + items.length + ' productos de la Orden de Compra ' + oc.codigo, 'success');
     }
 };
 
