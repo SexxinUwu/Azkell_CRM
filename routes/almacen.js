@@ -1189,6 +1189,51 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    router.get('/entradas/:id', async (req, res) => {
+        const tdb = getDb(req);
+        const rawId = (req.params.id || '').trim();
+        if (!rawId) return res.status(400).json({ error: 'ID requerido' });
+
+        const searchLike = '%' + rawId + '%';
+        tdb.query('SELECT * FROM entradas_inv WHERE id = ? OR id LIKE ? ORDER BY fecha DESC, id DESC LIMIT 1', [rawId, searchLike], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows || !rows.length) return res.status(404).json({ error: 'Orden no encontrada' });
+
+            const entrada = rows[0];
+            tdb.query(
+                `SELECT d.*, 
+                        COALESCE(i.descripcion, d.descripcion) AS item_descripcion_final,
+                        COALESCE(i.codigo_articulo, '') AS item_codigo_articulo,
+                        COALESCE(i.unidad, 'UND') AS item_unidad
+                 FROM detalle_entradas_inv d
+                 LEFT JOIN inventario i ON d.inventario_id = i.id
+                 WHERE d.entrada_id = ?
+                 ORDER BY d.id ASC`,
+                [entrada.id],
+                (eI, rI) => {
+                    const items = (rI || []).map(it => {
+                        const cantNum = parseFloat(it.cantidad) || 0;
+                        const cuNum = parseFloat(it.costo_unitario) || 0;
+                        const impNum = parseFloat(it.importe) || (cantNum * cuNum);
+                        const invId = it.inventario_id || '';
+                        return {
+                            id: it.id,
+                            descripcion: it.item_descripcion_final || it.descripcion || '',
+                            cantidad: cantNum,
+                            costo_unitario: cuNum,
+                            moneda: it.moneda || 'PEN',
+                            inventario_id: invId,
+                            unidad_medida: it.item_unidad || 'UND',
+                            importe: impNum,
+                            codigo_articulo: it.item_codigo_articulo || invId
+                        };
+                    });
+                    res.json({ ...entrada, items });
+                }
+            );
+        });
+    });
+
     router.get('/entradas/:id/archivo/:tipo/ver', async (req, res) => {
         const { id, tipo } = req.params;
         if (!['voucher', 'cotizacion', 'factura'].includes(tipo)) return res.status(400).send('Tipo de archivo inválido');
