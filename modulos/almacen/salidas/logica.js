@@ -1713,12 +1713,60 @@ window._salAbrirModalOC = async function () {
         } catch (e) { }
     }
 
-    // Cargar listado de órdenes de compra
+    // Cargar listado de órdenes de compra (priorizando /api/almacen/entradas)
     try {
         if (badgeCount) badgeCount.textContent = 'Cargando...';
-        var resp = await fetch('/api/ordenes-compra');
-        var ocs = resp.ok ? await resp.json() : [];
-        window._salOCsDisponibles = Array.isArray(ocs) ? ocs : [];
+        var ocs = [];
+        try {
+            var respEnt = await fetch('/api/almacen/entradas');
+            if (respEnt.ok) {
+                var entData = await respEnt.json();
+                if (Array.isArray(entData)) {
+                    ocs = entData.map(function (e) {
+                        return {
+                            id: e.id,
+                            codigo: e.id,
+                            proveedor_nombre: e.proveedor_nombre || '',
+                            proveedor_ruc: e.proveedor_documento || e.numero_documento || '',
+                            monto_total: parseFloat(e.total_pen || 0),
+                            moneda: e.moneda || 'PEN',
+                            estado: e.estado || 'REGISTRADA',
+                            solicitado_por: e.creado_por || 'Sistema',
+                            motivo_solicitud: e.observaciones || e.motivo_entrada || '',
+                            items: Array.isArray(e.items) ? e.items : []
+                        };
+                    });
+                }
+            }
+        } catch (errEnt) { }
+
+        try {
+            var respOC = await fetch('/api/ordenes-compra');
+            if (respOC.ok) {
+                var ocData = await respOC.json();
+                if (Array.isArray(ocData)) {
+                    ocData.forEach(function (oc) {
+                        var code = oc.codigo || oc.id;
+                        if (!ocs.some(function (x) { return x.codigo === code; })) {
+                            ocs.push({
+                                id: oc.id,
+                                codigo: code,
+                                proveedor_nombre: oc.proveedor_nombre || '',
+                                proveedor_ruc: oc.proveedor_ruc || '',
+                                monto_total: parseFloat(oc.monto_total || 0),
+                                moneda: oc.moneda || 'PEN',
+                                estado: oc.estado || 'REGISTRADA',
+                                solicitado_por: oc.solicitado_por || '',
+                                motivo_solicitud: oc.motivo_solicitud || '',
+                                items: Array.isArray(oc.items) ? oc.items : []
+                            });
+                        }
+                    });
+                }
+            }
+        } catch (errOC) { }
+
+        window._salOCsDisponibles = ocs;
 
         if (badgeCount) {
             badgeCount.textContent = window._salOCsDisponibles.length + ' O/C disponibles';
@@ -1770,11 +1818,24 @@ window._salOnOCInputChanged = async function (val) {
     }
 
     if (!match) {
-        // Si no está en la lista previa, intentar consultar directo al endpoint por código
         try {
-            var r = await fetch('/api/ordenes-compra/' + encodeURIComponent(raw));
+            var r = await fetch('/api/almacen/entradas/' + encodeURIComponent(raw));
             if (r.ok) {
-                match = await r.json();
+                var ent = await r.json();
+                if (ent && ent.id) {
+                    match = {
+                        id: ent.id,
+                        codigo: ent.id,
+                        proveedor_nombre: ent.proveedor_nombre || '',
+                        proveedor_ruc: ent.proveedor_documento || '',
+                        monto_total: parseFloat(ent.total_pen || 0),
+                        moneda: ent.moneda || 'PEN',
+                        estado: ent.estado || 'REGISTRADA',
+                        solicitado_por: ent.creado_por || '',
+                        motivo_solicitud: ent.observaciones || ent.motivo_entrada || '',
+                        items: Array.isArray(ent.items) ? ent.items : []
+                    };
+                }
             }
         } catch (e) { }
     }
@@ -1791,17 +1852,8 @@ window._salOnOCInputChanged = async function (val) {
         return;
     }
 
-    // Cargar detalle completo si no vienen items
-    var fullOC = match;
-    if (!Array.isArray(fullOC.items)) {
-        try {
-            var respDet = await fetch('/api/ordenes-compra/' + (match.id || match.codigo));
-            if (respDet.ok) fullOC = await respDet.json();
-        } catch (e) { }
-    }
-
-    window._salOCSeleccionada = fullOC;
-    window._salRenderOCPreview(fullOC);
+    window._salOCSeleccionada = match;
+    window._salRenderOCPreview(match);
 };
 
 window._salRenderOCPreview = function (oc) {
