@@ -2338,19 +2338,22 @@ module.exports = function (db, broadcast, logAudit) {
             // 1. Obtener Órdenes de Compra
             const sqlOC = `
                 SELECT e.*,
-                       COALESCE(e.total_pen, 0) AS total_oc,
-                       COUNT(DISTINCT de.id) AS total_items,
-                       GROUP_CONCAT(CONCAT(COALESCE(de.descripcion,''), '|', COALESCE(de.cantidad,0), '|', COALESCE(de.costo_unitario,0), '|', COALESCE(de.moneda,'PEN'), '|', COALESCE(de.importe,0), '|', COALESCE(de.inventario_id,'')) SEPARATOR ';;') AS items_raw
+                       COALESCE(e.total_pen, 0) AS total_oc
                 FROM entradas_inv e
-                LEFT JOIN detalle_entradas_inv de ON de.entrada_id = e.id
                 ${whereClause}
-                GROUP BY e.id
                 ORDER BY e.fecha DESC, e.id DESC
             `;
             const [ocs] = await tdb.query(sqlOC);
+            const ocIds = (ocs || []).map(o => o.id);
 
-            // 2. Mapear Usuarios para nombres legibles
-            const [usrRows] = await tdb.query("SELECT idUsuario, correo, nombre FROM usuarios").catch(() => [[]]);
+            // 2. Mapear Usuarios, Cuentas Bancarias, Proveedores e Ítems en paralelo
+            const [usrRows, ctasRows, provRows, itemsRows] = await Promise.all([
+                tdb.query("SELECT idUsuario, correo, nombre FROM usuarios").then(r => r[0] || []).catch(() => []),
+                tdb.query("SELECT * FROM proveedor_cuentas_bancarias WHERE estado = 1").then(r => r[0] || []).catch(() => []),
+                tdb.query("SELECT id, numero_documento, nombre, telefono, email FROM proveedores_inv").then(r => r[0] || []).catch(() => []),
+                ocIds.length ? tdb.query("SELECT * FROM detalle_entradas_inv WHERE entrada_id IN (?) ORDER BY id ASC", [ocIds]).then(r => r[0] || []).catch(() => []) : Promise.resolve([])
+            ]);
+
             const usuariosMap = {};
             (usrRows || []).forEach(u => {
                 if (u.idUsuario) usuariosMap[u.idUsuario.toLowerCase()] = u.nombre;
@@ -2358,8 +2361,6 @@ module.exports = function (db, broadcast, logAudit) {
                 if (u.nombre) usuariosMap[u.nombre.toLowerCase()] = u.nombre;
             });
 
-            // 3. Mapear Cuentas Bancarias de Proveedores
-            const [ctasRows] = await tdb.query("SELECT * FROM proveedor_cuentas_bancarias WHERE estado = 1").catch(() => [[]]);
             const ctasProvMap = {};
             (ctasRows || []).forEach(c => {
                 if (!ctasProvMap[c.proveedor_id]) ctasProvMap[c.proveedor_id] = [];
@@ -2379,15 +2380,29 @@ module.exports = function (db, broadcast, logAudit) {
                 });
             });
 
-            // 4. Mapear Proveedores info (RUC, Teléfono)
-            const [provRows] = await tdb.query("SELECT id, numero_documento, nombre, telefono, email FROM proveedores_inv").catch(() => [[]]);
             const provsMap = {};
             (provRows || []).forEach(p => {
                 if (p.id) provsMap[p.id] = p;
                 if (p.nombre) provsMap[p.nombre.toLowerCase()] = p;
             });
 
-            // 5. Enriquecer cada requerimiento con presigned URLs y datos de pago
+            const itemsMap = {};
+            (itemsRows || []).forEach(it => {
+                if (!itemsMap[it.entrada_id]) itemsMap[it.entrada_id] = [];
+                const cant = parseFloat(it.cantidad) || 0;
+                const cu = parseFloat(it.costo_unitario) || 0;
+                const imp = parseFloat(it.importe) || (cant * cu);
+                itemsMap[it.entrada_id].push({
+                    inventario_id: it.inventario_id || '',
+                    descripcion: it.descripcion || '',
+                    cantidad: cant,
+                    costo_unitario: cu,
+                    moneda: it.moneda || 'PEN',
+                    importe: imp
+                });
+            });
+
+            // 3. Enriquecer cada requerimiento con presigned URLs y datos de pago
             const resultado = await Promise.all((ocs || []).map(async (oc) => {
                 const creadorKey = (oc.creado_por || '').toLowerCase().trim();
                 const creadorNombre = usuariosMap[creadorKey] || usuariosMap[oc.creado_por] || oc.creado_por || 'SISTEMA';
@@ -2437,17 +2452,7 @@ module.exports = function (db, broadcast, logAudit) {
                 }
 
                 // Desglosar ítems
-                const items = oc.items_raw ? oc.items_raw.split(';;').map(s => {
-                    const [desc, cant, cu, mon, imp, invId] = s.split('|');
-                    return {
-                        inventario_id: invId || '',
-                        descripcion: desc || '',
-                        cantidad: parseFloat(cant) || 0,
-                        costo_unitario: parseFloat(cu) || 0,
-                        moneda: mon || oc.moneda || 'PEN',
-                        importe: parseFloat(imp) || ((parseFloat(cant) || 0) * (parseFloat(cu) || 0))
-                    };
-                }) : [];
+                const items = itemsMap[oc.id] || [];
 
                 // Calcular importe total correcto
                 let importeCalculado = 0;

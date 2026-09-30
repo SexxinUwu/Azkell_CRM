@@ -762,6 +762,10 @@ const defaultDbPool = mysql.createPool({
     keepAliveInitialDelay: 0
 });
 
+defaultDbPool.on('connection', (connection) => {
+    connection.query('SET SESSION group_concat_max_len = 10485760');
+});
+
 // Proxy global 'db' que delega automáticamente las peticiones al pool de la empresa según el subdominio activo
 const db = new Proxy({}, {
     get(target, prop) {

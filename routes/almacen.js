@@ -35,9 +35,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     // ── Helper: sumar total_pen de detalle (convierte USD con tipo_cambio) ───
     function _calcularTotalPen(detalles, tc) {
-        return detalles.reduce((acc, d) => {
-            const imp = parseFloat(d.importe) || 0;
-            return acc + (d.moneda === 'USD' ? imp * parseFloat(tc || 1) : imp);
+        return (detalles || []).reduce((acc, d) => {
+            const cant = parseFloat(d.cantidad) || 0;
+            const cu = parseFloat(d.costo_unitario) || 0;
+            const imp = (d.importe !== undefined && d.importe !== null && d.importe !== '') ? parseFloat(d.importe) : (cant * cu);
+            const val = isNaN(imp) ? (cant * cu) : imp;
+            return acc + (d.moneda === 'USD' ? val * parseFloat(tc || 1) : val);
         }, 0);
     }
 
@@ -1053,23 +1056,19 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         }
         let q = `SELECT e.*, 
                     COALESCE(rec.total_recibido, 0) AS total_recibido,
-                    COALESCE(rec.cant_recepciones, 0) AS cant_recepciones,
-                    GROUP_CONCAT(CONCAT(COALESCE(i.descripcion, d.descripcion, ''),'|',COALESCE(d.cantidad,0),'|',COALESCE(d.costo_unitario,0),'|',COALESCE(d.moneda,'PEN'),'|',COALESCE(d.inventario_id,''),'|',COALESCE(d.importe,0)) SEPARATOR ';;') AS items_raw
+                    COALESCE(rec.cant_recepciones, 0) AS cant_recepciones
              FROM (
                  SELECT * FROM entradas_inv e
                  ${where}
                  ORDER BY e.fecha DESC, e.id DESC
                  LIMIT 300
              ) e
-             LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
-             LEFT JOIN inventario i ON d.inventario_id = i.id
              LEFT JOIN (
                  SELECT r.oc_id, SUM(dr.cantidad_recibida) AS total_recibido, COUNT(DISTINCT r.id) AS cant_recepciones
                  FROM recepciones_oc r
                  JOIN detalle_recepciones_oc dr ON dr.recepcion_id = r.id
                  GROUP BY r.oc_id
              ) rec ON rec.oc_id = e.id
-             GROUP BY e.id
              ORDER BY e.fecha DESC, e.id DESC`;
         tdb.query(q, params, async (err, rows) => {
             if (err) {
@@ -1078,9 +1077,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             }
             try {
                 const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+                const entradaIds = (rows || []).map(r => r.id);
 
-                // Mapear usuarios y proveedores para nombres completos y RUC
-                const [usuariosMap, provsMap] = await Promise.all([
+                // Mapear usuarios, proveedores y los ítems detallados sin límite de bytes
+                const [usuariosMap, provsMap, itemsMap] = await Promise.all([
                     new Promise(resU => {
                         tdb.query('SELECT nombre, correo, idUsuario FROM usuarios', (eU, rU) => {
                             const uMap = {};
@@ -1106,6 +1106,44 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                             }
                             resP(pMap);
                         });
+                    }),
+                    new Promise(resItems => {
+                        if (!entradaIds.length) return resItems({});
+                        tdb.query(
+                            `SELECT d.*, 
+                                    COALESCE(i.descripcion, d.descripcion) AS item_descripcion_final,
+                                    COALESCE(i.codigo_articulo, '') AS item_codigo_articulo,
+                                    COALESCE(i.unidad, 'UND') AS item_unidad
+                             FROM detalle_entradas_inv d
+                             LEFT JOIN inventario i ON d.inventario_id = i.id
+                             WHERE d.entrada_id IN (?)
+                             ORDER BY d.id ASC`,
+                            [entradaIds],
+                            (eI, rI) => {
+                                const map = {};
+                                if (!eI && rI) {
+                                    rI.forEach(it => {
+                                        if (!map[it.entrada_id]) map[it.entrada_id] = [];
+                                        const cantNum = parseFloat(it.cantidad) || 0;
+                                        const cuNum = parseFloat(it.costo_unitario) || 0;
+                                        const impNum = parseFloat(it.importe) || (cantNum * cuNum);
+                                        const invId = it.inventario_id || '';
+                                        map[it.entrada_id].push({
+                                            id: it.id,
+                                            descripcion: it.item_descripcion_final || it.descripcion || '',
+                                            cantidad: cantNum,
+                                            costo_unitario: cuNum,
+                                            moneda: it.moneda || 'PEN',
+                                            inventario_id: invId,
+                                            unidad_medida: it.item_unidad || 'UND',
+                                            importe: impNum,
+                                            codigo_articulo: it.item_codigo_articulo || invId
+                                        });
+                                    });
+                                }
+                                resItems(map);
+                            }
+                        );
                     })
                 ]);
 
@@ -1137,23 +1175,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     r.proveedor_telefono = pInfo?.telefono || '';
                     r.proveedor_email = pInfo?.email || '';
 
-                    r.items = r.items_raw ? r.items_raw.split(';;').map(s => {
-                        const [desc, cant, cu, mon, invId, imp] = s.split('|');
-                        const cantNum = parseFloat(cant) || 0;
-                        const cuNum = parseFloat(cu) || 0;
-                        const impNum = parseFloat(imp) || (cantNum * cuNum);
-                        return {
-                            descripcion: desc || '',
-                            cantidad: cantNum,
-                            costo_unitario: cuNum,
-                            moneda: mon || r.moneda || 'PEN',
-                            inventario_id: invId || '',
-                            unidad_medida: 'UND',
-                            importe: impNum,
-                            codigo_articulo: invId || ''
-                        };
-                    }) : [];
-                    delete r.items_raw;
+                    r.items = itemsMap[r.id] || [];
                     r.url_voucher_presigned = r.url_voucher ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/voucher/ver') : null;
                     r.url_cotizacion_presigned = r.url_cotizacion ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/cotizacion/ver') : null;
                     r.url_factura_presigned = r.url_factura ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/factura/ver') : null;
@@ -1739,7 +1761,6 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     // ============================================================
     router.get('/salidas', (req, res) => {
         const targetDb = req.db || db;
-        const SEP_FIELD = '\x1F', SEP_ROW = '\x1E';
         const q = (req.query.q || '').trim();
 
         let whereClause = '';
@@ -1751,54 +1772,63 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
         const limit = q ? '' : 'LIMIT 2000';
 
-        targetDb.query(`SELECT s.*,
-              GROUP_CONCAT(CONCAT_WS('\x1F',
-                COALESCE(d.id, 0),
-                COALESCE(d.inventario_id,''),
-                COALESCE(i.descripcion, d.descripcion,''),
-                COALESCE(d.cantidad,0),
-                COALESCE(d.costo_unitario,0),
-                COALESCE(d.moneda,'PEN'),
-                COALESCE(d.importe, d.cantidad*d.costo_unitario, 0)
-              ) SEPARATOR '\x1E') AS items_raw
+        targetDb.query(`SELECT s.*
               FROM salidas_inv s
-              LEFT JOIN detalle_salidas_inv d ON d.salida_id=s.id
-              LEFT JOIN inventario i ON d.inventario_id = i.id
               ${whereClause}
-              GROUP BY s.id ORDER BY s.fecha DESC, s.id DESC ${limit}`, queryParams, (err, rows) => {
+              ORDER BY s.fecha DESC, s.id DESC ${limit}`, queryParams, (err, rows) => {
             if (err) {
                 console.error('Error GET /api/almacen/salidas:', err);
                 return res.status(500).json({ error: err.message });
             }
-            try {
-                const result = (Array.isArray(rows) ? rows : []).map(r => {
+
+            if (!rows || rows.length === 0) {
+                return res.json([]);
+            }
+
+            const salidaIds = rows.map(r => r.id);
+            targetDb.query(`
+                SELECT d.id, d.salida_id, d.inventario_id,
+                       COALESCE(i.descripcion, d.descripcion, '') AS descripcion,
+                       COALESCE(d.cantidad, 0) AS cantidad,
+                       COALESCE(d.costo_unitario, 0) AS costo_unitario,
+                       COALESCE(d.moneda, 'PEN') AS moneda,
+                       COALESCE(d.importe, d.cantidad * d.costo_unitario, 0) AS importe
+                FROM detalle_salidas_inv d
+                LEFT JOIN inventario i ON d.inventario_id = i.id
+                WHERE d.salida_id IN (?)
+                ORDER BY d.id ASC
+            `, [salidaIds], (errDet, detRows) => {
+                if (errDet) {
+                    console.error('Error cargando detalle_salidas_inv:', errDet);
+                    return res.status(500).json({ error: errDet.message });
+                }
+
+                const itemsBySalida = {};
+                (detRows || []).forEach(d => {
+                    if (!itemsBySalida[d.salida_id]) itemsBySalida[d.salida_id] = [];
+                    itemsBySalida[d.salida_id].push({
+                        id: d.id,
+                        inventario_id: d.inventario_id || null,
+                        descripcion: d.descripcion || null,
+                        cantidad: parseFloat(d.cantidad) || 0,
+                        costo_unitario: parseFloat(d.costo_unitario) || 0,
+                        moneda: d.moneda || 'PEN',
+                        importe: parseFloat(d.importe) || 0
+                    });
+                });
+
+                const result = rows.map(r => {
                     let sol = (r.solicitante_nombre || r.creado_por || '').trim();
                     if (sol && sol.includes('@')) {
                         let uName = sol.split('@')[0].replace(/[._-]/g, ' ');
                         sol = uName.charAt(0).toUpperCase() + uName.slice(1);
                     }
-                    const items = r.items_raw ? r.items_raw.split(SEP_ROW).map(seg => {
-                        const parts = seg.split(SEP_FIELD);
-                        return {
-                            id: parseInt(parts[0], 10) || null,
-                            inventario_id: parts[1] || null,
-                            descripcion: parts[2] || null,
-                            cantidad: parseFloat(parts[3]) || 0,
-                            costo_unitario: parseFloat(parts[4]) || 0,
-                            moneda: parts[5] || 'PEN',
-                            importe: parseFloat(parts[6]) || 0
-                        };
-                    }).filter(it => it.descripcion || it.inventario_id) : [];
-
-                    const rObj = Object.assign({}, r, { creado_por: sol, items: items });
-                    delete rObj.items_raw;
-                    return rObj;
+                    const items = itemsBySalida[r.id] || [];
+                    return Object.assign({}, r, { creado_por: sol, items: items });
                 });
+
                 res.json(result);
-            } catch (e) {
-                console.error('Error procesando filas de salidas:', e);
-                res.status(500).json({ error: e.message });
-            }
+            });
         });
     });
     router.post('/salidas', (req, res) => {
