@@ -56,6 +56,23 @@ window._entCambiarModoVista = function(modo, btn) {
     window._entRender();
 };
 
+window._entCerrarDropdowns = function() {
+    try {
+        document.querySelectorAll('.dropdown-menu.show').forEach(function(el) {
+            el.classList.remove('show');
+            el.removeAttribute('data-bs-popper');
+        });
+        document.querySelectorAll('[data-bs-toggle="dropdown"].show, .dropdown-toggle.show').forEach(function(btn) {
+            btn.classList.remove('show');
+            btn.setAttribute('aria-expanded', 'false');
+            try {
+                var inst = bootstrap.Dropdown.getInstance(btn);
+                if (inst) inst.hide();
+            } catch(e) {}
+        });
+    } catch(e) {}
+};
+
 function _entFmtFechaHora(iso, createdAt) {
     var raw = createdAt || iso;
     if (!raw) return '—';
@@ -1212,6 +1229,7 @@ window._entOnFileChange = function(input, previewId) {
 
 // ── Abrir panel ───────────────────────────────────────────────────
 window.abrirModalEntrada = function() {
+    if (typeof window._entCerrarDropdowns === 'function') window._entCerrarDropdowns();
     window._entEditId = null;
     var cards = document.getElementById('ent-items-cards');
     if (cards) cards.innerHTML = '';
@@ -1311,6 +1329,7 @@ window.abrirModalEntrada = function() {
 };
 
 window.abrirModalEditarEntrada = function(id) {
+    if (typeof window._entCerrarDropdowns === 'function') window._entCerrarDropdowns();
     var entrada = (window._entData || []).find(function(e) { return e.id === id; });
     if (!entrada) return alert('No se encontró la entrada');
     
@@ -1764,36 +1783,36 @@ window._entRender = function() {
         `;
 
         var accionesHtml =
-            '<div class="dropdown d-inline-block" onclick="event.stopPropagation();">' +
+            '<div class="dropdown d-inline-block">' +
                 '<button class="btn btn-sm btn-light border shadow-2xs rounded-3 px-2 py-1 text-secondary" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="border-radius:8px; width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center;" title="Acciones">' +
                     '<i class="bi bi-three-dots-vertical"></i>' +
                 '</button>' +
                 '<ul class="dropdown-menu dropdown-menu-start shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 175px; z-index: 1060;">' +
                     '<li>' +
-                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalDetalleOC(\'' + _entEsc(d.id) + '\')">' +
+                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window._entCerrarDropdowns(); window.abrirModalDetalleOC(\'' + _entEsc(d.id) + '\')">' +
                             '<i class="bi bi-eye text-primary fs-6"></i> Ver Detalle' +
                         '</a>' +
                     '</li>' +
                     '<li>' +
-                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\')">' +
+                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window._entCerrarDropdowns(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\')">' +
                             '<i class="bi bi-paperclip text-info fs-6"></i> Adjuntos / Sustentos' +
                         '</a>' +
                     '</li>' +
                     '<li>' +
-                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')">' +
+                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window._entCerrarDropdowns(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')">' +
                             '<i class="bi bi-file-earmark-pdf text-danger fs-6"></i> Imprimir PDF' +
                         '</a>' +
                     '</li>' +
                     (canEditRow ? 
                     '<li>' +
-                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')">' +
+                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window._entCerrarDropdowns(); window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')">' +
                             '<i class="bi bi-pencil text-warning fs-6"></i> Editar Orden' +
                         '</a>' +
                     '</li>' : '') +
                     (canDelete ? 
                     '<li><hr class="dropdown-divider my-1"></li>' +
                     '<li>' +
-                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')">' +
+                        '<a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window._entCerrarDropdowns(); window.eliminarEntrada(\'' + _entEsc(d.id) + '\')">' +
                             '<i class="bi bi-trash text-danger fs-6"></i> Eliminar' +
                         '</a>' +
                     '</li>' : '') +
@@ -1880,13 +1899,8 @@ window._entRender = function() {
         }
 
         itemsFiltrados.forEach(function(it, idx) {
-            var isFirst = idx === 0;
-            var isLast  = idx === itemsFiltrados.length - 1;
             var tr = document.createElement('tr');
-            var cls = activeCls;
-            if (!isFirst) cls += ' ent-item-sub';
-            if (isLast && itemsFiltrados.length > 1) cls += ' ent-item-last';
-            tr.className = cls.trim();
+            tr.className = activeCls.trim();
 
             var cant  = parseFloat(it.cantidad || 0);
             var cu    = parseFloat(it.costo_unitario || 0);
@@ -1894,25 +1908,23 @@ window._entRender = function() {
             var invId  = _entEsc(it.inventario_id || '—');
 
             tr.innerHTML =
-                '<td class="ps-3 text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
-                    (isFirst ? accionesHtml : '') +
-                '</td>' +
-                '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + (isFirst ? fecha : '') + '</td>' +
-                '<td class="text-center" style="vertical-align:middle;">' + (isFirst ? tipoOrdBadge : '') + '</td>' +
-                '<td class="text-center" style="vertical-align:middle;">' + (isFirst ? codeHtml : '') + '</td>' +
-                '<td class="text-center">' + (isFirst ? estadoHtml : '') + '</td>' +
-                '<td>' + (isFirst ? placaHtml : '') + '</td>' +
-                '<td>' + (isFirst ? motivoHtml : '') + '</td>' +
-                '<td>' + (isFirst ? provHtml : '') + '</td>' +
+                '<td class="ps-3 text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' + accionesHtml + '</td>' +
+                '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
+                '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
+                '<td class="text-center" style="vertical-align:middle;">' + codeHtml + '</td>' +
+                '<td class="text-center">' + estadoHtml + '</td>' +
+                '<td>' + placaHtml + '</td>' +
+                '<td>' + motivoHtml + '</td>' +
+                '<td>' + provHtml + '</td>' +
                 '<td class="text-dark font-monospace fw-bold" style="font-size:.75rem;white-space:nowrap;">' + invId + '</td>' +
                 '<td class="col-articulo text-dark fw-semibold" style="font-size:.80rem;">' + nombre + '</td>' +
                 '<td class="text-end text-dark fw-bold" style="font-size:.80rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
                 '<td class="text-end text-dark fw-semibold" style="font-size:.80rem;">' + (d.moneda === 'USD' ? '$ ' : 'S/ ') + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
-                '<td class="text-end" style="white-space:nowrap;">' + (isFirst ? totalFmt : '') + '</td>' +
-                '<td>' + (isFirst ? ccHtml : '') + '</td>' +
-                '<td class="text-center">' + (isFirst ? vHTML : '') + '</td>' +
-                '<td class="text-center">' + (isFirst ? cHTML : '') + '</td>' +
-                '<td class="text-center pe-3">' + (isFirst ? fHTML : '') + '</td>';
+                '<td class="text-end" style="white-space:nowrap;">' + totalFmt + '</td>' +
+                '<td>' + ccHtml + '</td>' +
+                '<td class="text-center">' + vHTML + '</td>' +
+                '<td class="text-center">' + cHTML + '</td>' +
+                '<td class="text-center pe-3">' + fHTML + '</td>';
             tbody.appendChild(tr);
         });
     });
@@ -2348,6 +2360,7 @@ window._entGenerarHtmlPDF = function(d) {
 };
 
 window.generarComprobanteEntrada = async function(id) {
+    if (typeof window._entCerrarDropdowns === 'function') window._entCerrarDropdowns();
     var d = (window._entData || []).find(function(e) { return e.id === id; });
     if (!d) { alert('No se encontró la entrada ' + id); return; }
 
@@ -2401,6 +2414,7 @@ window.generarComprobanteEntrada = async function(id) {
 };
 
 window.abrirModalSubirArchivos = function(id) {
+    if (typeof window._entCerrarDropdowns === 'function') window._entCerrarDropdowns();
     var entrada = (window._entData || []).find(function(e) { return e.id === id; });
     if (!entrada) return alert('No se encontró la entrada ' + id);
 
@@ -2639,6 +2653,7 @@ window.toggleAutoplayOC = function() {
 };
 
 window.abrirModalDetalleOC = function(id) {
+    if (typeof window._entCerrarDropdowns === 'function') window._entCerrarDropdowns();
     var d = (window._entData || []).find(function(e) { return e.id === id; });
     if (!d) return alert('No se encontró la orden de compra ' + id);
 
@@ -3120,28 +3135,28 @@ window.exportarEntradasExcel = function() {
                 var imp = parseFloat(it.importe || 0) || (cant * cu);
 
                 rows.push([
-                    i === 0 ? codLimpio : '',
-                    i === 0 ? (d.tipo_orden || 'Orden de compra') : '',
-                    i === 0 ? (fechaObj || '') : '',
-                    i === 0 ? estNorm : '',
-                    i === 0 ? aprobador : '',
-                    i === 0 ? (d.placa || '') : '',
-                    i === 0 ? (d.motivo_entrada || '') : '',
-                    i === 0 ? (d.proveedor_nombre || '') : '',
-                    i === 0 ? (d.centro_costo || 'CC-100') : '',
+                    codLimpio,
+                    d.tipo_orden || 'Orden de compra',
+                    fechaObj || '',
+                    estNorm,
+                    aprobador,
+                    d.placa || '',
+                    d.motivo_entrada || '',
+                    d.proveedor_nombre || '',
+                    d.centro_costo || 'CC-100',
                     it.inventario_id || '',
                     it.descripcion || '',
                     cant,
                     cu,
                     imp,
-                    i === 0 ? parseFloat(d.total_pen || 0) : '',
-                    i === 0 ? (d.condicion_pago || 'Al contado') : '',
-                    i === 0 ? (d.condicion_pago === 'A crédito' ? (parseInt(d.dias_credito, 10) || 30) : 0) : '',
+                    parseFloat(d.total_pen || 0),
+                    d.condicion_pago || 'Al contado',
+                    d.condicion_pago === 'A crédito' ? (parseInt(d.dias_credito, 10) || 30) : 0,
                     d.moneda || 'PEN',
-                    i === 0 && vUrl ? { t: 's', v: 'Ver Voucher', l: { Target: vUrl } } : '',
-                    i === 0 && cUrl ? { t: 's', v: 'Ver Cotización', l: { Target: cUrl } } : '',
-                    i === 0 && fUrl ? { t: 's', v: 'Ver Factura', l: { Target: fUrl } } : '',
-                    i === 0 ? (d.observaciones || '') : ''
+                    vUrl ? { t: 's', v: 'Ver Voucher', l: { Target: vUrl } } : '',
+                    cUrl ? { t: 's', v: 'Ver Cotización', l: { Target: cUrl } } : '',
+                    fUrl ? { t: 's', v: 'Ver Factura', l: { Target: fUrl } } : '',
+                    d.observaciones || ''
                 ]);
             });
         }
