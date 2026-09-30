@@ -1236,8 +1236,8 @@
             <div class="modal-body px-4 px-md-5 py-4 d-flex flex-column gap-3.5" style="max-height: calc(88vh - 120px); overflow-y: auto; background: #f8fafc;">
                 
                 <!-- 1. STEPPER DE TRAZABILIDAD (4 PASOS) & RESUMEN -->
-                <div class="card border-0 mb-1" style="border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6 !important; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);">
-                    <div class="p-4">
+                <div class="card border-0 mb-1 flex-shrink-0" style="border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6 !important; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03); min-height: 180px; overflow: visible !important;">
+                    <div class="p-3.5 p-md-4">
                         <!-- Fila superior: Badge y descripción -->
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                             <div class="d-flex align-items-center gap-2">
@@ -1251,44 +1251,44 @@
                         </div>
 
                         <!-- Horizontal Nodes -->
-                        <div class="position-relative my-3 py-1">
+                        <div class="position-relative my-3.5 py-1" style="min-height: 85px;">
                             <!-- Background line -->
-                            <div class="position-absolute top-50 start-0 w-100 translate-middle-y" style="height: 2px; background: #e2e8f0; z-index: 1;">
+                            <div class="position-absolute start-0 w-100" style="top: 20px; height: 2px; background: #e2e8f0; z-index: 1;">
                                 <div id="det-oc-stepper-line" style="height: 100%; width: 25%; background: #10b981; transition: width 0.3s ease;"></div>
                             </div>
                             <!-- 4 Nodes -->
                             <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
                                 <!-- Node 1 -->
                                 <div class="text-center" style="width: 24%;">
-                                    <div id="det-oc-step-node-1" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-white shadow-sm" style="width: 40px; height: 40px; background: #10b981; font-size: 1.1rem; border: 3px solid #fff;">
+                                    <div id="det-oc-step-node-1" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1.5 text-white shadow-sm" style="width: 40px; height: 40px; background: #10b981; font-size: 1.1rem; border: 3px solid #fff;">
                                         <i class="bi bi-check-lg"></i>
                                     </div>
-                                    <div class="fw-bold" style="font-size: 0.78rem; color: #0f172a;">Registrada</div>
-                                    <div class="text-secondary small" id="det-oc-step-date-1" style="font-size: 0.68rem; color: #64748b;">—</div>
+                                    <div class="fw-bold" style="font-size: 0.78rem; color: #0f172a; line-height: 1.2;">Registrada</div>
+                                    <div class="text-secondary small" id="det-oc-step-date-1" style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">—</div>
                                 </div>
                                 <!-- Node 2 -->
                                 <div class="text-center" style="width: 24%;">
-                                    <div id="det-oc-step-node-2" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-secondary shadow-sm" style="width: 40px; height: 40px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.95rem;">
+                                    <div id="det-oc-step-node-2" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1.5 text-secondary shadow-sm" style="width: 40px; height: 40px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.95rem;">
                                         <i class="bi bi-shield-check"></i>
                                     </div>
-                                    <div class="fw-bold" style="font-size: 0.78rem; color: #0f172a;">Aprobada</div>
-                                    <div class="text-secondary small" id="det-oc-step-user-2" style="font-size: 0.68rem; color: #64748b;">—</div>
+                                    <div class="fw-bold" style="font-size: 0.78rem; color: #0f172a; line-height: 1.2;">Aprobada</div>
+                                    <div class="text-secondary small" id="det-oc-step-user-2" style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">—</div>
                                 </div>
                                 <!-- Node 3 -->
                                 <div class="text-center" style="width: 24%;">
-                                    <div id="det-oc-step-node-3" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-secondary shadow-sm" style="width: 40px; height: 40px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.95rem;">
+                                    <div id="det-oc-step-node-3" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1.5 text-secondary shadow-sm" style="width: 40px; height: 40px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.95rem;">
                                         <i class="bi bi-credit-card"></i>
                                     </div>
-                                    <div class="fw-bold" style="font-size: 0.78rem; color: #0f172a;">Procesada</div>
-                                    <div class="text-secondary small" id="det-oc-step-status-3" style="font-size: 0.68rem; color: #64748b;">Por Liquidar</div>
+                                    <div class="fw-bold" style="font-size: 0.78rem; color: #0f172a; line-height: 1.2;">Procesada</div>
+                                    <div class="text-secondary small" id="det-oc-step-status-3" style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">Por Liquidar</div>
                                 </div>
                                 <!-- Node 4 -->
                                 <div class="text-center" style="width: 24%;">
-                                    <div id="det-oc-step-node-4" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-secondary shadow-sm" style="width: 40px; height: 40px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.95rem;">
+                                    <div id="det-oc-step-node-4" class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1.5 text-secondary shadow-sm" style="width: 40px; height: 40px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.95rem;">
                                         <i class="bi bi-box-seam"></i>
                                     </div>
-                                    <div class="fw-bold" style="font-size: 0.78rem; color: #0f172a;">Recepcionada</div>
-                                    <div class="text-secondary small" id="det-oc-step-reception-4" style="font-size: 0.68rem; color: #64748b;">0% Recepcionado</div>
+                                    <div class="fw-bold" style="font-size: 0.78rem; color: #0f172a; line-height: 1.2;">Recepcionada</div>
+                                    <div class="text-secondary small" id="det-oc-step-reception-4" style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">0% Recepcionado</div>
                                 </div>
                             </div>
                         </div>

@@ -726,24 +726,33 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     // ── OT MATERIALES ─────────────────────────────────────────────────
     router.get('/ot-materiales', (req, res) => {
         const { ticket_ot } = req.query;
-        let sql = `SELECT s.*,
-        GROUP_CONCAT(CONCAT_WS('\u001f', COALESCE(d.inventario_id,''), COALESCE(d.descripcion,''), d.cantidad, d.costo_unitario, COALESCE(d.moneda,'PEN'), d.importe) ORDER BY d.id SEPARATOR '\u001e') AS items_raw
-        FROM salidas_inv s
-        LEFT JOIN detalle_salidas_inv d ON d.salida_id = s.id
-        WHERE s.ticket_ot IS NOT NULL`;
+        let sql = `SELECT s.* FROM salidas_inv s WHERE s.ticket_ot IS NOT NULL`;
         const params = [];
         if (ticket_ot) { sql += ' AND s.ticket_ot = ?'; params.push(ticket_ot); }
-        sql += ' GROUP BY s.id ORDER BY s.id DESC';
+        sql += ' ORDER BY s.id DESC';
         db.query(sql, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            rows.forEach(r => {
-                r.items = r.items_raw ? r.items_raw.split('\u001e').map(s => {
-                    const [invId, desc, cant, cu, mon, imp] = s.split('\u001f');
-                    return { inventario_id: invId || null, descripcion: desc || '', cantidad: parseFloat(cant) || 0, costo_unitario: parseFloat(cu) || 0, moneda: mon || 'PEN', importe: parseFloat(imp) || 0 };
-                }) : [];
-                delete r.items_raw;
+            const salidaIds = (rows || []).map(r => r.id);
+            if (!salidaIds.length) return res.json([]);
+
+            db.query('SELECT * FROM detalle_salidas_inv WHERE salida_id IN (?) ORDER BY id ASC', [salidaIds], (errItems, itemRows) => {
+                const itemsMap = {};
+                (itemRows || []).forEach(d => {
+                    if (!itemsMap[d.salida_id]) itemsMap[d.salida_id] = [];
+                    itemsMap[d.salida_id].push({
+                        inventario_id: d.inventario_id || null,
+                        descripcion: d.descripcion || '',
+                        cantidad: parseFloat(d.cantidad) || 0,
+                        costo_unitario: parseFloat(d.costo_unitario) || 0,
+                        moneda: d.moneda || 'PEN',
+                        importe: parseFloat(d.importe) || ((parseFloat(d.cantidad) || 0) * (parseFloat(d.costo_unitario) || 0))
+                    });
+                });
+                rows.forEach(r => {
+                    r.items = itemsMap[r.id] || [];
+                });
+                res.json(rows);
             });
-            res.json(rows);
         });
     });
 

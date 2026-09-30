@@ -34,6 +34,10 @@ function getMasterPool() {
             enableKeepAlive: true
         });
 
+        masterPool.on('connection', (connection) => {
+            connection.query('SET SESSION group_concat_max_len = 10485760');
+        });
+
         // Crear la base de datos maestra y tabla empresas si no existen
         initMasterDatabase();
     }
@@ -197,6 +201,10 @@ function getTenantPool(dbName) {
         waitForConnections: true,
         connectionLimit: 15,
         enableKeepAlive: true
+    });
+
+    pool.on('connection', (connection) => {
+        connection.query('SET SESSION group_concat_max_len = 10485760');
     });
 
     tenantPoolsMap.set(dbName, pool);

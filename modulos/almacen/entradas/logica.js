@@ -3062,7 +3062,10 @@ window.abrirModalDetalleOC = function(id) {
                 var imp = parseFloat(it.importe);
                 if (isNaN(imp) || imp <= 0) imp = cant * cu;
                 var nombre = _entDescLimpia(it.descripcion, it.inventario_id);
-                var invId = it.inventario_id || ('ART-' + (idx + 1));
+                var invId = it.inventario_id || it.codigo_articulo || ('ART-' + (idx + 1));
+                if (/^\d+$/.test(invId)) {
+                    invId = 'INV-' + invId.padStart(4, '0');
+                }
                 var um = (it.unidad_medida || it.unidad || 'UND').toUpperCase();
 
                 return '<tr class="align-middle">' +
