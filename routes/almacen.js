@@ -502,24 +502,51 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         if (marca) descGenerada += ' / ' + String(marca).trim();
         const descFinal = descGenerada || descripcion || 'Sin nombre';
 
-        db.query(`UPDATE inventario SET
-        descripcion=?,articulo=?,codigo_articulo=?,familia=?,almacen=?,unidad=?,moneda=?,costo_referencial=?,costo_soles=?,tipo_cambio=?,
-        proveedor_id=?,marca=?,observaciones=?,activo=?,
-        codigo_item=?,marca_unidad=?,sistema=?,sub_sistema=?,tipo=?,sub_tipo=?,ubicacion=?,
-        anaquel=?,stock_min=?,stock_max=?,estado_art=?,codigo_barras=?
-        WHERE id=?`,
-            [descFinal, articulo || null, codigo_articulo || null, familia || null, almacen || null, unidad || null, monedaVal,
-                costoRef, costoSoles, tc,
-                proveedor_id || null, marca || null, observaciones || null,
-                activo != null ? activo : 1,
-                codigo_item || null, marca_unidad || null, sistema || null, sub_sistema || null,
-                tipo || null, sub_tipo || null, ubicacion || null,
-                (anaquel != null && String(anaquel).trim() !== '') ? String(anaquel).trim() : null, parseFloat(stock_min) || 0, parseFloat(stock_max) || 0,
-                estado_art || 'Activo', codigo_barras || null, req.params.id],
-            (err) => {
-                if (err) { console.error('[PUT inventario]', err.message); return res.status(500).json({ error: err.message }); }
-                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+        const oldId = req.params.id;
+        const wantsServ = (tipo === 'Servicio' || tipo === 'SERV' || /^(servicio|mantenimiento|reparacion|alquiler|flete|torno|taxi|mano de obra|lavado|planchado|pintura|diagnostico|auxilio|grua)/i.test((articulo || '').trim()) || /^(servicio|mantenimiento|reparacion|alquiler|flete|torno|taxi|mano de obra|lavado|planchado|pintura|diagnostico|auxilio|grua)/i.test((descripcion || '').trim()));
+        const isInvPrefix = oldId.startsWith('INV-');
+        const isServPrefix = oldId.startsWith('SERV-');
+
+        const needsPrefixChange = (isInvPrefix && wantsServ) || (isServPrefix && tipo && tipo !== 'Servicio' && tipo !== 'SERV' && !wantsServ);
+        const targetPrefix = wantsServ ? 'SERV' : 'INV';
+        const targetTipo = wantsServ ? 'Servicio' : (tipo || null);
+        const targetUnidad = wantsServ ? (unidad || 'Servicio') : (unidad || null);
+
+        const doUpdate = (newId) => {
+            db.query(`UPDATE inventario SET
+            id=?,descripcion=?,articulo=?,codigo_articulo=?,familia=?,almacen=?,unidad=?,moneda=?,costo_referencial=?,costo_soles=?,tipo_cambio=?,
+            proveedor_id=?,marca=?,observaciones=?,activo=?,
+            codigo_item=?,marca_unidad=?,sistema=?,sub_sistema=?,tipo=?,sub_tipo=?,ubicacion=?,
+            anaquel=?,stock_min=?,stock_max=?,estado_art=?,codigo_barras=?
+            WHERE id=?`,
+                [newId, descFinal, articulo || null, codigo_articulo || null, familia || null, almacen || null, targetUnidad, monedaVal,
+                    costoRef, costoSoles, tc,
+                    proveedor_id || null, marca || null, observaciones || null,
+                    activo != null ? activo : 1,
+                    codigo_item || null, marca_unidad || null, sistema || null, sub_sistema || null,
+                    targetTipo, sub_tipo || null, ubicacion || null,
+                    (anaquel != null && String(anaquel).trim() !== '') ? String(anaquel).trim() : null, parseFloat(stock_min) || 0, parseFloat(stock_max) || 0,
+                    estado_art || 'Activo', codigo_barras || null, oldId],
+                (err) => {
+                    if (err) { console.error('[PUT inventario]', err.message); return res.status(500).json({ error: err.message }); }
+                    if (newId !== oldId) {
+                        db.query('UPDATE detalle_entradas_inv SET inventario_id = ? WHERE inventario_id = ?', [newId, oldId]);
+                        db.query('UPDATE detalle_salidas_inv SET inventario_id = ? WHERE inventario_id = ?', [newId, oldId]);
+                        db.query('UPDATE detalle_recepciones_oc SET inventario_id = ? WHERE inventario_id = ?', [newId, oldId], () => {});
+                    }
+                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                    res.json({ ok: true, id: newId, old_id: oldId, migrado: newId !== oldId });
+                });
+        };
+
+        if (needsPrefixChange) {
+            _generarCodigoAlmacen(targetPrefix, null, (errGen, genId) => {
+                if (errGen) return res.status(500).json({ error: errGen.message });
+                doUpdate(genId);
             });
+        } else {
+            doUpdate(oldId);
+        }
     });
     router.delete('/inventario/:id', (req, res) => {
         db.query('UPDATE inventario SET activo=0 WHERE id=?', [req.params.id], (err) => {
