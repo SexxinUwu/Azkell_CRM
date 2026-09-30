@@ -1,17 +1,31 @@
-// ── LÓGICA DE VALES DE COMBUSTIBLE — ERP AZKELL FLEET (OPERACIONES) ────────────────
+// =================================================================
+// ⛽ MÓDULO: VALES DE COMBUSTIBLE — ERP AZKELL FLEET (OPERACIONES)
+// Lógica moderna estilo Reporte de Fallas / Checklist
+// =================================================================
+
 (function() {
     window._cvData = [];
+    window._cvCatalogos = { placas: [], conductores: [], proveedores: [], combustibles: [] };
     window._cvPaginaActual = 1;
     window._cvLimitePorPagina = 50;
     window._cvTotalPaginas = 1;
     window._cvTotalRegistros = 0;
     window._cvSeleccionados = new Set();
     window._cvParsedImportData = [];
+    window._cvEstadoFiltro = 'TODOS';
     window._cvSortBy = 'correlativo';
     window._cvSortDir = 'DESC';
+    window._cvIdAEliminar = null;
     let _cvSearchTimeout = null;
 
-    // Inicializador del módulo
+    // Helpers defensivos para evitar errores de DOM nulo
+    const getEl = (id) => document.getElementById(id);
+    const getVal = (id, def = '') => { const el = getEl(id); return el ? el.value : def; };
+    const setVal = (id, val) => { const el = getEl(id); if (el) el.value = (val !== null && val !== undefined) ? val : ''; };
+    const setText = (id, text) => { const el = getEl(id); if (el) el.textContent = (text !== null && text !== undefined) ? text : ''; };
+    const esc = (s) => String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Inicializador del módulo para SPA
     window.init_combustible_vales = function() {
         window.inicializarModuloCombustibleVales();
     };
@@ -20,117 +34,57 @@
     };
 
     window.inicializarModuloCombustibleVales = function() {
-        const isMarsisa = (window.location.hostname || '').toLowerCase().includes('marsisa') ||
-                          (localStorage.getItem('tenant_slug') || '').toLowerCase().includes('marsisa') ||
-                          (window.location.hostname || '').includes('localhost');
-        const btnSync = document.getElementById('cv-btn-sync-remoto');
-        if (btnSync) {
-            btnSync.style.display = isMarsisa ? 'inline-flex' : 'none';
-        }
-
-        // Configurar por defecto siempre Fecha Actual de Perú (America/Lima UTC-5)
+        // Inicializar fecha de hoy (Perú UTC-5)
         const getTodayPeru = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
         const today = getTodayPeru();
-        const fd = document.getElementById('cv-filter-fecha-desde');
-        const fh = document.getElementById('cv-filter-fecha-hasta');
+        const fd = getEl('cv-filter-fecha-desde');
+        const fh = getEl('cv-filter-fecha-hasta');
         if (fd && !fd.value) fd.value = today;
         if (fh && !fh.value) fh.value = today;
 
-        window.cvActualizarIconosOrden();
-        window._cvCargarCatalogos();
-        window.cvCargarDatos();
-    };
-
-    // ── GESTOR DE ORDENAMIENTO POR COLUMNA ──────────────────────────────────────────
-    window.cvOrdenarPor = function(col) {
-        if (window._cvSortBy === col) {
-            window._cvSortDir = (window._cvSortDir === 'ASC' ? 'DESC' : 'ASC');
-        } else {
-            window._cvSortBy = col;
-            window._cvSortDir = (col === 'fecha' || col === 'correlativo' || col === 'kilometraje' || col === 'galones' || col === 'importe') ? 'DESC' : 'ASC';
-        }
-        window.cvActualizarIconosOrden();
+        window.cvCargarCatalogos();
         window.cvCargarDatos(1);
     };
 
-    window.cvActualizarIconosOrden = function() {
-        document.querySelectorAll('.cv-sort-icon').forEach(icon => {
-            icon.className = 'bi bi-arrow-down-up cv-sort-icon text-muted';
-        });
-        const activeIcon = document.getElementById(`cv-ico-${window._cvSortBy}`);
-        if (activeIcon) {
-            if (window._cvSortDir === 'ASC') {
-                activeIcon.className = 'bi bi-arrow-up cv-sort-icon text-warning fw-bold';
-            } else {
-                activeIcon.className = 'bi bi-arrow-down cv-sort-icon text-warning fw-bold';
-            }
-        }
-    };
-
-    // ── SINCRONIZACIÓN DIRECTA DESDE HOST REMOTO (168.231.98.23) ───────────────────
-    window.cvSincronizarRemoto = async function(forzar = false) {
-        const btn = document.getElementById('cv-btn-sync-remoto');
-        const oldHtml = btn ? btn.innerHTML : '';
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1.5"></span> ${forzar ? 'Resincronizando todo...' : 'Sincronizando...'}`;
-        }
-
-        try {
-            const url = forzar ? '/api/combustible/sincronizar-remoto?forzar=true' : '/api/combustible/sincronizar-remoto';
-            const res = await fetch(url, { method: 'POST' });
-            const data = await res.json();
-            if (data.ok) {
-                alert(`✅ ${data.mensaje || (forzar ? 'Resincronización completa finalizada.' : 'Sincronización completada exitosamente.')}`);
-                window._cvCargarCatalogos();
-                window.cvCargarDatos(1);
-            } else {
-                alert(`⚠️ Error en sincronización: ${data.error || 'No se pudo sincronizar'}`);
-            }
-        } catch (e) {
-            alert('Error al conectar con el servidor de sincronización.');
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = oldHtml;
-            }
-        }
-    };
-
-    // Cargar opciones para filtros
-    window._cvCargarCatalogos = async function() {
+    // ── CARGAR CATÁLOGOS (PLACAS, CONDUCTORES, PROVEEDORES) ────────────
+    window.cvCargarCatalogos = async function() {
         try {
             const res = await fetch('/api/combustible/catalogos?modulo=operaciones');
             const data = await res.json();
             if (data.ok) {
-                const selP = document.getElementById('cv-filter-placa');
+                window._cvCatalogos = data;
+                const selP = getEl('cv-filter-placa');
                 if (selP && data.placas) {
                     selP.innerHTML = '<option value="ALL">Todas las Placas</option>' +
                         data.placas.map(p => `<option value="${p}">${p}</option>`).join('');
                 }
-                const selC = document.getElementById('cv-filter-combustible');
-                if (selC && data.combustibles) {
-                    selC.innerHTML = '<option value="ALL">Todos los Combustibles</option>' +
-                        data.combustibles.map(c => `<option value="${c}">${c}</option>`).join('');
-                }
             }
         } catch (e) {
-            console.error('Error cargando catálogos de combustible:', e);
+            console.warn('Error cargando catálogos de combustible:', e);
         }
     };
 
-    // Cargar datos paginados desde el Backend
+    // ── CARGA DE DATOS PAGINADOS & KPIS ────────────────────────────────
     window.cvCargarDatos = async function(pagina = 1) {
         window._cvPaginaActual = pagina;
-        const tbody = document.getElementById('cv-tbody');
+        const tbody = getEl('cv-tbody');
+        const cardCont = getEl('cvCardContainer');
+
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="33" class="text-center py-5 text-muted">
+                    <td colspan="13" class="text-center py-5 text-muted">
                         <div class="spinner-border spinner-border-sm text-primary me-2"></div>
                         Cargando vales de combustible...
                     </td>
                 </tr>
+            `;
+        }
+        if (cardCont) {
+            cardCont.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando vales...
+                </div>
             `;
         }
 
@@ -142,17 +96,15 @@
             sort_dir: window._cvSortDir || 'DESC'
         });
 
-        const s = document.getElementById('cv-filter-search')?.value;
-        const p = document.getElementById('cv-filter-placa')?.value;
-        const c = document.getElementById('cv-filter-combustible')?.value;
-        const e = document.getElementById('cv-filter-estado')?.value;
-        const fd = document.getElementById('cv-filter-fecha-desde')?.value;
-        const fh = document.getElementById('cv-filter-fecha-hasta')?.value;
+        const s = getVal('cv-buscador');
+        const p = getVal('cv-filter-placa');
+        const fd = getVal('cv-filter-fecha-desde');
+        const fh = getVal('cv-filter-fecha-hasta');
+        const e = window._cvEstadoFiltro;
 
-        if (s) params.append('search', s);
+        if (s) params.append('search', s.trim());
         if (p && p !== 'ALL') params.append('placa', p);
-        if (c && c !== 'ALL') params.append('combustible', c);
-        if (e && e !== 'ALL') params.append('estado', e);
+        if (e && e !== 'TODOS') params.append('estado', e);
         if (fd) params.append('fecha_desde', fd);
         if (fh) params.append('fecha_hasta', fh);
 
@@ -167,41 +119,58 @@
 
                 window.cvRenderKPIs(data.kpis);
                 window.cvRenderTabla();
+                window.cvRenderCardsMobile();
                 window.cvRenderPaginacion();
             } else {
-                if (tbody) tbody.innerHTML = `<tr><td colspan="33" class="text-center text-danger py-4">Error: ${data.error || 'No se pudieron cargar los datos'}</td></tr>`;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="13" class="text-center text-danger py-4">Error: ${data.error || 'No se pudieron obtener los datos'}</td></tr>`;
+                if (cardCont) cardCont.innerHTML = `<div class="alert alert-danger">Error: ${data.error || 'No se pudieron obtener los datos'}</div>`;
             }
         } catch (err) {
             console.error('Error al obtener vales:', err);
-            if (tbody) tbody.innerHTML = `<tr><td colspan="33" class="text-center text-danger py-4">Error de conexión con el servidor.</td></tr>`;
+            if (tbody) tbody.innerHTML = `<tr><td colspan="13" class="text-center text-danger py-4">Error de conexión con el servidor.</td></tr>`;
+            if (cardCont) cardCont.innerHTML = `<div class="alert alert-danger">Error de conexión con el servidor.</div>`;
         }
     };
 
-    // Renderizar KPIs
+    // ── RENDERIZAR KPIS ────────────────────────────────────────────────
     window.cvRenderKPIs = function(kpis = {}) {
         const totalV = kpis.totalVales || 0;
         const totalG = kpis.totalGalones || 0;
         const totalI = kpis.totalGasto || 0;
         const promC  = kpis.costoPromedioGalon || (totalG > 0 ? (totalI / totalG) : 0);
 
-        const elV = document.getElementById('cv-kpi-total-vales');
-        const elG = document.getElementById('cv-kpi-total-galones');
-        const elI = document.getElementById('cv-kpi-total-importe');
-        const elC = document.getElementById('cv-kpi-costo-promedio');
-
-        if (elV) elV.textContent = totalV.toLocaleString();
-        if (elG) elG.textContent = totalG.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Gln';
-        if (elI) elI.textContent = 'S/ ' + totalI.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        if (elC) elC.textContent = 'S/ ' + promC.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        setText('kpi-cv-total', totalV.toLocaleString());
+        setText('kpi-cv-galones', totalG.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Gln');
+        setText('kpi-cv-gasto', 'S/ ' + totalI.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+        setText('kpi-cv-promedio', 'S/ ' + promC.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     };
 
-    // Renderizar Tabla
-    window.cvRenderTabla = function() {
-        const tbody = document.getElementById('cv-tbody');
-        const badge = document.getElementById('cv-tabla-total-badge');
-        const pagInfo = document.getElementById('cv-tabla-pag-info');
+    // Formatear fecha bonita
+    const formatFecha = (f) => {
+        if (!f) return '—';
+        if (typeof f === 'string') {
+            const s = f.trim().replace('T', ' ').replace('.000Z', '');
+            if (s.length >= 16) {
+                const partes = s.slice(0, 10).split('-');
+                if (partes.length === 3) {
+                    const hora = s.slice(11, 16);
+                    return `${partes[2]}/${partes[1]}/${partes[0]} ${hora}`;
+                }
+            }
+        }
+        const d = new Date(f);
+        if (isNaN(d.getTime())) return f;
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
 
-        if (badge) badge.textContent = `${window._cvTotalRegistros.toLocaleString()} Registros`;
+    // ── RENDERIZAR TABLA ESCRITORIO ────────────────────────────────────
+    window.cvRenderTabla = function() {
+        const tbody = getEl('cv-tbody');
+        const badge = getEl('cv-tabla-total-badge');
+        const pagInfo = getEl('cv-paginacion-leyenda');
+
+        if (badge) badge.textContent = `${window._cvTotalRegistros.toLocaleString()} Vales`;
         if (pagInfo) pagInfo.textContent = `Página ${window._cvPaginaActual} de ${window._cvTotalPaginas}`;
 
         if (!tbody) return;
@@ -209,8 +178,8 @@
         if (window._cvData.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="33" class="text-center py-5 text-muted">
-                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                    <td colspan="13" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
                         No se encontraron vales de combustible con los filtros actuales.
                     </td>
                 </tr>
@@ -218,49 +187,17 @@
             return;
         }
 
-        const fmtFecha = (f) => {
-            if (!f) return '—';
-            if (typeof f === 'string') {
-                const s = f.trim().replace('T', ' ').replace('.000Z', '');
-                if (s.length >= 19) {
-                    const partes = s.slice(0, 10).split('-');
-                    if (partes.length === 3) {
-                        const hora = s.slice(11, 19);
-                        return `${partes[2]}/${partes[1]}/${partes[0]} ${hora}`;
-                    }
-                } else if (s.length >= 16) {
-                    const partes = s.slice(0, 10).split('-');
-                    if (partes.length === 3) {
-                        const hora = s.slice(11, 16);
-                        return `${partes[2]}/${partes[1]}/${partes[0]} ${hora}:00`;
-                    }
-                }
-            }
-            const d = new Date(f);
-            if (isNaN(d.getTime())) return f;
-            const pad = (n) => String(n).padStart(2, '0');
-            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-        };
-
-        const esc = (s) => String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
         let html = '';
         window._cvData.forEach(row => {
             const isSelected = window._cvSeleccionados.has(row.id);
-            const estadoBadge = row.estado === 'VÁLIDO' 
-                ? '<span class="badge" style="background:#059669; color:#fff; font-size:0.68rem; font-weight:700;">VÁLIDO</span>'
-                : '<span class="badge" style="background:#dc2626; color:#fff; font-size:0.68rem; font-weight:700;">ANULADO</span>';
+            const estadoBadge = row.estado === 'VÁLIDO'
+                ? '<span class="badge" style="background:#059669; color:#fff; font-size:0.72rem; font-weight:700; border-radius:6px; padding: 4px 8px;">VÁLIDO</span>'
+                : '<span class="badge" style="background:#dc2626; color:#fff; font-size:0.72rem; font-weight:700; border-radius:6px; padding: 4px 8px;">ANULADO</span>';
 
             const pagoBadge = (row.estado_pago || '').toUpperCase() === 'PAGADO'
-                ? '<span class="badge" style="background:#059669; color:#fff; font-size:0.68rem; font-weight:700;">PAGADO</span>'
-                : '<span class="badge" style="background:#dc2626; color:#fff; font-size:0.68rem; font-weight:700;">NO EXISTE PAGO</span>';
+                ? '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold px-2 py-1" style="font-size:0.7rem;">PAGADO</span>'
+                : '<span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold px-2 py-1" style="font-size:0.7rem;">NO PAGADO</span>';
 
-            const cajaBadge = (row.estado_caja || '').toUpperCase() === 'PROCESADO'
-                ? '<span class="badge" style="background:#059669; color:#fff; font-size:0.68rem; font-weight:700;">PROCESADO</span>'
-                : esc(row.estado_caja || '—');
-
-            const km = parseFloat(row.kilometraje || 0);
-            const peso = parseFloat(row.peso_tn || 0);
             const gal = parseFloat(row.galones || 0);
             const costoGl = parseFloat(row.costo_gl || 0);
             const importe = parseFloat(row.importe || 0);
@@ -268,54 +205,50 @@
             html += `
                 <tr class="${isSelected ? 'cv-row-selected' : ''}" id="cv-tr-${row.id}">
                     <td class="text-center">
-                        <input type="checkbox" class="form-check-input cv-row-chk" data-id="${row.id}" ${isSelected ? 'checked' : ''} onchange="window.cvToggleSelectRow(${row.id}, this)">
+                        <input type="checkbox" class="form-check-input" ${isSelected ? 'checked' : ''} onchange="window.cvToggleSelectRow(${row.id}, this)">
+                    </td>
+                    <td class="ps-3">
+                        <span class="font-monospace fw-bold text-dark" style="font-size:0.85rem;">
+                            ${esc(row.correlativo || ('#' + row.id))}
+                        </span>
                     </td>
                     <td>
-                        <div class="dropdown">
-                            <button class="btn btn-sm dropdown-toggle py-0.5 px-2 bg-white text-dark shadow-2xs fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.72rem; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                EDITAR
-                            </button>
-                            <ul class="dropdown-menu shadow-sm" style="font-size: 0.8rem; z-index: 1050;">
-                                <li><a class="dropdown-item py-1" href="javascript:void(0)" onclick="window.cvAbrirModalEditar(${row.id})"><i class="bi bi-pencil me-1.5 text-primary"></i> Editar Vale</a></li>
-                                <li><a class="dropdown-item py-1 text-danger" href="javascript:void(0)" onclick="window.cvEliminarVale(${row.id})"><i class="bi bi-x-circle me-1.5"></i> Anular Vale</a></li>
-                            </ul>
-                        </div>
+                        <span class="text-secondary small fw-medium">${formatFecha(row.fecha)}</span>
                     </td>
-                    <td>${fmtFecha(row.fecha)}</td>
-                    <td>${estadoBadge}</td>
-                    <td><span class="font-monospace fw-semibold text-secondary">${esc(row.correlativo || '—')}</span></td>
-                    <td>${pagoBadge}</td>
-                    <td><span class="font-monospace text-dark fw-semibold" style="font-size:0.75rem;">${esc(row.viaje || '—')}</span></td>
-                    <td><span class="font-monospace text-secondary" style="font-size:0.75rem;">${esc(row.caja || '—')}</span></td>
-                    <td>${cajaBadge}</td>
-                    <td><span class="text-secondary small fw-semibold">${esc(row.clase_vehiculo || 'TRACTO')}</span></td>
+                    <td class="text-center">${estadoBadge}</td>
+                    <td class="text-center">${pagoBadge}</td>
                     <td>
-                        <span class="fw-bold text-dark font-monospace" style="font-size:0.8rem; letter-spacing:0.5px;">
+                        <span class="badge bg-dark font-monospace px-2.5 py-1" style="font-size:0.78rem; letter-spacing:0.5px;">
                             ${esc(row.vehiculo || '—')}
                         </span>
                     </td>
-                    <td class="fw-semibold text-dark text-truncate" style="max-width: 180px;" title="${esc(row.conductor)}">${esc(row.conductor || '—')}</td>
-                    <td class="text-secondary small text-truncate" style="max-width: 200px;" title="${esc(row.ruta)}">${esc(row.ruta || '—')}</td>
-                    <td>${esc(row.departamento || '—')}</td>
-                    <td>${esc(row.provincia || '—')}</td>
-                    <td>${esc(row.distrito || '—')}</td>
-                    <td class="text-truncate" style="max-width: 150px;" title="${esc(row.estacion)}">${esc(row.estacion || '—')}</td>
-                    <td><span class="badge bg-info bg-opacity-10 text-info border fw-bold" style="font-size:0.7rem;">${esc(row.tipo_combustible || 'D2')}</span></td>
-                    <td class="text-truncate" style="max-width: 180px;" title="${esc(row.proveedor)}">${esc(row.proveedor || '—')}</td>
-                    <td><span class="font-monospace small text-muted">${esc(row.ruc || '—')}</span></td>
-                    <td class="text-end font-monospace">${km > 0 ? km.toLocaleString('es-PE', { minimumFractionDigits: 1 }) : '—'}</td>
-                    <td class="text-end font-monospace">${peso > 0 ? peso.toLocaleString('es-PE', { minimumFractionDigits: 2 }) : '—'}</td>
+                    <td>
+                        <div class="fw-bold text-dark text-truncate" style="max-width: 170px;" title="${esc(row.conductor)}">${esc(row.conductor || '—')}</div>
+                        <small class="text-muted text-truncate d-block" style="max-width: 170px;" title="${esc(row.ruta)}">${esc(row.ruta || '—')}</small>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark text-truncate" style="max-width: 150px;" title="${esc(row.estacion)}">${esc(row.estacion || '—')}</div>
+                        <small class="text-muted">${esc(row.tipo_combustible || 'D2')}</small>
+                    </td>
                     <td class="text-end font-monospace fw-bold text-primary">${gal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
-                    <td class="text-end font-monospace">S/ ${costoGl.toFixed(2)}</td>
-                    <td><span class="badge bg-light text-secondary border" style="font-size:0.68rem;">${esc(row.tipo_pago || '—')}</span></td>
-                    <td class="text-center font-monospace">${row.dias_credito || 0}</td>
-                    <td><span class="badge bg-light text-dark border" style="font-size:0.68rem;">${esc(row.moneda || 'SOLES')}</span></td>
-                    <td class="text-end font-monospace fw-bold text-success">S/ ${importe.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td><span class="font-monospace small text-secondary">${esc(row.numero_comprobante || '—')}</span></td>
-                    <td>${row.tipo_cambio ? row.tipo_cambio : '—'}</td>
-                    <td>${row.archivo_url ? `<a href="${row.archivo_url}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-1"><i class="bi bi-file-earmark-pdf"></i></a>` : '—'}</td>
-                    <td class="text-truncate" style="max-width: 140px;" title="${esc(row.observacion)}">${esc(row.observacion || '—')}</td>
-                    <td><span class="badge bg-secondary bg-opacity-10 text-secondary border" style="font-size:0.68rem;">${esc(row.tipo || 'RECARGA VUELTA')}</span></td>
+                    <td class="text-end font-monospace text-secondary">S/ ${costoGl.toFixed(2)}</td>
+                    <td class="text-end font-monospace fw-bold text-success" style="font-size:0.88rem;">S/ ${importe.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td>
+                        <span class="font-monospace small text-secondary">${esc(row.numero_comprobante || '—')}</span>
+                    </td>
+                    <td class="pe-3 text-end">
+                        <div class="d-inline-flex align-items-center gap-1">
+                            <button type="button" class="cv-action-btn cv-btn-view" onclick="window.cvVerDetalle(${row.id})" title="Ver Voucher">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button type="button" class="cv-action-btn cv-btn-edit" onclick="window.cvAbrirEditar(${row.id})" title="Editar Vale">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button type="button" class="cv-action-btn cv-btn-delete" onclick="window.cvSolicitarEliminar(${row.id})" title="Eliminar Vale">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </div>
+                    </td>
                 </tr>
             `;
         });
@@ -324,10 +257,85 @@
         window.cvActualizarBotonEliminarMasivo();
     };
 
-    // Renderizar Paginación
+    // ── RENDERIZAR CARDS MÓVIL ─────────────────────────────────────────
+    window.cvRenderCardsMobile = function() {
+        const container = getEl('cvCardContainer');
+        if (!container) return;
+
+        if (window._cvData.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                    No se encontraron vales de combustible.
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        window._cvData.forEach(row => {
+            const gal = parseFloat(row.galones || 0);
+            const importe = parseFloat(row.importe || 0);
+            const estadoBadge = row.estado === 'VÁLIDO'
+                ? '<span class="badge bg-success" style="font-size:0.68rem;">VÁLIDO</span>'
+                : '<span class="badge bg-danger" style="font-size:0.68rem;">ANULADO</span>';
+
+            html += `
+                <div class="cv-mobile-card">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-dark font-monospace px-2 py-1" style="font-size:0.8rem;">${esc(row.vehiculo || '—')}</span>
+                            <span class="font-monospace fw-bold text-secondary" style="font-size:0.8rem;">${esc(row.correlativo || ('#' + row.id))}</span>
+                        </div>
+                        ${estadoBadge}
+                    </div>
+
+                    <div class="mb-2">
+                        <div class="fw-bold text-dark" style="font-size:0.9rem;">${esc(row.conductor || 'Sin conductor')}</div>
+                        <small class="text-muted d-block">${esc(row.ruta || 'Sin ruta')}</small>
+                        <small class="text-secondary d-block"><i class="bi bi-geo-alt text-warning"></i> ${esc(row.estacion || 'Estación N/D')}</small>
+                    </div>
+
+                    <div class="p-2 rounded-3 bg-light border d-flex align-items-center justify-content-between mb-2" style="font-size:0.82rem;">
+                        <div>
+                            <span class="text-muted d-block" style="font-size:0.7rem;">GALONES</span>
+                            <strong class="text-primary font-monospace">${gal.toFixed(2)} Gln</strong>
+                        </div>
+                        <div>
+                            <span class="text-muted d-block" style="font-size:0.7rem;">COMBUSTIBLE</span>
+                            <strong class="text-dark">${esc(row.tipo_combustible || 'D2')}</strong>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-muted d-block" style="font-size:0.7rem;">TOTAL</span>
+                            <strong class="text-success font-monospace fs-6">S/ ${importe.toFixed(2)}</strong>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between pt-1">
+                        <small class="text-muted" style="font-size:0.72rem;">${formatFecha(row.fecha)}</small>
+                        <div class="d-flex align-items-center gap-1.5">
+                            <button class="btn btn-sm btn-light border px-2.5 py-1 text-primary fw-semibold" onclick="window.cvVerDetalle(${row.id})">
+                                <i class="bi bi-eye me-1"></i> Ver
+                            </button>
+                            <button class="btn btn-sm btn-light border px-2.5 py-1 text-dark fw-semibold" onclick="window.cvAbrirEditar(${row.id})">
+                                <i class="bi bi-pencil me-1"></i> Editar
+                            </button>
+                            <button class="btn btn-sm btn-light border px-2 py-1 text-danger" onclick="window.cvSolicitarEliminar(${row.id})">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    };
+
+    // ── RENDERIZAR PAGINACIÓN ──────────────────────────────────────────
     window.cvRenderPaginacion = function() {
-        const container = document.getElementById('cv-paginacion-botones');
-        const leyenda = document.getElementById('cv-paginacion-leyenda');
+        const container = getEl('cv-paginacion-botones');
+        const leyenda = getEl('cv-paginacion-leyenda');
 
         const inicio = (window._cvPaginaActual - 1) * window._cvLimitePorPagina + 1;
         const fin = Math.min(window._cvTotalRegistros, window._cvPaginaActual * window._cvLimitePorPagina);
@@ -339,7 +347,6 @@
         }
 
         if (!container) return;
-
         if (window._cvTotalPaginas <= 1) {
             container.innerHTML = '';
             return;
@@ -376,25 +383,22 @@
         container.innerHTML = html;
     };
 
-    // Cambiar límite por página (50, 100, 200)
-    window.cvCambiarLimite = function(lim) {
-        window._cvLimitePorPagina = parseInt(lim, 10) || 50;
-        window.cvCargarDatos(1);
-    };
-
-    // Filtros con Debounce
-    window.cvAplicarFiltrosDebounced = function() {
+    // ── FILTROS Y BÚSQUEDA ─────────────────────────────────────────────
+    window.cvFiltrarDebounced = function() {
         clearTimeout(_cvSearchTimeout);
         _cvSearchTimeout = setTimeout(() => {
             window.cvCargarDatos(1);
         }, 300);
     };
 
-    window.cvAplicarFiltros = function() {
+    window.cvFiltrarEstado = function(estado, btn) {
+        window._cvEstadoFiltro = estado;
+        document.querySelectorAll('#btn-group-estados-vales .cv-segment-item').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
         window.cvCargarDatos(1);
     };
 
-    // Manejo de Selección Múltiple
+    // ── SELECCIÓN MÚLTIPLE ─────────────────────────────────────────────
     window.cvToggleSelectAll = function(chk) {
         const checked = chk.checked;
         window._cvData.forEach(row => {
@@ -408,517 +412,203 @@
         if (chk.checked) window._cvSeleccionados.add(id);
         else window._cvSeleccionados.delete(id);
         
-        const tr = document.getElementById(`cv-tr-${id}`);
+        const tr = getEl(`cv-tr-${id}`);
         if (tr) tr.className = chk.checked ? 'cv-row-selected' : '';
-        
         window.cvActualizarBotonEliminarMasivo();
     };
 
     window.cvActualizarBotonEliminarMasivo = function() {
-        const btn = document.getElementById('cv-btn-eliminar-masivo');
-        const countSpan = document.getElementById('cv-count-seleccionados');
+        const btn = getEl('cv-btn-eliminar-masivo');
+        const countSpan = getEl('cv-count-seleccionados');
         const count = window._cvSeleccionados.size;
 
         if (countSpan) countSpan.textContent = count;
         if (btn) {
             if (count > 0) {
                 btn.classList.remove('d-none');
-                btn.classList.add('d-flex');
+                btn.classList.add('d-inline-flex');
             } else {
                 btn.classList.add('d-none');
-                btn.classList.remove('d-flex');
+                btn.classList.remove('d-inline-flex');
             }
         }
     };
 
-    // Eliminación Masiva
-    window.cvEliminarSeleccionados = async function() {
-        const count = window._cvSeleccionados.size;
-        if (count === 0) return;
+    // ── FORMULARIO DRAWER (NUEVO / EDITAR) ─────────────────────────────
+    window.cvAbrirNuevo = function(viajeAsignado = '', origen = 'modulo_propio') {
+        const form = getEl('cv-form-vale');
+        if (form) form.reset();
 
-        if (!confirm(`¿Estás seguro de que deseas eliminar definitivamente los ${count} vales seleccionados? Esta acción no se puede deshacer.`)) {
-            return;
-        }
+        setVal('cv-f-id', '');
+        setText('lbl-cv-modal-titulo', 'Nuevo Vale de Combustible');
 
-        try {
-            const res = await fetch('/api/combustible/vales/eliminar-masivo?hard=true&modulo=operaciones', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ids: Array.from(window._cvSeleccionados), modulo: 'operaciones' })
-            });
-            const data = await res.json();
-            if (data.ok) {
-                alert(`✅ ${data.mensaje || 'Vales eliminados con éxito.'}`);
-                window._cvSeleccionados.clear();
-                window.cvCargarDatos(window._cvPaginaActual);
-            } else {
-                alert(`Error: ${data.error || 'No se pudieron eliminar los vales.'}`);
-            }
-        } catch (e) {
-            alert('Error de conexión al eliminar vales.');
-        }
-    };
-
-    // Eliminar o Anular Vale Individual
-    window.cvEliminarVale = async function(id) {
-        if (!confirm(`¿Deseas eliminar este vale (#${id})? Presiona Aceptar para confirmar.`)) return;
-
-        try {
-            const res = await fetch(`/api/combustible/vales/${id}?hard=true&modulo=operaciones`, { method: 'DELETE' });
-            const data = await res.json();
-            if (data.ok) {
-                window._cvSeleccionados.delete(id);
-                window.cvCargarDatos(window._cvPaginaActual);
-            } else {
-                alert(`Error: ${data.error || 'No se pudo eliminar el vale'}`);
-            }
-        } catch (e) {
-            alert('Error al conectar con el servidor.');
-        }
-    };
-
-    // ── PROCESAMIENTO E IMPORTACIÓN EXCEL MARSISASOFT ───────────────────────────
-    window.cvAbrirModalImportar = function() {
-        window._cvParsedImportData = [];
-        const box = document.getElementById('cv-import-preview-box');
-        if (box) box.classList.add('d-none');
-        const btn = document.getElementById('cv-btn-confirmar-import');
-        if (btn) btn.disabled = true;
-        const input = document.getElementById('cv-file-input');
-        if (input) input.value = '';
-
-        const modalEl = document.getElementById('cvModalImportar');
-        if (modalEl) {
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.show();
-        }
-    };
-
-    window.cvProcesarArchivoExcel = function(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        if (typeof XLSX === 'undefined') {
-            alert('La librería SheetJS no está cargada. Por favor recarga la página.');
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-                if (rows.length === 0) {
-                    alert('El archivo no contiene filas de datos.');
-                    return;
-                }
-
-                window._cvParsedImportData = rows;
-
-                document.getElementById('cv-import-filename').textContent = file.name;
-                document.getElementById('cv-import-count-badge').textContent = `${rows.length.toLocaleString()} vales detectados`;
-
-                const tbody = document.getElementById('cv-import-preview-tbody');
-                if (tbody) {
-                    const previewRows = rows.slice(0, 5);
-                    tbody.innerHTML = previewRows.map(r => {
-                        const fecha = r.FECHA || r.fecha || '—';
-                        const viaje = r.VIAJE || r.viaje || '—';
-                        const veh = r.VEHICULO || r.vehiculo || r.PLACA || r.placa || '—';
-                        const cond = r.CONDUCTOR || r.conductor || '—';
-                        const ruta = r.RUTA || r.ruta || '—';
-                        const grifo = r.ESTACIÓN || r.ESTACION || r.estacion || r.PROVEEDOR || '—';
-                        const gal = r.GALONES || r.galones || '0';
-                        const imp = r.IMPORTE || r.importe || '0';
-
-                        return `
-                            <tr>
-                                <td>${fecha}</td>
-                                <td>${viaje}</td>
-                                <td><strong>${veh}</strong></td>
-                                <td>${cond}</td>
-                                <td>${ruta}</td>
-                                <td>${grifo}</td>
-                                <td class="text-end text-primary fw-bold">${gal}</td>
-                                <td class="text-end text-success fw-bold">${imp}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                }
-
-                document.getElementById('cv-import-preview-box').classList.remove('d-none');
-                document.getElementById('cv-btn-confirmar-import').disabled = false;
-            } catch (err) {
-                console.error(err);
-                alert('Error al leer el archivo Excel: ' + err.message);
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    };
-
-    window.cvConfirmarImportacion = async function() {
-        if (!window._cvParsedImportData || window._cvParsedImportData.length === 0) {
-            alert('No hay datos para importar.');
-            return;
-        }
-
-        const btn = document.getElementById('cv-btn-confirmar-import');
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Importando ${window._cvParsedImportData.length} vales...`;
-        }
-
-        try {
-            const res = await fetch('/api/combustible/vales/importar-masivo', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ vales: window._cvParsedImportData, modulo: 'operaciones' })
-            });
-            const data = await res.json();
-
-            if (data.ok) {
-                alert(`✅ ${data.mensaje || 'Importación completada con éxito.'}`);
-                const modalEl = document.getElementById('cvModalImportar');
-                if (modalEl) {
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) modal.hide();
-                }
-                window._cvCargarCatalogos();
-                window.cvCargarDatos(1);
-            } else {
-                alert(`Error al importar: ${data.error || 'Falló la inserción'}`);
-            }
-        } catch (e) {
-            alert('Error de conexión al enviar el archivo.');
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="bi bi-check-lg"></i> Importar Vales al ERP`;
-            }
-        }
-    };
-
-    // ── EXPORTAR A EXCEL (XLSX) ────────────────────────────────────────────────
-    window.cvExportarExcel = async function() {
-        if (typeof XLSX === 'undefined') {
-            alert('Librería SheetJS no disponible.');
-            return;
-        }
-
-        const params = new URLSearchParams({ limit: 5000, modulo: 'operaciones' });
-        const s = document.getElementById('cv-filter-search')?.value;
-        const p = document.getElementById('cv-filter-placa')?.value;
-        const c = document.getElementById('cv-filter-combustible')?.value;
-        const e = document.getElementById('cv-filter-estado')?.value;
-        const fd = document.getElementById('cv-filter-fecha-desde')?.value;
-        const fh = document.getElementById('cv-filter-fecha-hasta')?.value;
-
-        if (s) params.append('search', s);
-        if (p && p !== 'ALL') params.append('placa', p);
-        if (c && c !== 'ALL') params.append('combustible', c);
-        if (e && e !== 'ALL') params.append('estado', e);
-        if (fd) params.append('fecha_desde', fd);
-        if (fh) params.append('fecha_hasta', fh);
-
-        try {
-            const res = await fetch(`/api/combustible/vales?${params.toString()}`);
-            const data = await res.json();
-            const exportRows = data.ok ? data.data : window._cvData;
-
-            if (!exportRows || exportRows.length === 0) {
-                alert('No hay vales para exportar.');
-                return;
-            }
-
-            const exportData = exportRows.map(r => ({
-                "FECHA": r.fecha,
-                "ESTADO": r.estado,
-                "CORRELATIVO": r.correlativo,
-                "ESTADO PAGO": r.estado_pago,
-                "VIAJE": r.viaje,
-                "CAJA": r.caja,
-                "ESTADO CAJA": r.estado_caja,
-                "CLASE VEHICULO": r.clase_vehiculo,
-                "VEHICULO": r.vehiculo,
-                "CONDUCTOR": r.conductor,
-                "RUTA": r.ruta,
-                "DEPARTAMENTO": r.departamento,
-                "PROVINCIA": r.provincia,
-                "DISTRITO": r.distrito,
-                "ESTACIÓN": r.estacion,
-                "TIPO COMBUSTIBLE": r.tipo_combustible,
-                "PROVEEDOR": r.proveedor,
-                "RUC": r.ruc,
-                "KILOMETRAJE": r.kilometraje,
-                "PESO (Tn)": r.peso_tn,
-                "GALONES": r.galones,
-                "COSTO/GL": r.costo_gl,
-                "TIPO PAGO": r.tipo_pago,
-                "DÍAS CRÉDITO": r.dias_credito,
-                "MONEDA": r.moneda,
-                "IMPORTE": r.importe,
-                "NÚMERO COMPROBANTE": r.numero_comprobante,
-                "TIPO CAMBIO": r.tipo_cambio,
-                "OBSERVACIÓN": r.observacion,
-                "TIPO": r.tipo
-            }));
-
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Vales_Combustible");
-            XLSX.writeFile(wb, `Vales_Combustible_${new Date().toISOString().slice(0, 10)}.xlsx`);
-        } catch (e) {
-            alert('Error exportando vales a Excel.');
-        }
-    };
-
-    // ── FORMULARIO MODAL NUEVO / EDITAR (Bottom Drawer) ────────────────────────
-    window._cvOrigenApertura = 'modulo_propio';
-
-    window.cvRegresarAtras = function() {
-        const modalEl = document.getElementById('cvModalForm');
-        if (modalEl) {
-            const inst = bootstrap.Modal.getInstance(modalEl);
-            if (inst) inst.hide();
-        }
-        if (window._cvOrigenApertura === 'detalle_viaje') {
-            const drawer = document.getElementById('ovMonDrawer');
-            const backdrop = document.getElementById('ovMonDrawerBackdrop');
-            if (drawer) drawer.classList.add('active');
-            if (backdrop) backdrop.classList.add('active');
-            if (typeof window.ovRecargarMonitoreoActual === 'function') {
-                window.ovRecargarMonitoreoActual();
-            }
-        }
-    };
-
-    window.cvAbrirModalNuevo = function(viajeAsignado = '', origen = 'modulo_propio') {
-        window._cvOrigenApertura = origen;
-        document.getElementById('cv-form-id').value = '';
-        document.getElementById('cv-modal-form-title').textContent = 'Nuevo Vale de Combustible';
-        document.getElementById('cv-form-vale').reset();
-        
+        // Asignar fecha y hora local actual
         const now = new Date();
         const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-        document.getElementById('cv-f-fecha').value = localIso;
+        setVal('cv-f-fecha', localIso);
+        setVal('cv-f-clase', 'TRACTO');
+        setVal('cv-f-tipo', 'RECARGA VUELTA');
+        setVal('cv-f-estado', 'VÁLIDO');
+        setVal('cv-f-tipo-pago', 'ANTICIPO');
+        setVal('cv-f-estado-pago', 'NO PAGADO');
+        setVal('cv-f-moneda', 'SOLES');
+        setVal('cv-f-kilometraje', '0');
+        setVal('cv-f-peso', '0');
+        setVal('cv-f-galones', '');
+        setVal('cv-f-costo-gl', '');
+        setVal('cv-f-importe', '');
 
-        // Configurar campo de Viaje
-        const inpViaje = document.getElementById('cv-f-viaje');
-        const lockIcon = document.getElementById('cv-viaje-lock-icon');
-        const lockStatus = document.getElementById('cv-viaje-lock-status');
+        // Obtener siguiente correlativo
+        const siguienteCorr = window._cvCatalogos?.siguienteCorrelativo || `${now.getFullYear()}-00000001`;
+        setVal('cv-f-correlativo', siguienteCorr);
+        setText('lbl-cv-correlativo-header', `(N° ${siguienteCorr})`);
 
-        if (viajeAsignado && String(viajeAsignado).trim() !== '') {
-            if (inpViaje) {
-                inpViaje.value = String(viajeAsignado).trim();
-                inpViaje.readOnly = true;
-                inpViaje.classList.add('bg-warning-subtle');
-            }
-            if (lockIcon) lockIcon.className = 'bi bi-lock-fill text-warning';
-            if (lockStatus) {
-                lockStatus.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace';
-                lockStatus.textContent = 'Bloqueado (Desde Viaje)';
-            }
-
-            // Intentar auto-completar datos si están en el detalle del viaje activo
-            const listaViajes = window._ovViajesGlobal || (typeof _ovViajesGlobal !== 'undefined' ? _ovViajesGlobal : []) || window.dataGlobalOrdenesViajeModulo || [];
-            const vData = listaViajes.find(x => x.viaje === viajeAsignado);
-            if (vData) {
-                if (vData.placa_tracto && !document.getElementById('cv-f-vehiculo').value) {
-                    document.getElementById('cv-f-vehiculo').value = vData.placa_tracto;
-                }
-                if (vData.conductor && !document.getElementById('cv-f-conductor').value) {
-                    document.getElementById('cv-f-conductor').value = vData.conductor;
-                }
-                if (vData.ruta && !document.getElementById('cv-f-ruta').value) {
-                    document.getElementById('cv-f-ruta').value = vData.ruta;
-                }
-            }
+        if (viajeAsignado && String(viajeAsignado).trim()) {
+            window.cvSeleccionarViaje(String(viajeAsignado).trim(), '', '', '');
+            const col = getEl('cv_collapse_viaje_asociado');
+            if (col) col.style.display = 'block';
         } else {
-            if (inpViaje) {
-                inpViaje.value = '';
-                inpViaje.readOnly = false;
-                inpViaje.classList.remove('bg-warning-subtle');
-            }
-            if (lockIcon) lockIcon.className = 'bi bi-unlock text-muted';
-            if (lockStatus) {
-                lockStatus.className = 'badge bg-light text-muted border font-monospace';
-                lockStatus.textContent = 'Desbloqueado';
-            }
+            window.cvLimpiarViajeVinculado(true);
         }
 
-        // Si se abre desde detalle de viaje, ocultar momentáneamente el drawer para evitar doble cortina oscura
-        if (origen === 'detalle_viaje') {
-            const drawer = document.getElementById('ovMonDrawer');
-            const backdrop = document.getElementById('ovMonDrawerBackdrop');
-            if (drawer) drawer.classList.remove('active');
-            if (backdrop) backdrop.classList.remove('active');
-        }
-
-        const modalEl = document.getElementById('cvModalForm');
-        if (modalEl && modalEl.parentElement !== document.body) {
-            document.body.appendChild(modalEl);
-        }
-
-        if (modalEl && !modalEl._hasDrawerRestoreListener) {
-            modalEl._hasDrawerRestoreListener = true;
-            modalEl.addEventListener('hidden.bs.modal', function () {
-                if (window._cvOrigenApertura === 'detalle_viaje') {
-                    const drawer = document.getElementById('ovMonDrawer');
-                    const backdrop = document.getElementById('ovMonDrawerBackdrop');
-                    if (drawer) drawer.classList.add('active');
-                    if (backdrop) backdrop.classList.add('active');
-                    if (typeof window.ovRecargarMonitoreoActual === 'function') {
-                        window.ovRecargarMonitoreoActual();
-                    }
-                }
-            });
-        }
-
+        const modalEl = getEl('cvModalForm');
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
 
-    window.cvAbrirModalEditar = async function(id, origen = 'modulo_propio') {
-        window._cvOrigenApertura = origen;
+    window.cvAbrirModalNuevo = window.cvAbrirNuevo;
+    window.cvAbrirModalEditar = function(id) { window.cvAbrirEditar(id); };
+    window.cvEliminarVale = function(id) { window.cvSolicitarEliminar(id); };
+    window.cvAplicarFiltros = function() { window.cvCargarDatos(1); };
+    window.cvLimpiarFiltros = function() {
+        const getTodayPeru = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        const today = getTodayPeru();
+        setVal('cv-buscador', '');
+        setVal('cv-filter-placa', 'ALL');
+        setVal('cv-filter-fecha-desde', today);
+        setVal('cv-filter-fecha-hasta', today);
+        window._cvEstadoFiltro = 'TODOS';
+        document.querySelectorAll('#btn-group-estados-vales .cv-segment-item').forEach(b => b.classList.remove('active'));
+        const primerB = document.querySelector('#btn-group-estados-vales .cv-segment-item');
+        if (primerB) primerB.classList.add('active');
+        window.cvCargarDatos(1);
+    };
+
+    window.cvAbrirEditar = async function(id) {
         let item = (window._cvData || []).find(r => r.id === id || String(r.id) === String(id));
         if (!item) {
-            // Intentar consultar a la API si no está en cache local
             try {
                 const r = await fetch(`/api/combustible/vales/${id}`);
                 const j = await r.json();
                 if (j && j.ok && j.data) item = j.data;
             } catch (e) {
-                console.warn("No se pudo cargar vale:", e);
+                console.warn('No se pudo cargar el vale individual:', e);
             }
         }
         if (!item) return;
 
-        document.getElementById('cv-form-id').value = item.id;
-        document.getElementById('cv-modal-form-title').textContent = `Editar Vale #${item.id} (${item.vehiculo || ''})`;
+        setVal('cv-f-id', item.id);
+        setText('lbl-cv-modal-titulo', `Editar Vale #${item.id}`);
+        setText('lbl-cv-correlativo-header', item.correlativo ? `(${item.correlativo})` : '');
 
         if (item.fecha) {
             const dt = new Date(item.fecha);
             const localIso = new Date(dt.getTime() - (dt.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-            document.getElementById('cv-f-fecha').value = localIso;
+            setVal('cv-f-fecha', localIso);
         }
-        document.getElementById('cv-f-correlativo').value = item.correlativo || '';
-        document.getElementById('cv-f-estado').value = item.estado || 'VÁLIDO';
-        document.getElementById('cv-f-vehiculo').value = item.vehiculo || '';
-        document.getElementById('cv-f-clase').value = item.clase_vehiculo || 'TRACTO';
-        document.getElementById('cv-f-tipo').value = item.tipo || 'RECARGA VUELTA';
-        document.getElementById('cv-f-conductor').value = item.conductor || '';
-        document.getElementById('cv-f-ruta').value = item.ruta || '';
-        document.getElementById('cv-f-estacion').value = item.estacion || '';
-        document.getElementById('cv-f-proveedor').value = item.proveedor || '';
-        document.getElementById('cv-f-combustible').value = item.tipo_combustible || 'D2';
-        document.getElementById('cv-f-kilometraje').value = item.kilometraje || 0;
-        document.getElementById('cv-f-galones').value = item.galones || 0;
-        document.getElementById('cv-f-costo-gl').value = item.costo_gl || 0;
-        document.getElementById('cv-f-importe').value = item.importe || 0;
-        document.getElementById('cv-f-comprobante').value = item.numero_comprobante || '';
-        document.getElementById('cv-f-tipo-pago').value = item.tipo_pago || 'ANTICIPO';
-        document.getElementById('cv-f-estado-pago').value = item.estado_pago || 'NO PAGADO';
-        document.getElementById('cv-f-obs').value = item.observacion || '';
+        setVal('cv-f-correlativo', item.correlativo || '');
+        setVal('cv-f-estado', item.estado || 'VÁLIDO');
+        setVal('cv-f-vehiculo', item.vehiculo || '');
+        setVal('cv-f-vehiculo-txt', item.vehiculo || '');
+        setVal('cv-f-clase', item.clase_vehiculo || 'TRACTO');
+        setVal('cv-f-tipo', item.tipo || 'RECARGA VUELTA');
+        setVal('cv-f-conductor', item.conductor || '');
+        setVal('cv-f-conductor-txt', item.conductor || '');
+        setVal('cv-f-ruta', item.ruta || '');
+        setVal('cv-f-estacion', item.estacion || '');
+        setVal('cv-f-proveedor', item.proveedor || '');
+        setVal('cv-f-combustible', item.tipo_combustible || 'D2');
+        setVal('cv-f-departamento', item.departamento || '');
+        setVal('cv-f-provincia', item.provincia || '');
+        setVal('cv-f-distrito', item.distrito || '');
+        setVal('cv-f-kilometraje', item.kilometraje || 0);
+        setVal('cv-f-peso', item.peso_tn || 0);
+        setVal('cv-f-galones', item.galones || '');
+        setVal('cv-f-costo-gl', item.costo_gl || '');
+        setVal('cv-f-importe', item.importe || '');
+        setVal('cv-f-comprobante', item.numero_comprobante || '');
+        setVal('cv-f-tipo-pago', item.tipo_pago || 'ANTICIPO');
+        setVal('cv-f-estado-pago', item.estado_pago || 'NO PAGADO');
+        setVal('cv-f-dias-credito', item.dias_credito || 0);
+        setVal('cv-f-moneda', item.moneda || 'SOLES');
+        setVal('cv-f-obs', item.observacion || '');
 
-        // Configurar campo de Viaje
-        const inpViaje = document.getElementById('cv-f-viaje');
-        const lockIcon = document.getElementById('cv-viaje-lock-icon');
-        const lockStatus = document.getElementById('cv-viaje-lock-status');
-
-        const viajeVal = item.viaje || '';
-        if (inpViaje) inpViaje.value = viajeVal;
-
-        if (origen === 'detalle_viaje' || viajeVal) {
-            if (inpViaje) {
-                inpViaje.readOnly = (origen === 'detalle_viaje');
-                if (origen === 'detalle_viaje') inpViaje.classList.add('bg-warning-subtle');
-                else inpViaje.classList.remove('bg-warning-subtle');
-            }
-            if (lockIcon) lockIcon.className = (origen === 'detalle_viaje') ? 'bi bi-lock-fill text-warning' : 'bi bi-unlock text-muted';
-            if (lockStatus) {
-                lockStatus.className = (origen === 'detalle_viaje') ? 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace' : 'badge bg-light text-muted border font-monospace';
-                lockStatus.textContent = (origen === 'detalle_viaje') ? 'Bloqueado (Desde Viaje)' : 'Vinculado';
-            }
+        // Viaje vinculado
+        if (item.viaje) {
+            setVal('cv-f-viaje', item.viaje);
+            setVal('cv_orden_viaje-txt', item.viaje);
+            const infoBox = getEl('cv_viaje_seleccionado_info');
+            const lblNum = getEl('cv_lbl_viaje_num');
+            const lblDet = getEl('cv_lbl_viaje_detalles');
+            if (infoBox) infoBox.classList.remove('d-none');
+            if (lblNum) lblNum.textContent = item.viaje;
+            if (lblDet) lblDet.textContent = `Vehículo: ${item.vehiculo || '—'} | Conductor: ${item.conductor || '—'}`;
         } else {
-            if (inpViaje) {
-                inpViaje.readOnly = false;
-                inpViaje.classList.remove('bg-warning-subtle');
-            }
-            if (lockIcon) lockIcon.className = 'bi bi-unlock text-muted';
-            if (lockStatus) {
-                lockStatus.className = 'badge bg-light text-muted border font-monospace';
-                lockStatus.textContent = 'Desbloqueado';
-            }
+            window.cvLimpiarViajeVinculado(false);
         }
 
-        // Si se abre desde detalle de viaje, ocultar momentáneamente el drawer para evitar doble cortina oscura
-        if (origen === 'detalle_viaje') {
-            const drawer = document.getElementById('ovMonDrawer');
-            const backdrop = document.getElementById('ovMonDrawerBackdrop');
-            if (drawer) drawer.classList.remove('active');
-            if (backdrop) backdrop.classList.remove('active');
-        }
-
-        const modalEl = document.getElementById('cvModalForm');
-        if (modalEl && modalEl.parentElement !== document.body) {
-            document.body.appendChild(modalEl);
-        }
-
-        if (modalEl && !modalEl._hasDrawerRestoreListener) {
-            modalEl._hasDrawerRestoreListener = true;
-            modalEl.addEventListener('hidden.bs.modal', function () {
-                if (window._cvOrigenApertura === 'detalle_viaje') {
-                    const drawer = document.getElementById('ovMonDrawer');
-                    const backdrop = document.getElementById('ovMonDrawerBackdrop');
-                    if (drawer) drawer.classList.add('active');
-                    if (backdrop) backdrop.classList.add('active');
-                    if (typeof window.ovRecargarMonitoreoActual === 'function') {
-                        window.ovRecargarMonitoreoActual();
-                    }
-                }
-            });
-        }
-
+        const modalEl = getEl('cvModalForm');
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
 
-    window.cvRecalcularTotalForm = function() {
-        const gal = parseFloat(document.getElementById('cv-f-galones')?.value || 0);
-        const cgl = parseFloat(document.getElementById('cv-f-costo-gl')?.value || 0);
+    // Recalcular Importe Total
+    window.cvRecalcularImporte = function() {
+        const gal = parseFloat(getVal('cv-f-galones') || 0);
+        const cgl = parseFloat(getVal('cv-f-costo-gl') || 0);
         if (gal > 0 && cgl > 0) {
-            document.getElementById('cv-f-importe').value = (gal * cgl).toFixed(2);
+            setVal('cv-f-importe', (gal * cgl).toFixed(2));
         }
     };
 
-    window.cvGuardarFormulario = async function(event) {
-        event.preventDefault();
-        const id = document.getElementById('cv-form-id').value;
+    // ── GUARDAR FORMULARIO ─────────────────────────────────────────────
+    window.cvGuardarFormulario = async function(e) {
+        if (e && e.preventDefault) e.preventDefault();
+
+        const id = getVal('cv-f-id');
         const isEdit = !!id;
 
+        const vehiculo = (getVal('cv-f-vehiculo') || getVal('cv-f-vehiculo-txt')).toUpperCase().trim();
+        if (!vehiculo) {
+            alert('⚠️ La placa del vehículo es obligatoria.');
+            return;
+        }
+
         const payload = {
-            fecha: document.getElementById('cv-f-fecha').value,
-            correlativo: document.getElementById('cv-f-correlativo').value,
-            estado: document.getElementById('cv-f-estado').value,
-            vehiculo: document.getElementById('cv-f-vehiculo').value.toUpperCase().trim(),
-            viaje: document.getElementById('cv-f-viaje').value.trim(),
-            clase_vehiculo: document.getElementById('cv-f-clase').value.trim(),
-            tipo: document.getElementById('cv-f-tipo').value.trim(),
-            conductor: document.getElementById('cv-f-conductor').value.trim(),
-            ruta: document.getElementById('cv-f-ruta').value.trim(),
-            estacion: document.getElementById('cv-f-estacion').value.trim(),
-            proveedor: document.getElementById('cv-f-proveedor').value.trim(),
-            tipo_combustible: document.getElementById('cv-f-combustible').value.trim(),
-            kilometraje: parseFloat(document.getElementById('cv-f-kilometraje').value || 0),
-            galones: parseFloat(document.getElementById('cv-f-galones').value || 0),
-            costo_gl: parseFloat(document.getElementById('cv-f-costo-gl').value || 0),
-            importe: parseFloat(document.getElementById('cv-f-importe').value || 0),
-            numero_comprobante: document.getElementById('cv-f-comprobante').value.trim(),
-            tipo_pago: document.getElementById('cv-f-tipo-pago').value,
-            estado_pago: document.getElementById('cv-f-estado-pago').value,
-            observacion: document.getElementById('cv-f-obs').value.trim(),
+            fecha: getVal('cv-f-fecha'),
+            correlativo: getVal('cv-f-correlativo'),
+            estado: getVal('cv-f-estado'),
+            vehiculo,
+            viaje: getVal('cv-f-viaje'),
+            clase_vehiculo: getVal('cv-f-clase'),
+            tipo: getVal('cv-f-tipo'),
+            conductor: getVal('cv-f-conductor') || getVal('cv-f-conductor-txt'),
+            ruta: getVal('cv-f-ruta'),
+            estacion: getVal('cv-f-estacion'),
+            proveedor: getVal('cv-f-proveedor'),
+            tipo_combustible: getVal('cv-f-combustible'),
+            departamento: getVal('cv-f-departamento'),
+            provincia: getVal('cv-f-provincia'),
+            distrito: getVal('cv-f-distrito'),
+            kilometraje: parseFloat(getVal('cv-f-kilometraje') || 0),
+            peso_tn: parseFloat(getVal('cv-f-peso') || 0),
+            galones: parseFloat(getVal('cv-f-galones') || 0),
+            costo_gl: parseFloat(getVal('cv-f-costo-gl') || 0),
+            importe: parseFloat(getVal('cv-f-importe') || 0),
+            numero_comprobante: getVal('cv-f-comprobante'),
+            tipo_pago: getVal('cv-f-tipo-pago'),
+            estado_pago: getVal('cv-f-estado-pago'),
+            dias_credito: parseInt(getVal('cv-f-dias-credito') || 0, 10),
+            moneda: getVal('cv-f-moneda'),
+            observacion: getVal('cv-f-obs'),
             modulo: 'operaciones'
         };
 
@@ -934,128 +624,467 @@
             const data = await res.json();
 
             if (data.ok) {
-                alert(`✅ ${data.mensaje || 'Guardado exitosamente'}`);
-                window.cvRegresarAtras();
-                if (window._cvOrigenApertura !== 'detalle_viaje') {
-                    window.cvCargarDatos(window._cvPaginaActual);
+                const modalEl = getEl('cvModalForm');
+                if (modalEl) {
+                    const inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
                 }
+                window.cvCargarCatalogos();
+                window.cvCargarDatos(window._cvPaginaActual);
             } else {
-                alert(`Error: ${data.error || 'No se pudo guardar'}`);
+                alert(`Error: ${data.error || 'No se pudo guardar el vale'}`);
             }
-        } catch (e) {
-            alert('Error de conexión al guardar el formulario.');
+        } catch (err) {
+            alert('Error al conectar con el servidor al guardar el vale.');
         }
     };
 
-    // ── COMPRAS EXTERNAS (FACTURAS DE GRIFOS) ───────────────────────────
-    window._cvComprasExternasData = [];
-    window.cvAbrirModalComprasExternas = function() {
-        const modalEl = document.getElementById('cvModalComprasExternas');
-        if (!modalEl) return;
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-        window.cvCargarComprasExternas();
+    // ── VINCULACIÓN CON ORDEN DE VIAJE (COLLAPSE & DROPDOWN) ───────────
+    window.cvToggleCollapseViaje = function() {
+        const col = getEl('cv_collapse_viaje_asociado');
+        const icon = getEl('cv-icon-btn-vincular-viaje');
+        if (!col) return;
+
+        if (col.style.display === 'none' || !col.style.display) {
+            col.style.display = 'block';
+            if (icon) icon.className = 'bi bi-chevron-up';
+        } else {
+            col.style.display = 'none';
+            if (icon) icon.className = 'bi bi-chevron-down';
+        }
     };
 
-    window.cvCargarComprasExternas = async function() {
-        const tbody = document.getElementById('cv-modal-ce-tbody');
-        const countBadge = document.getElementById('cv-modal-ce-count');
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando facturas sincronizadas...</td></tr>`;
+    window.cvFiltrarViajeDropdown = async function() {
+        const input = getEl('cv_orden_viaje-txt');
+        const dd = getEl('cv_orden_viaje-dd');
+        const btnClear = getEl('cv_btn_clear_viaje');
+        if (!input || !dd) return;
+
+        const q = (input.value || '').trim();
+        if (btnClear) {
+            if (q) btnClear.classList.remove('d-none');
+            else btnClear.classList.add('d-none');
         }
 
         try {
-            const res = await fetch('/api/combustible/compras-externas');
+            const res = await fetch(`/api/checklist/buscar-viajes?limit=5&q=${encodeURIComponent(q)}`);
             const data = await res.json();
+            const viajes = (data && data.data) || [];
 
-            if (data.ok && Array.isArray(data.data)) {
-                window._cvComprasExternasData = data.data;
-                if (countBadge) countBadge.textContent = `${data.data.length} Facturas`;
-                window.cvRenderComprasExternas(data.data);
-            } else {
-                if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-danger">No se pudieron obtener las compras externas.</td></tr>`;
+            if (viajes.length === 0) {
+                dd.innerHTML = `<div class="p-2 text-muted small">No se encontraron órdenes de viaje</div>`;
+                dd.classList.remove('d-none');
+                return;
             }
+
+            dd.innerHTML = viajes.map(v => `
+                <div class="cv-dd-item" onmousedown="window.cvSeleccionarViaje('${esc(v.viaje)}', '${esc(v.placa_tracto || '')}', '${esc(v.conductor || '')}', '${esc(v.ruta || '')}')">
+                    <div class="d-flex justify-content-between">
+                        <strong class="text-primary font-monospace">${esc(v.viaje)}</strong>
+                        <span class="badge bg-light text-dark border">${esc(v.placa_tracto || 'Sin Placa')}</span>
+                    </div>
+                    <small class="text-secondary d-block text-truncate">${esc(v.conductor || 'Sin conductor')} | ${esc(v.ruta || '')}</small>
+                </div>
+            `).join('');
+            dd.classList.remove('d-none');
         } catch (e) {
-            if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-danger">Error conectando con el servidor.</td></tr>`;
+            dd.classList.add('d-none');
         }
     };
 
-    window.cvRenderComprasExternas = function(items) {
-        const tbody = document.getElementById('cv-modal-ce-tbody');
-        if (!tbody) return;
-        if (items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-muted">No se encontraron facturas externas.</td></tr>`;
+    window.cvHideViajeDropdown = function() {
+        setTimeout(() => {
+            const dd = getEl('cv_orden_viaje-dd');
+            if (dd) dd.classList.add('d-none');
+        }, 200);
+    };
+
+    window.cvSeleccionarViaje = function(numViaje, placa, conductor, ruta) {
+        setVal('cv-f-viaje', numViaje);
+        setVal('cv_orden_viaje-txt', numViaje);
+
+        if (placa) {
+            setVal('cv-f-vehiculo', placa);
+            setVal('cv-f-vehiculo-txt', placa);
+        }
+        if (conductor) {
+            setVal('cv-f-conductor', conductor);
+            setVal('cv-f-conductor-txt', conductor);
+        }
+        if (ruta) {
+            setVal('cv-f-ruta', ruta);
+        }
+
+        const infoBox = getEl('cv_viaje_seleccionado_info');
+        const lblNum = getEl('cv_lbl_viaje_num');
+        const lblDet = getEl('cv_lbl_viaje_detalles');
+        if (infoBox) infoBox.classList.remove('d-none');
+        if (lblNum) lblNum.textContent = numViaje;
+        if (lblDet) lblDet.textContent = `Tracto: ${placa || '—'} | Conductor: ${conductor || '—'} | Ruta: ${ruta || '—'}`;
+
+        window.cvHideViajeDropdown();
+    };
+
+    window.cvLimpiarViajeVinculado = function(limpiarCampos = false) {
+        setVal('cv-f-viaje', '');
+        setVal('cv_orden_viaje-txt', '');
+        const btnClear = getEl('cv_btn_clear_viaje');
+        if (btnClear) btnClear.classList.add('d-none');
+        const infoBox = getEl('cv_viaje_seleccionado_info');
+        if (infoBox) infoBox.classList.add('d-none');
+
+        if (limpiarCampos) {
+            setVal('cv-f-vehiculo', '');
+            setVal('cv-f-vehiculo-txt', '');
+            setVal('cv-f-conductor', '');
+            setVal('cv-f-conductor-txt', '');
+            setVal('cv-f-ruta', '');
+        }
+    };
+
+    // ── DROPDOWNS PARA PLACAS Y CONDUCTORES ────────────────────────────
+    window.cvFiltrarPlacaDropdown = function() {
+        const txt = getVal('cv-f-vehiculo-txt').toUpperCase().trim();
+        const dd = getEl('cv-f-vehiculo-dd');
+        if (!dd) return;
+
+        const placas = (window._cvCatalogos?.placas || []).filter(p => p.includes(txt));
+        if (placas.length === 0) {
+            dd.classList.add('d-none');
             return;
         }
 
-        const fmtFecha = (f) => {
-            if (!f) return '—';
-            const d = new Date(f);
-            if (isNaN(d.getTime())) return f;
-            const pad = (n) => String(n).padStart(2, '0');
-            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-        };
-
-        let html = '';
-        items.forEach(r => {
-            const sunatBadge = (r.estado_sunat || '').toUpperCase() === 'ACEPTADA'
-                ? '<span class="badge bg-success bg-opacity-10 text-success fw-bold px-2 py-0.5">ACEPTADA</span>'
-                : `<span class="badge bg-secondary bg-opacity-10 text-secondary fw-bold px-2 py-0.5">${r.estado_sunat || 'EMITIDA'}</span>`;
-
-            const pagoBadge = (r.estado_pago || '').toUpperCase() === 'PAGADO'
-                ? '<span class="badge" style="background:#059669; color:#fff; font-size:0.68rem; font-weight:700;">PAGADO</span>'
-                : '<span class="badge" style="background:#dc2626; color:#fff; font-size:0.68rem; font-weight:700;">PENDIENTE</span>';
-
-            html += `
-                <tr>
-                    <td>${fmtFecha(r.fecha_abastecimiento || r.fecha)}</td>
-                    <td><span class="font-monospace fw-bold text-dark">${r.comprobante || '—'}</span></td>
-                    <td class="text-truncate fw-semibold" style="max-width:180px;">${r.proveedor || '—'}</td>
-                    <td><span class="font-monospace small text-muted">${r.proveedor_ruc || '—'}</span></td>
-                    <td><span class="fw-bold text-primary font-monospace">${r.placa || '—'}</span></td>
-                    <td class="text-truncate" style="max-width:140px;">${r.conductor || '—'}</td>
-                    <td class="text-end font-monospace fw-bold">${parseFloat(r.galones || 0).toFixed(2)}</td>
-                    <td class="text-end font-monospace">S/ ${parseFloat(r.costo_por_galon || 0).toFixed(2)}</td>
-                    <td class="text-end font-monospace fw-bold text-success">S/ ${parseFloat(r.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
-                    <td>${sunatBadge}</td>
-                    <td>${pagoBadge}</td>
-                </tr>
-            `;
-        });
-        tbody.innerHTML = html;
+        dd.innerHTML = placas.slice(0, 10).map(p => `
+            <div class="cv-dd-item" onmousedown="window.cvSeleccionarPlaca('${p}')">
+                <strong class="font-monospace">${p}</strong>
+            </div>
+        `).join('');
+        dd.classList.remove('d-none');
     };
 
-    window.cvFiltrarComprasExternas = function(q) {
-        const query = (q || '').toLowerCase().trim();
-        if (!query) {
-            window.cvRenderComprasExternas(window._cvComprasExternasData);
+    window.cvHidePlacaDropdown = function() {
+        setTimeout(() => {
+            const dd = getEl('cv-f-vehiculo-dd');
+            if (dd) dd.classList.add('d-none');
+            const txt = getVal('cv-f-vehiculo-txt').toUpperCase().trim();
+            setVal('cv-f-vehiculo', txt);
+        }, 200);
+    };
+
+    window.cvSeleccionarPlaca = function(placa) {
+        setVal('cv-f-vehiculo', placa);
+        setVal('cv-f-vehiculo-txt', placa);
+        window.cvHidePlacaDropdown();
+    };
+
+    window.cvFiltrarConductorDropdown = function() {
+        const txt = getVal('cv-f-conductor-txt').toUpperCase().trim();
+        const dd = getEl('cv-f-conductor-dd');
+        if (!dd) return;
+
+        const conductores = (window._cvCatalogos?.conductores || []).filter(c => c.toUpperCase().includes(txt));
+        if (conductores.length === 0) {
+            dd.classList.add('d-none');
             return;
         }
-        const filtered = window._cvComprasExternasData.filter(r => 
-            (r.comprobante || '').toLowerCase().includes(query) ||
-            (r.proveedor || '').toLowerCase().includes(query) ||
-            (r.placa || '').toLowerCase().includes(query) ||
-            (r.conductor || '').toLowerCase().includes(query)
-        );
-        window.cvRenderComprasExternas(filtered);
+
+        dd.innerHTML = conductores.slice(0, 10).map(c => `
+            <div class="cv-dd-item" onmousedown="window.cvSeleccionarConductor('${esc(c)}')">
+                <span>${esc(c)}</span>
+            </div>
+        `).join('');
+        dd.classList.remove('d-none');
     };
 
-    window.cvImprimirTabla = function() {
+    window.cvHideConductorDropdown = function() {
+        setTimeout(() => {
+            const dd = getEl('cv-f-conductor-dd');
+            if (dd) dd.classList.add('d-none');
+            const txt = getVal('cv-f-conductor-txt').trim();
+            setVal('cv-f-conductor', txt);
+        }, 200);
+    };
+
+    window.cvSeleccionarConductor = function(c) {
+        setVal('cv-f-conductor', c);
+        setVal('cv-f-conductor-txt', c);
+        window.cvHideConductorDropdown();
+    };
+
+    // ── VER DETALLE (VOUCHER IMPRIMIBLE) ───────────────────────────────
+    window.cvVerDetalle = async function(id) {
+        let item = (window._cvData || []).find(r => r.id === id || String(r.id) === String(id));
+        if (!item) {
+            try {
+                const r = await fetch(`/api/combustible/vales/${id}`);
+                const j = await r.json();
+                if (j && j.ok && j.data) item = j.data;
+            } catch (e) {}
+        }
+        if (!item) return;
+
+        setText('cv-det-folio-lbl', `VALE DE COMBUSTIBLE ${item.correlativo || ('#' + item.id)}`);
+        setText('cv-det-fecha-lbl', formatFecha(item.fecha));
+        setText('cv-det-placa', item.vehiculo || '—');
+        setText('cv-det-viaje', item.viaje || 'SIN VIAJE');
+        setText('cv-det-conductor', item.conductor || '—');
+        setText('cv-det-ruta', item.ruta || '—');
+        setText('cv-det-estacion', item.estacion || item.proveedor || '—');
+        setText('cv-det-combustible', item.tipo_combustible || 'D2');
+        setText('cv-det-km', `${parseFloat(item.kilometraje || 0).toLocaleString()} Km`);
+        setText('cv-det-galones', `${parseFloat(item.galones || 0).toFixed(2)} Gln`);
+        setText('cv-det-costo-gl', `S/ ${parseFloat(item.costo_gl || 0).toFixed(2)}`);
+        setText('cv-det-importe', `S/ ${parseFloat(item.importe || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        setText('cv-det-comprobante', item.numero_comprobante || '—');
+
+        const badgePago = getEl('cv-det-estado-pago');
+        if (badgePago) {
+            const esPagado = (item.estado_pago || '').toUpperCase() === 'PAGADO';
+            badgePago.className = esPagado ? 'badge bg-success' : 'badge bg-danger';
+            badgePago.textContent = esPagado ? 'PAGADO' : 'NO PAGADO';
+        }
+
+        const obsBox = getEl('cv-det-obs-box');
+        if (obsBox) {
+            if (item.observacion) {
+                obsBox.style.display = 'block';
+                setText('cv-det-obs', item.observacion);
+            } else {
+                obsBox.style.display = 'none';
+            }
+        }
+
+        const modalEl = getEl('cvModalDetalle');
+        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    };
+
+    window.cvImprimirDetalle = function() {
         window.print();
     };
 
-    window.cvLimpiarFiltros = function() {
-        const getTodayPeru = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-        const today = getTodayPeru();
-        const s = document.getElementById('cv-filter-search'); if (s) s.value = '';
-        const p = document.getElementById('cv-filter-placa'); if (p) p.value = 'ALL';
-        const e = document.getElementById('cv-filter-estado'); if (e) e.value = 'ALL';
-        const c = document.getElementById('cv-filter-combustible'); if (c) c.value = 'ALL';
-        const fd = document.getElementById('cv-filter-fecha-desde'); if (fd) fd.value = today;
-        const fh = document.getElementById('cv-filter-fecha-hasta'); if (fh) fh.value = today;
-        window.cvCargarDatos(1);
+    // ── ELIMINACIÓN INDIVIDUAL (APPLE CIRCULAR DIALOG) ─────────────────
+    window.cvSolicitarEliminar = function(id) {
+        window._cvIdAEliminar = id;
+        setText('lbl-cv-delete-subtext', `¿Estás seguro de que deseas anular/eliminar el vale #${id}? Esta acción actualizará los registros.`);
+        const modalEl = getEl('modalEliminarValeConfirm');
+        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
 
-    // Auto-inicializar
+    window.cvEjecutarEliminacion = async function() {
+        const id = window._cvIdAEliminar;
+        if (!id) return;
+
+        try {
+            const res = await fetch(`/api/combustible/vales/${id}?hard=true&modulo=operaciones`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.ok) {
+                const modalEl = getEl('modalEliminarValeConfirm');
+                if (modalEl) {
+                    const inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                }
+                window._cvSeleccionados.delete(id);
+                window.cvCargarDatos(window._cvPaginaActual);
+            } else {
+                alert(`Error: ${data.error || 'No se pudo eliminar el vale'}`);
+            }
+        } catch (e) {
+            alert('Error al conectar con el servidor.');
+        }
+    };
+
+    // ── ELIMINACIÓN MASIVA ─────────────────────────────────────────────
+    window.cvEliminarSeleccionados = async function() {
+        const count = window._cvSeleccionados.size;
+        if (count === 0) return;
+
+        if (!confirm(`¿Estás seguro de eliminar los ${count} vales seleccionados?`)) return;
+
+        try {
+            const res = await fetch('/api/combustible/vales/eliminar-masivo?hard=true&modulo=operaciones', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: Array.from(window._cvSeleccionados), modulo: 'operaciones' })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                window._cvSeleccionados.clear();
+                window.cvCargarDatos(window._cvPaginaActual);
+            } else {
+                alert(`Error: ${data.error || 'No se pudieron eliminar los vales'}`);
+            }
+        } catch (e) {
+            alert('Error de conexión al eliminar vales.');
+        }
+    };
+
+    // ── IMPORTACIÓN EXCEL ──────────────────────────────────────────────
+    window.cvAbrirModalImportar = function() {
+        window._cvParsedImportData = [];
+        const box = getEl('cv-import-preview-box');
+        if (box) box.classList.add('d-none');
+        const btn = getEl('cv-btn-confirmar-import');
+        if (btn) btn.disabled = true;
+        const input = getEl('cv-file-input');
+        if (input) input.value = '';
+
+        const modalEl = getEl('cvModalImportar');
+        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    };
+
+    window.cvProcesarArchivoExcel = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (typeof XLSX === 'undefined') {
+            alert('La librería SheetJS (XLSX) no está cargada.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+                if (rows.length === 0) {
+                    alert('El archivo no contiene filas de datos.');
+                    return;
+                }
+
+                window._cvParsedImportData = rows;
+                setText('cv-import-filename', file.name);
+                setText('cv-import-count-badge', `${rows.length.toLocaleString()} vales detectados`);
+
+                const tbody = getEl('cv-import-preview-tbody');
+                if (tbody) {
+                    tbody.innerHTML = rows.slice(0, 5).map(r => `
+                        <tr>
+                            <td>${esc(r.FECHA || r.fecha || '—')}</td>
+                            <td><strong>${esc(r.VEHICULO || r.vehiculo || r.PLACA || r.placa || '—')}</strong></td>
+                            <td>${esc(r.CONDUCTOR || r.conductor || '—')}</td>
+                            <td>${esc(r.RUTA || r.ruta || '—')}</td>
+                            <td>${esc(r.ESTACIÓN || r.ESTACION || r.estacion || r.PROVEEDOR || '—')}</td>
+                            <td class="text-end text-primary fw-bold">${esc(r.GALONES || r.galones || '0')}</td>
+                            <td class="text-end text-success fw-bold">${esc(r.IMPORTE || r.importe || '0')}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                const box = getEl('cv-import-preview-box');
+                if (box) box.classList.remove('d-none');
+                const btn = getEl('cv-btn-confirmar-import');
+                if (btn) btn.disabled = false;
+            } catch (err) {
+                alert('Error al leer el archivo Excel: ' + err.message);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    window.cvConfirmarImportacion = async function() {
+        if (!window._cvParsedImportData || window._cvParsedImportData.length === 0) return;
+
+        const btn = getEl('cv-btn-confirmar-import');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Importando...`;
+        }
+
+        try {
+            const res = await fetch('/api/combustible/vales/importar-masivo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vales: window._cvParsedImportData, modulo: 'operaciones' })
+            });
+            const data = await res.json();
+
+            if (data.ok) {
+                alert(`✅ ${data.mensaje || 'Importación completada'}`);
+                const modalEl = getEl('cvModalImportar');
+                if (modalEl) {
+                    const inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                }
+                window.cvCargarCatalogos();
+                window.cvCargarDatos(1);
+            } else {
+                alert(`Error al importar: ${data.error || 'Falló la inserción'}`);
+            }
+        } catch (e) {
+            alert('Error de conexión al importar los vales.');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-check-lg"></i> Importar Vales al ERP`;
+            }
+        }
+    };
+
+    // ── EXPORTACIÓN EXCEL ──────────────────────────────────────────────
+    window.cvExportarExcel = async function() {
+        if (typeof XLSX === 'undefined') {
+            alert('Librería SheetJS no disponible.');
+            return;
+        }
+
+        const params = new URLSearchParams({ limit: 5000, modulo: 'operaciones' });
+        const s = getVal('cv-buscador');
+        const p = getVal('cv-filter-placa');
+        const fd = getVal('cv-filter-fecha-desde');
+        const fh = getVal('cv-filter-fecha-hasta');
+        const e = window._cvEstadoFiltro;
+
+        if (s) params.append('search', s.trim());
+        if (p && p !== 'ALL') params.append('placa', p);
+        if (e && e !== 'TODOS') params.append('estado', e);
+        if (fd) params.append('fecha_desde', fd);
+        if (fh) params.append('fecha_hasta', fh);
+
+        try {
+            const res = await fetch(`/api/combustible/vales?${params.toString()}`);
+            const data = await res.json();
+            const rows = data.ok ? data.data : window._cvData;
+
+            if (!rows || rows.length === 0) {
+                alert('No hay vales para exportar.');
+                return;
+            }
+
+            const exportData = rows.map(r => ({
+                "CORRELATIVO": r.correlativo || ('#' + r.id),
+                "FECHA": r.fecha,
+                "ESTADO": r.estado,
+                "ESTADO PAGO": r.estado_pago,
+                "VEHÍCULO": r.vehiculo,
+                "VIAJE": r.viaje,
+                "CONDUCTOR": r.conductor,
+                "RUTA": r.ruta,
+                "ESTACIÓN": r.estacion,
+                "TIPO COMBUSTIBLE": r.tipo_combustible,
+                "PROVEEDOR": r.proveedor,
+                "KILOMETRAJE": r.kilometraje,
+                "PESO (Tn)": r.peso_tn,
+                "GALONES": r.galones,
+                "COSTO/GL": r.costo_gl,
+                "IMPORTE": r.importe,
+                "NÚMERO COMPROBANTE": r.numero_comprobante,
+                "TIPO PAGO": r.tipo_pago,
+                "MONEDA": r.moneda,
+                "OBSERVACIÓN": r.observacion
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Vales_Combustible");
+            XLSX.writeFile(wb, `Vales_Combustible_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        } catch (e) {
+            alert('Error exportando vales a Excel.');
+        }
+    };
+
+    // Auto-ejecución al cargar el script
     window.inicializarModuloCombustibleVales();
 })();

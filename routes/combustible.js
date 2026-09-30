@@ -968,6 +968,116 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ============================================================
+    // 6.1 🔍 OBTENER DETALLE DE VALE POR ID
+    // ============================================================
+    router.get('/vales/:id', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const valesTable = getValesTable(req);
+            const id = req.params.id;
+
+            const [rows] = await tdb.query(
+                `SELECT *, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha FROM ${valesTable} WHERE id = ? LIMIT 1`,
+                [id]
+            );
+
+            if (!rows || rows.length === 0) {
+                return res.status(404).json({ ok: false, error: 'Vale no encontrado.' });
+            }
+
+            res.json({ ok: true, data: rows[0] });
+        } catch (err) {
+            console.error("Error obteniendo vale individual:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // ============================================================
+    // 6.2 📦 CATÁLOGOS Y CORRELATIVO SIGUIENTE PARA VALES
+    // ============================================================
+    router.get('/catalogos', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const valesTable = getValesTable(req);
+
+            let placas = [];
+            let conductores = [];
+            let proveedores = [];
+            let estaciones = [];
+            let combustibles = ['D2', 'GASOHOL 95', 'GASOHOL 90', 'GLP', 'GNV', 'UREA'];
+
+            try {
+                const [pRows] = await tdb.query("SELECT DISTINCT placa FROM placas WHERE placa IS NOT NULL AND placa != '' ORDER BY placa ASC");
+                placas = pRows.map(r => r.placa.trim().toUpperCase());
+            } catch (e) {}
+
+            try {
+                const [cRows] = await tdb.query("SELECT DISTINCT nombre FROM conductores WHERE nombre IS NOT NULL AND nombre != '' ORDER BY nombre ASC");
+                conductores = cRows.map(r => r.nombre.trim());
+            } catch (e) {}
+
+            try {
+                const [pvRows] = await tdb.query("SELECT DISTINCT proveedor_razon_social, proveedor_ruc, estaciones_nombres FROM combustible_estaciones_proveedores ORDER BY proveedor_razon_social ASC");
+                proveedores = pvRows;
+            } catch (e) {}
+
+            // Buscar también en vales históricos para asegurar catálogos completos
+            try {
+                const [histPlacas] = await tdb.query(`SELECT DISTINCT vehiculo FROM ${valesTable} WHERE vehiculo != ''`);
+                histPlacas.forEach(h => {
+                    const pl = h.vehiculo.trim().toUpperCase();
+                    if (pl && !placas.includes(pl)) placas.push(pl);
+                });
+            } catch (e) {}
+
+            try {
+                const [histCond] = await tdb.query(`SELECT DISTINCT conductor FROM ${valesTable} WHERE conductor != ''`);
+                histCond.forEach(h => {
+                    const cd = h.conductor.trim();
+                    if (cd && !conductores.includes(cd)) conductores.push(cd);
+                });
+            } catch (e) {}
+
+            try {
+                const [histComb] = await tdb.query(`SELECT DISTINCT tipo_combustible FROM ${valesTable} WHERE tipo_combustible != ''`);
+                histComb.forEach(h => {
+                    const cb = h.tipo_combustible.trim();
+                    if (cb && !combustibles.includes(cb)) combustibles.push(cb);
+                });
+            } catch (e) {}
+
+            // Calcular siguiente correlativo para el año actual
+            const year = new Date().getFullYear();
+            let siguienteCorrelativo = `${year}-00000001`;
+            try {
+                const [lastCorr] = await tdb.query(
+                    `SELECT correlativo FROM ${valesTable} WHERE correlativo LIKE ? ORDER BY id DESC LIMIT 1`,
+                    [`${year}-%`]
+                );
+                if (lastCorr && lastCorr.length > 0 && lastCorr[0].correlativo) {
+                    const parts = lastCorr[0].correlativo.split('-');
+                    if (parts.length === 2 && !isNaN(parseInt(parts[1], 10))) {
+                        const nextNum = parseInt(parts[1], 10) + 1;
+                        siguienteCorrelativo = `${year}-${String(nextNum).padStart(8, '0')}`;
+                    }
+                }
+            } catch (e) {}
+
+            res.json({
+                ok: true,
+                placas: placas.sort(),
+                conductores: conductores.sort(),
+                proveedores,
+                combustibles,
+                siguienteCorrelativo
+            });
+        } catch (err) {
+            console.error("Error obteniendo catálogos de combustible:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // ============================================================
     // 7. 🗑️ ELIMINAR O ANULAR VALE INDIVIDUAL
     // ============================================================
     router.delete('/vales/:id', async (req, res) => {
