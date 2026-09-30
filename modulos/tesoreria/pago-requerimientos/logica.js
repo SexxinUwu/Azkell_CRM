@@ -777,37 +777,69 @@
             provEl.textContent = pText;
         }
 
+        // Nodos del Stepper y Fechas
+        const stepDate1 = document.getElementById('pr-det-oc-step-date-1');
+        if (stepDate1) stepDate1.textContent = formatearFechaHora(item.fecha || item.created_at);
+
+        const stepUser2 = document.getElementById('pr-det-oc-step-user-2');
+        if (stepUser2) stepUser2.textContent = item.aprobador_nombre || item.aprobado_por || 'Gerencia';
+
+        const estNorm = (item.estado || 'APROBADA').toUpperCase();
+        const esProcesada = estNorm === 'PROCESADO' || estNorm === 'PROCESADA' || estNorm === 'PAGADO' || estNorm === 'PAGADA';
+
+        const stepLine = document.getElementById('pr-det-oc-stepper-line');
+        if (stepLine) stepLine.style.width = esProcesada ? '75%' : '50%';
+
+        const stepNode3 = document.getElementById('pr-det-oc-step-node-3');
+        const stepStatus3 = document.getElementById('pr-det-oc-step-status-3');
+        if (stepNode3) {
+            if (esProcesada) {
+                stepNode3.className = 'rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-white shadow-sm';
+                stepNode3.style.cssText = 'width: 36px; height: 36px; background: #10b981; font-size: 0.85rem; border: 3px solid #fff;';
+                stepNode3.innerHTML = '<i class="bi bi-check-lg"></i>';
+                if (stepStatus3) stepStatus3.textContent = 'Pago Registrado';
+            } else {
+                stepNode3.className = 'rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-secondary shadow-sm';
+                stepNode3.style.cssText = 'width: 36px; height: 36px; background: #fff; border: 2px solid #cbd5e1; font-size: 0.85rem;';
+                stepNode3.innerHTML = '<i class="bi bi-credit-card"></i>';
+                if (stepStatus3) stepStatus3.textContent = 'Por Liquidar';
+            }
+        }
+
         const estEl = document.getElementById('pr-det-oc-estado');
+        const descEstEl = document.getElementById('pr-det-oc-desc-estado');
         if (estEl) {
-            const estNorm = (item.estado || 'APROBADA').toUpperCase();
-            let badgeHtml = '<span class="badge bg-success fw-bold px-2.5 py-1" style="font-size:0.75rem;">APROBADA</span>';
-            if (estNorm === 'PROCESADO' || estNorm === 'PROCESADA' || estNorm === 'PAGADO' || estNorm === 'PAGADA') {
-                badgeHtml = '<span class="badge bg-primary fw-bold px-2.5 py-1" style="font-size:0.75rem;">PROCESADA</span>';
+            let badgeHtml = '<span class="badge rounded-pill fw-bold" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.75rem; padding: 6px 14px;"><i class="bi bi-shield-check me-1"></i> APROBADA</span>';
+            if (esProcesada) {
+                badgeHtml = '<span class="badge rounded-pill fw-bold" style="background:#e0f2fe; color:#0284c7; border:1px solid #38bdf8; font-size:0.75rem; padding: 6px 14px;"><i class="bi bi-credit-card me-1"></i> PROCESADA</span>';
+                if (descEstEl) descEstEl.textContent = 'Pago registrado y procesado exitosamente por Tesorería.';
+            } else {
+                if (descEstEl) descEstEl.textContent = 'Orden aprobada con visto bueno gerencial, pendiente de pago.';
             }
             const aprobador = item.aprobador_nombre || item.aprobado_por;
             if (aprobador) {
-                badgeHtml += ' <span class="ms-2 text-dark fw-bold" style="font-size:0.8rem;"><i class="bi bi-person-check-fill text-success me-1"></i>Aprobado por: ' + escapeHtml(aprobador) + '</span>';
+                badgeHtml += ' <span class="ms-2 text-dark fw-bold" style="font-size:0.78rem;"><i class="bi bi-person-check-fill text-success me-1"></i>Por: ' + escapeHtml(aprobador) + '</span>';
             }
             estEl.innerHTML = badgeHtml;
         }
 
-        // Adjuntos
+        // Adjuntos (Píldoras estilizadas)
         const cotAdjEl = document.getElementById('pr-det-oc-adj-cotizacion');
         if (cotAdjEl) {
             const urlCot = item.url_cotizacion_presigned || item.url_cotizacion;
-            cotAdjEl.innerHTML = urlCot ? `<a href="${urlCot}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-file-earmark-text"></i> Ver Cotización</a>` : `<span class="text-muted fst-italic">Sin archivo</span>`;
+            cotAdjEl.innerHTML = urlCot ? `<a href="${urlCot}" target="_blank" class="badge rounded-pill fw-bold text-decoration-none" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.68rem;"><i class="bi bi-file-earmark-check me-1"></i> Cotización</a>` : `<span class="badge rounded-pill text-muted bg-light border fw-normal" style="font-size:0.68rem; font-style: italic;">Sin cotización</span>`;
         }
 
         const facAdjEl = document.getElementById('pr-det-oc-adj-factura');
         if (facAdjEl) {
             const urlFac = item.url_factura_presigned || item.url_factura;
-            facAdjEl.innerHTML = urlFac ? `<a href="${urlFac}" target="_blank" class="text-success fw-bold text-decoration-none"><i class="bi bi-file-earmark-check"></i> Ver Factura</a>` : `<span class="text-muted fst-italic">Sin archivo</span>`;
+            facAdjEl.innerHTML = urlFac ? `<a href="${urlFac}" target="_blank" class="badge rounded-pill fw-bold text-decoration-none" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.68rem;"><i class="bi bi-file-earmark-check me-1"></i> Factura</a>` : `<span class="badge rounded-pill text-muted bg-light border fw-normal" style="font-size:0.68rem; font-style: italic;">Sin factura</span>`;
         }
 
         const vouAdjEl = document.getElementById('pr-det-oc-adj-voucher');
         if (vouAdjEl) {
             const urlVou = item.url_voucher_presigned || item.url_voucher;
-            vouAdjEl.innerHTML = urlVou ? `<a href="${urlVou}" target="_blank" class="text-danger fw-bold text-decoration-none"><i class="bi bi-file-earmark-pdf"></i> Ver Voucher</a>` : `<span class="text-muted fst-italic">Sin archivo</span>`;
+            vouAdjEl.innerHTML = urlVou ? `<a href="${urlVou}" target="_blank" class="badge rounded-pill fw-bold text-decoration-none" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; font-size:0.68rem;"><i class="bi bi-file-earmark-check me-1"></i> Voucher</a>` : `<span class="badge rounded-pill text-muted bg-light border fw-normal" style="font-size:0.68rem; font-style: italic;">Sin voucher</span>`;
         }
 
         // Artículos
@@ -818,9 +850,14 @@
         const sym = esUSD ? 'US$ ' : 'S/ ';
         let totalCalc = 0;
 
+        const badgeRenglones = document.getElementById('pr-det-oc-table-renglones-badge');
+        if (badgeRenglones) {
+            badgeRenglones.textContent = `${items.length} ${items.length === 1 ? 'Renglón' : 'Renglones'}`;
+        }
+
         if (tbody) {
             if (items.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3 fst-italic">${item.motivo ? escapeHtml(item.motivo) : 'No hay artículos registrados en esta orden.'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3 fst-italic">${item.motivo ? escapeHtml(item.motivo) : 'No hay artículos registrados en esta orden.'}</td></tr>`;
             } else {
                 tbody.innerHTML = items.map((it, idx) => {
                     const cant = parseFloat(it.cantidad || 0);
@@ -830,6 +867,7 @@
 
                     let codArt = (it.inventario_id || it.codigo || it.cod_art || '').trim();
                     let rawDesc = (it.descripcion || it.nombre_producto || it.item || '').trim();
+                    const um = (it.unidad_medida || it.unidad || 'UND').toUpperCase();
 
                     // Detectar y limpiar prefijos de código en la descripción (ej. "SERV-0007 — DESCRIPCIÓN")
                     const matchPrefijo = rawDesc.match(/^([A-Z0-9_\-\.]+)\s*[—\-–]\s*(.+)$/i);
@@ -851,12 +889,13 @@
 
                     return `
                         <tr>
-                            <td class="text-center fw-bold text-secondary">${idx + 1}</td>
-                            <td class="text-center fw-bold text-dark">${cant.toLocaleString('es-PE', { maximumFractionDigits: 3 })}</td>
-                            <td class="text-center font-monospace fw-bold text-dark">${escapeHtml(codArt)}</td>
-                            <td class="fw-semibold text-dark">${escapeHtml(descArt)}</td>
-                            <td class="text-end fw-semibold text-dark">${sym}${cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                            <td class="text-end fw-bold text-dark">${sym}${imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td class="ps-3 py-3 text-center text-muted fw-bold text-xs">${idx + 1}</td>
+                            <td class="py-3"><span class="badge bg-white text-dark border font-monospace fw-bold shadow-2xs" style="font-size:0.75rem;">${escapeHtml(codArt)}</span></td>
+                            <td class="py-3 text-start fw-bold text-dark text-xs">${escapeHtml(descArt)}</td>
+                            <td class="py-3 text-center"><span class="badge bg-light text-secondary border font-monospace" style="font-size:0.68rem;">${escapeHtml(um)}</span></td>
+                            <td class="py-3 text-center font-mono font-bold text-dark text-xs">${cant.toLocaleString('es-PE', { maximumFractionDigits: 3 })}</td>
+                            <td class="py-3 text-end font-mono text-secondary text-xs">${sym}${cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td class="pe-3 py-3 text-end font-mono font-bold text-dark text-xs">${sym}${imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         </tr>
                     `;
                 }).join('');
