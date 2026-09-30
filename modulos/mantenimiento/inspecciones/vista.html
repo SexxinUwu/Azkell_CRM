@@ -817,6 +817,11 @@
         <option value="12">Diciembre</option>
       </select>
 
+      <!-- Filtro Empresa / Cliente -->
+      <select id="filtroInspEmpresa" class="form-select form-select-sm rounded-3 bg-white border fw-semibold text-secondary shadow-2xs" style="max-width: 170px; height: 38px;" onchange="window.filtrarStatusAvanzado()" title="Filtrar por Empresa / Cliente">
+        <option value="">Empresa: Todas</option>
+      </select>
+
       <button onclick="window.limpiarFiltrosInsp()" class="btn btn-light bg-white border text-secondary rounded-3 shadow-2xs" style="height:38px; width:38px; display:flex; align-items:center; justify-content:center;" title="Limpiar todos los filtros">
         <i class="bi bi-x-lg"></i>
       </button>

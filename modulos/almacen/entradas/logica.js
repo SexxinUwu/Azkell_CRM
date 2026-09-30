@@ -36,7 +36,25 @@ window._entInvData   = window._entInvData   || [];
 window._entProvItems = window._entProvItems || [];
 window._entDetalleId = window._entDetalleId || null;
 window._entIgvMode   = window._entIgvMode   || 'sin_igv';
+window._entVistaModo = window._entVistaModo || 'articulos';
 var _ENT_POR_PAG = 20;
+
+window._entCambiarModoVista = function(modo, btn) {
+    window._entVistaModo = modo || 'articulos';
+    var switcher = document.getElementById('ent-view-switcher');
+    if (switcher) {
+        switcher.querySelectorAll('.ck-segment-item').forEach(function(b) {
+            b.classList.remove('active');
+        });
+    }
+    if (btn) {
+        btn.classList.add('active');
+    } else {
+        var activeBtn = document.getElementById('ent-btn-view-' + window._entVistaModo);
+        if (activeBtn) activeBtn.classList.add('active');
+    }
+    window._entRender();
+};
 
 function _entFmtFechaHora(iso, createdAt) {
     var raw = createdAt || iso;
@@ -1745,35 +1763,78 @@ window._entRender = function() {
         </div>
         `;
 
+        var accionesHtml =
+            '<div class="d-flex gap-1 justify-content-center align-items-center">' +
+                '<button class="btn btn-xs btn-outline-info" onclick="event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\')" title="Subir / Adjuntar Archivos"><i class="bi bi-paperclip"></i></button>' +
+                '<button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver PDF"><i class="bi bi-eye"></i></button>' +
+                (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="event.stopPropagation(); window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-pencil"></i></button>') +
+                (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="event.stopPropagation(); window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-trash"></i></button>') +
+            '</div>';
+
+        var provHtml = d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>';
+        var ccHtml = '<span class="badge font-monospace fw-bold" style="font-size:0.74rem; background:#eff6ff; color:#0f172a !important; border:1px solid #bfdbfe; border-radius:6px; padding:3px 8px;">' + _entEsc(d.centro_costo || 'CC-100') + '</span>';
+        var codeHtml = '<span class="btn-oc-code" onclick="event.stopPropagation(); window.abrirModalDetalleOC(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(codLimpio) + '</span>';
+
+        // MODO 1: POR ÓRDENES (1 FILA CONSOLIDADA)
+        if (window._entVistaModo === 'ordenes') {
+            var trOrd = document.createElement('tr');
+            trOrd.className = activeCls.trim();
+
+            var descResumen = 'Sin artículos';
+            if (items.length === 1) {
+                descResumen = _entEsc(_entDescLimpia(items[0].descripcion, items[0].inventario_id));
+            } else if (items.length > 1) {
+                var firstDesc = _entEsc(_entDescLimpia(items[0].descripcion, items[0].inventario_id));
+                descResumen = '<div class="d-flex align-items-center gap-1">' +
+                    '<span class="text-truncate" style="max-width:180px;" title="' + firstDesc + '">' + firstDesc + '</span>' +
+                    '<span class="badge bg-secondary-subtle text-secondary border fw-bold" style="font-size:0.68rem; flex-shrink:0;">+' + (items.length - 1) + ' más</span>' +
+                '</div>';
+            }
+
+            trOrd.innerHTML =
+                '<td class="ps-3 text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' + accionesHtml + '</td>' +
+                '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
+                '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
+                '<td class="text-center" style="vertical-align:middle;">' + codeHtml + '</td>' +
+                '<td class="text-center">' + estadoHtml + '</td>' +
+                '<td>' + placaHtml + '</td>' +
+                '<td>' + motivoHtml + '</td>' +
+                '<td>' + provHtml + '</td>' +
+                '<td><span class="badge bg-light text-primary border font-monospace fw-bold" style="font-size:0.72rem;">' + countItems + (countItems === 1 ? ' Ítem' : ' Ítems') + '</span></td>' +
+                '<td class="col-articulo text-dark fw-semibold" style="font-size:.80rem;">' + descResumen + '</td>' +
+                '<td class="text-end text-dark fw-bold" style="font-size:.80rem;">' + totalCant.toLocaleString('es-PE', {maximumFractionDigits:2}) + ' u.</td>' +
+                '<td class="text-end text-muted small">—</td>' +
+                '<td class="text-end" style="white-space:nowrap;">' + totalFmt + '</td>' +
+                '<td>' + ccHtml + '</td>' +
+                '<td class="text-center">' + vHTML + '</td>' +
+                '<td class="text-center">' + cHTML + '</td>' +
+                '<td class="text-center pe-3">' + fHTML + '</td>';
+            tbody.appendChild(trOrd);
+            return;
+        }
+
+        // MODO 2: POR ARTÍCULOS (DETALLE DE ÍTEMS)
         if (!items.length) {
             var tr0 = document.createElement('tr');
             tr0.className = activeCls.trim();
             tr0.innerHTML =
-                '<td class="ps-3 text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.abrirModalDetalleOC(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(codLimpio) + '</span></td>' +
-                '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
+                '<td class="ps-3 text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' + accionesHtml + '</td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
+                '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
+                '<td class="text-center" style="vertical-align:middle;">' + codeHtml + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
-                '<td>' + aprobadorHtml + '</td>' +
-                '<td><span class="badge font-monospace fw-bold" style="font-size:0.74rem; background:#eff6ff; color:#0f172a !important; border:1px solid #bfdbfe; border-radius:6px; padding:3px 8px;">' + _entEsc(d.centro_costo || 'CC-100') + '</span></td>' +
                 '<td>' + placaHtml + '</td>' +
                 '<td>' + motivoHtml + '</td>' +
-                '<td>' + (d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
-                '<td class="text-dark font-monospace fw-bold" style="font-size:.75rem;white-space:nowrap;"></td>' +
+                '<td>' + provHtml + '</td>' +
+                '<td class="text-dark font-monospace fw-bold" style="font-size:.75rem;white-space:nowrap;">—</td>' +
                 '<td class="col-articulo text-muted fw-semibold" style="font-size:.78rem;">Sin artículos</td>' +
-                '<td class="text-end"></td>' +
-                '<td class="text-end"></td>' +
+                '<td class="text-end text-muted">—</td>' +
+                '<td class="text-end text-muted">—</td>' +
                 '<td class="text-end" style="white-space:nowrap;">' + totalFmt + '</td>' +
+                '<td>' + ccHtml + '</td>' +
                 '<td class="text-center">' + vHTML + '</td>' +
                 '<td class="text-center">' + cHTML + '</td>' +
-                '<td class="text-center">' + fHTML + '</td>' +
-                '<td class="pe-3 text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
-                    '<div class="d-flex gap-1 justify-content-center">' +
-                        '<button class="btn btn-xs btn-outline-info" onclick="event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\')" title="Subir / Adjuntar Archivos"><i class="bi bi-paperclip"></i></button>' +
-                        '<button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver PDF"><i class="bi bi-eye"></i></button>' +
-                        (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-pencil"></i></button>') +
-                        (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-trash"></i></button>') +
-                    '</div>' +
-                '</td>';
+                '<td class="text-center pe-3">' + fHTML + '</td>';
             tbody.appendChild(tr0);
             return;
         }
@@ -1802,36 +1863,27 @@ window._entRender = function() {
             var cu    = parseFloat(it.costo_unitario || 0);
             var nombre = _entEsc(_entDescLimpia(it.descripcion, it.inventario_id));
             var invId  = _entEsc(it.inventario_id || '—');
-            var provHtml = d.proveedor_nombre ? '<span class="text-dark fw-bold" style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>';
 
             tr.innerHTML =
-                '<td class="ps-3 text-center" style="vertical-align:middle;"><span class="btn-oc-code" onclick="event.stopPropagation(); window.abrirModalDetalleOC(\'' + _entEsc(d.id) + '\')" title="Ver Detalle de la Orden"><i class="bi bi-eye"></i> ' + _entEsc(codLimpio) + '</span></td>' +
-                '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
-                '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + fecha + '</td>' +
-                '<td class="text-center">' + estadoHtml + '</td>' +
-                '<td>' + aprobadorHtml + '</td>' +
-                '<td><span class="badge font-monospace fw-bold" style="font-size:0.74rem; background:#eff6ff; color:#0f172a !important; border:1px solid #bfdbfe; border-radius:6px; padding:3px 8px;">' + _entEsc(d.centro_costo || 'CC-100') + '</span></td>' +
-                '<td>' + placaHtml + '</td>' +
-                '<td>' + motivoHtml + '</td>' +
-                '<td>' + provHtml + '</td>' +
+                '<td class="ps-3 text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
+                    (isFirst ? accionesHtml : '') +
+                '</td>' +
+                '<td style="white-space:nowrap;font-size:.80rem;color:#0f172a;font-weight:600;">' + (isFirst ? fecha : '') + '</td>' +
+                '<td class="text-center" style="vertical-align:middle;">' + (isFirst ? tipoOrdBadge : '') + '</td>' +
+                '<td class="text-center" style="vertical-align:middle;">' + (isFirst ? codeHtml : '') + '</td>' +
+                '<td class="text-center">' + (isFirst ? estadoHtml : '') + '</td>' +
+                '<td>' + (isFirst ? placaHtml : '') + '</td>' +
+                '<td>' + (isFirst ? motivoHtml : '') + '</td>' +
+                '<td>' + (isFirst ? provHtml : '') + '</td>' +
                 '<td class="text-dark font-monospace fw-bold" style="font-size:.75rem;white-space:nowrap;">' + invId + '</td>' +
                 '<td class="col-articulo text-dark fw-semibold" style="font-size:.80rem;">' + nombre + '</td>' +
                 '<td class="text-end text-dark fw-bold" style="font-size:.80rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
                 '<td class="text-end text-dark fw-semibold" style="font-size:.80rem;">' + (d.moneda === 'USD' ? '$ ' : 'S/ ') + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
                 '<td class="text-end" style="white-space:nowrap;">' + (isFirst ? totalFmt : '') + '</td>' +
+                '<td>' + (isFirst ? ccHtml : '') + '</td>' +
                 '<td class="text-center">' + (isFirst ? vHTML : '') + '</td>' +
                 '<td class="text-center">' + (isFirst ? cHTML : '') + '</td>' +
-                '<td class="text-center">' + (isFirst ? fHTML : '') + '</td>' +
-                '<td class="pe-3 text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
-                    (isFirst ?
-                        '<div class="d-flex gap-1 justify-content-center">' +
-                            '<button class="btn btn-xs btn-outline-info" onclick="event.stopPropagation(); window.abrirModalSubirArchivos(\'' + _entEsc(d.id) + '\')" title="Subir / Adjuntar Archivos"><i class="bi bi-paperclip"></i></button>' +
-                            '<button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver PDF"><i class="bi bi-eye"></i></button>' +
-                            (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-pencil"></i></button>') +
-                            (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-trash"></i></button>') +
-                        '</div>'
-                    : '') +
-                '</td>';
+                '<td class="text-center pe-3">' + (isFirst ? fHTML : '') + '</td>';
             tbody.appendChild(tr);
         });
     });
@@ -2848,44 +2900,141 @@ window.exportarEntradasExcel = function() {
     var datos = window._entFiltrados || window._entData || [];
     if (!datos.length) { alert('No hay datos para exportar.'); return; }
 
-    // Una fila por artículo (detalle completo)
-    var cab = ['Código Entrada','Fecha','Proveedor','Nº Factura','Tipo de Orden','Condición Pago','Días Crédito','Moneda',
-               'Código Artículo','Descripción Artículo','Cantidad','Costo Unit.','Importe','Total Entrada PEN','Observaciones'];
-    var filas = [];
+    var headers = [
+        'Código Orden',
+        'Tipo Orden',
+        'Fecha',
+        'Estado',
+        'Aprobador / Solicitante',
+        'Placa',
+        'Motivo',
+        'Proveedor',
+        'Centro de Costo',
+        'Cód. Artículo',
+        'Descripción Artículo',
+        'Cantidad',
+        'Costo Unit.',
+        'Importe Ítem',
+        'Total Orden PEN',
+        'Condición Pago',
+        'Días Crédito',
+        'Moneda',
+        'Voucher',
+        'Cotización',
+        'Factura',
+        'Observaciones'
+    ];
+
+    var rows = [headers];
+
     datos.forEach(function(d) {
+        var codLimpio = String(d.id || '').replace(/^ENT-/i, '');
+        var estNorm = (d.estado || 'REGISTRADA').toUpperCase();
+        var fechaObj = null;
+        if (d.fecha) {
+            try {
+                var fStr = String(d.fecha).split('T')[0].split(' ')[0];
+                fechaObj = new Date(fStr + 'T00:00:00');
+                if (isNaN(fechaObj.getTime())) fechaObj = fStr;
+            } catch(e) { fechaObj = String(d.fecha); }
+        }
+
+        var aprobador = d.aprobador_nombre || d.aprobado_por || d.autoriza || d.solicitante || '';
+        var vUrl = d.url_voucher_presigned || d.url_voucher || '';
+        var cUrl = d.url_cotizacion_presigned || d.url_cotizacion || '';
+        var fUrl = d.url_factura_presigned || d.url_factura || '';
+
         var items = d.items || [];
         if (!items.length) {
-            filas.push([d.id, d.fecha?String(d.fecha).split('T')[0]:'', d.proveedor_nombre||'',
-                d.documento_referencia||'', d.tipo_orden||'Orden de compra', d.condicion_pago||'Al contado', d.condicion_pago === 'A crédito' ? (d.dias_credito||30) : '', d.moneda||'PEN',
-                '','', 0, 0, 0, parseFloat(d.total_pen||0), d.observaciones||'']);
+            rows.push([
+                codLimpio,
+                d.tipo_orden || 'Orden de compra',
+                fechaObj || '',
+                estNorm,
+                aprobador,
+                d.placa || '',
+                d.motivo_entrada || '',
+                d.proveedor_nombre || '',
+                d.centro_costo || 'CC-100',
+                '',
+                'Sin artículos',
+                0,
+                0,
+                0,
+                parseFloat(d.total_pen || 0),
+                d.condicion_pago || 'Al contado',
+                d.condicion_pago === 'A crédito' ? (parseInt(d.dias_credito, 10) || 30) : 0,
+                d.moneda || 'PEN',
+                vUrl ? { t: 's', v: 'Ver Voucher', l: { Target: vUrl } } : '',
+                cUrl ? { t: 's', v: 'Ver Cotización', l: { Target: cUrl } } : '',
+                fUrl ? { t: 's', v: 'Ver Factura', l: { Target: fUrl } } : '',
+                d.observaciones || ''
+            ]);
         } else {
             items.forEach(function(it, i) {
-                filas.push([
-                    i===0 ? d.id : '',
-                    i===0 ? (d.fecha?String(d.fecha).split('T')[0]:'') : '',
-                    i===0 ? (d.proveedor_nombre||'') : '',
-                    i===0 ? (d.documento_referencia||'') : '',
-                    i===0 ? (d.tipo_orden||'Orden de compra') : '',
-                    i===0 ? (d.condicion_pago||'Al contado') : '',
-                    i===0 ? (d.condicion_pago === 'A crédito' ? (d.dias_credito||30) : '') : '',
-                    d.moneda||'PEN',
-                    it.inventario_id||'',
-                    it.descripcion||'',
-                    parseFloat(it.cantidad||0),
-                    parseFloat(it.costo_unitario||0),
-                    parseFloat(it.importe||0),
-                    i===0 ? parseFloat(d.total_pen||0) : '',
-                    i===0 ? (d.observaciones||'') : ''
+                var cant = parseFloat(it.cantidad || 0);
+                var cu = parseFloat(it.costo_unitario || 0);
+                var imp = parseFloat(it.importe || 0) || (cant * cu);
+
+                rows.push([
+                    i === 0 ? codLimpio : '',
+                    i === 0 ? (d.tipo_orden || 'Orden de compra') : '',
+                    i === 0 ? (fechaObj || '') : '',
+                    i === 0 ? estNorm : '',
+                    i === 0 ? aprobador : '',
+                    i === 0 ? (d.placa || '') : '',
+                    i === 0 ? (d.motivo_entrada || '') : '',
+                    i === 0 ? (d.proveedor_nombre || '') : '',
+                    i === 0 ? (d.centro_costo || 'CC-100') : '',
+                    it.inventario_id || '',
+                    it.descripcion || '',
+                    cant,
+                    cu,
+                    imp,
+                    i === 0 ? parseFloat(d.total_pen || 0) : '',
+                    i === 0 ? (d.condicion_pago || 'Al contado') : '',
+                    i === 0 ? (d.condicion_pago === 'A crédito' ? (parseInt(d.dias_credito, 10) || 30) : 0) : '',
+                    d.moneda || 'PEN',
+                    i === 0 && vUrl ? { t: 's', v: 'Ver Voucher', l: { Target: vUrl } } : '',
+                    i === 0 && cUrl ? { t: 's', v: 'Ver Cotización', l: { Target: cUrl } } : '',
+                    i === 0 && fUrl ? { t: 's', v: 'Ver Factura', l: { Target: fUrl } } : '',
+                    i === 0 ? (d.observaciones || '') : ''
                 ]);
             });
         }
     });
 
-    var ws = XLSX.utils.aoa_to_sheet([cab].concat(filas));
-    ws['!cols'] = [12,12,22,18,8,14,28,10,12,12,14,24].map(function(w){return{wch:w};});
+    var ws = XLSX.utils.aoa_to_sheet(rows, { cellDates: true });
+
+    ws['!cols'] = [
+        { wch: 14 }, // Código
+        { wch: 18 }, // Tipo Orden
+        { wch: 14 }, // Fecha
+        { wch: 14 }, // Estado
+        { wch: 22 }, // Aprobador
+        { wch: 12 }, // Placa
+        { wch: 25 }, // Motivo
+        { wch: 28 }, // Proveedor
+        { wch: 14 }, // Centro Costo
+        { wch: 14 }, // Cód. Art.
+        { wch: 32 }, // Artículo
+        { wch: 10 }, // Cantidad
+        { wch: 12 }, // Costo Unit
+        { wch: 12 }, // Importe
+        { wch: 15 }, // Total PEN
+        { wch: 16 }, // Condición Pago
+        { wch: 12 }, // Días Crédito
+        { wch: 10 }, // Moneda
+        { wch: 18 }, // Voucher Link
+        { wch: 18 }, // Cotización Link
+        { wch: 18 }, // Factura Link
+        { wch: 30 }  // Observaciones
+    ];
+
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Entradas');
-    XLSX.writeFile(wb, 'Entradas_Almacen.xlsx');
+    XLSX.utils.book_append_sheet(wb, ws, 'Órdenes de Compra');
+    var fechaHoyStr = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, 'Ordenes_Compra_Azkell_' + fechaHoyStr + '.xlsx');
 };
 
 window.descargarPlantillaEntradas = function() {

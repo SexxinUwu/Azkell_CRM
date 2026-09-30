@@ -39,15 +39,17 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ inspecciones.id_ot verificada');
         else console.warn('ALTER inspecciones.id_ot:', e.message);
     });
-    // ── Helper: sincronizar estado de reportes_fallas según OTs vinculadas ─────
+    // ── Helper: sincronizar estado de reportes_fallas y liberar rampas según OTs vinculadas ─────
     function _sincronizarEstadoReportesFallas(targetDb) {
         if (!targetDb) return;
         const pool = targetDb;
+        const FINISHED_STATUSES = ['finalizado', 'finalizada', 'cerrada', 'cerrado', 'completada', 'completado', 'terminada', 'terminado', 'anulado', 'anulada'];
+
+        // 1. Sincronizar Reportes de Fallas
         pool.query("SELECT id, folio, ots_generadas_json, estado FROM reportes_fallas", (errRf, rowsRf) => {
             if (errRf || !rowsRf || !rowsRf.length) return;
-            pool.query("SELECT ticket_entrada, id_ot, estado, detalles_json FROM ordenes_trabajo", (errOt, rowsOt) => {
+            pool.query("SELECT ticket_entrada, id_ot, id_rampa, placa, estado, detalles_json FROM ordenes_trabajo", (errOt, rowsOt) => {
                 if (errOt || !rowsOt) return;
-                const FINISHED_STATUSES = ['finalizado', 'finalizada', 'cerrada', 'cerrado', 'completada', 'completado', 'terminada', 'terminado', 'anulado', 'anulada'];
 
                 rowsRf.forEach(r => {
                     let otsArr = [];
@@ -79,6 +81,50 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                             pool.query("UPDATE reportes_fallas SET estado = ? WHERE id = ?", [nuevoEstado, r.id]);
                         }
                     }
+                });
+
+                // 2. Sincronizar y Liberar Status Rampa si todas sus OTs están finalizadas/cerradas
+                pool.query("SELECT id, rampa, placa, estado, situacion FROM taller_rampas WHERE estado != 'Liberado'", (errRampas, rowsRampas) => {
+                    if (errRampas || !rowsRampas || !rowsRampas.length) return;
+
+                    rowsRampas.forEach(rampa => {
+                        const rId = rampa.id;
+                        const rPlaca = String(rampa.placa || '').toUpperCase().trim();
+                        if (!rPlaca && !rId) return;
+
+                        // Buscar OTs asociadas a esta rampa o placa
+                        const otsRampa = (rowsOt || []).filter(o => {
+                            const oPlaca = String(o.placa || '').toUpperCase().trim();
+                            const oRampaId = o.id_rampa;
+                            return (oRampaId && String(oRampaId) === String(rId)) || (oPlaca && oPlaca === rPlaca);
+                        });
+
+                        // Si tiene OTs y TODAS están finalizadas/cerradas, liberar la rampa automáticamente
+                        if (otsRampa.length > 0) {
+                            const todasOtsCerradas = otsRampa.every(o => {
+                                const st = String(o.estado || '').toLowerCase().trim();
+                                return FINISHED_STATUSES.includes(st);
+                            });
+
+                            if (todasOtsCerradas) {
+                                pool.query(
+                                    `UPDATE taller_rampas SET 
+                                        estado = 'Liberado', 
+                                        situacion = 'Liberado', 
+                                        fecha_salida_real = COALESCE(fecha_salida_real, CURDATE()), 
+                                        hora_salida_real = COALESCE(hora_salida_real, CURTIME()), 
+                                        fecha_liberado = COALESCE(fecha_liberado, NOW()) 
+                                     WHERE id = ?`,
+                                    [rId],
+                                    (errUpRampa) => {
+                                        if (!errUpRampa) {
+                                            console.log(`🚗 Status Rampa: Rampa #${rampa.rampa} (ID: ${rId}, Placa: ${rPlaca}) LIBERADA automáticamente por cierre de todas sus OTs.`);
+                                        }
+                                    }
+                                );
+                            }
+                        }
+                    });
                 });
             });
         });

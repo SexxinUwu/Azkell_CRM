@@ -8,6 +8,38 @@ window._filtroGPSActivo  = window._filtroGPSActivo  || '';
 window._segmentoGPSActivo= window._segmentoGPSActivo|| 'total';
 window._placaGPSActiva   = window._placaGPSActiva   || null;
 
+window._intervalGpsLivePolling = window._intervalGpsLivePolling || null;
+
+// ------------------------------------------------------------
+// Refresco de Telemetría GPS en Vivo (Polling)
+// ------------------------------------------------------------
+window._actualizarGpsEnVivo = function(forzar) {
+    fetch('/api/script/obtenerDatosWialon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+        .then(function(r) { return r.json(); })
+        .then(function(r) {
+            let d = (r && r.data && Array.isArray(r.data)) ? r.data : [];
+            if (d.length > 0) {
+                if (typeof CACHE !== 'undefined') CACHE.wialon = d;
+                window.renderListaUnidadesGPS(d);
+
+                // Si hay una unidad seleccionada, actualizar sus telemetrías dinámicas
+                if (window._placaGPSActiva) {
+                    let w = d.find(x => (x.placa || '') === window._placaGPSActiva);
+                    if (w) {
+                        let speed = (w.velocidad != null ? Number(w.velocidad) : (w.pos && w.pos.s != null ? Number(w.pos.s) : 0)) || 0;
+                        let speedBadge = document.getElementById('gps-detalle-speed-badge');
+                        if (speedBadge) {
+                            speedBadge.innerHTML = speed > 3 ? `<i class="bi bi-speedometer2 me-1"></i>En Ruta: ${speed} km/h` : `<i class="bi bi-pause-circle me-1"></i>Detenido`;
+                        }
+                    }
+                }
+            }
+        })
+        .catch(function(err) {
+            console.warn("Aviso polling GPS:", err);
+        });
+};
+
 // ------------------------------------------------------------
 // INIT — llamado por el router SPA
 // ------------------------------------------------------------
@@ -25,23 +57,25 @@ window.init_ubicacion = function() {
 
     if (datos.length > 0) {
         window.renderListaUnidadesGPS(datos);
-    } else {
-        fetch('/api/script/obtenerDatosWialon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
-            .then(function(r) { return r.json(); })
-            .then(function(r) {
-                let d = r.data || [];
-                if (Array.isArray(d)) {
-                    if (typeof CACHE !== 'undefined') CACHE.wialon = d;
-                    window.renderListaUnidadesGPS(d);
-                } else {
-                    window.renderListaUnidadesGPS([]);
-                }
-            })
-            .catch(function(err) {
-                console.error("Error GPS:", err);
-                window.renderListaUnidadesGPS([]);
-            });
     }
+    
+    // Disparar carga fresca en vivo de inmediato
+    window._actualizarGpsEnVivo(true);
+
+    // Iniciar ciclo de polling en vivo (cada 15s) mientras el módulo esté abierto
+    if (window._intervalGpsLivePolling) {
+        clearInterval(window._intervalGpsLivePolling);
+        window._intervalGpsLivePolling = null;
+    }
+    window._intervalGpsLivePolling = setInterval(function() {
+        const modEl = document.getElementById('moduloUbicacionGPS');
+        if (!modEl || modEl.offsetParent === null) {
+            clearInterval(window._intervalGpsLivePolling);
+            window._intervalGpsLivePolling = null;
+            return;
+        }
+        window._actualizarGpsEnVivo(false);
+    }, 15000);
 };
 
 // ------------------------------------------------------------

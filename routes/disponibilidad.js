@@ -61,11 +61,13 @@ module.exports = function (db, logAudit) {
                 }
             };
 
-            // 1. Placas maestras
+            // 1. Placas maestras (Solo placas activas y en uso del maestro oficial)
             const placas = await safeQuery(`
                 SELECT placa, cliente, marca, tipo, sub_tipo, combustible, uts, carga_util, capacidad_tanque, motora 
                 FROM placas 
                 WHERE (estado = 'Activa' OR estado IS NULL OR estado = '')
+                  AND (en_uso != 'No' AND en_uso != 'NO' OR en_uso IS NULL OR en_uso = '')
+                  AND (placa NOT LIKE '%CONSUMO%' AND placa NOT LIKE '%ENTREGA%')
                 ORDER BY placa ASC
             `);
 
@@ -73,7 +75,7 @@ module.exports = function (db, logAudit) {
             const fallasRows = await safeQuery(`
                 SELECT id, folio, fecha_reporte, placa_tracto, placa_remolque, conductor, estado, ots_generadas_json
                 FROM reportes_fallas
-                WHERE estado != 'Finalizado'
+                WHERE estado NOT IN ('Finalizado', 'Finalizada', 'Anulado', 'Anulada')
                 ORDER BY id DESC
             `);
 
@@ -82,6 +84,13 @@ module.exports = function (db, logAudit) {
                 SELECT placa, id_ot, ticket_entrada, estado, fecha_ingreso
                 FROM ordenes_trabajo
                 WHERE estado NOT IN ('Finalizado', 'Finalizada', 'Anulado', 'Anulada', 'Cerrado', 'Cerrada')
+            `);
+
+            // 3.1 Rampas activas (no liberadas)
+            const rampaRows = await safeQuery(`
+                SELECT placa, rampa, estado, situacion
+                FROM taller_rampas
+                WHERE estado NOT IN ('Liberado', 'Liberada') AND situacion NOT IN ('Liberado', 'Liberada')
             `);
 
             // 4. Unidades en ruta
@@ -102,11 +111,17 @@ module.exports = function (db, logAudit) {
             // 6. Disponibilidad manual
             const dispRows = await safeQuery(`SELECT * FROM flota_disponibilidad`);
 
-                                const otSet = new Set();
-                                (otRows || []).forEach(ot => {
-                                    const p = clean(ot.placa);
-                                    if (p) otSet.add(p);
-                                });
+            const otSet = new Set();
+            (otRows || []).forEach(ot => {
+                const p = clean(ot.placa);
+                if (p) otSet.add(p);
+            });
+
+            // Agregar placas con rampas activas al set de mantenimiento
+            (rampaRows || []).forEach(r => {
+                const p = clean(r.placa);
+                if (p) otSet.add(p);
+            });
 
                                 // Mapeo de fallas activas (Taller)
                                 const fallasTractoMap = {};
@@ -333,15 +348,29 @@ module.exports = function (db, logAudit) {
             return res.status(400).json({ error: 'Debe ingresar al menos el Camión o la Carreta' });
         }
 
-        let checkSql = `SELECT id FROM flota_disponibilidad WHERE placa_camion = ? AND placa_camion != ''`;
-        let checkParams = [cam];
+        // Validar que las placas existan en el maestro de placas del ERP
+        const cleanPlc = p => (p || '').replace(/[^A-Z0-9]/g, '');
+        const validateSql = `SELECT placa FROM placas WHERE (estado = 'Activa' OR estado IS NULL OR estado = '')`;
+        tdb.query(validateSql, (errVal, placasRows) => {
+            if (!errVal && placasRows) {
+                const validPlacas = new Set(placasRows.map(p => cleanPlc(p.placa)));
+                if (cam && !validPlacas.has(cleanPlc(cam))) {
+                    return res.status(400).json({ error: `La placa de camión "${cam}" no existe en la matriz de placas activas del sistema.` });
+                }
+                if (car && !validPlacas.has(cleanPlc(car))) {
+                    return res.status(400).json({ error: `La placa de carreta "${car}" no existe en la matriz de placas activas del sistema.` });
+                }
+            }
 
-        if (!cam && car) {
-            checkSql = `SELECT id FROM flota_disponibilidad WHERE placa_carreta = ? AND (placa_camion = '' OR placa_camion IS NULL)`;
-            checkParams = [car];
-        }
+            let checkSql = `SELECT id FROM flota_disponibilidad WHERE placa_camion = ? AND placa_camion != ''`;
+            let checkParams = [cam];
 
-        tdb.query(checkSql, checkParams, (errCheck, existingRows) => {
+            if (!cam && car) {
+                checkSql = `SELECT id FROM flota_disponibilidad WHERE placa_carreta = ? AND (placa_camion = '' OR placa_camion IS NULL)`;
+                checkParams = [car];
+            }
+
+            tdb.query(checkSql, checkParams, (errCheck, existingRows) => {
             if (!errCheck && existingRows && existingRows.length > 0) {
                 const existId = existingRows[0].id;
                 const updateSql = `
@@ -394,6 +423,7 @@ module.exports = function (db, logAudit) {
                     return res.json({ success: true, message: 'Registro guardado correctamente', id: result.insertId });
                 });
             }
+        });
         });
     });
 
