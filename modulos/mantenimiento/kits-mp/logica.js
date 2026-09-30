@@ -1,11 +1,12 @@
 // =========================================================================
-// MÓDULO: KITS DE MANTENIMIENTO PREVENTIVO — LÓGICA REDISEÑADA (1:1 RF & MASTER-DETAIL)
+// MÓDULO: KITS DE MANTENIMIENTO PREVENTIVO — LÓGICA REDISEÑADA (1:1 MASTER-DETAIL)
 // =========================================================================
 
 window.kitsData = window.kitsData || [];
 window.kitsDataFil = window.kitsDataFil || [];
 window._kitsAlmacenItems = window._kitsAlmacenItems || [];
 window._kitsTiposMPList = window._kitsTiposMPList || [];
+window._marcasMotorasFlota = window._marcasMotorasFlota || [];
 window.kitsRowCounter = 0;
 window.kitsDeletedItemIds = [];
 window._kitEditandoGrupo = null;
@@ -26,7 +27,7 @@ window['init_kits-mp'] = function () {
 };
 
 /**
- * Cargar datos de Kits, Inventario y Tipos de Preventivo
+ * Cargar datos de Kits, Inventario, Tipos de Preventivo y Flota de Motoras
  */
 window.kitsCargarTabla = function (forzarRecarga) {
     const tbody = document.getElementById('kits-tbody');
@@ -52,8 +53,9 @@ window.kitsCargarTabla = function (forzarRecarga) {
     Promise.all([
         fetch('/api/mantenimiento-kits').then(r => r.ok ? r.json() : { data: [] }),
         fetch('/api/almacen/inventario').then(r => r.ok ? r.json() : []),
-        fetch('/api/tipos-preventivo').then(r => r.ok ? r.json() : { data: [] })
-    ]).then(([kitsResp, invData, tiposResp]) => {
+        fetch('/api/tipos-preventivo').then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/placas-lista').then(r => r.ok ? r.json() : []).catch(() => [])
+    ]).then(([kitsResp, invData, tiposResp, placasResp]) => {
         // 1. Mapear inventario para autocompletado, stock en vivo y sincronización de costos
         window._kitsAlmacenItems = (invData || []).map(x => {
             const nom = (x.descripcion || x.articulo || x.nombre || '').trim();
@@ -103,12 +105,45 @@ window.kitsCargarTabla = function (forzarRecarga) {
             };
         });
 
+        // 4. Extraer únicamente las Marcas de Unidades "MOTORAS" registradas en la flota del ERP
+        const marcasMotorasSet = new Set();
+        const placasArr = Array.isArray(placasResp) ? placasResp : [];
+        const noMotorasKeywords = ['REMOLQUE', 'SEMIREMOLQUE', 'SEMI REMOLQUE', 'CARRETA', 'PLATAFORMA', 'BATEA', 'CAMABAJA', 'FURGON REMOLQUE'];
+
+        placasArr.forEach(p => {
+            const m = (p.marca || '').trim();
+            if (!m || m === '-' || m === 'S/M' || m.toUpperCase() === 'SIN MARCA') return;
+
+            const motoraVal = (p.motora || '').toString().trim().toUpperCase();
+            const tipoVal = (p.tipo || '').toString().trim().toUpperCase();
+            const subTipoVal = (p.sub_tipo || '').toString().trim().toUpperCase();
+
+            const esNoMotora = noMotorasKeywords.some(k => tipoVal.includes(k) || subTipoVal.includes(k) || motoraVal.includes('NO'));
+            const esMotora = motoraVal === 'MOTORA' || motoraVal === 'SI' || motoraVal === '1' ||
+                             tipoVal.includes('TRACTO') || tipoVal.includes('CAMION') || tipoVal.includes('CAMIONETA') || tipoVal.includes('VOLQUETE') || tipoVal.includes('REMOLCADOR') ||
+                             (!esNoMotora && !tipoVal.includes('REMOLQUE'));
+
+            if (esMotora) {
+                // Formatear marca con mayúscula inicial si es todo mayúsculas o mantener estilo
+                marcasMotorasSet.add(m);
+            }
+        });
+
+        // Asegurar que también se incluyan las marcas que ya tienen kits registrados
+        window.kitsData.forEach(k => {
+            if (k.marca_vehiculo && k.marca_vehiculo !== 'GENERAL') {
+                marcasMotorasSet.add(k.marca_vehiculo);
+            }
+        });
+
+        window._marcasMotorasFlota = Array.from(marcasMotorasSet).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
         window.kitsDataFil = window.kitsData.slice();
 
-        // 4. Poblar sidebar lateral de Marcas / Modelos / Placas
+        // 5. Poblar sidebar lateral de Marcas Motoras
         window.kitsPoblarSidebarMarcas();
 
-        // 5. Renderizar vista y actualizar KPIs
+        // 6. Renderizar vista
         window.kitsFiltrar();
 
     }).catch(err => {
@@ -127,30 +162,37 @@ window.kitsCargarTabla = function (forzarRecarga) {
 };
 
 /**
- * Poblar lista del Sidebar Lateral Izquierdo (Todos + Marcas/Modelos)
+ * Poblar lista del Sidebar Lateral Izquierdo (Todos + Solo Marcas Motoras)
  */
 window.kitsPoblarSidebarMarcas = function () {
     const listContainer = document.getElementById('kits-nav-sidebar-list');
     if (!listContainer) return;
 
-    // Calcular marcas/modelos disponibles con sus conteos
+    // Calcular marcas motoras disponibles y cuántos ítems de kit tienen configurados
     const marcasMap = new Map();
 
-    // 1. Agregar marcas de la flota global si están presentes
-    if (window.dataGlobalPlacas && Array.isArray(window.dataGlobalPlacas)) {
-        window.dataGlobalPlacas.forEach(p => {
-            const m = (p[3] || '').trim();
-            if (m && m !== '-') {
-                if (!marcasMap.has(m)) marcasMap.set(m, 0);
-            }
-        });
-    }
+    // 1. Inicializar todas las marcas motoras registradas con 0
+    (window._marcasMotorasFlota || []).forEach(m => {
+        if (m) marcasMap.set(m, 0);
+    });
 
-    // 2. Agregar marcas de los kits configurados y contar ítems
+    // 2. Contar ítems de kits configurados para cada marca
     window.kitsData.forEach(k => {
-        const m = (k.marca_vehiculo || 'GENERAL').trim();
+        const m = (k.marca_vehiculo || '').trim();
         if (m) {
-            marcasMap.set(m, (marcasMap.get(m) || 0) + 1);
+            // Buscar si coincide ignorando mayúsculas/minúsculas
+            let matchedKey = null;
+            for (let key of marcasMap.keys()) {
+                if (key.toUpperCase() === m.toUpperCase()) {
+                    matchedKey = key;
+                    break;
+                }
+            }
+            if (matchedKey) {
+                marcasMap.set(matchedKey, (marcasMap.get(matchedKey) || 0) + 1);
+            } else {
+                marcasMap.set(m, 1);
+            }
         }
     });
 
@@ -169,7 +211,7 @@ window.kitsPoblarSidebarMarcas = function () {
         html += `
             <div class="kits-nav-item ${isActive ? 'active' : ''}" data-marca="${escapeHtml(marca)}" onclick="window.kitsSeleccionarMarcaSidebar('${escapeHtml(marca)}', this)">
                 <span class="text-truncate">${escapeHtml(marca)}</span>
-                ${count > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace" style="font-size: 0.70rem;">${count}</span>` : ''}
+                ${count > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace" style="font-size: 0.70rem;">${count}</span>` : '<span class="badge text-muted font-monospace" style="font-size: 0.65rem; opacity: 0.5;">0</span>'}
             </div>
         `;
     });
@@ -224,9 +266,9 @@ window.kitsFiltrarSegmento = function (tipo, btnEl) {
 };
 
 /**
- * Resetear filtros haciendo clic en el KPI principal
+ * Resetear filtros
  */
-window.kitsResetFiltros = function (cardEl) {
+window.kitsResetFiltros = function () {
     const searchInput = document.getElementById('buscadorKitsLive');
     if (searchInput) searchInput.value = '';
 
@@ -286,44 +328,9 @@ window.kitsFiltrar = function () {
         return true;
     });
 
-    // Actualizar KPIs de Bento Cards
-    window.kitsActualizarKPIs();
-
     // Renderizar Vistas (Desktop y Mobile)
     window.kitsRenderizarTablaDesktop();
     window.kitsRenderizarCardsMobile();
-};
-
-/**
- * Calcular y actualizar Bento KPIs interactivos
- */
-window.kitsActualizarKPIs = function () {
-    const setKits = new Set();
-    const setMarcas = new Set();
-    let totalItems = window.kitsDataFil.length;
-    let costoTotalGeneral = 0;
-
-    window.kitsDataFil.forEach(k => {
-        const kitKey = `${k.marca_vehiculo}__${k.modelo_vehiculo}__${k.tipo_mp}`;
-        const marcaKey = `${k.marca_vehiculo}__${k.modelo_vehiculo}`;
-        setKits.add(kitKey);
-        setMarcas.add(marcaKey);
-        costoTotalGeneral += parseFloat(k.costo_total || 0);
-    });
-
-    const elKits = document.getElementById('kits-kpi-total-kits');
-    if (elKits) elKits.textContent = setKits.size;
-
-    const elItems = document.getElementById('kits-kpi-total-items');
-    if (elItems) elItems.textContent = totalItems;
-
-    const elMarcas = document.getElementById('kits-kpi-total-marcas');
-    if (elMarcas) elMarcas.textContent = setMarcas.size;
-
-    const elCosto = document.getElementById('kits-kpi-costo-total');
-    if (elCosto) {
-        elCosto.textContent = 'S/ ' + costoTotalGeneral.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
 };
 
 /**
@@ -339,7 +346,12 @@ window.kitsRenderizarTablaDesktop = function () {
             <tr>
                 <td colspan="4" class="text-center py-5 text-muted">
                     <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-                    No se encontraron repuestos o kits con los criterios de búsqueda.
+                    ${window.kitsSidebarMarcaSeleccionada ? `No hay kits configurados para la marca <strong>${escapeHtml(window.kitsSidebarMarcaSeleccionada)}</strong>.` : 'No se encontraron repuestos o kits con los criterios de búsqueda.'}
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-sm btn-primary rounded-3 px-3 py-1.5 fw-bold" onclick="window.kitsAbrirModal()" style="background:#0284c7; border-color:#0284c7;">
+                            <i class="bi bi-plus-lg me-1"></i> Configurar Kit para esta Marca
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -350,7 +362,6 @@ window.kitsRenderizarTablaDesktop = function () {
     const grupos = new Map();
 
     window.kitsDataFil.forEach(k => {
-        // Título del grupo: Alias del kit si existe, o el tipo MP
         const groupTitle = (k.nombre_kit || k.tipo_mp || 'GENERAL').trim();
         if (!grupos.has(groupTitle)) {
             grupos.set(groupTitle, []);
@@ -416,7 +427,7 @@ window.kitsRenderizarTablaDesktop = function () {
 };
 
 /**
- * Renderizar Tarjetas Nativas para Móvil (1:1 Reporte de Fallas)
+ * Renderizar Tarjetas Nativas para Móvil
  */
 window.kitsRenderizarCardsMobile = function () {
     const container = document.getElementById('kitsCardContainer');
@@ -528,7 +539,7 @@ window.kitsAbrirModal = function () {
     if (lblTitulo) lblTitulo.textContent = 'Nuevo Kit de Mantenimiento';
     if (lblSub) lblSub.textContent = 'Configure el vehículo, tipo de preventivo y agregue repuestos requeridos';
 
-    // Poblar selects del modal
+    // Poblar selects del modal con las marcas motoras
     window.kitsPoblarSelectsModal();
 
     // Limpiar campos
@@ -551,7 +562,7 @@ window.kitsAbrirModal = function () {
     window.kitsModalAgregarFila();
     window.kitsModalRecalcularTotales();
 
-    // Mostrar modal bottom sheet
+    // Mostrar modal
     const modalEl = document.getElementById('modalNuevoKitMP');
     if (modalEl) {
         const m = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -605,7 +616,7 @@ window.kitsEditarKit = function (marca, modelo, tipo) {
 };
 
 /**
- * Poblar selects dentro del Modal (Marcas, Modelos, Tipos MP)
+ * Poblar selects dentro del Modal (Marcas Motoras, Modelos, Tipos MP)
  */
 window.kitsPoblarSelectsModal = function (presetMarca, presetModelo, presetTipo) {
     const selMarca = document.getElementById('modalKitMarca');
@@ -613,29 +624,24 @@ window.kitsPoblarSelectsModal = function (presetMarca, presetModelo, presetTipo)
     const selTipo = document.getElementById('modalKitTipoMP');
 
     if (selMarca) {
-        const marcasSet = new Set();
-        if (window.dataGlobalPlacas && Array.isArray(window.dataGlobalPlacas)) {
-            window.dataGlobalPlacas.forEach(p => {
-                const m = (p[3] || '').trim().toUpperCase();
-                if (m && m !== '-') marcasSet.add(m);
-            });
-        }
-        window.kitsData.forEach(k => {
-            if (k.marca_vehiculo) marcasSet.add(k.marca_vehiculo.toUpperCase());
-        });
+        const marcasArr = (window._marcasMotorasFlota && window._marcasMotorasFlota.length)
+            ? window._marcasMotorasFlota
+            : Array.from(new Set(window.kitsData.map(k => k.marca_vehiculo).filter(Boolean))).sort();
 
-        const marcasArr = Array.from(marcasSet).sort();
-        selMarca.innerHTML = '<option value="">Seleccione marca...</option>' +
-            marcasArr.map(m => `<option value="${m}">${m}</option>`).join('');
+        selMarca.innerHTML = '<option value="">Seleccione marca motora...</option>' +
+            marcasArr.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
 
-        if (presetMarca && marcasArr.includes(presetMarca.toUpperCase())) {
-            selMarca.value = presetMarca.toUpperCase();
+        if (presetMarca) {
+            // Buscar coincidencia insensible a mayúsculas
+            const match = marcasArr.find(m => m.toUpperCase() === presetMarca.toUpperCase());
+            if (match) selMarca.value = match;
+            else selMarca.value = presetMarca;
         }
     }
 
     if (selTipo) {
         selTipo.innerHTML = '<option value="">Seleccione tipo...</option>' +
-            window._kitsTiposMPList.map(t => `<option value="${t}">${t}</option>`).join('');
+            window._kitsTiposMPList.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
 
         if (presetTipo && window._kitsTiposMPList.includes(presetTipo.toUpperCase())) {
             selTipo.value = presetTipo.toUpperCase();
@@ -661,20 +667,20 @@ window.kitsModalMarcaCambiada = function (presetModelo) {
             window.dataGlobalPlacas.forEach(p => {
                 const mMarca = (p[3] || '').trim().toUpperCase();
                 const mMod = (p[4] || '').trim().toUpperCase();
-                if (mMarca === marca && mMod && mMod !== '-') {
+                if (mMarca === marca.toUpperCase() && mMod && mMod !== '-') {
                     modelosSet.add(mMod);
                 }
             });
         }
         window.kitsData.forEach(k => {
-            if (k.marca_vehiculo === marca && k.modelo_vehiculo) {
+            if (k.marca_vehiculo.toUpperCase() === marca.toUpperCase() && k.modelo_vehiculo) {
                 modelosSet.add(k.modelo_vehiculo);
             }
         });
     }
 
     const modelosArr = Array.from(modelosSet).sort();
-    selModelo.innerHTML = modelosArr.map(m => `<option value="${m}">${m}</option>`).join('');
+    selModelo.innerHTML = modelosArr.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
 
     if (presetModelo && modelosArr.includes(presetModelo.toUpperCase())) {
         selModelo.value = presetModelo.toUpperCase();
