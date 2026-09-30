@@ -1274,6 +1274,149 @@ router.delete('/mantenimiento-kits/:id', (req, res) => {
     });
 });
 
+// POST /api/mantenimiento-kits/guardarKitLote (Elimina duplicados y guarda atómicamente por modelo)
+router.post('/mantenimiento-kits/guardarKitLote', async (req, res) => {
+    try {
+        const { marca_vehiculo, modelos, tipo_mp, nombre_kit, items, kitOrig } = req.body;
+        if (!marca_vehiculo || !Array.isArray(modelos) || !modelos.length || (!tipo_mp && !nombre_kit) || !Array.isArray(items) || !items.length) {
+            return res.status(400).json({ error: 'Marca, modelos, tipo_mp/nombre_kit e ítems son requeridos.' });
+        }
+
+        const upperMarca = marca_vehiculo.trim().toUpperCase();
+        const upperTipo = (tipo_mp || 'MP1').trim().toUpperCase();
+        const cleanAlias = (nombre_kit || '').trim();
+
+        // 1. Si venía de editar un kit original y el modelo o tipo cambiaron
+        if (kitOrig && kitOrig.marca && (kitOrig.tipo_mp || kitOrig.nombre_kit)) {
+            const origMarca = (kitOrig.marca || '').trim().toUpperCase();
+            const origModel = (kitOrig.modelo || '').trim().toUpperCase();
+            const origTipo = (kitOrig.tipo_mp || '').trim().toUpperCase();
+            const origAlias = (kitOrig.nombre_kit || '').trim();
+
+            let sqlDel = `DELETE FROM mantenimiento_kits WHERE UPPER(marca_vehiculo) = ?`;
+            let paramsDel = [origMarca];
+
+            if (origModel && origModel !== 'TODOS' && origModel !== 'TODOS LOS MODELOS') {
+                sqlDel += ` AND UPPER(modelo_vehiculo) = ?`;
+                paramsDel.push(origModel);
+            }
+
+            if (origAlias && origTipo) {
+                sqlDel += ` AND (UPPER(tipo_mp) = ? OR nombre_kit = ?)`;
+                paramsDel.push(origTipo, origAlias);
+            } else if (origAlias) {
+                sqlDel += ` AND nombre_kit = ?`;
+                paramsDel.push(origAlias);
+            } else if (origTipo) {
+                sqlDel += ` AND UPPER(tipo_mp) = ?`;
+                paramsDel.push(origTipo);
+            }
+
+            await new Promise((resolve) => {
+                db.query(sqlDel, paramsDel, () => resolve());
+            });
+        }
+
+        // 2. Para cada modelo seleccionado: limpiar los ítems previos de ese kit específico e insertar la nueva lista exacta
+        for (const mod of modelos) {
+            const upperMod = (mod || 'TODOS LOS MODELOS').trim().toUpperCase();
+
+            // Eliminar registros anteriores de este kit para este modelo (evita duplicados)
+            let sqlClean = `DELETE FROM mantenimiento_kits WHERE UPPER(marca_vehiculo) = ? AND UPPER(modelo_vehiculo) = ?`;
+            let paramsClean = [upperMarca, upperMod];
+
+            if (cleanAlias && upperTipo) {
+                sqlClean += ` AND (UPPER(tipo_mp) = ? OR nombre_kit = ?)`;
+                paramsClean.push(upperTipo, cleanAlias);
+            } else if (cleanAlias) {
+                sqlClean += ` AND nombre_kit = ?`;
+                paramsClean.push(cleanAlias);
+            } else {
+                sqlClean += ` AND UPPER(tipo_mp) = ?`;
+                paramsClean.push(upperTipo);
+            }
+
+            await new Promise((resolve, reject) => {
+                db.query(sqlClean, paramsClean, (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+
+            // Insertar los ítems definitivos
+            for (let i = 0; i < items.length; i++) {
+                const it = items[i];
+                const cant = parseFloat(it.cantidad || 1) || 1;
+                const cu = parseFloat(it.costo_unitario || 0) || 0;
+                const ct = cant * cu;
+                const orden = i + 1;
+
+                await new Promise((resolve, reject) => {
+                    db.query(
+                        `INSERT INTO mantenimiento_kits
+                         (marca_vehiculo, modelo_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre,
+                          cantidad, unidad_medida, costo_unitario, costo_total, orden)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+                        [upperMarca, upperMod, upperTipo, cleanAlias || null,
+                         it.item_codigo || '-', it.item_nombre || '',
+                         cant, (it.unidad_medida || 'UND').toUpperCase(),
+                         cu, ct, orden],
+                        (err) => {
+                            if (err) return reject(err);
+                            resolve();
+                        }
+                    );
+                });
+            }
+        }
+
+        res.json({ ok: true, message: `Kit guardado exitosamente para ${modelos.length} modelo(s).` });
+    } catch (err) {
+        console.error('Error en guardarKitLote:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/mantenimiento-kits/eliminarGrupo (Elimina un kit completo y todos sus ítems)
+router.post('/mantenimiento-kits/eliminarGrupo', (req, res) => {
+    const { marca_vehiculo, modelo_vehiculo, tipo_mp, nombre_kit } = req.body;
+    if (!marca_vehiculo || (!tipo_mp && !nombre_kit)) {
+        return res.status(400).json({ error: 'Marca y Tipo o Nombre de Kit son requeridos.' });
+    }
+
+    const upperMarca = (marca_vehiculo || '').trim().toUpperCase();
+    const upperModelo = (modelo_vehiculo || '').trim().toUpperCase();
+    const upperTipo = (tipo_mp || '').trim().toUpperCase();
+    const cleanAlias = (nombre_kit || '').trim();
+
+    let sql = `DELETE FROM mantenimiento_kits WHERE UPPER(marca_vehiculo) = ?`;
+    const params = [upperMarca];
+
+    if (upperModelo && upperModelo !== 'TODOS' && upperModelo !== 'TODOS LOS MODELOS') {
+        sql += ` AND UPPER(modelo_vehiculo) = ?`;
+        params.push(upperModelo);
+    }
+
+    if (cleanAlias && upperTipo) {
+        sql += ` AND (UPPER(tipo_mp) = ? OR nombre_kit = ?)`;
+        params.push(upperTipo, cleanAlias);
+    } else if (cleanAlias) {
+        sql += ` AND nombre_kit = ?`;
+        params.push(cleanAlias);
+    } else if (upperTipo) {
+        sql += ` AND UPPER(tipo_mp) = ?`;
+        params.push(upperTipo);
+    }
+
+    db.query(sql, params, (err, result) => {
+        if (err) {
+            console.error('Error eliminando grupo de kit:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ ok: true, deleted: result.affectedRows });
+    });
+});
+
 // POST /api/mantenimiento-kits/importarMasivo
 router.post('/mantenimiento-kits/importarMasivo', (req, res) => {
     const items = req.body.items;

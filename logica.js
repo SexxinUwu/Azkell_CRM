@@ -4433,13 +4433,35 @@ window.cargarModuloAislado = async function(rutaModulo) {
         window._navFromPopstate = false;
     }
 
-    // 🧹 LIMPIEZA BOOTSTRAP Y DRAWERS — elimina backdrops huérfanos y drawers adjuntos al body
-    document.querySelectorAll('.modal-backdrop, .offcanvas-backdrop, #rotDrawerBackdrop').forEach(el => el.remove());
-    document.querySelectorAll('.rot-drawer, .rot-sub-drawer, .sr-drawer-global, #drawerFleetrun, #drawerEditarFleetrun, #drawerInspeccion, [id^="rot-drawer-"]').forEach(function(el) {
-        var inst = typeof bootstrap !== 'undefined' && bootstrap.Offcanvas ? bootstrap.Offcanvas.getInstance(el) : null;
-        if (inst) inst.hide();
-        el.remove();
+    // 🧹 LIMPIEZA TOTAL BOOTSTRAP, MODALES Y DRAWERS — elimina backdrops huérfanos y drawers adjuntos al body
+    document.querySelectorAll('.modal-backdrop, .offcanvas-backdrop, #rotDrawerBackdrop, #salNuevoBackdrop, .sal-backdrop, .sgu-drawer-backdrop, .drawer-backdrop, [class*="backdrop"]').forEach(el => el.remove());
+    
+    // Eliminar todos los drawers y subdrawers huérfanos adjuntos a document.body
+    document.querySelectorAll('.rot-drawer, .rot-sub-drawer, .sr-drawer-global, .sal-drawer, [id^="sal-drawer-"], [id^="rot-drawer-"], #drawerFleetrun, #drawerEditarFleetrun, #drawerInspeccion, [id*="-drawer-"], [class*="-drawer"]').forEach(function(el) {
+        if (el.parentElement === document.body) {
+            var inst = typeof bootstrap !== 'undefined' && bootstrap.Offcanvas ? bootstrap.Offcanvas.getInstance(el) : null;
+            if (inst) inst.hide();
+            el.classList.remove('open', 'show');
+            el.remove();
+        }
     });
+
+    // Cerrar y ocultar cualquier modal de Bootstrap o drawer abierto en pantalla
+    document.querySelectorAll('.modal.show, .modal').forEach(function(m) {
+        var inst = typeof bootstrap !== 'undefined' && bootstrap.Modal ? bootstrap.Modal.getInstance(m) : null;
+        if (inst) inst.hide();
+        m.classList.remove('show');
+        m.style.display = 'none';
+        m.setAttribute('aria-hidden', 'true');
+    });
+
+    // Remover clases 'open' residuales de cualquier panel
+    document.querySelectorAll('.open').forEach(function(el) {
+        if (el.id !== 'sidebar' && !el.classList.contains('sidebar')) {
+            el.classList.remove('open');
+        }
+    });
+
     document.body.classList.remove('modal-open', 'offcanvas-open');
     document.body.style.paddingRight = '';
     document.body.style.overflow = '';

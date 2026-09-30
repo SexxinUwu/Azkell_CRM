@@ -645,11 +645,16 @@
           </div>
 
           <!-- Footer Buttons 1:1 Reporte de Fallas -->
-          <div class="d-flex align-items-center justify-content-end gap-2 pt-2">
-            <button type="button" class="btn btn-light fw-bold rounded-3 px-3 py-2" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary fw-bold px-4 py-2 shadow-sm rounded-3 d-flex align-items-center gap-2" id="btnGuardarKitMP" style="background:#0284c7; border-color:#0284c7; min-height:42px;">
-              <i class="bi bi-check-circle-fill"></i> Guardar Kit
+          <div class="d-flex align-items-center justify-content-between gap-2 pt-2">
+            <button type="button" class="btn btn-outline-danger fw-bold rounded-3 px-3 py-2 d-none align-items-center gap-1.5" id="btnModalEliminarKit" onclick="window.kitsModalEliminarKitCompleto()">
+              <i class="bi bi-trash3"></i> <span>Eliminar Kit</span>
             </button>
+            <div class="d-flex align-items-center gap-2 ms-auto">
+              <button type="button" class="btn btn-light fw-bold rounded-3 px-3 py-2" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-primary fw-bold px-4 py-2 shadow-sm rounded-3 d-flex align-items-center gap-2" id="btnGuardarKitMP" style="background:#0284c7; border-color:#0284c7; min-height:42px;">
+                <i class="bi bi-check-circle-fill"></i> Guardar Kit
+              </button>
+            </div>
           </div>
 
         </form>
