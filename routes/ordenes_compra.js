@@ -21,7 +21,7 @@ module.exports = function (db, broadcast, logAudit) {
             const [rows] = await tdb.query(
                 `SELECT oc.*, 
                         (SELECT COUNT(*) FROM ordenes_compra_items WHERE orden_compra_id = oc.id) AS total_items,
-                        (SELECT status FROM oc_approval_tokens WHERE orden_compra_id = oc.id ORDER BY id DESC LIMIT 1) AS token_estado
+                        (SELECT estado FROM oc_approval_tokens WHERE orden_compra_id = oc.id ORDER BY id DESC LIMIT 1) AS token_estado
                  FROM ordenes_compra oc
                  ORDER BY oc.id DESC`
             );

@@ -1010,7 +1010,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
-    router.get('/taller-rampas', (req, res) => {
+    router.get(['/taller-rampas', '/rampas'], (req, res) => {
         const targetDb = req.db || db;
         const historial = req.query.historial === '1';
         targetDb.query("ALTER TABLE taller_rampas ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'Activo'", () => {
