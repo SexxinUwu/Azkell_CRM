@@ -1,0 +1,4227 @@
+require('dotenv').config();
+const { initDB } = require('./init_db');
+const express = require('express');
+const mysql = require('mysql2');
+const cors = require('cors');
+const path = require('path');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+const multer = require('multer');
+const fs = require('fs');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
+const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl } = require('./utils/s3');
+const { AsyncLocalStorage } = require('async_hooks');
+const tenantStorage = new AsyncLocalStorage();
+
+const app = express();
+
+// Render (y cualquier reverse proxy) necesita esto para que express-rate-limit
+// pueda identificar IPs correctamente desde el header X-Forwarded-For
+app.set('trust proxy', 1);
+
+// ── Compresión gzip (reduce 60-70% el tamaño de respuestas) ───────
+app.use(compression());
+
+// ── Rate Limiting (protección contra bots y abuso de API) ─────────
+const limiterGeneral = rateLimit({
+    windowMs: 60 * 1000,       // ventana: 1 minuto
+    max: 200,                   // máximo 200 requests por IP por minuto
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiadas solicitudes. Intenta en un momento.' }
+});
+const limiterLogin = rateLimit({
+    windowMs: 15 * 60 * 1000,  // ventana: 15 minutos
+    max: 20,                    // máximo 20 intentos de login por IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiados intentos de acceso. Espera 15 minutos.' }
+});
+app.use('/api/', limiterGeneral);
+app.use('/api/login', limiterLogin);
+const ALLOWED_ORIGINS = [
+    'https://azkell-crm.onrender.com',
+    'https://azkellcrm-production.up.railway.app',
+    process.env.APP_URL,
+    'capacitor://localhost',
+    'http://localhost',
+    'http://localhost:3000'
+].filter(Boolean);
+app.use(cors({
+    origin: function(origin, cb) {
+        // Permitimos llamadas sin origin (como apps móviles o curl)
+        if (!origin) return cb(null, true);
+        
+        // Permitimos dominios de Railway, Render, Localhost, azkell.com y subdominios
+        if (ALLOWED_ORIGINS.includes(origin) || origin.includes('azkell.com') || origin.includes('sslip.io')) {
+            return cb(null, true);
+        }
+        
+        // Si hay una APP_URL definida y el origin coincide, lo permitimos
+        if (process.env.APP_URL && origin.startsWith(process.env.APP_URL)) {
+            return cb(null, true);
+        }
+
+        cb(new Error('CORS bloqueado: ' + origin));
+    },
+    credentials: true
+}));
+app.use(express.json({ limit: '50mb' }));
+
+// ── Multi-Tenant SaaS Middleware ─────────────────────────────────
+const { resolveTenantMiddleware } = require('./services/tenant_master');
+app.use((req, res, next) => {
+    resolveTenantMiddleware(req, res, () => {
+        tenantStorage.run(req.db, next);
+    });
+});
+
+// ── Helper para generar PNG cuadrado (1:1) centrado con padding automático ──
+// Permite que logos alargados/rectangulares cumplan con la estricta validación 1:1 de PWA/Chrome
+const zlib = require('zlib');
+
+function _makePngChunk(type, data) {
+    const len = data.length;
+    const buf = Buffer.alloc(4 + 4 + len + 4);
+    buf.writeUInt32BE(len, 0);
+    buf.write(type, 4);
+    data.copy(buf, 8);
+    let crc = 0 ^ (-1);
+    const td = Buffer.concat([Buffer.from(type), data]);
+    for (let i = 0; i < td.length; i++) {
+        let c = (crc ^ td[i]) & 0xff;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        crc = (crc >>> 8) ^ c;
+    }
+    buf.writeUInt32BE((crc ^ (-1)) >>> 0, 8 + len);
+    return buf;
+}
+
+function _crearPngCuadrado(buf, targetSize = 512) {
+    if (!buf || buf.length < 32) return null;
+    // Validar cabecera PNG
+    if (buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4E || buf[3] !== 0x47) return null;
+
+    let pos = 8, width = 0, height = 0, colorType = 0, bitDepth = 0;
+    const idat = [];
+    while (pos < buf.length) {
+        const len = buf.readUInt32BE(pos);
+        const type = buf.toString('ascii', pos + 4, pos + 8);
+        const data = buf.subarray(pos + 8, pos + 8 + len);
+        if (type === 'IHDR') {
+            width = data.readUInt32BE(0);
+            height = data.readUInt32BE(4);
+            bitDepth = data[8];
+            colorType = data[9];
+        } else if (type === 'IDAT') {
+            idat.push(data);
+        } else if (type === 'IEND') {
+            break;
+        }
+        pos += 8 + len + 4;
+    }
+
+    if (width === height) return buf; // Ya es perfectamente cuadrado
+    if (bitDepth !== 8 || colorType !== 6) return null; // Solo RGBA 8-bit
+
+    try {
+        const inflated = zlib.inflateSync(Buffer.concat(idat));
+        const rowStride = 1 + width * 4;
+        const pixels = Buffer.alloc(width * height * 4);
+
+        for (let y = 0; y < height; y++) {
+            const filter = inflated[y * rowStride];
+            const prevRow = y > 0 ? pixels.subarray((y - 1) * width * 4, y * width * 4) : null;
+            const curRow = pixels.subarray(y * width * 4, (y + 1) * width * 4);
+
+            for (let x = 0; x < width * 4; x++) {
+                const raw = inflated[y * rowStride + 1 + x];
+                const a = x >= 4 ? curRow[x - 4] : 0;
+                const b = prevRow ? prevRow[x] : 0;
+                const c = (prevRow && x >= 4) ? prevRow[x - 4] : 0;
+                let val = 0;
+                if (filter === 0) val = raw;
+                else if (filter === 1) val = (raw + a) & 0xff;
+                else if (filter === 2) val = (raw + b) & 0xff;
+                else if (filter === 3) val = (raw + Math.floor((a + b) / 2)) & 0xff;
+                else if (filter === 4) {
+                    const p = a + b - c;
+                    const pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+                    val = (raw + ((pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c))) & 0xff;
+                }
+                curRow[x] = val;
+            }
+        }
+
+        // Color de fondo armónico: si las esquinas tienen fondo sólido (ej: blanco/gris), extenderlo. Si son transparentes, usar el azul oscuro del ERP.
+        const cornerA = pixels[3];
+        const isCornerTransparent = cornerA < 128;
+        const bg = isCornerTransparent ? [15, 23, 42, 255] : [pixels[0], pixels[1], pixels[2], 255];
+
+        const maxDim = Math.round(targetSize * 0.90);
+        const scale = Math.min(maxDim / width, maxDim / height);
+        const dstW = Math.round(width * scale);
+        const dstH = Math.round(height * scale);
+        const startX = Math.round((targetSize - dstW) / 2);
+        const startY = Math.round((targetSize - dstH) / 2);
+        const rowSize = 1 + targetSize * 4;
+        const raw = Buffer.alloc(targetSize * rowSize);
+
+        for (let y = 0; y < targetSize; y++) {
+            const rOff = y * rowSize;
+            raw[rOff] = 0; // Filter None
+            for (let x = 0; x < targetSize; x++) {
+                const px = rOff + 1 + x * 4;
+                if (x >= startX && x < startX + dstW && y >= startY && y < startY + dstH) {
+                    const sx = Math.min(width - 1, Math.floor((x - startX) / scale));
+                    const sy = Math.min(height - 1, Math.floor((y - startY) / scale));
+                    const so = (sy * width + sx) * 4;
+                    const sa = pixels[so + 3] / 255;
+                    if (sa === 0) {
+                        raw[px] = bg[0]; raw[px + 1] = bg[1]; raw[px + 2] = bg[2]; raw[px + 3] = bg[3];
+                    } else if (sa === 1) {
+                        raw[px] = pixels[so]; raw[px + 1] = pixels[so + 1]; raw[px + 2] = pixels[so + 2]; raw[px + 3] = 255;
+                    } else {
+                        raw[px] = Math.round(pixels[so] * sa + bg[0] * (1 - sa));
+                        raw[px + 1] = Math.round(pixels[so + 1] * sa + bg[1] * (1 - sa));
+                        raw[px + 2] = Math.round(pixels[so + 2] * sa + bg[2] * (1 - sa));
+                        raw[px + 3] = 255;
+                    }
+                } else {
+                    raw[px] = bg[0]; raw[px + 1] = bg[1]; raw[px + 2] = bg[2]; raw[px + 3] = bg[3];
+                }
+            }
+        }
+
+        const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+        const ihdrD = Buffer.alloc(13);
+        ihdrD.writeUInt32BE(targetSize, 0); ihdrD.writeUInt32BE(targetSize, 4);
+        ihdrD[8] = 8; ihdrD[9] = 6; ihdrD[10] = 0; ihdrD[11] = 0; ihdrD[12] = 0;
+
+        return Buffer.concat([
+            sig,
+            _makePngChunk('IHDR', ihdrD),
+            _makePngChunk('IDAT', zlib.deflateSync(raw, { level: 6 })),
+            _makePngChunk('IEND', Buffer.alloc(0))
+        ]);
+    } catch (e) {
+        console.warn('[_crearPngCuadrado] Error adaptando icono a formato cuadrado:', e.message);
+        return null;
+    }
+}
+
+function _formatearNombreEmpresa(raw) {
+    if (!raw) return 'Azkell';
+    let s = String(raw).trim();
+    // Limpiar sufijos societarios comunes como S.A.C., S.A., S.R.L., etc.
+    s = s.replace(/\s+(S\.?A\.?C\.?|S\.?A\.?|S\.?R\.?L\.?|E\.?I\.?R\.?L\.?|SOCIEDAD ANONIMA CERRADA)\b/gi, '').trim();
+    // Capitalizar adecuadamente si está todo en mayúsculas
+    if (s === s.toUpperCase() && s.length > 2) {
+        s = s.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+    }
+    return s || 'Azkell';
+}
+
+function _isSuperAdminReq(req) {
+    const host = (req.headers.host || '').toLowerCase().split(':')[0];
+    return req.tenantSlug === 'master' || req.tenantSlug === 'admin' || host.startsWith('admin.');
+}
+
+app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
+    try {
+        if (_isSuperAdminReq(req)) {
+            return res.json({
+                id: '/',
+                name: 'SuperAdmin SaaS Master - Azkell Fleet',
+                short_name: 'Azkell Master',
+                description: 'Panel de Administración SaaS Master — Azkell Fleet',
+                start_url: '/',
+                display: 'standalone',
+                background_color: '#0f172a',
+                theme_color: '#0f172a',
+                orientation: 'any',
+                icons: [
+                    {
+                        src: '/favicon-2003.png',
+                        sizes: '192x192',
+                        type: 'image/png',
+                        purpose: 'any'
+                    },
+                    {
+                        src: '/favicon-2003.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                        purpose: 'any maskable'
+                    }
+                ]
+            });
+        }
+
+        let nombreEmpresaRaw = '';
+        let logoRaw = '';
+
+        if (req.db) {
+            try {
+                const [rows] = await req.db.promise().query(
+                    "SELECT clave, valor FROM configuracion_erp WHERE clave IN ('empresa_nombre', 'empresa_logo')"
+                );
+                rows.forEach(r => {
+                    if (r.clave === 'empresa_nombre') nombreEmpresaRaw = r.valor;
+                    if (r.clave === 'empresa_logo') logoRaw = r.valor;
+                });
+            } catch (e) {
+                console.warn('[Manifest] No se pudo leer configuracion_erp:', e.message);
+            }
+        }
+
+        if (!nombreEmpresaRaw && req.tenantInfo && req.tenantInfo.nombre_empresa) {
+            nombreEmpresaRaw = req.tenantInfo.nombre_empresa;
+        }
+
+        const cleanName = _formatearNombreEmpresa(nombreEmpresaRaw || req.tenantSlug || 'Azkell Fleet');
+        const pwaName = `${cleanName} - Azkell Fleet`;
+        const pwaShortName = `${cleanName} Fleet`;
+
+        const hasCustomLogo = Boolean(logoRaw && logoRaw.length > 50);
+        const iconSrc = hasCustomLogo ? '/api/tenant-logo' : '/app-icon-2002.png';
+
+        const manifestData = {
+            id: '/',
+            name: pwaName,
+            short_name: pwaShortName,
+            description: `Sistema ERP de Gestión de Flota y Mantenimiento — ${cleanName}`,
+            start_url: '/',
+            display: 'standalone',
+            background_color: '#0f172a',
+            theme_color: '#0f172a',
+            orientation: 'any',
+            icons: [
+                {
+                    src: iconSrc,
+                    sizes: '192x192',
+                    type: 'image/png',
+                    purpose: 'any'
+                },
+                {
+                    src: iconSrc,
+                    sizes: '512x512',
+                    type: 'image/png',
+                    purpose: 'any'
+                },
+                {
+                    src: iconSrc,
+                    sizes: '512x512',
+                    type: 'image/png',
+                    purpose: 'maskable'
+                }
+            ]
+        };
+
+        res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        return res.json(manifestData);
+    } catch (err) {
+        console.error('[Manifest] Error generando manifest:', err);
+        return res.status(500).json({
+            name: 'Azkell Fleet',
+            short_name: 'Azkell Fleet',
+            start_url: '/',
+            display: 'standalone'
+        });
+    }
+});
+
+// Endpoint que sirve la imagen del logo del tenant actual como PNG nativo (1:1 perfectamente cuadrado para PWA)
+app.get('/api/tenant-logo', async (req, res) => {
+    try {
+        // En SuperAdmin Master o admin.*, servir SIEMPRE el logo inicial oficial de Azkell Fleet
+        if (_isSuperAdminReq(req)) {
+            const azkellIconPath = path.join(__dirname, 'favicon-2003.png');
+            if (fs.existsSync(azkellIconPath)) {
+                res.setHeader('Content-Type', 'image/png');
+                res.setHeader('Cache-Control', 'public, max-age=86400');
+                return res.sendFile(azkellIconPath);
+            }
+        }
+
+        let logoRaw = '';
+        if (req.db) {
+            const [rows] = await req.db.promise().query(
+                "SELECT valor FROM configuracion_erp WHERE clave = 'empresa_logo' LIMIT 1"
+            );
+            if (rows && rows[0] && rows[0].valor) {
+                logoRaw = rows[0].valor;
+            }
+        }
+
+        if (logoRaw && logoRaw.startsWith('data:image')) {
+            const matches = logoRaw.match(/^data:(image\/[^;]+);base64,(.+)$/);
+            if (matches) {
+                const mimeType = matches[1];
+                const rawBuffer = Buffer.from(matches[2], 'base64');
+
+                // Si es un PNG rectangular, adaptarlo a cuadrado 512x512 automáticamente
+                if (mimeType === 'image/png') {
+                    const squarePng = _crearPngCuadrado(rawBuffer, 512);
+                    if (squarePng) {
+                        res.setHeader('Content-Type', 'image/png');
+                        res.setHeader('Cache-Control', 'public, max-age=86400');
+                        return res.send(squarePng);
+                    }
+                }
+
+                // Fallback para JPEG o imágenes ya cuadradas
+                res.setHeader('Content-Type', mimeType);
+                res.setHeader('Cache-Control', 'public, max-age=86400');
+                return res.send(rawBuffer);
+            }
+        }
+
+        if (logoRaw && (logoRaw.startsWith('http://') || logoRaw.startsWith('https://'))) {
+            const key = s3KeyFromUrl(logoRaw);
+            if (key) {
+                try {
+                    const signedUrl = await getPresignedUrl(key, 86400);
+                    return res.redirect(signedUrl);
+                } catch(e) {}
+            }
+            return res.redirect(logoRaw);
+        }
+
+        // Fallback al logo estándar de Azkell Fleet
+        const defaultIconPath = path.join(__dirname, 'favicon-2003.png');
+        if (fs.existsSync(defaultIconPath)) {
+            res.setHeader('Content-Type', 'image/png');
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.sendFile(defaultIconPath);
+        }
+
+        return res.status(404).end();
+    } catch (e) {
+        console.error('[TenantLogo] Error:', e.message);
+        return res.redirect('/favicon-2003.png');
+    }
+});
+
+// Archivos en /libs/ son librerías estáticas → cachear agresivamente (30 días)
+app.use('/libs', express.static(path.join(__dirname, 'libs'), {
+    maxAge: '30d',
+    immutable: true
+}));
+// El resto de archivos (logica.js, estilos.css, vistas) → no cachear para reflejar cambios
+app.use(express.static(__dirname, {
+    setHeaders: function(res, filePath) {
+        if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+}));
+
+
+app.use('/api/superadmin', require('./routes/superadmin')());
+
+// ── CONFIGURACION ERP ─────────────────────────────────────────────────────────
+app.get('/api/configuracion', async (req, res) => {
+    try {
+        if (_isSuperAdminReq(req)) {
+            return res.json({
+                empresa_nombre: 'Azkell Fleet',
+                empresa_logo: '/favicon-2003.png',
+                empresa_ruc: ''
+            });
+        }
+        const [rows] = await db.promise().query("SELECT clave, valor FROM configuracion_erp");
+        let config = {};
+        for (const r of rows) {
+            config[r.clave] = r.valor;
+        }
+
+        // Si el logo está en AWS S3, firmar la URL con vigencia para que el navegador pueda mostrarlo
+        if (config.empresa_logo && config.empresa_logo.startsWith('http')) {
+            const key = s3KeyFromUrl(config.empresa_logo);
+            if (key) {
+                try {
+                    config.empresa_logo = await getPresignedUrl(key, 86400);
+                } catch(e) {}
+            }
+        }
+
+        res.json(config);
+    } catch (error) {
+        console.error("Error obteniendo configuracion:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
+app.post('/api/configuracion', async (req, res) => {
+    try {
+        const payload = req.body;
+        for (const clave in payload) {
+            let valor = payload[clave] || '';
+            
+            // Subir a AWS S3 si es una imagen base64
+            if (clave === 'empresa_logo' && typeof valor === 'string' && valor.startsWith('data:image')) {
+                const matches = valor.match(/^data:(image\/\w+);base64,(.+)$/);
+                if (matches) {
+                    const ext = matches[1].split('/')[1] || 'jpeg';
+                    const buffer = Buffer.from(matches[2], 'base64');
+                    const key = `configuracion/logo_empresa_${Date.now()}.${ext}`;
+                    
+                    try {
+                        const [oldRows] = await db.promise().query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_logo'");
+                        if (oldRows.length > 0 && oldRows[0].valor && oldRows[0].valor.includes('amazonaws.com')) {
+                            const oldKey = s3KeyFromUrl(oldRows[0].valor);
+                            if (oldKey) await deleteFromS3(oldKey);
+                        }
+                    } catch(e) { console.warn("Error deleting old logo:", e); }
+                    
+                    valor = await uploadToS3(buffer, key, matches[1]);
+                }
+            }
+
+            await db.promise().query("INSERT INTO configuracion_erp (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?", [clave, valor, valor]);
+        }
+
+        let logoFinal = payload.empresa_logo;
+        if (logoFinal && typeof logoFinal === 'string' && logoFinal.startsWith('data:image')) {
+            const [rows] = await db.promise().query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_logo'");
+            if (rows && rows[0] && rows[0].valor) {
+                logoFinal = rows[0].valor;
+                const key = s3KeyFromUrl(logoFinal);
+                if (key) {
+                    try { logoFinal = await getPresignedUrl(key, 86400); } catch(e) {}
+                }
+            }
+        }
+
+        res.json({ success: true, message: "Configuración guardada", empresa_logo: logoFinal });
+    } catch (error) {
+        console.error("Error guardando configuracion:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
+app.get(['/api/proxy/documento', '/api/proxy/sunat'], async (req, res) => {
+    let numero = (req.query.numero || req.query.doc || '').trim();
+    if (!numero) return res.status(400).json({ error: "Número de documento (RUC o DNI) requerido" });
+    
+    let tipo = req.query.tipo;
+    if (!tipo) {
+        tipo = numero.length === 8 ? 'DNI' : 'RUC';
+    }
+
+    let url = '';
+    if (tipo === 'RUC') url = 'https://api.apis.net.pe/v1/ruc?numero=' + numero;
+    else if (tipo === 'DNI') url = 'https://api.apis.net.pe/v1/dni?numero=' + numero;
+    else return res.status(400).json({ error: "Tipo no valido" });
+    
+    try {
+        let fetchCall = global.fetch || require('node-fetch');
+        let response = await fetchCall(url, { timeout: 7000 });
+        if (!response.ok) return res.status(response.status).json({ error: "Documento no encontrado en RENIEC/SUNAT" });
+        let data = await response.json();
+        
+        let nomComp = '';
+        if (data.nombres) {
+            nomComp = `${data.nombres} ${data.apellidoPaterno || data.apellido_paterno || ''} ${data.apellidoMaterno || data.apellido_materno || ''}`.trim();
+        } else if (data.nombre) {
+            nomComp = data.nombre.trim();
+        }
+
+        res.json({
+            success: true,
+            ...data,
+            nombre: nomComp || data.nombre || data.razonSocial || '',
+            razon_social: data.nombre || data.razonSocial || '',
+            nombres: data.nombres || '',
+            apellido_paterno: data.apellidoPaterno || data.apellido_paterno || '',
+            apellido_materno: data.apellidoMaterno || data.apellido_materno || '',
+            apellidoPaterno: data.apellidoPaterno || data.apellido_paterno || '',
+            apellidoMaterno: data.apellidoMaterno || data.apellido_materno || ''
+        });
+    } catch(err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+const _geoCacheMap = new Map();
+app.get('/api/proxy/geocode', async (req, res) => {
+    let lat = parseFloat(req.query.lat);
+    let lon = parseFloat(req.query.lon || req.query.lng);
+    if (isNaN(lat) || isNaN(lon)) {
+        return res.json({ display_name: '', address: {} });
+    }
+
+    let cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+    if (_geoCacheMap.has(cacheKey)) {
+        return res.json(_geoCacheMap.get(cacheKey));
+    }
+
+    try {
+        let fetchCall = global.fetch || require('node-fetch');
+        
+        // 1. Intentar con OpenStreetMap Nominatim
+        try {
+            const ctrl1 = new AbortController();
+            const to1 = setTimeout(() => ctrl1.abort(), 4000);
+            let response = await fetchCall(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
+                headers: {
+                    'User-Agent': 'AzkellERP-Fleet/2.0 (admin@azkell.pe)',
+                    'Accept-Language': 'es'
+                },
+                signal: ctrl1.signal
+            });
+            clearTimeout(to1);
+            if (response.ok) {
+                let data = await response.json();
+                if (data && data.address) {
+                    const addr = data.address;
+                    const via = addr.road || addr.pedestrian || addr.highway || addr.path || addr.street || '';
+                    const num = addr.house_number || addr.building || addr.house || '';
+                    const barrio = addr.suburb || addr.neighbourhood || addr.residential || addr.quarter || addr.district || addr.hamlet || addr.village || '';
+                    const ciudad = addr.city || addr.town || addr.municipality || addr.county || addr.state || '';
+
+                    let partes = [];
+                    if (via && !via.toLowerCase().includes('sin nombre')) {
+                        partes.push(via + (num ? ' ' + num : ''));
+                    }
+                    if (barrio && barrio !== via) {
+                        partes.push(barrio);
+                    }
+                    if (ciudad && ciudad !== barrio) {
+                        partes.push(ciudad);
+                    }
+
+                    let cleanName = partes.length > 0 ? partes.join(', ') : (data.display_name || '').replace(/^Sin nombre,\s*/i, '');
+                    if (cleanName && !cleanName.startsWith('Ubicación GPS')) {
+                        let resultN = { display_name: cleanName, address: addr };
+                        _geoCacheMap.set(cacheKey, resultN);
+                        return res.json(resultN);
+                    }
+                }
+            }
+        } catch (eN) {}
+
+        // 2. Intentar con BigDataCloud API como respaldo
+        try {
+            const ctrl2 = new AbortController();
+            const to2 = setTimeout(() => ctrl2.abort(), 3500);
+            let rB = await fetchCall(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=es`, {
+                signal: ctrl2.signal
+            });
+            clearTimeout(to2);
+            if (rB.ok) {
+                let dB = await rB.json();
+                let loc = dB.locality || dB.city || dB.localityInfo?.informative?.find(i => i.description)?.description || '';
+                let state = dB.principalSubdivision || dB.state || '';
+                let country = dB.countryName || 'Perú';
+
+                let parts = [loc, state, country].filter(Boolean);
+                if (parts.length > 0) {
+                    let resultB = { display_name: parts.join(', '), address: dB };
+                    _geoCacheMap.set(cacheKey, resultB);
+                    return res.json(resultB);
+                }
+            }
+        } catch(eB) {}
+
+        let fallback = { display_name: `Ubicación GPS (${lat.toFixed(4)}, ${lon.toFixed(4)})`, address: {} };
+        res.json(fallback);
+    } catch(err) {
+        res.json({ display_name: `Ubicación GPS (${lat.toFixed(4)}, ${lon.toFixed(4)})`, address: {} });
+    }
+});
+
+app.get('/api/proxy/placa', async (req, res) => {
+    let rawNum = (req.query.numero || '').trim().toUpperCase();
+    let numero = rawNum.replace(/[^A-Z0-9]/g, '');
+    if (!numero) return res.status(400).json({ error: "Número de placa requerido" });
+
+    let placaFormatted = numero.length === 6 ? (numero.substring(0, 3) + '-' + numero.substring(3)) : rawNum;
+    let fetchCall = global.fetch || require('node-fetch');
+
+    // Proveedores de consulta vehicular en Perú (SUNARP / MTC / SOAT)
+    let endpoints = [
+        'https://api.apis.net.pe/v1/soat?numero=' + numero,
+        'https://api.apis.net.pe/v2/sunarp/vehiculo?placa=' + numero,
+        'https://apiperu.dev/api/soat?placa=' + numero,
+        'https://api.perudevs.com/api/v1/vehiculo/soat?numero=' + numero
+    ];
+
+    for (let url of endpoints) {
+        try {
+            let response = await fetchCall(url, { headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' } }).catch(() => null);
+            if (response && response.ok) {
+                let data = await response.json();
+                let v = data.data || data;
+                if (v && (v.marca || v.modelo || v.vin || v.serie || v.propietario || v.nombre_propietario)) {
+                    return res.json({
+                        placa: placaFormatted,
+                        marca: (v.marca || '').toUpperCase(),
+                        modelo: (v.modelo || '').toUpperCase(),
+                        nro_motor: (v.motor || v.nro_motor || '').toUpperCase(),
+                        nro_vin: (v.vin || v.serie || v.nro_serie || '').toUpperCase(),
+                        tipo: (v.tipo || v.clase || v.categoria || 'CAMION').toUpperCase(),
+                        sub_tipo: (v.sub_tipo || v.subtipo || '').toUpperCase(),
+                        color: (v.color || '').toUpperCase(),
+                        combustible: (v.combustible || 'DIESEL').toUpperCase(),
+                        propietario: (v.propietario || v.nombre_propietario || v.razon_social || '').toUpperCase(),
+                        ruc_dni: v.ruc || v.dni || v.ruc_propietario || '',
+                        anio: v.anio || v.anio_fabricacion || v.modelo_anio || '',
+                        carga_util: v.carga_util || '',
+                        peso_neto: v.peso_neto || '',
+                        peso_bruto: v.peso_bruto || ''
+                    });
+                }
+            }
+        } catch(e) {}
+    }
+
+    db.query("SELECT * FROM placas WHERE UPPER(REPLACE(placa, '-', '')) = ? LIMIT 1", [numero], (err, rows) => {
+        if (!err && rows && rows.length > 0) {
+            const p = rows[0];
+            return res.json({
+                placa: p.placa,
+                cliente: p.cliente,
+                ruc_dni: p.ruc_dni,
+                marca: p.marca,
+                modelo: p.modelo,
+                tipo: p.tipo,
+                sub_tipo: p.sub_tipo,
+                color: p.color,
+                nro_motor: p.nro_motor,
+                nro_caja: p.nro_caja,
+                nro_corona: p.nro_corona,
+                nro_vin: p.nro_vin,
+                configuracion: p.configuracion,
+                anio: p.anio,
+                combustible: p.combustible,
+                carga_util: p.carga_util,
+                peso_neto: p.peso_neto,
+                peso_bruto: p.peso_bruto
+            });
+        }
+
+        return res.status(404).json({ error: "No se encontraron datos vehiculares en SUNARP/MTC para la placa " + placaFormatted });
+    });
+});
+
+app.get('/', async (req, res) => {
+    try {
+        let pageTitle = 'Azkell Fleet';
+        if (_isSuperAdminReq(req)) {
+            pageTitle = 'SuperAdmin SaaS Master — Azkell Fleet';
+        } else {
+            let nombreEmpresaRaw = '';
+            if (req.db) {
+                try {
+                    const [rows] = await req.db.promise().query(
+                        "SELECT valor FROM configuracion_erp WHERE clave = 'empresa_nombre' LIMIT 1"
+                    );
+                    if (rows && rows[0] && rows[0].valor) nombreEmpresaRaw = rows[0].valor;
+                } catch (e) {}
+            }
+            if (!nombreEmpresaRaw && req.tenantInfo && req.tenantInfo.nombre_empresa) {
+                nombreEmpresaRaw = req.tenantInfo.nombre_empresa;
+            }
+
+            const cleanName = _formatearNombreEmpresa(nombreEmpresaRaw || req.tenantSlug || 'Azkell Fleet');
+            pageTitle = `${cleanName} - Azkell Fleet`;
+        }
+
+        let html = fs.readFileSync(path.join(__dirname, 'Index.html'), 'utf8');
+        html = html.replace('<title>Azkell Fleet</title>', `<title>${pageTitle}</title>`);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.send(html);
+    } catch (e) {
+        res.sendFile(path.join(__dirname, 'Index.html'));
+    }
+});
+
+// ============================================================
+// 🔥 CONEXIÓN A LA BASE DE DATOS MULTI-TENANT (PROXY DINÁMICO POR SUBDOMINIO)
+// ============================================================
+const defaultDbPool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME || 'azkell_tenant_marsisa',
+    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
+    ssl: process.env.DB_HOST && (process.env.DB_HOST.includes('railway') || process.env.DB_HOST.includes('aiven') || process.env.DB_SSL === 'true') ? { rejectUnauthorized: false } : undefined,
+    charset: 'utf8mb4',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0
+});
+
+defaultDbPool.on('connection', (connection) => {
+    connection.query('SET SESSION group_concat_max_len = 10485760');
+});
+
+// Proxy global 'db' que delega automáticamente las peticiones al pool de la empresa según el subdominio activo
+const db = new Proxy({}, {
+    get(target, prop) {
+        const tenantPool = tenantStorage.getStore();
+        const activePool = tenantPool || defaultDbPool;
+        const val = activePool[prop];
+        return typeof val === 'function' ? val.bind(activePool) : val;
+    }
+});
+
+// ── Crear tablas faltantes al arrancar ───────────────────────────
+initDB(defaultDbPool);
+
+db.getConnection((err, connection) => {
+    if (err) {
+        console.error('🚨 Error al conectar con la base de datos MySQL:', err.message);
+    } else {
+        console.log('✅ Base de datos MySQL conectada con éxito (Pool Activo)');
+        // Migraciones de esquema al arrancar
+        connection.query(
+            `ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL`,
+            (err2) => {
+                if (err2 && err2.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER auditoria:', err2.message);
+                else console.log('✅ Columna modulo verificada en auditoria');
+            }
+        );
+        // Crear tabla roles si no existe
+        connection.query(
+            `CREATE TABLE IF NOT EXISTS roles (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nombre VARCHAR(100) NOT NULL,
+                color VARCHAR(20) DEFAULT '#5865F2',
+                permisos_json TEXT,
+                es_admin TINYINT(1) DEFAULT 0
+            )`,
+            (err3) => {
+                if (err3) console.warn('CREATE TABLE roles:', err3.message);
+                else console.log('✅ Tabla roles verificada');
+            }
+        );
+        // Agregar rol_id a usuarios si no existe
+        connection.query(
+            `ALTER TABLE usuarios ADD COLUMN rol_id INT NULL DEFAULT NULL`,
+            (err4) => {
+                if (err4 && err4.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER usuarios rol_id:', err4.message);
+                else console.log('✅ Columna rol_id verificada en usuarios');
+            }
+        );
+        // Columnas de actividad/sesión
+        connection.query(`ALTER TABLE usuarios ADD COLUMN ultimo_acceso DATETIME NULL DEFAULT NULL`,
+            (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER ultimo_acceso:', e.message); });
+        connection.query(`ALTER TABLE usuarios ADD COLUMN ultimo_ip VARCHAR(80) NULL DEFAULT NULL`,
+            (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER ultimo_ip:', e.message); });
+        connection.query(`ALTER TABLE usuarios ADD COLUMN ultimo_dispositivo VARCHAR(200) NULL DEFAULT NULL`,
+            (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER ultimo_dispositivo:', e.message); });
+        connection.query(`ALTER TABLE usuarios ADD COLUMN password_visible VARCHAR(255) NOT NULL DEFAULT ''`,
+            (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER password_visible:', e.message); });
+            
+        // Módulo Perfil
+        const perfilCols = [
+            'avatar_url VARCHAR(255) NULL',
+            'banner_url VARCHAR(255) NULL',
+            'telefono VARCHAR(50) NULL',
+            'firma_digital TEXT NULL',
+            'preferencias_json TEXT NULL'
+        ];
+        perfilCols.forEach(colDef => {
+            const colName = colDef.split(' ')[0];
+            connection.query(`ALTER TABLE usuarios ADD COLUMN ${colDef}`, (e) => {
+                if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn(`ALTER usuarios ${colName}:`, e.message);
+            });
+        });
+
+        connection.query(`CREATE TABLE IF NOT EXISTS mant_incidencias_ruta (
+            id               INT AUTO_INCREMENT PRIMARY KEY,
+            codigo           VARCHAR(30) UNIQUE NOT NULL,
+            fecha_falla      DATE NOT NULL,
+            placa            VARCHAR(20) NOT NULL,
+            conductor        VARCHAR(150) DEFAULT '',
+            marca            VARCHAR(50) DEFAULT '',
+            ubicacion        VARCHAR(150) DEFAULT '',
+            tipo_unidad      VARCHAR(50) DEFAULT '',
+            transbordo       ENUM('SI', 'NO') DEFAULT 'NO',
+            motivo           VARCHAR(255) DEFAULT '',
+            falla            TEXT,
+            area_responsable ENUM('Mantenimiento', 'Flota', 'Operaciones') DEFAULT 'Mantenimiento',
+            responsable      VARCHAR(100) DEFAULT '',
+            costos_detalle   JSON NULL,
+            total_costo      DECIMAL(12,2) DEFAULT 0.00,
+            solucionado      ENUM('Atendido', 'Pendiente') DEFAULT 'Pendiente',
+            observaciones    TEXT NULL,
+            creado_por       VARCHAR(100) DEFAULT '',
+            created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_fecha (fecha_falla),
+            INDEX idx_placa (placa),
+            INDEX idx_solucionado (solucionado),
+            INDEX idx_area (area_responsable)
+        )`, (e) => {
+            if (e) console.warn('CREATE TABLE mant_incidencias_ruta:', e.message);
+            else console.log('✅ Tabla mant_incidencias_ruta verificada');
+        });
+
+        connection.query(`CREATE TABLE IF NOT EXISTS sesiones_activas (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            usuario_correo VARCHAR(255) NOT NULL,
+            token VARCHAR(500) NOT NULL,
+            ip VARCHAR(80) NULL,
+            dispositivo VARCHAR(255) NULL,
+            fecha_login DATETIME NOT NULL,
+            ultima_actividad DATETIME NOT NULL
+        )`, (e) => { if (e) console.warn('CREATE sesiones_activas:', e.message); });
+
+        // Orden/jerarquía en roles
+        connection.query(`ALTER TABLE roles ADD COLUMN orden INT NOT NULL DEFAULT 0`,
+            (e) => {
+                if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER roles orden:', e.message);
+                else console.log('✅ Esquema v2 verificado');
+
+                // ── Módulo Planificación v1 ──────────────────────────────────
+                connection.query(
+                    `CREATE TABLE IF NOT EXISTS configuracion_flota (
+                        id              INT AUTO_INCREMENT PRIMARY KEY,
+                        marca           VARCHAR(50)  NOT NULL,
+                        uts_categoria   VARCHAR(20)  NOT NULL,
+                        km_mensuales    INT          NOT NULL DEFAULT 0,
+                        dias_operativos INT          NOT NULL DEFAULT 26,
+                        mp1_intervalo_km INT         NOT NULL DEFAULT 5000,
+                        mp2_intervalo_km INT         NOT NULL DEFAULT 10000,
+                        mp3_intervalo_km INT         NOT NULL DEFAULT 20000,
+                        activa          TINYINT(1)   NOT NULL DEFAULT 1,
+                        observaciones   TEXT,
+                        created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
+                        updated_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        UNIQUE KEY uq_marca_uts (marca, uts_categoria)
+                    )`,
+                    (e1) => {
+                        if (e1) console.warn('CREATE configuracion_flota:', e1.message);
+                        else console.log('✅ Tabla configuracion_flota verificada');
+                    }
+                );
+                connection.query(
+                    `CREATE TABLE IF NOT EXISTS mantenimiento_kits (
+                        id              INT           AUTO_INCREMENT PRIMARY KEY,
+                        marca_vehiculo  VARCHAR(50)   NOT NULL,
+                        tipo_mp         VARCHAR(60)   NOT NULL,
+                        nombre_kit      VARCHAR(150),
+                        item_codigo     VARCHAR(30)   NOT NULL,
+                        item_nombre     VARCHAR(200)  NOT NULL,
+                        cantidad        DECIMAL(10,2) NOT NULL,
+                        unidad_medida   VARCHAR(10)   NOT NULL,
+                        costo_unitario  DECIMAL(10,2) NOT NULL DEFAULT 0,
+                        costo_total     DECIMAL(10,2) NOT NULL DEFAULT 0,
+                        orden           INT           NOT NULL DEFAULT 1,
+                        activo          TINYINT(1)    NOT NULL DEFAULT 1,
+                        created_at      TIMESTAMP     NOT NULL DEFAULT NOW(),
+                        updated_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_marca_mp (marca_vehiculo, tipo_mp)
+                    )`,
+                    (e2) => {
+                        if (e2) console.warn('CREATE mantenimiento_kits:', e2.message);
+                        else console.log('✅ Tabla mantenimiento_kits verificada');
+                    }
+                );
+                connection.query(
+                    `CREATE TABLE IF NOT EXISTS planificacion (
+                        id                      VARCHAR(50)   NOT NULL PRIMARY KEY,
+                        placa                   VARCHAR(20)   NOT NULL,
+                        configuracion_flota_id  INT           NULL DEFAULT NULL,
+                        tipo_mp                 VARCHAR(60)   NOT NULL,
+                        fecha_inicio_ventana    DATE          NOT NULL,
+                        fecha_fin_ventana       DATE          NOT NULL,
+                        mes_ejecucion           INT           NOT NULL,
+                        anio_ejecucion          INT           NOT NULL,
+                        km_estimado             INT           NOT NULL DEFAULT 0,
+                        km_minimo               INT,
+                        km_maximo               INT,
+                        tecnico_asignado        VARCHAR(100),
+                        prioridad               ENUM('Baja','Normal','Alta','Crítica') NOT NULL DEFAULT 'Normal',
+                        observaciones_plan      TEXT,
+                        estado                  ENUM('Programada','Confirmada','En Progreso','Completada','Cancelada','Diferida') NOT NULL DEFAULT 'Programada',
+                        motivo_cancelacion      TEXT,
+                        fleetrun_id_ejecutado   VARCHAR(50),
+                        fecha_real_ejecucion    DATE,
+                        km_real_ejecucion       INT,
+                        desviacion_km           INT,
+                        desviacion_dias         INT,
+                        fecha_primer_retraso    DATE,
+                        alertas_enviadas        TINYINT NOT NULL DEFAULT 0,
+                        source                  ENUM('manual_excel','auto_generada') NOT NULL DEFAULT 'manual_excel',
+                        created_by              VARCHAR(100),
+                        created_at              TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_estado (estado),
+                        INDEX idx_placa (placa),
+                        INDEX idx_mes_anio (mes_ejecucion, anio_ejecucion),
+                        INDEX idx_fecha_ventana (fecha_fin_ventana)
+                    )`,
+                    (e3) => {
+                        if (e3) console.warn('CREATE planificacion:', e3.message);
+                        else console.log('✅ Tabla planificacion verificada');
+                    }
+                );
+                connection.query(
+                    `CREATE TABLE IF NOT EXISTS requerimientos_planificacion (
+                        id                  INT           AUTO_INCREMENT PRIMARY KEY,
+                        plan_id             VARCHAR(50)   NOT NULL,
+                        mes_ejecucion       INT           NOT NULL,
+                        anio_ejecucion      INT           NOT NULL,
+                        item_codigo         VARCHAR(30),
+                        item_nombre         VARCHAR(200)  NOT NULL,
+                        cantidad_requerida  DECIMAL(10,2) NOT NULL,
+                        unidad_medida       VARCHAR(10)   NOT NULL,
+                        costo_unitario      DECIMAL(10,2) NOT NULL DEFAULT 0,
+                        costo_total         DECIMAL(10,2) NOT NULL DEFAULT 0,
+                        estado_req          ENUM('Pendiente','Solicitado','Recibido','Entregado al Taller','Cancelado') NOT NULL DEFAULT 'Pendiente',
+                        fecha_solicitud     DATE,
+                        fecha_entrega       DATE,
+                        responsable_almacen VARCHAR(100),
+                        observaciones       TEXT,
+                        created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_plan       (plan_id),
+                        INDEX idx_mes_req    (mes_ejecucion, anio_ejecucion),
+                        INDEX idx_estado_req (estado_req)
+                    )`,
+                    (e4) => {
+                        connection.release();
+                        if (e4) console.warn('CREATE requerimientos_planificacion:', e4.message);
+                        else console.log('✅ Esquema planificacion v1 listo');
+                        // Migración de seguridad: asegurar que configuracion_flota_id sea nullable
+                        db.query(
+                            `ALTER TABLE planificacion MODIFY configuracion_flota_id INT NULL DEFAULT NULL`,
+                            (eM) => { if (eM && eM.code !== 'ER_DUP_FIELDNAME') console.log('✅ planificacion.configuracion_flota_id nullable'); }
+                        );
+                    }
+                );
+            }
+        );
+    }
+});
+
+// ── Migración adicional: tabla destinatarios_alertas  (fire-and-forget) ──
+db.query(
+    `CREATE TABLE IF NOT EXISTS destinatarios_alertas (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        nombre       VARCHAR(100) NOT NULL,
+        correo       VARCHAR(150) NOT NULL,
+        cargo        VARCHAR(80),
+        notif_1d     TINYINT(1) NOT NULL DEFAULT 1  COMMENT '+1 día retraso',
+        notif_3d     TINYINT(1) NOT NULL DEFAULT 1  COMMENT '+3 días retraso',
+        notif_7d     TINYINT(1) NOT NULL DEFAULT 1  COMMENT '+7 días retraso',
+        notif_completada TINYINT(1) NOT NULL DEFAULT 0,
+        activo       TINYINT(1) NOT NULL DEFAULT 1,
+        created_at   TIMESTAMP NOT NULL DEFAULT NOW(),
+        UNIQUE KEY uq_correo (correo)
+    ) COMMENT 'Destinatarios de alertas del módulo Planificación'`,
+    (e) => {
+        if (e) console.warn('CREATE destinatarios_alertas:', e.message);
+        else   console.log('✅ Tabla destinatarios_alertas verificada');
+    }
+);
+// ── Tabla integraciones_api (tokens/credenciales externas) ──────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS integraciones_api (
+        id              INT AUTO_INCREMENT PRIMARY KEY,
+        clave           VARCHAR(100)  NOT NULL UNIQUE,
+        valor           TEXT,
+        descripcion     VARCHAR(255),
+        actualizado_por VARCHAR(100),
+        actualizado_en  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) COMMENT 'Credenciales y tokens de integraciones externas (Wialon, etc.)'`,
+    (e) => {
+        if (e) console.warn('CREATE integraciones_api:', e.message);
+        else {
+            console.log('✅ Tabla integraciones_api verificada');
+            db.query(
+                `INSERT IGNORE INTO integraciones_api (clave, descripcion) VALUES
+                 ('wialon_token',   'Token de autenticación API Wialon'),
+                 ('wialon_url',     'URL base API Wialon (vacío = usar por defecto)')`,
+                () => {}
+            );
+        }
+    }
+);
+// ── Tabla histórico KM GPS (snapshot diario por placa) ────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS km_snapshots (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        placa        VARCHAR(20)    NOT NULL,
+        fecha        DATE           NOT NULL,
+        km_gps       INT            NOT NULL DEFAULT 0,
+        horas_motor  DECIMAL(10,1)  NOT NULL DEFAULT 0,
+        created_at   TIMESTAMP      NOT NULL DEFAULT NOW(),
+        UNIQUE KEY uq_placa_fecha (placa, fecha),
+        INDEX idx_placa (placa),
+        INDEX idx_fecha (fecha)
+    ) COMMENT 'Snapshot diario de KM GPS y horas motor por placa (Wialon)'`,
+    (e) => {
+        if (e) console.warn('CREATE km_snapshots:', e.message);
+        else   console.log('✅ Tabla km_snapshots verificada');
+    }
+);
+// ── Tabla maestra tipos de preventivo ─────────────────────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS tipos_preventivo (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(100) NOT NULL UNIQUE,
+        descripcion TEXT,
+        activo      TINYINT(1) NOT NULL DEFAULT 1,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE tipos_preventivo:', e.message);
+        else   console.log('✅ Tabla tipos_preventivo verificada');
+    }
+);
+// ── Crear tabla tipos_mantenimiento si no existe ──────────────────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS tipos_mantenimiento (
+        id              INT AUTO_INCREMENT PRIMARY KEY,
+        marca           VARCHAR(100) NOT NULL DEFAULT '',
+        tipo_mp         VARCHAR(100) NOT NULL DEFAULT '',
+        uts             VARCHAR(50)  NOT NULL DEFAULT '',
+        frecuencia_km   DECIMAL(10,2) NULL DEFAULT NULL,
+        frecuencia_horas VARCHAR(50) NULL DEFAULT NULL,
+        frecuencia_dias INT          NULL DEFAULT NULL,
+        tipo            VARCHAR(100) NULL DEFAULT NULL,
+        sistema         VARCHAR(100) NULL DEFAULT NULL,
+        descripcion     TEXT         NULL DEFAULT NULL,
+        created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_marca_tipo_uts (marca, tipo_mp, uts)
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE tipos_mantenimiento:', e.message);
+        else   console.log('✅ Tabla tipos_mantenimiento verificada');
+    }
+);
+// ✨ Crear tabla taller_personal si no existe ✨
+db.query(
+    `CREATE TABLE IF NOT EXISTS taller_personal (
+        id              INT AUTO_INCREMENT PRIMARY KEY,
+        nombre          VARCHAR(100) NOT NULL,
+        sueldo_mensual  DECIMAL(10,2) DEFAULT 0,
+        costo_hora      DECIMAL(10,2) DEFAULT 0,
+        creado_en       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE taller_personal:', e.message);
+        else   console.log('✅ Tabla taller_personal verificada');
+    }
+);
+// ── Migración: columna frecuencia_horas en tipos_mantenimiento ────────────
+db.query(
+    `ALTER TABLE tipos_mantenimiento ADD COLUMN frecuencia_horas VARCHAR(50) NULL DEFAULT NULL`,
+    (e) => { if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ tipos_mantenimiento.frecuencia_horas verificada'); }
+);
+// ── Migración: columna frecuencia_dias en tipos_mantenimiento ──────────────
+db.query(
+    `ALTER TABLE tipos_mantenimiento ADD COLUMN frecuencia_dias INT NULL DEFAULT NULL`,
+    (e) => { if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ tipos_mantenimiento.frecuencia_dias verificada'); }
+);
+// ── Migración: columnas marca, tipo_mp, uts, frecuencia_km, tipo, sistema ────
+['marca VARCHAR(100) NOT NULL DEFAULT \'\'',
+ 'tipo_mp VARCHAR(100) NOT NULL DEFAULT \'\'',
+ 'uts VARCHAR(50) NOT NULL DEFAULT \'\'',
+ 'frecuencia_km DECIMAL(10,2) NULL DEFAULT NULL',
+ 'tipo VARCHAR(100) NULL DEFAULT NULL',
+ 'sistema VARCHAR(100) NULL DEFAULT NULL'
+].forEach(function(colDef) {
+    var colName = colDef.split(' ')[0];
+    db.query('ALTER TABLE tipos_mantenimiento ADD COLUMN ' + colDef, function(e) {
+        if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ tipos_mantenimiento.' + colName + ' verificada');
+        else console.warn('ALTER tipos_mantenimiento.' + colName + ':', e.message);
+    });
+});
+// ── Migración: índice único para upsert en tipos_mantenimiento ────────────
+db.query(
+    'ALTER TABLE tipos_mantenimiento ADD UNIQUE INDEX uq_marca_tipo_uts (marca, tipo_mp, uts)',
+    (e) => { if (!e || e.code === 'ER_DUP_KEYNAME') console.log('✅ tipos_mantenimiento.uq_marca_tipo_uts verificado'); }
+);
+// ── Migración: columnas faltantes en fleetrun (nuevo esquema) ─────────────
+['idRegistro VARCHAR(50) NULL',
+ 'mes VARCHAR(10) NULL',
+ 'anio VARCHAR(10) NULL',
+ 'fecha VARCHAR(20) NULL',
+ 'marca VARCHAR(100) NULL DEFAULT \'\'',
+ 'dueno VARCHAR(100) NULL DEFAULT \'\'',
+ 'uts VARCHAR(50) NULL DEFAULT \'\'',
+ 'tipo_mp VARCHAR(100) NULL DEFAULT \'\'',
+ 'km_actual DECIMAL(15,2) NULL',
+ 'frecuencia_km DECIMAL(15,2) NULL',
+ 'km_proximo DECIMAL(15,2) NULL',
+ 'km_gps VARCHAR(100) NULL DEFAULT \'\'',
+ 'tecnico VARCHAR(100) NULL DEFAULT \'\'',
+ 'observacion TEXT NULL'
+].forEach(function(colDef) {
+    var colName = colDef.split(' ')[0];
+    db.query('ALTER TABLE fleetrun ADD COLUMN ' + colDef, function(e) {
+        if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ fleetrun.' + colName + ' verificada');
+        else console.warn('ALTER fleetrun.' + colName + ':', e.message);
+    });
+});
+// ── Migración: índice único idRegistro en fleetrun ────────────────────────
+db.query(
+    'ALTER TABLE fleetrun ADD UNIQUE INDEX uq_idregistro (idRegistro)',
+    (e) => { if (!e || e.code === 'ER_DUP_KEYNAME') console.log('✅ fleetrun.uq_idregistro verificado'); }
+);
+// ── Fix: tipos_mantenimiento — eliminar índice único de codigo (legacy) ───
+db.query(
+    'ALTER TABLE tipos_mantenimiento DROP INDEX codigo',
+    (e) => { if (!e || e.code === 'ER_CANT_DROP_FIELD_OR_KEY') console.log('✅ tipos_mantenimiento.codigo unique index removido'); }
+);
+// ── Migración: columna descripcion en tipos_mantenimiento ──────────────────
+db.query(
+    'ALTER TABLE tipos_mantenimiento ADD COLUMN descripcion TEXT NULL DEFAULT NULL',
+    (e) => { if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ tipos_mantenimiento.descripcion verificada'); }
+);
+// ── Fix: tipos_mantenimiento — permitir NULL en columnas legacy NOT NULL ──
+['ALTER TABLE tipos_mantenimiento MODIFY COLUMN codigo VARCHAR(20) NULL DEFAULT \'\'',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN descripcion TEXT NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN km_intervalo INT NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN tipo VARCHAR(100) NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN sistema VARCHAR(100) NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN frecuencia_km DECIMAL(10,2) NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN frecuencia_horas VARCHAR(50) NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN frecuencia_dias INT NULL DEFAULT NULL'
+].forEach(function(sql) {
+    db.query(sql, function(e) {
+        if (!e) console.log('✅ tipos_mantenimiento nullable fix: ' + sql.substring(0,60));
+    });
+});
+// ── Fix: fleetrun — permitir NULL en columnas legacy NOT NULL ─────────────
+['ALTER TABLE fleetrun MODIFY COLUMN placa VARCHAR(20) NULL DEFAULT \'\'',
+ 'ALTER TABLE fleetrun MODIFY COLUMN fecha DATE NULL DEFAULT NULL',
+ 'ALTER TABLE fleetrun MODIFY COLUMN km_actual INT NULL DEFAULT NULL',
+ 'ALTER TABLE fleetrun MODIFY COLUMN mes INT NULL DEFAULT NULL'
+].forEach(function(sql) {
+    db.query(sql, function(e) {
+        if (!e) console.log('✅ fleetrun nullable fix: ' + sql.substring(0,60));
+        else if (e.code !== 'ER_DUP_FIELDNAME') console.warn('WARN:', e.message);
+    });
+});
+
+// ── Fix: inspecciones — km_tablero nullable para importación ─────────────
+db.query('ALTER TABLE inspecciones MODIFY COLUMN km_tablero INT NULL DEFAULT NULL', function(e) {
+    if (!e) console.log('✅ inspecciones km_tablero nullable');
+    else if (e.code !== 'ER_NO_SUCH_TABLE') console.warn('WARN km_tablero:', e.message);
+});
+// ── Fix: normalizar marca a UPPERCASE en tipos_mantenimiento ──────────────
+db.query(
+    `UPDATE tipos_mantenimiento SET marca = UPPER(TRIM(marca)) WHERE marca != UPPER(TRIM(marca)) OR marca != TRIM(marca)`,
+    (e) => { if (!e) console.log('✅ tipos_mantenimiento.marca normalizada a UPPERCASE'); }
+);
+// ── Fix: corregir frecuencia_km — paso 1: limpiar valores con coma ('20,000.00' → 20000)
+db.query(
+    `UPDATE tipos_mantenimiento
+     SET frecuencia_km = CAST(REPLACE(CONVERT(frecuencia_km, CHAR), ',', '') AS DECIMAL(10,0))
+     WHERE CONVERT(frecuencia_km, CHAR) LIKE '%,%'`,
+    (e, r) => {
+        if (e) console.error('❌ fix frecuencia_km coma:', e.message);
+        else if (r && r.affectedRows > 0) console.log('✅ frecuencia_km: quitadas comas en', r.affectedRows, 'registros');
+        else console.log('✅ frecuencia_km: sin valores con coma');
+        // Paso 2: multiplicar x1000 los valores que quedaron con ceros faltantes (< 1000)
+        db.query(
+            `UPDATE tipos_mantenimiento SET frecuencia_km = frecuencia_km * 1000
+             WHERE frecuencia_km > 0 AND frecuencia_km < 1000`,
+            (e2, r2) => {
+                if (e2) console.error('❌ fix frecuencia_km x1000:', e2.message);
+                else if (r2 && r2.affectedRows > 0) console.log('✅ frecuencia_km corregida x1000 en', r2.affectedRows, 'registros');
+                else console.log('✅ frecuencia_km ya estaba correcta (sin cambios)');
+            }
+        );
+    }
+);
+// ── Fix: corregir encoding UTF-8 corrupto en tipos_mantenimiento ──────────
+const _encFixes = [
+    ["Campaña",  "Campaña"],  ["CorreccioÌ€n", "Corrección"],
+    ["ProteccioÌ€n","Protección"],["Inspección","Inspección"],
+    ["reparación","reparación"],["cambioÂ",    "cambio"],
+    ["ó",        "ó"],         ["é",         "é"],
+    ["ú",        "ú"],         ["Ãñ",         "ñ"],
+];
+_encFixes.forEach(([bad, good]) => {
+    db.query(
+        `UPDATE tipos_mantenimiento SET tipo = REPLACE(tipo, ?, ?) WHERE tipo LIKE CONCAT('%', ?, '%')`,
+        [bad, good, bad],
+        (e) => { if (e) console.error('encoding fix error:', e.message); }
+    );
+    db.query(
+        `UPDATE tipos_mantenimiento SET descripcion = REPLACE(descripcion, ?, ?) WHERE descripcion LIKE CONCAT('%', ?, '%')`,
+        [bad, good, bad],
+        (e) => { if (e) console.error('encoding fix error:', e.message); }
+    );
+});
+// ── Migración: columna metrica en placas (km vs horas motor) ──────────────
+db.query(`ALTER TABLE placas ADD COLUMN metrica ENUM('km','horas') NOT NULL DEFAULT 'km'`, (e) => { 
+    if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ placas.metrica verificada'); 
+});
+db.query(`ALTER TABLE placas ADD COLUMN wialon_name VARCHAR(100) DEFAULT NULL`, (e) => {});
+// ── Nueva tabla: almacen_familias (fire-and-forget) ──────────────────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS almacen_familias (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(100) NOT NULL UNIQUE,
+        descripcion VARCHAR(200) NULL,
+        activo      TINYINT(1) NOT NULL DEFAULT 1,
+        orden       INT NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE almacen_familias:', e.message);
+        else {
+            console.log('✅ Tabla almacen_familias verificada');
+            db.query(`SELECT COUNT(*) AS n FROM almacen_familias`, (e2, rows) => {
+                if (!e2 && rows[0].n === 0) {
+                    const defs = [['FILTROS',1],['LUBRICANTES',2],['NEUMATICOS',3],['HERRAMIENTAS',4],['REPUESTOS',5],['ELECTRICO',6],['CONSUMIBLES',7],['EPP',8],['QUIMICOS',9],['LIMPIEZA',10]];
+                    db.query(`INSERT IGNORE INTO almacen_familias (nombre, orden) VALUES ?`, [defs], () => {});
+                }
+            });
+        }
+    }
+);
+// ── Nueva tabla: almacen_marcas (fire-and-forget) ─────────────────────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS almacen_marcas (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(100) NOT NULL UNIQUE,
+        descripcion VARCHAR(200) NULL,
+        activo      TINYINT(1) NOT NULL DEFAULT 1,
+        orden       INT NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE almacen_marcas:', e.message);
+        else {
+            console.log('✅ Tabla almacen_marcas verificada');
+            db.query(`SELECT COUNT(*) AS n FROM almacen_marcas`, (e2, rows) => {
+                if (!e2 && rows[0].n === 0) {
+                    const defs = [['3M',1],['WIX',2],['MANN',3],['VOLVO',4],['FLEETGUARD',5],['DONALDSON',6],['MAHLE',7],['BOSCH',8],['CASTROL',9],['MOBIL',10]];
+                    db.query(`INSERT IGNORE INTO almacen_marcas (nombre, orden) VALUES ?`, [defs], () => {});
+                }
+            });
+        }
+    }
+);
+// ── Nuevas tablas: almacen_unidades y almacen_sistemas (fire-and-forget) ──────
+db.query(
+    `CREATE TABLE IF NOT EXISTS almacen_unidades (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(20) NOT NULL UNIQUE,
+        descripcion VARCHAR(200) NULL,
+        activo      TINYINT(1) NOT NULL DEFAULT 1,
+        orden       INT NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE almacen_unidades:', e.message);
+        else {
+            console.log('✅ Tabla almacen_unidades verificada');
+            // Insertar unidades por defecto si la tabla está vacía
+            db.query(`SELECT COUNT(*) AS n FROM almacen_unidades`, (e2, rows) => {
+                if (!e2 && rows[0].n === 0) {
+                    const defaults = [['UND','Unidades',1],['LT','Litros',2],['KG','Kilogramos',3],['GL','Galones',4],['JGO','Juego',5],['PAR','Par',6],['MT','Metros',7],['M2','Metro cuadrado',8],['M3','Metro cúbico',9]];
+                    db.query(`INSERT IGNORE INTO almacen_unidades (nombre, descripcion, orden) VALUES ?`, [defaults], () => {});
+                }
+            });
+        }
+    }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS almacen_sistemas (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(100) NOT NULL UNIQUE,
+        sub_sistemas JSON NULL,
+        activo      TINYINT(1) NOT NULL DEFAULT 1,
+        orden       INT NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE almacen_sistemas:', e.message);
+        else {
+            console.log('✅ Tabla almacen_sistemas verificada');
+            // Insertar sistemas por defecto
+            db.query(`SELECT COUNT(*) AS n FROM almacen_sistemas`, (e2, rows) => {
+                if (!e2 && rows[0].n === 0) {
+                    const defaults = [
+                        ['MOTOR',      JSON.stringify(['ACEITE MOTOR','REFRIGERACIÓN','TURBO','INYECCION','DISTRIBUCION']),    1],
+                        ['TRANSMISION',JSON.stringify(['CAJA DE CAMBIOS','EMBRAGUE','EJE CARDAN','DIFERENCIAL']),              2],
+                        ['FRENOS',     JSON.stringify(['PASTILLAS','DISCOS','TAMBORES','LIQUIDO FRENOS']),                     3],
+                        ['DIRECCION',  JSON.stringify(['CREMALLERA','TERMINALES','BOMBA DIRECCION']),                          4],
+                        ['SUSPENSION', JSON.stringify(['AMORTIGUADORES','RESORTES','BUJES']),                                  5],
+                        ['ELECTRICIDAD',JSON.stringify(['BATERIA','ALTERNADOR','ARRANQUE','FUSIBLES']),                       6],
+                        ['NEUMATICO',  JSON.stringify(['LLANTA','ARO','VALVULA']),                                             7],
+                        ['CARROCERIA', JSON.stringify(['PARACHOQUE','ESPEJO','LUNA','PUERTA']),                                8],
+                        ['LUBRICANTES',JSON.stringify(['ACEITE MOTOR','ACEITE CAJA','GRASA']),                                 9],
+                        ['HERRAMIENTAS',JSON.stringify(['HERRAMIENTA MANUAL','HERRAMIENTA ELECTRICA']),                      10],
+                        ['SSOMA',      JSON.stringify(['EPP','SEÑALIZACION','EXTINTOR']),                                     11],
+                        ['CONSUMIBLES',JSON.stringify(['LIMPIEZA','ADHESIVOS','SELLANTES']),                                  12],
+                    ];
+                    db.query(`INSERT IGNORE INTO almacen_sistemas (nombre, sub_sistemas, orden) VALUES ?`, [defaults], () => {});
+                }
+            });
+        }
+    }
+);
+// ── Tabla historial de cambios por placa ─────────────────────────────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS placa_auditoria (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        placa       VARCHAR(20)  NOT NULL,
+        campo       VARCHAR(60)  NOT NULL,
+        valor_ant   TEXT,
+        valor_nuevo TEXT,
+        usuario     VARCHAR(100),
+        ip          VARCHAR(80),
+        fecha       TIMESTAMP    NOT NULL DEFAULT NOW(),
+        INDEX idx_placa (placa),
+        INDEX idx_fecha  (fecha)
+    ) COMMENT 'Historial de cambios por placa'`,
+    (e) => {
+        if (e) console.warn('CREATE placa_auditoria:', e.message);
+        else   console.log('✅ Tabla placa_auditoria verificada');
+    }
+);
+// ── Tablas de Correo y Notificaciones Multi-Tenant ─────────────────────────
+async function ensureEmailTables(targetDb) {
+    const conn = targetDb || db;
+    if (!conn) return;
+    const q = (sql) => new Promise((resolve) => {
+        conn.query(sql, (err) => {
+            resolve();
+        });
+    });
+
+    await q(`CREATE TABLE IF NOT EXISTS configuracion_email (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        smtp_host VARCHAR(150) NOT NULL DEFAULT 'smtp.gmail.com',
+        smtp_port INT NOT NULL DEFAULT 587,
+        smtp_secure TINYINT(1) NOT NULL DEFAULT 0,
+        smtp_user VARCHAR(150) NULL,
+        smtp_pass VARCHAR(255) NULL,
+        from_name VARCHAR(150) NULL DEFAULT 'Azkell ERP Alertas',
+        from_email VARCHAR(150) NULL,
+        alertas_checklist TINYINT(1) DEFAULT 1,
+        alertas_vencimientos TINYINT(1) DEFAULT 1,
+        alertas_planes TINYINT(1) DEFAULT 1,
+        actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    await q(`CREATE TABLE IF NOT EXISTS destinatarios_alertas (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nombre VARCHAR(150) NOT NULL,
+        correo VARCHAR(150) NOT NULL,
+        cargo VARCHAR(100) NULL,
+        notif_checklist TINYINT(1) DEFAULT 1,
+        notif_vencimientos TINYINT(1) DEFAULT 1,
+        notif_1d TINYINT(1) DEFAULT 1,
+        notif_3d TINYINT(1) DEFAULT 1,
+        notif_7d TINYINT(1) DEFAULT 1,
+        activo TINYINT(1) DEFAULT 1,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    await q(`CREATE TABLE IF NOT EXISTS reportes_programaciones_email (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nombre_reporte VARCHAR(150) NOT NULL,
+        modulo VARCHAR(100) NOT NULL,
+        destinatarios_para TEXT NOT NULL,
+        destinatarios_cc TEXT NULL,
+        destinatarios_cco TEXT NULL,
+        frecuencia VARCHAR(50) NOT NULL DEFAULT 'DIARIO',
+        hora_envio VARCHAR(10) DEFAULT '08:00',
+        dias_semana VARCHAR(50) NULL,
+        asunto_personalizado VARCHAR(255) NULL,
+        mensaje_personalizado TEXT NULL,
+        incluir_pdf TINYINT(1) DEFAULT 1,
+        incluir_excel TINYINT(1) DEFAULT 0,
+        activo TINYINT(1) DEFAULT 1,
+        ultimo_envio DATETIME NULL,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    // Migraciones columna por columna por si la tabla ya existía en la BD del tenant
+    const migraciones = [
+        "ALTER TABLE destinatarios_alertas ADD COLUMN cargo VARCHAR(100) NULL",
+        "ALTER TABLE destinatarios_alertas ADD COLUMN notif_checklist TINYINT(1) DEFAULT 1",
+        "ALTER TABLE destinatarios_alertas ADD COLUMN notif_vencimientos TINYINT(1) DEFAULT 1",
+        "ALTER TABLE destinatarios_alertas ADD COLUMN notif_1d TINYINT(1) DEFAULT 1",
+        "ALTER TABLE destinatarios_alertas ADD COLUMN notif_3d TINYINT(1) DEFAULT 1",
+        "ALTER TABLE destinatarios_alertas ADD COLUMN notif_7d TINYINT(1) DEFAULT 1",
+        "ALTER TABLE destinatarios_alertas ADD COLUMN activo TINYINT(1) DEFAULT 1",
+        "ALTER TABLE configuracion_email ADD COLUMN from_name VARCHAR(150) NULL DEFAULT 'Azkell ERP Alertas'",
+        "ALTER TABLE configuracion_email ADD COLUMN from_email VARCHAR(150) NULL",
+        "ALTER TABLE configuracion_email ADD COLUMN alertas_checklist TINYINT(1) DEFAULT 1",
+        "ALTER TABLE configuracion_email ADD COLUMN alertas_vencimientos TINYINT(1) DEFAULT 1",
+        "ALTER TABLE configuracion_email ADD COLUMN alertas_planes TINYINT(1) DEFAULT 1"
+    ];
+    for (const sql of migraciones) {
+        await q(sql);
+    }
+}
+
+// Inicializar en BD por defecto al arrancar
+ensureEmailTables(db).catch(() => {});
+
+// ── Nodemailer: Transporter Dinámico de Correo ─────────────────────────────
+async function getMailConfig(targetDb) {
+    const conn = targetDb || db;
+    await ensureEmailTables(conn);
+    return new Promise((resolve) => {
+        conn.query("SELECT * FROM configuracion_email ORDER BY id DESC LIMIT 1", (err, rows) => {
+            if (!err && rows && rows.length > 0) {
+                const r = rows[0];
+                resolve({
+                    host: r.smtp_host || process.env.EMAIL_HOST || 'smtp.gmail.com',
+                    port: parseInt(r.smtp_port) || parseInt(process.env.EMAIL_PORT_SMTP) || 587,
+                    secure: !!r.smtp_secure,
+                    user: r.smtp_user || process.env.EMAIL_USER || '',
+                    pass: r.smtp_pass || process.env.EMAIL_PASS || '',
+                    from_name: r.from_name || 'Azkell ERP Alertas',
+                    from_email: r.from_email || r.smtp_user || process.env.EMAIL_FROM || process.env.EMAIL_USER || '',
+                    alertas_checklist: r.alertas_checklist !== 0,
+                    alertas_vencimientos: r.alertas_vencimientos !== 0,
+                    alertas_planes: r.alertas_planes !== 0
+                });
+            } else {
+                resolve({
+                    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+                    port: parseInt(process.env.EMAIL_PORT_SMTP) || 587,
+                    secure: false,
+                    user: process.env.EMAIL_USER || '',
+                    pass: process.env.EMAIL_PASS || '',
+                    from_name: 'Azkell ERP Alertas',
+                    from_email: process.env.EMAIL_FROM || process.env.EMAIL_USER || '',
+                    alertas_checklist: true,
+                    alertas_vencimientos: true,
+                    alertas_planes: true
+                });
+            }
+        });
+    });
+}
+
+async function getTransporterInstance(targetDb) {
+    const cfg = await getMailConfig(targetDb);
+    const transporter = nodemailer.createTransport({
+        host: cfg.host,
+        port: cfg.port,
+        secure: cfg.secure,
+        auth: (cfg.user && cfg.pass) ? {
+            user: cfg.user,
+            pass: cfg.pass
+        } : undefined,
+        tls: { rejectUnauthorized: false }
+    });
+    return { transporter, config: cfg };
+}
+
+// ── Función Universal de Envío de Correo ─────────────────────────────────────
+async function enviarEmailAlerta(para, asunto, htmlBody, attachments = [], targetDb = null) {
+    const { transporter, config } = await getTransporterInstance(targetDb);
+    if (!config.user || !config.pass) {
+        console.log(`[Email NO CONFIGURADO] Para: ${para} | Asunto: ${asunto}`);
+        return { demo: true, warning: 'Credenciales SMTP no configuradas' };
+    }
+    const fromHeader = config.from_name 
+        ? `"${config.from_name}" <${config.from_email || config.user}>`
+        : (config.from_email || config.user);
+
+    return transporter.sendMail({
+        from: fromHeader,
+        to: para,
+        subject: asunto,
+        html: htmlBody,
+        attachments: attachments
+    });
+}
+
+// ── Scheduler de alertas de retraso (+1/+3/+7 días) ──────────────────────
+// Corre una vez al día (cada 24h), revisa planes vencidos y manda emails
+async function verificarAlertasRetraso() {
+    const hoy = new Date().toISOString().split('T')[0];
+    // Planes activos cuya fecha_fin_ventana ya pasó
+    db.query(
+        `SELECT p.*, pl.cliente, pl.marca
+         FROM planificacion p
+         LEFT JOIN placas pl ON pl.placa = p.placa
+         WHERE p.estado IN ('Programada','Confirmada','En Progreso')
+         AND p.fecha_fin_ventana < ?`,
+        [hoy],
+        async (err, planes) => {
+            if (err || !planes.length) return;
+
+            // Destinatarios activos
+            db.query(`SELECT * FROM destinatarios_alertas WHERE activo=1`, async (err2, dest) => {
+                if (err2 || !dest.length) return;
+
+                for (const plan of planes) {
+                    const diasRetraso = Math.round(
+                        (new Date(hoy) - new Date(plan.fecha_fin_ventana)) / 86400000
+                    );
+                    if (!diasRetraso || isNaN(diasRetraso) || diasRetraso < 1) continue;
+
+                    const nivel = diasRetraso >= 7 ? 3 : diasRetraso >= 3 ? 2 : 1;
+                    const yaEnviados = plan.alertas_enviadas || 0;
+                    if (yaEnviados >= nivel) continue; // ya se notificó este nivel
+
+                    const destinatariosFiltrados = dest.filter(d =>
+                        (nivel === 1 && d.notif_1d) ||
+                        (nivel === 2 && d.notif_3d) ||
+                        (nivel === 3 && d.notif_7d)
+                    );
+                    if (!destinatariosFiltrados.length) continue;
+
+                    const etiqueta  = nivel === 3 ? '🔴 CRÍTICO' : nivel === 2 ? '🟠 URGENTE' : '🟡 AVISO';
+                    const htmlEmail =
+                        `<div style="font-family:Arial,sans-serif; max-width:600px;">
+                         <h2 style="color:#ef4444;">${etiqueta} — Plan de Mantenimiento Atrasado</h2>
+                         <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Placa</td><td style="padding:6px;">${plan.placa}</td></tr>
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Cliente</td><td style="padding:6px;">${plan.cliente || '—'}</td></tr>
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Tipo MP</td><td style="padding:6px;">${plan.tipo_mp}</td></tr>
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Ventana</td><td style="padding:6px;">${plan.fecha_inicio_ventana} → ${plan.fecha_fin_ventana}</td></tr>
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Días de retraso</td><td style="padding:6px; color:#ef4444; font-weight:bold;">${diasRetraso} días</td></tr>
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Técnico</td><td style="padding:6px;">${plan.tecnico_asignado || 'Sin asignar'}</td></tr>
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Plan ID</td><td style="padding:6px;">${plan.id}</td></tr>
+                         </table>
+                         <p style="margin-top:16px; color:#64748b; font-size:12px;">— Sistema Azkell Fleet | Alerta automática</p>
+                         </div>`;
+
+                    const promesas = destinatariosFiltrados.map(d =>
+                        enviarEmailAlerta(d.correo, `${etiqueta} — ${plan.placa} ${plan.tipo_mp} (+${diasRetraso}d)`, htmlEmail)
+                            .catch(e => console.warn(`Email error a ${d.correo}:`, e.message))
+                    );
+                    await Promise.all(promesas);
+
+                    // Registrar nivel de alerta enviada
+                    db.query(
+                        `UPDATE planificacion SET alertas_enviadas=?,
+                         fecha_primer_retraso=COALESCE(fecha_primer_retraso,?) WHERE id=?`,
+                        [nivel, hoy, plan.id]
+                    );
+                    console.log(`📧 Alerta nivel ${nivel} enviada: ${plan.id} (${plan.placa} ${plan.tipo_mp}, +${diasRetraso}d)`);
+                }
+            });
+        }
+    );
+}
+
+// Correr scheduler una vez al día (cada 24 horas)
+setInterval(verificarAlertasRetraso, 24 * 60 * 60 * 1000);
+// Correr también al arrancar (con 30s de delay para que el pool esté listo)
+setTimeout(verificarAlertasRetraso, 30000);
+
+// ============================================================
+// 🚨 MIDDLEWARE RBAC (Control de Acceso Basado en Roles)
+// ============================================================
+const globalRBAC = require('./rbac');
+
+function requirePerm(modulo, accion) {
+    // Retenemos requirePerm como stub vacío en caso de que alguna ruta antigua lo llame
+    return (req, res, next) => next();
+}
+
+function _resolverNombreUsuario(raw) {
+    if (!raw) return 'Sthefano Avila';
+    const s = String(raw).trim();
+    if (!s || s.includes('[object Object]') || s.toLowerCase() === 'undefined' || s.toLowerCase() === 'null') return 'Sthefano Avila';
+    const up = s.toUpperCase();
+    if (up === '75527474' || up === 'NIXON' || up === 'NIXON PEREZ' || up === 'NIXON PEREZ PEREZ') return 'NIXON PEREZ PEREZ';
+    if (up === '72437318' || up === 'STHEFANO' || up === 'STHEFANO AVILA') return 'Sthefano Avila';
+    if (up === '72746329' || up === 'FABIANO' || up === 'FABIANO TORRES') return 'Fabiano Torres';
+    if (up === '70805535' || up === 'LIDIA' || up === 'LIDIA FLORES' || up === 'LIDIA FLORES CORONEL') return 'LIDIA FLORES CORONEL';
+    if (up === 'JESUS MESIAS' || up === 'JESUS') return 'Jesus Mesias';
+    if (up === 'SAUL' || up === 'SAUL HENRY ROSAS' || up === 'SAUL ROSAS') return 'Saul Henry Rosas';
+    if (up === 'ADMINISTRADOR' || up === 'ADMIN' || up === 'SISTEMA') return 'Sthefano Avila';
+    return s;
+}
+
+function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, detalle) {
+    let u = 'Sthefano Avila';
+    let m = modulo || '';
+    let sm = '';
+    let a = '';
+    let d = '';
+
+    if (usuarioOrObj && typeof usuarioOrObj === 'object') {
+        // Si se pasó el objeto de petición Express `req`
+        if (usuarioOrObj.user || usuarioOrObj.headers || usuarioOrObj.method || usuarioOrObj.body) {
+            const req = usuarioOrObj;
+            // Priorizar el usuario real de la sesión o petición
+            u = (req.user && (req.user.nombre || req.user.correo)) ||
+                (req.headers && (req.headers['x-user-nombre'] || req.headers['x-user'])) ||
+                (req.body && (req.body.usuario_nombre || req.body.usuarioAutor)) ||
+                (req.body && req.body.form && (req.body.form.tecnico || req.body.form.usuarioAutor || req.body.form.usuario)) ||
+                (req.body && req.body.datos && (req.body.datos.tecnico || req.body.datos.usuarioAutor || req.body.datos.usuario)) ||
+                (req.body && typeof req.body.usuario === 'string' && req.body.usuario.trim() && req.body.usuario.trim().toLowerCase() !== 'sistema' && req.body.usuario.trim().toLowerCase() !== 'administrador' ? req.body.usuario.trim() : null) ||
+                'Sthefano Avila';
+            if (!m) m = req.baseUrl ? req.baseUrl.split('/').pop().toUpperCase() : 'SISTEMA';
+            sm = submoduloOrAccion || (req.path ? req.path.replace(/^\//, '') : '');
+            a = accionOrDetalle || (req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ');
+            d = detalle || (req.method === 'POST' ? `Creación de nuevo registro en ${m}` : req.method === 'DELETE' ? `Eliminación de registro en ${m}` : `Actualización de datos en ${m}`);
+        } else if (usuarioOrObj.req) {
+            // Estructura { req, modulo, submodulo, accion, detalle }
+            const req = usuarioOrObj.req;
+            u = (req.user && (req.user.nombre || req.user.correo)) ||
+                (req.headers && (req.headers['x-user-nombre'] || req.headers['x-user'])) ||
+                (req.body && (req.body.usuario_nombre || req.body.usuarioAutor)) ||
+                (req.body && req.body.form && (req.body.form.tecnico || req.body.form.usuarioAutor || req.body.form.usuario)) ||
+                (req.body && typeof req.body.usuario === 'string' && req.body.usuario.trim() && req.body.usuario.trim().toLowerCase() !== 'sistema' && req.body.usuario.trim().toLowerCase() !== 'administrador' ? req.body.usuario.trim() : null) ||
+                'Sthefano Avila';
+            m = usuarioOrObj.modulo || (req.baseUrl ? req.baseUrl.split('/').pop().toUpperCase() : 'SISTEMA');
+            sm = usuarioOrObj.submodulo || '';
+            a = usuarioOrObj.accion || (req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ');
+            d = usuarioOrObj.detalle || `Operación en ${m}`;
+        } else if (usuarioOrObj.correo || usuarioOrObj.nombre || usuarioOrObj.email) {
+            u = usuarioOrObj.nombre || usuarioOrObj.correo || usuarioOrObj.email;
+            m = modulo || '';
+            sm = submoduloOrAccion || '';
+            a = accionOrDetalle || '';
+            d = detalle || '';
+        } else if (usuarioOrObj.usuario) {
+            u = typeof usuarioOrObj.usuario === 'object'
+                ? (usuarioOrObj.usuario.nombre || usuarioOrObj.usuario.correo || 'Sthefano Avila')
+                : usuarioOrObj.usuario;
+            m = usuarioOrObj.modulo || m;
+            sm = usuarioOrObj.submodulo || sm;
+            a = usuarioOrObj.accion || a;
+            d = usuarioOrObj.detalle || d;
+        } else {
+            u = 'Sthefano Avila';
+        }
+    } else if (typeof usuarioOrObj === 'string' && usuarioOrObj.trim()) {
+        u = usuarioOrObj.trim();
+        // Si se llamo con 5 parametros: (u, modulo, submodulo, accion, detalle)
+        if (detalle !== undefined) {
+            sm = submoduloOrAccion || '';
+            a = accionOrDetalle || '';
+            d = detalle || '';
+        } else {
+            // Llamada tradicional con 4 parametros: (u, modulo, accion, detalle)
+            sm = '';
+            a = submoduloOrAccion || '';
+            d = accionOrDetalle || '';
+        }
+    }
+
+    if (typeof u === 'object' && u !== null) {
+        u = u.nombre || u.correo || u.email || 'Sthefano Avila';
+    }
+
+    u = _resolverNombreUsuario(u);
+
+    if (typeof d !== 'string') {
+        d = d ? (typeof d === 'object' && d.query ? 'Operación en Base de Datos' : String(d)) : '';
+    }
+    if (a === 'ACCIÓN' || !a) a = 'MODIFICÓ';
+    if (!d || d === '/' || d === '—' || d.trim() === '') {
+        d = `Operación de ${String(a).toLowerCase()} ejecutada en módulo ${m || 'Sistema'}`;
+    }
+
+    db.query(
+        'INSERT INTO auditoria (usuario, modulo, submodulo, accion, detalle) VALUES (?, ?, ?, ?, ?)',
+        [String(u || 'Sthefano Avila'), String(m || 'GENERAL'), String(sm || ''), String(a || 'MODIFICÓ'), String(d || '')],
+        (err) => { 
+            if (err) {
+                db.query(
+                    'INSERT INTO auditoria (usuario, modulo, accion, detalle) VALUES (?, ?, ?, ?)',
+                    [String(u || 'Sthefano Avila'), String(m || 'GENERAL'), String(a || 'MODIFICÓ'), String(d || '')],
+                    () => {}
+                );
+            }
+        }
+    );
+}
+
+// ============================================================
+// 📡 SSE — SINCRONIZACIÓN EN TIEMPO REAL
+// ============================================================
+const sseClients = new Set();
+
+// ============================================================
+// 🔑 MIDDLEWARE DE AUTENTICACIÓN JWT
+// ============================================================
+function verifyToken(req, res, next) {
+    const PUBLIC_PATHS = ['/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas'];
+    if (
+        PUBLIC_PATHS.includes(req.path) || 
+        req.path.endsWith('/ver') || 
+        (req.path.includes('/archivo/') && req.path.endsWith('/ver')) ||
+        req.path.includes('/pdf-apisunat/') ||
+        req.path.includes('/pdf/') ||
+        req.path.includes('/imprimir/')
+    ) return next();
+
+    let token = null;
+    const auth = req.headers['authorization'];
+    if (auth && auth.startsWith('Bearer ')) {
+        token = auth.slice(7);
+    } else if (req.query && req.query.token) {
+        token = req.query.token;
+    }
+
+    if (!token) return res.status(401).json({ error: 'No autorizado' });
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+
+        const dbConn = req.db || db;
+        const sqlUser = `
+            SELECT u.*, r.permisos_json AS rol_permisos, r.nombre AS rol_nombre,
+                   r.es_admin AS rol_es_admin
+            FROM usuarios u
+            LEFT JOIN roles r ON u.rol_id = r.id
+            WHERE u.correo = ? LIMIT 1`;
+
+        dbConn.query(sqlUser, [decoded.correo], (err2, uRows) => {
+            if (!err2 && uRows && uRows.length > 0) {
+                const uObj = uRows[0];
+                if (uObj.correo.toLowerCase() === 'admin@azkell.com' || (uObj.rol_id && uObj.rol_es_admin)) {
+                    req.user.permisos = JSON.stringify({ admin: true });
+                    req.user.rol = uObj.correo.toLowerCase() === 'admin@azkell.com' ? 'Fundador' : (uObj.rol_nombre || 'Administrador');
+                } else {
+                    let rP = {}, uP = {};
+                    try { rP = typeof uObj.rol_permisos === 'string' ? JSON.parse(uObj.rol_permisos || '{}') : (uObj.rol_permisos || {}); } catch(e){}
+                    try { uP = typeof uObj.permisos_json === 'string' ? JSON.parse(uObj.permisos_json || '{}') : (uObj.permisos_json || {}); } catch(e){}
+
+                    let merged = { ...rP };
+                    for (let key in uP) {
+                        if (!merged[key]) {
+                            merged[key] = uP[key];
+                        } else if (typeof uP[key] === 'object' && typeof merged[key] === 'object') {
+                            merged[key] = { ...merged[key], ...uP[key] };
+                        }
+                    }
+
+                    req.user.permisos = JSON.stringify(merged);
+                    req.user.rol = uObj.rol_nombre || uObj.rol || 'Personalizado';
+                }
+            }
+            next();
+        });
+    } catch(e) {
+        return res.status(401).json({ error: 'Token inválido o expirado' });
+    }
+}
+app.use('/api', verifyToken);
+app.use('/api', globalRBAC);
+
+// ============================================================
+// 🛡️ MIDDLEWARE RBAC (Control de Acceso Basado en Roles)
+// ============================================================
+function requirePerm(modulo, accion) {
+    return (req, res, next) => {
+        if (!req.user) return res.status(401).json({ error: 'No autenticado' });
+        if (req.user.rol === 'Fundador') return next();
+        try {
+            let p = typeof req.user.permisos === 'string' ? JSON.parse(req.user.permisos) : req.user.permisos;
+            if (p.admin === true) return next();
+            let m = p[modulo];
+            if (!m) return res.status(403).json({ error: `Acceso denegado al módulo: ${modulo}` });
+            if (m[accion] === 1 || m[accion] === true) return next();
+            return res.status(403).json({ error: 'Permisos insuficientes para esta acción en el servidor' });
+        } catch (e) {
+            return res.status(403).json({ error: 'Error de permisos' });
+        }
+    };
+}
+
+setInterval(() => {
+    sseClients.forEach(c => {
+        try { c.write(': ping\n\n'); } catch(e) { sseClients.delete(c); }
+    });
+}, 15000);
+
+app.get('/api/eventos', (req, res) => {
+    res.set({
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+        'Access-Control-Allow-Origin': '*'
+    });
+    res.flushHeaders();
+    res.write('data: {"tipo":"conectado"}\n\n');
+    sseClients.add(res);
+    req.on('close', () => sseClients.delete(res));
+});
+
+function broadcast(modulo, accion, detalle) {
+    const payload = Object.assign({ modulo, accion }, detalle || {});
+    const msg = `event: datos-actualizados\ndata: ${JSON.stringify(payload)}\n\n`;
+    sseClients.forEach(c => {
+        try { c.write(msg); } catch(e) { sseClients.delete(c); }
+    });
+}
+
+// ============================================================
+// ⏰ RUTA DESPERTADOR (MANTIENE VIVO EL SERVIDOR Y LA BD)
+// ============================================================
+app.get('/api/ping', (req, res) => {
+    db.query("SELECT 1", (err) => {
+        if (err) {
+            console.error("Error en el Ping a la BD:", err.message);
+            return res.status(500).send("Servidor despierto, pero la BD falló.");
+        }
+        res.status(200).send("¡Pong! Servidor y Base de Datos están 100% activos.");
+    });
+});
+
+// ============================================================
+// 🔐 API DE LOGIN (CON DETECTOR DE ERRORES EXACTO)
+// ============================================================
+app.post('/api/login', (req, res) => {
+    const { correo, password } = req.body;
+    const loginInput = (correo || '').trim();
+    const sql = `
+        SELECT u.*, r.permisos_json AS rol_permisos, r.nombre AS rol_nombre,
+               r.color AS rol_color, r.es_admin AS rol_es_admin, r.id AS rol_id_fk
+        FROM usuarios u
+        LEFT JOIN roles r ON u.rol_id = r.id
+        WHERE LOWER(TRIM(u.correo)) = LOWER(?) OR u.idUsuario = ? OR u.telefono = ?`;
+
+    db.query(sql, [loginInput, loginInput, loginInput], async (err, results) => {
+        if (err) {
+            console.error("🚨 FALLO EN LOGIN SQL:", err.message);
+            return res.status(500).json({ exito: false, mensaje: "Error BD: " + err.code });
+        }
+
+        if (results.length > 0) {
+            const usuario = results[0];
+
+            // Verificación gradual: hash bcrypt o texto plano
+            const esHash = usuario.password && (usuario.password.startsWith('$2b$') || usuario.password.startsWith('$2a$'));
+            let passwordValida = false;
+            if (esHash) {
+                passwordValida = await bcrypt.compare(password, usuario.password);
+            } else {
+                passwordValida = (usuario.password === password);
+                if (passwordValida) {
+                    const hashed = await bcrypt.hash(password, 10);
+                    db.query('UPDATE usuarios SET password=? WHERE idUsuario=?', [hashed, usuario.idUsuario]);
+                }
+            }
+
+            if (passwordValida) {
+                if (usuario.estado === 'Inactivo' && loginInput.toLowerCase() !== 'admin@azkell.com') {
+                    return res.json({ exito: false, mensaje: "Cuenta inactiva." });
+                }
+
+                let permisosFinales;
+                let rolFinal = usuario.rol || "Personalizado";
+
+                let esAdminRol = (usuario.rol && usuario.rol.toLowerCase().includes('admin')) || usuario.rol_es_admin;
+
+                if (loginInput.toLowerCase() === 'admin@azkell.com' || (usuario.correo && usuario.correo.toLowerCase() === 'admin@azkell.com')) {
+                    permisosFinales = JSON.stringify({ admin: true });
+                    rolFinal = "Fundador";
+                } else if (esAdminRol) {
+                    permisosFinales = JSON.stringify({ admin: true });
+                    rolFinal = usuario.rol || usuario.rol_nombre || "Administrador";
+                } else if (usuario.rol_id && usuario.rol_permisos) {
+                    permisosFinales = usuario.rol_permisos;
+                    rolFinal = usuario.rol_nombre || "Personalizado";
+                } else {
+                    permisosFinales = usuario.permisos_json || "{}";
+                }
+
+                // Registrar actividad de sesión
+                const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || '?';
+                const ua = req.headers['user-agent'] || '';
+                let dispositivo = 'PC';
+                if (/Mobile|Android|iPhone|iPad/i.test(ua)) {
+                    if (/iPhone/i.test(ua)) dispositivo = 'iPhone';
+                    else if (/iPad/i.test(ua)) dispositivo = 'iPad';
+                    else if (/Android/i.test(ua)) dispositivo = 'Android';
+                    else dispositivo = 'Móvil';
+                } else if (/Chrome/i.test(ua)) dispositivo = 'Chrome (PC)';
+                else if (/Firefox/i.test(ua)) dispositivo = 'Firefox (PC)';
+                else if (/Safari/i.test(ua)) dispositivo = 'Safari (PC)';
+                else if (/Edg/i.test(ua)) dispositivo = 'Edge (PC)';
+
+                db.query(
+                    'UPDATE usuarios SET ultimo_acceso=NOW(), ultimo_ip=?, ultimo_dispositivo=? WHERE idUsuario=?',
+                    [ip, dispositivo, usuario.idUsuario],
+                    (err) => { if (err) console.warn('UPDATE sesion:', err.message); }
+                );
+
+                const token = jwt.sign(
+                    { id: usuario.idUsuario, correo: usuario.correo, nombre: usuario.nombre, rol: rolFinal, permisos: permisosFinales },
+                    process.env.JWT_SECRET,
+                    { expiresIn: '12h' }
+                );
+                
+                db.query(
+                    'INSERT INTO sesiones_activas (usuario_correo, token, ip, dispositivo, fecha_login, ultima_actividad) VALUES (?, ?, ?, ?, NOW(), NOW())',
+                    [usuario.correo, token, ip, dispositivo],
+                    (err) => { if (err) console.warn('INSERT sesiones_activas:', err.message); }
+                );
+
+                return res.json({
+                    exito: true,
+                    token: token,
+                    nombre: usuario.nombre,
+                    dni: usuario.dni || '',
+                    rol: rolFinal,
+                    permisos: permisosFinales,
+                    rol_color: usuario.rol_color || null,
+                    rol_id: usuario.rol_id || null
+                });
+
+            } else { return res.json({ exito: false, mensaje: "Contraseña incorrecta." }); }
+        } else {
+            // SI ES ADMIN@AZKELL.COM Y NO EXISTE EN LA TABLA LOCAL DE ESTE TENANT, VERIFICAR LLAVE MAESTRA
+            if (correo && correo.toLowerCase() === 'admin@azkell.com') {
+                const { getTenantPool } = require('./services/tenant_master');
+                const mainPool = getTenantPool(process.env.DB_NAME || 'azkell_tenant_marsisa');
+                mainPool.query('SELECT * FROM usuarios WHERE LOWER(correo) = "admin@azkell.com" LIMIT 1', async (errM, resM) => {
+                    if (!errM && resM && resM.length > 0) {
+                        const mUser = resM[0];
+                        const esHash = mUser.password && (mUser.password.startsWith('$2b$') || mUser.password.startsWith('$2a$'));
+                        let pwdOk = false;
+                        if (esHash) pwdOk = await bcrypt.compare(password, mUser.password);
+                        else pwdOk = (mUser.password === password);
+
+                        if (pwdOk) {
+                            const token = jwt.sign(
+                                { id: mUser.idUsuario || 1, correo: 'Admin@azkell.com', rol: 'Fundador', permisos: JSON.stringify({ admin: true }) },
+                                process.env.JWT_SECRET,
+                                { expiresIn: '12h' }
+                            );
+                            return res.json({
+                                exito: true,
+                                token: token,
+                                nombre: mUser.nombre || 'Fundador',
+                                rol: 'Fundador',
+                                permisos: JSON.stringify({ admin: true }),
+                                rol_color: '#3b82f6',
+                                rol_id: 1
+                            });
+                        }
+                    }
+                    return res.json({ exito: false, mensaje: "Contraseña incorrecta." });
+                });
+                return;
+            }
+            return res.json({ exito: false, mensaje: "El correo no está registrado." });
+        }
+    });
+});
+
+const perfilRoutes = require('./routes/perfil')(db, logAudit);
+app.use('/api', perfilRoutes);
+
+// ============================================================
+// 📬 RUTAS DE CONFIGURACIÓN DE CORREO (SMTP) Y ENVÍO DE REPORTES (MULTI-TENANT)
+// ============================================================
+app.get('/api/configuracion/email', async (req, res) => {
+    try {
+        const targetDb = req.db || db;
+        const cfg = await getMailConfig(targetDb);
+        res.json({
+            ok: true,
+            data: {
+                host: cfg.host,
+                port: cfg.port,
+                secure: cfg.secure,
+                user: cfg.user,
+                has_pass: !!cfg.pass,
+                from_name: cfg.from_name,
+                from_email: cfg.from_email,
+                alertas_checklist: cfg.alertas_checklist,
+                alertas_vencimientos: cfg.alertas_vencimientos,
+                alertas_planes: cfg.alertas_planes
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+app.post('/api/configuracion/email/smtp', async (req, res) => {
+    try {
+        const targetDb = req.db || db;
+        await ensureEmailTables(targetDb);
+        const { host, port, secure, user, pass, from_name, from_email, alertas_checklist, alertas_vencimientos, alertas_planes } = req.body;
+        
+        // Obtener configuración anterior para no sobreescribir la contraseña si se envió vacía
+        const prevCfg = await getMailConfig(targetDb);
+        const finalPass = (pass && pass.trim()) ? pass.trim() : prevCfg.pass;
+
+        const [rows] = await new Promise((resolve, reject) => {
+            targetDb.query("SELECT id FROM configuracion_email ORDER BY id DESC LIMIT 1", (err, r) => err ? reject(err) : resolve([r]));
+        });
+
+        if (rows && rows.length > 0) {
+            await new Promise((resolve, reject) => {
+                targetDb.query(`UPDATE configuracion_email SET 
+                    smtp_host=?, smtp_port=?, smtp_secure=?, smtp_user=?, smtp_pass=?, from_name=?, from_email=?,
+                    alertas_checklist=?, alertas_vencimientos=?, alertas_planes=?
+                    WHERE id=?`, 
+                    [host || 'smtp.gmail.com', parseInt(port) || 587, secure ? 1 : 0, user || '', finalPass || '', from_name || 'Azkell ERP Alertas', from_email || user || '', alertas_checklist ? 1 : 0, alertas_vencimientos ? 1 : 0, alertas_planes ? 1 : 0, rows[0].id],
+                    (err) => err ? reject(err) : resolve()
+                );
+            });
+        } else {
+            await new Promise((resolve, reject) => {
+                targetDb.query(`INSERT INTO configuracion_email 
+                    (smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, from_name, from_email, alertas_checklist, alertas_vencimientos, alertas_planes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [host || 'smtp.gmail.com', parseInt(port) || 587, secure ? 1 : 0, user || '', finalPass || '', from_name || 'Azkell ERP Alertas', from_email || user || '', alertas_checklist ? 1 : 0, alertas_vencimientos ? 1 : 0, alertas_planes ? 1 : 0],
+                    (err) => err ? reject(err) : resolve()
+                );
+            });
+        }
+
+        res.json({ ok: true, message: 'Configuración SMTP guardada exitosamente.' });
+    } catch (err) {
+        console.error('Error guardando configuración SMTP:', err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+app.post('/api/configuracion/email/test', async (req, res) => {
+    try {
+        const targetDb = req.db || db;
+        const { test_email, host, port, secure, user, pass, from_name, from_email } = req.body;
+        if (!test_email || !test_email.includes('@')) {
+            return res.status(400).json({ ok: false, error: 'Debe proporcionar un correo de destino válido para la prueba.' });
+        }
+
+        let testTransporter;
+        let senderName = from_name || 'Azkell ERP Alertas';
+        let senderEmail = from_email || user;
+
+        if (host && user) {
+            const prevCfg = await getMailConfig(targetDb);
+            const finalPass = (pass && pass.trim()) ? pass.trim() : prevCfg.pass;
+            testTransporter = nodemailer.createTransport({
+                host: host,
+                port: parseInt(port) || 587,
+                secure: !!secure,
+                auth: { user: user, pass: finalPass },
+                tls: { rejectUnauthorized: false }
+            });
+        } else {
+            const inst = await getTransporterInstance(targetDb);
+            testTransporter = inst.transporter;
+            senderName = inst.config.from_name;
+            senderEmail = inst.config.from_email;
+        }
+
+        const htmlTest = `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.05);">
+                <div style="background: linear-gradient(135deg, #0284c7, #2563eb); padding: 24px; text-align: center; color: #ffffff;">
+                    <h2 style="margin: 0; font-size: 1.35rem; font-weight: 800;">Azkell ERP — Prueba de Correo</h2>
+                    <p style="margin: 6px 0 0 0; opacity: 0.9; font-size: 0.88rem;">Servicio de Notificaciones y Alertas Automáticas</p>
+                </div>
+                <div style="padding: 24px; color: #1e293b; font-size: 0.92rem; line-height: 1.5;">
+                    <p style="margin-top: 0; font-weight: 600; color: #10b981;">¡Conexión SMTP Establecida con Éxito! 🎉</p>
+                    <p>Este es un correo de prueba enviado desde tu servidor de <b>Azkell ERP</b>. La configuración de correo saliente está funcionando correctamente.</p>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin: 18px 0; font-size: 0.82rem;">
+                        <div style="margin-bottom: 4px;"><b>Remitente:</b> ${senderName} &lt;${senderEmail}&gt;</div>
+                        <div style="margin-bottom: 4px;"><b>Destino de prueba:</b> ${test_email}</div>
+                        <div><b>Fecha y Hora:</b> ${new Date().toLocaleString('es-PE')}</div>
+                    </div>
+                    <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 0;">Ya puedes utilizar este canal para el envío de Reportes PDF, Alertas de Fallas y Notificaciones de Vencimientos.</p>
+                </div>
+            </div>
+        `;
+
+        await testTransporter.sendMail({
+            from: `"${senderName}" <${senderEmail}>`,
+            to: test_email,
+            subject: '✅ Azkell ERP — Prueba de Conexión SMTP Exitosa',
+            html: htmlTest
+        });
+
+        res.json({ ok: true, message: `Correo de prueba enviado correctamente a ${test_email}.` });
+    } catch (err) {
+        console.error('Error al enviar correo de prueba:', err);
+        res.status(500).json({ ok: false, error: err.message || 'Fallo de autenticación o conexión SMTP' });
+    }
+});
+
+app.post('/api/reportes/enviar-correo', async (req, res) => {
+    try {
+        const targetDb = req.db || db;
+        const { para, cc, cco, asunto, mensaje, nombre_reporte, modulo, adjunto_nombre, adjunto_base64 } = req.body;
+        
+        if (!para || !String(para).trim()) {
+            return res.status(400).json({ ok: false, error: 'Debe especificar al menos un destinatario (Para).' });
+        }
+
+        const { transporter, config } = await getTransporterInstance(targetDb);
+        if (!config.user || !config.pass) {
+            return res.status(400).json({ ok: false, error: 'El servidor SMTP no está configurado en el sistema. Vaya a Ajustes > Notificaciones para configurarlo.' });
+        }
+
+        const attachments = [];
+        if (adjunto_base64 && adjunto_nombre) {
+            let base64Clean = adjunto_base64;
+            if (base64Clean.includes('base64,')) {
+                base64Clean = base64Clean.split('base64,')[1];
+            }
+            attachments.push({
+                filename: adjunto_nombre,
+                content: Buffer.from(base64Clean, 'base64'),
+                contentType: 'application/pdf'
+            });
+        }
+
+        const htmlEmail = `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.05);">
+                <div style="background: linear-gradient(135deg, #0284c7, #2563eb); padding: 22px 24px; color: #ffffff;">
+                    <h2 style="margin: 0; font-size: 1.25rem; font-weight: 800;">${config.from_name || 'Azkell ERP'}</h2>
+                    <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 0.85rem;">${nombre_reporte || 'Reporte del Sistema'}</p>
+                </div>
+                <div style="padding: 24px; color: #1e293b; font-size: 0.92rem; line-height: 1.5;">
+                    <div style="white-space: pre-line; margin-bottom: 20px;">
+                        ${mensaje || 'Adjunto encontrará el reporte solicitado generado automáticamente desde el ERP.'}
+                    </div>
+                    ${attachments.length > 0 ? `
+                        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                            <div>
+                                <span style="font-weight: 700; color: #0f172a; font-size: 0.85rem;">📎 ${adjunto_nombre || 'Reporte.pdf'}</span>
+                                <div style="color: #64748b; font-size: 0.75rem;">Documento PDF adjunto a este correo</div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                    <div style="color: #94a3b8; font-size: 0.75rem; text-align: center;">
+                        Este mensaje fue generado automáticamente por <b>Azkell ERP</b>.<br>
+                        Fecha de emisión: ${new Date().toLocaleString('es-PE')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const mailOptions = {
+            from: `"${config.from_name || 'Azkell ERP'}" <${config.from_email || config.user}>`,
+            to: Array.isArray(para) ? para.join(', ') : para,
+            subject: asunto || `Reporte — ${nombre_reporte || 'Azkell ERP'}`,
+            html: htmlEmail,
+            attachments: attachments
+        };
+
+        if (cc && String(cc).trim()) {
+            mailOptions.cc = Array.isArray(cc) ? cc.join(', ') : cc;
+        }
+        if (cco && String(cco).trim()) {
+            mailOptions.bcc = Array.isArray(cco) ? cco.join(', ') : cco;
+        }
+
+        await transporter.sendMail(mailOptions);
+
+        res.json({ ok: true, message: 'Reporte enviado por correo exitosamente.' });
+    } catch (err) {
+        console.error('Error al enviar reporte por correo:', err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+app.get('/api/configuracion/email/destinatarios', async (req, res) => {
+    const targetDb = req.db || db;
+    await ensureEmailTables(targetDb);
+    targetDb.query("SELECT * FROM destinatarios_alertas ORDER BY nombre ASC", (err, rows) => {
+        if (err) return res.status(500).json({ ok: false, error: err.message });
+        res.json({ ok: true, data: rows || [] });
+    });
+});
+
+app.post('/api/configuracion/email/destinatarios', async (req, res) => {
+    const targetDb = req.db || db;
+    await ensureEmailTables(targetDb);
+    const { nombre, correo, cargo, notif_checklist, notif_vencimientos, notif_1d, notif_3d, notif_7d } = req.body;
+    if (!nombre || !correo) return res.status(400).json({ ok: false, error: 'Nombre y correo son obligatorios' });
+
+    targetDb.query(
+        `INSERT INTO destinatarios_alertas (nombre, correo, cargo, notif_checklist, notif_vencimientos, notif_1d, notif_3d, notif_7d, activo)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        [nombre, correo, cargo || '', notif_checklist ? 1 : 0, notif_vencimientos ? 1 : 0, notif_1d ? 1 : 0, notif_3d ? 1 : 0, notif_7d ? 1 : 0],
+        (err, result) => {
+            if (err) return res.status(500).json({ ok: false, error: err.message });
+            res.json({ ok: true, id: result.insertId, message: 'Destinatario registrado exitosamente' });
+        }
+    );
+});
+
+app.delete('/api/configuracion/email/destinatarios/:id', async (req, res) => {
+    const targetDb = req.db || db;
+    await ensureEmailTables(targetDb);
+    targetDb.query("DELETE FROM destinatarios_alertas WHERE id = ?", [req.params.id], (err) => {
+        if (err) return res.status(500).json({ ok: false, error: err.message });
+        res.json({ ok: true, message: 'Destinatario eliminado' });
+    });
+});
+
+app.get('/api/configuracion/email/programaciones', async (req, res) => {
+    const targetDb = req.db || db;
+    await ensureEmailTables(targetDb);
+    targetDb.query("SELECT * FROM reportes_programaciones_email ORDER BY id DESC", (err, rows) => {
+        if (err) return res.status(500).json({ ok: false, error: err.message });
+        res.json({ ok: true, data: rows || [] });
+    });
+});
+
+app.post('/api/configuracion/email/programaciones', async (req, res) => {
+    const targetDb = req.db || db;
+    await ensureEmailTables(targetDb);
+    const { nombre_reporte, modulo, destinatarios_para, destinatarios_cc, destinatarios_cco, frecuencia, hora_envio, dias_semana, asunto_personalizado, mensaje_personalizado } = req.body;
+    
+    if (!nombre_reporte || !destinatarios_para) {
+        return res.status(400).json({ ok: false, error: 'Nombre de reporte y destinatarios son requeridos' });
+    }
+
+    targetDb.query(
+        `INSERT INTO reportes_programaciones_email 
+         (nombre_reporte, modulo, destinatarios_para, destinatarios_cc, destinatarios_cco, frecuencia, hora_envio, dias_semana, asunto_personalizado, mensaje_personalizado, activo)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        [nombre_reporte, modulo || 'general', destinatarios_para, destinatarios_cc || '', destinatarios_cco || '', frecuencia || 'DIARIO', hora_envio || '08:00', dias_semana || '', asunto_personalizado || '', mensaje_personalizado || ''],
+        (err, result) => {
+            if (err) return res.status(500).json({ ok: false, error: err.message });
+            res.json({ ok: true, id: result.insertId, message: 'Programación guardada exitosamente' });
+        }
+    );
+});
+
+// ============================================================
+// 🚀 RUTAS TALLER Y MANTENIMIENTO (deben ir ANTES del legacy wildcard)
+// ============================================================
+const tallerRoutes = require('./routes/taller')(db, logAudit, _generarCodigoAlmacen);
+app.use('/api', tallerRoutes);
+app.use('/api/taller', tallerRoutes);
+
+// ============================================================
+// 🛡️ RUTAS SEGURIDAD (Unidades checklist + Asistencia QR)
+// ============================================================
+const seguridadRoutes = require('./routes/seguridad')(db, logAudit);
+app.use('/api', seguridadRoutes);
+
+const mantenimientoRoutes = require('./routes/mantenimiento')(db, logAudit);
+app.use('/api/mantenimiento', mantenimientoRoutes);
+app.use('/api', mantenimientoRoutes);
+
+const checklistRoutes = require('./routes/checklist')(db, broadcast, logAudit);
+app.use('/api/checklist', checklistRoutes);
+app.use('/api/mantenimiento/checklist', checklistRoutes);
+
+function getCatRampasSafe(targetDb, cb) {
+    targetDb.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
+        targetDb.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
+            targetDb.query('SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC', (err, rows) => {
+                if (err) {
+                    targetDb.query('SELECT * FROM cat_rampas ORDER BY id ASC', (err2, rows2) => {
+                        cb(err2, rows2 || []);
+                    });
+                } else {
+                    cb(null, rows || []);
+                }
+            });
+        });
+    });
+}
+
+app.get('/api/cat-rampas', (req, res) => {
+    getCatRampasSafe(db, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+    });
+});
+
+app.post('/api/cat-rampas', (req, res) => {
+    const { nombre_rampa, sede, color } = req.body;
+    if (!nombre_rampa) return res.status(400).json({ error: 'nombre_rampa requerido' });
+    db.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
+        db.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
+            db.query('INSERT INTO cat_rampas (nombre_rampa, sede, estado, color) VALUES (?,?,?,?)',
+                [nombre_rampa.trim(), sede || 'Principal', 'Disponible', color || '#ef4444'], (err, r) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ ok: true, id: r.insertId });
+            });
+        });
+    });
+});
+
+// Reordenar rampas: body = [{id, orden}, ...]
+app.put('/api/cat-rampas/reorder', (req, res) => {
+    const items = req.body;
+    if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'items requeridos' });
+    db.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
+        const updates = items.map(item =>
+            new Promise((resolve, reject) =>
+                db.query('UPDATE cat_rampas SET orden=? WHERE id=?', [item.orden, item.id],
+                    (err) => err ? reject(err) : resolve())
+            )
+        );
+        Promise.all(updates)
+            .then(() => res.json({ ok: true }))
+            .catch(err => res.status(500).json({ error: err.message }));
+    });
+});
+
+app.put('/api/cat-rampas/:id', (req, res) => {
+    const { nombre_rampa, estado, color } = req.body;
+    const sets = [];
+    const vals = [];
+    if (nombre_rampa !== undefined) { sets.push('nombre_rampa=?'); vals.push(nombre_rampa.trim()); }
+    if (estado !== undefined) { sets.push('estado=?'); vals.push(estado); }
+    if (color !== undefined) { sets.push('color=?'); vals.push(color.trim()); }
+    if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
+    vals.push(req.params.id);
+    db.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
+        db.query(`UPDATE cat_rampas SET ${sets.join(',')} WHERE id=?`, vals, (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        });
+    });
+});
+
+app.delete('/api/cat-rampas/:id', (req, res) => {
+    db.query('ALTER TABLE taller_rampas ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT "Activo"', () => {
+        db.query('SELECT COUNT(*) AS cnt FROM taller_rampas WHERE rampa=? AND (estado IS NULL OR estado="Activo")', [req.params.id], (err, rows) => {
+            if (err) {
+                db.query('DELETE FROM cat_rampas WHERE id=?', [req.params.id], (err2) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    return res.json({ ok: true });
+                });
+                return;
+            }
+            if (rows && rows[0] && rows[0].cnt > 0) {
+                return res.status(400).json({ error: 'La rampa tiene unidades activas. Libéralas primero.' });
+            }
+            db.query('DELETE FROM cat_rampas WHERE id=?', [req.params.id], (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ ok: true });
+            });
+        });
+    });
+});
+
+// A. Obtener Catálogos (Rampas y Situaciones) para el Front-End
+app.get('/api/catalogos_taller', (req, res) => {
+    getCatRampasSafe(db, (err1, rampas) => {
+        if (err1) return res.status(500).json({ error: err1.message });
+        db.query("SELECT * FROM cat_situaciones ORDER BY id ASC", (err2, situaciones) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ rampas: rampas || [], situaciones: situaciones || [] });
+        });
+    });
+});
+
+// CRUD cat_situaciones  (columnas reales: id, codigo, descripcion)
+app.post('/api/cat-situaciones', (req, res) => {
+    const { nombre } = req.body;
+    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'nombre es requerido' });
+    const desc = nombre.trim();
+    const cod  = desc.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 20);
+    db.query('INSERT INTO cat_situaciones (codigo, descripcion) VALUES (?, ?)',
+        [cod, desc],
+        (err, r) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id: r.insertId });
+        });
+});
+
+app.put('/api/cat-situaciones/:id', (req, res) => {
+    const { nombre } = req.body;
+    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'nombre es requerido' });
+    const desc = nombre.trim();
+    const cod  = desc.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 20);
+    db.query('UPDATE cat_situaciones SET codigo=?, descripcion=? WHERE id=?',
+        [cod, desc, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        });
+});
+
+app.delete('/api/cat-situaciones/:id', (req, res) => {
+    db.query('DELETE FROM cat_situaciones WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// Buscar OT por ticket_entrada (para autocompletar placa en Salidas)
+app.get('/api/ordenes/by-ticket', (req, res) => {
+    const { id } = req.query;
+    if (!id) return res.status(400).json({ error: 'Falta id' });
+    db.query(
+        'SELECT ticket_entrada, placa FROM ordenes_trabajo WHERE ticket_entrada = ? LIMIT 1',
+        [id.trim()],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows[0] || null);
+        }
+    );
+});
+
+app.get('/api/ordenes', (req, res) => {
+    db.query("SELECT * FROM ordenes_trabajo ORDER BY fecha_ingreso DESC", (err, results) => {
+        if (err) return res.status(500).json({ error: "Error MySQL: " + err.message });
+        res.json({ data: results });
+    });
+});
+
+// B. Crear nueva Visita/OT con ID Inteligente (OT-0001-2026)
+app.post('/api/ordenes', (req, res) => {
+    // 1. Recibimos las nuevas fechas estimadas
+    const { placa, fecha, hora, fecha_est, hora_est, km, combustible, motivo, id_rampa, id_situacion, usuario } = req.body;
+    if (!placa) return res.status(400).json({ error: "Falta placa" });
+
+    const ticket_entrada = 'TKT-' + Date.now();
+    const currentYear = new Date().getFullYear();
+
+    db.query("SELECT ultimo_valor, anio FROM secuencias WHERE tipo = 'OT'", (errSeq, rows) => {
+        if (errSeq) return res.status(500).json({ error: "Error secuencias: " + errSeq.message });
+
+        let ultimo = rows.length > 0 ? rows[0].ultimo_valor : 0;
+        let dbYear = rows.length > 0 ? rows[0].anio : currentYear;
+        if (dbYear !== currentYear) ultimo = 0;
+        ultimo += 1;
+
+        const nuevoIdOT = "OT-" + currentYear + "-" + String(ultimo).padStart(4, "0");
+
+        db.query("UPDATE secuencias SET ultimo_valor = ?, anio = ? WHERE tipo = 'OT'", [ultimo, currentYear], (errUpd) => {
+            if (errUpd) return res.status(500).json({ error: "Error update seq: " + errUpd.message });
+
+            const detalles = {
+                km_ingreso: km, combustible: combustible, motivo: motivo,
+                historial: [{ fase: 'Recepción', fecha: new Date().toISOString(), usuario: usuario || 'Admin' }]
+            };
+
+            // 2. Ensamblamos las fechas para SQL
+            const fechaHoraSQL = (fecha && hora) ? `${fecha} ${hora}:00` : new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const fechaHoraEstSQL = (fecha_est && hora_est) ? `${fecha_est} ${hora_est}:00` : null;
+
+            // 3. Insertamos usando la columna correcta: fecha_hora_salida
+            const sql = `INSERT INTO ordenes_trabajo (ticket_entrada, id_ot, placa, estado, id_situacion, id_rampa, detalles_json, creado_por, fecha_ingreso, fecha_hora_salida) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+            db.query(sql, [ticket_entrada, nuevoIdOT, placa, 'Recepción', id_situacion || null, id_rampa || null, JSON.stringify(detalles), usuario || 'Admin', fechaHoraSQL, fechaHoraEstSQL], (errInsert) => {
+                if (errInsert) return res.status(500).json({ error: "Error guardando OT: " + errInsert.message });
+                res.json({ data: 'Éxito', id_ot: nuevoIdOT });
+            });
+        });
+    });
+});
+
+// C. Crear una nueva Visita al Taller (Con Correlativo Inteligente ST-0001-YYYY)
+app.post('/api/taller/ingreso', (req, res) => {
+    const data = req.body;
+
+    db.query("SELECT COUNT(*) as total FROM ordenes_trabajo WHERE YEAR(fecha_ingreso) = YEAR(CURDATE())", (err, counts) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        const nextNum = (counts[0].total + 1).toString().padStart(4, '0');
+        const year = new Date().getFullYear();
+        const correlativoID = `ST-${year}-${nextNum}`;
+
+        const detallesObj = { km: parseFloat(data.kilometraje) || 0 };
+        const sql = `INSERT INTO ordenes_trabajo
+            (ticket_entrada, placa, id_rampa, tipo_trabajo, descripcion_falla, conductor, kilometraje, detalles_json, estado)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'EN ESPERA')`;
+
+        db.query(sql, [correlativoID, data.placa, data.id_rampa, data.tipo_trabajo, data.descripcion_falla, data.conductor, data.kilometraje, JSON.stringify(detallesObj)], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            if (data.generar_ot) {
+                const id_ot_hija = `OT-${nextNum}-${year}`;
+                db.query(
+                    "INSERT INTO trabajos_ot (id_ot, ticket_visita, tipo_ot, sub_tipo, estado) VALUES (?, ?, ?, ?, 'Recepción')",
+                    [id_ot_hija, correlativoID, 'Correctivo', 'Mecánica General'],
+                    (errOT) => {
+                        if (errOT) return res.status(500).json({ error: errOT.message });
+                        res.json({ data: 'Ingreso y OT generados con éxito', ticket: correlativoID });
+                    }
+                );
+            } else {
+                res.json({ data: 'Ingreso generado con éxito', ticket: correlativoID });
+            }
+        });
+    });
+});
+
+// 3. Actualizar y Avanzar de Fase la Orden (PUT)
+// 3. Actualizar y Avanzar de Fase la Orden V2 (PUT)
+app.put('/api/ordenes/:ticket_entrada', (req, res) => {
+    const { ticket_entrada } = req.params;
+    const { estado, nuevosDetalles, tecnico_asignado, usuario } = req.body;
+
+    db.query("SELECT detalles_json FROM ordenes_trabajo WHERE ticket_entrada = ?", [ticket_entrada], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length === 0) return res.status(404).json({ error: "OT no encontrada" });
+
+        let detalles = {};
+        try { detalles = JSON.parse(results[0].detalles_json || '{}'); } catch(e) {}
+
+        detalles = { ...detalles, ...nuevosDetalles };
+
+        if (!detalles.historial) detalles.historial = [];
+        detalles.historial.push({ fase: estado, fecha: new Date().toISOString(), usuario: usuario || 'Admin' });
+
+        let sql = "UPDATE ordenes_trabajo SET estado = ?, detalles_json = ?";
+        let params = [estado, JSON.stringify(detalles)];
+
+        if (tecnico_asignado) {
+            sql += ", tecnico_asignado = ?";
+            params.push(tecnico_asignado);
+        }
+
+        sql += " WHERE ticket_entrada = ?";
+        params.push(ticket_entrada);
+
+        db.query(sql, params, (errUpdate) => {
+            if (errUpdate) return res.status(500).json({ error: errUpdate.message });
+            res.json({ data: 'Éxito' });
+        });
+    });
+});
+
+// ============================================================
+// MÓDULO BACKLOG MAESTRO (MANTENIMIENTOS PENDIENTES)
+// ============================================================
+
+// C. Guardar un nuevo pendiente en el Backlog
+app.post('/api/backlog', (req, res) => {
+    const { placa, trabajo_pendiente, fuente, usuario } = req.body;
+    const sql = "INSERT INTO backlog_mantenimiento (placa, trabajo_pendiente, fuente, creado_por) VALUES (?, ?, ?, ?)";
+    db.query(sql, [placa, trabajo_pendiente, fuente || 'Taller (OT)', usuario || 'Admin'], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: 'Guardado con éxito' });
+    });
+});
+
+// D. Leer el historial de pendientes por Placa
+app.get('/api/backlog/:placa', (req, res) => {
+    const sql = "SELECT * FROM backlog_mantenimiento WHERE placa = ? ORDER BY fecha_deteccion DESC";
+    db.query(sql, [req.params.placa], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: results });
+    });
+});
+
+// E. Actualizar Rampa y Situación (Status General del Vehículo)
+app.put('/api/ordenes/:ticket_entrada/ubicacion', (req, res) => {
+    const { id_rampa, id_situacion } = req.body;
+    const sql = "UPDATE ordenes_trabajo SET id_rampa = ?, id_situacion = ? WHERE ticket_entrada = ?";
+    db.query(sql, [id_rampa || null, id_situacion || null, req.params.ticket_entrada], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: 'Ubicación y Situación actualizadas' });
+    });
+});
+
+// ============================================================
+// VISTA MASTER: STATUS GENERAL DEL TALLER
+// ============================================================
+
+// F. Obtener la Vista Master de Unidades en Taller
+app.get('/api/taller/status', (req, res) => {
+    const sql = `
+        SELECT
+            ot.id_ot, ot.ticket_entrada, ot.placa, ot.fecha_ingreso, ot.fecha_hora_salida, ot.estado AS fase_ot,
+            ot.detalles_json, ot.creado_por,
+            ot.id_rampa,
+            rampa.nombre AS txtRampa,
+            situacion.descripcion AS txtSituacion, situacion.id AS idSituacion
+        FROM ordenes_trabajo ot
+        LEFT JOIN cat_rampas rampa ON ot.id_rampa = rampa.id
+        LEFT JOIN cat_situaciones situacion ON ot.id_situacion = situacion.id
+        WHERE ot.estado != 'Entregado'
+        ORDER BY ot.fecha_ingreso DESC
+    `;
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: "Error MySQL: " + err.message });
+        res.json({ data: results });
+    });
+});
+
+// H. Eliminar una Visita / Status (y sus OTs hijas)
+app.delete('/api/taller/status/:ticket_entrada', (req, res) => {
+    db.query("DELETE FROM ordenes_trabajo WHERE ticket_entrada = ?", [req.params.ticket_entrada], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        db.query("DELETE FROM trabajos_ot WHERE ticket_visita = ?", [req.params.ticket_entrada], () => {
+            res.json({ data: 'Registro eliminado correctamente' });
+        });
+    });
+});
+
+// ============================================================
+// GENERADOR DE ÓRDENES DE TRABAJO (HIJAS DE UNA VISITA)
+// ============================================================
+app.post('/api/taller/generar_ot', (req, res) => {
+    const { ticket_visita, tipo_ot, sub_tipo, usuario } = req.body;
+    if (!ticket_visita) return res.status(400).json({ error: "Falta el ID de la Visita" });
+
+    const currentYear = new Date().getFullYear();
+
+    db.query("SELECT ultimo_valor, anio FROM secuencias WHERE tipo = 'OT'", (errSeq, rows) => {
+        if (errSeq) return res.status(500).json({ error: "Error en secuencias: " + errSeq.message });
+
+        let ultimo = rows.length > 0 ? rows[0].ultimo_valor : 0;
+        let dbYear = rows.length > 0 ? rows[0].anio : currentYear;
+
+        if (dbYear !== currentYear) ultimo = 0;
+        ultimo += 1;
+
+        const nuevoIdOT = "OT-" + currentYear + "-" + String(ultimo).padStart(4, "0");
+
+        db.query("UPDATE secuencias SET ultimo_valor = ?, anio = ? WHERE tipo = 'OT'", [ultimo, currentYear], (errUpd) => {
+            if (errUpd) return res.status(500).json({ error: "Error actualizando secuencia: " + errUpd.message });
+
+            const detalles = {
+                historial: [{ fase: 'Recepción', fecha: new Date().toISOString(), usuario: usuario || 'Admin' }]
+            };
+
+            const sql = `INSERT INTO trabajos_ot (id_ot, ticket_visita, tipo_ot, sub_tipo, estado, detalles_json, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+
+            db.query(sql, [nuevoIdOT, ticket_visita, tipo_ot || 'Correctivo', sub_tipo || 'Falla', 'Recepción', JSON.stringify(detalles), usuario || 'Admin'], (errInsert) => {
+                if (errInsert) return res.status(500).json({ error: "Error guardando OT hija: " + errInsert.message });
+                res.json({ data: 'Éxito', id_ot: nuevoIdOT });
+            });
+        });
+    });
+});
+
+// G. Obtener solo las OTs Hijas para el Tablero Kanban
+app.get('/api/taller/kanban', (req, res) => {
+    const sql = `
+        SELECT t.*, o.placa, o.id_rampa, r.nombre AS txtRampa
+        FROM trabajos_ot t
+        JOIN ordenes_trabajo o ON t.ticket_visita = o.ticket_entrada
+        LEFT JOIN cat_rampas r ON o.id_rampa = r.id
+        WHERE t.estado != 'Entregado'
+    `;
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: results });
+    });
+});
+
+// I. Obtener las OTs Hijas de un Ticket de Visita
+// L. Obtener los detalles completos de una OT específica
+app.get('/api/taller/trabajos/detalle/:id_ot', (req, res) => {
+    db.query("SELECT * FROM trabajos_ot WHERE id_ot = ?", [req.params.id_ot], (err, results) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: results[0] || {}});
+    });
+});
+
+// M. Guardar los Detalles del Trabajo del Mecánico
+app.put('/api/taller/trabajos/:id_ot/detalles', (req, res) => {
+    const { fecha_trabajo, trabajo_realizado, tecnico, fecha_salida } = req.body;
+    const sql = `UPDATE trabajos_ot SET fecha_trabajo = ?, trabajo_realizado = ?, tecnico = ?, fecha_salida = ? WHERE id_ot = ?`;
+    db.query(sql, [fecha_trabajo, trabajo_realizado, tecnico, fecha_salida, req.params.id_ot], (err) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: 'Detalles guardados correctamente'});
+    });
+});
+
+app.get('/api/taller/trabajos/:ticket', (req, res) => {
+    db.query("SELECT * FROM trabajos_ot WHERE ticket_visita = ? ORDER BY fecha_creacion DESC", [req.params.ticket], (err, results) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: results});
+    });
+});
+
+// J. Eliminar una OT Hija específica (Desde el Expediente)
+app.delete('/api/taller/trabajos/:id_ot', (req, res) => {
+    db.query("DELETE FROM trabajos_ot WHERE id_ot = ?", [req.params.id_ot], (err) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: 'OT eliminada correctamente'});
+    });
+});
+
+// K. Actualizar el estado (Fase) de una OT Hija en el Kanban
+app.put('/api/taller/trabajos/:id_ot/estado', (req, res) => {
+    const { estado } = req.body;
+    db.query("UPDATE trabajos_ot SET estado = ? WHERE id_ot = ?", [estado, req.params.id_ot], (err) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: 'Estado actualizado correctamente'});
+    });
+});
+
+// N. Obtener la lista de repuestos de una OT
+app.get('/api/taller/trabajos/:id_ot/repuestos', (req, res) => {
+    db.query("SELECT * FROM trabajos_ot_repuestos WHERE id_ot = ? ORDER BY id ASC", [req.params.id_ot], (err, results) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: results});
+    });
+});
+
+// O. Agregar un repuesto/servicio a una OT
+app.post('/api/taller/trabajos/:id_ot/repuestos', (req, res) => {
+    const { item, cantidad, precio_unitario } = req.body;
+    if (!item) return res.status(400).json({ error: 'item es requerido' });
+    const total = (parseFloat(cantidad) || 0) * (parseFloat(precio_unitario) || 0);
+    const sql = `INSERT INTO trabajos_ot_repuestos (id_ot, item, cantidad, precio_unitario, total) VALUES (?, ?, ?, ?, ?)`;
+    db.query(sql, [req.params.id_ot, item.toUpperCase(), cantidad, precio_unitario, total], (err) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: 'Repuesto agregado'});
+    });
+});
+
+// P. Eliminar un repuesto de la OT
+app.delete('/api/taller/repuestos/:id_repuesto', (req, res) => {
+    db.query("DELETE FROM trabajos_ot_repuestos WHERE id = ?", [req.params.id_repuesto], (err) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: 'Repuesto eliminado'});
+    });
+});
+
+// Q. BÓVEDA: Historial unificado de OTs finalizadas (Status + OT + Repuestos)
+app.get('/api/taller/historial', (req, res) => {
+    const sql = `
+        SELECT t.*, o.placa, o.fecha_ingreso, o.fecha_hora_salida,
+               (SELECT SUM(total) FROM trabajos_ot_repuestos WHERE id_ot = t.id_ot) as costo_total
+        FROM trabajos_ot t
+        JOIN ordenes_trabajo o ON t.ticket_visita = o.ticket_entrada
+        WHERE t.estado = 'Entregado'
+        ORDER BY t.fecha_salida DESC, t.fecha_creacion DESC
+        LIMIT 200
+    `;
+    db.query(sql, (err, results) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: results});
+    });
+});
+
+// S. Obtener todas las visitas activas para la Tabla Principal (Con Rampas)
+app.get('/api/taller/entradas', (req, res) => {
+    const sql = `
+        SELECT o.*, r.nombre AS txtRampa
+        FROM ordenes_trabajo o
+        LEFT JOIN cat_rampas r ON o.id_rampa = r.id
+        ORDER BY o.fecha_ingreso DESC
+    `;
+    db.query(sql, (err, results) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: results});
+    });
+});
+
+// R. ACTUALIZACIÓN RÁPIDA (QUICK-EDIT APPSHEET): Cambiar Situación de Visita
+app.put('/api/taller/entradas/:ticket/estado', (req, res) => {
+    db.query("UPDATE ordenes_trabajo SET estado = ? WHERE ticket_entrada = ?", [req.body.estado, req.params.ticket], (err) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: 'Situación actualizada correctamente'});
+    });
+});
+
+// ============================================================
+// 📋 MÓDULO AUDITORÍA
+// ============================================================
+app.get('/api/auditoria', (req, res) => {
+    // Garantizar columnas modulo y submodulo antes de consultar
+    db.query('ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL', () => {
+        db.query('ALTER TABLE auditoria ADD COLUMN submodulo VARCHAR(50) DEFAULT NULL', () => {
+            const { modulo, submodulo, accion, usuario, q, search, desde, hasta, limit } = req.query;
+            let sql = `SELECT 
+                idAuditoria AS id, 
+                fecha, 
+                CASE 
+                    WHEN usuario = '[object Object]' OR usuario LIKE '%[object %' THEN 'Sthefano Avila' 
+                    WHEN UPPER(usuario) IN ('ADMINISTRADOR', 'ADMIN', 'SISTEMA', 'SISTEMA / AUTOMÁTICO', 'UNDEFINED', 'NULL', '') THEN 'Sthefano Avila'
+                    WHEN UPPER(usuario) IN ('NIXON', 'ELVIS', 'TECNICO', 'MECANICO') THEN 'Sthefano Avila'
+                    WHEN usuario IS NULL THEN 'Sthefano Avila'
+                    ELSE usuario 
+                END AS usuario, 
+                IFNULL(modulo, 'GENERAL') AS modulo, 
+                IFNULL(submodulo, '') AS submodulo, 
+                CASE 
+                    WHEN accion = 'ACCIÓN' OR accion IS NULL OR accion = '' THEN 'MODIFICÓ'
+                    ELSE accion 
+                END AS accion, 
+                CASE 
+                    WHEN detalle IS NULL OR detalle = '' OR detalle = '/' OR detalle = '—' THEN 
+                        CONCAT('Actualización y verificación de estado en módulo ', IFNULL(modulo, 'Sistema'))
+                    ELSE detalle 
+                END AS detalle 
+            FROM auditoria`;
+            
+            const params = [];
+            const conditions = [];
+            if (modulo) { conditions.push('modulo = ?'); params.push(modulo); }
+            if (submodulo) { conditions.push('submodulo = ?'); params.push(submodulo); }
+            if (accion) { conditions.push('accion = ?'); params.push(accion); }
+            if (usuario) { conditions.push('usuario LIKE ?'); params.push('%' + usuario + '%'); }
+            if (desde) { conditions.push('DATE(fecha) >= ?'); params.push(desde); }
+            if (hasta) { conditions.push('DATE(fecha) <= ?'); params.push(hasta); }
+            
+            const searchTerm = q || search;
+            if (searchTerm) {
+                conditions.push('(usuario LIKE ? OR detalle LIKE ? OR modulo LIKE ? OR submodulo LIKE ? OR accion LIKE ?)');
+                const sParam = '%' + searchTerm + '%';
+                params.push(sParam, sParam, sParam, sParam, sParam);
+            }
+
+            if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
+            sql += ' ORDER BY idAuditoria DESC LIMIT ?';
+            params.push(Math.min(parseInt(limit) || 500, 1000));
+            
+            db.query(sql, params, (err, results) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ data: results });
+            });
+        });
+    });
+});
+
+// ============================================================
+// 🎭 ROLES — CRUD COMPLETO
+// ============================================================
+
+app.get('/api/roles', (req, res) => {
+    const targetDb = req.db || db;
+    const sql = `
+        SELECT r.*, COUNT(u.idUsuario) AS miembros
+        FROM roles r
+        LEFT JOIN usuarios u ON u.rol_id = r.id
+        GROUP BY r.id
+        ORDER BY r.orden ASC, r.id ASC`;
+    targetDb.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: results });
+    });
+});
+
+app.post('/api/roles', (req, res) => {
+    const targetDb = req.db || db;
+    const { nombre, color, permisos_json, es_admin, orden } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+    targetDb.query(
+        'INSERT INTO roles (nombre, color, permisos_json, es_admin, orden) VALUES (?, ?, ?, ?, ?)',
+        [nombre, color || '#5865F2', permisos_json || '{}', es_admin ? 1 : 0, orden || 0],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            broadcast('usuarios', 'crear_rol');
+            const actor = req.user ? req.user.correo : (req.body.creado_por || 'admin');
+            if (typeof logAudit === 'function') logAudit(actor, 'roles', 'CREÓ ROL', `${nombre}`);
+            res.json({ data: 'Éxito', id: result.insertId });
+        }
+    );
+});
+
+app.put('/api/roles/:id', (req, res) => {
+    const { nombre, color, permisos_json, es_admin, orden } = req.body;
+    const { id } = req.params;
+    const targetDb = req.db || db;
+    targetDb.query(
+        'UPDATE roles SET nombre=?, color=?, permisos_json=?, es_admin=?, orden=? WHERE id=?',
+        [nombre, color || '#5865F2', permisos_json || '{}', es_admin ? 1 : 0, orden || 0, id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            // Sincronizar permisos_json en todos los usuarios asignados a este rol
+            targetDb.query(
+                'UPDATE usuarios SET permisos_json=? WHERE rol_id=?',
+                [permisos_json || '{}', id],
+                () => {}
+            );
+
+            broadcast('usuarios', 'actualizar_rol');
+            const actor = req.user ? req.user.correo : (req.body.editado_por || 'admin');
+            if (typeof logAudit === 'function') logAudit(actor, 'roles', 'MODIFICÓ ROL', `${nombre} (ID: ${id})`);
+            res.json({ data: 'Éxito' });
+        }
+    );
+});
+
+app.delete('/api/roles/:id', (req, res) => {
+    const { id } = req.params;
+    const targetDb = req.db || db;
+    targetDb.query('SELECT COUNT(*) AS cnt FROM usuarios WHERE rol_id = ?', [id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results[0].cnt > 0) return res.status(400).json({ error: `Este rol tiene ${results[0].cnt} usuario(s) asignado(s). Reasígnalos antes de eliminar.` });
+        targetDb.query('DELETE FROM roles WHERE id=?', [id], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            broadcast('usuarios', 'eliminar_rol');
+            const actor = req.user ? req.user.correo : 'admin';
+            if (typeof logAudit === 'function') logAudit(actor, 'roles', 'ELIMINÓ ROL', `ID Rol: ${id}`);
+            res.json({ data: 'Éxito' });
+        });
+    });
+});
+
+// ============================================================
+// 👤 USUARIOS v2 — ENDPOINTS MODERNOS
+// ============================================================
+
+app.post('/api/usuarios-v2', async (req, res) => {
+    const targetDb = req.db || db;
+    const { nombre, dni, cargo, correo, password, estado, rol_id } = req.body;
+    if (!correo) return res.status(400).json({ error: 'Correo requerido' });
+    const rolId = (rol_id && rol_id !== '') ? parseInt(rol_id) || null : null;
+    let rol = 'Personalizado';
+    if (correo.trim().toLowerCase() === 'admin@azkell.com') rol = 'Fundador';
+    const hashedPassword = password ? await bcrypt.hash(password, 10) : '';
+    targetDb.query('SELECT idUsuario FROM usuarios', (err, results) => {
+        let maxId = 1000;
+        if (!err && results) {
+            results.forEach(r => {
+                if (r.idUsuario && r.idUsuario.startsWith('USR-')) {
+                    let num = parseInt(r.idUsuario.split('-')[1]);
+                    if (!isNaN(num) && num > maxId) maxId = num;
+                }
+            });
+        }
+        const newId = `USR-${maxId + 1}`;
+        targetDb.query(
+            'INSERT INTO usuarios (idUsuario, nombre, dni, cargo, correo, password, password_visible, rol, estado, permisos_json, rol_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+            [newId, nombre || '', (dni || '').trim(), cargo || '', correo, hashedPassword, '', rol, estado || 'Activo', '{}', rolId],
+            (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                broadcast('usuarios', 'crear');
+                const usuario = req.body.creado_por || 'admin';
+                logAudit(usuario, 'usuarios', 'CREÓ', `${nombre || correo}`);
+                res.json({ data: 'Éxito', id: newId });
+            }
+        );
+    });
+});
+
+app.put('/api/usuarios-v2/:id', async (req, res) => {
+    const targetDb = req.db || db;
+    const { id } = req.params;
+    const { nombre, dni, cargo, correo, password, estado, rol_id } = req.body;
+    const rolId = (rol_id !== undefined && rol_id !== '' && rol_id !== null) ? parseInt(rol_id) || null : null;
+    let rol = 'Personalizado';
+    if (correo && correo.trim().toLowerCase() === 'admin@azkell.com') rol = 'Fundador';
+    const fields = ['nombre=?', 'dni=?', 'cargo=?', 'correo=?', 'estado=?', 'rol=?', 'rol_id=?'];
+    const values = [nombre || '', (dni || '').trim(), cargo || '', correo || '', estado || 'Activo', rol, rolId];
+    if (password && password.trim() !== '') {
+        const hashedPassword = await bcrypt.hash(password.trim(), 10);
+        fields.push('password=?'); values.push(hashedPassword);
+        fields.push('password_visible=?'); values.push('');
+    }
+    values.push(id);
+    targetDb.query(`UPDATE usuarios SET ${fields.join(',')} WHERE idUsuario=?`, values, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        broadcast('usuarios', 'actualizar');
+        const editor = req.body.editado_por || 'admin';
+        logAudit(editor, 'usuarios', 'MODIFICÓ', `${nombre || correo}`);
+        res.json({ data: 'Éxito' });
+    });
+});
+
+// ============================================================
+// 🔑 CAMBIO DE CONTRASEÑA (usuario cambia su propia clave)
+// ============================================================
+app.post('/api/cambiar-password', async (req, res) => {
+    const { correo, passwordActual, passwordNueva } = req.body;
+    if (!correo || !passwordActual || !passwordNueva)
+        return res.status(400).json({ error: 'Datos incompletos' });
+    db.query('SELECT password FROM usuarios WHERE correo=?', [correo], async (err, rows) => {
+        if (err || !rows.length) return res.status(404).json({ error: 'Usuario no encontrado' });
+        const hash = rows[0].password;
+        const esHash = hash && (hash.startsWith('$2b$') || hash.startsWith('$2a$'));
+        const valida = esHash ? await bcrypt.compare(passwordActual, hash) : (passwordActual === hash);
+        if (!valida) return res.status(400).json({ error: 'Contraseña actual incorrecta' });
+        const nuevoHash = await bcrypt.hash(passwordNueva, 10);
+        db.query('UPDATE usuarios SET password=?, password_visible=? WHERE correo=?',
+            [nuevoHash, passwordNueva, correo],
+            (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                logAudit(correo, 'usuarios', 'CAMBIÓ CONTRASEÑA', 'Auto-cambio de clave');
+                res.json({ data: 'Éxito' });
+            });
+    });
+});
+
+// ============================================================
+// RUTAS PLANIFICACION
+// ============================================================
+const planificacionRoutes = require('./routes/planificacion')(db, broadcast, logAudit);
+app.use('/api', planificacionRoutes);
+
+// ── Cloudinary + Multer (memoria) para imágenes de inventario ─────
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key:    process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+const _multerInv = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB máx
+    fileFilter: (req, file, cb) => {
+        const mime = (file.mimetype || '').toLowerCase();
+        const orig = (file.originalname || '').toLowerCase();
+        if (/^image\/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(mime)) return cb(null, true);
+        if (mime === 'application/pdf' || orig.endsWith('.pdf')) return cb(null, true);
+        if (/image\//i.test(mime)) return cb(null, true);
+        cb(new Error('Formato no permitido (se espera imagen o PDF)'));
+    }
+});
+
+// ── Helper endpoints para formularios de Almacén ─────────────────
+app.get('/api/conductores', (req, res) => {
+    const targetDb = req.db || db;
+    targetDb.query("SELECT * FROM conductores ORDER BY estado, nombre", (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+    });
+});
+
+app.get('/api/conductores-lista', (req, res) => {
+    const targetDb = req.db || db;
+    targetDb.query("SELECT idConductor AS id, nombre, dni FROM conductores ORDER BY nombre", (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+    });
+});
+
+app.delete('/api/conductores/:id', (req, res) => {
+    const targetDb = req.db || db;
+    const id = req.params.id;
+    targetDb.query("DELETE FROM conductores WHERE idConductor = ?", [id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (typeof broadcast === 'function') broadcast('conductores', 'eliminar');
+        res.json({ ok: true, mensaje: 'Personal eliminado correctamente' });
+    });
+});
+
+app.post('/api/conductores/importarMasivo', (req, res) => {
+    const lista = req.body.conductores || [];
+    if (!lista.length) return res.status(400).json({ error: 'Sin datos' });
+    let insertados = 0, errores = 0;
+    const procesar = (i) => {
+        if (i >= lista.length) return res.json({ insertados, errores });
+        const c = lista[i];
+        if (!c.nombre) { errores++; return procesar(i + 1); }
+        db.query(
+            'INSERT INTO conductores (nombre, empresa, telefono, dni, licencia, estado) VALUES (?,?,?,?,?,?)',
+            [c.nombre, c.empresa||'', c.telefono||'', c.dni||'', c.licencia||'', c.estado||'Activo'],
+            (err) => {
+                if (err) { errores++; } else { insertados++; }
+                procesar(i + 1);
+            }
+        );
+    };
+    procesar(0);
+});
+app.get('/api/placas-lista', (req, res) => {
+    const targetDb = req.db || db;
+    targetDb.query("SELECT * FROM placas ORDER BY placa", (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+    });
+});
+
+// ==========================================
+// FLOTA - DOCUMENTOS (S3 UPLOAD URL)
+// ==========================================
+app.get('/api/documentos-flota/upload-url', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) return res.status(401).json({ error: 'No autorizado' });
+        jwt.verify(token, process.env.JWT_SECRET || 'secreto_super_seguro');
+
+        const { filename, contentType } = req.query;
+        if (!filename) return res.status(400).json({ error: 'Falta filename' });
+
+        const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
+        const key = `flota/documentos/${Date.now()}_${safeName}`;
+
+        const uploadUrl = await getPresignedUploadUrl(key, contentType || 'application/pdf');
+        
+        const region = (process.env.AWS_REGION || 'us-east-2').trim();
+        const bucket = (process.env.AWS_BUCKET_NAME || '').trim();
+        const fileUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+
+        res.json({ uploadUrl, fileUrl });
+    } catch (e) {
+        console.error('Error generando upload URL:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
+app.post('/api/documentos-flota/presign-read', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) return res.status(401).json({ error: 'No autorizado' });
+        
+        const { urls } = req.body;
+        if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: 'Formato de urls inválido' });
+
+        let signed = {};
+        for (let url of urls) {
+            if (!url) continue;
+            let key = s3KeyFromUrl(url);
+            if (key) {
+                try { signed[url] = await getPresignedUrl(key, 3600); } catch(e) { signed[url] = url; }
+            } else {
+                signed[url] = url;
+            }
+        }
+        res.json(signed);
+    } catch (e) {
+        console.error('Error in /api/documentos-flota/presign-read:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/documentos-flota/delete', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) return res.status(401).json({ error: 'No autorizado' });
+        jwt.verify(token, process.env.JWT_SECRET || 'secreto_super_seguro');
+
+        const { url } = req.query;
+        if (!url) return res.status(400).json({ error: 'Falta url' });
+
+        const key = s3KeyFromUrl(url);
+        if (key) {
+            await deleteFromS3(key);
+        }
+
+        res.json({ ok: true });
+    } catch (e) {
+        console.error('Error eliminando S3:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ── GET /api/vehiculos-flota — Lista de vehículos con documentos (Sincronizado con Placas) ──────────────
+app.get('/api/vehiculos-flota', (req, res) => {
+    const tdb = (req && req.db) ? req.db : db;
+    tdb.query("ALTER TABLE placas CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", () => {});
+    tdb.query("ALTER TABLE vehiculos_flota CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", () => {});
+
+    const query = `
+        SELECT 
+            p.placa,
+            COALESCE(vf.tipo, p.tipo, '---') AS tipo,
+            COALESCE(vf.propiedad, 'PROPIA') AS propiedad,
+            COALESCE(vf.empresa, p.cliente) AS empresa,
+            vf.fecha_entrega,
+            COALESCE(vf.anio, p.anio) AS anio,
+            COALESCE(vf.marca, p.marca) AS marca,
+            COALESCE(vf.modelo, p.modelo_uts) AS modelo,
+            COALESCE(vf.color, p.color) AS color,
+            vf.chasis,
+            vf.tc_vencimiento, vf.tc_constancia, vf.soat_entidad, vf.soat_pago, vf.soat_vencimiento,
+            vf.matpel_constancia, vf.matpel_vencimiento, vf.rt_emision, vf.rt_vencimiento,
+            vf.boni_emision, vf.boni_vencimiento, vf.sv_entidad, vf.sv_asesor, vf.sv_vencimiento,
+            vf.sc_entidad, vf.sc_asesor, vf.sc_vencimiento, vf.fum_emision, vf.fum_vencimiento,
+            vf.ext_emision, vf.ext_vencimiento, vf.ext_cantidad,
+            vf.tc_url, vf.soat_url, vf.matpel_url, vf.rt_url, vf.boni_url, vf.sv_url, vf.sc_url, vf.fum_url, vf.ext_url, vf.wialon_name
+        FROM placas p
+        LEFT JOIN vehiculos_flota vf ON CONVERT(p.placa USING utf8mb4) = CONVERT(vf.placa USING utf8mb4)
+        ORDER BY p.placa ASC
+    `;
+    tdb.query(query, (err, rows) => {
+        if (err) {
+            console.error("Error en query de vehiculos-flota:", err);
+            tdb.query('SELECT * FROM vehiculos_flota ORDER BY placa ASC', (err2, rows2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json(rows2);
+            });
+            return;
+        }
+
+        const vehiculos = Array.isArray(rows) ? rows : [];
+        tdb.query('SELECT * FROM documentos_flota ORDER BY fecha_vencimiento DESC, creado_en DESC', (errDocs, docRows) => {
+            const docsByPlaca = {};
+            if (!errDocs && Array.isArray(docRows)) {
+                docRows.forEach(doc => {
+                    const pl = (doc.placa || '').toUpperCase().trim();
+                    if (!pl) return;
+                    if (!docsByPlaca[pl]) docsByPlaca[pl] = {};
+                    
+                    const tNorm = (doc.tipo_documento || '').toUpperCase().trim();
+                    if (!docsByPlaca[pl][tNorm]) {
+                        docsByPlaca[pl][tNorm] = doc;
+                    }
+                });
+            }
+
+            const standardAliases = [
+                'SOAT', 'SOAT (SEGURO OBLIGATORIO DE ACCIDENTES)', 'REVISIÓN TÉCNICA (CITV)', 'REV_TECNICA', 'REVISION TECNICA', 'CITV', 'REVISIÓN TÉCNICA', 'REVISION TECNICA (CITV)', 'INSPECCIÓN TÉCNICA VEHICULAR (CITV)', 'INSPECCION TECNICA VEHICULAR (CITV)',
+                'TARJETA DE PROPIEDAD / CIRCULACIÓN', 'TARJETA_PROPIEDAD', 'TARJ. CIRCULACIÓN', 'TARJETA DE PROPIEDAD', 'TARJETA DE CIRCULACIÓN', 'TARJ. CIRCULACION', 'TARJETA ÚNICA DE CIRCULACIÓN (TUC / MTC)', 'TARJETA UNICA DE CIRCULACION (TUC / MTC)', 'TARJ. CIRCULACIÓN (TUC)', 'TARJ. CIRCULACION (TUC)', 'TUC',
+                'TARJETA DE CIRCULACIÓN MATPEL', 'MATPEL', 'TARJETA DE CIRCULACION MATPEL', 'AUTORIZACIÓN DE CIRCULACIÓN MATPEL (MTC)', 'AUTORIZACION DE CIRCULACION MATPEL (MTC)', 'AUTORIZACIÓN MATPEL', 'AUTORIZACION MATPEL',
+                'BONIFICACIÓN / SUSPENSIÓN NEUMÁTICA', 'BONIFICACION', 'BONIFICACION / SUSPENSION NEUMATICA', 'BONIFICACIÓN', 'BONIFICACIÓN (MTC)', 'BONIFICACION (MTC)',
+                'SEGURO / PÓLIZA VEHICULAR', 'SEG_VEHICULAR', 'SEGURO VEHICULAR', 'POLIZA VEHICULAR', 'PÓLIZA VEHICULAR',
+                'SEGURO CARRETA', 'SEG_CARRETA', 'PÓLIZA CARRETA', 'POLIZA CARRETA',
+                'CERTIFICADO DE FUMIGACIÓN', 'FUMIGACION', 'FUMIGACIÓN', 'CERTIFICADO DE FUMIGACION', 'CERT. FUMIGACIÓN', 'CERTIFICADO DE FUMIGACIÓN Y DESINFECCIÓN',
+                'INSPECCIÓN EXTINTOR', 'EXTINTOR', 'INSPECCION EXTINTOR', 'INSP. EXTINTORES', 'INSPECCIÓN DE EXTINTORES', 'INSPECCION DE EXTINTORES'
+            ];
+
+            vehiculos.forEach(r => {
+                const pl = (r.placa || '').toUpperCase().trim();
+                const vDocs = docsByPlaca[pl] || {};
+                const customDocs = [];
+
+                Object.keys(vDocs).forEach(tKey => {
+                    const docObj = vDocs[tKey];
+                    const isStandard = standardAliases.some(alias => alias.toUpperCase() === tKey.toUpperCase());
+                    if (!isStandard) {
+                        customDocs.push({
+                            id: docObj.id,
+                            tipo: docObj.tipo_documento,
+                            title: docObj.tipo_documento.toUpperCase(),
+                            constancia: docObj.nro_constancia || docObj.entidad,
+                            emision: docObj.fecha_emision,
+                            vencimiento: docObj.fecha_vencimiento,
+                            pago: docObj.pago,
+                            url: docObj.observaciones,
+                            creado_en: docObj.creado_en
+                        });
+                    }
+                });
+
+                r.docs_personalizados = customDocs;
+            });
+
+            res.json(vehiculos);
+        });
+    });
+});
+
+// ── POST /api/vehiculos-flota — UPSERT vehículo ───────────────────────────────
+app.post('/api/vehiculos-flota', (req, res) => {
+    const d = req.body;
+    if (!d.placa) return res.status(400).json({ error: 'Placa requerida' });
+
+    const fmt = (f) => {
+        if (!f) return null;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(f)) return f;
+        if (typeof f === 'string' && f.includes('T')) return f.split('T')[0];
+        const p = String(f).split('/');
+        if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`;
+        return null;
+    };
+
+    const query = `INSERT INTO vehiculos_flota
+        (placa, tipo, propiedad, empresa, fecha_entrega, anio, marca, modelo, color, chasis,
+         tc_vencimiento, tc_constancia, soat_entidad, soat_pago, soat_vencimiento,
+         matpel_constancia, matpel_vencimiento,
+         rt_emision, rt_vencimiento, boni_emision, boni_vencimiento,
+         sv_entidad, sv_asesor, sv_vencimiento,
+         sc_entidad, sc_asesor, sc_vencimiento,
+         fum_emision, fum_vencimiento, ext_emision, ext_vencimiento, ext_cantidad,
+         tc_url, soat_url, matpel_url, rt_url, boni_url, sv_url, sc_url, fum_url, ext_url, wialon_name)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON DUPLICATE KEY UPDATE
+        tipo=VALUES(tipo), propiedad=VALUES(propiedad), empresa=VALUES(empresa),
+        fecha_entrega=VALUES(fecha_entrega), anio=VALUES(anio), marca=VALUES(marca),
+        modelo=VALUES(modelo), color=VALUES(color), chasis=VALUES(chasis),
+        tc_vencimiento=VALUES(tc_vencimiento), tc_constancia=VALUES(tc_constancia),
+        soat_entidad=VALUES(soat_entidad), soat_pago=VALUES(soat_pago),
+        soat_vencimiento=VALUES(soat_vencimiento), matpel_constancia=VALUES(matpel_constancia),
+        matpel_vencimiento=VALUES(matpel_vencimiento),
+        rt_emision=VALUES(rt_emision), rt_vencimiento=VALUES(rt_vencimiento),
+        boni_emision=VALUES(boni_emision), boni_vencimiento=VALUES(boni_vencimiento), sv_entidad=VALUES(sv_entidad),
+        sv_asesor=VALUES(sv_asesor), sv_vencimiento=VALUES(sv_vencimiento),
+        sc_entidad=VALUES(sc_entidad), sc_asesor=VALUES(sc_asesor),
+        sc_vencimiento=VALUES(sc_vencimiento),
+        fum_emision=VALUES(fum_emision), fum_vencimiento=VALUES(fum_vencimiento),
+        ext_emision=VALUES(ext_emision), ext_vencimiento=VALUES(ext_vencimiento), ext_cantidad=VALUES(ext_cantidad),
+        tc_url=VALUES(tc_url), soat_url=VALUES(soat_url), matpel_url=VALUES(matpel_url), rt_url=VALUES(rt_url),
+        boni_url=VALUES(boni_url), sv_url=VALUES(sv_url), sc_url=VALUES(sc_url), fum_url=VALUES(fum_url), ext_url=VALUES(ext_url),
+        wialon_name=VALUES(wialon_name)`;
+
+    const values = [
+        d.placa.toUpperCase(), d.tipo||null, d.propiedad||'PROPIA', d.empresa||'MARSISA',
+        fmt(d.fecha_entrega), d.anio||null, d.marca||null, d.modelo||null, d.color||null, d.chasis||null,
+        fmt(d.tc_vencimiento), d.tc_constancia||null, d.soat_entidad||null, d.soat_pago||null, fmt(d.soat_vencimiento),
+        d.matpel_constancia||null, fmt(d.matpel_vencimiento),
+        fmt(d.rt_emision), fmt(d.rt_vencimiento), fmt(d.boni_emision), fmt(d.boni_vencimiento),
+        d.sv_entidad||null, d.sv_asesor||null, fmt(d.sv_vencimiento),
+        d.sc_entidad||null, d.sc_asesor||null, fmt(d.sc_vencimiento),
+        fmt(d.fum_emision), fmt(d.fum_vencimiento), fmt(d.ext_emision), fmt(d.ext_vencimiento), d.ext_cantidad||1,
+        d.tc_url||null, d.soat_url||null, d.matpel_url||null, d.rt_url||null, d.boni_url||null,
+        d.sv_url||null, d.sc_url||null, d.fum_url||null, d.ext_url||null, d.wialon_name||null
+    ];
+
+    db.query(query, values, (err) => {
+        if (err) { console.error('Error vehiculos_flota:', err); return res.status(500).json({ error: err.message }); }
+        res.json({ ok: true });
+    });
+});
+
+// ── GET /api/documentos-flota/historial/:placa — Historial de documentos de la placa ──
+app.get('/api/documentos-flota/historial/:placa', (req, res) => {
+    const tdb = (req && req.db) ? req.db : db;
+    const placa = req.params.placa;
+    tdb.query(
+        'SELECT * FROM documentos_flota WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?)) ORDER BY fecha_vencimiento DESC, creado_en DESC',
+        [placa],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, historial: rows || [] });
+        }
+    );
+});
+
+// ── POST /api/documentos-flota/guardar-historial — Insertar registro historico ──
+app.post('/api/documentos-flota/guardar-historial', (req, res) => {
+    const tdb = (req && req.db) ? req.db : db;
+    const d = req.body || {};
+    if (!d.placa || !d.tipo_documento) return res.status(400).json({ error: 'Placa y tipo de documento requeridos' });
+
+    const id = `DOC-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+    const sql = `INSERT INTO documentos_flota 
+        (id, placa, tipo_documento, entidad, nro_constancia, fecha_emision, fecha_vencimiento, pago, asesor, observaciones, usuario)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    const vals = [
+        id,
+        d.placa.toUpperCase().trim(),
+        d.tipo_documento.trim(),
+        d.entidad || null,
+        d.nro_constancia || null,
+        d.fecha_emision || null,
+        d.fecha_vencimiento || null,
+        d.pago || null,
+        d.asesor || null,
+        d.observaciones || null,
+        d.usuario || 'SISTEMA'
+    ];
+
+    tdb.query(sql, vals, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true, id });
+    });
+});
+
+// ── POST /api/documentos-flota/eliminar-documento — Eliminar/Limpiar documento de la flota ──
+app.post('/api/documentos-flota/eliminar-documento', async (req, res) => {
+    const tdb = (req && req.db) ? req.db : db;
+    const { placa, tipoDocKey, urlS3 } = req.body;
+    if (!placa || !tipoDocKey) return res.status(400).json({ error: 'Faltan parámetros requeridos (placa, tipoDocKey)' });
+
+    try {
+        if (urlS3) {
+            const key = s3KeyFromUrl(urlS3);
+            if (key) await deleteFromS3(key);
+        }
+
+        const camposLimpiar = {
+            'SOAT': ['soat_entidad = NULL', 'soat_pago = NULL', 'soat_vencimiento = NULL', 'soat_url = NULL'],
+            'REV_TECNICA': ['rt_emision = NULL', 'rt_vencimiento = NULL', 'rt_url = NULL'],
+            'TARJETA_PROPIEDAD': ['tc_constancia = NULL', 'tc_vencimiento = NULL', 'tc_url = NULL'],
+            'MATPEL': ['matpel_constancia = NULL', 'matpel_vencimiento = NULL', 'matpel_url = NULL'],
+            'BONIFICACION': ['boni_emision = NULL', 'boni_vencimiento = NULL', 'boni_url = NULL'],
+            'SEG_VEHICULAR': ['sv_entidad = NULL', 'sv_asesor = NULL', 'sv_vencimiento = NULL', 'sv_url = NULL'],
+            'SEG_CARRETA': ['sc_entidad = NULL', 'sc_asesor = NULL', 'sc_vencimiento = NULL', 'sc_url = NULL'],
+            'FUMIGACION': ['fum_emision = NULL', 'fum_vencimiento = NULL', 'fum_url = NULL'],
+            'EXTINTOR': ['ext_emision = NULL', 'ext_vencimiento = NULL', 'ext_url = NULL', 'ext_cantidad = 1']
+        };
+
+        const updates = camposLimpiar[tipoDocKey];
+        if (updates && updates.length > 0) {
+            await new Promise((resolve, reject) => {
+                tdb.query(`UPDATE vehiculos_flota SET ${updates.join(', ')} WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?))`, [placa], (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+        }
+
+        // Limpiar historial de ese tipo de documento si existe
+        tdb.query(`DELETE FROM documentos_flota WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?)) AND (UPPER(TRIM(tipo_documento)) = UPPER(TRIM(?)) OR tipo_documento LIKE ?)`, 
+            [placa, tipoDocKey, `%${tipoDocKey}%`], () => {});
+
+        res.json({ ok: true });
+    } catch (e) {
+        console.error('Error eliminando documento:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ── DELETE /api/vehiculos-flota/:placa ────────────────────────────────────────
+app.delete('/api/vehiculos-flota/:placa', (req, res) => {
+    db.query('DELETE FROM vehiculos_flota WHERE placa=?', [req.params.placa], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// ── POST /api/importarVehiculosFlotaMasivo ────────────────────────────────────
+app.post('/api/importarVehiculosFlotaMasivo', async (req, res) => {
+    const { registros } = req.body;
+    if (!Array.isArray(registros) || !registros.length) {
+        return res.status(400).json({ ok: 0, errores: 0, msg: 'Sin registros' });
+    }
+
+    const query = `
+        INSERT INTO vehiculos_flota (
+            placa, tipo, propiedad, empresa, fecha_entrega, anio, modelo, color, marca, chasis,
+            tc_constancia, tc_vencimiento,
+            soat_entidad, soat_pago, soat_vencimiento,
+            matpel_constancia, matpel_vencimiento,
+            rt_emision, rt_vencimiento,
+            boni_emision, boni_vencimiento,
+            sv_entidad, sv_asesor, sv_vencimiento,
+            sc_entidad, sc_asesor, sc_vencimiento,
+            fum_emision, fum_vencimiento,
+            ext_cantidad, ext_emision, ext_vencimiento
+        ) VALUES ?
+        ON DUPLICATE KEY UPDATE
+            tipo=VALUES(tipo), propiedad=VALUES(propiedad), empresa=VALUES(empresa), 
+            fecha_entrega=VALUES(fecha_entrega), anio=VALUES(anio), modelo=VALUES(modelo), 
+            color=VALUES(color), marca=VALUES(marca), chasis=VALUES(chasis),
+            tc_constancia=VALUES(tc_constancia), tc_vencimiento=VALUES(tc_vencimiento),
+            soat_entidad=VALUES(soat_entidad), soat_pago=VALUES(soat_pago), soat_vencimiento=VALUES(soat_vencimiento),
+            matpel_constancia=VALUES(matpel_constancia), matpel_vencimiento=VALUES(matpel_vencimiento),
+            rt_emision=VALUES(rt_emision), rt_vencimiento=VALUES(rt_vencimiento),
+            boni_emision=VALUES(boni_emision), boni_vencimiento=VALUES(boni_vencimiento),
+            sv_entidad=VALUES(sv_entidad), sv_asesor=VALUES(sv_asesor), sv_vencimiento=VALUES(sv_vencimiento),
+            sc_entidad=VALUES(sc_entidad), sc_asesor=VALUES(sc_asesor), sc_vencimiento=VALUES(sc_vencimiento),
+            fum_emision=VALUES(fum_emision), fum_vencimiento=VALUES(fum_vencimiento),
+            ext_cantidad=VALUES(ext_cantidad), ext_emision=VALUES(ext_emision), ext_vencimiento=VALUES(ext_vencimiento)
+    `;
+
+    const cleanDate = (d) => {
+        if (d === null || d === undefined || d === '') return null;
+        let str = d.toString().trim();
+        if (str === '-' || str === '') return null;
+        
+        // Si Excel lo pasa como número de serie (ej: 45306)
+        if (!isNaN(str) && Number(str) > 10000) {
+            let date = new Date(Math.round((Number(str) - 25569) * 86400 * 1000));
+            return date.toISOString().split('T')[0];
+        }
+
+        let p = str.split('/');
+        if (p.length === 3) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`; // Convert from DD/MM/YYYY to YYYY-MM-DD
+        if (str.includes('-')) return str; // Handle native YYYY-MM-DD if exported like that
+        return null;
+    };
+
+    let ok = 0, errores = 0;
+    const validos = registros.filter(r => {
+        const placa = (r['PLACA'] || r.placa || '').toString().trim().toUpperCase();
+        if (!placa) { errores++; return false; }
+        return true;
+    });
+
+    if (validos.length > 0) {
+        for (let i = 0; i < validos.length; i += 500) {
+            const lote = validos.slice(i, i + 500);
+            const vals = lote.map(r => [
+                (r['PLACA'] || r.placa || '').toString().trim().toUpperCase(),
+                (r['TIPO'] || r.tipo || '').toString().trim(),
+                (r['PROPIEDAD'] || r.propiedad || '').toString().trim(),
+                (r['EMPRESA'] || r.empresa || '').toString().trim(),
+                cleanDate(r['F. ENTREGA'] || r.fecha_entrega || ''),
+                r['AÑO'] || r.anio || null,
+                (r['MODELO'] || r.modelo || '').toString().trim(),
+                (r['COLOR'] || r.color || '').toString().trim(),
+                (r['MARCA'] || r.marca || '').toString().trim(),
+                (r['SERIE/CHASIS'] || r.chasis || '').toString().trim(),
+                
+                (r['TC N° CONST.'] || r.tc_constancia || '').toString().trim(),
+                cleanDate(r['TC F. VENC.'] || r.tc_vencimiento || ''),
+                
+                (r['SOAT ENTIDAD'] || r.soat_entidad || '').toString().trim(),
+                r['SOAT PAGO'] || r.soat_pago || null,
+                cleanDate(r['SOAT F. VENC.'] || r.soat_vencimiento || ''),
+                
+                (r['MATPEL N° CONST.'] || r.matpel_constancia || '').toString().trim(),
+                cleanDate(r['MATPEL F. VENC.'] || r.matpel_vencimiento || ''),
+                
+                cleanDate(r['RT F. EMISIÓN'] || r.rt_emision || ''),
+                cleanDate(r['RT F. VENC.'] || r.rt_vencimiento || ''),
+                
+                cleanDate(r['BONI F. EMISIÓN'] || r.boni_emision || ''),
+                cleanDate(r['BONI F. VENC.'] || r.boni_vencimiento || ''),
+                
+                (r['SV ENTIDAD'] || r.sv_entidad || '').toString().trim(),
+                (r['SV ASESOR'] || r.sv_asesor || '').toString().trim(),
+                cleanDate(r['SV F. VENC.'] || r.sv_vencimiento || ''),
+                
+                (r['SC ENTIDAD'] || r.sc_entidad || '').toString().trim(),
+                (r['SC ASESOR'] || r.sc_asesor || '').toString().trim(),
+                cleanDate(r['SC F. VENC.'] || r.sc_vencimiento || ''),
+                
+                cleanDate(r['FUM F. EMISIÓN'] || r.fum_emision || ''),
+                cleanDate(r['FUM F. VENC.'] || r.fum_vencimiento || ''),
+                
+                r['EXT CANTIDAD'] || r.ext_cantidad || 1,
+                cleanDate(r['EXT F. EMISIÓN'] || r.ext_emision || ''),
+                cleanDate(r['EXT F. VENC.'] || r.ext_vencimiento || '')
+            ]);
+            try {
+                await new Promise((resolve, reject) => {
+                    db.query(query, [vals], (err, res) => {
+                        if (err) reject(err); else resolve(res);
+                    });
+                });
+                ok += lote.length;
+            } catch (error) {
+                console.error("Error importando lote de flota:", error);
+                return res.status(500).json({ ok: 0, errores: lote.length, msg: error.message });
+            }
+        }
+    }
+    res.json({ ok, errores });
+});
+
+
+app.put('/api/placas/:placa', (req, res) => {
+    const targetDb = req.db || db;
+    const placa   = req.params.placa;
+    const usuario = (req.user?.correo || req.body.usuario_autor || '').substring(0, 100);
+    const ip      = (req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '').substring(0, 80);
+    const campos  = ['cliente','ruc_dni','marca','modelo_uts','tipo','sub_tipo','color',
+                     'nro_motor','nro_caja','nro_corona','nro_vin','configuracion',
+                     'tanque_1','tanque_2','tanque_3','capacidad_tanque',
+                     'anio','combustible','tara','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica','wialon_name'];
+
+    targetDb.query('SELECT * FROM placas WHERE placa=?', [placa], (err, rows) => {
+        if (err)  return res.status(500).json({ error: err.message });
+        if (!rows.length) return res.status(404).json({ error: 'Placa no encontrada' });
+
+        const actual = rows[0];
+        const nuevo  = req.body;
+
+        const t1 = parseFloat(nuevo.tanque_1) || 0;
+        const t2 = parseFloat(nuevo.tanque_2) || 0;
+        const t3 = parseFloat(nuevo.tanque_3) || 0;
+        if (t1 > 0 || t2 > 0 || t3 > 0) {
+            nuevo.capacidad_tanque = String((t1 + t2 + t3) % 1 === 0 ? (t1 + t2 + t3) : (t1 + t2 + t3).toFixed(2));
+        }
+
+        // Detectar diferencias campo a campo
+        const diffs = [];
+        campos.forEach(c => {
+            const vAnt = actual[c] == null ? '' : String(actual[c]).trim();
+            const vNue = nuevo[c]  == null ? '' : String(nuevo[c]).trim();
+            if (vAnt !== vNue) diffs.push([placa, c, vAnt, vNue, usuario, ip]);
+        });
+
+        // Actualizar la placa
+        const sets = campos.map(c => `${c}=?`).join(', ');
+        const vals = campos.map(c => nuevo[c] != null ? String(nuevo[c]).trim() : '');
+        targetDb.query(`UPDATE placas SET ${sets} WHERE placa=?`, [...vals, placa], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+
+            // Insertar diffs en auditoría (fire-and-forget)
+            if (diffs.length) {
+                targetDb.query(
+                    'INSERT INTO placa_auditoria (placa, campo, valor_ant, valor_nuevo, usuario, ip) VALUES ?',
+                    [diffs], () => {}
+                );
+                logAudit(usuario, 'placas', 'editar', `Placa ${placa}: ${diffs.map(d => d[1]).join(', ')}`);
+            }
+            res.json({ ok: true, cambios: diffs.length });
+        });
+    });
+});
+
+// ── GET /api/placas/:placa/historial ──────────────────────────────────────────
+app.get('/api/placas/:placa/historial', (req, res) => {
+    db.query(
+        `SELECT id, campo, valor_ant, valor_nuevo, usuario, ip, fecha
+         FROM placa_auditoria
+         WHERE placa = ?
+         ORDER BY fecha DESC
+         LIMIT 100`,
+        [req.params.placa],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        }
+    );
+});
+
+// ============================================================
+// MÓDULO ALMACÉN — Tablas (fire-and-forget al arrancar)
+// ============================================================
+db.query(
+    `CREATE TABLE IF NOT EXISTS configuracion_almacen (
+        clave       VARCHAR(50)  NOT NULL PRIMARY KEY,
+        valor       VARCHAR(500) NOT NULL DEFAULT '',
+        descripcion VARCHAR(200)
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE configuracion_almacen:', e.message);
+        else {
+            console.log('✅ Tabla configuracion_almacen verificada');
+            db.query(`INSERT IGNORE INTO configuracion_almacen (clave,valor,descripcion) VALUES ('tipo_cambio','3.70','Tipo de cambio USD → PEN')`,
+                (e2) => { if (e2) console.warn('INSERT tipo_cambio:', e2.message); });
+        }
+    }
+);
+
+// ── Tabla de Catálogo de Almacenes (ERP Azkell) ───────────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS almacen_almacenes (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(100) NOT NULL UNIQUE,
+        descripcion VARCHAR(255) NULL,
+        es_sistema  TINYINT(1)   NOT NULL DEFAULT 0,
+        activo      TINYINT(1)   NOT NULL DEFAULT 1,
+        orden       INT          NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE almacen_almacenes:', e.message);
+        else {
+            console.log('✅ Tabla almacen_almacenes verificada');
+            db.query(`INSERT IGNORE INTO almacen_almacenes (id, nombre, descripcion, es_sistema, activo, orden) 
+                      VALUES (1, 'Principal', 'Almacén Principal Central del ERP', 1, 1, 1)`, () => {});
+        }
+    }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS proveedores_inv (
+        id               VARCHAR(20)  NOT NULL PRIMARY KEY,
+        nombre           VARCHAR(200) NOT NULL,
+        razon_social     VARCHAR(200),
+        tipo_documento   ENUM('RUC','DNI','CE','Otro') DEFAULT 'RUC',
+        numero_documento VARCHAR(20),
+        telefono         VARCHAR(30),
+        email            VARCHAR(150),
+        direccion        TEXT,
+        estado           ENUM('Activo','Inactivo') DEFAULT 'Activo',
+        observaciones    TEXT,
+        created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`,
+    (e) => { if (e) console.warn('CREATE proveedores_inv:', e.message); else console.log('✅ Tabla proveedores_inv verificada'); }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS proveedor_marcas_inv (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        proveedor_id VARCHAR(20) NOT NULL,
+        marca        VARCHAR(100) NOT NULL,
+        INDEX idx_prov (proveedor_id)
+    )`,
+    (e) => { if (e) console.warn('CREATE proveedor_marcas_inv:', e.message); else console.log('✅ Tabla proveedor_marcas_inv verificada'); }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS inventario (
+        id                   VARCHAR(20)  NOT NULL PRIMARY KEY,
+        descripcion          VARCHAR(400) NOT NULL,
+        familia              VARCHAR(100),
+        sub_familia          VARCHAR(100),
+        almacen              VARCHAR(100),
+        unidad               VARCHAR(30),
+        moneda               ENUM('PEN','USD') NOT NULL DEFAULT 'PEN',
+        costo_referencial    DECIMAL(14,4) NOT NULL DEFAULT 0,
+        stock_regularizado   DECIMAL(14,4) NOT NULL DEFAULT 0,
+        fecha_regularizacion DATE,
+        proveedor_id         VARCHAR(20),
+        marca                VARCHAR(100),
+        activo               TINYINT(1) NOT NULL DEFAULT 1,
+        observaciones        TEXT,
+        created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_familia (familia),
+        INDEX idx_almacen (almacen),
+        INDEX idx_activo  (activo)
+    )`,
+    (e) => { if (e) console.warn('CREATE inventario:', e.message); else console.log('✅ Tabla inventario verificada'); }
+);
+// ── Migración inventario: agregar columnas nuevas ─────────────────
+[
+    'ALTER TABLE inventario ADD COLUMN codigo_item    VARCHAR(100)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN marca_unidad   VARCHAR(100)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN sistema        VARCHAR(100)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN sub_sistema    VARCHAR(100)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN tipo           ENUM(\'Original\',\'Alternativo\') NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN sub_tipo       ENUM(\'Nuevo\',\'Reparado\') NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN ubicacion      VARCHAR(150)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN anaquel        VARCHAR(50)      NULL DEFAULT NULL',
+    'ALTER TABLE inventario MODIFY COLUMN anaquel     VARCHAR(50)      NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN stock_min      DECIMAL(14,4)    NOT NULL DEFAULT 0',
+    'ALTER TABLE inventario ADD COLUMN stock_max      DECIMAL(14,4)    NOT NULL DEFAULT 0',
+    'ALTER TABLE inventario ADD COLUMN estado_art     VARCHAR(50)      NULL DEFAULT \'Activo\'',
+    'ALTER TABLE inventario ADD COLUMN codigo_barras  VARCHAR(100)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN imagen_url     TEXT             NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN articulo       VARCHAR(300)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN codigo_articulo VARCHAR(100)    NULL DEFAULT NULL',
+].forEach(sql => {
+    db.query(sql, (e) => {
+        if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER inventario:', e.message);
+    });
+});
+// Ampliar marca_unidad a TEXT para soportar JSON de múltiples marcas
+db.query('ALTER TABLE inventario MODIFY COLUMN marca_unidad TEXT NULL DEFAULT NULL', () => {});
+db.query(
+    `CREATE TABLE IF NOT EXISTS entradas_inv (
+        id                   VARCHAR(20) NOT NULL PRIMARY KEY,
+        fecha                DATE        NOT NULL,
+        proveedor_id         VARCHAR(20),
+        proveedor_nombre     VARCHAR(200),
+        documento_referencia VARCHAR(100),
+        moneda               ENUM('PEN','USD') NOT NULL DEFAULT 'PEN',
+        tipo_cambio          DECIMAL(8,4),
+        total_pen            DECIMAL(14,4) NOT NULL DEFAULT 0,
+        observaciones        TEXT,
+        creado_por           VARCHAR(100),
+        created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+        INDEX idx_fecha (fecha)
+    )`,
+    (e) => { if (e) console.warn('CREATE entradas_inv:', e.message); else console.log('✅ Tabla entradas_inv verificada'); }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS detalle_entradas_inv (
+        id             INT AUTO_INCREMENT PRIMARY KEY,
+        entrada_id     VARCHAR(20)  NOT NULL,
+        inventario_id  VARCHAR(20)  NOT NULL,
+        descripcion    VARCHAR(400),
+        cantidad       DECIMAL(14,4) NOT NULL,
+        costo_unitario DECIMAL(14,4) NOT NULL DEFAULT 0,
+        moneda         ENUM('PEN','USD') NOT NULL DEFAULT 'PEN',
+        importe        DECIMAL(14,4) NOT NULL DEFAULT 0,
+        INDEX idx_entrada (entrada_id),
+        INDEX idx_item    (inventario_id)
+    )`,
+    (e) => { if (e) console.warn('CREATE detalle_entradas_inv:', e.message); else console.log('✅ Tabla detalle_entradas_inv verificada'); }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS salidas_inv (
+        id             VARCHAR(20)  NOT NULL PRIMARY KEY,
+        fecha          DATE         NOT NULL,
+        tipo_destino   ENUM('Vehiculo','Personal') NOT NULL,
+        placa          VARCHAR(20),
+        responsable    VARCHAR(150),
+        responsable_id INT,
+        moneda         ENUM('PEN','USD') NOT NULL DEFAULT 'PEN',
+        tipo_cambio    DECIMAL(8,4),
+        total_pen      DECIMAL(14,4) NOT NULL DEFAULT 0,
+        observaciones  TEXT,
+        creado_por     VARCHAR(100),
+        created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
+        INDEX idx_fecha (fecha),
+        INDEX idx_placa (placa)
+    )`,
+    (e) => { if (e) console.warn('CREATE salidas_inv:', e.message); else console.log('✅ Tabla salidas_inv verificada'); }
+);
+// Migraciones: columnas para Req/Salidas OT
+db.query(`ALTER TABLE salidas_inv ADD COLUMN ticket_ot VARCHAR(30) DEFAULT NULL`, (e) => {
+    if (e && !e.message.includes('Duplicate column')) console.warn('ALTER salidas_inv ticket_ot:', e.message);
+});
+db.query(`ALTER TABLE salidas_inv ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'Despachado'`, (e) => {
+    if (e && !e.message.includes('Duplicate column')) console.warn('ALTER salidas_inv estado:', e.message);
+});
+db.query(`ALTER TABLE salidas_inv ADD INDEX idx_ticket_ot (ticket_ot)`, (e) => {});
+// inventario_id en detalle_salidas_inv puede ser null (para ítems sin código)
+db.query(`ALTER TABLE detalle_salidas_inv MODIFY COLUMN inventario_id VARCHAR(20) NULL DEFAULT NULL`, (e) => {
+    if (e && !e.message.includes('errno: 150')) console.warn('ALTER detalle_salidas_inv inv_id:', e.message);
+});
+db.query(
+    `CREATE TABLE IF NOT EXISTS detalle_salidas_inv (
+        id             INT AUTO_INCREMENT PRIMARY KEY,
+        salida_id      VARCHAR(20)  NOT NULL,
+        inventario_id  VARCHAR(20)  NOT NULL,
+        descripcion    VARCHAR(400),
+        cantidad       DECIMAL(14,4) NOT NULL,
+        costo_unitario DECIMAL(14,4) NOT NULL DEFAULT 0,
+        moneda         ENUM('PEN','USD') NOT NULL DEFAULT 'PEN',
+        importe        DECIMAL(14,4) NOT NULL DEFAULT 0,
+        INDEX idx_salida (salida_id),
+        INDEX idx_item   (inventario_id)
+    )`,
+    (e) => { if (e) console.warn('CREATE detalle_salidas_inv:', e.message); else console.log('✅ Tabla detalle_salidas_inv verificada'); }
+);
+
+// ── Tabla de Recepciones de Órdenes de Compra (ERP Azkell) ───────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS recepciones_oc (
+        id              INT AUTO_INCREMENT PRIMARY KEY,
+        oc_id           VARCHAR(50)   NOT NULL,
+        fecha_recepcion DATETIME      NOT NULL,
+        usuario         VARCHAR(150)  NULL,
+        almacen         VARCHAR(100)  NULL DEFAULT 'ALM CENTRAL',
+        sustento_url    TEXT          NULL,
+        observacion     TEXT          NULL,
+        tipo_recepcion  ENUM('PARCIAL','TOTAL') NOT NULL DEFAULT 'TOTAL',
+        created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_rec_oc (oc_id),
+        INDEX idx_rec_fecha (fecha_recepcion)
+    )`,
+    (e) => { if (e) console.warn('CREATE recepciones_oc:', e.message); else console.log('✅ Tabla recepciones_oc verificada'); }
+);
+
+db.query(
+    `CREATE TABLE IF NOT EXISTS detalle_recepciones_oc (
+        id                INT AUTO_INCREMENT PRIMARY KEY,
+        recepcion_id      INT           NOT NULL,
+        oc_id             VARCHAR(50)   NOT NULL,
+        inventario_id     VARCHAR(20)   NULL,
+        descripcion       VARCHAR(400)  NULL,
+        cantidad_recibida DECIMAL(14,4) NOT NULL,
+        costo_unitario    DECIMAL(14,4) NOT NULL DEFAULT 0,
+        moneda            VARCHAR(10)   NOT NULL DEFAULT 'PEN',
+        almacen           VARCHAR(100)  NULL DEFAULT 'ALM CENTRAL',
+        INDEX idx_drec_rec (recepcion_id),
+        INDEX idx_drec_oc (oc_id),
+        INDEX idx_drec_item (inventario_id)
+    )`,
+    (e) => { 
+        if (e) console.warn('CREATE detalle_recepciones_oc:', e.message); 
+        else {
+            console.log('✅ Tabla detalle_recepciones_oc verificada');
+        }
+    }
+);
+
+// ── Reparar inventario_id NULL en detalle existentes ────────────────────
+// Actualiza filas cuyo inventario_id es NULL usando la descripción como clave
+db.query(
+    `UPDATE detalle_salidas_inv d
+     JOIN inventario i ON i.descripcion = d.descripcion AND i.activo = 1
+     SET d.inventario_id = i.id
+     WHERE d.inventario_id IS NULL AND d.descripcion IS NOT NULL`,
+    (e) => { if (e) console.warn('Repair detalle_salidas_inv:', e.message); else console.log('✅ Reparados inventario_id NULL en detalle_salidas_inv'); }
+);
+db.query(
+    `UPDATE detalle_entradas_inv d
+     JOIN inventario i ON i.descripcion = d.descripcion AND i.activo = 1
+     SET d.inventario_id = i.id
+     WHERE d.inventario_id IS NULL AND d.descripcion IS NOT NULL`,
+    (e) => { if (e) console.warn('Repair detalle_entradas_inv:', e.message); else console.log('✅ Reparados inventario_id NULL en detalle_entradas_inv'); }
+);
+
+// ── Helper: generar código secuencial para Almacén ───────────────────────
+function _generarCodigoAlmacen(tipo, anio, cb) {
+    const tablas = { INV: 'inventario', SERV: 'inventario', ENT: 'entradas_inv', SAL: 'salidas_inv', SA: 'salidas_inv', PROV: 'proveedores_inv' };
+    const tabla = tablas[tipo];
+    const prefix = anio ? `${tipo}-${anio}-` : `${tipo}-`;
+    db.query(
+        `SELECT id FROM \`${tabla}\` WHERE id LIKE ? ORDER BY CAST(SUBSTRING_INDEX(id, '-', -1) AS UNSIGNED) DESC LIMIT 1`,
+        [prefix + '%'],
+        (err, rows) => {
+            if (err) return cb(err);
+            let num = 1;
+            const last = rows[0]?.id;
+            if (last) { const p = last.split('-'); num = parseInt(p[p.length - 1], 10) + 1; }
+            const pad = anio ? 5 : 4;
+            cb(null, prefix + String(num).padStart(pad, '0'));
+        }
+    );
+}
+
+// ============================================================
+// RUTAS MODULARIZADAS
+// ============================================================
+const almacenRoutes = require('./routes/almacen')(db, _multerInv, logAudit, _generarCodigoAlmacen);
+app.use('/api/almacen', almacenRoutes);
+
+// (tallerRoutes ya fue montado antes del legacy wildcard — ver arriba)
+
+
+// ── Integraciones API (GET / PUT) ────────────────────────────────
+app.get('/api/integraciones', (req, res) => {
+    db.query('SELECT clave, valor, descripcion, actualizado_por, actualizado_en FROM integraciones_api ORDER BY id', (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.put('/api/integraciones', (req, res) => {
+    const { clave, valor, actualizado_por } = req.body;
+    if (!clave) return res.status(400).json({ error: 'clave requerida' });
+    db.query(
+        `INSERT INTO integraciones_api (clave, valor, actualizado_por)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE valor = VALUES(valor), actualizado_por = VALUES(actualizado_por), actualizado_en = NOW()`,
+        [clave, valor || null, actualizado_por || null],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+// ============================================================
+// 🚀 EL PUENTE DE LECTURA A MYSQL (Legacy)
+// Módulo Directorio de Clientes (Fase 1 - ERP)
+app.use('/api/clientes', require('./routes/clientes')(db, logAudit));
+app.use('/api/disponibilidad-flota', require('./routes/disponibilidad')(db, logAudit));
+app.use('/api/neumaticos', require('./routes/neumaticos')(db, broadcast, logAudit));
+app.use('/api/combustible', require('./routes/combustible')(db, broadcast, logAudit));
+app.use('/api/operaciones', require('./routes/operaciones')(db, broadcast, logAudit));
+app.use('/api/guias-remision', require('./routes/guias_remision')(db, broadcast, logAudit));
+app.use('/api/guia-transportista', require('./routes/guia_transportista')(db, broadcast, logAudit));
+app.use('/api/guia-remitente', require('./routes/guia_remitente')(db, broadcast, logAudit));
+app.use('/api/tesoreria', require('./routes/tesoreria')(db, broadcast, logAudit));
+app.use('/api/rrhh', require('./routes/rrhh')(db, broadcast, logAudit));
+
+// Módulo Órdenes de Compra y Aprobación Móvil vía WhatsApp (Magic Link)
+app.get('/aprobaciones/oc', (req, res) => {
+    res.sendFile(path.join(__dirname, 'web', 'aprobacion_oc.html'));
+});
+app.get('/qr-whatsapp', (req, res) => {
+    res.sendFile(path.join(__dirname, 'web', 'qr_whatsapp.html'));
+});
+app.get('/api/whatsapp/qr', async (req, res) => {
+    try {
+        const { ensureInstanceExists } = require('./services/whatsappService');
+        const evoUrl = process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085';
+        const evoKey = process.env.EVOLUTION_API_KEY || 'AZKELL_ERP_WA_SECRET_2026';
+        
+        // Modelo A: Instancia por cada empresa / tenant (ej: marsisa_bot)
+        const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
+        const evoInstance = (tenantSlug && !['admin', 'master', 'localhost', '82'].includes(tenantSlug)) 
+            ? `${tenantSlug}_bot` 
+            : (process.env.EVOLUTION_INSTANCE || 'azkell_erp_bot');
+
+        // Asegurar que la instancia de esta empresa esté creada en Evolution API
+        await ensureInstanceExists(evoInstance);
+
+        // Obtener nombre de la empresa para mostrar en la interfaz
+        let empresaNombre = req.tenantInfo?.nombre_empresa || (tenantSlug ? tenantSlug.toUpperCase() : 'Azkell ERP');
+        if (req.db) {
+            try {
+                const [cfg] = await req.db.promise().query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_nombre' LIMIT 1");
+                if (cfg && cfg[0] && cfg[0].valor) empresaNombre = cfg[0].valor;
+            } catch(e) {}
+        }
+
+        const response = await fetch(`${evoUrl.replace(/\/$/, '')}/instance/connect/${evoInstance}`, {
+            headers: { 'apikey': evoKey }
+        });
+        const data = await response.json();
+        
+        if (data && data.instance && data.instance.state === 'open') {
+            return res.json({ status: 'CONNECTED', instance: evoInstance, empresa_nombre: empresaNombre });
+        }
+        res.json({ ...data, instance: evoInstance, empresa_nombre: empresaNombre });
+    } catch(err) {
+        console.error('Error generando QR de WhatsApp:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+app.use(require('./routes/ordenes_compra')(db, broadcast, logAudit));
+
+const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
+app.use('/api/script', legacyRoutes);
+app.use('/api', legacyRoutes);
+
+// 4. Encender Servidor
+app.listen(process.env.PORT || 3000, () => {
+    console.log('🚀 Servidor Backend de Azkell corriendo');
+    // Migración: fecha_trabajo debe ser DATETIME (puede estar como DATE en DBs antiguas)
+    db.query("ALTER TABLE trabajos_ot MODIFY COLUMN fecha_trabajo DATETIME NULL", (e) => {
+        if (e) console.warn('ALTER fecha_trabajo (puede ignorarse si ya es DATETIME):', e.message);
+    });
+    // Migración: añadir ticket_ot a ot_backlog si no existe (compatible MySQL 5.7+)
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ot_backlog' AND COLUMN_NAME='ticket_ot'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE ot_backlog ADD COLUMN ticket_ot VARCHAR(50) DEFAULT NULL", () => {});
+            }
+        }
+    );
+    // Migración: añadir motivo_anulacion a salidas_inv si no existe (compatible MySQL 5.7+)
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='salidas_inv' AND COLUMN_NAME='motivo_anulacion'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE salidas_inv ADD COLUMN motivo_anulacion VARCHAR(255) DEFAULT NULL", () => {});
+            }
+        }
+    );
+    // Migración: añadir estado y motivo_anulacion a entradas_inv si no existe
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='estado'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE entradas_inv ADD COLUMN estado VARCHAR(50) DEFAULT NULL, ADD COLUMN motivo_anulacion VARCHAR(255) DEFAULT NULL", () => {});
+            }
+        }
+    );
+    // Migración: añadir columnas de archivos a entradas_inv
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='url_voucher'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE entradas_inv ADD COLUMN url_voucher TEXT DEFAULT NULL, ADD COLUMN url_cotizacion TEXT DEFAULT NULL, ADD COLUMN url_factura TEXT DEFAULT NULL", () => {});
+            }
+        }
+    );
+    // Migración: añadir motivo y placa a entradas_inv
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='motivo_entrada'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE entradas_inv ADD COLUMN motivo_entrada VARCHAR(255) DEFAULT NULL, ADD COLUMN placa VARCHAR(50) DEFAULT NULL", () => {});
+            }
+        }
+    );
+    // Migración: añadir tipo_orden, condicion_pago, dias_credito a entradas_inv
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='tipo_orden'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE entradas_inv ADD COLUMN tipo_orden VARCHAR(50) DEFAULT 'Orden de compra', ADD COLUMN condicion_pago VARCHAR(50) DEFAULT 'Al contado', ADD COLUMN dias_credito INT DEFAULT 30", () => {});
+            }
+        }
+    );
+    // Migración: añadir ot_id a entradas_inv para Órdenes de Servicio
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='ot_id'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE entradas_inv ADD COLUMN ot_id VARCHAR(50) NULL", () => {});
+            }
+        }
+    );
+    // Migración: añadir nuevos campos de Orden de Compra a entradas_inv
+    const camposOC = [
+        { col: 'serie', def: 'VARCHAR(20) DEFAULT NULL' },
+        { col: 'numero_correlativo', def: 'VARCHAR(50) DEFAULT NULL' },
+        { col: 'dias_pagar', def: 'INT DEFAULT 0' },
+        { col: 'prioridad', def: 'VARCHAR(30) DEFAULT \'Normal\'' },
+        { col: 'cuenta_bancaria_proveedor', def: 'VARCHAR(150) DEFAULT NULL' },
+        { col: 'cuenta_bancaria_empresa', def: 'VARCHAR(150) DEFAULT NULL' },
+        { col: 'solicitante', def: 'VARCHAR(150) DEFAULT NULL' },
+        { col: 'estado_factura', def: 'VARCHAR(50) DEFAULT \'Pendiente\'' }
+    ];
+    camposOC.forEach(c => {
+        db.query(
+            `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='${c.col}'`,
+            (e, r) => {
+                if (!e && r && r[0] && r[0].cnt === 0) {
+                    db.query(`ALTER TABLE entradas_inv ADD COLUMN ${c.col} ${c.def}`, () => {});
+                }
+            }
+        );
+    });
+
+    // Migración: Crear tabla proveedor_cuentas_bancarias si no existe
+    db.query(`
+        CREATE TABLE IF NOT EXISTS proveedor_cuentas_bancarias (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            proveedor_id VARCHAR(20) NOT NULL,
+            banco VARCHAR(100) NOT NULL,
+            moneda VARCHAR(20) DEFAULT 'SOLES',
+            tipo_cuenta ENUM('CUENTA CORRIENTE', 'CUENTA DE AHORROS', 'CUENTA REMUNERADA') NOT NULL,
+            numero_cuenta VARCHAR(100) NOT NULL,
+            detraccion TINYINT(1) DEFAULT 0,
+            estado TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_prov_cuenta (proveedor_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `, (e) => {
+        if (e) console.warn('CREATE proveedor_cuentas_bancarias:', e.message);
+        else console.log('✅ Tabla proveedor_cuentas_bancarias verificada');
+        // Asegurar columna moneda si ya existía la tabla sin ella
+        db.query(
+            "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='proveedor_cuentas_bancarias' AND COLUMN_NAME='moneda'",
+            (eCol, rCol) => {
+                if (!eCol && rCol && rCol[0] && rCol[0].cnt === 0) {
+                    db.query("ALTER TABLE proveedor_cuentas_bancarias ADD COLUMN moneda VARCHAR(20) DEFAULT 'SOLES'", (eAlt) => {
+                        if (eAlt) console.warn('ALTER proveedor_cuentas_bancarias ADD moneda:', eAlt.message);
+                        else console.log('✅ Columna moneda añadida a proveedor_cuentas_bancarias');
+                    });
+                }
+            }
+        );
+    });
+
+    // Migración: añadir url_firma a inspecciones si no existe
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='inspecciones' AND COLUMN_NAME='url_firma'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE inspecciones ADD COLUMN url_firma LONGTEXT DEFAULT NULL", () => {});
+            }
+        }
+    );
+    // Migración: añadir orden a cat_rampas si no existe
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='cat_rampas' AND COLUMN_NAME='orden'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0", () => {});
+            }
+        }
+    );
+    // Migración: crear tabla vehiculos_flota si no existe
+    db.query(`
+        CREATE TABLE IF NOT EXISTS vehiculos_flota (
+            -- Datos Generales
+            placa VARCHAR(10) PRIMARY KEY,
+            tipo VARCHAR(50) DEFAULT NULL,
+            propiedad VARCHAR(50) DEFAULT 'PROPIA',
+            empresa VARCHAR(100) DEFAULT 'MARSISA',
+            fecha_entrega DATE DEFAULT NULL,
+            anio INT(4) DEFAULT NULL,
+            marca VARCHAR(50) DEFAULT NULL,
+            modelo VARCHAR(50) DEFAULT NULL,
+            color VARCHAR(50) DEFAULT NULL,
+            chasis VARCHAR(100) DEFAULT NULL,
+
+            -- 1. Tarjeta Circulación
+            tc_vencimiento DATE DEFAULT NULL,
+            tc_constancia VARCHAR(50) DEFAULT NULL,
+
+            -- 2. SOAT
+            soat_entidad VARCHAR(50) DEFAULT NULL,
+            soat_pago DECIMAL(10,2) DEFAULT NULL,
+            soat_vencimiento DATE DEFAULT NULL,
+
+            -- 3. MATPEL
+            matpel_constancia VARCHAR(50) DEFAULT NULL,
+            matpel_vencimiento DATE DEFAULT NULL,
+
+            -- 4. Revisión Técnica (CITV)
+            rt_emision DATE DEFAULT NULL,
+            rt_vencimiento DATE DEFAULT NULL,
+
+            -- 5. Bonificación
+            boni_emision DATE DEFAULT NULL,
+            boni_vencimiento DATE DEFAULT NULL,
+
+            -- 6. Seguro Vehicular
+            sv_entidad VARCHAR(50) DEFAULT NULL,
+            sv_asesor VARCHAR(100) DEFAULT NULL,
+            sv_vencimiento DATE DEFAULT NULL,
+
+            -- 7. Seguro de Carga
+            sc_entidad VARCHAR(50) DEFAULT NULL,
+            sc_asesor VARCHAR(100) DEFAULT NULL,
+            sc_vencimiento DATE DEFAULT NULL,
+
+            -- 8. Fumigación
+            fum_emision DATE DEFAULT NULL,
+            fum_vencimiento DATE DEFAULT NULL,
+
+            -- 9. Extintores
+            ext_emision DATE DEFAULT NULL,
+            ext_vencimiento DATE DEFAULT NULL,
+            ext_cantidad INT DEFAULT 1,
+
+            -- Auditoría
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            
+            -- Wialon (GPS)
+            wialon_name VARCHAR(100) DEFAULT NULL
+        )
+    `, (e) => {
+        if (e) console.error("Error creando tabla vehiculos_flota:", e.message);
+    });
+    // Migración: añadir wialon_name a vehiculos_flota
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='vehiculos_flota' AND COLUMN_NAME='wialon_name'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE vehiculos_flota ADD COLUMN wialon_name VARCHAR(100) DEFAULT NULL", () => {});
+            }
+        }
+    );
+});
