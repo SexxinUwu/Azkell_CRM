@@ -1245,14 +1245,18 @@ router.post('/mantenimiento-kits', (req, res) => {
 
 router.put('/mantenimiento-kits/:id', (req, res) => {
     const { id } = req.params;
-    const { nombre_kit, item_codigo, item_nombre, cantidad,
+    const { marca_vehiculo, modelo_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre, cantidad,
             unidad_medida, costo_unitario, costo_total, orden, activo } = req.body;
     db.query(
         `UPDATE mantenimiento_kits
-         SET nombre_kit=?, item_codigo=?, item_nombre=?, cantidad=?,
+         SET marca_vehiculo=COALESCE(UPPER(?), marca_vehiculo),
+             modelo_vehiculo=COALESCE(UPPER(?), modelo_vehiculo),
+             tipo_mp=COALESCE(?, tipo_mp),
+             nombre_kit=?, item_codigo=?, item_nombre=?, cantidad=?,
              unidad_medida=?, costo_unitario=?, costo_total=?, orden=?, activo=?
          WHERE id=?`,
-        [nombre_kit || null, item_codigo || '-', item_nombre,
+        [marca_vehiculo || null, modelo_vehiculo || null, tipo_mp || null,
+         nombre_kit || null, item_codigo || '-', item_nombre,
          cantidad || 1, unidad_medida || 'UND',
          costo_unitario || 0, costo_total || 0, orden || 1,
          activo !== undefined ? (activo ? 1 : 0) : 1, id],
