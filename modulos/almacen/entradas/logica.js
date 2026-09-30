@@ -27,17 +27,61 @@ window._entCbFiltrar = function(id) {
     dd.style.zIndex   = '999999';
 };
 
-window._entData      = window._entData      || [];
-window._entFiltrados = window._entFiltrados || [];
-window._entPagActual = window._entPagActual || 1;
-window._entTC        = window._entTC        || 3.70;
-window._entItemIdx   = window._entItemIdx   || 0;
-window._entInvData   = window._entInvData   || [];
-window._entProvItems = window._entProvItems || [];
-window._entDetalleId = window._entDetalleId || null;
-window._entIgvMode   = window._entIgvMode   || 'sin_igv';
-window._entVistaModo = window._entVistaModo || 'articulos';
+window._entData          = window._entData          || [];
+window._entFiltrados     = window._entFiltrados     || [];
+window._entPagActual     = window._entPagActual     || 1;
+window._entTC            = window._entTC            || 3.70;
+window._entItemIdx       = window._entItemIdx       || 0;
+window._entInvData       = window._entInvData       || [];
+window._entProvItems     = window._entProvItems     || [];
+window._entDetalleId     = window._entDetalleId     || null;
+window._entIgvMode       = window._entIgvMode       || 'sin_igv';
+window._entVistaModo     = window._entVistaModo     || 'articulos';
+window._entEstadoFiltro  = window._entEstadoFiltro  || 'registradas';
 var _ENT_POR_PAG = 20;
+
+function _entNormalizarFechaAISO(item) {
+    if (!item) return null;
+    var raw = (typeof item === 'object') ? (item.fecha || item.created_at) : item;
+    if (!raw) return null;
+    try {
+        var s = String(raw).trim();
+        if (s.includes('T')) return s.split('T')[0];
+        if (s.includes(' ')) return s.split(' ')[0];
+        if (s.includes('/')) {
+            var p = s.split('/');
+            if (p.length === 3) return p[2] + '-' + p[1].padStart(2, '0') + '-' + p[0].padStart(2, '0');
+        }
+        return s;
+    } catch(e) { return null; }
+}
+window._entNormalizarFechaAISO = _entNormalizarFechaAISO;
+
+function _entObtenerFechaHoyISO() {
+    try {
+        return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+    } catch(e) {
+        var d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+}
+window._entObtenerFechaHoyISO = _entObtenerFechaHoyISO;
+
+function _entDeterminarCategoriaEstado(estadoRaw) {
+    var st = String(estadoRaw || 'REGISTRADA').toUpperCase().trim();
+    if (st === 'APROBADO' || st === 'APROBADA' || st === 'AUTORIZADO' || st === 'AUTORIZADA') {
+        return 'aprobadas';
+    }
+    if (st === 'PROCESADO' || st === 'PROCESADA' || st === 'PAGADO' || st === 'PAGADA' || st === 'RECIBIDO' || st === 'RECIBIDA' || st === 'FINALIZADO' || st === 'FINALIZADA') {
+        return 'procesadas';
+    }
+    if (st === 'ANULADO' || st === 'ANULADA' || st === 'RECHAZADO' || st === 'RECHAZADA') {
+        return 'anuladas';
+    }
+    // Por defecto: 'REGISTRADA', 'REGISTRADO', 'PENDIENTE', 'OBSERVADO', 'OBSERVADA'
+    return 'registradas';
+}
+window._entDeterminarCategoriaEstado = _entDeterminarCategoriaEstado;
 
 window._entCambiarModoVista = function(modo, btn) {
     window._entVistaModo = modo || 'articulos';
@@ -54,6 +98,86 @@ window._entCambiarModoVista = function(modo, btn) {
         if (activeBtn) activeBtn.classList.add('active');
     }
     window._entRender();
+};
+
+window._entCambiarEstadoFiltro = function(estado, btn) {
+    window._entEstadoFiltro = estado || 'registradas';
+    var switcher = document.getElementById('ent-status-switcher');
+    if (switcher) {
+        switcher.querySelectorAll('.ck-segment-item').forEach(function(b) {
+            b.classList.remove('active');
+        });
+    }
+    if (btn) {
+        btn.classList.add('active');
+    } else {
+        var activeBtn = document.getElementById('ent-btn-status-' + window._entEstadoFiltro);
+        if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    // Ajuste inteligente de fechas según el estado seleccionado
+    var hoy = _entObtenerFechaHoyISO();
+    var inputDesde = document.getElementById('ent-fil-desde');
+    var inputHasta = document.getElementById('ent-fil-hasta');
+
+    if (window._entEstadoFiltro === 'registradas') {
+        // Desde la fecha de la orden registrada más antigua hasta hoy
+        var regs = (window._entData || []).filter(function(d) {
+            return _entDeterminarCategoriaEstado(d.estado) === 'registradas';
+        });
+        var fechaMin = hoy;
+        if (regs.length > 0) {
+            var fechas = regs.map(function(d) { return _entNormalizarFechaAISO(d); }).filter(Boolean).sort();
+            if (fechas.length > 0) fechaMin = fechas[0];
+        }
+        if (inputDesde) inputDesde.value = fechaMin;
+        if (inputHasta) inputHasta.value = hoy;
+    } else if (window._entEstadoFiltro === 'aprobadas') {
+        // Desde la fecha de la orden aprobada más antigua hasta hoy
+        var aprobs = (window._entData || []).filter(function(d) {
+            return _entDeterminarCategoriaEstado(d.estado) === 'aprobadas';
+        });
+        var fechaMin = hoy;
+        if (aprobs.length > 0) {
+            var fechas = aprobs.map(function(d) { return _entNormalizarFechaAISO(d); }).filter(Boolean).sort();
+            if (fechas.length > 0) fechaMin = fechas[0];
+        }
+        if (inputDesde) inputDesde.value = fechaMin;
+        if (inputHasta) inputHasta.value = hoy;
+    } else if (window._entEstadoFiltro === 'procesadas') {
+        // Por defecto fecha actual (hoy) para evitar saturación de la vista con todo el histórico
+        if (inputDesde) inputDesde.value = hoy;
+        if (inputHasta) inputHasta.value = hoy;
+    } else {
+        // 'todas'
+        if (inputDesde && !inputDesde.value) inputDesde.value = hoy;
+        if (inputHasta && !inputHasta.value) inputHasta.value = hoy;
+    }
+
+    window.filtrarEntradas();
+};
+
+window._entActualizarBadgesEstado = function() {
+    var todas = window._entData || [];
+    var countRegs = 0;
+    var countAprobs = 0;
+    var countProcs = 0;
+
+    todas.forEach(function(d) {
+        var cat = _entDeterminarCategoriaEstado(d.estado);
+        if (cat === 'registradas') countRegs++;
+        else if (cat === 'aprobadas') countAprobs++;
+        else if (cat === 'procesadas') countProcs++;
+    });
+
+    var setBadge = function(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+    setBadge('ent-badge-registradas', countRegs);
+    setBadge('ent-badge-aprobadas', countAprobs);
+    setBadge('ent-badge-procesadas', countProcs);
+    setBadge('ent-badge-todas', todas.length);
 };
 
 window._entCerrarDropdowns = function() {
@@ -189,8 +313,8 @@ window.cargarEntradas = function(retryCount) {
             if (!data || !Array.isArray(data)) return;
             window._entData = data;
             window._entFiltrados = data;
-            window._entRenderKPIs(data);
-            window.filtrarEntradas();
+            window._entActualizarBadgesEstado();
+            window._entCambiarEstadoFiltro(window._entEstadoFiltro || 'registradas');
         })
         .catch(function(err) {
             var t = document.getElementById('tbody-entradas');
@@ -1544,26 +1668,48 @@ window.anularEntrada = function(id) {
 
 // ── Filtrar + Render ──────────────────────────────────────────────
 window.filtrarEntradas = function() {
-    var buscar  = ((document.getElementById('ent-buscar')     ||{}).value||'').toLowerCase();
-    var desde   = ((document.getElementById('ent-fil-desde')  ||{}).value||'');
-    var hasta   = ((document.getElementById('ent-fil-hasta')  ||{}).value||'');
-    window._entFiltrados = (window._entData||[]).filter(function(d) {
-        var matchB = !buscar||
-            (d.id||'').toLowerCase().includes(buscar)||
-            (d.proveedor_nombre||'').toLowerCase().includes(buscar)||
-            (d.documento_referencia||'').toLowerCase().includes(buscar)||
-            (d.creado_por||'').toLowerCase().includes(buscar)||
-            (d.items||[]).some(function(it) {
-                return (it.inventario_id||'').toLowerCase().includes(buscar) ||
-                       (it.descripcion||'').toLowerCase().includes(buscar);
-            });
-        var fecha = d.fecha ? String(d.fecha).split('T')[0] : '';
-        var matchD = !desde || fecha >= desde;
-        var matchH = !hasta || fecha <= hasta;
-        // Si solo hay una fecha: filtro exacto por ese día
-        if (desde && !hasta) { matchD = fecha === desde; matchH = true; }
-        if (!desde && hasta) { matchD = true; matchH = fecha === hasta; }
-        return matchB && matchD && matchH;
+    var buscar    = ((document.getElementById('ent-buscar')     ||{}).value||'').toLowerCase().trim();
+    var desde     = ((document.getElementById('ent-fil-desde')  ||{}).value||'');
+    var hasta     = ((document.getElementById('ent-fil-hasta')  ||{}).value||'');
+    var estFiltro = window._entEstadoFiltro || 'registradas';
+
+    window._entFiltrados = (window._entData || []).filter(function(d) {
+        // 1. Filtro por Estado (Registradas, Aprobadas, Procesadas o Todas)
+        if (estFiltro !== 'todas') {
+            var cat = _entDeterminarCategoriaEstado(d.estado);
+            if (cat !== estFiltro) return false;
+        }
+
+        // 2. Filtro por Búsqueda de Texto
+        if (buscar) {
+            var matchB = 
+                (d.id||'').toLowerCase().includes(buscar)||
+                (d.proveedor_nombre||'').toLowerCase().includes(buscar)||
+                (d.proveedor_ruc||'').toLowerCase().includes(buscar)||
+                (d.documento_referencia||'').toLowerCase().includes(buscar)||
+                (d.creado_por||'').toLowerCase().includes(buscar)||
+                (d.placa||'').toLowerCase().includes(buscar)||
+                (d.motivo_entrada||'').toLowerCase().includes(buscar)||
+                (d.centro_costo||'').toLowerCase().includes(buscar)||
+                (d.items||[]).some(function(it) {
+                    return (it.inventario_id||'').toLowerCase().includes(buscar) ||
+                           (it.descripcion||'').toLowerCase().includes(buscar);
+                });
+            if (!matchB) return false;
+        }
+
+        // 3. Filtro por Fechas
+        var fecha = _entNormalizarFechaAISO(d);
+        if (fecha) {
+            if (desde && !hasta) {
+                if (fecha < desde) return false;
+            } else if (!desde && hasta) {
+                if (fecha > hasta) return false;
+            } else if (desde && hasta) {
+                if (fecha < desde || fecha > hasta) return false;
+            }
+        }
+        return true;
     });
     window._entPagActual = 1;
 
@@ -1588,6 +1734,7 @@ window.filtrarEntradas = function() {
     setKpi('kpi-ent-provs', Object.keys(provsSet).length);
     setKpi('kpi-ent-items', Math.round(totalItems));
 
+    window._entActualizarBadgesEstado();
     window._entRender();
 };
 
