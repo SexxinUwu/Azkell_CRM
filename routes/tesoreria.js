@@ -2340,7 +2340,7 @@ module.exports = function (db, broadcast, logAudit) {
                 SELECT e.*,
                        COALESCE(e.total_pen, 0) AS total_oc,
                        COUNT(DISTINCT de.id) AS total_items,
-                       GROUP_CONCAT(CONCAT(COALESCE(de.descripcion,''), '|', COALESCE(de.cantidad,0), '|', COALESCE(de.costo_unitario,0), '|', COALESCE(de.moneda,'PEN'), '|', COALESCE(de.importe,0)) SEPARATOR ';;') AS items_raw
+                       GROUP_CONCAT(CONCAT(COALESCE(de.descripcion,''), '|', COALESCE(de.cantidad,0), '|', COALESCE(de.costo_unitario,0), '|', COALESCE(de.moneda,'PEN'), '|', COALESCE(de.importe,0), '|', COALESCE(de.inventario_id,'')) SEPARATOR ';;') AS items_raw
                 FROM entradas_inv e
                 LEFT JOIN detalle_entradas_inv de ON de.entrada_id = e.id
                 ${whereClause}
@@ -2438,8 +2438,9 @@ module.exports = function (db, broadcast, logAudit) {
 
                 // Desglosar ítems
                 const items = oc.items_raw ? oc.items_raw.split(';;').map(s => {
-                    const [desc, cant, cu, mon, imp] = s.split('|');
+                    const [desc, cant, cu, mon, imp, invId] = s.split('|');
                     return {
+                        inventario_id: invId || '',
                         descripcion: desc || '',
                         cantidad: parseFloat(cant) || 0,
                         costo_unitario: parseFloat(cu) || 0,
