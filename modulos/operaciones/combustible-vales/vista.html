@@ -1,71 +1,126 @@
-<!-- MÓDULO: VALES DE COMBUSTIBLE — ERP AZKELL FLEET (OPERACIONES) -->
+<!-- ================================================================= -->
+<!-- ⛽ MÓDULO: VALES DE COMBUSTIBLE — ERP AZKELL FLEET (OPERACIONES)    -->
+<!-- ================================================================= -->
 <style>
-/* ── Reset root-dinamico padding for full-bleed ─────────── */
+/* ── Reset root-dinamico padding for 100% full-bleed ─────────────── */
 #root-dinamico, .main-area {
     padding: 0 !important;
 }
 
-#moduloCombustibleValesContenedor {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 0.75rem 1.25rem 1.5rem 1.25rem !important;
+/* ── Apple-like UI Tokens & Layout ────────────────────────────────── */
+.cv-app-container {
     width: 100% !important;
     max-width: 100% !important;
-    box-sizing: border-box !important;
+    padding: 1rem 1.25rem 7.5rem 1.25rem !important;
+    background: transparent;
+    min-height: 100%;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 }
 
-/* Bento Header & Cards */
-.cv-filter-card {
+/* KPIs Apple Cards */
+.cv-kpi-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 0.6rem 1rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    margin-bottom: 0.6rem;
-}
-
-/* Tabla Estilizada y Scroll Aislado */
-.cv-table-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
-    overflow: hidden;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-}
-.cv-table-header {
-    padding: 0.5rem 1rem;
-    background: #ffffff;
-    border-bottom: 1px solid #f1f5f9;
+    border-radius: 18px;
+    padding: 1rem 1.25rem;
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cv-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+}
+.cv-kpi-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+/* Control Bar (Search + Apple Segmented Pill) */
+.cv-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 14px 8px 38px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+.cv-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+.cv-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+.cv-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+.cv-segment-item:hover { color: #0f172a; }
+.cv-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Desktop Table Styling */
+#cv-tabla-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
+    min-height: 320px;
 }
 .cv-table {
     width: 100%;
     margin-bottom: 0;
     border-collapse: collapse;
-    font-size: 0.81rem;
+    font-size: 0.84rem;
 }
 .cv-table th {
-    background: #0f172a;
-    color: #f8fafc;
-    font-size: 0.7rem;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding: 0.65rem 0.65rem;
-    border-bottom: 1px solid #1e293b;
+    padding: 0.75rem 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
     white-space: nowrap;
     position: sticky;
     top: 0;
     z-index: 10;
 }
 .cv-table td {
-    padding: 0.5rem 0.65rem;
+    padding: 0.65rem 0.75rem;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
     color: #1e293b;
@@ -78,588 +133,852 @@
     background: rgba(224, 231, 255, 0.45) !important;
 }
 
-.cv-scroll-table {
-    overflow-x: auto !important;
-    overflow-y: auto !important;
-    max-height: 48vh !important; /* Altura compacta: el final de la tabla sube notablemente */
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    -webkit-overflow-scrolling: touch;
-}
-.cv-scroll-table::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-.cv-scroll-table::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
-}
-
-.cv-sortable {
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.15s ease, color 0.15s ease;
-}
-.cv-sortable:hover {
-    background: #1e293b !important;
-    color: #38bdf8 !important;
-}
-.cv-sort-icon {
-    font-size: 0.68rem;
-    opacity: 0.6;
-    margin-left: 3px;
-}
-.cv-sortable:hover .cv-sort-icon {
-    opacity: 1;
-}
-
-.cv-table-footer {
-    padding: 0.45rem 1rem;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    flex-wrap: wrap;
+/* Action Capsule Buttons (Desktop) */
+.cv-action-btn {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    background: #f8fafc;
+    justify-content: center;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    font-size: 0.88rem;
+    text-decoration: none;
+}
+.cv-btn-view { background: #eff6ff; color: #2563eb; }
+.cv-btn-view:hover { background: #2563eb; color: #ffffff; transform: translateY(-1px); }
+.cv-btn-edit { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
+.cv-btn-edit:hover { background: #0f172a; color: #ffffff; border-color: #0f172a; transform: translateY(-1px); }
+.cv-btn-delete { background: transparent; color: #94a3b8; }
+.cv-btn-delete:hover { background: #fee2e2; color: #ef4444; transform: translateY(-1px); }
+
+/* Universal Modern Card (Mobile) */
+.cv-mobile-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 14px rgba(15, 23, 42, 0.03);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cv-mobile-card:active {
+    transform: scale(0.99);
 }
 
-/* ── Modal Bottom Drawer para Vales de Combustible (Idéntico a Detalle de Viaje) ── */
-#cvModalForm.modal {
-    padding: 0 !important;
-    overflow: hidden !important;
-    z-index: 1085 !important;
+/* ── Mobile View Adaptations (@media max-width: 768px) ─────────────── */
+@media (max-width: 768px) {
+    .cv-app-container {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+        background: transparent !important;
+    }
+    #cv-tabla-wrap {
+        display: none !important;
+    }
+    #cvCardContainer {
+        display: block !important;
+    }
+    .cv-kpi-card {
+        padding: 0.75rem 0.85rem !important;
+        border-radius: 14px !important;
+    }
+    .cv-kpi-card h2 {
+        font-size: 1.35rem !important;
+    }
+    .cv-kpi-icon {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1rem !important;
+        border-radius: 10px !important;
+    }
+    .cv-apple-segmented {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        overflow-x: auto;
+    }
+    .cv-segment-item {
+        flex: 1 !important;
+        text-align: center !important;
+        padding: 6px 4px !important;
+        font-size: 0.75rem !important;
+    }
+}
+@media (min-width: 769px) {
+    #cvCardContainer {
+        display: none !important;
+    }
+    #cv-tabla-wrap {
+        display: block !important;
+    }
 }
 
-#cvModalForm .modal-dialog {
-    position: fixed !important;
-    bottom: 0 !important;
-    top: auto !important;
-    left: 0 !important;
-    right: 0 !important;
-    margin: 0 auto !important;
-    width: min(1320px, 96vw) !important;
-    max-width: 96vw !important;
+/* ── Floating Drawer Modal & Inputs Styling (Apple-like) ───────────── */
+.cv-floating-drawer-dialog {
+    max-width: 780px !important;
+    width: 100% !important;
     height: 94vh !important;
     max-height: 94vh !important;
-    transform: translateY(100%) !important;
-    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    margin: 0 auto !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: auto !important;
 }
-
-#cvModalForm.show .modal-dialog {
-    transform: translateY(0) !important;
-}
-
-#cvModalForm .modal-content {
+.cv-floating-drawer-content {
     height: 100% !important;
     max-height: 94vh !important;
     border-radius: 28px 28px 0 0 !important;
     border: 1px solid #cbd5e1 !important;
     border-bottom: none !important;
-    box-shadow: 0 -20px 60px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.08) !important;
-    display: flex !important;
-    flex-direction: column !important;
+    box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.25) !important;
     overflow: hidden !important;
     background: #f8fafc !important;
-    -webkit-font-smoothing: subpixel-antialiased;
-    -moz-osx-font-smoothing: auto;
-    text-rendering: geometricPrecision;
 }
 
-#cvModalForm .modal-header {
+#cvModalForm .form-control,
+#cvModalForm .form-select {
+    min-height: 42px !important;
+    border-radius: 12px !important;
+    font-size: 0.90rem !important;
+    font-weight: 600 !important;
+    border-color: #cbd5e1 !important;
+    padding: 0.5rem 0.85rem !important;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+#cvModalForm .form-control:focus,
+#cvModalForm .form-select:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+#cvModalForm .form-label {
+    font-size: 0.74rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    color: #475569 !important;
+    margin-bottom: 0.35rem !important;
+}
+#cvModalForm .card {
+    border-radius: 18px !important;
+    border: 1px solid #e2e8f0 !important;
     background: #ffffff !important;
-    border-bottom: 1px solid #e2e8f0 !important;
-    padding: 0.85rem 1.4rem !important;
-    flex-shrink: 0;
+    overflow: visible !important;
 }
-
 #cvModalForm .modal-body {
-    flex: 1 1 auto;
     overflow-y: auto !important;
-    padding: 1.15rem 1.4rem !important;
-    background: #f8fafc;
+    overflow-x: visible !important;
 }
-
-#cvModalForm .modal-footer {
+.cv-dropdown {
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 999999 !important;
     background: #ffffff !important;
-    border-top: 1px solid #e2e8f0 !important;
-    padding: 0.75rem 1.4rem !important;
-    flex-shrink: 0;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.25) !important;
+    max-height: 220px !important;
+    overflow-y: auto !important;
+}
+.cv-dd-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+.cv-dd-item:hover {
+    background: #f0f9ff;
+    color: #0284c7;
 }
 
-.cv-form-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 1.1rem 1.25rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    margin-bottom: 1rem;
+/* ── Modal Confirmación Eliminación (Diseño B - Minimalista) ───────── */
+.cv-delete-dialog {
+    max-width: 350px !important;
+    width: 90% !important;
+    margin: 1.75rem auto !important;
 }
-.cv-form-card-title {
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: #1e293b;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
+.cv-delete-card {
+    background: #ffffff !important;
+    border-radius: 28px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12) !important;
+    padding: 2.2rem 1.6rem 1.8rem 1.6rem !important;
+    text-align: center;
+}
+.cv-delete-badge-icon {
+    font-size: 3.2rem;
+    color: #e11d48;
+    line-height: 1;
     margin-bottom: 0.85rem;
-    padding-bottom: 0.45rem;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex;
+    display: inline-block;
+}
+.cv-btn-circle {
+    width: 54px;
+    height: 54px;
+    border-radius: 50% !important;
+    border: none;
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: center;
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    outline: none;
+}
+.cv-btn-cancel-circle {
+    background: #18181b !important;
+    color: #ffffff !important;
+}
+.cv-btn-cancel-circle:hover {
+    background: #09090b !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+.cv-btn-delete-circle {
+    background: #e11d48 !important;
+    color: #ffffff !important;
+}
+.cv-btn-delete-circle:hover {
+    background: #be123c !important;
+    transform: scale(1.06);
+    color: #ffffff !important;
+}
+
+/* Mobile 100% Full-Bleed Edge-to-Edge */
+@media (max-width: 768px) {
+    .modal-dialog.cv-floating-drawer-dialog,
+    .modal.show .modal-dialog.cv-floating-drawer-dialog,
+    #cvModalForm .modal-dialog.cv-floating-drawer-dialog,
+    .cv-floating-drawer-dialog {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        height: 96vh !important;
+        max-height: 96vh !important;
+        margin: 0 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        transform: none !important;
+        border-radius: 24px 24px 0 0 !important;
+    }
+    .cv-floating-drawer-content,
+    #cvModalForm .cv-floating-drawer-content {
+        width: 100vw !important;
+        min-width: 100vw !important;
+        height: 100% !important;
+        max-height: 96vh !important;
+        border-radius: 24px 24px 0 0 !important;
+        border: none !important;
+        margin: 0 !important;
+    }
+    #cvModalForm .modal-body {
+        padding: 0.75rem 0.65rem !important;
+    }
+    #cvModalForm .card {
+        padding: 0.85rem 0.75rem !important;
+        margin-bottom: 0.65rem !important;
+        border-radius: 14px !important;
+    }
 }
 </style>
 
-<div id="moduloCombustibleValesContenedor">
-    <!-- Header Ejecutivo MarsisaSoft Style -->
-    <div class="cv-filter-card">
-        <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 pb-2 border-bottom">
-            <div>
-                <div class="d-flex align-items-center gap-2">
-                    <h5 class="fw-bold text-dark m-0" style="letter-spacing:-0.02em;">Vales de Combustible</h5>
-                    <span class="badge bg-success bg-opacity-10 text-success border px-2.5 py-0.5 rounded-pill small fw-bold">Combustible</span>
-                </div>
-            </div>
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-                <button class="btn btn-outline-secondary btn-sm rounded-2 px-3 fw-bold d-flex align-items-center gap-1.5" onclick="window.cvAplicarFiltros()">
-                    <i class="bi bi-arrow-clockwise"></i> Actualizar
-                </button>
-                <button class="btn btn-warning btn-sm rounded-2 px-3.5 fw-bold shadow-sm text-white d-flex align-items-center gap-1.5" style="background:#f59e0b; border-color:#d97706;" onclick="window.cvAbrirModalNuevo()">
-                    <i class="bi bi-plus-lg"></i> + Nuevo
-                </button>
-            </div>
-        </div>
+<div class="cv-app-container d-flex flex-column" id="combustible-vales-app">
 
-        <!-- Filtros MarsisaSoft: Fecha Desde, Fecha Hasta, Buscar, Compras Externas -->
-        <div class="row g-2 align-items-end mt-1.5">
-            <div class="col-12 col-sm-6 col-md-3 col-lg-2">
-                <label class="form-label text-muted small fw-bold mb-0.5" style="font-size:0.75rem;">Fecha Desde</label>
-                <input type="date" class="form-control form-control-sm" id="cv-filter-fecha-desde" onchange="window.cvAplicarFiltros()">
-            </div>
-            <div class="col-12 col-sm-6 col-md-3 col-lg-2">
-                <label class="form-label text-muted small fw-bold mb-0.5" style="font-size:0.75rem;">Fecha Hasta</label>
-                <input type="date" class="form-control form-control-sm" id="cv-filter-fecha-hasta" onchange="window.cvAplicarFiltros()">
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label text-muted small fw-bold mb-0.5" style="font-size:0.75rem;">Placa</label>
-                <select class="form-select form-select-sm" id="cv-filter-placa" onchange="window.cvAplicarFiltros()">
-                    <option value="ALL">Todas las Placas</option>
-                </select>
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label text-muted small fw-bold mb-0.5" style="font-size:0.75rem;">Estado</label>
-                <select class="form-select form-select-sm" id="cv-filter-estado" onchange="window.cvAplicarFiltros()">
-                    <option value="ALL">Todos los Estados</option>
-                    <option value="VÁLIDO">VÁLIDO</option>
-                    <option value="ANULADO">ANULADO</option>
-                </select>
-            </div>
-            <div class="col-12 col-lg-4 d-flex align-items-end gap-1.5">
-                <button class="btn btn-warning btn-sm fw-bold px-3 shadow-2xs text-white d-flex align-items-center gap-1" style="background:#f59e0b; border-color:#d97706;" onclick="window.cvAplicarFiltros()">
-                    <i class="bi bi-search"></i> Buscar
-                </button>
-                <button class="btn btn-outline-secondary btn-sm fw-bold px-2.5 shadow-2xs" onclick="window.cvLimpiarFiltros()" title="Limpiar Filtros">
-                    <i class="bi bi-arrow-counterclockwise"></i>
-                </button>
-            </div>
-        </div>
+  <!-- ═══ 1. ENCABEZADO PRINCIPAL (RESPONSIVE) ═════════════════════════ -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="d-flex align-items-center gap-2 gap-md-3">
+      <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+        <i class="bi bi-fuel-pump-fill text-warning fs-5"></i>
+      </div>
+      <div>
+        <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+          Vales de Combustible
+        </h4>
+        <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">Control de abastecimiento, consumo y liquidación de flota</small>
+      </div>
     </div>
-    <!-- Tabla Encapsulada con Barra de Acciones Integrada -->
-    <div class="cv-table-card">
-        <div class="cv-table-header">
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-                <span class="badge bg-primary rounded-pill px-2.5 py-1 fw-bold" id="cv-tabla-total-badge">0 Registros</span>
-                <small class="text-muted fw-semibold me-2" id="cv-tabla-pag-info">Página 1 de 1</small>
-                
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-secondary py-1 px-2.5 fw-semibold d-flex align-items-center gap-1 bg-white" onclick="window.cvImprimirTabla()">
-                        <i class="bi bi-printer"></i> Imprimir
-                    </button>
-                    <button class="btn btn-outline-secondary py-1 px-2.5 fw-semibold d-flex align-items-center gap-1 bg-white" onclick="window.cvExportarExcel()">
-                        <i class="bi bi-file-earmark-excel text-success"></i> Excel
-                    </button>
-                    <button class="btn btn-outline-success py-1 px-2.5 fw-semibold d-flex align-items-center gap-1 bg-white" onclick="window.cvAbrirModalImportar()">
-                        <i class="bi bi-file-earmark-arrow-up-fill"></i> Importar Excel
-                    </button>
-                </div>
-                <button id="cv-btn-eliminar-masivo" class="btn btn-danger btn-sm rounded-2 px-2.5 py-1 fw-bold shadow-sm d-none align-items-center gap-1 text-white" onclick="window.cvEliminarSeleccionados()">
-                    <i class="bi bi-trash-fill"></i> Eliminar (<span id="cv-count-seleccionados">0</span>)
-                </button>
-            </div>
-
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-                <div class="d-flex align-items-center gap-1.5">
-                    <label class="small text-muted fw-bold mb-0 text-nowrap">Buscar en tabla:</label>
-                    <input type="text" class="form-control form-control-sm" id="cv-filter-search" placeholder="Placa, viaje, conductor..." style="width: 180px; background:#fef9c3; border-color:#fde047;" onkeyup="window.cvAplicarFiltrosDebounced()">
-                </div>
-                <div class="d-flex align-items-center gap-1.5">
-                    <span class="text-muted small fw-semibold">Por página:</span>
-                    <select class="form-select form-select-sm" style="width: auto;" id="cv-page-limit" onchange="window.cvCambiarLimite(this.value)">
-                        <option value="50" selected>50</option>
-                        <option value="100">100</option>
-                        <option value="200">200</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div class="cv-scroll-table">
-            <table class="cv-table">
-                <thead>
-                    <tr>
-                        <th style="width: 38px; text-align: center;">
-                            <input type="checkbox" class="form-check-input" id="cv-chk-all" onchange="window.cvToggleSelectAll(this)">
-                        </th>
-                        <th>ACCIÓN</th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('fecha')">FECHA <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-fecha"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('estado')">ESTADO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-estado"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('correlativo')">CORRELATIVO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-correlativo"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('estado_pago')">ESTADO PAGO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-estado_pago"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('viaje')">VIAJE <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-viaje"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('caja')">CAJA <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-caja"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('estado_caja')">ESTADO CAJA <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-estado_caja"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('clase_vehiculo')">CLASE VEHICULO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-clase_vehiculo"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('vehiculo')">VEHICULO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-vehiculo"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('conductor')">CONDUCTOR <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-conductor"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('ruta')">RUTA <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-ruta"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('departamento')">DEPARTAMENTO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-departamento"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('provincia')">PROVINCIA <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-provincia"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('distrito')">DISTRITO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-distrito"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('estacion')">ESTACIÓN <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-estacion"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('tipo_combustible')">TIPO COMBUSTIBLE <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-tipo_combustible"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('proveedor')">PROVEEDOR <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-proveedor"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('ruc')">RUC <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-ruc"></i></th>
-                        <th class="cv-sortable text-end" onclick="window.cvOrdenarPor('kilometraje')">KILOMETRAJE <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-kilometraje"></i></th>
-                        <th class="cv-sortable text-end" onclick="window.cvOrdenarPor('peso_tn')">PESO (Tn) <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-peso_tn"></i></th>
-                        <th class="cv-sortable text-end" onclick="window.cvOrdenarPor('galones')">GALONES <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-galones"></i></th>
-                        <th class="cv-sortable text-end" onclick="window.cvOrdenarPor('costo_gl')">COSTO/GL <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-costo_gl"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('tipo_pago')">TIPO PAGO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-tipo_pago"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('dias_credito')">DÍAS CRÉDITO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-dias_credito"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('moneda')">MONEDA <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-moneda"></i></th>
-                        <th class="cv-sortable text-end" onclick="window.cvOrdenarPor('importe')">IMPORTE <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-importe"></i></th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('numero_comprobante')">NÚMERO COMPROBANTE <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-numero_comprobante"></i></th>
-                        <th>TIPO CAMBIO</th>
-                        <th>ARCHIVO</th>
-                        <th>OBSERVACIÓN</th>
-                        <th class="cv-sortable" onclick="window.cvOrdenarPor('tipo')">TIPO <i class="bi bi-arrow-down-up cv-sort-icon" id="cv-ico-tipo"></i></th>
-                    </tr>
-                </thead>
-                <tbody id="cv-tbody">
-                    <tr>
-                        <td colspan="33" class="text-center py-5 text-muted">
-                            <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                            Cargando vales de combustible...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Paginación Footer -->
-        <div class="cv-table-footer">
-            <div class="text-muted small fw-semibold" id="cv-paginacion-leyenda">
-                Mostrando 0 a 0 de 0 vales
-            </div>
-            <div class="d-flex align-items-center gap-1" id="cv-paginacion-botones">
-                <!-- Botones de paginación generados dinámicamente -->
-            </div>
-        </div>
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.cvCargarDatos(1)" title="Recargar">
+        <i class="bi bi-arrow-clockwise fs-6"></i>
+      </button>
+      <button class="btn btn-light bg-white border shadow-2xs text-success rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" onclick="window.cvExportarExcel()" title="Exportar a Excel">
+        <i class="bi bi-file-earmark-excel-fill text-success fs-6"></i> <span class="d-none d-sm-inline">Exportar Excel</span>
+      </button>
+      <button class="btn btn-light bg-white border shadow-2xs text-primary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2" onclick="window.cvAbrirModalImportar()" title="Importar Excel">
+        <i class="bi bi-file-earmark-arrow-up-fill text-primary fs-6"></i> <span class="d-none d-sm-inline">Importar Excel</span>
+      </button>
+      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-1.5 rounded-3" onclick="window.cvAbrirNuevo()" style="background: #0284c7; border-color: #0284c7;">
+        <i class="bi bi-plus-lg fs-6"></i> <span class="d-none d-sm-inline">Nuevo Vale</span>
+      </button>
     </div>
+  </div>
+
+  <!-- ═══ 2. BENTO KPIS ROW ═══════════════════════════════════════════ -->
+  <div class="row g-2 g-md-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="cv-kpi-card">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Total Vales</span>
+          <h2 id="kpi-cv-total" class="fw-bolder m-0 text-dark" style="font-size: 1.5rem;">0</h2>
+        </div>
+        <div class="cv-kpi-icon" style="background: #eff6ff; color: #2563eb;">
+          <i class="bi bi-file-earmark-text"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="cv-kpi-card">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Galones Despachados</span>
+          <h2 id="kpi-cv-galones" class="fw-bolder m-0 text-primary" style="font-size: 1.5rem;">0.00 Gln</h2>
+        </div>
+        <div class="cv-kpi-icon" style="background: #f0f9ff; color: #0284c7;">
+          <i class="bi bi-droplet-half"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="cv-kpi-card">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Gasto Total (S/)</span>
+          <h2 id="kpi-cv-gasto" class="fw-bolder m-0 text-success" style="font-size: 1.5rem;">S/ 0.00</h2>
+        </div>
+        <div class="cv-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
+          <i class="bi bi-cash-stack"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="cv-kpi-card">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Costo Promedio / Gl</span>
+          <h2 id="kpi-cv-promedio" class="fw-bolder m-0 text-warning" style="font-size: 1.5rem;">S/ 0.00</h2>
+        </div>
+        <div class="cv-kpi-icon" style="background: #fefce8; color: #ca8a04;">
+          <i class="bi bi-graph-up-arrow"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 3. BARRA DE BÚSQUEDA Y FILTROS SEGMENTED ════════════════════ -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="position-relative flex-grow-1" style="max-width: 360px;">
+      <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+      <input type="text" id="cv-buscador" class="cv-apple-search" placeholder="Buscar folio, placa, conductor, estación..." oninput="window.cvFiltrarDebounced()">
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <div class="d-flex align-items-center gap-1">
+        <input type="date" id="cv-filter-fecha-desde" class="form-control form-control-sm rounded-3 border-secondary-subtle" style="font-size:0.82rem;" onchange="window.cvCargarDatos(1)">
+        <span class="text-muted small">a</span>
+        <input type="date" id="cv-filter-fecha-hasta" class="form-control form-control-sm rounded-3 border-secondary-subtle" style="font-size:0.82rem;" onchange="window.cvCargarDatos(1)">
+      </div>
+      <select id="cv-filter-placa" class="form-select form-select-sm rounded-3 border-secondary-subtle" style="font-size:0.82rem; width: auto;" onchange="window.cvCargarDatos(1)">
+        <option value="ALL">Todas las Placas</option>
+      </select>
+      <div class="cv-apple-segmented" id="btn-group-estados-vales">
+        <button type="button" class="cv-segment-item active" onclick="window.cvFiltrarEstado('TODOS', this)">Todos</button>
+        <button type="button" class="cv-segment-item" onclick="window.cvFiltrarEstado('VÁLIDO', this)">Válidos</button>
+        <button type="button" class="cv-segment-item" onclick="window.cvFiltrarEstado('ANULADO', this)">Anulados</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 4. VISTA MÓVIL NATIVA (CARDS) ════════════════════════════════ -->
+  <div id="cvCardContainer" class="d-md-none">
+    <div class="text-center py-5 text-muted">
+      <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando vales...
+    </div>
+  </div>
+
+  <!-- ═══ 5. VISTA ESCRITORIO (TABLA FLUIDA) ═══════════════════════════ -->
+  <div id="cv-tabla-wrap" class="flex-grow-1 d-none d-md-block">
+    <div class="custom-scrollbar overflow-x-auto" style="overflow-y: visible; min-height: 320px;">
+      <table class="cv-table" id="tablaValesCombustible">
+        <thead>
+          <tr>
+            <th style="width: 38px; text-align: center;">
+              <input type="checkbox" class="form-check-input" id="cv-chk-all" onchange="window.cvToggleSelectAll(this)">
+            </th>
+            <th class="ps-3" style="min-width: 120px;">CORRELATIVO</th>
+            <th style="min-width: 130px;">FECHA / HORA</th>
+            <th class="text-center" style="min-width: 90px;">ESTADO</th>
+            <th class="text-center" style="min-width: 95px;">PAGO</th>
+            <th style="min-width: 100px;">VEHÍCULO</th>
+            <th style="min-width: 180px;">CONDUCTOR / RUTA</th>
+            <th style="min-width: 160px;">ESTACIÓN / GRIFO</th>
+            <th class="text-end" style="min-width: 90px;">GALONES</th>
+            <th class="text-end" style="min-width: 90px;">COSTO/GL</th>
+            <th class="text-end" style="min-width: 105px;">IMPORTE (S/)</th>
+            <th style="min-width: 110px;">COMPROBANTE</th>
+            <th class="pe-3 text-end" style="min-width: 100px;">ACCIONES</th>
+          </tr>
+        </thead>
+        <tbody id="cv-tbody">
+          <tr>
+            <td colspan="13" class="text-center py-5 text-muted">
+              <div class="spinner-border spinner-border-sm me-2 text-primary" role="status"></div> Cargando vales de combustible...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación Footer -->
+    <div class="p-3 border-top d-flex flex-wrap align-items-center justify-content-between gap-2 bg-light rounded-bottom-4">
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-primary rounded-pill px-2.5 py-1 fw-bold" id="cv-tabla-total-badge">0 Vales</span>
+        <small class="text-muted fw-semibold" id="cv-paginacion-leyenda">Mostrando 0 de 0</small>
+        <button id="cv-btn-eliminar-masivo" class="btn btn-danger btn-sm rounded-pill px-3 py-1 fw-bold shadow-sm d-none align-items-center gap-1" onclick="window.cvEliminarSeleccionados()">
+          <i class="bi bi-trash-fill"></i> Eliminar Seleccionados (<span id="cv-count-seleccionados">0</span>)
+        </button>
+      </div>
+      <div class="d-flex align-items-center gap-1" id="cv-paginacion-botones"></div>
+    </div>
+  </div>
+
+  <!-- ═══ 6. BOTÓN FLOTANTE (FAB) PARA MÓVIL ═══════════════════════════ -->
+  <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1040;">
+    <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+            onclick="window.cvAbrirNuevo()"
+            title="Nuevo Vale"
+            style="width: 56px; height: 56px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.55rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;">
+      <i class="bi bi-plus-lg"></i>
+    </button>
+  </div>
+
+  <div style="height: 90px; width: 100%;"></div>
 </div>
 
-<!-- MODAL: IMPORTAR EXCEL MARSISASOFT -->
-<div class="modal fade" id="cvModalImportar" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
-            <div class="modal-header bg-slate-900 text-white py-3 px-4" style="background:#0f172a;">
-                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 fs-6">
-                    <i class="bi bi-file-earmark-excel-fill text-success fs-5"></i>
-                    Importación Masiva de Vales de Combustible (Formato MarsisaSoft)
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4 bg-light">
-                <div class="border-2 border-dashed rounded-4 p-4 text-center bg-white mb-3" style="border-color: #cbd5e1 !important; cursor: pointer;" onclick="document.getElementById('cv-file-input').click()">
-                    <input type="file" id="cv-file-input" accept=".xlsx, .xls, .csv" class="d-none" onchange="window.cvProcesarArchivoExcel(event)">
-                    <div class="p-3">
-                        <i class="bi bi-cloud-arrow-up-fill text-primary" style="font-size: 2.8rem;"></i>
-                        <h6 class="fw-bold text-dark mt-2 mb-1">Haz clic para seleccionar o arrastra tu archivo Excel / CSV</h6>
-                        <p class="text-muted small m-0">Compatible con reportes directos exportados de MarsisaSoft (.xlsx, .xls, .csv)</p>
-                    </div>
-                </div>
-
-                <div id="cv-import-preview-box" class="d-none">
-                    <div class="alert alert-info d-flex align-items-center justify-content-between py-2 px-3 rounded-3 mb-3">
-                        <div>
-                            <strong id="cv-import-filename">archivo.xlsx</strong>
-                            <span class="badge bg-primary ms-2" id="cv-import-count-badge">0 vales detectados</span>
-                        </div>
-                        <small class="text-muted">Procesamiento automático de comas y columnas</small>
-                    </div>
-
-                    <h6 class="fw-bold text-dark small mb-2">Vista previa de los primeros 5 registros:</h6>
-                    <div class="table-responsive border rounded-3 bg-white mb-3" style="max-height: 250px;">
-                        <table class="table table-sm table-striped small mb-0">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Viaje</th>
-                                    <th>Vehículo</th>
-                                    <th>Conductor</th>
-                                    <th>Ruta</th>
-                                    <th>Grifo</th>
-                                    <th>Galones</th>
-                                    <th>Importe</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cv-import-preview-tbody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer bg-white py-3 px-4 border-top">
-                <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-2" id="cv-btn-confirmar-import" onclick="window.cvConfirmarImportacion()" disabled>
-                    <i class="bi bi-check-lg"></i> Importar Vales al ERP
-                </button>
-            </div>
+<!-- ================================================================= -->
+<!-- 📝 MODAL FORMULARIO DE VALE (FLOTANTE DESDE ABAJO TIPO CHECKLIST)  -->
+<!-- ================================================================= -->
+<div class="modal fade" id="cvModalForm" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-scrollable cv-floating-drawer-dialog">
+    <div class="modal-content border-0 cv-floating-drawer-content">
+      
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2 m-0" style="font-size: 1.2rem;">
+            <i class="bi bi-fuel-pump-fill text-warning"></i>
+            <span id="lbl-cv-modal-titulo">Nuevo Vale de Combustible</span>
+            <span class="text-muted fw-normal fs-6" id="lbl-cv-correlativo-header">--</span>
+          </h5>
         </div>
-    </div>
-</div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
 
-<!-- ============================================================ -->
-<!-- 📝 MODAL: REGISTRAR / EDITAR VALE MANUAL (Bottom Drawer)      -->
-<!-- ============================================================ -->
-<div class="modal fade" id="cvModalForm" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog">
-        <div class="modal-content">
+      <div class="modal-body p-3 p-md-4 custom-scrollbar">
+        <form id="cv-form-vale" onsubmit="window.cvGuardarFormulario(event)">
+          <input type="hidden" id="cv-f-id" value="">
+          
+          <!-- ── SECCIÓN 1: VINCULAR CON ORDEN DE VIAJE (OPCIONAL) ───────────── -->
+          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 100;">
+            <div class="d-flex align-items-center justify-content-between cursor-pointer" onclick="window.cvToggleCollapseViaje()" style="user-select: none;">
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-diagram-3-fill text-primary fs-5"></i>
+                <div>
+                  <h6 class="fw-bold text-dark m-0" style="font-size:0.95rem;">
+                    Viaje Asociado <span class="badge bg-secondary-subtle text-secondary fw-normal ms-1" style="font-size:0.7rem;">Opcional</span>
+                  </h6>
+                  <small class="text-muted" style="font-size:0.75rem;">Haga clic aquí para vincular y autocompletar con una Orden de Viaje</small>
+                </div>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-1" style="font-size:0.75rem;">
+                <span id="cv-lbl-btn-vincular-viaje">Vincular Viaje</span>
+                <i class="bi bi-chevron-down" id="cv-icon-btn-vincular-viaje"></i>
+              </button>
+            </div>
             
-            <!-- Modal Header con Botón Atrás Contextual -->
-            <div class="modal-header d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow-2xs" onclick="window.cvRegresarAtras()" title="Regresar">
-                        <i class="bi bi-arrow-left fs-6"></i>
-                        <span>Atrás</span>
+            <div class="collapse mt-3 pt-3 border-top" id="cv_collapse_viaje_asociado" style="display: none;">
+              <p class="text-muted small mb-2" style="font-size:0.8rem;">
+                <i class="bi bi-info-circle text-primary me-1"></i> Selecciona una <b>Orden de Viaje</b> para autocompletar Placa, Conductor y Ruta.
+              </p>
+              <div class="row g-2">
+                <div class="col-12">
+                  <label class="form-label">Buscar Orden de Viaje (Código, Placa o Conductor)</label>
+                  <div class="position-relative" style="z-index: 105;">
+                    <input type="text" id="cv_orden_viaje-txt" class="form-control form-control-sm fw-bold border-secondary-subtle text-uppercase pe-5" placeholder="BUSCAR VIAJE (EJ: 2026-00000492, PLACA, CONDUCTOR)..." autocomplete="off" oninput="window.cvFiltrarViajeDropdown()" onfocus="window.cvFiltrarViajeDropdown()" onblur="window.cvHideViajeDropdown()">
+                    <button type="button" id="cv_btn_clear_viaje" class="btn btn-sm text-secondary position-absolute top-50 end-0 translate-middle-y me-2 p-0 border-0 bg-transparent d-none" onclick="window.cvLimpiarViajeVinculado(true)" style="z-index: 106; font-size: 1rem; line-height: 1;" title="Quitar viaje">
+                      <i class="bi bi-x-circle-fill text-muted"></i>
                     </button>
-                    <h5 class="modal-title m-0 fw-bold" id="cv-modal-form-title" style="color: #d97706; font-size: 1.15rem;">Nuevo Vale de Combustible</h5>
+                    <input type="hidden" id="cv-f-viaje" name="viaje">
+                    <div id="cv_orden_viaje-dd" class="cv-dropdown d-none"></div>
+                  </div>
+                  <div id="cv_viaje_seleccionado_info" class="mt-2 p-2 rounded-3 bg-light border border-primary-subtle d-none" style="font-size:0.8rem;">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span class="fw-bold text-primary"><i class="bi bi-check-circle-fill me-1"></i> Viaje Vinculado: <span id="cv_lbl_viaje_num">--</span></span>
+                      <button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" onclick="window.cvLimpiarViajeVinculado(true)">Quitar vinculación ✕</button>
+                    </div>
+                    <div class="text-muted mt-1 small" id="cv_lbl_viaje_detalles">--</div>
+                  </div>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn-close" onclick="window.cvRegresarAtras()" aria-label="Close"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── SECCIÓN 2: IDENTIFICACIÓN Y UNIDAD OPERATIVA ───────────────── -->
+          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 80;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:0.95rem;">
+              <i class="bi bi-truck text-primary"></i> Identificación y Unidad Operativa
+            </h6>
+            <div class="row g-2">
+              <div class="col-12 col-md-4">
+                <label class="form-label">Fecha y Hora (<span class="text-danger">*</span>)</label>
+                <input type="datetime-local" class="form-control form-control-sm" id="cv-f-fecha" required>
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label">Correlativo</label>
+                <input type="text" class="form-control form-control-sm font-monospace fw-bold" id="cv-f-correlativo" placeholder="2026-00000001">
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label">Estado Vale</label>
+                <select class="form-select form-select-sm" id="cv-f-estado">
+                  <option value="VÁLIDO" selected>VÁLIDO</option>
+                  <option value="ANULADO">ANULADO</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label">Placa / Vehículo (<span class="text-danger">*</span>)</label>
+                <div class="position-relative" style="z-index: 88;">
+                  <input type="text" id="cv-f-vehiculo-txt" class="form-control form-control-sm text-uppercase fw-bold" placeholder="SELECCIONE PLACA..." autocomplete="off" oninput="window.cvFiltrarPlacaDropdown()" onfocus="window.cvFiltrarPlacaDropdown()" onblur="window.cvHidePlacaDropdown()" required>
+                  <input type="hidden" id="cv-f-vehiculo" name="vehiculo">
+                  <div id="cv-f-vehiculo-dd" class="cv-dropdown d-none"></div>
                 </div>
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label">Clase Vehículo</label>
+                <input type="text" class="form-control form-control-sm text-uppercase" id="cv-f-clase" value="TRACTO">
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label">Tipo de Vale</label>
+                <select class="form-select form-select-sm" id="cv-f-tipo">
+                  <option value="RECARGA VUELTA" selected>RECARGA VUELTA</option>
+                  <option value="SALIDA">SALIDA</option>
+                  <option value="LOCAL">LOCAL</option>
+                  <option value="RUTA">RUTA</option>
+                </select>
+              </div>
             </div>
+          </div>
 
-            <!-- Modal Body Segmentado por Cards -->
-            <div class="modal-body">
-                <form id="cv-form-vale" onsubmit="window.cvGuardarFormulario(event)">
-                    <input type="hidden" id="cv-form-id" value="">
-                    
-                    <!-- Card 1: Identificación y Unidad Operativa -->
-                    <div class="cv-form-card">
-                        <div class="cv-form-card-title">
-                            <i class="bi bi-truck text-warning"></i> Identificación y Unidad Operativa
-                        </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-6 col-md-4">
-                                <label class="form-label text-muted fw-bold small mb-1">Fecha y Hora <span class="text-danger">(*)</span></label>
-                                <input type="datetime-local" class="form-control form-control-sm" id="cv-f-fecha" required>
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label text-muted fw-bold small mb-1">Correlativo</label>
-                                <input type="text" class="form-control form-control-sm font-monospace" id="cv-f-correlativo" placeholder="Ej: 2026-00001959">
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label text-muted fw-bold small mb-1">Estado</label>
-                                <select class="form-select form-select-sm" id="cv-f-estado">
-                                    <option value="VÁLIDO" selected>VÁLIDO</option>
-                                    <option value="ANULADO">ANULADO</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row g-2">
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-muted fw-bold small mb-1">Placa / Vehículo <span class="text-danger">(*)</span></label>
-                                <input type="text" class="form-control form-control-sm fw-bold text-uppercase" id="cv-f-vehiculo" placeholder="BEQ701" required>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-muted fw-bold small mb-1 d-flex justify-content-between align-items-center">
-                                    <span>N° Viaje</span>
-                                    <span id="cv-viaje-lock-status" class="badge bg-light text-muted border font-monospace" style="font-size:0.65rem;">Desbloqueado</span>
-                                </label>
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text bg-white" id="cv-viaje-icon-container">
-                                        <i class="bi bi-unlock text-muted" id="cv-viaje-lock-icon"></i>
-                                    </span>
-                                    <input type="text" class="form-control form-control-sm font-monospace fw-bold" id="cv-f-viaje" placeholder="2026-00000492">
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-muted fw-bold small mb-1">Clase Vehículo</label>
-                                <input type="text" class="form-control form-control-sm" id="cv-f-clase" value="TRACTO">
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-muted fw-bold small mb-1">Tipo</label>
-                                <input type="text" class="form-control form-control-sm" id="cv-f-tipo" value="RECARGA VUELTA">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Card 2: Operación y Abastecimiento -->
-                    <div class="cv-form-card">
-                        <div class="cv-form-card-title">
-                            <i class="bi bi-fuel-pump-fill text-warning"></i> Operación, Ruta y Estación de Servicio
-                        </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-12 col-md-6">
-                                <label class="form-label text-muted fw-bold small mb-1">Conductor</label>
-                                <input type="text" class="form-control form-control-sm" id="cv-f-conductor" placeholder="Nombre del conductor">
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label text-muted fw-bold small mb-1">Ruta</label>
-                                <input type="text" class="form-control form-control-sm" id="cv-f-ruta" placeholder="LIMA - AREQUIPA">
-                            </div>
-                        </div>
-
-                        <div class="row g-2">
-                            <div class="col-6 col-md-4">
-                                <label class="form-label text-muted fw-bold small mb-1">Estación / Grifo</label>
-                                <input type="text" class="form-control form-control-sm" id="cv-f-estacion" placeholder="E/S LOS REYES">
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label text-muted fw-bold small mb-1">Proveedor</label>
-                                <input type="text" class="form-control form-control-sm" id="cv-f-proveedor" placeholder="GASOLINERA S.A.C.">
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label text-muted fw-bold small mb-1">Tipo Combustible</label>
-                                <input type="text" class="form-control form-control-sm" id="cv-f-combustible" value="D2">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Card 3: Odómetro y Liquidación Económica -->
-                    <div class="cv-form-card mb-0">
-                        <div class="cv-form-card-title">
-                            <i class="bi bi-cash-coin text-warning"></i> Odómetro y Liquidación Económica
-                        </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-muted fw-bold small mb-1">Kilometraje (Odómetro)</label>
-                                <input type="number" step="0.1" class="form-control form-control-sm font-monospace" id="cv-f-kilometraje" value="0">
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-muted fw-bold small mb-1">Galones <span class="text-danger">(*)</span></label>
-                                <input type="number" step="0.01" class="form-control form-control-sm font-monospace fw-bold text-primary" id="cv-f-galones" required oninput="window.cvRecalcularTotalForm()">
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-muted fw-bold small mb-1">Costo / Galón (S/)</label>
-                                <input type="number" step="0.01" class="form-control form-control-sm font-monospace" id="cv-f-costo-gl" oninput="window.cvRecalcularTotalForm()">
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-muted fw-bold small mb-1">Importe Total (S/) <span class="text-danger">(*)</span></label>
-                                <input type="number" step="0.01" class="form-control form-control-sm font-monospace fw-bold text-success" id="cv-f-importe" required>
-                            </div>
-                        </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-6 col-md-4">
-                                <label class="form-label text-muted fw-bold small mb-1">N° Comprobante</label>
-                                <input type="text" class="form-control form-control-sm" id="cv-f-comprobante" placeholder="F003-000964">
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label text-muted fw-bold small mb-1">Tipo Pago</label>
-                                <select class="form-select form-select-sm" id="cv-f-tipo-pago">
-                                    <option value="ANTICIPO" selected>ANTICIPO</option>
-                                    <option value="CREDITO">CREDITO</option>
-                                    <option value="EFECTIVO">EFECTIVO</option>
-                                </select>
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label text-muted fw-bold small mb-1">Estado Pago</label>
-                                <select class="form-select form-select-sm" id="cv-f-estado-pago">
-                                    <option value="NO PAGADO" selected>NO PAGADO</option>
-                                    <option value="PAGADO">PAGADO</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row g-2">
-                            <div class="col-12">
-                                <label class="form-label text-muted fw-bold small mb-1">Observaciones</label>
-                                <textarea class="form-control form-control-sm" id="cv-f-obs" rows="2" placeholder="Notas operativas adicionales..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-                </form>
+          <!-- ── SECCIÓN 3: OPERACIÓN, RUTA Y ESTACIÓN ──────────────────────── -->
+          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 60;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:0.95rem;">
+              <i class="bi bi-geo-alt-fill text-warning"></i> Operación, Ruta y Estación de Servicio
+            </h6>
+            <div class="row g-2">
+              <div class="col-12 col-md-6">
+                <label class="form-label">Conductor</label>
+                <div class="position-relative" style="z-index: 68;">
+                  <input type="text" id="cv-f-conductor-txt" class="form-control form-control-sm text-uppercase fw-semibold" placeholder="SELECCIONE O ESCRIBA CONDUCTOR..." autocomplete="off" oninput="window.cvFiltrarConductorDropdown()" onfocus="window.cvFiltrarConductorDropdown()" onblur="window.cvHideConductorDropdown()">
+                  <input type="hidden" id="cv-f-conductor" name="conductor">
+                  <div id="cv-f-conductor-dd" class="cv-dropdown d-none"></div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Ruta</label>
+                <input type="text" class="form-control form-control-sm text-uppercase" id="cv-f-ruta" placeholder="LIMA - AREQUIPA">
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label">Estación / Grifo</label>
+                <input type="text" class="form-control form-control-sm text-uppercase" id="cv-f-estacion" placeholder="E/S REPSOL CALLAO">
+              </div>
+              <div class="col-12 col-md-5">
+                <label class="form-label">Proveedor</label>
+                <input type="text" class="form-control form-control-sm text-uppercase" id="cv-f-proveedor" placeholder="PRIMAX / REPSOL S.A.">
+              </div>
+              <div class="col-12 col-md-3">
+                <label class="form-label">Tipo Combustible</label>
+                <select class="form-select form-select-sm" id="cv-f-combustible">
+                  <option value="D2" selected>D2 (Diesel)</option>
+                  <option value="GASOHOL 95">GASOHOL 95</option>
+                  <option value="GASOHOL 90">GASOHOL 90</option>
+                  <option value="GLP">GLP</option>
+                  <option value="GNV">GNV</option>
+                  <option value="UREA">UREA</option>
+                </select>
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label">Departamento</label>
+                <input type="text" class="form-control form-control-sm text-uppercase" id="cv-f-departamento" placeholder="LIMA">
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label">Provincia</label>
+                <input type="text" class="form-control form-control-sm text-uppercase" id="cv-f-provincia" placeholder="LIMA">
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label">Distrito</label>
+                <input type="text" class="form-control form-control-sm text-uppercase" id="cv-f-distrito" placeholder="CALLAO">
+              </div>
             </div>
+          </div>
 
-            <!-- Modal Footer con Botones -->
-            <div class="modal-footer d-flex align-items-center justify-content-between px-4 py-2 border-top bg-white">
-                <button type="button" class="btn btn-sm btn-light border px-4 fw-bold" onclick="window.cvRegresarAtras()">Cancelar</button>
-                <button type="button" class="btn btn-sm btn-warning rounded-pill px-4 fw-bold text-white shadow-sm" style="background:#f59e0b; border-color:#d97706;" onclick="document.getElementById('cv-form-vale').requestSubmit()">Guardar Vale</button>
+          <!-- ── SECCIÓN 4: ODÓMETRO Y LIQUIDACIÓN ECONÓMICA ─────────────────── -->
+          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; position: relative; z-index: 40;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:0.95rem;">
+              <i class="bi bi-cash-coin text-success"></i> Odómetro y Liquidación Económica
+            </h6>
+            <div class="row g-2">
+              <div class="col-6 col-md-3">
+                <label class="form-label">Kilometraje (Odómetro)</label>
+                <input type="number" step="0.1" class="form-control form-control-sm font-monospace" id="cv-f-kilometraje" value="0">
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Peso Tn</label>
+                <input type="number" step="0.01" class="form-control form-control-sm font-monospace" id="cv-f-peso" value="0">
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Galones (<span class="text-danger">*</span>)</label>
+                <input type="number" step="0.01" class="form-control form-control-sm font-monospace fw-bold text-primary" id="cv-f-galones" placeholder="0.00" oninput="window.cvRecalcularImporte()" required>
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Costo / Galón (S/)</label>
+                <input type="number" step="0.01" class="form-control form-control-sm font-monospace" id="cv-f-costo-gl" placeholder="0.00" oninput="window.cvRecalcularImporte()">
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label">Importe Total (S/) (<span class="text-danger">*</span>)</label>
+                <input type="number" step="0.01" class="form-control form-control-sm font-monospace fw-bold text-success" id="cv-f-importe" placeholder="0.00" required>
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label">N° Comprobante / Factura</label>
+                <input type="text" class="form-control form-control-sm font-monospace text-uppercase" id="cv-f-comprobante" placeholder="F001-0001234">
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label">Tipo Pago</label>
+                <select class="form-select form-select-sm" id="cv-f-tipo-pago">
+                  <option value="ANTICIPO" selected>ANTICIPO</option>
+                  <option value="CREDITO">CREDITO</option>
+                  <option value="EFECTIVO">EFECTIVO</option>
+                  <option value="TRANSFERENCIA">TRANSFERENCIA</option>
+                </select>
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label">Estado Pago</label>
+                <select class="form-select form-select-sm" id="cv-f-estado-pago">
+                  <option value="NO PAGADO" selected>NO PAGADO</option>
+                  <option value="PAGADO">PAGADO</option>
+                </select>
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label">Días Crédito</label>
+                <input type="number" class="form-control form-control-sm font-monospace" id="cv-f-dias-credito" value="0">
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label">Moneda</label>
+                <select class="form-select form-select-sm" id="cv-f-moneda">
+                  <option value="SOLES" selected>SOLES (S/)</option>
+                  <option value="DOLARES">DÓLARES ($)</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Observaciones</label>
+                <textarea class="form-control form-control-sm" id="cv-f-obs" rows="2" placeholder="Notas operativas del abastecimiento..."></textarea>
+              </div>
             </div>
+          </div>
 
-        </div>
+          <!-- Botón de Envío oculto para submit por enter -->
+          <button type="submit" class="d-none" id="cv-btn-submit-hidden"></button>
+        </form>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer border-top bg-white px-4 py-2.5 d-flex justify-content-between align-items-center">
+        <button type="button" class="btn btn-light border px-4 fw-semibold rounded-3" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary fw-bold px-4 rounded-3 shadow-sm d-flex align-items-center gap-1.5" style="background: #0284c7; border-color: #0284c7;" onclick="document.getElementById('cv-form-vale').requestSubmit()">
+          <i class="bi bi-cloud-check-fill fs-5"></i> <span>Guardar Vale</span>
+        </button>
+      </div>
+
     </div>
+  </div>
 </div>
 
-<!-- MODAL: COMPRAS EXTERNAS DE COMBUSTIBLE (FACTURAS DE GRIFOS) -->
-<div class="modal fade" id="cvModalComprasExternas" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-            <div class="modal-header border-bottom px-4 py-3 bg-light">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="rounded-3 p-2 d-flex align-items-center justify-content-center text-white" style="background:#059669;">
-                        <i class="bi bi-receipt-cutoff fs-5"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-bold m-0 text-dark">Compras Externas de Combustible</h5>
-                        <p class="text-muted small m-0">Facturas electrónicas sincronizadas directamente desde grifos externos</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="d-flex align-items-center justify-content-between gap-3 mb-3 flex-wrap">
-                    <div class="d-flex align-items-center gap-2">
-                        <input type="text" class="form-control form-control-sm" id="cv-modal-ce-search" placeholder="Filtrar por comprobante, grifo, placa..." style="width:280px;" onkeyup="window.cvFiltrarComprasExternas(this.value)">
-                        <span class="badge bg-success bg-opacity-10 text-success fw-bold px-2.5 py-1" id="cv-modal-ce-count">0 Facturas</span>
-                    </div>
-                    <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold" onclick="window.cvCargarComprasExternas()">
-                        <i class="bi bi-arrow-clockwise"></i> Recargar
-                    </button>
-                </div>
-                <div class="table-responsive border rounded-3" style="max-height: 480px;">
-                    <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.8rem;">
-                        <thead class="table-dark sticky-top">
-                            <tr>
-                                <th>FECHA</th>
-                                <th>COMPROBANTE</th>
-                                <th>PROVEEDOR / GRIFO</th>
-                                <th>RUC</th>
-                                <th>PLACA</th>
-                                <th>CONDUCTOR</th>
-                                <th>GALONES</th>
-                                <th>COSTO/GL</th>
-                                <th>TOTAL (S/)</th>
-                                <th>SUNAT</th>
-                                <th>ESTADO PAGO</th>
-                            </tr>
-                        </thead>
-                        <tbody id="cv-modal-ce-tbody">
-                            <tr>
-                                <td colspan="11" class="text-center py-4 text-muted">Cargando facturas de grifos...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer border-top px-4 py-2 bg-light">
-                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
-            </div>
+<!-- ================================================================= -->
+<!-- 👁️ MODAL: DETALLE DE VALE (VOUCHER IMPRIMIBLE)                     -->
+<!-- ================================================================= -->
+<div class="modal fade" id="cvModalDetalle" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-dark text-white py-3 px-4">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-receipt fs-4 text-warning"></i>
+          <div>
+            <h6 class="modal-title fw-bold m-0" id="cv-det-folio-lbl">VOUCHER DE COMBUSTIBLE</h6>
+            <small class="text-white-50" id="cv-det-fecha-lbl">--</small>
+          </div>
         </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 bg-white" id="cv-voucher-printable">
+        <div class="text-center pb-3 border-bottom mb-3">
+          <h5 class="fw-bolder text-dark m-0">ERP AZKELL FLEET</h5>
+          <small class="text-muted">Comprobante Interno de Abastecimiento</small>
+        </div>
+
+        <div class="row g-2 mb-3" style="font-size: 0.88rem;">
+          <div class="col-6">
+            <span class="text-muted d-block small">PLACA / TRACTO</span>
+            <strong class="text-dark fs-6" id="cv-det-placa">--</strong>
+          </div>
+          <div class="col-6 text-end">
+            <span class="text-muted d-block small">N° VIAJE</span>
+            <strong class="text-primary fs-6 font-monospace" id="cv-det-viaje">--</strong>
+          </div>
+          <div class="col-12">
+            <span class="text-muted d-block small">CONDUCTOR</span>
+            <strong class="text-dark" id="cv-det-conductor">--</strong>
+          </div>
+          <div class="col-12">
+            <span class="text-muted d-block small">RUTA</span>
+            <strong class="text-dark" id="cv-det-ruta">--</strong>
+          </div>
+          <div class="col-12">
+            <span class="text-muted d-block small">ESTACIÓN / GRIFO</span>
+            <strong class="text-dark" id="cv-det-estacion">--</strong>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-3 bg-light border mb-3">
+          <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
+            <span class="text-muted">Tipo Combustible:</span>
+            <strong id="cv-det-combustible">D2</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
+            <span class="text-muted">Odómetro:</span>
+            <strong class="font-monospace" id="cv-det-km">0 Km</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
+            <span class="text-muted">Galones Despachados:</span>
+            <strong class="text-primary font-monospace" id="cv-det-galones">0.00 Gln</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
+            <span class="text-muted">Precio por Galón:</span>
+            <strong class="font-monospace" id="cv-det-costo-gl">S/ 0.00</strong>
+          </div>
+          <div class="d-flex justify-content-between pt-2 border-top mt-2">
+            <span class="fw-bold text-dark fs-6">IMPORTE TOTAL:</span>
+            <span class="fw-bolder text-success fs-5 font-monospace" id="cv-det-importe">S/ 0.00</span>
+          </div>
+        </div>
+
+        <div class="row g-2 mb-2" style="font-size: 0.82rem;">
+          <div class="col-6">
+            <span class="text-muted d-block small">COMPROBANTE</span>
+            <span class="font-monospace fw-bold" id="cv-det-comprobante">--</span>
+          </div>
+          <div class="col-6 text-end">
+            <span class="text-muted d-block small">ESTADO PAGO</span>
+            <span id="cv-det-estado-pago" class="badge bg-success">PAGADO</span>
+          </div>
+          <div class="col-12" id="cv-det-obs-box">
+            <span class="text-muted d-block small">OBSERVACIONES</span>
+            <span class="text-secondary small" id="cv-det-obs">--</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light py-2.5 px-4 border-top d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold d-flex align-items-center gap-1.5" onclick="window.cvImprimirDetalle()">
+          <i class="bi bi-printer-fill"></i> Imprimir Voucher
+        </button>
+      </div>
     </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 📥 MODAL: IMPORTAR EXCEL (COMPATIBLE)                              -->
+<!-- ================================================================= -->
+<div class="modal fade" id="cvModalImportar" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-dark text-white py-3 px-4">
+        <h5 class="modal-title fw-bold d-flex align-items-center gap-2 fs-6">
+          <i class="bi bi-file-earmark-excel-fill text-success fs-5"></i>
+          Importación de Vales de Combustible desde Excel (.xlsx / .csv)
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 bg-light">
+        <div class="border-2 border-dashed rounded-4 p-4 text-center bg-white mb-3" style="border-color: #cbd5e1 !important; cursor: pointer;" onclick="document.getElementById('cv-file-input').click()">
+          <input type="file" id="cv-file-input" accept=".xlsx, .xls, .csv" class="d-none" onchange="window.cvProcesarArchivoExcel(event)">
+          <div class="p-3">
+            <i class="bi bi-cloud-arrow-up-fill text-primary" style="font-size: 2.8rem;"></i>
+            <h6 class="fw-bold text-dark mt-2 mb-1">Haz clic para seleccionar o arrastra tu archivo Excel / CSV</h6>
+            <p class="text-muted small m-0">Formatos compatibles: .xlsx, .xls, .csv</p>
+          </div>
+        </div>
+
+        <div id="cv-import-preview-box" class="d-none">
+          <div class="alert alert-info d-flex align-items-center justify-content-between py-2 px-3 rounded-3 mb-3">
+            <div>
+              <strong id="cv-import-filename">archivo.xlsx</strong>
+              <span class="badge bg-primary ms-2" id="cv-import-count-badge">0 vales detectados</span>
+            </div>
+            <small class="text-muted">Procesamiento automático</small>
+          </div>
+
+          <h6 class="fw-bold text-dark small mb-2">Vista previa de los primeros 5 registros:</h6>
+          <div class="table-responsive border rounded-3 bg-white mb-3" style="max-height: 220px;">
+            <table class="table table-sm table-striped small mb-0">
+              <thead class="table-dark">
+                <tr>
+                  <th>Fecha</th>
+                  <th>Vehículo</th>
+                  <th>Conductor</th>
+                  <th>Ruta</th>
+                  <th>Estación</th>
+                  <th>Galones</th>
+                  <th>Importe</th>
+                </tr>
+              </thead>
+              <tbody id="cv-import-preview-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-white py-3 px-4 border-top">
+        <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-2" id="cv-btn-confirmar-import" onclick="window.cvConfirmarImportacion()" disabled>
+          <i class="bi bi-check-lg"></i> Importar Vales al ERP
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 🗑️ MODAL: CONFIRMACIÓN DE ELIMINACIÓN (APPLE CIRCULAR)             -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalEliminarValeConfirm" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered cv-delete-dialog">
+    <div class="modal-content border-0 cv-delete-card">
+      <div class="cv-delete-badge-icon">
+        <i class="bi bi-trash3-fill"></i>
+      </div>
+      <h4 class="fw-bolder text-dark mb-1" style="font-size: 1.35rem; letter-spacing: -0.5px;">¿Eliminar Vale?</h4>
+      <p class="text-secondary small mb-4" id="lbl-cv-delete-subtext">Esta acción eliminará el vale de combustible de forma definitiva.</p>
+      
+      <div class="d-flex align-items-center justify-content-center gap-4">
+        <button type="button" class="cv-btn-circle cv-btn-cancel-circle shadow-sm" data-bs-dismiss="modal" title="Cancelar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+        <button type="button" class="cv-btn-circle cv-btn-delete-circle shadow-sm" id="btnConfirmarEliminarVale" onclick="window.cvEjecutarEliminacion()" title="Eliminar Definitivamente">
+          <i class="bi bi-check-lg"></i>
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
