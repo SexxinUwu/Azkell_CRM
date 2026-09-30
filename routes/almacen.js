@@ -1525,11 +1525,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             const tdb = getDb(req);
             const { deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
             const exitosos = (req.body && req.body.exitosos) || [];
-            if (!exitosos.length) return res.json({ ok: true });
+            const numOperacionGeneral = ((req.body && req.body.numero_operacion) || '').trim();
 
             // Obtener estado actual
             const rows = await new Promise((resolve, reject) => {
-                tdb.query('SELECT url_voucher, url_cotizacion, url_factura, estado FROM entradas_inv WHERE id=?',
+                tdb.query('SELECT url_voucher, url_cotizacion, url_factura, numero_operacion, estado FROM entradas_inv WHERE id=?',
                     [req.params.id], (err, r) => err ? reject(err) : resolve(r));
             });
 
@@ -1537,6 +1537,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             const sets = [];
             const params = [];
             let cambiaEstado = false;
+            let finalVoucherUrl = null;
+            let finalNumeroOperacion = numOperacionGeneral;
 
             for (const ex of exitosos) {
                 const col = `url_${ex.tipo}`;
@@ -1550,7 +1552,15 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
                 sets.push(`${col}=?`);
                 params.push(ex.finalUrl);
-                if (ex.tipo === 'voucher') cambiaEstado = true;
+
+                if (ex.tipo === 'voucher') {
+                    cambiaEstado = true;
+                    finalVoucherUrl = ex.finalUrl;
+                    const numOp = (ex.numero_operacion || numOperacionGeneral || '').trim();
+                    if (numOp) {
+                        finalNumeroOperacion = numOp;
+                    }
+                }
                 if (ex.tipo === 'factura') {
                     sets.push("estado_factura='Factura Entregada'");
                     const docRef = (ex.documento_referencia || (req.body && req.body.documento_referencia) || '').trim();
@@ -1559,6 +1569,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         params.push(docRef);
                     }
                 }
+            }
+
+            if (finalNumeroOperacion) {
+                sets.push("numero_operacion=?");
+                params.push(finalNumeroOperacion);
             }
 
             if (cambiaEstado) {
@@ -1570,6 +1585,35 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 await new Promise((resolve, reject) => {
                     tdb.query(`UPDATE entradas_inv SET ${sets.join(', ')} WHERE id=?`, params, (err) => err ? reject(err) : resolve());
                 });
+            }
+
+            // Sincronizar automáticamente con tesoreria_caja si se actualizó voucher o numero_operacion
+            if (finalVoucherUrl || finalNumeroOperacion) {
+                try {
+                    const ocId = req.params.id;
+                    const setCaja = [];
+                    const pCaja = [];
+                    if (finalVoucherUrl) {
+                        setCaja.push("voucher_url = ?");
+                        pCaja.push(finalVoucherUrl);
+                    }
+                    if (finalNumeroOperacion) {
+                        setCaja.push("numero_constancia_deposito = ?");
+                        pCaja.push(finalNumeroOperacion);
+                    }
+                    if (setCaja.length) {
+                        pCaja.push(`%${ocId}%`, `%${ocId}%`);
+                        const sqlCaja = `UPDATE tesoreria_caja SET ${setCaja.join(', ')} WHERE (descripcion LIKE ? OR observacion LIKE ?)`;
+                        await new Promise((resolve) => {
+                            tdb.query(sqlCaja, pCaja, (err) => {
+                                if (err) console.error('Error sincronizando tesoreria_caja:', err);
+                                resolve();
+                            });
+                        });
+                    }
+                } catch (errCaja) {
+                    console.error('Error sincronizando con tesoreria_caja:', errCaja);
+                }
             }
 
             res.json({ ok: true, estado: cambiaEstado ? 'Procesado' : (current.estado || 'Registrado') });
@@ -1589,7 +1633,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             const tdb = getDb(req);
             const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl } = require('../utils/s3');
             const col = `url_${tipo}`;
-            tdb.query(`SELECT ${col}, estado FROM entradas_inv WHERE id=?`, [req.params.id], async (err, rows) => {
+            tdb.query(`SELECT ${col}, numero_operacion, estado FROM entradas_inv WHERE id=?`, [req.params.id], async (err, rows) => {
                 if (err) return res.status(500).json({ error: 'DB Error: ' + err.message });
                 try {
                     if (rows && rows.length > 0 && rows[0][col]) {
@@ -1603,8 +1647,30 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     // Actualizaciones según el tipo de documento
                     let updateSql = `UPDATE entradas_inv SET ${col}=? WHERE id=?`;
                     let updateParams = [url, req.params.id];
+                    const numOp = (req.body && (req.body.numero_operacion || req.body.numero_constancia)) ? String(req.body.numero_operacion || req.body.numero_constancia).trim() : null;
+
                     if (tipo === 'voucher') {
-                        updateSql = `UPDATE entradas_inv SET ${col}=?, estado='Procesado' WHERE id=?`;
+                        if (numOp) {
+                            updateSql = `UPDATE entradas_inv SET ${col}=?, numero_operacion=?, estado='Procesado' WHERE id=?`;
+                            updateParams = [url, numOp, req.params.id];
+                        } else {
+                            updateSql = `UPDATE entradas_inv SET ${col}=?, estado='Procesado' WHERE id=?`;
+                        }
+
+                        // Sincronizar tesoreria_caja
+                        try {
+                            const ocId = req.params.id;
+                            let sqlCaja = "UPDATE tesoreria_caja SET voucher_url = ?";
+                            const pCaja = [url];
+                            if (numOp) {
+                                sqlCaja += ", numero_constancia_deposito = ?";
+                                pCaja.push(numOp);
+                            }
+                            sqlCaja += " WHERE (descripcion LIKE ? OR observacion LIKE ?)";
+                            pCaja.push(`%${ocId}%`, `%${ocId}%`);
+                            tdb.query(sqlCaja, pCaja, () => {});
+                        } catch (eCaja) {}
+
                     } else if (tipo === 'factura') {
                         const docRef = (req.body && (req.body.documento_referencia || req.body.numero_factura)) ? String(req.body.documento_referencia || req.body.numero_factura).trim() : null;
                         if (docRef) {
@@ -1647,6 +1713,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     let delSql = `UPDATE entradas_inv SET ${col}=NULL WHERE id=?`;
                     if (tipo === 'factura') {
                         delSql = `UPDATE entradas_inv SET ${col}=NULL, documento_referencia=NULL, estado_factura='Factura Pendiente' WHERE id=?`;
+                    } else if (tipo === 'voucher') {
+                        // Sincronizar con tesoreria_caja
+                        try {
+                            const ocId = req.params.id;
+                            tdb.query("UPDATE tesoreria_caja SET voucher_url=NULL WHERE (descripcion LIKE ? OR observacion LIKE ?)", [`%${ocId}%`, `%${ocId}%`], () => {});
+                        } catch (eCaja) {}
                     }
                     tdb.query(delSql, [req.params.id], (err2) => {
                         if (err2) return res.status(500).json({ error: 'Update Error: ' + err2.message });

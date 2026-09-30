@@ -1081,11 +1081,19 @@
 <!-- MODAL: SUBIR / ACTUALIZAR ARCHIVOS ADJUNTOS (COTIZACIÓN, FACTURA, VOUCHER) -->
 <!-- ========================================================================= -->
 <div class="modal fade" id="modalSubirArchivosOC" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content rounded-4 border-0 shadow-lg p-2 bg-white">
+    <div class="modal-dialog modal-dialog-centered modal-xl" style="max-width: 1080px; width: 95vw;">
+        <div class="modal-content rounded-4 border-0 shadow-lg p-2 bg-white" style="border-radius: 24px !important;">
             <!-- Header -->
             <div class="modal-header border-0 pb-0 pt-3 px-4 d-flex justify-content-between align-items-center">
-                <h5 class="modal-title fw-bold m-0" style="color: #0284c7; font-size: 1.25rem;">Subir Archivos</h5>
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="d-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 text-primary" style="width: 38px; height: 38px; font-size: 1.15rem; color:#0284c7 !important;">
+                        <i class="bi bi-cloud-arrow-up-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold m-0" style="color: #0284c7; font-size: 1.25rem;">Subir y Actualizar Archivos</h5>
+                        <small class="text-muted fw-medium" style="font-size: 0.78rem;">Gestión de cotización, factura y voucher de constancia de pago</small>
+                    </div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
@@ -1094,44 +1102,77 @@
                 <input type="hidden" id="subir-archivos-oc-id" value="">
                 
                 <!-- Fila 1: Código de Orden y Proveedor -->
-                <div class="row g-3 mb-3">
+                <div class="row g-2.5 mb-3">
                     <div class="col-12 col-md-4">
-                        <label class="form-label small fw-bold text-secondary mb-1">Orden de Compra</label>
-                        <input type="text" id="subir-archivos-oc-codigo" class="form-control rounded-3 bg-light border fw-bold text-dark" readonly>
+                        <label class="form-label small fw-bold text-secondary mb-1" style="font-size: 0.72rem; text-transform: uppercase;">Orden de Compra</label>
+                        <input type="text" id="subir-archivos-oc-codigo" class="form-control form-control-sm rounded-3 bg-light border fw-bold text-dark font-monospace" readonly>
                     </div>
                     <div class="col-12 col-md-8">
-                        <label class="form-label small fw-bold text-secondary mb-1">Proveedor</label>
-                        <input type="text" id="subir-archivos-oc-proveedor" class="form-control rounded-3 bg-light border fw-bold text-dark" readonly>
+                        <label class="form-label small fw-bold text-secondary mb-1" style="font-size: 0.72rem; text-transform: uppercase;">Proveedor</label>
+                        <input type="text" id="subir-archivos-oc-proveedor" class="form-control form-control-sm rounded-3 bg-light border fw-bold text-dark" readonly>
                     </div>
                 </div>
 
-                <!-- Fila 2: 2 Secciones de Carga de Archivo (Cotización y Factura) -->
+                <!-- Fila 2: 3 Secciones de Carga de Archivos (Cotización, Factura, Voucher) -->
                 <div class="row g-3">
-                    <!-- Cotización -->
-                    <div class="col-12 col-md-6">
-                        <div class="border rounded-3 p-3 bg-white h-100 shadow-2xs">
-                            <label class="form-label small fw-bold text-dark text-uppercase d-block mb-1" style="font-size:0.75rem; letter-spacing:0.04em;">
-                                Subir Archivo de Cotización
-                            </label>
-                            <div id="subir-existente-cotizacion" class="mb-2 small text-muted"></div>
-                            <input type="file" id="subir-file-cotizacion" class="form-control form-control-sm rounded-3 border" accept="image/*,application/pdf">
+                    <!-- 1. Cotización -->
+                    <div class="col-12 col-md-4">
+                        <div class="border rounded-4 p-3 bg-white h-100 shadow-2xs d-flex flex-column justify-content-between" style="border-radius: 16px !important; border: 1.5px solid #e2e8f0 !important;">
+                            <div>
+                                <label class="form-label small fw-bold text-primary text-uppercase d-flex align-items-center gap-1.5 mb-2" style="font-size:0.75rem; letter-spacing:0.04em;">
+                                    <i class="bi bi-file-earmark-text"></i> 1. Archivo Cotización
+                                </label>
+                                <div id="subir-existente-cotizacion" class="mb-2.5 small text-muted"></div>
+                            </div>
+                            <div>
+                                <label class="form-label small text-muted mb-1" style="font-size:0.70rem;">Seleccionar nuevo archivo:</label>
+                                <input type="file" id="subir-file-cotizacion" class="form-control form-control-sm rounded-3 border" accept="image/*,application/pdf">
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Factura -->
-                    <div class="col-12 col-md-6">
-                        <div class="border rounded-3 p-3 bg-white h-100 shadow-2xs">
-                            <label class="form-label small fw-bold text-dark text-uppercase d-block mb-1" style="font-size:0.75rem; letter-spacing:0.04em;">
-                                Subir Archivo de Factura
-                            </label>
-                            <div id="subir-existente-factura" class="mb-2 small text-muted"></div>
-                            <input type="file" id="subir-file-factura" class="form-control form-control-sm rounded-3 border mb-2" accept="image/*,application/pdf">
-
-                            <div class="mt-2 pt-2 border-top">
-                                <label class="form-label small fw-bold text-dark text-uppercase d-block mb-1" style="font-size:0.72rem; letter-spacing:0.03em;">
-                                    N° Comprobante / Factura <span class="text-danger">*</span>
+                    <!-- 2. Factura -->
+                    <div class="col-12 col-md-4">
+                        <div class="border rounded-4 p-3 bg-white h-100 shadow-2xs d-flex flex-column justify-content-between" style="border-radius: 16px !important; border: 1.5px solid #e2e8f0 !important;">
+                            <div>
+                                <label class="form-label small fw-bold text-success text-uppercase d-flex align-items-center gap-1.5 mb-2" style="font-size:0.75rem; letter-spacing:0.04em;">
+                                    <i class="bi bi-receipt"></i> 2. Archivo Factura
                                 </label>
-                                <input type="text" id="subir-factura-numero" class="form-control form-control-sm rounded-3 border fw-bold text-dark" placeholder="Ej: F001-0004523">
+                                <div id="subir-existente-factura" class="mb-2.5 small text-muted"></div>
+                            </div>
+                            <div>
+                                <label class="form-label small text-muted mb-1" style="font-size:0.70rem;">Seleccionar nuevo archivo:</label>
+                                <input type="file" id="subir-file-factura" class="form-control form-control-sm rounded-3 border mb-2" accept="image/*,application/pdf">
+
+                                <div class="pt-2 border-top border-slate-100">
+                                    <label class="form-label small fw-bold text-dark text-uppercase d-block mb-1" style="font-size:0.70rem; letter-spacing:0.03em;">
+                                        N° Comprobante / Factura
+                                    </label>
+                                    <input type="text" id="subir-factura-numero" class="form-control form-control-sm rounded-3 border fw-bold text-dark font-monospace" placeholder="Ej: F001-0004523">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Constancia / Voucher de Pago -->
+                    <div class="col-12 col-md-4">
+                        <div class="border rounded-4 p-3 bg-white h-100 shadow-2xs d-flex flex-column justify-content-between" style="border-radius: 16px !important; border: 1.5px solid #e2e8f0 !important;">
+                            <div>
+                                <label class="form-label small fw-bold text-danger text-uppercase d-flex align-items-center gap-1.5 mb-2" style="font-size:0.75rem; letter-spacing:0.04em; color: #dc2626 !important;">
+                                    <i class="bi bi-credit-card-2-front"></i> 3. Constancia / Voucher
+                                </label>
+                                <div id="subir-existente-voucher" class="mb-2.5 small text-muted"></div>
+                            </div>
+                            <div>
+                                <label class="form-label small text-muted mb-1" style="font-size:0.70rem;">Seleccionar nuevo archivo:</label>
+                                <input type="file" id="subir-file-voucher" class="form-control form-control-sm rounded-3 border mb-2" accept="image/*,application/pdf">
+
+                                <div class="pt-2 border-top border-slate-100">
+                                    <label class="form-label small fw-bold text-dark text-uppercase d-block mb-1" style="font-size:0.70rem; letter-spacing:0.03em;">
+                                        N° Constancia / Operación
+                                    </label>
+                                    <input type="text" id="subir-voucher-numero" class="form-control form-control-sm rounded-3 border fw-bold text-dark font-monospace" placeholder="Ej: OP-8947239">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1140,11 +1181,11 @@
 
             <!-- Footer -->
             <div class="modal-footer border-0 pt-0 pb-3 px-4 d-flex justify-content-between align-items-center">
-                <button type="button" class="btn btn-light border rounded-3 px-4 py-2 fw-semibold text-secondary" data-bs-dismiss="modal" style="background:#f1f5f9;">
+                <button type="button" class="btn btn-light border rounded-3 px-4 py-2 fw-semibold text-secondary" data-bs-dismiss="modal" style="background:#f1f5f9; border-radius: 12px !important;">
                     Cerrar
                 </button>
-                <button type="button" class="btn btn-primary rounded-3 px-4 py-2 fw-bold text-white shadow-sm" id="btn-guardar-archivos-modal" onclick="window.guardarArchivosOCModal()" style="background:#0284c7; border-color:#0284c7; min-width:120px;">
-                    Guardar
+                <button type="button" class="btn btn-primary rounded-3 px-4 py-2 fw-bold text-white shadow-sm" id="btn-guardar-archivos-modal" onclick="window.guardarArchivosOCModal()" style="background:#0284c7; border-color:#0284c7; min-width:140px; border-radius: 12px !important;">
+                    <i class="bi bi-check2-circle me-1"></i> Guardar Cambios
                 </button>
             </div>
         </div>
@@ -1154,6 +1195,18 @@
 <!-- ========================================================================= -->
 <!-- MODAL: DETALLE COMPLETO DE LA ORDEN DE COMPRA (LIGHT LIQUID GLASS)        -->
 <!-- ========================================================================= -->
+<style>
+#modalDetalleEntradaOC.fade .modal-dialog,
+#modalDetalleOCPagoRequerimiento.fade .modal-dialog {
+    transform: translateY(45px) scale(0.98);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease !important;
+}
+#modalDetalleEntradaOC.show .modal-dialog,
+#modalDetalleOCPagoRequerimiento.show .modal-dialog {
+    transform: translateY(0) scale(1) !important;
+}
+</style>
+
 <div class="modal fade" id="modalDetalleEntradaOC" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 1060px; width: 94vw; margin: 1.5rem auto;">
         <div class="modal-content border-0 shadow-2xl overflow-hidden" style="border-radius: 28px; background: #f8fafc; border: 1.5px solid #e2e8f0; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.22); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
@@ -1252,68 +1305,68 @@
                     </div>
                 </div>
 
-                <!-- 2. CUATRO CHUNKY SLABS DE INFORMACIÓN -->
-                <div class="row g-3 mb-1">
+                <!-- 2. CUATRO SLABS DE INFORMACIÓN PROPORCIONALES Y ESTRUCTURADOS -->
+                <div class="row g-2.5 mb-1">
                     <!-- Card 1: Solicitud -->
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="p-3.5 h-100 d-flex flex-column justify-content-between" style="min-height: 145px; border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);">
-                            <div class="fw-bold mb-2.5 d-flex align-items-center gap-1.5" style="font-size: 0.72rem; letter-spacing: 0.06em; color: #0284c7; text-transform: uppercase;">
-                                <i class="bi bi-person-fill" style="font-size: 0.85rem;"></i> SOLICITUD
+                        <div class="p-3 h-100 d-flex flex-column" style="border-radius: 16px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03); gap: 8px;">
+                            <div class="fw-bold d-flex align-items-center gap-1.5" style="font-size: 0.70rem; letter-spacing: 0.05em; color: #0284c7; text-transform: uppercase;">
+                                <i class="bi bi-person-fill" style="font-size: 0.82rem;"></i> SOLICITUD
                             </div>
-                            <div class="mb-2">
+                            <div>
                                 <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Solicitante (Autoriza):</span>
-                                <span class="d-block text-dark fw-bold" id="det-oc-card-solicitante" style="font-size: 0.82rem; color: #0f172a;">—</span>
+                                <span class="d-block text-dark fw-bold" id="det-oc-card-solicitante" style="font-size: 0.82rem; color: #0f172a; line-height: 1.3;">—</span>
                             </div>
                             <div>
                                 <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Usuario de Creación:</span>
-                                <span class="d-block text-dark fw-bold text-uppercase" id="det-oc-card-creador" style="font-size: 0.82rem; color: #0f172a;">—</span>
+                                <span class="d-block text-dark fw-bold text-uppercase" id="det-oc-card-creador" style="font-size: 0.82rem; color: #0f172a; line-height: 1.3;">—</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Card 2: Emisión & Destino -->
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="p-3.5 h-100 d-flex flex-column justify-content-between" style="min-height: 145px; border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);">
-                            <div class="fw-bold mb-2.5 d-flex align-items-center gap-1.5" style="font-size: 0.72rem; letter-spacing: 0.06em; color: #d97706; text-transform: uppercase;">
-                                <i class="bi bi-calendar-event-fill" style="font-size: 0.85rem;"></i> EMISIÓN & DESTINO
+                        <div class="p-3 h-100 d-flex flex-column" style="border-radius: 16px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03); gap: 8px;">
+                            <div class="fw-bold d-flex align-items-center gap-1.5" style="font-size: 0.70rem; letter-spacing: 0.05em; color: #d97706; text-transform: uppercase;">
+                                <i class="bi bi-calendar-event-fill" style="font-size: 0.82rem;"></i> EMISIÓN & DESTINO
                             </div>
-                            <div class="mb-2">
+                            <div>
                                 <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Fecha de Registro:</span>
-                                <span class="d-block text-dark fw-bold" id="det-oc-card-fecha" style="font-size: 0.80rem; font-family: ui-monospace, monospace; color: #0f172a;">—</span>
+                                <span class="d-block text-dark fw-bold font-monospace" id="det-oc-card-fecha" style="font-size: 0.80rem; color: #0f172a; line-height: 1.3;">—</span>
                             </div>
                             <div>
                                 <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Destino / Unidad:</span>
-                                <span class="d-block text-dark fw-bold text-uppercase text-truncate" id="det-oc-card-destino" style="font-size: 0.82rem; color: #0f172a;">SEDE PRINCIPAL / ALMACÉN</span>
+                                <span class="d-block text-dark fw-bold text-uppercase" id="det-oc-card-destino" style="font-size: 0.82rem; color: #0f172a; line-height: 1.3;">SEDE PRINCIPAL / ALMACÉN</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Card 3: Proveedor -->
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="p-3.5 h-100 d-flex flex-column justify-content-between" style="min-height: 145px; border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);">
-                            <div class="fw-bold mb-2.5 d-flex align-items-center gap-1.5" style="font-size: 0.72rem; letter-spacing: 0.06em; color: #059669; text-transform: uppercase;">
-                                <i class="bi bi-building-fill" style="font-size: 0.85rem;"></i> PROVEEDOR
+                        <div class="p-3 h-100 d-flex flex-column" style="border-radius: 16px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03); gap: 8px;">
+                            <div class="fw-bold d-flex align-items-center gap-1.5" style="font-size: 0.70rem; letter-spacing: 0.05em; color: #059669; text-transform: uppercase;">
+                                <i class="bi bi-building-fill" style="font-size: 0.82rem;"></i> PROVEEDOR
                             </div>
-                            <div class="mb-2">
+                            <div>
                                 <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Razón Social:</span>
-                                <span class="d-block text-dark fw-bold text-truncate" id="det-oc-card-proveedor" style="font-size: 0.82rem; color: #0f172a;" title="Proveedor">—</span>
+                                <span class="d-block text-dark fw-bold" id="det-oc-card-proveedor" style="font-size: 0.82rem; color: #0f172a; line-height: 1.3; word-break: break-word;" title="Proveedor">—</span>
                             </div>
                             <div>
                                 <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Motivo / Justificación:</span>
-                                <span class="d-block text-dark fw-bold text-truncate text-uppercase" id="det-oc-card-motivo" style="font-size: 0.82rem; color: #0f172a;">—</span>
+                                <span class="d-block text-dark fw-bold text-uppercase" id="det-oc-card-motivo" style="font-size: 0.82rem; color: #0f172a; line-height: 1.3; word-break: break-word;">—</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Card 4: Documentos & Pago -->
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="p-3.5 h-100 d-flex flex-column justify-content-between" style="min-height: 145px; border-radius: 20px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);">
-                            <div class="fw-bold mb-2.5 d-flex align-items-center gap-1.5" style="font-size: 0.72rem; letter-spacing: 0.06em; color: #4f46e5; text-transform: uppercase;">
-                                <i class="bi bi-credit-card-2-front-fill" style="font-size: 0.85rem;"></i> DOCUMENTOS & PAGO
+                        <div class="p-3 h-100 d-flex flex-column" style="border-radius: 16px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03); gap: 8px;">
+                            <div class="fw-bold d-flex align-items-center gap-1.5" style="font-size: 0.70rem; letter-spacing: 0.05em; color: #4f46e5; text-transform: uppercase;">
+                                <i class="bi bi-credit-card-2-front-fill" style="font-size: 0.82rem;"></i> DOCUMENTOS & PAGO
                             </div>
-                            <div class="mb-2">
+                            <div>
                                 <span class="d-block" style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Condición:</span>
-                                <span class="d-block text-dark fw-bold" id="det-oc-card-pago" style="font-size: 0.80rem; color: #0f172a;">SOLES (PEN) • AL CONTADO</span>
+                                <span class="d-block text-dark fw-bold" id="det-oc-card-pago" style="font-size: 0.80rem; color: #0f172a; line-height: 1.3;">SOLES (PEN) • AL CONTADO</span>
                             </div>
                             <div class="d-flex flex-wrap gap-1.5 pt-0.5" id="det-oc-card-pills-docs">
                                 <!-- Pills dinamicos de cotización, factura y voucher -->
