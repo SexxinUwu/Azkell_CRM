@@ -363,33 +363,40 @@ window.kitsPoblarSidebarMarcas = function () {
 
     // B. Renderizar Lista Móvil NATIVA (1:1 Imagen 2)
     if (listMobile) {
+        const isTodosActive = !window.kitsSidebarMarcaSeleccionada;
         let htmlMobile = `
-            <div class="kits-mobile-row" onclick="window.kitsMobileSeleccionarMarca('')">
-                <span class="fw-bold">Todos</span>
-                <div class="d-flex align-items-center gap-2">
-                    ${window.kitsData.length > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace">${window.kitsData.length}</span>` : ''}
-                    <i class="bi bi-chevron-right text-muted" style="font-size: 0.85rem;"></i>
-                </div>
+            <div class="kits-m-brand-item ${isTodosActive ? 'active' : ''}" onclick="window.kitsMobileSeleccionarMarca('')">
+                Todos
             </div>
         `;
 
         marcasSorted.forEach(item => {
             const marca = item.display;
-            const count = item.count;
+            const isBrandActive = window.kitsSidebarMarcaSeleccionada.toUpperCase() === marca.toUpperCase();
+            const displayName = window.kitsFormatearNombreMarca(marca);
 
             htmlMobile += `
-                <div class="kits-mobile-row" onclick="window.kitsMobileSeleccionarMarca('${escapeHtml(marca)}')">
-                    <span class="fw-bold text-dark">${escapeHtml(marca)}</span>
-                    <div class="d-flex align-items-center gap-2">
-                        ${count > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace">${count}</span>` : ''}
-                        <i class="bi bi-chevron-right text-muted" style="font-size: 0.85rem;"></i>
-                    </div>
+                <div class="kits-m-brand-item ${isBrandActive ? 'active' : ''}" onclick="window.kitsMobileSeleccionarMarca('${escapeHtml(marca)}')">
+                    ${escapeHtml(displayName)}
                 </div>
             `;
         });
 
         listMobile.innerHTML = htmlMobile;
     }
+};
+
+/**
+ * Formatear nombres de marcas para visualización móvil (1:1 Imagen 2)
+ */
+window.kitsFormatearNombreMarca = function (str) {
+    if (!str) return '';
+    const upper = str.toUpperCase().trim();
+    if (upper === 'DAF') return 'Daf';
+    if (upper === 'VOLVO') return 'VOLVO';
+    if (upper === 'UD') return 'UD';
+    if (upper === 'H1') return 'H1';
+    return str.toLowerCase().replace(/(?:^|\s|-|\/)\w/g, m => m.toUpperCase());
 };
 
 /**
@@ -401,6 +408,8 @@ window.kitsMobileMostrarMarcas = function () {
     const viewDetalle = document.getElementById('kits-mobile-view-detalle');
     if (viewMarcas) viewMarcas.style.display = 'block';
     if (viewDetalle) viewDetalle.style.display = 'none';
+
+    window.kitsPoblarSidebarMarcas();
 };
 
 /**
@@ -417,10 +426,11 @@ window.kitsMobileSeleccionarMarca = function (marca, modelo) {
     if (viewDetalle) viewDetalle.style.display = 'block';
 
     const brandTitleEl = document.getElementById('kits-mobile-detalle-brand-title');
-    const subbrandTitleEl = document.getElementById('kits-mobile-detalle-subbrand-title');
-    if (brandTitleEl) brandTitleEl.textContent = marca ? marca : 'Todos los Filtros';
-    if (subbrandTitleEl) subbrandTitleEl.textContent = marca ? marca : 'Tipo de Mantt';
+    if (brandTitleEl) {
+        brandTitleEl.textContent = marca ? window.kitsFormatearNombreMarca(marca) : 'Todos los Filtros';
+    }
 
+    window.kitsPoblarSidebarMarcas();
     window.kitsFiltrar();
 };
 
@@ -746,12 +756,12 @@ window.kitsRenderizarCardsMobile = function () {
     });
 
     let html = `
-        <table class="kits-mobile-table">
+        <table class="kits-m-table">
             <thead>
                 <tr>
-                    <th style="width: 52%;">Codigo / Descripción</th>
-                    <th class="text-center" style="width: 22%;">Cantidad</th>
-                    <th class="text-center" style="width: 26%;">Stock Almacen</th>
+                    <th style="text-align: left; padding-left: 14px;">Codigo</th>
+                    <th class="text-center" style="width: 85px;">Cantidad</th>
+                    <th class="text-center" style="width: 95px;">Stock Almacen</th>
                 </tr>
             </thead>
             <tbody>
@@ -764,12 +774,12 @@ window.kitsRenderizarCardsMobile = function () {
         const itemTipo = firstItem.tipo_mp || 'MP1';
         const itemAlias = firstItem.nombre_kit || '';
 
-        // Fila Encabezado de Sección en Negrita (1:1 Imagen 3) con acciones
+        // Fila Encabezado de Sección en Negrita (1:1 Imagen 3)
         html += `
             <tr>
-                <td colspan="3" class="kits-mobile-type-title">
+                <td colspan="3" class="kits-m-section-header">
                     <div class="d-flex align-items-center justify-content-between">
-                        <span class="fw-black text-dark text-uppercase">${escapeHtml(groupTitle)}</span>
+                        <span>${escapeHtml(groupTitle)}</span>
                         <div class="d-flex align-items-center gap-1.5">
                             <button type="button" class="btn btn-sm btn-light border border-slate-200 text-secondary px-2 py-0.5 rounded-2 d-inline-flex align-items-center gap-1 shadow-2xs" style="font-size: 0.72rem;" onclick="event.stopPropagation(); window.kitsEditarKit('${escapeHtml(itemMarca)}', '${escapeHtml(itemModelo)}', '${escapeHtml(itemTipo)}', '${escapeHtml(itemAlias)}')" title="Editar kit">
                                 <i class="bi bi-pencil-square text-primary"></i> <span>Editar</span>
@@ -783,37 +793,25 @@ window.kitsRenderizarCardsMobile = function () {
             </tr>
         `;
 
-        // Filas de repuestos
+        // Filas de repuestos (1:1 Imagen 3)
         items.forEach(it => {
             const kCod = (it.item_codigo || '').toString().trim();
             const kNom = (it.item_nombre || '').toString().trim();
 
             const invItem = window.kitsBuscarItemAlmacen(kCod, kNom);
 
-            let displayCodigo = invItem ? (invItem.codInv || invItem.codigo || invItem.codigo_articulo) : kCod;
-            if (!displayCodigo || displayCodigo === '-') {
-                displayCodigo = '—';
-            } else if (/^\d+$/.test(displayCodigo)) {
-                displayCodigo = 'INV-' + displayCodigo.padStart(4, '0');
-            }
-
             const displayNombre = (invItem ? invItem.nombre : kNom) || '—';
             const stockNum = invItem != null ? invItem.stock : (it.stock_almacen != null ? it.stock_almacen : 0);
 
             html += `
-                <tr onclick="window.kitsEditarKit('${escapeHtml(it.marca_vehiculo)}', '${escapeHtml(it.modelo_vehiculo)}', '${escapeHtml(it.tipo_mp)}', '${escapeHtml(it.nombre_kit || '')}')" style="cursor: pointer;">
-                    <td class="align-middle">
-                        <div class="d-flex flex-column gap-0.5">
-                            ${displayCodigo && displayCodigo !== '—' ? `<span class="badge bg-light text-dark border font-monospace fw-bold px-1.5 py-0.5 me-auto mb-1" style="font-size: 0.72rem; border-color: #cbd5e1 !important;">${escapeHtml(displayCodigo)}</span>` : ''}
-                            <span class="fw-bold text-dark" style="font-size: 0.82rem; line-height: 1.3;">
-                                ${escapeHtml(displayNombre)}
-                            </span>
-                        </div>
+                <tr class="kits-m-row" onclick="window.kitsEditarKit('${escapeHtml(it.marca_vehiculo)}', '${escapeHtml(it.modelo_vehiculo)}', '${escapeHtml(it.tipo_mp)}', '${escapeHtml(it.nombre_kit || '')}')">
+                    <td class="kits-m-cell-name">
+                        ${escapeHtml(displayNombre)}
                     </td>
-                    <td class="text-center align-middle font-monospace fw-bold" style="font-size: 0.85rem; color: #334155;">
+                    <td class="kits-m-cell-cant">
                         ${it.cantidad.toFixed(2)}
                     </td>
-                    <td class="text-center align-middle font-monospace fw-bold" style="font-size: 0.85rem; color: ${stockNum > 0 ? '#0f172a' : '#94a3b8'};">
+                    <td class="kits-m-cell-stock">
                         ${stockNum}
                     </td>
                 </tr>
