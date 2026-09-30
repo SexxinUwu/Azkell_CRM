@@ -677,6 +677,9 @@
             </div>
 
             <div class="gre-drawer-body">
+                <form id="greFormulario" onsubmit="window.greGuardarFormulario(event)">
+                    <input type="hidden" id="greFormId" value="">
+
                     <!-- BARRA RÁPIDA: Autocompletar desde Orden de Viaje -->
                     <div class="card p-3 mb-3 border-primary bg-primary-subtle shadow-sm" style="border-radius: var(--gre-radius-md);">
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">

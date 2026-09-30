@@ -340,6 +340,16 @@
         window.greCargarGuias();
     };
 
+    function setVal(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.value = (value !== null && value !== undefined) ? value : '';
+    }
+
+    function getVal(id) {
+        var el = document.getElementById(id);
+        return el ? el.value.trim() : '';
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // 6. FORMULARIO DRAWER CREAR / EDITAR
     // ═══════════════════════════════════════════════════════════════
@@ -347,25 +357,25 @@
         const overlay = document.getElementById('greDrawerOverlay');
         const titulo = document.getElementById('greDrawerTitulo');
         const form = document.getElementById('greFormulario');
-        if (!overlay || !form) return;
+        if (!overlay) return;
 
-        form.reset();
-        document.getElementById('greFormId').value = '';
+        if (form) form.reset();
+        setVal('greFormId', '');
         if (titulo) titulo.innerHTML = `<i class="bi bi-file-earmark-arrow-up-fill text-primary"></i> <span>Nueva Guía de Remisión Remitente (GRE)</span>`;
 
         // Fechas de hoy
         const hoy = new Date().toISOString().split('T')[0];
-        document.getElementById('greFormFechaEmision').value = hoy;
-        document.getElementById('greFormFechaTraslado').value = hoy;
-        document.getElementById('greFormSerie').value = 'T001';
-        document.getElementById('greFormModalidad').value = '01';
+        setVal('greFormFechaEmision', hoy);
+        setVal('greFormFechaTraslado', hoy);
+        setVal('greFormSerie', 'T001');
+        setVal('greFormModalidad', '01');
         window.greToggleModalidadTransporte('01');
 
         // Sugerir datos de remitente (YOGUI TRANSPORT o empresa configurada)
-        document.getElementById('greFormRemitenteRuc').value = '20609532484';
-        document.getElementById('greFormRemitenteRazon').value = 'YOGUI TRANSPORT S.A.C.';
-        document.getElementById('greFormPartidaUbigeo').value = '150101';
-        document.getElementById('greFormPartidaDireccion').value = 'AV. NESTOR GAMBETTA KM 3.5 - CALLAO';
+        setVal('greFormRemitenteRuc', '20609532484');
+        setVal('greFormRemitenteRazon', 'YOGUI TRANSPORT S.A.C.');
+        setVal('greFormPartidaUbigeo', '150101');
+        setVal('greFormPartidaDireccion', 'AV. NESTOR GAMBETTA KM 3.5 - CALLAO');
 
         // Obtener correlativo sugerido
         await window.greActualizarCorrelativoSugerido();
@@ -400,44 +410,45 @@
 
             if (titulo) titulo.innerHTML = `<i class="bi bi-pencil-square text-primary"></i> <span>Editar Guía Remitente ${g.numero_guia}</span>`;
 
-            document.getElementById('greFormId').value = g.id;
-            document.getElementById('greFormSerie').value = g.serie || 'T001';
-            document.getElementById('greFormCorrelativo').value = g.correlativo || '';
-            document.getElementById('greFormFechaEmision').value = g.fecha_emision ? String(g.fecha_emision).split('T')[0] : '';
-            document.getElementById('greFormFechaTraslado').value = g.fecha_traslado ? String(g.fecha_traslado).split('T')[0] : '';
-            document.getElementById('greFormModalidad').value = g.modalidad_transporte || '01';
-            document.getElementById('greFormMotivo').value = g.motivo_traslado || '01';
-            document.getElementById('greFormDescMotivo').value = g.descripcion_motivo || 'VENTA';
+            setVal('greFormId', g.id);
+            setVal('greFormSerie', g.serie || 'T001');
+            setVal('greFormCorrelativo', g.correlativo || '');
+            setVal('greFormFechaEmision', g.fecha_emision ? String(g.fecha_emision).split('T')[0] : '');
+            setVal('greFormFechaTraslado', g.fecha_traslado ? String(g.fecha_traslado).split('T')[0] : '');
+            setVal('greFormModalidad', g.modalidad_transporte || '01');
+            setVal('greFormMotivo', g.motivo_traslado || '01');
+            setVal('greFormDescMotivo', g.descripcion_motivo || 'VENTA');
 
-            document.getElementById('greFormRemitenteRuc').value = g.remitente_ruc || '';
-            document.getElementById('greFormRemitenteRazon').value = g.remitente_razon_social || '';
-            document.getElementById('greFormDestinatarioRuc').value = g.destinatario_ruc || '';
-            document.getElementById('greFormDestinatarioRazon').value = g.destinatario_razon_social || '';
+            setVal('greFormRemitenteRuc', g.remitente_ruc || '');
+            setVal('greFormRemitenteRazon', g.remitente_razon_social || '');
+            setVal('greFormDestinatarioRuc', g.destinatario_ruc || '');
+            setVal('greFormDestinatarioRazon', g.destinatario_razon_social || '');
 
-            document.getElementById('greFormPartidaUbigeo').value = g.partida_ubigeo || '';
-            document.getElementById('greFormPartidaDireccion').value = g.partida_direccion || '';
-            document.getElementById('greFormLlegadaUbigeo').value = g.llegada_ubigeo || '';
-            document.getElementById('greFormLlegadaDireccion').value = g.llegada_direccion || '';
+            setVal('greFormPartidaUbigeo', g.partida_ubigeo || '');
+            setVal('greFormPartidaDireccion', g.partida_direccion || '');
+            setVal('greFormLlegadaUbigeo', g.llegada_ubigeo || '');
+            setVal('greFormLlegadaDireccion', g.llegada_direccion || '');
 
             // Transporte público
-            document.getElementById('greFormTranspRuc').value = g.transportista_ruc || '';
-            document.getElementById('greFormTranspRazon').value = g.transportista_razon_social || '';
-            document.getElementById('greFormTranspMtc').value = g.transportista_reg_mtc || '';
+            setVal('greFormTranspRuc', g.transportista_ruc || '');
+            setVal('greFormTranspRazon', g.transportista_razon_social || '');
+            setVal('greFormTranspMtc', g.transportista_reg_mtc || '');
 
             // Transporte privado
-            document.getElementById('greFormVehiculoPlaca').value = g.vehiculo_placa || '';
-            document.getElementById('greFormVehiculoSecundario').value = g.vehiculo_secundario_placa || '';
-            document.getElementById('greFormConductorDni').value = g.conductor_num_doc || '';
-            document.getElementById('greFormConductorNombres').value = g.conductor_nombres || '';
-            document.getElementById('greFormConductorApellidos').value = g.conductor_apellidos || '';
-            document.getElementById('greFormConductorLicencia').value = g.conductor_licencia || '';
+            setVal('greFormVehiculoPlaca', g.vehiculo_placa || '');
+            setVal('greFormVehiculoSecundario', g.vehiculo_secundario_placa || '');
+            setVal('greFormConductorDni', g.conductor_num_doc || '');
+            setVal('greFormConductorNombres', g.conductor_nombres || '');
+            setVal('greFormConductorApellidos', g.conductor_apellidos || '');
+            setVal('greFormConductorLicencia', g.conductor_licencia || '');
 
             window.greToggleModalidadTransporte(g.modalidad_transporte || '01');
 
-            document.getElementById('greFormPesoTotal').value = g.peso_total || '1.00';
-            document.getElementById('greFormUnidadMedida').value = g.unidad_medida || 'KGM';
-            document.getElementById('greFormTotalBultos').value = g.total_bultos || 1;
-            document.getElementById('greFormIndicadorTransbordo').checked = !!g.indicador_transbordo;
+            setVal('greFormPesoTotal', g.peso_total || '1.00');
+            setVal('greFormUnidadMedida', g.unidad_medida || 'KGM');
+            setVal('greFormTotalBultos', g.total_bultos || 1);
+            var transbEl = document.getElementById('greFormIndicadorTransbordo');
+            if (transbEl) transbEl.checked = !!g.indicador_transbordo;
 
             document.getElementById('greFormOrdenViaje').value = g.orden_viaje || '';
             document.getElementById('greFormOrdenServicio').value = g.orden_servicio || '';
@@ -717,42 +728,42 @@
             });
         });
 
-        const id = document.getElementById('greFormId').value;
-        const modalidad = document.getElementById('greFormModalidad').value;
+        const id = getVal('greFormId');
+        const modalidad = getVal('greFormModalidad') || '01';
 
         const payload = {
-            serie: document.getElementById('greFormSerie').value.toUpperCase().trim(),
-            correlativo: document.getElementById('greFormCorrelativo').value,
-            fecha_emision: document.getElementById('greFormFechaEmision').value,
-            fecha_traslado: document.getElementById('greFormFechaTraslado').value,
+            serie: (getVal('greFormSerie') || 'T001').toUpperCase().trim(),
+            correlativo: getVal('greFormCorrelativo'),
+            fecha_emision: getVal('greFormFechaEmision'),
+            fecha_traslado: getVal('greFormFechaTraslado'),
             modalidad_transporte: modalidad,
-            motivo_traslado: document.getElementById('greFormMotivo').value,
-            descripcion_motivo: document.getElementById('greFormDescMotivo').value,
-            remitente_ruc: document.getElementById('greFormRemitenteRuc').value.trim(),
-            remitente_razon_social: document.getElementById('greFormRemitenteRazon').value.trim(),
-            destinatario_ruc: document.getElementById('greFormDestinatarioRuc').value.trim(),
-            destinatario_razon_social: document.getElementById('greFormDestinatarioRazon').value.trim(),
-            partida_ubigeo: document.getElementById('greFormPartidaUbigeo').value.trim(),
-            partida_direccion: document.getElementById('greFormPartidaDireccion').value.trim(),
-            llegada_ubigeo: document.getElementById('greFormLlegadaUbigeo').value.trim(),
-            llegada_direccion: document.getElementById('greFormLlegadaDireccion').value.trim(),
-            transportista_ruc: document.getElementById('greFormTranspRuc')?.value?.trim() || null,
-            transportista_razon_social: document.getElementById('greFormTranspRazon')?.value?.trim() || null,
-            transportista_reg_mtc: document.getElementById('greFormTranspMtc')?.value?.trim() || null,
-            vehiculo_placa: document.getElementById('greFormVehiculoPlaca')?.value?.trim() || null,
-            vehiculo_secundario_placa: document.getElementById('greFormVehiculoSecundario')?.value?.trim() || null,
-            conductor_num_doc: document.getElementById('greFormConductorDni')?.value?.trim() || null,
-            conductor_nombres: document.getElementById('greFormConductorNombres')?.value?.trim() || null,
-            conductor_apellidos: document.getElementById('greFormConductorApellidos')?.value?.trim() || null,
-            conductor_licencia: document.getElementById('greFormConductorLicencia')?.value?.trim() || null,
-            peso_total: parseFloat(document.getElementById('greFormPesoTotal').value) || 1,
-            unidad_medida: document.getElementById('greFormUnidadMedida').value || 'KGM',
-            total_bultos: parseInt(document.getElementById('greFormTotalBultos').value) || 1,
-            indicador_transbordo: document.getElementById('greFormIndicadorTransbordo').checked,
-            orden_viaje: document.getElementById('greFormOrdenViaje').value.trim() || null,
-            orden_servicio: document.getElementById('greFormOrdenServicio').value.trim() || null,
-            grt_vinculada_numero: document.getElementById('greFormGrtVinculada').value.trim() || null,
-            observaciones: document.getElementById('greFormObservaciones').value.trim() || null,
+            motivo_traslado: getVal('greFormMotivo') || '01',
+            descripcion_motivo: getVal('greFormDescMotivo') || 'VENTA',
+            remitente_ruc: getVal('greFormRemitenteRuc'),
+            remitente_razon_social: getVal('greFormRemitenteRazon'),
+            destinatario_ruc: getVal('greFormDestinatarioRuc'),
+            destinatario_razon_social: getVal('greFormDestinatarioRazon'),
+            partida_ubigeo: getVal('greFormPartidaUbigeo'),
+            partida_direccion: getVal('greFormPartidaDireccion'),
+            llegada_ubigeo: getVal('greFormLlegadaUbigeo'),
+            llegada_direccion: getVal('greFormLlegadaDireccion'),
+            transportista_ruc: getVal('greFormTranspRuc') || null,
+            transportista_razon_social: getVal('greFormTranspRazon') || null,
+            transportista_reg_mtc: getVal('greFormTranspMtc') || null,
+            vehiculo_placa: getVal('greFormVehiculoPlaca') || null,
+            vehiculo_secundario_placa: getVal('greFormVehiculoSecundario') || null,
+            conductor_num_doc: getVal('greFormConductorDni') || null,
+            conductor_nombres: getVal('greFormConductorNombres') || null,
+            conductor_apellidos: getVal('greFormConductorApellidos') || null,
+            conductor_licencia: getVal('greFormConductorLicencia') || null,
+            peso_total: parseFloat(getVal('greFormPesoTotal')) || 1,
+            unidad_medida: getVal('greFormUnidadMedida') || 'KGM',
+            total_bultos: parseInt(getVal('greFormTotalBultos')) || 1,
+            indicador_transbordo: document.getElementById('greFormIndicadorTransbordo') ? document.getElementById('greFormIndicadorTransbordo').checked : false,
+            orden_viaje: getVal('greFormOrdenViaje') || null,
+            orden_servicio: getVal('greFormOrdenServicio') || null,
+            grt_vinculada_numero: getVal('greFormGrtVinculada') || null,
+            observaciones: getVal('greFormObservaciones') || null,
             items
         };
 

@@ -224,13 +224,20 @@
         cargarTabla();
     };
 
+    function setVal(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.value = (value !== null && value !== undefined) ? value : '';
+    }
+
     // ═══════════════════════════════════════════════════════════
     // ABRIR MODAL NUEVA GRT
     // ═══════════════════════════════════════════════════════════
     window.grtAbrirNueva = async function() {
-        document.getElementById('grtEditId').value = '';
-        document.getElementById('formGRT').reset();
-        document.getElementById('grtModalTitle').textContent = 'Nueva Guía Transportista';
+        setVal('grtEditId', '');
+        var form = document.getElementById('formGRT');
+        if (form) form.reset();
+        var title = document.getElementById('grtModalTitle');
+        if (title) title.textContent = 'Nueva Guía Transportista';
         setFechasDefault();
 
         // Obtener siguiente correlativo
@@ -238,12 +245,15 @@
             const resp = await fetch(API + '/ultimo-correlativo?serie=V001');
             const json = await resp.json();
             if (json.ok) {
-                document.getElementById('grt_correlativo').value = String(json.correlativo_sugerido).padStart(8, '0');
+                setVal('grt_correlativo', String(json.correlativo_sugerido).padStart(8, '0'));
             }
         } catch (_) {}
 
-        var modal = new bootstrap.Modal(document.getElementById('modalNuevaGRT'));
-        modal.show();
+        var modalEl = document.getElementById('modalNuevaGRT');
+        if (modalEl) {
+            var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modal.show();
+        }
     };
 
     // ═══════════════════════════════════════════════════════════
@@ -256,43 +266,47 @@
             if (!json.ok) return toast('Error: ' + (json.error || 'No encontrada'));
 
             const g = json.guia;
-            document.getElementById('grtEditId').value = g.id;
-            document.getElementById('grtModalTitle').textContent = 'Editar ' + g.numero_guia;
-            document.getElementById('grt_serie').value = g.serie || 'V001';
-            document.getElementById('grt_correlativo').value = String(g.correlativo).padStart(8, '0');
-            document.getElementById('grt_fecha_emision').value = g.fecha_emision ? g.fecha_emision.slice(0, 10) : '';
-            document.getElementById('grt_fecha_traslado').value = g.fecha_traslado ? g.fecha_traslado.slice(0, 10) : '';
-            document.getElementById('grt_motivo_traslado').value = g.motivo_traslado || '01';
-            document.getElementById('grt_peso_total').value = g.peso_total || 1;
-            document.getElementById('grt_registro_mtc').value = g.transportista_reg_mtc || '';
-            document.getElementById('grt_remitente_ruc').value = g.remitente_ruc || '';
-            document.getElementById('grt_remitente_razon_social').value = g.remitente_razon_social || '';
-            document.getElementById('grt_destinatario_ruc').value = g.destinatario_ruc || '';
-            document.getElementById('grt_destinatario_razon_social').value = g.destinatario_razon_social || '';
-            document.getElementById('grt_partida_ubigeo').value = g.partida_ubigeo || '';
-            document.getElementById('grt_partida_direccion').value = g.partida_direccion || '';
-            document.getElementById('grt_llegada_ubigeo').value = g.llegada_ubigeo || '';
-            document.getElementById('grt_llegada_direccion').value = g.llegada_direccion || '';
-            document.getElementById('grt_vehiculo_placa').value = g.vehiculo_placa || '';
-            document.getElementById('grt_vehiculo_secundario_placa').value = g.vehiculo_secundario_placa || '';
-            document.getElementById('grt_conductor_num_doc').value = g.conductor_num_doc || '';
-            document.getElementById('grt_conductor_licencia').value = g.conductor_licencia || '';
-            document.getElementById('grt_conductor_nombres').value = g.conductor_nombres || '';
-            document.getElementById('grt_conductor_apellidos').value = g.conductor_apellidos || '';
-            document.getElementById('grt_costo_flete').value = g.costo_flete || 0;
-            document.getElementById('grt_observaciones').value = g.observaciones || '';
-            document.getElementById('grt_orden_servicio').value = g.orden_servicio || '';
-            document.getElementById('grt_gre_vinculada').value = g.gre_vinculada_numero || '';
+            setVal('grtEditId', g.id);
+            var title = document.getElementById('grtModalTitle');
+            if (title) title.textContent = 'Editar ' + g.numero_guia;
+            setVal('grt_serie', g.serie || 'V001');
+            setVal('grt_correlativo', String(g.correlativo).padStart(8, '0'));
+            setVal('grt_fecha_emision', g.fecha_emision ? g.fecha_emision.slice(0, 10) : '');
+            setVal('grt_fecha_traslado', g.fecha_traslado ? g.fecha_traslado.slice(0, 10) : '');
+            setVal('grt_motivo_traslado', g.motivo_traslado || '01');
+            setVal('grt_peso_total', g.peso_total || 1);
+            setVal('grt_registro_mtc', g.transportista_reg_mtc || '');
+            setVal('grt_remitente_ruc', g.remitente_ruc || '');
+            setVal('grt_remitente_razon_social', g.remitente_razon_social || '');
+            setVal('grt_destinatario_ruc', g.destinatario_ruc || '');
+            setVal('grt_destinatario_razon_social', g.destinatario_razon_social || '');
+            setVal('grt_partida_ubigeo', g.partida_ubigeo || '');
+            setVal('grt_partida_direccion', g.partida_direccion || '');
+            setVal('grt_llegada_ubigeo', g.llegada_ubigeo || '');
+            setVal('grt_llegada_direccion', g.llegada_direccion || '');
+            setVal('grt_vehiculo_placa', g.vehiculo_placa || '');
+            setVal('grt_vehiculo_secundario_placa', g.vehiculo_secundario_placa || '');
+            setVal('grt_conductor_num_doc', g.conductor_num_doc || '');
+            setVal('grt_conductor_licencia', g.conductor_licencia || '');
+            setVal('grt_conductor_nombres', g.conductor_nombres || '');
+            setVal('grt_conductor_apellidos', g.conductor_apellidos || '');
+            setVal('grt_costo_flete', g.costo_flete || 0);
+            setVal('grt_observaciones', g.observaciones || '');
+            setVal('grt_orden_servicio', g.orden_servicio || '');
+            setVal('grt_gre_vinculada', g.gre_vinculada_numero || '');
 
             // Items
             if (json.items && json.items.length) {
-                document.getElementById('grt_descripcion_carga').value = json.items[0].descripcion || 'CARGA GENERAL';
-                document.getElementById('grt_cantidad').value = json.items[0].cantidad || 1;
-                document.getElementById('grt_unidad_item').value = json.items[0].unidad_medida || 'NIU';
+                setVal('grt_descripcion_carga', json.items[0].descripcion || 'CARGA GENERAL');
+                setVal('grt_cantidad', json.items[0].cantidad || 1);
+                setVal('grt_unidad_item', json.items[0].unidad_medida || 'NIU');
             }
 
-            var modal = new bootstrap.Modal(document.getElementById('modalNuevaGRT'));
-            modal.show();
+            var modalEl = document.getElementById('modalNuevaGRT');
+            if (modalEl) {
+                var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                modal.show();
+            }
         } catch (e) {
             toast('Error cargando guía');
         }
