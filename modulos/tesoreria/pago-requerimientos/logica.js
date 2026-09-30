@@ -827,8 +827,27 @@
                     const cu = parseFloat(it.costo_unitario || it.precio_unitario || 0);
                     const imp = parseFloat(it.importe || (cant * cu));
                     totalCalc += imp;
-                    const codArt = it.inventario_id || it.codigo || it.cod_art || `INV-${String(idx + 1).padStart(4, '0')}`;
-                    const descArt = it.descripcion || it.nombre_producto || it.item || 'Artículo';
+
+                    let codArt = (it.inventario_id || it.codigo || it.cod_art || '').trim();
+                    let rawDesc = (it.descripcion || it.nombre_producto || it.item || '').trim();
+
+                    // Detectar y limpiar prefijos de código en la descripción (ej. "SERV-0007 — DESCRIPCIÓN")
+                    const matchPrefijo = rawDesc.match(/^([A-Z0-9_\-\.]+)\s*[—\-–]\s*(.+)$/i);
+                    if (matchPrefijo) {
+                        if (!codArt || codArt.startsWith('INV-')) {
+                            codArt = matchPrefijo[1].trim();
+                        }
+                        rawDesc = matchPrefijo[2].trim();
+                    } else if (codArt && rawDesc.startsWith(codArt + ' — ')) {
+                        rawDesc = rawDesc.slice(codArt.length + 3).trim();
+                    } else if (codArt && rawDesc.startsWith(codArt + ' - ')) {
+                        rawDesc = rawDesc.slice(codArt.length + 3).trim();
+                    }
+
+                    if (!codArt) {
+                        codArt = '—';
+                    }
+                    const descArt = rawDesc || 'Artículo';
 
                     return `
                         <tr>
