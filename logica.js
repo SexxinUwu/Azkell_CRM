@@ -2739,12 +2739,18 @@ window._cbFiltrar = function(id) {
         }
         if (String(id).startsWith('ent-art-') && q) {
             var itemIdx = id.replace('ent-art-', '');
+            var isServHint = /^(servicio|mantenimiento|reparacion|alquiler|flete|torno|taxi|mano de obra|lavado|planchado|pintura|diagnostico|auxilio|grua)/i.test(rawText.trim());
             dd.style.display = 'block';
             dd.innerHTML = '<div class="p-3 text-center text-muted small" style="background:#f8fafc;">' +
-                '<div class="mb-1 fw-bold text-dark"><i class="bi bi-search me-1"></i>No se encontró "' + _escCbH(rawText) + '"</div>' +
-                '<button type="button" class="btn btn-sm btn-primary fw-bold mt-1 px-3" style="border-radius:8px;background:#0284c7;border-color:#0284c7;" onmousedown="window.asegurarModalArticuloYAbrir(\'' + _escCbA(rawText) + '\', ' + itemIdx + ')">' +
-                '<i class="bi bi-box-seam me-1"></i>Registrar Nuevo Artículo' +
-                '</button></div>';
+                '<div class="mb-2 fw-bold text-dark"><i class="bi bi-search me-1"></i>No se encontró "' + _escCbH(rawText) + '"</div>' +
+                '<div class="d-flex justify-content-center gap-2 flex-wrap">' +
+                '<button type="button" class="btn btn-sm btn-success fw-bold px-3 shadow-2xs" style="border-radius:8px;background:#16a34a;border-color:#16a34a;" onmousedown="window.asegurarModalArticuloYAbrir(\'' + _escCbA(rawText) + '\', ' + itemIdx + ', \'servicio\')">' +
+                '<i class="bi bi-tools me-1"></i>+ Registrar Servicio (SERV)' +
+                '</button>' +
+                '<button type="button" class="btn btn-sm btn-primary fw-bold px-3 shadow-2xs" style="border-radius:8px;background:#0284c7;border-color:#0284c7;" onmousedown="window.asegurarModalArticuloYAbrir(\'' + _escCbA(rawText) + '\', ' + itemIdx + ', \'articulo\')">' +
+                '<i class="bi bi-box-seam me-1"></i>+ Registrar Artículo (INV)' +
+                '</button>' +
+                '</div></div>';
             return;
         }
         dd.style.display = 'none';
@@ -2766,8 +2772,18 @@ window._cbFiltrar = function(id) {
     }
     if (String(id).startsWith('ent-art-') && q) {
         var itemIdx = id.replace('ent-art-', '');
-        htmlOpts += '<div class="cb-opt text-primary fw-bold border-top mt-1 pt-2" style="background:#eff6ff;" onmousedown="window.asegurarModalArticuloYAbrir(\'' + _escCbA(rawText) + '\', ' + itemIdx + ')">' +
-            '<i class="bi bi-plus-circle-fill me-1"></i>+ Registrar nuevo artículo "' + _escCbH(rawText) + '"</div>';
+        var isServHint = /^(servicio|mantenimiento|reparacion|alquiler|flete|torno|taxi|mano de obra|lavado|planchado|pintura|diagnostico|auxilio|grua)/i.test(rawText.trim());
+        if (isServHint) {
+            htmlOpts += '<div class="cb-opt text-success fw-bold border-top mt-1 pt-2" style="background:#f0fdf4;" onmousedown="window.asegurarModalArticuloYAbrir(\'' + _escCbA(rawText) + '\', ' + itemIdx + ', \'servicio\')">' +
+                '<i class="bi bi-tools text-success me-1"></i>+ Registrar nuevo SERVICIO "' + _escCbH(rawText) + '" (Código SERV)</div>';
+            htmlOpts += '<div class="cb-opt text-primary fw-bold" style="background:#eff6ff;" onmousedown="window.asegurarModalArticuloYAbrir(\'' + _escCbA(rawText) + '\', ' + itemIdx + ', \'articulo\')">' +
+                '<i class="bi bi-box-seam me-1"></i>+ Registrar nuevo ARTÍCULO "' + _escCbH(rawText) + '" (Código INV)</div>';
+        } else {
+            htmlOpts += '<div class="cb-opt text-primary fw-bold border-top mt-1 pt-2" style="background:#eff6ff;" onmousedown="window.asegurarModalArticuloYAbrir(\'' + _escCbA(rawText) + '\', ' + itemIdx + ', \'articulo\')">' +
+                '<i class="bi bi-box-seam me-1"></i>+ Registrar nuevo artículo "' + _escCbH(rawText) + '" (Código INV)</div>';
+            htmlOpts += '<div class="cb-opt text-success fw-bold" style="background:#f0fdf4;" onmousedown="window.asegurarModalArticuloYAbrir(\'' + _escCbA(rawText) + '\', ' + itemIdx + ', \'servicio\')">' +
+                '<i class="bi bi-tools text-success me-1"></i>+ Registrar nuevo servicio "' + _escCbH(rawText) + '" (Código SERV)</div>';
+        }
     }
     dd.innerHTML = htmlOpts;
 };

@@ -454,7 +454,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         if (marca) descGenerada += ' / ' + String(marca).trim();
         const descFinal = descGenerada || descripcion || 'Sin nombre';
 
-        const prefix = (tipo === 'Servicio' || tipo === 'SERV') ? 'SERV' : 'INV';
+        const isServ = (tipo === 'Servicio' || tipo === 'SERV' || /^(servicio|mantenimiento|reparacion|alquiler|flete|torno|taxi|mano de obra|lavado|planchado|pintura|diagnostico|auxilio|grua)/i.test((articulo || '').trim()) || /^(servicio|mantenimiento|reparacion|alquiler|flete|torno|taxi|mano de obra|lavado|planchado|pintura|diagnostico|auxilio|grua)/i.test((descripcion || '').trim()));
+        const tipoFinal = (tipo || (isServ ? 'Servicio' : null));
+        const unidadFinal = (unidad || (isServ ? 'Servicio' : null));
+        const prefix = (tipoFinal === 'Servicio' || tipoFinal === 'SERV' || isServ) ? 'SERV' : 'INV';
+
         _generarCodigoAlmacen(prefix, null, (err, id) => {
             if (err) return res.status(500).json({ error: err.message });
             db.query(`INSERT INTO inventario
@@ -464,11 +468,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
              ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras,
              stock_regularizado,fecha_regularizacion)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-                [id, descFinal, articulo || null, codigo_articulo || null, familia || null, almacen || null, unidad || null, monedaVal,
+                [id, descFinal, articulo || null, codigo_articulo || null, familia || null, almacen || null, unidadFinal, monedaVal,
                     costoRef, costoSoles, tc,
                     proveedor_id || null, marca || null, observaciones || null,
                     codigo_item || null, marca_unidad || null, sistema || null, sub_sistema || null,
-                    tipo || null, sub_tipo || null, ubicacion || null,
+                    tipoFinal, sub_tipo || null, ubicacion || null,
                     (anaquel != null && String(anaquel).trim() !== '') ? String(anaquel).trim() : null, parseFloat(stock_min) || 0, parseFloat(stock_max) || 0,
                     estado_art || 'Activo', codigo_barras || null,
                     stockReg, fechaReg],

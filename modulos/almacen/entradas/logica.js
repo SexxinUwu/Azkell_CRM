@@ -3657,8 +3657,9 @@ window.asegurarModalProveedorYAbrir = function(rucTyped) {
     }
 };
 
-window.asegurarModalArticuloYAbrir = function(articuloTyped, itemIdx) {
+window.asegurarModalArticuloYAbrir = function(articuloTyped, itemIdx, modo) {
     var raw = (articuloTyped || '').trim();
+    var isServicio = (modo === 'servicio') || (!modo && /^(servicio|mantenimiento|reparacion|alquiler|flete|torno|taxi|mano de obra|lavado|planchado|pintura|diagnostico|auxilio|grua)/i.test(raw));
 
     var openForm = function() {
         if (typeof window.abrirModalInventario === 'function') {
@@ -3691,13 +3692,14 @@ window.asegurarModalArticuloYAbrir = function(articuloTyped, itemIdx) {
                             }
                         }
                     }
+                    var labelTipo = (newId && String(newId).startsWith('SERV')) ? 'Servicio' : 'Artículo';
                     if (typeof window.rotToast === 'function') {
-                        window.rotToast('Artículo "' + fullDesc + '" registrado y seleccionado.', 'bg-success');
+                        window.rotToast(labelTipo + ' "' + fullDesc + '" registrado y seleccionado.', 'bg-success');
                     }
                 }, true);
             };
 
-            window.abrirModalInventario();
+            window.abrirModalInventario(null, isServicio ? 'servicios' : null);
 
             var drawerEl = document.getElementById('inv-form-drawer');
             if (drawerEl) {
@@ -3712,11 +3714,17 @@ window.asegurarModalArticuloYAbrir = function(articuloTyped, itemIdx) {
                 var artEl = document.getElementById('inv-f-articulo');
                 if (artEl && raw) {
                     artEl.value = raw;
-                    if (typeof window._invActualizarPreview === 'function') {
-                        window._invActualizarPreview();
+                }
+                if (isServicio) {
+                    if (typeof window._cbSet === 'function') {
+                        window._cbSet('inv-f-tipo', 'Servicio', 'Servicio');
+                        window._cbSet('inv-f-unidad', 'Servicio', 'Servicio');
                     }
                 }
-            }, 150);
+                if (typeof window._invActualizarPreview === 'function') {
+                    window._invActualizarPreview();
+                }
+            }, 180);
         }
     };
 
