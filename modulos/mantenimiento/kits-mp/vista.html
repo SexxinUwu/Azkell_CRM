@@ -18,7 +18,7 @@
     box-sizing: border-box;
 }
 
-/* Left Master Sidebar (Marcas Motoras) */
+/* Left Master Sidebar (Marcas Motoras & Modelos) */
 #mod-kits-mp .kits-sidebar-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -61,14 +61,40 @@
     border-color: #bae6fd;
     box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
 }
+#mod-kits-mp .kits-nav-subitem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 12px 7px 24px;
+    border-radius: 10px;
+    font-size: 0.80rem;
+    font-weight: 500;
+    color: #64748b;
+    text-decoration: none;
+    transition: all 0.16s ease;
+    cursor: pointer;
+    margin-bottom: 2px;
+    border: 1px solid transparent;
+    user-select: none;
+}
+#mod-kits-mp .kits-nav-subitem:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+#mod-kits-mp .kits-nav-subitem.active {
+    background: #e0f2fe;
+    color: #0369a1;
+    font-weight: 700;
+    border-color: #bae6fd;
+}
 
-/* Control Bar (Search + Apple Segmented Pill) */
+/* Control Bar (Single Unified Search) */
 #mod-kits-mp .ck-apple-search {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
-    padding: 8px 14px 8px 38px;
-    font-size: 0.85rem;
+    padding: 9px 16px 9px 40px;
+    font-size: 0.88rem;
     font-weight: 500;
     transition: all 0.2s ease;
     color: #1e293b;
@@ -79,34 +105,6 @@
     border-color: #0284c7;
     box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
     outline: none;
-}
-#mod-kits-mp .ck-apple-segmented {
-    background: #e2e8f0 !important;
-    padding: 4px !important;
-    border-radius: 14px !important;
-    display: inline-flex !important;
-    gap: 3px !important;
-    border: 1px solid #cbd5e1 !important;
-}
-#mod-kits-mp .ck-segment-item {
-    border: none;
-    background: transparent;
-    padding: 6px 14px;
-    border-radius: 10px;
-    font-size: 0.80rem;
-    font-weight: 600;
-    color: #64748b;
-    transition: all 0.18s ease;
-    cursor: pointer;
-    user-select: none;
-    white-space: nowrap;
-}
-#mod-kits-mp .ck-segment-item:hover { color: #0f172a; }
-#mod-kits-mp .ck-segment-item.active {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    font-weight: 700 !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
 }
 
 /* Desktop Table Styling */
@@ -315,44 +313,28 @@
   <!-- ── 2. CONTENEDOR MASTER-DETAIL (SIDEBAR DE MARCAS MOTORAS + TABLA SEGMENTADA) ── -->
   <div class="row g-3 flex-grow-1">
     
-    <!-- 3A. PANEL LATERAL IZQUIERDO: MARCAS MOTORAS -->
+    <!-- 3A. PANEL LATERAL IZQUIERDO: MARCAS MOTORAS Y MODELOS -->
     <div class="col-12 col-md-3 col-lg-2">
       <div class="kits-sidebar-card">
-        <!-- Buscador de marcas / placas -->
-        <div class="position-relative mb-2.5">
-          <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-2.5 text-muted" style="font-size:0.75rem;"></i>
-          <input type="text" id="buscadorSidebarMarcas" class="form-control form-control-sm ps-4" placeholder="Buscar modelo..." style="border-radius:10px; font-size:0.78rem;" oninput="window.kitsFiltrarSidebarMarcas()">
-        </div>
-
-        <!-- Lista de Marcas Motoras -->
+        <!-- Lista de Marcas Motoras y Modelos -->
         <div class="kits-nav-list custom-scrollbar flex-grow-1" id="kits-nav-sidebar-list">
-          <div class="kits-nav-item active" data-marca="" onclick="window.kitsSeleccionarMarcaSidebar('', this)">
-            <span>Todos</span>
+          <div class="kits-nav-item active" data-marca="" data-modelo="" onclick="window.kitsSeleccionarMarcaSidebar('', this)">
+            <span class="fw-bold">Todos</span>
             <span class="badge bg-light text-secondary rounded-pill font-monospace" id="badge-count-sidebar-todos">0</span>
           </div>
-          <!-- Inyectado dinámicamente -->
+          <!-- Inyectado dinámicamente con marcas y modelos -->
         </div>
       </div>
     </div>
 
-    <!-- 3B. PANEL PRINCIPAL DERECHO: BUSCADOR & TABLA SEGMENTADA -->
+    <!-- 3B. PANEL PRINCIPAL DERECHO: BUSCADOR ÚNICO & TABLA SEGMENTADA -->
     <div class="col-12 col-md-9 col-lg-10 d-flex flex-column">
       
-      <!-- Barra de herramientas superior derecha -->
-      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2.5">
-        <!-- Buscador en vivo de repuestos -->
-        <div class="position-relative flex-grow-1" style="max-width: 380px;">
+      <!-- Barra de herramientas con Buscador ÚNICO -->
+      <div class="d-flex align-items-center mb-2.5">
+        <div class="position-relative w-100">
           <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
-          <input type="text" id="buscadorKitsLive" class="ck-apple-search" placeholder="Buscar repuesto, código, tipo..." oninput="window.kitsFiltrar()">
-        </div>
-
-        <!-- Filtros segmentados por Tipo de MP -->
-        <div class="ck-apple-segmented" id="btn-group-tipos-mp">
-          <button type="button" class="ck-segment-item active" onclick="window.kitsFiltrarSegmento('TODOS', this)">Todos</button>
-          <button type="button" class="ck-segment-item" onclick="window.kitsFiltrarSegmento('MP1', this)">MP1</button>
-          <button type="button" class="ck-segment-item" onclick="window.kitsFiltrarSegmento('MP2', this)">MP2</button>
-          <button type="button" class="ck-segment-item" onclick="window.kitsFiltrarSegmento('MP3', this)">MP3</button>
-          <button type="button" class="ck-segment-item" onclick="window.kitsFiltrarSegmento('OTROS', this)">Otros</button>
+          <input type="text" id="buscadorKitsLive" class="ck-apple-search" placeholder="Buscar por repuesto, código, marca, modelo, notas..." oninput="window.kitsFiltrar()">
         </div>
       </div>
 
@@ -474,15 +456,11 @@
               <!-- Renderizado dinámico de filas -->
             </div>
 
-            <!-- Totales del Kit -->
-            <div class="p-2.5 rounded-3 bg-light border border-slate-200 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <!-- Contador de Ítems del Kit -->
+            <div class="p-2.5 rounded-3 bg-light border border-slate-200 d-flex align-items-center justify-content-between gap-2">
               <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-secondary px-2.5 py-1.5 rounded-pill font-monospace" id="modalKitItemsCounter">0 Ítems</span>
-                <span class="text-muted small">Precios referenciales tomados en tiempo real de Almacén</span>
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <span class="text-secondary fw-bold small text-uppercase">Costo Total del Kit:</span>
-                <span class="fs-6 fw-bold text-success font-monospace" id="modalKitCostoTotalPreview">S/ 0.00</span>
+                <span class="text-muted small">Repuestos y materiales vinculados al catálogo oficial de Almacén</span>
               </div>
             </div>
           </div>
