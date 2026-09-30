@@ -7,11 +7,13 @@ window.kitsDataFil = window.kitsDataFil || [];
 window._kitsAlmacenItems = window._kitsAlmacenItems || [];
 window._kitsTiposMPList = window._kitsTiposMPList || [];
 window._marcasMotorasFlota = window._marcasMotorasFlota || [];
+window._modelosPorMarcaMap = window._modelosPorMarcaMap || new Map();
+window._marcasExpandedSet = window._marcasExpandedSet || new Set();
 window.kitsRowCounter = 0;
 window.kitsDeletedItemIds = [];
 window._kitEditandoGrupo = null;
 window.kitsSidebarMarcaSeleccionada = '';
-window.kitsFiltroSegmentoActual = 'TODOS';
+window.kitsSidebarModeloSeleccionado = '';
 
 /**
  * Entry point del módulo
@@ -36,7 +38,7 @@ window.kitsCargarTabla = function (forzarRecarga) {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="4" class="text-center py-5 text-muted">
+                <td colspan="5" class="text-center py-5 text-muted">
                     <div class="spinner-border spinner-border-sm text-primary me-2"></div> Cargando kits de mantenimiento...
                 </td>
             </tr>
@@ -56,18 +58,26 @@ window.kitsCargarTabla = function (forzarRecarga) {
         fetch('/api/tipos-preventivo').then(r => r.ok ? r.json() : { data: [] }),
         fetch('/api/placas-lista').then(r => r.ok ? r.json() : []).catch(() => [])
     ]).then(([kitsResp, invData, tiposResp, placasResp]) => {
-        // 1. Mapear inventario para autocompletado, stock en vivo y sincronización de costos
+        // 1. Mapear inventario para autocompletado, stock en vivo y sincronización
         window._kitsAlmacenItems = (invData || []).map(x => {
-            const id = x.id;
-            const cod = (x.codigo_articulo || x.codigo_item || x.codigo || x.codigo_barras || (id ? `ART-${id}` : '')).toString().trim();
+            const rawId = (x.id || '').toString().trim();
+            let codInv = rawId;
+            if (/^\d+$/.test(rawId)) {
+                codInv = 'INV-' + rawId.padStart(4, '0');
+            }
+            const codArt = (x.codigo_articulo || x.codigo_item || x.codigo_barras || '').toString().trim();
             const nom = (x.descripcion || x.articulo || x.nombre || '').toString().trim();
+            const art = (x.articulo || '').toString().trim();
             const unid = (x.unidad || x.unidad_medida || 'UND').toString().toUpperCase().trim();
             const cu = parseFloat(x.costo_soles != null ? x.costo_soles : (x.costo_referencial != null ? x.costo_referencial : (x.costo_unitario || 0))) || 0;
             const stk = parseFloat(x.stock_actual != null ? x.stock_actual : (x.stock != null ? x.stock : (x.cantidad != null ? x.cantidad : 0))) || 0;
             return {
-                id: id,
-                codigo: cod,
+                id: rawId,
+                codInv: codInv,
+                codigo_articulo: codArt,
+                codigo: codInv || codArt || (rawId ? `INV-${rawId}` : ''),
                 nombre: nom,
+                articulo: art,
                 unidad: unid,
                 costo: cu,
                 stock: stk
@@ -88,11 +98,8 @@ window.kitsCargarTabla = function (forzarRecarga) {
             const kCod = (k.item_codigo || '').toString().trim();
             const kNom = (k.item_nombre || '').toString().trim();
 
-            // Sincronizar en vivo con Almacén por código de inventario o por nombre
-            const invItem = window._kitsAlmacenItems.find(x => 
-                (kCod && kCod !== '-' && x.codigo.toLowerCase() === kCod.toLowerCase()) ||
-                (kNom && x.nombre.toLowerCase() === kNom.toLowerCase())
-            );
+            // Sincronizar en vivo con Almacén por código de inventario o por nombre/tokens
+            const invItem = window.kitsBuscarItemAlmacen(kCod, kNom);
 
             if (invItem && invItem.costo > 0) {
                 cu = invItem.costo;
@@ -100,13 +107,18 @@ window.kitsCargarTabla = function (forzarRecarga) {
             const stockActual = invItem ? invItem.stock : 0;
             const ct = parseFloat(k.costo_total || (cant * cu));
 
+            let codFinal = invItem ? (invItem.codInv || invItem.codigo || invItem.codigo_articulo) : kCod;
+            if (/^\d+$/.test(codFinal)) {
+                codFinal = 'INV-' + codFinal.padStart(4, '0');
+            }
+
             return {
                 id: k.id,
-                marca_vehiculo: (k.marca_vehiculo || 'GENERAL').trim(),
+                marca_vehiculo: (k.marca_vehiculo || 'GENERAL').trim().toUpperCase(),
                 modelo_vehiculo: (k.modelo_vehiculo || 'TODOS LOS MODELOS').trim(),
                 tipo_mp: (k.tipo_mp || 'MP1').trim().toUpperCase(),
                 nombre_kit: (k.nombre_kit || '').trim(),
-                item_codigo: (invItem ? invItem.codigo : kCod) || '-',
+                item_codigo: codFinal || '-',
                 item_nombre: (invItem ? invItem.nombre : kNom),
                 cantidad: cant,
                 unidad_medida: (k.unidad_medida || (invItem ? invItem.unidad : 'UND')).toUpperCase(),
@@ -117,8 +129,9 @@ window.kitsCargarTabla = function (forzarRecarga) {
             };
         });
 
-        // 4. Extraer únicamente las Marcas de Unidades "MOTORAS" registradas en la flota del ERP
-        const marcasMotorasSet = new Set();
+        // 4. Extraer únicamente las Marcas de Unidades "MOTORAS" registradas en la flota del ERP (DEDUPLICADAS) y sus Modelos
+        const marcasMotorasMap = new Map();
+        window._modelosPorMarcaMap = new Map();
         const placasArr = Array.isArray(placasResp) ? placasResp : [];
         const noMotorasKeywords = ['REMOLQUE', 'SEMIREMOLQUE', 'SEMI REMOLQUE', 'CARRETA', 'PLATAFORMA', 'BATEA', 'CAMABAJA', 'FURGON REMOLQUE'];
 
@@ -136,23 +149,42 @@ window.kitsCargarTabla = function (forzarRecarga) {
                              (!esNoMotora && !tipoVal.includes('REMOLQUE'));
 
             if (esMotora) {
-                // Formatear marca con mayúscula inicial si es todo mayúsculas o mantener estilo
-                marcasMotorasSet.add(m);
+                const upper = m.toUpperCase();
+                if (!marcasMotorasMap.has(upper)) {
+                    marcasMotorasMap.set(upper, upper);
+                }
+                if (!window._modelosPorMarcaMap.has(upper)) {
+                    window._modelosPorMarcaMap.set(upper, new Set());
+                }
+                const mod = (p.modelo || '').toString().trim().toUpperCase();
+                if (mod && mod !== '-' && mod !== 'S/M' && mod !== 'TODOS LOS MODELOS' && mod !== 'TODOS') {
+                    window._modelosPorMarcaMap.get(upper).add(mod);
+                }
             }
         });
 
-        // Asegurar que también se incluyan las marcas que ya tienen kits registrados
+        // Asegurar que también se incluyan las marcas y modelos de los kits ya existentes
         window.kitsData.forEach(k => {
-            if (k.marca_vehiculo && k.marca_vehiculo !== 'GENERAL') {
-                marcasMotorasSet.add(k.marca_vehiculo);
+            const m = (k.marca_vehiculo || '').trim().toUpperCase();
+            if (m && m !== 'GENERAL') {
+                if (!marcasMotorasMap.has(m)) {
+                    marcasMotorasMap.set(m, m);
+                }
+                if (!window._modelosPorMarcaMap.has(m)) {
+                    window._modelosPorMarcaMap.set(m, new Set());
+                }
+                const mod = (k.modelo_vehiculo || '').trim().toUpperCase();
+                if (mod && mod !== '-' && mod !== 'TODOS LOS MODELOS' && mod !== 'TODOS') {
+                    window._modelosPorMarcaMap.get(m).add(mod);
+                }
             }
         });
 
-        window._marcasMotorasFlota = Array.from(marcasMotorasSet).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        window._marcasMotorasFlota = Array.from(marcasMotorasMap.values()).sort((a, b) => a.localeCompare(b));
 
         window.kitsDataFil = window.kitsData.slice();
 
-        // 5. Poblar sidebar lateral de Marcas Motoras
+        // 5. Poblar sidebar lateral de Marcas Motoras y Modelos
         window.kitsPoblarSidebarMarcas();
 
         // 6. Renderizar vista
@@ -163,7 +195,7 @@ window.kitsCargarTabla = function (forzarRecarga) {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="4" class="text-center py-5 text-danger">
+                    <td colspan="5" class="text-center py-5 text-danger">
                         <i class="bi bi-exclamation-triangle fs-4 d-block mb-2"></i>
                         Error al cargar la información de kits.
                     </td>
@@ -174,106 +206,191 @@ window.kitsCargarTabla = function (forzarRecarga) {
 };
 
 /**
- * Poblar lista del Sidebar Lateral Izquierdo (Todos + Solo Marcas Motoras)
+ * Helper inteligente para resolver ítems de Almacén en vivo por Código o Descripción
+ */
+window.kitsBuscarItemAlmacen = function (kCod, kNom) {
+    const codStr = (kCod || '').toString().trim().toLowerCase();
+    const nomStr = (kNom || '').toString().trim().toLowerCase();
+    if (!codStr && !nomStr) return null;
+
+    // 1. Coincidencia directa por ID o código de inventario
+    if (codStr && codStr !== '-' && codStr !== '—') {
+        const byCod = (window._kitsAlmacenItems || []).find(x => 
+            (x.codInv && x.codInv.toLowerCase() === codStr) ||
+            (x.codigo && x.codigo.toLowerCase() === codStr) ||
+            (x.codigo_articulo && x.codigo_articulo.toLowerCase() === codStr) ||
+            (x.id && x.id.toString().toLowerCase() === codStr)
+        );
+        if (byCod) return byCod;
+    }
+
+    // 2. Coincidencia directa por nombre exacto
+    if (nomStr) {
+        const byExactNom = (window._kitsAlmacenItems || []).find(x => 
+            x.nombre.toLowerCase() === nomStr ||
+            (x.articulo && x.articulo.toLowerCase() === nomStr)
+        );
+        if (byExactNom) return byExactNom;
+    }
+
+    // 3. Coincidencia inteligente por tokens alfanuméricos / número de parte
+    if (nomStr || (codStr && codStr !== '-')) {
+        const cleanNom = nomStr.replace(/[()\-–—/]/g, ' ').replace(/\s+/g, ' ').trim();
+        const tokens = cleanNom.split(' ').filter(t => t.length >= 2);
+
+        // A. Si el código de parte del ítem de almacén está contenido en kNom
+        for (const itm of (window._kitsAlmacenItems || [])) {
+            if (itm.codigo_articulo && itm.codigo_articulo.length >= 3) {
+                const caNorm = itm.codigo_articulo.toLowerCase().replace(/[()\-–—/]/g, ' ').trim();
+                if (cleanNom.includes(caNorm)) return itm;
+            }
+        }
+
+        // B. Si múltiples tokens significativos coinciden
+        for (const itm of (window._kitsAlmacenItems || [])) {
+            const itmNorm = (itm.nombre + ' ' + (itm.codigo_articulo || '') + ' ' + (itm.articulo || '')).toLowerCase().replace(/[()\-–—/]/g, ' ');
+            const matchedTokens = tokens.filter(tk => itmNorm.includes(tk));
+            if (matchedTokens.length >= 2 && matchedTokens.length >= Math.floor(tokens.length * 0.6)) {
+                return itm;
+            }
+        }
+
+        // C. Substring parcial
+        for (const itm of (window._kitsAlmacenItems || [])) {
+            const itmNom = itm.nombre.toLowerCase();
+            if (itmNom.includes(nomStr) || (nomStr.length >= 5 && nomStr.includes(itmNom))) {
+                return itm;
+            }
+        }
+    }
+
+    return null;
+};
+
+/**
+ * Poblar lista del Sidebar Lateral Izquierdo (Todos + Marcas Motoras y sus Modelos)
  */
 window.kitsPoblarSidebarMarcas = function () {
     const listContainer = document.getElementById('kits-nav-sidebar-list');
     if (!listContainer) return;
 
-    // Calcular marcas motoras disponibles y cuántos ítems de kit tienen configurados
-    const marcasMap = new Map();
+    // Calcular marcas motoras disponibles y cuántos ítems de kit tienen configurados (1 sola entrada por marca)
+    const marcasMap = new Map(); // key: UPPERCASE, value: { display: string, count: number }
 
     // 1. Inicializar todas las marcas motoras registradas con 0
     (window._marcasMotorasFlota || []).forEach(m => {
-        if (m) marcasMap.set(m, 0);
-    });
-
-    // 2. Contar ítems de kits configurados para cada marca
-    window.kitsData.forEach(k => {
-        const m = (k.marca_vehiculo || '').trim();
         if (m) {
-            // Buscar si coincide ignorando mayúsculas/minúsculas
-            let matchedKey = null;
-            for (let key of marcasMap.keys()) {
-                if (key.toUpperCase() === m.toUpperCase()) {
-                    matchedKey = key;
-                    break;
-                }
-            }
-            if (matchedKey) {
-                marcasMap.set(matchedKey, (marcasMap.get(matchedKey) || 0) + 1);
-            } else {
-                marcasMap.set(m, 1);
+            const upper = m.toUpperCase().trim();
+            if (!marcasMap.has(upper)) {
+                marcasMap.set(upper, { display: upper, count: 0 });
             }
         }
     });
 
-    const marcasSorted = Array.from(marcasMap.keys()).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    // 2. Contar ítems de kits configurados para cada marca
+    window.kitsData.forEach(k => {
+        const m = (k.marca_vehiculo || '').trim().toUpperCase();
+        if (m && m !== 'GENERAL') {
+            if (marcasMap.has(m)) {
+                marcasMap.get(m).count++;
+            } else {
+                marcasMap.set(m, { display: m, count: 1 });
+            }
+        }
+    });
+
+    const marcasSorted = Array.from(marcasMap.values()).sort((a, b) => a.display.localeCompare(b.display));
+
+    const isTodosActive = !window.kitsSidebarMarcaSeleccionada && !window.kitsSidebarModeloSeleccionado;
 
     let html = `
-        <div class="kits-nav-item ${!window.kitsSidebarMarcaSeleccionada ? 'active' : ''}" data-marca="" onclick="window.kitsSeleccionarMarcaSidebar('', this)">
-            <span>Todos</span>
+        <div class="kits-nav-item ${isTodosActive ? 'active' : ''}" data-marca="" data-modelo="" onclick="window.kitsSeleccionarMarcaSidebar('', this)">
+            <span class="fw-bold">Todos</span>
             <span class="badge bg-light text-secondary rounded-pill font-monospace" id="badge-count-sidebar-todos">${window.kitsData.length}</span>
         </div>
     `;
 
-    marcasSorted.forEach(marca => {
-        const count = marcasMap.get(marca) || 0;
-        const isActive = window.kitsSidebarMarcaSeleccionada.toUpperCase() === marca.toUpperCase();
+    marcasSorted.forEach(item => {
+        const marca = item.display;
+        const count = item.count;
+        const isBrandSelected = window.kitsSidebarMarcaSeleccionada.toUpperCase() === marca.toUpperCase();
+        const isExactBrandActive = isBrandSelected && !window.kitsSidebarModeloSeleccionado;
+        const isExpanded = isBrandSelected || (window._marcasExpandedSet && window._marcasExpandedSet.has(marca));
+
+        const modelosSet = window._modelosPorMarcaMap ? (window._modelosPorMarcaMap.get(marca) || new Set()) : new Set();
+        const modelosArr = Array.from(modelosSet).sort();
+        const hasModels = modelosArr.length > 0;
+
         html += `
-            <div class="kits-nav-item ${isActive ? 'active' : ''}" data-marca="${escapeHtml(marca)}" onclick="window.kitsSeleccionarMarcaSidebar('${escapeHtml(marca)}', this)">
-                <span class="text-truncate">${escapeHtml(marca)}</span>
+            <div class="kits-nav-item ${isExactBrandActive ? 'active' : ''}" data-marca="${escapeHtml(marca)}" data-modelo="" onclick="window.kitsSeleccionarMarcaSidebar('${escapeHtml(marca)}', this)">
+                <div class="d-flex align-items-center gap-1.5 text-truncate">
+                    ${hasModels ? `<i class="bi bi-chevron-${isExpanded ? 'down' : 'right'} text-muted" style="font-size: 0.68rem;"></i>` : ''}
+                    <span class="text-truncate">${escapeHtml(marca)}</span>
+                </div>
                 ${count > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace" style="font-size: 0.70rem;">${count}</span>` : '<span class="badge text-muted font-monospace" style="font-size: 0.65rem; opacity: 0.5;">0</span>'}
             </div>
         `;
+
+        // Renderizar sub-ítems de modelos si la marca está expandida
+        if (hasModels && isExpanded) {
+            modelosArr.forEach(mod => {
+                const countMod = window.kitsData.filter(k => 
+                    k.marca_vehiculo.toUpperCase() === marca.toUpperCase() && 
+                    k.modelo_vehiculo.toUpperCase() === mod.toUpperCase()
+                ).length;
+
+                const isModelActive = isBrandSelected && window.kitsSidebarModeloSeleccionado.toUpperCase() === mod.toUpperCase();
+
+                html += `
+                    <div class="kits-nav-subitem ${isModelActive ? 'active' : ''}" data-marca="${escapeHtml(marca)}" data-modelo="${escapeHtml(mod)}" onclick="window.kitsSeleccionarModeloSidebar('${escapeHtml(marca)}', '${escapeHtml(mod)}', this)">
+                        <span class="text-truncate"><i class="bi bi-arrow-return-right me-1 text-muted" style="font-size:0.65rem;"></i>${escapeHtml(mod)}</span>
+                        ${countMod > 0 ? `<span class="badge bg-light text-secondary rounded-pill font-monospace" style="font-size: 0.68rem;">${countMod}</span>` : '<span class="badge text-muted font-monospace" style="font-size: 0.62rem; opacity: 0.4;">0</span>'}
+                    </div>
+                `;
+            });
+        }
     });
 
     listContainer.innerHTML = html;
 };
 
 /**
- * Filtrar ítems de la lista del sidebar
- */
-window.kitsFiltrarSidebarMarcas = function () {
-    const q = ((document.getElementById('buscadorSidebarMarcas') || {}).value || '').toLowerCase().trim();
-    const items = document.querySelectorAll('#kits-nav-sidebar-list .kits-nav-item');
-
-    items.forEach(it => {
-        const marca = (it.getAttribute('data-marca') || '').toLowerCase();
-        const text = it.textContent.toLowerCase();
-        if (!q || !marca || text.includes(q)) {
-            it.style.display = 'flex';
-        } else {
-            it.style.display = 'none';
-        }
-    });
-};
-
-/**
- * Seleccionar marca del sidebar lateral
+ * Seleccionar Marca completa del sidebar
  */
 window.kitsSeleccionarMarcaSidebar = function (marca, el) {
-    window.kitsSidebarMarcaSeleccionada = (marca || '').trim();
+    if (!marca) {
+        window.kitsSidebarMarcaSeleccionada = '';
+        window.kitsSidebarModeloSeleccionado = '';
+        window.kitsPoblarSidebarMarcas();
+        window.kitsFiltrar();
+        return;
+    }
 
-    const items = document.querySelectorAll('#kits-nav-sidebar-list .kits-nav-item');
-    items.forEach(it => it.classList.remove('active'));
-    if (el) el.classList.add('active');
+    if (window.kitsSidebarMarcaSeleccionada === marca && !window.kitsSidebarModeloSeleccionado) {
+        if (window._marcasExpandedSet.has(marca)) {
+            window._marcasExpandedSet.delete(marca);
+        } else {
+            window._marcasExpandedSet.add(marca);
+        }
+    } else {
+        window.kitsSidebarMarcaSeleccionada = marca;
+        window.kitsSidebarModeloSeleccionado = '';
+        window._marcasExpandedSet.add(marca);
+    }
 
+    window.kitsPoblarSidebarMarcas();
     window.kitsFiltrar();
 };
 
 /**
- * Filtrar por segmento rápido de Tipo MP (TODOS, MP1, MP2, MP3, OTROS)
+ * Seleccionar Modelo específico de una Marca en el sidebar
  */
-window.kitsFiltrarSegmento = function (tipo, btnEl) {
-    window.kitsFiltroSegmentoActual = tipo;
+window.kitsSeleccionarModeloSidebar = function (marca, modelo, el) {
+    window.kitsSidebarMarcaSeleccionada = (marca || '').trim();
+    window.kitsSidebarModeloSeleccionado = (modelo || '').trim();
+    window._marcasExpandedSet.add(marca);
 
-    const group = document.getElementById('btn-group-tipos-mp');
-    if (group) {
-        group.querySelectorAll('.ck-segment-item').forEach(b => b.classList.remove('active'));
-    }
-    if (btnEl) btnEl.classList.add('active');
-
+    window.kitsPoblarSidebarMarcas();
     window.kitsFiltrar();
 };
 
@@ -284,42 +401,32 @@ window.kitsResetFiltros = function () {
     const searchInput = document.getElementById('buscadorKitsLive');
     if (searchInput) searchInput.value = '';
 
-    const sidebarSearch = document.getElementById('buscadorSidebarMarcas');
-    if (sidebarSearch) sidebarSearch.value = '';
-
     window.kitsSidebarMarcaSeleccionada = '';
-    const todosSidebarItem = document.querySelector('#kits-nav-sidebar-list .kits-nav-item:first-child');
-    if (todosSidebarItem) {
-        document.querySelectorAll('#kits-nav-sidebar-list .kits-nav-item').forEach(b => b.classList.remove('active'));
-        todosSidebarItem.classList.add('active');
-    }
-
-    window.kitsFiltrarSegmento('TODOS', document.querySelector('#btn-group-tipos-mp button:first-child'));
+    window.kitsSidebarModeloSeleccionado = '';
+    window.kitsPoblarSidebarMarcas();
+    window.kitsFiltrar();
 };
 
 /**
- * Filtro unificado en vivo (Búsqueda + Sidebar Marca + Segmento)
+ * Filtro unificado en vivo (Buscador Único + Sidebar Marca / Modelo)
  */
 window.kitsFiltrar = function () {
     const q = ((document.getElementById('buscadorKitsLive') || {}).value || '').toLowerCase().trim();
     const selMarca = (window.kitsSidebarMarcaSeleccionada || '').toUpperCase().trim();
-    const segTipo = window.kitsFiltroSegmentoActual || 'TODOS';
+    const selModelo = (window.kitsSidebarModeloSeleccionado || '').toUpperCase().trim();
 
     window.kitsDataFil = window.kitsData.filter(k => {
-        // Filtro por Segmento de Tipo MP
-        if (segTipo !== 'TODOS') {
-            if (segTipo === 'OTROS') {
-                if (['MP1', 'MP2', 'MP3'].includes(k.tipo_mp)) return false;
-            } else {
-                if (k.tipo_mp !== segTipo) return false;
-            }
-        }
+        const kMarca = (k.marca_vehiculo || '').toUpperCase().trim();
+        const kMod = (k.modelo_vehiculo || '').toUpperCase().trim();
 
         // Filtro por Marca seleccionada en Sidebar
         if (selMarca) {
-            const m = (k.marca_vehiculo || '').toUpperCase().trim();
-            const mod = (k.modelo_vehiculo || '').toUpperCase().trim();
-            if (m !== selMarca && mod !== selMarca) return false;
+            if (kMarca !== selMarca) return false;
+        }
+
+        // Filtro por Modelo específico (ej. P450)
+        if (selModelo && selModelo !== 'TODOS' && selModelo !== 'TODOS LOS MODELOS') {
+            if (kMod !== selModelo && kMod !== 'TODOS LOS MODELOS' && kMod !== 'TODOS') return false;
         }
 
         // Búsqueda en texto libre
@@ -330,6 +437,7 @@ window.kitsFiltrar = function () {
                 k.tipo_mp,
                 k.nombre_kit,
                 k.item_nombre,
+                k.item_codigo,
                 k.unidad_medida,
                 k.observaciones
             ].join(' ').toLowerCase();
@@ -354,14 +462,18 @@ window.kitsRenderizarTablaDesktop = function () {
     if (!tbody) return;
 
     if (!window.kitsDataFil.length) {
+        const targetLabel = window.kitsSidebarModeloSeleccionado
+            ? `${window.kitsSidebarMarcaSeleccionada} • ${window.kitsSidebarModeloSeleccionado}`
+            : window.kitsSidebarMarcaSeleccionada;
+
         tbody.innerHTML = `
             <tr>
                 <td colspan="5" class="text-center py-5 text-muted">
                     <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-                    ${window.kitsSidebarMarcaSeleccionada ? `No hay kits configurados para la marca <strong>${escapeHtml(window.kitsSidebarMarcaSeleccionada)}</strong>.` : 'No se encontraron repuestos o kits con los criterios de búsqueda.'}
+                    ${targetLabel ? `No hay kits configurados para <strong>${escapeHtml(targetLabel)}</strong>.` : 'No se encontraron repuestos o kits con los criterios de búsqueda.'}
                     <div class="mt-3">
-                        <button type="button" class="btn btn-sm btn-primary rounded-3 px-3 py-1.5 fw-bold" onclick="window.kitsAbrirModal()" style="background:#0284c7; border-color:#0284c7;">
-                            <i class="bi bi-plus-lg me-1"></i> Configurar Kit para esta Marca
+                        <button type="button" class="btn btn-sm btn-primary rounded-3 px-3 py-1.5 fw-bold" onclick="window.kitsAbrirModal('${escapeHtml(window.kitsSidebarMarcaSeleccionada)}', '${escapeHtml(window.kitsSidebarModeloSeleccionado)}')" style="background:#0284c7; border-color:#0284c7;">
+                            <i class="bi bi-plus-lg me-1"></i> Configurar Kit para este Vehículo
                         </button>
                     </div>
                 </td>
@@ -403,22 +515,25 @@ window.kitsRenderizarTablaDesktop = function () {
             const kNom = (it.item_nombre || '').toString().trim();
 
             // Sincronización en tiempo real con inventario
-            const invItem = window._kitsAlmacenItems.find(x => 
-                (kCod && kCod !== '-' && x.codigo.toLowerCase() === kCod.toLowerCase()) ||
-                (kNom && x.nombre.toLowerCase() === kNom.toLowerCase())
-            );
+            const invItem = window.kitsBuscarItemAlmacen(kCod, kNom);
 
-            const displayCodigo = (invItem ? invItem.codigo : kCod) || '—';
+            let displayCodigo = invItem ? (invItem.codInv || invItem.codigo || invItem.codigo_articulo) : kCod;
+            if (!displayCodigo || displayCodigo === '-') {
+                displayCodigo = '—';
+            } else if (/^\d+$/.test(displayCodigo)) {
+                displayCodigo = 'INV-' + displayCodigo.padStart(4, '0');
+            }
+
             const displayNombre = (invItem ? invItem.nombre : kNom) || '—';
             const stockNum = invItem != null ? invItem.stock : (it.stock_almacen != null ? it.stock_almacen : 0);
             const stockColorClass = stockNum > 0 ? 'text-dark fw-bold' : 'text-muted';
 
             html += `
                 <tr class="kits-item-row hover:bg-slate-50 transition-colors" style="cursor: default;">
-                    <!-- Columna 1: Código del artículo -->
+                    <!-- Columna 1: Código del artículo (INV-XXXX) -->
                     <td class="ps-4 py-3 align-middle" style="border-bottom: 1px solid #f8fafc; width: 140px;">
                         <span class="badge bg-white text-dark border font-monospace fw-bold px-2 py-1" style="font-size: 0.80rem; border-color: #cbd5e1 !important; letter-spacing: 0.3px;">
-                            ${escapeHtml(displayCodigo !== '-' ? displayCodigo : '—')}
+                            ${escapeHtml(displayCodigo)}
                         </span>
                     </td>
 
@@ -559,7 +674,7 @@ window.kitsRenderizarCardsMobile = function () {
 /**
  * Abrir Drawer para Nuevo Kit
  */
-window.kitsAbrirModal = function () {
+window.kitsAbrirModal = function (presetMarca, presetModelo) {
     window._kitEditandoGrupo = null;
     window.kitsDeletedItemIds = [];
     window.kitsRowCounter = 0;
@@ -569,8 +684,11 @@ window.kitsAbrirModal = function () {
     if (lblTitulo) lblTitulo.textContent = 'Nuevo Kit de Mantenimiento';
     if (lblSub) lblSub.textContent = 'Configure el vehículo, tipo de preventivo y agregue repuestos requeridos';
 
-    // Poblar selects del modal con las marcas motoras
-    window.kitsPoblarSelectsModal();
+    const pMarca = presetMarca || window.kitsSidebarMarcaSeleccionada || '';
+    const pModelo = presetModelo || window.kitsSidebarModeloSeleccionado || 'TODOS LOS MODELOS';
+
+    // Poblar selects del modal con las marcas motoras y modelo seleccionado
+    window.kitsPoblarSelectsModal(pMarca, pModelo);
 
     // Limpiar campos
     const selMarca = document.getElementById('modalKitMarca');
@@ -579,8 +697,8 @@ window.kitsAbrirModal = function () {
     const txtAlias = document.getElementById('modalKitNombreAlias');
     const txtObs = document.getElementById('modalKitObservaciones');
 
-    if (selMarca) selMarca.value = window.kitsSidebarMarcaSeleccionada || '';
-    if (selModelo) selModelo.value = 'TODOS LOS MODELOS';
+    if (selMarca && pMarca) selMarca.value = pMarca;
+    if (selModelo && pModelo) selModelo.value = pModelo;
     if (selTipo) selTipo.value = '';
     if (txtAlias) txtAlias.value = '';
     if (txtObs) txtObs.value = '';
@@ -646,7 +764,7 @@ window.kitsEditarKit = function (marca, modelo, tipo) {
 };
 
 /**
- * Poblar selects dentro del Modal (Marcas Motoras, Modelos, Tipos MP)
+ * Poblar selects dentro del Modal (Marcas Motoras Sin Repetir, Modelos, Tipos MP)
  */
 window.kitsPoblarSelectsModal = function (presetMarca, presetModelo, presetTipo) {
     const selMarca = document.getElementById('modalKitMarca');
@@ -654,18 +772,21 @@ window.kitsPoblarSelectsModal = function (presetMarca, presetModelo, presetTipo)
     const selTipo = document.getElementById('modalKitTipoMP');
 
     if (selMarca) {
-        const marcasArr = (window._marcasMotorasFlota && window._marcasMotorasFlota.length)
-            ? window._marcasMotorasFlota
-            : Array.from(new Set(window.kitsData.map(k => k.marca_vehiculo).filter(Boolean))).sort();
+        const marcasArr = Array.from(new Set(
+            (window._marcasMotorasFlota && window._marcasMotorasFlota.length
+                ? window._marcasMotorasFlota
+                : window.kitsData.map(k => k.marca_vehiculo))
+            .filter(Boolean)
+            .map(m => m.trim().toUpperCase())
+        )).sort();
 
         selMarca.innerHTML = '<option value="">Seleccione marca motora...</option>' +
             marcasArr.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
 
         if (presetMarca) {
-            // Buscar coincidencia insensible a mayúsculas
             const match = marcasArr.find(m => m.toUpperCase() === presetMarca.toUpperCase());
             if (match) selMarca.value = match;
-            else selMarca.value = presetMarca;
+            else selMarca.value = presetMarca.toUpperCase();
         }
     }
 
@@ -741,7 +862,8 @@ window.kitsModalActualizarTitulo = function () {
 };
 
 /**
- * Agregar Fila Dinámica de Repuesto/Material en el Modal con Código + Descripción vinculados
+ * Agregar Fila Dinámica de Repuesto/Material en el Modal
+ * Solo campos necesarios: Código Artículo | Repuesto (Descripción) | Cantidad | Eliminar
  */
 window.kitsModalAgregarFila = function (data = {}) {
     const container = document.getElementById('modalKitItemsContainer');
@@ -758,29 +880,30 @@ window.kitsModalAgregarFila = function (data = {}) {
     const kNom = (data.item_nombre || '').toString().trim();
 
     // Sincronizar con inventario en vivo si existe
-    const invItem = window._kitsAlmacenItems.find(x => 
-        (kCod && kCod !== '-' && x.codigo.toLowerCase() === kCod.toLowerCase()) ||
-        (kNom && x.nombre.toLowerCase() === kNom.toLowerCase())
-    );
+    const invItem = window.kitsBuscarItemAlmacen(kCod, kNom);
 
-    const codigoVal = (invItem ? invItem.codigo : kCod) !== '-' ? (invItem ? invItem.codigo : kCod) : '';
+    let codigoVal = invItem ? (invItem.codInv || invItem.codigo || invItem.codigo_articulo) : kCod;
+    if (codigoVal === '-' || codigoVal === '—') codigoVal = '';
+    else if (/^\d+$/.test(codigoVal)) codigoVal = 'INV-' + codigoVal.padStart(4, '0');
+
     const nombreVal = invItem ? invItem.nombre : kNom;
     const unidVal = data.unidad_medida || (invItem ? invItem.unidad : 'UND');
     if (invItem && invItem.costo > 0 && cu <= 0) {
         cu = invItem.costo;
     }
-    const ct = parseFloat(data.costo_total || (cant * cu));
 
     const row = document.createElement('div');
     row.id = rowId;
-    row.className = 'kit-item-row-card';
+    row.className = 'kit-item-row-card p-2.5 rounded-3 mb-2 bg-white border border-slate-200 shadow-2xs';
     if (data.id) row.dataset.id = data.id;
+    row.dataset.unidad = unidVal;
+    row.dataset.costo = cu;
 
     row.innerHTML = `
         <div class="row g-2 align-items-center">
             <!-- 1. Código del Artículo (con Datalist de Almacén) -->
-            <div class="col-12 col-md-3">
-                <label class="form-label d-block mb-1 text-secondary fw-semibold" style="font-size:0.72rem;">Código Artículo</label>
+            <div class="col-12 col-md-4">
+                <label class="form-label d-block mb-1 text-secondary fw-semibold" style="font-size:0.75rem;">Código Artículo</label>
                 <div class="position-relative">
                     <input type="text" class="form-control form-control-sm font-monospace fw-bold kit-input-codigo text-uppercase"
                            list="${listCodId}"
@@ -789,14 +912,14 @@ window.kitsModalAgregarFila = function (data = {}) {
                            oninput="window.kitsModalItemCodigoCambiado(this, '${rowId}')"
                            autocomplete="off">
                     <datalist id="${listCodId}">
-                        ${window._kitsAlmacenItems.map(it => `<option value="${escapeHtml(it.codigo)}">${escapeHtml(it.nombre)}</option>`).join('')}
+                        ${(window._kitsAlmacenItems || []).map(it => `<option value="${escapeHtml(it.codInv || it.codigo)}">${escapeHtml(it.nombre)}</option>`).join('')}
                     </datalist>
                 </div>
             </div>
 
             <!-- 2. Repuesto / Descripción Completa del Artículo -->
-            <div class="col-12 col-md-4">
-                <label class="form-label d-block mb-1 text-secondary fw-semibold" style="font-size:0.72rem;">Repuesto / Lubricante / Material</label>
+            <div class="col-12 col-md-5">
+                <label class="form-label d-block mb-1 text-secondary fw-semibold" style="font-size:0.75rem;">Repuesto / Lubricante / Material</label>
                 <div class="position-relative">
                     <input type="text" class="form-control form-control-sm fw-bold kit-input-nombre"
                            list="${listNomId}"
@@ -805,36 +928,21 @@ window.kitsModalAgregarFila = function (data = {}) {
                            oninput="window.kitsModalItemNombreCambiado(this, '${rowId}')"
                            autocomplete="off">
                     <datalist id="${listNomId}">
-                        ${window._kitsAlmacenItems.map(it => `<option value="${escapeHtml(it.nombre)}">${escapeHtml(it.codigo)}</option>`).join('')}
+                        ${(window._kitsAlmacenItems || []).map(it => `<option value="${escapeHtml(it.nombre)}">${escapeHtml(it.codInv || it.codigo)}</option>`).join('')}
                     </datalist>
                 </div>
             </div>
 
             <!-- 3. Cantidad -->
-            <div class="col-4 col-md-1" style="flex: 0 0 12%; max-width: 12%;">
-                <label class="form-label d-block mb-1 text-secondary fw-semibold text-center" style="font-size:0.72rem;">Cantidad</label>
+            <div class="col-8 col-md-2">
+                <label class="form-label d-block mb-1 text-secondary fw-semibold text-center" style="font-size:0.75rem;">Cantidad</label>
                 <input type="number" class="form-control form-control-sm text-center font-monospace fw-bold kit-input-cant"
                        value="${cant}" step="0.01" min="0.01"
-                       oninput="window.kitsModalRecalcularFila('${rowId}')">
+                       oninput="window.kitsModalRecalcularTotales()">
             </div>
 
-            <!-- 4. Unidad -->
-            <div class="col-4 col-md-1" style="flex: 0 0 12%; max-width: 12%;">
-                <label class="form-label d-block mb-1 text-secondary fw-semibold text-center" style="font-size:0.72rem;">Unidad</label>
-                <input type="text" class="form-control form-control-sm text-center font-monospace fw-bold kit-input-unid text-uppercase"
-                       value="${escapeHtml(unidVal)}" placeholder="UND">
-            </div>
-
-            <!-- 5. Costo Unitario -->
-            <div class="col-4 col-md-2" style="flex: 0 0 18%; max-width: 18%;">
-                <label class="form-label d-block mb-1 text-secondary fw-semibold text-end" style="font-size:0.72rem;">C. Unitario (S/)</label>
-                <input type="number" class="form-control form-control-sm text-end font-monospace kit-input-costo"
-                       value="${cu.toFixed(2)}" step="0.01" min="0"
-                       oninput="window.kitsModalRecalcularFila('${rowId}')">
-            </div>
-
-            <!-- 6. Botón Eliminar Fila -->
-            <div class="col-12 col-md-auto text-end pt-md-3 ms-auto">
+            <!-- 4. Botón Eliminar Fila -->
+            <div class="col-4 col-md-1 text-end pt-md-4">
                 <button type="button" class="btn btn-sm btn-outline-danger rounded-2 p-1 px-2"
                         title="Quitar ítem" onclick="window.kitsModalEliminarFila('${rowId}')">
                     <i class="bi bi-trash"></i>
@@ -842,15 +950,11 @@ window.kitsModalAgregarFila = function (data = {}) {
             </div>
         </div>
 
-        <!-- Subtotal de la fila & stock hint -->
-        <div class="d-flex justify-content-between align-items-center mt-1.5 pt-1 border-top border-slate-200">
-            <small class="text-muted font-monospace kit-stock-hint" style="font-size:0.72rem;">
-                ${invItem ? `<i class="bi bi-box-seam me-1"></i>Stock Almacén: <strong>${invItem.stock}</strong> ${invItem.unidad}` : ''}
+        <!-- Hint de Stock en Almacén -->
+        <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top border-slate-100">
+            <small class="text-muted font-monospace kit-stock-hint" style="font-size:0.74rem;">
+                ${invItem ? `<i class="bi bi-box-seam me-1 text-primary"></i>Stock Almacén: <strong>${invItem.stock}</strong> ${invItem.unidad}` : '<span class="text-muted fst-italic">Ingrese código o nombre para vincular a Almacén</span>'}
             </small>
-            <div class="d-flex align-items-center gap-1">
-                <span class="text-secondary small" style="font-size:0.72rem;">Subtotal:</span>
-                <span class="fw-bold text-success font-monospace kit-span-subtotal" style="font-size:0.80rem;">S/ ${ct.toFixed(2)}</span>
-            </div>
         </div>
     `;
 
@@ -865,21 +969,19 @@ window.kitsModalItemCodigoCambiado = function (inputEl, rowId) {
     const val = (inputEl.value || '').trim();
     if (!val) return;
 
-    const matched = window._kitsAlmacenItems.find(x => x.codigo.toLowerCase() === val.toLowerCase());
+    const matched = window.kitsBuscarItemAlmacen(val, '');
     if (matched) {
         const row = document.getElementById(rowId);
         if (row) {
             const nomInput = row.querySelector('.kit-input-nombre');
-            const unidInput = row.querySelector('.kit-input-unid');
-            const costoInput = row.querySelector('.kit-input-costo');
             const hintEl = row.querySelector('.kit-stock-hint');
 
             if (nomInput) nomInput.value = matched.nombre;
-            if (unidInput && matched.unidad) unidInput.value = matched.unidad;
-            if (costoInput && matched.costo > 0) costoInput.value = matched.costo.toFixed(2);
-            if (hintEl) hintEl.innerHTML = `<i class="bi bi-box-seam me-1"></i>Stock Almacén: <strong>${matched.stock}</strong> ${matched.unidad}`;
+            row.dataset.unidad = matched.unidad || 'UND';
+            row.dataset.costo = matched.costo || 0;
+            if (hintEl) hintEl.innerHTML = `<i class="bi bi-box-seam me-1 text-primary"></i>Stock Almacén: <strong>${matched.stock}</strong> ${matched.unidad}`;
 
-            window.kitsModalRecalcularFila(rowId);
+            window.kitsModalRecalcularTotales();
         }
     }
 };
@@ -891,45 +993,24 @@ window.kitsModalItemNombreCambiado = function (inputEl, rowId) {
     const val = (inputEl.value || '').trim();
     if (!val) return;
 
-    const matched = window._kitsAlmacenItems.find(x => x.nombre.toLowerCase() === val.toLowerCase());
+    const matched = window.kitsBuscarItemAlmacen('', val);
     if (matched) {
         const row = document.getElementById(rowId);
         if (row) {
             const codInput = row.querySelector('.kit-input-codigo');
-            const unidInput = row.querySelector('.kit-input-unid');
-            const costoInput = row.querySelector('.kit-input-costo');
             const hintEl = row.querySelector('.kit-stock-hint');
 
-            if (codInput && matched.codigo) codInput.value = matched.codigo;
-            if (unidInput && matched.unidad) unidInput.value = matched.unidad;
-            if (costoInput && matched.costo > 0) costoInput.value = matched.costo.toFixed(2);
-            if (hintEl) hintEl.innerHTML = `<i class="bi bi-box-seam me-1"></i>Stock Almacén: <strong>${matched.stock}</strong> ${matched.unidad}`;
+            let codVal = matched.codInv || matched.codigo || matched.codigo_articulo;
+            if (/^\d+$/.test(codVal)) codVal = 'INV-' + codVal.padStart(4, '0');
 
-            window.kitsModalRecalcularFila(rowId);
+            if (codInput && codVal) codInput.value = codVal;
+            row.dataset.unidad = matched.unidad || 'UND';
+            row.dataset.costo = matched.costo || 0;
+            if (hintEl) hintEl.innerHTML = `<i class="bi bi-box-seam me-1 text-primary"></i>Stock Almacén: <strong>${matched.stock}</strong> ${matched.unidad}`;
+
+            window.kitsModalRecalcularTotales();
         }
     }
-};
-
-/**
- * Recalcular subtotal de una fila específica
- */
-window.kitsModalRecalcularFila = function (rowId) {
-    const row = document.getElementById(rowId);
-    if (!row) return;
-
-    const cantEl = row.querySelector('.kit-input-cant');
-    const costoEl = row.querySelector('.kit-input-costo');
-    const subtotalEl = row.querySelector('.kit-span-subtotal');
-
-    const cant = parseFloat(cantEl ? cantEl.value : 0) || 0;
-    const costo = parseFloat(costoEl ? costoEl.value : 0) || 0;
-    const subtotal = cant * costo;
-
-    if (subtotalEl) {
-        subtotalEl.textContent = `S/ ${subtotal.toFixed(2)}`;
-    }
-
-    window.kitsModalRecalcularTotales();
 };
 
 /**
@@ -947,29 +1028,16 @@ window.kitsModalEliminarFila = function (rowId) {
 };
 
 /**
- * Recalcular totales generales del Modal
+ * Recalcular totales / contador de ítems del Modal
  */
 window.kitsModalRecalcularTotales = function () {
     const container = document.getElementById('modalKitItemsContainer');
     if (!container) return;
 
     const rows = container.querySelectorAll('.kit-item-row-card');
-    let grandTotal = 0;
-
-    rows.forEach(r => {
-        const cant = parseFloat(r.querySelector('.kit-input-cant')?.value || 0) || 0;
-        const costo = parseFloat(r.querySelector('.kit-input-costo')?.value || 0) || 0;
-        grandTotal += cant * costo;
-    });
-
     const counterEl = document.getElementById('modalKitItemsCounter');
     if (counterEl) {
         counterEl.textContent = `${rows.length} ${rows.length === 1 ? 'Ítem' : 'Ítems'}`;
-    }
-
-    const previewEl = document.getElementById('modalKitCostoTotalPreview');
-    if (previewEl) {
-        previewEl.textContent = `S/ ${grandTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
 };
 
@@ -1005,9 +1073,6 @@ window.kitsModalGuardar = function () {
         const itemCodigo = (r.querySelector('.kit-input-codigo')?.value || '').trim();
         const itemNombre = (r.querySelector('.kit-input-nombre')?.value || '').trim();
         const cant = parseFloat(r.querySelector('.kit-input-cant')?.value || 0) || 0;
-        const unid = (r.querySelector('.kit-input-unid')?.value || 'UND').trim().toUpperCase();
-        const cu = parseFloat(r.querySelector('.kit-input-costo')?.value || 0) || 0;
-        const ct = cant * cu;
         const id = r.dataset.id ? parseInt(r.dataset.id) : null;
 
         if (!itemNombre) {
@@ -1017,14 +1082,23 @@ window.kitsModalGuardar = function () {
             return alert(`El ítem "${itemNombre}" debe tener una cantidad mayor a 0.`);
         }
 
+        // Vincular con Almacén en vivo para obtener unidad y costo referencial exactos
+        const invMatch = window.kitsBuscarItemAlmacen(itemCodigo, itemNombre);
+        const unid = (invMatch ? invMatch.unidad : (r.dataset.unidad || 'UND')).toUpperCase();
+        const cu = invMatch ? (invMatch.costo || 0) : (parseFloat(r.dataset.costo || 0) || 0);
+        const ct = cant * cu;
+
+        let codFinal = invMatch ? (invMatch.codInv || invMatch.codigo || invMatch.codigo_articulo) : itemCodigo;
+        if (/^\d+$/.test(codFinal)) codFinal = 'INV-' + codFinal.padStart(4, '0');
+
         itemsToSave.push({
             id,
             marca_vehiculo: marca,
             modelo_vehiculo: modelo,
             tipo_mp: tipo,
             nombre_kit: alias,
-            item_codigo: itemCodigo || '-',
-            item_nombre: itemNombre,
+            item_codigo: codFinal || '-',
+            item_nombre: invMatch ? invMatch.nombre : itemNombre,
             cantidad: cant,
             unidad_medida: unid,
             costo_unitario: cu,
