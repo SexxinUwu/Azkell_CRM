@@ -3912,6 +3912,29 @@ function _generarCodigoAlmacen(tipo, anio, cb) {
     );
 }
 
+// ── Reparación de Servicios creados con prefijo INV- ───────────────────────
+db.query(
+    `SELECT id, descripcion, articulo FROM inventario WHERE id LIKE 'INV-%' AND (tipo = 'Servicio' OR tipo = 'SERV' OR articulo LIKE 'Servicio%' OR descripcion LIKE 'Servicio%')`,
+    (err, rows) => {
+        if (!err && rows && rows.length > 0) {
+            rows.forEach(r => {
+                const oldId = r.id;
+                _generarCodigoAlmacen('SERV', null, (e2, newId) => {
+                    if (!e2 && newId) {
+                        db.query('UPDATE inventario SET id = ?, tipo = "Servicio", unidad = COALESCE(NULLIF(unidad, ""), "Servicio") WHERE id = ?', [newId, oldId], (e3) => {
+                            if (!e3) {
+                                db.query('UPDATE detalle_entradas_inv SET inventario_id = ? WHERE inventario_id = ?', [newId, oldId]);
+                                db.query('UPDATE detalle_salidas_inv SET inventario_id = ? WHERE inventario_id = ?', [newId, oldId]);
+                                console.log(`✅ Corregido servicio ${oldId} -> ${newId} (${r.descripcion})`);
+                            }
+                        });
+                    }
+                });
+            });
+        }
+    }
+);
+
 // ============================================================
 // RUTAS MODULARIZADAS
 // ============================================================
