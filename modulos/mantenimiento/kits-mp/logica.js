@@ -1407,12 +1407,16 @@ window.kitsModalGuardar = function () {
     }
 
     if (window._kitEditandoGrupo) {
-        // En modo edición de un grupo existente
+        // En modo edición: Determinar cuál es el modelo principal editado
+        const origModel = (window._kitEditandoGrupo.modelo || '').toUpperCase();
+        const targetPrimary = modelosToSave.includes(origModel) ? origModel : modelosToSave[0];
+
+        // A. Actualizar/guardar los ítems del modelo principal
         baseItems.forEach(it => {
             const payload = {
                 ...it,
                 marca_vehiculo: marca,
-                modelo_vehiculo: window._kitEditandoGrupo.modelo || modelosToSave[0] || 'TODOS LOS MODELOS',
+                modelo_vehiculo: targetPrimary,
                 tipo_mp: tipo
             };
             const method = it.id ? 'PUT' : 'POST';
@@ -1425,6 +1429,35 @@ window.kitsModalGuardar = function () {
                     body: JSON.stringify(payload)
                 })
             );
+        });
+
+        // B. Para todos los DEMÁS modelos seleccionados (ej: P-410 A4X2, R-500, etc.), generar de forma independiente
+        const otherModels = modelosToSave.filter(m => m !== targetPrimary);
+        otherModels.forEach(otherMod => {
+            baseItems.forEach(it => {
+                const payload = {
+                    marca_vehiculo: marca,
+                    modelo_vehiculo: otherMod,
+                    tipo_mp: tipo,
+                    nombre_kit: it.nombre_kit,
+                    item_codigo: it.item_codigo,
+                    item_nombre: it.item_nombre,
+                    cantidad: it.cantidad,
+                    unidad_medida: it.unidad_medida,
+                    costo_unitario: it.costo_unitario,
+                    costo_total: it.costo_total,
+                    orden: it.orden,
+                    observaciones: it.observaciones
+                };
+
+                promises.push(
+                    fetch('/api/mantenimiento-kits', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                );
+            });
         });
     } else {
         // En modo nuevo: Para cada modelo seleccionado, generar kit de forma independiente
