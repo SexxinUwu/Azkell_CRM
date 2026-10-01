@@ -1220,6 +1220,34 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    // ── Endpoint rápido para obtener URL de subida directa a S3 (Cotizaciones u otros) ──
+    // NOTA: Debe ir ANTES de /entradas/:id para que Express no capture 'upload-url' como :id
+    const _handleUploadUrlEntradas = async (req, res) => {
+        try {
+            const { getPresignedUploadUrl } = require('../utils/s3');
+            const filename = req.query.filename || req.body?.filename;
+            const contentType = req.query.contentType || req.body?.contentType;
+            const tipo = req.query.tipo || req.body?.tipo;
+            if (!filename) return res.status(400).json({ error: 'Falta filename' });
+
+            const safeName = String(filename).replace(/[^a-zA-Z0-9.\-_]/g, '');
+            const fileTipo = tipo || 'cotizacion';
+            const s3Key = `almacen/entradas/${fileTipo}_${Date.now()}_${safeName}`;
+            const uploadUrl = await getPresignedUploadUrl(s3Key, contentType || 'application/pdf', 600);
+
+            const region = (process.env.AWS_REGION || 'us-east-2').trim();
+            const bucket = (process.env.AWS_BUCKET_NAME || '').trim();
+            const fileUrl = `https://${bucket}.s3.${region}.amazonaws.com/${s3Key}`;
+
+            res.json({ uploadUrl, fileUrl, s3Key });
+        } catch (e) {
+            console.error('Error generando upload-url en almacén:', e);
+            res.status(500).json({ error: e.message });
+        }
+    };
+    router.get('/entradas/upload-url', _handleUploadUrlEntradas);
+    router.post('/entradas/upload-url', _handleUploadUrlEntradas);
+
     router.get('/entradas/:id', async (req, res) => {
         const tdb = getDb(req);
         const rawId = (req.params.id || '').trim();
@@ -1312,29 +1340,6 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             } catch (e) { }
         }
     }
-
-    // ── Endpoint rápido para obtener URL de subida directa a S3 (Mismo patrón que flota/documentos) ──
-    router.get('/entradas/upload-url', async (req, res) => {
-        try {
-            const { getPresignedUploadUrl } = require('../utils/s3');
-            const { filename, contentType, tipo } = req.query;
-            if (!filename) return res.status(400).json({ error: 'Falta filename' });
-
-            const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
-            const fileTipo = tipo || 'cotizacion';
-            const s3Key = `almacen/entradas/${fileTipo}_${Date.now()}_${safeName}`;
-            const uploadUrl = await getPresignedUploadUrl(s3Key, contentType || 'application/pdf', 600);
-
-            const region = (process.env.AWS_REGION || 'us-east-2').trim();
-            const bucket = (process.env.AWS_BUCKET_NAME || '').trim();
-            const fileUrl = `https://${bucket}.s3.${region}.amazonaws.com/${s3Key}`;
-
-            res.json({ uploadUrl, fileUrl, s3Key });
-        } catch (e) {
-            console.error('Error generando upload-url en almacén:', e);
-            res.status(500).json({ error: e.message });
-        }
-    });
 
     router.post('/entradas', (req, res) => {
         const tdb = getDb(req);
@@ -1812,10 +1817,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     if (tipo === 'factura') {
                         delSql = `UPDATE entradas_inv SET ${col}=NULL, documento_referencia=NULL, estado_factura='Factura Pendiente' WHERE id=?`;
                     } else if (tipo === 'voucher') {
+                        delSql = `UPDATE entradas_inv SET ${col}=NULL, numero_operacion=NULL WHERE id=?`;
                         // Sincronizar con tesoreria_caja
                         try {
                             const ocId = req.params.id;
-                            tdb.query("UPDATE tesoreria_caja SET voucher_url=NULL WHERE (descripcion LIKE ? OR observacion LIKE ?)", [`%${ocId}%`, `%${ocId}%`], () => {});
+                            tdb.query("UPDATE tesoreria_caja SET voucher_url=NULL, numero_constancia_deposito=NULL WHERE (descripcion LIKE ? OR observacion LIKE ?)", [`%${ocId}%`, `%${ocId}%`], () => {});
                         } catch (eCaja) {}
                     }
                     tdb.query(delSql, [req.params.id], (err2) => {
