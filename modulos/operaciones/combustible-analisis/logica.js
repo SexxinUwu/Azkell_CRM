@@ -29,6 +29,19 @@
         return 'operaciones';
     }
 
+    function _caIsFuelMatch(vProduct, targetFuel) {
+        if (!targetFuel || targetFuel === 'ALL') return true;
+        const prod = String(vProduct || '').toUpperCase().trim();
+        const target = String(targetFuel).toUpperCase().trim();
+        if (target === 'D2' || target === 'DIESEL' || target === 'DIÉSEL') {
+            return prod === 'D2' || prod.includes('DIESEL') || prod.includes('DIÉSEL') || prod.includes('B5') || (!prod.includes('UREA') && !prod.includes('ADBLUE') && !prod.includes('DEF'));
+        }
+        if (target === 'UREA' || target === 'ADBLUE' || target === 'DEF') {
+            return prod === 'UREA' || prod.includes('UREA') || prod.includes('ADBLUE') || prod.includes('DEF');
+        }
+        return prod === target || prod.includes(target);
+    }
+
     // Toggle para mostrar/ocultar la columna de observaciones de auditoría
     window.caToggleColObservacion = function() {
         window._caShowColObs = !window._caShowColObs;
@@ -256,12 +269,10 @@
         if (selFuel) {
             const cur = selFuel.value;
             selFuel.innerHTML = '<option value="ALL">Todos</option>' +
-                Array.from(allFuels).sort().map(f => `<option value="${f}">${f}</option>`).join('');
-            if (cur && allFuels.has(cur)) {
-                selFuel.value = cur;
-            } else if (allFuels.has('D2')) {
-                selFuel.value = 'D2';
-            }
+                '<option value="D2">D2 (Diésel)</option>' +
+                '<option value="UREA">UREA</option>';
+            if (cur) selFuel.value = cur;
+            else selFuel.value = 'D2';
         }
 
         if (selPlate) {
@@ -781,7 +792,7 @@
             }
 
             if (fState.combustible !== 'ALL') {
-                const hasFuel = (t.vouchers || []).some(v => !v.esPuntoPartida && v.producto === fState.combustible);
+                const hasFuel = (t.vouchers || []).some(v => !v.esPuntoPartida && _caIsFuelMatch(v.producto || v.producto_nombre, fState.combustible));
                 if (!hasFuel) return;
             }
 
@@ -960,7 +971,7 @@
             
             // Filtro por Combustible
             if (fState.combustible !== 'ALL') {
-                const matchingVouchers = (t.vouchers || []).filter(v => !v.esPuntoPartida && v.producto === fState.combustible);
+                const matchingVouchers = (t.vouchers || []).filter(v => !v.esPuntoPartida && _caIsFuelMatch(v.producto || v.producto_nombre, fState.combustible));
                 if (matchingVouchers.length === 0) return false;
             }
 
@@ -1020,7 +1031,7 @@
         let totalValesCount = 0;
 
         trips.forEach(t => {
-            const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
+            const fs = (fuelFilter !== 'ALL' && t.fuelStats) ? (t.fuelStats[fuelFilter] || t.fuelStats[fuelFilter.toUpperCase()] || (fuelFilter === 'D2' ? (t.fuelStats['D2'] || t.fuelStats['DIÉSEL B5']) : t.fuelStats['UREA']) || Object.values(t.fuelStats)[0]) : null;
             const totGal = fs ? fs.totalGalones : t.totalGalones;
             const totGas = fs ? fs.totalGasto : t.totalGasto;
             const recKm = fs ? fs.recorridoKm : t.recorridoKm;
@@ -1219,7 +1230,7 @@
             const globalIdx = startIdx + i;
             
             // Si hay filtro de combustible activo, usar estadísticas específicas de ese combustible
-            const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
+            const fs = (fuelFilter !== 'ALL' && t.fuelStats) ? (t.fuelStats[fuelFilter] || t.fuelStats[fuelFilter.toUpperCase()] || (fuelFilter === 'D2' ? (t.fuelStats['D2'] || t.fuelStats['DIÉSEL B5']) : t.fuelStats['UREA']) || Object.values(t.fuelStats)[0]) : null;
 
             const fInicio = fs ? fs.fechaInicio : t.fechaInicio;
             const fFin = fs ? fs.fechaFin : t.fechaFin;

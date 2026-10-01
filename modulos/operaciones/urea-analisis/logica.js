@@ -28,6 +28,19 @@
         return 'operaciones';
     }
 
+    function _caIsFuelMatch(vProduct, targetFuel) {
+        if (!targetFuel || targetFuel === 'ALL') return true;
+        const prod = String(vProduct || '').toUpperCase().trim();
+        const target = String(targetFuel).toUpperCase().trim();
+        if (target === 'UREA' || target === 'ADBLUE' || target === 'DEF') {
+            return prod === 'UREA' || prod.includes('UREA') || prod.includes('ADBLUE') || prod.includes('DEF');
+        }
+        if (target === 'D2' || target === 'DIESEL' || target === 'DIÉSEL') {
+            return prod === 'D2' || prod.includes('DIESEL') || prod.includes('DIÉSEL') || prod.includes('B5') || (!prod.includes('UREA') && !prod.includes('ADBLUE') && !prod.includes('DEF'));
+        }
+        return prod === target || prod.includes(target);
+    }
+
     // Inicializador del módulo
     window.inicializarModuloCombustibleAnalisis = function() {
         window.caCargarMatrizRendimiento();
@@ -243,7 +256,7 @@
             
             // Filtro por Combustible
             if (fuelFilter !== 'ALL') {
-                const matchingVouchers = (t.vouchers || []).filter(v => !v.esPuntoPartida && v.producto === fuelFilter);
+                const matchingVouchers = (t.vouchers || []).filter(v => !v.esPuntoPartida && _caIsFuelMatch(v.producto || v.producto_nombre, fuelFilter));
                 if (matchingVouchers.length === 0) return false;
             }
 
@@ -300,7 +313,7 @@
         let totalValesCount = 0;
 
         trips.forEach(t => {
-            const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
+            const fs = (fuelFilter !== 'ALL' && t.fuelStats) ? (t.fuelStats[fuelFilter] || t.fuelStats[fuelFilter.toUpperCase()] || t.fuelStats['UREA'] || Object.values(t.fuelStats)[0]) : null;
             const totGal = fs ? fs.totalGalones : t.totalGalones;
             const totGas = fs ? fs.totalGasto : t.totalGasto;
             const recKm = fs ? fs.recorridoKm : t.recorridoKm;
@@ -404,7 +417,7 @@
         pagedTrips.forEach((t, i) => {
             const globalIdx = startIdx + i;
             
-            const fs = (fuelFilter !== 'ALL' && t.fuelStats && t.fuelStats[fuelFilter]) ? t.fuelStats[fuelFilter] : null;
+            const fs = (fuelFilter !== 'ALL' && t.fuelStats) ? (t.fuelStats[fuelFilter] || t.fuelStats[fuelFilter.toUpperCase()] || t.fuelStats['UREA'] || Object.values(t.fuelStats)[0]) : null;
 
             const fInicio = fs ? fs.fechaInicio : t.fechaInicio;
             const fFin = fs ? fs.fechaFin : t.fechaFin;

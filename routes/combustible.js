@@ -1368,7 +1368,23 @@ module.exports = function (db, broadcast, logAudit) {
 
             rows.forEach(v => {
                 const vehKey = String(v.vehiculo || 'SIN-PLACA').toUpperCase().trim();
-                const tripKey = String(v.viaje || 'SIN-VIAJE').trim();
+                let rawTrip = String(v.viaje || '').trim();
+                let tripKey = rawTrip;
+                if (!tripKey || tripKey === '0' || tripKey.toUpperCase() === 'SIN-VIAJE' || tripKey === '-') {
+                    const vFormatted = formatPeruDate(v.fecha);
+                    const vYearMonth = (vFormatted && vFormatted.length >= 7) ? vFormatted.slice(0, 7) : 'OTROS';
+                    tripKey = `SIN-VIAJE (${vYearMonth})`;
+                }
+
+                const rawFuel = String(v.tipo_combustible || 'D2').trim();
+                let fuelCategory = 'D2';
+                if (/urea|adblue|def/i.test(rawFuel)) {
+                    fuelCategory = 'UREA';
+                } else if (/gasohol|gasolina|gnv|glp/i.test(rawFuel)) {
+                    fuelCategory = rawFuel.toUpperCase();
+                } else {
+                    fuelCategory = 'D2';
+                }
 
                 if (!vehiculoMap[vehKey]) vehiculoMap[vehKey] = {};
                 if (!vehiculoMap[vehKey][tripKey]) {
@@ -1386,7 +1402,8 @@ module.exports = function (db, broadcast, logAudit) {
                 vehiculoMap[vehKey][tripKey].vouchers.push({
                     id: v.id,
                     fecha: formatPeruDate(v.fecha),
-                    producto: v.tipo_combustible || 'D2',
+                    producto: fuelCategory,
+                    producto_nombre: rawFuel,
                     grifo: v.estacion || v.proveedor || 'Estación',
                     odometro: parseFloat(v.kilometraje || 0),
                     galones: parseFloat(v.galones || 0),
@@ -1404,13 +1421,16 @@ module.exports = function (db, broadcast, logAudit) {
 
             Object.keys(vehiculoMap).forEach(vehKey => {
                 const tripsObj = vehiculoMap[vehKey];
-                // Convertir a array de viajes del vehículo y ordenar por N° de Orden de Viaje ASC
+                // Convertir a array de viajes del vehículo y ordenar CRONOLÓGICAMENTE por fecha del primer vale
                 const vehTrips = Object.values(tripsObj).map(t => {
                     t.vouchers.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '') || (a.id - b.id));
                     return t;
                 }).sort((a, b) => {
-                    if (a.viaje === 'SIN-VIAJE') return 1;
-                    if (b.viaje === 'SIN-VIAJE') return -1;
+                    const fA = (a.vouchers[0] && a.vouchers[0].fecha) || '';
+                    const fB = (b.vouchers[0] && b.vouchers[0].fecha) || '';
+                    if (fA && fB) return fA.localeCompare(fB);
+                    if (a.viaje.startsWith('SIN-VIAJE')) return 1;
+                    if (b.viaje.startsWith('SIN-VIAJE')) return -1;
                     return (a.viaje || '').localeCompare(b.viaje || '', undefined, { numeric: true });
                 });
 
