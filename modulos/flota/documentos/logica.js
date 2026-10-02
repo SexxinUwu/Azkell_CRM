@@ -420,6 +420,7 @@ function cargarDatosVehiculos() {
     .then(rows => {
         vehiculosFlota = Array.isArray(rows) ? rows : [];
         vehiculosFlota.forEach(v => { v._meta = calcularMetadatos(v); });
+        poblarEmpresasPillsDocs(vehiculosFlota);
         actualizarFiltroEmpresas();
         actualizarKPIs();
         renderizarListaLateral();
@@ -446,10 +447,66 @@ function cargarDatosVehiculos() {
     });
 }
 
+// ── Filtro de Empresas Dinámicas en Documentos de Flota ──────────
+window._docFiltroEmpresa = window._docFiltroEmpresa || 'TODAS';
+
+function poblarEmpresasPillsDocs(vehiculos) {
+    const group = document.getElementById('btn-group-empresas-docs');
+    if (!group) return;
+
+    const empresasSet = new Set();
+    (vehiculos || []).forEach(v => {
+        const emp = (v.empresa || v.cliente || '').toString().trim();
+        if (emp && emp !== '-' && emp.toUpperCase() !== 'CLIENTE') empresasSet.add(emp);
+    });
+
+    const arr = Array.from(empresasSet).sort();
+    let html = `<button type="button" class="ck-segment-item ${window._docFiltroEmpresa === 'TODAS' ? 'active' : ''}" onclick="window.filtrarEmpresaDocs('TODAS', this)">Todas</button>`;
+
+    arr.forEach(emp => {
+        const isAct = window._docFiltroEmpresa.toUpperCase() === emp.toUpperCase();
+        let short = emp.replace(/S\.A\.C\.?/i, '').replace(/S\.A\.?/i, '').trim() || emp;
+        html += `<button type="button" class="ck-segment-item ${isAct ? 'active' : ''}" onclick="window.filtrarEmpresaDocs('${emp.replace(/'/g, "\\'")}', this)">${short}</button>`;
+    });
+
+    group.innerHTML = html;
+}
+window.poblarEmpresasPillsDocs = poblarEmpresasPillsDocs;
+
+function filtrarEmpresaDocs(empresa, btn) {
+    window._docFiltroEmpresa = empresa || 'TODAS';
+    const group = document.getElementById('btn-group-empresas-docs');
+    if (group) {
+        group.querySelectorAll('.ck-segment-item').forEach(b => b.classList.remove('active'));
+    }
+    if (btn) {
+        btn.classList.add('active');
+    } else if (group) {
+        group.querySelectorAll('.ck-segment-item').forEach(b => {
+            if (b.textContent.trim().toUpperCase() === (empresa || 'TODAS').toUpperCase()) {
+                b.classList.add('active');
+            }
+        });
+    }
+
+    actualizarKPIs();
+    renderizarListaLateral();
+    renderizarMatriz();
+    if (typeof window.renderizarCalendario === 'function' && document.getElementById('view-container-calendar') && !document.getElementById('view-container-calendar').classList.contains('d-none')) {
+        window.renderizarCalendario();
+    }
+}
+window.filtrarEmpresaDocs = filtrarEmpresaDocs;
+
 function actualizarKPIs() {
     let t = 0, vig = 0, ale = 0, ven = 0, sinDoc = 0;
     
     vehiculosFlota.forEach(v => {
+        if (window._docFiltroEmpresa && window._docFiltroEmpresa !== 'TODAS') {
+            const empV = (v.empresa || v.cliente || '').trim().toUpperCase();
+            if (empV !== window._docFiltroEmpresa.trim().toUpperCase()) return;
+        }
+
         let matchAvanzado = true;
         if (window.docFiltros) {
             for (let colKey in window.docFiltros) {
@@ -487,46 +544,27 @@ function actualizarKPIs() {
 }
 
 function filtrarKPI(tipo, element) {
-    document.querySelectorAll('.ck-kpi-card, .kpi-card').forEach(c => c.classList.remove('active'));
-    if (element) {
-        element.classList.add('active');
+    if (currentFiltroKPI === tipo && tipo !== 'total') {
+        currentFiltroKPI = 'total';
     } else {
-        const el = document.querySelector(`.ck-kpi-card[data-kpi="${tipo}"]`);
-        if (el) el.classList.add('active');
+        currentFiltroKPI = tipo;
     }
 
-    // Sincronizar pills segmentadas
-    document.querySelectorAll('.ck-segment-item').forEach(b => {
-        if (b.getAttribute('data-kpi') === tipo) b.classList.add('active');
-        else b.classList.remove('active');
-    });
-
-    currentFiltroKPI = tipo;
-    renderizarListaLateral();
-    renderizarMatriz();
-}
-
-function filtrarSegmentoDoc(tipo, element) {
-    document.querySelectorAll('.ck-segment-item').forEach(b => b.classList.remove('active'));
-    if (element) {
-        element.classList.add('active');
-    } else {
-        const b = document.querySelector(`.ck-segment-item[data-kpi="${tipo}"]`);
-        if (b) b.classList.add('active');
-    }
-
-    // Sincronizar tarjetas KPI
     document.querySelectorAll('.ck-kpi-card, .kpi-card').forEach(c => {
-        if (c.getAttribute('data-kpi') === tipo) c.classList.add('active');
+        if (c.getAttribute('data-kpi') === currentFiltroKPI) c.classList.add('active');
         else c.classList.remove('active');
     });
 
-    currentFiltroKPI = tipo;
     renderizarListaLateral();
     renderizarMatriz();
-    if (document.getElementById('view-container-calendar') && !document.getElementById('view-container-calendar').classList.contains('d-none')) {
+    if (typeof window.renderizarCalendario === 'function' && document.getElementById('view-container-calendar') && !document.getElementById('view-container-calendar').classList.contains('d-none')) {
         window.renderizarCalendario();
     }
+}
+window.filtrarKPI = filtrarKPI;
+
+function filtrarSegmentoDoc(tipo, element) {
+    filtrarKPI(tipo, element);
 }
 window.filtrarSegmentoDoc = filtrarSegmentoDoc;
 
@@ -656,6 +694,11 @@ window.renderizarCalendario = function() {
     let cntVigentesMes = 0;
 
     vehiculosFlota.forEach(v => {
+        if (window._docFiltroEmpresa && window._docFiltroEmpresa !== 'TODAS') {
+            const empV = (v.empresa || v.cliente || '').trim().toUpperCase();
+            if (empV !== window._docFiltroEmpresa.trim().toUpperCase()) return;
+        }
+
         // Filtro por búsqueda de placa
         if (searchTxt && !v.placa.toLowerCase().includes(searchTxt) && !(v.tipo || '').toLowerCase().includes(searchTxt)) {
             return;
@@ -1111,6 +1154,11 @@ function renderizarListaLateral() {
     let filtrados = vehiculosFlota.filter(v => {
         let matchTerm = v.placa.toLowerCase().includes(term) || (v.tipo || '').toLowerCase().includes(term);
         
+        if (window._docFiltroEmpresa && window._docFiltroEmpresa !== 'TODAS') {
+            const empV = (v.empresa || v.cliente || '').trim().toUpperCase();
+            if (empV !== window._docFiltroEmpresa.trim().toUpperCase()) return false;
+        }
+
         let matchAvanzado = true;
         if (window.docFiltros) {
             for (let colKey in window.docFiltros) {
@@ -1468,6 +1516,11 @@ function renderizarMatriz() {
     filtrados = vehiculosFlota.filter(v => {
         let matchTerm = v.placa.toLowerCase().includes(term) || (v.tipo || '').toLowerCase().includes(term);
         
+        if (window._docFiltroEmpresa && window._docFiltroEmpresa !== 'TODAS') {
+            const empV = (v.empresa || v.cliente || '').trim().toUpperCase();
+            if (empV !== window._docFiltroEmpresa.trim().toUpperCase()) return false;
+        }
+
         let matchAvanzado = true;
         if (window.docFiltros) {
             for (let colKey in window.docFiltros) {

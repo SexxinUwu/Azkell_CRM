@@ -1415,12 +1415,8 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         </div>
 
         <div class="d-flex align-items-center gap-2 flex-grow-1 flex-md-grow-0">
-            <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-estados-docs">
-                <button type="button" class="ck-segment-item active" data-kpi="total" onclick="filtrarSegmentoDoc('total', this)">Todos</button>
-                <button type="button" class="ck-segment-item" data-kpi="vigente" onclick="filtrarSegmentoDoc('vigente', this)">Vigentes</button>
-                <button type="button" class="ck-segment-item" data-kpi="alerta" onclick="filtrarSegmentoDoc('alerta', this)">En Alerta</button>
-                <button type="button" class="ck-segment-item" data-kpi="vencido" onclick="filtrarSegmentoDoc('vencido', this)">Vencidos</button>
-                <button type="button" class="ck-segment-item" data-kpi="sin-doc" onclick="filtrarSegmentoDoc('sin-doc', this)">Sin Docs</button>
+            <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-empresas-docs" style="max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                <button type="button" class="ck-segment-item active" onclick="filtrarEmpresaDocs('TODAS', this)">Todas</button>
             </div>
             <button class="btn bg-white border rounded-3 p-2 text-secondary d-flex align-items-center justify-content-center" style="width:38px; height:38px; position:relative;" onclick="window.abrirFiltrosDoc()" title="Filtros avanzados">
                 <i class="bi bi-funnel"></i>
@@ -1965,7 +1961,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     </div>
 </div>
 
-<script src="/modulos/flota/documentos/logica.js"></script>
+<script src="/modulos/flota/documentos/logica.js?v=1.1"></script>
 <script>
     setTimeout(() => {
         if (typeof init_documentos === 'function') init_documentos();

@@ -23,11 +23,17 @@
     align-items: center;
     justify-content: space-between;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    user-select: none;
 }
 .ck-kpi-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+}
+.ck-kpi-card.active {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25), 0 8px 24px -4px rgba(15, 23, 42, 0.08) !important;
+    background: #f8fafc !important;
 }
 .ck-kpi-icon {
     width: 46px;
@@ -490,7 +496,7 @@
   <!-- ── 2. BENTO KPIS ROW ─────────────────────────────────────────── -->
   <div class="row g-2 g-md-3 mb-3">
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card">
+      <div class="ck-kpi-card active" id="ck-kpi-card-total" style="cursor: pointer;" onclick="window.filtrarEstadoChecklist('TODOS', this)">
         <div>
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Total Reportes</span>
           <h2 id="kpi-ck-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
@@ -501,7 +507,7 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card">
+      <div class="ck-kpi-card" id="ck-kpi-card-pendientes" style="cursor: pointer;" onclick="window.filtrarEstadoChecklist('Pendiente', this)">
         <div>
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Pendientes</span>
           <h2 id="kpi-ck-pendientes" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem;">0</h2>
@@ -512,7 +518,7 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card">
+      <div class="ck-kpi-card" id="ck-kpi-card-proceso" style="cursor: pointer;" onclick="window.filtrarEstadoChecklist('En Proceso', this)">
         <div>
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">En Taller / OTs</span>
           <h2 id="kpi-ck-proceso" class="fw-bolder m-0 text-primary" style="font-size: 1.6rem;">0</h2>
@@ -523,7 +529,7 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="ck-kpi-card">
+      <div class="ck-kpi-card" id="ck-kpi-card-finalizados" style="cursor: pointer;" onclick="window.filtrarEstadoChecklist('Finalizado', this)">
         <div>
           <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Finalizados</span>
           <h2 id="kpi-ck-finalizados" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">0</h2>
@@ -535,17 +541,14 @@
     </div>
   </div>
 
-  <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS SEGMENTED (FULL-BLEED) ──────── -->
+  <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS POR EMPRESA SEGMENTED ──────── -->
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
     <div class="position-relative flex-grow-1" style="max-width: 360px;">
       <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
       <input type="text" id="buscadorChecklist" class="ck-apple-search" placeholder="Buscar folio, placa, conductor..." oninput="window.filtrarChecklist()">
     </div>
-    <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-estados-checklist">
-      <button type="button" class="ck-segment-item active" onclick="window.filtrarEstadoChecklist('TODOS', this)">Todos</button>
-      <button type="button" class="ck-segment-item" onclick="window.filtrarEstadoChecklist('Pendiente', this)">Pendientes</button>
-      <button type="button" class="ck-segment-item" onclick="window.filtrarEstadoChecklist('En Proceso', this)">En Taller</button>
-      <button type="button" class="ck-segment-item" onclick="window.filtrarEstadoChecklist('Finalizado', this)">Finalizados</button>
+    <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-empresas-checklist">
+      <button type="button" class="ck-segment-item active" onclick="window.filtrarEmpresaChecklist('TODAS', this)">Todas</button>
     </div>
   </div>
 

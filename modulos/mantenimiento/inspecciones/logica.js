@@ -3,6 +3,17 @@
 // Cargado dinámicamente por cargarModuloAislado('mantenimiento/inspecciones')
 // ================================================================
 
+function _escHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+window._escHtml = _escHtml;
+
 window.normalizeStr = window.normalizeStr || function(str) {
     return (str || '').toString().trim().toUpperCase();
 };
