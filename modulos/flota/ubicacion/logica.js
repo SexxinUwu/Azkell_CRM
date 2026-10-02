@@ -10,6 +10,8 @@ window._placaGPSActiva   = window._placaGPSActiva   || null;
 
 window._intervalGpsLivePolling = window._intervalGpsLivePolling || null;
 
+const _dispEsc = (s) => (s == null ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'));
+
 // ------------------------------------------------------------
 // Refresco de Telemetría GPS en Vivo (Polling)
 // ------------------------------------------------------------
