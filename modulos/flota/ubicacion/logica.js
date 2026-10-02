@@ -184,16 +184,20 @@ window.filtrarListaGPS = function(query) {
         let isActive = window._placaGPSActiva === (w.placa || '');
         let safePlc = (w.placa || '').replace(/'/g, "\\'");
 
+        let dirTextLista = w.ubicacion || w.nombre_wialon || '';
+
         return `
         <div class="gps-unit-card${isActive ? ' active' : ''}" onclick="abrirDetalleGPS('${safePlc}')">
-            <div class="d-flex align-items-center gap-2" style="min-width: 0;">
+            <div class="d-flex align-items-center gap-2" style="min-width: 0; flex: 1;">
                 <div style="width: 8px; height: 8px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0;"></div>
-                <div style="min-width: 0;">
+                <div style="min-width: 0; flex: 1;">
                     <div class="d-flex align-items-center gap-2">
                         <span class="gps-unit-plate">${w.placa || '—'}</span>
                         ${statusBadge}
                     </div>
-                    <div class="gps-unit-model">${w.nombre_wialon || ''}</div>
+                    <div class="gps-unit-model text-truncate" title="${_dispEsc(dirTextLista)}" style="max-width: 210px; font-size: 0.72rem;">
+                        ${w.ubicacion ? `<i class="bi bi-geo-alt-fill text-danger me-1"></i>${_dispEsc(w.ubicacion)}` : _dispEsc(w.nombre_wialon || '')}
+                    </div>
                 </div>
             </div>
             <div class="text-end" style="flex-shrink: 0;">
@@ -241,8 +245,10 @@ window.abrirDetalleGPS = function(placa) {
                </div>
            </div>`;
 
-    let safeNombre = (w.nombre_wialon || '').replace(/'/g, "\\'");
+    let safeNombre = (w.nombre_wialon || w.placa || '').replace(/'/g, "\\'");
+    let safeUbicacion = (w.ubicacion || '').replace(/'/g, "\\'");
     let coordsTxt = tienePos ? (w.lat.toFixed(5) + ', ' + w.lng.toFixed(5)) : '—';
+    let dirInicial = w.ubicacion || (tienePos ? `${w.lat.toFixed(5)}, ${w.lng.toFixed(5)}` : 'Sin señal');
 
     let contentHTML = `
         <!-- Header Bento de la Unidad -->
@@ -270,7 +276,7 @@ window.abrirDetalleGPS = function(placa) {
                 <div class="d-flex align-items-center gap-2">
                     ${tienePos ? `
                     <button class="btn btn-success btn-sm fw-bold px-3 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2"
-                        onclick="window.compartirUbicacion('${safeNombre}', ${w.lat}, ${w.lng})">
+                        onclick="window.compartirUbicacion('${safeNombre}', ${w.lat}, ${w.lng}, '${safeUbicacion}')">
                         <i class="bi bi-whatsapp"></i> Compartir Ubicación
                     </button>` : ''}
                 </div>
@@ -324,8 +330,8 @@ window.abrirDetalleGPS = function(placa) {
                 <div style="min-width:0; flex:1;">
                     <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">Dirección Satelital</span>
                     <div class="d-flex align-items-start justify-content-between gap-2">
-                        <div class="fw-bold m-0 text-dark" id="${dirId}" style="font-size:0.86rem; line-height:1.25; word-break: break-word;">
-                            ${tienePos ? '<span class="spinner-border spinner-border-sm text-primary"></span> Obteniendo dirección...' : '<span class="text-secondary fw-normal">Sin señal</span>'}
+                        <div class="fw-bold m-0 text-dark" id="${dirId}" style="font-size:0.86rem; line-height:1.3; word-break: break-word;">
+                            ${tienePos ? `<i class="bi bi-geo-alt-fill text-danger me-1"></i>${dirInicial}` : '<span class="text-secondary fw-normal">Sin señal</span>'}
                         </div>
                         ${tienePos ? `<button class="btn btn-sm p-0 text-secondary flex-shrink-0" id="${btnDirId}" title="Copiar dirección"><i class="bi bi-clipboard"></i></button>` : ''}
                     </div>
@@ -350,31 +356,33 @@ window.abrirDetalleGPS = function(placa) {
         pane.innerHTML = contentHTML;
     }
 
-    // Geocodificación asíncrona
-    if (tienePos) {
+    // Configurar botón copiar dirección
+    let btnEl = document.getElementById(btnDirId);
+    let dirTxtParaCopiar = w.ubicacion || (tienePos ? `${w.lat.toFixed(5)}, ${w.lng.toFixed(5)}` : '');
+    if (btnEl && dirTxtParaCopiar) {
+        btnEl.onclick = function() {
+            navigator.clipboard.writeText(dirTxtParaCopiar).then(() => {
+                btnEl.innerHTML = '<i class="bi bi-check2 text-success"></i>';
+                setTimeout(() => { btnEl.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 2000);
+            });
+        };
+    }
+
+    // Si por alguna razón no vino w.ubicacion, fallback asíncrono
+    if (tienePos && !w.ubicacion) {
         (async () => {
             let dirEl = document.getElementById(dirId);
-            let btnEl = document.getElementById(btnDirId);
             let dirTxt = w.lat.toFixed(5) + ', ' + w.lng.toFixed(5);
             try {
                 const res = await fetch(`/api/proxy/geocode?lat=${w.lat}&lon=${w.lng}`);
                 const data = await res.json();
                 if (data && data.display_name && !data.display_name.startsWith('Ubicación GPS')) {
                     dirTxt = data.display_name.replace(/^Sin nombre,\s*/i, '');
-                } else {
-                    // Respaldo directo en cliente si el backend devolvió genérico
-                    const resB = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${w.lat}&longitude=${w.lng}&localityLanguage=es`).then(r=>r.json()).catch(()=>null);
-                    if (resB) {
-                        let loc = resB.locality || resB.city || '';
-                        let state = resB.principalSubdivision || resB.state || '';
-                        let parts = [loc, state, 'Perú'].filter(Boolean);
-                        if (parts.length > 0) dirTxt = parts.join(', ');
-                    }
                 }
             } catch(e) {}
 
             if (dirEl) {
-                dirEl.textContent = dirTxt;
+                dirEl.innerHTML = `<i class="bi bi-geo-alt-fill text-danger me-1"></i>${dirTxt}`;
                 dirEl.setAttribute('title', dirTxt);
             }
             if (btnEl) {
@@ -389,9 +397,10 @@ window.abrirDetalleGPS = function(placa) {
     }
 };
 
-window.compartirUbicacion = function(nombre, lat, lng) {
+window.compartirUbicacion = function(nombre, lat, lng, dir) {
     let mapsUrl = `https://maps.google.com/maps?q=${lat},${lng}`;
-    let texto = `📍 *Ubicación GPS — ${nombre}*\nCoordenadas: ${lat.toFixed(5)}, ${lng.toFixed(5)}\nVer en Google Maps: ${mapsUrl}`;
+    let dirTxt = dir ? `\n📍 *Dirección:* ${dir}` : '';
+    let texto = `📍 *Ubicación GPS — ${nombre}*${dirTxt}\nCoordenadas: ${lat.toFixed(5)}, ${lng.toFixed(5)}\nVer en Google Maps: ${mapsUrl}`;
     let wUrl = `https://wa.me/?text=${encodeURIComponent(texto)}`;
     window.open(wUrl, '_blank');
 };

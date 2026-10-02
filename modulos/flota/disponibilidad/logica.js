@@ -879,28 +879,27 @@ window.dispRenderizarTabla = function (datos) {
         const conductor = item.conductor_asignado ? _dispEsc(item.conductor_asignado) : '<span class="text-muted">—</span>';
         const obs = item.observaciones ? _dispEsc(item.observaciones) : '<span class="text-muted">—</span>';
 
-        // Mapeo Telemetría GPS en Vivo
+        // Mapeo Telemetría GPS en Vivo y Ubicación Real
         const targetPlaca = cleanPlc(item.placa_camion || item.placa_carreta);
         const gps = (window._dispGpsMap && targetPlaca) ? window._dispGpsMap[targetPlaca] : null;
-        let gpsHtml = '<span class="badge bg-light text-secondary border px-2 py-1" style="font-size:0.7rem; border-radius:6px;">Sin Señal</span>';
+        let gpsHtml = '<span class="text-muted small" style="font-size:0.75rem;"><i class="bi bi-geo-alt me-1 opacity-50"></i>Sin Señal GPS</span>';
 
         if (gps && gps.lat && gps.lng) {
-            const speed = (gps.velocidad != null ? Number(gps.velocidad) : (gps.pos && gps.pos.s != null ? Number(gps.pos.s) : 0)) || 0;
-            const isMoving = speed > 3;
             const mapsUrl = `https://maps.google.com/maps?q=${gps.lat},${gps.lng}`;
             const coordsStr = `${gps.lat.toFixed(4)}, ${gps.lng.toFixed(4)}`;
-
-            const pillStatus = isMoving
-                ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold" style="font-size:0.70rem; border-radius:6px;"><i class="bi bi-speedometer2 me-1"></i>${speed} km/h</span>`
-                : `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-bold" style="font-size:0.70rem; border-radius:6px;"><i class="bi bi-geo-alt-fill me-1"></i>Detenido</span>`;
+            const ubicacionTexto = gps.ubicacion || `Lat: ${gps.lat.toFixed(4)}, Lng: ${gps.lng.toFixed(4)}`;
 
             gpsHtml = `
-                <div class="d-inline-flex align-items-center gap-1.5" title="GPS: ${coordsStr}">
-                    ${pillStatus}
-                    <a href="${mapsUrl}" target="_blank" class="btn btn-sm btn-light border p-1 rounded-2 text-primary shadow-2xs d-inline-flex align-items-center justify-content-center" style="width:24px; height:24px;" title="Ver en Google Maps (${coordsStr})">
-                        <i class="bi bi-box-arrow-up-right" style="font-size:0.72rem;"></i>
-                    </a>
-                </div>
+                <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" 
+                   class="d-inline-flex align-items-center gap-1 text-decoration-none py-1 px-1.5 rounded-2 transition-all" 
+                   title="Ver en Google Maps (${coordsStr}) • ${gps.ubicacion ? _dispEsc(gps.ubicacion) : coordsStr}"
+                   style="max-width: 260px; color: #0f172a;">
+                    <i class="bi bi-geo-alt-fill text-danger flex-shrink-0" style="font-size:0.85rem;"></i>
+                    <span class="text-truncate fw-semibold" style="font-size:0.78rem; border-bottom: 1px dashed #94a3b8;">
+                        ${_dispEsc(ubicacionTexto)}
+                    </span>
+                    <i class="bi bi-box-arrow-up-right ms-1 text-muted opacity-50 flex-shrink-0" style="font-size:0.65rem;"></i>
+                </a>
             `;
         }
 
@@ -1005,14 +1004,17 @@ window.dispRenderizarCardsMobile = function (datos) {
         let gpsMobileBadge = '';
 
         if (gps && gps.lat && gps.lng) {
-            const speed = (gps.velocidad != null ? Number(gps.velocidad) : (gps.pos && gps.pos.s != null ? Number(gps.pos.s) : 0)) || 0;
-            const isMoving = speed > 3;
             const mapsUrl = `https://maps.google.com/maps?q=${gps.lat},${gps.lng}`;
+            const coordsStr = `${gps.lat.toFixed(4)}, ${gps.lng.toFixed(4)}`;
+            const ubicacionTexto = gps.ubicacion || `Lat: ${gps.lat.toFixed(4)}, Lng: ${gps.lng.toFixed(4)}`;
             gpsMobileBadge = `
-                <a href="${mapsUrl}" target="_blank" class="badge bg-light text-primary border text-decoration-none px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size:0.72rem; border-radius:6px;">
-                    <i class="bi ${isMoving ? 'bi-speedometer2 text-primary' : 'bi-geo-alt-fill text-success'}"></i>
-                    <span>${isMoving ? speed + ' km/h' : 'GPS Detenido'}</span>
-                    <i class="bi bi-box-arrow-up-right ms-1 text-muted" style="font-size:0.65rem;"></i>
+                <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" 
+                   class="badge bg-light text-dark border text-decoration-none px-2.5 py-1.5 d-inline-flex align-items-center gap-1.5 w-100 text-start" 
+                   style="font-size:0.75rem; border-radius:8px;"
+                   title="Ver en Google Maps (${coordsStr})">
+                    <i class="bi bi-geo-alt-fill text-danger flex-shrink-0"></i>
+                    <span class="text-truncate fw-semibold text-secondary flex-grow-1">${_dispEsc(ubicacionTexto)}</span>
+                    <i class="bi bi-box-arrow-up-right ms-auto text-muted flex-shrink-0" style="font-size:0.65rem;"></i>
                 </a>
             `;
         }

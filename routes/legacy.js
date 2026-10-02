@@ -1359,6 +1359,7 @@ router.post('/:metodo', async (req, res) => {
                 if (!loginData || !loginData.eid) return { error: "Fallo Login Wialon. Verifica el token en Sistema → Integraciones." };
 
                 const sid = loginData.eid;
+                const gisSid = loginData.gis_sid;
                 const searchParams = { "spec": { "itemsType": "avl_unit", "propName": "sys_name", "propValueMask": "*", "sortType": "sys_name" }, "force": 1, "flags": 9221, "from": 0, "to": 0 };
                 
                 const searchController = new AbortController();
@@ -1373,6 +1374,9 @@ router.post('/:metodo', async (req, res) => {
                 if (!searchData || !searchData.items) return [];
 
                 const vehiculosLive = [];
+                const coordsToGeocode = [];
+                const coordIndexMap = [];
+
                 searchData.items.forEach(item => {
                     const rawName = item.nm ? item.nm.toUpperCase().trim() : "";
                     let placaLimpia = rawName.replace(/[^A-Z0-9]/g, '');
@@ -1380,14 +1384,55 @@ router.post('/:metodo', async (req, res) => {
                     if (matchPlaca) placaLimpia = matchPlaca[0];
 
                     if (rawName) {
-                        vehiculosLive.push({
-                            nombre_wialon: rawName, placa: placaLimpia,
+                        const lat = item.pos ? Number(item.pos.y) : 0;
+                        const lng = item.pos ? Number(item.pos.x) : 0;
+                        const speed = item.pos && item.pos.s != null ? Number(item.pos.s) : 0;
+
+                        const vObj = {
+                            nombre_wialon: rawName,
+                            placa: placaLimpia,
                             km: item.cnm_km ? Math.round(item.cnm_km) : 0,
                             horas: item.cneh ? Math.round(item.cneh) : 0,
-                            lat: item.pos ? item.pos.y : 0, lng: item.pos ? item.pos.x : 0
-                        });
+                            lat,
+                            lng,
+                            velocidad: speed,
+                            ubicacion: ''
+                        };
+
+                        if (lat && lng) {
+                            coordsToGeocode.push({ lat, lon: lng });
+                            coordIndexMap.push(vehiculosLive.length);
+                        }
+
+                        vehiculosLive.push(vObj);
                     }
                 });
+
+                // ── Geocodificación Inversa Wialon GIS en Lote ──
+                if (coordsToGeocode.length > 0 && gisSid) {
+                    try {
+                        const host = new URL(baseUrl).hostname;
+                        const geoUrl = `https://geocode-maps.wialon.com/${host}/gis_geocode?coords=${encodeURIComponent(JSON.stringify(coordsToGeocode))}&flags=1255211008&gis_sid=${gisSid}`;
+                        const geoController = new AbortController();
+                        const geoTimeout = setTimeout(() => geoController.abort(), 4000);
+                        const geoRes = await fetch(geoUrl, { signal: geoController.signal });
+                        clearTimeout(geoTimeout);
+
+                        if (geoRes.ok) {
+                            const addresses = await geoRes.json();
+                            if (Array.isArray(addresses)) {
+                                addresses.forEach((addr, i) => {
+                                    const targetIdx = coordIndexMap[i];
+                                    if (vehiculosLive[targetIdx] && typeof addr === 'string') {
+                                        vehiculosLive[targetIdx].ubicacion = addr.trim();
+                                    }
+                                });
+                            }
+                        }
+                    } catch (geoErr) {
+                        console.warn('Wialon Geocoding GIS aviso:', geoErr.message);
+                    }
+                }
 
                 fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(e=>{});
 
