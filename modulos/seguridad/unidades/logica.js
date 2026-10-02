@@ -106,6 +106,10 @@ function _sguFetch(url, opts) {
     if (token && !opts.headers['Authorization']) {
         opts.headers['Authorization'] = 'Bearer ' + token;
     }
+    var isSec = window.location.hostname.includes('seguridad.azkell.com') || window.location.hostname.startsWith('seguridad.');
+    if ((isSec || (typeof _sguEmpresaActiva !== 'undefined' && _sguEmpresaActiva === 'TODAS')) && !opts.headers['x-portal']) {
+        opts.headers['x-portal'] = 'seguridad';
+    }
     return fetch(url, opts).then(function(r) {
         if (!r.ok) {
             return r.json().catch(function(){ return {}; }).then(function(e) { 
@@ -253,15 +257,51 @@ async function _sguObtenerDocVehiculo(placa) {
     return { soat: soatData, rt: rtData };
 }
 
+window._sguValidarPlacaExiste = function(placaStr) {
+    if (!placaStr) return false;
+    var cleanP = placaStr.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!cleanP || cleanP.length < 4) return false;
+
+    // 1. Revisar lista completa de placas
+    var todas = (_sguRecursos.placas || []).concat(_sguRecursos.carretasGlobales || []);
+    var match = todas.some(function(p) {
+        return (p || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanP;
+    });
+    if (match) return true;
+
+    // 2. Revisar mapa placaToEmpresa
+    if (_sguRecursos.placaToEmpresa && _sguRecursos.placaToEmpresa[cleanP]) {
+        return true;
+    }
+
+    // 3. Revisar tractosPorEmpresa y placasPorEmpresa
+    if (_sguRecursos.tractosPorEmpresa) {
+        for (var k in _sguRecursos.tractosPorEmpresa) {
+            var arr = _sguRecursos.tractosPorEmpresa[k] || [];
+            if (arr.some(function(p){ return (p || '').replace(/[^A-Z0-9]/g, '').toUpperCase() === cleanP; })) return true;
+        }
+    }
+    if (_sguRecursos.placasPorEmpresa) {
+        for (var k2 in _sguRecursos.placasPorEmpresa) {
+            var arr2 = _sguRecursos.placasPorEmpresa[k2] || [];
+            if (arr2.some(function(p){ return (p || '').replace(/[^A-Z0-9]/g, '').toUpperCase() === cleanP; })) return true;
+        }
+    }
+
+    return false;
+};
+
 window._sguSyncDocPlaca = async function(placa, tipo) {
     var pStr = (placa || '').toString().trim().toUpperCase();
     var isTracto = tipo === 'tracto';
     var boxId = isTracto ? 'sgu-doc-box-tracto' : 'sgu-doc-box-carreta';
     var boxEl = document.getElementById(boxId);
     var lblEl = document.getElementById(isTracto ? 'sgu-lbl-doc-tracto-placa' : 'sgu-lbl-doc-carreta-placa');
+    var inputEl = document.getElementById(isTracto ? 'sgu-f-placa' : 'sgu-f-carreta');
 
     if (!pStr || pStr.length < 3) {
         if (boxEl) boxEl.style.display = 'none';
+        if (inputEl) inputEl.classList.remove('border-danger', 'is-invalid', 'border-success', 'is-valid');
         if (isTracto) {
             var hintEl = document.getElementById('sgu-f-km-hint');
             if (hintEl) hintEl.classList.add('d-none');
@@ -269,8 +309,41 @@ window._sguSyncDocPlaca = async function(placa, tipo) {
         return;
     }
 
+    var existe = window._sguValidarPlacaExiste(pStr);
+
+    if (pStr.length >= 4) {
+        if (!existe) {
+            if (inputEl) {
+                inputEl.classList.add('border-danger', 'is-invalid');
+                inputEl.classList.remove('border-success', 'is-valid');
+            }
+        } else {
+            if (inputEl) {
+                inputEl.classList.remove('border-danger', 'is-invalid');
+                inputEl.classList.add('border-success', 'is-valid');
+            }
+        }
+    } else {
+        if (inputEl) inputEl.classList.remove('border-danger', 'is-invalid', 'border-success', 'is-valid');
+    }
+
     if (lblEl) lblEl.textContent = pStr;
     if (boxEl) boxEl.style.display = 'block';
+
+    var prefix = isTracto ? '-t' : '-r';
+    var colSoat = document.getElementById('sgu-col-soat' + prefix);
+    var colRt = document.getElementById('sgu-col-rt' + prefix);
+    var noDocsEl = document.getElementById('sgu-no-docs' + prefix);
+
+    if (!existe && pStr.length >= 5) {
+        if (colSoat) colSoat.classList.add('d-none');
+        if (colRt) colRt.classList.add('d-none');
+        if (noDocsEl) {
+            noDocsEl.classList.remove('d-none');
+            noDocsEl.innerHTML = '<span class="text-danger fw-bold"><i class="bi bi-x-circle-fill me-1"></i> La placa "' + pStr + '" no existe en el maestro de flota. Debe ser una placa registrada.</span>';
+        }
+        return;
+    }
 
     // ── Autocompletar Último Kilometraje Registrado para el Tracto ──────
     if (isTracto && _sguView === 'form') {
@@ -312,11 +385,6 @@ window._sguSyncDocPlaca = async function(placa, tipo) {
     }
 
     var doc = await _sguObtenerDocVehiculo(pStr);
-    var prefix = isTracto ? '-t' : '-r';
-
-    var colSoat = document.getElementById('sgu-col-soat' + prefix);
-    var colRt = document.getElementById('sgu-col-rt' + prefix);
-    var noDocsEl = document.getElementById('sgu-no-docs' + prefix);
 
     var hasSoat = doc && doc.soat;
     var hasRt = doc && doc.rt;
@@ -354,6 +422,7 @@ window._sguSyncDocPlaca = async function(placa, tipo) {
     if (noDocsEl) {
         if (!hasSoat && !hasRt) {
             noDocsEl.classList.remove('d-none');
+            noDocsEl.textContent = 'Sin documentos registrados';
         } else {
             noDocsEl.classList.add('d-none');
         }
@@ -550,6 +619,16 @@ function _sguNormalizeEmpresa(str) {
         .replace(/S\.A\.C\.|SAC|S\.A\.|SA|E\.I\.R\.L\.|EIRL|S\.R\.L\.|SRL/gi, '')
         .replace(/[^A-Z0-9]/g, '')
         .trim();
+}
+
+function _sguGetBadgeEmpresa(emp) {
+    if (!emp) return '';
+    var s = String(emp).toLowerCase();
+    if (s.includes('marsisa')) return '<span class="badge rounded-pill" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;font-size:0.7rem;font-weight:700;">Marsisa</span>';
+    if (s.includes('rosymar')) return '<span class="badge rounded-pill" style="background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;font-size:0.7rem;font-weight:700;">Rosymar</span>';
+    if (s.includes('trahesa')) return '<span class="badge rounded-pill" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-size:0.7rem;font-weight:700;">Trahesa</span>';
+    if (s.includes('yogui')) return '<span class="badge rounded-pill" style="background:#f3e8ff;color:#7e22ce;border:1px solid #e9d5ff;font-size:0.7rem;font-weight:700;">Yogui</span>';
+    return '<span class="badge rounded-pill bg-light text-dark border" style="font-size:0.7rem;">' + emp + '</span>';
 }
 
 function _sguEmpresaMatches(emp1, emp2) {
@@ -948,8 +1027,12 @@ function _sguRenderList() {
             ? '<button class="sgu-action-btn sgu-btn-ingresar-cell" onclick="event.stopPropagation(); window._sguShowView(\'detail\',\'' + rec.id + '\')"><i class="bi bi-arrow-left-circle-fill"></i> Ingresar</button>'
             : '<button class="sgu-action-btn sgu-btn-view-cell" onclick="event.stopPropagation(); window._sguShowView(\'detail\',\'' + rec.id + '\')"><i class="bi bi-eye"></i> Detalle</button>';
 
+        var empName = rec.empresa_nombre || rec.empresa || _sguGetEmpresaDePlaca(rec.placa_tracto);
+        var empBadge = empName ? (' ' + _sguGetBadgeEmpresa(empName)) : '';
+
         var placaText = '<span class="sgu-placa-pill">' + rec.placa_tracto + '</span>' + 
-            (rec.placa_carreta ? ' <span class="text-muted fw-semibold" style="font-size:0.78rem;">/ ' + rec.placa_carreta + '</span>' : '');
+            (rec.placa_carreta ? ' <span class="text-muted fw-semibold" style="font-size:0.78rem;">/ ' + rec.placa_carreta + '</span>' : '') +
+            empBadge;
 
         var salidaText = '<div class="fw-bold text-dark" style="font-size:0.8rem;">' + (rec.salida_fecha || '--') + ' ' + (rec.salida_hora || '') + '</div>' +
             '<div class="text-secondary" style="font-size:0.75rem;">' + (rec.salida_km ? rec.salida_km + ' km' : 'Sin Km') + '</div>' +
@@ -2575,6 +2658,24 @@ window._sguSaveRecord = function() {
         document.getElementById('sgu-f-placa').focus();
         return;
     }
+    if (!window._sguValidarPlacaExiste(p)) {
+        _sguToast('La Placa de Tracto "' + p + '" no existe en el maestro de flota. Debe ser una placa registrada en el sistema.', 'bi-x-octagon-fill');
+        var elP = document.getElementById('sgu-f-placa');
+        if (elP) {
+            elP.focus();
+            elP.classList.add('border-danger', 'is-invalid');
+        }
+        return;
+    }
+    if (c && !window._sguValidarPlacaExiste(c)) {
+        _sguToast('La Placa de Carreta "' + c + '" no existe en el maestro de flota. Verifique que esté bien escrita o regístrela previamente.', 'bi-x-octagon-fill');
+        var elC = document.getElementById('sgu-f-carreta');
+        if (elC) {
+            elC.focus();
+            elC.classList.add('border-danger', 'is-invalid');
+        }
+        return;
+    }
     if (!cond) {
         _sguToast('Por favor, ingresa el Conductor Asignado', 'bi-exclamation-triangle');
         document.getElementById('sgu-f-conductor').focus();
@@ -2682,6 +2783,16 @@ window._sguSaveReturn = function() {
     var obsRetorno = ((document.getElementById('sgu-det-observaciones') || {}).value || '').trim();
     var retConductor = ((document.getElementById('sgu-det-ret-conductor') || {}).value || '').trim();
     var retCarreta = ((document.getElementById('sgu-det-ret-carreta') || {}).value || '').toUpperCase().trim();
+
+    if (retCarreta && !window._sguValidarPlacaExiste(retCarreta)) {
+        _sguToast('La Placa de Carreta "' + retCarreta + '" no existe en el maestro de flota.', 'bi-x-octagon-fill');
+        var elRetC = document.getElementById('sgu-det-ret-carreta');
+        if (elRetC) {
+            elRetC.focus();
+            elRetC.classList.add('border-danger', 'is-invalid');
+        }
+        return;
+    }
 
     if (!km || isNaN(km) || Number(km) <= 0) {
         _sguToast('El Kilometraje de Llegada es OBLIGATORIO', 'bi-exclamation-triangle');

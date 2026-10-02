@@ -8,9 +8,56 @@ const multer  = require('multer');
 const upload  = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } }); // 15MB max
 
 module.exports = (db, logAudit) => {
+    const { getAllActiveTenants, getTenantPool } = require('../services/tenant_master');
 
     function getDb(req) {
         return (req && req.db) ? req.db : db;
+    }
+
+    function isGlobalSecurityReq(req) {
+        return req && (
+            req.isSecurityPortal ||
+            req.tenantSlug === 'seguridad' ||
+            req.tenantSlug === 'master' ||
+            (req.headers && req.headers['x-portal'] === 'seguridad') ||
+            (req.query && req.query.multi_tenant === '1') ||
+            (req.query && (req.query.empresa === 'todas' || req.query.empresa_slug === 'todas' || req.query.empresa === 'all' || req.query.empresa_slug === 'all')) ||
+            (req.headers && (req.headers['x-empresa-slug'] === 'todas' || req.headers['x-empresa-slug'] === 'all'))
+        );
+    }
+
+    async function findTenantByPlaca(placa) {
+        if (!placa) return null;
+        const cleanP = placa.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const tenants = await getAllActiveTenants();
+        for (const t of tenants) {
+            try {
+                const [rows] = await t.pool.promise().query(
+                    "SELECT placa, cliente, tipo FROM placas WHERE UPPER(REPLACE(placa, '-', '')) = ? OR UPPER(placa) = ? LIMIT 1",
+                    [cleanP, placa.toString().trim().toUpperCase()]
+                );
+                if (rows && rows.length > 0) {
+                    return { tenant: t, placaInfo: rows[0] };
+                }
+            } catch(e) {}
+        }
+        return null;
+    }
+
+    async function findTenantByRecordId(table, id) {
+        const tenants = await getAllActiveTenants();
+        for (const t of tenants) {
+            try {
+                const [rows] = await t.pool.promise().query(
+                    `SELECT id FROM \`${table}\` WHERE id = ? LIMIT 1`,
+                    [id]
+                );
+                if (rows && rows.length > 0) {
+                    return t;
+                }
+            } catch(e) {}
+        }
+        return null;
     }
 
     // ── Middleware de Auditoría Automática para Seguridad ────────────────
@@ -44,214 +91,450 @@ module.exports = (db, logAudit) => {
     // ════════════════════════════════════════════════════════════════
 
     // ── GET /seguridad/unidades/stats — Estadísticas resumidas (1ms) ──
-    router.get('/seguridad/unidades/stats', (req, res) => {
-        const tdb = getDb(req);
-        const sql = `
-            SELECT 
-                COUNT(*) as total,
-                COALESCE(SUM(CASE WHEN estado = 'en_ruta' THEN 1 ELSE 0 END), 0) as en_ruta,
-                COALESCE(SUM(CASE WHEN estado = 'completado' THEN 1 ELSE 0 END), 0) as completados,
-                COALESCE(SUM(CASE WHEN salida_has_alert = 1 OR retorno_has_alert = 1 THEN 1 ELSE 0 END), 0) as alertas
-            FROM seg_unidades_registros
-        `;
-        db.query(sql, (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
-            const s = (rows && rows[0]) || { total: 0, en_ruta: 0, completados: 0, alertas: 0 };
+    router.get('/seguridad/unidades/stats', async (req, res) => {
+        try {
+            const isGlobal = isGlobalSecurityReq(req);
+            let targetTenants = [];
+            const reqEmpresa = req.query.empresa || req.query.empresa_slug || (req.headers && req.headers['x-empresa-slug']);
+
+            if (reqEmpresa && reqEmpresa !== 'todas' && reqEmpresa !== 'all') {
+                const allT = await getAllActiveTenants();
+                const matched = allT.find(t => t.slug === reqEmpresa || t.db_name === reqEmpresa);
+                targetTenants = matched ? [matched] : [{ slug: req.tenantSlug || 'marsisa', nombre_empresa: 'Marsisa S.A.C.', pool: getDb(req) }];
+            } else if (isGlobal) {
+                targetTenants = await getAllActiveTenants();
+            } else {
+                targetTenants = [{ slug: req.tenantSlug || 'marsisa', nombre_empresa: (req.tenantInfo && req.tenantInfo.nombre_empresa) || 'Marsisa S.A.C.', pool: getDb(req) }];
+            }
+
+            const sql = `
+                SELECT 
+                    COUNT(*) as total,
+                    COALESCE(SUM(CASE WHEN estado = 'en_ruta' THEN 1 ELSE 0 END), 0) as en_ruta,
+                    COALESCE(SUM(CASE WHEN estado = 'completado' THEN 1 ELSE 0 END), 0) as completados,
+                    COALESCE(SUM(CASE WHEN salida_has_alert = 1 OR retorno_has_alert = 1 THEN 1 ELSE 0 END), 0) as alertas
+                FROM seg_unidades_registros
+            `;
+
+            let total = 0, en_ruta = 0, completados = 0, alertas = 0;
+            const porEmpresa = {};
+
+            await Promise.all(targetTenants.map(async (t) => {
+                try {
+                    const [rows] = await t.pool.promise().query(sql);
+                    const s = (rows && rows[0]) || { total: 0, en_ruta: 0, completados: 0, alertas: 0 };
+                    const tTot = Number(s.total) || 0;
+                    const tEnRuta = Number(s.en_ruta) || 0;
+                    const tComp = Number(s.completados) || 0;
+                    const tAlert = Number(s.alertas) || 0;
+
+                    total += tTot;
+                    en_ruta += tEnRuta;
+                    completados += tComp;
+                    alertas += tAlert;
+
+                    porEmpresa[t.slug] = {
+                        slug: t.slug,
+                        nombre: t.nombre_empresa,
+                        total: tTot,
+                        en_ruta: tEnRuta,
+                        completados: tComp,
+                        alertas: tAlert
+                    };
+                } catch(e) {
+                    console.warn(`[Seguridad Stats] Error tenant ${t.slug}:`, e.message);
+                }
+            }));
+
             res.json({
-                total: Number(s.total) || 0,
-                en_ruta: Number(s.en_ruta) || 0,
-                completados: Number(s.completados) || 0,
-                alertas: Number(s.alertas) || 0
+                total,
+                en_ruta,
+                completados,
+                alertas,
+                por_empresa: porEmpresa
             });
-        });
+        } catch(err) {
+            console.error('[Seguridad Stats] Error:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── GET /seguridad/empresas-stats — Estadísticas por empresa para el portal de bienvenida ──
+    router.get('/seguridad/empresas-stats', async (req, res) => {
+        try {
+            const tenants = await getAllActiveTenants();
+            const empresas = [];
+            let globalTotalFlota = 0;
+            let globalEnRuta = 0;
+            let globalCompletados = 0;
+            let globalAlertas = 0;
+
+            for (const t of tenants) {
+                try {
+                    // 1. Contar flota activa
+                    const [flotaRows] = await t.pool.promise().query("SELECT COUNT(*) as cnt FROM placas");
+                    const totalFlota = (flotaRows && flotaRows[0]) ? Number(flotaRows[0].cnt) : 0;
+
+                    // 2. Contar registros de garita
+                    const [regRows] = await t.pool.promise().query(`
+                        SELECT 
+                            COALESCE(SUM(CASE WHEN estado = 'en_ruta' THEN 1 ELSE 0 END), 0) as en_ruta,
+                            COALESCE(SUM(CASE WHEN estado = 'completado' THEN 1 ELSE 0 END), 0) as completados,
+                            COALESCE(SUM(CASE WHEN salida_has_alert = 1 OR retorno_has_alert = 1 THEN 1 ELSE 0 END), 0) as alertas
+                        FROM seg_unidades_registros
+                    `);
+                    const r = (regRows && regRows[0]) || { en_ruta: 0, completados: 0, alertas: 0 };
+                    const enRuta = Number(r.en_ruta) || 0;
+                    const completados = Number(r.completados) || 0;
+                    const alertas = Number(r.alertas) || 0;
+
+                    globalTotalFlota += totalFlota;
+                    globalEnRuta += enRuta;
+                    globalCompletados += completados;
+                    globalAlertas += alertas;
+
+                    empresas.push({
+                        slug: t.slug,
+                        empresa: t.nombre_empresa,
+                        total_flota: totalFlota,
+                        en_ruta: enRuta,
+                        completados: completados,
+                        alertas: alertas
+                    });
+                } catch(e) {
+                    console.warn(`[empresas-stats] Error en tenant ${t.slug}:`, e.message);
+                }
+            }
+
+            res.json({
+                empresas: empresas,
+                global: {
+                    empresa: 'TODAS',
+                    total_flota: globalTotalFlota,
+                    en_ruta: globalEnRuta,
+                    completados: globalCompletados,
+                    alertas: globalAlertas
+                }
+            });
+        } catch(err) {
+            console.error('[empresas-stats] Error:', err);
+            res.status(500).json({ error: err.message });
+        }
     });
 
     // ── GET /seguridad/unidades — Listar registros ────────────────
     router.get('/seguridad/unidades', async (req, res) => {
-        let sql = `SELECT r.* FROM seg_unidades_registros r`;
-        const params = [];
-        const wheres = [];
+        try {
+            const isGlobal = isGlobalSecurityReq(req);
+            const reqEmpresa = req.query.empresa || req.query.empresa_slug || (req.headers && req.headers['x-empresa-slug']);
+            
+            let targetTenants = [];
+            if (reqEmpresa && reqEmpresa !== 'todas' && reqEmpresa !== 'all') {
+                const allT = await getAllActiveTenants();
+                const matched = allT.find(t => t.slug === reqEmpresa || t.db_name === reqEmpresa);
+                targetTenants = matched ? [matched] : [{ slug: req.tenantSlug || 'marsisa', nombre_empresa: 'Marsisa S.A.C.', pool: getDb(req) }];
+            } else if (isGlobal) {
+                targetTenants = await getAllActiveTenants();
+            } else {
+                targetTenants = [{ slug: req.tenantSlug || 'marsisa', nombre_empresa: (req.tenantInfo && req.tenantInfo.nombre_empresa) || 'Marsisa S.A.C.', pool: getDb(req) }];
+            }
 
-        if (req.query.estado) {
-            wheres.push('r.estado = ?');
-            params.push(req.query.estado);
-        }
-        if (req.query.fecha) {
-            wheres.push('r.salida_fecha = ?');
-            params.push(req.query.fecha);
-        }
-        if (wheres.length) {
-            sql += ' WHERE ' + wheres.join(' AND ');
-        }
-        sql += ' ORDER BY r.created_at DESC';
-        if (req.query.limit) {
-            sql += ' LIMIT ?';
-            params.push(parseInt(req.query.limit, 10));
-        }
-        
-        db.query(sql, params, (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
-            
-            if (!rows.length) return res.json([]);
-            
-            const ids = rows.map(r => r.id);
-            db.query('SELECT id, registro_id, tipo, url, orden FROM seg_unidades_fotos WHERE registro_id IN (?) ORDER BY orden ASC', [ids], (err2, fotosRows) => {
-                if (err2) return res.status(500).json({ error: err2.message });
-                
-                const fotosByRecord = {};
-                for (const f of (fotosRows || [])) {
-                    if (!fotosByRecord[f.registro_id]) fotosByRecord[f.registro_id] = [];
-                    fotosByRecord[f.registro_id].push(f);
+            const limitNum = req.query.limit ? parseInt(req.query.limit, 10) : 250;
+            const estadoFilter = req.query.estado || null;
+            const fechaFilter = req.query.fecha || null;
+
+            const allRowsPromises = targetTenants.map(async (t) => {
+                let sql = `SELECT r.* FROM seg_unidades_registros r`;
+                const params = [];
+                const wheres = [];
+
+                if (estadoFilter) {
+                    wheres.push('r.estado = ?');
+                    params.push(estadoFilter);
+                }
+                if (fechaFilter) {
+                    wheres.push('r.salida_fecha = ?');
+                    params.push(fechaFilter);
+                }
+                if (wheres.length) {
+                    sql += ' WHERE ' + wheres.join(' AND ');
+                }
+                sql += ' ORDER BY r.created_at DESC';
+                if (limitNum) {
+                    sql += ' LIMIT ?';
+                    params.push(limitNum);
                 }
 
-                for (const r of rows) {
-                    r.fotos = fotosByRecord[r.id] || [];
-                    try { r.salida_template_json  = r.salida_template_json  ? JSON.parse(r.salida_template_json)  : null; } catch(e) {}
-                    try { r.salida_checklist_json  = r.salida_checklist_json  ? JSON.parse(r.salida_checklist_json)  : null; } catch(e) {}
-                    try { r.retorno_template_json = r.retorno_template_json ? JSON.parse(r.retorno_template_json) : null; } catch(e) {}
-                    try { r.retorno_checklist_json = r.retorno_checklist_json ? JSON.parse(r.retorno_checklist_json) : null; } catch(e) {}
+                try {
+                    const [rows] = await t.pool.promise().query(sql, params);
+                    if (!rows || !rows.length) return [];
+
+                    const ids = rows.map(r => r.id);
+                    const [fotosRows] = await t.pool.promise().query(
+                        'SELECT id, registro_id, tipo, url, orden FROM seg_unidades_fotos WHERE registro_id IN (?) ORDER BY orden ASC',
+                        [ids]
+                    );
+
+                    const fotosByRecord = {};
+                    for (const f of (fotosRows || [])) {
+                        if (!fotosByRecord[f.registro_id]) fotosByRecord[f.registro_id] = [];
+                        fotosByRecord[f.registro_id].push(f);
+                    }
+
+                    for (const r of rows) {
+                        r.empresa_slug = t.slug;
+                        r.empresa_nombre = t.nombre_empresa;
+                        r.fotos = fotosByRecord[r.id] || [];
+                        try { r.salida_template_json  = r.salida_template_json  ? JSON.parse(r.salida_template_json)  : null; } catch(e) {}
+                        try { r.salida_checklist_json  = r.salida_checklist_json  ? JSON.parse(r.salida_checklist_json)  : null; } catch(e) {}
+                        try { r.retorno_template_json = r.retorno_template_json ? JSON.parse(r.retorno_template_json) : null; } catch(e) {}
+                        try { r.retorno_checklist_json = r.retorno_checklist_json ? JSON.parse(r.retorno_checklist_json) : null; } catch(e) {}
+                    }
+                    return rows;
+                } catch(errT) {
+                    console.warn(`[Seguridad] Error consultando tenant ${t.slug}:`, errT.message);
+                    return [];
                 }
-                res.json(rows);
             });
-        });
+
+            const results = await Promise.all(allRowsPromises);
+            let mergedRows = [].concat(...results);
+
+            // Ordenar de más reciente a más antiguo
+            mergedRows.sort((a, b) => {
+                const dateA = new Date(a.created_at || a.salida_fecha || 0).getTime();
+                const dateB = new Date(b.created_at || b.salida_fecha || 0).getTime();
+                return dateB - dateA;
+            });
+
+            if (req.query.limit && mergedRows.length > limitNum) {
+                mergedRows = mergedRows.slice(0, limitNum);
+            }
+
+            res.json(mergedRows);
+        } catch(err) {
+            console.error('[Seguridad GET /unidades] Error:', err);
+            res.status(500).json({ error: err.message });
+        }
     });
 
     // ── POST /seguridad/unidades — Crear registro de salida ───────
-    router.post('/seguridad/unidades', (req, res) => {
-        const tdb = getDb(req);
-        const { placa_tracto, placa_carreta, conductor, destino, orden_viaje, tipo_salida,
-                salida_fecha, salida_hora, salida_km,
-                salida_template_json, salida_checklist_json, salida_has_alert,
-                salida_observaciones,
-                firma_salida_conductor, firma_salida_vigilancia } = req.body;
+    router.post('/seguridad/unidades', async (req, res) => {
+        try {
+            const { placa_tracto, placa_carreta, conductor, destino, orden_viaje, tipo_salida,
+                    salida_fecha, salida_hora, salida_km,
+                    salida_template_json, salida_checklist_json, salida_has_alert,
+                    salida_observaciones,
+                    firma_salida_conductor, firma_salida_vigilancia,
+                    empresa_slug } = req.body;
 
-        if (!placa_tracto || !conductor) {
-            return res.status(400).json({ error: 'placa_tracto y conductor son requeridos' });
-        }
+            if (!placa_tracto || !conductor) {
+                return res.status(400).json({ error: 'placa_tracto y conductor son requeridos' });
+            }
 
-        const cleanT = (placa_tracto || '').trim().toUpperCase();
-        const cleanC = (placa_carreta || '').trim().toUpperCase();
+            const cleanT = (placa_tracto || '').trim().toUpperCase();
+            const cleanC = (placa_carreta || '').trim().toUpperCase();
+            const pTractoPure = cleanT.replace(/[^A-Z0-9]/g, '');
+            const pCarretaPure = cleanC.replace(/[^A-Z0-9]/g, '');
 
-        // 1. Validar que la unidad (tracto / camión) no se encuentre actualmente EN RUTA
-        // NOTA: Solo se restringe por tracto/camión. Las carretas o semirremolques no bloquean la salida.
-        const checkSql = "SELECT id, placa_tracto, placa_carreta, conductor, salida_fecha, salida_hora FROM seg_unidades_registros WHERE estado = 'en_ruta' AND placa_tracto = ? LIMIT 1";
-        const checkParams = [cleanT];
+            if (!pTractoPure) {
+                return res.status(400).json({ error: 'La placa de tracto/camión ingresada no es válida.' });
+            }
 
-        tdb.query(checkSql, checkParams, (errDup, dupRows) => {
-            if (errDup) return res.status(500).json({ error: errDup.message });
-            if (dupRows && dupRows.length > 0) {
-                const dup = dupRows[0];
+            // 1. Encontrar a qué empresa pertenece la placa
+            let targetTenant = null;
+            if (empresa_slug && empresa_slug !== 'todas' && empresa_slug !== 'all') {
+                const allT = await getAllActiveTenants();
+                targetTenant = allT.find(t => t.slug === empresa_slug || t.db_name === empresa_slug);
+            }
+
+            if (!targetTenant) {
+                const found = await findTenantByPlaca(cleanT);
+                if (found) {
+                    targetTenant = found.tenant;
+                }
+            }
+
+            // Si aún no encontramos y no es multi-tenant, usar tenant actual
+            if (!targetTenant) {
+                targetTenant = { slug: req.tenantSlug || 'marsisa', nombre_empresa: (req.tenantInfo && req.tenantInfo.nombre_empresa) || 'Marsisa S.A.C.', pool: getDb(req) };
+            }
+
+            const tdb = targetTenant.pool;
+            const pDb = tdb.promise ? tdb.promise() : tdb;
+
+            // 2. Validar que la placa de Tracto/Camión exista en el maestro
+            const [tractoMatch] = await pDb.query(
+                "SELECT placa, cliente, tipo FROM placas WHERE UPPER(REPLACE(placa, '-', '')) = ? OR UPPER(placa) = ? LIMIT 1",
+                [pTractoPure, cleanT]
+            );
+            if (!tractoMatch || tractoMatch.length === 0) {
                 return res.status(400).json({
-                    error: `El tracto / camión ${cleanT} ya se encuentra EN RUTA con un viaje pendiente de retorno (Folio: ${dup.id}, Conductor: ${dup.conductor || 'N/A'}, Salida: ${dup.salida_fecha || ''} ${dup.salida_hora || ''}). Debe registrarse su retorno antes de iniciar una nueva salida.`
+                    error: `La Placa Tracto "${cleanT}" no existe en el maestro de flota de ${targetTenant.nombre_empresa}. Debe ser una placa registrada en el sistema.`
                 });
             }
 
-            // 2. Generar ID secuencial: CHECK-YYYY-NNNN
+            // Validar que la placa de Carreta (si se ingresó) exista
+            if (pCarretaPure) {
+                let carretaFound = false;
+                const [carretaMatch] = await pDb.query(
+                    "SELECT placa, cliente, tipo FROM placas WHERE UPPER(REPLACE(placa, '-', '')) = ? OR UPPER(placa) = ? LIMIT 1",
+                    [pCarretaPure, cleanC]
+                );
+                if (carretaMatch && carretaMatch.length > 0) {
+                    carretaFound = true;
+                } else {
+                    const cGlobal = await findTenantByPlaca(cleanC);
+                    if (cGlobal) carretaFound = true;
+                }
+
+                if (!carretaFound) {
+                    return res.status(400).json({
+                        error: `La Placa Carreta "${cleanC}" no existe en el maestro de flota. Verifique que esté bien escrita o regístrela previamente.`
+                    });
+                }
+            }
+
+            // 3. Validar que la unidad no esté EN RUTA en esta empresa
+            const [dupRows] = await pDb.query(
+                "SELECT id, placa_tracto, placa_carreta, conductor, salida_fecha, salida_hora FROM seg_unidades_registros WHERE estado = 'en_ruta' AND placa_tracto = ? LIMIT 1",
+                [cleanT]
+            );
+            if (dupRows && dupRows.length > 0) {
+                const dup = dupRows[0];
+                return res.status(400).json({
+                    error: `El tracto / camión ${cleanT} ya se encuentra EN RUTA con un viaje pendiente de retorno en ${targetTenant.nombre_empresa} (Folio: ${dup.id}, Conductor: ${dup.conductor || 'N/A'}, Salida: ${dup.salida_fecha || ''} ${dup.salida_hora || ''}). Debe registrarse su retorno antes de iniciar una nueva salida.`
+                });
+            }
+
+            // 4. Generar ID secuencial: CHECK-YYYY-NNNN
             const year = new Date().getFullYear();
             const prefix = `CHECK-${year}-`;
-            tdb.query(
+            const [seqRows] = await pDb.query(
                 `SELECT id FROM seg_unidades_registros WHERE id LIKE ? ORDER BY id DESC LIMIT 1`,
-                [prefix + '%'],
-                (errSeq, seqRows) => {
-                    let nextNum = 1;
-                    if (!errSeq && seqRows && seqRows.length) {
-                        const lastId = seqRows[0].id;
-                        const parts = lastId.split('-');
-                        const lastNum = parseInt(parts[parts.length - 1], 10);
-                        if (!isNaN(lastNum)) nextNum = lastNum + 1;
-                    }
-                    const regId = prefix + String(nextNum).padStart(4, '0');
-
-                    const templateStr  = typeof salida_template_json  === 'string' ? salida_template_json  : JSON.stringify(salida_template_json  || null);
-                    const checklistStr = typeof salida_checklist_json  === 'string' ? salida_checklist_json  : JSON.stringify(salida_checklist_json  || null);
-
-                    const userSalida = (req.user && req.user.nombre) || (req.user && req.user.email) || req.body.creado_por || 'Seguridad';
-
-                    tdb.query(
-                        `INSERT INTO seg_unidades_registros
-                         (id, placa_tracto, placa_carreta, conductor, destino, tipo_salida, orden_viaje, estado,
-                          salida_fecha, salida_hora, salida_km,
-                          salida_template_json, salida_checklist_json, salida_has_alert,
-                          salida_observaciones,
-                          firma_salida_conductor, firma_salida_vigilancia, creado_por)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, 'en_ruta', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                        [regId, cleanT, cleanC || null,
-                         conductor, destino || null, tipo_salida || 'RUTA', orden_viaje || null,
-                         salida_fecha || null, salida_hora || null, salida_km || null,
-                         templateStr, checklistStr, salida_has_alert ? 1 : 0,
-                         salida_observaciones || null,
-                         firma_salida_conductor || null, firma_salida_vigilancia || null,
-                         userSalida],
-                        (err) => {
-                            if (err) return res.status(500).json({ error: err.message });
-                            if (typeof logAudit === 'function') logAudit(userSalida, 'seguridad', 'CREÓ', 'Registro unidad ' + regId);
-                            res.json({ ok: true, id: regId });
-                        }
-                    );
-                }
+                [prefix + '%']
             );
-        });
+
+            let nextNum = 1;
+            if (seqRows && seqRows.length) {
+                const lastId = seqRows[0].id;
+                const parts = lastId.split('-');
+                const lastNum = parseInt(parts[parts.length - 1], 10);
+                if (!isNaN(lastNum)) nextNum = lastNum + 1;
+            }
+            const regId = prefix + String(nextNum).padStart(4, '0');
+
+            const templateStr  = typeof salida_template_json  === 'string' ? salida_template_json  : JSON.stringify(salida_template_json  || null);
+            const checklistStr = typeof salida_checklist_json  === 'string' ? salida_checklist_json  : JSON.stringify(salida_checklist_json  || null);
+            const userSalida = (req.user && req.user.nombre) || (req.user && req.user.email) || req.body.creado_por || 'Seguridad';
+
+            await pDb.query(
+                `INSERT INTO seg_unidades_registros
+                 (id, placa_tracto, placa_carreta, conductor, destino, tipo_salida, orden_viaje, estado,
+                  salida_fecha, salida_hora, salida_km,
+                  salida_template_json, salida_checklist_json, salida_has_alert,
+                  salida_observaciones,
+                  firma_salida_conductor, firma_salida_vigilancia, creado_por)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 'en_ruta', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [regId, cleanT, cleanC || null,
+                 conductor, destino || null, tipo_salida || 'RUTA', orden_viaje || null,
+                 salida_fecha || null, salida_hora || null, salida_km || null,
+                 templateStr, checklistStr, salida_has_alert ? 1 : 0,
+                 salida_observaciones || null,
+                 firma_salida_conductor || null, firma_salida_vigilancia || null,
+                 userSalida]
+            );
+
+            if (typeof logAudit === 'function') logAudit(userSalida, 'seguridad', 'CREÓ', `Registro unidad ${regId} (${targetTenant.nombre_empresa})`);
+            res.json({ ok: true, id: regId, empresa_slug: targetTenant.slug, empresa_nombre: targetTenant.nombre_empresa });
+        } catch(ePost) {
+            console.error('[Seguridad POST /unidades] Error:', ePost);
+            res.status(500).json({ error: ePost.message });
+        }
     });
 
     // ── PUT /seguridad/unidades/:id — Actualizar (registrar retorno) ──
-    router.put('/seguridad/unidades/:id', (req, res) => {
-        const tdb = getDb(req);
-        const { retorno_fecha, retorno_hora, retorno_km,
-                retorno_conductor, retorno_placa_carreta,
-                retorno_template_json, retorno_checklist_json, retorno_has_alert,
-                salida_observaciones, retorno_observaciones,
-                firma_salida_conductor, firma_salida_vigilancia,
-                firma_retorno_conductor, firma_retorno_vigilancia,
-                retorno_creado_por,
-                estado } = req.body;
+    router.put('/seguridad/unidades/:id', async (req, res) => {
+        try {
+            const regId = req.params.id;
+            let targetTenant = null;
+            if (req.body.empresa_slug) {
+                const allT = await getAllActiveTenants();
+                targetTenant = allT.find(t => t.slug === req.body.empresa_slug);
+            }
+            if (!targetTenant) {
+                targetTenant = await findTenantByRecordId('seg_unidades_registros', regId);
+            }
+            if (!targetTenant) {
+                targetTenant = { pool: getDb(req), slug: req.tenantSlug || 'marsisa', nombre_empresa: 'Marsisa S.A.C.' };
+            }
 
-        const sets = [];
-        const params = [];
+            const tdb = targetTenant.pool;
+            const { retorno_fecha, retorno_hora, retorno_km,
+                    retorno_conductor, retorno_placa_carreta,
+                    retorno_template_json, retorno_checklist_json, retorno_has_alert,
+                    salida_observaciones, retorno_observaciones,
+                    firma_salida_conductor, firma_salida_vigilancia,
+                    firma_retorno_conductor, firma_retorno_vigilancia,
+                    retorno_creado_por,
+                    estado } = req.body;
 
-        const userRetorno = (req.user && req.user.nombre) || (req.user && req.user.email) || retorno_creado_por || req.body.creado_por || 'Seguridad';
+            const sets = [];
+            const params = [];
+            const userRetorno = (req.user && req.user.nombre) || (req.user && req.user.email) || retorno_creado_por || req.body.creado_por || 'Seguridad';
 
-        if (retorno_fecha !== undefined)           { sets.push('retorno_fecha = ?');           params.push(retorno_fecha); }
-        if (retorno_hora !== undefined)            { sets.push('retorno_hora = ?');            params.push(retorno_hora); }
-        if (retorno_km !== undefined)              { sets.push('retorno_km = ?');              params.push(retorno_km); }
-        if (retorno_conductor !== undefined)       { sets.push('retorno_conductor = ?');       params.push(retorno_conductor || null); }
-        if (retorno_placa_carreta !== undefined)   { sets.push('retorno_placa_carreta = ?');   params.push((retorno_placa_carreta || '').toUpperCase().trim() || null); }
-        if (retorno_template_json !== undefined)   {
-            sets.push('retorno_template_json = ?');
-            params.push(typeof retorno_template_json === 'string' ? retorno_template_json : JSON.stringify(retorno_template_json));
-        }
-        if (retorno_checklist_json !== undefined)  {
-            sets.push('retorno_checklist_json = ?');
-            params.push(typeof retorno_checklist_json === 'string' ? retorno_checklist_json : JSON.stringify(retorno_checklist_json));
-        }
-        if (retorno_has_alert !== undefined)       { sets.push('retorno_has_alert = ?');       params.push(retorno_has_alert ? 1 : 0); }
-        if (salida_observaciones !== undefined)    { sets.push('salida_observaciones = ?');    params.push(salida_observaciones || null); }
-        if (retorno_observaciones !== undefined)   { sets.push('retorno_observaciones = ?');   params.push(retorno_observaciones || null); }
-        if (firma_salida_conductor !== undefined)  { sets.push('firma_salida_conductor = ?');  params.push(firma_salida_conductor); }
-        if (firma_salida_vigilancia !== undefined) { sets.push('firma_salida_vigilancia = ?'); params.push(firma_salida_vigilancia); }
-        if (firma_retorno_conductor !== undefined) { sets.push('firma_retorno_conductor = ?'); params.push(firma_retorno_conductor); }
-        if (firma_retorno_vigilancia !== undefined){ sets.push('firma_retorno_vigilancia = ?');params.push(firma_retorno_vigilancia); }
-        
-        // Guardar automáticamente quién realizó la recepción / retorno
-        sets.push('retorno_creado_por = ?');
-        params.push(userRetorno);
+            if (retorno_fecha !== undefined)           { sets.push('retorno_fecha = ?');           params.push(retorno_fecha); }
+            if (retorno_hora !== undefined)            { sets.push('retorno_hora = ?');            params.push(retorno_hora); }
+            if (retorno_km !== undefined)              { sets.push('retorno_km = ?');              params.push(retorno_km); }
+            if (retorno_conductor !== undefined)       { sets.push('retorno_conductor = ?');       params.push(retorno_conductor || null); }
+            if (retorno_placa_carreta !== undefined)   { sets.push('retorno_placa_carreta = ?');   params.push((retorno_placa_carreta || '').toUpperCase().trim() || null); }
+            if (retorno_template_json !== undefined)   {
+                sets.push('retorno_template_json = ?');
+                params.push(typeof retorno_template_json === 'string' ? retorno_template_json : JSON.stringify(retorno_template_json));
+            }
+            if (retorno_checklist_json !== undefined)  {
+                sets.push('retorno_checklist_json = ?');
+                params.push(typeof retorno_checklist_json === 'string' ? retorno_checklist_json : JSON.stringify(retorno_checklist_json));
+            }
+            if (retorno_has_alert !== undefined)       { sets.push('retorno_has_alert = ?');       params.push(retorno_has_alert ? 1 : 0); }
+            if (salida_observaciones !== undefined)    { sets.push('salida_observaciones = ?');    params.push(salida_observaciones || null); }
+            if (retorno_observaciones !== undefined)   { sets.push('retorno_observaciones = ?');   params.push(retorno_observaciones || null); }
+            if (firma_salida_conductor !== undefined)  { sets.push('firma_salida_conductor = ?');  params.push(firma_salida_conductor); }
+            if (firma_salida_vigilancia !== undefined) { sets.push('firma_salida_vigilancia = ?'); params.push(firma_salida_vigilancia); }
+            if (firma_retorno_conductor !== undefined) { sets.push('firma_retorno_conductor = ?'); params.push(firma_retorno_conductor); }
+            if (firma_retorno_vigilancia !== undefined){ sets.push('firma_retorno_vigilancia = ?');params.push(firma_retorno_vigilancia); }
+            
+            // Guardar quién realizó la recepción
+            sets.push('retorno_creado_por = ?');
+            params.push(userRetorno);
 
-        if (estado !== undefined)                  { sets.push('estado = ?');                  params.push(estado); }
+            if (estado !== undefined)                  { sets.push('estado = ?');                  params.push(estado); }
 
-        if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
+            if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
 
-        params.push(req.params.id);
-        tdb.query('UPDATE seg_unidades_registros SET ' + sets.join(', ') + ' WHERE id = ?', params, (err, result) => {
-            if (err) return res.status(500).json({ error: err.message });
+            params.push(regId);
+            const [result] = await tdb.promise().query('UPDATE seg_unidades_registros SET ' + sets.join(', ') + ' WHERE id = ?', params);
             if (!result.affectedRows) return res.status(404).json({ error: 'Registro no encontrado' });
-            if (typeof logAudit === 'function') logAudit(userRetorno, 'seguridad', 'MODIFICÓ', 'Unidad retorno ' + req.params.id);
-            res.json({ ok: true });
-        });
+            if (typeof logAudit === 'function') logAudit(userRetorno, 'seguridad', 'MODIFICÓ', 'Unidad retorno ' + regId);
+            res.json({ ok: true, empresa_slug: targetTenant.slug });
+        } catch(ePut) {
+            console.error('[Seguridad PUT /unidades] Error:', ePut);
+            res.status(500).json({ error: ePut.message });
+        }
     });
 
     // ── GET /seguridad/unidades/:id/fotos-presigned — URLs firmadas de un registro para PDF ──
-    router.get('/seguridad/unidades/:id/fotos-presigned', (req, res) => {
-        db.query('SELECT * FROM seg_unidades_fotos WHERE registro_id = ? ORDER BY orden ASC', [req.params.id], async (err, fotos) => {
-            if (err) return res.status(500).json({ error: err.message });
+    router.get('/seguridad/unidades/:id/fotos-presigned', async (req, res) => {
+        try {
+            const regId = req.params.id;
+            let targetTenant = await findTenantByRecordId('seg_unidades_registros', regId);
+            if (!targetTenant) targetTenant = { pool: getDb(req) };
+
+            const [fotos] = await targetTenant.pool.promise().query(
+                'SELECT * FROM seg_unidades_fotos WHERE registro_id = ? ORDER BY orden ASC',
+                [regId]
+            );
+
             const signed = await Promise.all((fotos || []).map(async (f) => {
                 const key = s3KeyFromUrl(f.url);
                 let signedUrl = f.url;
@@ -261,39 +544,45 @@ module.exports = (db, logAudit) => {
                 return { id: f.id, registro_id: f.registro_id, tipo: f.tipo, url: signedUrl, orden: f.orden };
             }));
             res.json(signed);
-        });
+        } catch(eFotos) {
+            console.error('[Seguridad Fotos Presigned] Error:', eFotos);
+            res.status(500).json({ error: eFotos.message });
+        }
     });
 
     // ── DELETE /seguridad/unidades/:id — Eliminar registro + fotos S3 ──
-    router.delete('/seguridad/unidades/:id', (req, res) => {
-        const regId = req.params.id;
-        // 1. Obtener URLs de fotos para limpiar S3 después
-        db.query('SELECT url FROM seg_unidades_fotos WHERE registro_id = ?', [regId], (err, fotos) => {
-            // 2. Borrar fotos de la BD
-            db.query('DELETE FROM seg_unidades_fotos WHERE registro_id = ?', [regId], () => {
-                // 3. Borrar registro de la BD
-                db.query('DELETE FROM seg_unidades_registros WHERE id = ?', [regId], (err2) => {
-                    if (err2) return res.status(500).json({ error: err2.message });
-                    if (typeof logAudit === 'function') logAudit((req.user && req.user.nombre) || '', 'seguridad', 'ELIMINÓ', 'Unidad ' + regId);
-                    // 4. Responder inmediatamente
-                    res.json({ ok: true });
-                    // 5. Limpiar S3 en segundo plano (no bloquea la respuesta)
-                    if (!err && fotos && fotos.length) {
-                        Promise.all(fotos.map(f => {
-                            const key = s3KeyFromUrl(f.url);
-                            return key ? deleteFromS3(key) : Promise.resolve();
-                        })).catch(e => console.warn('S3 cleanup error:', e.message));
-                    }
-                });
-            });
-        });
+    router.delete('/seguridad/unidades/:id', async (req, res) => {
+        try {
+            const regId = req.params.id;
+            let targetTenant = await findTenantByRecordId('seg_unidades_registros', regId);
+            if (!targetTenant) targetTenant = { pool: getDb(req) };
+
+            const tdb = targetTenant.pool.promise ? targetTenant.pool.promise() : targetTenant.pool;
+
+            const [fotos] = await tdb.query('SELECT url FROM seg_unidades_fotos WHERE registro_id = ?', [regId]);
+            await tdb.query('DELETE FROM seg_unidades_fotos WHERE registro_id = ?', [regId]);
+            await tdb.query('DELETE FROM seg_unidades_registros WHERE id = ?', [regId]);
+
+            if (typeof logAudit === 'function') logAudit((req.user && req.user.nombre) || '', 'seguridad', 'ELIMINÓ', 'Unidad ' + regId);
+            res.json({ ok: true });
+
+            if (fotos && fotos.length) {
+                Promise.all(fotos.map(f => {
+                    const key = s3KeyFromUrl(f.url);
+                    return key ? deleteFromS3(key) : Promise.resolve();
+                })).catch(e => console.warn('S3 cleanup error:', e.message));
+            }
+        } catch(eDel) {
+            console.error('[Seguridad DELETE /unidades] Error:', eDel);
+            res.status(500).json({ error: eDel.message });
+        }
     });
 
     // ── POST /seguridad/unidades/:id/fotos/presigned — Generar pases VIP ──
     router.post('/seguridad/unidades/:id/fotos/presigned', async (req, res) => {
         try {
             const registroId = req.params.id;
-            const archivos = req.body.archivos || []; // [{nombre: '...', tipo: 'image/jpeg', fase: 'salida'}]
+            const archivos = req.body.archivos || [];
             if (!archivos.length) return res.status(400).json({ error: 'No se enviaron archivos' });
 
             const urls = await Promise.all(archivos.map(async (arch) => {
@@ -301,7 +590,6 @@ module.exports = (db, logAudit) => {
                 const ext = (arch.nombre || '').split('.').pop() || 'jpg';
                 const rand = Math.random().toString(36).substring(2, 7);
                 const s3Key = `seguridad/unidades/${registroId}/${tipo}_${Date.now()}_${rand}.${ext}`;
-                // Generar URL pre-firmada estándar
                 const uploadUrl = await getPresignedUploadUrl(s3Key, 'image/jpeg', 600);
                 return { uploadUrl, key: s3Key, fase: tipo };
             }));
@@ -314,80 +602,41 @@ module.exports = (db, logAudit) => {
     });
 
     // ── POST /seguridad/unidades/:id/fotos/confirmar — Confirmar subida a DB en lote (Bulk) ──
-    router.post('/seguridad/unidades/:id/fotos/confirmar', (req, res) => {
-        const registroId = req.params.id;
-        const exitosos = req.body.exitosos || []; // [{key: '...', fase: 'salida'}]
-        if (!exitosos.length) return res.json({ ok: true, message: 'Ninguna foto para confirmar' });
-
-        const bucket = (process.env.AWS_BUCKET_NAME || '').trim();
-        const region = (process.env.AWS_REGION || 'us-east-2').trim();
-
-        db.query(
-            'SELECT COALESCE(MAX(orden), 0) AS maxOrden FROM seg_unidades_fotos WHERE registro_id = ?',
-            [registroId],
-            (errDb, rows) => {
-                if (errDb) return res.status(500).json({ error: errDb.message });
-                let orden = (rows && rows[0]) ? rows[0].maxOrden : 0;
-                
-                const values = exitosos.map(ex => {
-                    orden++;
-                    const fullUrl = `https://${bucket}.s3.${region}.amazonaws.com/${ex.key}`;
-                    return [registroId, ex.fase || 'salida', fullUrl, orden];
-                });
-
-                db.query(
-                    'INSERT INTO seg_unidades_fotos (registro_id, tipo, url, orden) VALUES ?',
-                    [values],
-                    (errInsert) => {
-                        if (errInsert) {
-                            console.error('Error bulk insert fotos:', errInsert.message);
-                            return res.status(500).json({ error: errInsert.message });
-                        }
-                        res.json({ ok: true, guardados: values.length });
-                    }
-                );
-            }
-        );
-    });
-
-    // ── POST /seguridad/unidades/presign-fotos — Firmar URLs para PDF/WhatsApp bajo demanda ──
-    router.post('/seguridad/unidades/presign-fotos', async (req, res) => {
+    router.post('/seguridad/unidades/:id/fotos/confirmar', async (req, res) => {
         try {
-            const urls = req.body.urls || [];
-            if (!urls.length) return res.json({});
-            const signed = {};
-            await Promise.all(urls.map(async (url) => {
-                if (!url) return;
-                const key = s3KeyFromUrl(url);
-                if (key) {
-                    try { signed[url] = await getPresignedUrl(key, 7200); } catch(e) { signed[url] = url; }
-                } else {
-                    signed[url] = url;
-                }
-            }));
-            res.json(signed);
-        } catch(e) {
-            console.error('Error presign-fotos:', e);
-            res.status(500).json({ error: e.message });
+            const registroId = req.params.id;
+            const exitosos = req.body.exitosos || [];
+            if (!exitosos.length) return res.json({ ok: true, message: 'Ninguna foto para confirmar' });
+
+            let targetTenant = await findTenantByRecordId('seg_unidades_registros', registroId);
+            if (!targetTenant) targetTenant = { pool: getDb(req) };
+
+            const tdb = targetTenant.pool.promise ? targetTenant.pool.promise() : targetTenant.pool;
+            const bucket = (process.env.AWS_BUCKET_NAME || '').trim();
+            const region = (process.env.AWS_REGION || 'us-east-2').trim();
+
+            const [rows] = await tdb.query(
+                'SELECT COALESCE(MAX(orden), 0) AS maxOrden FROM seg_unidades_fotos WHERE registro_id = ?',
+                [registroId]
+            );
+
+            let orden = (rows && rows[0]) ? rows[0].maxOrden : 0;
+            const values = exitosos.map(ex => {
+                orden++;
+                const fullUrl = `https://${bucket}.s3.${region}.amazonaws.com/${ex.key}`;
+                return [registroId, ex.fase || 'salida', fullUrl, orden];
+            });
+
+            await tdb.query(
+                'INSERT INTO seg_unidades_fotos (registro_id, tipo, url, orden) VALUES ?',
+                [values]
+            );
+
+            res.json({ ok: true, guardados: values.length });
+        } catch(eConf) {
+            console.error('[Seguridad Fotos Confirmar] Error:', eConf);
+            res.status(500).json({ error: eConf.message });
         }
-    });
-
-    // ── DELETE /seguridad/unidades/:id/fotos/:fotoId — Eliminar foto ──
-    router.delete('/seguridad/unidades/:id/fotos/:fotoId', (req, res) => {
-        db.query('SELECT url FROM seg_unidades_fotos WHERE id = ? AND registro_id = ?',
-            [req.params.fotoId, req.params.id], async (err, rows) => {
-                if (err) return res.status(500).json({ error: err.message });
-                if (!rows.length) return res.status(404).json({ error: 'Foto no encontrada' });
-
-                const key = s3KeyFromUrl(rows[0].url);
-                if (key) await deleteFromS3(key);
-
-                db.query('DELETE FROM seg_unidades_fotos WHERE id = ?', [req.params.fotoId], (err2) => {
-                    if (err2) return res.status(500).json({ error: err2.message });
-                    res.json({ ok: true });
-                });
-            }
-        );
     });
 
     // ════════════════════════════════════════════════════════════════
@@ -489,191 +738,215 @@ module.exports = (db, logAudit) => {
     });
 
     // ── GET /seguridad/unidades/ultimo-km/:placa — Obtener último kilometraje registrado ──
-    router.get('/seguridad/unidades/ultimo-km/:placa', (req, res) => {
-        const placa = (req.params.placa || '').trim().toUpperCase();
-        const placaLimpia = placa.replace(/[^A-Z0-9]/g, '');
+    router.get('/seguridad/unidades/ultimo-km/:placa', async (req, res) => {
+        try {
+            const placa = (req.params.placa || '').trim().toUpperCase();
+            const placaLimpia = placa.replace(/[^A-Z0-9]/g, '');
 
-        if (!placaLimpia) return res.json({ ok: false, ultimoKm: null });
+            if (!placaLimpia) return res.json({ ok: false, ultimoKm: null });
 
-        // 1. Buscar en seg_unidades_registros el último retorno o salida
-        const sql = `
-            SELECT salida_km, retorno_km, salida_fecha, retorno_fecha, created_at
-            FROM seg_unidades_registros
-            WHERE REPLACE(REPLACE(placa_tracto, '-', ''), ' ', '') = ?
-            ORDER BY created_at DESC, id DESC
-            LIMIT 1
-        `;
+            let targetTenant = await findTenantByPlaca(placa);
+            const tenantsToSearch = targetTenant ? [targetTenant.tenant] : await getAllActiveTenants();
 
-        db.query(sql, [placaLimpia], (err, rows) => {
-            if (!err && rows && rows.length > 0) {
-                const r = rows[0];
-                const ultimoKm = (r.retorno_km && Number(r.retorno_km) > 0) ? Number(r.retorno_km) : (Number(r.salida_km) || null);
-                if (ultimoKm) {
-                    return res.json({
-                        ok: true,
-                        ultimoKm: ultimoKm,
-                        fecha: r.retorno_fecha || r.salida_fecha,
-                        tipo: r.retorno_km ? 'retorno' : 'salida'
-                    });
-                }
+            for (const t of tenantsToSearch) {
+                try {
+                    const [rows] = await t.pool.promise().query(`
+                        SELECT salida_km, retorno_km, salida_fecha, retorno_fecha, created_at
+                        FROM seg_unidades_registros
+                        WHERE UPPER(REPLACE(REPLACE(placa_tracto, '-', ''), ' ', '')) = ?
+                        ORDER BY created_at DESC, id DESC
+                        LIMIT 1
+                    `, [placaLimpia]);
+
+                    if (rows && rows.length > 0) {
+                        const r = rows[0];
+                        const ultimoKm = (r.retorno_km && Number(r.retorno_km) > 0) ? Number(r.retorno_km) : (Number(r.salida_km) || null);
+                        if (ultimoKm) {
+                            return res.json({
+                                ok: true,
+                                ultimoKm: ultimoKm,
+                                fecha: r.retorno_fecha || r.salida_fecha,
+                                tipo: r.retorno_km ? 'retorno' : 'salida',
+                                empresa: t.nombre_empresa
+                            });
+                        }
+                    }
+
+                    // Fallback: odómetro en tabla placas
+                    const [rowsP] = await t.pool.promise().query(
+                        `SELECT odometro, km_inicial FROM placas WHERE UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ? LIMIT 1`,
+                        [placaLimpia]
+                    );
+                    if (rowsP && rowsP.length > 0) {
+                        const km = Number(rowsP[0].odometro) || Number(rowsP[0].km_inicial) || null;
+                        if (km) return res.json({ ok: true, ultimoKm: km, tipo: 'placa', empresa: t.nombre_empresa });
+                    }
+                } catch(e) {}
             }
 
-            // 2. Fallback: buscar en tabla placas (odómetro)
-            db.query(
-                `SELECT odometro, km_inicial FROM placas WHERE REPLACE(REPLACE(placa, '-', ''), ' ', '') = ? LIMIT 1`,
-                [placaLimpia],
-                (errP, rowsP) => {
-                    if (!errP && rowsP && rowsP.length > 0) {
-                        const km = Number(rowsP[0].odometro) || Number(rowsP[0].km_inicial) || null;
-                        return res.json({ ok: true, ultimoKm: km, tipo: 'placa' });
-                    }
-                    res.json({ ok: true, ultimoKm: null });
-                }
-            );
-        });
+            res.json({ ok: true, ultimoKm: null });
+        } catch(errKm) {
+            res.json({ ok: false, ultimoKm: null });
+        }
     });
 
     // ── GET /seguridad/recursos — Autocomplete Placas y Directorio con Carretas Globales ──
-    router.get('/seguridad/recursos', (req, res) => {
-        const recursos = { 
-            placas: [], 
-            tractosPorEmpresa: {}, 
-            placasPorEmpresa: {},
-            placaToEmpresa: {},
-            carretasGlobales: [], 
-            conductores: [],
-            empresas: []
-        };
-        
-        // Consultar Placas con clasificación por empresa y tipo
-        db.query('SELECT placa, cliente, tipo, motora FROM placas ORDER BY placa ASC', (errP, rowsP) => {
-            if (!errP && rowsP) {
-                recursos.placas = rowsP.map(r => r.placa);
-                const empresasSet = new Set();
-
-                rowsP.forEach(r => {
-                    const empRaw = (r.cliente || 'GENERAL').toUpperCase().trim();
-                    if (empRaw && empRaw !== 'NULL') empresasSet.add(empRaw);
-
-                    const cleanP = (r.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                    if (cleanP && empRaw && empRaw !== 'NULL') {
-                        recursos.placaToEmpresa[cleanP] = empRaw;
-                        if (!recursos.placasPorEmpresa[empRaw]) recursos.placasPorEmpresa[empRaw] = [];
-                        recursos.placasPorEmpresa[empRaw].push(r.placa);
-                    }
-
-                    const motoraStr = String(r.motora || '').toUpperCase().trim();
-                    const tipoUpper = (r.tipo || '').toUpperCase().trim();
-
-                    const isNoMotora = motoraStr.includes('NO') || 
-                                       motoraStr === '0' ||
-                                       tipoUpper.includes('SEMIREMOLQUE') || 
-                                       tipoUpper.includes('SEMIRREMOLQUE') || 
-                                       tipoUpper.includes('CARRETA') || 
-                                       tipoUpper.includes('FURGON') || 
-                                       tipoUpper.includes('PLATAFORMA') || 
-                                       tipoUpper.includes('TANQUE') || 
-                                       tipoUpper.includes('TOLVA') ||
-                                       tipoUpper.includes('BATEA') ||
-                                       tipoUpper.includes('CAMA');
-
-                    if (isNoMotora) {
-                        recursos.carretasGlobales.push(r.placa);
-                    } else {
-                        if (!recursos.tractosPorEmpresa[empRaw]) recursos.tractosPorEmpresa[empRaw] = [];
-                        recursos.tractosPorEmpresa[empRaw].push(r.placa);
-                    }
-                });
-
-                recursos.empresas = Array.from(empresasSet);
+    router.get('/seguridad/recursos', async (req, res) => {
+        try {
+            const isGlobal = isGlobalSecurityReq(req);
+            let targetTenants = [];
+            if (isGlobal) {
+                targetTenants = await getAllActiveTenants();
+            } else {
+                targetTenants = [{ slug: req.tenantSlug || 'marsisa', nombre_empresa: (req.tenantInfo && req.tenantInfo.nombre_empresa) || 'Marsisa S.A.C.', pool: getDb(req) }];
             }
-            
-            // Consultar Conductores (Directorio)
-            db.query('SELECT nombre FROM conductores ORDER BY nombre ASC', (errD, rowsD) => {
-                if (!errD && rowsD) recursos.conductores = rowsD.map(r => r.nombre);
-                res.json(recursos);
-            });
-        });
+
+            const recursos = { 
+                placas: [], 
+                tractosPorEmpresa: {}, 
+                placasPorEmpresa: {},
+                placaToEmpresa: {},
+                carretasGlobales: [], 
+                conductores: [],
+                empresas: []
+            };
+
+            const placasSet = new Set();
+            const carretasSet = new Set();
+            const conductoresSet = new Set();
+            const empresasMap = {};
+
+            await Promise.all(targetTenants.map(async (t) => {
+                const empDisplayName = t.nombre_empresa;
+                const empSlug = t.slug;
+
+                empresasMap[empSlug] = {
+                    slug: empSlug,
+                    nombre: empDisplayName,
+                    count: 0
+                };
+
+                if (!recursos.tractosPorEmpresa[empSlug]) recursos.tractosPorEmpresa[empSlug] = [];
+                if (!recursos.placasPorEmpresa[empSlug]) recursos.placasPorEmpresa[empSlug] = [];
+
+                try {
+                    const [rowsP] = await t.pool.promise().query('SELECT placa, cliente, tipo, motora FROM placas ORDER BY placa ASC');
+                    (rowsP || []).forEach(r => {
+                        const rawP = (r.placa || '').toUpperCase().trim();
+                        if (!rawP) return;
+                        placasSet.add(rawP);
+                        empresasMap[empSlug].count++;
+
+                        const cleanP = rawP.replace(/[^A-Z0-9]/g, '');
+                        recursos.placaToEmpresa[cleanP] = empDisplayName;
+                        recursos.placasPorEmpresa[empSlug].push(rawP);
+
+                        const motoraStr = String(r.motora || '').toUpperCase().trim();
+                        const tipoUpper = (r.tipo || '').toUpperCase().trim();
+
+                        const isNoMotora = motoraStr.includes('NO') || 
+                                           motoraStr === '0' ||
+                                           tipoUpper.includes('SEMIREMOLQUE') || 
+                                           tipoUpper.includes('SEMIRREMOLQUE') || 
+                                           tipoUpper.includes('CARRETA') || 
+                                           tipoUpper.includes('FURGON') || 
+                                           tipoUpper.includes('PLATAFORMA') || 
+                                           tipoUpper.includes('TANQUE') || 
+                                           tipoUpper.includes('TOLVA') ||
+                                           tipoUpper.includes('BATEA') ||
+                                           tipoUpper.includes('CAMA');
+
+                        if (isNoMotora) {
+                            carretasSet.add(rawP);
+                        } else {
+                            recursos.tractosPorEmpresa[empSlug].push(rawP);
+                        }
+                    });
+                } catch(errP) {
+                    console.warn(`[Seguridad Recursos] Error placas en ${t.slug}:`, errP.message);
+                }
+
+                try {
+                    const [rowsD] = await t.pool.promise().query('SELECT nombre FROM conductores ORDER BY nombre ASC');
+                    (rowsD || []).forEach(d => {
+                        if (d.nombre) conductoresSet.add(d.nombre.trim());
+                    });
+                } catch(errD) {}
+            }));
+
+            recursos.placas = Array.from(placasSet);
+            recursos.carretasGlobales = Array.from(carretasSet);
+            recursos.conductores = Array.from(conductoresSet);
+            recursos.empresas = Object.values(empresasMap);
+
+            res.json(recursos);
+        } catch(err) {
+            console.error('[Seguridad GET /recursos] Error:', err);
+            res.status(500).json({ error: err.message });
+        }
     });
 
     // ── GET /seguridad/empresas-stats — Métricas en vivo por empresa ──
-    router.get('/seguridad/empresas-stats', (req, res) => {
-        const tdb = getDb(req);
-        tdb.query('SELECT placa, cliente FROM placas WHERE cliente IS NOT NULL AND TRIM(cliente) <> "" AND TRIM(cliente) <> "NULL"', (errP, placasRows) => {
-            if (errP) return res.status(500).json({ error: errP.message });
+    router.get('/seguridad/empresas-stats', async (req, res) => {
+        try {
+            const isGlobal = isGlobalSecurityReq(req);
+            let targetTenants = [];
+            if (isGlobal) {
+                targetTenants = await getAllActiveTenants();
+            } else {
+                targetTenants = [{ slug: req.tenantSlug || 'marsisa', nombre_empresa: (req.tenantInfo && req.tenantInfo.nombre_empresa) || 'Marsisa S.A.C.', pool: getDb(req) }];
+            }
 
-            const placaToEmpresa = {};
-            const empCountMap = {};
+            const statsMap = {};
+            let globalStats = { empresa: 'TODAS', total_flota: 0, en_ruta: 0, completados: 0, alertas: 0 };
 
-            (placasRows || []).forEach(p => {
-                const emp = (p.cliente || '').toUpperCase().trim();
-                if (emp && emp !== 'NULL') {
-                    empCountMap[emp] = (empCountMap[emp] || 0) + 1;
-                    const cleanP = (p.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                    if (cleanP) placaToEmpresa[cleanP] = emp;
-                }
-            });
+            await Promise.all(targetTenants.map(async (t) => {
+                const empSlug = t.slug;
+                const empNombre = t.nombre_empresa;
 
-            tdb.query('SELECT id, estado, salida_has_alert, retorno_has_alert, placa_tracto FROM seg_unidades_registros', (errR, regRows) => {
-                if (errR) return res.status(500).json({ error: errR.message });
+                try {
+                    const [pRows] = await t.pool.promise().query('SELECT COUNT(*) as total FROM placas');
+                    const [rRows] = await t.pool.promise().query(`
+                        SELECT 
+                            COUNT(*) as total,
+                            COALESCE(SUM(CASE WHEN estado = 'en_ruta' THEN 1 ELSE 0 END), 0) as en_ruta,
+                            COALESCE(SUM(CASE WHEN estado = 'completado' THEN 1 ELSE 0 END), 0) as completados,
+                            COALESCE(SUM(CASE WHEN salida_has_alert = 1 OR retorno_has_alert = 1 THEN 1 ELSE 0 END), 0) as alertas
+                        FROM seg_unidades_registros
+                    `);
 
-                const statsMap = {};
-                Object.keys(empCountMap).forEach(emp => {
-                    statsMap[emp] = {
-                        empresa: emp,
-                        total_flota: empCountMap[emp] || 0,
-                        en_ruta: 0,
-                        completados: 0,
-                        alertas: 0
+                    const totalFlota = (pRows && pRows[0]) ? Number(pRows[0].total) : 0;
+                    const r = (rRows && rRows[0]) || { en_ruta: 0, completados: 0, alertas: 0 };
+                    const enRuta = Number(r.en_ruta) || 0;
+                    const completados = Number(r.completados) || 0;
+                    const alertas = Number(r.alertas) || 0;
+
+                    statsMap[empSlug] = {
+                        slug: empSlug,
+                        empresa: empNombre,
+                        total_flota: totalFlota,
+                        en_ruta: enRuta,
+                        completados: completados,
+                        alertas: alertas
                     };
-                });
 
-                let globalStats = { empresa: 'TODAS', total_flota: (placasRows || []).length, en_ruta: 0, completados: 0, alertas: 0 };
-
-                (regRows || []).forEach(r => {
-                    const cleanP = (r.placa_tracto || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                    const emp = placaToEmpresa[cleanP] || (Object.keys(empCountMap)[0] || '');
-
-                    if (r.estado === 'en_ruta') {
-                        globalStats.en_ruta++;
-                        if (statsMap[emp]) statsMap[emp].en_ruta++;
-                    } else if (r.estado === 'completado') {
-                        globalStats.completados++;
-                        if (statsMap[emp]) statsMap[emp].completados++;
-                    }
-                    if (r.salida_has_alert || r.retorno_has_alert) {
-                        globalStats.alertas++;
-                        if (statsMap[emp]) statsMap[emp].alertas++;
-                    }
-                });
-
-                // Si no hay placas aún en la base de datos de esta empresa, obtener el nombre de la empresa configurada
-                if (Object.keys(statsMap).length === 0) {
-                    tdb.query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_nombre' LIMIT 1", (errConf, confRows) => {
-                        const nomEmpresa = (confRows && confRows[0] && confRows[0].valor) ? confRows[0].valor.trim().toUpperCase() : '';
-                        if (nomEmpresa) {
-                            statsMap[nomEmpresa] = {
-                                empresa: nomEmpresa,
-                                total_flota: 0,
-                                en_ruta: 0,
-                                completados: 0,
-                                alertas: 0
-                            };
-                        }
-                        return res.json({
-                            global: globalStats,
-                            empresas: Object.values(statsMap)
-                        });
-                    });
-                    return;
+                    globalStats.total_flota += totalFlota;
+                    globalStats.en_ruta += enRuta;
+                    globalStats.completados += completados;
+                    globalStats.alertas += alertas;
+                } catch(e) {
+                    console.warn(`[Seguridad Empresa Stats] Error ${t.slug}:`, e.message);
                 }
+            }));
 
-                res.json({
-                    global: globalStats,
-                    empresas: Object.values(statsMap)
-                });
+            res.json({
+                global: globalStats,
+                empresas: Object.values(statsMap)
             });
-        });
+        } catch(err) {
+            console.error('[Seguridad GET /empresas-stats] Error:', err);
+            res.status(500).json({ error: err.message });
+        }
     });
 
     // ════════════════════════════════════════════════════════════════
