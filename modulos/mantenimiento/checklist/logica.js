@@ -2008,14 +2008,78 @@ window.procesarFotosChecklist = function(input) {
 };
 
 // ── CARGAR Y FILTRAR TABLA DE CHECKLIST ─────────────────────────
-window.filtrarEstadoChecklist = function(estado, btn) {
-    estadoFiltroActualChecklist = estado;
-    const group = document.getElementById('btn-group-estados-checklist');
+window._ckFiltroEstado = window._ckFiltroEstado || 'TODOS';
+window._ckFiltroEmpresa = window._ckFiltroEmpresa || 'TODAS';
+
+window.filtrarEstadoChecklist = function(estado, el) {
+    window._ckFiltroEstado = estado || 'TODOS';
+    
+    // Resaltar tarjeta KPI activa
+    const mapCards = {
+        'TODOS': 'ck-kpi-card-total',
+        'Pendiente': 'ck-kpi-card-pendientes',
+        'En Proceso': 'ck-kpi-card-proceso',
+        'Finalizado': 'ck-kpi-card-finalizados'
+    };
+    
+    document.querySelectorAll('#checklist-app .ck-kpi-card').forEach(c => c.classList.remove('active'));
+    const targetId = mapCards[estado] || 'ck-kpi-card-total';
+    const cardEl = document.getElementById(targetId) || el;
+    if (cardEl) cardEl.classList.add('active');
+
+    window.filtrarChecklist();
+};
+
+window.filtrarEmpresaChecklist = function(empresa, btn) {
+    window._ckFiltroEmpresa = empresa || 'TODAS';
+    const group = document.getElementById('btn-group-empresas-checklist');
     if (group) {
-        group.querySelectorAll('.ck-segment-item, .btn').forEach(b => b.classList.remove('active'));
+        group.querySelectorAll('.ck-segment-item').forEach(b => b.classList.remove('active'));
     }
     if (btn) btn.classList.add('active');
     window.filtrarChecklist();
+};
+
+window._obtenerEmpresaDePlaca = function(placa) {
+    if (!placa) return '';
+    const clean = (placa || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const found = (window.dataGlobalPlacas || []).find(p => {
+        const pPlaca = (p[0] || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        return pPlaca === clean;
+    });
+    return found && found[1] ? found[1].toString().trim() : '';
+};
+
+window.poblarEmpresasChecklist = function(datos) {
+    const group = document.getElementById('btn-group-empresas-checklist');
+    if (!group) return;
+
+    const empresasSet = new Set();
+    (datos || []).forEach(r => {
+        const emp1 = window._obtenerEmpresaDePlaca(r.placa_tracto);
+        const emp2 = window._obtenerEmpresaDePlaca(r.placa_remolque);
+        if (emp1 && emp1 !== '-' && emp1.toUpperCase() !== 'CLIENTE') empresasSet.add(emp1);
+        if (emp2 && emp2 !== '-' && emp2.toUpperCase() !== 'CLIENTE') empresasSet.add(emp2);
+    });
+
+    // Si aún no hay en reportes, extraer de dataGlobalPlacas
+    if (empresasSet.size === 0 && Array.isArray(window.dataGlobalPlacas)) {
+        window.dataGlobalPlacas.forEach(p => {
+            const emp = (p[1] || '').toString().trim();
+            if (emp && emp !== '-' && emp.toUpperCase() !== 'CLIENTE') empresasSet.add(emp);
+        });
+    }
+
+    const arr = Array.from(empresasSet).sort();
+    let html = `<button type="button" class="ck-segment-item ${window._ckFiltroEmpresa === 'TODAS' ? 'active' : ''}" onclick="window.filtrarEmpresaChecklist('TODAS', this)">Todas</button>`;
+
+    arr.forEach(emp => {
+        const isAct = window._ckFiltroEmpresa.toUpperCase() === emp.toUpperCase();
+        let short = emp.replace(/S\.A\.C\.?/i, '').replace(/S\.A\.?/i, '').trim() || emp;
+        html += `<button type="button" class="ck-segment-item ${isAct ? 'active' : ''}" onclick="window.filtrarEmpresaChecklist('${emp.replace(/'/g, "\\'")}', this)">${short}</button>`;
+    });
+
+    group.innerHTML = html;
 };
 
 window.cargarTablaChecklist = function(forzarRefresh = false) {
@@ -2029,6 +2093,7 @@ window.cargarTablaChecklist = function(forzarRefresh = false) {
         })
         .then(data => {
             window.dataGlobalChecklist = Array.isArray(data) ? data : [];
+            window.poblarEmpresasChecklist(window.dataGlobalChecklist);
             window.filtrarChecklist();
         })
         .catch(err => {
@@ -2044,10 +2109,22 @@ window.filtrarChecklist = function() {
 
     let list = Array.isArray(window.dataGlobalChecklist) ? window.dataGlobalChecklist : [];
 
-    if (estadoFiltroActualChecklist !== 'TODOS') {
-        list = list.filter(r => (r.estado || 'Pendiente') === estadoFiltroActualChecklist);
+    // 1. Filtro por Estado (desde cards KPI)
+    if (window._ckFiltroEstado && window._ckFiltroEstado !== 'TODOS') {
+        list = list.filter(r => (r.estado || 'Pendiente') === window._ckFiltroEstado);
     }
 
+    // 2. Filtro por Empresa (desde pills inferiores)
+    if (window._ckFiltroEmpresa && window._ckFiltroEmpresa !== 'TODAS') {
+        const empFilter = window._ckFiltroEmpresa.toUpperCase();
+        list = list.filter(r => {
+            const emp1 = (window._obtenerEmpresaDePlaca(r.placa_tracto) || '').toUpperCase();
+            const emp2 = (window._obtenerEmpresaDePlaca(r.placa_remolque) || '').toUpperCase();
+            return emp1.includes(empFilter) || emp2.includes(empFilter);
+        });
+    }
+
+    // 3. Buscador general de texto
     if (query) {
         list = list.filter(r => {
             const fol = (r.folio || '').toLowerCase();

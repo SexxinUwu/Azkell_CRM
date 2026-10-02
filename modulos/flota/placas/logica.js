@@ -348,6 +348,9 @@ function mostrarPlacas(datos) {
     rellenarFiltroCheck('filtroMarca', setMarcas, 'filtrarPlacasAvanzado');
     rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado');
     rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('i_placa', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts);
+    
+    window.poblarEmpresasPillsPlacas(datosUtiles);
+    
     paginaActualPlacas = 1;
     _restaurarFiltrosPlacas();
     if (datosFiltradosPlacas.length === 0 && datosUtiles.length > 0) {
@@ -358,8 +361,43 @@ function mostrarPlacas(datos) {
     if (typeof window.actualizarBadgesSidebar === 'function') window.actualizarBadgesSidebar();
 }
 
+// ── Poblar Pills de Empresas Dinámicas en Placas ──────────────────
+window._placasFiltroEmpresa = window._placasFiltroEmpresa || 'TODAS';
+
+window.poblarEmpresasPillsPlacas = function(datos) {
+    const group = document.getElementById('btn-group-empresas-placas');
+    if (!group) return;
+
+    const empresasSet = new Set();
+    (datos || []).forEach(row => {
+        const emp = (row[1] || '').toString().trim();
+        if (emp && emp !== '-' && emp.toUpperCase() !== 'CLIENTE') empresasSet.add(emp);
+    });
+
+    const arr = Array.from(empresasSet).sort();
+    let html = `<button type="button" class="ck-segment-item ${window._placasFiltroEmpresa === 'TODAS' ? 'active' : ''}" onclick="window.filtrarEmpresaPlacas('TODAS', this)">Todas</button>`;
+
+    arr.forEach(emp => {
+        const isAct = window._placasFiltroEmpresa.toUpperCase() === emp.toUpperCase();
+        let short = emp.replace(/S\.A\.C\.?/i, '').replace(/S\.A\.?/i, '').trim() || emp;
+        html += `<button type="button" class="ck-segment-item ${isAct ? 'active' : ''}" onclick="window.filtrarEmpresaPlacas('${emp.replace(/'/g, "\\'")}', this)">${short}</button>`;
+    });
+
+    group.innerHTML = html;
+};
+
+window.filtrarEmpresaPlacas = function(empresa, btn) {
+    window._placasFiltroEmpresa = empresa || 'TODAS';
+    const group = document.getElementById('btn-group-empresas-placas');
+    if (group) {
+        group.querySelectorAll('.ck-segment-item').forEach(b => b.classList.remove('active'));
+    }
+    if (btn) btn.classList.add('active');
+    window.filtrarPlacasAvanzado();
+};
+
 // ── Filtro avanzado ──────────────────────────────────────────────
-// ── Filtrado por Tipo KPI / Segmented Control ─────────────────────
+// ── Filtrado por Tipo KPI / Cards Superiores ───────────────────────
 window.filtrarPorTipoKPI = function(tipo, element) {
     if (window._kpiFiltroActivo === tipo && tipo !== 'total') {
         window._kpiFiltroActivo = null;
@@ -371,15 +409,9 @@ window.filtrarPorTipoKPI = function(tipo, element) {
     }
 
     // Actualizar clases activas en Tarjetas KPI
-    document.querySelectorAll('.ck-kpi-card').forEach(c => {
+    document.querySelectorAll('#moduloPlacas .ck-kpi-card').forEach(c => {
         if (c.getAttribute('data-tipo-kpi') === tipo) c.classList.add('active');
         else c.classList.remove('active');
-    });
-
-    // Actualizar pills segmentadas
-    document.querySelectorAll('#btn-group-tipos-placas .ck-segment-item').forEach(b => {
-        if (b.getAttribute('data-tipo-kpi') === tipo) b.classList.add('active');
-        else b.classList.remove('active');
     });
 
     window.filtrarPlacasAvanzado();
@@ -388,6 +420,7 @@ window.filtrarPorTipoKPI = function(tipo, element) {
 window.filtrarPlacasAvanzado = function() {
     const txt = document.getElementById('buscadorPlacas')?.value.toLowerCase() || '';
     const kpiFiltroActivo = window._kpiFiltroActivo || null;
+    const empFiltroActivo = (window._placasFiltroEmpresa && window._placasFiltroEmpresa !== 'TODAS') ? window._placasFiltroEmpresa.toUpperCase().trim() : null;
 
     let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0, kpiTotal=0;
     let datosUtiles = dataGlobalPlacas.filter(f => (f[0]||'').toUpperCase() !== 'PLACA');
@@ -397,7 +430,15 @@ window.filtrarPlacasAvanzado = function() {
         const rowTexto = row.map(v => (v||'').toLowerCase().trim()).join(' ');
         if (txt && !rowTexto.includes(txt)) return false;
 
-        // 2. Filtros Avanzados por Columna
+        // 2. Filtro por Empresa / Cliente (desde pills)
+        if (empFiltroActivo) {
+            const rowEmp = (row[1] || '').toString().toUpperCase().trim();
+            if (rowEmp !== empFiltroActivo && !rowEmp.includes(empFiltroActivo)) {
+                return false;
+            }
+        }
+
+        // 3. Filtros Avanzados por Columna (modal de filtros)
         for (let colIndex in window.placasFiltros) {
             if (window.placasFiltros[colIndex].size > 0) {
                 let val = row[colIndex] ? row[colIndex].trim() : '';
@@ -408,7 +449,7 @@ window.filtrarPlacasAvanzado = function() {
             }
         }
         
-        // 3. KPI Counting (ignorando el filtro KPI actual)
+        // 4. KPI Counting (conteo de unidades filtradas)
         kpiTotal++;
         const tip = row[5] ? row[5].trim() : '';
         const t = tip.toLowerCase();
@@ -417,7 +458,7 @@ window.filtrarPlacasAvanzado = function() {
         else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++;
         else if (t.includes('tracto')) kpiTracto++;
 
-        // 4. Aplicar Filtro KPI si está activo
+        // 5. Aplicar Filtro KPI si está activo
         if (kpiFiltroActivo) {
             if (kpiFiltroActivo === 'camion' && !(t.includes('cami') || t.includes('camion'))) return false;
             if (kpiFiltroActivo === 'carreta' && !t.includes('carreta')) return false;
@@ -564,8 +605,6 @@ function renderizarPaginaPlacas() {
     const ctrlPag = document.getElementById('controles-paginacion-placas');
     
     if (!contenedor) return;
-
-    actualizarIndicadoresPlacas(datosFiltradosPlacas);
 
     if (datosFiltradosPlacas.length === 0) {
         contenedor.innerHTML = '<tr><td colspan="30" style="text-align:center;padding:3rem;color:#94a3b8;"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No hay vehículos que coincidan.</td></tr>';
