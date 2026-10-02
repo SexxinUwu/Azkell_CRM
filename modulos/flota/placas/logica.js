@@ -364,23 +364,50 @@ function mostrarPlacas(datos) {
 // ── Poblar Pills de Empresas Dinámicas en Placas ──────────────────
 window._placasFiltroEmpresa = window._placasFiltroEmpresa || 'TODAS';
 
+window._canonizarNombreEmpresa = window._canonizarNombreEmpresa || function(emp) {
+    if (!emp) return '';
+    const clean = emp.toString().trim().toUpperCase();
+    const raw = clean.replace(/[^A-Z0-9]/g, '');
+    if (raw.includes('MARSISA')) return 'MARSISA S.A.C.';
+    if (raw.includes('TRAHESA')) return 'TRAHESA S.A.C.';
+    if (raw.includes('YOGUI')) return 'YOGUI TRANSPORT S.A.C.';
+    if (raw.includes('ROSYMAR')) return 'ROSYMAR PERU S.A.C.';
+    return clean;
+};
+
+window._coincideEmpresa = window._coincideEmpresa || function(empTarget, empFiltro) {
+    if (!empFiltro || empFiltro === 'TODAS') return true;
+    const t = window._canonizarNombreEmpresa(empTarget);
+    const f = window._canonizarNombreEmpresa(empFiltro);
+    if (t === f) return true;
+    const rawT = (empTarget || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const rawF = (empFiltro || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return rawT === rawF || rawT.includes(rawF) || rawF.includes(rawT);
+};
+
 window.poblarEmpresasPillsPlacas = function(datos) {
     const group = document.getElementById('btn-group-empresas-placas');
     if (!group) return;
 
-    const empresasSet = new Set();
+    const empresasMap = new Map();
     (datos || []).forEach(row => {
-        const emp = (row[1] || '').toString().trim();
-        if (emp && emp !== '-' && emp.toUpperCase() !== 'CLIENTE') empresasSet.add(emp);
+        const rawEmp = (row[1] || '').toString().trim();
+        if (rawEmp && rawEmp !== '-' && rawEmp.toUpperCase() !== 'CLIENTE') {
+            const canon = window._canonizarNombreEmpresa(rawEmp);
+            const key = canon.toUpperCase();
+            if (!empresasMap.has(key)) {
+                empresasMap.set(key, canon);
+            }
+        }
     });
 
-    const arr = Array.from(empresasSet).sort();
-    let html = `<button type="button" class="ck-segment-item ${window._placasFiltroEmpresa === 'TODAS' ? 'active' : ''}" onclick="window.filtrarEmpresaPlacas('TODAS', this)">Todas</button>`;
+    const arr = Array.from(empresasMap.values()).sort();
+    const isTodasActive = !window._placasFiltroEmpresa || window._placasFiltroEmpresa === 'TODAS';
+    let html = `<button type="button" class="ck-segment-item ${isTodasActive ? 'active' : ''}" onclick="window.filtrarEmpresaPlacas('TODAS', this)">Todas</button>`;
 
     arr.forEach(emp => {
-        const isAct = window._placasFiltroEmpresa.toUpperCase() === emp.toUpperCase();
-        let short = emp.replace(/S\.A\.C\.?/i, '').replace(/S\.A\.?/i, '').trim() || emp;
-        html += `<button type="button" class="ck-segment-item ${isAct ? 'active' : ''}" onclick="window.filtrarEmpresaPlacas('${emp.replace(/'/g, "\\'")}', this)">${short}</button>`;
+        const isAct = !isTodasActive && window._coincideEmpresa(emp, window._placasFiltroEmpresa);
+        html += `<button type="button" class="ck-segment-item ${isAct ? 'active' : ''}" onclick="window.filtrarEmpresaPlacas('${emp.replace(/'/g, "\\'")}', this)">${emp}</button>`;
     });
 
     group.innerHTML = html;
@@ -390,9 +417,17 @@ window.filtrarEmpresaPlacas = function(empresa, btn) {
     window._placasFiltroEmpresa = empresa || 'TODAS';
     const group = document.getElementById('btn-group-empresas-placas');
     if (group) {
-        group.querySelectorAll('.ck-segment-item').forEach(b => b.classList.remove('active'));
+        group.querySelectorAll('.ck-segment-item').forEach(b => {
+            const bTxt = b.textContent.trim();
+            if (window._placasFiltroEmpresa === 'TODAS') {
+                if (bTxt.toUpperCase() === 'TODAS') b.classList.add('active');
+                else b.classList.remove('active');
+            } else {
+                if (window._coincideEmpresa(bTxt, window._placasFiltroEmpresa)) b.classList.add('active');
+                else b.classList.remove('active');
+            }
+        });
     }
-    if (btn) btn.classList.add('active');
     window.filtrarPlacasAvanzado();
 };
 
@@ -431,11 +466,8 @@ window.filtrarPlacasAvanzado = function() {
         if (txt && !rowTexto.includes(txt)) return false;
 
         // 2. Filtro por Empresa / Cliente (desde pills)
-        if (empFiltroActivo) {
-            const rowEmp = (row[1] || '').toString().toUpperCase().trim();
-            if (rowEmp !== empFiltroActivo && !rowEmp.includes(empFiltroActivo)) {
-                return false;
-            }
+        if (!window._coincideEmpresa(row[1], window._placasFiltroEmpresa)) {
+            return false;
         }
 
         // 3. Filtros Avanzados por Columna (modal de filtros)

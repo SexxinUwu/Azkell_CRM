@@ -3207,7 +3207,7 @@ app.get('/api/vehiculos-flota', (req, res) => {
             p.placa,
             COALESCE(vf.tipo, p.tipo, '---') AS tipo,
             COALESCE(vf.propiedad, 'PROPIA') AS propiedad,
-            COALESCE(vf.empresa, p.cliente) AS empresa,
+            COALESCE(p.cliente, vf.empresa) AS empresa,
             vf.fecha_entrega,
             COALESCE(vf.anio, p.anio) AS anio,
             COALESCE(vf.marca, p.marca) AS marca,
