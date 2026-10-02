@@ -530,6 +530,13 @@ function salAbrirDetalle(m) {
 
     var items = m.items || [];
     var totalCant = items.reduce(function (acc, it) { return acc + (parseFloat(it.cantidad) || 0); }, 0);
+    var totalMonto = items.reduce(function (acc, it) {
+        var c = parseFloat(it.cantidad || 0);
+        var cu = parseFloat(it.costo_unitario || 0);
+        var imp = (it.importe !== undefined && it.importe !== null && it.importe !== '') ? parseFloat(it.importe) : (c * cu);
+        return acc + (isNaN(imp) ? (c * cu) : imp);
+    }, 0);
+    var montoFinal = (m.total_pen != null && parseFloat(m.total_pen) > 0) ? parseFloat(m.total_pen) : totalMonto;
     var esPendiente = (m.estado === 'Pendiente');
 
     var html = `
@@ -716,7 +723,7 @@ function salAbrirDetalle(m) {
                 <span id="sal-detalle-total-lbl" class="fw-bold text-dark" style="font-size: 0.88rem;">Monto Total Solicitud:</span>
                 <div id="sal-detalle-total-breakdown" class="mt-0.5"></div>
             </div>
-            <span id="sal-detalle-total-val" class="fw-bolder text-success" style="font-size: 1.25rem;">${salFmtMoney(m.total_pen)}</span>
+            <span id="sal-detalle-total-val" class="fw-bolder text-success" style="font-size: 1.25rem;">${salFmtMoney(montoFinal)}</span>
         </div>
     </div>
     `;
@@ -793,7 +800,7 @@ function salAbrirDetalle(m) {
             </div>
         `;
 
-        if (typeof window._salActualizarContadorDespacho === 'function') {
+        if (esPendiente && typeof window._salActualizarContadorDespacho === 'function') {
             window._salActualizarContadorDespacho();
         }
     }
@@ -831,6 +838,8 @@ window._salToggleSelectAll = function(checked) {
 window._salActualizarContadorDespacho = function() {
     var chks = document.querySelectorAll('.sal-item-chk');
     var total = chks.length;
+    if (total === 0) return; // Si no hay checkboxes de ítems pendientes, mantener los valores renderizados
+
     var checkedCount = 0;
     var totalCant = 0;
     var cantSel = 0;
