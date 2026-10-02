@@ -2030,13 +2030,42 @@ window.filtrarEstadoChecklist = function(estado, el) {
     window.filtrarChecklist();
 };
 
+window._canonizarNombreEmpresa = window._canonizarNombreEmpresa || function(emp) {
+    if (!emp) return '';
+    const clean = emp.toString().trim().toUpperCase();
+    const raw = clean.replace(/[^A-Z0-9]/g, '');
+    if (raw.includes('MARSISA')) return 'MARSISA S.A.C.';
+    if (raw.includes('TRAHESA')) return 'TRAHESA S.A.C.';
+    if (raw.includes('YOGUI')) return 'YOGUI TRANSPORT S.A.C.';
+    if (raw.includes('ROSYMAR')) return 'ROSYMAR PERU S.A.C.';
+    return clean;
+};
+
+window._coincideEmpresa = window._coincideEmpresa || function(empTarget, empFiltro) {
+    if (!empFiltro || empFiltro === 'TODAS') return true;
+    const t = window._canonizarNombreEmpresa(empTarget);
+    const f = window._canonizarNombreEmpresa(empFiltro);
+    if (t === f) return true;
+    const rawT = (empTarget || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const rawF = (empFiltro || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return rawT === rawF || rawT.includes(rawF) || rawF.includes(rawT);
+};
+
 window.filtrarEmpresaChecklist = function(empresa, btn) {
     window._ckFiltroEmpresa = empresa || 'TODAS';
     const group = document.getElementById('btn-group-empresas-checklist');
     if (group) {
-        group.querySelectorAll('.ck-segment-item').forEach(b => b.classList.remove('active'));
+        group.querySelectorAll('.ck-segment-item').forEach(b => {
+            const bTxt = b.textContent.trim();
+            if (window._ckFiltroEmpresa === 'TODAS') {
+                if (bTxt.toUpperCase() === 'TODAS') b.classList.add('active');
+                else b.classList.remove('active');
+            } else {
+                if (window._coincideEmpresa(bTxt, window._ckFiltroEmpresa)) b.classList.add('active');
+                else b.classList.remove('active');
+            }
+        });
     }
-    if (btn) btn.classList.add('active');
     window.filtrarChecklist();
 };
 
@@ -2054,29 +2083,36 @@ window.poblarEmpresasChecklist = function(datos) {
     const group = document.getElementById('btn-group-empresas-checklist');
     if (!group) return;
 
-    const empresasSet = new Set();
+    const empresasMap = new Map();
+    const agregarEmp = (raw) => {
+        if (raw && raw !== '-' && raw.toUpperCase() !== 'CLIENTE') {
+            const canon = window._canonizarNombreEmpresa(raw);
+            const key = canon.toUpperCase();
+            if (!empresasMap.has(key)) {
+                empresasMap.set(key, canon);
+            }
+        }
+    };
+
     (datos || []).forEach(r => {
-        const emp1 = window._obtenerEmpresaDePlaca(r.placa_tracto);
-        const emp2 = window._obtenerEmpresaDePlaca(r.placa_remolque);
-        if (emp1 && emp1 !== '-' && emp1.toUpperCase() !== 'CLIENTE') empresasSet.add(emp1);
-        if (emp2 && emp2 !== '-' && emp2.toUpperCase() !== 'CLIENTE') empresasSet.add(emp2);
+        agregarEmp(window._obtenerEmpresaDePlaca(r.placa_tracto));
+        agregarEmp(window._obtenerEmpresaDePlaca(r.placa_remolque));
     });
 
     // Si aún no hay en reportes, extraer de dataGlobalPlacas
-    if (empresasSet.size === 0 && Array.isArray(window.dataGlobalPlacas)) {
+    if (empresasMap.size === 0 && Array.isArray(window.dataGlobalPlacas)) {
         window.dataGlobalPlacas.forEach(p => {
-            const emp = (p[1] || '').toString().trim();
-            if (emp && emp !== '-' && emp.toUpperCase() !== 'CLIENTE') empresasSet.add(emp);
+            agregarEmp(p[1]);
         });
     }
 
-    const arr = Array.from(empresasSet).sort();
-    let html = `<button type="button" class="ck-segment-item ${window._ckFiltroEmpresa === 'TODAS' ? 'active' : ''}" onclick="window.filtrarEmpresaChecklist('TODAS', this)">Todas</button>`;
+    const arr = Array.from(empresasMap.values()).sort();
+    const isTodasActive = !window._ckFiltroEmpresa || window._ckFiltroEmpresa === 'TODAS';
+    let html = `<button type="button" class="ck-segment-item ${isTodasActive ? 'active' : ''}" onclick="window.filtrarEmpresaChecklist('TODAS', this)">Todas</button>`;
 
     arr.forEach(emp => {
-        const isAct = window._ckFiltroEmpresa.toUpperCase() === emp.toUpperCase();
-        let short = emp.replace(/S\.A\.C\.?/i, '').replace(/S\.A\.?/i, '').trim() || emp;
-        html += `<button type="button" class="ck-segment-item ${isAct ? 'active' : ''}" onclick="window.filtrarEmpresaChecklist('${emp.replace(/'/g, "\\'")}', this)">${short}</button>`;
+        const isAct = !isTodasActive && window._coincideEmpresa(emp, window._ckFiltroEmpresa);
+        html += `<button type="button" class="ck-segment-item ${isAct ? 'active' : ''}" onclick="window.filtrarEmpresaChecklist('${emp.replace(/'/g, "\\'")}', this)">${emp}</button>`;
     });
 
     group.innerHTML = html;
@@ -2116,11 +2152,10 @@ window.filtrarChecklist = function() {
 
     // 2. Filtro por Empresa (desde pills inferiores)
     if (window._ckFiltroEmpresa && window._ckFiltroEmpresa !== 'TODAS') {
-        const empFilter = window._ckFiltroEmpresa.toUpperCase();
         list = list.filter(r => {
-            const emp1 = (window._obtenerEmpresaDePlaca(r.placa_tracto) || '').toUpperCase();
-            const emp2 = (window._obtenerEmpresaDePlaca(r.placa_remolque) || '').toUpperCase();
-            return emp1.includes(empFilter) || emp2.includes(empFilter);
+            const emp1 = window._obtenerEmpresaDePlaca(r.placa_tracto);
+            const emp2 = window._obtenerEmpresaDePlaca(r.placa_remolque);
+            return window._coincideEmpresa(emp1, window._ckFiltroEmpresa) || window._coincideEmpresa(emp2, window._ckFiltroEmpresa);
         });
     }
 

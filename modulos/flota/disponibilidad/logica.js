@@ -173,29 +173,55 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
     return placas;
 }
 
+window._canonizarNombreEmpresa = window._canonizarNombreEmpresa || function(emp) {
+    if (!emp) return '';
+    const clean = emp.toString().trim().toUpperCase();
+    const raw = clean.replace(/[^A-Z0-9]/g, '');
+    if (raw.includes('MARSISA')) return 'MARSISA S.A.C.';
+    if (raw.includes('TRAHESA')) return 'TRAHESA S.A.C.';
+    if (raw.includes('YOGUI')) return 'YOGUI TRANSPORT S.A.C.';
+    if (raw.includes('ROSYMAR')) return 'ROSYMAR PERU S.A.C.';
+    return clean;
+};
+
+window._coincideEmpresa = window._coincideEmpresa || function(empTarget, empFiltro) {
+    if (!empFiltro || empFiltro === 'TODAS') return true;
+    const t = window._canonizarNombreEmpresa(empTarget);
+    const f = window._canonizarNombreEmpresa(empFiltro);
+    if (t === f) return true;
+    const rawT = (empTarget || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const rawF = (empFiltro || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return rawT === rawF || rawT.includes(rawF) || rawF.includes(rawT);
+};
+
 // ── Renderizar Botones Segmentados de Empresas Dinámicamente (Solo Unidades Motoras) ──
 window.dispRenderizarSegmentedEmpresas = function () {
     const container = document.getElementById('btn-group-empresas-disp');
     if (!container) return;
 
-    const empresasSet = new Set();
+    const empresasMap = new Map();
     (window.dispDatos || []).forEach(d => {
         // Solo extraer empresas de unidades motoras (Camión / Tracto)
         if (d.placa_camion) {
-            const emp = (d.empresa || d.cliente || '').trim();
-            if (emp) empresasSet.add(emp);
+            const raw = (d.empresa || d.cliente || '').trim();
+            if (raw && raw !== '-' && raw.toUpperCase() !== 'CLIENTE') {
+                const canon = window._canonizarNombreEmpresa(raw);
+                const key = canon.toUpperCase();
+                if (!empresasMap.has(key)) {
+                    empresasMap.set(key, canon);
+                }
+            }
         }
     });
 
-    const empresas = Array.from(empresasSet).sort();
+    const empresas = Array.from(empresasMap.values()).sort();
+    const isTodasActive = !window._dispFiltroEmpresa || window._dispFiltroEmpresa === 'TODAS';
 
-    let html = `<button type="button" class="ck-segment-item ${window._dispFiltroEmpresa === 'TODAS' ? 'active' : ''}" data-empresa="TODAS" onclick="window.dispFiltrarPorEmpresa('TODAS', this)">Todas</button>`;
+    let html = `<button type="button" class="ck-segment-item ${isTodasActive ? 'active' : ''}" data-empresa="TODAS" onclick="window.dispFiltrarPorEmpresa('TODAS', this)">Todas</button>`;
 
     empresas.forEach(emp => {
-        let shortName = emp.replace(/S\.A\.C\.?/i, '').replace(/S\.A\.?/i, '').trim();
-        if (!shortName) shortName = emp;
-        const isActive = window._dispFiltroEmpresa === emp ? 'active' : '';
-        html += `<button type="button" class="ck-segment-item ${isActive}" data-empresa="${_dispEsc(emp)}" onclick="window.dispFiltrarPorEmpresa('${_dispEsc(emp)}', this)">${_dispEsc(shortName)}</button>`;
+        const isActive = !isTodasActive && window._coincideEmpresa(emp, window._dispFiltroEmpresa) ? 'active' : '';
+        html += `<button type="button" class="ck-segment-item ${isActive}" data-empresa="${_dispEsc(emp)}" onclick="window.dispFiltrarPorEmpresa('${_dispEsc(emp)}', this)">${_dispEsc(emp)}</button>`;
     });
 
     container.innerHTML = html;

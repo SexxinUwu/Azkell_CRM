@@ -447,26 +447,53 @@ function cargarDatosVehiculos() {
     });
 }
 
-// ── Filtro de Empresas Dinámicas en Documentos de Flota ──────────
+// ── Helpers de Normalización y Filtro de Empresas ──────────
+window._canonizarNombreEmpresa = function(emp) {
+    if (!emp) return '';
+    const clean = emp.toString().trim().toUpperCase();
+    const raw = clean.replace(/[^A-Z0-9]/g, '');
+    if (raw.includes('MARSISA')) return 'MARSISA S.A.C.';
+    if (raw.includes('TRAHESA')) return 'TRAHESA S.A.C.';
+    if (raw.includes('YOGUI')) return 'YOGUI TRANSPORT S.A.C.';
+    if (raw.includes('ROSYMAR')) return 'ROSYMAR PERU S.A.C.';
+    return clean;
+};
+
+window._coincideEmpresa = function(empTarget, empFiltro) {
+    if (!empFiltro || empFiltro === 'TODAS') return true;
+    const t = window._canonizarNombreEmpresa(empTarget);
+    const f = window._canonizarNombreEmpresa(empFiltro);
+    if (t === f) return true;
+    const rawT = (empTarget || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const rawF = (empFiltro || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return rawT === rawF || rawT.includes(rawF) || rawF.includes(rawT);
+};
+
 window._docFiltroEmpresa = window._docFiltroEmpresa || 'TODAS';
 
 function poblarEmpresasPillsDocs(vehiculos) {
     const group = document.getElementById('btn-group-empresas-docs');
     if (!group) return;
 
-    const empresasSet = new Set();
+    const empresasMap = new Map();
     (vehiculos || []).forEach(v => {
-        const emp = (v.empresa || v.cliente || '').toString().trim();
-        if (emp && emp !== '-' && emp.toUpperCase() !== 'CLIENTE') empresasSet.add(emp);
+        const rawEmp = (v.empresa || v.cliente || '').toString().trim();
+        if (rawEmp && rawEmp !== '-' && rawEmp.toUpperCase() !== 'CLIENTE') {
+            const canon = window._canonizarNombreEmpresa(rawEmp);
+            const key = canon.toUpperCase();
+            if (!empresasMap.has(key)) {
+                empresasMap.set(key, canon);
+            }
+        }
     });
 
-    const arr = Array.from(empresasSet).sort();
-    let html = `<button type="button" class="ck-segment-item ${window._docFiltroEmpresa === 'TODAS' ? 'active' : ''}" onclick="window.filtrarEmpresaDocs('TODAS', this)">Todas</button>`;
+    const arr = Array.from(empresasMap.values()).sort();
+    const isTodasActive = !window._docFiltroEmpresa || window._docFiltroEmpresa === 'TODAS';
+    let html = `<button type="button" class="ck-segment-item ${isTodasActive ? 'active' : ''}" onclick="window.filtrarEmpresaDocs('TODAS', this)">Todas</button>`;
 
     arr.forEach(emp => {
-        const isAct = window._docFiltroEmpresa.toUpperCase() === emp.toUpperCase();
-        let short = emp.replace(/S\.A\.C\.?/i, '').replace(/S\.A\.?/i, '').trim() || emp;
-        html += `<button type="button" class="ck-segment-item ${isAct ? 'active' : ''}" onclick="window.filtrarEmpresaDocs('${emp.replace(/'/g, "\\'")}', this)">${short}</button>`;
+        const isAct = !isTodasActive && window._coincideEmpresa(emp, window._docFiltroEmpresa);
+        html += `<button type="button" class="ck-segment-item ${isAct ? 'active' : ''}" onclick="window.filtrarEmpresaDocs('${emp.replace(/'/g, "\\'")}', this)">${emp}</button>`;
     });
 
     group.innerHTML = html;
@@ -477,14 +504,14 @@ function filtrarEmpresaDocs(empresa, btn) {
     window._docFiltroEmpresa = empresa || 'TODAS';
     const group = document.getElementById('btn-group-empresas-docs');
     if (group) {
-        group.querySelectorAll('.ck-segment-item').forEach(b => b.classList.remove('active'));
-    }
-    if (btn) {
-        btn.classList.add('active');
-    } else if (group) {
         group.querySelectorAll('.ck-segment-item').forEach(b => {
-            if (b.textContent.trim().toUpperCase() === (empresa || 'TODAS').toUpperCase()) {
-                b.classList.add('active');
+            const bTxt = b.textContent.trim();
+            if (window._docFiltroEmpresa === 'TODAS') {
+                if (bTxt.toUpperCase() === 'TODAS') b.classList.add('active');
+                else b.classList.remove('active');
+            } else {
+                if (window._coincideEmpresa(bTxt, window._docFiltroEmpresa)) b.classList.add('active');
+                else b.classList.remove('active');
             }
         });
     }
@@ -502,10 +529,7 @@ function actualizarKPIs() {
     let t = 0, vig = 0, ale = 0, ven = 0, sinDoc = 0;
     
     vehiculosFlota.forEach(v => {
-        if (window._docFiltroEmpresa && window._docFiltroEmpresa !== 'TODAS') {
-            const empV = (v.empresa || v.cliente || '').trim().toUpperCase();
-            if (empV !== window._docFiltroEmpresa.trim().toUpperCase()) return;
-        }
+        if (!window._coincideEmpresa(v.empresa || v.cliente, window._docFiltroEmpresa)) return;
 
         let matchAvanzado = true;
         if (window.docFiltros) {
@@ -694,10 +718,7 @@ window.renderizarCalendario = function() {
     let cntVigentesMes = 0;
 
     vehiculosFlota.forEach(v => {
-        if (window._docFiltroEmpresa && window._docFiltroEmpresa !== 'TODAS') {
-            const empV = (v.empresa || v.cliente || '').trim().toUpperCase();
-            if (empV !== window._docFiltroEmpresa.trim().toUpperCase()) return;
-        }
+        if (!window._coincideEmpresa(v.empresa || v.cliente, window._docFiltroEmpresa)) return;
 
         // Filtro por búsqueda de placa
         if (searchTxt && !v.placa.toLowerCase().includes(searchTxt) && !(v.tipo || '').toLowerCase().includes(searchTxt)) {
@@ -1154,10 +1175,7 @@ function renderizarListaLateral() {
     let filtrados = vehiculosFlota.filter(v => {
         let matchTerm = v.placa.toLowerCase().includes(term) || (v.tipo || '').toLowerCase().includes(term);
         
-        if (window._docFiltroEmpresa && window._docFiltroEmpresa !== 'TODAS') {
-            const empV = (v.empresa || v.cliente || '').trim().toUpperCase();
-            if (empV !== window._docFiltroEmpresa.trim().toUpperCase()) return false;
-        }
+        if (!window._coincideEmpresa(v.empresa || v.cliente, window._docFiltroEmpresa)) return false;
 
         let matchAvanzado = true;
         if (window.docFiltros) {
@@ -1516,10 +1534,7 @@ function renderizarMatriz() {
     filtrados = vehiculosFlota.filter(v => {
         let matchTerm = v.placa.toLowerCase().includes(term) || (v.tipo || '').toLowerCase().includes(term);
         
-        if (window._docFiltroEmpresa && window._docFiltroEmpresa !== 'TODAS') {
-            const empV = (v.empresa || v.cliente || '').trim().toUpperCase();
-            if (empV !== window._docFiltroEmpresa.trim().toUpperCase()) return false;
-        }
+        if (!window._coincideEmpresa(v.empresa || v.cliente, window._docFiltroEmpresa)) return false;
 
         let matchAvanzado = true;
         if (window.docFiltros) {
