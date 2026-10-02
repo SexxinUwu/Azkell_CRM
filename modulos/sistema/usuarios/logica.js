@@ -816,6 +816,17 @@ window.guGuardarUsuario = async function() {
         var eId  = (window._guSeleccionado && window._guSeleccionado.id !== 'nuevo') ? window._guSeleccionado.id : null;
         var url  = eId ? '/api/usuarios-v2/' + eId : '/api/usuarios-v2';
         var meth = eId ? 'PUT' : 'POST';
+        var body = {
+            nombre: nombre,
+            dni: dni,
+            cargo: cargo,
+            correo: correo,
+            estado: estado,
+            rol_id: rol_id || null,
+            creado_por: localStorage.getItem('fleet_correo') || 'admin',
+            editado_por: localStorage.getItem('fleet_correo') || 'admin'
+        };
+        if (password.trim()) body.password = password.trim();
         var token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token') || '';
         var headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = 'Bearer ' + token;
