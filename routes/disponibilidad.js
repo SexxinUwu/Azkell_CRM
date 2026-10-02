@@ -210,17 +210,11 @@ module.exports = function (db, logAudit) {
                                     let estado = 'En Base';
                                     let observaciones = '';
 
-                                    if (falla || hasDirectOT) {
+                                    if (hasDirectOT) {
                                         estado = 'En Mantenimiento';
-                                        if (falla) {
-                                            carreta = falla.placa_remolque || (disp ? disp.placa_carreta : '') || '';
-                                            conductor = falla.conductor || (disp ? disp.conductor_asignado : '') || '';
-                                            observaciones = `En Taller / Folio ${falla.folio || ''}`;
-                                        } else {
-                                            carreta = (disp ? disp.placa_carreta : '') || '';
-                                            conductor = (disp ? disp.conductor_asignado : '') || '';
-                                            observaciones = 'En Taller / OT Activa';
-                                        }
+                                        carreta = (disp ? disp.placa_carreta : '') || '';
+                                        conductor = (disp ? disp.conductor_asignado : '') || '';
+                                        observaciones = 'En Taller / OT Activa';
                                     } else if (enRuta) {
                                         estado = 'En Ruta';
                                         carreta = enRuta.placa_carreta || (disp ? disp.placa_carreta : '') || '';
@@ -235,6 +229,12 @@ module.exports = function (db, logAudit) {
                                         carreta = disp.placa_carreta || '';
                                         conductor = disp.conductor_asignado || '';
                                         observaciones = disp.observaciones || '';
+                                    }
+
+                                    if (!hasDirectOT && falla) {
+                                        if (falla.placa_remolque && !carreta) carreta = falla.placa_remolque;
+                                        if (falla.conductor && !conductor) conductor = falla.conductor;
+                                        if (!observaciones) observaciones = `Falla reportada / Folio ${falla.folio || ''}`;
                                     }
 
                                     if (carreta) carretasAcopladas.add(clean(carreta));
@@ -255,7 +255,7 @@ module.exports = function (db, logAudit) {
                                         subTipoCarreta = pCarretaData ? (pCarretaData.sub_tipo || pCarretaData.tipo || 'Carreta') : 'Carreta';
                                         empresaCarreta = pCarretaData ? (pCarretaData.cliente || p.cliente || '').trim() : (p.cliente || '').trim();
                                         marcaCarreta = pCarretaData ? (pCarretaData.marca || '') : '';
-                                        if (otSet.has(clean(carreta)) || fallasRemolqueSet.has(clean(carreta))) {
+                                        if (otSet.has(clean(carreta))) {
                                             estadoCarreta = 'En Mantenimiento';
                                         }
                                     }
@@ -288,7 +288,7 @@ module.exports = function (db, logAudit) {
                                     if (carretasAcopladas.has(cPlaca)) return; // Ya acoplada a un camión
 
                                     const disp = dispMap[cPlaca];
-                                    const hasOT = otSet.has(cPlaca) || fallasRemolqueSet.has(cPlaca);
+                                    const hasOT = otSet.has(cPlaca);
                                     const enRuta = rutaCarretaSet.has(cPlaca);
 
                                     let estado = 'En Base';

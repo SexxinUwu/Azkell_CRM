@@ -723,6 +723,7 @@ window.verificarSesionGuardada = function() {
 
         var rMap = {
             'dashboard': 'dashboard',
+            'mantenimiento/dashboard': 'mant_dashboard',
             'flota/disponibilidad': 'disponibilidad',
             'flota/ubicacion': 'gps',
             'flota/documentos': 'docs_flota',
@@ -1901,7 +1902,9 @@ window.checkPerm = function(modKey, action) {
         var p = window._permCache;
         if (p && p.admin === true) return true;
         var keyAliases = {
-            'dashboard': ['dashboard', 'dash'],
+            'dashboard': ['dashboard', 'dash', 'mant_dashboard'],
+            'mant_dashboard': ['mant_dashboard', 'mantenimiento/dashboard', 'dashboard', 'dash'],
+            'mantenimiento/dashboard': ['mant_dashboard', 'mantenimiento/dashboard', 'dashboard', 'dash'],
             'ot': ['ot', 'reportes_ot'],
             'reportes_ot': ['reportes_ot', 'ot'],
             'trabajos_ot': ['trabajos_ot'],
