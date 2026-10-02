@@ -1,7 +1,7 @@
-const CACHE_NAME = 'azkell-fleet-v50';
-const STATIC_CACHE = 'azkell-libs-v1';
+const CACHE_NAME = 'azkell-fleet-v51';
+const STATIC_CACHE = 'azkell-libs-v2';
 
-// Archivos de la app (cambian frecuentemente)
+// Archivos de la app
 const APP_ASSETS = [
   '/',
   '/Index.html',
@@ -11,7 +11,7 @@ const APP_ASSETS = [
   '/utils.js'
 ];
 
-// Librerías pesadas (NUNCA cambian → cachear permanentemente)
+// Librerías pesadas
 const LIB_ASSETS = [
   '/libs/bootstrap.min.css',
   '/libs/bootstrap-icons.css',
@@ -28,18 +28,22 @@ const LIB_ASSETS = [
   '/libs/leaflet.css'
 ];
 
-// Instalar: cachear todo de una vez
+// Instalar: cachear de forma segura sin romper la instalación si un archivo falla
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
-    Promise.all([
-      caches.open(CACHE_NAME).then(c => c.addAll(APP_ASSETS)),
-      caches.open(STATIC_CACHE).then(c => c.addAll(LIB_ASSETS))
+    Promise.allSettled([
+      caches.open(CACHE_NAME).then(c => {
+        return Promise.allSettled(APP_ASSETS.map(url => c.add(url).catch(() => {})));
+      }),
+      caches.open(STATIC_CACHE).then(c => {
+        return Promise.allSettled(LIB_ASSETS.map(url => c.add(url).catch(() => {})));
+      })
     ])
   );
-  self.skipWaiting();
 });
 
-// Activar: borrar cachés viejas
+// Activar: tomar control inmediato y limpiar versiones viejas
 self.addEventListener('activate', event => {
   const keep = [CACHE_NAME, STATIC_CACHE];
   event.waitUntil(
@@ -49,12 +53,28 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch: estrategia inteligente
+// Helper de timeout para evitar pantallas en blanco bloqueadas en red
+function fetchWithTimeout(request, timeoutMs = 2500) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('NetworkTimeout')), timeoutMs);
+    fetch(request).then(response => {
+      clearTimeout(timer);
+      resolve(response);
+    }).catch(err => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
+
+// Fetch: estrategia optimizada y blindada contra NetworkError
 self.addEventListener('fetch', event => {
+  // Solo interceptar peticiones GET del mismo origen
+  if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // API → siempre red
+  // 1. API → siempre red directa (nunca cachear)
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request).catch(() =>
@@ -66,35 +86,58 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Librerías → Cache First (instantáneo, nunca cambian)
+  // 2. Librerías estáticas (/libs/) → Cache First
   if (url.pathname.startsWith('/libs/')) {
     event.respondWith(
       caches.match(event.request).then(cached => {
         if (cached) return cached;
         return fetch(event.request).then(resp => {
-          if (resp.ok) {
-            var clone = resp.clone();
-            caches.open(STATIC_CACHE).then(c => c.put(event.request, clone));
+          if (resp && resp.status === 200) {
+            const clone = resp.clone();
+            caches.open(STATIC_CACHE).then(c => c.put(event.request, clone)).catch(() => {});
           }
           return resp;
-        });
+        }).catch(() => cached);
       })
     );
     return;
   }
 
-  // App files → Network First (con fallback a caché offline)
+  // 3. Navegación principal (HTML) → Stale-While-Revalidate con timeout rápido (Cero pantallas en blanco)
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/Index.html') {
+    event.respondWith(
+      fetchWithTimeout(event.request, 2000)
+        .then(resp => {
+          if (resp && resp.status === 200) {
+            const clone = resp.clone();
+            caches.open(CACHE_NAME).then(c => c.put(event.request, clone)).catch(() => {});
+          }
+          return resp;
+        })
+        .catch(() => {
+          return caches.match(event.request).then(cached => {
+            if (cached) return cached;
+            return caches.match('/Index.html').then(idx => idx || caches.match('/'));
+          });
+        })
+    );
+    return;
+  }
+
+  // 4. Otros recursos de la App (CSS, JS, iconos, modulos HTML) → Network First con timeout
   event.respondWith(
-    fetch(event.request).then(resp => {
-      if (resp.ok) {
-        var clone = resp.clone();
-        caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
-      }
-      return resp;
-    }).catch(() =>
-      caches.match(event.request).then(cached =>
-        cached || new Response('Offline', { status: 503, statusText: 'Sin conexión' })
-      )
-    )
+    fetchWithTimeout(event.request, 3000)
+      .then(resp => {
+        if (resp && resp.status === 200) {
+          const clone = resp.clone();
+          caches.open(CACHE_NAME).then(c => c.put(event.request, clone)).catch(() => {});
+        }
+        return resp;
+      })
+      .catch(() => {
+        return caches.match(event.request).then(cached => {
+          return cached || new Response('Offline', { status: 503, statusText: 'Sin conexión' });
+        });
+      })
   );
 });
