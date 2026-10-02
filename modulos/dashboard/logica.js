@@ -60,7 +60,7 @@
             var listaRampas= Array.isArray(rRampas)? rRampas: (rRampas.data|| []);
 
             // ── 1. Procesar Disponibilidad de Flota ──────────────────
-            var totalFlota = listaDisp.length || 85;
+            var totalFlota = listaDisp.length;
             var enTaller = 0;
             var porRegularizar = 0;
             var operativas = 0;
@@ -94,7 +94,7 @@
             porRegularizar = otsPorReg.length;
             operativas = Math.max(0, totalFlota - enTaller);
 
-            var pctOperativa = totalFlota > 0 ? Math.round((operativas / totalFlota) * 100) : 100;
+            var pctOperativa = totalFlota > 0 ? Math.round((operativas / totalFlota) * 100) : (totalFlota === 0 ? 0 : 100);
             var pctTaller    = totalFlota > 0 ? Math.round((enTaller / totalFlota) * 100) : 0;
             var pctReg       = totalFlota > 0 ? Math.round((porRegularizar / totalFlota) * 100) : 0;
 
@@ -152,10 +152,6 @@
                 if (v.estacion || v.proveedor) estacionesSet.add(v.estacion || v.proveedor);
             });
 
-            // Si vales vacíos, mostrar estimados razonables del ERP
-            if (totalGls === 0) totalGls = 14250;
-            if (totalFuelMonto === 0) totalFuelMonto = 206625;
-
             var elValFuel = document.getElementById('ap-val-fuel-gls');
             var elFuelMonto = document.getElementById('ap-fuel-monto');
             if (elValFuel) elValFuel.innerHTML = apFmtNum(Math.round(totalGls)) + ' <span style="font-size: 0.85rem; font-weight: 700;">GL</span>';
@@ -163,8 +159,8 @@
 
             var elOpVales = document.getElementById('ap-op-vales-count');
             var elOpEst = document.getElementById('ap-op-estaciones-count');
-            if (elOpVales) elOpVales.textContent = listaVales.length ? apFmtNum(listaVales.length) : '482';
-            if (elOpEst) elOpEst.textContent = estacionesSet.size ? estacionesSet.size : '14';
+            if (elOpVales) elOpVales.textContent = apFmtNum(listaVales.length);
+            if (elOpEst) elOpEst.textContent = apFmtNum(estacionesSet.size);
 
             // ── 3. Procesar Taller & OTs ──────────────────────────────
             var enProcesoOT = 0;
@@ -199,7 +195,7 @@
             if (elOTEnProceso)   elOTEnProceso.textContent = enProcesoOT + ' órdenes';
             if (elOTPorReg)      elOTPorReg.textContent = porRegOT + ' órdenes';
             if (elOTCerradas)    elOTCerradas.textContent = cerradasOT + ' órdenes';
-            if (elOTCosto)       elOTCosto.textContent = apFmtPEN(costoTotalOT || 18450);
+            if (elOTCosto)       elOTCosto.textContent = apFmtPEN(costoTotalOT);
 
             // ── 4. Procesar Almacén & Inventario ──────────────────────
             var valorizacionTotal = 0;
@@ -217,9 +213,9 @@
             var elInvArts  = document.getElementById('ap-inv-articulos-count');
             var elInvCrit  = document.getElementById('ap-inv-criticos-count');
 
-            if (elInvTotal) elInvTotal.textContent = apFmtPEN(valorizacionTotal || 84230);
-            if (elInvArts)  elInvArts.innerHTML = '<span class="fw-bold text-dark">' + apFmtNum(listaInv.length || 342) + '</span> artículos registrados';
-            if (elInvCrit)  elInvCrit.textContent = criticosCount || 12;
+            if (elInvTotal) elInvTotal.textContent = apFmtPEN(valorizacionTotal);
+            if (elInvArts)  elInvArts.innerHTML = '<span class="fw-bold text-dark">' + apFmtNum(listaInv.length) + '</span> artículos registrados';
+            if (elInvCrit)  elInvCrit.textContent = criticosCount;
 
             // ── 5. Procesar Tesorería ─────────────────────────────────
             var totalPENReq = 0;
@@ -245,10 +241,10 @@
             var elTesoPEN = document.getElementById('ap-teso-monto-pen');
             var elTesoUSD = document.getElementById('ap-teso-monto-usd');
 
-            if (elValTeso) elValTeso.textContent = apFmtPEN(totalPENReq || 34520);
-            if (elSubTeso) elSubTeso.innerHTML = '<span class="fw-bold text-dark">' + (reqPendientes || 8) + '</span> requerimientos pend.';
-            if (elTesoPEN) elTesoPEN.textContent = apFmtPEN(totalPENReq || 34520);
-            if (elTesoUSD) elTesoUSD.textContent = apFmtUSD(totalUSDReq || 2850) + ' USD pendientes';
+            if (elValTeso) elValTeso.textContent = apFmtPEN(totalPENReq);
+            if (elSubTeso) elSubTeso.innerHTML = '<span class="fw-bold text-dark">' + reqPendientes + '</span> requerimientos pend.';
+            if (elTesoPEN) elTesoPEN.textContent = apFmtPEN(totalPENReq);
+            if (elTesoUSD) elTesoUSD.textContent = apFmtUSD(totalUSDReq) + ' USD pendientes';
 
             // ── 6. Alertas Críticas Globales ──────────────────────────
             var elAlertFallas = document.getElementById('ap-alert-fallas-count');
@@ -256,10 +252,10 @@
             var elAlertGer    = document.getElementById('ap-alert-gerencia-count');
             var elAlertTotal  = document.getElementById('ap-alertas-total-badge');
 
-            var totalAlertas = (porRegOT || 4) + (criticosCount || 12) + (reqPendientes || 8);
-            if (elAlertFallas) elAlertFallas.textContent = (porRegOT || 4) + ' pendientes';
-            if (elAlertDocs)   elAlertDocs.textContent   = '3 por vencer';
-            if (elAlertGer)    elAlertGer.textContent    = (reqPendientes || 8) + ' por autorizar';
+            var totalAlertas = porRegOT + criticosCount + reqPendientes;
+            if (elAlertFallas) elAlertFallas.textContent = porRegOT + ' pendientes';
+            if (elAlertDocs)   elAlertDocs.textContent   = '0 por vencer';
+            if (elAlertGer)    elAlertGer.textContent    = reqPendientes + ' por autorizar';
             if (elAlertTotal)  elAlertTotal.innerHTML    = '<i class="bi bi-shield-exclamation text-warning me-1"></i> ' + totalAlertas + ' advertencias activas';
 
         } catch(e) {

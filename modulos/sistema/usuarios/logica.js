@@ -816,11 +816,10 @@ window.guGuardarUsuario = async function() {
         var eId  = (window._guSeleccionado && window._guSeleccionado.id !== 'nuevo') ? window._guSeleccionado.id : null;
         var url  = eId ? '/api/usuarios-v2/' + eId : '/api/usuarios-v2';
         var meth = eId ? 'PUT' : 'POST';
-        var body = { nombre, dni, cargo, correo, estado, rol_id: rol_id || null,
-            creado_por: localStorage.getItem('fleet_correo')||'admin',
-            editado_por: localStorage.getItem('fleet_correo')||'admin' };
-        if (password.trim()) body.password = password.trim();
-        var res  = await fetch(url, { method:meth, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        var token = localStorage.getItem('fleet_token') || sessionStorage.getItem('fleet_token') || '';
+        var headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        var res  = await fetch(url, { method:meth, headers: headers, body:JSON.stringify(body) });
         var json = await res.json();
         if (!res.ok) throw new Error(json.error || res.statusText);
         
