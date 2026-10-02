@@ -1983,40 +1983,95 @@ app.post('/api/login', (req, res) => {
 
             } else { return res.json({ exito: false, mensaje: "Contraseña incorrecta." }); }
         } else {
-            // SI ES ADMIN@AZKELL.COM Y NO EXISTE EN LA TABLA LOCAL DE ESTE TENANT, VERIFICAR LLAVE MAESTRA
-            if (correo && correo.toLowerCase() === 'admin@azkell.com') {
-                const { getTenantPool } = require('./services/tenant_master');
-                const mainPool = getTenantPool(process.env.DB_NAME || 'azkell_tenant_marsisa');
-                mainPool.query('SELECT * FROM usuarios WHERE LOWER(correo) = "admin@azkell.com" LIMIT 1', async (errM, resM) => {
-                    if (!errM && resM && resM.length > 0) {
-                        const mUser = resM[0];
-                        const esHash = mUser.password && (mUser.password.startsWith('$2b$') || mUser.password.startsWith('$2a$'));
-                        let pwdOk = false;
-                        if (esHash) pwdOk = await bcrypt.compare(password, mUser.password);
-                        else pwdOk = (mUser.password === password);
+            // SI NO EXISTE EN EL TENANT ACTUAL, BUSCAR EN LOS DEMÁS TENANTS ACTIVOS (LOGIN UNIFICADO MULTI-EMPRESA / GARITA)
+            try {
+                const { getAllActiveTenants } = require('./services/tenant_master');
+                const allTenants = await getAllActiveTenants();
+                for (const t of allTenants) {
+                    const [tResults] = await t.pool.promise().query(sql, [loginInput, loginInput, loginInput]);
+                    if (tResults && tResults.length > 0) {
+                        const usuario = tResults[0];
+                        const esHash = usuario.password && (usuario.password.startsWith('$2b$') || usuario.password.startsWith('$2a$'));
+                        let passwordValida = false;
+                        if (esHash) {
+                            passwordValida = await bcrypt.compare(password, usuario.password);
+                        } else {
+                            passwordValida = (usuario.password === password);
+                            if (passwordValida) {
+                                const hashed = await bcrypt.hash(password, 10);
+                                t.pool.query('UPDATE usuarios SET password=? WHERE idUsuario=?', [hashed, usuario.idUsuario]);
+                            }
+                        }
 
-                        if (pwdOk) {
+                        if (passwordValida) {
+                            if (usuario.estado === 'Inactivo' && loginInput.toLowerCase() !== 'admin@azkell.com') {
+                                return res.json({ exito: false, mensaje: "Cuenta inactiva." });
+                            }
+
+                            let permisosFinales;
+                            let rolFinal = usuario.rol || "Personalizado";
+                            let esAdminRol = (usuario.rol && usuario.rol.toLowerCase().includes('admin')) || usuario.rol_es_admin;
+
+                            if (loginInput.toLowerCase() === 'admin@azkell.com' || (usuario.correo && usuario.correo.toLowerCase() === 'admin@azkell.com')) {
+                                permisosFinales = JSON.stringify({ admin: true });
+                                rolFinal = "Fundador";
+                            } else if (esAdminRol) {
+                                permisosFinales = JSON.stringify({ admin: true });
+                                rolFinal = usuario.rol || usuario.rol_nombre || "Administrador";
+                            } else if (usuario.rol_id && usuario.rol_permisos) {
+                                permisosFinales = usuario.rol_permisos;
+                                rolFinal = usuario.rol_nombre || "Personalizado";
+                            } else {
+                                permisosFinales = usuario.permisos_json || "{}";
+                            }
+
+                            const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || '?';
+                            const ua = req.headers['user-agent'] || '';
+                            let dispositivo = 'PC';
+                            if (/Mobile|Android|iPhone|iPad/i.test(ua)) {
+                                if (/iPhone/i.test(ua)) dispositivo = 'iPhone';
+                                else if (/iPad/i.test(ua)) dispositivo = 'iPad';
+                                else if (/Android/i.test(ua)) dispositivo = 'Android';
+                                else dispositivo = 'Móvil';
+                            } else if (/Chrome/i.test(ua)) dispositivo = 'Chrome (PC)';
+                            else if (/Firefox/i.test(ua)) dispositivo = 'Firefox (PC)';
+                            else if (/Safari/i.test(ua)) dispositivo = 'Safari (PC)';
+                            else if (/Edg/i.test(ua)) dispositivo = 'Edge (PC)';
+
+                            t.pool.query(
+                                'UPDATE usuarios SET ultimo_acceso=NOW(), ultimo_ip=?, ultimo_dispositivo=? WHERE idUsuario=?',
+                                [ip, dispositivo, usuario.idUsuario],
+                                (err) => { if (err) console.warn('UPDATE sesion:', err.message); }
+                            );
+
                             const token = jwt.sign(
-                                { id: mUser.idUsuario || 1, correo: 'Admin@azkell.com', rol: 'Fundador', permisos: JSON.stringify({ admin: true }) },
+                                { id: usuario.idUsuario, correo: usuario.correo, nombre: usuario.nombre, rol: rolFinal, permisos: permisosFinales, tenant_slug: t.slug },
                                 process.env.JWT_SECRET,
                                 { expiresIn: '12h' }
                             );
+
                             return res.json({
                                 exito: true,
                                 token: token,
-                                nombre: mUser.nombre || 'Fundador',
-                                rol: 'Fundador',
-                                permisos: JSON.stringify({ admin: true }),
-                                rol_color: '#3b82f6',
-                                rol_id: 1
+                                nombre: usuario.nombre,
+                                dni: usuario.dni || '',
+                                rol: rolFinal,
+                                permisos: permisosFinales,
+                                rol_color: usuario.rol_color || null,
+                                rol_id: usuario.rol_id || null,
+                                empresa_slug: t.slug,
+                                empresa_nombre: t.nombre_empresa
                             });
+                        } else {
+                            return res.json({ exito: false, mensaje: "Contraseña incorrecta." });
                         }
                     }
-                    return res.json({ exito: false, mensaje: "Contraseña incorrecta." });
-                });
-                return;
+                }
+            } catch(e) {
+                console.error('[Login Multi-Tenant Fallback] Error:', e);
             }
-            return res.json({ exito: false, mensaje: "El correo no está registrado." });
+
+            return res.json({ exito: false, mensaje: "El usuario o correo no está registrado." });
         }
     });
 });
@@ -3197,7 +3252,49 @@ app.delete('/api/documentos-flota/delete', async (req, res) => {
 });
 
 // ── GET /api/vehiculos-flota — Lista de vehículos con documentos (Sincronizado con Placas) ──────────────
-app.get('/api/vehiculos-flota', (req, res) => {
+app.get('/api/vehiculos-flota', async (req, res) => {
+    const isGlobal = req.isSecurityPortal || req.tenantSlug === 'seguridad' || (req.query && req.query.multi_tenant === '1') || (req.headers && req.headers['x-portal'] === 'seguridad');
+    if (isGlobal) {
+        try {
+            const { getAllActiveTenants } = require('./services/tenant_master');
+            const tenants = await getAllActiveTenants();
+            
+            const results = await Promise.all(tenants.map(async (t) => {
+                try {
+                    const [rows] = await t.pool.promise().query(`
+                        SELECT 
+                            p.placa,
+                            COALESCE(vf.tipo, p.tipo, '---') AS tipo,
+                            COALESCE(vf.propiedad, 'PROPIA') AS propiedad,
+                            COALESCE(p.cliente, vf.empresa, '${t.nombre_empresa}') AS empresa,
+                            vf.fecha_entrega,
+                            COALESCE(vf.anio, p.anio) AS anio,
+                            COALESCE(vf.marca, p.marca) AS marca,
+                            COALESCE(vf.modelo, p.modelo_uts) AS modelo,
+                            COALESCE(vf.color, p.color) AS color,
+                            vf.chasis,
+                            vf.tc_vencimiento, vf.tc_constancia, vf.soat_entidad, vf.soat_pago, vf.soat_vencimiento,
+                            vf.matpel_constancia, vf.matpel_vencimiento, vf.rt_emision, vf.rt_vencimiento,
+                            vf.boni_emision, vf.boni_vencimiento, vf.sv_entidad, vf.sv_asesor, vf.sv_vencimiento,
+                            vf.sc_entidad, vf.sc_asesor, vf.sc_vencimiento, vf.fum_emision, vf.fum_vencimiento,
+                            vf.ext_emision, vf.ext_vencimiento, vf.ext_cantidad,
+                            vf.tc_url, vf.soat_url, vf.matpel_url, vf.rt_url, vf.boni_url, vf.sv_url, vf.sc_url, vf.fum_url, vf.ext_url, vf.wialon_name
+                        FROM placas p
+                        LEFT JOIN vehiculos_flota vf ON CONVERT(p.placa USING utf8mb4) = CONVERT(vf.placa USING utf8mb4)
+                        ORDER BY p.placa ASC
+                    `);
+                    return (rows || []).map(r => ({ ...r, empresa_slug: t.slug, empresa_nombre: t.nombre_empresa }));
+                } catch(e) {
+                    return [];
+                }
+            }));
+            
+            return res.json([].concat(...results));
+        } catch(e) {
+            console.warn('[Global vehiculos-flota] Error:', e.message);
+        }
+    }
+
     const tdb = (req && req.db) ? req.db : db;
     tdb.query("ALTER TABLE placas CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", () => {});
     tdb.query("ALTER TABLE vehiculos_flota CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", () => {});

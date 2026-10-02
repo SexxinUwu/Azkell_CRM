@@ -841,6 +841,10 @@ window.verificarSesionGuardada = function() {
     };
 
     window.obtenerPrimeraRutaPermitida = function() {
+        var isSecurityDomain = window.location.hostname.includes('seguridad.azkell.com') || window.location.hostname.startsWith('seguridad.');
+        if (isSecurityDomain) {
+            return 'seguridad/unidades';
+        }
         var rol = (localStorage.getItem('fleet_rol') || window.rolLogueado || '').toLowerCase();
         if (rol.includes('conductor')) {
             return 'operaciones/conductor-portal';
@@ -888,12 +892,13 @@ window.verificarSesionGuardada = function() {
 
     window.irAInicio = function() {
         var rol = (localStorage.getItem('fleet_rol') || window.rolLogueado || '').toLowerCase();
-        if (rol.includes('conductor')) {
-            cargarModuloAislado('operaciones/conductor-portal');
-            setBottomNavActive('bnav-conductor');
-        } else if (rol.includes('seguridad')) {
+        var isSecurityDomain = window.location.hostname.includes('seguridad.azkell.com') || window.location.hostname.startsWith('seguridad.');
+        if (isSecurityDomain || rol.includes('seguridad')) {
             cargarModuloAislado('seguridad/unidades');
             setBottomNavActive('bnav-seguridad');
+        } else if (rol.includes('conductor')) {
+            cargarModuloAislado('operaciones/conductor-portal');
+            setBottomNavActive('bnav-conductor');
         } else {
             cargarModuloAislado(window.obtenerPrimeraRutaPermitida ? window.obtenerPrimeraRutaPermitida() : 'dashboard');
             setBottomNavActive('bnav-dashboard');
@@ -950,9 +955,12 @@ window.verificarSesionGuardada = function() {
         }
     } catch(e) {}
 
+    var isSecurityDomain = window.location.hostname.includes('seguridad.azkell.com') || window.location.hostname.startsWith('seguridad.');
     let rutaGuardada = sessionStorage.getItem('fleet_rutaActual');
     if (isSuperAdminDomain) {
         cargarModuloAislado('sistema/superadmin');
+    } else if (isSecurityDomain && (!rutaHash || !window.esRutaValidaYPermitida(rutaHash))) {
+        cargarModuloAislado('seguridad/unidades');
     } else if (rutaHash && window.esRutaValidaYPermitida(rutaHash)) {
         // Si la URL vino con un hash específico (#operaciones/ordenes-servicio), SIEMPRE carga ese módulo
         cargarModuloAislado(rutaHash);

@@ -132,6 +132,15 @@ window.init_login = function() {
         emailInput.value = savedEmail;
         if(rememberCheckbox) rememberCheckbox.checked = true;
     }
+
+    // Detección de Portal Independiente de Seguridad (seguridad.azkell.com)
+    const isSecurityDomain = window.location.hostname.includes('seguridad.azkell.com') || window.location.hostname.startsWith('seguridad.');
+    if (isSecurityDomain) {
+        const titleEl = document.querySelector('#pantalla-login .branding h1');
+        const descEl = document.querySelector('#pantalla-login .branding p');
+        if (titleEl) titleEl.textContent = 'Control de Garita y Seguridad';
+        if (descEl) descEl.textContent = 'Control de accesos unificado, inspección de flota e ingreso/salida de unidades en tiempo real.';
+    }
 };
 
 // Alternar entre Tab Iniciar Sesión y Registrarse

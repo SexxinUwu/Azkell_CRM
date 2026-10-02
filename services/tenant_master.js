@@ -357,6 +357,20 @@ async function resolveTenantMiddleware(req, res, next) {
         }
     }
 
+    // Si se accede desde seguridad.azkell.com o se especifica el portal de seguridad independiente
+    if (tenantSlug === 'seguridad') {
+        req.isSecurityPortal = true;
+        req.tenantSlug = 'seguridad';
+        req.tenantInfo = {
+            id: 0,
+            slug: 'seguridad',
+            nombre_empresa: 'Control de Seguridad y Garita',
+            db_name: process.env.DB_NAME || 'azkell_tenant_marsisa'
+        };
+        req.db = getTenantPool(process.env.DB_NAME || 'azkell_tenant_marsisa');
+        return next();
+    }
+
     // Si se accede desde admin.azkell.com o no se especifica tenant, usar la Base de Datos por defecto para autenticación/configuración y masterPool para gestión de empresas
     if (!tenantSlug || tenantSlug === 'admin' || tenantSlug === 'master') {
         req.tenantSlug = 'master';
@@ -419,8 +433,40 @@ async function resolveTenantMiddleware(req, res, next) {
     });
 }
 
+/**
+ * Retorna la lista de todas las empresas activas con sus pools de conexión
+ */
+async function getAllActiveTenants() {
+    try {
+        const master = getMasterPool();
+        const [rows] = await master.promise().query("SELECT id, slug, nombre_empresa, db_name, estado FROM empresas WHERE estado = 'activo'");
+        const tenants = [];
+        for (const r of rows) {
+            tenants.push({
+                id: r.id,
+                slug: r.slug,
+                nombre_empresa: r.nombre_empresa,
+                db_name: r.db_name,
+                pool: getTenantPool(r.db_name)
+            });
+        }
+        return tenants;
+    } catch(e) {
+        console.error('Error obteniendo lista de tenants:', e.message);
+        // Fallback a los 4 tenants predeterminados
+        return [
+            { slug: 'marsisa', nombre_empresa: 'Marsisa S.A.C.', db_name: 'azkell_tenant_marsisa', pool: getTenantPool('azkell_tenant_marsisa') },
+            { slug: 'rosymarperu', nombre_empresa: 'ROSYMAR PERU S.A.C.', db_name: 'azkell_tenant_rosymarperu', pool: getTenantPool('azkell_tenant_rosymarperu') },
+            { slug: 'yoguitransport', nombre_empresa: 'YOGUI TRANSPORT S.A.C.', db_name: 'azkell_tenant_yoguitransport', pool: getTenantPool('azkell_tenant_yoguitransport') },
+            { slug: 'trahesa', nombre_empresa: 'TRAHESA S.A.C.', db_name: 'azkell_tenant_trahesa', pool: getTenantPool('azkell_tenant_trahesa') }
+        ];
+    }
+}
+
 module.exports = {
     getMasterPool,
     getTenantPool,
+    getAllActiveTenants,
     resolveTenantMiddleware
 };
+
