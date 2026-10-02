@@ -1906,7 +1906,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         sol = uName.charAt(0).toUpperCase() + uName.slice(1);
                     }
                     const items = itemsBySalida[r.id] || [];
-                    return Object.assign({}, r, { creado_por: sol, items: items });
+                    const calcTotal = items.reduce((acc, it) => acc + (parseFloat(it.importe) || (it.cantidad * it.costo_unitario) || 0), 0);
+                    const totalPen = (r.total_pen != null && parseFloat(r.total_pen) > 0) ? parseFloat(r.total_pen) : calcTotal;
+                    return Object.assign({}, r, { creado_por: sol, items: items, total_pen: totalPen });
                 });
 
                 res.json(result);
