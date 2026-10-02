@@ -504,9 +504,13 @@ window.dispFiltrar = function () {
     const filtrados = (window.dispDatos || []).filter(item => {
         // Filtro 1: Card Superior (Estado)
         if (filtroCard !== 'TODOS') {
-            if (filtroCard === 'En Base' && item.estado !== 'En Base') return false;
-            if (filtroCard === 'En Ruta' && item.estado !== 'En Ruta') return false;
-            if (filtroCard === 'En Mantenimiento' && item.estado !== 'En Mantenimiento') return false;
+            const isMant = (item.estado === 'En Mantenimiento' || item.estado_carreta === 'En Mantenimiento');
+            const isRuta = (item.estado === 'En Ruta' || (!item.placa_camion && item.estado_carreta === 'En Ruta'));
+            const isBase = (item.estado === 'En Base' || (!item.placa_camion && item.estado_carreta === 'En Base'));
+
+            if (filtroCard === 'En Mantenimiento' && !isMant) return false;
+            if (filtroCard === 'En Ruta' && (!isRuta || isMant)) return false;
+            if (filtroCard === 'En Base' && (!isBase || isMant)) return false;
         }
 
         // Filtro 2: Empresa Segmentada (Aplica exclusivamente sobre la empresa de la unidad motora)
@@ -869,7 +873,7 @@ window.dispRenderizarTabla = function (datos) {
         const est = item.estado || 'En Base';
 
         let estadoBadge = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">En Base</span>';
-        if (est === 'En Mantenimiento') {
+        if (est === 'En Mantenimiento' || item.estado_carreta === 'En Mantenimiento') {
             estadoBadge = '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">En Mantenimiento</span>';
         } else if (est === 'En Ruta') {
             estadoBadge = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">En Ruta</span>';
@@ -992,7 +996,7 @@ window.dispRenderizarCardsMobile = function (datos) {
         const est = item.estado || 'En Base';
 
         let badgeEstadoMobile = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">En Base</span>';
-        if (est === 'En Mantenimiento') {
+        if (est === 'En Mantenimiento' || item.estado_carreta === 'En Mantenimiento') {
             badgeEstadoMobile = '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">En Mantenimiento</span>';
         } else if (est === 'En Ruta') {
             badgeEstadoMobile = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">En Ruta</span>';
