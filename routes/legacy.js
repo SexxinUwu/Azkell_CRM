@@ -13,7 +13,7 @@ const INSP_CACHE_TTL = 45000; // 45s
 let _wialonCache = null;
 let _wialonCacheTime = 0;
 let _wialonInFlightPromise = null;
-const WIALON_CACHE_TTL = 8000; // 8s de refresco ultra rápido para tiempo real
+const WIALON_CACHE_TTL = 4000; // 4s de refresco ultra rápido para tiempo real y animación fluida
 
 function parseMesInt(val) {
     if (val === null || val === undefined || val === '') return null;
