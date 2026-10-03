@@ -13,7 +13,7 @@ const INSP_CACHE_TTL = 45000; // 45s
 let _wialonCache = null;
 let _wialonCacheTime = 0;
 let _wialonInFlightPromise = null;
-const WIALON_CACHE_TTL = 30000; // 30s
+const WIALON_CACHE_TTL = 8000; // 8s de refresco ultra rápido para tiempo real
 
 function parseMesInt(val) {
     if (val === null || val === undefined || val === '') return null;
@@ -1387,6 +1387,7 @@ router.post('/:metodo', async (req, res) => {
                         const lat = item.pos ? Number(item.pos.y) : 0;
                         const lng = item.pos ? Number(item.pos.x) : 0;
                         const speed = item.pos && item.pos.s != null ? Number(item.pos.s) : 0;
+                        const course = item.pos && item.pos.c != null ? Number(item.pos.c) : 0;
 
                         const vObj = {
                             nombre_wialon: rawName,
@@ -1396,6 +1397,7 @@ router.post('/:metodo', async (req, res) => {
                             lat,
                             lng,
                             velocidad: speed,
+                            curso: course,
                             ubicacion: ''
                         };
 

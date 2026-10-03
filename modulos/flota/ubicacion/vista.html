@@ -1,4 +1,4 @@
-<!-- MÓDULO: UBICACIÓN GPS FLOTA (DISEÑO APPLE / BENTO ERP) -->
+<!-- MÓDULO: UBICACIÓN GPS FLOTA (DISEÑO APPLE / BENTO ERP — MAPA EN VIVO) -->
 <style>
 /* ── Reset root-dinamico padding for full-bleed ─────────── */
 #root-dinamico, .main-area {
@@ -7,7 +7,7 @@
 
 #moduloUbicacionGPS {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 1rem 1.25rem 3rem 1.25rem !important;
+    padding: 1rem 1.25rem 2rem 1.25rem !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
@@ -110,7 +110,8 @@
     gap: 1.25rem;
     width: 100% !important;
     padding: 0 !important;
-    min-height: 0;
+    min-height: 540px;
+    height: calc(100vh - 270px);
     overflow: hidden;
 }
 .gps-sidebar-panel {
@@ -169,43 +170,167 @@
     text-overflow: ellipsis;
 }
 
-/* ── Panel Detalle Bento ─────────────────────────── */
-.gps-detail-panel {
+/* ── Panel Mapa Interactivo y Telemetría ──────────── */
+.gps-map-panel {
     flex: 1 1 0;
     min-width: 0;
+    position: relative;
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 18px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-    padding: 1.5rem;
 }
-.gps-empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+
+#gpsFleetMap {
+    width: 100%;
     height: 100%;
-    text-align: center;
-    color: #94a3b8;
-    padding: 3rem 1.5rem;
+    min-height: 380px;
+    background: #f8fafc;
+    z-index: 1;
 }
+
+/* Controles Flotantes del Mapa */
+.gps-map-top-bar {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    z-index: 500;
+    pointer-events: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+.gps-map-top-bar > * {
+    pointer-events: auto;
+}
+
+.gps-map-control-btn {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 7px 13px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #334155;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+.gps-map-control-btn:hover {
+    background: #f8fafc;
+    color: #0284c7;
+    border-color: #0284c7;
+    transform: translateY(-1px);
+}
+
+/* Ficha Telemetría Flotante (Bento Drawer) */
+.gps-floating-telemetry {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    right: 14px;
+    z-index: 500;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.15);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    animation: gpsSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes gpsSlideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
 .gps-telemetry-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 0.85rem;
-    margin-top: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.75rem;
 }
 .gps-telemetry-box {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    padding: 0.65rem 0.85rem;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.65rem;
+}
+
+/* Marcadores Leaflet Custom */
+.wialon-truck-marker {
+    background: transparent;
+    border: none;
+}
+.wialon-truck-pin {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 7px 3px 5px;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    border: 2px solid #0284c7;
+    white-space: nowrap;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #0f172a;
+    cursor: pointer;
+}
+.wialon-truck-pin:hover {
+    transform: scale(1.12);
+    z-index: 1000 !important;
+}
+.wialon-truck-pin.moving {
+    border-color: #0284c7;
+    background: #f0f9ff;
+}
+.wialon-truck-pin.stopped {
+    border-color: #10b981;
+    background: #ffffff;
+}
+.wialon-truck-pin.offline {
+    border-color: #94a3b8;
+    background: #f8fafc;
+    opacity: 0.85;
+}
+
+.wialon-truck-icon-circle {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+}
+.wialon-truck-pin.moving .wialon-truck-icon-circle { background: #0284c7; }
+.wialon-truck-pin.stopped .wialon-truck-icon-circle { background: #10b981; }
+.wialon-truck-pin.offline .wialon-truck-icon-circle { background: #94a3b8; }
+
+.wialon-speed-tag {
+    background: #0284c7;
+    color: #ffffff;
+    padding: 1px 5px;
+    border-radius: 6px;
+    font-size: 0.64rem;
+    font-weight: 700;
 }
 
 /* ── Adaptación Móvil (<768px) ───────────────────── */
@@ -217,20 +342,22 @@
     .gps-main-split {
         display: flex !important;
         flex-direction: column !important;
-        overflow: visible !important;
+        height: auto !important;
         min-height: auto !important;
-        flex: none !important;
+        overflow: visible !important;
     }
     .gps-sidebar-panel {
         width: 100% !important;
-        overflow: visible !important;
+        order: 2;
     }
-    .gps-list-container {
-        overflow-y: visible !important;
-        max-height: none !important;
-        padding-right: 0 !important;
+    .gps-map-panel {
+        width: 100% !important;
+        height: 380px !important;
+        min-height: 380px !important;
+        order: 1;
+        border-radius: 16px;
     }
-    .gps-detail-panel {
+    .gps-floating-telemetry {
         display: none !important;
     }
     .ck-apple-segmented {
@@ -262,10 +389,10 @@
         </div>
         <div class="d-flex align-items-center gap-2">
             <span id="badge-wialon-ubicacion" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2 fw-bold d-flex align-items-center gap-2">
-                <span class="spinner-grow spinner-grow-sm text-success" style="width:7px;height:7px;"></span> En Vivo
+                <span class="spinner-grow spinner-grow-sm text-success" style="width:7px;height:7px;"></span> En Vivo (<span id="gps-timer-countdown">8s</span>)
             </span>
             <span id="gps-unit-count-badge" class="badge bg-white border text-secondary px-3 py-2 fw-bold rounded-3 shadow-2xs">0 unidades</span>
-            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="recargarWialon(true)" title="Actualizar GPS">
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold" onclick="window._actualizarGpsEnVivo(true)" title="Actualizar GPS Ahora">
                 <i class="bi bi-arrow-clockwise fs-6"></i>
             </button>
         </div>
@@ -338,7 +465,7 @@
         </div>
     </div>
 
-    <!-- ── 4. SPLIT VIEW: SIDEBAR + PANEL DETALLE (ALINEACIÓN 1:1) ────── -->
+    <!-- ── 4. SPLIT VIEW: SIDEBAR + MAPA INTERACTIVO WIALON ────── -->
     <div class="gps-main-split">
 
         <!-- Panel Lateral Izquierdo: Lista de Unidades -->
@@ -351,23 +478,115 @@
             </div>
         </div>
 
-        <!-- Panel Detalle Derecho Bento: Mapa y Telemetría -->
-        <div class="gps-detail-panel custom-scrollbar" id="paneDetalleGPS">
-            <div class="gps-empty-state">
-                <div style="width:68px;height:68px;border-radius:20px;background:#eff6ff;color:#0284c7;display:flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:1rem;box-shadow:0 4px 12px rgba(2,132,199,0.1);">
-                    <i class="bi bi-geo-alt"></i>
+        <!-- Panel Derecho: Mapa Interactivo Leaflet Flota Completa -->
+        <div class="gps-map-panel" id="paneMapaGPS">
+            
+            <!-- Controles Flotantes Superiores -->
+            <div class="gps-map-top-bar">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="gps-map-control-btn" onclick="window.gpsVerTodaLaFlota()" title="Enfocar toda la flota de Perú">
+                        <i class="bi bi-arrows-fullscreen text-primary"></i> Toda la Flota
+                    </button>
+                    <button class="gps-map-control-btn" id="btnGpsCentrarSeleccion" style="display:none;" onclick="window.gpsCentrarSeleccion()" title="Centrar vehículo seleccionado">
+                        <i class="bi bi-crosshair text-danger"></i> Centrar Unidad
+                    </button>
                 </div>
-                <h5 class="fw-bold text-dark mb-1" style="letter-spacing:-0.02em;">Selecciona una unidad</h5>
-                <p class="text-secondary small mb-0" style="max-width: 320px;">
-                    Haz clic en cualquier vehículo del panel lateral para ver su ubicación satelital en vivo, odómetro y telemetría completa.
-                </p>
+
+                <div class="d-flex align-items-center gap-2">
+                    <div class="btn-group shadow-sm bg-white rounded-3 p-1 border">
+                        <button type="button" id="btnMapStyleStreet" class="btn btn-sm btn-primary py-1 px-2 fw-bold" style="font-size:0.75rem; border-radius:8px;" onclick="window.gpsCambiarCapaMapa('calle')">
+                            <i class="bi bi-map me-1"></i> Callejero
+                        </button>
+                        <button type="button" id="btnMapStyleSat" class="btn btn-sm btn-light py-1 px-2 fw-bold text-secondary" style="font-size:0.75rem; border-radius:8px;" onclick="window.gpsCambiarCapaMapa('satelite')">
+                            <i class="bi bi-globe-americas me-1"></i> Satelital
+                        </button>
+                    </div>
+                </div>
             </div>
+
+            <!-- Contenedor del Mapa Leaflet -->
+            <div id="gpsFleetMap"></div>
+
+            <!-- Ficha Bento Flotante de Unidad Seleccionada -->
+            <div id="gpsFloatingTelemetryCard" class="gps-floating-telemetry" style="display:none;">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 border-bottom pb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:36px; height:36px; border-radius:10px; background:#0f172a; color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">
+                            <i class="bi bi-truck"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="fw-bolder m-0 text-dark" id="gps-card-placa">—</h5>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold rounded-2 text-uppercase" style="font-size:0.68rem;" id="gps-card-tipo">UNIDAD</span>
+                                <span id="gps-card-speed-badge" class="badge bg-success px-2 py-1 fw-bold rounded-2" style="font-size:0.68rem;">Detenido</span>
+                            </div>
+                            <span class="text-secondary small fw-medium" id="gps-card-nombre" style="font-size:0.75rem;">—</span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-sm btn-success fw-bold px-3 py-1 rounded-3 shadow-2xs d-flex align-items-center gap-1" id="gps-card-btn-whatsapp" style="font-size:0.75rem;">
+                            <i class="bi bi-whatsapp"></i> Compartir
+                        </button>
+                        <a href="#" target="_blank" id="gps-card-btn-gmaps" class="btn btn-sm btn-light border fw-bold px-3 py-1 rounded-3 shadow-2xs d-flex align-items-center gap-1" style="font-size:0.75rem;">
+                            <i class="bi bi-box-arrow-up-right"></i> Google Maps
+                        </a>
+                        <button class="btn btn-sm btn-light border p-1 rounded-3" onclick="window.gpsCerrarFichaSeleccionada()" title="Cerrar Ficha">
+                            <i class="bi bi-x-lg text-secondary"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Grid Telemetría Mini Bento -->
+                <div class="gps-telemetry-grid">
+                    <div class="gps-telemetry-box">
+                        <div style="width:32px;height:32px;border-radius:8px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:1rem;">
+                            <i class="bi bi-speedometer"></i>
+                        </div>
+                        <div>
+                            <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.62rem;">Odómetro</span>
+                            <h6 class="fw-bolder m-0 text-dark" style="font-size:0.92rem;" id="gps-card-km">0 km</h6>
+                        </div>
+                    </div>
+
+                    <div class="gps-telemetry-box">
+                        <div style="width:32px;height:32px;border-radius:8px;background:#fefce8;color:#ca8a04;display:flex;align-items:center;justify-content:center;font-size:1rem;">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <div>
+                            <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.62rem;">Horas Motor</span>
+                            <h6 class="fw-bolder m-0 text-dark" style="font-size:0.92rem;" id="gps-card-horas">0 hrs</h6>
+                        </div>
+                    </div>
+
+                    <div class="gps-telemetry-box">
+                        <div style="width:32px;height:32px;border-radius:8px;background:#f0fdf4;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:1rem;">
+                            <i class="bi bi-compass"></i>
+                        </div>
+                        <div style="min-width:0; flex:1;">
+                            <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.62rem;">Coordenadas</span>
+                            <h6 class="fw-bolder m-0 text-dark text-truncate" style="font-size:0.82rem;" id="gps-card-coords">—</h6>
+                        </div>
+                    </div>
+
+                    <div class="gps-telemetry-box" style="grid-column: span 1 / -1; min-height: 48px;">
+                        <div style="width:32px;height:32px;border-radius:8px;background:#f1f5f9;color:#475569;display:flex;align-items:center;justify-content:center;font-size:1rem; flex-shrink:0;">
+                            <i class="bi bi-pin-map"></i>
+                        </div>
+                        <div style="min-width:0; flex:1;">
+                            <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.62rem;">Dirección Satelital</span>
+                            <div class="fw-bold m-0 text-dark text-truncate" id="gps-card-direccion" style="font-size:0.78rem;">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
     </div>
 
     <!-- Offcanvas Detalle Móvil (<768px) -->
-    <div class="offcanvas offcanvas-bottom" tabindex="-1" id="gpsDetalleOffcanvas" style="height:90vh; border-radius:20px 20px 0 0; background: #fff; z-index: 1055;">
+    <div class="offcanvas offcanvas-bottom" tabindex="-1" id="gpsDetalleOffcanvas" style="height:80vh; border-radius:20px 20px 0 0; background: #fff; z-index: 1055;">
         <div class="offcanvas-header border-bottom px-4 py-3">
             <div class="d-flex align-items-center gap-3">
                 <div style="width:40px;height:40px;border-radius:10px;background:#eff6ff;color:#0284c7;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
