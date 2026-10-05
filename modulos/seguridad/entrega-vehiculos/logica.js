@@ -685,8 +685,9 @@
             });
 
             // Configuración y Diagrama
-            const config = (r.configuracion || (r.tipo && r.tipo.includes('CARRETA') ? 'R2' : 'T3')).toUpperCase();
+            const config = _evObtenerConfiguracion(r);
             window._evCurrentConfiguracion = config;
+            if (r.estilo_cabina) window._evCabinaEstilo = r.estilo_cabina;
             window.evRenderizarCroquis(config);
             window.evSyncNombresFirmas();
 
@@ -865,7 +866,7 @@
                     setVal('ev-f-km', d.kilometraje || 0);
                 }
 
-                const config = d.configuracion || (d.tipo && d.tipo.includes('CARRETA') ? 'R2' : 'T3');
+                const config = _evObtenerConfiguracion(d);
                 window._evCurrentConfiguracion = config;
                 window.evRenderizarCroquis(config);
             }
@@ -1502,6 +1503,8 @@
             numero_motor: getVal('ev-f-motor'),
             numero_serie: getVal('ev-f-serie'),
             kilometraje: parseFloat(getVal('ev-f-km')) || 0,
+            configuracion: window._evCurrentConfiguracion || 'T3',
+            estilo_cabina: window._evCabinaEstilo || 'chata',
             inventario_partes_json: window._evItemsStates,
             observaciones: getVal('ev-f-obs'),
             doc_entrega: entrega,
@@ -1543,19 +1546,46 @@
 
     // ── OBTENCIÓN Y NORMALIZACIÓN DE CONFIGURACIÓN VEHICULAR ───────
     function _evObtenerConfiguracion(r) {
-        let pdfConfig = (r.configuracion || (r.tipo && r.tipo.includes('CARRETA') ? 'R2' : 'T3')).toUpperCase().trim();
-        if (pdfConfig === '6X4' || pdfConfig === '6X2' || pdfConfig.includes('T3')) return 'T3';
-        if (pdfConfig === '4X2' || pdfConfig.includes('T2')) return 'T2';
-        if (pdfConfig.includes('C3') || pdfConfig.includes('VOLQUETE')) return 'C3';
-        if (pdfConfig.includes('C2')) return 'C2';
-        if (pdfConfig.includes('S3') || pdfConfig.includes('SE3')) return 'S3';
-        if (pdfConfig.includes('S2') || pdfConfig.includes('SE2')) return 'S2';
-        if (pdfConfig.includes('R2') || pdfConfig.includes('REMOLQUE')) return 'R2';
+        if (!r) return 'T3';
+        const cfg = String(r.configuracion || '').toUpperCase().trim();
+        const mod = String(r.modelo || '').toUpperCase().trim();
+        const tip = String(r.tipo || r.clase || '').toUpperCase().trim();
+        const str = `${cfg} ${mod} ${tip}`;
+
+        // 1. T2 / 4X2 (Tractocamión de 2 ejes)
+        if (cfg === 'T2' || cfg === '4X2' || cfg.includes('T2') || cfg.includes('4X2') || str.includes('4X2') || str.includes('T2') || mod.includes('4X2') || mod.includes('T2')) {
+            return 'T2';
+        }
+        // 2. T3 / 6X4 / 6X2 (Tractocamión de 3 ejes)
+        if (cfg === 'T3' || cfg === '6X4' || cfg === '6X2' || cfg.includes('T3') || cfg.includes('6X4') || cfg.includes('6X2') || str.includes('6X4') || str.includes('6X2') || str.includes('T3')) {
+            return 'T3';
+        }
+        // 3. Volquete / Camión Rígido C3 (3 ejes)
+        if (cfg.includes('C3') || str.includes('C3') || str.includes('VOLQUETE')) {
+            return 'C3';
+        }
+        // 4. Camión Rígido C2 (2 ejes)
+        if (cfg.includes('C2') || str.includes('C2') || str.includes('RIGIDO')) {
+            return 'C2';
+        }
+        // 5. Semirremolque S3 (3 ejes)
+        if (cfg.includes('S3') || cfg.includes('SE3') || str.includes('S3') || str.includes('3 EJES')) {
+            return 'S3';
+        }
+        // 6. Semirremolque S2 (2 ejes)
+        if (cfg.includes('S2') || cfg.includes('SE2') || str.includes('S2') || str.includes('2 EJES')) {
+            return 'S2';
+        }
+        // 7. Remolque R2 / Carreta
+        if (cfg.includes('R2') || str.includes('R2') || str.includes('REMOLQUE') || str.includes('CARRETA')) {
+            return 'R2';
+        }
         return 'T3';
     }
 
     // ── GENERADOR DE STRING SVG OFICIAL PARA LA UNIDAD ──────────────
-    function _evGenerarSvgDiagrama(pdfConfig) {
+    function _evGenerarSvgDiagrama(pdfConfig, estiloCabina) {
+        const isChata = estiloCabina !== 'trompa';
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 340" width="920" height="340" style="background:#ffffff;display:block;margin:0 auto;">
             <defs>
                 <linearGradient id="evChassisGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#475569"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
@@ -1567,14 +1597,14 @@
             </defs>
             <line x1="40" y1="295" x2="880" y2="295" stroke="#cbd5e1" stroke-width="2.5" stroke-dasharray="8 6" />`;
 
-        if (pdfConfig === 'T3') svg += _evRenderTracto(3, true);
-        else if (pdfConfig === 'T2') svg += _evRenderTracto(2, true);
-        else if (pdfConfig === 'C3') svg += _evRenderCamionRigido(3, true, true);
-        else if (pdfConfig === 'C2') svg += _evRenderCamionRigido(2, true, true);
+        if (pdfConfig === 'T3') svg += _evRenderTracto(3, isChata);
+        else if (pdfConfig === 'T2') svg += _evRenderTracto(2, isChata);
+        else if (pdfConfig === 'C3') svg += _evRenderCamionRigido(3, isChata, true);
+        else if (pdfConfig === 'C2') svg += _evRenderCamionRigido(2, isChata, true);
         else if (pdfConfig === 'S3') svg += _evRenderSemirremolque(3, true);
         else if (pdfConfig === 'S2') svg += _evRenderSemirremolque(2, true);
         else if (pdfConfig === 'R2') svg += _evRenderRemolqueR2(true);
-        else svg += _evRenderTracto(3, true);
+        else svg += _evRenderTracto(3, isChata);
 
         svg += `</svg>`;
         return svg;
@@ -1630,11 +1660,12 @@
         const fechaStr = r.fecha ? r.fecha.slice(0, 10) : new Date().toISOString().slice(0, 10);
         const kmFmt = parseFloat(r.kilometraje || 0).toLocaleString('es-PE');
         const pdfConfig = _evObtenerConfiguracion(r);
+        const estiloCabina = r.estilo_cabina || 'chata';
         const templateList = _evGlobalTemplate || GRUPOS_SISTEMAS_DEFAULT;
 
         const diagramaHtml = diagramaDataUrl
-            ? `<img src="${diagramaDataUrl}" style="width: 100%; max-width: 740px; height: 135px; object-fit: contain; display: block; margin: 0 auto;" alt="Diagrama Unidad">`
-            : _evGenerarSvgDiagrama(pdfConfig);
+            ? `<img src="${diagramaDataUrl}" style="width: 100%; max-width: 820px; height: 145px; object-fit: contain; display: block; margin: 0 auto;" alt="Diagrama Unidad">`
+            : _evGenerarSvgDiagrama(pdfConfig, estiloCabina);
 
         const third = Math.ceil(templateList.length / 3);
         const col1 = templateList.slice(0, third);
@@ -1642,105 +1673,105 @@
         const col3 = templateList.slice(third * 2);
 
         return `
-            <main class="report-page w-full max-w-[840px] bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-3 sm:p-4 text-slate-900 mx-auto" style="box-sizing:border-box;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;">
+            <main class="report-page w-full bg-white rounded-xl border border-slate-300 shadow-xl p-3 sm:p-5 text-slate-900 mx-auto" style="box-sizing:border-box;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;width:100%;max-width:960px;">
 
                 <!-- 1. ENCABEZADO INSTITUCIONAL OFICIAL SGC -->
                 <header class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2" style="border:1.5px solid #0F172A;">
                     <div class="grid grid-cols-12 divide-x-[1.5px] divide-slate-900 border-b-[1.5px] border-slate-900" style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));border-bottom:1.5px solid #0F172A;">
                         <!-- Logo Empresa -->
-                        <div class="col-span-3 p-1.5 flex flex-col items-center justify-center bg-white text-center" style="grid-column:span 3 / span 3;border-right:1.5px solid #0F172A;">
-                            ${empLogoUrl ? `<img src="${empLogoUrl}" style="max-height:30px;max-width:110px;object-fit:contain;" crossorigin="anonymous">` : `
-                                <div class="text-xs font-extrabold tracking-tight text-slate-900 leading-none">${r.empresa || 'MARSISA'}</div>
+                        <div class="col-span-3 p-2 flex flex-col items-center justify-center bg-white text-center" style="grid-column:span 3 / span 3;border-right:1.5px solid #0F172A;">
+                            ${empLogoUrl ? `<img src="${empLogoUrl}" style="max-height:36px;max-width:130px;object-fit:contain;" crossorigin="anonymous">` : `
+                                <div class="text-sm font-extrabold tracking-tight text-slate-900 leading-none">${r.empresa || 'MARSISA'}</div>
                             `}
-                            <span class="text-[7.5px] font-semibold tracking-wider text-slate-500 uppercase mt-0.5">Transporte & Logística</span>
+                            <span class="text-[8px] font-bold tracking-wider text-slate-500 uppercase mt-0.5">Transporte & Logística</span>
                         </div>
 
                         <!-- Título Oficial -->
-                        <div class="col-span-6 p-1.5 flex flex-col items-center justify-center text-center bg-slate-50/50" style="grid-column:span 6 / span 6;border-right:1.5px solid #0F172A;">
-                            <h1 class="text-xs font-extrabold text-slate-900 tracking-tight uppercase leading-tight">INVENTARIO FÍSICO ESTADO DE VEHÍCULO</h1>
-                            <p class="text-[8.5px] font-semibold text-slate-600 tracking-normal mt-0.5 uppercase">Acta de Entrega y Recepción Técnica de Unidades</p>
+                        <div class="col-span-6 p-2 flex flex-col items-center justify-center text-center bg-slate-50/60" style="grid-column:span 6 / span 6;border-right:1.5px solid #0F172A;">
+                            <h1 class="text-sm font-extrabold text-slate-900 tracking-tight uppercase leading-tight">INVENTARIO FÍSICO ESTADO DE VEHÍCULO</h1>
+                            <p class="text-[9.5px] font-bold text-slate-600 tracking-normal mt-0.5 uppercase">Acta de Entrega y Recepción Técnica de Unidades</p>
                         </div>
 
                         <!-- Control Documentario SGC -->
-                        <div class="col-span-3 text-[9px] flex flex-col divide-y-[1.5px] divide-slate-900 bg-white" style="grid-column:span 3 / span 3;">
-                            <div class="px-2 py-0.5 flex items-center justify-between" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-600 uppercase text-[8px]">Código:</span><span class="font-mono font-bold text-slate-900">F-SEG-004</span></div>
-                            <div class="px-2 py-0.5 flex items-center justify-between" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-600 uppercase text-[8px]">Versión:</span><span class="font-mono font-bold text-slate-900">01</span></div>
-                            <div class="px-2 py-0.5 flex items-center justify-between"><span class="font-bold text-slate-600 uppercase text-[8px]">Fecha:</span><span class="font-mono font-semibold text-slate-900">10/11/2025</span></div>
+                        <div class="col-span-3 text-[9.5px] flex flex-col divide-y-[1.5px] divide-slate-900 bg-white" style="grid-column:span 3 / span 3;">
+                            <div class="px-2.5 py-1 flex items-center justify-between" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Código:</span><span class="font-mono font-bold text-slate-900">F-SEG-004</span></div>
+                            <div class="px-2.5 py-1 flex items-center justify-between" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Versión:</span><span class="font-mono font-bold text-slate-900">01</span></div>
+                            <div class="px-2.5 py-1 flex items-center justify-between"><span class="font-bold text-slate-600 uppercase text-[8.5px]">Fecha:</span><span class="font-mono font-semibold text-slate-900">10/11/2025</span></div>
                         </div>
                     </div>
 
                     <!-- Metadata Matrix Bento -->
-                    <div class="grid grid-cols-3 divide-x-[1.5px] divide-slate-900 text-[9.5px]" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));">
+                    <div class="grid grid-cols-3 divide-x-[1.5px] divide-slate-900 text-[10px]" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));">
                         <div class="divide-y-[1.5px] divide-slate-900" style="border-right:1.5px solid #0F172A;">
-                            <div class="px-2 py-0.5 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[8px] uppercase">Nº Inventario:</span><span class="font-mono font-bold text-[#0284C7] text-[10px]">${r.numero_inventario || r.id}</span></div>
-                            <div class="px-2 py-0.5 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[8px] uppercase">Entregado Por:</span><span class="font-bold text-slate-900 truncate max-w-[130px] text-[8.5px]">${r.quien_entrega}</span></div>
+                            <div class="px-2.5 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[8.5px] uppercase">Nº Inventario:</span><span class="font-mono font-bold text-[#0284C7] text-[11px]">${r.numero_inventario || r.id}</span></div>
+                            <div class="px-2.5 py-1 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[8.5px] uppercase">Entregado Por:</span><span class="font-bold text-slate-900 truncate max-w-[150px] text-[9.5px]">${r.quien_entrega}</span></div>
                         </div>
                         <div class="divide-y-[1.5px] divide-slate-900" style="border-right:1.5px solid #0F172A;">
-                            <div class="px-2 py-0.5 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[8px] uppercase">Motivo:</span><span class="font-bold text-slate-900 uppercase text-[8px]">${r.motivo || 'ENTREGA DE UNIDAD'}</span></div>
-                            <div class="px-2 py-0.5 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[8px] uppercase">Recibido Por:</span><span class="font-bold text-slate-900 truncate max-w-[130px] text-[8.5px]">${r.quien_recibe}</span></div>
+                            <div class="px-2.5 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[8.5px] uppercase">Motivo:</span><span class="font-bold text-slate-900 uppercase text-[9px]">${r.motivo || 'ENTREGA DE UNIDAD'}</span></div>
+                            <div class="px-2.5 py-1 flex items-center justify-between bg-white"><span class="font-bold text-slate-700 text-[8.5px] uppercase">Recibido Por:</span><span class="font-bold text-slate-900 truncate max-w-[150px] text-[9.5px]">${r.quien_recibe}</span></div>
                         </div>
                         <div class="divide-y-[1.5px] divide-slate-900">
-                            <div class="px-2 py-0.5 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[8px] uppercase">Fecha Emisión:</span><span class="font-mono font-medium text-slate-900 text-[8.5px]">${fechaStr}</span></div>
-                            <div class="px-2 py-0.5 flex items-center justify-between bg-emerald-50/50"><span class="font-bold text-slate-700 text-[8px] uppercase">Estado:</span><span class="font-bold text-emerald-600 text-[8.5px] tracking-tight uppercase flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block"></span>Conforme</span></div>
+                            <div class="px-2.5 py-1 flex items-center justify-between bg-white" style="border-bottom:1.5px solid #0F172A;"><span class="font-bold text-slate-700 text-[8.5px] uppercase">Fecha Emisión:</span><span class="font-mono font-medium text-slate-900 text-[9.5px]">${fechaStr}</span></div>
+                            <div class="px-2.5 py-1 flex items-center justify-between bg-emerald-50/50"><span class="font-bold text-slate-700 text-[8.5px] uppercase">Estado:</span><span class="font-bold text-emerald-600 text-[9.5px] tracking-tight uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span>Conforme</span></div>
                         </div>
                     </div>
                 </header>
 
                 <!-- 2. FICHA TÉCNICA DEL VEHÍCULO -->
                 <section class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2" style="border:1.5px solid #0F172A;">
-                    <div class="px-3 py-0.5 bg-slate-900 text-white flex items-center justify-between" style="background:#0F172A;">
-                        <span class="text-[9px] font-bold uppercase tracking-wider text-white">Ficha Técnica y Datos del Vehículo</span>
-                        <span class="text-[7.5px] font-mono text-sky-300">REGISTRO FLOTA</span>
+                    <div class="px-3 py-1 bg-slate-900 text-white flex items-center justify-between" style="background:#0F172A;">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-white">Ficha Técnica y Datos del Vehículo</span>
+                        <span class="text-[8.5px] font-mono text-sky-300">REGISTRO FLOTA</span>
                     </div>
 
                     <div class="grid grid-cols-6 divide-x-[1.5px] divide-slate-900 text-center border-b-[1.5px] border-slate-900" style="display:grid; grid-template-columns: 15% 18% 18% 18% 16% 15%; border-bottom:1.5px solid #0F172A;">
-                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">CLASE</div>
-                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">MARCA</div>
-                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">TIPO</div>
-                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">MODELO</div>
-                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">PLACA</div>
-                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]">COLOR</div>
+                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/80 text-[8px]" style="border-right:1.5px solid #0F172A;">CLASE</div>
+                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/80 text-[8px]" style="border-right:1.5px solid #0F172A;">MARCA</div>
+                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/80 text-[8px]" style="border-right:1.5px solid #0F172A;">TIPO</div>
+                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/80 text-[8px]" style="border-right:1.5px solid #0F172A;">MODELO</div>
+                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/80 text-[8px]" style="border-right:1.5px solid #0F172A;">PLACA</div>
+                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/80 text-[8px]">COLOR</div>
                     </div>
 
-                    <div class="grid grid-cols-6 divide-x-[1.5px] divide-slate-900 text-center border-b-[1.5px] border-slate-900 font-bold text-[8px]" style="display:grid; grid-template-columns: 15% 18% 18% 18% 16% 15%; border-bottom:1.5px solid #0F172A;">
-                        <div class="p-0.5 uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.clase || 'TRACTO'}</div>
-                        <div class="p-0.5 uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.marca || '---'}</div>
-                        <div class="p-0.5 uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.tipo || r.clase || 'TRACTO'}</div>
-                        <div class="p-0.5 uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.modelo || '---'}</div>
-                        <div class="p-0.5 font-mono text-sky-800 font-extrabold bg-sky-50/50" style="border-right:1.5px solid #0F172A;">${r.placa}</div>
-                        <div class="p-0.5 uppercase text-slate-800">${r.color || '---'}</div>
+                    <div class="grid grid-cols-6 divide-x-[1.5px] divide-slate-900 text-center border-b-[1.5px] border-slate-900 font-bold text-[9px]" style="display:grid; grid-template-columns: 15% 18% 18% 18% 16% 15%; border-bottom:1.5px solid #0F172A;">
+                        <div class="p-1 uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.clase || 'TRACTO'}</div>
+                        <div class="p-1 uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.marca || '---'}</div>
+                        <div class="p-1 uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.tipo || r.clase || 'TRACTO'}</div>
+                        <div class="p-1 uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.modelo || '---'}</div>
+                        <div class="p-1 font-mono text-sky-800 font-extrabold bg-sky-50/50 text-[10.5px]" style="border-right:1.5px solid #0F172A;">${r.placa}</div>
+                        <div class="p-1 uppercase text-slate-800">${r.color || '---'}</div>
                     </div>
 
                     <div class="grid grid-cols-3 divide-x-[1.5px] divide-slate-900 text-center border-b-[1.5px] border-slate-900" style="display:grid; grid-template-columns: 35% 35% 30%; border-bottom:1.5px solid #0F172A;">
-                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">NÚMERO DEL MOTOR</div>
-                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]" style="border-right:1.5px solid #0F172A;">NÚMERO DE SERIE / VIN</div>
-                        <div class="p-0.5 font-bold text-slate-600 uppercase bg-slate-100/70 text-[7.5px]">KILOMETRAJE ACTUAL</div>
+                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/80 text-[8px]" style="border-right:1.5px solid #0F172A;">NÚMERO DEL MOTOR</div>
+                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/80 text-[8px]" style="border-right:1.5px solid #0F172A;">NÚMERO DE SERIE / VIN</div>
+                        <div class="p-1 font-bold text-slate-600 uppercase bg-slate-100/80 text-[8px]">KILOMETRAJE ACTUAL</div>
                     </div>
 
-                    <div class="grid grid-cols-3 divide-x-[1.5px] divide-slate-900 text-center font-bold text-[8px]" style="display:grid; grid-template-columns: 35% 35% 30%;">
-                        <div class="p-0.5 font-mono uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.numero_motor || '---'}</div>
-                        <div class="p-0.5 font-mono uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.numero_serie || '---'}</div>
-                        <div class="p-0.5 font-mono text-emerald-800 font-extrabold bg-emerald-50/50">${kmFmt} KM</div>
+                    <div class="grid grid-cols-3 divide-x-[1.5px] divide-slate-900 text-center font-bold text-[9px]" style="display:grid; grid-template-columns: 35% 35% 30%;">
+                        <div class="p-1 font-mono uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.numero_motor || '---'}</div>
+                        <div class="p-1 font-mono uppercase text-slate-800" style="border-right:1.5px solid #0F172A;">${r.numero_serie || '---'}</div>
+                        <div class="p-1 font-mono text-emerald-800 font-extrabold bg-emerald-50/50 text-[10px]">${kmFmt} KM</div>
                     </div>
                 </section>
 
                 <!-- 3. MATRIZ DE CALIFICACIÓN DE SISTEMAS Y ACCESORIOS -->
                 <section class="mb-2">
-                    <div class="grid grid-cols-3 gap-1" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;">
+                    <div class="grid grid-cols-3 gap-1.5" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;">
                         ${[col1, col2, col3].map(colGrupos => `
                             <div class="doc-grid-box rounded-lg overflow-hidden bg-white" style="border:1.5px solid #0F172A;">
-                                <table style="width:100%; border-collapse: collapse; font-size: 7.2px;">
+                                <table style="width:100%; border-collapse: collapse; font-size: 8px;">
                                     <thead>
                                         <tr style="background:#0F172A; color:#ffffff;">
-                                            <th style="padding: 1.5px 3px; text-align:left; font-size:7.2px; font-weight:800; text-transform:uppercase;">PARTES Y ACCESORIOS</th>
-                                            <th style="padding: 1.5px 2px; text-align:center; width:20px; font-size:6.8px;">CANT</th>
-                                            <th style="padding: 1.5px 2px; text-align:center; width:28px; font-size:6.8px;">ESTADO</th>
+                                            <th style="padding: 2px 4px; text-align:left; font-size:8px; font-weight:800; text-transform:uppercase;">PARTES Y ACCESORIOS</th>
+                                            <th style="padding: 2px 3px; text-align:center; width:22px; font-size:7.5px;">CANT</th>
+                                            <th style="padding: 2px 3px; text-align:center; width:32px; font-size:7.5px;">ESTADO</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         ${colGrupos.map(grp => `
-                                            <tr style="background:#F1F5F9; border-top:1px solid #0F172A; border-bottom:1px solid #0F172A;">
-                                                <td colspan="3" style="padding: 1px 3px; font-weight: 800; font-size: 7.2px; color: #1E293B; text-transform: uppercase;">
+                                            <tr style="background:#E2E8F0; border-top:1px solid #0F172A; border-bottom:1px solid #0F172A;">
+                                                <td colspan="3" style="padding: 1.5px 4px; font-weight: 800; font-size: 8px; color: #0F172A; text-transform: uppercase;">
                                                     • ${grp.titulo || grp.title}
                                                 </td>
                                             </tr>
@@ -1748,15 +1779,15 @@
                                                 const itemLabel = typeof it === 'string' ? it : (it.label || it.texto || '');
                                                 const k = itemLabel.toLowerCase().replace(/[^a-z0-9]/g, '_');
                                                 const est = partes[k] || 'B';
-                                                let badgeHtml = '<span class="px-1 py-0.2 rounded font-extrabold text-[6.8px] bg-emerald-100 text-emerald-800 border border-emerald-300">OK</span>';
-                                                if (est === 'R') badgeHtml = '<span class="px-1 py-0.2 rounded font-extrabold text-[6.8px] bg-amber-100 text-amber-800 border border-amber-300">REG</span>';
-                                                if (est === 'M') badgeHtml = '<span class="px-1 py-0.2 rounded font-extrabold text-[6.8px] bg-rose-100 text-rose-800 border border-rose-300">MAL</span>';
+                                                let badgeHtml = '<span class="px-1.5 py-0.2 rounded font-extrabold text-[7.5px] bg-emerald-100 text-emerald-800 border border-emerald-300">OK</span>';
+                                                if (est === 'R') badgeHtml = '<span class="px-1.5 py-0.2 rounded font-extrabold text-[7.5px] bg-amber-100 text-amber-800 border border-amber-300">REG</span>';
+                                                if (est === 'M') badgeHtml = '<span class="px-1.5 py-0.2 rounded font-extrabold text-[7.5px] bg-rose-100 text-rose-800 border border-rose-300">MAL</span>';
 
                                                 return `
                                                     <tr style="border-bottom: 1px solid #E2E8F0;">
-                                                        <td style="padding: 0.8px 3px; color: #334155; font-weight: 500; font-size: 7px;">${itemLabel}</td>
-                                                        <td style="padding: 0.8px 2px; text-align:center; font-family:monospace; font-weight:bold; color:#64748B; font-size: 7px;">1</td>
-                                                        <td style="padding: 0.8px 2px; text-align:center;">${badgeHtml}</td>
+                                                        <td style="padding: 1px 4px; color: #334155; font-weight: 500; font-size: 7.8px;">${itemLabel}</td>
+                                                        <td style="padding: 1px 3px; text-align:center; font-family:monospace; font-weight:bold; color:#64748B; font-size: 7.8px;">1</td>
+                                                        <td style="padding: 1px 3px; text-align:center;">${badgeHtml}</td>
                                                     </tr>
                                                 `;
                                             }).join('')}
@@ -1769,51 +1800,51 @@
                 </section>
 
                 <!-- 4. DIAGRAMA TÉCNICO DEL ESTADO DE LA UNIDAD SEGÚN CONFIGURACIÓN -->
-                <section class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2 p-1 text-center" style="border:1.5px solid #0F172A; background: rgba(248, 250, 252, 0.5);">
-                    <div class="flex justify-between items-center px-2 pb-0.5 border-b border-slate-300 mb-0.5">
-                        <span class="font-extrabold text-slate-800 text-[8px] uppercase">Diagrama Técnico del Estado de la Unidad</span>
-                        <span class="font-mono font-extrabold text-[7.5px] px-2 py-0.2 rounded-full uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">CONFIGURACIÓN: ${pdfConfig}</span>
+                <section class="doc-grid-box rounded-lg overflow-hidden bg-white mb-2 p-1.5 text-center" style="border:1.5px solid #0F172A; background: rgba(248, 250, 252, 0.5);">
+                    <div class="flex justify-between items-center px-3 pb-1 border-b border-slate-300 mb-1">
+                        <span class="font-extrabold text-slate-800 text-[9px] uppercase">Diagrama Técnico del Estado de la Unidad</span>
+                        <span class="font-mono font-extrabold text-[8.5px] px-2.5 py-0.5 rounded-full uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">CONFIGURACIÓN: ${pdfConfig}</span>
                     </div>
-                    <div class="py-0.5">
+                    <div class="py-1">
                         ${diagramaHtml}
                     </div>
                 </section>
 
                 <!-- 5. OBSERVACIONES DE LA ENTREGA -->
-                <section class="doc-grid-box rounded-lg p-1.5 bg-white mb-2" style="border:1.5px solid #0F172A;">
-                    <span class="font-bold text-slate-700 text-[8px] uppercase block mb-0.5">Observaciones Técnicas Registradas:</span>
-                    <p class="text-[7.5px] text-slate-800 m-0 font-medium leading-snug">
+                <section class="doc-grid-box rounded-lg p-2 bg-white mb-2" style="border:1.5px solid #0F172A;">
+                    <span class="font-bold text-slate-700 text-[8.5px] uppercase block mb-0.5">Observaciones Técnicas Registradas:</span>
+                    <p class="text-[8px] text-slate-800 m-0 font-medium leading-snug">
                         ${r.observaciones ? r.observaciones.toUpperCase() : 'LA UNIDAD VEHICULAR SE ENTREGA EN CONDICIONES OPERATIVAS Y CON SU EQUIPAMIENTO COMPLETO SEGÚN DETALLE SUPERIOR.'}
                     </p>
                 </section>
 
                 <!-- 6. FIRMAS DIGITALES DE CONFORMIDAD -->
-                <footer class="doc-grid-box rounded-lg p-2 bg-white" style="border:1.5px solid #0F172A;">
-                    <div class="grid grid-cols-2 gap-2" style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                        <div class="p-1.5 rounded-lg border border-slate-200 bg-slate-50/50 flex flex-col items-center justify-between text-center min-h-[56px]" style="border:1px solid #E2E8F0; background:#F8FAFC;">
-                            <div class="h-7 flex items-center justify-center">
-                                ${r.firma_entrega ? `<img src="${r.firma_entrega}" style="max-height: 26px; max-width: 140px; object-fit: contain;" crossorigin="anonymous">` : '<span class="text-slate-300 italic text-[7px]">Firma digitalizada</span>'}
+                <footer class="doc-grid-box rounded-lg p-2.5 bg-white" style="border:1.5px solid #0F172A;">
+                    <div class="grid grid-cols-2 gap-3" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="p-2 rounded-lg border border-slate-200 bg-slate-50/60 flex flex-col items-center justify-between text-center min-h-[64px]" style="border:1px solid #CBD5E1; background:#F8FAFC;">
+                            <div class="h-9 flex items-center justify-center">
+                                ${r.firma_entrega ? `<img src="${r.firma_entrega}" style="max-height: 34px; max-width: 160px; object-fit: contain;" crossorigin="anonymous">` : '<span class="text-slate-300 italic text-[8px]">Firma digitalizada</span>'}
                             </div>
-                            <div class="w-full pt-1 border-t border-slate-300" style="border-top:1px solid #CBD5E1;">
-                                <div class="font-bold text-slate-900 text-[8px] uppercase">${r.quien_entrega}</div>
-                                <div class="text-[6.8px] text-slate-500 font-semibold uppercase">ENTREGADO POR (CONTROL DE FLOTA)</div>
+                            <div class="w-full pt-1.5 border-t border-slate-300" style="border-top:1px solid #CBD5E1;">
+                                <div class="font-bold text-slate-900 text-[9px] uppercase">${r.quien_entrega}</div>
+                                <div class="text-[7.5px] text-slate-500 font-semibold uppercase">ENTREGADO POR (CONTROL DE FLOTA)</div>
                             </div>
                         </div>
 
-                        <div class="p-1.5 rounded-lg border border-slate-200 bg-slate-50/50 flex flex-col items-center justify-between text-center min-h-[56px]" style="border:1px solid #E2E8F0; background:#F8FAFC;">
-                            <div class="h-7 flex items-center justify-center">
-                                ${r.firma_recibe ? `<img src="${r.firma_recibe}" style="max-height: 26px; max-width: 140px; object-fit: contain;" crossorigin="anonymous">` : '<span class="text-slate-300 italic text-[7px]">Firma digitalizada</span>'}
+                        <div class="p-2 rounded-lg border border-slate-200 bg-slate-50/60 flex flex-col items-center justify-between text-center min-h-[64px]" style="border:1px solid #CBD5E1; background:#F8FAFC;">
+                            <div class="h-9 flex items-center justify-center">
+                                ${r.firma_recibe ? `<img src="${r.firma_recibe}" style="max-height: 34px; max-width: 160px; object-fit: contain;" crossorigin="anonymous">` : '<span class="text-slate-300 italic text-[8px]">Firma digitalizada</span>'}
                             </div>
-                            <div class="w-full pt-1 border-t border-slate-300" style="border-top:1px solid #CBD5E1;">
-                                <div class="font-bold text-slate-900 text-[8px] uppercase">${r.quien_recibe}</div>
-                                <div class="text-[6.8px] text-slate-500 font-semibold uppercase">RECIBIDO POR (CONDUCTOR ASIGNADO)</div>
+                            <div class="w-full pt-1.5 border-t border-slate-300" style="border-top:1px solid #CBD5E1;">
+                                <div class="font-bold text-slate-900 text-[9px] uppercase">${r.quien_recibe}</div>
+                                <div class="text-[7.5px] text-slate-500 font-semibold uppercase">RECIBIDO POR (CONDUCTOR ASIGNADO)</div>
                             </div>
                         </div>
                     </div>
                 </footer>
 
                 <!-- Pie de Página -->
-                <div class="flex justify-between items-center text-[6.5px] text-slate-400 mt-1 px-1 font-mono">
+                <div class="flex justify-between items-center text-[7px] text-slate-400 mt-1.5 px-1 font-mono">
                     <span>ERP AZKELL FLEET • SISTEMA DE GESTIÓN INTEGRAL DE TRANSPORTE</span>
                     <span>FECHA DE IMPRESIÓN: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}</span>
                 </div>
@@ -1826,7 +1857,7 @@
     async function _evRenderPdfBlob(htmlBody, filename) {
         return new Promise(function(resolve, reject) {
             var iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed; top:-10000px; left:-10000px; width:840px; height:1200px; border:none; z-index:-999;';
+            iframe.style.cssText = 'position:fixed; top:-10000px; left:-10000px; width:960px; height:1350px; border:none; z-index:-999;';
             document.body.appendChild(iframe);
 
             var doc = iframe.contentWindow.document;
@@ -1840,11 +1871,11 @@
                 + '<style>\n'
                 + 'body { background-color:#FFFFFF; color:#0F172A; margin:0; padding:0; -webkit-font-smoothing:antialiased; font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif; }\n'
                 + '.doc-grid-box { border: 1.5px solid #0F172A; }\n'
-                + '.report-page { width:100%; max-width:820px; box-sizing:border-box; padding:8px 12px; background:#FFFFFF; margin:0 auto; }\n'
+                + '.report-page { width:100% !important; max-width:960px !important; box-sizing:border-box; padding:6px 10px; background:#FFFFFF; margin:0 auto; }\n'
                 + '.report-page-break { page-break-before:always !important; }\n'
                 + 'img { display: block; max-width: 100%; }\n'
                 + '</style>\n</head>\n<body>\n'
-                + '<div id="ev-pdf-render-root" style="width:100%; max-width:820px; margin:0 auto;">' + htmlBody + '</div>\n'
+                + '<div id="ev-pdf-render-root" style="width:100%; max-width:960px; margin:0 auto;">' + htmlBody + '</div>\n'
                 + '</body>\n</html>');
             doc.close();
 
@@ -1853,10 +1884,10 @@
                     await new Promise(function(r) { setTimeout(r, 600); });
                     var targetEl = doc.getElementById('ev-pdf-render-root');
                     var opt = {
-                        margin:       0,
+                        margin:       [3, 3, 3, 3],
                         filename:     filename,
                         image:        { type: 'jpeg', quality: 0.98 },
-                        html2canvas:  { scale: 2.5, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 840 },
+                        html2canvas:  { scale: 2.8, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 960 },
                         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
                         pagebreak:    { mode: ['css', 'legacy'] }
                     };
@@ -1896,7 +1927,7 @@
             + '@media print {\n'
             + '  @page {\n'
             + '    size: A4 portrait;\n'
-            + '    margin: 4mm 5mm;\n'
+            + '    margin: 3mm 4mm;\n'
             + '  }\n'
             + '  body {\n'
             + '    background: #FFFFFF !important;\n'
@@ -1920,7 +1951,7 @@
             + '}\n'
             + '</style>\n</head>\n<body class="py-4 md:py-6 px-2 sm:px-4 flex flex-col items-center min-h-screen">\n'
             + '  <!-- TOP APP TOOLBAR -->\n'
-            + '  <nav class="no-print w-full max-w-[840px] mb-4 flex flex-wrap items-center justify-between gap-3 bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-xs">\n'
+            + '  <nav class="no-print w-full max-w-[960px] mb-4 flex flex-wrap items-center justify-between gap-3 bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-xs">\n'
             + '    <div class="flex items-center gap-3">\n'
             + '      <button onclick="window.close()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">\n'
             + '        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>\n'
@@ -1940,11 +1971,11 @@
             + '    </div>\n'
             + '  </nav>\n'
             + '  <!-- MAIN CONTENT ROOT -->\n'
-            + '  <div id="ev-pdf-root" class="w-full flex flex-col items-center">\n'
+            + '  <div id="ev-pdf-root" class="w-full max-w-[960px] flex flex-col items-center">\n'
             + htmlBody
             + '\n  </div>\n'
             + '  <aside class="no-print mt-3 text-center text-[10px] text-slate-400">\n'
-            + '    Azkell Fleet • Documento digital de control vehicular 2026\n'
+            + '    ERP Azkell Fleet • Documento digital de control vehicular 2026\n'
             + '  </aside>\n'
             + (autoPrint ? '<script>window.onload = function() { setTimeout(function(){ window.print(); }, 400); };</scr' + 'ipt>\n' : '')
             + '</body>\n</html>';
@@ -1993,7 +2024,8 @@
             const filename = _evGetPdfFilename(r);
 
             const pdfConfig = _evObtenerConfiguracion(r);
-            const svgStr = _evGenerarSvgDiagrama(pdfConfig);
+            const estiloCabina = r.estilo_cabina || 'chata';
+            const svgStr = _evGenerarSvgDiagrama(pdfConfig, estiloCabina);
             const diagramaDataUrl = await _evRasterizarSvgAPng(svgStr);
 
             const htmlBody = _evConstruirHtmlPDF(r, diagramaDataUrl);
@@ -2047,7 +2079,8 @@
             const filename = _evGetPdfFilename(r);
 
             const pdfConfig = _evObtenerConfiguracion(r);
-            const svgStr = _evGenerarSvgDiagrama(pdfConfig);
+            const estiloCabina = r.estilo_cabina || 'chata';
+            const svgStr = _evGenerarSvgDiagrama(pdfConfig, estiloCabina);
             const diagramaDataUrl = await _evRasterizarSvgAPng(svgStr);
 
             const htmlBody = _evConstruirHtmlPDF(r, diagramaDataUrl);
