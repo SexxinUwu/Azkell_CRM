@@ -231,6 +231,26 @@
     transform: translateY(-1px);
 }
 
+.btn-volver-movil-gps {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 7px 14px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #0f172a;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.btn-volver-movil-gps:hover {
+    background: #f1f5f9;
+    color: #0284c7;
+}
+
 /* Ficha Telemetría Flotante (Bento Drawer) */
 .gps-floating-telemetry {
     position: absolute;
@@ -333,12 +353,14 @@
     font-weight: 700;
 }
 
-/* ── Adaptación Móvil (<768px) ───────────────────── */
+/* ── Adaptación Móvil (<768px) Master-Detail ─────────── */
 @media (max-width: 768px) {
     #moduloUbicacionGPS {
-        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+        padding: 0.75rem 0.75rem 100px 0.75rem !important;
         min-height: auto !important;
     }
+    
+    /* 1. Por defecto en móvil: SOLO mostrar la lista de unidades */
     .gps-main-split {
         display: flex !important;
         flex-direction: column !important;
@@ -348,18 +370,64 @@
     }
     .gps-sidebar-panel {
         width: 100% !important;
-        order: 2;
+        display: flex !important;
     }
     .gps-map-panel {
-        width: 100% !important;
-        height: 380px !important;
-        min-height: 380px !important;
-        order: 1;
-        border-radius: 16px;
-    }
-    .gps-floating-telemetry {
         display: none !important;
     }
+    
+    /* 2. Cuando se activa el detalle (show-detail) en móvil */
+    .gps-main-split.show-detail .gps-sidebar-panel {
+        display: none !important;
+    }
+    .gps-main-split.show-detail .gps-map-panel {
+        display: flex !important;
+        width: 100% !important;
+        height: calc(100vh - 125px) !important;
+        min-height: 520px !important;
+        border-radius: 18px !important;
+        overflow: hidden !important;
+    }
+    
+    /* En móvil, ocultar KPIs y Barra de Búsqueda cuando estamos dentro del detalle del mapa */
+    #moduloUbicacionGPS.in-detail-mobile #gps-kpis-row,
+    #moduloUbicacionGPS.in-detail-mobile #gps-search-filter-row {
+        display: none !important;
+    }
+    
+    .btn-volver-movil-gps {
+        display: inline-flex !important;
+    }
+    
+    .gps-unit-card {
+        padding: 0.95rem 1rem !important;
+        border-radius: 16px !important;
+        margin-bottom: 0.5rem !important;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03) !important;
+    }
+    .gps-unit-plate {
+        font-size: 1.05rem !important;
+    }
+    
+    .gps-floating-telemetry {
+        display: block !important;
+        left: 8px !important;
+        right: 8px !important;
+        bottom: 8px !important;
+        padding: 0.85rem !important;
+        border-radius: 16px !important;
+        max-height: 250px !important;
+        overflow-y: auto !important;
+    }
+    
+    .gps-telemetry-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.5rem !important;
+    }
+    .gps-telemetry-box {
+        padding: 0.5rem 0.65rem !important;
+    }
+    
     .ck-apple-segmented {
         width: 100% !important;
         display: flex !important;
@@ -399,7 +467,7 @@
     </div>
 
     <!-- ── 2. BENTO KPIS ROW (HORIZONTAL ULTRA COMPACTO) ─────────────── -->
-    <div class="row g-2 mb-3">
+    <div class="row g-2 mb-3" id="gps-kpis-row">
         <div class="col-6 col-md-3">
             <div class="ck-kpi-card active" id="gps-kpi-total" onclick="window.filtrarSegmentoGPS('total', this)">
                 <div class="ck-kpi-icon" style="background:#eff6ff; color:#2563eb;">
@@ -447,7 +515,7 @@
     </div>
 
     <!-- ── 3. BARRA DE BÚSQUEDA Y FILTRO SEGMENTADO ──────────────────── -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3" id="gps-search-filter-row">
         <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 340px;">
             <div class="position-relative flex-grow-1">
                 <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
@@ -470,6 +538,12 @@
 
         <!-- Panel Lateral Izquierdo: Lista de Unidades -->
         <div class="gps-sidebar-panel">
+            <div class="d-flex align-items-center justify-content-between mb-1 d-md-none">
+                <span class="text-uppercase fw-bold text-secondary" style="font-size:0.75rem; letter-spacing:0.05em;">VEHÍCULOS DE FLOTA</span>
+                <button type="button" class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-2.5 py-1 d-flex align-items-center gap-1 shadow-2xs" onclick="window.gpsVerMapaGeneralMovil()" style="font-size:0.72rem;">
+                    <i class="bi bi-map-fill"></i> Ver Mapa General
+                </button>
+            </div>
             <div class="gps-list-container custom-scrollbar" id="listaUnidadesGPS">
                 <div class="text-center py-5 text-muted">
                     <div class="spinner-border spinner-border-sm text-primary me-2"></div>
@@ -484,11 +558,15 @@
             <!-- Controles Flotantes Superiores -->
             <div class="gps-map-top-bar">
                 <div class="d-flex align-items-center gap-2">
-                    <button class="gps-map-control-btn" onclick="window.gpsVerTodaLaFlota()" title="Enfocar toda la flota de Perú">
+                    <!-- Botón Volver exclusivo móvil -->
+                    <button type="button" class="btn-volver-movil-gps" onclick="window.gpsVolverListaMovil()" title="Volver a lista de unidades">
+                        <i class="bi bi-chevron-left"></i> Volver a Lista
+                    </button>
+                    <button class="gps-map-control-btn d-none d-md-inline-flex" onclick="window.gpsVerTodaLaFlota()" title="Enfocar toda la flota de Perú">
                         <i class="bi bi-arrows-fullscreen text-primary"></i> Toda la Flota
                     </button>
                     <button class="gps-map-control-btn" id="btnGpsCentrarSeleccion" style="display:none;" onclick="window.gpsCentrarSeleccion()" title="Centrar vehículo seleccionado">
-                        <i class="bi bi-crosshair text-danger"></i> Centrar Unidad
+                        <i class="bi bi-crosshair text-danger"></i> Centrar
                     </button>
                 </div>
 
@@ -583,23 +661,6 @@
 
         </div>
 
-    </div>
-
-    <!-- Offcanvas Detalle Móvil (<768px) -->
-    <div class="offcanvas offcanvas-bottom" tabindex="-1" id="gpsDetalleOffcanvas" style="height:80vh; border-radius:20px 20px 0 0; background: #fff; z-index: 1055;">
-        <div class="offcanvas-header border-bottom px-4 py-3">
-            <div class="d-flex align-items-center gap-3">
-                <div style="width:40px;height:40px;border-radius:10px;background:#eff6ff;color:#0284c7;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
-                    <i class="bi bi-truck"></i>
-                </div>
-                <div>
-                    <h5 class="fw-bold m-0 text-dark" id="gpsDetalleOffcanvasTitle">—</h5>
-                    <small class="text-secondary" id="gpsDetalleOffcanvasSubtitle"></small>
-                </div>
-            </div>
-            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
-        </div>
-        <div class="offcanvas-body p-3 custom-scrollbar" id="gpsDetalleOffcanvasBody"></div>
     </div>
 
 </div>

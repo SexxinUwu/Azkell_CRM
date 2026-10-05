@@ -607,23 +607,63 @@ window.abrirDetalleGPS = function(placa) {
 
     var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
 
-    if (tienePos && window._gpsMapInstance) {
-        window._gpsMapInstance.flyTo([w.lat, w.lng], 16, {
-            duration: 1.0,
-            easeLinearity: 0.25
-        });
+    // Transición en móvil: Pasar a la vista de Mapa + Ficha de Detalle (1:1 con Documentos de Flota)
+    if (window.innerWidth <= 768) {
+        var splitEl = document.querySelector('.gps-main-split');
+        var modEl = document.getElementById('moduloUbicacionGPS');
+        if (splitEl) splitEl.classList.add('show-detail');
+        if (modEl) modEl.classList.add('in-detail-mobile');
 
-        if (window._gpsMarkersMap[placa]) {
+        if (window._gpsMapInstance) {
             setTimeout(function() {
-                window._gpsMarkersMap[placa].openPopup();
-            }, 500);
+                window._gpsMapInstance.invalidateSize();
+                if (tienePos) {
+                    window._gpsMapInstance.flyTo([w.lat, w.lng], 16, { duration: 0.5 });
+                }
+            }, 180);
+        }
+    } else {
+        if (tienePos && window._gpsMapInstance) {
+            window._gpsMapInstance.flyTo([w.lat, w.lng], 16, {
+                duration: 1.0,
+                easeLinearity: 0.25
+            });
+
+            if (window._gpsMarkersMap[placa]) {
+                setTimeout(function() {
+                    window._gpsMarkersMap[placa].openPopup();
+                }, 500);
+            }
         }
     }
 
     window.gpsActualizarFichaFlotante(w);
+};
 
-    if (window.innerWidth < 768) {
-        window.gpsAbrirDetalleMovil(w);
+// ------------------------------------------------------------
+// NAVEGACIÓN MÓVIL (VOLVER A LISTA DE UNIDADES & VER MAPA GENERAL)
+// ------------------------------------------------------------
+window.gpsVolverListaMovil = function() {
+    var splitEl = document.querySelector('.gps-main-split');
+    var modEl = document.getElementById('moduloUbicacionGPS');
+    if (splitEl) splitEl.classList.remove('show-detail');
+    if (modEl) modEl.classList.remove('in-detail-mobile');
+    window._placaGPSActiva = null;
+    document.querySelectorAll('.gps-unit-card').forEach(function(c) {
+        c.classList.remove('active');
+    });
+};
+
+window.gpsVerMapaGeneralMovil = function() {
+    var splitEl = document.querySelector('.gps-main-split');
+    var modEl = document.getElementById('moduloUbicacionGPS');
+    if (splitEl) splitEl.classList.add('show-detail');
+    if (modEl) modEl.classList.add('in-detail-mobile');
+    if (window._gpsMapInstance) {
+        setTimeout(function() {
+            window._gpsMapInstance.invalidateSize();
+            window.gpsVerTodaLaFlota();
+        }, 180);
     }
 };
 
