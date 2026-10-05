@@ -808,14 +808,49 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.put('/ot-materiales/:id', (req, res) => {
         const id = req.params.id;
         const { accion, motivo } = req.body;
+        const targetDb = req.db || db;
         if (accion === 'despachar') {
             const sqlStockCheck = `
-            SELECT d.descripcion, d.cantidad, i.stock_actual, i.descripcion AS inv_desc
-            FROM detalle_salidas_inv d
-            LEFT JOIN inventario i ON (i.id = d.inventario_id OR i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
-            WHERE d.salida_id = ?
-        `;
-            db.query(sqlStockCheck, [id], (errStk, rowsStk) => {
+                SELECT d.id AS detalle_id, d.descripcion, d.cantidad, d.costo_unitario, d.moneda, d.importe, d.inventario_id,
+                       i.id AS inv_id, i.descripcion AS inv_desc,
+                       ROUND(COALESCE(i.stock_regularizado, 0) 
+                         + COALESCE(ent.total_entradas, 0) 
+                         + COALESCE(rec.total_recepciones, 0) 
+                         - COALESCE(sal.total_salidas, 0), 4) AS stock_actual
+                FROM detalle_salidas_inv d
+                LEFT JOIN inventario i ON (i.id = d.inventario_id OR i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
+                LEFT JOIN (
+                    SELECT de.inventario_id, SUM(de.cantidad) AS total_entradas 
+                    FROM detalle_entradas_inv de
+                    JOIN entradas_inv e ON e.id = de.entrada_id
+                    JOIN inventario inv ON inv.id = de.inventario_id
+                    WHERE (inv.fecha_regularizacion IS NULL OR COALESCE(e.created_at, e.fecha) > inv.fecha_regularizacion)
+                      AND (e.estado IS NULL OR e.estado != 'Anulado')
+                      AND (e.tipo_orden = 'Entrada directa' OR e.tipo_orden = 'Ajuste')
+                    GROUP BY de.inventario_id
+                ) ent ON ent.inventario_id = i.id
+                LEFT JOIN (
+                    SELECT dr.inventario_id, SUM(dr.cantidad_recibida) AS total_recepciones
+                    FROM detalle_recepciones_oc dr
+                    JOIN recepciones_oc r ON r.id = dr.recepcion_id
+                    JOIN entradas_inv e ON e.id = r.oc_id
+                    JOIN inventario inv ON inv.id = dr.inventario_id
+                    WHERE (e.estado IS NULL OR (e.estado != 'Anulado' AND LOWER(e.estado) NOT LIKE '%anul%' AND LOWER(e.estado) NOT LIKE '%rechaz%'))
+                      AND (inv.fecha_regularizacion IS NULL OR COALESCE(r.created_at, r.fecha_recepcion) > inv.fecha_regularizacion)
+                    GROUP BY dr.inventario_id
+                ) rec ON rec.inventario_id = i.id
+                LEFT JOIN (
+                    SELECT ds.inventario_id, SUM(ds.cantidad) AS total_salidas
+                    FROM detalle_salidas_inv ds
+                    JOIN salidas_inv s2 ON s2.id = ds.salida_id
+                    JOIN inventario inv ON inv.id = ds.inventario_id
+                    WHERE s2.estado = 'Despachado'
+                      AND (inv.fecha_regularizacion IS NULL OR COALESCE(s2.created_at, s2.fecha) > inv.fecha_regularizacion)
+                    GROUP BY ds.inventario_id
+                ) sal ON sal.inventario_id = i.id
+                WHERE d.salida_id = ?
+            `;
+            targetDb.query(sqlStockCheck, [id], (errStk, rowsStk) => {
                 if (errStk) return res.status(500).json({ error: errStk.message });
 
                 const sinStock = [];
@@ -833,13 +868,13 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                     });
                 }
 
-                db.query("UPDATE salidas_inv SET estado = 'Despachado' WHERE id = ?", [id], (err, result) => {
+                targetDb.query("UPDATE salidas_inv SET estado = 'Despachado' WHERE id = ?", [id], (err, result) => {
                     if (err) {
                         console.error('Error despachando:', err.message);
                         return res.status(500).json({ error: err.message });
                     }
                     // Resolver inventario_id nulos: por descripción exacta O prefijo "INV-XXX — ..."
-                    db.query(
+                    targetDb.query(
                         `UPDATE detalle_salidas_inv d
                      INNER JOIN inventario i ON (i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
                      SET d.inventario_id = i.id
@@ -851,7 +886,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             });
         } else if (accion === 'anular') {
             if (!motivo || !String(motivo).trim()) return res.status(400).json({ error: 'Motivo requerido' });
-            db.query('UPDATE salidas_inv SET estado=?, motivo_anulacion=? WHERE id=?',
+            targetDb.query('UPDATE salidas_inv SET estado=?, motivo_anulacion=? WHERE id=?',
                 ['Anulado', String(motivo).trim(), id], (err, result) => {
                     if (err) return res.status(500).json({ error: err.message });
                     if (!result.affectedRows) return res.status(404).json({ error: 'No encontrado' });

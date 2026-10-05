@@ -1997,7 +1997,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     SELECT de.inventario_id, SUM(de.cantidad) AS total_entradas 
                     FROM detalle_entradas_inv de
                     JOIN entradas_inv e ON e.id = de.entrada_id
-                    WHERE (e.estado IS NULL OR e.estado != 'Anulado') AND (e.tipo_orden = 'Entrada directa' OR e.tipo_orden = 'Ajuste')
+                    JOIN inventario inv ON inv.id = de.inventario_id
+                    WHERE (inv.fecha_regularizacion IS NULL OR COALESCE(e.created_at, e.fecha) > inv.fecha_regularizacion)
+                      AND (e.estado IS NULL OR e.estado != 'Anulado')
+                      AND (e.tipo_orden = 'Entrada directa' OR e.tipo_orden = 'Ajuste')
                     GROUP BY de.inventario_id
                 ) ent ON ent.inventario_id = i.id
                 LEFT JOIN (
@@ -2005,14 +2008,18 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     FROM detalle_recepciones_oc dr
                     JOIN recepciones_oc r ON r.id = dr.recepcion_id
                     JOIN entradas_inv e ON e.id = r.oc_id
+                    JOIN inventario inv ON inv.id = dr.inventario_id
                     WHERE (e.estado IS NULL OR (e.estado != 'Anulado' AND LOWER(e.estado) NOT LIKE '%anul%' AND LOWER(e.estado) NOT LIKE '%rechaz%'))
+                      AND (inv.fecha_regularizacion IS NULL OR COALESCE(r.created_at, r.fecha_recepcion) > inv.fecha_regularizacion)
                     GROUP BY dr.inventario_id
                 ) rec ON rec.inventario_id = i.id
                 LEFT JOIN (
                     SELECT ds.inventario_id, SUM(ds.cantidad) AS total_salidas
                     FROM detalle_salidas_inv ds
                     JOIN salidas_inv s2 ON s2.id = ds.salida_id
+                    JOIN inventario inv ON inv.id = ds.inventario_id
                     WHERE s2.estado = 'Despachado'
+                      AND (inv.fecha_regularizacion IS NULL OR COALESCE(s2.created_at, s2.fecha) > inv.fecha_regularizacion)
                     GROUP BY ds.inventario_id
                 ) sal ON sal.inventario_id = i.id
                 WHERE d.salida_id = ?
