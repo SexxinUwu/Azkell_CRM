@@ -1,5 +1,110 @@
 const express = require('express');
 const router = express.Router();
+const { createApprovalToken } = require('../services/ocApprovalService');
+const { sendApprovalWhatsapp } = require('../services/whatsappService');
+
+async function despacharAprobacionWhatsAppAlmacen(req, tdb, entradaId, bodyData) {
+    try {
+        const promiseDb = typeof tdb.promise === 'function' ? tdb.promise() : tdb;
+        const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
+
+        // 1. Obtener datos de la empresa y receptor
+        let empresaNombre = req.tenantInfo?.nombre_empresa || (tenantSlug ? tenantSlug.toUpperCase() : 'Azkell ERP');
+        let targetPhone = bodyData.aprobador_telefono || null;
+        let approverName = bodyData.aprobador_nombre || 'Gerencia General';
+
+        try {
+            const [cfgRows] = await promiseDb.query(
+                "SELECT clave, valor FROM configuracion_erp WHERE clave IN ('empresa_nombre', 'gerencia_whatsapp', 'aprobador_whatsapp', 'gerencia_nombre')"
+            );
+            (cfgRows || []).forEach(r => {
+                if (r.clave === 'empresa_nombre' && r.valor) empresaNombre = r.valor;
+                if (!targetPhone && (r.clave === 'gerencia_whatsapp' || r.clave === 'aprobador_whatsapp') && r.valor) targetPhone = r.valor;
+                if (r.clave === 'gerencia_nombre' && r.valor) approverName = r.valor;
+            });
+        } catch(e) {}
+
+        if (!targetPhone) {
+            targetPhone = process.env.GERENCIA_WHATSAPP || process.env.OWNER_WHATSAPP;
+        }
+
+        if (!targetPhone) {
+            console.warn(`[WhatsApp OC] No hay teléfono de gerencia configurado para el tenant: ${tenantSlug || 'default'}`);
+            return;
+        }
+
+        // 2. Sincronizar / Registrar en la tabla ordenes_compra
+        const total = parseFloat(bodyData.total_pen || 0);
+        const moneda = bodyData.moneda || 'PEN';
+        const proveedor = bodyData.proveedor_nombre || 'Proveedor General';
+        const ruc = bodyData.proveedor_ruc || null;
+        const motivo = bodyData.motivo_entrada || bodyData.observaciones || 'Solicitud de Compra / Entrada';
+        const sustentoUrl = bodyData.url_cotizacion || bodyData.url_voucher || null;
+        const solicitante = bodyData.solicitante || bodyData.creado_por || req.usuario?.nombre || 'Almacén / Taller';
+
+        await promiseDb.query(
+            `INSERT INTO ordenes_compra (codigo, proveedor_nombre, proveedor_ruc, monto_total, moneda, motivo_solicitud, sustento_cotizacion_url, solicitado_por, estado)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE_APROBACION')
+             ON DUPLICATE KEY UPDATE 
+                proveedor_nombre = VALUES(proveedor_nombre),
+                monto_total = VALUES(monto_total),
+                moneda = VALUES(moneda),
+                motivo_solicitud = VALUES(motivo_solicitud),
+                sustento_cotizacion_url = VALUES(sustento_cotizacion_url),
+                solicitado_por = VALUES(solicitado_por)`,
+            [entradaId, proveedor, ruc, total, moneda, motivo, sustentoUrl, solicitante]
+        );
+
+        // Obtener ID numérico de ordenes_compra
+        const [ocRows] = await promiseDb.query("SELECT id FROM ordenes_compra WHERE codigo = ? LIMIT 1", [entradaId]);
+        if (!ocRows || !ocRows.length) return;
+        const ocId = ocRows[0].id;
+
+        // Sincronizar items en ordenes_compra_items
+        const itemsList = Array.isArray(bodyData.items) ? bodyData.items : [];
+        if (itemsList.length > 0) {
+            await promiseDb.query("DELETE FROM ordenes_compra_items WHERE orden_compra_id = ?", [ocId]);
+            for (const it of itemsList) {
+                const cant = parseFloat(it.cantidad || it.cant || 1);
+                const pu = parseFloat(it.costo_unitario || it.pu || 0);
+                const sub = parseFloat(it.importe || it.total || (cant * pu));
+                await promiseDb.query(
+                    `INSERT INTO ordenes_compra_items (orden_compra_id, descripcion, cantidad, unidad_medida, precio_unitario, subtotal)
+                     VALUES (?, ?, ?, ?, ?, ?)`,
+                    [ocId, it.descripcion || 'Item', cant, it.unidad_medida || it.um || 'UND', pu, sub]
+                );
+            }
+        }
+
+        // 3. Generar token criptográfico de aprobación de 24h
+        const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
+        const tokenData = await createApprovalToken(promiseDb, {
+            ocId,
+            approverPhone: targetPhone,
+            approverName: approverName,
+            baseUrl: origin
+        });
+
+        // 4. Enviar WhatsApp a través de Evolution API
+        const waResult = await sendApprovalWhatsapp({
+            phone: targetPhone,
+            ocCode: entradaId,
+            supplier: proveedor,
+            total: total,
+            currency: moneda,
+            approvalUrl: tokenData.approvalUrl,
+            solicitadoPor: solicitante,
+            motivo: motivo,
+            tenantSlug: tenantSlug,
+            empresaNombre: empresaNombre
+        });
+
+        console.log(`[WhatsApp OC] Despachado a ${targetPhone} para orden ${entradaId}:`, waResult?.success ? 'OK' : waResult?.error);
+
+    } catch (err) {
+        console.error('[WhatsApp OC] Error despachando aprobación:', err.message);
+    }
+}
 
 module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
@@ -1396,7 +1501,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                             const toUpdate = items.filter(d =>
                                 (d.inventario_id || mapaInvEnt[d.descripcion]) && parseFloat(d.costo_unitario) > 0
                             );
-                            if (!toUpdate.length) { if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
+                            if (!toUpdate.length) { 
+                                despacharAprobacionWhatsAppAlmacen(req, tdb, id, req.body).catch(e => console.error('[WhatsApp OC] Background error:', e));
+                                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } 
+                                return res.json({ ok: true, id }); 
+                            }
                             let done = 0;
                             toUpdate.forEach(d => {
                                 const invId = d.inventario_id || mapaInvEnt[d.descripcion];
@@ -1406,7 +1515,13 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                 tdb.query(
                                     'UPDATE inventario SET costo_referencial=?, costo_soles=?, tipo_cambio=? WHERE id=? AND activo=1',
                                     [costoOrig, costoSoles, isUSD ? tc : null, invId],
-                                    () => { if (++done === toUpdate.length) if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id }); }
+                                    () => { 
+                                        if (++done === toUpdate.length) {
+                                            despacharAprobacionWhatsAppAlmacen(req, tdb, id, req.body).catch(e => console.error('[WhatsApp OC] Background error:', e));
+                                            if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } 
+                                            res.json({ ok: true, id }); 
+                                        }
+                                    }
                                 );
                             });
                         });
@@ -1414,6 +1529,25 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 });
         });
     });
+
+    // ── Endpoint para Reenviar Notificación de Aprobación por WhatsApp ──
+    router.post('/entradas/:id/reenviar-whatsapp', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const promiseDb = typeof tdb.promise === 'function' ? tdb.promise() : tdb;
+            const { id } = req.params;
+            const [rows] = await promiseDb.query("SELECT * FROM entradas_inv WHERE id = ?", [id]);
+            if (!rows || !rows.length) return res.status(404).json({ error: 'Orden no encontrada' });
+            const [items] = await promiseDb.query("SELECT * FROM detalle_entradas_inv WHERE entrada_id = ?", [id]);
+            const bodyData = { ...rows[0], items };
+            await despacharAprobacionWhatsAppAlmacen(req, tdb, id, bodyData);
+            return res.json({ success: true, message: 'Notificación de WhatsApp enviada a Gerencia exitosamente' });
+        } catch (e) {
+            console.error('Error reenviando WhatsApp de orden:', e);
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
     router.put('/entradas/:id', (req, res) => {
         const tdb = getDb(req);
         _ensureColumnasOC(tdb);
