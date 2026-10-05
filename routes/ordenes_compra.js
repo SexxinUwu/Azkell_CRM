@@ -287,6 +287,17 @@ module.exports = function (db, broadcast, logAudit) {
                 [newOcStatus, aprobador, reason || null, tok.orden_compra_id]
             );
 
+            // Sincronizar actualización en entradas_inv del ERP
+            try {
+                await tdb.query(
+                    `UPDATE entradas_inv 
+                     SET estado = ?, 
+                         autoriza = ? 
+                     WHERE id = ?`,
+                    [newOcStatus === 'APROBADA' ? 'Aprobado' : 'Rechazado', aprobador, tok.codigo]
+                );
+            } catch(e) {}
+
             // Actualizar Token a consumido
             await tdb.query(
                 `UPDATE oc_approval_tokens 
