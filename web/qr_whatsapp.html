@@ -121,7 +121,10 @@
       const container = document.getElementById('qrContainer');
       container.innerHTML = '<div style="padding-top: 100px; color: #64748b; font-size: 13px;">Generando QR...</div>';
       try {
-        const res = await fetch('/api/whatsapp/qr');
+        const headers = {};
+        const token = localStorage.getItem('token') || localStorage.getItem('erp_token') || localStorage.getItem('azkell_token');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch('/api/whatsapp/qr', { headers });
         const data = await res.json();
         
         if (data.empresa_nombre) {

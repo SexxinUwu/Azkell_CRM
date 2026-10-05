@@ -1755,9 +1755,14 @@ const sseClients = new Set();
 // 🔑 MIDDLEWARE DE AUTENTICACIÓN JWT
 // ============================================================
 function verifyToken(req, res, next) {
-    const PUBLIC_PATHS = ['/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas'];
+    const PUBLIC_PATHS = [
+        '/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas',
+        '/whatsapp/qr', '/approvals/oc', '/approvals/oc/action'
+    ];
     if (
         PUBLIC_PATHS.includes(req.path) || 
+        req.path.startsWith('/whatsapp/') ||
+        req.path.startsWith('/approvals/') ||
         req.path.endsWith('/ver') || 
         (req.path.includes('/archivo/') && req.path.endsWith('/ver')) ||
         req.path.includes('/pdf-apisunat/') ||
