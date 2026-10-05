@@ -216,7 +216,35 @@ module.exports = function (db, broadcast, logAudit) {
             const record = rows[0];
             const isExpired = new Date() > new Date(record.expira_en);
 
-            // Generar URL pre-firmada válida por 24 horas si el sustento está en S3
+            // 1. Obtener Logo y Nombre de la Empresa del Tenant
+            let empresaNombre = 'MARSISA. FLEET';
+            let empresaLogo = '/favicon-2003.png';
+            try {
+                const [cfgRows] = await tdb.query("SELECT clave, valor FROM configuracion_erp WHERE clave IN ('empresa_nombre', 'empresa_logo')");
+                (cfgRows || []).forEach(r => {
+                    if (r.clave === 'empresa_nombre' && r.valor) empresaNombre = r.valor;
+                    if (r.clave === 'empresa_logo' && r.valor) empresaLogo = r.valor;
+                });
+                if (empresaLogo && empresaLogo.startsWith('http') && empresaLogo.includes('amazonaws.com')) {
+                    const key = s3KeyFromUrl(empresaLogo);
+                    if (key) empresaLogo = await getPresignedUrl(key, 86400);
+                }
+            } catch(e) {}
+
+            // 2. Extraer RUC y limpiar nombre del proveedor si viene con RUC entre paréntesis
+            let rawProv = record.proveedor_nombre || '';
+            let ruc = record.proveedor_ruc || '';
+            if (!ruc) {
+                const matchRuc = rawProv.match(/\b(10|20)\d{9}\b/);
+                if (matchRuc) {
+                    ruc = matchRuc[0];
+                    rawProv = rawProv.replace(/\s*\(\s*\b(10|20)\d{9}\b\s*\)\s*/, '').trim();
+                }
+            }
+            record.proveedor_nombre = rawProv || 'PROVEEDOR GENERAL';
+            record.proveedor_ruc = ruc || 'No registrado';
+
+            // 3. Generar URL pre-firmada válida por 24 horas si el sustento está en S3
             let presignedSustentoUrl = record.sustento_cotizacion_url;
             if (presignedSustentoUrl) {
                 try {
@@ -234,6 +262,7 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             }
 
+            // 4. Obtener ítems y calcular total exacto
             const [items] = await tdb.query(
                 `SELECT id, descripcion, cantidad, unidad_medida, precio_unitario, subtotal 
                  FROM ordenes_compra_items 
@@ -241,12 +270,41 @@ module.exports = function (db, broadcast, logAudit) {
                 [record.oc_id]
             );
 
+            const totalFromItems = (items || []).reduce((acc, it) => {
+                const cant = parseFloat(it.cantidad || 1);
+                const pu = parseFloat(it.precio_unitario || 0);
+                const sub = it.subtotal != null ? parseFloat(it.subtotal) : (cant * pu);
+                return acc + (isNaN(sub) ? 0 : sub);
+            }, 0);
+
+            if (!record.monto_total || parseFloat(record.monto_total) === 0) {
+                record.monto_total = totalFromItems;
+            }
+
+            // 5. Datos complementarios de la entrada (Placa, OT, Condición de pago)
+            let datosEntrada = {};
+            try {
+                const [entRows] = await tdb.query(
+                    "SELECT condicion_pago, dias_credito, placa, ot_id, tipo_igv, tipo_cambio, observaciones, solicitante, creado_por FROM entradas_inv WHERE id = ? LIMIT 1",
+                    [record.codigo]
+                );
+                if (entRows && entRows.length > 0) {
+                    datosEntrada = entRows[0];
+                    if (!record.solicitado_por && (datosEntrada.solicitante || datosEntrada.creado_por)) {
+                        record.solicitado_por = datosEntrada.solicitante || datosEntrada.creado_por;
+                    }
+                }
+            } catch(e) {}
+
             return res.json({
                 ...record,
+                empresa_nombre: empresaNombre,
+                empresa_logo: empresaLogo,
                 sustento_cotizacion_url: presignedSustentoUrl,
                 is_expired: isExpired,
                 is_used: record.token_estado !== 'PENDIENTE',
-                items
+                items,
+                ...datosEntrada
             });
 
         } catch (err) {
