@@ -765,10 +765,79 @@
         if (elFirmaRecNom) elFirmaRecNom.textContent = recibeVal.trim().toUpperCase() || 'CONDUCTOR / RECEPTOR';
     };
 
-    // ── AUTOCOMPLETADO EXACTO DESDE LA BASE DE DATOS DE PLACAS ────
+    // ── OBTENER KILOMETRAJE GPS EN TIEMPO REAL DESDE WIALON ───────
+    window.evObtenerKmGps = async function(placa) {
+        const cleanP = String(placa || '').replace(/[^A-Z0-9]/ig, '').toUpperCase();
+        if (!cleanP || cleanP.length < 3) return null;
+
+        // 1. Intentar helper global window.buscarWialonPorPlaca
+        try {
+            if (typeof window.buscarWialonPorPlaca === 'function') {
+                const w = window.buscarWialonPorPlaca(cleanP);
+                if (w && w.km !== undefined && w.km !== null && Number(w.km) > 0) {
+                    return Math.round(Number(w.km));
+                }
+            }
+        } catch(e) {}
+
+        // 2. Intentar buscar en CACHE.wialon o window.CACHE.wialon
+        let wList = (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0)
+            ? CACHE.wialon
+            : (window.CACHE && Array.isArray(window.CACHE.wialon) && window.CACHE.wialon.length > 0 ? window.CACHE.wialon : null);
+
+        // 3. Si la lista no está en memoria, consultar al servidor Wialon
+        if (!wList || !wList.length) {
+            try {
+                const res = await fetch('/api/script/obtenerDatosWialon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ args: [] })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && Array.isArray(data.data) && data.data.length > 0) {
+                        wList = data.data;
+                        if (typeof CACHE !== 'undefined') CACHE.wialon = wList;
+                        if (window.CACHE) window.CACHE.wialon = wList;
+                    }
+                }
+            } catch(e) {}
+        }
+
+        if (wList && Array.isArray(wList)) {
+            const match = wList.find(w => {
+                const wp = String(w.placa || '').replace(/[^A-Z0-9]/ig, '').toUpperCase();
+                const wn = String(w.nombre_wialon || '').replace(/[^A-Z0-9]/ig, '').toUpperCase();
+                return (wp && (wp === cleanP || wp.includes(cleanP) || cleanP.includes(wp))) ||
+                       (wn && (wn === cleanP || wn.includes(cleanP) || cleanP.includes(wn)));
+            });
+            if (match && match.km !== undefined && match.km !== null && Number(match.km) > 0) {
+                return Math.round(Number(match.km));
+            }
+        }
+
+        return null;
+    };
+
+    // ── AUTOCOMPLETADO EXACTO DESDE LA BASE DE DATOS DE PLACAS Y GPS ────
     window.evOnPlacaInput = async function(placa) {
         const cleanP = String(placa || '').trim().toUpperCase();
         if (cleanP.length < 3) return;
+
+        // Disparar búsqueda del Odómetro GPS en paralelo
+        const kmPromise = window.evObtenerKmGps(cleanP);
+
+        // Si ya tenemos el KM en memoria rápido, asignarlo de inmediato al input
+        kmPromise.then(kmGps => {
+            if (kmGps !== null && kmGps > 0) {
+                const elKm = document.getElementById('ev-f-km');
+                if (elKm) {
+                    elKm.value = kmGps;
+                    elKm.style.backgroundColor = '#ecfdf5';
+                    setTimeout(() => { if (elKm) elKm.style.backgroundColor = ''; }, 1000);
+                }
+            }
+        }).catch(() => {});
 
         try {
             const res = await fetch(`/api/seguridad/entrega-vehiculos/placa-detalle/${encodeURIComponent(cleanP)}`);
@@ -786,7 +855,15 @@
                 setVal('ev-f-color', d.color);
                 setVal('ev-f-motor', d.numero_motor);
                 setVal('ev-f-serie', d.numero_serie);
-                setVal('ev-f-km', d.kilometraje || 0);
+
+                // Esperar resolución de KM GPS si todavía no se ha establecido
+                const kmGps = await kmPromise;
+                const elKm = document.getElementById('ev-f-km');
+                if (kmGps !== null && kmGps > 0) {
+                    setVal('ev-f-km', kmGps);
+                } else if (!elKm || !elKm.value || Number(elKm.value) === 0) {
+                    setVal('ev-f-km', d.kilometraje || 0);
+                }
 
                 const config = d.configuracion || (d.tipo && d.tipo.includes('CARRETA') ? 'R2' : 'T3');
                 window._evCurrentConfiguracion = config;
