@@ -1117,7 +1117,7 @@ window.ckGenerarAccordionCardHTML = function(unidad, sysKey, title, iconClass, i
         const itemId = `item_${unidad}_${sysKey}_${idx}`;
         const cleanTxt = (itemTxt || '').toString().trim();
         itemsHTML += `
-            <div class="ck-item-row border-bottom py-2.5 px-3 bg-white" data-item-text="${cleanTxt.toUpperCase()}" id="row_${itemId}">
+            <div class="ck-item-row border-bottom py-2.5 px-3 bg-white" data-item-text="${cleanTxt.toUpperCase()}" id="row_${itemId}" style="transition: background 0.15s ease;">
                 <div class="form-check d-flex align-items-center justify-content-between m-0">
                     <div class="flex-grow-1 d-flex align-items-center">
                         <input class="form-check-input me-2.5 ck-checkbox-item" type="checkbox" id="chk_${itemId}" onchange="window.ckOnToggleFalla('${itemId}', '${unidad}', '${sysKey}', '${cleanTxt.replace(/'/g, "\\'")}')" style="cursor: pointer; width: 1.15rem; height: 1.15rem;">
@@ -1136,15 +1136,25 @@ window.ckGenerarAccordionCardHTML = function(unidad, sysKey, title, iconClass, i
     });
 
     return `
-        <div class="accordion-item border rounded-3 mb-2 overflow-hidden shadow-2xs ck-accordion-group" id="group_${accordionId}">
-            <h2 class="accordion-header m-0">
-                <button class="accordion-button collapsed fw-bold py-2.5 ${isTracto ? 'bg-light' : 'bg-warning-subtle bg-opacity-25'} text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
-                    <i class="bi ${iconClass} me-2 ${isTracto ? 'text-primary' : 'text-warning-emphasis'}"></i> <span>${title}</span>
-                    <span class="badge bg-secondary rounded-pill ms-2 px-2 py-1 count-badge" id="cnt_${accordionId}">0</span>
-                </button>
-            </h2>
-            <div id="${collapseId}" class="accordion-collapse collapse">
-                <div class="accordion-body p-0 border-top bg-white">
+        <div class="ck-system-card border rounded-3 mb-2 overflow-hidden shadow-2xs ck-accordion-group bg-white" id="group_${accordionId}" style="border: 1px solid #e2e8f0 !important;">
+            <div class="ck-system-header p-2.5 px-3 d-flex align-items-center justify-content-between cursor-pointer ${isTracto ? 'bg-light' : 'bg-warning-subtle bg-opacity-25'}" 
+                 data-bs-toggle="collapse" 
+                 data-bs-target="#${collapseId}" 
+                 aria-expanded="false" 
+                 aria-controls="${collapseId}"
+                 style="cursor: pointer; user-select: none;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi ${iconClass} ${isTracto ? 'text-primary' : 'text-warning-emphasis'} fs-5"></i>
+                    <span class="fw-bold text-dark" style="font-size:0.90rem;">${title}</span>
+                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2" style="font-size:0.72rem;">${safeItems.length} ítems</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-secondary rounded-pill px-2 py-1 count-badge" id="cnt_${accordionId}">0</span>
+                    <i class="bi bi-chevron-down text-secondary"></i>
+                </div>
+            </div>
+            <div id="${collapseId}" class="collapse">
+                <div class="p-0 border-top bg-white">
                     ${itemsHTML || '<div class="p-3 text-center text-muted small">Sin subcategorías registradas</div>'}
                 </div>
             </div>
@@ -2066,6 +2076,7 @@ window.filtrarEstadoChecklist = function(estado, el) {
 window._canonizarNombreEmpresa = window._canonizarNombreEmpresa || function(emp) {
     if (!emp) return '';
     const clean = emp.toString().trim().toUpperCase();
+    if (!clean || clean === '-') return '';
     const raw = clean.replace(/[^A-Z0-9]/g, '');
     if (raw.includes('MARSISA')) return 'MARSISA S.A.C.';
     if (raw.includes('TRAHESA')) return 'TRAHESA S.A.C.';
@@ -2076,12 +2087,14 @@ window._canonizarNombreEmpresa = window._canonizarNombreEmpresa || function(emp)
 
 window._coincideEmpresa = window._coincideEmpresa || function(empTarget, empFiltro) {
     if (!empFiltro || empFiltro === 'TODAS') return true;
+    if (!empTarget || !String(empTarget).trim() || String(empTarget).trim() === '-') return false;
     const t = window._canonizarNombreEmpresa(empTarget);
     const f = window._canonizarNombreEmpresa(empFiltro);
-    if (t === f) return true;
+    if (t && f && t === f) return true;
     const rawT = (empTarget || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     const rawF = (empFiltro || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    return rawT === rawF || rawT.includes(rawF) || rawF.includes(rawT);
+    if (!rawT || !rawF) return false;
+    return rawT === rawF || (rawT.length >= 5 && rawF.length >= 5 && (rawT.includes(rawF) || rawF.includes(rawT)));
 };
 
 window.filtrarEmpresaChecklist = function(empresa, btn) {
@@ -2226,8 +2239,12 @@ window.filtrarChecklist = function() {
             if (empReporte && window._coincideEmpresa(empReporte, window._ckFiltroEmpresa)) return true;
             
             const emp1 = r.empresa_tracto || window._obtenerEmpresaDePlaca(r.placa_tracto);
+            if (emp1 && window._coincideEmpresa(emp1, window._ckFiltroEmpresa)) return true;
+
             const emp2 = r.empresa_remolque || window._obtenerEmpresaDePlaca(r.placa_remolque);
-            return window._coincideEmpresa(emp1, window._ckFiltroEmpresa) || window._coincideEmpresa(emp2, window._ckFiltroEmpresa);
+            if (emp2 && window._coincideEmpresa(emp2, window._ckFiltroEmpresa)) return true;
+
+            return false;
         });
     }
 
