@@ -143,9 +143,63 @@ async function sendDecisionConfirmationWhatsapp({ phone, ocCode, status, reason,
     }
 }
 
+/**
+ * Envía notificación automática a Tesorería / Pagos cuando una OC ha sido aprobada
+ */
+async function sendTreasuryNotificationWhatsapp({ phone, ocCode, supplier, ruc, total, currency, approverName, reason, bankAccount, tenantSlug, instanceName, empresaNombre }) {
+    const recipient = formatPhone(phone);
+    if (!recipient) return;
+
+    const finalInstance = instanceName || (tenantSlug ? `${tenantSlug}_bot` : DEFAULT_INSTANCE);
+    await ensureInstanceExists(finalInstance);
+
+    const monedaSym = currency === 'USD' ? '$' : 'S/';
+    const montoFormateado = `${monedaSym} ${parseFloat(total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const headerEmpresa = empresaNombre ? `🏢 *[${empresaNombre}]*\n` : '';
+
+    const messageText = 
+`${headerEmpresa}💳 *NUEVA ORDEN APROBADA LISTA PARA PAGO*
+
+📋 *N° Orden:* ${ocCode}
+🤝 *Proveedor:* ${supplier}
+${ruc && ruc !== 'No registrado' ? `🆔 *RUC:* ${ruc}\n` : ''}💰 *Monto Autorizado:* ${montoFormateado}
+👤 *Autorizado por:* ${approverName || 'Gerencia General'}
+${reason ? `📝 *Motivo:* ${reason}\n` : ''}${bankAccount ? `🏦 *Cuenta Destino:* ${bankAccount}\n` : ''}━━━━━━━━━━━━━━━━━━
+⚡ _Esta orden ya se encuentra lista en el módulo 'Pago de Requerimientos' de Tesorería para su procesamiento de pago._`;
+
+    const payload = {
+        number: recipient,
+        text: messageText,
+        delay: 500,
+        linkPreview: false
+    };
+
+    const url = `${EVOLUTION_URL.replace(/\/$/, '')}/message/sendText/${finalInstance}`;
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': EVOLUTION_KEY
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+            const errText = await res.text();
+            console.error(`⚠️ [WhatsApp Tesorería Error] Status: ${res.status}`, errText);
+            return { success: false, error: errText };
+        }
+        return { success: true };
+    } catch (err) {
+        console.error('❌ Error enviando notificación WhatsApp a Tesorería:', err.message);
+        return { success: false, error: err.message };
+    }
+}
+
 module.exports = {
     formatPhone,
     ensureInstanceExists,
     sendApprovalWhatsapp,
-    sendDecisionConfirmationWhatsapp
+    sendDecisionConfirmationWhatsapp,
+    sendTreasuryNotificationWhatsapp
 };

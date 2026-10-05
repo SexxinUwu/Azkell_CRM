@@ -4109,16 +4109,20 @@ app.get('/api/whatsapp/qr', async (req, res) => {
         let empresaNombre = req.tenantInfo?.nombre_empresa || (tenantSlug ? tenantSlug.toUpperCase() : 'Azkell ERP');
         let receptorTelefono = process.env.GERENCIA_WHATSAPP || process.env.OWNER_WHATSAPP || '';
         let receptorNombre = 'Gerencia General';
+        let tesoreriaTelefono = process.env.TESORERIA_WHATSAPP || '';
+        let tesoreriaNombre = 'Tesorería / Pagos';
 
         if (req.db) {
             try {
                 const [cfg] = await req.db.promise().query(
-                    "SELECT clave, valor FROM configuracion_erp WHERE clave IN ('empresa_nombre', 'gerencia_whatsapp', 'aprobador_whatsapp', 'gerencia_nombre')"
+                    "SELECT clave, valor FROM configuracion_erp WHERE clave IN ('empresa_nombre', 'gerencia_whatsapp', 'aprobador_whatsapp', 'gerencia_nombre', 'tesoreria_whatsapp', 'tesoreria_nombre')"
                 );
                 (cfg || []).forEach(r => {
                     if (r.clave === 'empresa_nombre' && r.valor) empresaNombre = r.valor;
                     if ((r.clave === 'gerencia_whatsapp' || r.clave === 'aprobador_whatsapp') && r.valor) receptorTelefono = r.valor;
                     if (r.clave === 'gerencia_nombre' && r.valor) receptorNombre = r.valor;
+                    if (r.clave === 'tesoreria_whatsapp' && r.valor) tesoreriaTelefono = r.valor;
+                    if (r.clave === 'tesoreria_nombre' && r.valor) tesoreriaNombre = r.valor;
                 });
             } catch(e) {}
         }
@@ -4132,7 +4136,9 @@ app.get('/api/whatsapp/qr', async (req, res) => {
             instance: evoInstance,
             empresa_nombre: empresaNombre,
             receptor_telefono: receptorTelefono,
-            receptor_nombre: receptorNombre
+            receptor_nombre: receptorNombre,
+            tesoreria_telefono: tesoreriaTelefono,
+            tesoreria_nombre: tesoreriaNombre
         };
 
         if (data && data.instance && data.instance.state === 'open') {
@@ -4147,7 +4153,7 @@ app.get('/api/whatsapp/qr', async (req, res) => {
 
 app.post('/api/whatsapp/config-receptor', async (req, res) => {
     try {
-        const { telefono, nombre } = req.body;
+        const { telefono, nombre, tesoreria_telefono, tesoreria_nombre } = req.body;
         const tdb = req.db || db;
         if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
         const promiseDb = typeof tdb.promise === 'function' ? tdb.promise() : tdb;
@@ -4167,14 +4173,29 @@ app.post('/api/whatsapp/config-receptor', async (req, res) => {
             );
         }
 
-        if (logAudit) {
-            logAudit(req, 'WHATSAPP', 'CONFIGURAR_RECEPTOR', `Actualizado número receptor WhatsApp: ${telefono || '—'} (${nombre || 'Gerencia'})`);
+        if (tesoreria_telefono !== undefined) {
+            const cleanTesoPhone = String(tesoreria_telefono || '').trim();
+            await promiseDb.query(
+                "INSERT INTO configuracion_erp (clave, valor) VALUES ('tesoreria_whatsapp', ?) ON DUPLICATE KEY UPDATE valor = ?",
+                [cleanTesoPhone, cleanTesoPhone]
+            );
+        }
+        if (tesoreria_nombre !== undefined) {
+            const cleanTesoName = String(tesoreria_nombre || '').trim();
+            await promiseDb.query(
+                "INSERT INTO configuracion_erp (clave, valor) VALUES ('tesoreria_nombre', ?) ON DUPLICATE KEY UPDATE valor = ?",
+                [cleanTesoName, cleanTesoName]
+            );
         }
 
-        return res.json({ success: true, message: 'Receptor de WhatsApp guardado exitosamente.' });
+        if (logAudit) {
+            logAudit(req, 'WHATSAPP', 'CONFIGURAR_CONTACTOS', `Actualizados contactos WhatsApp: Gerencia (${nombre || telefono || '—'}), Tesorería (${tesoreria_nombre || tesoreria_telefono || '—'})`);
+        }
+
+        return res.json({ success: true, message: 'Contactos de WhatsApp guardados exitosamente.' });
     } catch (err) {
-        console.error('Error guardando configuración de receptor WhatsApp:', err.message);
-        return res.status(500).json({ error: 'Error guardando receptor: ' + err.message });
+        console.error('Error guardando configuración de contactos WhatsApp:', err.message);
+        return res.status(500).json({ error: 'Error guardando contactos: ' + err.message });
     }
 });
 app.use(require('./routes/ordenes_compra')(db, broadcast, logAudit));
