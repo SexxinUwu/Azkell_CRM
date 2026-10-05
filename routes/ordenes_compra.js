@@ -102,10 +102,31 @@ module.exports = function (db, broadcast, logAudit) {
 
             await tdb.query('COMMIT');
 
+            // Obtener datos del tenant y empresa
+            const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
+            let empresaNombre = req.tenantInfo?.nombre_empresa || null;
+            if (!empresaNombre) {
+                try {
+                    const [cfgName] = await tdb.query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_nombre' LIMIT 1");
+                    if (cfgName && cfgName[0] && cfgName[0].valor) empresaNombre = cfgName[0].valor;
+                } catch(e) {}
+            }
+
             // Generar Token criptográfico y enlace de Aprobación Móvil
             let approvalUrl = null;
             let waResult = null;
-            const targetPhone = aprobador_telefono || process.env.GERENCIA_WHATSAPP || process.env.OWNER_WHATSAPP;
+            
+            // Prioridad de teléfono: 1. Enviado en body, 2. Guardado en configuracion_erp, 3. Variable de entorno .env
+            let targetPhone = aprobador_telefono;
+            if (!targetPhone) {
+                try {
+                    const [cfgPhone] = await tdb.query("SELECT valor FROM configuracion_erp WHERE clave IN ('gerencia_whatsapp', 'aprobador_whatsapp', 'telefono_gerencia') LIMIT 1");
+                    if (cfgPhone && cfgPhone[0] && cfgPhone[0].valor) targetPhone = cfgPhone[0].valor;
+                } catch(e) {}
+            }
+            if (!targetPhone) {
+                targetPhone = process.env.GERENCIA_WHATSAPP || process.env.OWNER_WHATSAPP;
+            }
 
             if (targetPhone) {
                 const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
@@ -126,7 +147,9 @@ module.exports = function (db, broadcast, logAudit) {
                     currency: moneda,
                     approvalUrl: approvalUrl,
                     solicitadoPor: solicitado_por || req.usuario?.nombre,
-                    motivo: motivo_solicitud
+                    motivo: motivo_solicitud,
+                    tenantSlug: tenantSlug,
+                    empresaNombre: empresaNombre
                 });
             }
 
@@ -278,11 +301,13 @@ module.exports = function (db, broadcast, logAudit) {
 
             // Enviar confirmación por WhatsApp en segundo plano
             if (tok.aprobador_telefono) {
+                const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
                 sendDecisionConfirmationWhatsapp({
                     phone: tok.aprobador_telefono,
                     ocCode: tok.codigo,
                     status: newOcStatus,
-                    reason: reason
+                    reason: reason,
+                    tenantSlug: tenantSlug
                 }).catch(e => console.error('Error enviando confirmación:', e));
             }
 

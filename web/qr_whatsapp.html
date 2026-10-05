@@ -5,27 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vincular WhatsApp ERP Azkell</title>
   <link rel="icon" type="image/png" href="/favicon-2003.png">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(255, 255, 255, 0.04);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.2);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
     body {
-      background: #090d16;
-      color: #f8fafc;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
-      background-image: radial-gradient(circle at 50% 10%, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+      padding: 24px 16px;
+      background-image: radial-gradient(circle at 50% 5%, rgba(59, 130, 246, 0.15) 0%, transparent 65%);
+    }
+    .wrapper {
+      max-width: 520px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
     .card {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
       backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-radius: 24px;
-      padding: 32px;
-      max-width: 460px;
-      width: 100%;
+      padding: 28px;
       text-align: center;
       box-shadow: 0 20px 50px rgba(0,0,0,0.5);
     }
@@ -34,35 +53,56 @@
       background: rgba(59, 130, 246, 0.15);
       color: #60a5fa;
       border: 1px solid rgba(59, 130, 246, 0.3);
-      padding: 6px 14px;
+      padding: 5px 12px;
       border-radius: 999px;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.5px;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
-    h1 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
-    .company-title { font-size: 15px; color: #38bdf8; font-weight: 700; margin-bottom: 12px; }
-    p { font-size: 13px; color: #94a3b8; line-height: 1.5; margin-bottom: 20px; }
+    h1 { font-size: 22px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.5px; }
+    .company-title { font-size: 15px; color: #38bdf8; font-weight: 700; margin-bottom: 8px; }
+    p.desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px; }
+    
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0 16px 0;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .section-divider::before, .section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
     .qr-box {
       background: #ffffff;
       padding: 16px;
-      border-radius: 18px;
+      border-radius: 20px;
       display: inline-block;
-      margin-bottom: 20px;
-      min-width: 250px;
-      min-height: 250px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      margin-bottom: 16px;
+      min-width: 240px;
+      min-height: 240px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     }
     .qr-box img {
       width: 220px;
       height: 220px;
       display: block;
+      border-radius: 8px;
     }
     .instance-info {
       font-size: 11px;
       color: #64748b;
       margin-bottom: 16px;
+      font-weight: 600;
     }
     .steps {
       text-align: left;
@@ -72,58 +112,236 @@
       padding: 14px 16px;
       font-size: 12px;
       color: #cbd5e1;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
     .steps ol { padding-left: 18px; }
     .steps li { margin-bottom: 6px; }
-    .btn-refresh {
-      background: #3b82f6;
-      color: #fff;
-      border: none;
-      padding: 14px 24px;
-      border-radius: 14px;
-      font-weight: 700;
-      cursor: pointer;
+
+    /* Formulario Receptor */
+    .receptor-card {
+      text-align: left;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 18px;
+      padding: 20px;
+    }
+    .receptor-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .receptor-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .receptor-title {
       font-size: 14px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .receptor-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-prefix {
+      position: absolute;
+      left: 14px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #60a5fa;
+      pointer-events: none;
+    }
+    .form-input {
       width: 100%;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: #fff;
+      outline: none;
       transition: all 0.2s;
     }
-    .btn-refresh:active { transform: scale(0.98); }
+    .form-input.has-prefix {
+      padding-left: 54px;
+    }
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    }
+    .form-hint {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    /* Botones */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 13px 20px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-success {
+      background: var(--green);
+      color: #fff;
+    }
+    .btn-success:hover {
+      background: #059669;
+    }
+    .btn-success:active { transform: scale(0.98); }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #cbd5e1;
+      margin-top: 8px;
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #10b981;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 9999;
+      pointer-events: none;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <span class="badge" id="badgeTag">WHATSAPP MULTI-TENANT</span>
-    <h1>Vincular Número Emisor</h1>
-    <div class="company-title" id="companyName">Cargando empresa...</div>
-    <p>Escanea este código con el WhatsApp corporativo asignado a esta empresa para enviar las aprobaciones de Órdenes de Compra.</p>
+  <div class="wrapper">
+    <div class="card">
+      <span class="badge" id="badgeTag">WHATSAPP MULTI-TENANT</span>
+      <h1>Vinculación y Aprobaciones</h1>
+      <div class="company-title" id="companyName">Cargando empresa...</div>
+      <p class="desc">Configura el número emisor del bot y el teléfono de gerencia que recibirá las aprobaciones de Órdenes de Compra.</p>
 
-    <div class="qr-box" id="qrContainer">
-      <div style="padding-top: 100px; color: #64748b; font-size: 13px;">Generando QR...</div>
+      <!-- SECCIÓN 1: EMISOR (QR) -->
+      <div class="section-divider">1. Número Emisor (WhatsApp Bot)</div>
+
+      <div class="qr-box" id="qrContainer">
+        <div style="padding-top: 95px; color: #64748b; font-size: 13px;">Generando QR...</div>
+      </div>
+
+      <div class="instance-info" id="instanceInfo">Instancia: --</div>
+
+      <div class="steps">
+        <ol>
+          <li>Abre <b>WhatsApp</b> en el teléfono emisor de la empresa.</li>
+          <li>Toca los <b>3 puntos</b> o <b>Configuración</b>.</li>
+          <li>Selecciona <b>Dispositivos vinculados</b>.</li>
+          <li>Toca <b>Vincular un dispositivo</b> y apunta la cámara a este código QR.</li>
+        </ol>
+      </div>
+
+      <button class="btn btn-outline" onclick="fetchQR()">↻ Actualizar Código QR</button>
+
+      <!-- SECCIÓN 2: RECEPTOR (GERENCIA) -->
+      <div class="section-divider">2. Receptor de Aprobaciones (Gerencia)</div>
+
+      <div class="receptor-card">
+        <div class="receptor-header">
+          <div class="receptor-icon">📲</div>
+          <div>
+            <div class="receptor-title">Teléfono del Aprobador</div>
+            <div class="receptor-subtitle">Recibirá el Magic Link para aprobar O/C por WhatsApp</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="txtReceptorPhone">Celular WhatsApp de Gerencia</label>
+          <div class="input-wrapper">
+            <span class="input-prefix">+51</span>
+            <input type="tel" id="txtReceptorPhone" class="form-input has-prefix" placeholder="987654321" maxlength="15">
+          </div>
+          <div class="form-hint">Ingresa los 9 dígitos de celular del dueño o gerente aprobador.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="txtReceptorName">Nombre / Cargo del Aprobador</label>
+          <input type="text" id="txtReceptorName" class="form-input" placeholder="Ej: Gerencia General / Dueño">
+        </div>
+
+        <button class="btn btn-success" id="btnSaveReceptor" onclick="saveReceptor()">
+          💾 Guardar Receptor de Aprobaciones
+        </button>
+      </div>
+
     </div>
-
-    <div class="instance-info" id="instanceInfo">Instancia: --</div>
-
-    <div class="steps">
-      <ol>
-        <li>Abre <b>WhatsApp</b> en el teléfono emisor de la empresa.</li>
-        <li>Toca los <b>3 puntos</b> o <b>Configuración</b>.</li>
-        <li>Selecciona <b>Dispositivos vinculados</b>.</li>
-        <li>Toca <b>Vincular un dispositivo</b> y apunta la cámara a este código QR.</li>
-      </ol>
-    </div>
-
-    <button class="btn-refresh" onclick="fetchQR()">↻ Actualizar QR</button>
   </div>
 
+  <div class="toast" id="toastMsg">✅ Configuración guardada</div>
+
   <script>
+    function showToast(msg, bg = '#10b981') {
+      const t = document.getElementById('toastMsg');
+      t.innerText = msg;
+      t.style.background = bg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
     async function fetchQR() {
       const container = document.getElementById('qrContainer');
-      container.innerHTML = '<div style="padding-top: 100px; color: #64748b; font-size: 13px;">Generando QR...</div>';
       try {
         const headers = {};
         const token = localStorage.getItem('token') || localStorage.getItem('erp_token') || localStorage.getItem('azkell_token');
         if (token) headers['Authorization'] = `Bearer ${token}`;
+        
         const res = await fetch('/api/whatsapp/qr', { headers });
         const data = await res.json();
         
@@ -137,12 +355,25 @@
           document.getElementById('instanceInfo').innerText = `Instancia WhatsApp: ${data.instance}`;
         }
 
+        // Cargar datos del receptor en los inputs solo si aún no los ha editado el usuario
+        const inputPhone = document.getElementById('txtReceptorPhone');
+        const inputName = document.getElementById('txtReceptorName');
+        
+        if (data.receptor_telefono && !inputPhone.dataset.userEdited) {
+          let clean = String(data.receptor_telefono).replace(/\D/g, '');
+          if (clean.startsWith('51') && clean.length > 9) clean = clean.substring(2);
+          inputPhone.value = clean;
+        }
+        if (data.receptor_nombre && !inputName.dataset.userEdited) {
+          inputName.value = data.receptor_nombre;
+        }
+
         if (data.status === 'CONNECTED') {
           container.innerHTML = `
-            <div style="padding: 50px 16px; color: #10b981;">
+            <div style="padding: 45px 16px; color: #10b981;">
               <div style="font-size: 52px; margin-bottom: 8px;">✅</div>
-              <b style="font-size: 16px;">¡WhatsApp Conectado!</b>
-              <p style="color: #64748b; margin-top: 6px; font-size: 12px;">Esta empresa ya tiene su número emisor activo y vinculado.</p>
+              <b style="font-size: 16px;">¡WhatsApp Emisor Conectado!</b>
+              <p style="color: #64748b; margin-top: 6px; font-size: 12px;">El bot de esta empresa está en línea y listo para despachar mensajes.</p>
             </div>
           `;
           return;
@@ -157,6 +388,59 @@
         container.innerHTML = `<div style="padding-top: 90px; color: #ef4444; font-size: 12px;">Error: ${err.message}</div>`;
       }
     }
+
+    async function saveReceptor() {
+      const phoneRaw = document.getElementById('txtReceptorPhone').value.trim();
+      const nameRaw = document.getElementById('txtReceptorName').value.trim() || 'Gerencia General';
+      const btn = document.getElementById('btnSaveReceptor');
+
+      if (!phoneRaw) {
+        showToast('⚠️ Ingresa un número de celular válido para el aprobador', '#f59e0b');
+        return;
+      }
+
+      let cleanPhone = phoneRaw.replace(/\D/g, '');
+      if (!cleanPhone.startsWith('51') && cleanPhone.length === 9) {
+        cleanPhone = '51' + cleanPhone;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Guardando...';
+
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        const token = localStorage.getItem('token') || localStorage.getItem('erp_token') || localStorage.getItem('azkell_token');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const res = await fetch('/api/whatsapp/config-receptor', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({
+            telefono: cleanPhone,
+            nombre: nameRaw
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('✅ ¡Receptor de aprobaciones guardado correctamente!');
+        } else {
+          showToast('❌ Error: ' + (data.error || 'No se pudo guardar'), '#ef4444');
+        }
+      } catch (e) {
+        showToast('❌ Error de conexión: ' + e.message, '#ef4444');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '💾 Guardar Receptor de Aprobaciones';
+      }
+    }
+
+    document.getElementById('txtReceptorPhone').addEventListener('input', () => {
+      document.getElementById('txtReceptorPhone').dataset.userEdited = 'true';
+    });
+    document.getElementById('txtReceptorName').addEventListener('input', () => {
+      document.getElementById('txtReceptorName').dataset.userEdited = 'true';
+    });
 
     fetchQR();
     setInterval(fetchQR, 20000);

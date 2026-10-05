@@ -4105,12 +4105,21 @@ app.get('/api/whatsapp/qr', async (req, res) => {
         // Asegurar que la instancia de esta empresa esté creada en Evolution API
         await ensureInstanceExists(evoInstance);
 
-        // Obtener nombre de la empresa para mostrar en la interfaz
+        // Obtener datos del receptor y nombre de la empresa
         let empresaNombre = req.tenantInfo?.nombre_empresa || (tenantSlug ? tenantSlug.toUpperCase() : 'Azkell ERP');
+        let receptorTelefono = process.env.GERENCIA_WHATSAPP || process.env.OWNER_WHATSAPP || '';
+        let receptorNombre = 'Gerencia General';
+
         if (req.db) {
             try {
-                const [cfg] = await req.db.promise().query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_nombre' LIMIT 1");
-                if (cfg && cfg[0] && cfg[0].valor) empresaNombre = cfg[0].valor;
+                const [cfg] = await req.db.promise().query(
+                    "SELECT clave, valor FROM configuracion_erp WHERE clave IN ('empresa_nombre', 'gerencia_whatsapp', 'aprobador_whatsapp', 'gerencia_nombre')"
+                );
+                (cfg || []).forEach(r => {
+                    if (r.clave === 'empresa_nombre' && r.valor) empresaNombre = r.valor;
+                    if ((r.clave === 'gerencia_whatsapp' || r.clave === 'aprobador_whatsapp') && r.valor) receptorTelefono = r.valor;
+                    if (r.clave === 'gerencia_nombre' && r.valor) receptorNombre = r.valor;
+                });
             } catch(e) {}
         }
 
@@ -4119,13 +4128,53 @@ app.get('/api/whatsapp/qr', async (req, res) => {
         });
         const data = await response.json();
         
+        const extraInfo = {
+            instance: evoInstance,
+            empresa_nombre: empresaNombre,
+            receptor_telefono: receptorTelefono,
+            receptor_nombre: receptorNombre
+        };
+
         if (data && data.instance && data.instance.state === 'open') {
-            return res.json({ status: 'CONNECTED', instance: evoInstance, empresa_nombre: empresaNombre });
+            return res.json({ status: 'CONNECTED', ...extraInfo });
         }
-        res.json({ ...data, instance: evoInstance, empresa_nombre: empresaNombre });
+        res.json({ ...data, ...extraInfo });
     } catch(err) {
         console.error('Error generando QR de WhatsApp:', err.message);
         res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/whatsapp/config-receptor', async (req, res) => {
+    try {
+        const { telefono, nombre } = req.body;
+        const tdb = req.db || db;
+        if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+        const promiseDb = typeof tdb.promise === 'function' ? tdb.promise() : tdb;
+
+        if (telefono !== undefined) {
+            const cleanPhone = String(telefono || '').trim();
+            await promiseDb.query(
+                "INSERT INTO configuracion_erp (clave, valor) VALUES ('gerencia_whatsapp', ?) ON DUPLICATE KEY UPDATE valor = ?",
+                [cleanPhone, cleanPhone]
+            );
+        }
+        if (nombre !== undefined) {
+            const cleanName = String(nombre || '').trim();
+            await promiseDb.query(
+                "INSERT INTO configuracion_erp (clave, valor) VALUES ('gerencia_nombre', ?) ON DUPLICATE KEY UPDATE valor = ?",
+                [cleanName, cleanName]
+            );
+        }
+
+        if (logAudit) {
+            logAudit(req, 'WHATSAPP', 'CONFIGURAR_RECEPTOR', `Actualizado número receptor WhatsApp: ${telefono || '—'} (${nombre || 'Gerencia'})`);
+        }
+
+        return res.json({ success: true, message: 'Receptor de WhatsApp guardado exitosamente.' });
+    } catch (err) {
+        console.error('Error guardando configuración de receptor WhatsApp:', err.message);
+        return res.status(500).json({ error: 'Error guardando receptor: ' + err.message });
     }
 });
 app.use(require('./routes/ordenes_compra')(db, broadcast, logAudit));
