@@ -4111,11 +4111,13 @@ app.get('/api/whatsapp/qr', async (req, res) => {
         let receptorNombre = 'Gerencia General';
         let tesoreriaTelefono = process.env.TESORERIA_WHATSAPP || '';
         let tesoreriaNombre = 'Tesorería / Pagos';
+        let almacenTelefono = process.env.ALMACEN_WHATSAPP || '';
+        let almacenNombre = 'Almacén / Logística';
 
         if (req.db) {
             try {
                 const [cfg] = await req.db.promise().query(
-                    "SELECT clave, valor FROM configuracion_erp WHERE clave IN ('empresa_nombre', 'gerencia_whatsapp', 'aprobador_whatsapp', 'gerencia_nombre', 'tesoreria_whatsapp', 'tesoreria_nombre')"
+                    "SELECT clave, valor FROM configuracion_erp WHERE clave IN ('empresa_nombre', 'gerencia_whatsapp', 'aprobador_whatsapp', 'gerencia_nombre', 'tesoreria_whatsapp', 'tesoreria_nombre', 'almacen_whatsapp', 'almacen_nombre')"
                 );
                 (cfg || []).forEach(r => {
                     if (r.clave === 'empresa_nombre' && r.valor) empresaNombre = r.valor;
@@ -4123,6 +4125,8 @@ app.get('/api/whatsapp/qr', async (req, res) => {
                     if (r.clave === 'gerencia_nombre' && r.valor) receptorNombre = r.valor;
                     if (r.clave === 'tesoreria_whatsapp' && r.valor) tesoreriaTelefono = r.valor;
                     if (r.clave === 'tesoreria_nombre' && r.valor) tesoreriaNombre = r.valor;
+                    if (r.clave === 'almacen_whatsapp' && r.valor) almacenTelefono = r.valor;
+                    if (r.clave === 'almacen_nombre' && r.valor) almacenNombre = r.valor;
                 });
             } catch(e) {}
         }
@@ -4138,7 +4142,9 @@ app.get('/api/whatsapp/qr', async (req, res) => {
             receptor_telefono: receptorTelefono,
             receptor_nombre: receptorNombre,
             tesoreria_telefono: tesoreriaTelefono,
-            tesoreria_nombre: tesoreriaNombre
+            tesoreria_nombre: tesoreriaNombre,
+            almacen_telefono: almacenTelefono,
+            almacen_nombre: almacenNombre
         };
 
         if (data && data.instance && data.instance.state === 'open') {
@@ -4153,7 +4159,7 @@ app.get('/api/whatsapp/qr', async (req, res) => {
 
 app.post('/api/whatsapp/config-receptor', async (req, res) => {
     try {
-        const { telefono, nombre, tesoreria_telefono, tesoreria_nombre } = req.body;
+        const { telefono, nombre, tesoreria_telefono, tesoreria_nombre, almacen_telefono, almacen_nombre } = req.body;
         const tdb = req.db || db;
         if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
         const promiseDb = typeof tdb.promise === 'function' ? tdb.promise() : tdb;
@@ -4188,8 +4194,23 @@ app.post('/api/whatsapp/config-receptor', async (req, res) => {
             );
         }
 
+        if (almacen_telefono !== undefined) {
+            const cleanAlmPhone = String(almacen_telefono || '').trim();
+            await promiseDb.query(
+                "INSERT INTO configuracion_erp (clave, valor) VALUES ('almacen_whatsapp', ?) ON DUPLICATE KEY UPDATE valor = ?",
+                [cleanAlmPhone, cleanAlmPhone]
+            );
+        }
+        if (almacen_nombre !== undefined) {
+            const cleanAlmName = String(almacen_nombre || '').trim();
+            await promiseDb.query(
+                "INSERT INTO configuracion_erp (clave, valor) VALUES ('almacen_nombre', ?) ON DUPLICATE KEY UPDATE valor = ?",
+                [cleanAlmName, cleanAlmName]
+            );
+        }
+
         if (logAudit) {
-            logAudit(req, 'WHATSAPP', 'CONFIGURAR_CONTACTOS', `Actualizados contactos WhatsApp: Gerencia (${nombre || telefono || '—'}), Tesorería (${tesoreria_nombre || tesoreria_telefono || '—'})`);
+            logAudit(req, 'WHATSAPP', 'CONFIGURAR_CONTACTOS', `Actualizados contactos WhatsApp: Gerencia (${nombre || telefono || '—'}), Tesorería (${tesoreria_nombre || tesoreria_telefono || '—'}), Almacén (${almacen_nombre || almacen_telefono || '—'})`);
         }
 
         return res.json({ success: true, message: 'Contactos de WhatsApp guardados exitosamente.' });
