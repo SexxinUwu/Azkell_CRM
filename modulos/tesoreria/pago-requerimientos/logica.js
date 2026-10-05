@@ -895,13 +895,13 @@
 
                     return `
                         <tr class="align-middle">
-                            <td class="ps-4 py-3 text-center text-muted fw-bold" style="font-size:0.78rem;">${idx + 1}</td>
-                            <td class="py-3"><span class="badge bg-white text-dark border font-monospace fw-bold" style="font-size:0.75rem; border-color:#e2e8f0; color:#0f172a; padding:3px 8px; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,0.03);">${escapeHtml(codArt)}</span></td>
-                            <td class="py-3 fw-bold text-dark text-uppercase" style="font-size:0.80rem; color:#0f172a;">${escapeHtml(descArt)}</td>
-                            <td class="py-3 text-center"><span class="badge bg-light text-secondary border font-monospace" style="font-size:0.68rem; color:#64748b; background:#f8fafc !important; border-color:#e2e8f0 !important; border-radius:4px; padding:2px 6px;">${escapeHtml(um)}</span></td>
-                            <td class="py-3 text-center fw-bold font-monospace text-dark" style="font-size:0.82rem; color:#0f172a;">${cant.toLocaleString('es-PE', { maximumFractionDigits: 3 })}</td>
-                            <td class="py-3 text-end font-monospace text-secondary" style="font-size:0.80rem; color:#64748b;">${sym}${cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                            <td class="pe-4 py-3 text-end fw-bold font-monospace text-dark" style="font-size:0.82rem; color:#0f172a;">${sym}${imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td class="ps-4 py-2.5 text-center text-muted fw-bold" style="font-size:0.84rem;">${idx + 1}</td>
+                            <td class="py-2.5"><span class="badge text-dark border font-monospace fw-bold" style="font-size:0.82rem; font-family:ui-monospace,monospace; font-weight:800; background:#f8fafc; border-color:#cbd5e1; color:#0f172a; padding:4px 9px; border-radius:7px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">${escapeHtml(codArt)}</span></td>
+                            <td class="py-2.5 fw-bold text-dark text-uppercase" style="font-size:0.90rem; font-weight:800; color:#0f172a; letter-spacing:-0.01em;">${escapeHtml(descArt)}</td>
+                            <td class="py-2.5 text-center"><span class="badge text-secondary border font-monospace fw-bold" style="font-size:0.76rem; color:#475569; background:#f1f5f9 !important; border-color:#cbd5e1 !important; border-radius:6px; padding:3px 7px;">${escapeHtml(um)}</span></td>
+                            <td class="py-2.5 text-center fw-bold font-monospace text-dark" style="font-size:0.92rem; font-weight:800; color:#0f172a;">${cant.toLocaleString('es-PE', { maximumFractionDigits: 3 })}</td>
+                            <td class="py-2.5 text-end font-monospace text-secondary fw-bold" style="font-size:0.88rem; color:#64748b;">${sym}${cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td class="pe-4 py-2.5 text-end fw-black font-monospace text-dark" style="font-size:0.92rem; font-weight:900; color:#0f172a;">${sym}${imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         </tr>
                     `;
                 }).join('');

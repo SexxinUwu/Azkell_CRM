@@ -4861,20 +4861,20 @@ window._rotFiltrarDropdownArt = function(idx) {
         var stock = parseFloat(item.stock_actual != null ? item.stock_actual : (item.stock != null ? item.stock : 0));
         var costo = parseFloat(item.costo_referencial || item.costo || item.costo_soles || 0);
         var stockBadge = stock > 0
-            ? '<span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;font-size:0.72rem;font-weight:700;"><i class="bi bi-check2 me-1"></i>' + stock + ' ' + (item.unidad || 'UND') + '</span>'
-            : '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:0.72rem;font-weight:700;"><i class="bi bi-slash-circle me-1"></i>Sin stock</span>';
+            ? '<span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;font-size:0.75rem;font-weight:800;padding:3px 8px;border-radius:6px;"><i class="bi bi-check2 me-1"></i>' + stock + ' ' + (item.unidad || 'UND') + '</span>'
+            : '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:0.75rem;font-weight:800;padding:3px 8px;border-radius:6px;"><i class="bi bi-slash-circle me-1"></i>Sin stock</span>';
 
         var safeId = String(item.id || '').replace(/"/g, '&quot;');
         var safeDesc = String(item.descripcion || item.articulo || '').replace(/"/g, '&quot;');
-        var marcaBadge = item.marca ? '<span class="badge bg-light text-secondary border px-1.5 py-0.5 rounded-2" style="font-size:0.68rem;">' + item.marca + '</span>' : '';
-        var sistemaText = item.sistema ? '<span class="text-muted small"><i class="bi bi-gear-wide-connected me-1"></i>' + item.sistema + '</span>' : '';
+        var marcaBadge = item.marca ? '<span class="badge" style="font-size:0.72rem;font-weight:700;color:#334155;background:#f1f5f9;border:1px solid #cbd5e1;padding:2px 7px;border-radius:6px;">' + item.marca + '</span>' : '';
+        var sistemaText = item.sistema ? '<span class="text-secondary fw-semibold" style="font-size:0.74rem;"><i class="bi bi-gear-wide-connected me-1 text-muted"></i>' + item.sistema + '</span>' : '';
 
         var imgThumb = item.imagen_url 
-            ? `<div style="width: 38px; height: 38px; min-width: 38px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; justify-content: center; flex-shrink:0;">
+            ? `<div style="width: 42px; height: 42px; min-width: 42px; border-radius: 10px; overflow: hidden; border: 1.5px solid #e2e8f0; background: #fff; display: flex; align-items: center; justify-content: center; flex-shrink:0;">
                 <img src="${rotEscHtml(item.imagen_url)}" alt="${safeId}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='<i class=\\'bi bi-box-seam text-secondary\\'></i>';">
                </div>`
-            : `<div style="width: 38px; height: 38px; min-width: 38px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; flex-shrink:0;">
-                <i class="bi bi-box-seam text-secondary" style="font-size: 1.1rem;"></i>
+            : `<div style="width: 42px; height: 42px; min-width: 42px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; flex-shrink:0;">
+                <i class="bi bi-box-seam text-secondary" style="font-size: 1.15rem;"></i>
                </div>`;
 
         return `
@@ -4887,15 +4887,15 @@ window._rotFiltrarDropdownArt = function(idx) {
                     <div class="flex-grow-1 min-w-0">
                         <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
                             <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                                <span class="badge bg-dark text-white fw-bold px-2 py-0.5 rounded-2" style="font-size:0.72rem;">${item.id}</span>
+                                <span class="badge text-white fw-bold px-2 py-0.5" style="background:#0f172a;font-size:0.76rem;font-family:ui-monospace,monospace;border-radius:6px;">${item.id}</span>
                                 ${marcaBadge}
                             </div>
                             ${stockBadge}
                         </div>
-                        <div class="fw-semibold text-dark text-truncate" style="font-size:0.84rem;" title="${safeDesc}">${item.descripcion || item.articulo || ''}</div>
-                        <div class="d-flex align-items-center justify-content-between text-muted mt-1" style="font-size:0.72rem;">
+                        <div class="fw-bold text-dark text-truncate" style="font-size:0.88rem;color:#0f172a;line-height:1.35;" title="${safeDesc}">${item.descripcion || item.articulo || ''}</div>
+                        <div class="d-flex align-items-center justify-content-between text-muted mt-1">
                             ${sistemaText}
-                            <span class="fw-bold" style="color:#0f172a;">S/. ${costo.toFixed(2)}</span>
+                            <span class="fw-bold" style="color:#0284c7;font-size:0.86rem;">S/. ${costo.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
