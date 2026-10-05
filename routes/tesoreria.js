@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } }); // 25MB max
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl } = require('../utils/s3');
+const { sendWarehousePaymentVoucherWhatsapp } = require('../services/whatsappService');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
@@ -2664,6 +2665,68 @@ module.exports = function (db, broadcast, logAudit) {
                 broadcast('almacen', 'actualizar_oc');
                 broadcast('tesoreria', 'pago_procesado');
             }
+
+            // 6. DISPARADOR AUTOMÁTICO A ALMACÉN: Envío de comprobante/constancia por WhatsApp con imagen
+            (async () => {
+                try {
+                    const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
+                    let almacenPhone = null;
+                    let empresaNombre = null;
+
+                    const [cfgRows] = await tdb.query(
+                        "SELECT clave, valor FROM configuracion_erp WHERE clave IN ('almacen_whatsapp', 'empresa_nombre')"
+                    );
+                    (cfgRows || []).forEach(r => {
+                        if (r.clave === 'almacen_whatsapp' && r.valor) almacenPhone = r.valor;
+                        if (r.clave === 'empresa_nombre' && r.valor) empresaNombre = r.valor;
+                    });
+
+                    if (!almacenPhone) almacenPhone = process.env.ALMACEN_WHATSAPP || null;
+
+                    if (almacenPhone) {
+                        // Generar URL pre-firmada si el voucher está en S3
+                        let presignedVoucher = voucherUrl;
+                        if (presignedVoucher && presignedVoucher.includes('amazonaws.com')) {
+                            const k = s3KeyFromUrl(presignedVoucher);
+                            if (k) {
+                                try { presignedVoucher = await getPresignedUrl(k, 86400); } catch(e) {}
+                            }
+                        }
+
+                        // Extraer RUC si está en el nombre o en proveedor_ruc
+                        let ruc = '';
+                        let provNombre = oc.proveedor_nombre || '';
+                        if (provNombre) {
+                            const matchRuc = provNombre.match(/\b(10|20)\d{9}\b/);
+                            if (matchRuc) {
+                                ruc = matchRuc[0];
+                                provNombre = provNombre.replace(/\s*\(\s*\b(10|20)\d{9}\b\s*\)\s*/, '').trim();
+                            }
+                        }
+
+                        const totalFinal = montoPagado || parseFloat(oc.total_pen) || 0;
+
+                        await sendWarehousePaymentVoucherWhatsapp({
+                            phone: almacenPhone,
+                            ocCode: id,
+                            supplier: provNombre,
+                            ruc: ruc,
+                            total: totalFinal,
+                            currency: monedaPago || oc.moneda || 'PEN',
+                            paidBy: usuarioPago,
+                            reason: oc.motivo_entrada || descripcionPago,
+                            bankAccount: oc.cuenta_bancaria_proveedor || cuentaOrigen,
+                            operationNumber: numeroConstancia,
+                            mediaUrl: presignedVoucher,
+                            mimeType: req.file ? req.file.mimetype : null,
+                            tenantSlug: tenantSlug,
+                            empresaNombre: empresaNombre
+                        });
+                    }
+                } catch (errWaAlm) {
+                    console.error('[WhatsApp Almacén] Error despachando comprobante de pago:', errWaAlm.message);
+                }
+            })();
 
             res.json({
                 ok: true,

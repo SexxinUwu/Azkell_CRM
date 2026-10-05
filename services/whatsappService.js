@@ -196,10 +196,122 @@ ${reason ? `📝 *Motivo:* ${reason}\n` : ''}${bankAccount ? `🏦 *Cuenta Desti
     }
 }
 
+/**
+ * Envía la constancia / comprobante de pago con su desglose detallado a Almacén / Logística
+ * Si hay imagen o PDF del comprobante, lo despacha como Media con caption (descripción) directo.
+ */
+async function sendWarehousePaymentVoucherWhatsapp({
+    phone,
+    ocCode,
+    supplier,
+    ruc,
+    total,
+    currency,
+    paidBy,
+    reason,
+    bankAccount,
+    operationNumber,
+    mediaUrl,
+    mimeType,
+    tenantSlug,
+    instanceName,
+    empresaNombre
+}) {
+    const recipient = formatPhone(phone);
+    if (!recipient) return { success: false, error: 'Número no configurado' };
+
+    const finalInstance = instanceName || (tenantSlug ? `${tenantSlug}_bot` : DEFAULT_INSTANCE);
+    await ensureInstanceExists(finalInstance);
+
+    const monedaSym = (currency || 'PEN').toUpperCase() === 'USD' ? '$' : 'S/';
+    const montoFormateado = `${monedaSym} ${parseFloat(total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const headerEmpresa = empresaNombre ? `🏢 *[${empresaNombre}]*\n` : '';
+
+    const messageText = 
+`${headerEmpresa}✅ *PAGO DE ORDEN DE COMPRA REALIZADO*
+
+📋 *N° Orden:* ${ocCode}
+🤝 *Proveedor:* ${supplier || 'Proveedor General'}
+${ruc && ruc !== 'No registrado' ? `🆔 *RUC:* ${ruc}\n` : ''}💰 *Monto Pagado:* ${montoFormateado}
+${bankAccount ? `🏦 *Cuenta Destino:* ${bankAccount}\n` : ''}${operationNumber ? `📄 *N° Operación / Constancia:* ${operationNumber}\n` : ''}👤 *Procesado por:* ${paidBy || 'Tesorería'}
+${reason ? `📝 *Motivo:* ${reason}\n` : ''}━━━━━━━━━━━━━━━━━━
+📦 _El requerimiento ha sido liquidado con éxito por Tesorería. Se adjunta el comprobante/constancia de transferencia bancaria._`;
+
+    // Si tenemos una URL válida de imagen / PDF, enviamos por sendMedia
+    if (mediaUrl) {
+        const isPdf = (mimeType && mimeType.includes('pdf')) || mediaUrl.toLowerCase().includes('.pdf');
+        const mediaType = isPdf ? 'document' : 'image';
+        const finalMime = mimeType || (isPdf ? 'application/pdf' : 'image/jpeg');
+        const fileName = `Constancia_Pago_${ocCode}.${isPdf ? 'pdf' : 'jpg'}`;
+
+        const mediaPayload = {
+            number: recipient,
+            media: mediaUrl,
+            mediatype: mediaType,
+            mimetype: finalMime,
+            caption: messageText,
+            fileName: fileName,
+            delay: 1000
+        };
+
+        const mediaApiUrl = `${EVOLUTION_URL.replace(/\/$/, '')}/message/sendMedia/${finalInstance}`;
+
+        try {
+            const res = await fetch(mediaApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': EVOLUTION_KEY
+                },
+                body: JSON.stringify(mediaPayload)
+            });
+
+            if (res.ok) {
+                return { success: true };
+            } else {
+                const errText = await res.text();
+                console.warn(`⚠️ [sendMedia Fallback a sendText] Status: ${res.status}`, errText);
+            }
+        } catch (errMedia) {
+            console.warn('⚠️ [sendMedia Fallback a sendText Error]:', errMedia.message);
+        }
+    }
+
+    // Fallback: Si no hay voucher o falló sendMedia, enviar como texto estructurado
+    const textPayload = {
+        number: recipient,
+        text: messageText,
+        delay: 500,
+        linkPreview: false
+    };
+
+    const textUrl = `${EVOLUTION_URL.replace(/\/$/, '')}/message/sendText/${finalInstance}`;
+    try {
+        const res = await fetch(textUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': EVOLUTION_KEY
+            },
+            body: JSON.stringify(textPayload)
+        });
+        if (!res.ok) {
+            const errText = await res.text();
+            console.error(`⚠️ [WhatsApp Almacén Error] Status: ${res.status}`, errText);
+            return { success: false, error: errText };
+        }
+        return { success: true };
+    } catch (err) {
+        console.error('❌ Error enviando notificación WhatsApp a Almacén:', err.message);
+        return { success: false, error: err.message };
+    }
+}
+
 module.exports = {
     formatPhone,
     ensureInstanceExists,
     sendApprovalWhatsapp,
     sendDecisionConfirmationWhatsapp,
-    sendTreasuryNotificationWhatsapp
+    sendTreasuryNotificationWhatsapp,
+    sendWarehousePaymentVoucherWhatsapp
 };

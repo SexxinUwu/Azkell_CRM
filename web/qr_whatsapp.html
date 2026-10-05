@@ -343,6 +343,33 @@
           <label class="form-label" for="txtTesoreriaName">Nombre / Área de Tesorería</label>
           <input type="text" id="txtTesoreriaName" class="form-input" placeholder="Ej: Tesorería & Pagos">
         </div>
+      </div>
+
+      <!-- SECCIÓN 4: COMPROBANTE A ALMACÉN -->
+      <div class="section-divider">4. Comprobante de Pago (Almacén / Logística)</div>
+
+      <div class="receptor-card">
+        <div class="receptor-header">
+          <div class="receptor-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">📦</div>
+          <div>
+            <div class="receptor-title">Receptor de Comprobante (Almacén)</div>
+            <div class="receptor-subtitle">Recibirá la foto/voucher de constancia cuando Tesorería ejecute el pago</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="txtAlmacenPhone">Celular WhatsApp de Almacén / Solicitante</label>
+          <div class="input-wrapper">
+            <span class="input-prefix">+51</span>
+            <input type="tel" id="txtAlmacenPhone" class="form-input has-prefix" placeholder="987654321" maxlength="15">
+          </div>
+          <div class="form-hint">Ingresa los 9 dígitos del encargado de almacén que recepcionará las compras pagadas.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="txtAlmacenName">Nombre / Área de Almacén</label>
+          <input type="text" id="txtAlmacenName" class="form-input" placeholder="Ej: Almacén Central / Solicitante">
+        </div>
 
         <button class="btn btn-success" id="btnSaveReceptor" onclick="saveReceptor()" style="margin-top: 10px;">
           💾 Guardar Configuración de Contactos
@@ -409,6 +436,19 @@
           inputTesoName.value = data.tesoreria_nombre;
         }
 
+        // Cargar datos de Almacén
+        const inputAlmPhone = document.getElementById('txtAlmacenPhone');
+        const inputAlmName = document.getElementById('txtAlmacenName');
+
+        if (data.almacen_telefono && !inputAlmPhone.dataset.userEdited) {
+          let cleanA = String(data.almacen_telefono).replace(/\D/g, '');
+          if (cleanA.startsWith('51') && cleanA.length > 9) cleanA = cleanA.substring(2);
+          inputAlmPhone.value = cleanA;
+        }
+        if (data.almacen_nombre && !inputAlmName.dataset.userEdited) {
+          inputAlmName.value = data.almacen_nombre;
+        }
+
         if (data.status === 'CONNECTED') {
           container.innerHTML = `
             <div style="padding: 45px 16px; color: #10b981;">
@@ -435,6 +475,8 @@
       const nameRaw = document.getElementById('txtReceptorName').value.trim() || 'Gerencia General';
       const tesoPhoneRaw = document.getElementById('txtTesoreriaPhone').value.trim();
       const tesoNameRaw = document.getElementById('txtTesoreriaName').value.trim() || 'Tesorería / Pagos';
+      const almPhoneRaw = document.getElementById('txtAlmacenPhone').value.trim();
+      const almNameRaw = document.getElementById('txtAlmacenName').value.trim() || 'Almacén / Logística';
       const btn = document.getElementById('btnSaveReceptor');
 
       if (!phoneRaw) {
@@ -455,6 +497,14 @@
         }
       }
 
+      let cleanAlmPhone = '';
+      if (almPhoneRaw) {
+        cleanAlmPhone = almPhoneRaw.replace(/\D/g, '');
+        if (!cleanAlmPhone.startsWith('51') && cleanAlmPhone.length === 9) {
+          cleanAlmPhone = '51' + cleanAlmPhone;
+        }
+      }
+
       btn.disabled = true;
       btn.innerHTML = '⏳ Guardando...';
 
@@ -470,13 +520,15 @@
             telefono: cleanPhone,
             nombre: nameRaw,
             tesoreria_telefono: cleanTesoPhone,
-            tesoreria_nombre: tesoNameRaw
+            tesoreria_nombre: tesoNameRaw,
+            almacen_telefono: cleanAlmPhone,
+            almacen_nombre: almNameRaw
           })
         });
 
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast('✅ ¡Contactos de Gerencia y Tesorería guardados!');
+          showToast('✅ ¡Contactos de Gerencia, Tesorería y Almacén guardados!');
         } else {
           showToast('❌ Error: ' + (data.error || 'No se pudo guardar'), '#ef4444');
         }
@@ -499,6 +551,12 @@
     });
     document.getElementById('txtTesoreriaName').addEventListener('input', () => {
       document.getElementById('txtTesoreriaName').dataset.userEdited = 'true';
+    });
+    document.getElementById('txtAlmacenPhone').addEventListener('input', () => {
+      document.getElementById('txtAlmacenPhone').dataset.userEdited = 'true';
+    });
+    document.getElementById('txtAlmacenName').addEventListener('input', () => {
+      document.getElementById('txtAlmacenName').dataset.userEdited = 'true';
     });
 
     fetchQR();
