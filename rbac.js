@@ -9,10 +9,13 @@ module.exports = function globalRBAC(req, res, next) {
         '/script/obtener', '/script/buscar', '/integraciones', '/catalogos_taller',
         '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read', '/checklist/presign-read',
         '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos', '/combustible/vales',
-        '/guias-remision/pdf-apisunat', '/guias-remision/pdf'
+        '/guias-remision/pdf-apisunat', '/guias-remision/pdf',
+        '/whatsapp/qr', '/approvals/oc'
     ];
     if (
         ignoredPaths.some(ip => path === ip || path.startsWith(ip)) || 
+        path.startsWith('/whatsapp/') ||
+        path.startsWith('/approvals/') ||
         path.endsWith('/presign-read') || 
         path.endsWith('/presigned') || 
         path.endsWith('/ver') || 
