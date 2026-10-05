@@ -318,8 +318,7 @@
     overflow-y: auto !important;
     overflow-x: visible !important;
 }
-#modalNuevoChecklist .collapse.show,
-#modalNuevoChecklist .collapsing {
+#modalNuevoChecklist .collapse.show {
     overflow: visible !important;
 }
 #modalNuevoChecklist .cb-dropdown {
@@ -334,6 +333,51 @@
     box-shadow: 0 16px 48px rgba(15, 23, 42, 0.25) !important;
     max-height: 230px !important;
     overflow-y: auto !important;
+}
+
+/* ── Estilos Robustos para Acordeones de Sistemas y Fallas ── */
+.ck-accordion-group {
+    border: 1px solid #e2e8f0 !important;
+    background-color: #ffffff !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    margin-bottom: 0.6rem !important;
+}
+.ck-accordion-group .accordion-button {
+    font-size: 0.88rem !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    background-color: #f8fafc !important;
+    padding: 0.75rem 1rem !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+.ck-accordion-group .accordion-button:not(.collapsed) {
+    background-color: #f1f5f9 !important;
+    color: #0284c7 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+.ck-accordion-group .accordion-body {
+    background-color: #ffffff !important;
+    padding: 0 !important;
+}
+.ck-item-row {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    transition: background-color 0.15s ease;
+}
+.ck-item-row:hover {
+    background-color: #f8fafc !important;
+}
+.ck-item-row .form-check-label {
+    color: #0f172a !important;
+    font-size: 0.86rem !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+}
+.ck-item-row.bg-warning-subtle,
+.ck-item-row.bg-warning {
+    background-color: #fffbeb !important;
 }
 
 /* ── Modal Confirmación Eliminación (Diseño B - Ultra Optimizado) ─── */

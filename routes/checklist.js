@@ -287,11 +287,16 @@ module.exports = function (db, broadcast, logAudit) {
     router.get('/', (req, res) => {
         const tdb = getDb(req);
         const sql = `
-            SELECT id, folio, orden_viaje, fecha_reporte, placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
-                   conductor, procedencia, ubicacion_gps, fallas_tracto_json, fallas_remolque_json, fallas_libres_text,
-                   fotos_json, firma_conductor, estado, id_rampa, ots_generadas_json, creado_por, creado_en
-            FROM reportes_fallas
-            ORDER BY id DESC;
+            SELECT rf.id, rf.folio, rf.orden_viaje, rf.fecha_reporte, rf.placa_tracto, rf.placa_remolque, rf.km_inicial, rf.km_final, rf.horas_motor,
+                   rf.conductor, rf.procedencia, rf.ubicacion_gps, rf.fallas_tracto_json, rf.fallas_remolque_json, rf.fallas_libres_text,
+                   rf.fotos_json, rf.firma_conductor, rf.estado, rf.id_rampa, rf.ots_generadas_json, rf.creado_por, rf.creado_en,
+                   COALESCE(p1.cliente, '') AS empresa_tracto,
+                   COALESCE(p2.cliente, '') AS empresa_remolque,
+                   COALESCE(NULLIF(p1.cliente, ''), NULLIF(p2.cliente, ''), '') AS empresa
+            FROM reportes_fallas rf
+            LEFT JOIN placas p1 ON REPLACE(REPLACE(rf.placa_tracto, '-', ''), ' ', '') = REPLACE(REPLACE(p1.placa, '-', ''), ' ', '')
+            LEFT JOIN placas p2 ON REPLACE(REPLACE(rf.placa_remolque, '-', ''), ' ', '') = REPLACE(REPLACE(p2.placa, '-', ''), ' ', '')
+            ORDER BY rf.id DESC;
         `;
         tdb.query(sql, async (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
@@ -346,7 +351,17 @@ module.exports = function (db, broadcast, logAudit) {
     router.get('/:id', (req, res) => {
         const tdb = getDb(req);
         const id = req.params.id;
-        tdb.query('SELECT * FROM reportes_fallas WHERE id = ?', [id], async (err, rows) => {
+        const sqlSingle = `
+            SELECT rf.*,
+                   COALESCE(p1.cliente, '') AS empresa_tracto,
+                   COALESCE(p2.cliente, '') AS empresa_remolque,
+                   COALESCE(NULLIF(p1.cliente, ''), NULLIF(p2.cliente, ''), '') AS empresa
+            FROM reportes_fallas rf
+            LEFT JOIN placas p1 ON REPLACE(REPLACE(rf.placa_tracto, '-', ''), ' ', '') = REPLACE(REPLACE(p1.placa, '-', ''), ' ', '')
+            LEFT JOIN placas p2 ON REPLACE(REPLACE(rf.placa_remolque, '-', ''), ' ', '') = REPLACE(REPLACE(p2.placa, '-', ''), ' ', '')
+            WHERE rf.id = ?;
+        `;
+        tdb.query(sqlSingle, [id], async (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!rows.length) return res.status(404).json({ error: 'Reporte no encontrado' });
 

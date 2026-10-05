@@ -11,6 +11,40 @@ var canvasFirmaChecklist = null;
 var ctxFirmaChecklist = null;
 var estaFirmandoChecklist = false;
 
+// ── UTILIDAD PARA CERRAR MENÚS DESPLEGABLES (3 PUNTOS) ABIERTOS ───────────
+window.ckCerrarDropdownsAbiertos = function() {
+    try {
+        const openDropdowns = document.querySelectorAll('.dropdown-menu.show');
+        openDropdowns.forEach(menu => {
+            menu.classList.remove('show');
+            const toggle = menu.closest('.dropdown, .dropstart, .dropend, .dropup')?.querySelector('[data-bs-toggle="dropdown"]');
+            if (toggle) {
+                toggle.classList.remove('show');
+                toggle.setAttribute('aria-expanded', 'false');
+                if (window.bootstrap && bootstrap.Dropdown) {
+                    const inst = bootstrap.Dropdown.getInstance(toggle);
+                    if (inst) {
+                        try { inst.hide(); } catch(e) {}
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.warn('Error cerrando dropdowns:', e);
+    }
+};
+
+if (!window._ckDropdownGlobalListenerAdded) {
+    window._ckDropdownGlobalListenerAdded = true;
+    document.addEventListener('click', function(ev) {
+        if (ev.target && ev.target.closest && ev.target.closest('.dropdown-item')) {
+            setTimeout(function() {
+                window.ckCerrarDropdownsAbiertos();
+            }, 30);
+        }
+    });
+}
+
 // ── DEFINICIÓN COMPLETA DE ÍTEMS F-MAN-001 (CONFIGURABLE DINÁMICAMENTE) ─────
 window.SISTEMAS_TRACTO_CONFIG = [
     {
@@ -1078,19 +1112,21 @@ window.ckGenerarAccordionCardHTML = function(unidad, sysKey, title, iconClass, i
         : `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle me-2" style="font-size:0.65rem;">REMOLQUE</span>`;
 
     let itemsHTML = '';
-    items.forEach((itemTxt, idx) => {
+    const safeItems = Array.isArray(items) ? items : [];
+    safeItems.forEach((itemTxt, idx) => {
         const itemId = `item_${unidad}_${sysKey}_${idx}`;
+        const cleanTxt = (itemTxt || '').toString().trim();
         itemsHTML += `
-            <div class="ck-item-row border-bottom py-2 px-3 bg-white" data-item-text="${itemTxt.toUpperCase()}" id="row_${itemId}">
-                <div class="form-check d-flex align-items-center justify-content-between">
+            <div class="ck-item-row border-bottom py-2.5 px-3 bg-white" data-item-text="${cleanTxt.toUpperCase()}" id="row_${itemId}">
+                <div class="form-check d-flex align-items-center justify-content-between m-0">
                     <div class="flex-grow-1 d-flex align-items-center">
-                        <input class="form-check-input me-2 ck-checkbox-item" type="checkbox" id="chk_${itemId}" onchange="window.ckOnToggleFalla('${itemId}', '${unidad}', '${sysKey}', '${itemTxt.replace(/'/g, "\\'")}')">
+                        <input class="form-check-input me-2.5 ck-checkbox-item" type="checkbox" id="chk_${itemId}" onchange="window.ckOnToggleFalla('${itemId}', '${unidad}', '${sysKey}', '${cleanTxt.replace(/'/g, "\\'")}')" style="cursor: pointer; width: 1.15rem; height: 1.15rem;">
                         ${unitBadge}
-                        <label class="form-check-label fw-bold text-dark style-sm cursor-pointer mb-0" for="chk_${itemId}" id="lbl_${itemId}">
-                            ${itemTxt}
+                        <label class="form-check-label fw-bold text-dark mb-0 user-select-none" for="chk_${itemId}" id="lbl_${itemId}" style="cursor: pointer; font-size: 0.86rem; color: #0f172a !important;">
+                            ${cleanTxt}
                         </label>
                     </div>
-                    <span class="badge bg-secondary-subtle text-secondary small style-none d-none" id="tag_${itemId}">MARCADO</span>
+                    <span class="badge bg-secondary-subtle text-secondary small d-none" id="tag_${itemId}">MARCADO</span>
                 </div>
                 <div class="ck-item-textarea-box mt-2 d-none" id="box_${itemId}">
                     <textarea class="form-control form-control-sm text-uppercase border-primary-subtle" id="txt_${itemId}" rows="2" placeholder="Describa la falla encontrada en ${unidad}..." oninput="window.ckActualizarChipsFallas()"></textarea>
@@ -1101,15 +1137,15 @@ window.ckGenerarAccordionCardHTML = function(unidad, sysKey, title, iconClass, i
 
     return `
         <div class="accordion-item border rounded-3 mb-2 overflow-hidden shadow-2xs ck-accordion-group" id="group_${accordionId}">
-            <h2 class="accordion-header">
-                <button class="accordion-button collapsed fw-bold py-2 ${isTracto ? 'bg-light' : 'bg-warning-subtle bg-opacity-25'} text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
-                    <i class="bi ${iconClass} me-2 ${isTracto ? 'text-primary' : 'text-warning-emphasis'}"></i> ${title}
+            <h2 class="accordion-header m-0">
+                <button class="accordion-button collapsed fw-bold py-2.5 ${isTracto ? 'bg-light' : 'bg-warning-subtle bg-opacity-25'} text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+                    <i class="bi ${iconClass} me-2 ${isTracto ? 'text-primary' : 'text-warning-emphasis'}"></i> <span>${title}</span>
                     <span class="badge bg-secondary rounded-pill ms-2 px-2 py-1 count-badge" id="cnt_${accordionId}">0</span>
                 </button>
             </h2>
             <div id="${collapseId}" class="accordion-collapse collapse">
-                <div class="accordion-body p-0 border-top">
-                    ${itemsHTML}
+                <div class="accordion-body p-0 border-top bg-white">
+                    ${itemsHTML || '<div class="p-3 text-center text-muted small">Sin subcategorías registradas</div>'}
                 </div>
             </div>
         </div>
@@ -1218,7 +1254,7 @@ window.ckFiltrarItemsLive = function(query) {
         items.forEach(row => {
             const text = row.getAttribute('data-item-text') || row.innerText.toUpperCase();
             if (!q || text.includes(q)) {
-                row.style.display = 'block';
+                row.style.display = '';
                 matchCountInGroup++;
             } else {
                 row.style.display = 'none';
@@ -1227,7 +1263,7 @@ window.ckFiltrarItemsLive = function(query) {
 
         if (q) {
             if (matchCountInGroup > 0) {
-                group.style.display = 'block';
+                group.style.display = '';
                 if (isTractoGroup) matchesTracto += matchCountInGroup;
                 else matchesRemolque += matchCountInGroup;
                 if (collapseEl && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
@@ -1237,10 +1273,7 @@ window.ckFiltrarItemsLive = function(query) {
                 group.style.display = 'none';
             }
         } else {
-            group.style.display = 'block';
-            if (collapseEl && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
-                bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).hide();
-            }
+            group.style.display = '';
         }
     });
 
@@ -2071,12 +2104,36 @@ window.filtrarEmpresaChecklist = function(empresa, btn) {
 
 window._obtenerEmpresaDePlaca = function(placa) {
     if (!placa) return '';
-    const clean = (placa || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const clean = String(placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!clean) return '';
     const found = (window.dataGlobalPlacas || []).find(p => {
-        const pPlaca = (p[0] || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (!p) return false;
+        const pPlaca = (Array.isArray(p) ? p[0] : (p.placa || p[0] || '')).toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
         return pPlaca === clean;
     });
-    return found && found[1] ? found[1].toString().trim() : '';
+    if (found) {
+        const clienteVal = Array.isArray(found) ? found[1] : (found.cliente || found[1] || '');
+        return clienteVal ? clienteVal.toString().trim() : '';
+    }
+    return '';
+};
+
+window._obtenerEmpresaDeReporte = function(r) {
+    if (!r) return '';
+    if (r.empresa && String(r.empresa).trim() !== '' && String(r.empresa).trim() !== '-') {
+        return window._canonizarNombreEmpresa(r.empresa);
+    }
+    if (r.empresa_tracto && String(r.empresa_tracto).trim() !== '' && String(r.empresa_tracto).trim() !== '-') {
+        return window._canonizarNombreEmpresa(r.empresa_tracto);
+    }
+    if (r.empresa_remolque && String(r.empresa_remolque).trim() !== '' && String(r.empresa_remolque).trim() !== '-') {
+        return window._canonizarNombreEmpresa(r.empresa_remolque);
+    }
+    const empTracto = window._obtenerEmpresaDePlaca(r.placa_tracto);
+    if (empTracto) return window._canonizarNombreEmpresa(empTracto);
+    const empRemolque = window._obtenerEmpresaDePlaca(r.placa_remolque);
+    if (empRemolque) return window._canonizarNombreEmpresa(empRemolque);
+    return '';
 };
 
 window.poblarEmpresasChecklist = function(datos) {
@@ -2087,24 +2144,32 @@ window.poblarEmpresasChecklist = function(datos) {
     const agregarEmp = (raw) => {
         if (raw && raw !== '-' && raw.toUpperCase() !== 'CLIENTE') {
             const canon = window._canonizarNombreEmpresa(raw);
-            const key = canon.toUpperCase();
-            if (!empresasMap.has(key)) {
-                empresasMap.set(key, canon);
+            if (canon) {
+                const key = canon.toUpperCase();
+                if (!empresasMap.has(key)) {
+                    empresasMap.set(key, canon);
+                }
             }
         }
     };
 
     (datos || []).forEach(r => {
+        if (r.empresa) agregarEmp(r.empresa);
+        if (r.empresa_tracto) agregarEmp(r.empresa_tracto);
+        if (r.empresa_remolque) agregarEmp(r.empresa_remolque);
         agregarEmp(window._obtenerEmpresaDePlaca(r.placa_tracto));
         agregarEmp(window._obtenerEmpresaDePlaca(r.placa_remolque));
     });
 
-    // Si aún no hay en reportes, extraer de dataGlobalPlacas
-    if (empresasMap.size === 0 && Array.isArray(window.dataGlobalPlacas)) {
+    if (Array.isArray(window.dataGlobalPlacas)) {
         window.dataGlobalPlacas.forEach(p => {
-            agregarEmp(p[1]);
+            const cli = Array.isArray(p) ? p[1] : (p.cliente || p[1]);
+            agregarEmp(cli);
         });
     }
+
+    // Asegurar que las empresas principales siempre aparezcan en los tabs
+    ['MARSISA S.A.C.', 'ROSYMAR PERU S.A.C.', 'TRAHESA S.A.C.', 'YOGUI TRANSPORT S.A.C.'].forEach(agregarEmp);
 
     const arr = Array.from(empresasMap.values()).sort();
     const isTodasActive = !window._ckFiltroEmpresa || window._ckFiltroEmpresa === 'TODAS';
@@ -2122,13 +2187,21 @@ window.cargarTablaChecklist = function(forzarRefresh = false) {
     const c = document.getElementById('contenedorChecklistDinamico');
     if (c) c.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2 text-primary"></span> Cargando reportes...</td></tr>';
 
-    fetch('/api/checklist')
-        .then(r => {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
-        })
-        .then(data => {
-            window.dataGlobalChecklist = Array.isArray(data) ? data : [];
+    const fetchPlacas = (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0)
+        ? fetch('/api/placas').then(r => r.ok ? r.json() : []).catch(() => [])
+        : Promise.resolve(window.dataGlobalPlacas);
+
+    const fetchChecklist = fetch('/api/checklist').then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    });
+
+    Promise.all([fetchChecklist, fetchPlacas])
+        .then(([dataCk, dataPl]) => {
+            if (dataPl && dataPl.length && (!window.dataGlobalPlacas || !window.dataGlobalPlacas.length)) {
+                window.dataGlobalPlacas = dataPl;
+            }
+            window.dataGlobalChecklist = Array.isArray(dataCk) ? dataCk : [];
             window.poblarEmpresasChecklist(window.dataGlobalChecklist);
             window.filtrarChecklist();
         })
@@ -2143,20 +2216,29 @@ window.filtrarChecklist = function() {
     const q = (document.getElementById('buscadorChecklist') || {}).value || '';
     const query = q.toLowerCase().trim();
 
-    let list = Array.isArray(window.dataGlobalChecklist) ? window.dataGlobalChecklist : [];
+    const allData = Array.isArray(window.dataGlobalChecklist) ? window.dataGlobalChecklist : [];
 
-    // 1. Filtro por Estado (desde cards KPI)
-    if (window._ckFiltroEstado && window._ckFiltroEstado !== 'TODOS') {
-        list = list.filter(r => (r.estado || 'Pendiente') === window._ckFiltroEstado);
-    }
-
-    // 2. Filtro por Empresa (desde pills inferiores)
+    // 1. Filtrar por Empresa (pills inferiores)
+    let listPorEmpresa = allData;
     if (window._ckFiltroEmpresa && window._ckFiltroEmpresa !== 'TODAS') {
-        list = list.filter(r => {
-            const emp1 = window._obtenerEmpresaDePlaca(r.placa_tracto);
-            const emp2 = window._obtenerEmpresaDePlaca(r.placa_remolque);
+        listPorEmpresa = allData.filter(r => {
+            const empReporte = window._obtenerEmpresaDeReporte(r);
+            if (empReporte && window._coincideEmpresa(empReporte, window._ckFiltroEmpresa)) return true;
+            
+            const emp1 = r.empresa_tracto || window._obtenerEmpresaDePlaca(r.placa_tracto);
+            const emp2 = r.empresa_remolque || window._obtenerEmpresaDePlaca(r.placa_remolque);
             return window._coincideEmpresa(emp1, window._ckFiltroEmpresa) || window._coincideEmpresa(emp2, window._ckFiltroEmpresa);
         });
+    }
+
+    // Actualizar KPIs según la empresa seleccionada
+    window.actualizarKPIsChecklist(listPorEmpresa);
+
+    let list = listPorEmpresa;
+
+    // 2. Filtro por Estado (desde cards KPI)
+    if (window._ckFiltroEstado && window._ckFiltroEstado !== 'TODOS') {
+        list = list.filter(r => (r.estado || 'Pendiente') === window._ckFiltroEstado);
     }
 
     // 3. Buscador general de texto
@@ -2167,12 +2249,12 @@ window.filtrarChecklist = function() {
             const rem = (r.placa_remolque || '').toLowerCase();
             const cond = (r.conductor || '').toLowerCase();
             const proc = (r.procedencia || '').toLowerCase();
-            return fol.includes(query) || trac.includes(query) || rem.includes(query) || cond.includes(query) || proc.includes(query);
+            const emp = (r.empresa || '').toLowerCase();
+            return fol.includes(query) || trac.includes(query) || rem.includes(query) || cond.includes(query) || proc.includes(query) || emp.includes(query);
         });
     }
 
     window.renderizarTablaChecklist(list);
-    window.actualizarKPIsChecklist(window.dataGlobalChecklist);
 };
 
 window.renderizarTablaChecklist = function(lista) {
@@ -2252,42 +2334,43 @@ window.renderizarTablaChecklist = function(lista) {
                     </button>
 
                     <!-- Menú Desplegable 3 Puntos (Opciones adicionales) -->
-                    <div class="dropstart d-inline-block" onclick="event.stopPropagation();">
+                    <div class="dropstart d-inline-block">
                         <button class="btn btn-light border shadow-2xs rounded-3 p-0 d-flex align-items-center justify-content-center" 
                                 type="button" 
                                 data-bs-toggle="dropdown" 
                                 data-bs-boundary="viewport"
                                 aria-expanded="false" 
+                                onclick="event.stopPropagation();"
                                 style="width: 32px; height: 32px; color: #475569;" 
                                 title="Más opciones">
                             <i class="bi bi-three-dots-vertical fs-6"></i>
                         </button>
                         <ul class="dropdown-menu shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
                             <li>
-                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirDetalleChecklist(${r.id})">
+                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.ckCerrarDropdownsAbiertos(); window.abrirDetalleChecklist(${r.id})">
                                     <i class="bi bi-eye text-primary fs-6"></i> Ver Detalle
                                 </a>
                             </li>
                             ${!isFinalizado ? `
                             <li>
-                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirEditarChecklist(${r.id})">
+                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.ckCerrarDropdownsAbiertos(); window.abrirEditarChecklist(${r.id})">
                                     <i class="bi bi-pencil text-secondary fs-6"></i> Editar Reporte
                                 </a>
                             </li>
                             ` : ''}
                             <li>
-                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalGenerarOTs(${r.id})">
+                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.ckCerrarDropdownsAbiertos(); window.abrirModalGenerarOTs(${r.id})">
                                     <i class="bi bi-lightning-charge-fill text-warning fs-6"></i> Generar / Ver OTs
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.ckEnviarReportePorEmail(${r.id})">
+                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.ckCerrarDropdownsAbiertos(); window.ckEnviarReportePorEmail(${r.id})">
                                     <i class="bi bi-envelope-at text-warning-emphasis fs-6"></i> Enviar / Programar por Correo
                                 </a>
                             </li>
                             <li><hr class="dropdown-divider my-1"></li>
                             <li>
-                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window.eliminarChecklist(${r.id})">
+                                <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window.ckCerrarDropdownsAbiertos(); window.eliminarChecklist(${r.id})">
                                     <i class="bi bi-trash3 text-danger fs-6"></i> Eliminar
                                 </a>
                             </li>
@@ -2344,24 +2427,24 @@ window.renderizarTablaChecklist = function(lista) {
                     <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-1" style="font-size: 0.82rem; min-width: 170px; z-index: 1050;">
                         ${!isFinalizado ? `
                         <li>
-                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirEditarChecklist(${r.id})">
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.ckCerrarDropdownsAbiertos(); window.abrirEditarChecklist(${r.id})">
                                 <i class="bi bi-pencil text-secondary fs-6"></i> Editar Reporte
                             </a>
                         </li>
                         ` : ''}
                         <li>
-                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.abrirModalGenerarOTs(${r.id})">
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.ckCerrarDropdownsAbiertos(); window.abrirModalGenerarOTs(${r.id})">
                                 <i class="bi bi-lightning-charge-fill text-warning fs-6"></i> Generar / Ver OTs
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.ckEnviarReportePorEmail(${r.id})">
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-medium text-dark" href="javascript:void(0)" onclick="window.ckCerrarDropdownsAbiertos(); window.ckEnviarReportePorEmail(${r.id})">
                                 <i class="bi bi-envelope-at text-warning-emphasis fs-6"></i> Enviar / Programar por Correo
                             </a>
                         </li>
                         <li><hr class="dropdown-divider my-1"></li>
                         <li>
-                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window.eliminarChecklist(${r.id})">
+                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 fw-semibold text-danger" href="javascript:void(0)" onclick="window.ckCerrarDropdownsAbiertos(); window.eliminarChecklist(${r.id})">
                                 <i class="bi bi-trash3 text-danger fs-6"></i> Eliminar
                             </a>
                         </li>
@@ -2396,6 +2479,7 @@ window.actualizarKPIsChecklist = function(datos) {
 
 // ── ABRIR MODAL PARA EDITAR REPORTE EXISTENTE ────────────────────
 window.abrirEditarChecklist = async function(id) {
+    window.ckCerrarDropdownsAbiertos?.();
     let r = (window.dataGlobalChecklist || []).find(item => item.id === id);
     if (!r) {
         try {
@@ -2522,12 +2606,48 @@ window.abrirEditarChecklist = async function(id) {
 
     todasF.forEach(f => {
         const fechaOrig = f.fecha || fechaGenFmt;
-        if (f.sistema === 'MANUAL' || (f.item || '').includes('Falla Manual')) {
-            const rowId = 'manual_' + Date.now() + Math.floor(Math.random()*1000);
+        const itemLimpio = (f.item || '').toUpperCase().trim();
+        let matchEncontrado = false;
+
+        // Intentar emparejar con ítems del acordeón si no es explícitamente MANUAL
+        if (f.sistema !== 'MANUAL' && !(f.item || '').includes('Falla Manual')) {
+            document.querySelectorAll('.ck-checkbox-item').forEach(chk => {
+                if (matchEncontrado) return;
+                const itemId = chk.id.replace('chk_', '');
+                const lblEl = document.getElementById(`lbl_${itemId}`);
+                const lblText = lblEl ? lblEl.innerText.trim().toUpperCase() : '';
+                
+                // Coincidencia exacta o por inclusión de nombre
+                if (lblText && itemLimpio && (lblText === itemLimpio || lblText.includes(itemLimpio) || itemLimpio.includes(lblText))) {
+                    chk.checked = true;
+                    chk.dataset.fecha = fechaOrig;
+                    const txtEl = document.getElementById(`txt_${itemId}`);
+                    const obsWrap = document.getElementById(`obs_${itemId}`);
+                    if (obsWrap) obsWrap.classList.remove('d-none');
+                    if (txtEl && f.obs && f.obs !== f.item) txtEl.value = f.obs;
+                    matchEncontrado = true;
+                }
+            });
+        }
+
+        // Si es manual O si no coincidió con ninguna casilla predeterminada (p. ej. fallas generadas desde Inspecciones como "Cortes o Averías", "Limpieza y Regulación")
+        if (!matchEncontrado) {
+            const rowId = 'manual_' + Date.now() + Math.floor(Math.random()*10000);
             const div = document.createElement('div');
             div.className = 'row g-2 mb-2 align-items-center ck-manual-falla-row';
             div.id = rowId;
             div.dataset.fecha = fechaOrig;
+            if (f.origen_inspeccion) div.dataset.origenInspeccion = f.origen_inspeccion;
+            if (f.foto) div.dataset.foto = f.foto;
+            if (f.backlog_id) div.dataset.backlogId = f.backlog_id;
+
+            var descVal = '';
+            if (f.item && f.obs && f.item !== f.obs) {
+                descVal = (f.sistema && f.sistema !== 'MANUAL' ? '[' + f.sistema + '] ' : '') + f.item + ' — ' + f.obs;
+            } else {
+                descVal = (f.sistema && f.sistema !== 'MANUAL' ? '[' + f.sistema + '] ' : '') + (f.obs || f.item || '');
+            }
+
             div.innerHTML = `
                 <div class="col-md-4">
                     <select class="form-select form-select-sm ck-manual-sistema fw-bold text-primary border-secondary-subtle">
@@ -2536,8 +2656,8 @@ window.abrirEditarChecklist = async function(id) {
                     </select>
                 </div>
                 <div class="col-md-7">
-                    <input type="text" class="form-control form-control-sm text-uppercase ck-manual-desc border-secondary-subtle" value="${f.obs || ''}" placeholder="Describa el componente / falla no listada...">
-                    ${fechaOrig ? `<small class="text-muted d-block mt-1" style="font-size:0.7rem;"><i class="bi bi-clock-history me-1 text-primary"></i>Reportado el: <b>${fechaOrig}</b></small>` : ''}
+                    <input type="text" class="form-control form-control-sm text-uppercase ck-manual-desc border-secondary-subtle" value="${descVal.replace(/"/g, '&quot;')}" placeholder="Describa el componente / falla no listada...">
+                    ${fechaOrig ? `<small class="text-muted d-block mt-1" style="font-size:0.7rem;"><i class="bi bi-clock-history me-1 text-primary"></i>Reportado el: <b>${fechaOrig}</b> ${f.origen_inspeccion ? `<span class="badge ms-1" style="background:#f3e8ff; color:#7c3aed;"><i class="bi bi-ui-checks me-1"></i>${f.origen_inspeccion}</span>` : ''}</small>` : ''}
                 </div>
                 <div class="col-md-1 text-end">
                     <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1" onclick="document.getElementById('${rowId}').remove(); window.ckActualizarContadores();" title="Eliminar">
@@ -2546,20 +2666,6 @@ window.abrirEditarChecklist = async function(id) {
                 </div>
             `;
             wrapManuales.appendChild(div);
-        } else {
-            const itemLimpio = (f.item || '').toUpperCase().trim();
-            document.querySelectorAll('.ck-checkbox-item').forEach(chk => {
-                const itemId = chk.id.replace('chk_', '');
-                const lblEl = document.getElementById(`lbl_${itemId}`);
-                if (lblEl && lblEl.innerText.trim().toUpperCase() === itemLimpio) {
-                    chk.checked = true;
-                    chk.dataset.fecha = fechaOrig;
-                    const txtEl = document.getElementById(`txt_${itemId}`);
-                    const obsWrap = document.getElementById(`obs_${itemId}`);
-                    if (obsWrap) obsWrap.classList.remove('d-none');
-                    if (txtEl && f.obs && f.obs !== f.item) txtEl.value = f.obs;
-                }
-            });
         }
     });
 
@@ -2641,10 +2747,33 @@ window.guardarChecklist = function(e) {
             const obs = descEl ? descEl.value.trim() : '';
             const fechaFalla = row.dataset.fecha || nowFmt;
             const bId = row.dataset.backlogId || null;
+            const origInsp = row.dataset.origenInspeccion || null;
+            const fotoUrl = row.dataset.foto || null;
 
             if (obs) {
                 const isRem = sysVal.toUpperCase().includes('REMOLQUE') || sysVal.toUpperCase().includes('CARRETA') || (placaRemolque && sysVal === placaRemolque);
-                const obj = { sistema: 'MANUAL', item: bId ? `Backlog (${bId})` : 'Falla Manual', obs: obs, fecha: fechaFalla, backlog_id: bId };
+                
+                let sistemaNombre = 'MANUAL';
+                let itemNombre = bId ? `Backlog (${bId})` : (origInsp ? `Inspección (${origInsp})` : 'Falla Manual');
+                let obsFinal = obs;
+
+                const sysMatch = obs.match(/^\[([A-Z\s_\-]+)\]\s*(.+)$/i);
+                if (sysMatch) {
+                    sistemaNombre = sysMatch[1].trim().toUpperCase();
+                    obsFinal = sysMatch[2].trim();
+                }
+
+                const obj = { 
+                    sistema: sistemaNombre, 
+                    item: itemNombre, 
+                    obs: obsFinal, 
+                    observacion: obsFinal,
+                    estado: 'FALLA',
+                    fecha: fechaFalla, 
+                    backlog_id: bId,
+                    origen_inspeccion: origInsp,
+                    foto: fotoUrl
+                };
                 if (isRem) {
                     fallasRemolque.push(obj);
                 } else {
@@ -2731,6 +2860,7 @@ window.guardarChecklist = function(e) {
 
 // ── DETALLE DIGITAL COMPLETO DEL REPORTE (MODAL XL ESTILO REPORTES) ──
 window.abrirDetalleChecklist = async function(id) {
+    window.ckCerrarDropdownsAbiertos?.();
     const modalEl = document.getElementById('modalDetalleChecklistFull');
     const body = document.getElementById('det-full-body');
     const folioEl = document.getElementById('det-full-folio');
@@ -3169,6 +3299,7 @@ window.abrirDetalleChecklist = async function(id) {
 window._idChecklistAEliminar = null;
 
 window.eliminarChecklist = function(id) {
+    window.ckCerrarDropdownsAbiertos?.();
     if (!window.guardAction('checklist', 'd')) return;
     
     window._idChecklistAEliminar = id;
@@ -3223,6 +3354,7 @@ window._genOT_TodasFallas = [];
 window._genOT_Cards = [];
 
 window.abrirModalGenerarOTs = async function(id) {
+    window.ckCerrarDropdownsAbiertos?.();
     const r = (window.dataGlobalChecklist || []).find(item => item.id === id);
     if (!r) {
         alert('No se encontró la información del reporte seleccionado.');
@@ -3998,6 +4130,7 @@ window.enviarGeneracionOTs = function(e) {
 
 // ── GENERADOR DE PDF A4 F-MAN-001 REPORTE DE FALLAS FLOTA PESADA ───
 window.generarPDF_Checklist = async function(id) {
+    window.ckCerrarDropdownsAbiertos?.();
     if (typeof window.rotToast === 'function') {
         window.rotToast('Preparando formato PDF F-MAN-001...', 'bg-info');
     }
@@ -4643,6 +4776,7 @@ window.ckExportarExcel = async function() {
 
 // ── ENVIAR / PROGRAMAR REPORTE DE FALLAS POR EMAIL ────────────────
 window.ckEnviarReportePorEmail = async function(id) {
+    window.ckCerrarDropdownsAbiertos?.();
     let r = (window.dataGlobalChecklist || []).find(item => item.id === id);
     if (!r) {
         try {

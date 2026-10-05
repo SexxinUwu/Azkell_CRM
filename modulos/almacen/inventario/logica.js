@@ -1730,7 +1730,7 @@ window.invImprimirEtiquetasMasivas = function() {
 
 
 // ── Modal Add / Edit ─────────────────────────────────────────────
-window.abrirModalInventario = function(id) {
+window.abrirModalInventario = function(id, tabOrModo) {
     var titulo = document.getElementById('modal-inv-titulo');
     var form   = document.getElementById('form-inv-articulo');
     if (!form) return;
@@ -1741,39 +1741,51 @@ window.abrirModalInventario = function(id) {
     // Reset chips
     window.invMsInit('');
 
-      // Aislamiento Servicios en el modal
-      var isServicio = window._invActiveTab === 'servicios';
-        
-        var f = document.getElementById('form-inv-articulo');
-        if (f) {
-            if (isServicio) {
-                f.classList.add('form-servicio-mode');
-            } else {
-                f.classList.remove('form-servicio-mode');
-            }
+    // Aislamiento Servicios en el modal
+    var isServicio = (tabOrModo === 'servicios' || tabOrModo === 'servicio') || (window._invActiveTab === 'servicios');
+    if (id && !tabOrModo) {
+        var itemFound = (window._invData || []).find(function(d) { return d.id === id; });
+        if (itemFound && (itemFound.tipo === 'Servicio' || itemFound.tipo === 'SERV' || String(itemFound.id).startsWith('SERV'))) {
+            isServicio = true;
         }
+    }
         
-        // Cambiar labels a Servicio
-        var lblTitulo = document.getElementById('modal-inv-titulo');
-        var lblArticulo = document.querySelector('.servicio-keep .ent-field-label');
-        if (lblTitulo) {
-            if (isServicio) {
-                lblTitulo.innerHTML = id ? '<i class="bi bi-pencil-fill me-1"></i>Editar Servicio &mdash; ' + id : '<i class="bi bi-box me-1"></i>Nuevo Servicio <span style="color:var(--subtext);font-size:0.65em;display:block;margin-top:-2px;font-weight:600;">CATÁLOGO DE SERVICIOS</span>';
-            } else {
-                lblTitulo.innerHTML = id ? '<i class="bi bi-pencil-fill me-1"></i>Editar Artículo &mdash; ' + id : '<i class="bi bi-box me-1"></i>Nuevo Artículo <span style="color:var(--subtext);font-size:0.65em;display:block;margin-top:-2px;font-weight:600;">INVENTARIO DE ALMACÉN</span>';
-            }
+    var f = document.getElementById('form-inv-articulo');
+    if (f) {
+        if (isServicio) {
+            f.classList.add('form-servicio-mode');
+        } else {
+            f.classList.remove('form-servicio-mode');
         }
-        if (lblArticulo) {
-            lblArticulo.innerHTML = isServicio ? 'Servicio <span style="color:#ef4444;">*</span>' : 'Artículo <span style="color:#ef4444;">*</span>';
-        }
-        
-        if (isServicio && !id) {
-          window._cbSet('inv-f-tipo', 'Servicio', 'Servicio');
-          window._cbSet('inv-f-unidad', 'Servicio', 'Servicio');
-      }
+    }
+    
+    // Cambiar labels a Servicio
+    var lblTitulo = document.getElementById('modal-inv-titulo');
+    var lblArticulo = document.querySelector('.servicio-keep .ent-field-label');
+    var inputArticulo = document.getElementById('inv-f-articulo');
+    var btnGuardar = document.querySelector('#inv-form-drawer button[type="submit"]') || document.querySelector('#form-inv-articulo button[type="submit"]');
 
-
-    // Tabs removidos
+    if (lblTitulo) {
+        if (isServicio) {
+            lblTitulo.innerHTML = id ? '<i class="bi bi-pencil-fill me-1"></i>Editar Servicio &mdash; ' + id : '<i class="bi bi-tools me-1"></i>Nuevo Servicio <span style="color:var(--subtext);font-size:0.65em;display:block;margin-top:-2px;font-weight:600;">CATÁLOGO DE SERVICIOS</span>';
+        } else {
+            lblTitulo.innerHTML = id ? '<i class="bi bi-pencil-fill me-1"></i>Editar Artículo &mdash; ' + id : '<i class="bi bi-box me-1"></i>Nuevo Artículo <span style="color:var(--subtext);font-size:0.65em;display:block;margin-top:-2px;font-weight:600;">INVENTARIO DE ALMACÉN</span>';
+        }
+    }
+    if (lblArticulo) {
+        lblArticulo.innerHTML = isServicio ? 'Servicio <span style="color:#ef4444;">*</span>' : 'Artículo <span style="color:#ef4444;">*</span>';
+    }
+    if (inputArticulo) {
+        inputArticulo.placeholder = isServicio ? 'Ej: Filtro Aceite' : 'Ej: Filtro Aceite';
+    }
+    if (btnGuardar) {
+        btnGuardar.innerHTML = isServicio ? '<i class="bi bi-check-lg me-1"></i>Guardar Servicio' : '<i class="bi bi-check-lg me-1"></i>Guardar Artículo';
+    }
+    
+    if (isServicio && !id) {
+        window._cbSet('inv-f-tipo', 'Servicio', 'Servicio');
+        window._cbSet('inv-f-unidad', 'Servicio', 'Servicio');
+    }
 
     // Reset preview
     window._invActualizarPreview();
