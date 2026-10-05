@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } }); // 25MB max
-const { uploadToS3 } = require('../utils/s3');
+const { uploadToS3, getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
 const { createApprovalToken } = require('../services/ocApprovalService');
 const { sendApprovalWhatsapp, sendDecisionConfirmationWhatsapp } = require('../services/whatsappService');
 
@@ -216,6 +216,24 @@ module.exports = function (db, broadcast, logAudit) {
             const record = rows[0];
             const isExpired = new Date() > new Date(record.expira_en);
 
+            // Generar URL pre-firmada válida por 24 horas si el sustento está en S3
+            let presignedSustentoUrl = record.sustento_cotizacion_url;
+            if (presignedSustentoUrl) {
+                try {
+                    let s3Key = s3KeyFromUrl(presignedSustentoUrl) || presignedSustentoUrl;
+                    if (s3Key && !s3Key.startsWith('http://') && !s3Key.startsWith('https://')) {
+                        presignedSustentoUrl = await getPresignedUrl(s3Key, 86400); // 24 horas
+                    } else if (s3Key && s3Key.includes('amazonaws.com')) {
+                        const extracted = s3KeyFromUrl(s3Key);
+                        if (extracted) {
+                            presignedSustentoUrl = await getPresignedUrl(extracted, 86400);
+                        }
+                    }
+                } catch(errS3) {
+                    console.warn('Error presigning sustento URL:', errS3.message);
+                }
+            }
+
             const [items] = await tdb.query(
                 `SELECT id, descripcion, cantidad, unidad_medida, precio_unitario, subtotal 
                  FROM ordenes_compra_items 
@@ -225,6 +243,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             return res.json({
                 ...record,
+                sustento_cotizacion_url: presignedSustentoUrl,
                 is_expired: isExpired,
                 is_used: record.token_estado !== 'PENDIENTE',
                 items

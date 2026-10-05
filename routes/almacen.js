@@ -33,8 +33,32 @@ async function despacharAprobacionWhatsAppAlmacen(req, tdb, entradaId, bodyData)
             return;
         }
 
-        // 2. Sincronizar / Registrar en la tabla ordenes_compra
-        const total = parseFloat(bodyData.total_pen || 0);
+        // 2. Calcular Monto Total exacto de los ítems o base de datos
+        const itemsList = Array.isArray(bodyData.items) ? bodyData.items : [];
+        let total = 0;
+        if (itemsList.length > 0) {
+            total = itemsList.reduce((acc, it) => {
+                const cant = parseFloat(it.cantidad != null ? it.cantidad : (it.cant != null ? it.cant : 1));
+                const pu = parseFloat(it.costo_unitario != null ? it.costo_unitario : (it.pu != null ? it.pu : 0));
+                const imp = it.importe != null ? parseFloat(it.importe) : (it.total != null ? parseFloat(it.total) : (cant * pu));
+                return acc + (isNaN(imp) ? 0 : imp);
+            }, 0);
+        }
+
+        if (!total || total === 0) {
+            total = parseFloat(bodyData.total_pen || bodyData.total || bodyData.monto_total || 0);
+        }
+
+        if (!total || total === 0) {
+            try {
+                const [entRows] = await promiseDb.query("SELECT total_pen, moneda, url_cotizacion FROM entradas_inv WHERE id = ? LIMIT 1", [entradaId]);
+                if (entRows && entRows.length > 0) {
+                    if (parseFloat(entRows[0].total_pen) > 0) total = parseFloat(entRows[0].total_pen);
+                    if (!bodyData.url_cotizacion && entRows[0].url_cotizacion) bodyData.url_cotizacion = entRows[0].url_cotizacion;
+                }
+            } catch(e) {}
+        }
+
         const moneda = bodyData.moneda || 'PEN';
         const proveedor = bodyData.proveedor_nombre || 'Proveedor General';
         const ruc = bodyData.proveedor_ruc || null;
@@ -61,7 +85,6 @@ async function despacharAprobacionWhatsAppAlmacen(req, tdb, entradaId, bodyData)
         const ocId = ocRows[0].id;
 
         // Sincronizar items en ordenes_compra_items
-        const itemsList = Array.isArray(bodyData.items) ? bodyData.items : [];
         if (itemsList.length > 0) {
             await promiseDb.query("DELETE FROM ordenes_compra_items WHERE orden_compra_id = ?", [ocId]);
             for (const it of itemsList) {
