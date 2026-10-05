@@ -853,7 +853,7 @@
                 <div class="row g-3">
                     <div class="col-12 col-md-4">
                         <label class="ev-form-label">Placa Principal (Tracto) (<span class="text-danger">*</span>)</label>
-                        <input type="text" id="ev-f-placa" class="ev-form-input text-uppercase fw-bold text-primary" placeholder="SELECCIONE PLACA (EJ: AEZ984)..." oninput="window.evOnPlacaInput(this.value)" list="ev-dl-placas" required style="font-size:1rem;">
+                        <input type="text" id="ev-f-placa" class="ev-form-input text-uppercase fw-bold text-primary" placeholder="SELECCIONE PLACA (EJ: AEZ984)..." oninput="window.evOnPlacaInput(this.value)" onchange="window.evOnPlacaInput(this.value)" onblur="window.evOnPlacaInput(this.value)" list="ev-dl-placas" required style="font-size:1rem;">
                     </div>
                     <div class="col-12 col-md-4">
                         <label class="ev-form-label">Kilometraje Actual (Odómetro)</label>

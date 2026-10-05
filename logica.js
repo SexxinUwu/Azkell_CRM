@@ -110,6 +110,7 @@ let itemAEliminarID   = ''; let itemAEliminarCol  = ''; let tooltipList       = 
 
 // 🔥 SISTEMA DE CACHÉ EN MEMORIA
 const CACHE = { placas: null, fleetrun: null, usuarios: null, statusMant: null, statusFlota: null, wialon: null, conductores: null };
+window.CACHE = CACHE;
 const CACHE_TIME = {};
 
 let dataGlobalFleetrun = []; let dataGlobalInspecciones = [];
@@ -3197,29 +3198,39 @@ function recargarWialon(forzarVista = false) {
 }
 
 function buscarWialonPorPlaca(placa) {
-    if(!CACHE.wialon || !Array.isArray(CACHE.wialon)) return null;
-    let placaStr = placa ? placa.toString() : '';
+    const wList = (typeof CACHE !== 'undefined' && CACHE.wialon && Array.isArray(CACHE.wialon)) 
+        ? CACHE.wialon 
+        : (window.CACHE && Array.isArray(window.CACHE.wialon) ? window.CACHE.wialon : null);
+    if(!wList || !Array.isArray(wList) || !wList.length) return null;
+    let placaStr = placa ? placa.toString().trim() : '';
+    if (!placaStr) return null;
 
     // 1. Intentar coincidencia exacta vinculada (wialon_name)
-    let placasArr = window.dataGlobalPlacas || (CACHE && CACHE.placas) || [];
+    let placasArr = window.dataGlobalPlacas || (typeof CACHE !== 'undefined' && CACHE.placas) || (window.CACHE && window.CACHE.placas) || [];
     if (placasArr && placasArr.length > 0) {
         // Puede ser array de arrays o array de objetos
-        let vehiculo = placasArr.find(v => (v.placa || v[0]) === placaStr);
+        let cleanP = placaStr.replace(/[^A-Z0-9]/ig, '').toUpperCase();
+        let vehiculo = placasArr.find(v => {
+            let vp = String(v.placa || v[0] || '').replace(/[^A-Z0-9]/ig, '').toUpperCase();
+            return vp === cleanP;
+        });
         let wName = vehiculo ? (vehiculo.wialon_name || vehiculo[23]) : null;
         if (wName) {
-            let exactMatch = CACHE.wialon.find(w => w.nombre_wialon === wName);
+            let exactMatch = wList.find(w => (w.nombre_wialon || '').trim().toUpperCase() === String(wName).trim().toUpperCase());
             if (exactMatch) return exactMatch;
         }
     }
 
     // 2. Respaldo: Búsqueda difusa (fuzzy search) clásica
     let pLimpia = placaStr.replace(/[^A-Z0-9]/ig, '').toUpperCase();
-    return CACHE.wialon.find(w => {
+    return wList.find(w => {
         let wPlaca = w.placa ? w.placa.replace(/[^A-Z0-9]/ig, '').toUpperCase() : "";
         let wNom = w.nombre_wialon ? w.nombre_wialon.replace(/[^A-Z0-9]/ig, '').toUpperCase() : "";
-        return wPlaca.includes(pLimpia) || wNom.includes(pLimpia);
+        return (wPlaca && (wPlaca === pLimpia || wPlaca.includes(pLimpia) || pLimpia.includes(wPlaca))) ||
+               (wNom && (wNom === pLimpia || wNom.includes(pLimpia) || pLimpia.includes(wNom)));
     });
 }
+window.buscarWialonPorPlaca = buscarWialonPorPlaca;
 
 function abrirMapaFlotante(placa, lat, lng) {
     let mapaTituloEl = document.getElementById('mapa-placa-titulo');

@@ -1620,29 +1620,89 @@ module.exports = (db, logAudit) => {
         const sql = `
             SELECT 
                 p.placa, p.cliente, p.marca, p.modelo_uts, p.tipo, p.sub_tipo, p.color, 
-                p.nro_motor, p.nro_vin, p.configuracion, p.combustible
+                p.nro_motor, p.nro_vin, p.configuracion, p.combustible, p.wialon_name
             FROM placas p 
-            WHERE p.placa = ? LIMIT 1
+            WHERE p.placa = ? OR REPLACE(p.placa, '-', '') = ? LIMIT 1
         `;
-        db.query(sql, [p], (err, rows) => {
+        const cleanP = p.replace(/[^A-Z0-9]/g, '');
+        db.query(sql, [p, cleanP], (err, rows) => {
             if (err) {
                 console.error('Error placa-detalle:', err.message);
                 return res.status(500).json({ error: err.message });
             }
             if (!rows || !rows.length) return res.json({ ok: false, msg: 'Placa no encontrada' });
             const d = rows[0];
+            const wName = (d.wialon_name || '').trim();
 
-            // Intentar obtener el último KM registrado en seg_unidades_registros de forma no bloqueante
-            db.query(
-                `SELECT km_inicial, retorno_km FROM seg_unidades_registros WHERE placa_camion = ? ORDER BY id DESC LIMIT 1`,
-                [p],
-                (errKm, kmRows) => {
-                    let km = 0;
-                    if (!errKm && kmRows && kmRows.length) {
-                        km = kmRows[0].retorno_km || kmRows[0].km_inicial || 0;
-                    }
+            // 1. Intentar obtener el Odómetro más reciente de GPS Wialon (km_snapshots)
+            const sqlGps = `
+                SELECT km_gps, horas_motor 
+                FROM km_snapshots 
+                WHERE (REPLACE(placa, '-', '') = ? OR placa = ? OR placa = ?) AND km_gps > 0
+                ORDER BY fecha DESC, id DESC 
+                LIMIT 1
+            `;
+            db.query(sqlGps, [cleanP, p, wName], (errGps, gpsRows) => {
+                let km = 0;
+                if (!errGps && gpsRows && gpsRows.length && gpsRows[0].km_gps > 0) {
+                    km = Math.round(gpsRows[0].km_gps);
+                }
 
-                    res.json({
+                // 2. Si no hay snapshot GPS, buscar en seg_unidades_registros o entregas previas
+                if (!km) {
+                    db.query(
+                        `SELECT retorno_km, km_inicial FROM seg_unidades_registros WHERE placa_camion = ? ORDER BY id DESC LIMIT 1`,
+                        [p],
+                        (errKm, kmRows) => {
+                            if (!errKm && kmRows && kmRows.length) {
+                                km = kmRows[0].retorno_km || kmRows[0].km_inicial || 0;
+                            }
+                            if (!km) {
+                                db.query(
+                                    `SELECT kilometraje FROM seg_entrega_vehiculos WHERE placa = ? AND kilometraje > 0 ORDER BY id DESC LIMIT 1`,
+                                    [p],
+                                    (errEnt, entRows) => {
+                                        if (!errEnt && entRows && entRows.length) {
+                                            km = entRows[0].kilometraje || 0;
+                                        }
+                                        return res.json({
+                                            ok: true,
+                                            data: {
+                                                placa: d.placa,
+                                                cliente: d.cliente,
+                                                marca: d.marca || '',
+                                                modelo: d.modelo_uts || '',
+                                                tipo: d.sub_tipo || d.tipo || 'TRACTO',
+                                                color: d.color || '',
+                                                numero_motor: d.nro_motor || '',
+                                                numero_serie: d.nro_vin || '',
+                                                configuracion: (d.configuracion || '').toUpperCase().trim(),
+                                                kilometraje: km
+                                            }
+                                        });
+                                    }
+                                );
+                            } else {
+                                return res.json({
+                                    ok: true,
+                                    data: {
+                                        placa: d.placa,
+                                        cliente: d.cliente,
+                                        marca: d.marca || '',
+                                        modelo: d.modelo_uts || '',
+                                        tipo: d.sub_tipo || d.tipo || 'TRACTO',
+                                        color: d.color || '',
+                                        numero_motor: d.nro_motor || '',
+                                        numero_serie: d.nro_vin || '',
+                                        configuracion: (d.configuracion || '').toUpperCase().trim(),
+                                        kilometraje: km
+                                    }
+                                });
+                            }
+                        }
+                    );
+                } else {
+                    return res.json({
                         ok: true,
                         data: {
                             placa: d.placa,
@@ -1658,7 +1718,7 @@ module.exports = (db, logAudit) => {
                         }
                     });
                 }
-            );
+            });
         });
     });
 
