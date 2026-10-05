@@ -3,19 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Aprobación de Orden de Compra | Azkell ERP</title>
+  <title>Orden de Compra | Aprobación Ejecutiva</title>
   <link rel="icon" type="image/png" href="/favicon-2003.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f8fafc;
-      --card-bg: #ffffff;
-      --card-border: #e2e8f0;
+      --bg: #f1f5f9;
+      --paper-bg: #ffffff;
+      --border-color: #e2e8f0;
+      --border-dark: #cbd5e1;
       --text-main: #0f172a;
-      --text-sub: #475569;
+      --text-sub: #334155;
       --text-muted: #64748b;
+      --primary: #1e3a8a;
       --accent: #2563eb;
       --accent-light: #eff6ff;
       --green: #10b981;
@@ -35,339 +37,457 @@
     body {
       background-color: var(--bg);
       color: var(--text-main);
-      padding: 16px;
+      padding: 14px 10px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      background-image: radial-gradient(circle at 50% 0%, #e0f2fe 0%, transparent 65%);
+      align-items: center;
+      background-image: radial-gradient(circle at 50% 0%, #e2e8f0 0%, #f1f5f9 70%);
     }
-    .wrapper {
-      max-width: 480px;
+    .document-wrapper {
+      max-width: 540px;
       width: 100%;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-    }
-    .top-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 4px 4px 8px 4px;
-    }
-    .logo-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      font-weight: 800;
-      color: var(--accent);
-      letter-spacing: 0.5px;
-    }
-    .logo-badge img {
-      width: 26px;
-      height: 26px;
-      border-radius: 7px;
-      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
-    }
-    .badge-pill {
-      background: #e2e8f0;
-      color: #334155;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.3px;
+      gap: 12px;
     }
 
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
-      padding: 22px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+    /* Hoja Formal de Orden de Compra (Estilo Documento Ejecutivo / PDF) */
+    .document-sheet {
+      background: var(--paper-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 22px 20px;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+      position: relative;
     }
-    .header {
+
+    /* Encabezado del Documento */
+    .doc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 14px;
+      margin-bottom: 14px;
+      gap: 10px;
+    }
+    .doc-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .doc-logo {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    .doc-company-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.3px;
+      line-height: 1.1;
+    }
+    .doc-company-sub {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 3px;
+    }
+
+    .doc-number-box {
+      text-align: right;
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 6px 10px;
+      min-width: 140px;
+    }
+    .doc-type-title {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .doc-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 1px 0;
+    }
+    .doc-date {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Estado del documento */
+    .doc-status-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      background: #fffbeb;
+      border: 1px solid #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 14px;
     }
-    .badge-status {
-      background: #fef3c7;
-      color: #b45309;
-      border: 1px solid #fde68a;
-      padding: 4px 10px;
-      border-radius: 999px;
+    .doc-status-tag {
       font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-    .title {
-      font-size: 22px;
       font-weight: 800;
-      color: var(--text-main);
-      letter-spacing: -0.5px;
-      margin-bottom: 4px;
+      color: #b45309;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
-    .supplier {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-sub);
-      margin-bottom: 16px;
-      line-height: 1.4;
+    .doc-badge-valid {
+      font-size: 10px;
+      font-weight: 700;
+      color: #92400e;
     }
-    .meta-grid {
+
+    /* Grilla de Datos de la Orden (Factura/Sustento) */
+    .doc-details-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       background: #f8fafc;
-      border: 1px solid #edf2f7;
-      border-radius: 14px;
-      padding: 12px 14px;
-      margin-bottom: 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
+      font-size: 12px;
     }
-    .meta-item { display: flex; flex-direction: column; }
-    .meta-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
-    .meta-val { font-size: 13px; font-weight: 700; color: var(--text-main); margin-top: 2px; }
+    .doc-field {
+      display: flex;
+      flex-direction: column;
+    }
+    .doc-field.full {
+      grid-column: span 2;
+    }
+    .field-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 2px;
+    }
+    .field-value {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      word-break: break-word;
+      line-height: 1.3;
+    }
+    .field-value.highlight {
+      color: var(--primary);
+      font-size: 13px;
+    }
 
-    .total-container {
-      background: linear-gradient(135deg, #eff6ff 0%, #ecfdf5 100%);
-      border: 1px solid #bfdbfe;
-      border-radius: 16px;
-      padding: 18px 14px;
-      margin: 16px 0;
-      text-align: center;
-    }
-    .total-label { 
-      font-size: 11px; 
-      text-transform: uppercase; 
-      color: var(--text-muted); 
-      letter-spacing: 0.6px; 
-      font-weight: 700; 
-    }
-    .total-amount { 
-      font-size: 32px; 
-      font-weight: 800; 
-      color: var(--accent); 
-      margin-top: 4px; 
-      letter-spacing: -0.5px; 
-    }
-
-    .pdf-button {
+    /* Botón de Cotización Adjunta */
+    .doc-quotation-btn {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      width: 100%;
-      background: #eff6ff;
+      gap: 8px;
+      background: var(--accent-light);
+      border: 1px dashed var(--accent);
       color: var(--accent);
-      border: 1px solid #bfdbfe;
-      border-radius: 14px;
-      padding: 14px;
-      font-size: 14px;
+      padding: 11px 14px;
+      border-radius: 12px;
+      font-size: 12.5px;
       font-weight: 700;
       text-decoration: none;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       transition: all 0.2s;
     }
-    .pdf-button:hover {
+    .doc-quotation-btn:hover {
       background: #dbeafe;
     }
-    .pdf-button:active {
-      transform: scale(0.98);
-    }
 
-    .table-container { margin: 16px 0 8px 0; }
-    .table-header-title { 
-      font-size: 12px; 
-      font-weight: 700; 
-      text-transform: uppercase; 
-      color: var(--text-muted); 
-      margin-bottom: 10px; 
-      letter-spacing: 0.5px; 
-    }
-    .item-card {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
+    /* Tabla Formal de Ítems */
+    .doc-table-wrapper {
+      margin-bottom: 14px;
+      border: 1px solid var(--border-color);
       border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      overflow: hidden;
     }
-    .item-desc { font-size: 13px; font-weight: 700; color: var(--text-main); line-height: 1.3; }
-    .item-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
-    .item-total { font-size: 14px; font-weight: 800; color: var(--text-main); text-align: right; }
+    .doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      text-align: left;
+    }
+    .doc-table th {
+      background: #f1f5f9;
+      color: var(--text-sub);
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 9.5px;
+      letter-spacing: 0.5px;
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .doc-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+    .doc-table tr:last-child td {
+      border-bottom: none;
+    }
+    .doc-table tr:nth-child(even) {
+      background: #fafafa;
+    }
+    .td-num { text-align: center; color: var(--text-muted); font-weight: 600; width: 24px; }
+    .td-desc { font-weight: 600; }
+    .td-cant { text-align: center; font-weight: 700; white-space: nowrap; }
+    .td-pu { text-align: right; font-family: 'JetBrains Mono', monospace; }
+    .td-total { text-align: right; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
 
-    .actions {
+    /* Totalización */
+    .doc-total-box {
       display: flex;
-      gap: 12px;
-      padding-top: 10px;
-      position: sticky;
-      bottom: 0;
-      background: linear-gradient(0deg, var(--bg) 85%, transparent 100%);
-      padding-bottom: 12px;
+      justify-content: flex-end;
+      margin-bottom: 10px;
     }
-    .btn {
+    .total-card {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 16px;
+      min-width: 220px;
+      text-align: right;
+    }
+    .total-title {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .total-number {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -0.5px;
+      margin-top: 2px;
+    }
+
+    /* Barra de Autorización / Sticky Actions */
+    .doc-actions-bar {
+      display: flex;
+      gap: 10px;
+      position: sticky;
+      bottom: 10px;
+      z-index: 50;
+      padding-top: 4px;
+    }
+    .action-btn {
       flex: 1;
-      padding: 16px;
+      padding: 15px 12px;
       border: none;
       border-radius: 14px;
-      font-size: 15px;
-      font-weight: 700;
+      font-size: 14px;
+      font-weight: 800;
       cursor: pointer;
       display: flex;
       justify-content: center;
       align-items: center;
       gap: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       transition: all 0.2s;
     }
-    .btn:active { transform: scale(0.97); }
-    .btn-approve {
+    .action-btn:active { transform: scale(0.97); }
+    .action-btn-approve {
       background: var(--green);
       color: #ffffff;
-      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+      flex: 1.4;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
     }
-    .btn-approve:hover {
-      background: var(--green-dark);
-    }
-    .btn-reject {
-      background: var(--red-light);
+    .action-btn-approve:hover { background: var(--green-dark); }
+    .action-btn-reject {
+      background: #ffffff;
       color: var(--red-dark);
-      border: 1px solid #fecaca;
+      border: 1.5px solid #fca5a5;
     }
-    .btn-reject:hover {
-      background: #fee2e2;
-    }
+    .action-btn-reject:hover { background: #fee2e2; }
 
-    /* Modal de confirmación de rechazo */
+    /* Modal de Rechazo */
     #rejectModal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.6);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      padding: 20px;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 16px;
       align-items: center;
       justify-content: center;
       z-index: 100;
     }
-    .modal-box {
+    .modal-sheet {
       background: #ffffff;
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
-      padding: 24px;
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 22px;
       width: 100%;
       max-width: 380px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
     }
     textarea {
       width: 100%;
-      height: 100px;
+      height: 95px;
       background: #f8fafc;
-      border: 1px solid #cbd5e1;
-      border-radius: 12px;
+      border: 1px solid var(--border-dark);
+      border-radius: 10px;
       color: var(--text-main);
-      padding: 12px;
-      margin: 14px 0;
+      padding: 10px;
+      margin: 12px 0;
       outline: none;
-      font-size: 14px;
+      font-size: 13px;
       resize: none;
     }
-    textarea:focus { 
-      border-color: var(--accent); 
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-    }
-    
+    textarea:focus { border-color: var(--accent); }
+
+    /* Pantallas de Estado */
     .status-screen {
       text-align: center;
-      margin: auto;
-      padding: 40px 20px;
+      padding: 45px 20px;
       background: #ffffff;
-      border: 1px solid var(--card-border);
-      border-radius: 24px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
     }
-    .status-icon {
-      font-size: 58px;
-      margin-bottom: 14px;
-      display: inline-block;
-    }
-    .status-title { font-size: 20px; font-weight: 800; color: var(--text-main); margin-bottom: 8px; }
-    .status-desc { font-size: 14px; color: var(--text-sub); line-height: 1.5; }
+    .status-icon { font-size: 54px; margin-bottom: 12px; }
+    .status-title { font-size: 19px; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
+    .status-desc { font-size: 13px; color: var(--text-sub); line-height: 1.5; }
   </style>
 </head>
 <body>
 
-  <div class="wrapper" id="mainContainer">
-    <div class="top-bar">
-      <div class="logo-badge">
-        <img src="/favicon-2003.png" alt="Azkell">
-        <span id="tenantBrandTitle">AZKELL ERP</span>
-      </div>
-      <span class="badge-pill" id="badgeStatus">⏱ Vigente 24h</span>
-    </div>
-
-    <div class="card" id="cardContent">
-      <div class="header">
-        <span class="badge-status">
-          ⏳ Pendiente de Aprobación
-        </span>
-        <span id="ocDate" style="font-size: 12px; color: var(--text-muted); font-weight: 600;"></span>
-      </div>
-
-      <h1 class="title" id="ocCode">Cargando...</h1>
-      <p class="supplier" id="ocSupplier">--</p>
-
-      <div class="meta-grid">
-        <div class="meta-item">
-          <span class="meta-label">Solicitado por</span>
-          <span class="meta-val" id="ocSolicitante">--</span>
+  <div class="document-wrapper" id="mainContainer">
+    
+    <!-- Hoja de Orden de Compra Ejecutiva -->
+    <div class="document-sheet" id="docSheet">
+      
+      <!-- 1. Encabezado de la Empresa -->
+      <div class="doc-header">
+        <div class="doc-brand">
+          <img id="companyLogo" src="/favicon-2003.png" alt="Logo Empresa" class="doc-logo">
+          <div>
+            <div class="doc-company-name" id="companyName">MARSISA. FLEET</div>
+            <div class="doc-company-sub">SISTEMA DE GESTIÓN & LOGÍSTICA</div>
+          </div>
         </div>
-        <div class="meta-item">
-          <span class="meta-label">RUC Proveedor</span>
-          <span class="meta-val" id="ocRuc">--</span>
+
+        <div class="doc-number-box">
+          <div class="doc-type-title">ORDEN DE COMPRA</div>
+          <div class="doc-code" id="ocCode">Cargando...</div>
+          <div class="doc-date" id="ocDate">--</div>
         </div>
       </div>
 
-      <div class="total-container">
-        <div class="total-label">Monto Total a Autorizar</div>
-        <div class="total-amount" id="ocTotal">--</div>
+      <!-- 2. Barra de Estado -->
+      <div class="doc-status-bar">
+        <div class="doc-status-tag">
+          <span>⏳</span> Pendiente de Autorización
+        </div>
+        <div class="doc-badge-valid">⏱ Vigente 24h</div>
       </div>
 
-      <!-- Sustento de Cotización / Archivo Adjunto -->
-      <a id="btnQuotation" href="#" target="_blank" class="pdf-button" style="display: none;">
-        📄 Ver Sustento / Cotización Adjunta
+      <!-- 3. Grilla de Información de la Orden -->
+      <div class="doc-details-grid">
+        <div class="doc-field full">
+          <span class="field-label">Proveedor</span>
+          <span class="field-value highlight" id="ocSupplier">--</span>
+        </div>
+        <div class="doc-field">
+          <span class="field-label">RUC Proveedor</span>
+          <span class="field-value" id="ocRuc">--</span>
+        </div>
+        <div class="doc-field">
+          <span class="field-label">Solicitado por</span>
+          <span class="field-value" id="ocSolicitante">--</span>
+        </div>
+        <div class="doc-field">
+          <span class="field-label">Condición / Moneda</span>
+          <span class="field-value" id="ocCondicion">Al contado • SOLES</span>
+        </div>
+        <div class="doc-field">
+          <span class="field-label">Destino / OT</span>
+          <span class="field-value" id="ocDestino">Sede Principal</span>
+        </div>
+        <div class="doc-field full">
+          <span class="field-label">Motivo / Justificación</span>
+          <span class="field-value" id="ocMotivo">--</span>
+        </div>
+      </div>
+
+      <!-- 4. Sustento / Cotización Adjunta -->
+      <a id="btnQuotation" href="#" target="_blank" class="doc-quotation-btn" style="display: none;">
+        <span>📄</span> <span>Ver Cotización / Sustento Adjunto (PDF)</span>
       </a>
 
-      <div class="table-container">
-        <div class="table-header-title">Ítems Solicitados</div>
-        <div id="itemsList">
-          <div style="text-align: center; color: var(--text-muted); padding: 16px; font-size: 13px;">Cargando ítems...</div>
+      <!-- 5. Tabla Formal de Ítems -->
+      <div class="doc-table-wrapper">
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th class="td-num">#</th>
+              <th>Descripción</th>
+              <th class="td-cant">Cant.</th>
+              <th class="td-pu">P. Unit.</th>
+              <th class="td-total">Total</th>
+            </tr>
+          </thead>
+          <tbody id="itemsTableBody">
+            <tr>
+              <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 18px;">Cargando ítems solicitados...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 6. Totalización Formal -->
+      <div class="doc-total-box">
+        <div class="total-card">
+          <div class="total-title">Total a Autorizar</div>
+          <div class="total-number" id="ocTotal">S/ 0.00</div>
         </div>
       </div>
+
     </div>
 
-    <div class="actions" id="actionButtons">
-      <button class="btn btn-reject" onclick="openRejectModal()">✕ Rechazar</button>
-      <button class="btn btn-approve" onclick="submitDecision('APPROVE')">✓ Aprobar Orden</button>
+    <!-- Barra Inferior de Autorización -->
+    <div class="doc-actions-bar" id="actionButtons">
+      <button class="action-btn action-btn-reject" onclick="openRejectModal()">✕ Rechazar</button>
+      <button class="action-btn action-btn-approve" onclick="submitDecision('APPROVE')">✓ AUTORIZAR ORDEN</button>
     </div>
+
   </div>
 
-  <!-- Modal para Motivo de Rechazo -->
+  <!-- Modal de Rechazo -->
   <div id="rejectModal">
-    <div class="modal-box">
-      <h3 style="font-size: 17px; font-weight: 800; color: var(--text-main);">Rechazar Orden de Compra</h3>
-      <p style="font-size: 13px; color: var(--text-sub); margin-top: 4px;">Indica el motivo de la observación para el solicitante:</p>
-      <textarea id="rejectReason" placeholder="Ej: Precios unitarios muy altos o requiere cotizar con otro proveedor..."></textarea>
-      <div style="display: flex; gap: 10px;">
-        <button class="btn btn-reject" style="padding: 12px; font-size: 13px;" onclick="closeRejectModal()">Cancelar</button>
-        <button class="btn" style="background: var(--red); color: white; padding: 12px; font-size: 13px;" onclick="submitDecision('REJECT')">Confirmar Rechazo</button>
+    <div class="modal-sheet">
+      <h3 style="font-size: 16px; font-weight: 800; color: #0f172a;">Rechazar / Observar Orden</h3>
+      <p style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">Indica el motivo de la observación para el solicitante:</p>
+      <textarea id="rejectReason" placeholder="Ej: Cotizar con otro proveedor o precios unitarios observados..."></textarea>
+      <div style="display: flex; gap: 8px;">
+        <button class="action-btn action-btn-reject" style="padding: 10px; font-size: 12.5px;" onclick="closeRejectModal()">Cancelar</button>
+        <button class="action-btn" style="background: var(--red-dark); color: white; padding: 10px; font-size: 12.5px;" onclick="submitDecision('REJECT')">Confirmar Rechazo</button>
       </div>
     </div>
   </div>
@@ -405,38 +525,69 @@
           return;
         }
 
-        // Renderizar datos de la OC
-        document.getElementById('ocCode').innerText = data.codigo;
-        document.getElementById('ocSupplier').innerText = data.proveedor_nombre;
+        // 1. Logo y Nombre de la Empresa
+        if (data.empresa_nombre) {
+          document.getElementById('companyName').innerText = data.empresa_nombre;
+        }
+        if (data.empresa_logo) {
+          document.getElementById('companyLogo').src = data.empresa_logo;
+        }
+
+        // 2. Datos de la Orden
+        document.getElementById('ocCode').innerText = data.codigo || '--';
+        document.getElementById('ocSupplier').innerText = data.proveedor_nombre || '--';
         document.getElementById('ocRuc').innerText = data.proveedor_ruc || 'No registrado';
-        document.getElementById('ocSolicitante').innerText = data.solicitado_por || 'Taller / Compras';
+        document.getElementById('ocSolicitante').innerText = data.solicitado_por || 'Almacén / Taller';
+        document.getElementById('ocMotivo').innerText = data.motivo_solicitud || data.observaciones || 'Adquisición de repuestos / servicios';
+
+        // Destino y Condición
+        let destinoTxt = 'Sede Principal / Almacén';
+        if (data.placa) destinoTxt = `Unidad ${data.placa}`;
+        if (data.ot_id) destinoTxt += ` • OT: ${data.ot_id}`;
+        document.getElementById('ocDestino').innerText = destinoTxt;
+
+        const condTxt = data.condicion_pago ? `${data.condicion_pago} • ${data.moneda === 'USD' ? 'DÓLARES' : 'SOLES'}` : (data.moneda === 'USD' ? 'DÓLARES (USD)' : 'SOLES (PEN)');
+        document.getElementById('ocCondicion').innerText = condTxt;
 
         const dateStr = data.creado_en ? new Date(data.creado_en).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
         document.getElementById('ocDate').innerText = dateStr;
 
         const sym = data.moneda === 'USD' ? '$' : 'S/';
-        document.getElementById('ocTotal').innerText = `${sym} ${parseFloat(data.monto_total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+        // 3. Monto Total (Calculado de ítems o base de datos)
+        let totalCalculado = parseFloat(data.monto_total || 0);
+        const items = data.items || [];
+        if (totalCalculado === 0 && items.length > 0) {
+          totalCalculado = items.reduce((acc, it) => acc + (parseFloat(it.subtotal) || (parseFloat(it.cantidad || 1) * parseFloat(it.precio_unitario || 0))), 0);
+        }
+        document.getElementById('ocTotal').innerText = `${sym} ${totalCalculado.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // 4. Cotización Adjunta
         if (data.sustento_cotizacion_url) {
           const btn = document.getElementById('btnQuotation');
           btn.href = data.sustento_cotizacion_url;
           btn.style.display = 'flex';
         }
 
-        // Renderizar ítems
-        const itemsList = document.getElementById('itemsList');
-        if (data.items && data.items.length > 0) {
-          itemsList.innerHTML = data.items.map(item => `
-            <div class="item-card">
-              <div>
-                <div class="item-desc">${escapeHtml(item.descripcion)}</div>
-                <div class="item-sub">${item.cantidad} ${item.unidad_medida || 'UND'} &times; ${sym} ${parseFloat(item.precio_unitario || 0).toFixed(2)}</div>
-              </div>
-              <div class="item-total">${sym} ${parseFloat(item.subtotal || 0).toFixed(2)}</div>
-            </div>
-          `).join('');
+        // 5. Renderizar Tabla Formal de Ítems
+        const tbody = document.getElementById('itemsTableBody');
+        if (items.length > 0) {
+          tbody.innerHTML = items.map((it, idx) => {
+            const cant = parseFloat(it.cantidad || 1);
+            const pu = parseFloat(it.precio_unitario || 0);
+            const sub = it.subtotal != null ? parseFloat(it.subtotal) : (cant * pu);
+            return `
+              <tr>
+                <td class="td-num">${idx + 1}</td>
+                <td class="td-desc">${escapeHtml(it.descripcion)}</td>
+                <td class="td-cant">${cant} ${it.unidad_medida || 'UND'}</td>
+                <td class="td-pu">${sym} ${pu.toFixed(2)}</td>
+                <td class="td-total">${sym} ${sub.toFixed(2)}</td>
+              </tr>
+            `;
+          }).join('');
         } else {
-          itemsList.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 12px; font-size: 13px;">Sin desglose de ítems</div>`;
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 14px;">Sin ítems desglosados</td></tr>`;
         }
 
       } catch (err) {
@@ -447,11 +598,10 @@
     async function submitDecision(action) {
       const reason = document.getElementById('rejectReason').value.trim();
       if (action === 'REJECT' && !reason) {
-        alert('Por favor escribe un motivo de rechazo.');
+        alert('Por favor escribe un motivo para la observación o rechazo.');
         return;
       }
 
-      // Desactivar botones mientras procesa
       const actionBtns = document.getElementById('actionButtons');
       if (actionBtns) actionBtns.style.opacity = '0.5';
 
@@ -470,8 +620,8 @@
           action === 'APPROVE' ? '✅' : '❌',
           action === 'APPROVE' ? 'Orden Aprobada con Éxito' : 'Orden Rechazada',
           action === 'APPROVE' 
-            ? 'La Orden de Compra ha sido autorizada satisfactoriamente y el ERP ha sido actualizado.'
-            : 'Se ha registrado la observación y el estado fue cambiado a RECHAZADA en el ERP.'
+            ? 'La Orden de Compra ha sido autorizada satisfactoriamente y el ERP ha sido actualizado a estado <b>APROBADO</b>.'
+            : 'Se ha registrado la observación y el estado fue cambiado a <b>RECHAZADO</b> en el ERP.'
         );
 
       } catch (err) {
