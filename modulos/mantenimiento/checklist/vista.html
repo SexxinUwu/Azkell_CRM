@@ -221,6 +221,34 @@
     background: #f8fafc !important;
 }
 
+/* ── Tarjetas de Sistemas Checklist ──────────────────────────────── */
+.ck-system-card {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    margin-bottom: 0.65rem !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.ck-system-card:hover {
+    border-color: #cbd5e1 !important;
+}
+.ck-system-header {
+    padding: 0.75rem 1rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    transition: background 0.15s ease;
+}
+.ck-system-header .bi-chevron-down {
+    transition: transform 0.2s ease;
+}
+.ck-system-header[aria-expanded="true"] .bi-chevron-down {
+    transform: rotate(180deg);
+}
+
 /* ── Config Drawer Modal (80% de altura, 100% ancho de borde a borde, sube de abajo hacia arriba) ── */
 .ck-fullscreen-config-dialog,
 #modalConfigChecklistSistemas .modal-dialog {

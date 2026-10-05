@@ -2375,22 +2375,35 @@ window._salFiltrarDropdownArt = function (idx) {
         var marcaBadge = item.marca ? '<span class="badge bg-light text-secondary border px-1.5 py-0.5 rounded-2" style="font-size:0.68rem;">' + item.marca + '</span>' : '';
         var sistemaText = item.sistema ? '<span class="text-muted small"><i class="bi bi-gear-wide-connected me-1"></i>' + item.sistema + '</span>' : '';
 
+        var imgThumb = item.imagen_url 
+            ? `<div style="width: 38px; height: 38px; min-width: 38px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; justify-content: center; flex-shrink:0;">
+                <img src="${salEsc(item.imagen_url)}" alt="${safeId}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='<i class=\\'bi bi-box-seam text-secondary\\'></i>';">
+               </div>`
+            : `<div style="width: 38px; height: 38px; min-width: 38px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; flex-shrink:0;">
+                <i class="bi bi-box-seam text-secondary" style="font-size: 1.1rem;"></i>
+               </div>`;
+
         return `
             <div class="sal-art-opt" 
                  onmousedown="window._salSeleccionarArticulo(${idx}, '${safeId}')"
                  onmouseenter="this.style.background='#f8fafc'" 
                  onmouseleave="this.style.background='#ffffff'">
-                <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
-                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                        <span class="badge bg-dark text-white fw-bold px-2 py-0.5 rounded-2" style="font-size:0.72rem;">${item.id}</span>
-                        ${marcaBadge}
+                <div class="d-flex align-items-start gap-2.5">
+                    ${imgThumb}
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                <span class="badge bg-dark text-white fw-bold px-2 py-0.5 rounded-2" style="font-size:0.72rem;">${item.id}</span>
+                                ${marcaBadge}
+                            </div>
+                            ${stockBadge}
+                        </div>
+                        <div class="fw-semibold text-dark text-truncate" style="font-size:0.84rem;" title="${safeDesc}">${item.descripcion || item.articulo || ''}</div>
+                        <div class="d-flex align-items-center justify-content-between text-muted mt-1" style="font-size:0.72rem;">
+                            ${sistemaText}
+                            <span class="fw-bold" style="color:#0f172a;">S/. ${costo.toFixed(2)}</span>
+                        </div>
                     </div>
-                    ${stockBadge}
-                </div>
-                <div class="fw-semibold text-dark text-truncate" style="font-size:0.84rem;" title="${safeDesc}">${item.descripcion || item.articulo || ''}</div>
-                <div class="d-flex align-items-center justify-content-between text-muted mt-1" style="font-size:0.72rem;">
-                    ${sistemaText}
-                    <span class="fw-bold" style="color:#0f172a;">S/. ${costo.toFixed(2)}</span>
                 </div>
             </div>
         `;

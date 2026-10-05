@@ -3214,42 +3214,53 @@ window.rotAbrirEditarMateriales = function(idSalida, idOt) {
         modalEl.className = 'modal fade';
         modalEl.tabIndex = -1;
         modalEl.setAttribute('aria-hidden', 'true');
+        modalEl.style.zIndex = '1150';
         modalEl.innerHTML = `
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-                <div class="modal-header bg-light border-bottom py-3 px-4">
-                    <div>
-                        <h5 class="modal-title fw-bold text-dark m-0 d-flex align-items-center gap-2" id="rot-edit-mat-title">
-                            <i class="bi bi-pencil-square text-primary"></i> Editar Cantidades de Solicitud
-                        </h5>
-                        <p class="text-muted small m-0 mt-1" id="rot-edit-mat-subtitle">Modifique las cantidades solicitadas antes de despachar en almacén</p>
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 740px; width: 95vw; margin: 1.5rem auto;">
+            <div class="modal-content border-0 shadow-2xl rounded-4 overflow-hidden" style="border: 1.5px solid #e2e8f0; background: #ffffff;">
+                <div class="modal-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 40px; height: 40px; background: #eff6ff; color: #0284c7; font-size: 1.25rem;">
+                            <i class="bi bi-pencil-square"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark m-0" id="rot-edit-mat-title" style="font-size: 1.05rem;">
+                                Editar Cantidades de Solicitud
+                            </h5>
+                            <p class="text-muted small m-0" id="rot-edit-mat-subtitle" style="font-size: 0.74rem;">Modifique las cantidades solicitadas antes de despachar en almacén</p>
+                        </div>
                     </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    <button type="button" class="btn btn-sm btn-light border rounded-circle p-1 d-flex align-items-center justify-content-center" data-bs-dismiss="modal" aria-label="Cerrar" style="width: 32px; height: 32px;">
+                        <i class="bi bi-x-lg text-secondary" style="font-size: 0.85rem;"></i>
+                    </button>
                 </div>
-                <div class="modal-body p-4">
-                    <div class="table-responsive rounded-3 border">
+                <div class="modal-body p-4" style="background: #f8fafc; max-height: calc(85vh - 130px); overflow-y: auto;">
+                    <div class="table-responsive rounded-3 border bg-white shadow-2xs">
                         <table class="table table-sm table-hover align-middle m-0" id="rot-edit-mat-table">
-                            <thead class="table-light text-muted text-uppercase small">
+                            <thead class="table-light text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.04em;">
                                 <tr>
-                                    <th class="py-2 px-3">Código</th>
-                                    <th class="py-2 px-3">Artículo</th>
-                                    <th class="py-2 px-3 text-center" style="width: 140px;">Cantidad</th>
-                                    <th class="py-2 px-3 text-end" style="width: 120px;">C. Unit.</th>
-                                    <th class="py-2 px-3 text-end" style="width: 130px;">Subtotal</th>
-                                    <th class="py-2 px-2 text-center" style="width: 50px;"></th>
+                                    <th class="py-2.5 px-3">Código</th>
+                                    <th class="py-2.5 px-3">Artículo</th>
+                                    <th class="py-2.5 px-3 text-center" style="width: 130px;">Cantidad</th>
+                                    <th class="py-2.5 px-3 text-end" style="width: 110px;">C. Unit.</th>
+                                    <th class="py-2.5 px-3 text-end" style="width: 120px;">Subtotal</th>
+                                    <th class="py-2.5 px-2 text-center" style="width: 45px;"></th>
                                 </tr>
                             </thead>
                             <tbody id="rot-edit-mat-tbody"></tbody>
                         </table>
                     </div>
-                    <div class="d-flex align-items-center justify-content-between mt-3 p-3 bg-light rounded-3">
-                        <span class="text-muted small"><i class="bi bi-info-circle me-1 text-primary"></i>El importe total de la salida se recalculará automáticamente.</span>
-                        <h5 class="fw-bolder text-dark m-0">Total: <span id="rot-edit-mat-total-lbl" class="text-primary font-monospace">S/ 0.00</span></h5>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between mt-3 p-3 bg-white border rounded-3 shadow-2xs gap-2">
+                        <span class="text-muted small" style="font-size: 0.76rem;"><i class="bi bi-info-circle me-1 text-primary"></i>El importe total de la salida se recalculará automáticamente.</span>
+                        <h5 class="fw-bolder text-dark m-0 d-flex align-items-center gap-2" style="font-size: 1rem;">
+                            <span class="text-secondary text-uppercase fw-bold" style="font-size: 0.75rem;">Total Solicitud:</span> 
+                            <span id="rot-edit-mat-total-lbl" class="text-primary font-monospace fw-bold" style="font-size: 1.15rem;">S/ 0.00</span>
+                        </h5>
                     </div>
                 </div>
-                <div class="modal-footer bg-light border-top py-2 px-4 d-flex justify-content-between">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-2" id="rot-btn-save-edit-mat" onclick="window.rotGuardarEdicionMateriales()">
+                <div class="modal-footer bg-white border-top py-2.5 px-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-light border rounded-pill px-4 fw-bold text-secondary" data-bs-dismiss="modal" style="font-size: 0.82rem;">Cancelar</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-2" id="rot-btn-save-edit-mat" onclick="window.rotGuardarEdicionMateriales()" style="font-size: 0.82rem;">
                         <i class="bi bi-check-lg"></i> Guardar Cambios
                     </button>
                 </div>
@@ -3257,6 +3268,17 @@ window.rotAbrirEditarMateriales = function(idSalida, idOt) {
         </div>
         `;
         document.body.appendChild(modalEl);
+
+        modalEl.addEventListener('show.bs.modal', function() {
+            modalEl.style.zIndex = '1150';
+            setTimeout(function() {
+                var backdrops = document.querySelectorAll('.modal-backdrop');
+                if (backdrops.length > 0) {
+                    var last = backdrops[backdrops.length - 1];
+                    last.style.zIndex = '1140';
+                }
+            }, 10);
+        });
     }
 
     var titleEl = document.getElementById('rot-edit-mat-title');
@@ -4847,22 +4869,35 @@ window._rotFiltrarDropdownArt = function(idx) {
         var marcaBadge = item.marca ? '<span class="badge bg-light text-secondary border px-1.5 py-0.5 rounded-2" style="font-size:0.68rem;">' + item.marca + '</span>' : '';
         var sistemaText = item.sistema ? '<span class="text-muted small"><i class="bi bi-gear-wide-connected me-1"></i>' + item.sistema + '</span>' : '';
 
+        var imgThumb = item.imagen_url 
+            ? `<div style="width: 38px; height: 38px; min-width: 38px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; justify-content: center; flex-shrink:0;">
+                <img src="${rotEscHtml(item.imagen_url)}" alt="${safeId}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='<i class=\\'bi bi-box-seam text-secondary\\'></i>';">
+               </div>`
+            : `<div style="width: 38px; height: 38px; min-width: 38px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; flex-shrink:0;">
+                <i class="bi bi-box-seam text-secondary" style="font-size: 1.1rem;"></i>
+               </div>`;
+
         return `
             <div class="rot-art-opt" 
                  onmousedown="window._rotSeleccionarArticuloMat(${idx}, '${safeId}')"
                  onmouseenter="this.style.background='#f8fafc'" 
                  onmouseleave="this.style.background='#ffffff'">
-                <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
-                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                        <span class="badge bg-dark text-white fw-bold px-2 py-0.5 rounded-2" style="font-size:0.72rem;">${item.id}</span>
-                        ${marcaBadge}
+                <div class="d-flex align-items-start gap-2.5">
+                    ${imgThumb}
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                <span class="badge bg-dark text-white fw-bold px-2 py-0.5 rounded-2" style="font-size:0.72rem;">${item.id}</span>
+                                ${marcaBadge}
+                            </div>
+                            ${stockBadge}
+                        </div>
+                        <div class="fw-semibold text-dark text-truncate" style="font-size:0.84rem;" title="${safeDesc}">${item.descripcion || item.articulo || ''}</div>
+                        <div class="d-flex align-items-center justify-content-between text-muted mt-1" style="font-size:0.72rem;">
+                            ${sistemaText}
+                            <span class="fw-bold" style="color:#0f172a;">S/. ${costo.toFixed(2)}</span>
+                        </div>
                     </div>
-                    ${stockBadge}
-                </div>
-                <div class="fw-semibold text-dark text-truncate" style="font-size:0.84rem;" title="${safeDesc}">${item.descripcion || item.articulo || ''}</div>
-                <div class="d-flex align-items-center justify-content-between text-muted mt-1" style="font-size:0.72rem;">
-                    ${sistemaText}
-                    <span class="fw-bold" style="color:#0f172a;">S/. ${costo.toFixed(2)}</span>
                 </div>
             </div>
         `;
