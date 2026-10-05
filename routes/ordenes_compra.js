@@ -3,7 +3,7 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } }); // 25MB max
 const { uploadToS3, getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
 const { createApprovalToken } = require('../services/ocApprovalService');
-const { sendApprovalWhatsapp, sendDecisionConfirmationWhatsapp } = require('../services/whatsappService');
+const { sendApprovalWhatsapp, sendDecisionConfirmationWhatsapp, sendTreasuryNotificationWhatsapp } = require('../services/whatsappService');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
@@ -349,7 +349,18 @@ module.exports = function (db, broadcast, logAudit) {
 
             const newOcStatus = action === 'APPROVE' ? 'APROBADA' : 'RECHAZADA';
             const newTokStatus = action === 'APPROVE' ? 'APROBADO' : 'RECHAZADO';
-            const aprobador = approver_name || tok.aprobador_nombre || 'Dueño / Gerencia';
+            
+            // Determinar el nombre exacto del aprobador
+            let aprobador = approver_name || tok.aprobador_nombre;
+            if (!aprobador || ['Dueño / Gerencia', 'Gerencia', 'Dirección / Gerencia', 'DIRECCIÓN / GERENCIA', 'Gerencia General'].includes(aprobador.trim())) {
+                try {
+                    const [cfgRow] = await tdb.query("SELECT valor FROM configuracion_erp WHERE clave = 'gerencia_nombre' LIMIT 1");
+                    if (cfgRow && cfgRow[0] && cfgRow[0].valor) {
+                        aprobador = cfgRow[0].valor;
+                    }
+                } catch(e) {}
+            }
+            if (!aprobador) aprobador = 'Gerencia General';
 
             await tdb.query('START TRANSACTION');
 
@@ -364,14 +375,16 @@ module.exports = function (db, broadcast, logAudit) {
                 [newOcStatus, aprobador, reason || null, tok.orden_compra_id]
             );
 
-            // Sincronizar actualización en entradas_inv del ERP
+            // Sincronizar actualización en entradas_inv del ERP (autoriza, aprobado_por y fecha_aprobacion)
             try {
                 await tdb.query(
                     `UPDATE entradas_inv 
                      SET estado = ?, 
-                         autoriza = ? 
+                         autoriza = ?,
+                         aprobado_por = ?,
+                         fecha_aprobacion = NOW()
                      WHERE id = ?`,
-                    [newOcStatus === 'APROBADA' ? 'Aprobado' : 'Rechazado', aprobador, tok.codigo]
+                    [newOcStatus === 'APROBADA' ? 'Aprobado' : 'Rechazado', aprobador, aprobador, tok.codigo]
                 );
             } catch(e) {}
 
@@ -387,9 +400,10 @@ module.exports = function (db, broadcast, logAudit) {
 
             await tdb.query('COMMIT');
 
-            // Enviar confirmación por WhatsApp en segundo plano
+            const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
+
+            // 1. Enviar confirmación al aprobador por WhatsApp en segundo plano
             if (tok.aprobador_telefono) {
-                const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
                 sendDecisionConfirmationWhatsapp({
                     phone: tok.aprobador_telefono,
                     ocCode: tok.codigo,
@@ -397,6 +411,70 @@ module.exports = function (db, broadcast, logAudit) {
                     reason: reason,
                     tenantSlug: tenantSlug
                 }).catch(e => console.error('Error enviando confirmación:', e));
+            }
+
+            // 2. DISPARADOR AUTOMÁTICO A TESORERÍA: Notificar cuando una OC fue aprobada
+            if (action === 'APPROVE') {
+                (async () => {
+                    try {
+                        // Obtener configuración de Tesorería del tenant
+                        let tesoreriaPhone = null;
+                        let empresaNombre = null;
+                        const [cfgRows] = await tdb.query("SELECT clave, valor FROM configuracion_erp WHERE clave IN ('tesoreria_whatsapp', 'empresa_nombre')");
+                        (cfgRows || []).forEach(r => {
+                            if (r.clave === 'tesoreria_whatsapp' && r.valor) tesoreriaPhone = r.valor;
+                            if (r.clave === 'empresa_nombre' && r.valor) empresaNombre = r.valor;
+                        });
+                        if (!tesoreriaPhone) tesoreriaPhone = process.env.TESORERIA_WHATSAPP || null;
+
+                        if (tesoreriaPhone) {
+                            // Obtener datos complementarios de la entrada / proveedor
+                            const [entRows] = await tdb.query(
+                                `SELECT e.id, e.proveedor_id, e.proveedor_nombre, e.total_pen, e.moneda, e.motivo_entrada, 
+                                        e.cuenta_bancaria_proveedor, e.solicitante, e.creado_por,
+                                        p.numero_documento AS proveedor_ruc
+                                 FROM entradas_inv e
+                                 LEFT JOIN proveedores_inv p ON (e.proveedor_id = p.id OR e.proveedor_nombre = p.nombre)
+                                 WHERE e.id = ? LIMIT 1`,
+                                [tok.codigo]
+                            );
+                            const ent = entRows && entRows.length > 0 ? entRows[0] : {};
+
+                            let ruc = ent.proveedor_ruc || '';
+                            let provNombre = ent.proveedor_nombre || tok.proveedor_nombre || '';
+                            if (!ruc && provNombre) {
+                                const matchRuc = provNombre.match(/\b(10|20)\d{9}\b/);
+                                if (matchRuc) ruc = matchRuc[0];
+                            }
+
+                            let ctaBancaria = ent.cuenta_bancaria_proveedor || '';
+                            if (!ctaBancaria && ent.proveedor_id) {
+                                try {
+                                    const [ctas] = await tdb.query("SELECT banco, tipo_cuenta, numero_cuenta, moneda FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? AND estado = 1 LIMIT 1", [ent.proveedor_id]);
+                                    if (ctas && ctas.length > 0) {
+                                        ctaBancaria = `${ctas[0].banco} - ${ctas[0].tipo_cuenta || 'Cta'} [${ctas[0].moneda || 'SOLES'}] - ${ctas[0].numero_cuenta}`;
+                                    }
+                                } catch(e) {}
+                            }
+
+                            await sendTreasuryNotificationWhatsapp({
+                                phone: tesoreriaPhone,
+                                ocCode: tok.codigo,
+                                supplier: provNombre,
+                                ruc: ruc,
+                                total: ent.total_pen || tok.monto_total || 0,
+                                currency: ent.moneda || tok.moneda || 'PEN',
+                                approverName: aprobador,
+                                reason: ent.motivo_entrada || tok.motivo_solicitud || 'Orden de compra autorizada',
+                                bankAccount: ctaBancaria,
+                                tenantSlug: tenantSlug,
+                                empresaNombre: empresaNombre
+                            });
+                        }
+                    } catch (errTeso) {
+                        console.error('[WhatsApp Tesorería] Error despachando notificación:', errTeso.message);
+                    }
+                })();
             }
 
             return res.json({

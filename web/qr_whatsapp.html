@@ -297,8 +297,8 @@
         <div class="receptor-header">
           <div class="receptor-icon">📲</div>
           <div>
-            <div class="receptor-title">Teléfono del Aprobador</div>
-            <div class="receptor-subtitle">Recibirá el Magic Link para aprobar O/C por WhatsApp</div>
+            <div class="receptor-title">Aprobador Directivo (Gerencia)</div>
+            <div class="receptor-subtitle">Recibirá el enlace para revisar y autorizar cada O/C por WhatsApp</div>
           </div>
         </div>
 
@@ -312,12 +312,40 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="txtReceptorName">Nombre / Cargo del Aprobador</label>
-          <input type="text" id="txtReceptorName" class="form-input" placeholder="Ej: Gerencia General / Dueño">
+          <label class="form-label" for="txtReceptorName">Nombre Completo del Aprobador</label>
+          <input type="text" id="txtReceptorName" class="form-input" placeholder="Ej: JENRRY SAUL ROSAS PANDURO">
+          <div class="form-hint">Este nombre aparecerá en el módulo 'Pago de Requerimientos' como Usuario de Aprobación.</div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 3: NOTIFICACIÓN TESORERÍA -->
+      <div class="section-divider">3. Notificación de Pagos (Tesorería / Finanzas)</div>
+
+      <div class="receptor-card">
+        <div class="receptor-header">
+          <div class="receptor-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">💳</div>
+          <div>
+            <div class="receptor-title">Encargado de Pagos (Tesorería)</div>
+            <div class="receptor-subtitle">Recibirá el aviso automático con el monto y cuenta una vez aprobada la O/C</div>
+          </div>
         </div>
 
-        <button class="btn btn-success" id="btnSaveReceptor" onclick="saveReceptor()">
-          💾 Guardar Receptor de Aprobaciones
+        <div class="form-group">
+          <label class="form-label" for="txtTesoreriaPhone">Celular WhatsApp de Tesorería</label>
+          <div class="input-wrapper">
+            <span class="input-prefix">+51</span>
+            <input type="tel" id="txtTesoreriaPhone" class="form-input has-prefix" placeholder="987654321" maxlength="15">
+          </div>
+          <div class="form-hint">Ingresa los 9 dígitos del responsable de efectuar transferencias bancarias.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="txtTesoreriaName">Nombre / Área de Tesorería</label>
+          <input type="text" id="txtTesoreriaName" class="form-input" placeholder="Ej: Tesorería & Pagos">
+        </div>
+
+        <button class="btn btn-success" id="btnSaveReceptor" onclick="saveReceptor()" style="margin-top: 10px;">
+          💾 Guardar Configuración de Contactos
         </button>
       </div>
 
@@ -355,7 +383,7 @@
           document.getElementById('instanceInfo').innerText = `Instancia WhatsApp: ${data.instance}`;
         }
 
-        // Cargar datos del receptor en los inputs solo si aún no los ha editado el usuario
+        // Cargar datos del receptor de Gerencia
         const inputPhone = document.getElementById('txtReceptorPhone');
         const inputName = document.getElementById('txtReceptorName');
         
@@ -366,6 +394,19 @@
         }
         if (data.receptor_nombre && !inputName.dataset.userEdited) {
           inputName.value = data.receptor_nombre;
+        }
+
+        // Cargar datos de Tesorería
+        const inputTesoPhone = document.getElementById('txtTesoreriaPhone');
+        const inputTesoName = document.getElementById('txtTesoreriaName');
+
+        if (data.tesoreria_telefono && !inputTesoPhone.dataset.userEdited) {
+          let cleanT = String(data.tesoreria_telefono).replace(/\D/g, '');
+          if (cleanT.startsWith('51') && cleanT.length > 9) cleanT = cleanT.substring(2);
+          inputTesoPhone.value = cleanT;
+        }
+        if (data.tesoreria_nombre && !inputTesoName.dataset.userEdited) {
+          inputTesoName.value = data.tesoreria_nombre;
         }
 
         if (data.status === 'CONNECTED') {
@@ -392,16 +433,26 @@
     async function saveReceptor() {
       const phoneRaw = document.getElementById('txtReceptorPhone').value.trim();
       const nameRaw = document.getElementById('txtReceptorName').value.trim() || 'Gerencia General';
+      const tesoPhoneRaw = document.getElementById('txtTesoreriaPhone').value.trim();
+      const tesoNameRaw = document.getElementById('txtTesoreriaName').value.trim() || 'Tesorería / Pagos';
       const btn = document.getElementById('btnSaveReceptor');
 
       if (!phoneRaw) {
-        showToast('⚠️ Ingresa un número de celular válido para el aprobador', '#f59e0b');
+        showToast('⚠️ Ingresa un número de celular válido para el aprobador de Gerencia', '#f59e0b');
         return;
       }
 
       let cleanPhone = phoneRaw.replace(/\D/g, '');
       if (!cleanPhone.startsWith('51') && cleanPhone.length === 9) {
         cleanPhone = '51' + cleanPhone;
+      }
+
+      let cleanTesoPhone = '';
+      if (tesoPhoneRaw) {
+        cleanTesoPhone = tesoPhoneRaw.replace(/\D/g, '');
+        if (!cleanTesoPhone.startsWith('51') && cleanTesoPhone.length === 9) {
+          cleanTesoPhone = '51' + cleanTesoPhone;
+        }
       }
 
       btn.disabled = true;
@@ -417,13 +468,15 @@
           headers: headers,
           body: JSON.stringify({
             telefono: cleanPhone,
-            nombre: nameRaw
+            nombre: nameRaw,
+            tesoreria_telefono: cleanTesoPhone,
+            tesoreria_nombre: tesoNameRaw
           })
         });
 
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast('✅ ¡Receptor de aprobaciones guardado correctamente!');
+          showToast('✅ ¡Contactos de Gerencia y Tesorería guardados!');
         } else {
           showToast('❌ Error: ' + (data.error || 'No se pudo guardar'), '#ef4444');
         }
@@ -431,7 +484,7 @@
         showToast('❌ Error de conexión: ' + e.message, '#ef4444');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '💾 Guardar Receptor de Aprobaciones';
+        btn.innerHTML = '💾 Guardar Configuración de Contactos';
       }
     }
 
@@ -440,6 +493,12 @@
     });
     document.getElementById('txtReceptorName').addEventListener('input', () => {
       document.getElementById('txtReceptorName').dataset.userEdited = 'true';
+    });
+    document.getElementById('txtTesoreriaPhone').addEventListener('input', () => {
+      document.getElementById('txtTesoreriaPhone').dataset.userEdited = 'true';
+    });
+    document.getElementById('txtTesoreriaName').addEventListener('input', () => {
+      document.getElementById('txtTesoreriaName').dataset.userEdited = 'true';
     });
 
     fetchQR();

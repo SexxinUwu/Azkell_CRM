@@ -2407,8 +2407,9 @@ module.exports = function (db, broadcast, logAudit) {
                 const creadorKey = (oc.creado_por || '').toLowerCase().trim();
                 const creadorNombre = usuariosMap[creadorKey] || usuariosMap[oc.creado_por] || oc.creado_por || 'SISTEMA';
 
-                const aprobKey = (oc.aprobado_por || '').toLowerCase().trim();
-                const aprobadorNombre = usuariosMap[aprobKey] || usuariosMap[oc.aprobado_por] || oc.aprobado_por || 'Gerencia';
+                const aprobRaw = oc.aprobado_por || oc.autoriza || '';
+                const aprobKey = aprobRaw.toLowerCase().trim();
+                const aprobadorNombre = usuariosMap[aprobKey] || usuariosMap[aprobRaw] || aprobRaw || 'Gerencia';
 
                 const pInfo = (oc.proveedor_id && provsMap[oc.proveedor_id]) ||
                               (oc.proveedor_nombre && provsMap[oc.proveedor_nombre.toLowerCase()]) || null;
