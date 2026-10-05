@@ -10,58 +10,83 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #090d16;
-      --card-bg: rgba(255, 255, 255, 0.04);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.2);
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-sub: #475569;
+      --text-muted: #64748b;
+      --accent: #2563eb;
+      --accent-light: #eff6ff;
       --green: #10b981;
-      --green-glow: rgba(16, 185, 129, 0.2);
+      --green-dark: #059669;
+      --green-light: #ecfdf5;
       --red: #ef4444;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
+      --red-dark: #dc2626;
+      --red-light: #fef2f2;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; 
+      -webkit-tap-highlight-color: transparent; 
+    }
     body {
       background-color: var(--bg);
-      color: var(--text);
+      color: var(--text-main);
       padding: 16px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      background-image: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+      background-image: radial-gradient(circle at 50% 0%, #e0f2fe 0%, transparent 65%);
+    }
+    .wrapper {
+      max-width: 480px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
     .top-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 16px;
-      padding: 0 4px;
+      padding: 4px 4px 8px 4px;
     }
     .logo-badge {
       display: flex;
       align-items: center;
       gap: 8px;
       font-size: 13px;
-      font-weight: 700;
-      color: #93c5fd;
+      font-weight: 800;
+      color: var(--accent);
       letter-spacing: 0.5px;
     }
     .logo-badge img {
-      width: 24px;
-      height: 24px;
-      border-radius: 6px;
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
     }
+    .badge-pill {
+      background: #e2e8f0;
+      color: #334155;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
     .card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
       border-radius: 20px;
-      padding: 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      padding: 22px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
     }
     .header {
       display: flex;
@@ -69,53 +94,67 @@
       align-items: center;
       margin-bottom: 12px;
     }
-    .badge {
-      background: rgba(59, 130, 246, 0.15);
-      color: #60a5fa;
-      border: 1px solid rgba(59, 130, 246, 0.3);
+    .badge-status {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
       padding: 4px 10px;
       border-radius: 999px;
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
     }
     .title {
       font-size: 22px;
       font-weight: 800;
+      color: var(--text-main);
       letter-spacing: -0.5px;
       margin-bottom: 4px;
     }
     .supplier {
       font-size: 15px;
       font-weight: 600;
-      color: var(--text-muted);
+      color: var(--text-sub);
       margin-bottom: 16px;
+      line-height: 1.4;
     }
     .meta-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 12px;
-      padding: 12px;
+      background: #f8fafc;
+      border: 1px solid #edf2f7;
+      border-radius: 14px;
+      padding: 12px 14px;
       margin-bottom: 16px;
     }
     .meta-item { display: flex; flex-direction: column; }
-    .meta-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
-    .meta-val { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 2px; }
+    .meta-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+    .meta-val { font-size: 13px; font-weight: 700; color: var(--text-main); margin-top: 2px; }
 
     .total-container {
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%);
-      border: 1px solid rgba(59, 130, 246, 0.3);
+      background: linear-gradient(135deg, #eff6ff 0%, #ecfdf5 100%);
+      border: 1px solid #bfdbfe;
       border-radius: 16px;
-      padding: 16px;
+      padding: 18px 14px;
       margin: 16px 0;
       text-align: center;
     }
-    .total-label { font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px; font-weight: 600; }
-    .total-amount { font-size: 32px; font-weight: 800; color: #38bdf8; margin-top: 4px; letter-spacing: -0.5px; }
+    .total-label { 
+      font-size: 11px; 
+      text-transform: uppercase; 
+      color: var(--text-muted); 
+      letter-spacing: 0.6px; 
+      font-weight: 700; 
+    }
+    .total-amount { 
+      font-size: 32px; 
+      font-weight: 800; 
+      color: var(--accent); 
+      margin-top: 4px; 
+      letter-spacing: -0.5px; 
+    }
 
     .pdf-button {
       display: flex;
@@ -123,9 +162,9 @@
       justify-content: center;
       gap: 10px;
       width: 100%;
-      background: rgba(255, 255, 255, 0.06);
-      color: #38bdf8;
-      border: 1px solid rgba(56, 189, 248, 0.3);
+      background: #eff6ff;
+      color: var(--accent);
+      border: 1px solid #bfdbfe;
       border-radius: 14px;
       padding: 14px;
       font-size: 14px;
@@ -134,41 +173,50 @@
       margin-bottom: 16px;
       transition: all 0.2s;
     }
+    .pdf-button:hover {
+      background: #dbeafe;
+    }
     .pdf-button:active {
       transform: scale(0.98);
-      background: rgba(56, 189, 248, 0.15);
     }
 
     .table-container { margin: 16px 0 8px 0; }
-    .table-header-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; letter-spacing: 0.5px; }
+    .table-header-title { 
+      font-size: 12px; 
+      font-weight: 700; 
+      text-transform: uppercase; 
+      color: var(--text-muted); 
+      margin-bottom: 10px; 
+      letter-spacing: 0.5px; 
+    }
     .item-card {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.04);
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
       border-radius: 12px;
-      padding: 12px;
+      padding: 12px 14px;
       margin-bottom: 8px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    .item-desc { font-size: 14px; font-weight: 600; line-height: 1.3; }
-    .item-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-    .item-total { font-size: 14px; font-weight: 700; color: #f1f5f9; text-align: right; }
+    .item-desc { font-size: 13px; font-weight: 700; color: var(--text-main); line-height: 1.3; }
+    .item-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
+    .item-total { font-size: 14px; font-weight: 800; color: var(--text-main); text-align: right; }
 
     .actions {
       display: flex;
       gap: 12px;
-      padding-top: 12px;
+      padding-top: 10px;
       position: sticky;
       bottom: 0;
-      background: linear-gradient(0deg, var(--bg) 80%, transparent 100%);
-      padding-bottom: 8px;
+      background: linear-gradient(0deg, var(--bg) 85%, transparent 100%);
+      padding-bottom: 12px;
     }
     .btn {
       flex: 1;
-      padding: 18px;
+      padding: 16px;
       border: none;
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 700;
       cursor: pointer;
@@ -180,14 +228,20 @@
     }
     .btn:active { transform: scale(0.97); }
     .btn-approve {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      background: var(--green);
       color: #ffffff;
-      box-shadow: 0 4px 20px var(--green-glow);
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+    .btn-approve:hover {
+      background: var(--green-dark);
     }
     .btn-reject {
-      background: rgba(239, 68, 68, 0.12);
-      color: #f87171;
-      border: 1px solid rgba(239, 68, 68, 0.3);
+      background: var(--red-light);
+      color: var(--red-dark);
+      border: 1px solid #fecaca;
+    }
+    .btn-reject:hover {
+      background: #fee2e2;
     }
 
     /* Modal de confirmación de rechazo */
@@ -195,67 +249,74 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.85);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       padding: 20px;
       align-items: center;
       justify-content: center;
       z-index: 100;
     }
     .modal-box {
-      background: #0f172a;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #ffffff;
+      border: 1px solid var(--card-border);
       border-radius: 20px;
-      padding: 22px;
+      padding: 24px;
       width: 100%;
       max-width: 380px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
     }
     textarea {
       width: 100%;
       height: 100px;
-      background: rgba(0,0,0,0.4);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
       border-radius: 12px;
-      color: #fff;
+      color: var(--text-main);
       padding: 12px;
       margin: 14px 0;
       outline: none;
       font-size: 14px;
       resize: none;
     }
-    textarea:focus { border-color: var(--accent); }
+    textarea:focus { 
+      border-color: var(--accent); 
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
     
     .status-screen {
       text-align: center;
       margin: auto;
       padding: 40px 20px;
+      background: #ffffff;
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
     }
     .status-icon {
-      font-size: 64px;
-      margin-bottom: 16px;
+      font-size: 58px;
+      margin-bottom: 14px;
       display: inline-block;
     }
-    .status-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
-    .status-desc { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+    .status-title { font-size: 20px; font-weight: 800; color: var(--text-main); margin-bottom: 8px; }
+    .status-desc { font-size: 14px; color: var(--text-sub); line-height: 1.5; }
   </style>
 </head>
 <body>
 
-  <div id="mainContainer">
+  <div class="wrapper" id="mainContainer">
     <div class="top-bar">
       <div class="logo-badge">
         <img src="/favicon-2003.png" alt="Azkell">
-        <span>AZKELL ERP</span>
+        <span id="tenantBrandTitle">AZKELL ERP</span>
       </div>
-      <span class="badge" id="badgeStatus">VIGENTE 24H</span>
+      <span class="badge-pill" id="badgeStatus">⏱ Vigente 24h</span>
     </div>
 
     <div class="card" id="cardContent">
       <div class="header">
-        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3);">
-          Pendiente de Aprobación
+        <span class="badge-status">
+          ⏳ Pendiente de Aprobación
         </span>
         <span id="ocDate" style="font-size: 12px; color: var(--text-muted); font-weight: 600;"></span>
       </div>
@@ -281,32 +342,32 @@
 
       <!-- Sustento de Cotización / Archivo Adjunto -->
       <a id="btnQuotation" href="#" target="_blank" class="pdf-button" style="display: none;">
-        📄 Ver Sustento / Cotización (PDF)
+        📄 Ver Sustento / Cotización Adjunta
       </a>
 
       <div class="table-container">
         <div class="table-header-title">Ítems Solicitados</div>
         <div id="itemsList">
-          <div style="text-align: center; color: var(--text-muted); padding: 20px;">Cargando ítems...</div>
+          <div style="text-align: center; color: var(--text-muted); padding: 16px; font-size: 13px;">Cargando ítems...</div>
         </div>
       </div>
     </div>
 
     <div class="actions" id="actionButtons">
-      <button class="btn btn-reject" onclick="openRejectModal()">Rechazar</button>
-      <button class="btn btn-approve" onclick="submitDecision('APPROVE')">✓ Aprobar OC</button>
+      <button class="btn btn-reject" onclick="openRejectModal()">✕ Rechazar</button>
+      <button class="btn btn-approve" onclick="submitDecision('APPROVE')">✓ Aprobar Orden</button>
     </div>
   </div>
 
   <!-- Modal para Motivo de Rechazo -->
   <div id="rejectModal">
     <div class="modal-box">
-      <h3 style="font-size: 18px; font-weight: 700;">Rechazar Orden de Compra</h3>
-      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Indica el motivo o la observación para el equipo:</p>
-      <textarea id="rejectReason" placeholder="Ej. Precios unitarios muy altos o requiere cotizar con otro proveedor..."></textarea>
+      <h3 style="font-size: 17px; font-weight: 800; color: var(--text-main);">Rechazar Orden de Compra</h3>
+      <p style="font-size: 13px; color: var(--text-sub); margin-top: 4px;">Indica el motivo de la observación para el solicitante:</p>
+      <textarea id="rejectReason" placeholder="Ej: Precios unitarios muy altos o requiere cotizar con otro proveedor..."></textarea>
       <div style="display: flex; gap: 10px;">
-        <button class="btn btn-reject" style="padding: 12px;" onclick="closeRejectModal()">Cancelar</button>
-        <button class="btn" style="background: var(--red); color: white; padding: 12px;" onclick="submitDecision('REJECT')">Confirmar</button>
+        <button class="btn btn-reject" style="padding: 12px; font-size: 13px;" onclick="closeRejectModal()">Cancelar</button>
+        <button class="btn" style="background: var(--red); color: white; padding: 12px; font-size: 13px;" onclick="submitDecision('REJECT')">Confirmar Rechazo</button>
       </div>
     </div>
   </div>
@@ -317,7 +378,7 @@
 
     async function loadData() {
       if (!token) {
-        showErrorScreen('Token no proporcionado', 'Acceso denegado. Este enlace requiere un token seguro.');
+        showErrorScreen('Token no proporcionado', 'Acceso denegado. Este enlace requiere un token de seguridad válido.');
         return;
       }
 
@@ -326,12 +387,12 @@
         const data = await res.json();
 
         if (!res.ok) {
-          showErrorScreen(data.error || 'Enlace no válido', 'Este enlace no existe o ya no se encuentra disponible.');
+          showErrorScreen(data.error || 'Enlace no válido', 'Este enlace no existe o ya fue consumido.');
           return;
         }
 
         if (data.is_expired) {
-          showErrorScreen('Enlace Expirado', 'Este enlace de aprobación tenía una vigencia de 24 horas y ha expirado.');
+          showErrorScreen('Enlace Expirado', 'Este enlace de aprobación tenía una vigencia de 24 horas y ha caducado.');
           return;
         }
 
@@ -339,7 +400,7 @@
           showStatusScreen(
             data.token_estado === 'APROBADO' ? '✅' : '❌',
             `Orden ${data.token_estado === 'APROBADO' ? 'Aprobada' : 'Rechazada'}`,
-            `Esta orden de compra ya fue procesada anteriormente.`
+            `Esta orden de compra ya fue procesada anteriormente con estado: <b>${data.token_estado}</b>.`
           );
           return;
         }
@@ -375,7 +436,7 @@
             </div>
           `).join('');
         } else {
-          itemsList.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 12px;">Sin desglose de ítems</div>`;
+          itemsList.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 12px; font-size: 13px;">Sin desglose de ítems</div>`;
         }
 
       } catch (err) {
@@ -409,8 +470,8 @@
           action === 'APPROVE' ? '✅' : '❌',
           action === 'APPROVE' ? 'Orden Aprobada con Éxito' : 'Orden Rechazada',
           action === 'APPROVE' 
-            ? 'La Orden de Compra ha sido autorizada y el ERP se ha actualizado.'
-            : 'Se ha registrado la observación y el estado fue cambiado a RECHAZADA.'
+            ? 'La Orden de Compra ha sido autorizada satisfactoriamente y el ERP ha sido actualizado.'
+            : 'Se ha registrado la observación y el estado fue cambiado a RECHAZADA en el ERP.'
         );
 
       } catch (err) {
