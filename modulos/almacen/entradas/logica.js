@@ -1754,10 +1754,10 @@ window._entRender = function() {
     var pag = Math.min(window._entPagActual, totalPag);
     window._entPagActual = pag;
     var pagina = datos.slice((pag - 1) * _ENT_POR_PAG, pag * _ENT_POR_PAG);
-    var canDelete = window.checkPerm('ent_inv', 'd');
-    var canEdit = window.checkPerm('ent_inv', 'e') || window.checkPerm('ent_inv', 'u');
+    var canDelete = window.checkPerm('ent_inv', 'd') || window.checkPerm('ordenes_compra', 'd') || window.checkPerm('admin', '');
     var userRol = (localStorage.getItem('fleet_rol') || localStorage.getItem('fleet_usuario_rol') || localStorage.getItem('fleet_role') || '').toLowerCase();
     var isAdmin = userRol.includes('admin') || userRol === 'fundador' || userRol === 'gerente general' || window.checkPerm('admin', '');
+    var canEdit = isAdmin || window.checkPerm('ent_inv', 'e') || window.checkPerm('ent_inv', 'u') || window.checkPerm('ent_inv', 'c') || window.checkPerm('ordenes_compra', 'e') || window.checkPerm('ordenes_compra', 'u') || window.checkPerm('ordenes_compra', 'c') || window.checkPerm('ent_inv', 'l');
     var todayStr = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Lima'});
 
     var cont = document.getElementById('ent-contador');
@@ -1782,20 +1782,9 @@ window._entRender = function() {
         var fechaCorta = d.fecha ? new Date(String(d.fecha).replace(' ', 'T')).toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
         var isAnulado = String(d.estado || '').toLowerCase().includes('anulad');
 
-        // Comprobación precisa si la orden corresponde al día actual
-        var esHoy = false;
-        if (d.fecha) {
-            var fStr = (d.fecha instanceof Date) ? d.fecha.toLocaleDateString('en-CA', { timeZone: 'America/Lima' }) : String(d.fecha).split('T')[0].split(' ')[0];
-            if (fStr === todayStr) esHoy = true;
-        }
-        if (!esHoy && d.created_at) {
-            var cStr = (d.created_at instanceof Date) ? d.created_at.toLocaleDateString('en-CA', { timeZone: 'America/Lima' }) : String(d.created_at).split('T')[0].split(' ')[0];
-            if (cStr === todayStr) esHoy = true;
-        }
-
         var estadoLimpio = String(d.estado || 'Registrado').toLowerCase().trim();
         var esModificable = (estadoLimpio === 'registrado' || estadoLimpio === 'registrada' || estadoLimpio === 'pendiente' || estadoLimpio === 'observado' || estadoLimpio === 'observada' || !d.estado);
-        var canEditRow = canEdit && !isAnulado && esModificable && (isAdmin || esHoy);
+        var canEditRow = canEdit && !isAnulado && esModificable;
 
         var tp = parseFloat(d.total_pen || 0);
         var totalFmt = '<strong style="color:#16a34a;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
@@ -2818,9 +2807,25 @@ window.toggleAutoplayOC = function() {
     }
 };
 
-window.abrirModalDetalleOC = function(id) {
+window.abrirModalDetalleOC = async function(id) {
     if (typeof window._entCerrarDropdowns === 'function') window._entCerrarDropdowns();
     var d = (window._entData || []).find(function(e) { return e.id === id; });
+    if (!d) {
+        try {
+            var res = await fetch('/api/almacen/entradas/' + encodeURIComponent(id));
+            if (res.ok) d = await res.json();
+        } catch(e) {}
+    } else if (!d.items || !d.items.length) {
+        try {
+            var res = await fetch('/api/almacen/entradas/' + encodeURIComponent(id));
+            if (res.ok) {
+                var fresh = await res.json();
+                if (fresh && Array.isArray(fresh.items)) {
+                    d.items = fresh.items;
+                }
+            }
+        } catch(e) {}
+    }
     if (!d) return alert('No se encontró la orden de compra ' + id);
 
     window._ocSeleccionadaDetalle = d.id;
@@ -3661,6 +3666,14 @@ window.asegurarModalArticuloYAbrir = function(articuloTyped, itemIdx, modo) {
     var raw = (articuloTyped || '').trim();
     var isServicio = (modo === 'servicio') || (!modo && /^(servicio|mantenimiento|reparacion|alquiler|flete|torno|taxi|mano de obra|lavado|planchado|pintura|diagnostico|auxilio|grua)/i.test(raw));
 
+    // Asegurar que el estilo de servicio esté inyectado en el documento
+    if (!document.getElementById('css-form-servicio-mode')) {
+        var st = document.createElement('style');
+        st.id = 'css-form-servicio-mode';
+        st.textContent = '.form-servicio-mode .ent-doc-card > div > div:not(.servicio-keep) { display: none !important; } .form-servicio-mode .ent-doc-card:not(:first-child) { display: none !important; }';
+        document.head.appendChild(st);
+    }
+
     var openForm = function() {
         if (typeof window.abrirModalInventario === 'function') {
             window._onArticuloCreado = function(newId, artNombre, res, payload) {
@@ -3699,7 +3712,8 @@ window.asegurarModalArticuloYAbrir = function(articuloTyped, itemIdx, modo) {
                 }, true);
             };
 
-            window.abrirModalInventario(null, isServicio ? 'servicios' : null);
+            window._invActiveTab = isServicio ? 'servicios' : 'articulos';
+            window.abrirModalInventario(null, isServicio ? 'servicios' : 'articulos');
 
             var drawerEl = document.getElementById('inv-form-drawer');
             if (drawerEl) {
@@ -3708,6 +3722,15 @@ window.asegurarModalArticuloYAbrir = function(articuloTyped, itemIdx, modo) {
             var bdEl = document.getElementById('inv-drawer-backdrop');
             if (bdEl) {
                 bdEl.style.zIndex = '1140';
+            }
+
+            var f = document.getElementById('form-inv-articulo');
+            if (f) {
+                if (isServicio) {
+                    f.classList.add('form-servicio-mode');
+                } else {
+                    f.classList.remove('form-servicio-mode');
+                }
             }
 
             setTimeout(function() {
@@ -3724,7 +3747,7 @@ window.asegurarModalArticuloYAbrir = function(articuloTyped, itemIdx, modo) {
                 if (typeof window._invActualizarPreview === 'function') {
                     window._invActualizarPreview();
                 }
-            }, 180);
+            }, 100);
         }
     };
 

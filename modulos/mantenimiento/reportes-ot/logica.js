@@ -3046,11 +3046,32 @@ window.rotEditarKm = function(idOT, kmActual) {
 };
 
 
+function _rotExtraerCodigoYArticulo(it) {
+    var rawDesc = String(it.descripcion || '').trim();
+    var invId = String(it.inventario_id || '').trim();
+    
+    var codigo = invId;
+    var articulo = rawDesc;
+    
+    var match = rawDesc.match(/^(INV-[\w\d]+)\s*[-—–]\s*(.+)$/i);
+    if (match) {
+        if (!codigo) codigo = match[1].trim().toUpperCase();
+        articulo = match[2].trim();
+    } else if (codigo && rawDesc.toUpperCase().startsWith(codigo.toUpperCase())) {
+        articulo = rawDesc.slice(codigo.length).replace(/^[\s\-—–:]+/, '').trim();
+    }
+    
+    if (!codigo) codigo = 'REP';
+    if (!articulo) articulo = rawDesc || 'Artículo sin nombre';
+    
+    return { codigo: codigo, articulo: articulo };
+}
+
 function rotRenderSecMateriales(idOt, esAprobada) {
     var body  = document.getElementById('rot-mat-body');
     var count = document.getElementById('rot-mat-count');
     if (!body) return;
-    var lista = window.rotOtMaterialesActivos;
+    var lista = window.rotOtMaterialesActivos || [];
     if (count) count.textContent = lista.length;
 
     var costoTotal = lista
@@ -3063,29 +3084,355 @@ function rotRenderSecMateriales(idOt, esAprobada) {
         html += '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay salidas registradas</div>';
     } else {
         lista.forEach(function(m) {
+            var esPendiente = m.estado === 'Pendiente' || !m.estado;
             var badge = m.estado === 'Despachado'
-                ? '<span style="background:rgba(22,163,74,0.12);color:#16a34a;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Despachado</span>'
+                ? '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill" style="font-size:0.7rem; font-weight:700;"><i class="bi bi-check-circle-fill me-1"></i>Despachado</span>'
                 : m.estado === 'Anulado'
-                ? '<span style="background:rgba(220,38,38,0.1);color:#dc2626;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Anulado</span>'
-                : '<span style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Pendiente</span>';
+                ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill" style="font-size:0.7rem; font-weight:700;"><i class="bi bi-x-circle-fill me-1"></i>Anulado</span>'
+                : '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill" style="font-size:0.7rem; font-weight:700;"><i class="bi bi-clock-history me-1"></i>Pendiente</span>';
+
             var items = m.items || [];
-            var artResumen = items.map(function(it) { return rotEscHtml(it.descripcion || it.inventario_id || '—'); }).join(', ') || '—';
-            html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;">'
-                  + '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">'
-                  + '<div><span style="font-weight:700;color:var(--text);font-size:0.75rem;">' + rotEscHtml(m.id || '—') + '</span> ' + badge + '</div>'
-                  + '<button class="btn btn-sm" style="color:var(--subtext);padding:0 4px;" onclick="event.stopPropagation();window.rotEliminarMaterial(\'' + m.id + '\',\'' + rotEscHtml(idOt) + '\')" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button>'
-                  + '</div>'
-                  + '<div style="color:var(--subtext);margin-top:2px;font-size:0.79rem;">' + artResumen + '</div>'
-                  + '<div style="margin-top:2px;"><strong style="color:var(--text);">Total: S/.' + parseFloat(m.total_pen || 0).toFixed(2) + '</strong></div>'
-                  + '</div>';
+            var monedaSimbolo = (m.moneda === 'USD') ? '$' : 'S/';
+
+            var filasHTML = '';
+            items.forEach(function(it, idx) {
+                var info = _rotExtraerCodigoYArticulo(it);
+                var cant = parseFloat(it.cantidad || 0);
+                var cu = parseFloat(it.costo_unitario || 0);
+                var imp = parseFloat(it.importe) || (cant * cu);
+
+                filasHTML += `
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td class="py-2 px-2 text-nowrap" style="width: 110px;">
+                        <span class="badge bg-light text-dark border font-monospace px-2 py-1 shadow-2xs" style="font-size:0.73rem; border-radius:6px; letter-spacing:0.02em;">
+                            <i class="bi bi-upc-scan text-primary me-1"></i>${rotEscHtml(info.codigo)}
+                        </span>
+                    </td>
+                    <td class="py-2 px-2" style="font-size: 0.8rem; color: var(--text, #1e293b); font-weight: 600;">
+                        ${rotEscHtml(info.articulo)}
+                    </td>
+                    <td class="py-2 px-2 text-center text-nowrap" style="width: 90px;">
+                        <span class="badge bg-primary-subtle text-primary fw-bold px-2 py-1" style="font-size: 0.76rem; border-radius:6px;">
+                            ${cant.toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} u.
+                        </span>
+                    </td>
+                    <td class="py-2 px-2 text-end text-nowrap text-muted" style="width: 100px; font-size: 0.78rem; font-family: monospace;">
+                        ${monedaSimbolo} ${cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td class="py-2 px-2 text-end text-nowrap fw-bold" style="width: 110px; font-size: 0.8rem; color: var(--text, #0f172a); font-family: monospace;">
+                        ${monedaSimbolo} ${imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                </tr>
+                `;
+            });
+
+            html += `
+            <div class="card border-0 rounded-3 mb-3 bg-white shadow-2xs overflow-hidden" style="border: 1.5px solid #e2e8f0 !important;">
+                <!-- Header de la Solicitud -->
+                <div class="d-flex align-items-center justify-content-between p-2 px-3 bg-light border-bottom flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold font-monospace text-primary" style="font-size:0.85rem;">
+                            <i class="bi bi-box-seam me-1"></i>${rotEscHtml(m.id || '—')}
+                        </span>
+                        ${badge}
+                        ${m.fecha ? `<span class="text-muted small" style="font-size:0.75rem;"><i class="bi bi-calendar-event me-1"></i>${String(m.fecha).slice(0,10)}</span>` : ''}
+                        ${m.responsable ? `<span class="text-muted small d-none d-sm-inline" style="font-size:0.75rem;"><i class="bi bi-person me-1"></i>${rotEscHtml(m.responsable)}</span>` : ''}
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        ${esPendiente ? `
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-2 py-0 d-inline-flex align-items-center gap-1 shadow-2xs" style="font-size:0.72rem; height:26px;" onclick="event.stopPropagation();window.rotAbrirEditarMateriales('${rotEscHtml(m.id)}','${rotEscHtml(idOt)}')" title="Editar cantidades solicitadas">
+                                <i class="bi bi-pencil-square"></i> Editar Cantidades
+                            </button>
+                        ` : ''}
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width:26px; height:26px;" onclick="event.stopPropagation();window.rotEliminarMaterial('${rotEscHtml(m.id)}','${rotEscHtml(idOt)}')" title="Eliminar / Anular Solicitud">
+                            <i class="bi bi-trash-fill" style="font-size:0.75rem;"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabla de Repuestos -->
+                <div class="table-responsive m-0">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.8rem;">
+                        <thead class="table-light" style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b;">
+                            <tr>
+                                <th class="py-2 px-2">Código</th>
+                                <th class="py-2 px-2">Artículo</th>
+                                <th class="py-2 px-2 text-center">Cantidad</th>
+                                <th class="py-2 px-2 text-end">C. Unit.</th>
+                                <th class="py-2 px-2 text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filasHTML || '<tr><td colspan="5" class="text-center py-2 text-muted">Sin repuestos registrados</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Footer de la Solicitud -->
+                <div class="d-flex align-items-center justify-content-between p-2 px-3 bg-light-subtle border-top">
+                    <span class="text-muted small" style="font-size: 0.74rem;">${items.length} ${items.length === 1 ? 'ítem solicitado' : 'ítems solicitados'}</span>
+                    <span class="fw-bolder" style="font-size: 0.84rem; color: var(--text, #0f172a);">
+                        Total Solicitud: <span class="text-primary font-monospace">S/ ${parseFloat(m.total_pen || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </span>
+                </div>
+            </div>
+            `;
         });
-        html += '<div style="padding:8px 12px;font-size:0.82rem;font-weight:700;text-align:right;color:#16a34a;">'
-              + 'Total despachado: S/.' + costoTotal.toFixed(2)
-              + (hayPendientes ? '<span style="font-size:0.72rem;color:#d97706;margin-left:6px;">(pendientes no incluidos)</span>' : '')
-              + '</div>';
+
+        html += `
+        <div class="d-flex align-items-center justify-content-end gap-2 p-2 px-3 rounded-3 mt-2" style="background: rgba(22,163,74,0.06); border: 1px dashed rgba(22,163,74,0.3);">
+            <span class="fw-bold text-success" style="font-size: 0.85rem;">
+                <i class="bi bi-check-all me-1"></i>Total despachado: S/ ${costoTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            ${hayPendientes ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 0.72rem;">(pendientes no incluidos)</span>` : ''}
+        </div>
+        `;
     }
     body.innerHTML = html;
 }
+
+// ── Modal de Edición de Cantidades de Materiales ──────────────────
+window.rotAbrirEditarMateriales = function(idSalida, idOt) {
+    var salida = (window.rotOtMaterialesActivos || []).find(function(m) {
+        return String(m.id || '') === String(idSalida);
+    });
+    if (!salida) {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('No se encontró la salida ' + idSalida, 'danger');
+        return;
+    }
+
+    window._rotEdicionSalidaActiva = {
+        salida_id: idSalida,
+        ticket_ot: idOt,
+        salida: JSON.parse(JSON.stringify(salida))
+    };
+
+    var modalEl = document.getElementById('modalRotEditarCantidadesMateriales');
+    if (!modalEl) {
+        modalEl = document.createElement('div');
+        modalEl.id = 'modalRotEditarCantidadesMateriales';
+        modalEl.className = 'modal fade';
+        modalEl.tabIndex = -1;
+        modalEl.setAttribute('aria-hidden', 'true');
+        modalEl.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-light border-bottom py-3 px-4">
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark m-0 d-flex align-items-center gap-2" id="rot-edit-mat-title">
+                            <i class="bi bi-pencil-square text-primary"></i> Editar Cantidades de Solicitud
+                        </h5>
+                        <p class="text-muted small m-0 mt-1" id="rot-edit-mat-subtitle">Modifique las cantidades solicitadas antes de despachar en almacén</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="table-responsive rounded-3 border">
+                        <table class="table table-sm table-hover align-middle m-0" id="rot-edit-mat-table">
+                            <thead class="table-light text-muted text-uppercase small">
+                                <tr>
+                                    <th class="py-2 px-3">Código</th>
+                                    <th class="py-2 px-3">Artículo</th>
+                                    <th class="py-2 px-3 text-center" style="width: 140px;">Cantidad</th>
+                                    <th class="py-2 px-3 text-end" style="width: 120px;">C. Unit.</th>
+                                    <th class="py-2 px-3 text-end" style="width: 130px;">Subtotal</th>
+                                    <th class="py-2 px-2 text-center" style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="rot-edit-mat-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between mt-3 p-3 bg-light rounded-3">
+                        <span class="text-muted small"><i class="bi bi-info-circle me-1 text-primary"></i>El importe total de la salida se recalculará automáticamente.</span>
+                        <h5 class="fw-bolder text-dark m-0">Total: <span id="rot-edit-mat-total-lbl" class="text-primary font-monospace">S/ 0.00</span></h5>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top py-2 px-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-2" id="rot-btn-save-edit-mat" onclick="window.rotGuardarEdicionMateriales()">
+                        <i class="bi bi-check-lg"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+        `;
+        document.body.appendChild(modalEl);
+    }
+
+    var titleEl = document.getElementById('rot-edit-mat-title');
+    var subEl = document.getElementById('rot-edit-mat-subtitle');
+    if (titleEl) titleEl.innerHTML = `<i class="bi bi-pencil-square text-primary me-2"></i>Editar Solicitud <span class="font-monospace text-dark ms-1">${rotEscHtml(idSalida)}</span>`;
+    if (subEl) subEl.textContent = `Ajuste las cantidades de repuestos requeridos para la ${idOt} antes del despacho`;
+
+    _rotRenderizarFilasEdicionMateriales(salida.items || []);
+
+    var bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    bsModal.show();
+};
+
+function _rotRenderizarFilasEdicionMateriales(items) {
+    var tbody = document.getElementById('rot-edit-mat-tbody');
+    if (!tbody) return;
+
+    if (!items || !items.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No hay artículos en esta solicitud.</td></tr>';
+        _rotRecalcularTotalEdicion();
+        return;
+    }
+
+    var html = '';
+    items.forEach(function(it, idx) {
+        var info = _rotExtraerCodigoYArticulo(it);
+        var cant = parseFloat(it.cantidad || 0);
+        var cu = parseFloat(it.costo_unitario || 0);
+        var imp = parseFloat(it.importe) || (cant * cu);
+
+        html += `
+        <tr class="rot-edit-mat-row" data-idx="${idx}" data-inv-id="${rotEscHtml(it.inventario_id || info.codigo)}" data-desc="${rotEscHtml(it.descripcion || (info.codigo + ' — ' + info.articulo))}" data-cu="${cu}">
+            <td class="py-2 px-3">
+                <span class="badge bg-light text-dark border font-monospace px-2 py-1" style="font-size:0.75rem;">
+                    ${rotEscHtml(info.codigo)}
+                </span>
+            </td>
+            <td class="py-2 px-3 fw-semibold text-dark" style="font-size:0.83rem;">
+                ${rotEscHtml(info.articulo)}
+            </td>
+            <td class="py-2 px-3 text-center">
+                <input type="number" step="any" min="0.01" class="form-control form-control-sm text-center fw-bold rot-edit-mat-cant-input" value="${cant}" oninput="window._rotRecalcularFilaEdicion(this)" style="border-radius:8px;">
+            </td>
+            <td class="py-2 px-3 text-end font-monospace text-muted small">
+                S/ ${cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </td>
+            <td class="py-2 px-3 text-end fw-bold font-monospace rot-edit-mat-imp-cell" style="font-size:0.85rem; color:#0f172a;">
+                S/ ${imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </td>
+            <td class="py-2 px-2 text-center">
+                <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1" style="width:26px; height:26px;" onclick="this.closest('tr').remove(); window._rotRecalcularTotalEdicion();" title="Quitar artículo">
+                    <i class="bi bi-x-lg" style="font-size:0.7rem;"></i>
+                </button>
+            </td>
+        </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+    _rotRecalcularTotalEdicion();
+}
+
+window._rotRecalcularFilaEdicion = function(inputEl) {
+    var tr = inputEl.closest('tr');
+    if (!tr) return;
+    var cu = parseFloat(tr.dataset.cu || 0);
+    var cant = parseFloat(inputEl.value || 0);
+    if (cant < 0) cant = 0;
+    var imp = cant * cu;
+    var cellImp = tr.querySelector('.rot-edit-mat-imp-cell');
+    if (cellImp) {
+        cellImp.textContent = 'S/ ' + imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    _rotRecalcularTotalEdicion();
+};
+
+window._rotRecalcularTotalEdicion = function() {
+    var total = 0;
+    document.querySelectorAll('.rot-edit-mat-row').forEach(function(tr) {
+        var cu = parseFloat(tr.dataset.cu || 0);
+        var inputEl = tr.querySelector('.rot-edit-mat-cant-input');
+        var cant = parseFloat(inputEl ? inputEl.value : 0) || 0;
+        total += (cant * cu);
+    });
+    var totalLbl = document.getElementById('rot-edit-mat-total-lbl');
+    if (totalLbl) {
+        totalLbl.textContent = 'S/ ' + total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+};
+
+window.rotGuardarEdicionMateriales = function() {
+    if (!window._rotEdicionSalidaActiva) return;
+    var info = window._rotEdicionSalidaActiva;
+    var idSalida = info.salida_id;
+    var idOt = info.ticket_ot;
+
+    var rows = document.querySelectorAll('.rot-edit-mat-row');
+    if (!rows.length) {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La solicitud no puede quedar vacía. Si desea cancelarla, use la opción Eliminar.', 'warning');
+        return;
+    }
+
+    var updatedItems = [];
+    var hasInvalid = false;
+    rows.forEach(function(tr) {
+        var invId = tr.dataset.invId || null;
+        var desc = tr.dataset.desc || '';
+        var cu = parseFloat(tr.dataset.cu || 0);
+        var inputEl = tr.querySelector('.rot-edit-mat-cant-input');
+        var cant = parseFloat(inputEl ? inputEl.value : 0);
+        if (isNaN(cant) || cant <= 0) {
+            hasInvalid = true;
+            return;
+        }
+        var imp = cant * cu;
+        updatedItems.push({
+            inventario_id: invId,
+            descripcion: desc,
+            cantidad: cant,
+            costo_unitario: cu,
+            moneda: 'PEN',
+            importe: imp
+        });
+    });
+
+    if (hasInvalid || !updatedItems.length) {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Verifique que todas las cantidades sean mayores a 0.', 'danger');
+        return;
+    }
+
+    var btnSave = document.getElementById('rot-btn-save-edit-mat');
+    if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
+    }
+
+    fetch('/api/taller/ot-materiales/' + encodeURIComponent(idSalida), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            accion: 'editar',
+            items: updatedItems,
+            usuario: window.usuarioLogueado || localStorage.getItem('fleet_user') || 'Sistema'
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.innerHTML = '<i class="bi bi-check-lg"></i> Guardar Cambios';
+        }
+        var modalEl = document.getElementById('modalRotEditarCantidadesMateriales');
+        if (modalEl) {
+            var bsModal = bootstrap.Modal.getInstance(modalEl);
+            if (bsModal) bsModal.hide();
+        }
+
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Cantidades actualizadas con éxito en ' + idSalida, 'success');
+
+        // Recargar materiales de la OT
+        fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOt))
+            .then(function(r){ return r.ok ? r.json() : []; })
+            .then(function(materialesRows) {
+                window.rotOtMaterialesActivos = Array.isArray(materialesRows) ? materialesRows : [];
+                var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+                rotRenderSecMateriales(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
+            })
+            .catch(function(){});
+    })
+    .catch(function(err) {
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.innerHTML = '<i class="bi bi-check-lg"></i> Guardar Cambios';
+        }
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar cambios: ' + (err.message || 'Error de red'), 'danger');
+    });
+};
 
 // ── Render dinámico: sección Servicios de Terceros ───────────────
 function rotRenderSecServicios(idOt, esAprobada) {
@@ -3835,35 +4182,6 @@ window._rotInsertarKit = function() {
         var tbody = document.getElementById('rot-mat-items-tbody');
         if (!tbody) return;
 
-        var tr = document.createElement('tr');
-        tr.id = 'rot-mat-item-' + idx;
-        tr.innerHTML = `
-            <td style="padding:6px 8px;">
-                <div style="display:flex;gap:4px;align-items:center;">
-                    <input type="text" class="form-control form-control-sm rot-mat-item-desc bg-white fw-medium" list="rot-mat-inv-list" placeholder="Buscar artículo…" 
-                        data-idx="${idx}" oninput="window._rotBuscarArtMat(this, ${idx})" style="border-radius:8px; font-size:0.8rem;">
-                    <button type="button" class="btn btn-sm btn-light border text-primary shadow-2xs" style="flex-shrink:0; padding:3px 8px; border-radius:8px;" 
-                        onclick="window._rotAbrirQR(${idx})" title="Escanear código de barras o QR">
-                        <i class="bi bi-upc-scan"></i>
-                    </button>
-                </div>
-                <input type="hidden" class="rot-mat-item-inv-id" data-idx="${idx}">
-                <input type="hidden" class="rot-mat-item-stock" data-idx="${idx}" value="">
-                <input type="hidden" class="rot-mat-item-cu" data-idx="${idx}" value="0">
-                <input type="hidden" class="rot-mat-item-imp" data-idx="${idx}" value="0">
-                <div class="rot-mat-item-stock-lbl" data-idx="${idx}" style="font-size:0.75rem;margin-top:4px;display:none;"></div>
-            </td>
-            <td style="padding:6px 8px; width:120px; text-align:center;">
-                <input type="number" class="form-control form-control-sm rot-mat-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="${parseFloat(it.cantidad || 1)}" min="0.001" step="0.001" oninput="window._rotCalcItemMat(${idx})" style="border-radius:8px; font-size:0.82rem;">
-            </td>
-            <td style="padding:6px 8px; width:44px; text-align:center;">
-                <button type="button" class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1" onclick="window._rotQuitarItemMat(${idx})" title="Eliminar fila">
-                    <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-
         // Buscar correspondencia en almacén
         var invItem = (window._rotInvData || []).find(function(x) {
             var invNom = (x.descripcion || x.articulo || x.nombre || '').trim().toUpperCase();
@@ -3871,34 +4189,89 @@ window._rotInsertarKit = function() {
             return invNom === kitNom || invNom.includes(kitNom) || kitNom.includes(invNom);
         });
 
-        var descEl  = tr.querySelector('.rot-mat-item-desc');
-        var hidEl   = tr.querySelector('.rot-mat-item-inv-id');
-        var cuEl    = tr.querySelector('.rot-mat-item-cu');
-        var stockEl = tr.querySelector('.rot-mat-item-stock');
-        var lblEl   = tr.querySelector('.rot-mat-item-stock-lbl');
-
-        if (invItem) {
-            if (descEl) descEl.value = invItem.id + ' — ' + (invItem.descripcion || it.item_nombre);
-            if (hidEl) hidEl.value = invItem.id;
-            var costo = parseFloat(invItem.costo_referencial || invItem.costo || it.costo_unitario || 0);
-            if (cuEl) cuEl.value = costo.toFixed(2);
-            var stock = parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : -1));
-            if (stockEl) stockEl.value = stock;
-            if (lblEl) {
-                lblEl.style.display = 'block';
-                if (stock <= 0) {
-                    lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock disponible</span>';
-                } else if (stock < parseFloat(it.cantidad || 1)) {
-                    lblEl.innerHTML = '<span style="color:#d97706;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Stock insuficiente: ' + stock + ' ' + (invItem.unidad || 'und') + '</span>';
-                } else {
-                    lblEl.innerHTML = '<span style="color:#16a34a;"><i class="bi bi-check-circle-fill me-1"></i>Stock disponible: <strong>' + stock + '</strong> ' + (invItem.unidad || 'und') + '</span>';
-                }
+        var stock = invItem ? parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : 0)) : null;
+        var stockLblHtml = '';
+        if (stock !== null) {
+            if (stock <= 0) {
+                stockLblHtml = '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock (0 ' + (invItem.unidad || 'UND') + ')</span>';
+            } else {
+                stockLblHtml = '<span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-check2 me-1"></i>Stock: <strong>' + stock + ' ' + (invItem.unidad || 'UND') + '</strong></span>';
             }
-        } else {
-            if (descEl) descEl.value = it.item_nombre || '';
-            if (cuEl) cuEl.value = parseFloat(it.costo_unitario || 0).toFixed(2);
         }
 
+        var itemDescVal = invItem ? (invItem.id + ' — ' + (invItem.descripcion || it.item_nombre)) : (it.item_nombre || '');
+        var costoUnit = invItem ? parseFloat(invItem.costo_referencial || invItem.costo || it.costo_unitario || 0) : parseFloat(it.costo_unitario || 0);
+
+        var tr = document.createElement('tr');
+        tr.id = 'rot-mat-item-' + idx;
+        tr.innerHTML = `
+            <td style="padding: 8px 10px; position: relative;">
+                <div class="position-relative">
+                    <div class="input-group input-group-sm">
+                        <input type="text" 
+                               class="form-control form-control-sm rot-mat-item-desc bg-white fw-semibold" 
+                               placeholder="Buscar por código o nombre..." 
+                               data-idx="${idx}" 
+                               value="${rotEscHtml(itemDescVal)}"
+                               autocomplete="off"
+                               oninput="window._rotFiltrarDropdownArt(${idx})" 
+                               onfocus="window._rotFiltrarDropdownArt(${idx})" 
+                               onblur="window._rotHideDropdownArt(${idx})" 
+                               style="border-radius: 8px 0 0 8px; min-height: 38px; font-size: 0.84rem;">
+                        <button type="button" 
+                                class="btn btn-sm btn-light border text-primary shadow-2xs d-flex align-items-center justify-content-center px-3" 
+                                style="border-radius: 0 8px 8px 0; min-height: 38px;" 
+                                onclick="window._rotAbrirQR(${idx})" 
+                                title="Escanear código de barras o QR">
+                            <i class="bi bi-upc-scan fs-6"></i>
+                        </button>
+                    </div>
+                    <div id="rot-art-${idx}-dd" class="cb-dropdown custom-art-dropdown shadow-lg"></div>
+                </div>
+                <input type="hidden" class="rot-mat-item-inv-id" data-idx="${idx}" value="${rotEscHtml(invItem ? invItem.id : '')}">
+                <input type="hidden" class="rot-mat-item-stock" data-idx="${idx}" value="${stock !== null ? stock : ''}">
+                <div class="rot-mat-item-stock-lbl" data-idx="${idx}" style="font-size: 0.74rem; margin-top: 4px; ${stockLblHtml ? '' : 'display:none;'}">${stockLblHtml}</div>
+            </td>
+            <td style="padding: 8px 8px; width: 100px; text-align: center;">
+                <input type="number" 
+                       class="form-control form-control-sm rot-mat-item-cant bg-white fw-bold text-center" 
+                       data-idx="${idx}" 
+                       value="${parseFloat(it.cantidad || 1)}" 
+                       min="0.001" 
+                       step="0.001" 
+                       oninput="window._rotCalcItemMat(${idx})" 
+                       style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 8px 8px; width: 120px;">
+                <input type="number" 
+                       class="form-control form-control-sm rot-mat-item-cu bg-white fw-semibold text-end" 
+                       data-idx="${idx}" 
+                       value="${costoUnit.toFixed(2)}" 
+                       min="0" 
+                       step="0.01" 
+                       oninput="window._rotCalcItemMat(${idx})" 
+                       style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 8px 8px; width: 120px;">
+                <input type="number" 
+                       class="form-control form-control-sm rot-mat-item-imp bg-light fw-bold text-success text-end" 
+                       data-idx="${idx}" 
+                       value="${(parseFloat(it.cantidad || 1) * costoUnit).toFixed(2)}" 
+                       readonly 
+                       tabindex="-1"
+                       style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 8px 8px; width: 44px; text-align: center;">
+                <button type="button" 
+                        class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1 d-flex align-items-center justify-content-center mx-auto" 
+                        onclick="window._rotQuitarItemMat(${idx})" 
+                        title="Eliminar fila" 
+                        style="width: 32px; height: 32px;">
+                    <i class="bi bi-trash3-fill" style="font-size: 0.82rem;"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
         window._rotCalcItemMat(idx);
     });
 
@@ -4235,35 +4608,6 @@ window._rotInsertarOC = function () {
         var tbody = document.getElementById('rot-mat-items-tbody');
         if (!tbody) return;
 
-        var tr = document.createElement('tr');
-        tr.id = 'rot-mat-item-' + idx;
-        tr.innerHTML = `
-            <td style="padding:6px 8px;">
-                <div style="display:flex;gap:4px;align-items:center;">
-                    <input type="text" class="form-control form-control-sm rot-mat-item-desc bg-white fw-medium" list="rot-mat-inv-list" placeholder="Buscar artículo…" 
-                        data-idx="${idx}" oninput="window._rotBuscarArtMat(this, ${idx})" style="border-radius:8px; font-size:0.8rem;">
-                    <button type="button" class="btn btn-sm btn-light border text-primary shadow-2xs" style="flex-shrink:0; padding:3px 8px; border-radius:8px;" 
-                        onclick="window._rotAbrirQR(${idx})" title="Escanear código de barras o QR">
-                        <i class="bi bi-upc-scan"></i>
-                    </button>
-                </div>
-                <input type="hidden" class="rot-mat-item-inv-id" data-idx="${idx}">
-                <input type="hidden" class="rot-mat-item-stock" data-idx="${idx}" value="">
-                <input type="hidden" class="rot-mat-item-cu" data-idx="${idx}" value="0">
-                <input type="hidden" class="rot-mat-item-imp" data-idx="${idx}" value="0">
-                <div class="rot-mat-item-stock-lbl" data-idx="${idx}" style="font-size:0.75rem;margin-top:4px;display:none;"></div>
-            </td>
-            <td style="padding:6px 8px; width:120px; text-align:center;">
-                <input type="number" class="form-control form-control-sm rot-mat-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="${parseFloat(it.cantidad || 1)}" min="0.001" step="0.001" oninput="window._rotCalcItemMat(${idx})" style="border-radius:8px; font-size:0.82rem;">
-            </td>
-            <td style="padding:6px 8px; width:44px; text-align:center;">
-                <button type="button" class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1" onclick="window._rotQuitarItemMat(${idx})" title="Eliminar fila">
-                    <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-
         var itDesc = it.descripcion || it.nombre || it.articulo || '';
 
         // Buscar correspondencia en almacén
@@ -4273,34 +4617,89 @@ window._rotInsertarOC = function () {
             return invNom === ocNom || invNom.includes(ocNom) || ocNom.includes(invNom);
         });
 
-        var descEl  = tr.querySelector('.rot-mat-item-desc');
-        var hidEl   = tr.querySelector('.rot-mat-item-inv-id');
-        var cuEl    = tr.querySelector('.rot-mat-item-cu');
-        var stockEl = tr.querySelector('.rot-mat-item-stock');
-        var lblEl   = tr.querySelector('.rot-mat-item-stock-lbl');
-
-        if (invItem) {
-            if (descEl) descEl.value = invItem.id + ' — ' + (invItem.descripcion || itDesc);
-            if (hidEl) hidEl.value = invItem.id;
-            var costo = parseFloat(invItem.costo_referencial || invItem.costo || it.precio_unitario || 0);
-            if (cuEl) cuEl.value = costo.toFixed(2);
-            var stock = parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : -1));
-            if (stockEl) stockEl.value = stock;
-            if (lblEl) {
-                lblEl.style.display = 'block';
-                if (stock <= 0) {
-                    lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock disponible</span>';
-                } else if (stock < parseFloat(it.cantidad || 1)) {
-                    lblEl.innerHTML = '<span style="color:#d97706;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Stock insuficiente: ' + stock + ' ' + (invItem.unidad || 'und') + '</span>';
-                } else {
-                    lblEl.innerHTML = '<span style="color:#16a34a;"><i class="bi bi-check-circle-fill me-1"></i>Stock disponible: <strong>' + stock + '</strong> ' + (invItem.unidad || 'und') + '</span>';
-                }
+        var stock = invItem ? parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : 0)) : null;
+        var stockLblHtml = '';
+        if (stock !== null) {
+            if (stock <= 0) {
+                stockLblHtml = '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock (0 ' + (invItem.unidad || 'UND') + ')</span>';
+            } else {
+                stockLblHtml = '<span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-check2 me-1"></i>Stock: <strong>' + stock + ' ' + (invItem.unidad || 'UND') + '</strong></span>';
             }
-        } else {
-            if (descEl) descEl.value = itDesc;
-            if (cuEl) cuEl.value = parseFloat(it.precio_unitario || 0).toFixed(2);
         }
 
+        var itemDescVal = invItem ? (invItem.id + ' — ' + (invItem.descripcion || itDesc)) : itDesc;
+        var costoUnit = invItem ? parseFloat(invItem.costo_referencial || invItem.costo || it.precio_unitario || 0) : parseFloat(it.precio_unitario || 0);
+
+        var tr = document.createElement('tr');
+        tr.id = 'rot-mat-item-' + idx;
+        tr.innerHTML = `
+            <td style="padding: 8px 10px; position: relative;">
+                <div class="position-relative">
+                    <div class="input-group input-group-sm">
+                        <input type="text" 
+                               class="form-control form-control-sm rot-mat-item-desc bg-white fw-semibold" 
+                               placeholder="Buscar por código o nombre..." 
+                               data-idx="${idx}" 
+                               value="${rotEscHtml(itemDescVal)}"
+                               autocomplete="off"
+                               oninput="window._rotFiltrarDropdownArt(${idx})" 
+                               onfocus="window._rotFiltrarDropdownArt(${idx})" 
+                               onblur="window._rotHideDropdownArt(${idx})" 
+                               style="border-radius: 8px 0 0 8px; min-height: 38px; font-size: 0.84rem;">
+                        <button type="button" 
+                                class="btn btn-sm btn-light border text-primary shadow-2xs d-flex align-items-center justify-content-center px-3" 
+                                style="border-radius: 0 8px 8px 0; min-height: 38px;" 
+                                onclick="window._rotAbrirQR(${idx})" 
+                                title="Escanear código de barras o QR">
+                            <i class="bi bi-upc-scan fs-6"></i>
+                        </button>
+                    </div>
+                    <div id="rot-art-${idx}-dd" class="cb-dropdown custom-art-dropdown shadow-lg"></div>
+                </div>
+                <input type="hidden" class="rot-mat-item-inv-id" data-idx="${idx}" value="${rotEscHtml(invItem ? invItem.id : '')}">
+                <input type="hidden" class="rot-mat-item-stock" data-idx="${idx}" value="${stock !== null ? stock : ''}">
+                <div class="rot-mat-item-stock-lbl" data-idx="${idx}" style="font-size: 0.74rem; margin-top: 4px; ${stockLblHtml ? '' : 'display:none;'}">${stockLblHtml}</div>
+            </td>
+            <td style="padding: 8px 8px; width: 100px; text-align: center;">
+                <input type="number" 
+                       class="form-control form-control-sm rot-mat-item-cant bg-white fw-bold text-center" 
+                       data-idx="${idx}" 
+                       value="${parseFloat(it.cantidad || 1)}" 
+                       min="0.001" 
+                       step="0.001" 
+                       oninput="window._rotCalcItemMat(${idx})" 
+                       style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 8px 8px; width: 120px;">
+                <input type="number" 
+                       class="form-control form-control-sm rot-mat-item-cu bg-white fw-semibold text-end" 
+                       data-idx="${idx}" 
+                       value="${costoUnit.toFixed(2)}" 
+                       min="0" 
+                       step="0.01" 
+                       oninput="window._rotCalcItemMat(${idx})" 
+                       style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 8px 8px; width: 120px;">
+                <input type="number" 
+                       class="form-control form-control-sm rot-mat-item-imp bg-light fw-bold text-success text-end" 
+                       data-idx="${idx}" 
+                       value="${(parseFloat(it.cantidad || 1) * costoUnit).toFixed(2)}" 
+                       readonly 
+                       tabindex="-1"
+                       style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 8px 8px; width: 44px; text-align: center;">
+                <button type="button" 
+                        class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1 d-flex align-items-center justify-content-center mx-auto" 
+                        onclick="window._rotQuitarItemMat(${idx})" 
+                        title="Eliminar fila" 
+                        style="width: 32px; height: 32px;">
+                    <i class="bi bi-trash3-fill" style="font-size: 0.82rem;"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
         window._rotCalcItemMat(idx);
     });
 
@@ -4327,7 +4726,7 @@ window._rotInsertarOC = function () {
     }
 };
 
-// ── Item helpers para el form de materiales ───────────────────────
+// ── Item helpers para el form de materiales con Buscador Moderno ──
 window._rotAgregarItemMat = function() {
     var tbody = document.getElementById('rot-mat-items-tbody');
     if (!tbody) return;
@@ -4335,31 +4734,195 @@ window._rotAgregarItemMat = function() {
     var tr = document.createElement('tr');
     tr.id = 'rot-mat-item-' + idx;
     tr.innerHTML = `
-        <td style="padding:6px 8px;">
-            <div style="display:flex;gap:4px;align-items:center;">
-                <input type="text" class="form-control form-control-sm rot-mat-item-desc bg-white fw-medium" list="rot-mat-inv-list" placeholder="Buscar artículo…" 
-                    data-idx="${idx}" oninput="window._rotBuscarArtMat(this, ${idx})" style="border-radius:8px; font-size:0.8rem;">
-                <button type="button" class="btn btn-sm btn-light border text-primary shadow-2xs" style="flex-shrink:0; padding:3px 8px; border-radius:8px;" 
-                    onclick="window._rotAbrirQR(${idx})" title="Escanear código de barras o QR">
-                    <i class="bi bi-upc-scan"></i>
-                </button>
+        <td style="padding: 8px 10px; position: relative;">
+            <div class="position-relative">
+                <div class="input-group input-group-sm">
+                    <input type="text" 
+                           class="form-control form-control-sm rot-mat-item-desc bg-white fw-semibold" 
+                           placeholder="Escribe código (INV-...) o nombre del artículo..." 
+                           data-idx="${idx}" 
+                           autocomplete="off"
+                           oninput="window._rotFiltrarDropdownArt(${idx})" 
+                           onfocus="window._rotFiltrarDropdownArt(${idx})" 
+                           onblur="window._rotHideDropdownArt(${idx})" 
+                           style="border-radius: 8px 0 0 8px; min-height: 38px; font-size: 0.84rem;">
+                    <button type="button" 
+                            class="btn btn-sm btn-light border text-primary shadow-2xs d-flex align-items-center justify-content-center px-3" 
+                            style="border-radius: 0 8px 8px 0; min-height: 38px;" 
+                            onclick="window._rotAbrirQR(${idx})" 
+                            title="Escanear código de barras o QR">
+                        <i class="bi bi-upc-scan fs-6"></i>
+                    </button>
+                </div>
+                <div id="rot-art-${idx}-dd" class="cb-dropdown custom-art-dropdown shadow-lg"></div>
             </div>
             <input type="hidden" class="rot-mat-item-inv-id" data-idx="${idx}">
             <input type="hidden" class="rot-mat-item-stock" data-idx="${idx}" value="">
-            <input type="hidden" class="rot-mat-item-cu" data-idx="${idx}" value="0">
-            <input type="hidden" class="rot-mat-item-imp" data-idx="${idx}" value="0">
-            <div class="rot-mat-item-stock-lbl" data-idx="${idx}" style="font-size:0.75rem;margin-top:4px;display:none;"></div>
+            <div class="rot-mat-item-stock-lbl" data-idx="${idx}" style="font-size: 0.74rem; margin-top: 4px; display: none;"></div>
         </td>
-        <td style="padding:6px 8px; width:120px; text-align:center;">
-            <input type="number" class="form-control form-control-sm rot-mat-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="1" min="0.001" step="0.001" oninput="window._rotCalcItemMat(${idx})" style="border-radius:8px; font-size:0.82rem;">
+        <td style="padding: 8px 8px; width: 100px; text-align: center;">
+            <input type="number" 
+                   class="form-control form-control-sm rot-mat-item-cant bg-white fw-bold text-center" 
+                   data-idx="${idx}" 
+                   value="1" 
+                   min="0.001" 
+                   step="0.001" 
+                   oninput="window._rotCalcItemMat(${idx})" 
+                   style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
         </td>
-        <td style="padding:6px 8px; width:44px; text-align:center;">
-            <button type="button" class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1" onclick="window._rotQuitarItemMat(${idx})" title="Eliminar fila">
-                <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>
+        <td style="padding: 8px 8px; width: 120px;">
+            <input type="number" 
+                   class="form-control form-control-sm rot-mat-item-cu bg-white fw-semibold text-end" 
+                   data-idx="${idx}" 
+                   value="0.00" 
+                   min="0" 
+                   step="0.01" 
+                   oninput="window._rotCalcItemMat(${idx})" 
+                   style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+        </td>
+        <td style="padding: 8px 8px; width: 120px;">
+            <input type="number" 
+                   class="form-control form-control-sm rot-mat-item-imp bg-light fw-bold text-success text-end" 
+                   data-idx="${idx}" 
+                   value="0.00" 
+                   readonly 
+                   tabindex="-1"
+                   style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+        </td>
+        <td style="padding: 8px 8px; width: 44px; text-align: center;">
+            <button type="button" 
+                    class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1 d-flex align-items-center justify-content-center mx-auto" 
+                    onclick="window._rotQuitarItemMat(${idx})" 
+                    title="Eliminar fila" 
+                    style="width: 32px; height: 32px;">
+                <i class="bi bi-trash3-fill" style="font-size: 0.82rem;"></i>
             </button>
         </td>
     `;
     tbody.appendChild(tr);
+};
+
+window._rotFiltrarDropdownArt = function(idx) {
+    var input = document.querySelector('.rot-mat-item-desc[data-idx="' + idx + '"]');
+    var dd = document.getElementById('rot-art-' + idx + '-dd');
+    if (!input || !dd) return;
+
+    var query = (input.value || '').trim().toLowerCase();
+    var invList = window._rotInvData || [];
+
+    var results = invList;
+    if (query) {
+        var cleanQuery = query;
+        if (cleanQuery.includes(' — ')) cleanQuery = cleanQuery.split(' — ')[1] || cleanQuery;
+        cleanQuery = cleanQuery.trim();
+
+        results = invList.filter(function(item) {
+            var id = String(item.id || '').toLowerCase();
+            var desc = String(item.descripcion || item.articulo || item.nombre || '').toLowerCase();
+            var barcode = String(item.codigo_barras || '').toLowerCase();
+            var fabCode = String(item.codigo_fabrica || '').toLowerCase();
+            var marca = String(item.marca || '').toLowerCase();
+            var sis = String(item.sistema || '').toLowerCase();
+            return id.includes(cleanQuery) || desc.includes(cleanQuery) || barcode.includes(cleanQuery) || fabCode.includes(cleanQuery) || marca.includes(cleanQuery) || sis.includes(cleanQuery);
+        });
+    }
+
+    if (!results.length) {
+        dd.innerHTML = '<div class="p-3 text-center text-muted small"><i class="bi bi-search me-1"></i>No se encontraron artículos</div>';
+        dd.style.display = 'block';
+        return;
+    }
+
+    var limit = 35;
+    var slice = results.slice(0, limit);
+    var html = slice.map(function(item) {
+        var stock = parseFloat(item.stock_actual != null ? item.stock_actual : (item.stock != null ? item.stock : 0));
+        var costo = parseFloat(item.costo_referencial || item.costo || item.costo_soles || 0);
+        var stockBadge = stock > 0
+            ? '<span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;font-size:0.72rem;font-weight:700;"><i class="bi bi-check2 me-1"></i>' + stock + ' ' + (item.unidad || 'UND') + '</span>'
+            : '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:0.72rem;font-weight:700;"><i class="bi bi-slash-circle me-1"></i>Sin stock</span>';
+
+        var safeId = String(item.id || '').replace(/"/g, '&quot;');
+        var safeDesc = String(item.descripcion || item.articulo || '').replace(/"/g, '&quot;');
+        var marcaBadge = item.marca ? '<span class="badge bg-light text-secondary border px-1.5 py-0.5 rounded-2" style="font-size:0.68rem;">' + item.marca + '</span>' : '';
+        var sistemaText = item.sistema ? '<span class="text-muted small"><i class="bi bi-gear-wide-connected me-1"></i>' + item.sistema + '</span>' : '';
+
+        return `
+            <div class="rot-art-opt" 
+                 onmousedown="window._rotSeleccionarArticuloMat(${idx}, '${safeId}')"
+                 onmouseenter="this.style.background='#f8fafc'" 
+                 onmouseleave="this.style.background='#ffffff'">
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                        <span class="badge bg-dark text-white fw-bold px-2 py-0.5 rounded-2" style="font-size:0.72rem;">${item.id}</span>
+                        ${marcaBadge}
+                    </div>
+                    ${stockBadge}
+                </div>
+                <div class="fw-semibold text-dark text-truncate" style="font-size:0.84rem;" title="${safeDesc}">${item.descripcion || item.articulo || ''}</div>
+                <div class="d-flex align-items-center justify-content-between text-muted mt-1" style="font-size:0.72rem;">
+                    ${sistemaText}
+                    <span class="fw-bold" style="color:#0f172a;">S/. ${costo.toFixed(2)}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    if (results.length > limit) {
+        html += `<div class="p-2 text-center text-muted small bg-light" style="font-size:0.72rem;">Mostrando ${limit} de ${results.length} artículos. Escribe para filtrar más rápido.</div>`;
+    }
+
+    dd.innerHTML = html;
+    dd.style.display = 'block';
+};
+
+window._rotHideDropdownArt = function(idx) {
+    setTimeout(function() {
+        var dd = document.getElementById('rot-art-' + idx + '-dd');
+        if (dd) dd.style.display = 'none';
+    }, 250);
+};
+
+window._rotSeleccionarArticuloMat = function(idx, invId) {
+    var item = (window._rotInvData || []).find(function(d) { return String(d.id).trim() === String(invId).trim(); });
+    if (!item) return;
+
+    var descEl = document.querySelector('.rot-mat-item-desc[data-idx="' + idx + '"]');
+    var hidEl  = document.querySelector('.rot-mat-item-inv-id[data-idx="' + idx + '"]');
+    var stockEl = document.querySelector('.rot-mat-item-stock[data-idx="' + idx + '"]');
+    var cuEl   = document.querySelector('.rot-mat-item-cu[data-idx="' + idx + '"]');
+    var lblEl  = document.querySelector('.rot-mat-item-stock-lbl[data-idx="' + idx + '"]');
+    var dd     = document.getElementById('rot-art-' + idx + '-dd');
+
+    if (descEl) descEl.value = item.id + ' — ' + (item.descripcion || item.articulo || '');
+    if (hidEl) hidEl.value = item.id;
+    
+    var costo = parseFloat(item.costo_referencial || item.costo || item.costo_soles || 0);
+    if (cuEl) {
+        cuEl.value = costo.toFixed(2);
+    }
+    
+    var stock = parseFloat(item.stock_actual != null ? item.stock_actual : (item.stock != null ? item.stock : 0));
+    if (stockEl) stockEl.value = stock;
+
+    if (lblEl) {
+        lblEl.style.display = 'block';
+        if (stock <= 0) {
+            lblEl.innerHTML = '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock disponible (0 ' + (item.unidad || 'UND') + ')</span>';
+        } else {
+            lblEl.innerHTML = '<span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-check2 me-1"></i>Stock disponible: <strong>' + stock + ' ' + (item.unidad || 'UND') + '</strong></span>';
+        }
+    }
+
+    if (dd) dd.style.display = 'none';
+
+    window._rotCalcItemMat(idx);
+
+    var cantEl = document.querySelector('.rot-mat-item-cant[data-idx="' + idx + '"]');
+    if (cantEl) {
+        cantEl.focus();
+        cantEl.select();
+    }
 };
 
 window._rotQrTargetIdx = window._rotQrTargetIdx || null;
@@ -4385,55 +4948,12 @@ window._rotSeleccionarItemPorQR = function(valor, idx) {
         else alert('Artículo no encontrado: ' + valor);
         return;
     }
-    var descEl = document.querySelector('.rot-mat-item-desc[data-idx="' + idx + '"]');
-    var hidEl  = document.querySelector('.rot-mat-item-inv-id[data-idx="' + idx + '"]');
-    var cuEl   = document.querySelector('.rot-mat-item-cu[data-idx="' + idx + '"]');
-    if (descEl) descEl.value = item.id + ' — ' + (item.descripcion || '');
-    if (hidEl) hidEl.value = item.id;
-    if (cuEl) cuEl.value = item.costo || item.costo_referencial || 0;
-    
-    var stock = parseFloat(item.stock_actual != null ? item.stock_actual : (item.stock != null ? item.stock : 0));
-    var stockEl = document.querySelector('.rot-mat-item-stock[data-idx="' + idx + '"]');
-    var lblEl   = document.querySelector('.rot-mat-item-stock-lbl[data-idx="' + idx + '"]');
-    if (stockEl) stockEl.value = stock;
-    if (lblEl) {
-        lblEl.style.display = 'block';
-        if (stock <= 0) {
-            lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock disponible</span>';
-        } else {
-            lblEl.innerHTML = '<span style="color:#16a34a;"><i class="bi bi-check-circle-fill me-1"></i>Stock disponible: <strong>' + stock + '</strong> ' + (item.unidad || 'und') + '</span>';
-        }
-    }
-    
-    window._rotCalcItemMat(idx);
-    if (typeof window.rotToast === 'function') window.rotToast('Artículo agregado correctamente', 'bg-success');
+    window._rotSeleccionarArticuloMat(idx, item.id);
+    if (typeof window.rotToast === 'function') window.rotToast('Artículo: ' + (item.descripcion || item.id), 'bg-success');
 };
 
 window._rotBuscarArtMat = function(input, idx) {
-    var val = input.value || '';
-    var invId = val.split(' — ')[0].trim();
-    var item = (window._rotInvData || []).find(function(d) { return d.id === invId; });
-    var stockEl = document.querySelector('.rot-mat-item-stock[data-idx="' + idx + '"]');
-    var lblEl   = document.querySelector('.rot-mat-item-stock-lbl[data-idx="' + idx + '"]');
-    if (item) {
-        var hidEl = document.querySelector('.rot-mat-item-inv-id[data-idx="' + idx + '"]');
-        if (hidEl) hidEl.value = item.id;
-        var cuEl = document.querySelector('.rot-mat-item-cu[data-idx="' + idx + '"]');
-        if (cuEl) { cuEl.value = parseFloat(item.costo_referencial || item.costo || 0).toFixed(2); window._rotCalcItemMat(idx); }
-        var stock = parseFloat(item.stock_actual != null ? item.stock_actual : -1);
-        if (stockEl) stockEl.value = stock;
-        if (lblEl) {
-            lblEl.style.display = 'block';
-            if (stock <= 0) {
-                lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock disponible</span>';
-            } else {
-                lblEl.innerHTML = '<span style="color:#16a34a;"><i class="bi bi-check-circle-fill me-1"></i>Stock disponible: <strong>' + stock + '</strong> ' + (item.unidad || 'und') + '</span>';
-            }
-        }
-    } else {
-        if (stockEl) stockEl.value = '';
-        if (lblEl) lblEl.style.display = 'none';
-    }
+    window._rotFiltrarDropdownArt(idx);
 };
 
 window._rotCalcItemMat = function(idx) {

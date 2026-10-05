@@ -1259,22 +1259,89 @@ window.salEditarSalida = function (id) {
             var idx = window._salItemIdx++;
             var tr = document.createElement('tr');
             tr.id = 'sal-item-' + idx;
-            tr.innerHTML =
-                '<td>' +
-                '<div style="display:flex;gap:4px;align-items:center;">' +
-                '<input type="text" class="form-control form-control-sm sal-item-desc" list="sal-inv-list" placeholder="Buscar artículo…" ' +
-                'data-idx="' + idx + '" oninput="window._salBuscarArt(this,' + idx + ')" value="' + salEsc(it.inventario_id + ' — ' + (it.descripcion || '')) + '">' +
-                '<button type="button" class="btn btn-sm btn-outline-secondary" style="flex-shrink:0;padding:2px 7px;" ' +
-                'onclick="window._salAbrirQR(' + idx + ')" title="Escanear código de barras">' +
-                '<i class="bi bi-upc-scan"></i>' +
-                '</button>' +
-                '</div>' +
-                '<input type="hidden" class="sal-item-inv-id" data-idx="' + idx + '" value="' + salEsc(it.inventario_id) + '">' +
-                '</td>' +
-                '<td><input type="number" class="form-control form-control-sm sal-item-cant" data-idx="' + idx + '" value="' + parseFloat(it.cantidad || 0) + '" min="0.001" step="0.001" oninput="window._salCalcItem(' + idx + ')"></td>' +
-                '<td><input type="number" class="form-control form-control-sm sal-item-cu" data-idx="' + idx + '" value="' + parseFloat(it.costo_unitario || 0) + '" min="0" step="0.01" oninput="window._salCalcItem(' + idx + ')"></td>' +
-                '<td><input type="number" class="form-control form-control-sm sal-item-imp" data-idx="' + idx + '" value="' + (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)).toFixed(2) + '" readonly></td>' +
-                '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="window._salQuitarItem(' + idx + ')"><i class="bi bi-x"></i></button></td>';
+
+            var invItem = (window._salInvData || []).find(function (x) {
+                return String(x.id).trim() === String(it.inventario_id).trim();
+            });
+            var stock = invItem ? parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : 0)) : null;
+            var stockLblHtml = '';
+            if (stock !== null) {
+                if (stock <= 0) {
+                    stockLblHtml = '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock (0 ' + (invItem.unidad || 'UND') + ')</span>';
+                } else {
+                    stockLblHtml = '<span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-check2 me-1"></i>Stock: <strong>' + stock + ' ' + (invItem.unidad || 'UND') + '</strong></span>';
+                }
+            }
+
+            var safeDesc = (it.inventario_id ? it.inventario_id + ' — ' : '') + (it.descripcion || '');
+
+            tr.innerHTML = `
+                <td style="padding: 8px 10px; position: relative;">
+                    <div class="position-relative">
+                        <div class="input-group input-group-sm">
+                            <input type="text" 
+                                   class="form-control form-control-sm sal-item-desc bg-white fw-semibold" 
+                                   placeholder="Buscar por código o nombre..." 
+                                   data-idx="${idx}" 
+                                   value="${salEsc(safeDesc)}"
+                                   autocomplete="off"
+                                   oninput="window._salFiltrarDropdownArt(${idx})" 
+                                   onfocus="window._salFiltrarDropdownArt(${idx})" 
+                                   onblur="window._salHideDropdownArt(${idx})" 
+                                   style="border-radius: 8px 0 0 8px; min-height: 38px; font-size: 0.84rem;">
+                            <button type="button" 
+                                    class="btn btn-sm btn-light border text-primary shadow-2xs d-flex align-items-center justify-content-center px-3" 
+                                    style="border-radius: 0 8px 8px 0; min-height: 38px;" 
+                                    onclick="window._salAbrirQR(${idx})" 
+                                    title="Escanear código de barras o QR">
+                                <i class="bi bi-upc-scan fs-6"></i>
+                            </button>
+                        </div>
+                        <div id="sal-art-${idx}-dd" class="cb-dropdown custom-art-dropdown shadow-lg"></div>
+                    </div>
+                    <input type="hidden" class="sal-item-inv-id" data-idx="${idx}" value="${salEsc(it.inventario_id || '')}">
+                    <input type="hidden" class="sal-item-stock" data-idx="${idx}" value="${stock !== null ? stock : ''}">
+                    <div class="sal-item-stock-lbl" data-idx="${idx}" style="font-size: 0.74rem; margin-top: 4px; ${stockLblHtml ? '' : 'display:none;'}">${stockLblHtml}</div>
+                </td>
+                <td style="padding: 8px 8px; width: 100px; text-align: center;">
+                    <input type="number" 
+                           class="form-control form-control-sm sal-item-cant bg-white fw-bold text-center" 
+                           data-idx="${idx}" 
+                           value="${parseFloat(it.cantidad || 0)}" 
+                           min="0.001" 
+                           step="0.001" 
+                           oninput="window._salCalcItem(${idx})" 
+                           style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+                </td>
+                <td style="padding: 8px 8px; width: 120px;">
+                    <input type="number" 
+                           class="form-control form-control-sm sal-item-cu bg-white fw-semibold text-end" 
+                           data-idx="${idx}" 
+                           value="${parseFloat(it.costo_unitario || 0).toFixed(2)}" 
+                           min="0" 
+                           step="0.01" 
+                           oninput="window._salCalcItem(${idx})" 
+                           style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+                </td>
+                <td style="padding: 8px 8px; width: 120px;">
+                    <input type="number" 
+                           class="form-control form-control-sm sal-item-imp bg-light fw-bold text-success text-end" 
+                           data-idx="${idx}" 
+                           value="${(parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)).toFixed(2)}" 
+                           readonly 
+                           tabindex="-1"
+                           style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+                </td>
+                <td style="padding: 8px 8px; width: 44px; text-align: center;">
+                    <button type="button" 
+                            class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1 d-flex align-items-center justify-content-center mx-auto" 
+                            onclick="window._salQuitarItem(${idx})" 
+                            title="Eliminar fila" 
+                            style="width: 32px; height: 32px;">
+                        <i class="bi bi-trash3-fill" style="font-size: 0.82rem;"></i>
+                    </button>
+                </td>
+            `;
             if (tbody) tbody.appendChild(tr);
         });
         _salActualizarTotal();
@@ -1622,37 +1689,6 @@ window._salInsertarKit = function () {
         var tbody = document.getElementById('sal-items-tbody');
         if (!tbody) return;
 
-        var tr = document.createElement('tr');
-        tr.id = 'sal-item-' + idx;
-        tr.innerHTML = `
-            <td style="padding:6px 8px;">
-                <div style="display:flex;gap:4px;align-items:center;">
-                    <input type="text" class="form-control form-control-sm sal-item-desc bg-white fw-medium" list="sal-inv-list" placeholder="Buscar artículo…" 
-                        data-idx="${idx}" oninput="window._salBuscarArt(this, ${idx})" style="border-radius:8px; font-size:0.8rem;">
-                    <button type="button" class="btn btn-sm btn-light border text-primary shadow-2xs" style="flex-shrink:0; padding:3px 8px; border-radius:8px;" 
-                        onclick="window._salAbrirQR(${idx})" title="Escanear código de barras o QR">
-                        <i class="bi bi-upc-scan"></i>
-                    </button>
-                </div>
-                <input type="hidden" class="sal-item-inv-id" data-idx="${idx}">
-            </td>
-            <td style="padding:6px 8px; width:75px;">
-                <input type="number" class="form-control form-control-sm sal-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="${parseFloat(it.cantidad || 1)}" min="0.001" step="0.001" oninput="window._salCalcItem(${idx})" style="border-radius:8px; font-size:0.8rem;">
-            </td>
-            <td style="padding:6px 8px; width:105px;">
-                <input type="number" class="form-control form-control-sm sal-item-cu bg-white fw-semibold" data-idx="${idx}" value="0" min="0" step="0.01" oninput="window._salCalcItem(${idx})" style="border-radius:8px; font-size:0.8rem;">
-            </td>
-            <td style="padding:6px 8px; width:100px;">
-                <input type="number" class="form-control form-control-sm sal-item-imp bg-light fw-bold text-success" data-idx="${idx}" value="0" readonly style="border-radius:8px; font-size:0.8rem;">
-            </td>
-            <td style="padding:6px 8px; width:38px; text-align:center;">
-                <button type="button" class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1" onclick="window._salQuitarItem(${idx})" title="Eliminar fila">
-                    <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-
         // Buscar correspondencia en almacén
         var invItem = (window._salInvData || []).find(function (x) {
             var invNom = (x.descripcion || x.articulo || x.nombre || '').trim().toUpperCase();
@@ -1660,20 +1696,89 @@ window._salInsertarKit = function () {
             return invNom === kitNom || invNom.includes(kitNom) || kitNom.includes(invNom);
         });
 
-        var descEl = tr.querySelector('.sal-item-desc');
-        var hidEl = tr.querySelector('.sal-item-inv-id');
-        var cuEl = tr.querySelector('.sal-item-cu');
-
-        if (invItem) {
-            if (descEl) descEl.value = invItem.id + ' — ' + (invItem.descripcion || it.item_nombre);
-            if (hidEl) hidEl.value = invItem.id;
-            var costoSoles = parseFloat(invItem.costo_soles != null ? invItem.costo_soles : (invItem.costo_referencial || it.costo_unitario || 0));
-            if (cuEl) cuEl.value = costoSoles.toFixed(2);
-        } else {
-            if (descEl) descEl.value = it.item_nombre || '';
-            if (cuEl) cuEl.value = parseFloat(it.costo_unitario || 0).toFixed(2);
+        var stock = invItem ? parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : 0)) : null;
+        var stockLblHtml = '';
+        if (stock !== null) {
+            if (stock <= 0) {
+                stockLblHtml = '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock (0 ' + (invItem.unidad || 'UND') + ')</span>';
+            } else {
+                stockLblHtml = '<span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-check2 me-1"></i>Stock: <strong>' + stock + ' ' + (invItem.unidad || 'UND') + '</strong></span>';
+            }
         }
 
+        var itemDescVal = invItem ? (invItem.id + ' — ' + (invItem.descripcion || it.item_nombre)) : (it.item_nombre || '');
+        var costoSoles = invItem ? parseFloat(invItem.costo_soles != null ? invItem.costo_soles : (invItem.costo_referencial || it.costo_unitario || 0)) : parseFloat(it.costo_unitario || 0);
+
+        var tr = document.createElement('tr');
+        tr.id = 'sal-item-' + idx;
+        tr.innerHTML = `
+            <td style="padding: 8px 10px; position: relative;">
+                <div class="position-relative">
+                    <div class="input-group input-group-sm">
+                        <input type="text" 
+                               class="form-control form-control-sm sal-item-desc bg-white fw-semibold" 
+                               placeholder="Buscar por código o nombre..." 
+                               data-idx="${idx}" 
+                               value="${salEsc(itemDescVal)}"
+                               autocomplete="off"
+                               oninput="window._salFiltrarDropdownArt(${idx})" 
+                               onfocus="window._salFiltrarDropdownArt(${idx})" 
+                               onblur="window._salHideDropdownArt(${idx})" 
+                               style="border-radius: 8px 0 0 8px; min-height: 38px; font-size: 0.84rem;">
+                        <button type="button" 
+                                class="btn btn-sm btn-light border text-primary shadow-2xs d-flex align-items-center justify-content-center px-3" 
+                                style="border-radius: 0 8px 8px 0; min-height: 38px;" 
+                                onclick="window._salAbrirQR(${idx})" 
+                                title="Escanear código de barras o QR">
+                            <i class="bi bi-upc-scan fs-6"></i>
+                        </button>
+                    </div>
+                    <div id="sal-art-${idx}-dd" class="cb-dropdown custom-art-dropdown shadow-lg"></div>
+                </div>
+                <input type="hidden" class="sal-item-inv-id" data-idx="${idx}" value="${salEsc(invItem ? invItem.id : '')}">
+                <input type="hidden" class="sal-item-stock" data-idx="${idx}" value="${stock !== null ? stock : ''}">
+                <div class="sal-item-stock-lbl" data-idx="${idx}" style="font-size: 0.74rem; margin-top: 4px; ${stockLblHtml ? '' : 'display:none;'}">${stockLblHtml}</div>
+            </td>
+            <td style="padding: 8px 8px; width: 100px; text-align: center;">
+                <input type="number" 
+                       class="form-control form-control-sm sal-item-cant bg-white fw-bold text-center" 
+                       data-idx="${idx}" 
+                       value="${parseFloat(it.cantidad || 1)}" 
+                       min="0.001" 
+                       step="0.001" 
+                       oninput="window._salCalcItem(${idx})" 
+                       style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 8px 8px; width: 120px;">
+                <input type="number" 
+                       class="form-control form-control-sm sal-item-cu bg-white fw-semibold text-end" 
+                       data-idx="${idx}" 
+                       value="${costoSoles.toFixed(2)}" 
+                       min="0" 
+                       step="0.01" 
+                       oninput="window._salCalcItem(${idx})" 
+                       style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 8px 8px; width: 120px;">
+                <input type="number" 
+                       class="form-control form-control-sm sal-item-imp bg-light fw-bold text-success text-end" 
+                       data-idx="${idx}" 
+                       value="${(parseFloat(it.cantidad || 1) * costoSoles).toFixed(2)}" 
+                       readonly 
+                       tabindex="-1"
+                       style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 8px 8px; width: 44px; text-align: center;">
+                <button type="button" 
+                        class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1 d-flex align-items-center justify-content-center mx-auto" 
+                        onclick="window._salQuitarItem(${idx})" 
+                        title="Eliminar fila" 
+                        style="width: 32px; height: 32px;">
+                    <i class="bi bi-trash3-fill" style="font-size: 0.82rem;"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
         window._salCalcItem(idx);
     });
 
@@ -2014,37 +2119,6 @@ window._salInsertarOC = function () {
         var tbody = document.getElementById('sal-items-tbody');
         if (!tbody) return;
 
-        var tr = document.createElement('tr');
-        tr.id = 'sal-item-' + idx;
-        tr.innerHTML = `
-            <td style="padding:6px 8px;">
-                <div style="display:flex;gap:4px;align-items:center;">
-                    <input type="text" class="form-control form-control-sm sal-item-desc bg-white fw-medium" list="sal-inv-list" placeholder="Buscar artículo…" 
-                        data-idx="${idx}" oninput="window._salBuscarArt(this, ${idx})" style="border-radius:8px; font-size:0.8rem;">
-                    <button type="button" class="btn btn-sm btn-light border text-primary shadow-2xs" style="flex-shrink:0; padding:3px 8px; border-radius:8px;" 
-                        onclick="window._salAbrirQR(${idx})" title="Escanear código de barras o QR">
-                        <i class="bi bi-upc-scan"></i>
-                    </button>
-                </div>
-                <input type="hidden" class="sal-item-inv-id" data-idx="${idx}">
-            </td>
-            <td style="padding:6px 8px; width:75px;">
-                <input type="number" class="form-control form-control-sm sal-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="${parseFloat(it.cantidad || 1)}" min="0.001" step="0.001" oninput="window._salCalcItem(${idx})" style="border-radius:8px; font-size:0.8rem;">
-            </td>
-            <td style="padding:6px 8px; width:105px;">
-                <input type="number" class="form-control form-control-sm sal-item-cu bg-white fw-semibold" data-idx="${idx}" value="0" min="0" step="0.01" oninput="window._salCalcItem(${idx})" style="border-radius:8px; font-size:0.8rem;">
-            </td>
-            <td style="padding:6px 8px; width:100px;">
-                <input type="number" class="form-control form-control-sm sal-item-imp bg-light fw-bold text-success" data-idx="${idx}" value="0" readonly style="border-radius:8px; font-size:0.8rem;">
-            </td>
-            <td style="padding:6px 8px; width:38px; text-align:center;">
-                <button type="button" class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1" onclick="window._salQuitarItem(${idx})" title="Eliminar fila">
-                    <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-
         var itDesc = it.descripcion || it.nombre || it.articulo || '';
 
         // Buscar correspondencia en almacén
@@ -2054,20 +2128,89 @@ window._salInsertarOC = function () {
             return invNom === ocNom || invNom.includes(ocNom) || ocNom.includes(invNom);
         });
 
-        var descEl = tr.querySelector('.sal-item-desc');
-        var hidEl = tr.querySelector('.sal-item-inv-id');
-        var cuEl = tr.querySelector('.sal-item-cu');
-
-        if (invItem) {
-            if (descEl) descEl.value = invItem.id + ' — ' + (invItem.descripcion || itDesc);
-            if (hidEl) hidEl.value = invItem.id;
-            var costoSoles = parseFloat(invItem.costo_soles != null ? invItem.costo_soles : (invItem.costo_referencial || it.precio_unitario || 0));
-            if (cuEl) cuEl.value = costoSoles.toFixed(2);
-        } else {
-            if (descEl) descEl.value = itDesc;
-            if (cuEl) cuEl.value = parseFloat(it.precio_unitario || 0).toFixed(2);
+        var stock = invItem ? parseFloat(invItem.stock_actual != null ? invItem.stock_actual : (invItem.stock != null ? invItem.stock : 0)) : null;
+        var stockLblHtml = '';
+        if (stock !== null) {
+            if (stock <= 0) {
+                stockLblHtml = '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock (0 ' + (invItem.unidad || 'UND') + ')</span>';
+            } else {
+                stockLblHtml = '<span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-check2 me-1"></i>Stock: <strong>' + stock + ' ' + (invItem.unidad || 'UND') + '</strong></span>';
+            }
         }
 
+        var itemDescVal = invItem ? (invItem.id + ' — ' + (invItem.descripcion || itDesc)) : itDesc;
+        var costoSoles = invItem ? parseFloat(invItem.costo_soles != null ? invItem.costo_soles : (invItem.costo_referencial || it.precio_unitario || 0)) : parseFloat(it.precio_unitario || 0);
+
+        var tr = document.createElement('tr');
+        tr.id = 'sal-item-' + idx;
+        tr.innerHTML = `
+            <td style="padding: 8px 10px; position: relative;">
+                <div class="position-relative">
+                    <div class="input-group input-group-sm">
+                        <input type="text" 
+                               class="form-control form-control-sm sal-item-desc bg-white fw-semibold" 
+                               placeholder="Buscar por código o nombre..." 
+                               data-idx="${idx}" 
+                               value="${salEsc(itemDescVal)}"
+                               autocomplete="off"
+                               oninput="window._salFiltrarDropdownArt(${idx})" 
+                               onfocus="window._salFiltrarDropdownArt(${idx})" 
+                               onblur="window._salHideDropdownArt(${idx})" 
+                               style="border-radius: 8px 0 0 8px; min-height: 38px; font-size: 0.84rem;">
+                        <button type="button" 
+                                class="btn btn-sm btn-light border text-primary shadow-2xs d-flex align-items-center justify-content-center px-3" 
+                                style="border-radius: 0 8px 8px 0; min-height: 38px;" 
+                                onclick="window._salAbrirQR(${idx})" 
+                                title="Escanear código de barras o QR">
+                            <i class="bi bi-upc-scan fs-6"></i>
+                        </button>
+                    </div>
+                    <div id="sal-art-${idx}-dd" class="cb-dropdown custom-art-dropdown shadow-lg"></div>
+                </div>
+                <input type="hidden" class="sal-item-inv-id" data-idx="${idx}" value="${salEsc(invItem ? invItem.id : '')}">
+                <input type="hidden" class="sal-item-stock" data-idx="${idx}" value="${stock !== null ? stock : ''}">
+                <div class="sal-item-stock-lbl" data-idx="${idx}" style="font-size: 0.74rem; margin-top: 4px; ${stockLblHtml ? '' : 'display:none;'}">${stockLblHtml}</div>
+            </td>
+            <td style="padding: 8px 8px; width: 100px; text-align: center;">
+                <input type="number" 
+                       class="form-control form-control-sm sal-item-cant bg-white fw-bold text-center" 
+                       data-idx="${idx}" 
+                       value="${parseFloat(it.cantidad || 1)}" 
+                       min="0.001" 
+                       step="0.001" 
+                       oninput="window._salCalcItem(${idx})" 
+                       style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 8px 8px; width: 120px;">
+                <input type="number" 
+                       class="form-control form-control-sm sal-item-cu bg-white fw-semibold text-end" 
+                       data-idx="${idx}" 
+                       value="${costoSoles.toFixed(2)}" 
+                       min="0" 
+                       step="0.01" 
+                       oninput="window._salCalcItem(${idx})" 
+                       style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 8px 8px; width: 120px;">
+                <input type="number" 
+                       class="form-control form-control-sm sal-item-imp bg-light fw-bold text-success text-end" 
+                       data-idx="${idx}" 
+                       value="${(parseFloat(it.cantidad || 1) * costoSoles).toFixed(2)}" 
+                       readonly 
+                       tabindex="-1"
+                       style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 8px 8px; width: 44px; text-align: center;">
+                <button type="button" 
+                        class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1 d-flex align-items-center justify-content-center mx-auto" 
+                        onclick="window._salQuitarItem(${idx})" 
+                        title="Eliminar fila" 
+                        style="width: 32px; height: 32px;">
+                    <i class="bi bi-trash3-fill" style="font-size: 0.82rem;"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
         window._salCalcItem(idx);
     });
 
@@ -2110,7 +2253,7 @@ window.salCerrarSubDrawer = function (id) {
     if (d) d.classList.remove('open');
 };
 
-// ── Items del formulario ──────────────────────────────────────
+// ── Items del formulario con Buscador Moderno & Autocomplete ─────────
 window._salAgregarItem = function () {
     var tbody = document.getElementById('sal-items-tbody');
     if (!tbody) return;
@@ -2118,33 +2261,196 @@ window._salAgregarItem = function () {
     var tr = document.createElement('tr');
     tr.id = 'sal-item-' + idx;
     tr.innerHTML = `
-        <td style="padding:6px 8px;">
-            <div style="display:flex;gap:4px;align-items:center;">
-                <input type="text" class="form-control form-control-sm sal-item-desc bg-white fw-medium" list="sal-inv-list" placeholder="Buscar artículo…" 
-                    data-idx="${idx}" oninput="window._salBuscarArt(this, ${idx})" style="border-radius:8px; font-size:0.8rem;">
-                <button type="button" class="btn btn-sm btn-light border text-primary shadow-2xs" style="flex-shrink:0; padding:3px 8px; border-radius:8px;" 
-                    onclick="window._salAbrirQR(${idx})" title="Escanear código de barras o QR">
-                    <i class="bi bi-upc-scan"></i>
-                </button>
+        <td style="padding: 8px 10px; position: relative;">
+            <div class="position-relative">
+                <div class="input-group input-group-sm">
+                    <input type="text" 
+                           class="form-control form-control-sm sal-item-desc bg-white fw-semibold" 
+                           placeholder="Escribe código (INV-...) o nombre del artículo..." 
+                           data-idx="${idx}" 
+                           autocomplete="off"
+                           oninput="window._salFiltrarDropdownArt(${idx})" 
+                           onfocus="window._salFiltrarDropdownArt(${idx})" 
+                           onblur="window._salHideDropdownArt(${idx})" 
+                           style="border-radius: 8px 0 0 8px; min-height: 38px; font-size: 0.84rem;">
+                    <button type="button" 
+                            class="btn btn-sm btn-light border text-primary shadow-2xs d-flex align-items-center justify-content-center px-3" 
+                            style="border-radius: 0 8px 8px 0; min-height: 38px;" 
+                            onclick="window._salAbrirQR(${idx})" 
+                            title="Escanear código de barras o QR">
+                        <i class="bi bi-upc-scan fs-6"></i>
+                    </button>
+                </div>
+                <div id="sal-art-${idx}-dd" class="cb-dropdown custom-art-dropdown shadow-lg"></div>
             </div>
             <input type="hidden" class="sal-item-inv-id" data-idx="${idx}">
+            <input type="hidden" class="sal-item-stock" data-idx="${idx}" value="">
+            <div class="sal-item-stock-lbl" data-idx="${idx}" style="font-size: 0.74rem; margin-top: 4px; display: none;"></div>
         </td>
-        <td style="padding:6px 8px; width:75px;">
-            <input type="number" class="form-control form-control-sm sal-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="1" min="0.001" step="0.001" oninput="window._salCalcItem(${idx})" style="border-radius:8px; font-size:0.8rem;">
+        <td style="padding: 8px 8px; width: 100px; text-align: center;">
+            <input type="number" 
+                   class="form-control form-control-sm sal-item-cant bg-white fw-bold text-center" 
+                   data-idx="${idx}" 
+                   value="1" 
+                   min="0.001" 
+                   step="0.001" 
+                   oninput="window._salCalcItem(${idx})" 
+                   style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
         </td>
-        <td style="padding:6px 8px; width:105px;">
-            <input type="number" class="form-control form-control-sm sal-item-cu bg-white fw-semibold" data-idx="${idx}" value="0" min="0" step="0.01" oninput="window._salCalcItem(${idx})" style="border-radius:8px; font-size:0.8rem;">
+        <td style="padding: 8px 8px; width: 120px;">
+            <input type="number" 
+                   class="form-control form-control-sm sal-item-cu bg-white fw-semibold text-end" 
+                   data-idx="${idx}" 
+                   value="0.00" 
+                   min="0" 
+                   step="0.01" 
+                   oninput="window._salCalcItem(${idx})" 
+                   style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
         </td>
-        <td style="padding:6px 8px; width:100px;">
-            <input type="number" class="form-control form-control-sm sal-item-imp bg-light fw-bold text-success" data-idx="${idx}" value="0" readonly style="border-radius:8px; font-size:0.8rem;">
+        <td style="padding: 8px 8px; width: 120px;">
+            <input type="number" 
+                   class="form-control form-control-sm sal-item-imp bg-light fw-bold text-success text-end" 
+                   data-idx="${idx}" 
+                   value="0.00" 
+                   readonly 
+                   tabindex="-1"
+                   style="border-radius: 8px; min-height: 38px; font-size: 0.85rem;">
         </td>
-        <td style="padding:6px 8px; width:38px; text-align:center;">
-            <button type="button" class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1" onclick="window._salQuitarItem(${idx})" title="Eliminar fila">
-                <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>
+        <td style="padding: 8px 8px; width: 44px; text-align: center;">
+            <button type="button" 
+                    class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1 d-flex align-items-center justify-content-center mx-auto" 
+                    onclick="window._salQuitarItem(${idx})" 
+                    title="Eliminar fila" 
+                    style="width: 32px; height: 32px;">
+                <i class="bi bi-trash3-fill" style="font-size: 0.82rem;"></i>
             </button>
         </td>
     `;
     tbody.appendChild(tr);
+};
+
+window._salFiltrarDropdownArt = function (idx) {
+    var input = document.querySelector('.sal-item-desc[data-idx="' + idx + '"]');
+    var dd = document.getElementById('sal-art-' + idx + '-dd');
+    if (!input || !dd) return;
+
+    var query = (input.value || '').trim().toLowerCase();
+    var invList = window._salInvData || [];
+
+    var results = invList;
+    if (query) {
+        // Ignorar prefijo si ya tiene 'INV-XXXX — '
+        var cleanQuery = query;
+        if (cleanQuery.includes(' — ')) cleanQuery = cleanQuery.split(' — ')[1] || cleanQuery;
+        cleanQuery = cleanQuery.trim();
+
+        results = invList.filter(function (item) {
+            var id = String(item.id || '').toLowerCase();
+            var desc = String(item.descripcion || item.articulo || item.nombre || '').toLowerCase();
+            var barcode = String(item.codigo_barras || '').toLowerCase();
+            var fabCode = String(item.codigo_fabrica || '').toLowerCase();
+            var marca = String(item.marca || '').toLowerCase();
+            var sis = String(item.sistema || '').toLowerCase();
+            return id.includes(cleanQuery) || desc.includes(cleanQuery) || barcode.includes(cleanQuery) || fabCode.includes(cleanQuery) || marca.includes(cleanQuery) || sis.includes(cleanQuery);
+        });
+    }
+
+    if (!results.length) {
+        dd.innerHTML = '<div class="p-3 text-center text-muted small"><i class="bi bi-search me-1"></i>No se encontraron artículos</div>';
+        dd.style.display = 'block';
+        return;
+    }
+
+    var limit = 35;
+    var slice = results.slice(0, limit);
+    var html = slice.map(function (item) {
+        var stock = parseFloat(item.stock_actual != null ? item.stock_actual : (item.stock != null ? item.stock : 0));
+        var costo = parseFloat(item.costo_soles != null ? item.costo_soles : (item.costo_referencial || item.costo || 0));
+        var stockBadge = stock > 0
+            ? '<span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;font-size:0.72rem;font-weight:700;"><i class="bi bi-check2 me-1"></i>' + stock + ' ' + (item.unidad || 'UND') + '</span>'
+            : '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:0.72rem;font-weight:700;"><i class="bi bi-slash-circle me-1"></i>Sin stock</span>';
+
+        var safeId = String(item.id || '').replace(/"/g, '&quot;');
+        var safeDesc = String(item.descripcion || item.articulo || '').replace(/"/g, '&quot;');
+        var marcaBadge = item.marca ? '<span class="badge bg-light text-secondary border px-1.5 py-0.5 rounded-2" style="font-size:0.68rem;">' + item.marca + '</span>' : '';
+        var sistemaText = item.sistema ? '<span class="text-muted small"><i class="bi bi-gear-wide-connected me-1"></i>' + item.sistema + '</span>' : '';
+
+        return `
+            <div class="sal-art-opt" 
+                 onmousedown="window._salSeleccionarArticulo(${idx}, '${safeId}')"
+                 onmouseenter="this.style.background='#f8fafc'" 
+                 onmouseleave="this.style.background='#ffffff'">
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                        <span class="badge bg-dark text-white fw-bold px-2 py-0.5 rounded-2" style="font-size:0.72rem;">${item.id}</span>
+                        ${marcaBadge}
+                    </div>
+                    ${stockBadge}
+                </div>
+                <div class="fw-semibold text-dark text-truncate" style="font-size:0.84rem;" title="${safeDesc}">${item.descripcion || item.articulo || ''}</div>
+                <div class="d-flex align-items-center justify-content-between text-muted mt-1" style="font-size:0.72rem;">
+                    ${sistemaText}
+                    <span class="fw-bold" style="color:#0f172a;">S/. ${costo.toFixed(2)}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    if (results.length > limit) {
+        html += `<div class="p-2 text-center text-muted small bg-light" style="font-size:0.72rem;">Mostrando ${limit} de ${results.length} artículos. Escribe para filtrar más rápido.</div>`;
+    }
+
+    dd.innerHTML = html;
+    dd.style.display = 'block';
+};
+
+window._salHideDropdownArt = function (idx) {
+    setTimeout(function () {
+        var dd = document.getElementById('sal-art-' + idx + '-dd');
+        if (dd) dd.style.display = 'none';
+    }, 250);
+};
+
+window._salSeleccionarArticulo = function (idx, invId) {
+    var item = (window._salInvData || []).find(function (d) { return String(d.id).trim() === String(invId).trim(); });
+    if (!item) return;
+
+    var descEl = document.querySelector('.sal-item-desc[data-idx="' + idx + '"]');
+    var hidEl = document.querySelector('.sal-item-inv-id[data-idx="' + idx + '"]');
+    var stockEl = document.querySelector('.sal-item-stock[data-idx="' + idx + '"]');
+    var cuEl = document.querySelector('.sal-item-cu[data-idx="' + idx + '"]');
+    var lblEl = document.querySelector('.sal-item-stock-lbl[data-idx="' + idx + '"]');
+    var dd = document.getElementById('sal-art-' + idx + '-dd');
+
+    if (descEl) descEl.value = item.id + ' — ' + (item.descripcion || item.articulo || '');
+    if (hidEl) hidEl.value = item.id;
+
+    var costo = parseFloat(item.costo_soles != null ? item.costo_soles : (item.costo_referencial || item.costo || 0));
+    if (cuEl) {
+        cuEl.value = costo.toFixed(2);
+    }
+
+    var stock = parseFloat(item.stock_actual != null ? item.stock_actual : (item.stock != null ? item.stock : 0));
+    if (stockEl) stockEl.value = stock;
+
+    if (lblEl) {
+        lblEl.style.display = 'block';
+        if (stock <= 0) {
+            lblEl.innerHTML = '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin stock disponible (0 ' + (item.unidad || 'UND') + ')</span>';
+        } else {
+            lblEl.innerHTML = '<span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;padding:3px 7px;font-size:0.72rem;font-weight:700;"><i class="bi bi-check2 me-1"></i>Stock disponible: <strong>' + stock + ' ' + (item.unidad || 'UND') + '</strong></span>';
+        }
+    }
+
+    if (dd) dd.style.display = 'none';
+
+    window._salCalcItem(idx);
+
+    var cantEl = document.querySelector('.sal-item-cant[data-idx="' + idx + '"]');
+    if (cantEl) {
+        cantEl.focus();
+        cantEl.select();
+    }
 };
 
 window._salQrTargetIdx = window._salQrTargetIdx || null;
@@ -2166,29 +2472,12 @@ window._salSeleccionarItemPorQR = function (valor, idx) {
         else alert('Artículo no encontrado: ' + valor);
         return;
     }
-    var descEl = document.querySelector('.sal-item-desc[data-idx="' + idx + '"]');
-    var hidEl = document.querySelector('.sal-item-inv-id[data-idx="' + idx + '"]');
-    var cuEl = document.querySelector('.sal-item-cu[data-idx="' + idx + '"]');
-    if (descEl) descEl.value = item.id + ' — ' + (item.descripcion || '');
-    if (hidEl) hidEl.value = item.id;
-    if (cuEl) { cuEl.value = parseFloat(item.costo_soles != null ? item.costo_soles : item.costo_referencial || 0).toFixed(2); window._salCalcItem(idx); }
-    // Enfocar cantidad
-    var cantEl = document.querySelector('.sal-item-cant[data-idx="' + idx + '"]');
-    if (cantEl) { cantEl.focus(); cantEl.select(); }
+    window._salSeleccionarArticulo(idx, item.id);
     if (typeof window.mostrarToast === 'function') window.mostrarToast('Artículo: ' + (item.descripcion || item.id), 'success');
 };
 
 window._salBuscarArt = function (input, idx) {
-    var val = input.value || '';
-    var invId = val.split(' — ')[0].trim();
-    var item = (window._salInvData || []).find(function (d) { return d.id === invId; });
-    if (item) {
-        var hidEl = document.querySelector('.sal-item-inv-id[data-idx="' + idx + '"]');
-        if (hidEl) hidEl.value = item.id;
-        var cuEl = document.querySelector('.sal-item-cu[data-idx="' + idx + '"]');
-        var costoSoles = parseFloat(item.costo_soles != null ? item.costo_soles : item.costo_referencial || 0);
-        if (cuEl) { cuEl.value = costoSoles.toFixed(2); window._salCalcItem(idx); }
-    }
+    window._salFiltrarDropdownArt(idx);
 };
 
 window._salCalcItem = function (idx) {

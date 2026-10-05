@@ -726,20 +726,22 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     // ── OT MATERIALES ─────────────────────────────────────────────────
     router.get('/ot-materiales', (req, res) => {
         const { ticket_ot } = req.query;
+        const targetDb = req.db || db;
         let sql = `SELECT s.* FROM salidas_inv s WHERE s.ticket_ot IS NOT NULL`;
         const params = [];
         if (ticket_ot) { sql += ' AND s.ticket_ot = ?'; params.push(ticket_ot); }
         sql += ' ORDER BY s.id DESC';
-        db.query(sql, params, (err, rows) => {
+        targetDb.query(sql, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             const salidaIds = (rows || []).map(r => r.id);
             if (!salidaIds.length) return res.json([]);
 
-            db.query('SELECT * FROM detalle_salidas_inv WHERE salida_id IN (?) ORDER BY id ASC', [salidaIds], (errItems, itemRows) => {
+            targetDb.query('SELECT * FROM detalle_salidas_inv WHERE salida_id IN (?) ORDER BY id ASC', [salidaIds], (errItems, itemRows) => {
                 const itemsMap = {};
                 (itemRows || []).forEach(d => {
                     if (!itemsMap[d.salida_id]) itemsMap[d.salida_id] = [];
                     itemsMap[d.salida_id].push({
+                        id: d.id,
                         inventario_id: d.inventario_id || null,
                         descripcion: d.descripcion || '',
                         cantidad: parseFloat(d.cantidad) || 0,
@@ -884,6 +886,44 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 });
             });
+        } else if (accion === 'editar') {
+            const { items, moneda, tipo_cambio } = req.body;
+            if (!Array.isArray(items) || !items.length) {
+                return res.status(400).json({ error: 'Se requiere al menos un artículo' });
+            }
+            const tc = parseFloat(tipo_cambio) || 1;
+            const total_pen = items.reduce((acc, it) => acc + ((parseFloat(it.importe) || (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)))), 0);
+
+            targetDb.query('UPDATE salidas_inv SET total_pen = ? WHERE id = ?', [total_pen, id], (errUpd) => {
+                if (errUpd) return res.status(500).json({ error: errUpd.message });
+
+                targetDb.query('DELETE FROM detalle_salidas_inv WHERE salida_id = ?', [id], (errDel) => {
+                    if (errDel) return res.status(500).json({ error: errDel.message });
+
+                    const dVals = items.map(d => {
+                        const cant = parseFloat(d.cantidad) || 0;
+                        const cu = parseFloat(d.costo_unitario) || 0;
+                        const imp = parseFloat(d.importe) || (cant * cu);
+                        return [
+                            id,
+                            d.inventario_id || null,
+                            d.descripcion || null,
+                            cant,
+                            cu,
+                            d.moneda || moneda || 'PEN',
+                            imp
+                        ];
+                    });
+
+                    targetDb.query('INSERT INTO detalle_salidas_inv (salida_id, inventario_id, descripcion, cantidad, costo_unitario, moneda, importe) VALUES ?', [dVals], (errIns) => {
+                        if (errIns) return res.status(500).json({ error: errIns.message });
+                        if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
+                            logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); 
+                        }
+                        res.json({ ok: true, id, total_pen });
+                    });
+                });
+            });
         } else if (accion === 'anular') {
             if (!motivo || !String(motivo).trim()) return res.status(400).json({ error: 'Motivo requerido' });
             targetDb.query('UPDATE salidas_inv SET estado=?, motivo_anulacion=? WHERE id=?',
@@ -899,8 +939,9 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
     router.delete('/ot-materiales/:id', (req, res) => {
         const id = req.params.id;
-        db.query('DELETE FROM detalle_salidas_inv WHERE salida_id = ?', [id], () => {
-            db.query('DELETE FROM salidas_inv WHERE id = ?', [id], (err2) => {
+        const targetDb = req.db || db;
+        targetDb.query('DELETE FROM detalle_salidas_inv WHERE salida_id = ?', [id], () => {
+            targetDb.query('DELETE FROM salidas_inv WHERE id = ?', [id], (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
