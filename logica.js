@@ -135,7 +135,7 @@ window.verificarSesionGuardada = function() {
     const guardadoToken    = localStorage.getItem('fleet_token');
 
     if (!guardadoUser || !guardadoTime || !guardadoToken || Date.now() - parseInt(guardadoTime) >= TIEMPO_MAX_INACTIVIDAD) {
-        cargarModuloAislado('login');
+        cerrarSesion();
         return;
     }
 
@@ -1200,6 +1200,8 @@ function cerrarSesion() {
         } catch(e) {}
     }
     if (window.cerrarSSE) window.cerrarSSE();
+    if (typeof detenerCuentaRegresivaSesion === 'function') detenerCuentaRegresivaSesion();
+
     window._permCache = null; // Invalidar cache de permisos
     localStorage.removeItem('fleet_user'); 
     localStorage.removeItem('fleet_rol'); 
@@ -1209,6 +1211,19 @@ function cerrarSesion() {
     localStorage.removeItem('fleet_token');
     sessionStorage.removeItem('fleet_rutaActual');
     usuarioLogueado = ''; rolLogueado = ''; permisosUsuario = {};
+
+    // 🧹 Limpieza de Modales y Backdrops
+    try {
+        const modalExp = document.getElementById('modal-sesion-expirada');
+        if (modalExp && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const inst = bootstrap.Modal.getInstance(modalExp);
+            if (inst) inst.hide();
+        }
+        document.querySelectorAll('.modal-backdrop, .offcanvas-backdrop, .drawer-backdrop, [class*="backdrop"]').forEach(el => el.remove());
+        document.body.classList.remove('modal-open', 'offcanvas-open');
+        document.body.style.paddingRight = '';
+        document.body.style.overflow = '';
+    } catch(e) {}
 
     // 🧹 Limpieza Total de Pantalla y Ocultar Cascarón App
     const sb = document.getElementById('sidebarMenu');
@@ -1229,9 +1244,19 @@ function cerrarSesion() {
     });
     document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
     
-    // Recarga limpia a la raíz mostrando directamente el Login sin estados residuales
-    window.location.replace(window.location.origin + '/');
+    // Actualizar URL sin hash para evitar loops de recarga
+    if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', '/');
+    }
+
+    // Cargar directamente la vista de Login en el SPA de forma inmediata y limpia
+    if (typeof window.cargarModuloAislado === 'function') {
+        window.cargarModuloAislado('login');
+    } else {
+        window.location.replace(window.location.origin + '/');
+    }
 }
+window.cerrarSesion = cerrarSesion;
 
 window.restaurarCascaronApp = function() {
     const sb = document.getElementById('sidebarMenu');
