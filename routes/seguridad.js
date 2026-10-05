@@ -1722,45 +1722,69 @@ module.exports = (db, logAudit) => {
         });
     });
 
+    // Asegurar columnas configuracion y estilo_cabina en seg_entrega_vehiculos
+    db.query("ALTER TABLE seg_entrega_vehiculos ADD COLUMN configuracion VARCHAR(50) NULL", () => {});
+    db.query("ALTER TABLE seg_entrega_vehiculos ADD COLUMN estilo_cabina VARCHAR(50) NULL", () => {});
+
     // ── GET /seguridad/entrega-vehiculos ──────────────────────────
     router.get('/seguridad/entrega-vehiculos', (req, res) => {
-        let sql = `SELECT * FROM seg_entrega_vehiculos`;
+        let sql = `
+            SELECT e.*, p.configuracion AS placa_configuracion 
+            FROM seg_entrega_vehiculos e
+            LEFT JOIN placas p ON p.placa = e.placa OR REPLACE(p.placa, '-', '') = REPLACE(e.placa, '-', '')
+        `;
         const wheres = [];
         const params = [];
 
         if (req.query.empresa && req.query.empresa !== 'TODAS') {
-            wheres.push('empresa = ?');
+            wheres.push('e.empresa = ?');
             params.push(req.query.empresa);
         }
         if (req.query.placa) {
-            wheres.push('placa LIKE ?');
+            wheres.push('e.placa LIKE ?');
             params.push(`%${req.query.placa.trim()}%`);
         }
         if (req.query.fecha) {
-            wheres.push('fecha = ?');
+            wheres.push('e.fecha = ?');
             params.push(req.query.fecha);
         }
 
         if (wheres.length) {
             sql += ' WHERE ' + wheres.join(' AND ');
         }
-        sql += ' ORDER BY fecha DESC, creado_en DESC LIMIT 300';
+        sql += ' ORDER BY e.fecha DESC, e.creado_en DESC LIMIT 300';
 
         db.query(sql, params, (err, rows) => {
             if (err) {
                 console.warn('Advertencia GET /seguridad/entrega-vehiculos:', err.message);
                 return res.json({ ok: true, data: [] });
             }
-            res.json({ ok: true, data: rows || [] });
+            const out = (rows || []).map(r => {
+                if (!r.configuracion && r.placa_configuracion) {
+                    r.configuracion = r.placa_configuracion;
+                }
+                return r;
+            });
+            res.json({ ok: true, data: out });
         });
     });
 
     // ── GET /seguridad/entrega-vehiculos/:id ──────────────────────
     router.get('/seguridad/entrega-vehiculos/:id', (req, res) => {
-        db.query('SELECT * FROM seg_entrega_vehiculos WHERE id = ? LIMIT 1', [req.params.id], (err, rows) => {
+        const sql = `
+            SELECT e.*, p.configuracion AS placa_configuracion 
+            FROM seg_entrega_vehiculos e
+            LEFT JOIN placas p ON p.placa = e.placa OR REPLACE(p.placa, '-', '') = REPLACE(e.placa, '-', '')
+            WHERE e.id = ? LIMIT 1
+        `;
+        db.query(sql, [req.params.id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
-            res.json({ ok: true, data: rows[0] });
+            const r = rows[0];
+            if (!r.configuracion && r.placa_configuracion) {
+                r.configuracion = r.placa_configuracion;
+            }
+            res.json({ ok: true, data: r });
         });
     });
 
@@ -1769,6 +1793,7 @@ module.exports = (db, logAudit) => {
         const {
             numero_inventario, fecha, motivo, quien_entrega, quien_recibe,
             clase, marca, tipo, modelo, placa, color, cilindros, numero_motor, numero_serie, kilometraje,
+            configuracion, estilo_cabina,
             llantas_del_der_marca, llantas_del_izq_marca, llantas_tra_der_marca, llantas_tra_izq_marca, llantas_repuesto_marca, llantas_ref_json,
             inventario_partes_json, observaciones, croquis_danos_json,
             firma_entrega, firma_recibe, doc_entrega, doc_recibe,
@@ -1803,11 +1828,12 @@ module.exports = (db, logAudit) => {
                     INSERT INTO seg_entrega_vehiculos (
                         id, numero_inventario, fecha, motivo, quien_entrega, quien_recibe,
                         clase, marca, tipo, modelo, placa, color, cilindros, numero_motor, numero_serie, kilometraje,
+                        configuracion, estilo_cabina,
                         llantas_del_der_marca, llantas_del_izq_marca, llantas_tra_der_marca, llantas_tra_izq_marca, llantas_repuesto_marca, llantas_ref_json,
                         inventario_partes_json, observaciones, croquis_danos_json,
                         firma_entrega, firma_recibe, doc_entrega, doc_recibe,
                         empresa, creado_por
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `;
 
                 const values = [
@@ -1827,6 +1853,8 @@ module.exports = (db, logAudit) => {
                     numero_motor || null,
                     numero_serie || null,
                     parseFloat(kilometraje) || 0,
+                    configuracion ? String(configuracion).trim().toUpperCase() : null,
+                    estilo_cabina ? String(estilo_cabina).trim() : null,
                     llantas_del_der_marca || null,
                     llantas_del_izq_marca || null,
                     llantas_tra_der_marca || null,
@@ -1858,7 +1886,7 @@ module.exports = (db, logAudit) => {
         const id = req.params.id;
         const {
             fecha, quien_recibe, clase, marca, tipo, modelo, color, numero_motor, numero_serie,
-            kilometraje, inventario_partes_json, observaciones, firma_entrega, firma_recibe, empresa
+            kilometraje, configuracion, estilo_cabina, inventario_partes_json, observaciones, firma_entrega, firma_recibe, empresa
         } = req.body;
 
         const fInventarioPartes = typeof inventario_partes_json === 'string' ? inventario_partes_json : JSON.stringify(inventario_partes_json || {});
@@ -1876,6 +1904,8 @@ module.exports = (db, logAudit) => {
                 numero_motor = ?,
                 numero_serie = ?,
                 kilometraje = ?,
+                configuracion = COALESCE(?, configuracion),
+                estilo_cabina = COALESCE(?, estilo_cabina),
                 inventario_partes_json = ?,
                 observaciones = ?,
                 firma_entrega = COALESCE(?, firma_entrega),
@@ -1895,6 +1925,8 @@ module.exports = (db, logAudit) => {
             numero_motor || null,
             numero_serie || null,
             parseFloat(kilometraje) || 0,
+            configuracion ? String(configuracion).trim().toUpperCase() : null,
+            estilo_cabina ? String(estilo_cabina).trim() : null,
             fInventarioPartes,
             observaciones || null,
             firma_entrega || null,
