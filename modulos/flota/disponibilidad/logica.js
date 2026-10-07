@@ -96,6 +96,28 @@ window.dispCargarDatos = async function (forzarRefresh = false) {
     }
 };
 
+// ── Helper: Determinar Estado Unificado de la Unidad / Fila ─────────────
+window._dispDeterminarEstadoFila = function (item) {
+    if (!item) return 'En Base';
+    const est = (item.estado || '').toString().trim();
+    const estCar = (item.estado_carreta || '').toString().trim();
+    const estLower = est.toLowerCase();
+    const estCarLower = estCar.toLowerCase();
+
+    // 1. Mantenimiento / Taller (si camión o carreta están en taller o mantenimiento)
+    if (estLower.includes('mant') || estLower.includes('taller') || estCarLower.includes('mant') || estCarLower.includes('taller')) {
+        return 'En Mantenimiento';
+    }
+
+    // 2. En Ruta
+    if (estLower.includes('ruta') || estLower.includes('viaje') || (!item.placa_camion && estCarLower.includes('ruta'))) {
+        return 'En Ruta';
+    }
+
+    // 3. En Base (por defecto)
+    return 'En Base';
+};
+
 // ── Helper: Extraer Placas Individuales (Consolidación Real de Flota) ────
 function _dispExtraerPlacas(lista, aplicarFiltros = false) {
     const q = (document.getElementById('dispBuscador')?.value || '').toLowerCase().trim();
@@ -107,7 +129,7 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
     (lista || []).forEach(d => {
         const empPrincipal = (d.empresa || d.cliente || '').trim();
 
-        // 1. Unidad Motora (Camión / Tracto) - Es la que manda la empresa
+        // 1. Unidad Motora (Camión / Tracto)
         if (d.placa_camion) {
             const pCamion = {
                 placa: d.placa_camion,
@@ -124,11 +146,8 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
 
             let include = true;
             if (aplicarFiltros) {
-                if (filtroCard !== 'TODOS' && pCamion.estado !== filtroCard) include = false;
-                if (filtroEmp !== 'TODAS') {
-                    const empU = pCamion.empresa.toUpperCase();
-                    if (empU !== filtroEmp.toUpperCase() && !empU.includes(filtroEmp.toUpperCase())) include = false;
-                }
+                if (filtroCard !== 'TODOS' && window._dispDeterminarEstadoFila(d) !== filtroCard) include = false;
+                if (filtroEmp !== 'TODAS' && !window._coincideEmpresa(pCamion.empresa, filtroEmp)) include = false;
                 if (q) {
                     const matches = [pCamion.placa, pCamion.sub_tipo, pCamion.conductor, pCamion.marca, pCamion.empresa, pCamion.estado, pCamion.observaciones]
                         .some(v => String(v).toLowerCase().includes(q));
@@ -138,7 +157,7 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
             if (include) placas.push(pCamion);
         }
 
-        // 2. Unidad Carreta / Remolque (Hereda la empresa de la unidad motora a la que pertenece)
+        // 2. Unidad Carreta / Remolque
         if (d.placa_carreta) {
             const pCarreta = {
                 placa: d.placa_carreta,
@@ -146,7 +165,7 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
                 tipo_unidad: d.tipo_unidad_carreta || 'Carreta',
                 sub_tipo: d.sub_tipo_carreta || d.sub_tipo || 'Carreta',
                 estado: d.estado_carreta || d.estado || 'En Base',
-                empresa: empPrincipal, // La motora es la que manda
+                empresa: empPrincipal,
                 marca: d.marca_carreta || d.marca || '',
                 conductor: d.conductor_asignado || '',
                 observaciones: d.observaciones || '',
@@ -155,11 +174,8 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
 
             let include = true;
             if (aplicarFiltros) {
-                if (filtroCard !== 'TODOS' && pCarreta.estado !== filtroCard) include = false;
-                if (filtroEmp !== 'TODAS') {
-                    const empU = pCarreta.empresa.toUpperCase();
-                    if (empU !== filtroEmp.toUpperCase() && !empU.includes(filtroEmp.toUpperCase())) include = false;
-                }
+                if (filtroCard !== 'TODOS' && window._dispDeterminarEstadoFila(d) !== filtroCard) include = false;
+                if (filtroEmp !== 'TODAS' && !window._coincideEmpresa(pCarreta.empresa, filtroEmp)) include = false;
                 if (q) {
                     const matches = [pCarreta.placa, pCarreta.sub_tipo, pCarreta.conductor, pCarreta.marca, pCarreta.empresa, pCarreta.estado, pCarreta.observaciones]
                         .some(v => String(v).toLowerCase().includes(q));
@@ -201,7 +217,6 @@ window.dispRenderizarSegmentedEmpresas = function () {
 
     const empresasMap = new Map();
     (window.dispDatos || []).forEach(d => {
-        // Solo extraer empresas de unidades motoras (Camión / Tracto)
         if (d.placa_camion) {
             const raw = (d.empresa || d.cliente || '').trim();
             if (raw && raw !== '-' && raw.toUpperCase() !== 'CLIENTE') {
@@ -227,76 +242,53 @@ window.dispRenderizarSegmentedEmpresas = function () {
     container.innerHTML = html;
 };
 
-// ── Actualizar Métricas Superiores (Bento KPIs de Flota Real Dinámicos) ──
+// ── Actualizar Métricas Superiores (Bento KPIs de Flota Real Dinámicos 1:1 con la Tabla) ──
 window.dispActualizarKPIs = function () {
     const filtroEmp = window._dispFiltroEmpresa || 'TODAS';
     const q = (document.getElementById('dispBuscador')?.value || '').toLowerCase().trim();
 
-    const placas = [];
-    (window.dispDatos || []).forEach(d => {
-        const empPrincipal = (d.empresa || d.cliente || '').trim();
-
-        // 1. Unidad Motora
-        if (d.placa_camion) {
-            const pCamion = {
-                placa: d.placa_camion,
-                es_motora: true,
-                estado: d.estado || 'En Base',
-                empresa: empPrincipal,
-                marca: d.marca || '',
-                conductor: d.conductor_asignado || '',
-                observaciones: d.observaciones || '',
-                sub_tipo: d.sub_tipo || d.tipo_unidad || 'Camión'
-            };
-            let include = true;
-            if (filtroEmp !== 'TODAS') {
-                const empU = pCamion.empresa.toUpperCase();
-                if (empU !== filtroEmp.toUpperCase() && !empU.includes(filtroEmp.toUpperCase())) include = false;
-            }
-            if (q) {
-                const matches = [pCamion.placa, pCamion.sub_tipo, pCamion.conductor, pCamion.marca, pCamion.empresa, pCamion.estado, pCamion.observaciones]
-                    .some(v => String(v).toLowerCase().includes(q));
-                if (!matches) include = false;
-            }
-            if (include) placas.push(pCamion);
-        }
-
-        // 2. Unidad Carreta / Remolque (hereda la empresa de la unidad motora)
-        if (d.placa_carreta) {
-            const pCarreta = {
-                placa: d.placa_carreta,
-                es_motora: false,
-                estado: d.estado_carreta || d.estado || 'En Base',
-                empresa: empPrincipal,
-                marca: d.marca_carreta || d.marca || '',
-                conductor: d.conductor_asignado || '',
-                observaciones: d.observaciones || '',
-                sub_tipo: d.sub_tipo_carreta || d.sub_tipo || 'Carreta'
-            };
-            let include = true;
-            if (filtroEmp !== 'TODAS') {
-                const empU = pCarreta.empresa.toUpperCase();
-                if (empU !== filtroEmp.toUpperCase() && !empU.includes(filtroEmp.toUpperCase())) include = false;
-            }
-            if (q) {
-                const matches = [pCarreta.placa, pCarreta.sub_tipo, pCarreta.conductor, pCarreta.marca, pCarreta.empresa, pCarreta.estado, pCarreta.observaciones]
-                    .some(v => String(v).toLowerCase().includes(q));
-                if (!matches) include = false;
-            }
-            if (include) placas.push(pCarreta);
-        }
-    });
-
-    const total = placas.length;
+    let total = 0;
     let enBase = 0;
     let enRuta = 0;
     let enMant = 0;
 
-    placas.forEach(p => {
-        const est = (p.estado || 'En Base').toLowerCase();
-        if (est.includes('mant') || est.includes('taller')) enMant++;
-        else if (est.includes('ruta')) enRuta++;
-        else enBase++;
+    (window.dispDatos || []).forEach(item => {
+        // 1. Filtrar por Empresa Activa
+        if (filtroEmp !== 'TODAS') {
+            if (!window._coincideEmpresa(item.empresa || item.cliente, filtroEmp)) {
+                return;
+            }
+        }
+
+        // 2. Filtrar por Buscador Universal
+        if (q) {
+            const matches = [
+                item.placa_camion || '',
+                item.placa_carreta || '',
+                item.conductor_asignado || '',
+                item.marca || '',
+                item.tipo_unidad || '',
+                item.sub_tipo || '',
+                item.sub_tipo_carreta || '',
+                item.estado || '',
+                item.empresa || '',
+                item.cliente || '',
+                item.observaciones || '',
+                item.capacidad_tanque || ''
+            ].some(val => String(val).toLowerCase().includes(q));
+
+            if (!matches) return;
+        }
+
+        total++;
+        const estadoFila = window._dispDeterminarEstadoFila(item);
+        if (estadoFila === 'En Mantenimiento') {
+            enMant++;
+        } else if (estadoFila === 'En Ruta') {
+            enRuta++;
+        } else {
+            enBase++;
+        }
     });
 
     const setKpi = (id, val) => {
@@ -502,22 +494,17 @@ window.dispFiltrar = function () {
     const filtroEmp = window._dispFiltroEmpresa || 'TODAS';
 
     const filtrados = (window.dispDatos || []).filter(item => {
-        // Filtro 1: Card Superior (Estado)
+        // Filtro 1: Card Superior (Estado Consolidado)
         if (filtroCard !== 'TODOS') {
-            const isMant = (item.estado === 'En Mantenimiento' || item.estado_carreta === 'En Mantenimiento');
-            const isRuta = (item.estado === 'En Ruta' || (!item.placa_camion && item.estado_carreta === 'En Ruta'));
-            const isBase = (item.estado === 'En Base' || (!item.placa_camion && item.estado_carreta === 'En Base'));
-
-            if (filtroCard === 'En Mantenimiento' && !isMant) return false;
-            if (filtroCard === 'En Ruta' && (!isRuta || isMant)) return false;
-            if (filtroCard === 'En Base' && (!isBase || isMant)) return false;
+            const estadoFila = window._dispDeterminarEstadoFila(item);
+            if (estadoFila !== filtroCard) return false;
         }
 
-        // Filtro 2: Empresa Segmentada (Aplica exclusivamente sobre la empresa de la unidad motora)
+        // Filtro 2: Empresa Segmentada (Aplica sobre la empresa de la unidad)
         if (filtroEmp !== 'TODAS') {
-            const itemEmp = (item.empresa || item.cliente || '').trim().toUpperCase();
-            const empTarget = filtroEmp.toUpperCase();
-            if (itemEmp !== empTarget && !itemEmp.includes(empTarget)) return false;
+            if (!window._coincideEmpresa(item.empresa || item.cliente, filtroEmp)) {
+                return false;
+            }
         }
 
         // Filtro 3: Buscador Universal
@@ -873,12 +860,12 @@ window.dispRenderizarTabla = function (datos) {
     let html = '';
     datos.forEach((item, index) => {
         const num = index + 1;
-        const est = item.estado || 'En Base';
+        const estadoFila = window._dispDeterminarEstadoFila(item);
 
         let estadoBadge = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">En Base</span>';
-        if (est === 'En Mantenimiento' || item.estado_carreta === 'En Mantenimiento') {
+        if (estadoFila === 'En Mantenimiento') {
             estadoBadge = '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">En Mantenimiento</span>';
-        } else if (est === 'En Ruta') {
+        } else if (estadoFila === 'En Ruta') {
             estadoBadge = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">En Ruta</span>';
         }
 
@@ -996,12 +983,12 @@ window.dispRenderizarCardsMobile = function (datos) {
 
     let html = '';
     datos.forEach((item, index) => {
-        const est = item.estado || 'En Base';
+        const estadoFila = window._dispDeterminarEstadoFila(item);
 
         let badgeEstadoMobile = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">En Base</span>';
-        if (est === 'En Mantenimiento' || item.estado_carreta === 'En Mantenimiento') {
+        if (estadoFila === 'En Mantenimiento') {
             badgeEstadoMobile = '<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">En Mantenimiento</span>';
-        } else if (est === 'En Ruta') {
+        } else if (estadoFila === 'En Ruta') {
             badgeEstadoMobile = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">En Ruta</span>';
         }
 
@@ -1358,12 +1345,13 @@ window.dispExportarExcel = function () {
             gpsText = (speed > 3 ? `En Ruta (${speed} km/h)` : 'Detenido') + ` [${gps.lat.toFixed(4)}, ${gps.lng.toFixed(4)}]`;
         }
 
+        const estadoFila = window._dispDeterminarEstadoFila ? window._dispDeterminarEstadoFila(d) : (d.estado || 'En Base');
         return {
             '#': i + 1,
             'CAMIÓN': d.placa_camion || '—',
             'CARRETA': d.placa_carreta || '—',
             'CONDUCTOR': d.conductor_asignado || '—',
-            'ESTADO': d.estado || 'En Base',
+            'ESTADO': estadoFila,
             'EMPRESA': d.empresa || d.cliente || '—',
             'MARCA': d.marca || '—',
             'CAPACIDAD DE TANQUE': d.capacidad_tanque || '—',
@@ -1386,15 +1374,16 @@ window.dispAbrirModalCuadro = function () {
     const bodyEl = document.getElementById('disp-cuadro-body');
     if (!modalEl || !bodyEl) return;
 
-    const datos = window.dispDatos || [];
+    const datos = (window._dispFiltrados && window._dispFiltrados.length > 0) ? window._dispFiltrados : (window.dispDatos || []);
     const tipos = {};
 
     datos.forEach(d => {
         const t = d.tipo_unidad || 'Otros';
         if (!tipos[t]) tipos[t] = { total: 0, base: 0, ruta: 0, mant: 0 };
         tipos[t].total++;
-        if (d.estado === 'En Mantenimiento') tipos[t].mant++;
-        else if (d.estado === 'En Ruta') tipos[t].ruta++;
+        const estadoFila = window._dispDeterminarEstadoFila ? window._dispDeterminarEstadoFila(d) : (d.estado || 'En Base');
+        if (estadoFila === 'En Mantenimiento') tipos[t].mant++;
+        else if (estadoFila === 'En Ruta') tipos[t].ruta++;
         else tipos[t].base++;
     });
 
@@ -1449,12 +1438,11 @@ function _dispEsc(str) {
 
 // ── Generador y Exportador de Reporte PDF Oficial (F-FLOT-0004) ──
 function _dispNormalizarEstado(d) {
-    const est = (d.estado || '').toString().trim().toLowerCase();
-    const estCar = (d.estado_carreta || '').toString().trim().toLowerCase();
-    if (est.includes('mant') || est.includes('taller') || estCar.includes('mant') || estCar.includes('taller')) {
+    const estadoFila = window._dispDeterminarEstadoFila ? window._dispDeterminarEstadoFila(d) : 'En Base';
+    if (estadoFila === 'En Mantenimiento') {
         return 'EN MANTENIMIENTO';
     }
-    if (est.includes('ruta') || est.includes('viaje')) {
+    if (estadoFila === 'En Ruta') {
         return 'EN RUTA';
     }
     return 'EN BASE';
