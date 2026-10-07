@@ -527,11 +527,13 @@
             <div class="row g-2">
               <div class="col-6 col-md-3">
                 <label class="form-label">Placa Tracto</label>
-                <input type="text" id="grt_vehiculo_placa" class="form-control" placeholder="ABC123" maxlength="10" required style="text-transform:uppercase;">
+                <input type="text" id="grt_vehiculo_placa" class="form-control" list="grt_lista_placas_tracto" placeholder="Seleccione o escriba" maxlength="10" required style="text-transform:uppercase;">
+                <datalist id="grt_lista_placas_tracto"></datalist>
               </div>
               <div class="col-6 col-md-3">
                 <label class="form-label">Placa Carreta</label>
-                <input type="text" id="grt_vehiculo_secundario_placa" class="form-control" placeholder="XYZ789" maxlength="10" style="text-transform:uppercase;">
+                <input type="text" id="grt_vehiculo_secundario_placa" class="form-control" list="grt_lista_placas_carreta" placeholder="Seleccione o escriba" maxlength="10" style="text-transform:uppercase;">
+                <datalist id="grt_lista_placas_carreta"></datalist>
               </div>
               <div class="col-6 col-md-3">
                 <label class="form-label">DNI Conductor</label>
@@ -545,7 +547,8 @@
             <div class="row g-2 mt-1">
               <div class="col-12 col-md-6">
                 <label class="form-label">Nombres Conductor</label>
-                <input type="text" id="grt_conductor_nombres" class="form-control" placeholder="Nombres completos" required>
+                <input type="text" id="grt_conductor_nombres" class="form-control" list="grt_lista_conductores" placeholder="Seleccione de la lista o escriba" onchange="window.grtSeleccionarConductor(this.value)" required>
+                <datalist id="grt_lista_conductores"></datalist>
               </div>
               <div class="col-12 col-md-6">
                 <label class="form-label">Apellidos</label>

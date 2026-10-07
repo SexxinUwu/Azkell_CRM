@@ -12,6 +12,8 @@
     let _filtroBuscar = '';
     let _eliminarId = null;
 
+    let _conductoresCache = [];
+
     // ═══════════════════════════════════════════════════════════
     // INIT
     // ═══════════════════════════════════════════════════════════
@@ -19,7 +21,55 @@
         console.log('[GRT] Módulo inicializado');
         cargarKPIs();
         cargarTabla();
+        cargarCatalogosGRT();
         setFechasDefault();
+    };
+
+    async function cargarCatalogosGRT() {
+        try {
+            // 1. Cargar Placas de la Flota
+            const rPlacas = await fetch('/api/placas-lista').then(r => r.ok ? r.json() : []).catch(() => []);
+            if (Array.isArray(rPlacas) && rPlacas.length) {
+                const dlTracto = document.getElementById('grt_lista_placas_tracto');
+                const dlCarreta = document.getElementById('grt_lista_placas_carreta');
+                const opts = rPlacas.map(p => `<option value="${p}">`).join('');
+                if (dlTracto) dlTracto.innerHTML = opts;
+                if (dlCarreta) dlCarreta.innerHTML = opts;
+            }
+
+            // 2. Cargar Conductores y DNI/Licencia
+            let rCond = await fetch('/api/conductores').then(r => r.ok ? r.json() : []).catch(() => []);
+            if (!Array.isArray(rCond) || !rCond.length) {
+                rCond = await fetch('/api/conductores-lista').then(r => r.ok ? r.json() : []).catch(() => []);
+            }
+            if (Array.isArray(rCond) && rCond.length) {
+                _conductoresCache = rCond;
+                const dlCond = document.getElementById('grt_lista_conductores');
+                if (dlCond) {
+                    dlCond.innerHTML = rCond.map(c => {
+                        const nombreCompleto = (typeof c === 'string') ? c : `${c.nombres || ''} ${c.apellidos || ''}`.trim();
+                        return `<option value="${nombreCompleto}">`;
+                    }).join('');
+                }
+            }
+        } catch (e) {
+            console.warn('[GRT] Aviso cargando catálogos:', e);
+        }
+    }
+
+    window.grtSeleccionarConductor = function(nombre) {
+        if (!nombre || !_conductoresCache.length) return;
+        const norm = nombre.trim().toUpperCase();
+        const found = _conductoresCache.find(c => {
+            if (typeof c === 'string') return c.toUpperCase() === norm;
+            const full = `${c.nombres || ''} ${c.apellidos || ''}`.trim().toUpperCase();
+            return full === norm || (c.nombres && c.nombres.toUpperCase() === norm);
+        });
+        if (found && typeof found === 'object') {
+            if (found.dni || found.numero_documento) setVal('grt_conductor_num_doc', found.dni || found.numero_documento);
+            if (found.licencia || found.numero_licencia) setVal('grt_conductor_licencia', found.licencia || found.numero_licencia);
+            if (found.apellidos) setVal('grt_conductor_apellidos', found.apellidos);
+        }
     };
 
     function setFechasDefault() {
@@ -239,6 +289,7 @@
         var title = document.getElementById('grtModalTitle');
         if (title) title.textContent = 'Nueva Guía Transportista';
         setFechasDefault();
+        cargarCatalogosGRT();
 
         // Obtener siguiente correlativo
         try {
