@@ -498,8 +498,22 @@
 /* ── Adaptación Móvil (<768px) Master-Detail ─────────── */
 @media (max-width: 768px) {
     #moduloUbicacionGPS {
-        padding: 0.5rem 0.5rem 90px 0.5rem !important;
+        padding: 0.5rem 0.5rem 80px 0.5rem !important;
         min-height: auto !important;
+    }
+    
+    #moduloUbicacionGPS.in-detail-mobile {
+        padding: 0 !important;
+        margin: 0 !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        overflow: hidden !important;
+    }
+    
+    #moduloUbicacionGPS.in-detail-mobile #gps-page-header,
+    #moduloUbicacionGPS.in-detail-mobile #gps-kpis-row,
+    #moduloUbicacionGPS.in-detail-mobile #gps-search-filter-row {
+        display: none !important;
     }
     
     .gps-main-split {
@@ -534,6 +548,10 @@
     .gps-main-split.show-detail {
         display: flex !important;
         flex-direction: column !important;
+        height: 100% !important;
+        min-height: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
     .gps-main-split.show-detail .gps-sidebar-panel {
         display: none !important;
@@ -541,10 +559,12 @@
     .gps-main-split.show-detail .gps-map-panel {
         display: flex !important;
         width: 100% !important;
-        height: calc(100vh - 125px) !important;
-        min-height: 520px !important;
-        border-radius: 18px !important;
+        height: calc(100vh - 65px) !important;
+        min-height: calc(100vh - 65px) !important;
+        border-radius: 0 !important;
+        border: none !important;
         overflow: hidden !important;
+        position: relative !important;
     }
     
     #gps-kpis-row {
@@ -561,22 +581,24 @@
         width: 100% !important;
     }
     
-    #moduloUbicacionGPS.in-detail-mobile #gps-search-filter-row {
-        display: none !important;
+    .gps-map-top-bar {
+        top: 8px !important;
+        left: 8px !important;
+        right: 8px !important;
+        gap: 6px !important;
     }
-    
     .gps-top-btn {
-        height: 35px !important;
+        height: 34px !important;
         padding: 0 10px !important;
-        font-size: 0.75rem !important;
+        font-size: 0.74rem !important;
         border-radius: 10px !important;
     }
     .gps-top-layer-toggle {
-        height: 35px !important;
+        height: 34px !important;
         border-radius: 10px !important;
     }
     .gps-layer-btn {
-        height: 27px !important;
+        height: 26px !important;
         padding: 0 8px !important;
         font-size: 0.70rem !important;
         border-radius: 7px !important;
@@ -593,29 +615,92 @@
         box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03) !important;
     }
     
-    .gps-floating-telemetry, .gps-playback-panel {
-        left: 8px !important;
-        right: 8px !important;
-        bottom: 8px !important;
-        padding: 0.75rem 0.85rem !important;
-        border-radius: 18px !important;
-        max-height: 54vh !important;
+    /* Ficha inferior flotante compacta (Bento Bottom Sheet) */
+    .gps-floating-telemetry {
+        left: 6px !important;
+        right: 6px !important;
+        bottom: 6px !important;
+        padding: 0.45rem 0.70rem 0.60rem 0.70rem !important;
+        border-radius: 16px !important;
+        max-height: 22vh !important;
         overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25) !important;
+        transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s ease !important;
     }
+    
+    .gps-floating-telemetry.is-expanded {
+        max-height: 58vh !important;
+    }
+    .gps-floating-telemetry.is-minimized {
+        max-height: 48px !important;
+        overflow: hidden !important;
+    }
+    
     .gps-drawer-handle {
         display: block !important;
+        width: 34px !important;
+        height: 4px !important;
+        background: #cbd5e1 !important;
+        border-radius: 4px !important;
+        margin: 0 auto 5px auto !important;
+        cursor: pointer !important;
+    }
+    
+    .gps-telemetry-actions {
+        margin-top: 0.30rem !important;
+        padding-top: 0.30rem !important;
+        gap: 4px !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        scrollbar-width: none !important;
+    }
+    .gps-telemetry-actions::-webkit-scrollbar {
+        display: none !important;
+    }
+    .gps-action-btn {
+        height: 27px !important;
+        padding: 0 7px !important;
+        font-size: 0.66rem !important;
+        border-radius: 7px !important;
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
     }
     
     .gps-telemetry-grid {
         grid-template-columns: 1fr 1fr !important;
-        gap: 0.45rem !important;
+        gap: 0.30rem !important;
+        margin-top: 0.35rem !important;
     }
     .gps-telemetry-box {
-        padding: 0.45rem 0.60rem !important;
-        min-height: 54px !important;
+        padding: 0.30rem 0.45rem !important;
+        min-height: 40px !important;
+        border-radius: 9px !important;
+        gap: 0.40rem !important;
+    }
+    .gps-telemetry-icon-wrap {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 0.80rem !important;
+        border-radius: 6px !important;
+    }
+    .gps-telemetry-lbl {
+        font-size: 0.54rem !important;
+        margin-bottom: 1px !important;
     }
     .gps-telemetry-val {
-        font-size: 0.82rem !important;
+        font-size: 0.74rem !important;
+    }
+    
+    .gps-playback-panel {
+        left: 6px !important;
+        right: 6px !important;
+        bottom: 6px !important;
+        padding: 0.60rem 0.75rem !important;
+        border-radius: 16px !important;
+        max-height: 38vh !important;
+        overflow-y: auto !important;
     }
     
     .ck-apple-segmented {
@@ -629,7 +714,7 @@
 <div id="moduloUbicacionGPS" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
 
     <!-- ── 1. ENCABEZADO DE PÁGINA (ESTILO OFICIAL ERP) ─────────────── -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3" id="gps-page-header">
         <div class="d-flex align-items-center gap-3">
             <div style="width: 44px; height: 44px; background: #eff6ff; color: #0284c7; border-radius: 12px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;">
                 <i class="bi bi-geo-alt-fill"></i>
@@ -862,28 +947,33 @@
             <!-- ── FICHA BENTO FLOTANTE DE UNIDAD SELECCIONADA EN VIVO ────── -->
             <div id="gpsFloatingTelemetryCard" class="gps-floating-telemetry" style="display:none;">
                 <!-- Drag Handle visual móvil -->
-                <div class="gps-drawer-handle"></div>
+                <div class="gps-drawer-handle" onclick="window.gpsToggleExpandFicha(event)" title="Deslizar / expandir detalles"></div>
 
                 <!-- Cabecera de la Unidad: Placa, Modelo, Estado y Cerrar -->
-                <div class="d-flex align-items-center justify-content-between gap-2 border-bottom pb-2 mb-2">
-                    <div class="d-flex align-items-center gap-2.5" style="min-width:0; flex:1;">
-                        <div style="width:38px; height:38px; border-radius:11px; background:#0f172a; color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.15rem; flex-shrink:0; box-shadow:0 3px 8px rgba(15,23,42,0.25);">
+                <div class="d-flex align-items-center justify-content-between gap-2 border-bottom pb-1 mb-1">
+                    <div class="d-flex align-items-center gap-2" style="min-width:0; flex:1;" onclick="window.gpsToggleExpandFicha(event)" role="button" title="Toca para expandir/reducir">
+                        <div style="width:34px; height:34px; border-radius:10px; background:#0f172a; color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.05rem; flex-shrink:0; box-shadow:0 3px 8px rgba(15,23,42,0.25);">
                             <i class="bi bi-truck"></i>
                         </div>
                         <div style="min-width:0; flex:1;">
-                            <div class="d-flex align-items-center gap-1.5 flex-wrap mb-0.5">
-                                <h5 class="fw-bolder m-0 text-dark font-monospace" id="gps-card-placa" style="font-size:1.05rem;">—</h5>
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 fw-bold rounded-2 text-uppercase" style="font-size:0.65rem;" id="gps-card-tipo">UNIDAD</span>
-                                <span id="gps-card-speed-badge" class="badge bg-success px-2 py-0.5 fw-bold rounded-2" style="font-size:0.65rem;">Detenido</span>
-                                <span id="gps-card-empresa-badge" class="badge bg-light text-dark border px-2 py-0.5 fw-semibold" style="font-size:0.65rem;">MARSISA</span>
+                            <div class="d-flex align-items-center gap-1 flex-wrap mb-0.5">
+                                <h5 class="fw-bolder m-0 text-dark font-monospace" id="gps-card-placa" style="font-size:0.98rem;">—</h5>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-1.5 py-0.5 fw-bold rounded-2 text-uppercase" style="font-size:0.62rem;" id="gps-card-tipo">UNIDAD</span>
+                                <span id="gps-card-speed-badge" class="badge bg-success px-1.5 py-0.5 fw-bold rounded-2" style="font-size:0.62rem;">Detenido</span>
+                                <span id="gps-card-empresa-badge" class="badge bg-light text-dark border px-1.5 py-0.5 fw-semibold" style="font-size:0.62rem;">MARSISA</span>
                             </div>
-                            <span class="text-secondary small fw-medium text-truncate d-block" id="gps-card-nombre" style="font-size:0.73rem;">—</span>
+                            <span class="text-secondary small fw-medium text-truncate d-block" id="gps-card-nombre" style="font-size:0.70rem;">—</span>
                         </div>
                     </div>
 
-                    <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:30px; height:30px;" onclick="window.gpsCerrarFichaSeleccionada()" title="Cerrar Ficha">
-                        <i class="bi bi-x-lg text-secondary fs-6"></i>
-                    </button>
+                    <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                        <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center" style="width:28px; height:28px;" id="btnGpsToggleExpand" onclick="window.gpsToggleExpandFicha(event)" title="Expandir/Reducir">
+                            <i class="bi bi-arrows-expand text-secondary" style="font-size:0.75rem;" id="iconGpsToggleExpand"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center" style="width:28px; height:28px;" onclick="window.gpsCerrarFichaSeleccionada()" title="Cerrar Ficha">
+                            <i class="bi bi-x-lg text-secondary" style="font-size:0.75rem;"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Botones de Acción Rápida Sincronizados y Uniformes -->

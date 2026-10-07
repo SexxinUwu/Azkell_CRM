@@ -632,7 +632,8 @@ window.abrirDetalleGPS = function(placa) {
             setTimeout(function() {
                 window._gpsMapInstance.invalidateSize();
                 if (tienePos) {
-                    window._gpsMapInstance.flyTo([w.lat, w.lng], 16, { duration: 0.5 });
+                    // Compensación latitudinal hacia el sur (-0.0022) para que el camión quede perfectamente visible en la zona superior libre del mapa
+                    window._gpsMapInstance.flyTo([w.lat - 0.0022, w.lng], 16, { duration: 0.5 });
                 }
             }, 180);
         }
@@ -657,6 +658,13 @@ window.gpsVolverListaMovil = function() {
     if (splitEl) splitEl.classList.remove('show-detail');
     if (modEl) modEl.classList.remove('in-detail-mobile');
     window._placaGPSActiva = null;
+    
+    var card = document.getElementById('gpsFloatingTelemetryCard');
+    if (card) {
+        card.style.display = 'none';
+        card.classList.remove('is-expanded');
+    }
+    
     document.querySelectorAll('.gps-unit-card').forEach(function(c) {
         c.classList.remove('active');
     });
@@ -819,14 +827,37 @@ window.gpsCentrarSeleccion = function() {
     if (!window._placaGPSActiva || !window._gpsMapInstance) return;
     var w = window._datosWialonGPS.find(function(x) { return (x.placa || '') === window._placaGPSActiva; });
     if (w && w.lat && w.lng) {
-        window._gpsMapInstance.flyTo([w.lat, w.lng], 16, { duration: 0.8 });
+        var offsetLat = (window.innerWidth <= 768) ? 0.0022 : 0;
+        window._gpsMapInstance.flyTo([w.lat - offsetLat, w.lng], 16, { duration: 0.8 });
+    }
+};
+
+window.gpsToggleExpandFicha = function(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    var card = document.getElementById('gpsFloatingTelemetryCard');
+    if (!card) return;
+    
+    var icon = document.getElementById('iconGpsToggleExpand');
+    if (card.classList.contains('is-expanded')) {
+        card.classList.remove('is-expanded');
+        if (icon) {
+            icon.className = 'bi bi-arrows-expand text-secondary';
+        }
+    } else {
+        card.classList.add('is-expanded');
+        if (icon) {
+            icon.className = 'bi bi-arrows-collapse text-primary';
+        }
     }
 };
 
 window.gpsCerrarFichaSeleccionada = function() {
     window._placaGPSActiva = null;
     var card = document.getElementById('gpsFloatingTelemetryCard');
-    if (card) card.style.display = 'none';
+    if (card) {
+        card.style.display = 'none';
+        card.classList.remove('is-expanded');
+    }
 
     var btnCentrar = document.getElementById('btnGpsCentrarSeleccion');
     if (btnCentrar) btnCentrar.style.display = 'none';
