@@ -344,6 +344,12 @@
         setFechasDefault();
         cargarCatalogosGRT();
 
+        // Reset toggle subcontratista
+        const toggleSub = document.getElementById('grt_toggle_subcontratista');
+        if (toggleSub) toggleSub.checked = false;
+        const divSub = document.getElementById('grt_subcontratista_fields');
+        if (divSub) divSub.style.display = 'none';
+
         // Obtener siguiente correlativo
         try {
             const resp = await fetch(API + '/ultimo-correlativo?serie=V001');
@@ -398,12 +404,23 @@
             setVal('grt_observaciones', g.observaciones || '');
             setVal('grt_orden_servicio', g.orden_servicio || '');
             setVal('grt_gre_vinculada', g.gre_vinculada_numero || '');
+            setVal('grt_gre_vinculada_ruc', g.gre_vinculada_ruc || g.remitente_ruc || '');
+            setVal('grt_gre_vinculada_tipo', g.gre_vinculada_tipo || '09');
+
+            // Subcontratista
+            setVal('grt_subcontratista_ruc', g.subcontratista_ruc || '');
+            setVal('grt_subcontratista_razon_social', g.subcontratista_razon_social || '');
+            const hasSub = !!(g.subcontratista_ruc && g.subcontratista_ruc.trim());
+            const toggleSub = document.getElementById('grt_toggle_subcontratista');
+            if (toggleSub) toggleSub.checked = hasSub;
+            const divSub = document.getElementById('grt_subcontratista_fields');
+            if (divSub) divSub.style.display = hasSub ? 'flex' : 'none';
 
             // Items
             if (json.items && json.items.length) {
                 setVal('grt_descripcion_carga', json.items[0].descripcion || 'CARGA GENERAL');
                 setVal('grt_cantidad', json.items[0].cantidad || 1);
-                setVal('grt_unidad_item', json.items[0].unidad_medida || 'NIU');
+                setVal('grt_unidad_item', json.items[0].unidad_medida || 'KGM');
             }
 
             var modalEl = document.getElementById('modalNuevaGRT');
@@ -592,6 +609,16 @@
             html += '<div class="card p-3 mb-3"><h6 class="fw-bold text-dark mb-2" style="font-size:0.85rem;"><i class="bi bi-geo-alt text-danger me-1"></i>Destinatario</h6>';
             html += '<div class="small"><strong>' + esc(g.destinatario_razon_social) + '</strong><br>RUC: ' + esc(g.destinatario_ruc) + '</div></div>';
 
+            if (g.gre_vinculada_numero) {
+                html += '<div class="card p-3 mb-3 border-primary-subtle"><h6 class="fw-bold text-primary mb-2" style="font-size:0.85rem;"><i class="bi bi-file-earmark-ruled me-1"></i>Documentos Relacionados (Guía Remitente)</h6>';
+                html += '<div class="small"><strong>Guía Remisión Remitente:</strong> ' + esc(g.gre_vinculada_numero) + '<br><strong>RUC Emisor:</strong> ' + esc(g.gre_vinculada_ruc || g.remitente_ruc) + '</div></div>';
+            }
+
+            if (g.subcontratista_ruc) {
+                html += '<div class="card p-3 mb-3 border-warning-subtle"><h6 class="fw-bold text-warning-emphasis mb-2" style="font-size:0.85rem;"><i class="bi bi-person-workspace me-1"></i>Transporte Subcontratado</h6>';
+                html += '<div class="small"><strong>Subcontratador:</strong> ' + esc(g.subcontratista_razon_social || '-') + '<br><strong>RUC:</strong> ' + esc(g.subcontratista_ruc) + '</div></div>';
+            }
+
             html += '<div class="card p-3 mb-3"><h6 class="fw-bold text-dark mb-2" style="font-size:0.85rem;"><i class="bi bi-signpost-2 text-primary me-1"></i>Ruta</h6>';
             html += '<div class="small"><strong>Origen:</strong> [' + esc(g.partida_ubigeo) + '] ' + esc(g.partida_direccion) + '<br>';
             html += '<strong>Destino:</strong> [' + esc(g.llegada_ubigeo) + '] ' + esc(g.llegada_direccion) + '</div></div>';
@@ -686,6 +713,10 @@
                 const data = await resp.json();
                 if (data.razonSocial) {
                     rsInput.value = data.razonSocial;
+                    if (tipo === 'remitente') {
+                        const rucGre = document.getElementById('grt_gre_vinculada_ruc');
+                        if (rucGre && !rucGre.value) rucGre.value = ruc;
+                    }
                     toast('✅ ' + data.razonSocial);
                     return;
                 }
@@ -753,12 +784,16 @@
             observaciones: val('grt_observaciones'),
             orden_servicio: val('grt_orden_servicio'),
             gre_vinculada_numero: val('grt_gre_vinculada'),
+            gre_vinculada_ruc: val('grt_gre_vinculada_ruc') || val('grt_remitente_ruc'),
+            gre_vinculada_tipo: val('grt_gre_vinculada_tipo') || '09',
+            subcontratista_ruc: (document.getElementById('grt_toggle_subcontratista') && document.getElementById('grt_toggle_subcontratista').checked) ? val('grt_subcontratista_ruc') : '',
+            subcontratista_razon_social: (document.getElementById('grt_toggle_subcontratista') && document.getElementById('grt_toggle_subcontratista').checked) ? val('grt_subcontratista_razon_social') : '',
             descripcion_carga: val('grt_descripcion_carga'),
             items: [{
                 codigo: '001',
                 descripcion: val('grt_descripcion_carga') || 'CARGA GENERAL',
                 cantidad: parseFloat(val('grt_cantidad')) || 1,
-                unidad_medida: val('grt_unidad_item') || 'NIU'
+                unidad_medida: val('grt_unidad_item') || 'KGM'
             }]
         };
     }

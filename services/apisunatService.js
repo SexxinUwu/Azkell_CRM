@@ -351,14 +351,28 @@ class ApisunatService {
             };
         }
 
+        // Subcontratación
+        if (data.subcontratista_ruc && String(data.subcontratista_ruc).trim()) {
+            datosEnvio.indSubcontratacion = "1";
+            datosEnvio.subcontratista = {
+                tipoDoc: "6",
+                numDoc: String(data.subcontratista_ruc).trim(),
+                rznSocial: String(data.subcontratista_razon_social || '').trim()
+            };
+        }
+
         // Documentos Relacionados (GRE remitente vinculada)
         if (data.gre_relacionada_numero && String(data.gre_relacionada_numero).trim()) {
-            datosEnvio.documentosRelacionados = [
-                {
-                    tipoDoc: "09",
-                    numDoc: String(data.gre_relacionada_numero).trim()
-                }
-            ];
+            const docRel = {
+                tipoDoc: data.gre_relacionada_tipo || "09",
+                numDoc: String(data.gre_relacionada_numero).trim()
+            };
+            const rucDoc = data.gre_relacionada_ruc || data.remitente_ruc;
+            if (rucDoc && String(rucDoc).trim()) {
+                docRel.numDocEmisor = String(rucDoc).trim();
+                docRel.tipoDocEmisor = "6";
+            }
+            datosEnvio.documentosRelacionados = [docRel];
         }
 
         const body = {

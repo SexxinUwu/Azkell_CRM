@@ -492,7 +492,36 @@
             </div>
           </div>
 
-          <!-- SECCIÓN 4: Ruta (Partida → Llegada) -->
+          <!-- SECCIÓN 4: Documentos Relacionados (Guía Remitente GRR) -->
+          <div class="card p-3 mb-3 border-primary-subtle shadow-xs">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size:0.88rem;">
+                <i class="bi bi-file-earmark-ruled text-primary"></i> Documento Relacionado (Guía Remitente / GRR)
+              </h6>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold" style="font-size:0.72rem;">Tipo 09</span>
+            </div>
+            <p class="text-muted small mb-2" style="font-size:0.76rem;">Ingresa el número y RUC de la Guía de Remisión Remitente emitida por el cliente:</p>
+            <div class="row g-2">
+              <div class="col-12 col-md-5">
+                <label class="form-label">Nº Guía Remitente</label>
+                <input type="text" id="grt_gre_vinculada" class="form-control" placeholder="Ej: T114-380589" style="text-transform:uppercase;">
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label">RUC Emisor de la Guía</label>
+                <input type="text" id="grt_gre_vinculada_ruc" class="form-control" placeholder="Ej: 20263322496" maxlength="11">
+              </div>
+              <div class="col-12 col-md-3">
+                <label class="form-label">Tipo Documento</label>
+                <select id="grt_gre_vinculada_tipo" class="form-select">
+                  <option value="09" selected>09 - Guía Remitente</option>
+                  <option value="01">01 - Factura</option>
+                  <option value="03">03 - Boleta</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 5: Ruta (Partida → Llegada) -->
           <div class="card p-3 mb-3">
             <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size:0.88rem;">
               <i class="bi bi-signpost-2 text-primary"></i> Ruta de Traslado
@@ -519,7 +548,7 @@
             </div>
           </div>
 
-          <!-- SECCIÓN 5: Vehículo y Conductor -->
+          <!-- SECCIÓN 6: Vehículo y Conductor -->
           <div class="card p-3 mb-3">
             <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size:0.88rem;">
               <i class="bi bi-truck text-success"></i> Vehículo y Conductor
@@ -557,7 +586,7 @@
             </div>
           </div>
 
-          <!-- SECCIÓN 6: Carga / Items -->
+          <!-- SECCIÓN 7: Carga / Items -->
           <div class="card p-3 mb-3">
             <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size:0.88rem;">
               <i class="bi bi-box-seam text-secondary"></i> Detalle de Carga
@@ -575,7 +604,7 @@
                 <label class="form-label">Und. Medida</label>
                 <select id="grt_unidad_item" class="form-select">
                   <option value="NIU">NIU - Unidad</option>
-                  <option value="KGM">KGM - Kilogramo</option>
+                  <option value="KGM" selected>KGM - Kilogramo</option>
                   <option value="TNE">TNE - Tonelada</option>
                   <option value="LTR">LTR - Litro</option>
                   <option value="GLL">GLL - Galón</option>
@@ -584,7 +613,33 @@
             </div>
           </div>
 
-          <!-- SECCIÓN 7: Observaciones -->
+          <!-- SECCIÓN 8: Subcontratación (Opcional) -->
+          <div class="card p-3 mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size:0.88rem;">
+                <i class="bi bi-person-workspace text-warning"></i> Transporte Subcontratado (Opcional)
+              </h6>
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" id="grt_toggle_subcontratista" onchange="document.getElementById('grt_subcontratista_fields').style.display = this.checked ? 'flex' : 'none';">
+                <label class="form-check-label small fw-semibold text-secondary" for="grt_toggle_subcontratista">¿Subcontratado?</label>
+              </div>
+            </div>
+            <div id="grt_subcontratista_fields" class="row g-2 mt-1" style="display:none;">
+              <div class="col-12 col-md-4">
+                <label class="form-label">RUC Subcontratista</label>
+                <div class="input-group">
+                  <input type="text" id="grt_subcontratista_ruc" class="form-control" placeholder="20XXXXXXXXX" maxlength="11">
+                  <button type="button" class="btn btn-outline-secondary" onclick="window.grtBuscarRuc('subcontratista')" title="Buscar RUC"><i class="bi bi-search"></i></button>
+                </div>
+              </div>
+              <div class="col-12 col-md-8">
+                <label class="form-label">Razón Social Subcontratista</label>
+                <input type="text" id="grt_subcontratista_razon_social" class="form-control" placeholder="Ej: ROSYMAR PERU S.A.C.">
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 9: Observaciones y Adicionales -->
           <div class="card p-3 mb-3">
             <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size:0.88rem;">
               <i class="bi bi-chat-left-text text-muted"></i> Adicional
@@ -600,13 +655,9 @@
               </div>
             </div>
             <div class="row g-2 mt-1">
-              <div class="col-12 col-md-6">
-                <label class="form-label">Orden de Servicio</label>
-                <input type="text" id="grt_orden_servicio" class="form-control" placeholder="OS-001">
-              </div>
-              <div class="col-12 col-md-6">
-                <label class="form-label">GRE Vinculada (Nº)</label>
-                <input type="text" id="grt_gre_vinculada" class="form-control" placeholder="T001-00000001">
+              <div class="col-12">
+                <label class="form-label">Orden de Servicio / Viaje</label>
+                <input type="text" id="grt_orden_servicio" class="form-control" placeholder="OS-001 o VIAJE-001">
               </div>
             </div>
           </div>
