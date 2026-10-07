@@ -1,9 +1,10 @@
 // ============================================================
-// 📍 MÓDULO GPS FLOTA — Centro de Monitoreo Satelital en Vivo (Wialon)
+// 📍 MÓDULO GPS FLOTA — Centro de Monitoreo Satelital & Playback (Wialon)
 // ============================================================
 
 window._datosWialonGPS         = window._datosWialonGPS         || [];
 window._filtroGPSActivo        = window._filtroGPSActivo        || '';
+window._filtroEmpresaGPS       = window._filtroEmpresaGPS       || 'todas';
 window._segmentoGPSActivo      = window._segmentoGPSActivo      || 'total';
 window._placaGPSActiva         = window._placaGPSActiva         || null;
 
@@ -17,7 +18,21 @@ window._gpsCurrentLayerType    = 'calle';
 window._intervalGpsLivePolling = null;
 window._intervalCountdown      = null;
 window._gpsCountdownSecs       = 4;
-window._gpsFirstBoundsFitted     = false;
+window._gpsFirstBoundsFitted   = false;
+
+// ── Variables del Motor de Playback de Historial ────────────
+window._gpsPlaybackActive      = false;
+window._gpsPlaybackData        = null; // { metricas, paradas, excesos, puntos, placa, unitId }
+window._gpsPlaybackIndex       = 0;
+window._gpsPlaybackPlaying     = false;
+window._gpsPlaybackSpeed       = 1;
+window._gpsPlaybackTimer       = null;
+window._gpsPlaybackTrackLayer  = null;
+window._gpsPlaybackMarker      = null;
+window._gpsPlaybackStartMarker = null;
+window._gpsPlaybackEndMarker   = null;
+window._gpsPlaybackStopMarkers = [];
+window._gpsPlaybackOverspeedMarkers = [];
 
 var _gpsEsc = function(s) {
     if (s == null) return '';
@@ -36,6 +51,7 @@ window.init_ubicacion = function() {
 
     window._placaGPSActiva = null;
     window._gpsFirstBoundsFitted = false;
+    window._gpsPlaybackActive = false;
 
     // Limpiar temporizadores y animaciones previas
     window.gpsLimpiarTodo();
@@ -81,6 +97,10 @@ window.gpsLimpiarTodo = function() {
     if (window._intervalCountdown) {
         clearInterval(window._intervalCountdown);
         window._intervalCountdown = null;
+    }
+    if (window._gpsPlaybackTimer) {
+        clearInterval(window._gpsPlaybackTimer);
+        window._gpsPlaybackTimer = null;
     }
     // Cancelar animaciones en curso
     if (window._gpsAnimationsMap) {
@@ -197,7 +217,10 @@ window.gpsIniciarCicloPolling = function() {
             window.gpsLimpiarTodo();
             return;
         }
-        window._actualizarGpsEnVivo(false);
+        // Si estamos en modo Playback, no actualizar marcadores en vivo para no interferir
+        if (!window._gpsPlaybackActive) {
+            window._actualizarGpsEnVivo(false);
+        }
     }, 4000);
 };
 
@@ -220,7 +243,9 @@ window._actualizarGpsEnVivo = function(forzar) {
         if (d.length > 0) {
             if (typeof CACHE !== 'undefined') CACHE.wialon = d;
             window.renderListaUnidadesGPS(d);
-            window.gpsActualizarMarcadoresMapa(d);
+            if (!window._gpsPlaybackActive) {
+                window.gpsActualizarMarcadoresMapa(d);
+            }
         }
     })
     .catch(function(err) {
@@ -241,7 +266,7 @@ window.renderListaUnidadesGPS = function(datos) {
 
     datos.forEach(function(w) {
         var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
-        var speed = (w.velocidad != null ? Number(w.velocidad) : (w.pos && w.pos.s != null ? Number(w.pos.s) : 0)) || 0;
+        var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
         
         if (tienePos) {
             online++;
@@ -271,8 +296,18 @@ window.renderListaUnidadesGPS = function(datos) {
 };
 
 // ------------------------------------------------------------
-// FILTRADO SEGMENTADO & BÚSQUEDA
+// FILTRADO SEGMENTADO POR EMPRESA, ESTADO & BÚSQUEDA MULTI-CRITERIO
 // ------------------------------------------------------------
+window.filtrarEmpresaGPS = function(empresa, btn) {
+    window._filtroEmpresaGPS = empresa || 'todas';
+
+    document.querySelectorAll('#btn-group-gps-empresa .ck-segment-item').forEach(function(el) {
+        el.classList.toggle('active', el.getAttribute('data-empresa') === window._filtroEmpresaGPS);
+    });
+
+    window.filtrarListaGPS(window._filtroGPSActivo || '');
+};
+
 window.filtrarSegmentoGPS = function(tipo, btn) {
     window._segmentoGPSActivo = tipo || 'total';
 
@@ -299,53 +334,89 @@ window.filtrarListaGPS = function(query) {
 
     var q = (query || '').trim().toUpperCase();
     var filtrados = datos.filter(function(w) {
-        var matchText = !q || (w.placa || '').toUpperCase().includes(q) || (w.nombre_wialon || '').toUpperCase().includes(q);
         var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
-        var speed = (w.velocidad != null ? Number(w.velocidad) : (w.pos && w.pos.s != null ? Number(w.pos.s) : 0)) || 0;
+        var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
+        var isIgnition = Boolean(w.ignicion);
+        var estadoMot = w.estado_motor || (speed > 3 ? 'en_marcha' : (isIgnition ? 'ralenti' : (tienePos ? 'detenido' : 'offline')));
 
+        // Filtro por Búsqueda Multi-criterio (Placa, Nombre, Empresa, Ciudad/Dirección, Tipo)
+        var matchText = !q ||
+            (w.placa || '').toUpperCase().includes(q) ||
+            (w.nombre_wialon || '').toUpperCase().includes(q) ||
+            (w.empresa || '').toUpperCase().includes(q) ||
+            (w.ubicacion || '').toUpperCase().includes(q) ||
+            (w.tipo_vehiculo || '').toUpperCase().includes(q);
+
+        // Filtro por Empresa
+        var matchEmpresa = true;
+        if (window._filtroEmpresaGPS && window._filtroEmpresaGPS !== 'todas') {
+            matchEmpresa = (w.empresa || '').toUpperCase().includes(window._filtroEmpresaGPS.toUpperCase()) ||
+                           (w.nombre_wialon || '').toUpperCase().includes(window._filtroEmpresaGPS.toUpperCase());
+        }
+
+        // Filtro por Estado de Telemetría
         var matchSeg = true;
-        if (window._segmentoGPSActivo === 'online') matchSeg = tienePos;
-        else if (window._segmentoGPSActivo === 'movimiento') matchSeg = (tienePos && speed > 3);
-        else if (window._segmentoGPSActivo === 'offline') matchSeg = !tienePos;
+        if (window._segmentoGPSActivo === 'online') {
+            matchSeg = tienePos;
+        } else if (window._segmentoGPSActivo === 'movimiento') {
+            matchSeg = (tienePos && speed > 3);
+        } else if (window._segmentoGPSActivo === 'ralenti') {
+            matchSeg = (tienePos && speed <= 3 && (isIgnition || estadoMot === 'ralenti'));
+        } else if (window._segmentoGPSActivo === 'detenido') {
+            matchSeg = (tienePos && speed <= 3 && !isIgnition && estadoMot !== 'ralenti');
+        } else if (window._segmentoGPSActivo === 'offline') {
+            matchSeg = !tienePos;
+        }
 
-        return matchText && matchSeg;
+        return matchText && matchEmpresa && matchSeg;
     });
 
     if (filtrados.length === 0) {
-        lista.innerHTML = '<div class="text-center py-5 text-muted" style="font-size:0.85rem;">Sin resultados.</div>';
+        lista.innerHTML = '<div class="text-center py-5 text-muted" style="font-size:0.85rem;"><i class="bi bi-search me-1"></i> Sin unidades encontradas con estos filtros.</div>';
         return;
     }
 
     lista.innerHTML = filtrados.map(function(w) {
         var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
-        var speed = (w.velocidad != null ? Number(w.velocidad) : (w.pos && w.pos.s != null ? Number(w.pos.s) : 0)) || 0;
+        var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
         var isMoving = tienePos && speed > 3;
+        var isIgnition = Boolean(w.ignicion);
+        var isRalenti = tienePos && speed <= 3 && isIgnition;
 
-        var dotColor = tienePos ? (isMoving ? '#0284c7' : '#10b981') : '#94a3b8';
-        var statusBadge = tienePos 
-            ? (isMoving ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold" style="font-size:0.65rem; border-radius:6px;"><i class="bi bi-speedometer2 me-1"></i>' + speed + ' km/h</span>' 
-                        : '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold" style="font-size:0.65rem; border-radius:6px;"><i class="bi bi-pause-circle me-1"></i>Detenido</span>')
-            : '<span class="badge bg-light text-secondary border" style="font-size:0.65rem; border-radius:6px;">Sin Señal</span>';
+        var dotColor = tienePos ? (isMoving ? '#0284c7' : (isRalenti ? '#ea580c' : '#10b981')) : '#94a3b8';
+        
+        var statusBadge = '';
+        if (!tienePos) {
+            statusBadge = '<span class="badge bg-light text-secondary border" style="font-size:0.65rem; border-radius:6px;">Sin Señal</span>';
+        } else if (isMoving) {
+            statusBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold" style="font-size:0.65rem; border-radius:6px;"><i class="bi bi-speedometer2 me-1"></i>${speed} km/h</span>`;
+        } else if (isRalenti) {
+            statusBadge = '<span class="badge bg-warning-subtle text-warning border border-warning-subtle fw-bold" style="font-size:0.65rem; border-radius:6px; color:#c2410c !important;"><i class="bi bi-fire me-1"></i>Ralentí</span>';
+        } else {
+            statusBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold" style="font-size:0.65rem; border-radius:6px;"><i class="bi bi-pause-circle me-1"></i>Detenido</span>';
+        }
 
         var isActive = window._placaGPSActiva === (w.placa || '');
         var safePlc = (w.placa || '').replace(/'/g, "\\'");
         var dirTextLista = w.ubicacion || w.nombre_wialon || '';
+        var empText = w.empresa ? (w.empresa.includes('TRAHESA') ? 'TRAHESA' : 'MARSISA') : 'MARSISA';
 
         return `
         <div class="gps-unit-card${isActive ? ' active' : ''}" id="gps-list-card-${w.placa || ''}" onclick="window.abrirDetalleGPS('${safePlc}')">
             <div class="d-flex align-items-center gap-2" style="min-width: 0; flex: 1;">
-                <div style="width: 9px; height: 9px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0;"></div>
+                <div style="width: 10px; height: 10px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0; box-shadow:0 0 6px ${dotColor};"></div>
                 <div style="min-width: 0; flex: 1;">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="gps-unit-plate">${w.placa || '—'}</span>
+                    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                        <span class="gps-unit-plate font-monospace">${w.placa || '—'}</span>
+                        <span class="badge bg-light text-secondary border" style="font-size:0.62rem; padding:2px 5px;">${empText}</span>
                         ${statusBadge}
                     </div>
-                    <div class="gps-unit-model text-truncate" title="${_gpsEsc(dirTextLista)}" style="max-width: 200px; font-size: 0.72rem;">
+                    <div class="gps-unit-model text-truncate" title="${_gpsEsc(dirTextLista)}" style="max-width: 210px; font-size: 0.72rem;">
                         ${w.ubicacion ? `<i class="bi bi-geo-alt-fill text-danger me-1"></i>${_gpsEsc(w.ubicacion)}` : _gpsEsc(w.nombre_wialon || '')}
                     </div>
                 </div>
             </div>
-            <div class="text-end" style="flex-shrink: 0;">
+            <div class="text-end font-monospace" style="flex-shrink: 0;">
                 <div class="gps-unit-stat text-primary fw-bold" style="font-size:0.75rem;">${(w.km || 0).toLocaleString()} km</div>
                 <div class="gps-unit-stat text-secondary" style="font-size:0.68rem;">${(w.horas || 0).toLocaleString()} hrs</div>
             </div>
@@ -357,15 +428,19 @@ window.filtrarListaGPS = function(query) {
 // GENERADOR DE ÍCONO WIALON: CAMIONCITO 3D + FLECHA DE RUMBO
 // ------------------------------------------------------------
 window.gpsGenerarIconoCamion = function(w, isMoving, speed, course) {
+    var isIgnition = Boolean(w.ignicion);
+    var isRalenti = !isMoving && isIgnition;
+
     var truckFill = isMoving ? '#f8fafc' : '#f1f5f9';
-    var cabFill = isMoving ? '#ffffff' : '#e2e8f0';
-    var arrowColor = isMoving ? '#10b981' : '#64748b';
-    var arrowStroke = isMoving ? '#047857' : '#334155';
+    var cabFill = isMoving ? '#ffffff' : (isRalenti ? '#ffedd5' : '#e2e8f0');
+    var arrowColor = isMoving ? '#0284c7' : (isRalenti ? '#ea580c' : '#64748b');
+    var arrowStroke = isMoving ? '#0369a1' : (isRalenti ? '#9a3412' : '#334155');
+    var plateBorder = isMoving ? '#0284c7' : (isRalenti ? '#ea580c' : '#10b981');
 
     var html = `
         <div class="wialon-truck-unit-wrap" style="position:relative; width:64px; height:50px; display:flex; flex-direction:column; align-items:center; cursor:pointer;">
             
-            <!-- Flecha Verde de Rumbo / Orientación Wialon (360°) -->
+            <!-- Flecha de Rumbo / Orientación Wialon (360°) -->
             <div class="wialon-heading-pointer" style="position:absolute; top:-6px; left:50%; margin-left:-7px; width:14px; height:14px; transform: rotate(${course}deg); transform-origin:center center; transition: transform 0.8s ease; z-index:2;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="${arrowColor}" stroke="${arrowStroke}" stroke-width="2">
                     <polygon points="12,2 22,22 12,17 2,22" />
@@ -396,8 +471,8 @@ window.gpsGenerarIconoCamion = function(w, isMoving, speed, course) {
             </div>
 
             <!-- Placa & Velocidad Integrada estilo Wialon -->
-            <div class="wialon-plate-tag" style="background:#ffffff; border:1.5px solid ${isMoving ? '#0284c7' : '#64748b'}; border-radius:6px; padding:1px 5px; font-size:0.68rem; font-weight:800; color:#0f172a; box-shadow:0 2px 6px rgba(0,0,0,0.18); margin-top:-2px; white-space:nowrap; z-index:3;">
-                ${_gpsEsc(w.placa || '—')} ${isMoving ? `<span style="color:#0284c7; font-weight:800; margin-left:2px;">${speed}k</span>` : ''}
+            <div class="wialon-plate-tag font-monospace" style="background:#ffffff; border:1.5px solid ${plateBorder}; border-radius:6px; padding:1px 5px; font-size:0.68rem; font-weight:800; color:#0f172a; box-shadow:0 2px 6px rgba(0,0,0,0.18); margin-top:-2px; white-space:nowrap; z-index:3;">
+                ${_gpsEsc(w.placa || '—')} ${isMoving ? `<span style="color:#0284c7; font-weight:800; margin-left:2px;">${speed}k</span>` : (isRalenti ? '<span style="color:#ea580c; font-weight:800; margin-left:2px;">ON</span>' : '')}
             </div>
 
         </div>
@@ -425,7 +500,6 @@ window.gpsAnimarMovimientoSuave = function(placa, marker, startLatLng, endLatLng
     var latDiff = endLatLng[0] - startLatLng[0];
     var lngDiff = endLatLng[1] - startLatLng[1];
 
-    // Si la distancia es insignificante, actualizar directo
     if (Math.abs(latDiff) < 0.00001 && Math.abs(lngDiff) < 0.00001) {
         marker.setLatLng(endLatLng);
         return;
@@ -435,18 +509,15 @@ window.gpsAnimarMovimientoSuave = function(placa, marker, startLatLng, endLatLng
         var elapsed = now - startTime;
         var progress = Math.min(elapsed / durationMs, 1);
 
-        // Interpolación lineal con suavizado
         var curLat = startLatLng[0] + (latDiff * progress);
         var curLng = startLatLng[1] + (lngDiff * progress);
         var curPos = [curLat, curLng];
 
         marker.setLatLng(curPos);
 
-        // Si la unidad tiene estela activa o está seleccionada, actualizar la línea de ruta
         if (window._gpsTrailsMap[placa]) {
             var pts = window._gpsTrailPointsMap[placa] || [];
             if (pts.length > 0) {
-                // Actualizar último punto de la estela
                 pts[pts.length - 1] = curPos;
                 window._gpsTrailsMap[placa].setLatLngs(pts);
             }
@@ -491,9 +562,9 @@ window.gpsActualizarMarcadoresMapa = function(datos) {
         var targetLatLng = [w.lat, w.lng];
         validCoords.push(targetLatLng);
 
-        var speed = (w.velocidad != null ? Number(w.velocidad) : (w.pos && w.pos.s != null ? Number(w.pos.s) : 0)) || 0;
+        var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
         var isMoving = speed > 3;
-        var course = (w.curso != null ? Number(w.curso) : (w.pos && w.pos.c != null ? Number(w.pos.c) : 0)) || 0;
+        var course = (w.curso != null ? Number(w.curso) : 0) || 0;
 
         var customIcon = window.gpsGenerarIconoCamion(w, isMoving, speed, course);
 
@@ -505,12 +576,10 @@ window.gpsActualizarMarcadoresMapa = function(datos) {
             var lastPt = pts[pts.length - 1];
             if (lastPt && (Math.abs(lastPt[0] - targetLatLng[0]) > 0.00005 || Math.abs(lastPt[1] - targetLatLng[1]) > 0.00005)) {
                 pts.push(targetLatLng);
-                // Mantener últimos 100 puntos de estela
                 if (pts.length > 100) pts.shift();
             }
         }
 
-        // Crear o actualizar la línea azul de trayectoria sobre la autopista
         if (!window._gpsTrailsMap[placa] && window._gpsTrailPointsMap[placa].length > 1) {
             window._gpsTrailsMap[placa] = L.polyline(window._gpsTrailPointsMap[placa], {
                 color: '#2563eb',
@@ -527,15 +596,17 @@ window.gpsActualizarMarcadoresMapa = function(datos) {
         var safePlaca = (w.placa || '').replace(/'/g, "\\'");
         var safeUbicacion = (w.ubicacion || '').replace(/'/g, "\\'");
 
+        var isIgn = Boolean(w.ignicion);
+        var isRal = !isMoving && isIgn;
+        var statusBadgePopup = isMoving 
+            ? `<span class="badge bg-primary" style="font-size:0.65rem;">${speed} km/h</span>`
+            : (isRal ? '<span class="badge bg-warning text-dark" style="font-size:0.65rem;">Ralentí (Motor ON)</span>' : '<span class="badge bg-success" style="font-size:0.65rem;">Detenido</span>');
+
         var popupHTML = `
-            <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:215px; padding:4px;">
+            <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:220px; padding:4px;">
                 <div class="d-flex align-items-center justify-content-between gap-2 border-bottom pb-1 mb-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <strong style="font-size:0.95rem; color:#0f172a;">${_gpsEsc(w.placa)}</strong>
-                        <span class="badge ${isMoving ? 'bg-primary' : 'bg-success'}" style="font-size:0.65rem;">
-                            ${isMoving ? speed + ' km/h' : 'Detenido'}
-                        </span>
-                    </div>
+                    <strong style="font-size:0.95rem; color:#0f172a;" class="font-monospace">${_gpsEsc(w.placa)}</strong>
+                    ${statusBadgePopup}
                 </div>
                 <div class="small text-secondary mb-1">
                     <i class="bi bi-speedometer text-primary me-1"></i> Odómetro: <strong>${(w.km || 0).toLocaleString()} km</strong>
@@ -543,14 +614,15 @@ window.gpsActualizarMarcadoresMapa = function(datos) {
                 <div class="small text-secondary mb-1">
                     <i class="bi bi-clock-history text-warning me-1"></i> Horómetro: <strong>${(w.horas || 0).toLocaleString()} hrs</strong>
                 </div>
+                ${w.voltaje ? `<div class="small text-secondary mb-1"><i class="bi bi-lightning-charge text-success me-1"></i> Batería: <strong>${w.voltaje} V</strong></div>` : ''}
                 ${w.ubicacion ? `<div class="small text-dark mt-2 mb-2 p-1 bg-light rounded" style="font-size:0.73rem; line-height:1.2;">
                     <i class="bi bi-geo-alt-fill text-danger me-1"></i>${_gpsEsc(w.ubicacion)}
                 </div>` : ''}
                 <div class="d-flex gap-1 mt-2">
                     <button class="btn btn-xs btn-primary w-100 py-1 fw-bold" style="font-size:0.75rem; border-radius:6px;" onclick="window.abrirDetalleGPS('${safePlaca}')">
-                        <i class="bi bi-info-circle me-1"></i> Ver Ficha
+                        <i class="bi bi-info-circle me-1"></i> Ficha & Playback
                     </button>
-                    <button class="btn btn-xs btn-success py-1 px-2" style="font-size:0.75rem; border-radius:6px;" title="Compartir WhatsApp" onclick="window.compartirUbicacion('${safeNombre}', ${w.lat}, ${w.lng}, '${safeUbicacion}')">
+                    <button class="btn btn-xs btn-success py-1 px-2" style="font-size:0.75rem; border-radius:6px;" title="Compartir WhatsApp" onclick="window.compartirUbicacion('${safeNombre}', ${w.lat}, ${w.lng}, '${safeUbicacion}', ${speed}, '${w.voltaje || ''}', '${_gpsEsc(w.empresa || '')}')">
                         <i class="bi bi-whatsapp"></i>
                     </button>
                 </div>
@@ -560,8 +632,6 @@ window.gpsActualizarMarcadoresMapa = function(datos) {
         if (window._gpsMarkersMap[placa]) {
             var marker = window._gpsMarkersMap[placa];
             var startPos = marker.getLatLng();
-            
-            // Animación continua y fluida de 4 segundos hacia el nuevo punto
             window.gpsAnimarMovimientoSuave(placa, marker, [startPos.lat, startPos.lng], targetLatLng, 3800);
             marker.setIcon(customIcon);
             marker.setPopupContent(popupHTML);
@@ -613,7 +683,7 @@ window.abrirDetalleGPS = function(placa) {
 
     var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
 
-    // Transición en móvil: Pasar a la vista de Mapa + Ficha de Detalle (1:1 con Documentos de Flota)
+    // Transición en móvil
     if (window.innerWidth <= 768) {
         var splitEl = document.querySelector('.gps-main-split');
         var modEl = document.getElementById('moduloUbicacionGPS');
@@ -674,15 +744,17 @@ window.gpsVerMapaGeneralMovil = function() {
 };
 
 // ------------------------------------------------------------
-// ACTUALIZAR FICHA FLOTANTE DE TELEMETRÍA
+// ACTUALIZAR FICHA FLOTANTE DE TELEMETRÍA (BENTO ERP)
 // ------------------------------------------------------------
 window.gpsActualizarFichaFlotante = function(w) {
     var card = document.getElementById('gpsFloatingTelemetryCard');
     if (!card) return;
 
     var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
-    var speed = (w.velocidad != null ? Number(w.velocidad) : (w.pos && w.pos.s != null ? Number(w.pos.s) : 0)) || 0;
+    var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
     var isMoving = tienePos && speed > 3;
+    var isIgn = Boolean(w.ignicion);
+    var isRalenti = tienePos && speed <= 3 && isIgn;
 
     var setTxt = function(id, val) {
         var el = document.getElementById(id);
@@ -693,8 +765,25 @@ window.gpsActualizarFichaFlotante = function(w) {
     setTxt('gps-card-nombre', w.nombre_wialon || 'Unidad de Flota');
     setTxt('gps-card-km', (w.km || 0).toLocaleString() + ' km');
     setTxt('gps-card-horas', (w.horas || 0).toLocaleString() + ' hrs');
-    setTxt('gps-card-coords', tienePos ? (w.lat.toFixed(5) + ', ' + w.lng.toFixed(5)) : 'Sin señal');
-    
+    setTxt('gps-card-tipo', w.tipo_vehiculo || 'UNIDAD');
+
+    var empBadge = document.getElementById('gps-card-empresa-badge');
+    if (empBadge) {
+        empBadge.textContent = w.empresa ? (w.empresa.includes('TRAHESA') ? 'TRAHESA' : 'MARSISA') : 'MARSISA';
+    }
+
+    var voltEl = document.getElementById('gps-card-voltaje');
+    if (voltEl) {
+        var ignText = isIgn ? '<span class="text-success fw-bold">Motor ON</span>' : '<span class="text-secondary">Motor OFF</span>';
+        var voltText = w.voltaje ? ` • ${w.voltaje} V` : '';
+        voltEl.innerHTML = `${ignText}${voltText}`;
+    }
+
+    var satEl = document.getElementById('gps-card-satelites');
+    if (satEl) {
+        satEl.textContent = tienePos ? `${w.satelites || 0} sat • ${w.altitud || 0} msnm` : 'Sin satélites';
+    }
+
     var dirEl = document.getElementById('gps-card-direccion');
     if (dirEl) {
         dirEl.innerHTML = tienePos 
@@ -705,14 +794,38 @@ window.gpsActualizarFichaFlotante = function(w) {
     var speedBadge = document.getElementById('gps-card-speed-badge');
     if (speedBadge) {
         if (!tienePos) {
-            speedBadge.className = 'badge bg-secondary px-2 py-1 fw-bold rounded-2';
+            speedBadge.className = 'badge bg-secondary px-2 py-0.5 fw-bold rounded-2';
             speedBadge.innerHTML = 'Offline';
         } else if (isMoving) {
-            speedBadge.className = 'badge bg-primary px-2 py-1 fw-bold rounded-2';
+            speedBadge.className = 'badge bg-primary px-2 py-0.5 fw-bold rounded-2';
             speedBadge.innerHTML = `<i class="bi bi-speedometer2 me-1"></i>En Ruta: ${speed} km/h`;
+        } else if (isRalenti) {
+            speedBadge.className = 'badge bg-warning px-2 py-0.5 fw-bold rounded-2 text-dark';
+            speedBadge.innerHTML = `<i class="bi bi-fire me-1"></i>Ralentí (Motor ON)`;
         } else {
-            speedBadge.className = 'badge bg-success px-2 py-1 fw-bold rounded-2';
-            speedBadge.innerHTML = `<i class="bi bi-pause-circle me-1"></i>Detenido`;
+            speedBadge.className = 'badge bg-success px-2 py-0.5 fw-bold rounded-2';
+            speedBadge.innerHTML = `<i class="bi bi-pause-circle me-1"></i>Detenido (OFF)`;
+        }
+    }
+
+    // Botones de Navegación Rápida Directa (Waze, Google Maps, WhatsApp)
+    var btnWaze = document.getElementById('gps-card-btn-waze');
+    if (btnWaze) {
+        if (tienePos) {
+            btnWaze.href = `https://waze.com/ul?ll=${w.lat},${w.lng}&navigate=yes`;
+            btnWaze.style.display = 'inline-flex';
+        } else {
+            btnWaze.style.display = 'none';
+        }
+    }
+
+    var btnGmaps = document.getElementById('gps-card-btn-gmaps');
+    if (btnGmaps) {
+        if (tienePos) {
+            btnGmaps.href = `https://www.google.com/maps/dir/?api=1&destination=${w.lat},${w.lng}`;
+            btnGmaps.style.display = 'inline-flex';
+        } else {
+            btnGmaps.style.display = 'none';
         }
     }
 
@@ -721,18 +834,8 @@ window.gpsActualizarFichaFlotante = function(w) {
         var safeNombre = (w.nombre_wialon || w.placa || '').replace(/'/g, "\\'");
         var safeUbicacion = (w.ubicacion || '').replace(/'/g, "\\'");
         btnWa.onclick = function() {
-            window.compartirUbicacion(safeNombre, w.lat || 0, w.lng || 0, safeUbicacion);
+            window.compartirUbicacion(safeNombre, w.lat || 0, w.lng || 0, safeUbicacion, speed, w.voltaje, w.empresa);
         };
-    }
-
-    var btnGmaps = document.getElementById('gps-card-btn-gmaps');
-    if (btnGmaps) {
-        if (tienePos) {
-            btnGmaps.href = `https://maps.google.com/maps?q=${w.lat},${w.lng}`;
-            btnGmaps.style.display = 'inline-flex';
-        } else {
-            btnGmaps.style.display = 'none';
-        }
     }
 
     card.style.display = 'block';
@@ -776,44 +879,356 @@ window.gpsCerrarFichaSeleccionada = function() {
 };
 
 // ------------------------------------------------------------
-// OFFCANVAS MÓVIL
+// ⏱️ MOTOR DE REPRODUCCIÓN / PLAYBACK DE RECORRIDO (HISTORIAL)
+// ------------------------------------------------------------
+window.gpsAbrirPlaybackDesdeFicha = function() {
+    if (!window._placaGPSActiva) return;
+    window.gpsCargarHistorial(24);
+};
+
+window.gpsCargarHistorial = function(horas) {
+    var placa = window._placaGPSActiva;
+    if (!placa) return;
+
+    var unit = window._datosWialonGPS.find(function(x) { return (x.placa || '') === placa; });
+    var unitId = unit ? unit.id : null;
+
+    var playbackContainer = document.getElementById('gpsPlaybackContainer');
+    var floatingCard = document.getElementById('gpsFloatingTelemetryCard');
+
+    if (floatingCard) floatingCard.style.display = 'none';
+    if (playbackContainer) playbackContainer.style.display = 'block';
+
+    var placaEl = document.getElementById('gps-playback-placa');
+    if (placaEl) placaEl.textContent = placa;
+
+    var badgeRango = document.getElementById('gps-playback-rango-badge');
+    if (badgeRango) badgeRango.textContent = `ÚLTIMAS ${horas} HORAS`;
+
+    var subEl = document.getElementById('gps-playback-subtitulo');
+    if (subEl) subEl.textContent = 'Cargando telemetría satelital...';
+
+    // Desactivar temporalmente marcadores en vivo
+    window._gpsPlaybackActive = true;
+    window.gpsLimpiarCapasPlayback();
+
+    fetch('/api/script/obtenerHistorialGPS', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ args: [{ placa: placa, unitId: unitId, horas: horas }] })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        var data = (res && res.data) ? res.data : null;
+        if (!data || !data.puntos || data.puntos.length === 0) {
+            if (subEl) subEl.textContent = 'Sin historial de recorrido en el rango seleccionado.';
+            return;
+        }
+
+        window._gpsPlaybackData = data;
+        window._gpsPlaybackIndex = 0;
+        window._gpsPlaybackPlaying = false;
+        window._gpsPlaybackSpeed = 1;
+
+        // Renderizar Métricas
+        var m = data.metricas || {};
+        var setTxt = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+        setTxt('gps-playback-km', (m.totalKm || 0) + ' km');
+        setTxt('gps-playback-vmax', (m.maxSpeed || 0) + ' km/h');
+        setTxt('gps-playback-vprom', (m.avgSpeed || 0) + ' km/h');
+        setTxt('gps-playback-tiempo', (m.tiempoMovMin || 0) + 'm en ruta');
+        setTxt('gps-playback-paradas', (m.paradasTotal || 0) + ' paradas');
+
+        if (subEl) subEl.textContent = `${data.puntos.length} puntos satelitales procesados`;
+
+        // Configurar Scrubber Slider
+        var scrubber = document.getElementById('gpsPlaybackScrubber');
+        if (scrubber) {
+            scrubber.min = 0;
+            scrubber.max = data.puntos.length - 1;
+            scrubber.value = 0;
+        }
+
+        // Dibujar Trazo de Ruta y Marcadores en el Mapa Leaflet
+        window.gpsDibujarTrazoPlayback(data);
+    })
+    .catch(function(err) {
+        console.error("Error al cargar historial GPS:", err);
+        if (subEl) subEl.textContent = 'Error al consultar historial: ' + err.message;
+    });
+};
+
+window.gpsDibujarTrazoPlayback = function(data) {
+    if (!window._gpsMapInstance || typeof L === 'undefined') return;
+    var map = window._gpsMapInstance;
+
+    window.gpsLimpiarCapasPlayback();
+
+    var puntos = data.puntos || [];
+    if (puntos.length === 0) return;
+
+    var latLngs = puntos.map(function(p) { return [p.lat, p.lng]; });
+
+    // Polyline de Ruta con Sombra y Color Cían Satelital
+    window._gpsPlaybackTrackLayer = L.polyline(latLngs, {
+        color: '#0284c7',
+        weight: 5,
+        opacity: 0.9,
+        lineJoin: 'round'
+    }).addTo(map);
+
+    // Marcador Punto de Inicio (Bandera Verde)
+    var startPt = puntos[0];
+    var startIcon = L.divIcon({
+        className: 'gps-start-marker',
+        html: '<div style="background:#16a34a; color:#fff; border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:0.8rem; border:2px solid #fff; box-shadow:0 3px 8px rgba(0,0,0,0.3);"><i class="bi bi-flag-fill"></i></div>',
+        iconSize: [26, 26],
+        iconAnchor: [13, 13]
+    });
+    window._gpsPlaybackStartMarker = L.marker([startPt.lat, startPt.lng], { icon: startIcon })
+        .bindPopup(`<strong>Inicio de Recorrido</strong><br>${new Date(startPt.tiempo * 1000).toLocaleTimeString()}`)
+        .addTo(map);
+
+    // Marcador Punto Final / Actual (Bandera a Cuadros)
+    var endPt = puntos[puntos.length - 1];
+    var endIcon = L.divIcon({
+        className: 'gps-end-marker',
+        html: '<div style="background:#0f172a; color:#fff; border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:0.8rem; border:2px solid #fff; box-shadow:0 3px 8px rgba(0,0,0,0.3);"><i class="bi bi-geo-alt-fill"></i></div>',
+        iconSize: [26, 26],
+        iconAnchor: [13, 13]
+    });
+    window._gpsPlaybackEndMarker = L.marker([endPt.lat, endPt.lng], { icon: endIcon })
+        .bindPopup(`<strong>Fin de Recorrido</strong><br>${new Date(endPt.tiempo * 1000).toLocaleTimeString()}`)
+        .addTo(map);
+
+    // Marcadores de Paradas (Pines Naranjas 🛑)
+    window._gpsPlaybackStopMarkers = [];
+    (data.paradas || []).forEach(function(s, idx) {
+        var stopIcon = L.divIcon({
+            className: 'gps-stop-marker',
+            html: `<div class="gps-stop-pin" title="Parada de ${s.durMin} min"><i class="bi bi-pause-fill"></i></div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        var stopM = L.marker([s.lat, s.lng], { icon: stopIcon })
+            .bindPopup(`<strong>Parada #${idx+1}</strong><br>Duración: <strong>${s.durMin} minutos</strong><br>Desde: ${new Date(s.startT * 1000).toLocaleTimeString()}<br>Hasta: ${new Date(s.endT * 1000).toLocaleTimeString()}`)
+            .addTo(map);
+        window._gpsPlaybackStopMarkers.push(stopM);
+    });
+
+    // Marcadores de Excesos de Velocidad (Pines Rojos ⚠️ >80 km/h)
+    window._gpsPlaybackOverspeedMarkers = [];
+    (data.excesos || []).forEach(function(e) {
+        var overIcon = L.divIcon({
+            className: 'gps-overspeed-marker',
+            html: `<div class="gps-overspeed-pin" title="Exceso: ${e.velocidad} km/h"><i class="bi bi-exclamation-triangle-fill"></i></div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        var overM = L.marker([e.lat, e.lng], { icon: overIcon })
+            .bindPopup(`<strong class="text-danger">⚠️ Exceso de Velocidad</strong><br>Velocidad: <strong>${e.velocidad} km/h</strong><br>Hora: ${new Date(e.tiempo * 1000).toLocaleTimeString()}`)
+            .addTo(map);
+        window._gpsPlaybackOverspeedMarkers.push(overM);
+    });
+
+    // Marcador Móvil del Camión para Playback
+    var customTruck = window.gpsGenerarIconoCamion({ placa: data.placa, ignicion: 1 }, false, 0, startPt.curso || 0);
+    window._gpsPlaybackMarker = L.marker([startPt.lat, startPt.lng], { icon: customTruck, zIndexOffset: 2000 }).addTo(map);
+
+    // Ajustar zoom a toda la ruta
+    map.fitBounds(latLngs, { padding: [50, 50] });
+
+    // Actualizar HUD en punto 0
+    window.gpsActualizarPuntoPlayback(0);
+};
+
+window.gpsLimpiarCapasPlayback = function() {
+    if (!window._gpsMapInstance) return;
+    var map = window._gpsMapInstance;
+
+    if (window._gpsPlaybackTrackLayer) { map.removeLayer(window._gpsPlaybackTrackLayer); window._gpsPlaybackTrackLayer = null; }
+    if (window._gpsPlaybackMarker) { map.removeLayer(window._gpsPlaybackMarker); window._gpsPlaybackMarker = null; }
+    if (window._gpsPlaybackStartMarker) { map.removeLayer(window._gpsPlaybackStartMarker); window._gpsPlaybackStartMarker = null; }
+    if (window._gpsPlaybackEndMarker) { map.removeLayer(window._gpsPlaybackEndMarker); window._gpsPlaybackEndMarker = null; }
+
+    (window._gpsPlaybackStopMarkers || []).forEach(function(m) { map.removeLayer(m); });
+    window._gpsPlaybackStopMarkers = [];
+
+    (window._gpsPlaybackOverspeedMarkers || []).forEach(function(m) { map.removeLayer(m); });
+    window._gpsPlaybackOverspeedMarkers = [];
+};
+
+window.gpsActualizarPuntoPlayback = function(index) {
+    if (!window._gpsPlaybackData || !window._gpsPlaybackData.puntos) return;
+    var puntos = window._gpsPlaybackData.puntos;
+    var p = puntos[index];
+    if (!p) return;
+
+    window._gpsPlaybackIndex = index;
+
+    // Actualizar Scrubber Slider
+    var scrubber = document.getElementById('gpsPlaybackScrubber');
+    if (scrubber && Number(scrubber.value) !== index) {
+        scrubber.value = index;
+    }
+
+    // Actualizar HUD de hora y velocidad
+    var dateObj = new Date(p.tiempo * 1000);
+    var timeStr = dateObj.toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit' }) + ' ' + dateObj.toLocaleTimeString('es-PE', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    var timeLabel = document.getElementById('gps-playback-time-label');
+    if (timeLabel) timeLabel.textContent = timeStr;
+
+    var speedLabel = document.getElementById('gps-playback-point-speed');
+    if (speedLabel) {
+        var isMoving = p.velocidad > 3;
+        var ignText = p.ignicion ? 'ON' : 'OFF';
+        speedLabel.innerHTML = `⚡ <strong>${p.velocidad} km/h</strong> • 🔑 Ignición: <strong>${ignText}</strong> • 🏔️ ${p.altitud || 0} m`;
+    }
+
+    // Mover Camión
+    if (window._gpsPlaybackMarker && window._gpsMapInstance) {
+        window._gpsPlaybackMarker.setLatLng([p.lat, p.lng]);
+        var icon = window.gpsGenerarIconoCamion({ placa: window._gpsPlaybackData.placa, ignicion: p.ignicion }, p.velocidad > 3, p.velocidad, p.curso || 0);
+        window._gpsPlaybackMarker.setIcon(icon);
+    }
+};
+
+window.gpsTogglePlayPause = function() {
+    if (!window._gpsPlaybackData || !window._gpsPlaybackData.puntos) return;
+    
+    window._gpsPlaybackPlaying = !window._gpsPlaybackPlaying;
+    var icon = document.getElementById('iconGpsPlayPause');
+    if (icon) {
+        icon.className = window._gpsPlaybackPlaying ? 'bi bi-pause-fill fs-5' : 'bi bi-play-fill fs-5';
+    }
+
+    if (window._gpsPlaybackPlaying) {
+        window.gpsIniciarTimerPlayback();
+    } else {
+        if (window._gpsPlaybackTimer) {
+            clearInterval(window._gpsPlaybackTimer);
+            window._gpsPlaybackTimer = null;
+        }
+    }
+};
+
+window.gpsIniciarTimerPlayback = function() {
+    if (window._gpsPlaybackTimer) clearInterval(window._gpsPlaybackTimer);
+
+    var stepMs = Math.max(20, Math.round(300 / (window._gpsPlaybackSpeed || 1)));
+
+    window._gpsPlaybackTimer = setInterval(function() {
+        if (!window._gpsPlaybackPlaying || !window._gpsPlaybackData) return;
+
+        var puntos = window._gpsPlaybackData.puntos;
+        if (window._gpsPlaybackIndex >= puntos.length - 1) {
+            // Llegó al final del playback
+            window.gpsTogglePlayPause();
+            return;
+        }
+
+        window._gpsPlaybackIndex++;
+        window.gpsActualizarPuntoPlayback(window._gpsPlaybackIndex);
+    }, stepMs);
+};
+
+window.gpsSetVelocidadPlayback = function(speed) {
+    window._gpsPlaybackSpeed = speed;
+    ['btnSpeed1x', 'btnSpeed2x', 'btnSpeed5x', 'btnSpeed10x'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.classList.remove('active', 'btn-light');
+    });
+    var activeBtn = document.getElementById('btnSpeed' + speed + 'x');
+    if (activeBtn) activeBtn.classList.add('active', 'btn-light');
+
+    if (window._gpsPlaybackPlaying) {
+        window.gpsIniciarTimerPlayback();
+    }
+};
+
+window.gpsSeekPlayback = function(val) {
+    var idx = parseInt(val, 10);
+    window.gpsActualizarPuntoPlayback(idx);
+};
+
+window.gpsReiniciarPlayback = function() {
+    window.gpsActualizarPuntoPlayback(0);
+};
+
+window.gpsSalirPlayback = function() {
+    window._gpsPlaybackActive = false;
+    window._gpsPlaybackPlaying = false;
+    if (window._gpsPlaybackTimer) {
+        clearInterval(window._gpsPlaybackTimer);
+        window._gpsPlaybackTimer = null;
+    }
+
+    window.gpsLimpiarCapasPlayback();
+
+    var playbackContainer = document.getElementById('gpsPlaybackContainer');
+    if (playbackContainer) playbackContainer.style.display = 'none';
+
+    // Restaurar Ficha Flotante y marcadores en vivo
+    if (window._placaGPSActiva) {
+        var w = window._datosWialonGPS.find(function(x) { return (x.placa || '') === window._placaGPSActiva; });
+        if (w) window.gpsActualizarFichaFlotante(w);
+    }
+    window.gpsActualizarMarcadoresMapa(window._datosWialonGPS);
+};
+
+// ------------------------------------------------------------
+// OFFCANVAS MÓVIL (COMPLETO PARA SMARTPHONES)
 // ------------------------------------------------------------
 window.gpsAbrirDetalleMovil = function(w) {
     var titleEl = document.getElementById('gpsDetalleOffcanvasTitle');
     var subtitleEl = document.getElementById('gpsDetalleOffcanvasSubtitle');
     var bodyEl = document.getElementById('gpsDetalleOffcanvasBody');
     if (titleEl) titleEl.textContent = w.placa || '—';
-    if (subtitleEl) subtitleEl.textContent = w.nombre_wialon || '';
+    if (subtitleEl) subtitleEl.textContent = `${w.empresa || 'MARSISA S.A.C.'} • ${w.tipo_vehiculo || 'TRACTO'}`;
 
     var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
-    var speed = (w.velocidad != null ? Number(w.velocidad) : (w.pos && w.pos.s != null ? Number(w.pos.s) : 0)) || 0;
+    var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
     var isMoving = tienePos && speed > 3;
+    var isIgn = Boolean(w.ignicion);
+    var isRal = tienePos && speed <= 3 && isIgn;
 
     var safeNombre = (w.nombre_wialon || w.placa || '').replace(/'/g, "\\'");
     var safeUbicacion = (w.ubicacion || '').replace(/'/g, "\\'");
+    var safePlaca = (w.placa || '').replace(/'/g, "\\'");
 
     var content = `
         <div class="d-flex align-items-center justify-content-between mb-3">
-            <span class="badge ${tienePos ? (isMoving ? 'bg-primary' : 'bg-success') : 'bg-secondary'} px-3 py-2 fw-bold" style="font-size:0.8rem;">
-                ${tienePos ? (isMoving ? speed + ' km/h' : 'Detenido') : 'Sin Señal'}
+            <span class="badge ${tienePos ? (isMoving ? 'bg-primary' : (isRal ? 'bg-warning text-dark' : 'bg-success')) : 'bg-secondary'} px-3 py-2 fw-bold" style="font-size:0.8rem;">
+                ${tienePos ? (isMoving ? `<i class="bi bi-speedometer2 me-1"></i>En Ruta: ${speed} km/h` : (isRal ? '<i class="bi bi-fire me-1"></i>Ralentí (Motor ON)' : '<i class="bi bi-pause-circle me-1"></i>Detenido')) : 'Sin Señal'}
             </span>
-            ${tienePos ? `
-            <button class="btn btn-success btn-sm fw-bold px-3 py-2 rounded-3" onclick="window.compartirUbicacion('${safeNombre}', ${w.lat}, ${w.lng}, '${safeUbicacion}')">
-                <i class="bi bi-whatsapp me-1"></i> WhatsApp
-            </button>` : ''}
+            <button class="btn btn-primary btn-sm fw-bold px-3 py-2 rounded-3 shadow-2xs d-flex align-items-center gap-1" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('gpsDetalleOffcanvas')).hide(); window.abrirDetalleGPS('${safePlaca}'); window.gpsAbrirPlaybackDesdeFicha();">
+                <i class="bi bi-clock-history"></i> Historial / Playback
+            </button>
         </div>
 
         <div class="row g-2 mb-3">
             <div class="col-6">
                 <div class="p-3 bg-light rounded-3 border">
                     <span class="small text-secondary d-block fw-bold text-uppercase" style="font-size:0.65rem;">Odómetro</span>
-                    <h5 class="fw-bold m-0 text-dark">${(w.km || 0).toLocaleString()} km</h5>
+                    <h5 class="fw-bold m-0 text-dark font-monospace">${(w.km || 0).toLocaleString()} km</h5>
                 </div>
             </div>
             <div class="col-6">
                 <div class="p-3 bg-light rounded-3 border">
-                    <span class="small text-secondary d-block fw-bold text-uppercase" style="font-size:0.65rem;">Horas Motor</span>
-                    <h5 class="fw-bold m-0 text-dark">${(w.horas || 0).toLocaleString()} hrs</h5>
+                    <span class="small text-secondary d-block fw-bold text-uppercase" style="font-size:0.65rem;">Horómetro</span>
+                    <h5 class="fw-bold m-0 text-dark font-monospace">${(w.horas || 0).toLocaleString()} hrs</h5>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-3 bg-light rounded-3 border">
+                    <span class="small text-secondary d-block fw-bold text-uppercase" style="font-size:0.65rem;">Batería / Ignición</span>
+                    <h6 class="fw-bold m-0 text-dark font-monospace">${isIgn ? '🟢 Motor ON' : '⚪ Motor OFF'} ${w.voltaje ? `• ${w.voltaje}V` : ''}</h6>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-3 bg-light rounded-3 border">
+                    <span class="small text-secondary d-block fw-bold text-uppercase" style="font-size:0.65rem;">Satélites</span>
+                    <h6 class="fw-bold m-0 text-dark font-monospace">${w.satelites || 0} sat • ${w.altitud || 0} m</h6>
                 </div>
             </div>
         </div>
@@ -825,10 +1240,21 @@ window.gpsAbrirDetalleMovil = function(w) {
             </div>
         </div>
 
+        <!-- Botones de Navegación Móvil Directa -->
         ${tienePos ? `
-        <a href="https://maps.google.com/maps?q=${w.lat},${w.lng}" target="_blank" class="btn btn-outline-primary w-100 py-2 fw-bold rounded-3">
-            <i class="bi bi-box-arrow-up-right me-1"></i> Abrir en Google Maps
-        </a>` : ''}
+        <div class="d-flex flex-column gap-2 mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <a href="https://waze.com/ul?ll=${w.lat},${w.lng}&navigate=yes" target="_blank" class="btn btn-outline-success flex-grow-1 py-2 fw-bold rounded-3 d-flex align-items-center justify-content-center gap-1">
+                    <i class="bi bi-cursor-fill"></i> Navegar en Waze
+                </a>
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${w.lat},${w.lng}" target="_blank" class="btn btn-outline-primary flex-grow-1 py-2 fw-bold rounded-3 d-flex align-items-center justify-content-center gap-1">
+                    <i class="bi bi-geo-alt-fill"></i> Google Maps
+                </a>
+            </div>
+            <button class="btn btn-success w-100 py-2 fw-bold rounded-3 d-flex align-items-center justify-content-center gap-1" onclick="window.compartirUbicacion('${safeNombre}', ${w.lat}, ${w.lng}, '${safeUbicacion}', ${speed}, '${w.voltaje || ''}', '${_gpsEsc(w.empresa || '')}')">
+                <i class="bi bi-whatsapp"></i> Compartir Ubicación por WhatsApp
+            </button>
+        </div>` : ''}
     `;
 
     if (bodyEl) bodyEl.innerHTML = content;
@@ -839,12 +1265,17 @@ window.gpsAbrirDetalleMovil = function(w) {
 };
 
 // ------------------------------------------------------------
-// COMPARTIR UBICACIÓN POR WHATSAPP
+// COMPARTIR UBICACIÓN FORMATEADA POR WHATSAPP
 // ------------------------------------------------------------
-window.compartirUbicacion = function(nombre, lat, lng, dir) {
+window.compartirUbicacion = function(nombre, lat, lng, dir, speed, volt, empresa) {
     var mapsUrl = `https://maps.google.com/maps?q=${lat},${lng}`;
-    var dirTxt = dir ? `\n📍 *Dirección:* ${dir}` : '';
-    var texto = `📍 *Ubicación GPS — ${nombre}*${dirTxt}\nCoordenadas: ${lat.toFixed(5)}, ${lng.toFixed(5)}\nVer en Google Maps: ${mapsUrl}`;
+    var wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+    var dirTxt = dir ? `\n📍 *Ubicación:* ${dir}` : '';
+    var speedTxt = speed > 3 ? `\n⚡ *Velocidad:* ${speed} km/h` : `\n⏸ *Estado:* Detenido`;
+    var empTxt = empresa ? `\n🏢 *Empresa:* ${empresa}` : '';
+    var voltTxt = volt ? `\n🔋 *Batería:* ${volt} V` : '';
+
+    var texto = `🏢 *[${empresa || 'MARSISA S.A.C.'}]*\n📍 *MONITOREO GPS EN VIVO*\n\n🚛 *Unidad:* ${nombre}${empTxt}${speedTxt}${voltTxt}${dirTxt}\n🌐 *Coordenadas:* ${lat.toFixed(5)}, ${lng.toFixed(5)}\n\n👉 *Ver en Google Maps:* ${mapsUrl}\n👉 *Navegar en Waze:* ${wazeUrl}`;
     var wUrl = `https://wa.me/?text=${encodeURIComponent(texto)}`;
     window.open(wUrl, '_blank');
 };

@@ -1377,6 +1377,20 @@ router.post('/:metodo', async (req, res) => {
                 const coordsToGeocode = [];
                 const coordIndexMap = [];
 
+                // ── Obtener Información de Flota desde MySQL para Enriquecer Telemetría ──
+                let placasMap = {};
+                try {
+                    const [pRows] = await new Promise((resolve) => {
+                        db.query("SELECT placa, cliente, tipo, marca, modelo_uts FROM placas", (err, rows) => {
+                            resolve([rows || []]);
+                        });
+                    });
+                    pRows.forEach(p => {
+                        const cleanP = String(p.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+                        if (cleanP) placasMap[cleanP] = p;
+                    });
+                } catch(ePlacas) {}
+
                 searchData.items.forEach(item => {
                     const rawName = item.nm ? item.nm.toUpperCase().trim() : "";
                     let placaLimpia = rawName.replace(/[^A-Z0-9]/g, '');
@@ -1388,8 +1402,31 @@ router.post('/:metodo', async (req, res) => {
                         const lng = item.pos ? Number(item.pos.x) : 0;
                         const speed = item.pos && item.pos.s != null ? Number(item.pos.s) : 0;
                         const course = item.pos && item.pos.c != null ? Number(item.pos.c) : 0;
+                        const alt = item.pos && item.pos.z != null ? Number(item.pos.z) : 0;
+                        const sats = item.pos && item.pos.sc != null ? Number(item.pos.sc) : 0;
+                        const timePos = item.pos && item.pos.t != null ? Number(item.pos.t) : null;
+
+                        // Telemetría de Ignición y Voltaje
+                        const prms = (item.lmsg && item.lmsg.p) ? item.lmsg.p : {};
+                        const pwrExt = prms.pwr_ext != null ? Number(prms.pwr_ext) : (prms.power != null ? Number(prms.power) / 1000 : null);
+                        const hasIgnParam = (prms.io_1 === 1 || prms.io_239 === 1 || prms.acc === 1 || prms.ign === 1 || (pwrExt && pwrExt > 24) || (prms.can_rpm && prms.can_rpm > 400));
+                        const isIgnitionOn = (speed > 3) || Boolean(hasIgnParam);
+
+                        let estadoMotor = 'offline';
+                        if (lat && lng) {
+                            if (speed > 3) {
+                                estadoMotor = 'en_marcha';
+                            } else if (isIgnitionOn) {
+                                estadoMotor = 'ralenti';
+                            } else {
+                                estadoMotor = 'detenido';
+                            }
+                        }
+
+                        const pInfo = placasMap[placaLimpia] || {};
 
                         const vObj = {
+                            id: item.id,
                             nombre_wialon: rawName,
                             placa: placaLimpia,
                             km: item.cnm_km ? Math.round(item.cnm_km) : 0,
@@ -1398,6 +1435,15 @@ router.post('/:metodo', async (req, res) => {
                             lng,
                             velocidad: speed,
                             curso: course,
+                            altitud: alt,
+                            satelites: sats,
+                            tiempo_pos: timePos,
+                            ignicion: isIgnitionOn ? 1 : 0,
+                            estado_motor: estadoMotor,
+                            voltaje: pwrExt ? pwrExt.toFixed(1) : null,
+                            empresa: pInfo.cliente || (rawName.includes('TRAHESA') ? 'TRAHESA S.A.C.' : 'MARSISA S.A.C.'),
+                            tipo_vehiculo: pInfo.tipo || (rawName.includes('CARRETA') ? 'Carreta' : (rawName.includes('VOLVO') || rawName.includes('SCANIA') ? 'Tracto' : 'Camión')),
+                            marca_modelo: [pInfo.marca, pInfo.modelo_uts].filter(Boolean).join(' ') || '',
                             ubicacion: ''
                         };
 
@@ -1467,6 +1513,180 @@ router.post('/:metodo', async (req, res) => {
             _wialonInFlightPromise = null;
             console.error("Error Wialon:", error);
             return res.json({ data: { error: error.toString() }});
+        }
+    }
+
+    // ============================================================
+    // ⏱️ HISTORIAL DE RECORRIDO / PLAYBACK TELEMETRÍA (WIALON)
+    // ============================================================
+    if (metodo === 'obtenerHistorialGPS' || metodo === 'obtenerTrackGPS') {
+        const payload = (req.body && req.body.args && req.body.args[0]) ? req.body.args[0] : (req.body || {});
+        const placaParam = String(payload.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+        let targetUnitId = payload.unitId || payload.id || null;
+        const horas = parseInt(payload.horas || 24, 10);
+        const fechaInicio = payload.fechaInicio || null;
+        const fechaFin = payload.fechaFin || null;
+
+        const toSec = fechaFin ? Math.floor(new Date(fechaFin).getTime() / 1000) : Math.floor(Date.now() / 1000);
+        const fromSec = fechaInicio ? Math.floor(new Date(fechaInicio).getTime() / 1000) : (toSec - (horas * 3600));
+
+        if (!placaParam && !targetUnitId) {
+            return res.json({ data: { error: 'Debe especificar placa o unitId para consultar el historial.' } });
+        }
+
+        try {
+            const obtenerToken = () => new Promise((resolve) => {
+                db.query("SELECT valor FROM integraciones_api WHERE clave = 'wialon_token' LIMIT 1", (err, rows) => {
+                    resolve(rows && rows[0] && rows[0].valor ? rows[0].valor.trim() : (process.env.WIALON_TOKEN || ''));
+                });
+            });
+            const obtenerUrl = () => new Promise((resolve) => {
+                db.query("SELECT valor FROM integraciones_api WHERE clave = 'wialon_url' LIMIT 1", (err, rows) => {
+                    resolve(rows && rows[0] && rows[0].valor ? rows[0].valor.trim() : 'https://hst-api.wialon.us/wialon/ajax.html');
+                });
+            });
+
+            const [token, baseUrl] = await Promise.all([obtenerToken(), obtenerUrl()]);
+            if (!token) return res.json({ data: { error: 'Token Wialon no configurado.' } });
+
+            const loginRes = await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({token}))}`);
+            const loginData = await loginRes.json();
+            if (!loginData || !loginData.eid) return res.json({ data: { error: 'No se pudo iniciar sesión con Wialon.' } });
+            const sid = loginData.eid;
+
+            // Si no tenemos unitId, buscar por placa
+            if (!targetUnitId && placaParam) {
+                const searchParams = { spec: { itemsType: 'avl_unit', propName: 'sys_name', propValueMask: `*${placaParam}*`, sortType: 'sys_name' }, force: 1, flags: 1, from: 0, to: 5 };
+                const searchRes = await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(searchParams))}&sid=${sid}`);
+                const searchData = await searchRes.json();
+                if (searchData && searchData.items && searchData.items.length > 0) {
+                    targetUnitId = searchData.items[0].id;
+                }
+            }
+
+            if (!targetUnitId) {
+                fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(()=>{});
+                return res.json({ data: { error: `No se encontró la unidad satelital para la placa ${placaParam}.` } });
+            }
+
+            // Consultar mensajes / telemetría en el rango
+            const msgParams = { itemId: targetUnitId, timeFrom: fromSec, timeTo: toSec, flags: 0x0000, flagsMask: 0xFF00, loadCount: 2000 };
+            const msgRes = await fetch(`${baseUrl}?svc=messages/load_interval&params=${encodeURIComponent(JSON.stringify(msgParams))}&sid=${sid}`);
+            const msgData = await msgRes.json();
+            fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(()=>{});
+
+            const rawMessages = (msgData && msgData.messages) ? msgData.messages : [];
+
+            // Helper de distancia Haversine (km)
+            const calcDist = (lat1, lon1, lat2, lon2) => {
+                const R = 6371;
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+                return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            };
+
+            let totalKm = 0;
+            let maxSpeed = 0;
+            let speeds = [];
+            let paradas = [];
+            let excesos = [];
+            let currentStop = null;
+            let puntos = [];
+
+            for (let i = 0; i < rawMessages.length; i++) {
+                const m = rawMessages[i];
+                if (!m.pos || !m.pos.y || !m.pos.x) continue;
+                const lat = Number(m.pos.y);
+                const lng = Number(m.pos.x);
+                const speed = Number(m.pos.s || 0);
+                const course = Number(m.pos.c || 0);
+                const alt = Number(m.pos.z || 0);
+                const t = Number(m.t || 0);
+
+                if (speed > maxSpeed) maxSpeed = speed;
+                if (speed > 3) speeds.push(speed);
+
+                // Excesos de velocidad (> 80 km/h)
+                if (speed >= 80) {
+                    excesos.push({ lat, lng, velocidad: speed, tiempo: t });
+                }
+
+                // Cálculo de distancia acumulada
+                if (puntos.length > 0) {
+                    const prev = puntos[puntos.length - 1];
+                    const d = calcDist(prev.lat, prev.lng, lat, lng);
+                    if (d < 50) totalKm += d; // descartar saltos anómalos
+                }
+
+                // Detección de paradas (> 3 minutos detenidos)
+                if (speed <= 3) {
+                    if (!currentStop) {
+                        currentStop = { startT: t, endT: t, lat, lng };
+                    } else {
+                        currentStop.endT = t;
+                    }
+                } else {
+                    if (currentStop) {
+                        const durMin = Math.round((currentStop.endT - currentStop.startT) / 60);
+                        if (durMin >= 3) {
+                            currentStop.durMin = durMin;
+                            paradas.push(currentStop);
+                        }
+                        currentStop = null;
+                    }
+                }
+
+                const prms = m.p || {};
+                const pwrExt = prms.pwr_ext != null ? Number(prms.pwr_ext) : (prms.power != null ? Number(prms.power)/1000 : null);
+                const isIgn = (speed > 3) || Boolean(prms.io_1 === 1 || prms.io_239 === 1 || prms.acc === 1 || prms.ign === 1 || (pwrExt && pwrExt > 24) || (prms.can_rpm && prms.can_rpm > 400));
+
+                puntos.push({
+                    lat,
+                    lng,
+                    velocidad: speed,
+                    curso: course,
+                    altitud: alt,
+                    tiempo: t,
+                    ignicion: isIgn ? 1 : 0
+                });
+            }
+
+            if (currentStop) {
+                const durMin = Math.round((currentStop.endT - currentStop.startT) / 60);
+                if (durMin >= 3) {
+                    currentStop.durMin = durMin;
+                    paradas.push(currentStop);
+                }
+            }
+
+            const avgSpeed = speeds.length ? Math.round(speeds.reduce((a,b)=>a+b, 0) / speeds.length) : 0;
+            const tiempoMovMin = speeds.length; // aprox puntos por minuto
+
+            return res.json({
+                data: {
+                    success: true,
+                    placa: placaParam,
+                    unitId: targetUnitId,
+                    totalPuntos: puntos.length,
+                    metricas: {
+                        totalKm: Math.round(totalKm * 10) / 10,
+                        maxSpeed: Math.round(maxSpeed),
+                        avgSpeed: avgSpeed,
+                        tiempoMovMin: tiempoMovMin,
+                        tiempoDetenidoMin: paradas.reduce((a,b)=>a+(b.durMin||0), 0),
+                        paradasTotal: paradas.length,
+                        excesosTotal: excesos.length
+                    },
+                    paradas: paradas.slice(-20), // últimas 20 paradas
+                    excesos: excesos.slice(-20),
+                    puntos: puntos
+                }
+            });
+
+        } catch(histErr) {
+            console.error('Error Historial GPS Wialon:', histErr);
+            return res.json({ data: { error: 'Fallo al procesar historial GPS: ' + histErr.message } });
         }
     }
 
