@@ -124,6 +124,63 @@ module.exports = function(db, broadcast, logAudit) {
     });
 
     // ═══════════════════════════════════════════════════════════════
+    // GET /conductores-lista — Catálogo de conductores
+    // ═══════════════════════════════════════════════════════════════
+    router.get('/conductores-lista', async (req, res) => {
+        try {
+            const dbConn = getDb(req);
+            let rows = [];
+            try {
+                const [r1] = await dbConn.query("SELECT idConductor as id, nombre, dni, licencia, telefono FROM conductores WHERE estado != 'INACTIVO' OR estado IS NULL ORDER BY nombre ASC");
+                rows = r1 || [];
+            } catch (_) {}
+
+            if (!rows.length) {
+                try {
+                    const [r2] = await dbConn.query("SELECT id, CONCAT(COALESCE(nombres,''), ' ', COALESCE(apellidos,'')) as nombre, dni, licencia FROM directorio_conductores ORDER BY nombres ASC");
+                    rows = r2 || [];
+                } catch (_) {}
+            }
+
+            if (!rows.length) {
+                try {
+                    const [r3] = await dbConn.query("SELECT DISTINCT conductor as nombre FROM ordenes_viaje WHERE conductor IS NOT NULL AND conductor != '' ORDER BY conductor ASC");
+                    rows = (r3 || []).map(x => ({ nombre: x.nombre, dni: '', licencia: '' }));
+                } catch (_) {}
+            }
+
+            res.json({ ok: true, data: rows });
+        } catch (err) {
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // GET /placas-lista — Catálogo de placas tracto y carreta
+    // ═══════════════════════════════════════════════════════════════
+    router.get('/placas-lista', async (req, res) => {
+        try {
+            const dbConn = getDb(req);
+            let rows = [];
+            try {
+                const [r1] = await dbConn.query("SELECT id, placa, tipo, marca, modelo, configuracion FROM placas ORDER BY placa ASC");
+                rows = r1 || [];
+            } catch (_) {}
+
+            if (!rows.length) {
+                try {
+                    const [r2] = await dbConn.query("SELECT DISTINCT placa_tracto as placa, 'TRACTO' as tipo FROM ordenes_viaje WHERE placa_tracto IS NOT NULL AND placa_tracto != ''");
+                    rows = r2 || [];
+                } catch (_) {}
+            }
+
+            res.json({ ok: true, data: rows });
+        } catch (err) {
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // ═══════════════════════════════════════════════════════════════
     // GET /ultimo-correlativo — Obtener siguiente número sugerido
     // ═══════════════════════════════════════════════════════════════
     router.get('/ultimo-correlativo', async (req, res) => {
