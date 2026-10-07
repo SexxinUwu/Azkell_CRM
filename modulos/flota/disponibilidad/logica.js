@@ -1519,7 +1519,7 @@ function _dispBuildPdfHtml() {
 
         filasHtml += `
             <tr style="background:#e2e8f0 !important; font-weight:bold; -webkit-print-color-adjust:exact; page-break-after:avoid;">
-                <td colspan="6" style="padding: 4px 6px; font-weight:800; font-size:9.5px; text-transform:uppercase; letter-spacing:0.5px; border: 1.5px solid #000; background-color:#e2e8f0 !important; color:#000000;">
+                <td colspan="9" style="padding: 4px 6px; font-weight:800; font-size:9.5px; text-transform:uppercase; letter-spacing:0.5px; border: 1.5px solid #000; background-color:#e2e8f0 !important; color:#000000;">
                     ■ ${gKey} (${list.length} ${list.length === 1 ? 'UNIDAD' : 'UNIDADES'})
                 </td>
             </tr>
@@ -1529,49 +1529,37 @@ function _dispBuildPdfHtml() {
             const camionStr = (r.placa_camion && r.placa_camion.trim() && r.placa_camion.trim() !== '—' && r.placa_camion.trim() !== '---') ? r.placa_camion : '—';
             const carretaStr = (r.placa_carreta && r.placa_carreta.trim() && r.placa_carreta.trim() !== '—' && r.placa_carreta.trim() !== '---') ? r.placa_carreta : '—';
             const conductorFormateado = _dispFormatNombreConductor(r.conductor_asignado);
-            
-            const marcaPartes = [];
-            if (r.marca) marcaPartes.push(r.marca);
-            if (r.tipo_unidad) marcaPartes.push(r.tipo_unidad);
-            if (r.capacidad_tanque && r.capacidad_tanque !== '—') marcaPartes.push(r.capacidad_tanque);
-            const marcaTipoStr = marcaPartes.join(' • ') || '—';
-
-            const obs = (r.observaciones && r.observaciones !== '—') ? r.observaciones.trim() : '';
+            const marcaStr = r.marca || '—';
+            const tipoStr = r.tipo_unidad || r.sub_tipo || '—';
+            const galonesStr = (r.capacidad_tanque && r.capacidad_tanque !== '0' && r.capacidad_tanque !== '—') ? r.capacidad_tanque : '—';
+            const obsStr = (r.observaciones && r.observaciones !== '—') ? r.observaciones.trim() : '—';
 
             // GPS Telemetría
             const targetPlaca = cleanPlc(r.placa_camion || r.placa_carreta);
             const gps = (window._dispGpsMap && targetPlaca) ? window._dispGpsMap[targetPlaca] : null;
-            let gpsTexto = '';
+            let gpsStr = 'Sin Señal';
             if (gps && gps.lat && gps.lng) {
-                gpsTexto = gps.ubicacion || `Lat: ${gps.lat.toFixed(4)}, Lng: ${gps.lng.toFixed(4)}`;
-            }
-
-            let obsHtml = '';
-            if (obs && gpsTexto && obs !== gpsTexto) {
-                obsHtml = `<b>${_dispEsc(obs)}</b> <span style="color:#334155; font-size:8.5px;">(${_dispEsc(gpsTexto)})</span>`;
-            } else if (obs) {
-                obsHtml = `<span>${_dispEsc(obs)}</span>`;
-            } else if (gpsTexto) {
-                obsHtml = `<span style="color:#334155; font-size:8.5px;">${_dispEsc(gpsTexto)}</span>`;
-            } else {
-                obsHtml = `<span style="color:#94a3b8;">—</span>`;
+                gpsStr = gps.ubicacion || `Lat: ${gps.lat.toFixed(4)}, Lng: ${gps.lng.toFixed(4)}`;
             }
 
             filasHtml += `
-                <tr>
-                    <td style="text-align:center; font-weight:bold; width:28px; padding:3px 2px; border:1px solid #000; font-size:9px;">${itemIndex++}</td>
-                    <td style="text-align:center; font-family:monospace; font-weight:bold; font-size:10px; width:82px; padding:3px 2px; border:1px solid #000;">${_dispEsc(camionStr)}</td>
-                    <td style="text-align:center; font-family:monospace; font-size:10px; width:80px; padding:3px 2px; border:1px solid #000;">${_dispEsc(carretaStr)}</td>
-                    <td style="width:175px; font-size:9.5px; padding:3px 6px; border:1px solid #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;">${_dispEsc(conductorFormateado)}</td>
-                    <td style="text-align:center; font-weight:600; width:115px; font-size:9px; padding:3px 4px; border:1px solid #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${_dispEsc(marcaTipoStr)}</td>
-                    <td style="font-size:9px; word-break:normal; overflow-wrap:break-word; white-space:normal; padding:3px 6px; border:1px solid #000; line-height:1.25;">${obsHtml}</td>
+                <tr style="page-break-inside:avoid;">
+                    <td style="text-align:center; font-weight:bold; width:24px; padding:3px 2px; border:1px solid #000; font-size:8.5px;">${itemIndex++}</td>
+                    <td style="text-align:center; font-family:monospace; font-weight:bold; font-size:9px; width:58px; padding:3px 2px; border:1px solid #000;">${_dispEsc(camionStr)}</td>
+                    <td style="text-align:center; font-family:monospace; font-size:9px; width:58px; padding:3px 2px; border:1px solid #000;">${_dispEsc(carretaStr)}</td>
+                    <td style="width:125px; font-size:8.5px; padding:3px 4px; border:1px solid #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;">${_dispEsc(conductorFormateado)}</td>
+                    <td style="text-align:center; width:60px; font-size:8.5px; padding:3px 2px; border:1px solid #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${_dispEsc(marcaStr)}</td>
+                    <td style="text-align:center; width:55px; font-size:8.5px; padding:3px 2px; border:1px solid #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${_dispEsc(tipoStr)}</td>
+                    <td style="text-align:center; width:48px; font-size:8.5px; font-weight:600; padding:3px 2px; border:1px solid #000;">${_dispEsc(galonesStr)}</td>
+                    <td style="width:120px; font-size:8px; padding:3px 4px; border:1px solid #000; word-break:normal; overflow-wrap:break-word; white-space:normal; line-height:1.2;">${_dispEsc(obsStr)}</td>
+                    <td style="font-size:8px; padding:3px 4px; border:1px solid #000; word-break:normal; overflow-wrap:break-word; white-space:normal; line-height:1.2; color:#334155;">${_dispEsc(gpsStr)}</td>
                 </tr>
             `;
         });
     });
 
     return `
-        <div style="width:210mm; min-height:297mm; background:#ffffff; padding:10mm 12mm; margin:0 auto; box-sizing:border-box; font-family:'Inter', system-ui, sans-serif; color:#000000; display:flex; flex-direction:column;">
+        <div style="width:210mm; min-height:297mm; background:#ffffff; padding:8mm 8mm; margin:0 auto; box-sizing:border-box; font-family:'Inter', system-ui, sans-serif; color:#000000; display:flex; flex-direction:column;">
             
             <!-- 1. Encabezado Oficial -->
             <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:6px; table-layout:fixed;">
@@ -1599,19 +1587,22 @@ function _dispBuildPdfHtml() {
             </table>
 
             <!-- 3. Tabla Principal de Unidades -->
-            <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:8px; font-size:9.5px; table-layout:fixed;">
+            <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:8px; font-size:8.5px; table-layout:fixed;">
                 <thead>
                     <tr style="background-color:#333333; color:#ffffff; -webkit-print-color-adjust:exact;">
-                        <th style="width:28px; text-align:center; padding:5px 2px; border:1px solid #000; font-size:9px;">#</th>
-                        <th style="width:82px; text-align:center; padding:5px 2px; border:1px solid #000; font-size:9px;">SOLO CAMIÓN</th>
-                        <th style="width:80px; text-align:center; padding:5px 2px; border:1px solid #000; font-size:9px;">CARRETA</th>
-                        <th style="width:175px; text-align:center; padding:5px 4px; border:1px solid #000; font-size:9px;">CONDUCTOR</th>
-                        <th style="width:115px; text-align:center; padding:5px 4px; border:1px solid #000; font-size:9px;">MARCA / TIPO</th>
-                        <th style="text-align:center; padding:5px 4px; border:1px solid #000; font-size:9px;">OBSERVACIONES / UBICACIÓN GPS</th>
+                        <th style="width:24px; text-align:center; padding:4px 2px; border:1px solid #000; font-size:8.5px;">#</th>
+                        <th style="width:58px; text-align:center; padding:4px 2px; border:1px solid #000; font-size:8.5px;">SOLO CAMIÓN</th>
+                        <th style="width:58px; text-align:center; padding:4px 2px; border:1px solid #000; font-size:8.5px;">CARRETA</th>
+                        <th style="width:125px; text-align:center; padding:4px 4px; border:1px solid #000; font-size:8.5px;">CONDUCTOR</th>
+                        <th style="width:60px; text-align:center; padding:4px 2px; border:1px solid #000; font-size:8.5px;">MARCA</th>
+                        <th style="width:55px; text-align:center; padding:4px 2px; border:1px solid #000; font-size:8.5px;">TIPO</th>
+                        <th style="width:48px; text-align:center; padding:4px 2px; border:1px solid #000; font-size:8.5px;">GALONES</th>
+                        <th style="width:120px; text-align:center; padding:4px 4px; border:1px solid #000; font-size:8.5px;">OBSERVACIONES</th>
+                        <th style="text-align:center; padding:4px 4px; border:1px solid #000; font-size:8.5px;">UBICACIÓN GPS</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${filasHtml || '<tr><td colspan="6" style="text-align:center; padding:15px; border:1px solid #000; color:#64748b;">No hay unidades para los filtros seleccionados.</td></tr>'}
+                    ${filasHtml || '<tr><td colspan="9" style="text-align:center; padding:15px; border:1px solid #000; color:#64748b;">No hay unidades para los filtros seleccionados.</td></tr>'}
                 </tbody>
             </table>
 
