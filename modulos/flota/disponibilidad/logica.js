@@ -1444,6 +1444,367 @@ function _dispEsc(str) {
         .replace(/'/g, '&#039;');
 }
 
+// ── Generador y Exportador de Reporte PDF Oficial (F-FLOT-0004) ──
+function _dispBuildPdfHtml() {
+    const items = (window._dispFiltrados && window._dispFiltrados.length > 0) ? window._dispFiltrados : (window.dispDatos || []);
+    const empresaFiltro = window._dispFiltroEmpresa || 'TODAS';
+    const estadoFiltro = window._dispFiltroCard || 'TODOS';
+    const hoy = new Date();
+    const fechaFormateada = hoy.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const horaFormateada = hoy.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+
+    let totBase = 0;
+    let totRuta = 0;
+    let totMant = 0;
+
+    items.forEach(d => {
+        const est = (d.estado || 'En Base').toLowerCase();
+        if (est.includes('mant') || est.includes('taller')) totMant++;
+        else if (est.includes('ruta')) totRuta++;
+        else totBase++;
+    });
+
+    const cleanPlc = str => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    let filasHtml = '';
+    items.forEach((d, idx) => {
+        const num = idx + 1;
+        const est = d.estado || 'En Base';
+        let badgeColor = '#16a34a'; // Verde
+        let badgeBg = '#dcfce7';
+        if (est === 'En Mantenimiento' || d.estado_carreta === 'En Mantenimiento') {
+            badgeColor = '#dc2626'; // Rojo
+            badgeBg = '#fee2e2';
+        } else if (est === 'En Ruta') {
+            badgeColor = '#0284c7'; // Azul
+            badgeBg = '#e0f2fe';
+        }
+
+        const camionStr = (d.placa_camion && d.placa_camion !== '—') ? d.placa_camion : '—';
+        const carretaStr = (d.placa_carreta && d.placa_carreta !== '—') ? d.placa_carreta : '—';
+        const conductorStr = d.conductor_asignado || 'Sin Asignar';
+        const marcaTipoStr = `${d.marca || '—'} ${d.tipo_unidad ? '• ' + d.tipo_unidad : ''}`;
+        const capTanque = d.capacidad_tanque || '—';
+        const obs = d.observaciones || '—';
+
+        // GPS Telemetría
+        const targetPlaca = cleanPlc(d.placa_camion || d.placa_carreta);
+        const gps = (window._dispGpsMap && targetPlaca) ? window._dispGpsMap[targetPlaca] : null;
+        let gpsTexto = 'Sin Señal';
+        if (gps && gps.lat && gps.lng) {
+            gpsTexto = gps.ubicacion || `Lat: ${gps.lat.toFixed(4)}, Lng: ${gps.lng.toFixed(4)}`;
+        }
+
+        filasHtml += `
+            <tr style="border-bottom: 1px solid #cbd5e1; font-size: 8.5px;">
+                <td style="text-align:center; font-weight:bold; padding: 4px 2px; border: 1px solid #000; width: 24px;">${num}</td>
+                <td style="text-align:center; font-family:monospace; font-weight:bold; padding: 4px 2px; border: 1px solid #000; font-size: 9px; width: 62px;">${_dispEsc(camionStr)}</td>
+                <td style="text-align:center; font-family:monospace; font-weight:bold; padding: 4px 2px; border: 1px solid #000; font-size: 9px; width: 62px;">${_dispEsc(carretaStr)}</td>
+                <td style="padding: 4px 4px; border: 1px solid #000; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width: 140px;">${_dispEsc(conductorStr)}</td>
+                <td style="text-align:center; padding: 3px 2px; border: 1px solid #000; width: 84px;">
+                    <span style="display:inline-block; padding: 2px 4px; border-radius: 4px; font-weight: bold; font-size: 7.5px; text-transform: uppercase; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeColor};">
+                        ${_dispEsc(est)}
+                    </span>
+                </td>
+                <td style="padding: 4px 4px; border: 1px solid #000; font-size: 8px; width: 95px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${_dispEsc(marcaTipoStr)}</td>
+                <td style="text-align:center; padding: 4px 2px; border: 1px solid #000; font-size: 8px; width: 50px;">${_dispEsc(capTanque)}</td>
+                <td style="padding: 4px 4px; border: 1px solid #000; font-size: 8px; max-width: 120px; word-break: break-word;">${_dispEsc(obs)}</td>
+                <td style="padding: 4px 4px; border: 1px solid #000; font-size: 7.5px; max-width: 140px; word-break: break-word; color: #334155;">${_dispEsc(gpsTexto)}</td>
+            </tr>
+        `;
+    });
+
+    return `
+        <div style="width:210mm; min-height:297mm; background:#ffffff; padding:8mm 10mm; margin:0 auto; box-sizing:border-box; font-family:'Inter', system-ui, sans-serif; color:#000000; display:flex; flex-direction:column;">
+            
+            <!-- 1. Encabezado Oficial -->
+            <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:6px; table-layout:fixed;">
+                <tr>
+                    <td style="width:22%; padding:4px; border:1px solid #000; text-align:center; vertical-align:middle;" rowspan="3">
+                        <img src="${empLogoUrl}" alt="Logo Empresa" style="max-height:46px; max-width:100%; object-fit:contain;">
+                    </td>
+                    <td style="width:54%; border:1px solid #000; text-align:center; vertical-align:middle; font-size:16px; font-weight:800; line-height:1.2; text-transform:uppercase;" rowspan="3">
+                        DISPONIBILIDAD OPERATIVA DE FLOTA<br>
+                        <span style="font-size:9.5px; font-weight:600; color:#333; letter-spacing:0.5px; display:block; margin-top:3px;">CONTROL Y GESTIÓN DE DISPONIBILIDAD DE UNIDADES</span>
+                    </td>
+                    <td style="width:24%; border:1px solid #000; font-size:9px; text-align:left; padding:2px 6px; height:16px;"><b>CÓDIGO:</b> F-FLOT-0004</td>
+                </tr>
+                <tr><td style="border:1px solid #000; font-size:9px; text-align:left; padding:2px 6px; height:16px;"><b>VERSIÓN:</b> 01</td></tr>
+                <tr><td style="border:1px solid #000; font-size:9px; text-align:left; padding:2px 6px; height:16px;"><b>F. EMISIÓN:</b> ${fechaFormateada}</td></tr>
+            </table>
+
+            <!-- 2. Metadatos y Filtros Aplicados -->
+            <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:6px; font-size:9.5px;">
+                <tr style="background:#f8fafc;">
+                    <td style="width:25%; border:1px solid #000; padding:4px 6px;"><b>FECHA:</b> ${fechaFormateada}</td>
+                    <td style="width:35%; border:1px solid #000; padding:4px 6px;"><b>EMPRESA:</b> ${empresaFiltro === 'TODAS' ? 'TODAS LAS EMPRESAS' : _dispEsc(empresaFiltro)}</td>
+                    <td style="width:40%; border:1px solid #000; padding:4px 6px;"><b>FILTRO ESTADO:</b> ${_dispEsc(estadoFiltro.toUpperCase())}</td>
+                </tr>
+                <tr>
+                    <td colspan="3" style="border:1px solid #000; padding:4px 6px; font-weight:bold; font-size:9px;">
+                        RESUMEN DE FLOTA FILTRADA: 
+                        <span style="color:#0f172a; margin-left:6px;">TOTAL: <b>${items.length}</b></span> | 
+                        <span style="color:#16a34a; margin-left:6px;">EN BASE: <b>${totBase}</b></span> | 
+                        <span style="color:#0284c7; margin-left:6px;">EN RUTA: <b>${totRuta}</b></span> | 
+                        <span style="color:#dc2626; margin-left:6px;">EN MANTENIMIENTO: <b>${totMant}</b></span>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- 3. Tabla Principal de Unidades -->
+            <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:8px; font-size:8.5px; table-layout:fixed;">
+                <thead>
+                    <tr style="background-color:#1e293b; color:#ffffff;">
+                        <th style="width:24px; text-align:center; padding:5px 2px; border:1px solid #000;">#</th>
+                        <th style="width:62px; text-align:center; padding:5px 2px; border:1px solid #000;">CAMIÓN</th>
+                        <th style="width:62px; text-align:center; padding:5px 2px; border:1px solid #000;">CARRETA</th>
+                        <th style="width:140px; text-align:center; padding:5px 4px; border:1px solid #000;">CONDUCTOR ASIGNADO</th>
+                        <th style="width:84px; text-align:center; padding:5px 2px; border:1px solid #000;">ESTADO</th>
+                        <th style="width:95px; text-align:center; padding:5px 4px; border:1px solid #000;">MARCA / TIPO</th>
+                        <th style="width:50px; text-align:center; padding:5px 2px; border:1px solid #000;">TANQUE</th>
+                        <th style="text-align:center; padding:5px 4px; border:1px solid #000;">OBSERVACIONES / DESTINO</th>
+                        <th style="width:140px; text-align:center; padding:5px 4px; border:1px solid #000;">UBICACIÓN GPS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasHtml || '<tr><td colspan="9" style="text-align:center; padding:15px; border:1px solid #000; color:#64748b;">No hay unidades para los filtros seleccionados.</td></tr>'}
+                </tbody>
+            </table>
+
+            <!-- 4. Pie de Página -->
+            <div style="margin-top:auto; border-top:1px solid #000; padding-top:4px; display:flex; justify-content:space-between; font-size:8.5px; color:#475569;">
+                <div><b>ERP Azkell Fleet</b> — Módulo de Disponibilidad de Flota</div>
+                <div>Impreso: ${fechaFormateada} ${horaFormateada}</div>
+            </div>
+        </div>
+    `;
+}
+
+// ── Renderizador de Blob PDF en Iframe Aislado ───────────────────
+async function _dispRenderPdfBlob(htmlBody, filename) {
+    return new Promise(function (resolve, reject) {
+        var iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed; top:-10000px; left:-10000px; width:840px; height:1200px; border:none; z-index:-999;';
+        document.body.appendChild(iframe);
+
+        var doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write('<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n'
+            + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+            + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">\n'
+            + '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></scr' + 'ipt>\n'
+            + '<style>\n'
+            + 'body { background-color:#FFFFFF; color:#0F172A; margin:0; padding:0; font-family:"Inter", sans-serif; }\n'
+            + '</style>\n</head>\n<body>\n'
+            + '<div id="disp-pdf-render-root">' + htmlBody + '</div>\n'
+            + '</body>\n</html>');
+        doc.close();
+
+        iframe.onload = async function () {
+            try {
+                await new Promise(function (r) { setTimeout(r, 400); });
+                var targetEl = doc.getElementById('disp-pdf-render-root');
+                var opt = {
+                    margin: 0,
+                    filename: filename,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2.2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 840 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                var pdfBlob = await iframe.contentWindow.html2pdf().set(opt).from(targetEl).outputPdf('blob');
+                iframe.remove();
+                resolve(pdfBlob);
+            } catch (e) {
+                iframe.remove();
+                reject(e);
+            }
+        };
+    });
+}
+
+// ── 📲 Compartir Reporte PDF por WhatsApp ────────────────────────
+window.dispCompartirWhatsAppPDF = async function () {
+    const empresaFiltro = window._dispFiltroEmpresa || 'TODAS';
+    const hoy = new Date().toISOString().split('T')[0];
+    const filename = `${hoy} - Disponibilidad Flota ${empresaFiltro !== 'TODAS' ? '(' + empresaFiltro + ')' : ''}.pdf`;
+
+    const btn = document.getElementById('disp-btn-share-pdf');
+    if (btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm text-success"></span>';
+        btn.style.pointerEvents = 'none';
+    }
+
+    if (typeof window.mostrarToast === 'function') {
+        window.mostrarToast('Preparando PDF de Disponibilidad para WhatsApp...', 'info');
+    }
+
+    try {
+        const htmlFinal = _dispBuildPdfHtml();
+        const pdfBlob = await _dispRenderPdfBlob(htmlFinal, filename);
+        const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+        // 1. Compartir nativo en móviles o navegadores compatibles
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            try {
+                await navigator.share({
+                    files: [pdfFile],
+                    title: filename
+                });
+                return;
+            } catch (shareErr) {
+                if (shareErr.name === 'AbortError') return;
+                console.warn('Error en navigator.share:', shareErr);
+
+                if (shareErr.name === 'NotAllowedError') {
+                    window._dispPendingPdfFile = pdfFile;
+                    window._dispPendingPdfFilename = filename;
+                    _dispMostrarBotonReintentarShare();
+                    return;
+                }
+            }
+        }
+
+        // 2. Fallback WhatsApp app directo
+        window.location.href = 'whatsapp://';
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast('Abriendo aplicación WhatsApp...', 'success');
+        }
+    } catch (err) {
+        console.error('Error al compartir PDF por WhatsApp:', err);
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast('Error al generar PDF: ' + err.message, 'danger');
+        } else {
+            alert('Error al generar PDF: ' + err.message);
+        }
+    } finally {
+        if (btn) {
+            btn.innerHTML = '<i class="bi bi-whatsapp text-success fs-5"></i>';
+            btn.style.pointerEvents = 'auto';
+        }
+    }
+};
+
+function _dispMostrarBotonReintentarShare() {
+    var existing = document.getElementById('disp-reintentar-share-overlay');
+    if (existing) existing.remove();
+
+    var div = document.createElement('div');
+    div.id = 'disp-reintentar-share-overlay';
+    div.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);';
+    div.innerHTML = '<div style="background:#fff;border-radius:24px;padding:26px 20px;text-align:center;max-width:320px;width:88%;box-shadow:0 20px 40px rgba(0,0,0,0.25);">' +
+        '<div style="width:58px;height:58px;background:#25D366;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px;">' +
+        '<i class="bi bi-whatsapp"></i>' +
+        '</div>' +
+        '<h5 style="font-weight:800;color:#0f172a;margin-bottom:8px;font-size:1.1rem;">PDF de Flota Listo</h5>' +
+        '<p style="color:#64748b;font-size:0.83rem;margin-bottom:20px;">Toca el botón para abrir WhatsApp y seleccionar el destinatario.</p>' +
+        '<button id="disp-btn-touch-share" style="background:#25D366;color:#fff;font-weight:700;border:none;padding:12px 24px;border-radius:14px;width:100%;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(37,211,102,0.35);">' +
+        '<i class="bi bi-share-fill"></i> Enviar por WhatsApp' +
+        '</button>' +
+        '<button onclick="document.getElementById(\'disp-reintentar-share-overlay\').remove()" style="background:transparent;color:#94a3b8;font-weight:600;border:none;margin-top:12px;font-size:0.8rem;cursor:pointer;">Cancelar</button>' +
+        '</div>';
+    document.body.appendChild(div);
+
+    document.getElementById('disp-btn-touch-share').onclick = async function () {
+        div.remove();
+        if (window._dispPendingPdfFile && navigator.canShare && navigator.canShare({ files: [window._dispPendingPdfFile] })) {
+            try {
+                await navigator.share({
+                    files: [window._dispPendingPdfFile],
+                    title: window._dispPendingPdfFilename || 'Disponibilidad_Flota.pdf'
+                });
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    window.location.href = 'whatsapp://';
+                }
+            }
+        } else {
+            window.location.href = 'whatsapp://';
+        }
+    };
+}
+
+// ── 📄 Exportar / Imprimir PDF Oficial (F-FLOT-0004) ──────────────
+window.dispExportarPDF = function () {
+    const items = (window._dispFiltrados && window._dispFiltrados.length > 0) ? window._dispFiltrados : (window.dispDatos || []);
+    if (!items || items.length === 0) {
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast('No hay unidades registradas para exportar en este filtro.', 'warning');
+        } else {
+            alert('No hay unidades para exportar');
+        }
+        return;
+    }
+
+    const ventana = window.open('', '_blank');
+    if (!ventana) {
+        alert('Por favor permite las ventanas emergentes para generar el PDF.');
+        return;
+    }
+
+    const htmlFinal = _dispBuildPdfHtml();
+
+    ventana.document.write(`
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <title>Disponibilidad de Flota — F-FLOT-0004</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+            <style>
+                @page { size: A4 portrait; margin: 0; }
+                body { margin: 0; padding: 0; background: #525659; font-family: 'Inter', system-ui, sans-serif; }
+                .no-print-bar {
+                    background: #1e293b;
+                    padding: 10px 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    color: #fff;
+                    position: sticky;
+                    top: 0;
+                    z-index: 1000;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+                }
+                .btn-print {
+                    background: #0284c7;
+                    color: white;
+                    border: none;
+                    padding: 8px 18px;
+                    border-radius: 8px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 13px;
+                }
+                @media print {
+                    .no-print-bar { display: none !important; }
+                    body { background: white !important; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="no-print-bar">
+                <span style="font-weight:700; font-size:14px;">Vista Previa de Impresión — Disponibilidad de Flota (F-FLOT-0004)</span>
+                <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+            </div>
+            ${htmlFinal}
+            <script>
+                setTimeout(function() {
+                    window.print();
+                }, 600);
+            </script>
+        </body>
+        </html>
+    `);
+    ventana.document.close();
+};
+
 // ── Inicializador del Módulo ──────────────────────────────────────
 window.init_disponibilidad = function () {
     window.dispCargarDatos(true);

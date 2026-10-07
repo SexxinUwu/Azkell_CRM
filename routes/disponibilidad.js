@@ -212,12 +212,18 @@ module.exports = function (db, logAudit) {
 
                                     if (hasDirectOT) {
                                         estado = 'En Mantenimiento';
-                                        carreta = (disp ? disp.placa_carreta : '') || '';
-                                        conductor = (disp ? disp.conductor_asignado : '') || '';
-                                        observaciones = 'En Taller / OT Activa';
+                                        carreta = (disp ? disp.placa_carreta : '') || (enRuta ? enRuta.placa_carreta : (enBase ? enBase.placa_carreta : '')) || '';
+                                        conductor = (disp ? disp.conductor_asignado : '') || (enRuta ? enRuta.conductor : (enBase ? enBase.conductor : '')) || '';
+                                        observaciones = (disp && disp.observaciones) ? disp.observaciones : 'En Taller / OT Activa';
+                                    } else if (disp && disp.estado_unidad && disp.estado_unidad.trim() !== '') {
+                                        // Prioridad 1: Override manual en Disponibilidad (si el usuario editó el estado)
+                                        estado = disp.estado_unidad;
+                                        carreta = disp.placa_carreta || (enRuta ? enRuta.placa_carreta : (enBase ? enBase.placa_carreta : '')) || '';
+                                        conductor = disp.conductor_asignado || (enRuta ? enRuta.conductor : (enBase ? enBase.conductor : '')) || '';
+                                        observaciones = disp.observaciones || (enRuta ? (enRuta.destino ? `Destino: ${enRuta.destino}` : enRuta.salida_observaciones) : (enBase ? enBase.observacion : ''));
                                     } else if (enRuta) {
+                                        // Prioridad 2: Salida activa en Seguridad
                                         estado = 'En Ruta';
-                                        // Si enRuta indica carreta la usamos; si no, solo tomamos la de disp si NO está en taller/mantenimiento
                                         if (enRuta.placa_carreta) {
                                             carreta = enRuta.placa_carreta;
                                         } else if (disp && disp.placa_carreta) {
@@ -229,6 +235,7 @@ module.exports = function (db, logAudit) {
                                         conductor = enRuta.conductor || (disp ? disp.conductor_asignado : '') || '';
                                         observaciones = enRuta.destino ? `Destino: ${enRuta.destino}` : (enRuta.salida_observaciones || (disp ? disp.observaciones : ''));
                                     } else if (enBase) {
+                                        // Prioridad 3: Registro en Base
                                         estado = 'En Base';
                                         if (enBase.placa_carreta) {
                                             carreta = enBase.placa_carreta;
@@ -249,6 +256,7 @@ module.exports = function (db, logAudit) {
                                         }
                                         conductor = disp.conductor_asignado || '';
                                         observaciones = disp.observaciones || '';
+                                        estado = disp.estado_unidad || 'En Base';
                                     }
 
                                     if (!hasDirectOT && falla) {
@@ -316,6 +324,7 @@ module.exports = function (db, logAudit) {
 
                                     let estado = 'En Base';
                                     if (hasOT) estado = 'En Mantenimiento';
+                                    else if (disp && disp.estado_unidad && disp.estado_unidad.trim() !== '') estado = disp.estado_unidad;
                                     else if (enRuta) estado = 'En Ruta';
 
                                     const stCarreta = p.sub_tipo || p.tipo || 'Carreta';
