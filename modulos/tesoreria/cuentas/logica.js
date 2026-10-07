@@ -8,12 +8,11 @@ window._cuentasFiltradas = window._cuentasFiltradas || [];
 window.init_tesoreria_cuentas = function() {
     console.log('Inicializando módulo Cuentas por Cobrar y Pagar...');
     
-    // Por defecto: Rango de fecha con el día actual (Hoy)
+    // Por defecto: Limpiar rango de fechas para mostrar todo el historial de cuentas
     var fDesdeEl = document.getElementById('cuentas-filtro-desde');
     var fHastaEl = document.getElementById('cuentas-filtro-hasta');
-    var hoyStr = new Date().toISOString().split('T')[0];
-    if (fDesdeEl && !fDesdeEl.value) fDesdeEl.value = hoyStr;
-    if (fHastaEl && !fHastaEl.value) fHastaEl.value = hoyStr;
+    if (fDesdeEl) fDesdeEl.value = '';
+    if (fHastaEl) fHastaEl.value = '';
 
     window.cargarCuentas();
 };
@@ -102,38 +101,10 @@ window.filtrarCuentas = function() {
 };
 
 window.alCambiarFiltroEstado = function(est) {
-    var estado = (est || 'TODOS').toUpperCase();
     var fDesdeEl = document.getElementById('cuentas-filtro-desde');
     var fHastaEl = document.getElementById('cuentas-filtro-hasta');
-    var hoyStr = new Date().toISOString().split('T')[0];
-
-    if (estado === 'PENDIENTE') {
-        // Encontrar automáticamente el rango desde el PRIMER pendiente hasta el día actual / último pendiente
-        // Esto se hace 100% en memoria con los datos ya cargados sin saturar la BD con peticiones extra
-        var pendientes = (window._cuentasData || []).filter(function(item) {
-            return (item.estado_servicio || '').toUpperCase() === 'PENDIENTE';
-        });
-
-        if (pendientes.length > 0) {
-            var fechas = pendientes.map(function(item) {
-                var f = item.fecha_servicio || item.fecha_liquidacion;
-                return f ? String(f).split('T')[0] : null;
-            }).filter(Boolean).sort();
-
-            if (fechas.length > 0) {
-                var minFecha = fechas[0];
-                var maxFecha = fechas[fechas.length - 1];
-                if (maxFecha < hoyStr) maxFecha = hoyStr; // Cubrir hasta la fecha actual
-
-                if (fDesdeEl) fDesdeEl.value = minFecha;
-                if (fHastaEl) fHastaEl.value = maxFecha;
-            }
-        }
-    } else if (estado === 'TODOS') {
-        // Si vuelve a TODOS, restaurar al día actual por defecto
-        if (fDesdeEl) fDesdeEl.value = hoyStr;
-        if (fHastaEl) fHastaEl.value = hoyStr;
-    }
+    if (fDesdeEl) fDesdeEl.value = '';
+    if (fHastaEl) fHastaEl.value = '';
 
     window.filtrarCuentas();
 };
@@ -460,7 +431,7 @@ window.abrirModalNuevoRegistro = function() {
     var fileFac = document.getElementById('fc-archivo-factura');
     if (fileFac) fileFac.value = '';
 
-    var modal = new bootstrap.Modal(document.getElementById('modalCuentaForm'));
+    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCuentaForm'));
     modal.show();
 };
 
@@ -550,7 +521,7 @@ window.abrirEditarRegistro = function(id) {
     if (fileFac) fileFac.value = '';
 
     document.getElementById('modalCuentaFormTitulo').textContent = 'Editar Registro (ID ' + item.id + ')';
-    var modal = new bootstrap.Modal(document.getElementById('modalCuentaForm'));
+    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCuentaForm'));
     modal.show();
 };
 
@@ -1251,7 +1222,7 @@ window.abrirModalCambiarFacturaNC = function(id) {
     var inputFecha = document.getElementById('nc-input-nueva-fecha');
     if (inputFecha) inputFecha.value = new Date().toISOString().split('T')[0];
 
-    var modal = new bootstrap.Modal(document.getElementById('modalCambiarFacturaNC'));
+    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCambiarFacturaNC'));
     modal.show();
 };
 
@@ -1334,7 +1305,7 @@ window.abrirModalHistorialFacturasNC = function(id) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando historial de comprobantes...</td></tr>';
     }
 
-    var modal = new bootstrap.Modal(document.getElementById('modalHistorialFacturasNC'));
+    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalHistorialFacturasNC'));
     modal.show();
 
     fetch('/api/tesoreria/cuentas/' + id + '/historial-facturas')
