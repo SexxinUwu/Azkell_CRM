@@ -194,6 +194,12 @@ module.exports = function (db, logAudit) {
                                     }
                                 });
 
+                                const isMaintenanceState = str => {
+                                    if (!str) return false;
+                                    const s = String(str).toLowerCase().trim();
+                                    return s.includes('mant') || s.includes('taller');
+                                };
+
                                 const resultado = [];
 
                                 // Procesar motoras (Camiones / Tractos)
@@ -240,14 +246,14 @@ module.exports = function (db, logAudit) {
                                     } else if (enRuta) {
                                         estado = 'En Ruta';
                                         observaciones = enRuta.destino ? `Destino: ${enRuta.destino}` : (enRuta.salida_observaciones || (disp ? disp.observaciones : ''));
-                                    } else if (disp && disp.estado_unidad && disp.estado_unidad.trim() !== '' && disp.estado_unidad !== 'En Mantenimiento') {
+                                    } else if (disp && disp.estado_unidad && disp.estado_unidad.trim() !== '' && !isMaintenanceState(disp.estado_unidad)) {
                                         estado = disp.estado_unidad;
                                         observaciones = disp.observaciones || (enBase ? enBase.observacion : '');
                                     } else if (enBase) {
                                         estado = 'En Base';
                                         observaciones = enBase.observacion || (disp ? disp.observaciones : '');
                                     } else {
-                                        estado = (disp && disp.estado_unidad && disp.estado_unidad !== 'En Mantenimiento') ? disp.estado_unidad : 'En Base';
+                                        estado = (disp && disp.estado_unidad && !isMaintenanceState(disp.estado_unidad)) ? disp.estado_unidad : 'En Base';
                                         observaciones = (disp && disp.observaciones) ? disp.observaciones : '';
                                     }
 
@@ -315,7 +321,7 @@ module.exports = function (db, logAudit) {
                                     } else if (enRuta) {
                                         estado = 'En Ruta';
                                         obs = (disp && disp.observaciones) ? disp.observaciones : '';
-                                    } else if (disp && disp.estado_unidad && disp.estado_unidad.trim() !== '' && disp.estado_unidad !== 'En Mantenimiento') {
+                                    } else if (disp && disp.estado_unidad && disp.estado_unidad.trim() !== '' && !isMaintenanceState(disp.estado_unidad)) {
                                         estado = disp.estado_unidad;
                                         obs = disp.observaciones || '';
                                     } else {

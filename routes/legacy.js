@@ -1501,6 +1501,9 @@ router.post('/:metodo', async (req, res) => {
                 return vehiculosLive;
             } catch(fetchErr) {
                 console.warn('Advertencia Wialon Fetch:', fetchErr.message);
+                if (_wialonCache && _wialonCache.length > 0) {
+                    return _wialonCache;
+                }
                 return { error: 'No se pudo conectar con el servidor GPS: ' + fetchErr.message };
             }
         })();
@@ -1512,6 +1515,9 @@ router.post('/:metodo', async (req, res) => {
         } catch (error) {
             _wialonInFlightPromise = null;
             console.error("Error Wialon:", error);
+            if (_wialonCache && _wialonCache.length > 0) {
+                return res.json({ data: _wialonCache });
+            }
             return res.json({ data: { error: error.toString() }});
         }
     }
