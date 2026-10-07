@@ -67,6 +67,10 @@ module.exports = function(db, broadcast, logAudit) {
                     observaciones TEXT DEFAULT NULL,
                     gre_vinculada_id INT DEFAULT NULL,
                     gre_vinculada_numero VARCHAR(30) DEFAULT NULL,
+                    gre_vinculada_ruc VARCHAR(20) DEFAULT NULL,
+                    gre_vinculada_tipo VARCHAR(10) DEFAULT '09',
+                    subcontratista_ruc VARCHAR(20) DEFAULT NULL,
+                    subcontratista_razon_social VARCHAR(255) DEFAULT NULL,
                     orden_servicio VARCHAR(60) DEFAULT NULL,
                     orden_viaje VARCHAR(60) DEFAULT NULL,
                     datos_json LONGTEXT DEFAULT NULL,
@@ -78,6 +82,12 @@ module.exports = function(db, broadcast, logAudit) {
                     INDEX idx_placa (vehiculo_placa)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             `);
+
+            // Columnas adicionales seguras si la tabla ya existía
+            try { await dbConn.query("ALTER TABLE guias_transportista ADD COLUMN gre_vinculada_ruc VARCHAR(20) DEFAULT NULL"); } catch (_) {}
+            try { await dbConn.query("ALTER TABLE guias_transportista ADD COLUMN gre_vinculada_tipo VARCHAR(10) DEFAULT '09'"); } catch (_) {}
+            try { await dbConn.query("ALTER TABLE guias_transportista ADD COLUMN subcontratista_ruc VARCHAR(20) DEFAULT NULL"); } catch (_) {}
+            try { await dbConn.query("ALTER TABLE guias_transportista ADD COLUMN subcontratista_razon_social VARCHAR(255) DEFAULT NULL"); } catch (_) {}
 
             await dbConn.query(`
                 CREATE TABLE IF NOT EXISTS guias_items (
@@ -412,7 +422,11 @@ module.exports = function(db, broadcast, logAudit) {
                     costo_flete: parseFloat(d.costo_flete) || 0,
                     observaciones: (d.observaciones || '').trim() || null,
                     gre_vinculada_id: d.gre_vinculada_id || null,
-                    gre_vinculada_numero: d.gre_vinculada_numero || null,
+                    gre_vinculada_numero: (d.gre_vinculada_numero || '').trim() || null,
+                    gre_vinculada_ruc: (d.gre_vinculada_ruc || d.remitente_ruc || '').trim() || null,
+                    gre_vinculada_tipo: d.gre_vinculada_tipo || '09',
+                    subcontratista_ruc: (d.subcontratista_ruc || '').trim() || null,
+                    subcontratista_razon_social: (d.subcontratista_razon_social || '').trim() || null,
                     orden_servicio: d.orden_servicio || null,
                     orden_viaje: d.orden_viaje || null
                 }
@@ -477,6 +491,7 @@ module.exports = function(db, broadcast, logAudit) {
                 'vehiculo_secundario_placa', 'conductor_tipo_doc', 'conductor_num_doc',
                 'conductor_nombres', 'conductor_apellidos', 'conductor_licencia',
                 'costo_flete', 'observaciones', 'gre_vinculada_id', 'gre_vinculada_numero',
+                'gre_vinculada_ruc', 'gre_vinculada_tipo', 'subcontratista_ruc', 'subcontratista_razon_social',
                 'orden_servicio', 'orden_viaje'
             ];
 
@@ -613,12 +628,28 @@ module.exports = function(db, broadcast, logAudit) {
                 };
             }
 
-            // GRE vinculada
-            if (guia.gre_vinculada_numero) {
-                datosEnvio.documentosRelacionados = [{
-                    tipoDoc: '09',
-                    numDoc: guia.gre_vinculada_numero
-                }];
+            // Subcontratación
+            if (guia.subcontratista_ruc && String(guia.subcontratista_ruc).trim()) {
+                datosEnvio.indSubcontratacion = '1';
+                datosEnvio.subcontratista = {
+                    tipoDoc: '6',
+                    numDoc: String(guia.subcontratista_ruc).trim(),
+                    rznSocial: String(guia.subcontratista_razon_social || '').trim()
+                };
+            }
+
+            // GRE vinculada / Documentos Relacionados
+            if (guia.gre_vinculada_numero && String(guia.gre_vinculada_numero).trim()) {
+                const docRel = {
+                    tipoDoc: guia.gre_vinculada_tipo || '09',
+                    numDoc: String(guia.gre_vinculada_numero).trim()
+                };
+                const rucEmisor = guia.gre_vinculada_ruc || guia.remitente_ruc;
+                if (rucEmisor && String(rucEmisor).trim()) {
+                    docRel.numDocEmisor = String(rucEmisor).trim();
+                    docRel.tipoDocEmisor = '6';
+                }
+                datosEnvio.documentosRelacionados = [docRel];
             }
 
             const documentBody = {
@@ -821,6 +852,10 @@ module.exports = function(db, broadcast, logAudit) {
                     costo_flete: original.costo_flete,
                     gre_vinculada_id: original.gre_vinculada_id,
                     gre_vinculada_numero: original.gre_vinculada_numero,
+                    gre_vinculada_ruc: original.gre_vinculada_ruc,
+                    gre_vinculada_tipo: original.gre_vinculada_tipo,
+                    subcontratista_ruc: original.subcontratista_ruc,
+                    subcontratista_razon_social: original.subcontratista_razon_social,
                     orden_servicio: original.orden_servicio,
                     orden_viaje: original.orden_viaje
                 }

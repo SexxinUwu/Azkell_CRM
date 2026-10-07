@@ -546,6 +546,9 @@ window.dispFiltrar = function () {
     // Actualizar dinámicamente los KPIs superiores según empresa y filtros
     window.dispActualizarKPIs();
 
+    // Guardar referencia del arreglo filtrado actual
+    window._dispFiltrados = filtrados;
+
     // Renderizar Tablero (Tabla + Mobile Cards)
     window.dispRenderizarTabla(filtrados);
     window.dispRenderizarCardsMobile(filtrados);
@@ -957,7 +960,7 @@ window.dispRenderizarTabla = function (datos) {
                 </td>
                 <td class="pe-4 text-end" style="min-width: 90px;">
                     <div class="d-inline-flex align-items-center justify-content-end gap-1">
-                        <button type="button" class="ck-action-btn ck-btn-edit" onclick="window.dispEditarFila(${index})" title="Editar registro">
+                        <button type="button" class="ck-action-btn ck-btn-edit" onclick="window.dispEditarFila('${_dispEsc(item.placa_camion || '')}', '${_dispEsc(item.placa_carreta || '')}', ${item.id || 'null'})" title="Editar registro">
                             <i class="bi bi-pencil"></i>
                         </button>
                         ${item.id ? `
@@ -1056,7 +1059,7 @@ window.dispRenderizarCardsMobile = function (datos) {
 
                 <!-- Botones de Acción Móvil -->
                 <div class="d-flex align-items-center justify-content-end gap-2 pt-2 border-top">
-                    <button type="button" class="btn btn-sm btn-outline-secondary fw-bold px-3 py-1 d-flex align-items-center gap-1" onclick="window.dispEditarFila(${index})" style="border-radius:8px; font-size:0.78rem;">
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-bold px-3 py-1 d-flex align-items-center gap-1" onclick="window.dispEditarFila('${_dispEsc(item.placa_camion || '')}', '${_dispEsc(item.placa_carreta || '')}', ${item.id || 'null'})" style="border-radius:8px; font-size:0.78rem;">
                         <i class="bi bi-pencil"></i> Editar
                     </button>
                     ${item.id ? `
@@ -1091,8 +1094,28 @@ window.dispAbrirModalNuevo = function () {
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
 };
 
-window.dispEditarFila = function (index) {
-    const item = (window.dispDatos || [])[index];
+window.dispEditarFila = function (placaCamion, placaCarreta, id) {
+    let item = null;
+
+    // 1. Buscar por ID de BD si existe
+    if (id) {
+        item = (window.dispDatos || []).find(d => d.id == id);
+    }
+    // 2. Buscar por Placa de Camión
+    if (!item && placaCamion && typeof placaCamion === 'string') {
+        const pCamUpper = placaCamion.trim().toUpperCase();
+        item = (window.dispDatos || []).find(d => d.placa_camion && d.placa_camion.trim().toUpperCase() === pCamUpper);
+    }
+    // 3. Buscar por Placa de Carreta
+    if (!item && placaCarreta && typeof placaCarreta === 'string') {
+        const pCarUpper = placaCarreta.trim().toUpperCase();
+        item = (window.dispDatos || []).find(d => d.placa_carreta && d.placa_carreta.trim().toUpperCase() === pCarUpper);
+    }
+    // 4. Fallback si se pasa un índice
+    if (!item && typeof placaCamion === 'number') {
+        item = (window._dispFiltrados || window.dispDatos || [])[placaCamion];
+    }
+
     if (!item) return;
 
     const modalEl = document.getElementById('modalDisponibilidad');
@@ -1125,6 +1148,7 @@ window.guardarFormularioDisponibilidad = async function (e) {
         return;
     }
 
+    const estadoVal = (document.getElementById('disp-f-estado').value || 'En Base').trim();
     const payload = {
         placa_camion: cam,
         placa_carreta: car,
@@ -1132,7 +1156,8 @@ window.guardarFormularioDisponibilidad = async function (e) {
         marca: (document.getElementById('disp-f-marca').value || '').trim().toUpperCase(),
         capacidad_tanque: (document.getElementById('disp-f-capacidad').value || '').trim(),
         tipo_unidad: (document.getElementById('disp-f-tipo-unidad').value || '').trim(),
-        estado: (document.getElementById('disp-f-estado').value || 'En Base').trim(),
+        estado: estadoVal,
+        estado_unidad: estadoVal,
         observaciones: (document.getElementById('disp-f-observaciones').value || '').trim(),
         actualizado_por: localStorage.getItem('fleet_user') || 'Sistema',
         creado_por: localStorage.getItem('fleet_user') || 'Sistema'
