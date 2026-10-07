@@ -383,21 +383,47 @@
       <div class="modal-body px-4 py-3" style="overflow-y:auto; flex:1;">
         <form id="formGRT" onsubmit="return window.grtGuardar(event);">
           <input type="hidden" id="grtEditId" value="">
-          <!-- BARRA RÁPIDA: Autocompletar desde Orden de Viaje -->
-          <div class="card p-3 mb-3 border-warning bg-warning-subtle shadow-sm">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-              <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
-                <div>
-                  <div class="fw-bold small text-dark">Autocompletar con 1-Click desde Orden de Viaje (OV)</div>
-                  <div class="text-muted" style="font-size:0.75rem;">Importa automáticamente Placas, Conductor, Licencia, Ubigeos, Direcciones y Peso</div>
+          <!-- BARRAS RÁPIDAS DE AUTOCOMPLETADO AUTOMÁTICO -->
+          <div class="row g-2 mb-3">
+            <!-- Opción 1: Cargar XML de la Guía Remitente (GRE) -->
+            <div class="col-12 col-md-6">
+              <div class="card p-3 h-100 border-primary bg-primary-subtle shadow-xs">
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-filetype-xml text-primary fs-4"></i>
+                    <div>
+                      <div class="fw-bold small text-dark">Importar XML Guía Remitente</div>
+                      <div class="text-muted" style="font-size:0.73rem;">Autocompleta Remitente, Destino, Ruta, Peso y GRE</div>
+                    </div>
+                  </div>
+                  <div>
+                    <input type="file" id="grt_xml_file_input" accept=".xml" style="display:none;" onchange="if(this.files && this.files[0]) window.grtProcesarXmlGre(this.files[0]); this.value='';">
+                    <button type="button" class="btn btn-sm btn-primary fw-bold text-white shadow-2xs" onclick="document.getElementById('grt_xml_file_input').click()">
+                      <i class="bi bi-cloud-upload-fill me-1"></i> Subir XML
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div class="d-flex align-items-center gap-1">
-                <input type="text" id="grt_buscar_ov_input" class="form-control form-control-sm bg-white" placeholder="Ej: OV-2026-001" style="max-width: 150px;">
-                <button type="button" class="btn btn-sm btn-warning fw-bold text-dark" onclick="window.grtAutocompletarDesdeOV()">
-                  <i class="bi bi-cloud-arrow-down-fill"></i> Importar
-                </button>
+            </div>
+
+            <!-- Opción 2: Autocompletar desde Orden de Viaje (OV) -->
+            <div class="col-12 col-md-6">
+              <div class="card p-3 h-100 border-warning bg-warning-subtle shadow-xs">
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-lightning-charge-fill text-warning fs-4"></i>
+                    <div>
+                      <div class="fw-bold small text-dark">Desde Orden de Viaje (OV)</div>
+                      <div class="text-muted" style="font-size:0.73rem;">Importa Placas, Conductor, Ubigeos y Peso</div>
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center gap-1">
+                    <input type="text" id="grt_buscar_ov_input" class="form-control form-control-sm bg-white" placeholder="OV-..." style="max-width: 100px;">
+                    <button type="button" class="btn btn-sm btn-warning fw-bold text-dark shadow-2xs" onclick="window.grtAutocompletarDesdeOV()">
+                      <i class="bi bi-arrow-down-circle-fill"></i>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
