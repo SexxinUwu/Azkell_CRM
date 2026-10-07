@@ -1338,7 +1338,7 @@ window.dispSeleccionarConductor = function (nombre) {
     if (panel) panel.style.display = 'none';
 };
 
-// ── Exportar Excel ────────────────────────────────────────────────
+// ── Exportar Excel (Respetando Filtros Activos) ───────────────────
 window.dispExportarExcel = function () {
     if (typeof XLSX === 'undefined') {
         alert('Librería XLSX no disponible');
@@ -1346,8 +1346,10 @@ window.dispExportarExcel = function () {
     }
 
     const cleanPlc = str => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const items = (window._dispFiltrados && window._dispFiltrados.length > 0) ? window._dispFiltrados : (window.dispDatos || []);
+    const empresaFiltro = window._dispFiltroEmpresa || 'TODAS';
 
-    const rows = (window.dispDatos || []).map((d, i) => {
+    const rows = items.map((d, i) => {
         const targetPlaca = cleanPlc(d.placa_camion || d.placa_carreta);
         const gps = (window._dispGpsMap && targetPlaca) ? window._dispGpsMap[targetPlaca] : null;
         let gpsText = 'Sin Señal';
@@ -1374,7 +1376,8 @@ window.dispExportarExcel = function () {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Disponibilidad Flota');
-    XLSX.writeFile(wb, `Disponibilidad_Flota_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const sufijoEmpresa = empresaFiltro !== 'TODAS' ? `_${empresaFiltro.replace(/[^A-Z0-9]/g, '_')}` : '';
+    XLSX.writeFile(wb, `Disponibilidad_Flota_${new Date().toISOString().split('T')[0]}${sufijoEmpresa}.xlsx`);
 };
 
 // ── Modal Cuadro Resumen ──────────────────────────────────────────
@@ -1445,79 +1448,130 @@ function _dispEsc(str) {
 }
 
 // ── Generador y Exportador de Reporte PDF Oficial (F-FLOT-0004) ──
+function _dispNormalizarEstado(d) {
+    const est = (d.estado || '').toString().trim().toLowerCase();
+    const estCar = (d.estado_carreta || '').toString().trim().toLowerCase();
+    if (est.includes('mant') || est.includes('taller') || estCar.includes('mant') || estCar.includes('taller')) {
+        return 'EN MANTENIMIENTO';
+    }
+    if (est.includes('ruta') || est.includes('viaje')) {
+        return 'EN RUTA';
+    }
+    return 'EN BASE';
+}
+
+function _dispFormatNombreConductor(nom) {
+    if (!nom || nom.trim() === '' || nom.trim() === '-' || nom.trim() === '—' || nom.trim().toLowerCase() === 'sin asignar') return 'Sin asignar';
+    const partes = nom.trim().split(/\s+/);
+    if (partes.length === 1) return partes[0];
+    return partes.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+}
+
 function _dispBuildPdfHtml() {
     const items = (window._dispFiltrados && window._dispFiltrados.length > 0) ? window._dispFiltrados : (window.dispDatos || []);
     const empresaFiltro = window._dispFiltroEmpresa || 'TODAS';
-    const estadoFiltro = window._dispFiltroCard || 'TODOS';
     const hoy = new Date();
     const fechaFormateada = hoy.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const horaFormateada = hoy.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     const empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
 
-    let totBase = 0;
-    let totRuta = 0;
-    let totMant = 0;
+    const grupos = {
+        'EN BASE (CAMIÓN - CARRETA)': [],
+        'EN BASE (SOLO CAMIÓN / TRACTO)': [],
+        'EN BASE (SOLO CARRETA / REMOLQUE)': [],
+        'EN RUTA (EN OPERACIÓN)': [],
+        'EN MANTENIMIENTO / TALLER': []
+    };
 
     items.forEach(d => {
-        const est = (d.estado || 'En Base').toLowerCase();
-        if (est.includes('mant') || est.includes('taller')) totMant++;
-        else if (est.includes('ruta')) totRuta++;
-        else totBase++;
+        const estNorm = _dispNormalizarEstado(d);
+        if (estNorm === 'EN MANTENIMIENTO') {
+            grupos['EN MANTENIMIENTO / TALLER'].push(d);
+        } else if (estNorm === 'EN RUTA') {
+            grupos['EN RUTA (EN OPERACIÓN)'].push(d);
+        } else {
+            const hasCamion = d.placa_camion && d.placa_camion.trim() && d.placa_camion.trim() !== '—' && d.placa_camion.trim() !== '---';
+            const hasCarreta = d.placa_carreta && d.placa_carreta.trim() && d.placa_carreta.trim() !== '—' && d.placa_carreta.trim() !== '---';
+            if (hasCamion && hasCarreta) grupos['EN BASE (CAMIÓN - CARRETA)'].push(d);
+            else if (hasCamion && !hasCarreta) grupos['EN BASE (SOLO CAMIÓN / TRACTO)'].push(d);
+            else if (!hasCamion && hasCarreta) grupos['EN BASE (SOLO CARRETA / REMOLQUE)'].push(d);
+            else grupos['EN BASE (CAMIÓN - CARRETA)'].push(d);
+        }
     });
+
+    const ordenGrupos = [
+        'EN BASE (CAMIÓN - CARRETA)',
+        'EN BASE (SOLO CAMIÓN / TRACTO)',
+        'EN BASE (SOLO CARRETA / REMOLQUE)',
+        'EN RUTA (EN OPERACIÓN)',
+        'EN MANTENIMIENTO / TALLER'
+    ];
 
     const cleanPlc = str => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
     let filasHtml = '';
-    items.forEach((d, idx) => {
-        const num = idx + 1;
-        const est = d.estado || 'En Base';
-        let badgeColor = '#16a34a'; // Verde
-        let badgeBg = '#dcfce7';
-        if (est === 'En Mantenimiento' || d.estado_carreta === 'En Mantenimiento') {
-            badgeColor = '#dc2626'; // Rojo
-            badgeBg = '#fee2e2';
-        } else if (est === 'En Ruta') {
-            badgeColor = '#0284c7'; // Azul
-            badgeBg = '#e0f2fe';
-        }
+    let itemIndex = 1;
 
-        const camionStr = (d.placa_camion && d.placa_camion !== '—') ? d.placa_camion : '—';
-        const carretaStr = (d.placa_carreta && d.placa_carreta !== '—') ? d.placa_carreta : '—';
-        const conductorStr = d.conductor_asignado || 'Sin Asignar';
-        const marcaTipoStr = `${d.marca || '—'} ${d.tipo_unidad ? '• ' + d.tipo_unidad : ''}`;
-        const capTanque = d.capacidad_tanque || '—';
-        const obs = d.observaciones || '—';
-
-        // GPS Telemetría
-        const targetPlaca = cleanPlc(d.placa_camion || d.placa_carreta);
-        const gps = (window._dispGpsMap && targetPlaca) ? window._dispGpsMap[targetPlaca] : null;
-        let gpsTexto = 'Sin Señal';
-        if (gps && gps.lat && gps.lng) {
-            gpsTexto = gps.ubicacion || `Lat: ${gps.lat.toFixed(4)}, Lng: ${gps.lng.toFixed(4)}`;
-        }
+    ordenGrupos.forEach(gKey => {
+        const list = grupos[gKey];
+        if (!list || list.length === 0) return;
 
         filasHtml += `
-            <tr style="border-bottom: 1px solid #cbd5e1; font-size: 8.5px;">
-                <td style="text-align:center; font-weight:bold; padding: 4px 2px; border: 1px solid #000; width: 24px;">${num}</td>
-                <td style="text-align:center; font-family:monospace; font-weight:bold; padding: 4px 2px; border: 1px solid #000; font-size: 9px; width: 62px;">${_dispEsc(camionStr)}</td>
-                <td style="text-align:center; font-family:monospace; font-weight:bold; padding: 4px 2px; border: 1px solid #000; font-size: 9px; width: 62px;">${_dispEsc(carretaStr)}</td>
-                <td style="padding: 4px 4px; border: 1px solid #000; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width: 140px;">${_dispEsc(conductorStr)}</td>
-                <td style="text-align:center; padding: 3px 2px; border: 1px solid #000; width: 84px;">
-                    <span style="display:inline-block; padding: 2px 4px; border-radius: 4px; font-weight: bold; font-size: 7.5px; text-transform: uppercase; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeColor};">
-                        ${_dispEsc(est)}
-                    </span>
+            <tr style="background:#e2e8f0 !important; font-weight:bold; -webkit-print-color-adjust:exact; page-break-after:avoid;">
+                <td colspan="6" style="padding: 4px 6px; font-weight:800; font-size:9.5px; text-transform:uppercase; letter-spacing:0.5px; border: 1.5px solid #000; background-color:#e2e8f0 !important; color:#000000;">
+                    ■ ${gKey} (${list.length} ${list.length === 1 ? 'UNIDAD' : 'UNIDADES'})
                 </td>
-                <td style="padding: 4px 4px; border: 1px solid #000; font-size: 8px; width: 95px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${_dispEsc(marcaTipoStr)}</td>
-                <td style="text-align:center; padding: 4px 2px; border: 1px solid #000; font-size: 8px; width: 50px;">${_dispEsc(capTanque)}</td>
-                <td style="padding: 4px 4px; border: 1px solid #000; font-size: 8px; max-width: 120px; word-break: break-word;">${_dispEsc(obs)}</td>
-                <td style="padding: 4px 4px; border: 1px solid #000; font-size: 7.5px; max-width: 140px; word-break: break-word; color: #334155;">${_dispEsc(gpsTexto)}</td>
             </tr>
         `;
+
+        list.forEach(r => {
+            const camionStr = (r.placa_camion && r.placa_camion.trim() && r.placa_camion.trim() !== '—' && r.placa_camion.trim() !== '---') ? r.placa_camion : '—';
+            const carretaStr = (r.placa_carreta && r.placa_carreta.trim() && r.placa_carreta.trim() !== '—' && r.placa_carreta.trim() !== '---') ? r.placa_carreta : '—';
+            const conductorFormateado = _dispFormatNombreConductor(r.conductor_asignado);
+            
+            const marcaPartes = [];
+            if (r.marca) marcaPartes.push(r.marca);
+            if (r.tipo_unidad) marcaPartes.push(r.tipo_unidad);
+            if (r.capacidad_tanque && r.capacidad_tanque !== '—') marcaPartes.push(r.capacidad_tanque);
+            const marcaTipoStr = marcaPartes.join(' • ') || '—';
+
+            const obs = (r.observaciones && r.observaciones !== '—') ? r.observaciones.trim() : '';
+
+            // GPS Telemetría
+            const targetPlaca = cleanPlc(r.placa_camion || r.placa_carreta);
+            const gps = (window._dispGpsMap && targetPlaca) ? window._dispGpsMap[targetPlaca] : null;
+            let gpsTexto = '';
+            if (gps && gps.lat && gps.lng) {
+                gpsTexto = gps.ubicacion || `Lat: ${gps.lat.toFixed(4)}, Lng: ${gps.lng.toFixed(4)}`;
+            }
+
+            let obsHtml = '';
+            if (obs && gpsTexto && obs !== gpsTexto) {
+                obsHtml = `<b>${_dispEsc(obs)}</b> <span style="color:#334155; font-size:8.5px;">(${_dispEsc(gpsTexto)})</span>`;
+            } else if (obs) {
+                obsHtml = `<span>${_dispEsc(obs)}</span>`;
+            } else if (gpsTexto) {
+                obsHtml = `<span style="color:#334155; font-size:8.5px;">${_dispEsc(gpsTexto)}</span>`;
+            } else {
+                obsHtml = `<span style="color:#94a3b8;">—</span>`;
+            }
+
+            filasHtml += `
+                <tr>
+                    <td style="text-align:center; font-weight:bold; width:28px; padding:3px 2px; border:1px solid #000; font-size:9px;">${itemIndex++}</td>
+                    <td style="text-align:center; font-family:monospace; font-weight:bold; font-size:10px; width:82px; padding:3px 2px; border:1px solid #000;">${_dispEsc(camionStr)}</td>
+                    <td style="text-align:center; font-family:monospace; font-size:10px; width:80px; padding:3px 2px; border:1px solid #000;">${_dispEsc(carretaStr)}</td>
+                    <td style="width:175px; font-size:9.5px; padding:3px 6px; border:1px solid #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;">${_dispEsc(conductorFormateado)}</td>
+                    <td style="text-align:center; font-weight:600; width:115px; font-size:9px; padding:3px 4px; border:1px solid #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${_dispEsc(marcaTipoStr)}</td>
+                    <td style="font-size:9px; word-break:normal; overflow-wrap:break-word; white-space:normal; padding:3px 6px; border:1px solid #000; line-height:1.25;">${obsHtml}</td>
+                </tr>
+            `;
+        });
     });
 
     return `
-        <div style="width:210mm; min-height:297mm; background:#ffffff; padding:8mm 10mm; margin:0 auto; box-sizing:border-box; font-family:'Inter', system-ui, sans-serif; color:#000000; display:flex; flex-direction:column;">
+        <div style="width:210mm; min-height:297mm; background:#ffffff; padding:10mm 12mm; margin:0 auto; box-sizing:border-box; font-family:'Inter', system-ui, sans-serif; color:#000000; display:flex; flex-direction:column;">
             
             <!-- 1. Encabezado Oficial -->
             <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:6px; table-layout:fixed;">
@@ -1525,58 +1579,46 @@ function _dispBuildPdfHtml() {
                     <td style="width:22%; padding:4px; border:1px solid #000; text-align:center; vertical-align:middle;" rowspan="3">
                         <img src="${empLogoUrl}" alt="Logo Empresa" style="max-height:46px; max-width:100%; object-fit:contain;">
                     </td>
-                    <td style="width:54%; border:1px solid #000; text-align:center; vertical-align:middle; font-size:16px; font-weight:800; line-height:1.2; text-transform:uppercase;" rowspan="3">
+                    <td style="width:54%; border:1px solid #000; text-align:center; vertical-align:middle; font-size:18px; font-weight:700; line-height:1.1; text-transform:uppercase;" rowspan="3">
                         DISPONIBILIDAD OPERATIVA DE FLOTA<br>
-                        <span style="font-size:9.5px; font-weight:600; color:#333; letter-spacing:0.5px; display:block; margin-top:3px;">CONTROL Y GESTIÓN DE DISPONIBILIDAD DE UNIDADES</span>
+                        <span style="font-size:10px; font-weight:500; color:#333; letter-spacing:0.5px; display:block; margin-top:3px;">CONTROL Y GESTIÓN DE DISPONIBILIDAD DE UNIDADES</span>
                     </td>
-                    <td style="width:24%; border:1px solid #000; font-size:9px; text-align:left; padding:2px 6px; height:16px;"><b>CÓDIGO:</b> F-FLOT-0004</td>
+                    <td style="width:24%; border:1px solid #000; font-size:9.5px; text-align:left; padding:2px 6px; height:17px;"><b>CÓDIGO:</b> F-FLOT-0004</td>
                 </tr>
-                <tr><td style="border:1px solid #000; font-size:9px; text-align:left; padding:2px 6px; height:16px;"><b>VERSIÓN:</b> 01</td></tr>
-                <tr><td style="border:1px solid #000; font-size:9px; text-align:left; padding:2px 6px; height:16px;"><b>F. EMISIÓN:</b> ${fechaFormateada}</td></tr>
+                <tr><td style="border:1px solid #000; font-size:9.5px; text-align:left; padding:2px 6px; height:17px;"><b>VERSIÓN:</b> 01</td></tr>
+                <tr><td style="border:1px solid #000; font-size:9.5px; text-align:left; padding:2px 6px; height:17px;"><b>F. EMISIÓN:</b> ${fechaFormateada}</td></tr>
             </table>
 
             <!-- 2. Metadatos y Filtros Aplicados -->
-            <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:6px; font-size:9.5px;">
-                <tr style="background:#f8fafc;">
-                    <td style="width:25%; border:1px solid #000; padding:4px 6px;"><b>FECHA:</b> ${fechaFormateada}</td>
-                    <td style="width:35%; border:1px solid #000; padding:4px 6px;"><b>EMPRESA:</b> ${empresaFiltro === 'TODAS' ? 'TODAS LAS EMPRESAS' : _dispEsc(empresaFiltro)}</td>
-                    <td style="width:40%; border:1px solid #000; padding:4px 6px;"><b>FILTRO ESTADO:</b> ${_dispEsc(estadoFiltro.toUpperCase())}</td>
-                </tr>
+            <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:6px; font-size:10.5px; font-weight:bold;">
                 <tr>
-                    <td colspan="3" style="border:1px solid #000; padding:4px 6px; font-weight:bold; font-size:9px;">
-                        RESUMEN DE FLOTA FILTRADA: 
-                        <span style="color:#0f172a; margin-left:6px;">TOTAL: <b>${items.length}</b></span> | 
-                        <span style="color:#16a34a; margin-left:6px;">EN BASE: <b>${totBase}</b></span> | 
-                        <span style="color:#0284c7; margin-left:6px;">EN RUTA: <b>${totRuta}</b></span> | 
-                        <span style="color:#dc2626; margin-left:6px;">EN MANTENIMIENTO: <b>${totMant}</b></span>
-                    </td>
+                    <td style="width:30%; border:1px solid #000; padding:4px 6px;">FECHA: <span style="font-weight:normal; margin-left:4px;">${fechaFormateada}</span></td>
+                    <td style="width:35%; border:1px solid #000; padding:4px 6px;">EMPRESA: <span style="font-weight:normal; margin-left:4px;">${empresaFiltro === 'TODAS' ? 'TODAS LAS EMPRESAS' : _dispEsc(empresaFiltro)}</span></td>
+                    <td style="width:35%; border:1px solid #000; padding:4px 6px;">TOTAL REGISTRADAS: <span style="font-weight:bold; color:#0284c7; margin-left:4px;">${items.length}</span></td>
                 </tr>
             </table>
 
             <!-- 3. Tabla Principal de Unidades -->
-            <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:8px; font-size:8.5px; table-layout:fixed;">
+            <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:8px; font-size:9.5px; table-layout:fixed;">
                 <thead>
-                    <tr style="background-color:#1e293b; color:#ffffff;">
-                        <th style="width:24px; text-align:center; padding:5px 2px; border:1px solid #000;">#</th>
-                        <th style="width:62px; text-align:center; padding:5px 2px; border:1px solid #000;">CAMIÓN</th>
-                        <th style="width:62px; text-align:center; padding:5px 2px; border:1px solid #000;">CARRETA</th>
-                        <th style="width:140px; text-align:center; padding:5px 4px; border:1px solid #000;">CONDUCTOR ASIGNADO</th>
-                        <th style="width:84px; text-align:center; padding:5px 2px; border:1px solid #000;">ESTADO</th>
-                        <th style="width:95px; text-align:center; padding:5px 4px; border:1px solid #000;">MARCA / TIPO</th>
-                        <th style="width:50px; text-align:center; padding:5px 2px; border:1px solid #000;">TANQUE</th>
-                        <th style="text-align:center; padding:5px 4px; border:1px solid #000;">OBSERVACIONES / DESTINO</th>
-                        <th style="width:140px; text-align:center; padding:5px 4px; border:1px solid #000;">UBICACIÓN GPS</th>
+                    <tr style="background-color:#333333; color:#ffffff; -webkit-print-color-adjust:exact;">
+                        <th style="width:28px; text-align:center; padding:5px 2px; border:1px solid #000; font-size:9px;">#</th>
+                        <th style="width:82px; text-align:center; padding:5px 2px; border:1px solid #000; font-size:9px;">SOLO CAMIÓN</th>
+                        <th style="width:80px; text-align:center; padding:5px 2px; border:1px solid #000; font-size:9px;">CARRETA</th>
+                        <th style="width:175px; text-align:center; padding:5px 4px; border:1px solid #000; font-size:9px;">CONDUCTOR</th>
+                        <th style="width:115px; text-align:center; padding:5px 4px; border:1px solid #000; font-size:9px;">MARCA / TIPO</th>
+                        <th style="text-align:center; padding:5px 4px; border:1px solid #000; font-size:9px;">OBSERVACIONES / UBICACIÓN GPS</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${filasHtml || '<tr><td colspan="9" style="text-align:center; padding:15px; border:1px solid #000; color:#64748b;">No hay unidades para los filtros seleccionados.</td></tr>'}
+                    ${filasHtml || '<tr><td colspan="6" style="text-align:center; padding:15px; border:1px solid #000; color:#64748b;">No hay unidades para los filtros seleccionados.</td></tr>'}
                 </tbody>
             </table>
 
             <!-- 4. Pie de Página -->
-            <div style="margin-top:auto; border-top:1px solid #000; padding-top:4px; display:flex; justify-content:space-between; font-size:8.5px; color:#475569;">
+            <div style="margin-top:auto; border-top:1px solid #000; padding-top:6px; display:flex; justify-content:space-between; font-size:9px; color:#333;">
                 <div><b>ERP Azkell Fleet</b> — Módulo de Disponibilidad de Flota</div>
-                <div>Impreso: ${fechaFormateada} ${horaFormateada}</div>
+                <div>Generado el: ${fechaFormateada} ${horaFormateada}</div>
             </div>
         </div>
     `;
@@ -1596,7 +1638,8 @@ async function _dispRenderPdfBlob(htmlBody, filename) {
             + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">\n'
             + '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></scr' + 'ipt>\n'
             + '<style>\n'
-            + 'body { background-color:#FFFFFF; color:#0F172A; margin:0; padding:0; font-family:"Inter", sans-serif; }\n'
+            + '* { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }\n'
+            + 'body { background-color:#FFFFFF; color:#000000; margin:0; padding:0; font-family:"Inter", sans-serif; }\n'
             + '</style>\n</head>\n<body>\n'
             + '<div id="disp-pdf-render-root">' + htmlBody + '</div>\n'
             + '</body>\n</html>');
@@ -1755,6 +1798,12 @@ window.dispExportarPDF = function () {
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
             <style>
+                * {
+                    box-sizing: border-box;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    color-adjust: exact !important;
+                }
                 @page { size: A4 portrait; margin: 0; }
                 body { margin: 0; padding: 0; background: #525659; font-family: 'Inter', system-ui, sans-serif; }
                 .no-print-bar {
