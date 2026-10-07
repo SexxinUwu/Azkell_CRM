@@ -40,18 +40,22 @@ window.init_ubicacion = function() {
     // Limpiar temporizadores y animaciones previas
     window.gpsLimpiarTodo();
 
-    // 1. Cargar biblioteca Leaflet y crear mapa interactivo
+    // 1. Usar datos en caché de Wialon si existen para renderizado instantáneo
+    var datosCache = (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0)
+        ? CACHE.wialon : [];
+
+    if (datosCache.length > 0) {
+        window.renderListaUnidadesGPS(datosCache);
+    }
+
+    // 2. Cargar biblioteca Leaflet y crear mapa interactivo
     var leafletPromise = (typeof L !== 'undefined') ? Promise.resolve() : (window.loadLeaflet ? window.loadLeaflet() : Promise.resolve());
 
     leafletPromise.then(function() {
         window.gpsInitMap();
 
-        // 2. Usar datos en caché de Wialon si existen
-        var datos = (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0)
-            ? CACHE.wialon : [];
-
-        if (datos.length > 0) {
-            window.renderListaUnidadesGPS(datos);
+        if (datosCache.length > 0) {
+            window.renderListaUnidadesGPS(datosCache);
         }
 
         // 3. Disparar consulta fresca en vivo inmediata
@@ -63,6 +67,8 @@ window.init_ubicacion = function() {
         console.error("Error al inicializar Leaflet en GPS:", err);
     });
 };
+
+window.init_flota_ubicacion = window.init_ubicacion;
 
 // ------------------------------------------------------------
 // LIMPIEZA DE TIMERS Y ANIMACIONES

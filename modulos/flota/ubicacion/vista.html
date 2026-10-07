@@ -362,21 +362,39 @@
     
     /* 1. Por defecto en móvil: SOLO mostrar la lista de unidades */
     .gps-main-split {
-        display: flex !important;
-        flex-direction: column !important;
+        display: block !important;
         height: auto !important;
         min-height: auto !important;
         overflow: visible !important;
+        gap: 0 !important;
     }
     .gps-sidebar-panel {
         width: 100% !important;
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+        flex: none !important;
+    }
+    .gps-list-container {
         display: flex !important;
+        flex-direction: column !important;
+        gap: 0.65rem !important;
+        height: auto !important;
+        min-height: 120px !important;
+        max-height: none !important;
+        overflow: visible !important;
+        flex: none !important;
+        padding-right: 0 !important;
     }
     .gps-map-panel {
         display: none !important;
     }
     
     /* 2. Cuando se activa el detalle (show-detail) en móvil */
+    .gps-main-split.show-detail {
+        display: flex !important;
+        flex-direction: column !important;
+    }
     .gps-main-split.show-detail .gps-sidebar-panel {
         display: none !important;
     }

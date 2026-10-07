@@ -1867,7 +1867,7 @@
                 + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
                 + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
                 + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
-                + '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></scr' + 'ipt>\n'
+                + '<script src="/libs/html2pdf.bundle.min.js"></scr' + 'ipt>\n'
                 + '<style>\n'
                 + 'body { background-color:#FFFFFF; color:#0F172A; margin:0; padding:0; -webkit-font-smoothing:antialiased; font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif; }\n'
                 + '.doc-grid-box { border: 1.5px solid #0F172A; }\n'
@@ -1884,7 +1884,7 @@
                     await new Promise(function(r) { setTimeout(r, 600); });
                     var targetEl = doc.getElementById('ev-pdf-render-root');
                     var opt = {
-                        margin:       [3, 3, 3, 3],
+                        margin:       0,
                         filename:     filename,
                         image:        { type: 'jpeg', quality: 0.98 },
                         html2canvas:  { scale: 2.8, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 960 },
@@ -2042,6 +2042,12 @@
                 } catch (shareErr) {
                     if (shareErr.name === 'AbortError') return;
                     console.warn('Fallo navigator.share en entrega, ejecutando fallback:', shareErr);
+                    if (shareErr.name === 'NotAllowedError') {
+                        window._evPendingPdfFile = pdfFile;
+                        window._evPendingPdfFilename = filename;
+                        _evMostrarBotonReintentarShare();
+                        return;
+                    }
                 }
             }
 
@@ -2053,7 +2059,7 @@
             a.click();
             document.body.removeChild(a);
 
-            window.open('https://api.whatsapp.com/send', '_blank');
+            window.location.href = 'whatsapp://';
 
         } catch(e) {
             if (e.name === 'AbortError') return;
@@ -2061,6 +2067,45 @@
             alert('Error al generar y compartir el PDF por WhatsApp.');
         }
     };
+
+    function _evMostrarBotonReintentarShare() {
+        var existing = document.getElementById('ev-reintentar-share-overlay');
+        if (existing) existing.remove();
+
+        var div = document.createElement('div');
+        div.id = 'ev-reintentar-share-overlay';
+        div.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);animation:fadeIn 0.2s ease;';
+        div.innerHTML = '<div style="background:#fff;border-radius:24px;padding:26px 20px;text-align:center;max-width:320px;width:88%;box-shadow:0 20px 40px rgba(0,0,0,0.25);">' +
+            '<div style="width:58px;height:58px;background:#25D366;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px;">' +
+            '<i class="bi bi-whatsapp"></i>' +
+            '</div>' +
+            '<h5 style="font-weight:800;color:#0f172a;margin-bottom:8px;font-size:1.1rem;">PDF Listo</h5>' +
+            '<p style="color:#64748b;font-size:0.83rem;margin-bottom:20px;">Toca el botón para abrir WhatsApp y seleccionar el chat.</p>' +
+            '<button id="ev-btn-touch-share" style="background:#25D366;color:#fff;font-weight:700;border:none;padding:12px 24px;border-radius:14px;width:100%;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(37,211,102,0.35);">' +
+            '<i class="bi bi-share-fill"></i> Enviar por WhatsApp' +
+            '</button>' +
+            '<button onclick="document.getElementById(\'ev-reintentar-share-overlay\').remove()" style="background:transparent;color:#94a3b8;font-weight:600;border:none;margin-top:12px;font-size:0.8rem;cursor:pointer;">Cancelar</button>' +
+            '</div>';
+        document.body.appendChild(div);
+
+        document.getElementById('ev-btn-touch-share').onclick = async function() {
+            div.remove();
+            if (window._evPendingPdfFile && navigator.canShare && navigator.canShare({ files: [window._evPendingPdfFile] })) {
+                try {
+                    await navigator.share({
+                        files: [window._evPendingPdfFile],
+                        title: window._evPendingPdfFilename || 'Entrega_Vehiculo.pdf'
+                    });
+                } catch(e) {
+                    if (e.name !== 'AbortError') {
+                        window.location.href = 'whatsapp://';
+                    }
+                }
+            } else {
+                window.location.href = 'whatsapp://';
+            }
+        };
+    }
 
     // ── GENERACIÓN E IMPRESIÓN DEL PDF OFICIAL ──────
     window.evImprimirPDF = async function(id) {
