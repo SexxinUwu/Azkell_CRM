@@ -526,14 +526,6 @@ window.gpsAnimarMovimientoSuave = function(placa, marker, startLatLng, endLatLng
 
         marker.setLatLng(curPos);
 
-        if (window._gpsTrailsMap[placa]) {
-            var pts = window._gpsTrailPointsMap[placa] || [];
-            if (pts.length > 0) {
-                pts[pts.length - 1] = curPos;
-                window._gpsTrailsMap[placa].setLatLngs(pts);
-            }
-        }
-
         if (progress < 1) {
             window._gpsAnimationsMap[placa] = requestAnimationFrame(step);
         } else {
@@ -545,7 +537,7 @@ window.gpsAnimarMovimientoSuave = function(placa, marker, startLatLng, endLatLng
 };
 
 // ------------------------------------------------------------
-// ACTUALIZACIÓN DE MARCADORES Y ESTELA EN EL MAPA LEAFLET
+// ACTUALIZACIÓN DE MARCADORES EN EL MAPA LEAFLET
 // ------------------------------------------------------------
 window.gpsActualizarMarcadoresMapa = function(datos) {
     if (!window._gpsMapInstance || typeof L === 'undefined') return;
@@ -563,10 +555,6 @@ window.gpsActualizarMarcadoresMapa = function(datos) {
                 map.removeLayer(window._gpsMarkersMap[placa]);
                 delete window._gpsMarkersMap[placa];
             }
-            if (window._gpsTrailsMap[placa]) {
-                map.removeLayer(window._gpsTrailsMap[placa]);
-                delete window._gpsTrailsMap[placa];
-            }
             return;
         }
 
@@ -579,77 +567,16 @@ window.gpsActualizarMarcadoresMapa = function(datos) {
 
         var customIcon = window.gpsGenerarIconoCamion(w, isMoving, speed, course);
 
-        // Estela / Breadcrumb Polyline en vivo
-        if (!window._gpsTrailPointsMap[placa]) {
-            window._gpsTrailPointsMap[placa] = [targetLatLng];
-        } else {
-            var pts = window._gpsTrailPointsMap[placa];
-            var lastPt = pts[pts.length - 1];
-            if (lastPt && (Math.abs(lastPt[0] - targetLatLng[0]) > 0.00005 || Math.abs(lastPt[1] - targetLatLng[1]) > 0.00005)) {
-                pts.push(targetLatLng);
-                if (pts.length > 100) pts.shift();
-            }
-        }
-
-        if (!window._gpsTrailsMap[placa] && window._gpsTrailPointsMap[placa].length > 1) {
-            window._gpsTrailsMap[placa] = L.polyline(window._gpsTrailPointsMap[placa], {
-                color: '#2563eb',
-                weight: 4,
-                opacity: 0.85,
-                smoothFactor: 1
-            }).addTo(map);
-        } else if (window._gpsTrailsMap[placa]) {
-            window._gpsTrailsMap[placa].setLatLngs(window._gpsTrailPointsMap[placa]);
-        }
-
-        // Popup al hacer clic
-        var safeNombre = (w.nombre_wialon || w.placa || '').replace(/'/g, "\\'");
-        var safePlaca = (w.placa || '').replace(/'/g, "\\'");
-        var safeUbicacion = (w.ubicacion || '').replace(/'/g, "\\'");
-
-        var isIgn = Boolean(w.ignicion);
-        var isRal = !isMoving && isIgn;
-        var statusBadgePopup = isMoving 
-            ? `<span class="badge bg-primary" style="font-size:0.65rem;">${speed} km/h</span>`
-            : (isRal ? '<span class="badge bg-warning text-dark" style="font-size:0.65rem;">Ralentí (Motor ON)</span>' : '<span class="badge bg-success" style="font-size:0.65rem;">Detenido</span>');
-
-        var popupHTML = `
-            <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:220px; padding:4px;">
-                <div class="d-flex align-items-center justify-content-between gap-2 border-bottom pb-1 mb-2">
-                    <strong style="font-size:0.95rem; color:#0f172a;" class="font-monospace">${_gpsEsc(w.placa)}</strong>
-                    ${statusBadgePopup}
-                </div>
-                <div class="small text-secondary mb-1">
-                    <i class="bi bi-speedometer text-primary me-1"></i> Odómetro: <strong>${(w.km || 0).toLocaleString()} km</strong>
-                </div>
-                <div class="small text-secondary mb-1">
-                    <i class="bi bi-clock-history text-warning me-1"></i> Horómetro: <strong>${(w.horas || 0).toLocaleString()} hrs</strong>
-                </div>
-                ${w.voltaje ? `<div class="small text-secondary mb-1"><i class="bi bi-lightning-charge text-success me-1"></i> Batería: <strong>${w.voltaje} V</strong></div>` : ''}
-                ${w.ubicacion ? `<div class="small text-dark mt-2 mb-2 p-1 bg-light rounded" style="font-size:0.73rem; line-height:1.2;">
-                    <i class="bi bi-geo-alt-fill text-danger me-1"></i>${_gpsEsc(w.ubicacion)}
-                </div>` : ''}
-                <div class="d-flex gap-1 mt-2">
-                    <button class="btn btn-xs btn-primary w-100 py-1 fw-bold" style="font-size:0.75rem; border-radius:6px;" onclick="window.abrirDetalleGPS('${safePlaca}')">
-                        <i class="bi bi-info-circle me-1"></i> Ficha & Playback
-                    </button>
-                    <button class="btn btn-xs btn-success py-1 px-2" style="font-size:0.75rem; border-radius:6px;" title="Compartir WhatsApp" onclick="window.compartirUbicacion('${safeNombre}', ${w.lat}, ${w.lng}, '${safeUbicacion}', ${speed}, '${w.voltaje || ''}', '${_gpsEsc(w.empresa || '')}')">
-                        <i class="bi bi-whatsapp"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-
         if (window._gpsMarkersMap[placa]) {
             var marker = window._gpsMarkersMap[placa];
             var startPos = marker.getLatLng();
             window.gpsAnimarMovimientoSuave(placa, marker, [startPos.lat, startPos.lng], targetLatLng, 3800);
             marker.setIcon(customIcon);
-            marker.setPopupContent(popupHTML);
         } else {
+            // Crear marcador satelital interactivo (sin popup superpuesto duplicado)
             var newMarker = L.marker(targetLatLng, { icon: customIcon }).addTo(map);
-            newMarker.bindPopup(popupHTML);
-            newMarker.on('click', function() {
+            newMarker.on('click', function(e) {
+                if (L.DomEvent) L.DomEvent.stopPropagation(e);
                 window.abrirDetalleGPS(placa);
             });
             window._gpsMarkersMap[placa] = newMarker;
@@ -712,15 +639,9 @@ window.abrirDetalleGPS = function(placa) {
     } else {
         if (tienePos && window._gpsMapInstance) {
             window._gpsMapInstance.flyTo([w.lat, w.lng], 16, {
-                duration: 1.0,
+                duration: 0.8,
                 easeLinearity: 0.25
             });
-
-            if (window._gpsMarkersMap[placa]) {
-                setTimeout(function() {
-                    window._gpsMarkersMap[placa].openPopup();
-                }, 500);
-            }
         }
     }
 
@@ -766,6 +687,7 @@ window.gpsActualizarFichaFlotante = function(w) {
     var isMoving = tienePos && speed > 3;
     var isIgn = Boolean(w.ignicion);
     var isRalenti = tienePos && speed <= 3 && isIgn;
+    var course = (w.curso != null ? Number(w.curso) : 0) || 0;
 
     var setTxt = function(id, val) {
         var el = document.getElementById(id);
@@ -785,7 +707,7 @@ window.gpsActualizarFichaFlotante = function(w) {
 
     var voltEl = document.getElementById('gps-card-voltaje');
     if (voltEl) {
-        var ignText = isIgn ? '<span class="text-success fw-bold">Motor ON</span>' : '<span class="text-secondary">Motor OFF</span>';
+        var ignText = isIgn ? '<span class="text-success fw-bold">Motor ON</span>' : '<span class="text-secondary fw-semibold">Motor OFF</span>';
         var voltText = w.voltaje ? ` • ${w.voltaje} V` : '';
         voltEl.innerHTML = `${ignText}${voltText}`;
     }
@@ -795,10 +717,35 @@ window.gpsActualizarFichaFlotante = function(w) {
         satEl.textContent = tienePos ? `${w.satelites || 0} sat • ${w.altitud || 0} msnm` : 'Sin satélites';
     }
 
+    // Velocidad & Rumbo cardinal
+    var velRumboEl = document.getElementById('gps-card-velocidad-rumbo');
+    if (velRumboEl) {
+        if (!tienePos) {
+            velRumboEl.textContent = '0 km/h • Sin señal';
+        } else {
+            var dirs = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO', 'N'];
+            var cardDir = dirs[Math.round((course % 360) / 45)] || '';
+            velRumboEl.textContent = `${speed} km/h • ${cardDir} (${course}°)`;
+        }
+    }
+
+    // Conductor
+    var condEl = document.getElementById('gps-card-conductor');
+    if (condEl) {
+        condEl.textContent = w.conductor || w.conductor_asignado || w.nombre_wialon || 'Sin conductor asignado';
+    }
+
+    // Coordenadas badge
+    var coordsBadge = document.getElementById('gps-card-coords-badge');
+    if (coordsBadge) {
+        coordsBadge.textContent = tienePos ? `${w.lat.toFixed(4)}, ${w.lng.toFixed(4)}` : 'Wialon GPS';
+    }
+
+    // Dirección completa
     var dirEl = document.getElementById('gps-card-direccion');
     if (dirEl) {
         dirEl.innerHTML = tienePos 
-            ? (w.ubicacion ? `<i class="bi bi-geo-alt-fill text-danger me-1"></i>${_gpsEsc(w.ubicacion)}` : `${w.lat.toFixed(5)}, ${w.lng.toFixed(5)}`)
+            ? (w.ubicacion ? `<i class="bi bi-geo-alt-fill text-danger me-1"></i>${_gpsEsc(w.ubicacion)}` : `<i class="bi bi-geo-alt-fill text-danger me-1"></i>Coordenadas: ${w.lat.toFixed(5)}, ${w.lng.toFixed(5)}`)
             : '<span class="text-secondary fw-normal">Dispositivo apagado o fuera de cobertura</span>';
     }
 
