@@ -99,18 +99,15 @@ window.dispCargarDatos = async function (forzarRefresh = false) {
 // ── Helper: Determinar Estado Unificado de la Unidad / Fila ─────────────
 window._dispDeterminarEstadoFila = function (item) {
     if (!item) return 'En Base';
-    const est = (item.estado || '').toString().trim();
-    const estCar = (item.estado_carreta || '').toString().trim();
-    const estLower = est.toLowerCase();
-    const estCarLower = estCar.toLowerCase();
+    const est = (item.estado || '').toString().trim().toLowerCase();
 
-    // 1. Mantenimiento / Taller (si camión o carreta están en taller o mantenimiento)
-    if (estLower.includes('mant') || estLower.includes('taller') || estCarLower.includes('mant') || estCarLower.includes('taller')) {
+    // 1. Mantenimiento / Taller
+    if (est.includes('mant') || est.includes('taller')) {
         return 'En Mantenimiento';
     }
 
     // 2. En Ruta
-    if (estLower.includes('ruta') || estLower.includes('viaje') || (!item.placa_camion && estCarLower.includes('ruta'))) {
+    if (est.includes('ruta') || est.includes('viaje')) {
         return 'En Ruta';
     }
 
