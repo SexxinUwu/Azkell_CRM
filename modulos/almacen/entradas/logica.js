@@ -1767,7 +1767,7 @@ window._entRender = function() {
     var cardContainer = document.getElementById('entCardContainer');
     if (!tbody) return;
     if (!pagina.length) {
-        tbody.innerHTML = '<tr><td colspan="17" class="td-placeholder"><i class="bi bi-inbox" style="font-size:1.5rem;opacity:0.3"></i><br>Sin órdenes encontradas</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="18" class="td-placeholder"><i class="bi bi-inbox" style="font-size:1.5rem;opacity:0.3"></i><br>Sin órdenes encontradas</td></tr>';
         if (cardContainer) cardContainer.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>No se encontraron órdenes registradas.</div>';
         var paginEl2 = document.getElementById('ent-paginacion');
         if (paginEl2) paginEl2.innerHTML = '';
@@ -1787,7 +1787,12 @@ window._entRender = function() {
         var canEditRow = canEdit && !isAnulado && esModificable;
 
         var tp = parseFloat(d.total_pen || 0);
-        var totalFmt = '<strong style="color:#16a34a;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
+        var isUSD = (d.moneda === 'USD');
+        var tc = parseFloat(d.tipo_cambio || 1);
+        var toc = parseFloat(d.total_oc != null ? d.total_oc : (isUSD && tc > 0 ? tp / tc : tp));
+
+        var totalOcFmt = '<strong style="color:#0284c7; font-family:monospace; font-size:0.83rem;">' + (isUSD ? '$ ' : 'S/ ') + toc.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
+        var totalPenFmt = '<strong style="color:#16a34a; font-family:monospace; font-size:0.83rem;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
         var estadoNorm = (d.estado || 'REGISTRADA').toUpperCase();
         var estadoHtml = '<span class="badge" style="background-color:#64748b !important; color:#ffffff !important; font-size:0.68rem; font-weight:700; letter-spacing:0.03em; border-radius:4px; padding:3px 8px; display:inline-block;">REGISTRADA</span>';
         if (estadoNorm === 'ANULADO' || estadoNorm === 'ANULADA' || estadoNorm === 'RECHAZADO' || estadoNorm === 'RECHAZADA') {
@@ -1872,7 +1877,10 @@ window._entRender = function() {
                 <span class="badge bg-light text-dark border fw-semibold" style="font-size:0.75rem; border-radius:6px;">
                     <i class="bi bi-box-seam me-1 text-primary"></i>${countItems} ${countItems === 1 ? 'Ítem' : 'Ítems'} (${totalCant.toLocaleString('es-PE', {maximumFractionDigits:2})} u.)
                 </span>
-                <span class="fw-bold text-success font-monospace" style="font-size:0.95rem;">${(d.moneda === 'USD' ? '$ ' : 'S/ ') + tp.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                <div class="text-end">
+                    <span class="fw-bold text-primary font-monospace d-block" style="font-size:0.95rem;">${(isUSD ? '$ ' : 'S/ ') + toc.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                    ${isUSD ? `<span class="text-success small fw-semibold font-monospace" style="font-size:0.75rem;">S/ ${tp.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>` : ''}
+                </div>
             </div>
 
             <!-- Botones de Acción Móvil -->
@@ -1989,7 +1997,8 @@ window._entRender = function() {
                 '<td class="col-articulo text-dark fw-semibold" style="font-size:.80rem;">' + descResumen + '</td>' +
                 '<td class="text-end text-dark fw-bold" style="font-size:.80rem;">' + totalCant.toLocaleString('es-PE', {maximumFractionDigits:2}) + ' u.</td>' +
                 '<td class="text-end text-muted small">—</td>' +
-                '<td class="text-end" style="white-space:nowrap;">' + totalFmt + '</td>' +
+                '<td class="text-end" style="white-space:nowrap;">' + totalOcFmt + '</td>' +
+                '<td class="text-end" style="white-space:nowrap;">' + totalPenFmt + '</td>' +
                 '<td>' + ccHtml + '</td>' +
                 '<td class="text-center">' + vHTML + '</td>' +
                 '<td class="text-center">' + cHTML + '</td>' +
@@ -2015,7 +2024,8 @@ window._entRender = function() {
                 '<td class="col-articulo text-muted fw-semibold" style="font-size:.78rem;">Sin artículos</td>' +
                 '<td class="text-end text-muted">—</td>' +
                 '<td class="text-end text-muted">—</td>' +
-                '<td class="text-end" style="white-space:nowrap;">' + totalFmt + '</td>' +
+                '<td class="text-end" style="white-space:nowrap;">' + totalOcFmt + '</td>' +
+                '<td class="text-end" style="white-space:nowrap;">' + totalPenFmt + '</td>' +
                 '<td>' + ccHtml + '</td>' +
                 '<td class="text-center">' + vHTML + '</td>' +
                 '<td class="text-center">' + cHTML + '</td>' +
@@ -2057,7 +2067,8 @@ window._entRender = function() {
                 '<td class="col-articulo text-dark fw-semibold" style="font-size:.80rem;">' + nombre + '</td>' +
                 '<td class="text-end text-dark fw-bold" style="font-size:.80rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
                 '<td class="text-end text-dark fw-semibold" style="font-size:.80rem;">' + (d.moneda === 'USD' ? '$ ' : 'S/ ') + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
-                '<td class="text-end" style="white-space:nowrap;">' + totalFmt + '</td>' +
+                '<td class="text-end" style="white-space:nowrap;">' + totalOcFmt + '</td>' +
+                '<td class="text-end" style="white-space:nowrap;">' + totalPenFmt + '</td>' +
                 '<td>' + ccHtml + '</td>' +
                 '<td class="text-center">' + vHTML + '</td>' +
                 '<td class="text-center">' + cHTML + '</td>' +
