@@ -228,16 +228,24 @@ window.gpsIniciarCicloPolling = function() {
 // PETICIÓN Y ACTUALIZACIÓN EN VIVO
 // ------------------------------------------------------------
 window._actualizarGpsEnVivo = function(forzar) {
+    if (window._gpsFetchInFlight) return; // Evitar peticiones solapadas
     window._gpsCountdownSecs = 4;
     var elCount = document.getElementById('gps-timer-countdown');
     if (elCount) elCount.textContent = '4s';
 
+    window._gpsFetchInFlight = true;
     fetch('/api/script/obtenerDatosWialon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ args: [] })
     })
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+        if (!r.ok) {
+            // Manejar 429 (Too Many Requests) o 504 (Gateway Timeout) sin romper JSON
+            return { data: (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon)) ? CACHE.wialon : [] };
+        }
+        return r.json().catch(function() { return { data: [] }; });
+    })
     .then(function(r) {
         var d = (r && r.data && Array.isArray(r.data)) ? r.data : [];
         if (d.length > 0) {
@@ -249,7 +257,10 @@ window._actualizarGpsEnVivo = function(forzar) {
         }
     })
     .catch(function(err) {
-        console.warn("Aviso polling GPS:", err);
+        // Silenciar advertencias rutinarias de red/timeout
+    })
+    .finally(function() {
+        window._gpsFetchInFlight = false;
     });
 };
 
