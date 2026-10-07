@@ -407,8 +407,22 @@
         overflow: hidden !important;
     }
     
-    /* En móvil, ocultar KPIs y Barra de Búsqueda cuando estamos dentro del detalle del mapa */
-    #moduloUbicacionGPS.in-detail-mobile #gps-kpis-row,
+    /* En móvil: Ocultar KPI cards superiores y colocar segmentado por encima del buscador */
+    #gps-kpis-row {
+        display: none !important;
+    }
+    #gps-search-filter-row {
+        display: flex !important;
+        flex-direction: column-reverse !important;
+        gap: 0.65rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+    #gps-search-filter-row > div {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    
+    /* En móvil, ocultar Barra de Búsqueda y Segmentado cuando estamos dentro del detalle del mapa */
     #moduloUbicacionGPS.in-detail-mobile #gps-search-filter-row {
         display: none !important;
     }
@@ -454,8 +468,8 @@
     .ck-segment-item {
         flex: 1 !important;
         text-align: center !important;
-        padding: 6px 4px !important;
-        font-size: 0.72rem !important;
+        padding: 7px 4px !important;
+        font-size: 0.75rem !important;
     }
 }
 </style>
