@@ -1339,6 +1339,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     r.proveedor_email = pInfo?.email || '';
 
                     r.items = itemsMap[r.id] || [];
+                    const totalOrigCalc = (r.items || []).reduce((acc, it) => acc + (parseFloat(it.importe) || 0), 0);
+                    r.total_oc = totalOrigCalc > 0 ? totalOrigCalc : (r.moneda === 'USD' && parseFloat(r.tipo_cambio) > 0 ? (parseFloat(r.total_pen) / parseFloat(r.tipo_cambio)) : parseFloat(r.total_pen || 0));
                     r.url_voucher_presigned = r.url_voucher ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/voucher/ver') : null;
                     r.url_cotizacion_presigned = r.url_cotizacion ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/cotizacion/ver') : null;
                     r.url_factura_presigned = r.url_factura ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/factura/ver') : null;
@@ -1767,11 +1769,15 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
                         if (tesoreriaPhone) {
                             const [entRows] = await promiseDb.query(
-                                `SELECT e.id, e.proveedor_id, e.proveedor_nombre, e.total_pen, e.moneda, e.motivo_entrada, 
+                                `SELECT e.id, e.proveedor_id, e.proveedor_nombre, e.total_pen, e.moneda, e.tipo_cambio, e.motivo_entrada, 
                                         e.cuenta_bancaria_proveedor, e.solicitante, e.creado_por,
-                                        p.numero_documento AS proveedor_ruc
+                                        p.numero_documento AS proveedor_ruc,
+                                        COALESCE((SELECT SUM(d.importe) FROM detalle_entradas_inv d WHERE d.entrada_id = e.id), 0) AS total_original,
+                                        COALESCE(oc.monto_total, 0) AS oc_monto_total,
+                                        COALESCE(oc.moneda, e.moneda) AS oc_moneda
                                  FROM entradas_inv e
                                  LEFT JOIN proveedores_inv p ON (e.proveedor_id = p.id OR e.proveedor_nombre = p.nombre)
+                                 LEFT JOIN ordenes_compra oc ON oc.codigo = e.id
                                  WHERE e.id = ? LIMIT 1`,
                                 [id]
                             );
@@ -1794,13 +1800,30 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                 } catch(e) {}
                             }
 
+                            const monedaFinal = ent.moneda || ent.oc_moneda || 'PEN';
+                            const totalOrigParsed = parseFloat(ent.total_original || 0);
+                            const totalOcParsed = parseFloat(ent.oc_monto_total || 0);
+                            const totalPenParsed = parseFloat(ent.total_pen || 0);
+                            const tcParsed = parseFloat(ent.tipo_cambio || 1);
+
+                            let totalAutorizado = 0;
+                            if (totalOrigParsed > 0) {
+                                totalAutorizado = totalOrigParsed;
+                            } else if (totalOcParsed > 0) {
+                                totalAutorizado = totalOcParsed;
+                            } else if (monedaFinal === 'USD' && tcParsed > 0) {
+                                totalAutorizado = totalPenParsed / tcParsed;
+                            } else {
+                                totalAutorizado = totalPenParsed;
+                            }
+
                             await sendTreasuryNotificationWhatsapp({
                                 phone: tesoreriaPhone,
                                 ocCode: id,
                                 supplier: provNombre,
                                 ruc: ruc,
-                                total: ent.total_pen || 0,
-                                currency: ent.moneda || 'PEN',
+                                total: totalAutorizado || 0,
+                                currency: monedaFinal,
                                 approverName: aprobadorVal,
                                 reason: ent.motivo_entrada || comentario || 'Orden de compra autorizada',
                                 bankAccount: ctaBancaria,

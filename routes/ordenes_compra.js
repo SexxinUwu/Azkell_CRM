@@ -430,9 +430,10 @@ module.exports = function (db, broadcast, logAudit) {
                         if (tesoreriaPhone) {
                             // Obtener datos complementarios de la entrada / proveedor
                             const [entRows] = await tdb.query(
-                                `SELECT e.id, e.proveedor_id, e.proveedor_nombre, e.total_pen, e.moneda, e.motivo_entrada, 
+                                `SELECT e.id, e.proveedor_id, e.proveedor_nombre, e.total_pen, e.moneda, e.tipo_cambio, e.motivo_entrada, 
                                         e.cuenta_bancaria_proveedor, e.solicitante, e.creado_por,
-                                        p.numero_documento AS proveedor_ruc
+                                        p.numero_documento AS proveedor_ruc,
+                                        COALESCE((SELECT SUM(d.importe) FROM detalle_entradas_inv d WHERE d.entrada_id = e.id), 0) AS total_original
                                  FROM entradas_inv e
                                  LEFT JOIN proveedores_inv p ON (e.proveedor_id = p.id OR e.proveedor_nombre = p.nombre)
                                  WHERE e.id = ? LIMIT 1`,
@@ -457,13 +458,30 @@ module.exports = function (db, broadcast, logAudit) {
                                 } catch(e) {}
                             }
 
+                            const monedaFinal = tok.moneda || ent.moneda || 'PEN';
+                            const totalTokParsed = parseFloat(tok.monto_total || 0);
+                            const totalOrigParsed = parseFloat(ent.total_original || 0);
+                            const totalPenParsed = parseFloat(ent.total_pen || 0);
+                            const tcParsed = parseFloat(ent.tipo_cambio || 1);
+
+                            let totalAutorizado = 0;
+                            if (totalTokParsed > 0) {
+                                totalAutorizado = totalTokParsed;
+                            } else if (totalOrigParsed > 0) {
+                                totalAutorizado = totalOrigParsed;
+                            } else if (monedaFinal === 'USD' && tcParsed > 0) {
+                                totalAutorizado = totalPenParsed / tcParsed;
+                            } else {
+                                totalAutorizado = totalPenParsed;
+                            }
+
                             await sendTreasuryNotificationWhatsapp({
                                 phone: tesoreriaPhone,
                                 ocCode: tok.codigo,
                                 supplier: provNombre,
                                 ruc: ruc,
-                                total: ent.total_pen || tok.monto_total || 0,
-                                currency: ent.moneda || tok.moneda || 'PEN',
+                                total: totalAutorizado || 0,
+                                currency: monedaFinal,
                                 approverName: aprobador,
                                 reason: ent.motivo_entrada || tok.motivo_solicitud || 'Orden de compra autorizada',
                                 bankAccount: ctaBancaria,
