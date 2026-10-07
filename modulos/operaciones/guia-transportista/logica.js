@@ -852,6 +852,127 @@
         }
     };
 
+    // ═══════════════════════════════════════════════════════════
+    // IMPORTAR Y PARSEAR XML DE GUÍA REMITENTE (UBL 2.1)
+    // ═══════════════════════════════════════════════════════════
+    window.grtProcesarXmlGre = function(file) {
+        if (!file) return;
+        toast('📄 Leyendo XML de Guía Remitente...');
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const xmlText = e.target.result;
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(xmlText, 'text/xml');
+
+                // Helper para buscar texto de nodo ignorando namespaces
+                const getTag = function(parent, tag) {
+                    if (!parent) return '';
+                    let el = parent.getElementsByTagName(tag)[0] || 
+                             parent.getElementsByTagNameNS('*', tag)[0] || 
+                             parent.getElementsByTagName('cbc:' + tag)[0] || 
+                             parent.getElementsByTagName('cac:' + tag)[0];
+                    return el ? el.textContent.trim() : '';
+                };
+
+                // 1. Serie y Correlativo de la GRE
+                const numGre = getTag(xml, 'ID') || '';
+                if (numGre) {
+                    setVal('grt_gre_vinculada', numGre);
+                }
+
+                // 2. Remitente
+                const remParty = xml.getElementsByTagName('cac:DespatchSupplierParty')[0] || 
+                                 xml.getElementsByTagNameNS('*', 'DespatchSupplierParty')[0] ||
+                                 xml.getElementsByTagName('cac:SenderParty')[0] ||
+                                 xml.getElementsByTagNameNS('*', 'SenderParty')[0];
+                if (remParty) {
+                    const ruc = getTag(remParty, 'ID') || getTag(remParty, 'CompanyID');
+                    const rs = getTag(remParty, 'RegistrationName') || getTag(remParty, 'Name');
+                    if (ruc) {
+                        setVal('grt_remitente_ruc', ruc);
+                        setVal('grt_gre_vinculada_ruc', ruc);
+                    }
+                    if (rs) setVal('grt_remitente_razon_social', rs);
+                }
+
+                // 3. Destinatario
+                const destParty = xml.getElementsByTagName('cac:DeliveryCustomerParty')[0] || 
+                                  xml.getElementsByTagNameNS('*', 'DeliveryCustomerParty')[0] ||
+                                  xml.getElementsByTagName('cac:ReceiverParty')[0] ||
+                                  xml.getElementsByTagNameNS('*', 'ReceiverParty')[0];
+                if (destParty) {
+                    const ruc = getTag(destParty, 'ID') || getTag(destParty, 'CompanyID');
+                    const rs = getTag(destParty, 'RegistrationName') || getTag(destParty, 'Name');
+                    if (ruc) setVal('grt_destinatario_ruc', ruc);
+                    if (rs) setVal('grt_destinatario_razon_social', rs);
+                }
+
+                // 4. Dirección y Ubigeo de Partida
+                const originAddress = xml.getElementsByTagName('cac:OriginAddress')[0] || 
+                                      xml.getElementsByTagName('cac:DespatchAddress')[0] ||
+                                      xml.getElementsByTagNameNS('*', 'OriginAddress')[0] ||
+                                      xml.getElementsByTagNameNS('*', 'DespatchAddress')[0];
+                if (originAddress) {
+                    const ubi = getTag(originAddress, 'ID') || getTag(originAddress, 'District');
+                    const dir = getTag(originAddress, 'Line') || getTag(originAddress, 'StreetName');
+                    if (ubi) setVal('grt_partida_ubigeo', ubi);
+                    if (dir) setVal('grt_partida_direccion', dir);
+                }
+
+                // 5. Dirección y Ubigeo de Llegada
+                const deliveryAddress = xml.getElementsByTagName('cac:DeliveryAddress')[0] || 
+                                        xml.getElementsByTagNameNS('*', 'DeliveryAddress')[0];
+                if (deliveryAddress) {
+                    const ubi = getTag(deliveryAddress, 'ID') || getTag(deliveryAddress, 'District');
+                    const dir = getTag(deliveryAddress, 'Line') || getTag(deliveryAddress, 'StreetName');
+                    if (ubi) setVal('grt_llegada_ubigeo', ubi);
+                    if (dir) setVal('grt_llegada_direccion', dir);
+                }
+
+                // 6. Peso Bruto Total y Unidad
+                const grossWeight = xml.getElementsByTagName('cbc:GrossWeightMeasure')[0] || 
+                                    xml.getElementsByTagNameNS('*', 'GrossWeightMeasure')[0];
+                if (grossWeight) {
+                    const peso = grossWeight.textContent.trim();
+                    const und = grossWeight.getAttribute('unitCode') || 'KGM';
+                    if (peso) setVal('grt_peso_total', peso);
+                    if (und) setVal('grt_unidad_item', und);
+                }
+
+                // 7. Motivo de traslado
+                const handlingCode = getTag(xml, 'HandlingCode');
+                if (handlingCode) {
+                    setVal('grt_motivo_traslado', handlingCode);
+                }
+
+                // 8. Items / Detalle de Carga
+                const lines = xml.getElementsByTagName('cac:DespatchLine') || xml.getElementsByTagNameNS('*', 'DespatchLine');
+                if (lines && lines.length > 0) {
+                    const firstLine = lines[0];
+                    const itemDesc = getTag(firstLine, 'Description') || getTag(firstLine, 'Name') || 'CARGA GENERAL';
+                    const qty = getTag(firstLine, 'DeliveredQuantity') || '1';
+                    setVal('grt_descripcion_carga', itemDesc);
+                    setVal('grt_cantidad', qty);
+                }
+
+                // 9. Conductor y Vehículo si venían en la GRE
+                const roadTransport = xml.getElementsByTagName('cac:RoadTransport')[0] || xml.getElementsByTagNameNS('*', 'RoadTransport')[0];
+                if (roadTransport) {
+                    const plc = getTag(roadTransport, 'LicensePlateID');
+                    if (plc && !val('grt_vehiculo_placa')) setVal('grt_vehiculo_placa', plc);
+                }
+
+                toast('✅ ¡Datos de Guía Remitente importados exitosamente!');
+            } catch (err) {
+                console.error('[GRT] Error parseando XML de GRE:', err);
+                toast('⚠️ No se pudo procesar el archivo XML');
+            }
+        };
+        reader.readAsText(file);
+    };
+
     // Exponer cerrarModal globalmente para uso desde HTML renderizado
     window.cerrarModal = cerrarModal;
 
