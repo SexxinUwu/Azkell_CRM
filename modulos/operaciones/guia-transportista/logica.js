@@ -28,28 +28,81 @@
     async function cargarCatalogosGRT() {
         try {
             // 1. Cargar Placas de la Flota
-            const rPlacas = await fetch('/api/placas-lista').then(r => r.ok ? r.json() : []).catch(() => []);
+            let rPlacas = [];
+            try {
+                const resP = await fetch(`${API}/placas-lista`);
+                if (resP.ok) {
+                    const jsonP = await resP.json();
+                    rPlacas = jsonP.data || (Array.isArray(jsonP) ? jsonP : []);
+                }
+            } catch (_) {}
+            if (!rPlacas.length) {
+                try {
+                    rPlacas = await fetch('/api/placas-lista').then(r => r.ok ? r.json() : []).catch(() => []);
+                } catch (_) {}
+            }
+
             if (Array.isArray(rPlacas) && rPlacas.length) {
                 const dlTracto = document.getElementById('grt_lista_placas_tracto');
                 const dlCarreta = document.getElementById('grt_lista_placas_carreta');
-                const opts = rPlacas.map(p => `<option value="${p}">`).join('');
-                if (dlTracto) dlTracto.innerHTML = opts;
-                if (dlCarreta) dlCarreta.innerHTML = opts;
+                
+                const tractos = [];
+                const carretas = [];
+
+                rPlacas.forEach(p => {
+                    const placa = (typeof p === 'string' ? p : (p.placa || p.nombre || p[0] || '')).toString().trim().toUpperCase();
+                    if (!placa) return;
+                    const tipo = (typeof p === 'object' && p.tipo ? p.tipo : '').toUpperCase();
+                    if (tipo.includes('CARRETA') || tipo.includes('SEMI') || tipo.includes('REMOLQUE')) {
+                        carretas.push(placa);
+                    } else {
+                        tractos.push(placa);
+                    }
+                });
+
+                const allPlacas = rPlacas.map(p => (typeof p === 'string' ? p : (p.placa || p.nombre || p[0] || ''))).filter(Boolean);
+
+                if (dlTracto) {
+                    const listT = tractos.length ? tractos : allPlacas;
+                    dlTracto.innerHTML = listT.map(p => `<option value="${p}">`).join('');
+                }
+                if (dlCarreta) {
+                    const listC = carretas.length ? carretas : allPlacas;
+                    dlCarreta.innerHTML = listC.map(p => `<option value="${p}">`).join('');
+                }
             }
 
             // 2. Cargar Conductores y DNI/Licencia
-            let rCond = await fetch('/api/conductores').then(r => r.ok ? r.json() : []).catch(() => []);
-            if (!Array.isArray(rCond) || !rCond.length) {
-                rCond = await fetch('/api/conductores-lista').then(r => r.ok ? r.json() : []).catch(() => []);
+            let rCond = [];
+            try {
+                const resC = await fetch(`${API}/conductores-lista`);
+                if (resC.ok) {
+                    const jsonC = await resC.json();
+                    rCond = jsonC.data || (Array.isArray(jsonC) ? jsonC : []);
+                }
+            } catch (_) {}
+            if (!rCond.length) {
+                try {
+                    rCond = await fetch('/api/conductores').then(r => r.ok ? r.json() : []).catch(() => []);
+                    if (!rCond.length) {
+                        rCond = await fetch('/api/conductores-lista').then(r => r.ok ? r.json() : []).catch(() => []);
+                    }
+                } catch (_) {}
             }
+
             if (Array.isArray(rCond) && rCond.length) {
                 _conductoresCache = rCond;
                 const dlCond = document.getElementById('grt_lista_conductores');
                 if (dlCond) {
                     dlCond.innerHTML = rCond.map(c => {
-                        const nombreCompleto = (typeof c === 'string') ? c : `${c.nombres || ''} ${c.apellidos || ''}`.trim();
-                        return `<option value="${nombreCompleto}">`;
-                    }).join('');
+                        let nombre = '';
+                        if (typeof c === 'string') {
+                            nombre = c;
+                        } else if (c) {
+                            nombre = (c.nombre || `${c.nombres || ''} ${c.apellidos || ''}`).trim();
+                        }
+                        return nombre ? `<option value="${nombre}">` : '';
+                    }).filter(Boolean).join('');
                 }
             }
         } catch (e) {
@@ -62,8 +115,8 @@
         const norm = nombre.trim().toUpperCase();
         const found = _conductoresCache.find(c => {
             if (typeof c === 'string') return c.toUpperCase() === norm;
-            const full = `${c.nombres || ''} ${c.apellidos || ''}`.trim().toUpperCase();
-            return full === norm || (c.nombres && c.nombres.toUpperCase() === norm);
+            const full = (c.nombre || `${c.nombres || ''} ${c.apellidos || ''}`).trim().toUpperCase();
+            return full === norm || (c.nombres && c.nombres.toUpperCase() === norm) || (c.nombre && c.nombre.toUpperCase() === norm);
         });
         if (found && typeof found === 'object') {
             if (found.dni || found.numero_documento) setVal('grt_conductor_num_doc', found.dni || found.numero_documento);
