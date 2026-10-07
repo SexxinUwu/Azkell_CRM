@@ -223,6 +223,9 @@ module.exports = function (db, logAudit) {
                                         } else if (!hasDirectOT && hasCarretaOT) {
                                             // Carreta en taller (OT activa), pero camión sin OT -> Desacoplar (el camión queda en base/ruta y la carreta saldrá en taller)
                                             carreta = '';
+                                        } else if (carretasAcopladas.has(cCandidata)) {
+                                            // La carreta ya fue acoplada a otro camión (evitar duplicidad física en múltiples registros)
+                                            carreta = '';
                                         } else {
                                             // Ambos sin OT o ambos con OT -> Se mantienen acoplados
                                             carreta = candidataCarreta;

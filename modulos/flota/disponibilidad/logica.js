@@ -125,15 +125,17 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
 
     (lista || []).forEach(d => {
         const empPrincipal = (d.empresa || d.cliente || '').trim();
+        const empCarreta = (d.empresa_carreta || d.empresa || d.cliente || '').trim();
 
         // 1. Unidad Motora (Camión / Tracto)
         if (d.placa_camion) {
+            const estCamion = window._dispDeterminarEstadoFila({ estado: d.estado });
             const pCamion = {
                 placa: d.placa_camion,
                 es_motora: true,
                 tipo_unidad: d.tipo_unidad || 'Camión',
                 sub_tipo: d.sub_tipo || d.tipo_unidad || 'Camión',
-                estado: d.estado || 'En Base',
+                estado: estCamion,
                 empresa: empPrincipal,
                 marca: d.marca || '',
                 conductor: d.conductor_asignado || '',
@@ -143,7 +145,7 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
 
             let include = true;
             if (aplicarFiltros) {
-                if (filtroCard !== 'TODOS' && window._dispDeterminarEstadoFila(d) !== filtroCard) include = false;
+                if (filtroCard !== 'TODOS' && estCamion !== filtroCard) include = false;
                 if (filtroEmp !== 'TODAS' && !window._coincideEmpresa(pCamion.empresa, filtroEmp)) include = false;
                 if (q) {
                     const matches = [pCamion.placa, pCamion.sub_tipo, pCamion.conductor, pCamion.marca, pCamion.empresa, pCamion.estado, pCamion.observaciones]
@@ -156,13 +158,14 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
 
         // 2. Unidad Carreta / Remolque
         if (d.placa_carreta) {
+            const estCarreta = window._dispDeterminarEstadoFila({ estado: d.estado_carreta || d.estado });
             const pCarreta = {
                 placa: d.placa_carreta,
                 es_motora: false,
                 tipo_unidad: d.tipo_unidad_carreta || 'Carreta',
                 sub_tipo: d.sub_tipo_carreta || d.sub_tipo || 'Carreta',
-                estado: d.estado_carreta || d.estado || 'En Base',
-                empresa: empPrincipal,
+                estado: estCarreta,
+                empresa: empCarreta,
                 marca: d.marca_carreta || d.marca || '',
                 conductor: d.conductor_asignado || '',
                 observaciones: d.observaciones || '',
@@ -171,7 +174,7 @@ function _dispExtraerPlacas(lista, aplicarFiltros = false) {
 
             let include = true;
             if (aplicarFiltros) {
-                if (filtroCard !== 'TODOS' && window._dispDeterminarEstadoFila(d) !== filtroCard) include = false;
+                if (filtroCard !== 'TODOS' && estCarreta !== filtroCard) include = false;
                 if (filtroEmp !== 'TODAS' && !window._coincideEmpresa(pCarreta.empresa, filtroEmp)) include = false;
                 if (q) {
                     const matches = [pCarreta.placa, pCarreta.sub_tipo, pCarreta.conductor, pCarreta.marca, pCarreta.empresa, pCarreta.estado, pCarreta.observaciones]
@@ -207,21 +210,27 @@ window._coincideEmpresa = window._coincideEmpresa || function(empTarget, empFilt
     return rawT === rawF || rawT.includes(rawF) || rawF.includes(rawT);
 };
 
-// ── Renderizar Botones Segmentados de Empresas Dinámicamente (Solo Unidades Motoras) ──
+// ── Renderizar Botones Segmentados de Empresas Dinámicamente ──
 window.dispRenderizarSegmentedEmpresas = function () {
     const container = document.getElementById('btn-group-empresas-disp');
     if (!container) return;
 
     const empresasMap = new Map();
     (window.dispDatos || []).forEach(d => {
-        if (d.placa_camion) {
-            const raw = (d.empresa || d.cliente || '').trim();
-            if (raw && raw !== '-' && raw.toUpperCase() !== 'CLIENTE') {
-                const canon = window._canonizarNombreEmpresa(raw);
-                const key = canon.toUpperCase();
-                if (!empresasMap.has(key)) {
-                    empresasMap.set(key, canon);
-                }
+        const raw1 = (d.empresa || d.cliente || '').trim();
+        if (raw1 && raw1 !== '-' && raw1.toUpperCase() !== 'CLIENTE') {
+            const canon = window._canonizarNombreEmpresa(raw1);
+            const key = canon.toUpperCase();
+            if (!empresasMap.has(key)) {
+                empresasMap.set(key, canon);
+            }
+        }
+        const raw2 = (d.empresa_carreta || '').trim();
+        if (raw2 && raw2 !== '-' && raw2.toUpperCase() !== 'CLIENTE') {
+            const canon = window._canonizarNombreEmpresa(raw2);
+            const key = canon.toUpperCase();
+            if (!empresasMap.has(key)) {
+                empresasMap.set(key, canon);
             }
         }
     });
@@ -250,41 +259,75 @@ window.dispActualizarKPIs = function () {
     let enMant = 0;
 
     (window.dispDatos || []).forEach(item => {
-        // 1. Filtrar por Empresa Activa
-        if (filtroEmp !== 'TODAS') {
-            if (!window._coincideEmpresa(item.empresa || item.cliente, filtroEmp)) {
-                return;
+        // 1. Unidad Motora (Camión / Tracto)
+        if (item.placa_camion) {
+            const empCamion = item.empresa || item.cliente || '';
+            let includeCamion = true;
+            if (filtroEmp !== 'TODAS' && !window._coincideEmpresa(empCamion, filtroEmp)) {
+                includeCamion = false;
+            }
+            if (q) {
+                const matches = [
+                    item.placa_camion || '',
+                    item.conductor_asignado || '',
+                    item.marca || '',
+                    item.tipo_unidad || '',
+                    item.sub_tipo || '',
+                    item.estado || '',
+                    item.empresa || '',
+                    item.cliente || '',
+                    item.observaciones || '',
+                    item.capacidad_tanque || ''
+                ].some(val => String(val).toLowerCase().includes(q));
+                if (!matches) includeCamion = false;
+            }
+
+            if (includeCamion) {
+                total++;
+                const estCamion = window._dispDeterminarEstadoFila({ estado: item.estado });
+                if (estCamion === 'En Mantenimiento') {
+                    enMant++;
+                } else if (estCamion === 'En Ruta') {
+                    enRuta++;
+                } else {
+                    enBase++;
+                }
             }
         }
 
-        // 2. Filtrar por Buscador Universal
-        if (q) {
-            const matches = [
-                item.placa_camion || '',
-                item.placa_carreta || '',
-                item.conductor_asignado || '',
-                item.marca || '',
-                item.tipo_unidad || '',
-                item.sub_tipo || '',
-                item.sub_tipo_carreta || '',
-                item.estado || '',
-                item.empresa || '',
-                item.cliente || '',
-                item.observaciones || '',
-                item.capacidad_tanque || ''
-            ].some(val => String(val).toLowerCase().includes(q));
+        // 2. Unidad No Motora (Carreta / Semirremolque)
+        if (item.placa_carreta) {
+            const empCarreta = item.empresa_carreta || item.empresa || item.cliente || '';
+            let includeCarreta = true;
+            if (filtroEmp !== 'TODAS' && !window._coincideEmpresa(empCarreta, filtroEmp)) {
+                includeCarreta = false;
+            }
+            if (q) {
+                const matches = [
+                    item.placa_carreta || '',
+                    item.conductor_asignado || '',
+                    item.marca_carreta || item.marca || '',
+                    item.sub_tipo_carreta || item.sub_tipo || '',
+                    item.tipo_unidad || '',
+                    item.estado_carreta || item.estado || '',
+                    item.empresa_carreta || item.empresa || '',
+                    item.cliente || '',
+                    item.observaciones || ''
+                ].some(val => String(val).toLowerCase().includes(q));
+                if (!matches) includeCarreta = false;
+            }
 
-            if (!matches) return;
-        }
-
-        total++;
-        const estadoFila = window._dispDeterminarEstadoFila(item);
-        if (estadoFila === 'En Mantenimiento') {
-            enMant++;
-        } else if (estadoFila === 'En Ruta') {
-            enRuta++;
-        } else {
-            enBase++;
+            if (includeCarreta) {
+                total++;
+                const estCarreta = window._dispDeterminarEstadoFila({ estado: item.estado_carreta || item.estado });
+                if (estCarreta === 'En Mantenimiento') {
+                    enMant++;
+                } else if (estCarreta === 'En Ruta') {
+                    enRuta++;
+                } else {
+                    enBase++;
+                }
+            }
         }
     });
 
@@ -491,17 +534,31 @@ window.dispFiltrar = function () {
     const filtroEmp = window._dispFiltroEmpresa || 'TODAS';
 
     const filtrados = (window.dispDatos || []).filter(item => {
-        // Filtro 1: Card Superior (Estado Consolidado)
-        if (filtroCard !== 'TODOS') {
-            const estadoFila = window._dispDeterminarEstadoFila(item);
-            if (estadoFila !== filtroCard) return false;
-        }
+        const empCamion = item.empresa || item.cliente || '';
+        const empCarreta = item.empresa_carreta || item.empresa || item.cliente || '';
+        const camionPertenece = item.placa_camion && (filtroEmp === 'TODAS' || window._coincideEmpresa(empCamion, filtroEmp));
+        const carretaPertenece = item.placa_carreta && (filtroEmp === 'TODAS' || window._coincideEmpresa(empCarreta, filtroEmp));
 
-        // Filtro 2: Empresa Segmentada (Aplica sobre la empresa de la unidad)
+        // Filtro 1: Empresa Segmentada
         if (filtroEmp !== 'TODAS') {
-            if (!window._coincideEmpresa(item.empresa || item.cliente, filtroEmp)) {
+            if (!camionPertenece && !carretaPertenece) {
                 return false;
             }
+        }
+
+        // Filtro 2: Card Superior (Estado Consolidado)
+        if (filtroCard !== 'TODOS') {
+            const estCamion = window._dispDeterminarEstadoFila({ estado: item.estado });
+            const estCarreta = window._dispDeterminarEstadoFila({ estado: item.estado_carreta || item.estado });
+
+            let matches = false;
+            if (camionPertenece && estCamion === filtroCard) matches = true;
+            if (carretaPertenece && estCarreta === filtroCard) matches = true;
+            if (!camionPertenece && !carretaPertenece) {
+                if (estCamion === filtroCard || estCarreta === filtroCard) matches = true;
+            }
+
+            if (!matches) return false;
         }
 
         // Filtro 3: Buscador Universal
@@ -515,7 +572,9 @@ window.dispFiltrar = function () {
                 item.sub_tipo || '',
                 item.sub_tipo_carreta || '',
                 item.estado || '',
+                item.estado_carreta || '',
                 item.empresa || '',
+                item.empresa_carreta || '',
                 item.cliente || '',
                 item.observaciones || '',
                 item.capacidad_tanque || ''
