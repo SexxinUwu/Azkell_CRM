@@ -61,8 +61,8 @@
             --tv-shadow-lg: 0 10px 25px -4px rgba(0,0,0,0.08), 0 4px 10px -2px rgba(0,0,0,0.03);
             --tv-shadow-focus: 0 0 0 3px rgba(2, 132, 199, 0.35);
 
-            --tv-radius: 16px;
-            --tv-radius-sm: 10px;
+            --tv-radius: 12px;
+            --tv-radius-sm: 8px;
         }
 
         * {
@@ -73,6 +73,17 @@
             -webkit-user-select: none;
         }
 
+        /* Smart TV: Eliminar outline / focus fantasma del navegador de TV */
+        button:focus, 
+        button:focus-visible, 
+        .tv-tab-btn:focus, 
+        .tv-tab-btn:focus-visible, 
+        .tv-action-btn:focus, 
+        .tv-action-btn:focus-visible,
+        input:focus {
+            outline: none !important;
+        }
+
         body, html {
             width: 100%;
             height: 100%;
@@ -80,7 +91,7 @@
             background-color: var(--tv-bg);
             color: var(--tv-text-main);
             font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-            font-size: 15px;
+            font-size: 13.5px;
         }
 
         /* ── PROGRESS BAR CARRUSEL TV ────────────────────────────── */
@@ -88,7 +99,7 @@
             position: fixed;
             top: 0;
             left: 0;
-            height: 4px;
+            height: 3px;
             width: 0%;
             background: linear-gradient(90deg, #0284c7, #38bdf8, #10b981);
             z-index: 9999;
@@ -104,40 +115,40 @@
             overflow: hidden;
         }
 
-        /* ── TOP NAV & CONTROL BAR (APPLE SEAMLESS DESIGN) ──────── */
+        /* ── TOP NAV & CONTROL BAR (APPLE COMPACT SEAMLESS) ──────── */
         .tv-header-bar {
-            height: 62px;
-            background: rgba(255, 255, 255, 0.92);
+            height: 50px;
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
             border-bottom: 1px solid rgba(226, 232, 240, 0.85);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.02);
+            padding: 0 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 3px 8px rgba(0, 0, 0, 0.02);
             z-index: 100;
             flex-shrink: 0;
-            gap: 12px;
+            gap: 10px;
         }
 
         .tv-brand-box {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             flex-shrink: 0;
         }
         .tv-brand-logo {
-            width: 38px;
-            height: 38px;
+            width: 32px;
+            height: 32px;
             background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-            border-radius: 10px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #ffffff;
-            font-size: 1.25rem;
-            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.28);
+            font-size: 1.1rem;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.28);
             overflow: hidden;
             flex-shrink: 0;
         }
@@ -153,51 +164,50 @@
         }
         .tv-brand-title {
             font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-            font-size: 1.05rem;
+            font-size: 0.95rem;
             font-weight: 800;
             color: var(--tv-text-main);
-            line-height: 1.15;
+            line-height: 1.1;
             display: flex;
             align-items: center;
             gap: 6px;
             letter-spacing: -0.2px;
         }
         .tv-live-tag {
-            font-size: 0.62rem;
+            font-size: 0.58rem;
             font-weight: 800;
-            padding: 1.5px 6px;
+            padding: 1px 5px;
             background: #ecfdf5;
             color: #059669;
             border: 1px solid rgba(16, 185, 129, 0.25);
             border-radius: 9999px;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            letter-spacing: 0.4px;
+            gap: 3px;
+            letter-spacing: 0.3px;
         }
         .tv-live-dot {
-            width: 5px;
-            height: 5px;
+            width: 4px;
+            height: 4px;
             background: #10b981;
             border-radius: 50%;
             animation: tvPulse 1.5s infinite;
         }
         .tv-brand-sub {
-            font-size: 0.68rem;
+            font-size: 0.60rem;
             font-weight: 600;
             color: #94a3b8;
             letter-spacing: 0.2px;
             white-space: nowrap;
-            margin-top: 1px;
         }
 
-        /* ── TABS NAVEGACIÓN (APPLE SEGMENTED CONTROL) ────────────── */
+        /* ── TABS NAVEGACIÓN (APPLE SEGMENTED CONTROL CON COLORES VIBRANTES) ── */
         .tv-tabs-nav {
             display: inline-flex;
             align-items: center;
             background: #f1f5f9;
             padding: 3px;
-            border-radius: 12px;
+            border-radius: 10px;
             border: 1px solid #e2e8f0;
             gap: 3px;
             flex-shrink: 0;
@@ -205,75 +215,122 @@
         .tv-tab-btn {
             display: inline-flex;
             align-items: center;
-            gap: 7px;
-            height: 36px;
-            padding: 0 13px;
-            border-radius: 9px;
+            gap: 6px;
+            height: 32px;
+            padding: 0 11px;
+            border-radius: 7px;
             background: transparent;
             border: none;
             color: #64748b;
             font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-            font-size: 0.85rem;
+            font-size: 0.80rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.15s ease;
             white-space: nowrap;
             position: relative;
             user-select: none;
         }
         .tv-tab-btn:hover {
             color: var(--tv-text-main);
-            background: rgba(255, 255, 255, 0.55);
-        }
-        .tv-tab-btn.active {
-            background: #ffffff;
-            color: #0f172a;
-            font-weight: 700;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03);
+            background: rgba(255, 255, 255, 0.6);
         }
         .tv-tab-badge {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             font-weight: 800;
-            padding: 1.5px 7px;
+            padding: 1px 6px;
             border-radius: 9999px;
             background: #e2e8f0;
             color: #475569;
-            min-width: 18px;
+            min-width: 16px;
             text-align: center;
-            transition: all 0.16s ease;
+            transition: all 0.15s ease;
         }
-        .tv-tab-btn.active .tv-tab-badge {
-            background: #e0f2fe;
-            color: #0284c7;
+
+        /* Colores Sólidos y Vivos por Cada Módulo Activo */
+        .tv-tab-btn#tabGps.active {
+            background: #0284c7 !important;
+            color: #ffffff !important;
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
         }
-        .tv-tab-badge.danger, .tv-tab-btn.active .tv-tab-badge.danger {
-            background: #fee2e2;
-            color: #dc2626;
+        .tv-tab-btn#tabGps.active i { color: #ffffff !important; }
+        .tv-tab-btn#tabGps.active .tv-tab-badge {
+            background: #ffffff !important;
+            color: #0284c7 !important;
+        }
+
+        .tv-tab-btn#tabOt.active {
+            background: #d97706 !important;
+            color: #ffffff !important;
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(217, 119, 6, 0.35);
+        }
+        .tv-tab-btn#tabOt.active i { color: #ffffff !important; }
+        .tv-tab-btn#tabOt.active .tv-tab-badge {
+            background: #ffffff !important;
+            color: #d97706 !important;
+        }
+
+        .tv-tab-btn#tabBacklog.active {
+            background: #7c3aed !important;
+            color: #ffffff !important;
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
+        }
+        .tv-tab-btn#tabBacklog.active i { color: #ffffff !important; }
+        .tv-tab-btn#tabBacklog.active .tv-tab-badge {
+            background: #ffffff !important;
+            color: #7c3aed !important;
+        }
+
+        .tv-tab-btn#tabFallas.active {
+            background: #dc2626 !important;
+            color: #ffffff !important;
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+        }
+        .tv-tab-btn#tabFallas.active i { color: #ffffff !important; }
+        .tv-tab-btn#tabFallas.active .tv-tab-badge {
+            background: #ffffff !important;
+            color: #dc2626 !important;
+        }
+
+        .tv-tab-btn#tabRampas.active {
+            background: #0d9488 !important;
+            color: #ffffff !important;
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(13, 148, 136, 0.35);
+        }
+        .tv-tab-btn#tabRampas.active i { color: #ffffff !important; }
+        .tv-tab-btn#tabRampas.active .tv-tab-badge {
+            background: #ffffff !important;
+            color: #0d9488 !important;
         }
 
         /* ── HEADER RIGHT TOOLS (APPLE ACTION PILLS) ─────────────── */
         .tv-header-tools {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-shrink: 0;
         }
         .tv-action-btn {
-            height: 36px;
-            padding: 0 12px;
-            border-radius: 10px;
+            height: 32px;
+            padding: 0 10px;
+            border-radius: 8px;
             border: 1px solid #e2e8f0;
             background: #ffffff;
             color: #334155;
             font-family: -apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', sans-serif;
             font-weight: 600;
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             cursor: pointer;
-            transition: all 0.16s ease;
+            transition: all 0.15s ease;
             box-shadow: 0 1px 2px rgba(0,0,0,0.03);
             white-space: nowrap;
         }
@@ -283,44 +340,44 @@
             color: #0f172a;
         }
         .tv-action-btn.icon-only {
-            width: 36px;
+            width: 32px;
             padding: 0;
             justify-content: center;
-            font-size: 0.92rem;
+            font-size: 0.88rem;
         }
         .tv-action-btn.active {
             background: #0284c7;
             color: #ffffff;
             border-color: #0284c7;
-            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
         }
 
         .tv-clock-pill {
-            height: 36px;
-            padding: 0 12px;
+            height: 32px;
+            padding: 0 10px;
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 10px;
+            border-radius: 8px;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.03);
             flex-shrink: 0;
         }
         .tv-clock-time {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.92rem;
+            font-size: 0.85rem;
             font-weight: 800;
             color: #0f172a;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.3px;
         }
         .tv-clock-divider {
             width: 1px;
-            height: 14px;
+            height: 12px;
             background: #e2e8f0;
         }
         .tv-clock-date {
-            font-size: 0.68rem;
+            font-size: 0.62rem;
             font-weight: 700;
             color: #64748b;
             text-transform: uppercase;
@@ -345,46 +402,46 @@
             display: none;
             flex-direction: column;
             opacity: 0;
-            transition: opacity 0.25s ease;
+            transition: opacity 0.2s ease;
         }
         .tv-view-pane.active {
             display: flex;
             opacity: 1;
         }
 
-        /* ── KPI STRIP UNIVERSAL (APPLE REFINED CARDS) ──────────── */
+        /* ── KPI STRIP UNIVERSAL (COMPACT SLIM CARDS) ────────────── */
         .tv-kpi-strip {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 14px;
-            padding: 14px 20px 10px 20px;
+            gap: 10px;
+            padding: 8px 16px 6px 16px;
             background: transparent;
             flex-shrink: 0;
         }
         .tv-kpi-card {
             background: rgba(255, 255, 255, 0.95);
             border: 1px solid rgba(226, 232, 240, 0.85);
-            border-radius: 14px;
-            padding: 12px 18px;
+            border-radius: 10px;
+            padding: 6px 14px;
             display: flex;
             align-items: center;
-            gap: 14px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.02);
-            transition: all 0.2s ease;
-            height: 76px;
+            gap: 10px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 2px 6px rgba(0, 0, 0, 0.02);
+            transition: all 0.15s ease;
+            height: 52px;
         }
         .tv-kpi-card:hover {
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04), 0 8px 20px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
             border-color: #cbd5e1;
         }
         .tv-kpi-icon-wrap {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.45rem;
+            font-size: 1.15rem;
             flex-shrink: 0;
         }
         .tv-kpi-icon-wrap.blue { background: #e0f2fe; color: #0284c7; }
@@ -401,19 +458,19 @@
             overflow: hidden;
         }
         .tv-kpi-label {
-            font-size: 0.70rem;
+            font-size: 0.62rem;
             font-weight: 700;
             color: var(--tv-text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.6px;
+            letter-spacing: 0.4px;
             white-space: nowrap;
         }
         .tv-kpi-value {
             font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-            font-size: 1.85rem;
+            font-size: 1.35rem;
             font-weight: 800;
             color: var(--tv-text-main);
-            line-height: 1.1;
+            line-height: 1;
             margin-top: 1px;
         }
 
@@ -421,15 +478,15 @@
         .tv-gps-body {
             flex: 1;
             display: flex;
-            padding: 0 24px 18px 24px;
-            gap: 18px;
+            padding: 0 16px 10px 16px;
+            gap: 12px;
             overflow: hidden;
             position: relative;
         }
         
         /* Lateral Izquierdo de Unidades */
         .tv-units-panel {
-            width: 380px;
+            width: 340px;
             background: var(--tv-surface);
             border: 1px solid var(--tv-border);
             border-radius: var(--tv-radius);
@@ -440,11 +497,11 @@
             flex-shrink: 0;
         }
         .tv-units-header {
-            padding: 14px 16px;
+            padding: 10px 12px;
             border-bottom: 1px solid var(--tv-border);
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             background: var(--tv-surface);
         }
         .tv-search-input-box {
@@ -703,12 +760,12 @@
             margin-top: 2px;
         }
 
-        /* ── VISTAS 2, 3, 4: TABLAS DE GESTIÓN ERP (LIGHT MODE) ──── */
+        /* ── VISTAS 2, 3, 4, 5: TABLAS DE GESTIÓN ERP (COMPACT SMART TV) ──── */
         .tv-table-view-body {
             flex: 1;
             display: flex;
             flex-direction: column;
-            padding: 0 24px 18px 24px;
+            padding: 0 16px 8px 16px;
             overflow: hidden;
         }
         .tv-table-card {
@@ -722,7 +779,7 @@
             overflow: hidden;
         }
         .tv-table-header-strip {
-            padding: 14px 20px;
+            padding: 8px 16px;
             border-bottom: 1px solid var(--tv-border);
             display: flex;
             align-items: center;
@@ -732,18 +789,18 @@
         }
         .tv-table-title {
             font-family: 'Outfit', sans-serif;
-            font-size: 1.15rem;
+            font-size: 0.95rem;
             font-weight: 800;
             color: var(--tv-text-main);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
         .tv-table-subtitle {
-            font-size: 0.78rem;
+            font-size: 0.68rem;
             color: var(--tv-text-muted);
             font-weight: 500;
-            margin-top: 2px;
+            margin-top: 1px;
         }
 
         .tv-table-scroll-wrap {
@@ -755,7 +812,7 @@
             width: 100%;
             border-collapse: collapse;
             text-align: left;
-            font-size: 0.88rem;
+            font-size: 0.80rem;
         }
         .tv-modern-table thead {
             position: sticky;
@@ -764,43 +821,52 @@
             z-index: 10;
         }
         .tv-modern-table th {
-            padding: 12px 16px;
+            padding: 7px 12px;
             font-family: 'Outfit', sans-serif;
-            font-size: 0.78rem;
+            font-size: 0.70rem;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
+            letter-spacing: 0.5px;
             color: var(--tv-text-muted);
             border-bottom: 1px solid var(--tv-border);
             white-space: nowrap;
         }
         .tv-modern-table td {
-            padding: 12px 16px;
+            padding: 7px 12px;
             border-bottom: 1px solid var(--tv-border);
             color: var(--tv-text-main);
             font-weight: 500;
             vertical-align: middle;
+            font-size: 0.80rem;
         }
         .tv-modern-table tbody tr {
-            transition: background 0.15s ease;
+            transition: background 0.12s ease;
             cursor: pointer;
         }
         .tv-modern-table tbody tr:hover {
             background: #f8fafc;
         }
-        .tv-modern-table tbody tr.active, .tv-modern-table tbody tr:focus {
+        /* Fila activa seleccionada por control remoto D-Pad */
+        .tv-modern-table tbody tr.tv-row-active,
+        .tv-modern-table tbody tr.active {
             background: #e0f2fe !important;
-            outline: none;
+            outline: 2px solid #0284c7 !important;
+            box-shadow: inset 3px 0 0 #0284c7 !important;
+        }
+        .tv-modern-table tbody tr.tv-row-active td,
+        .tv-modern-table tbody tr.active td {
+            color: #0f172a !important;
+            font-weight: 700 !important;
         }
 
         /* Status Pills in Tables */
         .tv-status-badge {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 4px 10px;
-            border-radius: 8px;
-            font-size: 0.76rem;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.70rem;
             font-weight: 700;
             text-transform: capitalize;
             white-space: nowrap;
@@ -814,41 +880,41 @@
 
         /* ── BOTTOM CONTROL & TICKER BAR ─────────────────────────── */
         .tv-footer-bar {
-            height: 48px;
+            height: 38px;
             background: var(--tv-surface);
             border-top: 1px solid var(--tv-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 24px;
+            padding: 0 16px;
             flex-shrink: 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+            box-shadow: 0 -1px 6px rgba(0,0,0,0.02);
             z-index: 100;
         }
         .tv-ticker-area {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             overflow: hidden;
             flex: 1;
         }
         .tv-ticker-tag {
             font-family: 'Outfit', sans-serif;
-            font-size: 0.72rem;
+            font-size: 0.65rem;
             font-weight: 800;
-            padding: 3px 8px;
-            border-radius: 6px;
+            padding: 2px 6px;
+            border-radius: 5px;
             background: var(--tv-primary-subtle);
             color: var(--tv-primary-text);
             text-transform: uppercase;
-            letter-spacing: 0.6px;
+            letter-spacing: 0.5px;
             flex-shrink: 0;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
         }
         .tv-ticker-msg {
-            font-size: 0.82rem;
+            font-size: 0.76rem;
             color: var(--tv-text-muted);
             font-weight: 600;
             white-space: nowrap;
@@ -859,27 +925,42 @@
         .tv-remote-shortcuts {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 10px;
             flex-shrink: 0;
         }
         .tv-key-guide {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.75rem;
+            gap: 4px;
+            font-size: 0.68rem;
             font-weight: 600;
             color: var(--tv-text-muted);
         }
         .tv-key-btn {
-            padding: 2px 7px;
-            border-radius: 6px;
+            padding: 1px 5px;
+            border-radius: 5px;
             background: var(--tv-bg);
             border: 1px solid var(--tv-border);
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.74rem;
+            font-size: 0.66rem;
             font-weight: 800;
             color: var(--tv-text-main);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+
+        /* Responsive Media Queries para Smart TVs de baja resolución o DPR alto */
+        @media screen and (max-height: 800px) {
+            body, html { font-size: 12.5px; }
+            .tv-header-bar { height: 46px; padding: 0 12px; }
+            .tv-kpi-strip { padding: 6px 12px 4px 12px; gap: 8px; }
+            .tv-kpi-card { height: 46px; padding: 4px 10px; }
+            .tv-kpi-icon-wrap { width: 30px; height: 30px; font-size: 1rem; }
+            .tv-kpi-value { font-size: 1.25rem; }
+            .tv-table-view-body { padding: 0 12px 6px 12px; }
+            .tv-table-header-strip { padding: 6px 12px; }
+            .tv-modern-table th { padding: 5px 8px; font-size: 0.66rem; }
+            .tv-modern-table td { padding: 5px 8px; font-size: 0.74rem; }
+            .tv-footer-bar { height: 34px; padding: 0 12px; }
         }
 
         /* ── MODAL QR / DETALLE ──────────────────────────────────── */
@@ -1075,7 +1156,7 @@
                     <div class="tv-units-header">
                         <div class="tv-search-input-box">
                             <i class="bi bi-search"></i>
-                            <input type="text" class="tv-search-input" id="tvUnitSearch" placeholder="Buscar placa, empresa, conductor..." oninput="tvFilterUnits()">
+                            <input type="text" class="tv-search-input" id="tvUnitSearch" placeholder="Buscar placa, empresa, conductor..." tabindex="-1" oninput="tvFilterUnits()" onkeydown="if(event.key==='ArrowDown'||event.key==='Escape'){ this.blur(); event.preventDefault(); tvNavigateTable(1); }">
                         </div>
                         <div class="tv-filter-chips">
                             <span class="tv-chip active" onclick="tvSetGpsFilter('all', this)">Todas (<span id="chipCountAll">62</span>)</span>
@@ -1184,9 +1265,9 @@
                             <div class="tv-table-title"><i class="bi bi-tools text-amber"></i> Reporte de OTs — Solo en Estado "En Proceso"</div>
                             <div class="tv-table-subtitle">Mostrando únicamente órdenes de trabajo activas en proceso de atención en taller</div>
                         </div>
-                        <div class="tv-search-input-box" style="width: 260px;">
+                        <div class="tv-search-input-box" style="width: 240px;">
                             <i class="bi bi-search"></i>
-                            <input type="text" class="tv-search-input" id="tvOtSearch" placeholder="Buscar por N° OT o Placa..." oninput="tvRenderOtsTable()">
+                            <input type="text" class="tv-search-input" id="tvOtSearch" placeholder="Buscar N° OT o Placa..." tabindex="-1" oninput="tvRenderOtsTable()" onkeydown="if(event.key==='ArrowDown'||event.key==='Escape'){ this.blur(); event.preventDefault(); tvNavigateTable(1); }">
                         </div>
                     </div>
                     <div class="tv-table-scroll-wrap">
@@ -1252,12 +1333,12 @@
                 <div class="tv-table-card">
                     <div class="tv-table-header-strip">
                         <div>
-                            <div class="tv-table-title"><i class="bi bi-clipboard-check text-danger"></i> Control de BackLog — Solo Pendientes</div>
+                            <div class="tv-table-title"><i class="bi bi-clipboard-check text-purple"></i> Control de BackLog — Solo Pendientes</div>
                             <div class="tv-table-subtitle">Mostrando únicamente tareas técnicas y repuestos pendientes de atención en taller</div>
                         </div>
-                        <div class="tv-search-input-box" style="width: 260px;">
+                        <div class="tv-search-input-box" style="width: 240px;">
                             <i class="bi bi-search"></i>
-                            <input type="text" class="tv-search-input" id="tvBacklogSearch" placeholder="Buscar placa, tarea..." oninput="tvRenderBacklogTable()">
+                            <input type="text" class="tv-search-input" id="tvBacklogSearch" placeholder="Buscar placa, tarea..." tabindex="-1" oninput="tvRenderBacklogTable()" onkeydown="if(event.key==='ArrowDown'||event.key==='Escape'){ this.blur(); event.preventDefault(); tvNavigateTable(1); }">
                         </div>
                     </div>
                     <div class="tv-table-scroll-wrap">
@@ -1326,9 +1407,9 @@
                             <div class="tv-table-title"><i class="bi bi-exclamation-octagon-fill text-danger"></i> Reporte de Fallas — Solo Casos No Finalizados</div>
                             <div class="tv-table-subtitle">Alertas e incidencias de tractos y carretas en ruta pendientes de atención</div>
                         </div>
-                        <div class="tv-search-input-box" style="width: 260px;">
+                        <div class="tv-search-input-box" style="width: 240px;">
                             <i class="bi bi-search"></i>
-                            <input type="text" class="tv-search-input" id="tvFallasSearch" placeholder="Buscar folio, placa o falla..." oninput="tvRenderFallasTable()">
+                            <input type="text" class="tv-search-input" id="tvFallasSearch" placeholder="Buscar folio, placa o falla..." tabindex="-1" oninput="tvRenderFallasTable()" onkeydown="if(event.key==='ArrowDown'||event.key==='Escape'){ this.blur(); event.preventDefault(); tvNavigateTable(1); }">
                         </div>
                     </div>
                     <div class="tv-table-scroll-wrap">
@@ -1395,9 +1476,9 @@
                             <div class="tv-table-title"><i class="bi bi-ev-front-fill text-primary"></i> Status Rampa & Zonas — Horarios de Salida</div>
                             <div class="tv-table-subtitle">Monitoreo en tiempo real de unidades en rampas, lavado, espera y horario programado de liberación técnica</div>
                         </div>
-                        <div class="tv-search-input-box" style="width: 280px;">
+                        <div class="tv-search-input-box" style="width: 250px;">
                             <i class="bi bi-search"></i>
-                            <input type="text" class="tv-search-input" id="tvRampasSearch" placeholder="Buscar rampa, zona o placa..." oninput="tvRenderRampasTable()">
+                            <input type="text" class="tv-search-input" id="tvRampasSearch" placeholder="Buscar rampa, zona o placa..." tabindex="-1" oninput="tvRenderRampasTable()" onkeydown="if(event.key==='ArrowDown'||event.key==='Escape'){ this.blur(); event.preventDefault(); tvNavigateTable(1); }">
                         </div>
                     </div>
                     <div class="tv-table-scroll-wrap">
@@ -1808,6 +1889,14 @@
         tvRenderGpsView();
     }
 
+    // Índices de fila seleccionada con control remoto por cada vista
+    var _tvTableIndices = {
+        ot: 0,
+        backlog: 0,
+        fallas: 0,
+        rampas: 0
+    };
+
     // 6. RENDERIZADO VISTA 2: REPORTES OT (SOLO EN PROCESO)
     function tvRenderOtsTable() {
         var tbody = document.getElementById('tvOtTableBody');
@@ -1826,11 +1915,13 @@
                    (o.supervisor || '').toLowerCase().includes(q);
         });
 
+        var curIdx = _tvTableIndices.ot || 0;
         var html = '';
-        list.forEach(function(o) {
+        list.forEach(function(o, idx) {
             var fecha = o.fecha_ingreso ? new Date(o.fecha_ingreso).toLocaleDateString('es-PE') : '-';
+            var isActive = (idx === curIdx && _tvCurrentView === 'ot');
 
-            html += '<tr>';
+            html += '<tr class="' + (isActive ? 'tv-row-active active' : '') + '" onclick="tvSelectTableRow(\'ot\', ' + idx + ')">';
             html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800; color: #0284c7;">' + (o.id_ot || '-') + '</td>';
             html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800;">' + (o.placa || '-') + '</td>';
             html += '  <td><span style="font-weight: 700;">' + (o.tipo_ot || 'Correctivo') + '</span> ' + (o.sub_tipo ? '<span style="color: #64748b;">(' + o.sub_tipo + ')</span>' : '') + '</td>';
@@ -1843,7 +1934,7 @@
             html += '</tr>';
         });
 
-        tbody.innerHTML = html || '<tr><td colspan="9" style="text-align: center; padding: 28px; color: #94a3b8;"><i class="bi bi-check2-circle text-success" style="font-size: 1.6rem; display: block; margin-bottom: 6px;"></i>No hay órdenes de trabajo en proceso en este momento.</td></tr>';
+        tbody.innerHTML = html || '<tr><td colspan="9" style="text-align: center; padding: 24px; color: #94a3b8;"><i class="bi bi-check2-circle text-success" style="font-size: 1.5rem; display: block; margin-bottom: 4px;"></i>No hay órdenes de trabajo en proceso en este momento.</td></tr>';
     }
 
     // 7. RENDERIZADO VISTA 3: BACKLOG (SOLO PENDIENTES)
@@ -1863,11 +1954,13 @@
                    (b.tarea || '').toLowerCase().includes(q);
         });
 
+        var curIdx = _tvTableIndices.backlog || 0;
         var html = '';
-        list.forEach(function(b) {
+        list.forEach(function(b, idx) {
             var fecha = b.fecha_reporte ? new Date(b.fecha_reporte).toLocaleDateString('es-PE') : '-';
+            var isActive = (idx === curIdx && _tvCurrentView === 'backlog');
 
-            html += '<tr>';
+            html += '<tr class="' + (isActive ? 'tv-row-active active' : '') + '" onclick="tvSelectTableRow(\'backlog\', ' + idx + ')">';
             html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800; color: #8b5cf6;">' + (b.backlog_id || '-') + '</td>';
             html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800;">' + (b.placa || '-') + '</td>';
             html += '  <td><span class="tv-status-badge purple">' + (b.tema || 'Mantenimiento') + '</span></td>';
@@ -1880,7 +1973,7 @@
             html += '</tr>';
         });
 
-        tbody.innerHTML = html || '<tr><td colspan="9" style="text-align: center; padding: 28px; color: #94a3b8;"><i class="bi bi-check2-circle text-success" style="font-size: 1.6rem; display: block; margin-bottom: 6px;"></i>¡Excelente! No hay tareas de backlog pendientes en este momento.</td></tr>';
+        tbody.innerHTML = html || '<tr><td colspan="9" style="text-align: center; padding: 24px; color: #94a3b8;"><i class="bi bi-check2-circle text-success" style="font-size: 1.5rem; display: block; margin-bottom: 4px;"></i>¡Excelente! No hay tareas de backlog pendientes en este momento.</td></tr>';
     }
 
     // 8. RENDERIZADO VISTA 4: REPORTE DE FALLAS (NO FINALIZADAS)
@@ -1897,17 +1990,19 @@
                    (f.descripcion || '').toLowerCase().includes(q);
         });
 
+        var curIdx = _tvTableIndices.fallas || 0;
         var html = '';
-        list.forEach(function(f) {
+        list.forEach(function(f, idx) {
             var est = (f.estado || 'Pendiente').toLowerCase();
             var badgeCls = est.includes('pend') ? 'danger' : (est.includes('proc') ? 'warning' : 'slate');
             var fecha = f.fecha ? new Date(f.fecha).toLocaleDateString('es-PE') : '-';
+            var isActive = (idx === curIdx && _tvCurrentView === 'fallas');
 
-            html += '<tr>';
+            html += '<tr class="' + (isActive ? 'tv-row-active active' : '') + '" onclick="tvSelectTableRow(\'fallas\', ' + idx + ')">';
             html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800; color: #ef4444;">' + (f.folio || '-') + '</td>';
             html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800;">' + (f.placa || '-') + '</td>';
             html += '  <td style="font-weight: 600;">' + (f.conductor || 'No asignado') + '</td>';
-            html += '  <td><span style="font-size: 0.78rem; font-weight: 700; color: #64748b;">' + (f.procedencia || 'En ruta') + '</span></td>';
+            html += '  <td><span style="font-size: 0.76rem; font-weight: 700; color: #64748b;">' + (f.procedencia || 'En ruta') + '</span></td>';
             html += '  <td style="max-width: 380px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="' + f.descripcion + '">';
             html += '    <span style="color: #0f172a; font-weight: 600;">' + f.descripcion + '</span>';
             html += '  </td>';
@@ -1934,8 +2029,9 @@
                    (r.hora_salida || '').toLowerCase().includes(q);
         });
 
+        var curIdx = _tvTableIndices.rampas || 0;
         var html = '';
-        list.forEach(function(r) {
+        list.forEach(function(r, idx) {
             var hSalida = r.hora_salida && r.hora_salida !== '-' ? r.hora_salida + ' hrs' : 'Por definir';
             
             // Icono y Estilo de Badge según la zona
@@ -1956,16 +2052,18 @@
                 iconHtml = '<i class="bi bi-truck-flatbed text-danger"></i>';
             }
 
-            html += '<tr>';
+            var isActive = (idx === curIdx && _tvCurrentView === 'rampas');
+
+            html += '<tr class="' + (isActive ? 'tv-row-active active' : '') + '" onclick="tvSelectTableRow(\'rampas\', ' + idx + ')">';
             html += '  <td>';
-            html += '    <span class="tv-status-badge" style="' + badgeStyle + ' font-weight: 800; font-size: 0.82rem; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">';
+            html += '    <span class="tv-status-badge" style="' + badgeStyle + ' font-weight: 800; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">';
             html += '      ' + iconHtml + ' ' + (r.rampa || 'Rampa General');
             html += '    </span>';
             html += '  </td>';
-            html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800; font-size: 1rem; color: #0f172a;">' + (r.placa || '-') + '</td>';
+            html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800; font-size: 0.95rem; color: #0f172a;">' + (r.placa || '-') + '</td>';
             html += '  <td style="font-family: monospace; font-weight: 700; color: #64748b;">' + (r.hora_ingreso !== '-' ? r.hora_ingreso + ' hrs' : '-') + '</td>';
             html += '  <td>';
-            html += '    <span style="font-family: \'JetBrains Mono\', monospace; font-size: 0.95rem; font-weight: 900; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(2,132,199,0.2);">';
+            html += '    <span style="font-family: \'JetBrains Mono\', monospace; font-size: 0.88rem; font-weight: 900; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid rgba(2,132,199,0.2);">';
             html += '      <i class="bi bi-clock-history"></i> ' + hSalida;
             html += '    </span>';
             html += '  </td>';
@@ -1977,16 +2075,68 @@
             html += '</tr>';
         });
 
-        tbody.innerHTML = html || '<tr><td colspan="7" style="text-align: center; padding: 28px; color: #94a3b8;"><i class="bi bi-door-open text-success" style="font-size: 1.6rem; display: block; margin-bottom: 6px;"></i>No hay unidades en taller en este momento.</td></tr>';
+        tbody.innerHTML = html || '<tr><td colspan="7" style="text-align: center; padding: 24px; color: #94a3b8;"><i class="bi bi-door-open text-success" style="font-size: 1.5rem; display: block; margin-bottom: 4px;"></i>No hay unidades en taller en este momento.</td></tr>';
     }
 
-    // 10. NAVEGACIÓN Y CAMBIO ENTRE VISTAS
+    // 10. NAVEGACIÓN Y SELECCIÓN DE FILAS CON CONTROL REMOTO
+    function tvSelectTableRow(viewName, index) {
+        _tvTableIndices[viewName] = index;
+        tvNavigateTable(0);
+    }
+
+    function tvNavigateTable(delta) {
+        if (_tvCurrentView === 'gps') {
+            var units = (_tvData.gps.unidades || []);
+            if (units.length > 0) {
+                _tvSelectedUnitIndex = Math.max(0, Math.min(units.length - 1, _tvSelectedUnitIndex + delta));
+                tvRenderGpsView();
+                var activeCard = document.querySelector('.tv-unit-card.active');
+                if (activeCard && typeof activeCard.scrollIntoView === 'function') {
+                    activeCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            }
+            return;
+        }
+
+        var tbodyId = 'tv' + _tvCurrentView.charAt(0).toUpperCase() + _tvCurrentView.slice(1) + 'TableBody';
+        var tbody = document.getElementById(tbodyId);
+        if (!tbody) return;
+
+        var rows = tbody.querySelectorAll('tr');
+        if (!rows || rows.length === 0) return;
+        if (rows.length === 1 && rows[0].querySelector('td[colspan]')) return;
+
+        var cur = _tvTableIndices[_tvCurrentView] || 0;
+        var next = Math.max(0, Math.min(rows.length - 1, cur + delta));
+        _tvTableIndices[_tvCurrentView] = next;
+
+        rows.forEach(function(r, i) {
+            if (i === next) {
+                r.classList.add('tv-row-active');
+                r.classList.add('active');
+                if (typeof r.scrollIntoView === 'function') {
+                    r.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            } else {
+                r.classList.remove('tv-row-active');
+                r.classList.remove('active');
+            }
+        });
+    }
+
+    // 11. CAMBIO ENTRE VISTAS (RESET DE FOCO Y ESTADO)
     function tvSwitchView(viewName) {
         _tvCurrentView = viewName;
 
-        // Actualizar pestañas
+        // Desenfocar cualquier elemento activo para evitar bordes o focus fantasmas de Smart TV
+        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
+        }
+
+        // Actualizar pestañas superiores
         document.querySelectorAll('.tv-tabs-nav .tv-tab-btn').forEach(function(b) {
-            b.classList.toggle('active', b.getAttribute('data-view') === viewName);
+            var isThis = b.getAttribute('data-view') === viewName;
+            b.classList.toggle('active', isThis);
         });
 
         // Actualizar contenedores de vista
@@ -1996,6 +2146,11 @@
 
         var targetPane = document.getElementById('view' + viewName.charAt(0).toUpperCase() + viewName.slice(1));
         if (targetPane) targetPane.classList.add('active');
+
+        // Enfocar fila activa
+        setTimeout(function() {
+            tvNavigateTable(0);
+        }, 50);
 
         // Si es GPS, redibujar Leaflet
         if (viewName === 'gps' && _tvMap) {
@@ -2015,7 +2170,7 @@
         tvSwitchView(_tvViews[prevIdx]);
     }
 
-    // 11. CARRUSEL AUTOMÁTICO TV (WAR ROOM ROTATION)
+    // 12. CARRUSEL AUTOMÁTICO TV (WAR ROOM ROTATION)
     function tvToggleCarousel() {
         _tvCarouselActive = !_tvCarouselActive;
         var btn = document.getElementById('tvBtnCarousel');
@@ -2051,7 +2206,7 @@
         }
     }
 
-    // 12. PANTALLA COMPLETA & MODAL QR
+    // 13. PANTALLA COMPLETA & MODAL QR
     function tvToggleFullscreen() {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(function(e){});
@@ -2074,9 +2229,29 @@
         }
     }
 
-    // 13. CONTROL REMOTO SMART TV (D-PAD & HOTKEYS)
+    // 14. CONTROL REMOTO SMART TV (D-PAD & HOTKEYS)
     window.addEventListener('keydown', function(e) {
         var key = e.key;
+
+        // Si el usuario está escribiendo en un input de búsqueda con un teclado físico
+        var isInputFocused = (document.activeElement && document.activeElement.tagName === 'INPUT');
+        if (isInputFocused && key !== 'ArrowDown' && key !== 'ArrowUp' && key !== 'Escape' && key !== 'Enter') {
+            return;
+        }
+
+        // Si presiona Flecha Abajo o Escape en el input, desenfocar y navegar por la tabla
+        if (isInputFocused && (key === 'ArrowDown' || key === 'Escape')) {
+            document.activeElement.blur();
+            e.preventDefault();
+            tvNavigateTable(1);
+            return;
+        }
+        if (isInputFocused && key === 'ArrowUp') {
+            document.activeElement.blur();
+            e.preventDefault();
+            tvNavigateTable(-1);
+            return;
+        }
 
         // Teclas Numéricas (1, 2, 3, 4, 5)
         if (key === '1') { tvSwitchView('gps'); return; }
@@ -2088,6 +2263,40 @@
         // Flechas Horizontales
         if (key === 'ArrowRight') { tvNextView(); return; }
         if (key === 'ArrowLeft') { tvPrevView(); return; }
+
+        // Flechas Verticales (Navegar filas / unidades)
+        if (key === 'ArrowDown') {
+            e.preventDefault();
+            tvNavigateTable(1);
+            return;
+        }
+        if (key === 'ArrowUp') {
+            e.preventDefault();
+            tvNavigateTable(-1);
+            return;
+        }
+
+        // Page Down / Page Up (Scroll rápido)
+        if (key === 'PageDown') {
+            e.preventDefault();
+            tvNavigateTable(5);
+            return;
+        }
+        if (key === 'PageUp') {
+            e.preventDefault();
+            tvNavigateTable(-5);
+            return;
+        }
+        if (key === 'Home') {
+            e.preventDefault();
+            tvNavigateTable(-9999);
+            return;
+        }
+        if (key === 'End') {
+            e.preventDefault();
+            tvNavigateTable(9999);
+            return;
+        }
 
         // Carrusel (C)
         if (key === 'c' || key === 'C') { tvToggleCarousel(); return; }
@@ -2113,18 +2322,6 @@
             return;
         }
 
-        // Flechas Verticales (Navegar unidades)
-        if (key === 'ArrowDown') {
-            _tvSelectedUnitIndex += 1;
-            tvRenderGpsView();
-            return;
-        }
-        if (key === 'ArrowUp') {
-            _tvSelectedUnitIndex = Math.max(0, _tvSelectedUnitIndex - 1);
-            tvRenderGpsView();
-            return;
-        }
-
         // Escape
         if (key === 'Escape') {
             tvCloseDrawer();
@@ -2133,7 +2330,7 @@
         }
     });
 
-    // 13. INICIO Y CICLO DE REFRESH AUTOMÁTICO (CADA 5 SEGUNDOS)
+    // 15. INICIO Y CICLO DE REFRESH AUTOMÁTICO (CADA 5 SEGUNDOS)
     document.addEventListener('DOMContentLoaded', function() {
         tvInitClock();
         tvInitMap();
