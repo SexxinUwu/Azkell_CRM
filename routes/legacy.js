@@ -1361,17 +1361,39 @@ router.post('/:metodo', async (req, res) => {
                 const sid = loginData.eid;
                 const gisSid = loginData.gis_sid;
                 const searchParams = { "spec": { "itemsType": "avl_unit", "propName": "sys_name", "propValueMask": "*", "sortType": "sys_name" }, "force": 1, "flags": 9221, "from": 0, "to": 0 };
+                const groupParams = { "spec": { "itemsType": "avl_unit_group", "propName": "sys_name", "propValueMask": "*", "sortType": "sys_name" }, "force": 1, "flags": 1, "from": 0, "to": 0 };
                 
                 const searchController = new AbortController();
                 const searchTimeout = setTimeout(() => searchController.abort(), 6000);
-                const searchRes = await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(searchParams))}&sid=${sid}`, {
-                    signal: searchController.signal
-                });
+                
+                const [searchRes, groupRes] = await Promise.all([
+                    fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(searchParams))}&sid=${sid}`, {
+                        signal: searchController.signal
+                    }).catch(() => null),
+                    fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(groupParams))}&sid=${sid}`, {
+                        signal: searchController.signal
+                    }).catch(() => null)
+                ]);
                 clearTimeout(searchTimeout);
-                if (!searchRes.ok) return [];
-                const searchData = await searchRes.json();
 
-                if (!searchData || !searchData.items) return [];
+                if (!searchRes || !searchRes.ok) return { data: [], grupos: [] };
+                const searchData = await searchRes.json();
+                if (!searchData || !searchData.items) return { data: [], grupos: [] };
+
+                // Procesar grupos de Wialon
+                let wialonGrupos = [];
+                if (groupRes && groupRes.ok) {
+                    try {
+                        const groupData = await groupRes.json();
+                        if (groupData && Array.isArray(groupData.items)) {
+                            wialonGrupos = groupData.items.map(g => ({
+                                id: g.id,
+                                nombre: g.nm,
+                                unitIds: Array.isArray(g.u) ? g.u : (Array.isArray(g.units) ? g.units : [])
+                            }));
+                        }
+                    } catch(eGrp) {}
+                }
 
                 const vehiculosLive = [];
                 const coordsToGeocode = [];
@@ -1424,6 +1446,7 @@ router.post('/:metodo', async (req, res) => {
                         }
 
                         const pInfo = placasMap[placaLimpia] || {};
+                        const itemGroups = wialonGrupos.filter(g => g.unitIds.includes(item.id)).map(g => g.nombre);
 
                         const vObj = {
                             id: item.id,
@@ -1444,6 +1467,7 @@ router.post('/:metodo', async (req, res) => {
                             empresa: pInfo.cliente || (rawName.includes('TRAHESA') ? 'TRAHESA S.A.C.' : 'MARSISA S.A.C.'),
                             tipo_vehiculo: pInfo.tipo || (rawName.includes('CARRETA') ? 'Carreta' : (rawName.includes('VOLVO') || rawName.includes('SCANIA') ? 'Tracto' : 'Camión')),
                             marca_modelo: [pInfo.marca, pInfo.modelo_uts].filter(Boolean).join(' ') || '',
+                            grupos: itemGroups,
                             ubicacion: ''
                         };
 
@@ -1496,12 +1520,13 @@ router.post('/:metodo', async (req, res) => {
                     );
                 });
 
-                _wialonCache = vehiculosLive;
+                const payload = { data: vehiculosLive, grupos: wialonGrupos };
+                _wialonCache = payload;
                 _wialonCacheTime = Date.now();
-                return vehiculosLive;
+                return payload;
             } catch(fetchErr) {
                 console.warn('Advertencia Wialon Fetch:', fetchErr.message);
-                if (_wialonCache && _wialonCache.length > 0) {
+                if (_wialonCache) {
                     return _wialonCache;
                 }
                 return { error: 'No se pudo conectar con el servidor GPS: ' + fetchErr.message };
@@ -1509,16 +1534,17 @@ router.post('/:metodo', async (req, res) => {
         })();
 
         try {
-            const data = await _wialonInFlightPromise;
+            const result = await _wialonInFlightPromise;
             _wialonInFlightPromise = null;
-            return res.json({ data });
+            if (result && result.data && Array.isArray(result.data)) {
+                return res.json(result);
+            }
+            const data = Array.isArray(result) ? result : [];
+            return res.json({ data, grupos: [] });
         } catch (error) {
             _wialonInFlightPromise = null;
-            console.error("Error Wialon:", error);
-            if (_wialonCache && _wialonCache.length > 0) {
-                return res.json({ data: _wialonCache });
-            }
-            return res.json({ data: { error: error.toString() }});
+            const data = _wialonCache && _wialonCache.data ? _wialonCache.data : (_wialonCache || []);
+            return res.json({ data, grupos: (_wialonCache && _wialonCache.grupos) || [] });
         }
     }
 

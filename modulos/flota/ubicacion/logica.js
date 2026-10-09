@@ -3,10 +3,14 @@
 // ============================================================
 
 window._datosWialonGPS         = window._datosWialonGPS         || [];
-window._filtroGPSActivo        = window._filtroGPSActivo        || '';
-window._filtroEmpresaGPS       = window._filtroEmpresaGPS       || 'todas';
-window._segmentoGPSActivo      = window._segmentoGPSActivo      || 'total';
-window._placaGPSActiva         = window._placaGPSActiva         || null;
+window._datosWialonGrupos      = window._datosWialonGrupos      || [];
+window._filtroGPSActivo        = '';
+window._filtroEmpresaGPS       = 'todas';
+window._segmentoGPSActivo      = 'total';
+window._placaGPSActiva         = null;
+window._gpsModoVista           = window._gpsModoVista           || 'tree'; // 'tree' | 'flat'
+window._gpsVisibilidadPlacas   = window._gpsVisibilidadPlacas   || {};     // { [placa]: boolean }
+window._gpsGruposColapsados    = window._gpsGruposColapsados    || {};     // { [grpId]: boolean }
 
 window._gpsMapInstance         = null;
 window._gpsMarkersMap          = {}; // { PLACA: L.marker }
@@ -49,9 +53,30 @@ window.init_ubicacion = function() {
         return;
     }
 
+    // ── Reseteo estricto de filtros al entrar/re-entrar al módulo ──
+    window._filtroGPSActivo = '';
+    window._filtroEmpresaGPS = 'todas';
+    window._segmentoGPSActivo = 'total';
     window._placaGPSActiva = null;
     window._gpsFirstBoundsFitted = false;
     window._gpsPlaybackActive = false;
+
+    // Limpiar input de búsqueda visualmente
+    var inputBus = document.getElementById('busGPSUnidad');
+    if (inputBus) inputBus.value = '';
+    var btnClear = document.getElementById('btn-clear-search-gps');
+    if (btnClear) btnClear.style.display = 'none';
+
+    // Restaurar botones segmentados activos
+    document.querySelectorAll('#btn-group-gps-empresa .ck-segment-item').forEach(function(el) {
+        el.classList.toggle('active', el.getAttribute('data-empresa') === 'todas');
+    });
+    document.querySelectorAll('#btn-group-gps-filtros .ck-segment-item').forEach(function(el) {
+        el.classList.toggle('active', el.getAttribute('data-filter') === 'total');
+    });
+    document.querySelectorAll('#moduloUbicacionGPS .ck-kpi-card').forEach(function(el) {
+        el.classList.toggle('active', el.id === 'gps-kpi-total');
+    });
 
     // Limpiar temporizadores y animaciones previas
     window.gpsLimpiarTodo();
@@ -61,7 +86,7 @@ window.init_ubicacion = function() {
         ? CACHE.wialon : [];
 
     if (datosCache.length > 0) {
-        window.renderListaUnidadesGPS(datosCache);
+        window.renderListaUnidadesGPS(datosCache, window._datosWialonGrupos || []);
     }
 
     // 2. Cargar biblioteca Leaflet y crear mapa interactivo
@@ -71,7 +96,7 @@ window.init_ubicacion = function() {
         window.gpsInitMap();
 
         if (datosCache.length > 0) {
-            window.renderListaUnidadesGPS(datosCache);
+            window.renderListaUnidadesGPS(datosCache, window._datosWialonGrupos || []);
         }
 
         // 3. Disparar consulta fresca en vivo inmediata
@@ -179,16 +204,16 @@ window.gpsCambiarCapaMapa = function(tipo) {
         }
         window._gpsMapLayers.satelite.addTo(window._gpsMapInstance);
 
-        if (btnSat) { btnSat.className = 'btn btn-sm btn-primary py-1 px-2 fw-bold'; }
-        if (btnStreet) { btnStreet.className = 'btn btn-sm btn-light py-1 px-2 fw-bold text-secondary'; }
+        if (btnSat) { btnSat.classList.add('active'); }
+        if (btnStreet) { btnStreet.classList.remove('active'); }
     } else {
         if (window._gpsMapInstance.hasLayer(window._gpsMapLayers.satelite)) {
             window._gpsMapInstance.removeLayer(window._gpsMapLayers.satelite);
         }
         window._gpsMapLayers.calle.addTo(window._gpsMapInstance);
 
-        if (btnStreet) { btnStreet.className = 'btn btn-sm btn-primary py-1 px-2 fw-bold'; }
-        if (btnSat) { btnSat.className = 'btn btn-sm btn-light py-1 px-2 fw-bold text-secondary'; }
+        if (btnStreet) { btnStreet.classList.add('active'); }
+        if (btnSat) { btnSat.classList.remove('active'); }
     }
 };
 
@@ -241,16 +266,20 @@ window._actualizarGpsEnVivo = function(forzar) {
     })
     .then(function(r) {
         if (!r.ok) {
-            // Manejar 429 (Too Many Requests) o 504 (Gateway Timeout) sin romper JSON
-            return { data: (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon)) ? CACHE.wialon : [] };
+            return {
+                data: (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon)) ? CACHE.wialon : [],
+                grupos: window._datosWialonGrupos || []
+            };
         }
-        return r.json().catch(function() { return { data: [] }; });
+        return r.json().catch(function() { return { data: [], grupos: [] }; });
     })
     .then(function(r) {
         var d = (r && r.data && Array.isArray(r.data)) ? r.data : [];
+        var grps = (r && r.grupos && Array.isArray(r.grupos)) ? r.grupos : [];
+
         if (d.length > 0) {
             if (typeof CACHE !== 'undefined') CACHE.wialon = d;
-            window.renderListaUnidadesGPS(d);
+            window.renderListaUnidadesGPS(d, grps);
             if (!window._gpsPlaybackActive) {
                 window.gpsActualizarMarcadoresMapa(d);
             }
@@ -265,12 +294,15 @@ window._actualizarGpsEnVivo = function(forzar) {
 };
 
 // ------------------------------------------------------------
-// RENDER LISTA UNIDADES (panel izquierdo) Y KPIS
+// RENDER LISTA UNIDADES & ARBOL DE GRUPOS WIALON
 // ------------------------------------------------------------
-window.renderListaUnidadesGPS = function(datos) {
+window.renderListaUnidadesGPS = function(datos, grupos) {
     window._datosWialonGPS = datos || [];
+    if (grupos && Array.isArray(grupos) && grupos.length > 0) {
+        window._datosWialonGrupos = grupos;
+    }
 
-    var total = datos.length;
+    var total = (datos || []).length;
     var online = 0;
     var movimiento = 0;
     var offline = 0;
@@ -284,6 +316,11 @@ window.renderListaUnidadesGPS = function(datos) {
             if (speed > 3) movimiento++;
         } else {
             offline++;
+        }
+
+        // Inicializar visibilidad por defecto en true para cada placa
+        if (w.placa && typeof window._gpsVisibilidadPlacas[w.placa] === 'undefined') {
+            window._gpsVisibilidadPlacas[w.placa] = true;
         }
     });
 
@@ -332,19 +369,221 @@ window.filtrarSegmentoGPS = function(tipo, btn) {
     window.filtrarListaGPS(window._filtroGPSActivo || '');
 };
 
+window.gpsLimpiarBusqueda = function() {
+    var input = document.getElementById('busGPSUnidad');
+    if (input) input.value = '';
+    var btnClear = document.getElementById('btn-clear-search-gps');
+    if (btnClear) btnClear.style.display = 'none';
+    window.filtrarListaGPS('');
+};
+
+window.gpsCambiarModoVista = function(modo) {
+    window._gpsModoVista = modo || 'tree';
+
+    var btnTree = document.getElementById('btnGpsViewTree');
+    var btnFlat = document.getElementById('btnGpsViewFlat');
+    if (btnTree) btnTree.classList.toggle('active', window._gpsModoVista === 'tree');
+    if (btnFlat) btnFlat.classList.toggle('active', window._gpsModoVista === 'flat');
+
+    window.filtrarListaGPS(window._filtroGPSActivo || '');
+};
+
+window.gpsToggleColapsoGrupo = function(grpKey, e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    window._gpsGruposColapsados[grpKey] = !window._gpsGruposColapsados[grpKey];
+    var card = document.getElementById('gps-group-card-' + grpKey);
+    if (card) {
+        card.classList.toggle('is-collapsed', Boolean(window._gpsGruposColapsados[grpKey]));
+    }
+};
+
+window.gpsToggleColapsoTodosGrupos = function() {
+    var cards = document.querySelectorAll('.gps-group-card');
+    if (cards.length === 0) return;
+
+    var anyExpanded = Array.from(cards).some(function(c) { return !c.classList.contains('is-collapsed'); });
+    var icon = document.getElementById('iconGpsToggleExpandAll');
+
+    cards.forEach(function(c) {
+        var grpKey = c.getAttribute('data-group-key');
+        if (anyExpanded) {
+            c.classList.add('is-collapsed');
+            if (grpKey) window._gpsGruposColapsados[grpKey] = true;
+        } else {
+            c.classList.remove('is-collapsed');
+            if (grpKey) window._gpsGruposColapsados[grpKey] = false;
+        }
+    });
+
+    if (icon) {
+        icon.className = anyExpanded ? 'bi bi-arrows-expand' : 'bi bi-arrows-collapse';
+    }
+};
+
+// ------------------------------------------------------------
+// TOGGLES DE VISIBILIDAD EN MAPA CON CHECKBOXES MODERNOS
+// ------------------------------------------------------------
+window.gpsToggleVisibilidadPlaca = function(placa, checked, e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    window._gpsVisibilidadPlacas[placa] = Boolean(checked);
+
+    // Actualizar marcador Leaflet
+    if (window._gpsMapInstance && window._gpsMarkersMap[placa]) {
+        var marker = window._gpsMarkersMap[placa];
+        if (checked) {
+            if (!window._gpsMapInstance.hasLayer(marker)) marker.addTo(window._gpsMapInstance);
+        } else {
+            if (window._gpsMapInstance.hasLayer(marker)) window._gpsMapInstance.removeLayer(marker);
+        }
+    }
+
+    // Actualizar estilos visuales de filas / tarjetas de esa unidad
+    document.querySelectorAll(`[data-placa-unit="${placa}"]`).forEach(function(el) {
+        el.classList.toggle('is-hidden-map', !checked);
+        var chk = el.querySelector('.gps-check-custom');
+        if (chk && chk.checked !== checked) chk.checked = checked;
+    });
+
+    window.gpsActualizarEstadosCheckboxesGrupos();
+    window.gpsActualizarMasterCheckbox();
+};
+
+window.gpsToggleVisibilidadGrupo = function(grpKey, checked, e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    var grpCard = document.getElementById('gps-group-card-' + grpKey);
+    if (!grpCard) return;
+
+    var unitCheckboxes = grpCard.querySelectorAll('.gps-unit-checkbox');
+    unitCheckboxes.forEach(function(chk) {
+        var placa = chk.getAttribute('data-placa');
+        if (placa) {
+            window._gpsVisibilidadPlacas[placa] = Boolean(checked);
+            chk.checked = checked;
+
+            // Actualizar marcador Leaflet
+            if (window._gpsMapInstance && window._gpsMarkersMap[placa]) {
+                var marker = window._gpsMarkersMap[placa];
+                if (checked) {
+                    if (!window._gpsMapInstance.hasLayer(marker)) marker.addTo(window._gpsMapInstance);
+                } else {
+                    if (window._gpsMapInstance.hasLayer(marker)) window._gpsMapInstance.removeLayer(marker);
+                }
+            }
+
+            document.querySelectorAll(`[data-placa-unit="${placa}"]`).forEach(function(el) {
+                el.classList.toggle('is-hidden-map', !checked);
+            });
+        }
+    });
+
+    window.gpsActualizarEstadosCheckboxesGrupos();
+    window.gpsActualizarMasterCheckbox();
+};
+
+window.gpsToggleVisibilidadTodos = function(checked) {
+    (window._datosWialonGPS || []).forEach(function(w) {
+        if (!w.placa) return;
+        window._gpsVisibilidadPlacas[w.placa] = Boolean(checked);
+
+        if (window._gpsMapInstance && window._gpsMarkersMap[w.placa]) {
+            var marker = window._gpsMarkersMap[w.placa];
+            if (checked) {
+                if (!window._gpsMapInstance.hasLayer(marker)) marker.addTo(window._gpsMapInstance);
+            } else {
+                if (window._gpsMapInstance.hasLayer(marker)) window._gpsMapInstance.removeLayer(marker);
+            }
+        }
+    });
+
+    document.querySelectorAll('.gps-check-custom').forEach(function(chk) {
+        chk.checked = checked;
+        chk.indeterminate = false;
+    });
+
+    document.querySelectorAll('.gps-unit-row, .gps-unit-card').forEach(function(el) {
+        el.classList.toggle('is-hidden-map', !checked);
+    });
+
+    window.gpsActualizarMasterCheckbox();
+};
+
+window.gpsActualizarEstadosCheckboxesGrupos = function() {
+    document.querySelectorAll('.gps-group-card').forEach(function(card) {
+        var grpChk = card.querySelector('.gps-group-checkbox');
+        if (!grpChk) return;
+
+        var unitChks = Array.from(card.querySelectorAll('.gps-unit-checkbox'));
+        if (unitChks.length === 0) return;
+
+        var checkedCount = unitChks.filter(function(c) { return c.checked; }).length;
+        if (checkedCount === 0) {
+            grpChk.checked = false;
+            grpChk.indeterminate = false;
+        } else if (checkedCount === unitChks.length) {
+            grpChk.checked = true;
+            grpChk.indeterminate = false;
+        } else {
+            grpChk.checked = false;
+            grpChk.indeterminate = true;
+        }
+
+        var countBadge = card.querySelector('.gps-group-badge-count');
+        if (countBadge) {
+            countBadge.textContent = `${checkedCount}/${unitChks.length}`;
+        }
+    });
+};
+
+window.gpsActualizarMasterCheckbox = function() {
+    var masterChk = document.getElementById('gpsMasterCheckbox');
+    var countCheckedEl = document.getElementById('gpsCheckedUnitsCount');
+    var countTotalEl = document.getElementById('gpsTotalUnitsCount');
+
+    var datos = window._datosWialonGPS || [];
+    var totalUnits = datos.length;
+    var checkedCount = datos.filter(function(w) { return w.placa && window._gpsVisibilidadPlacas[w.placa] !== false; }).length;
+
+    if (countCheckedEl) countCheckedEl.textContent = checkedCount;
+    if (countTotalEl) countTotalEl.textContent = totalUnits;
+
+    if (masterChk) {
+        if (totalUnits === 0 || checkedCount === 0) {
+            masterChk.checked = false;
+            masterChk.indeterminate = false;
+        } else if (checkedCount === totalUnits) {
+            masterChk.checked = true;
+            masterChk.indeterminate = false;
+        } else {
+            masterChk.checked = false;
+            masterChk.indeterminate = true;
+        }
+    }
+};
+
+// ------------------------------------------------------------
+// MOTOR PRINCIPAL DE FILTRADO Y RENDERIZADO DEL SIDEBAR
+// ------------------------------------------------------------
 window.filtrarListaGPS = function(query) {
-    window._filtroGPSActivo = query;
+    window._filtroGPSActivo = query || '';
     var lista = document.getElementById('listaUnidadesGPS');
     if (!lista) return;
 
-    var datos = window._datosWialonGPS;
-    if (!datos || datos.length === 0) {
-        lista.innerHTML = '<div class="text-center py-5 text-muted" style="font-size:0.85rem;">No hay datos GPS disponibles.</div>';
+    var btnClear = document.getElementById('btn-clear-search-gps');
+    if (btnClear) {
+        btnClear.style.display = (query && query.trim().length > 0) ? 'block' : 'none';
+    }
+
+    var datos = window._datosWialonGPS || [];
+    if (datos.length === 0) {
+        lista.innerHTML = '<div class="text-center py-5 text-muted" style="font-size:0.85rem;"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Sincronizando telemetría GPS...</div>';
         return;
     }
 
     var q = (query || '').trim().toUpperCase();
-    var filtrados = datos.filter(function(w) {
+
+    // Función de validación de unidad contra filtros activos
+    var testUnidad = function(w) {
         var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
         var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
         var isIgnition = Boolean(w.ignicion);
@@ -380,14 +619,37 @@ window.filtrarListaGPS = function(query) {
         }
 
         return matchText && matchEmpresa && matchSeg;
-    });
+    };
 
-    if (filtrados.length === 0) {
+    var filtradosTotales = datos.filter(testUnidad);
+
+    if (filtradosTotales.length === 0) {
         lista.innerHTML = '<div class="text-center py-5 text-muted" style="font-size:0.85rem;"><i class="bi bi-search me-1"></i> Sin unidades encontradas con estos filtros.</div>';
+        window.gpsActualizarMasterCheckbox();
         return;
     }
 
-    lista.innerHTML = filtrados.map(function(w) {
+    // Helper para generar el badge de estado
+    var generarStatusBadge = function(w) {
+        var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
+        var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
+        var isMoving = tienePos && speed > 3;
+        var isIgnition = Boolean(w.ignicion);
+        var isRalenti = tienePos && speed <= 3 && isIgnition;
+
+        if (!tienePos) {
+            return '<span class="badge bg-light text-secondary border" style="font-size:0.62rem; border-radius:5px; padding:2px 5px;">Sin Señal</span>';
+        } else if (isMoving) {
+            return `<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold" style="font-size:0.62rem; border-radius:5px; padding:2px 5px;"><i class="bi bi-speedometer2 me-1"></i>${speed} km/h</span>`;
+        } else if (isRalenti) {
+            return '<span class="badge bg-warning-subtle text-warning border border-warning-subtle fw-bold" style="font-size:0.62rem; border-radius:5px; padding:2px 5px; color:#c2410c !important;"><i class="bi bi-fire me-1"></i>Ralentí</span>';
+        } else {
+            return '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold" style="font-size:0.62rem; border-radius:5px; padding:2px 5px;"><i class="bi bi-pause-circle me-1"></i>Detenido</span>';
+        }
+    };
+
+    // Helper para renderizar una fila de unidad (estilo compacto dentro de grupo)
+    var renderFilaUnidad = function(w) {
         var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
         var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
         var isMoving = tienePos && speed > 3;
@@ -395,44 +657,181 @@ window.filtrarListaGPS = function(query) {
         var isRalenti = tienePos && speed <= 3 && isIgnition;
 
         var dotColor = tienePos ? (isMoving ? '#0284c7' : (isRalenti ? '#ea580c' : '#10b981')) : '#94a3b8';
-        
-        var statusBadge = '';
-        if (!tienePos) {
-            statusBadge = '<span class="badge bg-light text-secondary border" style="font-size:0.65rem; border-radius:6px;">Sin Señal</span>';
-        } else if (isMoving) {
-            statusBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold" style="font-size:0.65rem; border-radius:6px;"><i class="bi bi-speedometer2 me-1"></i>${speed} km/h</span>`;
-        } else if (isRalenti) {
-            statusBadge = '<span class="badge bg-warning-subtle text-warning border border-warning-subtle fw-bold" style="font-size:0.65rem; border-radius:6px; color:#c2410c !important;"><i class="bi bi-fire me-1"></i>Ralentí</span>';
-        } else {
-            statusBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle fw-bold" style="font-size:0.65rem; border-radius:6px;"><i class="bi bi-pause-circle me-1"></i>Detenido</span>';
-        }
-
         var isActive = window._placaGPSActiva === (w.placa || '');
+        var isVisible = window._gpsVisibilidadPlacas[w.placa] !== false;
         var safePlc = (w.placa || '').replace(/'/g, "\\'");
-        var dirTextLista = w.ubicacion || w.nombre_wialon || '';
-        var empText = w.empresa ? (w.empresa.includes('TRAHESA') ? 'TRAHESA' : 'MARSISA') : 'MARSISA';
+        var dirText = w.ubicacion || w.nombre_wialon || '';
 
         return `
-        <div class="gps-unit-card${isActive ? ' active' : ''}" id="gps-list-card-${w.placa || ''}" onclick="window.abrirDetalleGPS('${safePlc}')">
+        <div class="gps-unit-row${isActive ? ' active' : ''}${!isVisible ? ' is-hidden-map' : ''}" data-placa-unit="${w.placa || ''}" onclick="window.abrirDetalleGPS('${safePlc}')">
             <div class="d-flex align-items-center gap-2" style="min-width: 0; flex: 1;">
-                <div style="width: 10px; height: 10px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0; box-shadow:0 0 6px ${dotColor};"></div>
+                <input type="checkbox" class="gps-check-custom gps-unit-checkbox" data-placa="${w.placa || ''}" ${isVisible ? 'checked' : ''} onclick="event.stopPropagation()" onchange="window.gpsToggleVisibilidadPlaca('${safePlc}', this.checked, event)" title="Ver en mapa">
+                <div style="width: 8px; height: 8px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0; box-shadow:0 0 5px ${dotColor};"></div>
                 <div style="min-width: 0; flex: 1;">
-                    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                        <span class="gps-unit-plate font-monospace">${w.placa || '—'}</span>
-                        <span class="badge bg-light text-secondary border" style="font-size:0.62rem; padding:2px 5px;">${empText}</span>
-                        ${statusBadge}
+                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                        <span class="font-monospace fw-bold text-dark" style="font-size:0.82rem;">${w.placa || '—'}</span>
+                        ${generarStatusBadge(w)}
                     </div>
-                    <div class="gps-unit-model text-truncate" title="${_gpsEsc(dirTextLista)}" style="max-width: 210px; font-size: 0.72rem;">
-                        ${w.ubicacion ? `<i class="bi bi-geo-alt-fill text-danger me-1"></i>${_gpsEsc(w.ubicacion)}` : _gpsEsc(w.nombre_wialon || '')}
+                    <div class="text-truncate text-secondary" title="${_gpsEsc(dirText)}" style="font-size: 0.68rem; max-width: 175px;">
+                        ${w.ubicacion ? `<i class="bi bi-geo-alt-fill text-danger me-0.5"></i>${_gpsEsc(w.ubicacion)}` : _gpsEsc(w.nombre_wialon || '')}
                     </div>
                 </div>
             </div>
             <div class="text-end font-monospace" style="flex-shrink: 0;">
-                <div class="gps-unit-stat text-primary fw-bold" style="font-size:0.75rem;">${(w.km || 0).toLocaleString()} km</div>
-                <div class="gps-unit-stat text-secondary" style="font-size:0.68rem;">${(w.horas || 0).toLocaleString()} hrs</div>
+                <div class="text-primary fw-bold" style="font-size:0.72rem;">${(w.km || 0).toLocaleString()} km</div>
+                <div class="text-secondary" style="font-size:0.64rem;">${(w.horas || 0).toLocaleString()} hrs</div>
             </div>
         </div>`;
-    }).join('');
+    };
+
+    // ── MODO 1: VISTA EN ÁRBOL / GRUPOS WIALON & EMPRESAS ─────────
+    if (window._gpsModoVista === 'tree') {
+        var wialonGrupos = window._datosWialonGrupos || [];
+        var unitIdMap = {};
+        datos.forEach(function(u) { unitIdMap[u.id] = u; });
+
+        // Si no vinieron grupos de Wialon, sintetizar por empresa
+        var gruposAProcesar = [];
+
+        if (wialonGrupos.length > 0) {
+            gruposAProcesar = wialonGrupos.map(function(g) {
+                var unitsInGrp = (g.unitIds || []).map(function(uid) { return unitIdMap[uid]; }).filter(Boolean);
+                return {
+                    id: String(g.id),
+                    nombre: g.nombre,
+                    units: unitsInGrp
+                };
+            });
+
+            // Detectar unidades fuera de grupos
+            var allAssignedUnitIds = new Set();
+            wialonGrupos.forEach(function(g) { (g.unitIds || []).forEach(function(id) { allAssignedUnitIds.add(id); }); });
+            var outsideUnits = datos.filter(function(u) { return !allAssignedUnitIds.has(u.id); });
+            if (outsideUnits.length > 0) {
+                gruposAProcesar.push({
+                    id: 'outside_groups',
+                    nombre: 'Otras Unidades',
+                    units: outsideUnits
+                });
+            }
+        } else {
+            // Grupos Sintéticos por Empresa
+            var marsisaUnits = datos.filter(function(u) { return (u.empresa || '').includes('MARSISA'); });
+            var trahesaUnits = datos.filter(function(u) { return (u.empresa || '').includes('TRAHESA'); });
+            var otrasUnits = datos.filter(function(u) { return !marsisaUnits.includes(u) && !trahesaUnits.includes(u); });
+
+            gruposAProcesar = [
+                { id: 'flota_total', nombre: 'Flota Total', units: datos },
+                { id: 'marsisa_sac', nombre: 'Marsisa SAC', units: marsisaUnits },
+                { id: 'trahesa_sac', nombre: 'Trahesa SAC', units: trahesaUnits }
+            ];
+            if (otrasUnits.length > 0) {
+                gruposAProcesar.push({ id: 'otras_unidades', nombre: 'Otras Unidades', units: otrasUnits });
+            }
+        }
+
+        // Renderizar Grupos
+        var htmlGrupos = gruposAProcesar.map(function(grp, gIdx) {
+            var matchingUnits = grp.units.filter(testUnidad);
+            if (matchingUnits.length === 0) return ''; // Ocultar grupos vacíos bajo este filtro
+
+            var grpKey = 'grp_' + (grp.id || gIdx).toString().replace(/[^a-zA-Z0-9_]/g, '_');
+            
+            // Si el usuario está buscando texto, auto-expandir grupos que tienen coincidencias
+            var isAutoExpandedBySearch = q.length > 0;
+            var isCollapsed = isAutoExpandedBySearch ? false : Boolean(window._gpsGruposColapsados[grpKey]);
+
+            var checkedCount = matchingUnits.filter(function(u) { return window._gpsVisibilidadPlacas[u.placa] !== false; }).length;
+            var isAllChecked = checkedCount === matchingUnits.length;
+            var isNoneChecked = checkedCount === 0;
+            var isIndeterminate = !isAllChecked && !isNoneChecked;
+
+            // Icono alusivo según el nombre del grupo
+            var grpIcon = 'bi-truck';
+            var grpNameUpper = (grp.nombre || '').toUpperCase();
+            if (grpNameUpper.includes('THERMO') || grpNameUpper.includes('TEMP')) {
+                grpIcon = 'bi-thermometer-half text-info';
+            } else if (grpNameUpper.includes('FLOTA TOTAL')) {
+                grpIcon = 'bi-collection-fill text-primary';
+            } else if (grpNameUpper.includes('MARSISA')) {
+                grpIcon = 'bi-building text-primary';
+            } else if (grpNameUpper.includes('TRAHESA')) {
+                grpIcon = 'bi-building text-warning';
+            } else if (grpNameUpper.includes('YOGUI')) {
+                grpIcon = 'bi-truck text-success';
+            }
+
+            var rowsHtml = matchingUnits.map(renderFilaUnidad).join('');
+
+            return `
+            <div class="gps-group-card${isCollapsed ? ' is-collapsed' : ''}" id="gps-group-card-${grpKey}" data-group-key="${grpKey}">
+                <div class="gps-group-header" onclick="window.gpsToggleColapsoGrupo('${grpKey}', event)">
+                    <div class="d-flex align-items-center gap-2" style="min-width:0; flex:1;">
+                        <span class="gps-group-chevron"><i class="bi bi-chevron-right"></i></span>
+                        <input type="checkbox" class="gps-check-custom gps-group-checkbox" ${isAllChecked ? 'checked' : ''} ${isIndeterminate ? 'data-indeterminate="true"' : ''} onclick="event.stopPropagation()" onchange="window.gpsToggleVisibilidadGrupo('${grpKey}', this.checked, event)" title="Mostrar/Ocultar todo el grupo">
+                        <i class="bi ${grpIcon}" style="font-size:0.85rem;"></i>
+                        <span class="gps-group-title" title="${_gpsEsc(grp.nombre)}">
+                            (${grp.units.length}) ${_gpsEsc(grp.nombre)}
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1.5 flex-shrink-0">
+                        <span class="gps-group-badge-count">${checkedCount}/${matchingUnits.length}</span>
+                    </div>
+                </div>
+                <div class="gps-group-units">
+                    ${rowsHtml}
+                </div>
+            </div>`;
+        }).filter(Boolean).join('');
+
+        lista.innerHTML = htmlGrupos || '<div class="text-center py-5 text-muted" style="font-size:0.85rem;"><i class="bi bi-search me-1"></i> Sin unidades encontradas en grupos.</div>';
+
+        // Aplicar estado indeterminado a checkboxes de grupo en DOM
+        document.querySelectorAll('.gps-group-card input[data-indeterminate="true"]').forEach(function(chk) {
+            chk.indeterminate = true;
+        });
+
+    } else {
+        // ── MODO 2: VISTA LISTA PLANA ──────────────────────────────
+        lista.innerHTML = filtradosTotales.map(function(w) {
+            var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
+            var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
+            var isMoving = tienePos && speed > 3;
+            var isIgnition = Boolean(w.ignicion);
+            var isRalenti = tienePos && speed <= 3 && isIgnition;
+
+            var dotColor = tienePos ? (isMoving ? '#0284c7' : (isRalenti ? '#ea580c' : '#10b981')) : '#94a3b8';
+            var isActive = window._placaGPSActiva === (w.placa || '');
+            var isVisible = window._gpsVisibilidadPlacas[w.placa] !== false;
+            var safePlc = (w.placa || '').replace(/'/g, "\\'");
+            var dirTextLista = w.ubicacion || w.nombre_wialon || '';
+            var empText = w.empresa ? (w.empresa.includes('TRAHESA') ? 'TRAHESA' : 'MARSISA') : 'MARSISA';
+
+            return `
+            <div class="gps-unit-card${isActive ? ' active' : ''}${!isVisible ? ' is-hidden-map' : ''}" data-placa-unit="${w.placa || ''}" id="gps-list-card-${w.placa || ''}" onclick="window.abrirDetalleGPS('${safePlc}')">
+                <div class="d-flex align-items-center gap-2" style="min-width: 0; flex: 1;">
+                    <input type="checkbox" class="gps-check-custom gps-unit-checkbox" data-placa="${w.placa || ''}" ${isVisible ? 'checked' : ''} onclick="event.stopPropagation()" onchange="window.gpsToggleVisibilidadPlaca('${safePlc}', this.checked, event)" title="Ver en mapa">
+                    <div style="width: 10px; height: 10px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0; box-shadow:0 0 6px ${dotColor};"></div>
+                    <div style="min-width: 0; flex: 1;">
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <span class="gps-unit-plate font-monospace">${w.placa || '—'}</span>
+                            <span class="badge bg-light text-secondary border" style="font-size:0.62rem; padding:2px 5px;">${empText}</span>
+                            ${generarStatusBadge(w)}
+                        </div>
+                        <div class="gps-unit-model text-truncate" title="${_gpsEsc(dirTextLista)}" style="max-width: 200px; font-size: 0.72rem;">
+                            ${w.ubicacion ? `<i class="bi bi-geo-alt-fill text-danger me-1"></i>${_gpsEsc(w.ubicacion)}` : _gpsEsc(w.nombre_wialon || '')}
+                        </div>
+                    </div>
+                </div>
+                <div class="text-end font-monospace" style="flex-shrink: 0;">
+                    <div class="gps-unit-stat text-primary fw-bold" style="font-size:0.75rem;">${(w.km || 0).toLocaleString()} km</div>
+                    <div class="gps-unit-stat text-secondary" style="font-size:0.68rem;">${(w.horas || 0).toLocaleString()} hrs</div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    window.gpsActualizarMasterCheckbox();
 };
 
 // ------------------------------------------------------------
@@ -559,7 +958,10 @@ window.gpsActualizarMarcadoresMapa = function(datos) {
         }
 
         var targetLatLng = [w.lat, w.lng];
-        validCoords.push(targetLatLng);
+        var isVisible = window._gpsVisibilidadPlacas[placa] !== false;
+        if (isVisible) {
+            validCoords.push(targetLatLng);
+        }
 
         var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
         var isMoving = speed > 3;
@@ -572,14 +974,22 @@ window.gpsActualizarMarcadoresMapa = function(datos) {
             var startPos = marker.getLatLng();
             window.gpsAnimarMovimientoSuave(placa, marker, [startPos.lat, startPos.lng], targetLatLng, 3800);
             marker.setIcon(customIcon);
+            if (isVisible) {
+                if (!map.hasLayer(marker)) marker.addTo(map);
+            } else {
+                if (map.hasLayer(marker)) map.removeLayer(marker);
+            }
         } else {
             // Crear marcador satelital interactivo (sin popup superpuesto duplicado)
-            var newMarker = L.marker(targetLatLng, { icon: customIcon }).addTo(map);
+            var newMarker = L.marker(targetLatLng, { icon: customIcon });
             newMarker.on('click', function(e) {
                 if (L.DomEvent) L.DomEvent.stopPropagation(e);
                 window.abrirDetalleGPS(placa);
             });
             window._gpsMarkersMap[placa] = newMarker;
+            if (isVisible) {
+                newMarker.addTo(map);
+            }
         }
     });
 
