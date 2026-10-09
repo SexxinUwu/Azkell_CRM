@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Azkell Fleet TV — Centro de Control y Monitoreo Satelital</title>
+    <title>Azkell Fleet — Centro de Control Smart TV & War Room</title>
     
     <!-- Meta tags para Smart TV y Pantallas Grandes -->
-    <meta name="theme-color" content="#070b14">
+    <meta name="theme-color" content="#f8fafc">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="icon" type="image/png" href="/favicon-2003.png">
     
     <!-- Google Fonts: Plus Jakarta Sans, Outfit & JetBrains Mono -->
@@ -25,21 +25,44 @@
 
     <style>
         :root {
-            --tv-bg: #070b14;
-            --tv-surface: rgba(13, 21, 39, 0.88);
-            --tv-surface-card: rgba(18, 29, 54, 0.75);
-            --tv-surface-hover: rgba(30, 48, 86, 0.95);
-            --tv-border: rgba(56, 189, 248, 0.18);
-            --tv-border-bright: rgba(56, 189, 248, 0.6);
-            --tv-accent-cyan: #00f0ff;
-            --tv-accent-blue: #38bdf8;
-            --tv-accent-green: #10b981;
-            --tv-accent-amber: #f59e0b;
-            --tv-accent-red: #ef4444;
-            --tv-accent-purple: #8b5cf6;
-            --tv-text-main: #f8fafc;
-            --tv-text-muted: #94a3b8;
-            --tv-focus-glow: 0 0 0 3px #00f0ff, 0 0 28px rgba(0, 240, 255, 0.65);
+            --tv-bg: #f1f5f9;
+            --tv-surface: #ffffff;
+            --tv-surface-subtle: #f8fafc;
+            --tv-surface-hover: #f1f5f9;
+            --tv-border: #e2e8f0;
+            --tv-border-hover: #cbd5e1;
+            
+            --tv-primary: #0284c7;
+            --tv-primary-subtle: #e0f2fe;
+            --tv-primary-text: #0369a1;
+
+            --tv-success: #10b981;
+            --tv-success-subtle: #dcfce7;
+            --tv-success-text: #15803d;
+
+            --tv-amber: #f59e0b;
+            --tv-amber-subtle: #fef3c7;
+            --tv-amber-text: #b45309;
+
+            --tv-danger: #ef4444;
+            --tv-danger-subtle: #fee2e2;
+            --tv-danger-text: #b91c1c;
+
+            --tv-purple: #8b5cf6;
+            --tv-purple-subtle: #ede9fe;
+            --tv-purple-text: #6d28d9;
+
+            --tv-text-main: #0f172a;
+            --tv-text-muted: #64748b;
+            --tv-text-light: #94a3b8;
+
+            --tv-shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --tv-shadow: 0 4px 16px -2px rgba(0,0,0,0.06), 0 2px 6px -1px rgba(0,0,0,0.03);
+            --tv-shadow-lg: 0 10px 25px -4px rgba(0,0,0,0.08), 0 4px 10px -2px rgba(0,0,0,0.03);
+            --tv-shadow-focus: 0 0 0 3px rgba(2, 132, 199, 0.35);
+
+            --tv-radius: 16px;
+            --tv-radius-sm: 10px;
         }
 
         * {
@@ -57,1061 +80,1878 @@
             background-color: var(--tv-bg);
             color: var(--tv-text-main);
             font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-            font-size: 16px;
+            font-size: 15px;
         }
 
-        /* ── TV CANVAS & MAP ─────────────────────────────────────── */
-        #tvMapContainer {
-            position: absolute;
+        /* ── PROGRESS BAR CARRUSEL TV ────────────────────────────── */
+        #tvCarouselProgressBar {
+            position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            background: #0b1120;
+            height: 4px;
+            width: 0%;
+            background: linear-gradient(90deg, #0284c7, #38bdf8, #10b981);
+            z-index: 9999;
+            transition: width 0.3s linear;
         }
 
-        .leaflet-container {
-            background: #0b1120 !important;
-            font-family: inherit;
+        /* ── APP WRAPPER ─────────────────────────────────────────── */
+        .tv-app-shell {
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        /* ── TOP HUD HEADER ─────────────────────────────────────── */
-        .tv-hud-header {
-            position: absolute;
-            top: 20px;
-            left: 24px;
-            right: 24px;
-            height: 64px;
-            z-index: 50;
+        /* ── TOP NAV & CONTROL BAR ───────────────────────────────── */
+        .tv-header-bar {
+            height: 72px;
+            background: var(--tv-surface);
+            border-bottom: 1px solid var(--tv-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
-            background: var(--tv-surface);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid var(--tv-border);
-            border-radius: 18px;
-            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+            padding: 0 24px;
+            box-shadow: var(--tv-shadow-sm);
+            z-index: 100;
+            flex-shrink: 0;
         }
 
-        .tv-brand {
+        .tv-brand-box {
             display: flex;
             align-items: center;
             gap: 12px;
         }
-        .tv-logo-badge {
-            width: 40px;
-            height: 40px;
+        .tv-brand-logo {
+            width: 44px;
+            height: 44px;
             background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
-            font-size: 1.35rem;
-            box-shadow: 0 0 20px rgba(2, 132, 199, 0.5);
+            color: #ffffff;
+            font-size: 1.4rem;
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3);
+            overflow: hidden;
+        }
+        .tv-brand-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .tv-brand-text {
+            display: flex;
+            flex-direction: column;
         }
         .tv-brand-title {
             font-family: 'Outfit', sans-serif;
             font-size: 1.25rem;
             font-weight: 800;
-            letter-spacing: 0.5px;
-            color: #fff;
+            color: var(--tv-text-main);
+            line-height: 1.1;
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        .tv-brand-tag {
+        .tv-live-tag {
             font-size: 0.65rem;
             font-weight: 700;
             padding: 2px 7px;
-            background: rgba(0, 240, 255, 0.15);
-            color: var(--tv-accent-cyan);
-            border: 1px solid rgba(0, 240, 255, 0.35);
-            border-radius: 6px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .tv-hud-center {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-        .tv-live-pill {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: var(--tv-accent-green);
-            background: rgba(16, 185, 129, 0.12);
-            padding: 5px 12px;
-            border-radius: 20px;
+            background: var(--tv-success-subtle);
+            color: var(--tv-success-text);
             border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            letter-spacing: 0.5px;
         }
-        .tv-pulse-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--tv-accent-green);
+        .tv-live-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--tv-success);
             border-radius: 50%;
-            box-shadow: 0 0 10px var(--tv-accent-green);
-            animation: tvPulse 1.6s infinite;
+            animation: tvPulse 1.5s infinite;
         }
         @keyframes tvPulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1.15); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+            0% { transform: scale(0.9); opacity: 0.7; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.7; }
         }
 
-        .tv-clock-wrap {
-            text-align: right;
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .tv-clock-time {
-            font-size: 1.15rem;
-            font-weight: 800;
-            color: #fff;
-            letter-spacing: 1px;
-        }
-        .tv-clock-date {
-            font-size: 0.65rem;
-            color: var(--tv-text-muted);
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .tv-kpis-summary {
+        /* ── TABS NAVEGACIÓN (VISTAS) ────────────────────────────── */
+        .tv-tabs-nav {
             display: flex;
             align-items: center;
-            gap: 10px;
+            background: var(--tv-bg);
+            padding: 5px;
+            border-radius: 14px;
+            border: 1px solid var(--tv-border);
+            gap: 6px;
         }
-        .tv-kpi-chip {
+        .tv-tab-btn {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 8px 18px;
+            border-radius: 10px;
+            background: transparent;
+            border: none;
+            color: var(--tv-text-muted);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+        .tv-tab-btn:hover {
+            color: var(--tv-text-main);
+            background: rgba(255, 255, 255, 0.6);
+        }
+        .tv-tab-btn.active {
+            background: var(--tv-surface);
+            color: var(--tv-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .tv-tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 18px;
+            height: 3px;
+            background: var(--tv-primary);
+            border-radius: 3px;
+        }
+        .tv-tab-badge {
+            font-size: 0.75rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            background: var(--tv-border);
+            color: var(--tv-text-muted);
+        }
+        .tv-tab-btn.active .tv-tab-badge {
+            background: var(--tv-primary-subtle);
+            color: var(--tv-primary-text);
+        }
+        .tv-tab-badge.danger {
+            background: var(--tv-danger-subtle);
+            color: var(--tv-danger-text);
+        }
+
+        /* ── HEADER RIGHT TOOLS ──────────────────────────────────── */
+        .tv-header-tools {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .tv-clock-pill {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            padding: 6px 14px;
+            background: var(--tv-surface-subtle);
+            border: 1px solid var(--tv-border);
+            border-radius: 12px;
+        }
+        .tv-clock-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--tv-text-main);
+            letter-spacing: 0.5px;
+            line-height: 1;
+        }
+        .tv-clock-date {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--tv-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+        .tv-action-btn {
+            height: 42px;
+            padding: 0 14px;
+            border-radius: 12px;
+            border: 1px solid var(--tv-border);
+            background: var(--tv-surface);
+            color: var(--tv-text-main);
+            font-weight: 700;
+            font-size: 0.85rem;
             display: flex;
             align-items: center;
             gap: 7px;
-            padding: 6px 12px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            font-size: 0.75rem;
-            font-weight: 700;
             cursor: pointer;
             transition: all 0.2s ease;
+            box-shadow: var(--tv-shadow-sm);
         }
-        .tv-kpi-chip.active, .tv-kpi-chip:focus {
-            background: rgba(56, 189, 248, 0.2);
-            border-color: var(--tv-accent-cyan);
-            box-shadow: var(--tv-focus-glow);
-            outline: none;
+        .tv-action-btn:hover {
+            background: var(--tv-surface-hover);
+            border-color: var(--tv-border-hover);
         }
-        .tv-kpi-num {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.92rem;
-            font-weight: 800;
+        .tv-action-btn.active {
+            background: var(--tv-primary);
+            color: #ffffff;
+            border-color: var(--tv-primary);
         }
-        .tv-kpi-chip.route .tv-kpi-num { color: var(--tv-accent-green); }
-        .tv-kpi-chip.idle .tv-kpi-num { color: var(--tv-accent-amber); }
-        .tv-kpi-chip.stop .tv-kpi-num { color: var(--tv-accent-red); }
 
-        /* ── LEFT DRAWER: FLEET UNITS LIST ───────────────────────── */
-        .tv-fleet-sidebar {
+        /* ── MAIN CONTENT AREA (VISTAS) ──────────────────────────── */
+        .tv-view-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .tv-view-pane {
             position: absolute;
-            top: 100px;
-            left: 24px;
-            bottom: 74px;
-            width: 360px;
-            z-index: 40;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        .tv-view-pane.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* ── KPI STRIP UNIVERSAL (CASILLAS UNIFORMES) ────────────── */
+        .tv-kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            padding: 18px 24px 14px 24px;
+            background: transparent;
+            flex-shrink: 0;
+        }
+        .tv-kpi-card {
             background: var(--tv-surface);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--tv-border);
-            border-radius: 20px;
-            box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55);
+            border-radius: var(--tv-radius);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--tv-shadow);
+            transition: all 0.2s ease;
+            height: 84px;
+        }
+        .tv-kpi-icon-wrap {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+        .tv-kpi-icon-wrap.blue { background: #e0f2fe; color: #0284c7; }
+        .tv-kpi-icon-wrap.green { background: #dcfce7; color: #10b981; }
+        .tv-kpi-icon-wrap.amber { background: #fef3c7; color: #f59e0b; }
+        .tv-kpi-icon-wrap.red { background: #fee2e2; color: #ef4444; }
+        .tv-kpi-icon-wrap.purple { background: #ede9fe; color: #8b5cf6; }
+        .tv-kpi-icon-wrap.gray { background: #f1f5f9; color: #64748b; }
+
+        .tv-kpi-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .tv-kpi-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--tv-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            white-space: nowrap;
+        }
+        .tv-kpi-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--tv-text-main);
+            line-height: 1.1;
+            margin-top: 1px;
+        }
+
+        /* ── VISTA 1: UBICACIÓN GPS FLOTA ────────────────────────── */
+        .tv-gps-body {
+            flex: 1;
+            display: flex;
+            padding: 0 24px 18px 24px;
+            gap: 18px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Lateral Izquierdo de Unidades */
+        .tv-units-panel {
+            width: 380px;
+            background: var(--tv-surface);
+            border: 1px solid var(--tv-border);
+            border-radius: var(--tv-radius);
+            box-shadow: var(--tv-shadow);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+            flex-shrink: 0;
         }
-
-        .tv-sidebar-head {
+        .tv-units-header {
             padding: 14px 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .tv-sidebar-title {
-            font-size: 0.88rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: #e2e8f0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .tv-units-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
+            border-bottom: 1px solid var(--tv-border);
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(56, 189, 248, 0.3) transparent;
+            gap: 10px;
+            background: var(--tv-surface);
         }
-        .tv-units-list::-webkit-scrollbar {
-            width: 5px;
-        }
-        .tv-units-list::-webkit-scrollbar-thumb {
-            background: rgba(56, 189, 248, 0.3);
-            border-radius: 10px;
-        }
-
-        .tv-unit-card {
-            background: var(--tv-surface-card);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 14px;
-            padding: 10px 12px;
-            cursor: pointer;
-            transition: all 0.22s ease;
+        .tv-search-input-box {
             position: relative;
-            outline: none;
+            width: 100%;
         }
-        .tv-unit-card:hover, .tv-unit-card:focus, .tv-unit-card.is-selected {
-            background: var(--tv-surface-hover);
-            border-color: var(--tv-accent-cyan);
-            transform: translateX(4px) scale(1.01);
-            box-shadow: var(--tv-focus-glow);
+        .tv-search-input-box i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--tv-text-muted);
+            font-size: 0.95rem;
+        }
+        .tv-search-input {
+            width: 100%;
+            height: 38px;
+            padding: 0 12px 0 36px;
+            border-radius: 20px;
+            border: 1px solid var(--tv-border);
+            background: var(--tv-bg);
+            font-family: inherit;
+            font-size: 0.85rem;
+            color: var(--tv-text-main);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .tv-search-input:focus {
+            border-color: var(--tv-primary);
+            background: #ffffff;
+            box-shadow: var(--tv-shadow-focus);
+        }
+        .tv-filter-chips {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .tv-filter-chips::-webkit-scrollbar { display: none; }
+        .tv-chip {
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: var(--tv-bg);
+            border: 1px solid var(--tv-border);
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--tv-text-muted);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s ease;
+        }
+        .tv-chip.active {
+            background: var(--tv-primary-subtle);
+            color: var(--tv-primary-text);
+            border-color: rgba(2, 132, 199, 0.4);
         }
 
-        .tv-unit-card-top {
+        .tv-units-list-wrap {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 10px;
+            scrollbar-width: thin;
+        }
+        .tv-group-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 5px;
+            padding: 8px 10px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: var(--tv-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: var(--tv-surface-subtle);
+            border-radius: 8px;
+            margin: 6px 0 4px 0;
         }
-        .tv-plate-badge {
+        .tv-unit-card {
+            background: var(--tv-surface);
+            border: 1px solid var(--tv-border);
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .tv-unit-card:hover {
+            border-color: var(--tv-primary);
+            background: #f0f9ff;
+        }
+        .tv-unit-card.active, .tv-unit-card:focus {
+            border-color: var(--tv-primary);
+            background: #e0f2fe;
+            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.4);
+            outline: none;
+        }
+        .tv-unit-row-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .tv-unit-plate {
             font-family: 'JetBrains Mono', monospace;
             font-size: 1rem;
             font-weight: 800;
-            color: #fff;
+            color: var(--tv-text-main);
             letter-spacing: 0.5px;
         }
-        .tv-speed-badge {
+        .tv-speed-pill {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.78rem;
-            font-weight: 800;
-            padding: 2px 8px;
-            border-radius: 8px;
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--tv-accent-green);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-        .tv-speed-badge.stopped {
-            background: rgba(239, 68, 68, 0.12);
-            color: #fca5a5;
-            border-color: rgba(239, 68, 68, 0.25);
-        }
-        .tv-speed-badge.idle {
-            background: rgba(245, 158, 11, 0.15);
-            color: #fcd34d;
-            border-color: rgba(245, 158, 11, 0.3);
-        }
-
-        .tv-unit-meta {
             font-size: 0.72rem;
-            color: var(--tv-text-muted);
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+        }
+        .tv-speed-pill.moving { background: #dcfce7; color: #15803d; }
+        .tv-speed-pill.stopped { background: #fee2e2; color: #b91c1c; }
+        .tv-speed-pill.idle { background: #fef3c7; color: #b45309; }
+
+        .tv-unit-row-mid {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-top: 3px;
+            font-size: 0.74rem;
+            color: var(--tv-text-muted);
+            font-weight: 600;
         }
-        .tv-unit-driver {
+        .tv-unit-address {
+            font-size: 0.72rem;
+            color: var(--tv-text-light);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 170px;
-            font-weight: 600;
-            color: #cbd5e1;
+            margin-top: 1px;
         }
 
-        /* ── RIGHT TELEMETRY HUD (WAR ROOM GAUGES) ───────────────── */
-        .tv-telemetry-hud {
-            position: absolute;
-            top: 100px;
-            right: 24px;
-            width: 380px;
-            z-index: 40;
+        /* Mapa Central */
+        .tv-map-wrapper {
+            flex: 1;
             background: var(--tv-surface);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--tv-border);
-            border-radius: 20px;
-            box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55);
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            animation: tvSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: var(--tv-radius);
+            box-shadow: var(--tv-shadow);
+            overflow: hidden;
+            position: relative;
         }
-        @keyframes tvSlideIn {
-            from { transform: translateX(30px); opacity: 0; }
+        #tvMap {
+            width: 100%;
+            height: 100%;
+            background: #e2e8f0;
+        }
+
+        /* Map Controls Floating Overlay */
+        .tv-map-tools {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
+            padding: 6px;
+            border-radius: 12px;
+            border: 1px solid var(--tv-border);
+            box-shadow: var(--tv-shadow);
+        }
+        .tv-map-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--tv-text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tv-map-btn.active {
+            background: var(--tv-primary);
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
+        }
+
+        /* Floating Telemetry Box on Unit Click */
+        .tv-telemetry-drawer {
+            position: absolute;
+            top: 80px;
+            right: 16px;
+            width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--tv-border);
+            border-radius: 18px;
+            box-shadow: var(--tv-shadow-lg);
+            padding: 16px;
+            z-index: 500;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            animation: tvDrawerSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes tvDrawerSlide {
+            from { transform: translateX(20px); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-
-        .tv-telemetry-header {
+        .tv-drawer-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid var(--tv-border);
+            padding-bottom: 8px;
         }
-        .tv-telemetry-plate {
+        .tv-drawer-plate {
             font-family: 'Outfit', sans-serif;
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             font-weight: 900;
-            color: #fff;
-            letter-spacing: 0.5px;
+            color: var(--tv-text-main);
         }
-        .tv-status-tag {
-            font-size: 0.70rem;
-            font-weight: 800;
-            padding: 3px 9px;
-            border-radius: 8px;
-            text-transform: uppercase;
-        }
-
-        .tv-gauge-card {
-            background: var(--tv-surface-card);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 16px;
-            padding: 12px 14px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .tv-speed-big {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: var(--tv-accent-cyan);
-            line-height: 1;
-            text-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
-        }
-        .tv-speed-unit {
-            font-size: 0.80rem;
+        .tv-drawer-close {
+            background: transparent;
+            border: none;
+            font-size: 1.2rem;
             color: var(--tv-text-muted);
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            cursor: pointer;
         }
-
-        .tv-metrics-grid {
+        .tv-drawer-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
         }
-        .tv-metric-box {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 12px;
+        .tv-drawer-box {
+            background: var(--tv-surface-subtle);
+            border: 1px solid var(--tv-border);
+            border-radius: 10px;
             padding: 8px 10px;
         }
-        .tv-metric-lbl {
-            font-size: 0.62rem;
+        .tv-drawer-lbl {
+            font-size: 0.65rem;
+            font-weight: 700;
             color: var(--tv-text-muted);
             text-transform: uppercase;
+        }
+        .tv-drawer-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--tv-text-main);
+            margin-top: 2px;
+        }
+
+        /* ── VISTAS 2, 3, 4: TABLAS DE GESTIÓN ERP (LIGHT MODE) ──── */
+        .tv-table-view-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 0 24px 18px 24px;
+            overflow: hidden;
+        }
+        .tv-table-card {
+            flex: 1;
+            background: var(--tv-surface);
+            border: 1px solid var(--tv-border);
+            border-radius: var(--tv-radius);
+            box-shadow: var(--tv-shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .tv-table-header-strip {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--tv-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--tv-surface);
+            flex-shrink: 0;
+        }
+        .tv-table-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--tv-text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tv-table-subtitle {
+            font-size: 0.78rem;
+            color: var(--tv-text-muted);
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        .tv-table-scroll-wrap {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+        .tv-modern-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+        .tv-modern-table thead {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            z-index: 10;
+        }
+        .tv-modern-table th {
+            padding: 12px 16px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--tv-text-muted);
+            border-bottom: 1px solid var(--tv-border);
+            white-space: nowrap;
+        }
+        .tv-modern-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--tv-border);
+            color: var(--tv-text-main);
+            font-weight: 500;
+            vertical-align: middle;
+        }
+        .tv-modern-table tbody tr {
+            transition: background 0.15s ease;
+            cursor: pointer;
+        }
+        .tv-modern-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        .tv-modern-table tbody tr.active, .tv-modern-table tbody tr:focus {
+            background: #e0f2fe !important;
+            outline: none;
+        }
+
+        /* Status Pills in Tables */
+        .tv-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.76rem;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            text-transform: capitalize;
+            white-space: nowrap;
+        }
+        .tv-status-badge.success { background: var(--tv-success-subtle); color: var(--tv-success-text); }
+        .tv-status-badge.warning { background: var(--tv-amber-subtle); color: var(--tv-amber-text); }
+        .tv-status-badge.danger { background: var(--tv-danger-subtle); color: var(--tv-danger-text); }
+        .tv-status-badge.info { background: var(--tv-primary-subtle); color: var(--tv-primary-text); }
+        .tv-status-badge.purple { background: var(--tv-purple-subtle); color: var(--tv-purple-text); }
+        .tv-status-badge.slate { background: #f1f5f9; color: #475569; }
+
+        /* ── BOTTOM CONTROL & TICKER BAR ─────────────────────────── */
+        .tv-footer-bar {
+            height: 48px;
+            background: var(--tv-surface);
+            border-top: 1px solid var(--tv-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+            z-index: 100;
+        }
+        .tv-ticker-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            overflow: hidden;
+            flex: 1;
+        }
+        .tv-ticker-tag {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: var(--tv-primary-subtle);
+            color: var(--tv-primary-text);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            flex-shrink: 0;
             display: flex;
             align-items: center;
             gap: 5px;
         }
-        .tv-metric-val {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.95rem;
-            font-weight: 800;
-            color: #f1f5f9;
-            margin-top: 2px;
-        }
-
-        /* ── BOTTOM EVENT TICKER & REMOTE CONTROL HINTS ──────────── */
-        .tv-bottom-bar {
-            position: absolute;
-            bottom: 14px;
-            left: 24px;
-            right: 24px;
-            height: 48px;
-            z-index: 50;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 16px;
-            background: var(--tv-surface);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--tv-border);
-            border-radius: 14px;
-            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
-        }
-
-        .tv-ticker-wrap {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex: 1;
-            overflow: hidden;
-        }
-        .tv-ticker-tag {
-            font-size: 0.65rem;
-            font-weight: 800;
-            padding: 3px 8px;
-            background: rgba(239, 68, 68, 0.2);
-            color: #f87171;
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            border-radius: 6px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            flex-shrink: 0;
-        }
-        .tv-ticker-text {
-            font-size: 0.78rem;
-            color: #e2e8f0;
+        .tv-ticker-msg {
+            font-size: 0.82rem;
+            color: var(--tv-text-muted);
+            font-weight: 600;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            font-family: 'JetBrains Mono', monospace;
         }
 
-        .tv-remote-keys {
+        .tv-remote-shortcuts {
             display: flex;
             align-items: center;
             gap: 14px;
             flex-shrink: 0;
         }
-        .tv-key-hint {
+        .tv-key-guide {
             display: flex;
             align-items: center;
-            gap: 5px;
-            font-size: 0.68rem;
-            color: var(--tv-text-muted);
+            gap: 6px;
+            font-size: 0.75rem;
             font-weight: 600;
+            color: var(--tv-text-muted);
         }
-        .tv-btn-pill {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
-            font-weight: 800;
+        .tv-key-btn {
             padding: 2px 7px;
             border-radius: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
+            background: var(--tv-bg);
+            border: 1px solid var(--tv-border);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.74rem;
+            font-weight: 800;
+            color: var(--tv-text-main);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
-        /* ── MODALS (QR PAIRING & HELP) ──────────────────────────── */
-        .tv-modal-backdrop {
+        /* ── MODAL QR / DETALLE ──────────────────────────────────── */
+        .tv-modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(16px);
-            z-index: 100;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
             display: none;
             align-items: center;
             justify-content: center;
         }
-        .tv-modal-backdrop.is-open {
-            display: flex;
-        }
-        .tv-modal-card {
-            background: #0d1527;
-            border: 1px solid var(--tv-accent-cyan);
-            border-radius: 24px;
-            padding: 30px;
-            width: 480px;
+        .tv-modal-dialog {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 28px;
+            width: 440px;
+            max-width: 90vw;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--tv-border);
             text-align: center;
-            box-shadow: 0 0 50px rgba(0, 240, 255, 0.25);
-            animation: tvModalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes tvModalPop {
-            from { transform: scale(0.9); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
-        .tv-qr-box {
-            background: #fff;
-            padding: 16px;
-            border-radius: 16px;
-            display: inline-block;
-            margin: 20px 0;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-        }
-
-        /* ── CUSTOM MAP MARKERS ──────────────────────────────────── */
-        .tv-custom-marker {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            position: relative;
+            gap: 14px;
+        }
+        .tv-qr-container {
+            padding: 14px;
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid var(--tv-border);
+            box-shadow: var(--tv-shadow-sm);
+        }
+
+        /* ── LEAFLET CUSTOM MARKER PIN ───────────────────────────── */
+        .tv-marker-pin {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+        }
+        .tv-marker-bubble {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 2px 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 800;
+            color: #0f172a;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            white-space: nowrap;
+            margin-bottom: 2px;
         }
         .tv-marker-icon-box {
-            width: 38px;
-            height: 38px;
-            background: #0f172a;
-            border: 2px solid #00f0ff;
-            border-radius: 10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #0284c7;
+            color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
-            font-size: 1.1rem;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
-            transition: transform 0.25s ease;
+            font-size: 14px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+            border: 2px solid #ffffff;
+            transition: transform 0.2s ease;
         }
-        .tv-marker-icon-box.stopped {
-            border-color: #ef4444;
-            box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
-        }
-        .tv-marker-label {
-            position: absolute;
-            top: -24px;
-            background: rgba(15, 23, 42, 0.95);
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.70rem;
-            font-weight: 800;
-            padding: 2px 6px;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            white-space: nowrap;
-            pointer-events: none;
-        }
+        .tv-marker-icon-box.moving { background: #10b981; }
+        .tv-marker-icon-box.stopped { background: #ef4444; }
+        .tv-marker-icon-box.idle { background: #f59e0b; }
     </style>
 </head>
 <body>
 
-    <!-- MAP CANVAS -->
-    <div id="tvMapContainer"></div>
+<div id="tvCarouselProgressBar"></div>
 
-    <!-- 1. TOP HUD HEADER -->
-    <header class="tv-hud-header">
-        <div class="tv-brand">
-            <div class="tv-logo-badge">
-                <i class="bi bi-broadcast-pin"></i>
+<div class="tv-app-shell">
+    
+    <!-- 1. BARRA SUPERIOR DE CONTROL Y NAVEGACIÓN -->
+    <header class="tv-header-bar">
+        <!-- Brand / Tenant -->
+        <div class="tv-brand-box">
+            <div class="tv-brand-logo">
+                <i class="bi bi-truck"></i>
             </div>
-            <div>
+            <div class="tv-brand-text">
                 <div class="tv-brand-title">
-                    AZKELL FLEET <span class="tv-brand-tag">WAR ROOM TV</span>
+                    <span id="tvTenantName">Marsisa SAC</span>
+                    <span class="tv-live-tag"><span class="tv-live-dot"></span> EN VIVO</span>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--tv-text-muted); font-weight: 600;">
+                    Centro de Control Satelital & ERP
                 </div>
             </div>
         </div>
 
-        <div class="tv-hud-center">
-            <div class="tv-live-pill">
-                <div class="tv-pulse-dot"></div>
-                <span>EN VIVO (WIALON STREAM)</span>
-            </div>
-            <div class="tv-kpis-summary">
-                <button class="tv-kpi-chip active" id="chip-total" onclick="tvFiltrarFlota('total')">
-                    <span>Total</span>
-                    <span class="tv-kpi-num" id="tvKpiTotal">0</span>
-                </button>
-                <button class="tv-kpi-chip route" id="chip-route" onclick="tvFiltrarFlota('ruta')">
-                    <span>🟢 En Ruta</span>
-                    <span class="tv-kpi-num" id="tvKpiRuta">0</span>
-                </button>
-                <button class="tv-kpi-chip idle" id="chip-idle" onclick="tvFiltrarFlota('ralenti')">
-                    <span>🟡 Ralentí</span>
-                    <span class="tv-kpi-num" id="tvKpiRalenti">0</span>
-                </button>
-                <button class="tv-kpi-chip stop" id="chip-stop" onclick="tvFiltrarFlota('detenido')">
-                    <span>🔴 Detenidas</span>
-                    <span class="tv-kpi-num" id="tvKpiDetenido">0</span>
-                </button>
-            </div>
-        </div>
+        <!-- Pestañas de Navegación de Vistas -->
+        <nav class="tv-tabs-nav" id="tvTabsNav">
+            <button class="tv-tab-btn active" onclick="tvSwitchView('gps')" id="tabGps" data-view="gps">
+                <i class="bi bi-geo-alt-fill text-primary"></i> Ubicación GPS Flota
+                <span class="tv-tab-badge" id="kpiBadgeGps">62</span>
+            </button>
+            <button class="tv-tab-btn" onclick="tvSwitchView('ot')" id="tabOt" data-view="ot">
+                <i class="bi bi-tools text-amber"></i> Reportes OT
+                <span class="tv-tab-badge" id="kpiBadgeOt">604</span>
+            </button>
+            <button class="tv-tab-btn" onclick="tvSwitchView('backlog')" id="tabBacklog" data-view="backlog">
+                <i class="bi bi-clipboard-check text-purple"></i> BackLog
+                <span class="tv-tab-badge" id="kpiBadgeBacklog">21</span>
+            </button>
+            <button class="tv-tab-btn" onclick="tvSwitchView('fallas')" id="tabFallas" data-view="fallas">
+                <i class="bi bi-exclamation-octagon-fill text-danger"></i> Reporte de Fallas
+                <span class="tv-tab-badge danger" id="kpiBadgeFallas">42 Activas</span>
+            </button>
+        </nav>
 
-        <div class="tv-clock-wrap">
-            <div class="tv-clock-time" id="tvLiveClock">--:--:--</div>
-            <div class="tv-clock-date" id="tvLiveDate">CARGANDO...</div>
+        <!-- Reloj y Herramientas -->
+        <div class="tv-header-tools">
+            <button class="tv-action-btn" id="tvBtnCarousel" onclick="tvToggleCarousel()">
+                <i class="bi bi-arrow-repeat"></i> <span id="tvCarouselText">Carrusel Auto</span>
+            </button>
+            <button class="tv-action-btn" onclick="tvToggleQrModal()">
+                <i class="bi bi-qr-code"></i> <span>Móvil</span>
+            </button>
+            <button class="tv-action-btn" onclick="tvToggleFullscreen()">
+                <i class="bi bi-arrows-fullscreen"></i>
+            </button>
+            
+            <div class="tv-clock-pill">
+                <div class="tv-clock-time" id="tvLiveTime">12:00:00</div>
+                <div class="tv-clock-date" id="tvLiveDate">VIERNES, 9 DE OCT.</div>
+            </div>
         </div>
     </header>
 
-    <!-- 2. LEFT FLEET DRAWER (TV D-PAD ACCESSIBLE) -->
-    <aside class="tv-fleet-sidebar" id="tvSidebar">
-        <div class="tv-sidebar-head">
-            <div class="tv-sidebar-title">
-                <i class="bi bi-truck text-info"></i> Unidades Activas
-            </div>
-            <span class="tv-btn-pill" id="tvCountPill">0 / 0</span>
-        </div>
-        <div class="tv-units-list" id="tvUnitsList">
-            <!-- Renderizado dinámico de tarjetas de vehículos -->
-        </div>
-    </aside>
+    <!-- 2. CONTENEDOR UNIVERSAL DE VISTAS -->
+    <main class="tv-view-container">
 
-    <!-- 3. RIGHT TELEMETRY HUD (SELECTED VEHICLE) -->
-    <aside class="tv-telemetry-hud" id="tvTelemetryHud" style="display: none;">
-        <div class="tv-telemetry-header">
-            <div>
-                <div class="tv-telemetry-plate" id="tvHudPlate">---</div>
-                <div style="font-size: 0.75rem; color: var(--tv-text-muted);" id="tvHudModel">Vehículo de Flota</div>
+        <!-- ======================================================== -->
+        <!-- VISTA 1: UBICACIÓN GPS FLOTA (WAR ROOM LIVE MAP)        -->
+        <!-- ======================================================== -->
+        <section class="tv-view-pane active" id="viewGps">
+            <!-- KPIs GPS Superiores -->
+            <div class="tv-kpi-strip">
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap blue"><i class="bi bi-truck"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Flota Monitoreada</span>
+                        <span class="tv-kpi-value" id="kpiGpsTotal">62</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap green"><i class="bi bi-reception-4"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Con Señal GPS</span>
+                        <span class="tv-kpi-value" id="kpiGpsOnline">59</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap amber"><i class="bi bi-speedometer2"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">En Movimiento</span>
+                        <span class="tv-kpi-value" id="kpiGpsMoving">21</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap gray"><i class="bi bi-slash-circle"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Sin Señal / Detenido</span>
+                        <span class="tv-kpi-value" id="kpiGpsOffline">3</span>
+                    </div>
+                </div>
             </div>
-            <span class="tv-status-tag" id="tvHudStatusTag" style="background: rgba(16,185,129,0.2); color: #34d399;">EN RUTA</span>
+
+            <!-- Cuerpo Mapa + Lista de Unidades -->
+            <div class="tv-gps-body">
+                <!-- Panel Lateral de Unidades -->
+                <aside class="tv-units-panel">
+                    <div class="tv-units-header">
+                        <div class="tv-search-input-box">
+                            <i class="bi bi-search"></i>
+                            <input type="text" class="tv-search-input" id="tvUnitSearch" placeholder="Buscar placa, empresa, conductor..." oninput="tvFilterUnits()">
+                        </div>
+                        <div class="tv-filter-chips">
+                            <span class="tv-chip active" onclick="tvSetGpsFilter('all', this)">Todas (<span id="chipCountAll">62</span>)</span>
+                            <span class="tv-chip" onclick="tvSetGpsFilter('moving', this)">En Marcha (<span id="chipCountMoving">21</span>)</span>
+                            <span class="tv-chip" onclick="tvSetGpsFilter('stopped', this)">Detenidas (<span id="chipCountStopped">38</span>)</span>
+                            <span class="tv-chip" onclick="tvSetGpsFilter('idle', this)">Ralentí (<span id="chipCountIdle">3</span>)</span>
+                        </div>
+                    </div>
+                    <div class="tv-units-list-wrap" id="tvUnitsList">
+                        <!-- Lista Dinámica de Unidades y Grupos -->
+                    </div>
+                </aside>
+
+                <!-- Mapa Leaflet Interactivo (OSM / Google Satélite) -->
+                <div class="tv-map-wrapper">
+                    <div id="tvMap"></div>
+                    
+                    <!-- Botones de Capas de Mapa -->
+                    <div class="tv-map-tools">
+                        <button class="tv-map-btn active" id="btnLayerStreet" onclick="tvSetMapLayer('street')">
+                            <i class="bi bi-map"></i> Callejero
+                        </button>
+                        <button class="tv-map-btn" id="btnLayerSat" onclick="tvSetMapLayer('satellite')">
+                            <i class="bi bi-globe-americas"></i> Satelital
+                        </button>
+                        <button class="tv-map-btn" onclick="tvFitAllUnits()">
+                            <i class="bi bi-arrows-angle-expand"></i> Toda la Flota
+                        </button>
+                    </div>
+
+                    <!-- Drawer Flotante de Telemetría Detallada -->
+                    <div class="tv-telemetry-drawer" id="tvUnitDrawer">
+                        <div class="tv-drawer-header">
+                            <div>
+                                <div class="tv-drawer-plate" id="drwPlate">AHG901</div>
+                                <div style="font-size: 0.72rem; color: var(--tv-text-muted);" id="drwModel">TRACTO VOLVO FH 500</div>
+                            </div>
+                            <button class="tv-drawer-close" onclick="tvCloseDrawer()"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                        <div class="tv-drawer-grid">
+                            <div class="tv-drawer-box">
+                                <div class="tv-drawer-lbl">Velocidad</div>
+                                <div class="tv-drawer-val" id="drwSpeed">0 km/h</div>
+                            </div>
+                            <div class="tv-drawer-box">
+                                <div class="tv-drawer-lbl">Ignición</div>
+                                <div class="tv-drawer-val" id="drwIgn">Apagada</div>
+                            </div>
+                            <div class="tv-drawer-box">
+                                <div class="tv-drawer-lbl">Kilometraje</div>
+                                <div class="tv-drawer-val" id="drwKm">412,436 km</div>
+                            </div>
+                            <div class="tv-drawer-box">
+                                <div class="tv-drawer-lbl">Voltaje Batería</div>
+                                <div class="tv-drawer-val" id="drwVolt">28.4 V</div>
+                            </div>
+                        </div>
+                        <div class="tv-drawer-box" style="margin-top: 4px;">
+                            <div class="tv-drawer-lbl">Ubicación / Coordenadas</div>
+                            <div style="font-size: 0.75rem; font-weight: 600; color: var(--tv-text-main); margin-top: 2px;" id="drwCoords">-16.4176, -71.5496</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- VISTA 2: REPORTES OT (ÓRDENES DE TRABAJO)                -->
+        <!-- ======================================================== -->
+        <section class="tv-view-pane" id="viewOt">
+            <div class="tv-kpi-strip">
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap blue"><i class="bi bi-tools"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Total Órdenes OT</span>
+                        <span class="tv-kpi-value" id="kpiOtTotal">604</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap amber"><i class="bi bi-hourglass-split"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">OTs En Proceso</span>
+                        <span class="tv-kpi-value" id="kpiOtProceso">1</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap purple"><i class="bi bi-folder2-open"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Abiertas / Pendientes</span>
+                        <span class="tv-kpi-value" id="kpiOtAbiertas">21</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap green"><i class="bi bi-check2-all"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">OTs Finalizadas</span>
+                        <span class="tv-kpi-value" id="kpiOtFinalizadas">574</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tv-table-view-body">
+                <div class="tv-table-card">
+                    <div class="tv-table-header-strip">
+                        <div>
+                            <div class="tv-table-title"><i class="bi bi-tools text-primary"></i> Registro de Órdenes de Trabajo (OT)</div>
+                            <div class="tv-table-subtitle">Monitoreo en vivo de tareas de mantenimiento en taller central</div>
+                        </div>
+                        <div class="tv-search-input-box" style="width: 260px;">
+                            <i class="bi bi-search"></i>
+                            <input type="text" class="tv-search-input" id="tvOtSearch" placeholder="Buscar por N° OT o Placa..." oninput="tvRenderOtsTable()">
+                        </div>
+                    </div>
+                    <div class="tv-table-scroll-wrap">
+                        <table class="tv-modern-table">
+                            <thead>
+                                <tr>
+                                    <th>N° OT</th>
+                                    <th>Placa</th>
+                                    <th>Tipo Mantenimiento</th>
+                                    <th>Motivo / Trabajo Técnico</th>
+                                    <th>Supervisor</th>
+                                    <th>Mecánico</th>
+                                    <th>Rampa</th>
+                                    <th>Fecha Ingreso</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tvOtTableBody">
+                                <!-- Filas de OTs -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- VISTA 3: BACKLOG (PENDIENTES DE TALLER)                 -->
+        <!-- ======================================================== -->
+        <section class="tv-view-pane" id="viewBacklog">
+            <div class="tv-kpi-strip">
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap blue"><i class="bi bi-clipboard-data"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Total BackLog</span>
+                        <span class="tv-kpi-value" id="kpiBacklogTotal">21</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap red"><i class="bi bi-clock-history"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Backlogs Pendientes</span>
+                        <span class="tv-kpi-value" id="kpiBacklogPendiente">20</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap amber"><i class="bi bi-gear-wide-connected"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">En Atención</span>
+                        <span class="tv-kpi-value" id="kpiBacklogProceso">0</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap green"><i class="bi bi-check-circle-fill"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Realizados / Cerrados</span>
+                        <span class="tv-kpi-value" id="kpiBacklogRealizado">1</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tv-table-view-body">
+                <div class="tv-table-card">
+                    <div class="tv-table-header-strip">
+                        <div>
+                            <div class="tv-table-title"><i class="bi bi-clipboard-check text-purple"></i> Registro y Control de BackLog</div>
+                            <div class="tv-table-subtitle">Trabajos pendientes de corrección y repuestos postergados</div>
+                        </div>
+                        <div class="tv-search-input-box" style="width: 260px;">
+                            <i class="bi bi-search"></i>
+                            <input type="text" class="tv-search-input" id="tvBacklogSearch" placeholder="Buscar placa, tarea..." oninput="tvRenderBacklogTable()">
+                        </div>
+                    </div>
+                    <div class="tv-table-scroll-wrap">
+                        <table class="tv-modern-table">
+                            <thead>
+                                <tr>
+                                    <th>ID Backlog</th>
+                                    <th>Placa</th>
+                                    <th>Sistema / Tema</th>
+                                    <th>Tarea Pendiente</th>
+                                    <th>Kilometraje</th>
+                                    <th>Reportado Por</th>
+                                    <th>OT Vinculada</th>
+                                    <th>Fecha Registro</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tvBacklogTableBody">
+                                <!-- Filas de Backlog -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- VISTA 4: REPORTE DE FALLAS (SOLO LAS NO FINALIZADAS)    -->
+        <!-- ======================================================== -->
+        <section class="tv-view-pane" id="viewFallas">
+            <div class="tv-kpi-strip">
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap red"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Fallas Activas (No Finalizadas)</span>
+                        <span class="tv-kpi-value" id="kpiFallasActivas">42</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap red"><i class="bi bi-clock-fill"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Fallas Pendientes</span>
+                        <span class="tv-kpi-value" id="kpiFallasPendientes">22</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap amber"><i class="bi bi-wrench-adjustable"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">En Proceso de Reparación</span>
+                        <span class="tv-kpi-value" id="kpiFallasProceso">20</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap gray"><i class="bi bi-archive-fill"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Total Histórico Registrado</span>
+                        <span class="tv-kpi-value" id="kpiFallasHistorico">231</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tv-table-view-body">
+                <div class="tv-table-card">
+                    <div class="tv-table-header-strip">
+                        <div>
+                            <div class="tv-table-title"><i class="bi bi-exclamation-octagon-fill text-danger"></i> Reporte de Fallas — Solo Casos No Finalizados</div>
+                            <div class="tv-table-subtitle">Alertas e incidencias de tractos y carretas en ruta pendientes de atención</div>
+                        </div>
+                        <div class="tv-search-input-box" style="width: 260px;">
+                            <i class="bi bi-search"></i>
+                            <input type="text" class="tv-search-input" id="tvFallasSearch" placeholder="Buscar folio, placa o falla..." oninput="tvRenderFallasTable()">
+                        </div>
+                    </div>
+                    <div class="tv-table-scroll-wrap">
+                        <table class="tv-modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Folio Falla</th>
+                                    <th>Placa Tracto / Remolque</th>
+                                    <th>Conductor</th>
+                                    <th>Procedencia / Origen</th>
+                                    <th>Detalle de Fallas Detectadas</th>
+                                    <th>Fecha Reporte</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tvFallasTableBody">
+                                <!-- Filas de Fallas Activas -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 3. BARRA INFERIOR DE EVENTOS EN VIVO Y GUÍA DE CONTROL REMOTO -->
+    <footer class="tv-footer-bar">
+        <div class="tv-ticker-area">
+            <span class="tv-ticker-tag"><i class="bi bi-broadcast"></i> TELEMETRÍA ERP</span>
+            <div class="tv-ticker-msg" id="tvLiveTicker">Sincronizando feed de datos satelitales en tiempo real...</div>
         </div>
 
-        <!-- Velocímetro Digital -->
-        <div class="tv-gauge-card">
-            <div>
-                <div class="tv-metric-lbl"><i class="bi bi-speedometer2 text-info"></i> Velocidad Actual</div>
-                <div class="tv-speed-big" id="tvHudSpeed">0</div>
+        <div class="tv-remote-shortcuts">
+            <div class="tv-key-guide">
+                <span class="tv-key-btn">1..4</span> <span>Cambiar Vista</span>
             </div>
-            <div style="text-align: right;">
-                <div class="tv-speed-unit">KM / H</div>
-                <div style="font-size: 0.75rem; color: #cbd5e1; font-weight: 700;" id="tvHudIgnition">IGNICIÓN: ON</div>
+            <div class="tv-key-guide">
+                <span class="tv-key-btn">◄ ►</span> <span>Pestañas</span>
             </div>
-        </div>
-
-        <!-- Rejilla de Sensores y Telemetría -->
-        <div class="tv-metrics-grid">
-            <div class="tv-metric-box">
-                <div class="tv-metric-lbl"><i class="bi bi-person-badge text-primary"></i> Conductor</div>
-                <div class="tv-metric-val" style="font-size: 0.78rem;" id="tvHudDriver">Sin asignar</div>
+            <div class="tv-key-guide">
+                <span class="tv-key-btn">▲ ▼</span> <span>Navegar</span>
             </div>
-            <div class="tv-metric-box">
-                <div class="tv-metric-lbl"><i class="bi bi-battery-charging text-warning"></i> Batería</div>
-                <div class="tv-metric-val" id="tvHudBattery">24.2 V</div>
+            <div class="tv-key-guide">
+                <span class="tv-key-btn">OK</span> <span>Enfocar</span>
             </div>
-            <div class="tv-metric-box">
-                <div class="tv-metric-lbl"><i class="bi bi-speedometer text-success"></i> Odómetro</div>
-                <div class="tv-metric-val" id="tvHudOdometer">0 km</div>
+            <div class="tv-key-guide">
+                <span class="tv-key-btn">C</span> <span id="tvKeyCarouselTxt">Carrusel [OFF]</span>
             </div>
-            <div class="tv-metric-box">
-                <div class="tv-metric-lbl"><i class="bi bi-compass text-info"></i> Rumbo</div>
-                <div class="tv-metric-val" id="tvHudCourse">0° N</div>
+            <div class="tv-key-guide">
+                <span class="tv-key-btn">S</span> <span>Satélite</span>
             </div>
-        </div>
-
-        <!-- Dirección / Geocerca -->
-        <div class="tv-metric-box" style="padding: 10px;">
-            <div class="tv-metric-lbl"><i class="bi bi-geo-alt-fill text-danger"></i> Última Ubicación</div>
-            <div class="tv-metric-val" style="font-size: 0.74rem; font-weight: 600; line-height: 1.3; margin-top: 4px;" id="tvHudAddress">
-                Actualizando posición satelital...
-            </div>
-        </div>
-    </aside>
-
-    <!-- 4. BOTTOM BAR: LIVE TICKER & TV REMOTE KEYS -->
-    <footer class="tv-bottom-bar">
-        <div class="tv-ticker-wrap">
-            <span class="tv-ticker-tag"><i class="bi bi-bell-fill"></i> EVENTOS</span>
-            <div class="tv-ticker-text" id="tvLiveTicker">Iniciando Centro de Control Satelital Azkell Fleet...</div>
-        </div>
-
-        <div class="tv-remote-keys">
-            <div class="tv-key-hint">
-                <span class="tv-btn-pill">▲▼</span> <span>Navegar</span>
-            </div>
-            <div class="tv-key-hint">
-                <span class="tv-btn-pill">OK</span> <span>Enfocar</span>
-            </div>
-            <div class="tv-key-hint">
-                <span class="tv-btn-pill">C</span> <span id="tvAutoCycleStatus">Carrusel [OFF]</span>
-            </div>
-            <div class="tv-key-hint">
-                <span class="tv-btn-pill">S</span> <span>Satélite</span>
-            </div>
-            <div class="tv-key-hint">
-                <span class="tv-btn-pill">F</span> <span>Fullscreen</span>
-            </div>
-            <div class="tv-key-hint" onclick="tvToggleQrModal()" style="cursor: pointer;">
-                <span class="tv-btn-pill"><i class="bi bi-qr-code"></i> QR</span> <span>Emparejar</span>
+            <div class="tv-key-guide">
+                <span class="tv-key-btn">F</span> <span>Pantalla Completa</span>
             </div>
         </div>
     </footer>
 
-    <!-- 5. QR PAIRING MODAL (TIPO NETFLIX / YOUTUBE) -->
-    <div class="tv-modal-backdrop" id="tvQrModal" onclick="tvToggleQrModal()">
-        <div class="tv-modal-card" onclick="event.stopPropagation()">
-            <div class="tv-brand-title" style="justify-content: center; font-size: 1.5rem; margin-bottom: 8px;">
-                <i class="bi bi-phone-vibrate text-info"></i> Control Móvil
-            </div>
-            <p style="color: var(--tv-text-muted); font-size: 0.85rem;">
-                Escanea este código desde tu smartphone para proyectar o controlar el mapa en la Smart TV.
-            </p>
-            
-            <div class="tv-qr-box">
-                <img id="tvQrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://azkell.com/tv" alt="QR Control" width="180" height="180" />
-            </div>
+</div>
 
-            <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: 800; color: var(--tv-accent-cyan);">
-                URL: <span id="tvHostDisplay">azkell.com/tv</span>
-            </div>
-
-            <button class="tv-kpi-chip active" style="margin: 20px auto 0 auto; padding: 8px 24px; font-size: 0.9rem;" onclick="tvToggleQrModal()">
-                Cerrar (Volver al Mapa)
-            </button>
+<!-- 4. MODAL DE EMPAREJAMIENTO MÓVIL (QR) -->
+<div class="tv-modal-overlay" id="tvQrModal" onclick="tvToggleQrModal()">
+    <div class="tv-modal-dialog" onclick="event.stopPropagation()">
+        <div style="font-family: 'Outfit', sans-serif; font-size: 1.4rem; font-weight: 800; color: var(--tv-text-main);">
+            <i class="bi bi-phone-vibrate text-primary"></i> Control Móvil Smart TV
         </div>
+        <p style="font-size: 0.85rem; color: var(--tv-text-muted);">
+            Escanea este código QR con tu smartphone o tablet para acceder al sistema y supervisar la flota en vivo.
+        </p>
+        <div class="tv-qr-container">
+            <img id="tvQrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https://marsisa.azkell.com" alt="QR" width="200" height="200">
+        </div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 800; color: var(--tv-primary);">
+            URL: <span id="tvHostDisplay">marsisa.azkell.com</span>
+        </div>
+        <button class="tv-action-btn active" style="margin-top: 10px; width: 100%; justify-content: center;" onclick="tvToggleQrModal()">
+            Cerrar (Volver al Centro de Control)
+        </button>
     </div>
+</div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <script>
-        // ============================================================
-        // 🛰️ AZKELL FLEET TV ENGINE (SMART TV & WAR ROOM SYSTEM)
-        // ============================================================
+<script>
+    // ============================================================
+    // 🛰️ AZKELL FLEET TV ENGINE (MODO CLARO + 4 VISTAS ERP)
+    // ============================================================
+
+    var _tvMap = null;
+    var _tvMarkers = {};
+    var _tvData = {
+        gps: { kpis: {}, unidades: [], grupos: [] },
+        ots: { kpis: {}, list: [] },
+        backlog: { kpis: {}, list: [] },
+        fallas: { kpis: {}, list: [] }
+    };
+    var _tvCurrentView = 'gps';
+    var _tvViews = ['gps', 'ot', 'backlog', 'fallas'];
+    var _tvGpsFilter = 'all';
+    var _tvSelectedUnitIndex = 0;
+    var _tvSelectedUnitPlate = null;
+    
+    // Carrusel Automático (30s)
+    var _tvCarouselActive = false;
+    var _tvCarouselInterval = null;
+    var _tvCarouselSeconds = 30;
+    var _tvCarouselTimerCount = 0;
+
+    // Capas de Mapa (OpenStreetMap + Google Satélite)
+    var _tvLayers = {};
+    var _tvCurrentMapLayer = 'street';
+
+    // 1. INICIALIZAR RELOJ EN VIVO
+    function tvInitClock() {
+        var clockEl = document.getElementById('tvLiveTime');
+        var dateEl = document.getElementById('tvLiveDate');
         
-        var _tvMap = null;
-        var _tvMarkers = {};
-        var _tvData = [];
-        var _tvActiveFilter = 'total';
-        var _tvSelectedPlate = null;
-        var _tvSelectedIndex = 0;
-        var _tvAutoCycle = false;
-        var _tvAutoCycleTimer = null;
-        var _tvLayers = {};
-        var _tvCurrentLayer = 'dark';
+        function tick() {
+            var now = new Date();
+            var h = String(now.getHours()).padStart(2, '0');
+            var m = String(now.getMinutes()).padStart(2, '0');
+            var s = String(now.getSeconds()).padStart(2, '0');
+            if (clockEl) clockEl.innerText = h + ':' + m + ':' + s;
 
-        // 1. INICIALIZAR RELOJ EN VIVO
-        function tvInitClock() {
-            var clockEl = document.getElementById('tvLiveClock');
-            var dateEl = document.getElementById('tvLiveDate');
-            
-            function update() {
-                var now = new Date();
-                var h = String(now.getHours()).padStart(2, '0');
-                var m = String(now.getMinutes()).padStart(2, '0');
-                var s = String(now.getSeconds()).padStart(2, '0');
-                if (clockEl) clockEl.innerText = h + ':' + m + ':' + s;
+            var options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+            if (dateEl) dateEl.innerText = now.toLocaleDateString('es-PE', options).toUpperCase();
+        }
+        tick();
+        setInterval(tick, 1000);
+    }
 
-                var options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
-                if (dateEl) dateEl.innerText = now.toLocaleDateString('es-PE', options).toUpperCase();
+    // 2. INICIALIZAR MAPA LEAFLET
+    function tvInitMap() {
+        if (typeof L === 'undefined' || _tvMap) return;
+
+        _tvMap = L.map('tvMap', {
+            zoomControl: true,
+            attributionControl: false,
+            fadeAnimation: true,
+            zoomAnimation: true
+        }).setView([-12.0464, -77.0428], 11);
+
+        // Capa 1: OpenStreetMap (Callejero limpio, sin marcas de agua)
+        _tvLayers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            subdomains: 'abc'
+        });
+
+        // Capa 2: Google Hybrid Satelital
+        _tvLayers.satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20
+        });
+
+        _tvLayers.street.addTo(_tvMap);
+    }
+
+    function tvSetMapLayer(layerType) {
+        _tvCurrentMapLayer = layerType;
+        if (layerType === 'satellite') {
+            if (_tvMap.hasLayer(_tvLayers.street)) _tvMap.removeLayer(_tvLayers.street);
+            _tvLayers.satellite.addTo(_tvMap);
+            document.getElementById('btnLayerSat').classList.add('active');
+            document.getElementById('btnLayerStreet').classList.remove('active');
+        } else {
+            if (_tvMap.hasLayer(_tvLayers.satellite)) _tvMap.removeLayer(_tvLayers.satellite);
+            _tvLayers.street.addTo(_tvMap);
+            document.getElementById('btnLayerStreet').classList.add('active');
+            document.getElementById('btnLayerSat').classList.remove('active');
+        }
+    }
+
+    // 3. CARGA DE DATOS DESDE BACKEND VPS (/api/tv/feed)
+    async function tvFetchData() {
+        try {
+            var res = await fetch('/api/tv/feed');
+            if (!res.ok) {
+                // Fallback secundario si es necesario
+                res = await fetch('/api/tv/data');
             }
-            update();
-            setInterval(update, 1000);
-        }
-
-        // 2. INICIALIZAR MAPA LEAFLET EN MODO ALTA DEFINICIÓN TV
-        function tvInitMap() {
-            if (typeof L === 'undefined') return;
-
-            _tvMap = L.map('tvMapContainer', {
-                zoomControl: false,
-                attributionControl: false,
-                fadeAnimation: true,
-                zoomAnimation: true
-            }).setView([-12.0464, -77.0428], 11);
-
-            // Capa Nocturna Oscura (CartoDB Dark Matter)
-            _tvLayers.dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19,
-                subdomains: 'abcd'
-            });
-
-            // Capa Satelital de Alta Resolución (ESRI World Imagery)
-            _tvLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}', {
-                maxZoom: 19
-            });
-
-            _tvLayers.dark.addTo(_tvMap);
-        }
-
-        // 3. CARGA DE DATOS DE TELEMETRÍA (WIALON / VPS BACKEND)
-        async function tvFetchData() {
-            try {
-                var res = await fetch('/api/script/obtenerDatosWialon', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ args: [] })
-                });
-                var json = await res.json();
-                var data = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
-                _tvData = data;
-                
-                tvActualizarKPIs();
-                tvRenderLista();
-                tvActualizarMarcadores();
-
-                var tickerEl = document.getElementById('tvLiveTicker');
-                if (tickerEl && data.length > 0) {
-                    var moving = data.filter(function(u) { return (u.velocidad || u.speed || 0) > 0; });
-                    if (moving.length > 0) {
-                        var rand = moving[Math.floor(Math.random() * moving.length)];
-                        tickerEl.innerText = '🚛 Unidad ' + (rand.placa || rand.name) + ' en marcha a ' + Math.round(rand.velocidad || rand.speed || 0) + ' km/h en ' + (rand.direccion || rand.address || 'ruta activa');
-                    }
+            var json = await res.json();
+            if (json && json.ok) {
+                _tvData = json;
+                if (json.empresa) {
+                    var el = document.getElementById('tvTenantName');
+                    if (el) el.innerText = json.empresa;
                 }
-            } catch (err) {
-                console.error('Error obteniendo telemetría TV:', err);
+                tvActualizarTodasLasVistas();
             }
+        } catch (e) {
+            console.warn('Error obteniendo feed TV:', e.message);
         }
+    }
 
-        // 4. ACTUALIZAR KPIS EN TIEMPO REAL
-        function tvActualizarKPIs() {
-            var total = _tvData.length;
-            var ruta = 0, ralenti = 0, detenido = 0;
+    function tvActualizarTodasLasVistas() {
+        tvActualizarBadgesKPIs();
+        tvRenderGpsView();
+        tvRenderOtsTable();
+        tvRenderBacklogTable();
+        tvRenderFallasTable();
+    }
 
-            _tvData.forEach(function(u) {
-                var vel = Math.round(u.velocidad || u.speed || 0);
-                var ign = Boolean(u.ignition || u.ignicion || (u.sensores && u.sensores.ignicion));
-                if (vel > 0) ruta++;
-                else if (ign) ralenti++;
-                else detenido++;
-            });
+    // 4. ACTUALIZACIÓN DE BADGES Y KPIS SUPERIORES
+    function tvActualizarBadgesKPIs() {
+        // GPS KPIs
+        var gpsKpi = _tvData.gps.kpis || {};
+        document.getElementById('kpiBadgeGps').innerText = gpsKpi.total || 0;
+        document.getElementById('kpiGpsTotal').innerText = gpsKpi.total || 0;
+        document.getElementById('kpiGpsOnline').innerText = gpsKpi.con_senal || 0;
+        document.getElementById('kpiGpsMoving').innerText = gpsKpi.en_movimiento || 0;
+        document.getElementById('kpiGpsOffline').innerText = gpsKpi.sin_senal || 0;
 
-            document.getElementById('tvKpiTotal').innerText = total;
-            document.getElementById('tvKpiRuta').innerText = ruta;
-            document.getElementById('tvKpiRalenti').innerText = ralenti;
-            document.getElementById('tvKpiDetenido').innerText = detenido;
-            document.getElementById('tvCountPill').innerText = total + ' UNIDADES';
-        }
+        document.getElementById('chipCountAll').innerText = gpsKpi.total || 0;
+        document.getElementById('chipCountMoving').innerText = gpsKpi.en_movimiento || 0;
+        document.getElementById('chipCountStopped').innerText = (gpsKpi.total || 0) - (gpsKpi.en_movimiento || 0);
 
-        // 5. RENDERIZAR LISTA LATERAL ACCESIBLE POR CONTROL REMOTO
-        function tvRenderLista() {
-            var listEl = document.getElementById('tvUnitsList');
-            if (!listEl) return;
+        // OTs KPIs
+        var otKpi = _tvData.ots.kpis || {};
+        document.getElementById('kpiBadgeOt').innerText = otKpi.total || 0;
+        document.getElementById('kpiOtTotal').innerText = otKpi.total || 0;
+        document.getElementById('kpiOtProceso').innerText = otKpi.proceso || 0;
+        document.getElementById('kpiOtAbiertas').innerText = otKpi.abierto || 0;
+        document.getElementById('kpiOtFinalizadas').innerText = otKpi.finalizado || 0;
 
-            var filtradas = _tvData.filter(function(u) {
-                var vel = Math.round(u.velocidad || u.speed || 0);
-                var ign = Boolean(u.ignition || u.ignicion || (u.sensores && u.sensores.ignicion));
-                if (_tvActiveFilter === 'ruta') return vel > 0;
-                if (_tvActiveFilter === 'ralenti') return vel === 0 && ign;
-                if (_tvActiveFilter === 'detenido') return vel === 0 && !ign;
-                return true;
-            });
+        // Backlog KPIs
+        var blKpi = _tvData.backlog.kpis || {};
+        document.getElementById('kpiBadgeBacklog').innerText = blKpi.total || 0;
+        document.getElementById('kpiBacklogTotal').innerText = blKpi.total || 0;
+        document.getElementById('kpiBacklogPendiente').innerText = blKpi.pendiente || 0;
+        document.getElementById('kpiBacklogProceso').innerText = blKpi.proceso || 0;
+        document.getElementById('kpiBacklogRealizado').innerText = blKpi.realizado || 0;
 
-            listEl.innerHTML = '';
-            filtradas.forEach(function(u, idx) {
-                var placa = u.placa || u.name || '---';
-                var vel = Math.round(u.velocidad || u.speed || 0);
-                var ign = Boolean(u.ignition || u.ignicion || (u.sensores && u.sensores.ignicion));
-                
-                var statusClass = vel > 0 ? '' : (ign ? 'idle' : 'stopped');
-                var statusText = vel > 0 ? (vel + ' km/h') : (ign ? 'Ralentí' : 'Detenido');
+        // Fallas KPIs
+        var fKpi = _tvData.fallas.kpis || {};
+        document.getElementById('kpiBadgeFallas').innerText = (fKpi.total_activas || 0) + ' Activas';
+        document.getElementById('kpiFallasActivas').innerText = fKpi.total_activas || 0;
+        document.getElementById('kpiFallasPendientes').innerText = fKpi.pendiente || 0;
+        document.getElementById('kpiFallasProceso').innerText = fKpi.proceso || 0;
+        document.getElementById('kpiFallasHistorico').innerText = fKpi.total_historico || 0;
+    }
 
-                var card = document.createElement('div');
-                card.className = 'tv-unit-card' + (placa === _tvSelectedPlate ? ' is-selected' : '');
-                card.tabIndex = 0;
-                card.id = 'tv-card-' + idx;
-                card.innerHTML = `
-                    <div class="tv-unit-card-top">
-                        <span class="tv-plate-badge">${placa}</span>
-                        <span class="tv-speed-badge ${statusClass}">${statusText}</span>
-                    </div>
-                    <div class="tv-unit-meta">
-                        <span class="tv-unit-driver"><i class="bi bi-person"></i> ${u.conductor || u.driver || 'Conductor asignado'}</span>
-                        <span>${u.odometro ? Math.round(u.odometro).toLocaleString() + ' km' : ''}</span>
-                    </div>
-                `;
+    // 5. RENDERIZADO VISTA 1: GPS FLOTA
+    function tvRenderGpsView() {
+        var listContainer = document.getElementById('tvUnitsList');
+        if (!listContainer) return;
 
-                card.onclick = function() {
-                    tvSeleccionarUnidad(u);
-                };
-
-                listEl.appendChild(card);
-            });
-        }
-
-        // 6. ACTUALIZAR MARCADORES EN EL MAPA
-        function tvActualizarMarcadores() {
-            if (!_tvMap) return;
-
-            var bounds = [];
-            _tvData.forEach(function(u) {
-                var lat = parseFloat(u.lat || u.latitude || (u.pos && u.pos.y));
-                var lng = parseFloat(u.lng || u.lon || u.longitude || (u.pos && u.pos.x));
-                if (isNaN(lat) || isNaN(lng)) return;
-
-                var placa = u.placa || u.name || '---';
-                var vel = Math.round(u.velocidad || u.speed || 0);
-                bounds.push([lat, lng]);
-
-                var iconHtml = `
-                    <div class="tv-custom-marker">
-                        <div class="tv-marker-label">${placa} ${vel > 0 ? '(' + vel + 'k)' : ''}</div>
-                        <div class="tv-marker-icon-box ${vel === 0 ? 'stopped' : ''}">
-                            <i class="bi bi-truck"></i>
-                        </div>
-                    </div>
-                `;
-
-                var customIcon = L.divIcon({
-                    className: 'tv-marker-wrapper',
-                    html: iconHtml,
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 20]
-                });
-
-                if (_tvMarkers[placa]) {
-                    _tvMarkers[placa].setLatLng([lat, lng]);
-                    _tvMarkers[placa].setIcon(customIcon);
-                } else {
-                    var m = L.marker([lat, lng], { icon: customIcon }).addTo(_tvMap);
-                    m.on('click', function() {
-                        tvSeleccionarUnidad(u);
-                    });
-                    _tvMarkers[placa] = m;
-                }
-            });
-
-            if (bounds.length > 0 && !_tvSelectedPlate) {
-                _tvMap.fitBounds(bounds, { padding: [120, 120], maxZoom: 13 });
+        var q = (document.getElementById('tvUnitSearch').value || '').toLowerCase().trim();
+        var unidades = (_tvData.gps.unidades || []).filter(function(u) {
+            if (_tvGpsFilter === 'moving' && (u.velocidad || 0) <= 3) return false;
+            if (_tvGpsFilter === 'stopped' && (u.velocidad || 0) > 3) return false;
+            if (_tvGpsFilter === 'idle' && u.estado_motor !== 'ralenti') return false;
+            if (q) {
+                var match = (u.placa || '').toLowerCase().includes(q) ||
+                            (u.nombre_wialon || '').toLowerCase().includes(q) ||
+                            (u.empresa || '').toLowerCase().includes(q);
+                if (!match) return false;
             }
+            return true;
+        });
+
+        var html = '';
+        html += '<div class="tv-group-header"><span>( ' + unidades.length + ' ) Unidades Visibles</span> <i class="bi bi-chevron-down"></i></div>';
+
+        unidades.forEach(function(u, idx) {
+            var speed = Math.round(u.velocidad || 0);
+            var isMoving = speed > 3;
+            var isIdle = u.estado_motor === 'ralenti';
+            var speedCls = isMoving ? 'moving' : (isIdle ? 'idle' : 'stopped');
+            var speedTxt = isMoving ? speed + ' km/h' : (isIdle ? 'Ralentí' : 'Detenido');
+            var isActive = (_tvSelectedUnitPlate === u.placa) || (idx === _tvSelectedUnitIndex && !_tvSelectedUnitPlate);
+
+            html += '<div class="tv-unit-card ' + (isActive ? 'active' : '') + '" onclick="tvFocusUnit(\'' + u.placa + '\')">';
+            html += '  <div class="tv-unit-row-top">';
+            html += '    <span class="tv-unit-plate">' + (u.placa || u.nombre_wialon) + '</span>';
+            html += '    <span class="tv-speed-pill ' + speedCls + '">' + speedTxt + '</span>';
+            html += '  </div>';
+            html += '  <div class="tv-unit-row-mid">';
+            html += '    <span>' + (u.marca_modelo || u.tipo_vehiculo || 'Tracto') + '</span>';
+            html += '    <span style="font-family: monospace;">' + (u.km ? Number(u.km).toLocaleString('es-PE') + ' km' : '') + '</span>';
+            html += '  </div>';
+            html += '</div>';
+        });
+
+        listContainer.innerHTML = html || '<div style="padding: 20px; text-align: center; color: #94a3b8;">No se encontraron unidades</div>';
+
+        // Actualizar Marcadores en Mapa
+        tvActualizarMarcadoresMapa(unidades);
+
+        // Actualizar Live Ticker
+        var movingUnits = (_tvData.gps.unidades || []).filter(function(u) { return (u.velocidad || 0) > 3; });
+        if (movingUnits.length > 0) {
+            var rand = movingUnits[Math.floor(Math.random() * movingUnits.length)];
+            document.getElementById('tvLiveTicker').innerText = '🚛 Unidad ' + rand.placa + ' en ruta a ' + Math.round(rand.velocidad) + ' km/h (' + (rand.empresa || 'Marsisa') + ')';
         }
+    }
 
-        // 7. SELECCIONAR Y ENFOCAR UNIDAD
-        function tvSeleccionarUnidad(u) {
-            var placa = u.placa || u.name;
-            _tvSelectedPlate = placa;
+    function tvActualizarMarcadoresMapa(unidades) {
+        if (!_tvMap) return;
 
-            var lat = parseFloat(u.lat || u.latitude || (u.pos && u.pos.y));
-            var lng = parseFloat(u.lng || u.lon || u.longitude || (u.pos && u.pos.x));
-            if (!isNaN(lat) && !isNaN(lng) && _tvMap) {
-                _tvMap.flyTo([lat, lng], 16, { duration: 1.2 });
-            }
+        var bounds = [];
+        unidades.forEach(function(u) {
+            if (!u.lat || !u.lng) return;
 
-            var hud = document.getElementById('tvTelemetryHud');
-            if (hud) {
-                hud.style.display = 'flex';
-                document.getElementById('tvHudPlate').innerText = placa;
-                var vel = Math.round(u.velocidad || u.speed || 0);
-                document.getElementById('tvHudSpeed').innerText = vel;
-                var ign = Boolean(u.ignition || u.ignicion || (u.sensores && u.sensores.ignicion));
-                document.getElementById('tvHudIgnition').innerText = 'IGNICIÓN: ' + (ign ? 'ON' : 'OFF');
-                document.getElementById('tvHudDriver').innerText = u.conductor || u.driver || 'No asignado';
-                document.getElementById('tvHudBattery').innerText = (u.bateria || u.battery || '24.2') + ' V';
-                document.getElementById('tvHudOdometer').innerText = (u.odometro ? Math.round(u.odometro).toLocaleString() : '0') + ' km';
-                document.getElementById('tvHudCourse').innerText = (u.curso || u.course || 0) + '°';
-                document.getElementById('tvHudAddress').innerText = u.direccion || u.address || 'Ubicación satelital en tiempo real';
-            }
+            var latLng = [u.lat, u.lng];
+            bounds.push(latLng);
 
-            tvRenderLista();
-        }
+            var speed = Math.round(u.velocidad || 0);
+            var isMoving = speed > 3;
+            var isIdle = u.estado_motor === 'ralenti';
+            var iconCls = isMoving ? 'moving' : (isIdle ? 'idle' : 'stopped');
+            var iconName = isMoving ? 'bi-arrow-up-circle-fill' : 'bi-truck';
+            var rot = u.curso || 0;
 
-        // 8. MOTOR DE NAVEGACIÓN POR CONTROL REMOTO (D-PAD SMART TV)
-        window.addEventListener('keydown', function(e) {
-            var key = e.key;
+            var customIcon = L.divIcon({
+                className: 'tv-leaflet-custom',
+                html: '<div class="tv-marker-pin" onclick="tvFocusUnit(\'' + u.placa + '\')">' +
+                      '  <div class="tv-marker-bubble">' + (u.placa || u.nombre_wialon) + '</div>' +
+                      '  <div class="tv-marker-icon-box ' + iconCls + '" style="transform: rotate(' + rot + 'deg);">' +
+                      '    <i class="bi ' + iconName + '"></i>' +
+                      '  </div>' +
+                      '</div>',
+                iconSize: [60, 50],
+                iconAnchor: [30, 45]
+            });
 
-            if (key === 'ArrowDown') {
-                e.preventDefault();
-                var cards = document.querySelectorAll('.tv-unit-card');
-                if (cards.length > 0) {
-                    _tvSelectedIndex = (_tvSelectedIndex + 1) % cards.length;
-                    cards[_tvSelectedIndex].focus();
-                    cards[_tvSelectedIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            } else if (key === 'ArrowUp') {
-                e.preventDefault();
-                var cards = document.querySelectorAll('.tv-unit-card');
-                if (cards.length > 0) {
-                    _tvSelectedIndex = (_tvSelectedIndex - 1 + cards.length) % cards.length;
-                    cards[_tvSelectedIndex].focus();
-                    cards[_tvSelectedIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            } else if (key === 'Enter') {
-                var activeCard = document.activeElement;
-                if (activeCard && activeCard.classList.contains('tv-unit-card')) {
-                    activeCard.click();
-                }
-            } else if (key === 'c' || key === 'C') {
-                tvToggleAutoCycle();
-            } else if (key === 's' || key === 'S') {
-                tvToggleLayer();
-            } else if (key === 'f' || key === 'F') {
-                tvToggleFullscreen();
-            } else if (key === 'Escape' || key === 'Back') {
-                _tvSelectedPlate = null;
-                document.getElementById('tvTelemetryHud').style.display = 'none';
-                tvRenderLista();
-                tvActualizarMarcadores();
+            if (_tvMarkers[u.placa]) {
+                _tvMarkers[u.placa].setLatLng(latLng);
+                _tvMarkers[u.placa].setIcon(customIcon);
+            } else {
+                _tvMarkers[u.placa] = L.marker(latLng, { icon: customIcon }).addTo(_tvMap);
             }
         });
 
-        // 9. MODO KIOSCO: CARRUSEL AUTOMÁTICO DE TELEMETRÍA (15 SEG)
-        function tvToggleAutoCycle() {
-            _tvAutoCycle = !_tvAutoCycle;
-            var statusEl = document.getElementById('tvAutoCycleStatus');
-            if (statusEl) statusEl.innerText = 'Carrusel [' + (_tvAutoCycle ? 'ON' : 'OFF') + ']';
+        // Si es la primera carga y hay unidades, encuadrar
+        if (!_tvSelectedUnitPlate && bounds.length > 0 && !_tvMap._tvHasFitted) {
+            _tvMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+            _tvMap._tvHasFitted = true;
+        }
+    }
 
-            if (_tvAutoCycle) {
-                var moving = _tvData.filter(function(u) { return (u.velocidad || u.speed || 0) > 0; });
-                var pool = moving.length > 0 ? moving : _tvData;
-                var cycleIndex = 0;
+    function tvFocusUnit(placa) {
+        _tvSelectedUnitPlate = placa;
+        var unit = (_tvData.gps.unidades || []).find(function(u) { return u.placa === placa; });
+        if (!unit || !unit.lat || !unit.lng) return;
 
-                _tvAutoCycleTimer = setInterval(function() {
-                    if (pool.length > 0) {
-                        tvSeleccionarUnidad(pool[cycleIndex]);
-                        cycleIndex = (cycleIndex + 1) % pool.length;
-                    }
-                }, 15000);
-            } else {
-                clearInterval(_tvAutoCycleTimer);
+        if (_tvMap) {
+            _tvMap.flyTo([unit.lat, unit.lng], 15, { duration: 1 });
+        }
+
+        // Abrir Drawer de Telemetría
+        var drawer = document.getElementById('tvUnitDrawer');
+        if (drawer) {
+            drawer.style.display = 'flex';
+            document.getElementById('drwPlate').innerText = unit.placa || unit.nombre_wialon;
+            document.getElementById('drwModel').innerText = (unit.marca_modelo || unit.tipo_vehiculo || 'Tracto') + ' • ' + (unit.empresa || 'Marsisa');
+            document.getElementById('drwSpeed').innerText = Math.round(unit.velocidad || 0) + ' km/h';
+            document.getElementById('drwIgn').innerText = unit.ignicion ? 'Encendida' : 'Apagada';
+            document.getElementById('drwKm').innerText = unit.km ? Number(unit.km).toLocaleString('es-PE') + ' km' : '-';
+            document.getElementById('drwVolt').innerText = unit.voltaje ? unit.voltaje + ' V' : '24.0 V';
+            document.getElementById('drwCoords').innerText = unit.lat.toFixed(4) + ', ' + unit.lng.toFixed(4);
+        }
+
+        tvRenderGpsView();
+    }
+
+    function tvCloseDrawer() {
+        var drawer = document.getElementById('tvUnitDrawer');
+        if (drawer) drawer.style.display = 'none';
+        _tvSelectedUnitPlate = null;
+    }
+
+    function tvFitAllUnits() {
+        var bounds = [];
+        (_tvData.gps.unidades || []).forEach(function(u) {
+            if (u.lat && u.lng) bounds.push([u.lat, u.lng]);
+        });
+        if (bounds.length > 0 && _tvMap) {
+            _tvMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+        }
+        tvCloseDrawer();
+    }
+
+    function tvFilterUnits() {
+        tvRenderGpsView();
+    }
+
+    function tvSetGpsFilter(filterType, btnEl) {
+        _tvGpsFilter = filterType;
+        document.querySelectorAll('.tv-filter-chips .tv-chip').forEach(function(c) { c.classList.remove('active'); });
+        if (btnEl) btnEl.classList.add('active');
+        tvRenderGpsView();
+    }
+
+    // 6. RENDERIZADO VISTA 2: REPORTES OT
+    function tvRenderOtsTable() {
+        var tbody = document.getElementById('tvOtTableBody');
+        if (!tbody) return;
+
+        var q = (document.getElementById('tvOtSearch') ? document.getElementById('tvOtSearch').value : '').toLowerCase().trim();
+        var list = (_tvData.ots.list || []).filter(function(o) {
+            if (!q) return true;
+            return (o.id_ot || '').toLowerCase().includes(q) ||
+                   (o.placa || '').toLowerCase().includes(q) ||
+                   (o.motivo || '').toLowerCase().includes(q) ||
+                   (o.supervisor || '').toLowerCase().includes(q);
+        });
+
+        var html = '';
+        list.forEach(function(o) {
+            var est = (o.estado || 'Abierto').toLowerCase();
+            var badgeCls = est.includes('proceso') ? 'warning' : (est.includes('finaliz') ? 'success' : (est.includes('anul') ? 'slate' : 'info'));
+            var fecha = o.fecha_ingreso ? new Date(o.fecha_ingreso).toLocaleDateString('es-PE') : '-';
+
+            html += '<tr>';
+            html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800; color: #0284c7;">' + (o.id_ot || '-') + '</td>';
+            html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800;">' + (o.placa || '-') + '</td>';
+            html += '  <td><span style="font-weight: 700;">' + (o.tipo_ot || 'Correctivo') + '</span> ' + (o.sub_tipo ? '<span style="color: #64748b;">(' + o.sub_tipo + ')</span>' : '') + '</td>';
+            html += '  <td style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="' + (o.motivo || '') + '">' + (o.motivo || 'Mantenimiento preventivo / inspección') + '</td>';
+            html += '  <td>' + (o.supervisor || 'Taller Central') + '</td>';
+            html += '  <td>' + (o.mecanico || 'Asignado') + '</td>';
+            html += '  <td>' + (o.rampa || '-') + '</td>';
+            html += '  <td>' + fecha + '</td>';
+            html += '  <td><span class="tv-status-badge ' + badgeCls + '">' + (o.estado || 'Abierto') + '</span></td>';
+            html += '</tr>';
+        });
+
+        tbody.innerHTML = html || '<tr><td colspan="9" style="text-align: center; padding: 24px; color: #94a3b8;">No hay órdenes de trabajo disponibles</td></tr>';
+    }
+
+    // 7. RENDERIZADO VISTA 3: BACKLOG
+    function tvRenderBacklogTable() {
+        var tbody = document.getElementById('tvBacklogTableBody');
+        if (!tbody) return;
+
+        var q = (document.getElementById('tvBacklogSearch') ? document.getElementById('tvBacklogSearch').value : '').toLowerCase().trim();
+        var list = (_tvData.backlog.list || []).filter(function(b) {
+            if (!q) return true;
+            return (b.backlog_id || '').toLowerCase().includes(q) ||
+                   (b.placa || '').toLowerCase().includes(q) ||
+                   (b.tarea || '').toLowerCase().includes(q);
+        });
+
+        var html = '';
+        list.forEach(function(b) {
+            var est = (b.estado || 'Pendiente').toLowerCase();
+            var badgeCls = est.includes('pend') ? 'danger' : (est.includes('proc') ? 'warning' : 'success');
+            var fecha = b.fecha_reporte ? new Date(b.fecha_reporte).toLocaleDateString('es-PE') : '-';
+
+            html += '<tr>';
+            html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800; color: #8b5cf6;">' + (b.backlog_id || '-') + '</td>';
+            html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800;">' + (b.placa || '-') + '</td>';
+            html += '  <td><span class="tv-status-badge purple">' + (b.tema || 'Mantenimiento') + '</span></td>';
+            html += '  <td style="font-weight: 600; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + (b.tarea || '-') + '</td>';
+            html += '  <td style="font-family: \'JetBrains Mono\', monospace;">' + (b.km || '-') + '</td>';
+            html += '  <td>' + (b.reportado_por || 'Operaciones') + '</td>';
+            html += '  <td><span style="font-family: monospace; font-weight: 700; color: #0284c7;">' + (b.ticket_ot || '-') + '</span></td>';
+            html += '  <td>' + fecha + '</td>';
+            html += '  <td><span class="tv-status-badge ' + badgeCls + '">' + (b.estado || 'Pendiente') + '</span></td>';
+            html += '</tr>';
+        });
+
+        tbody.innerHTML = html || '<tr><td colspan="9" style="text-align: center; padding: 24px; color: #94a3b8;">No hay registros en Backlog</td></tr>';
+    }
+
+    // 8. RENDERIZADO VISTA 4: REPORTE DE FALLAS (NO FINALIZADAS)
+    function tvRenderFallasTable() {
+        var tbody = document.getElementById('tvFallasTableBody');
+        if (!tbody) return;
+
+        var q = (document.getElementById('tvFallasSearch') ? document.getElementById('tvFallasSearch').value : '').toLowerCase().trim();
+        var list = (_tvData.fallas.list || []).filter(function(f) {
+            if (!q) return true;
+            return (f.folio || '').toLowerCase().includes(q) ||
+                   (f.placa || '').toLowerCase().includes(q) ||
+                   (f.conductor || '').toLowerCase().includes(q) ||
+                   (f.descripcion || '').toLowerCase().includes(q);
+        });
+
+        var html = '';
+        list.forEach(function(f) {
+            var est = (f.estado || 'Pendiente').toLowerCase();
+            var badgeCls = est.includes('pend') ? 'danger' : (est.includes('proc') ? 'warning' : 'slate');
+            var fecha = f.fecha ? new Date(f.fecha).toLocaleDateString('es-PE') : '-';
+
+            html += '<tr>';
+            html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800; color: #ef4444;">' + (f.folio || '-') + '</td>';
+            html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800;">' + (f.placa || '-') + '</td>';
+            html += '  <td style="font-weight: 600;">' + (f.conductor || 'No asignado') + '</td>';
+            html += '  <td><span style="font-size: 0.78rem; font-weight: 700; color: #64748b;">' + (f.procedencia || 'En ruta') + '</span></td>';
+            html += '  <td style="max-width: 380px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="' + f.descripcion + '">';
+            html += '    <span style="color: #0f172a; font-weight: 600;">' + f.descripcion + '</span>';
+            html += '  </td>';
+            html += '  <td>' + fecha + '</td>';
+            html += '  <td><span class="tv-status-badge ' + badgeCls + '">' + (f.estado || 'Pendiente') + '</span></td>';
+            html += '</tr>';
+        });
+
+        tbody.innerHTML = html || '<tr><td colspan="7" style="text-align: center; padding: 24px; color: #94a3b8;">¡Excelente! No hay fallas pendientes de atención.</td></tr>';
+    }
+
+    // 9. NAVEGACIÓN Y CAMBIO ENTRE VISTAS
+    function tvSwitchView(viewName) {
+        _tvCurrentView = viewName;
+
+        // Actualizar pestañas
+        document.querySelectorAll('.tv-tabs-nav .tv-tab-btn').forEach(function(b) {
+            b.classList.toggle('active', b.getAttribute('data-view') === viewName);
+        });
+
+        // Actualizar contenedores de vista
+        document.querySelectorAll('.tv-view-pane').forEach(function(p) {
+            p.classList.remove('active');
+        });
+
+        var targetPane = document.getElementById('view' + viewName.charAt(0).toUpperCase() + viewName.slice(1));
+        if (targetPane) targetPane.classList.add('active');
+
+        // Si es GPS, redibujar Leaflet
+        if (viewName === 'gps' && _tvMap) {
+            setTimeout(function() { _tvMap.invalidateSize(); }, 150);
+        }
+    }
+
+    function tvNextView() {
+        var idx = _tvViews.indexOf(_tvCurrentView);
+        var nextIdx = (idx + 1) % _tvViews.length;
+        tvSwitchView(_tvViews[nextIdx]);
+    }
+
+    function tvPrevView() {
+        var idx = _tvViews.indexOf(_tvCurrentView);
+        var prevIdx = (idx - 1 + _tvViews.length) % _tvViews.length;
+        tvSwitchView(_tvViews[prevIdx]);
+    }
+
+    // 10. CARRUSEL AUTOMÁTICO TV (WAR ROOM ROTATION)
+    function tvToggleCarousel() {
+        _tvCarouselActive = !_tvCarouselActive;
+        var btn = document.getElementById('tvBtnCarousel');
+        var txt = document.getElementById('tvCarouselText');
+        var keyTxt = document.getElementById('tvKeyCarouselTxt');
+        var bar = document.getElementById('tvCarouselProgressBar');
+
+        if (_tvCarouselActive) {
+            if (btn) btn.classList.add('active');
+            if (txt) txt.innerText = 'Carrusel [ON]';
+            if (keyTxt) keyTxt.innerText = 'Carrusel [ON]';
+            _tvCarouselTimerCount = 0;
+            if (bar) bar.style.width = '0%';
+
+            _tvCarouselInterval = setInterval(function() {
+                _tvCarouselTimerCount += 1;
+                var pct = (_tvCarouselTimerCount / _tvCarouselSeconds) * 100;
+                if (bar) bar.style.width = pct + '%';
+
+                if (_tvCarouselTimerCount >= _tvCarouselSeconds) {
+                    _tvCarouselTimerCount = 0;
+                    if (bar) bar.style.width = '0%';
+                    tvNextView();
+                }
+            }, 1000);
+        } else {
+            if (btn) btn.classList.remove('active');
+            if (txt) txt.innerText = 'Carrusel Auto';
+            if (keyTxt) keyTxt.innerText = 'Carrusel [OFF]';
+            if (bar) bar.style.width = '0%';
+            if (_tvCarouselInterval) clearInterval(_tvCarouselInterval);
+            _tvCarouselInterval = null;
+        }
+    }
+
+    // 11. PANTALLA COMPLETA & MODAL QR
+    function tvToggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(function(e){});
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen().catch(function(e){});
+        }
+    }
+
+    function tvToggleQrModal() {
+        var modal = document.getElementById('tvQrModal');
+        if (!modal) return;
+        var isShown = modal.style.display === 'flex';
+        modal.style.display = isShown ? 'none' : 'flex';
+
+        if (!isShown) {
+            var host = window.location.hostname || 'marsisa.azkell.com';
+            var fullUrl = window.location.origin;
+            document.getElementById('tvHostDisplay').innerText = host;
+            document.getElementById('tvQrImage').src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(fullUrl);
+        }
+    }
+
+    // 12. CONTROL REMOTO SMART TV (D-PAD & HOTKEYS)
+    window.addEventListener('keydown', function(e) {
+        var key = e.key;
+
+        // Teclas Numéricas (1, 2, 3, 4)
+        if (key === '1') { tvSwitchView('gps'); return; }
+        if (key === '2') { tvSwitchView('ot'); return; }
+        if (key === '3') { tvSwitchView('backlog'); return; }
+        if (key === '4') { tvSwitchView('fallas'); return; }
+
+        // Flechas Horizontales
+        if (key === 'ArrowRight') { tvNextView(); return; }
+        if (key === 'ArrowLeft') { tvPrevView(); return; }
+
+        // Carrusel (C)
+        if (key === 'c' || key === 'C') { tvToggleCarousel(); return; }
+
+        // Satélite (S)
+        if (key === 's' || key === 'S') {
+            tvSetMapLayer(_tvCurrentMapLayer === 'street' ? 'satellite' : 'street');
+            return;
+        }
+
+        // Fullscreen (F)
+        if (key === 'f' || key === 'F') { tvToggleFullscreen(); return; }
+
+        // Enter / OK
+        if (key === 'Enter') {
+            if (_tvCurrentView === 'gps') {
+                var units = (_tvData.gps.unidades || []);
+                if (units.length > 0) {
+                    var unit = units[_tvSelectedUnitIndex % units.length];
+                    if (unit) tvFocusUnit(unit.placa);
+                }
             }
+            return;
         }
 
-        // 10. CAMBIAR CAPA DEL MAPA (SATÉLITE / OSCURO)
-        function tvToggleLayer() {
-            if (!_tvMap) return;
-            if (_tvCurrentLayer === 'dark') {
-                _tvMap.removeLayer(_tvLayers.dark);
-                _tvLayers.satellite.addTo(_tvMap);
-                _tvCurrentLayer = 'satellite';
-            } else {
-                _tvMap.removeLayer(_tvLayers.satellite);
-                _tvLayers.dark.addTo(_tvMap);
-                _tvCurrentLayer = 'dark';
-            }
+        // Flechas Verticales (Navegar unidades)
+        if (key === 'ArrowDown') {
+            _tvSelectedUnitIndex += 1;
+            tvRenderGpsView();
+            return;
+        }
+        if (key === 'ArrowUp') {
+            _tvSelectedUnitIndex = Math.max(0, _tvSelectedUnitIndex - 1);
+            tvRenderGpsView();
+            return;
         }
 
-        // 11. PANTALLA COMPLETA
-        function tvToggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(function(){});
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen().catch(function(){});
-            }
-        }
-
-        // 12. FILTRO DE KPIS
-        function tvFiltrarFlota(tipo) {
-            _tvActiveFilter = tipo;
-            document.querySelectorAll('.tv-kpi-chip').forEach(function(c) {
-                c.classList.remove('active');
-            });
-            var activeChip = document.getElementById('chip-' + tipo);
-            if (activeChip) activeChip.classList.add('active');
-            tvRenderLista();
-        }
-
-        // 13. QR PAIRING MODAL
-        function tvToggleQrModal() {
+        // Escape
+        if (key === 'Escape') {
+            tvCloseDrawer();
             var modal = document.getElementById('tvQrModal');
-            if (modal) {
-                modal.classList.toggle('is-open');
-                var hostEl = document.getElementById('tvHostDisplay');
-                var qrImg = document.getElementById('tvQrImage');
-                var currentUrl = window.location.origin + '/tv';
-                if (hostEl) hostEl.innerText = window.location.host + '/tv';
-                if (qrImg) qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(currentUrl);
-            }
+            if (modal) modal.style.display = 'none';
         }
+    });
 
-        // INICIALIZACIÓN GLOBAL
-        document.addEventListener('DOMContentLoaded', function() {
-            tvInitClock();
-            tvInitMap();
-            tvFetchData();
-            // Polling en vivo cada 4 segundos
-            setInterval(tvFetchData, 4000);
-        });
-    </script>
+    // 13. INICIO Y CICLO DE REFRESH AUTOMÁTICO (CADA 5 SEGUNDOS)
+    document.addEventListener('DOMContentLoaded', function() {
+        tvInitClock();
+        tvInitMap();
+        tvFetchData();
+
+        // Polling silencioso en tiempo real sin recargar la página
+        setInterval(tvFetchData, 5000);
+    });
+</script>
+
 </body>
 </html>
