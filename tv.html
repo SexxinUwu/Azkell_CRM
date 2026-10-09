@@ -954,20 +954,24 @@
         <!-- Pestañas de Navegación de Vistas -->
         <nav class="tv-tabs-nav" id="tvTabsNav">
             <button class="tv-tab-btn active" onclick="tvSwitchView('gps')" id="tabGps" data-view="gps">
-                <i class="bi bi-geo-alt-fill text-primary"></i> Ubicación GPS Flota
+                <i class="bi bi-geo-alt-fill text-primary"></i> Ubicación GPS
                 <span class="tv-tab-badge" id="kpiBadgeGps">62</span>
             </button>
             <button class="tv-tab-btn" onclick="tvSwitchView('ot')" id="tabOt" data-view="ot">
                 <i class="bi bi-tools text-amber"></i> Reportes OT
-                <span class="tv-tab-badge" id="kpiBadgeOt">604</span>
+                <span class="tv-tab-badge" id="kpiBadgeOt">1 En Proceso</span>
             </button>
             <button class="tv-tab-btn" onclick="tvSwitchView('backlog')" id="tabBacklog" data-view="backlog">
                 <i class="bi bi-clipboard-check text-purple"></i> BackLog
-                <span class="tv-tab-badge" id="kpiBadgeBacklog">21</span>
+                <span class="tv-tab-badge" id="kpiBadgeBacklog">20 Pendientes</span>
             </button>
             <button class="tv-tab-btn" onclick="tvSwitchView('fallas')" id="tabFallas" data-view="fallas">
                 <i class="bi bi-exclamation-octagon-fill text-danger"></i> Reporte de Fallas
-                <span class="tv-tab-badge danger" id="kpiBadgeFallas">42 Activas</span>
+                <span class="tv-tab-badge danger" id="kpiBadgeFallas">43 Activas</span>
+            </button>
+            <button class="tv-tab-btn" onclick="tvSwitchView('rampas')" id="tabRampas" data-view="rampas">
+                <i class="bi bi-ev-front-fill text-amber"></i> Status Rampa
+                <span class="tv-tab-badge" id="kpiBadgeRampas">33 En Rampa</span>
             </button>
         </nav>
 
@@ -1109,13 +1113,6 @@
         <section class="tv-view-pane" id="viewOt">
             <div class="tv-kpi-strip">
                 <div class="tv-kpi-card">
-                    <div class="tv-kpi-icon-wrap blue"><i class="bi bi-tools"></i></div>
-                    <div class="tv-kpi-info">
-                        <span class="tv-kpi-label">Total Órdenes OT</span>
-                        <span class="tv-kpi-value" id="kpiOtTotal">604</span>
-                    </div>
-                </div>
-                <div class="tv-kpi-card">
                     <div class="tv-kpi-icon-wrap amber"><i class="bi bi-hourglass-split"></i></div>
                     <div class="tv-kpi-info">
                         <span class="tv-kpi-label">OTs En Proceso</span>
@@ -1136,14 +1133,21 @@
                         <span class="tv-kpi-value" id="kpiOtFinalizadas">574</span>
                     </div>
                 </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap blue"><i class="bi bi-archive-fill"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Histórico Total</span>
+                        <span class="tv-kpi-value" id="kpiOtTotal">604</span>
+                    </div>
+                </div>
             </div>
 
             <div class="tv-table-view-body">
                 <div class="tv-table-card">
                     <div class="tv-table-header-strip">
                         <div>
-                            <div class="tv-table-title"><i class="bi bi-tools text-primary"></i> Registro de Órdenes de Trabajo (OT)</div>
-                            <div class="tv-table-subtitle">Monitoreo en vivo de tareas de mantenimiento en taller central</div>
+                            <div class="tv-table-title"><i class="bi bi-tools text-amber"></i> Reporte de OTs — Solo en Estado "En Proceso"</div>
+                            <div class="tv-table-subtitle">Mostrando únicamente órdenes de trabajo activas en proceso de atención en taller</div>
                         </div>
                         <div class="tv-search-input-box" style="width: 260px;">
                             <i class="bi bi-search"></i>
@@ -1180,13 +1184,6 @@
         <section class="tv-view-pane" id="viewBacklog">
             <div class="tv-kpi-strip">
                 <div class="tv-kpi-card">
-                    <div class="tv-kpi-icon-wrap blue"><i class="bi bi-clipboard-data"></i></div>
-                    <div class="tv-kpi-info">
-                        <span class="tv-kpi-label">Total BackLog</span>
-                        <span class="tv-kpi-value" id="kpiBacklogTotal">21</span>
-                    </div>
-                </div>
-                <div class="tv-kpi-card">
                     <div class="tv-kpi-icon-wrap red"><i class="bi bi-clock-history"></i></div>
                     <div class="tv-kpi-info">
                         <span class="tv-kpi-label">Backlogs Pendientes</span>
@@ -1207,14 +1204,21 @@
                         <span class="tv-kpi-value" id="kpiBacklogRealizado">1</span>
                     </div>
                 </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap blue"><i class="bi bi-archive-fill"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Histórico Total</span>
+                        <span class="tv-kpi-value" id="kpiBacklogTotal">21</span>
+                    </div>
+                </div>
             </div>
 
             <div class="tv-table-view-body">
                 <div class="tv-table-card">
                     <div class="tv-table-header-strip">
                         <div>
-                            <div class="tv-table-title"><i class="bi bi-clipboard-check text-purple"></i> Registro y Control de BackLog</div>
-                            <div class="tv-table-subtitle">Trabajos pendientes de corrección y repuestos postergados</div>
+                            <div class="tv-table-title"><i class="bi bi-clipboard-check text-danger"></i> Control de BackLog — Solo Pendientes</div>
+                            <div class="tv-table-subtitle">Mostrando únicamente tareas técnicas y repuestos pendientes de atención en taller</div>
                         </div>
                         <div class="tv-search-input-box" style="width: 260px;">
                             <i class="bi bi-search"></i>
@@ -1314,6 +1318,75 @@
             </div>
         </section>
 
+        <!-- ======================================================== -->
+        <!-- VISTA 5: STATUS RAMPA (HORARIOS Y SALIDA DE UNIDADES)    -->
+        <!-- ======================================================== -->
+        <section class="tv-view-pane" id="viewRampas">
+            <div class="tv-kpi-strip">
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap amber"><i class="bi bi-ev-front-fill"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Unidades en Rampa</span>
+                        <span class="tv-kpi-value" id="kpiRampasActivas">33</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap blue"><i class="bi bi-clock-history"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Rampas Ocupadas</span>
+                        <span class="tv-kpi-value" id="kpiRampasOcupadas">3</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap green"><i class="bi bi-door-open-fill"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Rampas Disponibles</span>
+                        <span class="tv-kpi-value" id="kpiRampasLibres">13</span>
+                    </div>
+                </div>
+                <div class="tv-kpi-card">
+                    <div class="tv-kpi-icon-wrap gray"><i class="bi bi-building-gear"></i></div>
+                    <div class="tv-kpi-info">
+                        <span class="tv-kpi-label">Total Rampas Taller</span>
+                        <span class="tv-kpi-value" id="kpiRampasTotal">16</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tv-table-view-body">
+                <div class="tv-table-card">
+                    <div class="tv-table-header-strip">
+                        <div>
+                            <div class="tv-table-title"><i class="bi bi-ev-front-fill text-amber"></i> Status Rampa — Programación y Horarios de Salida</div>
+                            <div class="tv-table-subtitle">Monitoreo en tiempo real de unidades en taller y hora programada de liberación técnica</div>
+                        </div>
+                        <div class="tv-search-input-box" style="width: 260px;">
+                            <i class="bi bi-search"></i>
+                            <input type="text" class="tv-search-input" id="tvRampasSearch" placeholder="Buscar rampa, placa..." oninput="tvRenderRampasTable()">
+                        </div>
+                    </div>
+                    <div class="tv-table-scroll-wrap">
+                        <table class="tv-modern-table">
+                            <thead>
+                                <tr>
+                                    <th>N° Rampa</th>
+                                    <th>Placa Unidad</th>
+                                    <th>Hora Ingreso</th>
+                                    <th style="color: #0284c7; font-weight: 800;">⏰ HORA ESTIMADA DE SALIDA</th>
+                                    <th>Trabajos en Ejecución</th>
+                                    <th>Kilometraje</th>
+                                    <th>Situación</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tvRampasTableBody">
+                                <!-- Filas de Status Rampa -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- 3. BARRA INFERIOR DE EVENTOS EN VIVO Y GUÍA DE CONTROL REMOTO -->
@@ -1325,7 +1398,7 @@
 
         <div class="tv-remote-shortcuts">
             <div class="tv-key-guide">
-                <span class="tv-key-btn">1..4</span> <span>Cambiar Vista</span>
+                <span class="tv-key-btn">1..5</span> <span>Cambiar Vista</span>
             </div>
             <div class="tv-key-guide">
                 <span class="tv-key-btn">◄ ►</span> <span>Pestañas</span>
@@ -1385,10 +1458,11 @@
         gps: { kpis: {}, unidades: [], grupos: [] },
         ots: { kpis: {}, list: [] },
         backlog: { kpis: {}, list: [] },
-        fallas: { kpis: {}, list: [] }
+        fallas: { kpis: {}, list: [] },
+        rampas: { kpis: {}, list: [] }
     };
     var _tvCurrentView = 'gps';
-    var _tvViews = ['gps', 'ot', 'backlog', 'fallas'];
+    var _tvViews = ['gps', 'ot', 'backlog', 'fallas', 'rampas'];
     var _tvGpsFilter = 'all';
     var _tvSelectedUnitIndex = 0;
     var _tvSelectedUnitPlate = null;
@@ -1490,6 +1564,7 @@
         tvRenderOtsTable();
         tvRenderBacklogTable();
         tvRenderFallasTable();
+        tvRenderRampasTable();
     }
 
     // 4. ACTUALIZACIÓN DE BADGES Y KPIS SUPERIORES
@@ -1508,7 +1583,7 @@
 
         // OTs KPIs
         var otKpi = _tvData.ots.kpis || {};
-        document.getElementById('kpiBadgeOt').innerText = otKpi.total || 0;
+        document.getElementById('kpiBadgeOt').innerText = (otKpi.proceso || 0) + ' En Proceso';
         document.getElementById('kpiOtTotal').innerText = otKpi.total || 0;
         document.getElementById('kpiOtProceso').innerText = otKpi.proceso || 0;
         document.getElementById('kpiOtAbiertas').innerText = otKpi.abierto || 0;
@@ -1516,7 +1591,7 @@
 
         // Backlog KPIs
         var blKpi = _tvData.backlog.kpis || {};
-        document.getElementById('kpiBadgeBacklog').innerText = blKpi.total || 0;
+        document.getElementById('kpiBadgeBacklog').innerText = (blKpi.pendiente || 0) + ' Pendientes';
         document.getElementById('kpiBacklogTotal').innerText = blKpi.total || 0;
         document.getElementById('kpiBacklogPendiente').innerText = blKpi.pendiente || 0;
         document.getElementById('kpiBacklogProceso').innerText = blKpi.proceso || 0;
@@ -1529,6 +1604,17 @@
         document.getElementById('kpiFallasPendientes').innerText = fKpi.pendiente || 0;
         document.getElementById('kpiFallasProceso').innerText = fKpi.proceso || 0;
         document.getElementById('kpiFallasHistorico').innerText = fKpi.total_historico || 0;
+
+        // Rampas KPIs
+        var rKpi = _tvData.rampas.kpis || {};
+        var totalRampas = rKpi.total_rampas || 16;
+        var ocupadas = rKpi.rampas_ocupadas || 0;
+        var libres = Math.max(0, totalRampas - ocupadas);
+        document.getElementById('kpiBadgeRampas').innerText = (rKpi.total_activas || 0) + ' En Rampa';
+        document.getElementById('kpiRampasActivas').innerText = rKpi.total_activas || 0;
+        document.getElementById('kpiRampasOcupadas').innerText = ocupadas;
+        document.getElementById('kpiRampasLibres').innerText = libres;
+        document.getElementById('kpiRampasTotal').innerText = totalRampas;
     }
 
     // 5. RENDERIZADO VISTA 1: GPS FLOTA
@@ -1683,13 +1769,17 @@
         tvRenderGpsView();
     }
 
-    // 6. RENDERIZADO VISTA 2: REPORTES OT
+    // 6. RENDERIZADO VISTA 2: REPORTES OT (SOLO EN PROCESO)
     function tvRenderOtsTable() {
         var tbody = document.getElementById('tvOtTableBody');
         if (!tbody) return;
 
         var q = (document.getElementById('tvOtSearch') ? document.getElementById('tvOtSearch').value : '').toLowerCase().trim();
         var list = (_tvData.ots.list || []).filter(function(o) {
+            var est = (o.estado || '').toLowerCase();
+            // Filtrar únicamente los que están en estado "En Proceso"
+            if (!est.includes('proceso')) return false;
+
             if (!q) return true;
             return (o.id_ot || '').toLowerCase().includes(q) ||
                    (o.placa || '').toLowerCase().includes(q) ||
@@ -1699,33 +1789,35 @@
 
         var html = '';
         list.forEach(function(o) {
-            var est = (o.estado || 'Abierto').toLowerCase();
-            var badgeCls = est.includes('proceso') ? 'warning' : (est.includes('finaliz') ? 'success' : (est.includes('anul') ? 'slate' : 'info'));
             var fecha = o.fecha_ingreso ? new Date(o.fecha_ingreso).toLocaleDateString('es-PE') : '-';
 
             html += '<tr>';
             html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800; color: #0284c7;">' + (o.id_ot || '-') + '</td>';
             html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800;">' + (o.placa || '-') + '</td>';
             html += '  <td><span style="font-weight: 700;">' + (o.tipo_ot || 'Correctivo') + '</span> ' + (o.sub_tipo ? '<span style="color: #64748b;">(' + o.sub_tipo + ')</span>' : '') + '</td>';
-            html += '  <td style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="' + (o.motivo || '') + '">' + (o.motivo || 'Mantenimiento preventivo / inspección') + '</td>';
+            html += '  <td style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="' + (o.motivo || '') + '">' + (o.motivo || 'Mantenimiento en taller') + '</td>';
             html += '  <td>' + (o.supervisor || 'Taller Central') + '</td>';
             html += '  <td>' + (o.mecanico || 'Asignado') + '</td>';
             html += '  <td>' + (o.rampa || '-') + '</td>';
             html += '  <td>' + fecha + '</td>';
-            html += '  <td><span class="tv-status-badge ' + badgeCls + '">' + (o.estado || 'Abierto') + '</span></td>';
+            html += '  <td><span class="tv-status-badge warning"><i class="bi bi-hourglass-split"></i> En Proceso</span></td>';
             html += '</tr>';
         });
 
-        tbody.innerHTML = html || '<tr><td colspan="9" style="text-align: center; padding: 24px; color: #94a3b8;">No hay órdenes de trabajo disponibles</td></tr>';
+        tbody.innerHTML = html || '<tr><td colspan="9" style="text-align: center; padding: 28px; color: #94a3b8;"><i class="bi bi-check2-circle text-success" style="font-size: 1.6rem; display: block; margin-bottom: 6px;"></i>No hay órdenes de trabajo en proceso en este momento.</td></tr>';
     }
 
-    // 7. RENDERIZADO VISTA 3: BACKLOG
+    // 7. RENDERIZADO VISTA 3: BACKLOG (SOLO PENDIENTES)
     function tvRenderBacklogTable() {
         var tbody = document.getElementById('tvBacklogTableBody');
         if (!tbody) return;
 
         var q = (document.getElementById('tvBacklogSearch') ? document.getElementById('tvBacklogSearch').value : '').toLowerCase().trim();
         var list = (_tvData.backlog.list || []).filter(function(b) {
+            var est = (b.estado || 'Pendiente').toLowerCase();
+            // Filtrar únicamente los pendientes
+            if (est.includes('realiz') || est.includes('cerrad') || est.includes('finaliz')) return false;
+
             if (!q) return true;
             return (b.backlog_id || '').toLowerCase().includes(q) ||
                    (b.placa || '').toLowerCase().includes(q) ||
@@ -1734,8 +1826,6 @@
 
         var html = '';
         list.forEach(function(b) {
-            var est = (b.estado || 'Pendiente').toLowerCase();
-            var badgeCls = est.includes('pend') ? 'danger' : (est.includes('proc') ? 'warning' : 'success');
             var fecha = b.fecha_reporte ? new Date(b.fecha_reporte).toLocaleDateString('es-PE') : '-';
 
             html += '<tr>';
@@ -1747,11 +1837,11 @@
             html += '  <td>' + (b.reportado_por || 'Operaciones') + '</td>';
             html += '  <td><span style="font-family: monospace; font-weight: 700; color: #0284c7;">' + (b.ticket_ot || '-') + '</span></td>';
             html += '  <td>' + fecha + '</td>';
-            html += '  <td><span class="tv-status-badge ' + badgeCls + '">' + (b.estado || 'Pendiente') + '</span></td>';
+            html += '  <td><span class="tv-status-badge danger"><i class="bi bi-clock-history"></i> Pendiente</span></td>';
             html += '</tr>';
         });
 
-        tbody.innerHTML = html || '<tr><td colspan="9" style="text-align: center; padding: 24px; color: #94a3b8;">No hay registros en Backlog</td></tr>';
+        tbody.innerHTML = html || '<tr><td colspan="9" style="text-align: center; padding: 28px; color: #94a3b8;"><i class="bi bi-check2-circle text-success" style="font-size: 1.6rem; display: block; margin-bottom: 6px;"></i>¡Excelente! No hay tareas de backlog pendientes en este momento.</td></tr>';
     }
 
     // 8. RENDERIZADO VISTA 4: REPORTE DE FALLAS (NO FINALIZADAS)
@@ -1790,7 +1880,45 @@
         tbody.innerHTML = html || '<tr><td colspan="7" style="text-align: center; padding: 24px; color: #94a3b8;">¡Excelente! No hay fallas pendientes de atención.</td></tr>';
     }
 
-    // 9. NAVEGACIÓN Y CAMBIO ENTRE VISTAS
+    // 9. RENDERIZADO VISTA 5: STATUS RAMPA (HORAS DE SALIDA)
+    function tvRenderRampasTable() {
+        var tbody = document.getElementById('tvRampasTableBody');
+        if (!tbody) return;
+
+        var q = (document.getElementById('tvRampasSearch') ? document.getElementById('tvRampasSearch').value : '').toLowerCase().trim();
+        var list = (_tvData.rampas.list || []).filter(function(r) {
+            if (!q) return true;
+            return (r.rampa || '').toLowerCase().includes(q) ||
+                   (r.placa || '').toLowerCase().includes(q) ||
+                   (r.trabajo || '').toLowerCase().includes(q) ||
+                   (r.hora_salida || '').toLowerCase().includes(q);
+        });
+
+        var html = '';
+        list.forEach(function(r) {
+            var hSalida = r.hora_salida && r.hora_salida !== '-' ? r.hora_salida + ' hrs' : 'Por definir';
+
+            html += '<tr>';
+            html += '  <td><span class="tv-status-badge warning" style="font-weight: 800; font-size: 0.82rem;"><i class="bi bi-ev-front"></i> ' + r.rampa + '</span></td>';
+            html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800; font-size: 1rem; color: #0f172a;">' + (r.placa || '-') + '</td>';
+            html += '  <td style="font-family: monospace; font-weight: 700; color: #64748b;">' + (r.hora_ingreso !== '-' ? r.hora_ingreso + ' hrs' : '-') + '</td>';
+            html += '  <td>';
+            html += '    <span style="font-family: \'JetBrains Mono\', monospace; font-size: 1rem; font-weight: 900; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">';
+            html += '      <i class="bi bi-clock-history"></i> ' + hSalida;
+            html += '    </span>';
+            html += '  </td>';
+            html += '  <td style="max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="' + r.trabajo + '">';
+            html += '    <span style="font-weight: 600; color: #334155;">' + r.trabajo + '</span>';
+            html += '  </td>';
+            html += '  <td style="font-family: monospace;">' + (r.km || '-') + '</td>';
+            html += '  <td><span class="tv-status-badge success"><i class="bi bi-gear-wide"></i> ' + (r.situacion || 'En atención') + '</span></td>';
+            html += '</tr>';
+        });
+
+        tbody.innerHTML = html || '<tr><td colspan="7" style="text-align: center; padding: 28px; color: #94a3b8;"><i class="bi bi-door-open text-success" style="font-size: 1.6rem; display: block; margin-bottom: 6px;"></i>Todas las rampas están libres en este momento.</td></tr>';
+    }
+
+    // 10. NAVEGACIÓN Y CAMBIO ENTRE VISTAS
     function tvSwitchView(viewName) {
         _tvCurrentView = viewName;
 
@@ -1825,7 +1953,7 @@
         tvSwitchView(_tvViews[prevIdx]);
     }
 
-    // 10. CARRUSEL AUTOMÁTICO TV (WAR ROOM ROTATION)
+    // 11. CARRUSEL AUTOMÁTICO TV (WAR ROOM ROTATION)
     function tvToggleCarousel() {
         _tvCarouselActive = !_tvCarouselActive;
         var btn = document.getElementById('tvBtnCarousel');
@@ -1861,7 +1989,7 @@
         }
     }
 
-    // 11. PANTALLA COMPLETA & MODAL QR
+    // 12. PANTALLA COMPLETA & MODAL QR
     function tvToggleFullscreen() {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(function(e){});
@@ -1884,15 +2012,16 @@
         }
     }
 
-    // 12. CONTROL REMOTO SMART TV (D-PAD & HOTKEYS)
+    // 13. CONTROL REMOTO SMART TV (D-PAD & HOTKEYS)
     window.addEventListener('keydown', function(e) {
         var key = e.key;
 
-        // Teclas Numéricas (1, 2, 3, 4)
+        // Teclas Numéricas (1, 2, 3, 4, 5)
         if (key === '1') { tvSwitchView('gps'); return; }
         if (key === '2') { tvSwitchView('ot'); return; }
         if (key === '3') { tvSwitchView('backlog'); return; }
         if (key === '4') { tvSwitchView('fallas'); return; }
+        if (key === '5') { tvSwitchView('rampas'); return; }
 
         // Flechas Horizontales
         if (key === 'ArrowRight') { tvNextView(); return; }
