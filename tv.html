@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Azkell Fleet — Centro de Control Smart TV & War Room</title>
     
-    <!-- Meta tags para Smart TV y Pantallas Grandes -->
+    <!-- Anti-Cache & Smart TV Meta Tags -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="theme-color" content="#f8fafc">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1092,6 +1095,9 @@
 
         <!-- Reloj y Herramientas -->
         <div class="tv-header-tools">
+            <button class="tv-action-btn" onclick="tvForceReload()" title="Actualizar / Forzar Recarga de Interfaz (Tecla R o 0)">
+                <i class="bi bi-arrow-clockwise text-primary"></i> <span>Recargar</span>
+            </button>
             <button class="tv-action-btn" id="tvBtnCarousel" onclick="tvToggleCarousel()" title="Rotación Automática cada 30 segundos (Tecla C)">
                 <i class="bi bi-arrow-repeat"></i> <span id="tvCarouselText">Carrusel</span>
             </button>
@@ -1524,6 +1530,9 @@
             </div>
             <div class="tv-key-guide">
                 <span class="tv-key-btn">OK</span> <span>Enfocar</span>
+            </div>
+            <div class="tv-key-guide">
+                <span class="tv-key-btn">R</span> <span>Recargar</span>
             </div>
             <div class="tv-key-guide">
                 <span class="tv-key-btn">C</span> <span id="tvKeyCarouselTxt">Carrusel [OFF]</span>
@@ -2229,7 +2238,28 @@
         }
     }
 
-    // 14. CONTROL REMOTO SMART TV (D-PAD & HOTKEYS)
+    // 14. FORZAR RECARGA OMITIENDO CACHÉ DE GOOGLE TV
+    function tvForceReload() {
+        var base = window.location.pathname || '/tv';
+        window.location.href = base + '?_v=' + Date.now();
+    }
+
+    // Auto-detección de nueva versión desplegada en VPS
+    var _tvClientBuild = 2026100902;
+    async function tvCheckAutoUpdate() {
+        try {
+            var res = await fetch('/api/tv/version?_t=' + Date.now());
+            if (res.ok) {
+                var data = await res.json();
+                if (data && data.versionCode && data.versionCode > _tvClientBuild) {
+                    console.log('Nueva versión detectada en servidor, recargando...');
+                    tvForceReload();
+                }
+            }
+        } catch(e) {}
+    }
+
+    // 15. CONTROL REMOTO SMART TV (D-PAD & HOTKEYS)
     window.addEventListener('keydown', function(e) {
         var key = e.key;
 
@@ -2259,6 +2289,12 @@
         if (key === '3') { tvSwitchView('backlog'); return; }
         if (key === '4') { tvSwitchView('fallas'); return; }
         if (key === '5') { tvSwitchView('rampas'); return; }
+
+        // Recargar / Actualizar Interfaz (R o 0)
+        if (key === 'r' || key === 'R' || key === '0') {
+            tvForceReload();
+            return;
+        }
 
         // Flechas Horizontales
         if (key === 'ArrowRight') { tvNextView(); return; }
@@ -2330,7 +2366,7 @@
         }
     });
 
-    // 15. INICIO Y CICLO DE REFRESH AUTOMÁTICO (CADA 5 SEGUNDOS)
+    // 16. INICIO Y CICLO DE REFRESH AUTOMÁTICO (CADA 5 SEGUNDOS)
     document.addEventListener('DOMContentLoaded', function() {
         tvInitClock();
         tvInitMap();
@@ -2338,6 +2374,16 @@
 
         // Polling silencioso en tiempo real sin recargar la página
         setInterval(tvFetchData, 5000);
+
+        // Verificación de actualizaciones de software cada 30 segundos
+        setInterval(tvCheckAutoUpdate, 30000);
+    });
+
+    // Al volver a la app cuando el TV se enciende o se cambia de app
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            tvFetchData();
+        }
     });
 </script>
 

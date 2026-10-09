@@ -751,6 +751,10 @@ app.get('/', async (req, res) => {
 // ── RUTA DEDICADA PARA SMART TV (CENTRO DE CONTROL / WAR ROOM) ─────
 app.get(['/tv', '/tv/gps'], (req, res) => {
     try {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        res.setHeader('Surrogate-Control', 'no-store');
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         return res.sendFile(path.join(__dirname, 'tv.html'));
     } catch (e) {

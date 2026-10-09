@@ -86,7 +86,7 @@ public class MainActivity extends Activity {
         ws.setBuiltInZoomControls(false);
         ws.setMediaPlaybackRequiresUserGesture(false);
         ws.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        ws.setCacheMode(WebSettings.LOAD_DEFAULT);
+        ws.setCacheMode(WebSettings.LOAD_NO_CACHE);
         
         // Identificador Smart TV
         String originalUa = ws.getUserAgentString();
@@ -283,6 +283,15 @@ public class MainActivity extends Activity {
 
         } catch (Exception e) {
             Toast.makeText(this, "Error al iniciar descarga: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mWebView != null) {
+            mWebView.clearCache(true);
+            mWebView.reload();
         }
     }
 
