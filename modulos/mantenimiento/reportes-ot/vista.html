@@ -310,6 +310,23 @@
     display: flex !important;
 }
 
+#rot-drawer-material {
+    max-width: 1180px !important;
+    width: 95vw !important;
+    height: 94vh !important;
+    max-height: 94vh !important;
+    border-radius: 20px 20px 0 0 !important;
+}
+#rot-drawer-material .rot-drawer-hd {
+    padding: 0.85rem 1.5rem !important;
+}
+#rot-drawer-material .rot-drawer-body {
+    padding: 1.25rem 1.5rem 220px 1.5rem !important;
+}
+#rot-drawer-material .rot-drawer-footer {
+    padding: 0.85rem 1.5rem !important;
+}
+
 /* ── Autocomplete Desplegable Personalizado para Artículos OT ── */
 .custom-art-dropdown {
     display: none;
@@ -317,9 +334,9 @@
     top: calc(100% + 4px) !important;
     left: 0 !important;
     width: 100% !important;
-    min-width: 440px !important;
-    max-width: 580px !important;
-    max-height: 290px !important;
+    min-width: 480px !important;
+    max-width: 680px !important;
+    max-height: 280px !important;
     overflow-y: auto !important;
     background: #ffffff !important;
     border: 1.5px solid #cbd5e1 !important;
@@ -340,19 +357,25 @@
     background: #f8fafc;
 }
 
-#rot-drawer-material .rot-drawer-body {
-    padding-bottom: 240px !important;
-}
-
 @media (max-width: 767.98px) {
-    .rot-drawer, .rot-sub-drawer {
+    .rot-drawer, .rot-sub-drawer, #rot-drawer-material {
         max-width: 100% !important;
+        width: 100% !important;
         left: 0 !important;
         transform: translateY(100%) !important;
-        border-radius: 28px 28px 0 0 !important;
+        border-radius: 24px 24px 0 0 !important;
     }
     .rot-drawer.open, .rot-sub-drawer.open {
         transform: translateY(0) !important;
+    }
+    #rot-drawer-material .rot-drawer-hd {
+        padding: 0.65rem 1rem !important;
+    }
+    #rot-drawer-material .rot-drawer-body {
+        padding: 0.85rem 0.85rem 240px 0.85rem !important;
+    }
+    #rot-drawer-material .rot-drawer-footer {
+        padding: 0.65rem 1rem !important;
     }
     .custom-art-dropdown {
         min-width: 290px !important;
@@ -733,9 +756,10 @@
                     </div>
                 </div>
                 <div class="col-6">
-                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Solicitante / Responsable</label>
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Solicitante / Responsable (*)</label>
                     <div class="position-relative">
-                        <input type="text" class="form-control form-control-sm bg-white fw-semibold" id="rot-mat-solicitante" placeholder="Nombre del solicitante..." autocomplete="off" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
+                        <input type="text" class="form-control form-control-sm bg-white fw-semibold" id="rot-mat-solicitante-txt" placeholder="Buscar personal / solicitante..." autocomplete="off" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;" oninput="window._cbFiltrar('rot-mat-solicitante')" onfocus="window._cbFiltrar('rot-mat-solicitante')" onblur="window._cbHide('rot-mat-solicitante')">
+                        <input type="hidden" id="rot-mat-solicitante" name="rot-mat-solicitante">
                         <div id="rot-mat-solicitante-dd" class="cb-dropdown shadow-sm" style="display:none;"></div>
                     </div>
                 </div>
@@ -764,8 +788,8 @@
                     </button>
                 </div>
             </div>
-            <div class="rounded-3 border overflow-x-auto" style="overflow-y: visible !important; -webkit-overflow-scrolling: touch;">
-                <table class="table table-sm align-middle mb-0" style="font-size: 0.82rem; min-width: 680px;">
+            <div class="rounded-3 border" style="overflow: visible !important;">
+                <table class="table table-sm align-middle mb-0" style="font-size: 0.82rem; width: 100%;">
                     <thead style="background: #f8fafc;">
                         <tr>
                             <th style="padding:10px 12px; font-size:.72rem; text-transform:uppercase; font-weight:800; color:#475569; min-width: 320px;">Artículo / Repuesto a Solicitar</th>

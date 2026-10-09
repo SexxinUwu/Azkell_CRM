@@ -648,7 +648,7 @@ window.filtrarListaGPS = function(query) {
         }
     };
 
-    // Helper para renderizar una fila de unidad (estilo compacto dentro de grupo)
+    // Helper para renderizar una fila de unidad (estilo más grueso y nítido dentro de grupo)
     var renderFilaUnidad = function(w) {
         var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
         var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
@@ -664,70 +664,120 @@ window.filtrarListaGPS = function(query) {
 
         return `
         <div class="gps-unit-row${isActive ? ' active' : ''}${!isVisible ? ' is-hidden-map' : ''}" data-placa-unit="${w.placa || ''}" onclick="window.abrirDetalleGPS('${safePlc}')">
-            <div class="d-flex align-items-center gap-2" style="min-width: 0; flex: 1;">
+            <div class="d-flex align-items-center gap-2.5" style="min-width: 0; flex: 1;">
                 <input type="checkbox" class="gps-check-custom gps-unit-checkbox" data-placa="${w.placa || ''}" ${isVisible ? 'checked' : ''} onclick="event.stopPropagation()" onchange="window.gpsToggleVisibilidadPlaca('${safePlc}', this.checked, event)" title="Ver en mapa">
-                <div style="width: 8px; height: 8px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0; box-shadow:0 0 5px ${dotColor};"></div>
+                <div style="width: 10px; height: 10px; border-radius: 50%; background: ${dotColor}; flex-shrink: 0; box-shadow:0 0 6px ${dotColor};"></div>
                 <div style="min-width: 0; flex: 1;">
-                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                        <span class="font-monospace fw-bold text-dark" style="font-size:0.82rem;">${w.placa || '—'}</span>
+                    <div class="d-flex align-items-center gap-2 mb-0.5 flex-wrap">
+                        <span class="font-monospace fw-bold text-dark" style="font-size:0.88rem; letter-spacing: -0.01em;">${w.placa || '—'}</span>
                         ${generarStatusBadge(w)}
                     </div>
-                    <div class="text-truncate text-secondary" title="${_gpsEsc(dirText)}" style="font-size: 0.68rem; max-width: 175px;">
-                        ${w.ubicacion ? `<i class="bi bi-geo-alt-fill text-danger me-0.5"></i>${_gpsEsc(w.ubicacion)}` : _gpsEsc(w.nombre_wialon || '')}
+                    <div class="text-truncate text-secondary" title="${_gpsEsc(dirText)}" style="font-size: 0.72rem; line-height: 1.35; max-width: 190px;">
+                        ${w.ubicacion ? `<i class="bi bi-geo-alt-fill text-danger me-1"></i>${_gpsEsc(w.ubicacion)}` : _gpsEsc(w.nombre_wialon || '')}
                     </div>
                 </div>
             </div>
             <div class="text-end font-monospace" style="flex-shrink: 0;">
-                <div class="text-primary fw-bold" style="font-size:0.72rem;">${(w.km || 0).toLocaleString()} km</div>
-                <div class="text-secondary" style="font-size:0.64rem;">${(w.horas || 0).toLocaleString()} hrs</div>
+                <div class="text-primary fw-bold" style="font-size:0.76rem;">${(w.km || 0).toLocaleString()} km</div>
+                <div class="text-secondary" style="font-size:0.68rem;">${(w.horas || 0).toLocaleString()} hrs</div>
             </div>
         </div>`;
     };
 
-    // ── MODO 1: VISTA EN ÁRBOL / GRUPOS WIALON & EMPRESAS ─────────
+    // ── MODO 1: VISTA EN ÁRBOL / GRUPOS EMPRESARIALES LIMPIOS ───────
     if (window._gpsModoVista === 'tree') {
         var wialonGrupos = window._datosWialonGrupos || [];
-        var unitIdMap = {};
-        datos.forEach(function(u) { unitIdMap[u.id] = u; });
 
-        // Si no vinieron grupos de Wialon, sintetizar por empresa
+        // 1. Filtrar grupos técnicos / de consulta no deseados (UND TEMPERATURA, UNIDADES-TEMP-CONSULTA, etc.)
+        var wialonGruposLimpios = (wialonGrupos || []).filter(function(g) {
+            var nm = (g.nombre || '').toUpperCase().trim();
+            return !nm.includes('TEMP') && !nm.includes('CONSULTA');
+        });
+
+        // 2. Mapeo de unidades por ID y Placa
+        var unitIdMap = {};
+        datos.forEach(function(u) {
+            unitIdMap[u.id] = u;
+        });
+
+        // 3. Crear los grupos de negocio principales ordenados
         var gruposAProcesar = [];
 
-        if (wialonGrupos.length > 0) {
-            gruposAProcesar = wialonGrupos.map(function(g) {
-                var unitsInGrp = (g.unitIds || []).map(function(uid) { return unitIdMap[uid]; }).filter(Boolean);
-                return {
-                    id: String(g.id),
-                    nombre: g.nombre,
-                    units: unitsInGrp
-                };
-            });
+        // Grupo A: Flota Total (Todas las unidades monitoreadas)
+        gruposAProcesar.push({
+            id: 'flota_total',
+            nombre: 'Flota Total',
+            units: datos
+        });
 
-            // Detectar unidades fuera de grupos
-            var allAssignedUnitIds = new Set();
-            wialonGrupos.forEach(function(g) { (g.unitIds || []).forEach(function(id) { allAssignedUnitIds.add(id); }); });
-            var outsideUnits = datos.filter(function(u) { return !allAssignedUnitIds.has(u.id); });
-            if (outsideUnits.length > 0) {
+        // Grupo B: Marsisa SAC
+        var marsisaGrp = wialonGruposLimpios.find(function(g) { return (g.nombre || '').toUpperCase().includes('MARSISA'); });
+        var marsisaUnitIds = new Set(marsisaGrp ? (marsisaGrp.unitIds || []) : []);
+        var marsisaUnits = datos.filter(function(u) {
+            return marsisaUnitIds.has(u.id) || (u.empresa || '').toUpperCase().includes('MARSISA') || (u.nombre_wialon || '').toUpperCase().includes('MARSISA');
+        });
+        gruposAProcesar.push({
+            id: 'marsisa_sac',
+            nombre: 'Marsisa SAC',
+            units: marsisaUnits
+        });
+
+        // Grupo C: Trahesa SAC (Incluye todas las unidades de Trahesa como F7E861 y V53776 / V5J776)
+        var trahesaGrp = wialonGruposLimpios.find(function(g) { return (g.nombre || '').toUpperCase().includes('TRAHESA'); });
+        var trahesaUnitIds = new Set(trahesaGrp ? (trahesaGrp.unitIds || []) : []);
+        var trahesaUnits = datos.filter(function(u) {
+            var plc = (u.placa || '').toUpperCase();
+            var emp = (u.empresa || '').toUpperCase();
+            var nom = (u.nombre_wialon || '').toUpperCase();
+            return trahesaUnitIds.has(u.id) || emp.includes('TRAHESA') || nom.includes('TRAHESA') || plc.startsWith('F7E') || plc.startsWith('V53') || plc.startsWith('V5J');
+        });
+        gruposAProcesar.push({
+            id: 'trahesa_sac',
+            nombre: 'Trahesa SAC',
+            units: trahesaUnits
+        });
+
+        // Grupo D: Yogui Transport
+        var yoguiGrp = wialonGruposLimpios.find(function(g) { return (g.nombre || '').toUpperCase().includes('YOGUI'); });
+        var yoguiUnitIds = new Set(yoguiGrp ? (yoguiGrp.unitIds || []) : []);
+        var yoguiUnits = datos.filter(function(u) {
+            var emp = (u.empresa || '').toUpperCase();
+            var nom = (u.nombre_wialon || '').toUpperCase();
+            return yoguiUnitIds.has(u.id) || emp.includes('YOGUI') || nom.includes('YOGUI');
+        });
+        if (yoguiUnits.length > 0) {
+            gruposAProcesar.push({
+                id: 'yogui_transport',
+                nombre: 'Yogui Transport',
+                units: yoguiUnits
+            });
+        }
+
+        // Grupo E: ThermoKing
+        var thermoGrp = wialonGruposLimpios.find(function(g) { return (g.nombre || '').toUpperCase().includes('THERMO'); });
+        if (thermoGrp && Array.isArray(thermoGrp.unitIds) && thermoGrp.unitIds.length > 0) {
+            var thermoUnits = thermoGrp.unitIds.map(function(uid) { return unitIdMap[uid]; }).filter(Boolean);
+            if (thermoUnits.length > 0) {
                 gruposAProcesar.push({
-                    id: 'outside_groups',
-                    nombre: 'Otras Unidades',
-                    units: outsideUnits
+                    id: 'thermo_king',
+                    nombre: 'ThermoKing',
+                    units: thermoUnits
                 });
             }
-        } else {
-            // Grupos Sintéticos por Empresa
-            var marsisaUnits = datos.filter(function(u) { return (u.empresa || '').includes('MARSISA'); });
-            var trahesaUnits = datos.filter(function(u) { return (u.empresa || '').includes('TRAHESA'); });
-            var otrasUnits = datos.filter(function(u) { return !marsisaUnits.includes(u) && !trahesaUnits.includes(u); });
+        }
 
-            gruposAProcesar = [
-                { id: 'flota_total', nombre: 'Flota Total', units: datos },
-                { id: 'marsisa_sac', nombre: 'Marsisa SAC', units: marsisaUnits },
-                { id: 'trahesa_sac', nombre: 'Trahesa SAC', units: trahesaUnits }
-            ];
-            if (otrasUnits.length > 0) {
-                gruposAProcesar.push({ id: 'otras_unidades', nombre: 'Otras Unidades', units: otrasUnits });
-            }
+        // Grupo F: Otras Unidades (Solo si quedan unidades verdaderamente no categorizadas)
+        var allCategorizedPlacas = new Set();
+        [marsisaUnits, trahesaUnits, yoguiUnits].forEach(function(arr) {
+            (arr || []).forEach(function(u) { if (u && u.placa) allCategorizedPlacas.add(u.placa.toUpperCase()); });
+        });
+        var trueOutsideUnits = datos.filter(function(u) { return u.placa && !allCategorizedPlacas.has(u.placa.toUpperCase()); });
+        if (trueOutsideUnits.length > 0) {
+            gruposAProcesar.push({
+                id: 'outside_groups',
+                nombre: 'Otras Unidades',
+                units: trueOutsideUnits
+            });
         }
 
         // Renderizar Grupos
