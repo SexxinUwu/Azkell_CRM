@@ -1052,22 +1052,13 @@
             </div>
         </div>
 
-        <!-- Filtros Rápidos: Empresa & Estado -->
+        <!-- Filtros Rápidos: Empresa -->
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <!-- Segmentado Empresa -->
             <div class="ck-apple-segmented" id="btn-group-gps-empresa">
                 <button type="button" class="ck-segment-item active" data-empresa="todas" onclick="window.filtrarEmpresaGPS('todas', this)">Todas</button>
                 <button type="button" class="ck-segment-item" data-empresa="MARSISA" onclick="window.filtrarEmpresaGPS('MARSISA', this)">Marsisa</button>
                 <button type="button" class="ck-segment-item" data-empresa="TRAHESA" onclick="window.filtrarEmpresaGPS('TRAHESA', this)">Trahesa</button>
-            </div>
-
-            <!-- Segmentado Estado de Motor / Telemetría -->
-            <div class="ck-apple-segmented" id="btn-group-gps-filtros">
-                <button type="button" class="ck-segment-item active" data-filter="total" onclick="window.filtrarSegmentoGPS('total', this)">Todos</button>
-                <button type="button" class="ck-segment-item" data-filter="movimiento" onclick="window.filtrarSegmentoGPS('movimiento', this)">🟢 En Ruta</button>
-                <button type="button" class="ck-segment-item" data-filter="ralenti" onclick="window.filtrarSegmentoGPS('ralenti', this)">🟠 Ralentí</button>
-                <button type="button" class="ck-segment-item" data-filter="detenido" onclick="window.filtrarSegmentoGPS('detenido', this)">🔵 Detenidos</button>
-                <button type="button" class="ck-segment-item" data-filter="offline" onclick="window.filtrarSegmentoGPS('offline', this)">⚪ Sin Señal</button>
             </div>
         </div>
     </div>

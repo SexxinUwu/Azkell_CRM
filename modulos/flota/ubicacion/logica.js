@@ -71,9 +71,6 @@ window.init_ubicacion = function() {
     document.querySelectorAll('#btn-group-gps-empresa .ck-segment-item').forEach(function(el) {
         el.classList.toggle('active', el.getAttribute('data-empresa') === 'todas');
     });
-    document.querySelectorAll('#btn-group-gps-filtros .ck-segment-item').forEach(function(el) {
-        el.classList.toggle('active', el.getAttribute('data-filter') === 'total');
-    });
     document.querySelectorAll('#moduloUbicacionGPS .ck-kpi-card').forEach(function(el) {
         el.classList.toggle('active', el.id === 'gps-kpi-total');
     });
