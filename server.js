@@ -1051,12 +1051,29 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
             }
         }
 
-        // 5. Status Rampa (Unidades en Rampa y Horas de Salida)
+        // 5. Status Rampa (Unidades en Rampa y Horas de Salida con Nombres Reales de cat_rampas)
         const [rampasRaw] = await activeDb.promise().query(`
-            SELECT id, rampa, placa, km, conductor, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, estado, creado_en
-            FROM taller_rampas
-            WHERE estado != 'Liberado' AND (fecha_liberado IS NULL OR estado = 'Activo')
-            ORDER BY rampa ASC, hora_salida ASC, id DESC
+            SELECT 
+                tr.id, 
+                tr.rampa, 
+                COALESCE(cr.nombre_rampa, CASE WHEN tr.rampa REGEXP '^[0-9]+$' THEN CONCAT('Rampa ', tr.rampa) ELSE tr.rampa END) AS nombre_rampa,
+                COALESCE(cr.color, '#0284c7') AS rampa_color,
+                COALESCE(cr.orden, 99) AS rampa_orden,
+                tr.placa, 
+                tr.km, 
+                tr.conductor, 
+                tr.fecha_ingreso, 
+                tr.hora_ingreso, 
+                tr.fecha_salida, 
+                tr.hora_salida, 
+                tr.situacion, 
+                tr.obs, 
+                tr.estado, 
+                tr.creado_en
+            FROM taller_rampas tr
+            LEFT JOIN cat_rampas cr ON (CAST(tr.rampa AS CHAR) = CAST(cr.id AS CHAR) OR LOWER(TRIM(tr.rampa)) = LOWER(TRIM(cr.nombre_rampa)))
+            WHERE tr.estado != 'Liberado' AND (tr.fecha_liberado IS NULL OR tr.estado = 'Activo')
+            ORDER BY COALESCE(cr.orden, 99) ASC, tr.hora_salida ASC, tr.id DESC
             LIMIT 60
         `).catch(() => [[]]);
 
@@ -1064,11 +1081,22 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
             let hIngreso = r.hora_ingreso ? String(r.hora_ingreso).substring(0, 5) : '-';
             let hSalida = r.hora_salida ? String(r.hora_salida).substring(0, 5) : '-';
             let obsClean = (r.obs || 'Mantenimiento en rampa').split('\n').filter(Boolean).slice(0, 2).join(' • ');
+            let nombre = r.nombre_rampa || `Rampa ${r.rampa}`;
+
+            // Determinar categoría/tipo de zona
+            let tipoZona = 'rampa';
+            let nomLower = nombre.toLowerCase();
+            if (nomLower.includes('lavad')) tipoZona = 'lavado';
+            else if (nomLower.includes('espera')) tipoZona = 'espera';
+            else if (nomLower.includes('taller')) tipoZona = 'taller';
+            else if (nomLower.includes('auxilio')) tipoZona = 'auxilio';
 
             return {
                 id: r.id,
-                rampa: r.rampa ? `Rampa ${r.rampa}` : 'Rampa General',
-                rampa_num: r.rampa || 1,
+                rampa: nombre,
+                rampa_raw: r.rampa,
+                tipo_zona: tipoZona,
+                color: r.rampa_color || '#0284c7',
                 placa: r.placa || 'S/P',
                 conductor: r.conductor || 'Asignado a taller',
                 km: r.km ? `${Number(r.km).toLocaleString('es-PE')} km` : '-',
@@ -1080,10 +1108,16 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
             };
         });
 
+        const [catRampasAll] = await activeDb.promise().query("SELECT * FROM cat_rampas").catch(() => [[]]);
+        const totalRampasDefinidas = catRampasAll && catRampasAll.length ? catRampasAll.length : 8;
+        const rampasFisicasOcupadas = new Set(rampasList.filter(r => r.tipo_zona === 'rampa').map(r => r.rampa)).size;
+        const enLavadoEspera = rampasList.filter(r => r.tipo_zona === 'lavado' || r.tipo_zona === 'espera').length;
+
         const rampasKPIs = {
             total_activas: rampasList.length,
-            rampas_ocupadas: new Set(rampasList.map(r => r.rampa_num)).size,
-            total_rampas: 16
+            rampas_ocupadas: rampasFisicasOcupadas,
+            en_lavado_espera: enLavadoEspera,
+            total_rampas: totalRampasDefinidas
         };
 
         const gpsData = wialonResult.data || [];

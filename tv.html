@@ -104,37 +104,42 @@
             overflow: hidden;
         }
 
-        /* ── TOP NAV & CONTROL BAR ───────────────────────────────── */
+        /* ── TOP NAV & CONTROL BAR (APPLE SEAMLESS DESIGN) ──────── */
         .tv-header-bar {
-            height: 72px;
-            background: var(--tv-surface);
-            border-bottom: 1px solid var(--tv-border);
+            height: 62px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.85);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 24px;
-            box-shadow: var(--tv-shadow-sm);
+            padding: 0 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.02);
             z-index: 100;
             flex-shrink: 0;
+            gap: 12px;
         }
 
         .tv-brand-box {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
+            flex-shrink: 0;
         }
         .tv-brand-logo {
-            width: 44px;
-            height: 44px;
+            width: 38px;
+            height: 38px;
             background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-            border-radius: 12px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #ffffff;
-            font-size: 1.4rem;
-            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3);
+            font-size: 1.25rem;
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.28);
             overflow: hidden;
+            flex-shrink: 0;
         }
         .tv-brand-logo img {
             width: 100%;
@@ -144,161 +149,183 @@
         .tv-brand-text {
             display: flex;
             flex-direction: column;
+            justify-content: center;
         }
         .tv-brand-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.25rem;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 1.05rem;
             font-weight: 800;
             color: var(--tv-text-main);
-            line-height: 1.1;
+            line-height: 1.15;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            letter-spacing: -0.2px;
         }
         .tv-live-tag {
-            font-size: 0.65rem;
-            font-weight: 700;
-            padding: 2px 7px;
-            background: var(--tv-success-subtle);
-            color: var(--tv-success-text);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 6px;
-            display: flex;
+            font-size: 0.62rem;
+            font-weight: 800;
+            padding: 1.5px 6px;
+            background: #ecfdf5;
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 9999px;
+            display: inline-flex;
             align-items: center;
             gap: 4px;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
         }
         .tv-live-dot {
-            width: 6px;
-            height: 6px;
-            background: var(--tv-success);
+            width: 5px;
+            height: 5px;
+            background: #10b981;
             border-radius: 50%;
             animation: tvPulse 1.5s infinite;
         }
-        @keyframes tvPulse {
-            0% { transform: scale(0.9); opacity: 0.7; }
-            50% { transform: scale(1.3); opacity: 1; }
-            100% { transform: scale(0.9); opacity: 0.7; }
+        .tv-brand-sub {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: #94a3b8;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+            margin-top: 1px;
         }
 
-        /* ── TABS NAVEGACIÓN (VISTAS) ────────────────────────────── */
+        /* ── TABS NAVEGACIÓN (APPLE SEGMENTED CONTROL) ────────────── */
         .tv-tabs-nav {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            background: var(--tv-bg);
-            padding: 5px;
-            border-radius: 14px;
-            border: 1px solid var(--tv-border);
-            gap: 6px;
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            gap: 3px;
+            flex-shrink: 0;
         }
         .tv-tab-btn {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 9px;
-            padding: 8px 18px;
-            border-radius: 10px;
+            gap: 7px;
+            height: 36px;
+            padding: 0 13px;
+            border-radius: 9px;
             background: transparent;
             border: none;
-            color: var(--tv-text-muted);
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 700;
+            color: #64748b;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+            white-space: nowrap;
             position: relative;
+            user-select: none;
         }
         .tv-tab-btn:hover {
             color: var(--tv-text-main);
-            background: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.55);
         }
         .tv-tab-btn.active {
-            background: var(--tv-surface);
-            color: var(--tv-primary);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
-        .tv-tab-btn.active::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 18px;
-            height: 3px;
-            background: var(--tv-primary);
-            border-radius: 3px;
+            background: #ffffff;
+            color: #0f172a;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03);
         }
         .tv-tab-badge {
-            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
             font-weight: 800;
-            padding: 2px 7px;
-            border-radius: 6px;
-            background: var(--tv-border);
-            color: var(--tv-text-muted);
+            padding: 1.5px 7px;
+            border-radius: 9999px;
+            background: #e2e8f0;
+            color: #475569;
+            min-width: 18px;
+            text-align: center;
+            transition: all 0.16s ease;
         }
         .tv-tab-btn.active .tv-tab-badge {
-            background: var(--tv-primary-subtle);
-            color: var(--tv-primary-text);
+            background: #e0f2fe;
+            color: #0284c7;
         }
-        .tv-tab-badge.danger {
-            background: var(--tv-danger-subtle);
-            color: var(--tv-danger-text);
+        .tv-tab-badge.danger, .tv-tab-btn.active .tv-tab-badge.danger {
+            background: #fee2e2;
+            color: #dc2626;
         }
 
-        /* ── HEADER RIGHT TOOLS ──────────────────────────────────── */
+        /* ── HEADER RIGHT TOOLS (APPLE ACTION PILLS) ─────────────── */
         .tv-header-tools {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 8px;
+            flex-shrink: 0;
         }
+        .tv-action-btn {
+            height: 36px;
+            padding: 0 12px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #334155;
+            font-family: -apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', sans-serif;
+            font-weight: 600;
+            font-size: 0.82rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.16s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            white-space: nowrap;
+        }
+        .tv-action-btn:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+        .tv-action-btn.icon-only {
+            width: 36px;
+            padding: 0;
+            justify-content: center;
+            font-size: 0.92rem;
+        }
+        .tv-action-btn.active {
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #0284c7;
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+        }
+
         .tv-clock-pill {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            padding: 6px 14px;
-            background: var(--tv-surface-subtle);
-            border: 1px solid var(--tv-border);
-            border-radius: 12px;
+            height: 36px;
+            padding: 0 12px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            flex-shrink: 0;
         }
         .tv-clock-time {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1.15rem;
+            font-size: 0.92rem;
             font-weight: 800;
-            color: var(--tv-text-main);
-            letter-spacing: 0.5px;
-            line-height: 1;
+            color: #0f172a;
+            letter-spacing: 0.4px;
+        }
+        .tv-clock-divider {
+            width: 1px;
+            height: 14px;
+            background: #e2e8f0;
         }
         .tv-clock-date {
             font-size: 0.68rem;
             font-weight: 700;
-            color: var(--tv-text-muted);
+            color: #64748b;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 2px;
-        }
-        .tv-action-btn {
-            height: 42px;
-            padding: 0 14px;
-            border-radius: 12px;
-            border: 1px solid var(--tv-border);
-            background: var(--tv-surface);
-            color: var(--tv-text-main);
-            font-weight: 700;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: var(--tv-shadow-sm);
-        }
-        .tv-action-btn:hover {
-            background: var(--tv-surface-hover);
-            border-color: var(--tv-border-hover);
-        }
-        .tv-action-btn.active {
-            background: var(--tv-primary);
-            color: #ffffff;
-            border-color: var(--tv-primary);
+            letter-spacing: 0.3px;
+            white-space: nowrap;
         }
 
         /* ── MAIN CONTENT AREA (VISTAS) ──────────────────────────── */
@@ -325,35 +352,39 @@
             opacity: 1;
         }
 
-        /* ── KPI STRIP UNIVERSAL (CASILLAS UNIFORMES) ────────────── */
+        /* ── KPI STRIP UNIVERSAL (APPLE REFINED CARDS) ──────────── */
         .tv-kpi-strip {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            padding: 18px 24px 14px 24px;
+            gap: 14px;
+            padding: 14px 20px 10px 20px;
             background: transparent;
             flex-shrink: 0;
         }
         .tv-kpi-card {
-            background: var(--tv-surface);
-            border: 1px solid var(--tv-border);
-            border-radius: var(--tv-radius);
-            padding: 14px 18px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(226, 232, 240, 0.85);
+            border-radius: 14px;
+            padding: 12px 18px;
             display: flex;
             align-items: center;
-            gap: 16px;
-            box-shadow: var(--tv-shadow);
+            gap: 14px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.02);
             transition: all 0.2s ease;
-            height: 84px;
+            height: 76px;
+        }
+        .tv-kpi-card:hover {
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04), 0 8px 20px rgba(0, 0, 0, 0.03);
+            border-color: #cbd5e1;
         }
         .tv-kpi-icon-wrap {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.6rem;
+            font-size: 1.45rem;
             flex-shrink: 0;
         }
         .tv-kpi-icon-wrap.blue { background: #e0f2fe; color: #0284c7; }
@@ -370,16 +401,16 @@
             overflow: hidden;
         }
         .tv-kpi-label {
-            font-size: 0.72rem;
+            font-size: 0.70rem;
             font-weight: 700;
             color: var(--tv-text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.8px;
+            letter-spacing: 0.6px;
             white-space: nowrap;
         }
         .tv-kpi-value {
-            font-family: 'Outfit', sans-serif;
-            font-size: 2rem;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 1.85rem;
             font-weight: 800;
             color: var(--tv-text-main);
             line-height: 1.1;
@@ -933,63 +964,67 @@
 
 <div class="tv-app-shell">
     
-    <!-- 1. BARRA SUPERIOR DE CONTROL Y NAVEGACIÓN -->
+    <!-- 1. BARRA SUPERIOR DE CONTROL Y NAVEGACIÓN (APPLE DESIGN) -->
     <header class="tv-header-bar">
         <!-- Brand / Tenant -->
         <div class="tv-brand-box">
             <div class="tv-brand-logo">
-                <i class="bi bi-truck"></i>
+                <i class="bi bi-truck-front-fill"></i>
             </div>
             <div class="tv-brand-text">
                 <div class="tv-brand-title">
-                    <span id="tvTenantName">Marsisa SAC</span>
+                    <span id="tvTenantName">Marsisa</span>
                     <span class="tv-live-tag"><span class="tv-live-dot"></span> EN VIVO</span>
                 </div>
-                <div style="font-size: 0.72rem; color: var(--tv-text-muted); font-weight: 600;">
-                    Centro de Control Satelital & ERP
-                </div>
+                <div class="tv-brand-sub">Centro de Control Satelital & ERP</div>
             </div>
         </div>
 
-        <!-- Pestañas de Navegación de Vistas -->
+        <!-- Pestañas de Navegación de Vistas (Apple Segmented Control) -->
         <nav class="tv-tabs-nav" id="tvTabsNav">
             <button class="tv-tab-btn active" onclick="tvSwitchView('gps')" id="tabGps" data-view="gps">
-                <i class="bi bi-geo-alt-fill text-primary"></i> Ubicación GPS
+                <i class="bi bi-geo-alt-fill text-primary"></i>
+                <span>GPS Flota</span>
                 <span class="tv-tab-badge" id="kpiBadgeGps">62</span>
             </button>
             <button class="tv-tab-btn" onclick="tvSwitchView('ot')" id="tabOt" data-view="ot">
-                <i class="bi bi-tools text-amber"></i> Reportes OT
-                <span class="tv-tab-badge" id="kpiBadgeOt">1 En Proceso</span>
+                <i class="bi bi-tools text-amber"></i>
+                <span>Reportes OT</span>
+                <span class="tv-tab-badge" id="kpiBadgeOt">1</span>
             </button>
             <button class="tv-tab-btn" onclick="tvSwitchView('backlog')" id="tabBacklog" data-view="backlog">
-                <i class="bi bi-clipboard-check text-purple"></i> BackLog
-                <span class="tv-tab-badge" id="kpiBadgeBacklog">20 Pendientes</span>
+                <i class="bi bi-clipboard-check text-purple"></i>
+                <span>BackLog</span>
+                <span class="tv-tab-badge" id="kpiBadgeBacklog">20</span>
             </button>
             <button class="tv-tab-btn" onclick="tvSwitchView('fallas')" id="tabFallas" data-view="fallas">
-                <i class="bi bi-exclamation-octagon-fill text-danger"></i> Reporte de Fallas
-                <span class="tv-tab-badge danger" id="kpiBadgeFallas">43 Activas</span>
+                <i class="bi bi-exclamation-octagon-fill text-danger"></i>
+                <span>Reporte Fallas</span>
+                <span class="tv-tab-badge danger" id="kpiBadgeFallas">43</span>
             </button>
             <button class="tv-tab-btn" onclick="tvSwitchView('rampas')" id="tabRampas" data-view="rampas">
-                <i class="bi bi-ev-front-fill text-amber"></i> Status Rampa
-                <span class="tv-tab-badge" id="kpiBadgeRampas">33 En Rampa</span>
+                <i class="bi bi-ev-front-fill text-primary"></i>
+                <span>Status Rampa</span>
+                <span class="tv-tab-badge" id="kpiBadgeRampas">33</span>
             </button>
         </nav>
 
         <!-- Reloj y Herramientas -->
         <div class="tv-header-tools">
-            <button class="tv-action-btn" id="tvBtnCarousel" onclick="tvToggleCarousel()">
-                <i class="bi bi-arrow-repeat"></i> <span id="tvCarouselText">Carrusel Auto</span>
+            <button class="tv-action-btn" id="tvBtnCarousel" onclick="tvToggleCarousel()" title="Rotación Automática cada 30 segundos (Tecla C)">
+                <i class="bi bi-arrow-repeat"></i> <span id="tvCarouselText">Carrusel</span>
             </button>
-            <button class="tv-action-btn" onclick="tvToggleQrModal()">
+            <button class="tv-action-btn" onclick="tvToggleQrModal()" title="Vincular teléfono móvil">
                 <i class="bi bi-qr-code"></i> <span>Móvil</span>
             </button>
-            <button class="tv-action-btn" onclick="tvToggleFullscreen()">
+            <button class="tv-action-btn icon-only" onclick="tvToggleFullscreen()" title="Pantalla Completa (Tecla F)">
                 <i class="bi bi-arrows-fullscreen"></i>
             </button>
             
             <div class="tv-clock-pill">
-                <div class="tv-clock-time" id="tvLiveTime">12:00:00</div>
-                <div class="tv-clock-date" id="tvLiveDate">VIERNES, 9 DE OCT.</div>
+                <span class="tv-clock-time" id="tvLiveTime">12:00:00</span>
+                <span class="tv-clock-divider"></span>
+                <span class="tv-clock-date" id="tvLiveDate">VIE, 9 OCT</span>
             </div>
         </div>
     </header>
@@ -1324,31 +1359,31 @@
         <section class="tv-view-pane" id="viewRampas">
             <div class="tv-kpi-strip">
                 <div class="tv-kpi-card">
-                    <div class="tv-kpi-icon-wrap amber"><i class="bi bi-ev-front-fill"></i></div>
+                    <div class="tv-kpi-icon-wrap amber"><i class="bi bi-truck-front-fill"></i></div>
                     <div class="tv-kpi-info">
-                        <span class="tv-kpi-label">Unidades en Rampa</span>
-                        <span class="tv-kpi-value" id="kpiRampasActivas">33</span>
+                        <span class="tv-kpi-label">Total en Taller</span>
+                        <span class="tv-kpi-value" id="kpiRampasActivas">39</span>
                     </div>
                 </div>
                 <div class="tv-kpi-card">
-                    <div class="tv-kpi-icon-wrap blue"><i class="bi bi-clock-history"></i></div>
+                    <div class="tv-kpi-icon-wrap green"><i class="bi bi-ev-front-fill"></i></div>
                     <div class="tv-kpi-info">
                         <span class="tv-kpi-label">Rampas Ocupadas</span>
                         <span class="tv-kpi-value" id="kpiRampasOcupadas">3</span>
                     </div>
                 </div>
                 <div class="tv-kpi-card">
-                    <div class="tv-kpi-icon-wrap green"><i class="bi bi-door-open-fill"></i></div>
+                    <div class="tv-kpi-icon-wrap blue"><i class="bi bi-droplet-half"></i></div>
                     <div class="tv-kpi-info">
-                        <span class="tv-kpi-label">Rampas Disponibles</span>
-                        <span class="tv-kpi-value" id="kpiRampasLibres">13</span>
+                        <span class="tv-kpi-label">En Lavado / Espera</span>
+                        <span class="tv-kpi-value" id="kpiRampasLavadoEspera">2</span>
                     </div>
                 </div>
                 <div class="tv-kpi-card">
                     <div class="tv-kpi-icon-wrap gray"><i class="bi bi-building-gear"></i></div>
                     <div class="tv-kpi-info">
-                        <span class="tv-kpi-label">Total Rampas Taller</span>
-                        <span class="tv-kpi-value" id="kpiRampasTotal">16</span>
+                        <span class="tv-kpi-label">Total Zonas Taller</span>
+                        <span class="tv-kpi-value" id="kpiRampasTotal">8</span>
                     </div>
                 </div>
             </div>
@@ -1357,19 +1392,19 @@
                 <div class="tv-table-card">
                     <div class="tv-table-header-strip">
                         <div>
-                            <div class="tv-table-title"><i class="bi bi-ev-front-fill text-amber"></i> Status Rampa — Programación y Horarios de Salida</div>
-                            <div class="tv-table-subtitle">Monitoreo en tiempo real de unidades en taller y hora programada de liberación técnica</div>
+                            <div class="tv-table-title"><i class="bi bi-ev-front-fill text-primary"></i> Status Rampa & Zonas — Horarios de Salida</div>
+                            <div class="tv-table-subtitle">Monitoreo en tiempo real de unidades en rampas, lavado, espera y horario programado de liberación técnica</div>
                         </div>
-                        <div class="tv-search-input-box" style="width: 260px;">
+                        <div class="tv-search-input-box" style="width: 280px;">
                             <i class="bi bi-search"></i>
-                            <input type="text" class="tv-search-input" id="tvRampasSearch" placeholder="Buscar rampa, placa..." oninput="tvRenderRampasTable()">
+                            <input type="text" class="tv-search-input" id="tvRampasSearch" placeholder="Buscar rampa, zona o placa..." oninput="tvRenderRampasTable()">
                         </div>
                     </div>
                     <div class="tv-table-scroll-wrap">
                         <table class="tv-modern-table">
                             <thead>
                                 <tr>
-                                    <th>N° Rampa</th>
+                                    <th>Zona / Rampa</th>
                                     <th>Placa Unidad</th>
                                     <th>Hora Ingreso</th>
                                     <th style="color: #0284c7; font-weight: 800;">⏰ HORA ESTIMADA DE SALIDA</th>
@@ -1477,7 +1512,7 @@
     var _tvLayers = {};
     var _tvCurrentMapLayer = 'street';
 
-    // 1. INICIALIZAR RELOJ EN VIVO
+    // 1. INICIALIZAR RELOJ EN VIVO (APPLE COMPACT STYLE)
     function tvInitClock() {
         var clockEl = document.getElementById('tvLiveTime');
         var dateEl = document.getElementById('tvLiveDate');
@@ -1489,8 +1524,12 @@
             var s = String(now.getSeconds()).padStart(2, '0');
             if (clockEl) clockEl.innerText = h + ':' + m + ':' + s;
 
-            var options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
-            if (dateEl) dateEl.innerText = now.toLocaleDateString('es-PE', options).toUpperCase();
+            var dias = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+            var meses = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SET', 'OCT', 'NOV', 'DIC'];
+            var dNom = dias[now.getDay()];
+            var dNum = now.getDate();
+            var mNom = meses[now.getMonth()];
+            if (dateEl) dateEl.innerText = dNom + ', ' + dNum + ' ' + mNom;
         }
         tick();
         setInterval(tick, 1000);
@@ -1567,7 +1606,7 @@
         tvRenderRampasTable();
     }
 
-    // 4. ACTUALIZACIÓN DE BADGES Y KPIS SUPERIORES
+    // 4. ACTUALIZACIÓN DE BADGES Y KPIS SUPERIORES (NÚMEROS COMPACTOS APPLE)
     function tvActualizarBadgesKPIs() {
         // GPS KPIs
         var gpsKpi = _tvData.gps.kpis || {};
@@ -1581,9 +1620,9 @@
         document.getElementById('chipCountMoving').innerText = gpsKpi.en_movimiento || 0;
         document.getElementById('chipCountStopped').innerText = (gpsKpi.total || 0) - (gpsKpi.en_movimiento || 0);
 
-        // OTs KPIs
+        // OTs KPIs (Solo número en el tab, texto completo en el KPI card)
         var otKpi = _tvData.ots.kpis || {};
-        document.getElementById('kpiBadgeOt').innerText = (otKpi.proceso || 0) + ' En Proceso';
+        document.getElementById('kpiBadgeOt').innerText = otKpi.proceso || 0;
         document.getElementById('kpiOtTotal').innerText = otKpi.total || 0;
         document.getElementById('kpiOtProceso').innerText = otKpi.proceso || 0;
         document.getElementById('kpiOtAbiertas').innerText = otKpi.abierto || 0;
@@ -1591,7 +1630,7 @@
 
         // Backlog KPIs
         var blKpi = _tvData.backlog.kpis || {};
-        document.getElementById('kpiBadgeBacklog').innerText = (blKpi.pendiente || 0) + ' Pendientes';
+        document.getElementById('kpiBadgeBacklog').innerText = blKpi.pendiente || 0;
         document.getElementById('kpiBacklogTotal').innerText = blKpi.total || 0;
         document.getElementById('kpiBacklogPendiente').innerText = blKpi.pendiente || 0;
         document.getElementById('kpiBacklogProceso').innerText = blKpi.proceso || 0;
@@ -1599,7 +1638,7 @@
 
         // Fallas KPIs
         var fKpi = _tvData.fallas.kpis || {};
-        document.getElementById('kpiBadgeFallas').innerText = (fKpi.total_activas || 0) + ' Activas';
+        document.getElementById('kpiBadgeFallas').innerText = fKpi.total_activas || 0;
         document.getElementById('kpiFallasActivas').innerText = fKpi.total_activas || 0;
         document.getElementById('kpiFallasPendientes').innerText = fKpi.pendiente || 0;
         document.getElementById('kpiFallasProceso').innerText = fKpi.proceso || 0;
@@ -1607,13 +1646,13 @@
 
         // Rampas KPIs
         var rKpi = _tvData.rampas.kpis || {};
-        var totalRampas = rKpi.total_rampas || 16;
+        var totalRampas = rKpi.total_rampas || 8;
         var ocupadas = rKpi.rampas_ocupadas || 0;
-        var libres = Math.max(0, totalRampas - ocupadas);
-        document.getElementById('kpiBadgeRampas').innerText = (rKpi.total_activas || 0) + ' En Rampa';
+        var lavadoEspera = rKpi.en_lavado_espera || 0;
+        document.getElementById('kpiBadgeRampas').innerText = rKpi.total_activas || 0;
         document.getElementById('kpiRampasActivas').innerText = rKpi.total_activas || 0;
         document.getElementById('kpiRampasOcupadas').innerText = ocupadas;
-        document.getElementById('kpiRampasLibres').innerText = libres;
+        if (document.getElementById('kpiRampasLavadoEspera')) document.getElementById('kpiRampasLavadoEspera').innerText = lavadoEspera;
         document.getElementById('kpiRampasTotal').innerText = totalRampas;
     }
 
@@ -1880,7 +1919,7 @@
         tbody.innerHTML = html || '<tr><td colspan="7" style="text-align: center; padding: 24px; color: #94a3b8;">¡Excelente! No hay fallas pendientes de atención.</td></tr>';
     }
 
-    // 9. RENDERIZADO VISTA 5: STATUS RAMPA (HORAS DE SALIDA)
+    // 9. RENDERIZADO VISTA 5: STATUS RAMPA & ZONAS (HORAS DE SALIDA)
     function tvRenderRampasTable() {
         var tbody = document.getElementById('tvRampasTableBody');
         if (!tbody) return;
@@ -1891,19 +1930,42 @@
             return (r.rampa || '').toLowerCase().includes(q) ||
                    (r.placa || '').toLowerCase().includes(q) ||
                    (r.trabajo || '').toLowerCase().includes(q) ||
+                   (r.situacion || '').toLowerCase().includes(q) ||
                    (r.hora_salida || '').toLowerCase().includes(q);
         });
 
         var html = '';
         list.forEach(function(r) {
             var hSalida = r.hora_salida && r.hora_salida !== '-' ? r.hora_salida + ' hrs' : 'Por definir';
+            
+            // Icono y Estilo de Badge según la zona
+            var badgeStyle = 'background: #dcfce7; color: #15803d; border: 1px solid rgba(16,185,129,0.25);';
+            var iconHtml = '<i class="bi bi-ev-front-fill text-success"></i>';
+
+            if (r.tipo_zona === 'lavado') {
+                badgeStyle = 'background: #e0f2fe; color: #0369a1; border: 1px solid rgba(2,132,199,0.25);';
+                iconHtml = '<i class="bi bi-droplet-fill text-primary"></i>';
+            } else if (r.tipo_zona === 'espera') {
+                badgeStyle = 'background: #fef3c7; color: #b45309; border: 1px solid rgba(245,158,11,0.25);';
+                iconHtml = '<i class="bi bi-pause-circle-fill text-amber"></i>';
+            } else if (r.tipo_zona === 'taller') {
+                badgeStyle = 'background: #ede9fe; color: #6d28d9; border: 1px solid rgba(139,92,246,0.25);';
+                iconHtml = '<i class="bi bi-wrench-adjustable text-purple"></i>';
+            } else if (r.tipo_zona === 'auxilio') {
+                badgeStyle = 'background: #fee2e2; color: #b91c1c; border: 1px solid rgba(239,68,68,0.25);';
+                iconHtml = '<i class="bi bi-truck-flatbed text-danger"></i>';
+            }
 
             html += '<tr>';
-            html += '  <td><span class="tv-status-badge warning" style="font-weight: 800; font-size: 0.82rem;"><i class="bi bi-ev-front"></i> ' + r.rampa + '</span></td>';
+            html += '  <td>';
+            html += '    <span class="tv-status-badge" style="' + badgeStyle + ' font-weight: 800; font-size: 0.82rem; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">';
+            html += '      ' + iconHtml + ' ' + (r.rampa || 'Rampa General');
+            html += '    </span>';
+            html += '  </td>';
             html += '  <td style="font-family: \'JetBrains Mono\', monospace; font-weight: 800; font-size: 1rem; color: #0f172a;">' + (r.placa || '-') + '</td>';
             html += '  <td style="font-family: monospace; font-weight: 700; color: #64748b;">' + (r.hora_ingreso !== '-' ? r.hora_ingreso + ' hrs' : '-') + '</td>';
             html += '  <td>';
-            html += '    <span style="font-family: \'JetBrains Mono\', monospace; font-size: 1rem; font-weight: 900; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">';
+            html += '    <span style="font-family: \'JetBrains Mono\', monospace; font-size: 0.95rem; font-weight: 900; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(2,132,199,0.2);">';
             html += '      <i class="bi bi-clock-history"></i> ' + hSalida;
             html += '    </span>';
             html += '  </td>';
@@ -1915,7 +1977,7 @@
             html += '</tr>';
         });
 
-        tbody.innerHTML = html || '<tr><td colspan="7" style="text-align: center; padding: 28px; color: #94a3b8;"><i class="bi bi-door-open text-success" style="font-size: 1.6rem; display: block; margin-bottom: 6px;"></i>Todas las rampas están libres en este momento.</td></tr>';
+        tbody.innerHTML = html || '<tr><td colspan="7" style="text-align: center; padding: 28px; color: #94a3b8;"><i class="bi bi-door-open text-success" style="font-size: 1.6rem; display: block; margin-bottom: 6px;"></i>No hay unidades en taller en este momento.</td></tr>';
     }
 
     // 10. NAVEGACIÓN Y CAMBIO ENTRE VISTAS
