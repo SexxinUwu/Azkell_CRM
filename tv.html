@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Azkell Fleet TV — Centro de Control y Monitoreo Satelital</title>
+    
+    <!-- Meta tags para Smart TV y Pantallas Grandes -->
+    <meta name="theme-color" content="#070b14">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/png" href="/favicon-2003.png">
+    
+    <!-- Google Fonts: Plus Jakarta Sans, Outfit & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        :root {
+            --tv-bg: #070b14;
+            --tv-surface: rgba(13, 21, 39, 0.88);
+            --tv-surface-card: rgba(18, 29, 54, 0.75);
+            --tv-surface-hover: rgba(30, 48, 86, 0.95);
+            --tv-border: rgba(56, 189, 248, 0.18);
+            --tv-border-bright: rgba(56, 189, 248, 0.6);
+            --tv-accent-cyan: #00f0ff;
+            --tv-accent-blue: #38bdf8;
+            --tv-accent-green: #10b981;
+            --tv-accent-amber: #f59e0b;
+            --tv-accent-red: #ef4444;
+            --tv-accent-purple: #8b5cf6;
+            --tv-text-main: #f8fafc;
+            --tv-text-muted: #94a3b8;
+            --tv-focus-glow: 0 0 0 3px #00f0ff, 0 0 28px rgba(0, 240, 255, 0.65);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--tv-bg);
+            color: var(--tv-text-main);
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            font-size: 16px;
+        }
+
+        /* ── TV CANVAS & MAP ─────────────────────────────────────── */
+        #tvMapContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background: #0b1120;
+        }
+
+        .leaflet-container {
+            background: #0b1120 !important;
+            font-family: inherit;
+        }
+
+        /* ── TOP HUD HEADER ─────────────────────────────────────── */
+        .tv-hud-header {
+            position: absolute;
+            top: 20px;
+            left: 24px;
+            right: 24px;
+            height: 64px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: var(--tv-surface);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--tv-border);
+            border-radius: 18px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+        }
+
+        .tv-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .tv-logo-badge {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.35rem;
+            box-shadow: 0 0 20px rgba(2, 132, 199, 0.5);
+        }
+        .tv-brand-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tv-brand-tag {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            background: rgba(0, 240, 255, 0.15);
+            color: var(--tv-accent-cyan);
+            border: 1px solid rgba(0, 240, 255, 0.35);
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tv-hud-center {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .tv-live-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--tv-accent-green);
+            background: rgba(16, 185, 129, 0.12);
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .tv-pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--tv-accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--tv-accent-green);
+            animation: tvPulse 1.6s infinite;
+        }
+        @keyframes tvPulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1.15); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .tv-clock-wrap {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .tv-clock-time {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+        .tv-clock-date {
+            font-size: 0.65rem;
+            color: var(--tv-text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .tv-kpis-summary {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tv-kpi-chip {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tv-kpi-chip.active, .tv-kpi-chip:focus {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--tv-accent-cyan);
+            box-shadow: var(--tv-focus-glow);
+            outline: none;
+        }
+        .tv-kpi-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.92rem;
+            font-weight: 800;
+        }
+        .tv-kpi-chip.route .tv-kpi-num { color: var(--tv-accent-green); }
+        .tv-kpi-chip.idle .tv-kpi-num { color: var(--tv-accent-amber); }
+        .tv-kpi-chip.stop .tv-kpi-num { color: var(--tv-accent-red); }
+
+        /* ── LEFT DRAWER: FLEET UNITS LIST ───────────────────────── */
+        .tv-fleet-sidebar {
+            position: absolute;
+            top: 100px;
+            left: 24px;
+            bottom: 74px;
+            width: 360px;
+            z-index: 40;
+            background: var(--tv-surface);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--tv-border);
+            border-radius: 20px;
+            box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+        }
+
+        .tv-sidebar-head {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .tv-sidebar-title {
+            font-size: 0.88rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tv-units-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(56, 189, 248, 0.3) transparent;
+        }
+        .tv-units-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        .tv-units-list::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.3);
+            border-radius: 10px;
+        }
+
+        .tv-unit-card {
+            background: var(--tv-surface-card);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.22s ease;
+            position: relative;
+            outline: none;
+        }
+        .tv-unit-card:hover, .tv-unit-card:focus, .tv-unit-card.is-selected {
+            background: var(--tv-surface-hover);
+            border-color: var(--tv-accent-cyan);
+            transform: translateX(4px) scale(1.01);
+            box-shadow: var(--tv-focus-glow);
+        }
+
+        .tv-unit-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .tv-plate-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 0.5px;
+        }
+        .tv-speed-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 8px;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--tv-accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .tv-speed-badge.stopped {
+            background: rgba(239, 68, 68, 0.12);
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.25);
+        }
+        .tv-speed-badge.idle {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fcd34d;
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .tv-unit-meta {
+            font-size: 0.72rem;
+            color: var(--tv-text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 3px;
+        }
+        .tv-unit-driver {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 170px;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+
+        /* ── RIGHT TELEMETRY HUD (WAR ROOM GAUGES) ───────────────── */
+        .tv-telemetry-hud {
+            position: absolute;
+            top: 100px;
+            right: 24px;
+            width: 380px;
+            z-index: 40;
+            background: var(--tv-surface);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--tv-border);
+            border-radius: 20px;
+            box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            animation: tvSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes tvSlideIn {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .tv-telemetry-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .tv-telemetry-plate {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: #fff;
+            letter-spacing: 0.5px;
+        }
+        .tv-status-tag {
+            font-size: 0.70rem;
+            font-weight: 800;
+            padding: 3px 9px;
+            border-radius: 8px;
+            text-transform: uppercase;
+        }
+
+        .tv-gauge-card {
+            background: var(--tv-surface-card);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .tv-speed-big {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--tv-accent-cyan);
+            line-height: 1;
+            text-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+        }
+        .tv-speed-unit {
+            font-size: 0.80rem;
+            color: var(--tv-text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tv-metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .tv-metric-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 8px 10px;
+        }
+        .tv-metric-lbl {
+            font-size: 0.62rem;
+            color: var(--tv-text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .tv-metric-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #f1f5f9;
+            margin-top: 2px;
+        }
+
+        /* ── BOTTOM EVENT TICKER & REMOTE CONTROL HINTS ──────────── */
+        .tv-bottom-bar {
+            position: absolute;
+            bottom: 14px;
+            left: 24px;
+            right: 24px;
+            height: 48px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            background: var(--tv-surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--tv-border);
+            border-radius: 14px;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+        }
+
+        .tv-ticker-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            overflow: hidden;
+        }
+        .tv-ticker-tag {
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 6px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+        .tv-ticker-text {
+            font-size: 0.78rem;
+            color: #e2e8f0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .tv-remote-keys {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+        }
+        .tv-key-hint {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.68rem;
+            color: var(--tv-text-muted);
+            font-weight: 600;
+        }
+        .tv-btn-pill {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        /* ── MODALS (QR PAIRING & HELP) ──────────────────────────── */
+        .tv-modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(16px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .tv-modal-backdrop.is-open {
+            display: flex;
+        }
+        .tv-modal-card {
+            background: #0d1527;
+            border: 1px solid var(--tv-accent-cyan);
+            border-radius: 24px;
+            padding: 30px;
+            width: 480px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(0, 240, 255, 0.25);
+            animation: tvModalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes tvModalPop {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .tv-qr-box {
+            background: #fff;
+            padding: 16px;
+            border-radius: 16px;
+            display: inline-block;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        /* ── CUSTOM MAP MARKERS ──────────────────────────────────── */
+        .tv-custom-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .tv-marker-icon-box {
+            width: 38px;
+            height: 38px;
+            background: #0f172a;
+            border: 2px solid #00f0ff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.1rem;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+            transition: transform 0.25s ease;
+        }
+        .tv-marker-icon-box.stopped {
+            border-color: #ef4444;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+        }
+        .tv-marker-label {
+            position: absolute;
+            top: -24px;
+            background: rgba(15, 23, 42, 0.95);
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.70rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- MAP CANVAS -->
+    <div id="tvMapContainer"></div>
+
+    <!-- 1. TOP HUD HEADER -->
+    <header class="tv-hud-header">
+        <div class="tv-brand">
+            <div class="tv-logo-badge">
+                <i class="bi bi-broadcast-pin"></i>
+            </div>
+            <div>
+                <div class="tv-brand-title">
+                    AZKELL FLEET <span class="tv-brand-tag">WAR ROOM TV</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="tv-hud-center">
+            <div class="tv-live-pill">
+                <div class="tv-pulse-dot"></div>
+                <span>EN VIVO (WIALON STREAM)</span>
+            </div>
+            <div class="tv-kpis-summary">
+                <button class="tv-kpi-chip active" id="chip-total" onclick="tvFiltrarFlota('total')">
+                    <span>Total</span>
+                    <span class="tv-kpi-num" id="tvKpiTotal">0</span>
+                </button>
+                <button class="tv-kpi-chip route" id="chip-route" onclick="tvFiltrarFlota('ruta')">
+                    <span>🟢 En Ruta</span>
+                    <span class="tv-kpi-num" id="tvKpiRuta">0</span>
+                </button>
+                <button class="tv-kpi-chip idle" id="chip-idle" onclick="tvFiltrarFlota('ralenti')">
+                    <span>🟡 Ralentí</span>
+                    <span class="tv-kpi-num" id="tvKpiRalenti">0</span>
+                </button>
+                <button class="tv-kpi-chip stop" id="chip-stop" onclick="tvFiltrarFlota('detenido')">
+                    <span>🔴 Detenidas</span>
+                    <span class="tv-kpi-num" id="tvKpiDetenido">0</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="tv-clock-wrap">
+            <div class="tv-clock-time" id="tvLiveClock">--:--:--</div>
+            <div class="tv-clock-date" id="tvLiveDate">CARGANDO...</div>
+        </div>
+    </header>
+
+    <!-- 2. LEFT FLEET DRAWER (TV D-PAD ACCESSIBLE) -->
+    <aside class="tv-fleet-sidebar" id="tvSidebar">
+        <div class="tv-sidebar-head">
+            <div class="tv-sidebar-title">
+                <i class="bi bi-truck text-info"></i> Unidades Activas
+            </div>
+            <span class="tv-btn-pill" id="tvCountPill">0 / 0</span>
+        </div>
+        <div class="tv-units-list" id="tvUnitsList">
+            <!-- Renderizado dinámico de tarjetas de vehículos -->
+        </div>
+    </aside>
+
+    <!-- 3. RIGHT TELEMETRY HUD (SELECTED VEHICLE) -->
+    <aside class="tv-telemetry-hud" id="tvTelemetryHud" style="display: none;">
+        <div class="tv-telemetry-header">
+            <div>
+                <div class="tv-telemetry-plate" id="tvHudPlate">---</div>
+                <div style="font-size: 0.75rem; color: var(--tv-text-muted);" id="tvHudModel">Vehículo de Flota</div>
+            </div>
+            <span class="tv-status-tag" id="tvHudStatusTag" style="background: rgba(16,185,129,0.2); color: #34d399;">EN RUTA</span>
+        </div>
+
+        <!-- Velocímetro Digital -->
+        <div class="tv-gauge-card">
+            <div>
+                <div class="tv-metric-lbl"><i class="bi bi-speedometer2 text-info"></i> Velocidad Actual</div>
+                <div class="tv-speed-big" id="tvHudSpeed">0</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="tv-speed-unit">KM / H</div>
+                <div style="font-size: 0.75rem; color: #cbd5e1; font-weight: 700;" id="tvHudIgnition">IGNICIÓN: ON</div>
+            </div>
+        </div>
+
+        <!-- Rejilla de Sensores y Telemetría -->
+        <div class="tv-metrics-grid">
+            <div class="tv-metric-box">
+                <div class="tv-metric-lbl"><i class="bi bi-person-badge text-primary"></i> Conductor</div>
+                <div class="tv-metric-val" style="font-size: 0.78rem;" id="tvHudDriver">Sin asignar</div>
+            </div>
+            <div class="tv-metric-box">
+                <div class="tv-metric-lbl"><i class="bi bi-battery-charging text-warning"></i> Batería</div>
+                <div class="tv-metric-val" id="tvHudBattery">24.2 V</div>
+            </div>
+            <div class="tv-metric-box">
+                <div class="tv-metric-lbl"><i class="bi bi-speedometer text-success"></i> Odómetro</div>
+                <div class="tv-metric-val" id="tvHudOdometer">0 km</div>
+            </div>
+            <div class="tv-metric-box">
+                <div class="tv-metric-lbl"><i class="bi bi-compass text-info"></i> Rumbo</div>
+                <div class="tv-metric-val" id="tvHudCourse">0° N</div>
+            </div>
+        </div>
+
+        <!-- Dirección / Geocerca -->
+        <div class="tv-metric-box" style="padding: 10px;">
+            <div class="tv-metric-lbl"><i class="bi bi-geo-alt-fill text-danger"></i> Última Ubicación</div>
+            <div class="tv-metric-val" style="font-size: 0.74rem; font-weight: 600; line-height: 1.3; margin-top: 4px;" id="tvHudAddress">
+                Actualizando posición satelital...
+            </div>
+        </div>
+    </aside>
+
+    <!-- 4. BOTTOM BAR: LIVE TICKER & TV REMOTE KEYS -->
+    <footer class="tv-bottom-bar">
+        <div class="tv-ticker-wrap">
+            <span class="tv-ticker-tag"><i class="bi bi-bell-fill"></i> EVENTOS</span>
+            <div class="tv-ticker-text" id="tvLiveTicker">Iniciando Centro de Control Satelital Azkell Fleet...</div>
+        </div>
+
+        <div class="tv-remote-keys">
+            <div class="tv-key-hint">
+                <span class="tv-btn-pill">▲▼</span> <span>Navegar</span>
+            </div>
+            <div class="tv-key-hint">
+                <span class="tv-btn-pill">OK</span> <span>Enfocar</span>
+            </div>
+            <div class="tv-key-hint">
+                <span class="tv-btn-pill">C</span> <span id="tvAutoCycleStatus">Carrusel [OFF]</span>
+            </div>
+            <div class="tv-key-hint">
+                <span class="tv-btn-pill">S</span> <span>Satélite</span>
+            </div>
+            <div class="tv-key-hint">
+                <span class="tv-btn-pill">F</span> <span>Fullscreen</span>
+            </div>
+            <div class="tv-key-hint" onclick="tvToggleQrModal()" style="cursor: pointer;">
+                <span class="tv-btn-pill"><i class="bi bi-qr-code"></i> QR</span> <span>Emparejar</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 5. QR PAIRING MODAL (TIPO NETFLIX / YOUTUBE) -->
+    <div class="tv-modal-backdrop" id="tvQrModal" onclick="tvToggleQrModal()">
+        <div class="tv-modal-card" onclick="event.stopPropagation()">
+            <div class="tv-brand-title" style="justify-content: center; font-size: 1.5rem; margin-bottom: 8px;">
+                <i class="bi bi-phone-vibrate text-info"></i> Control Móvil
+            </div>
+            <p style="color: var(--tv-text-muted); font-size: 0.85rem;">
+                Escanea este código desde tu smartphone para proyectar o controlar el mapa en la Smart TV.
+            </p>
+            
+            <div class="tv-qr-box">
+                <img id="tvQrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://azkell.com/tv" alt="QR Control" width="180" height="180" />
+            </div>
+
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: 800; color: var(--tv-accent-cyan);">
+                URL: <span id="tvHostDisplay">azkell.com/tv</span>
+            </div>
+
+            <button class="tv-kpi-chip active" style="margin: 20px auto 0 auto; padding: 8px 24px; font-size: 0.9rem;" onclick="tvToggleQrModal()">
+                Cerrar (Volver al Mapa)
+            </button>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // ============================================================
+        // 🛰️ AZKELL FLEET TV ENGINE (SMART TV & WAR ROOM SYSTEM)
+        // ============================================================
+        
+        var _tvMap = null;
+        var _tvMarkers = {};
+        var _tvData = [];
+        var _tvActiveFilter = 'total';
+        var _tvSelectedPlate = null;
+        var _tvSelectedIndex = 0;
+        var _tvAutoCycle = false;
+        var _tvAutoCycleTimer = null;
+        var _tvLayers = {};
+        var _tvCurrentLayer = 'dark';
+
+        // 1. INICIALIZAR RELOJ EN VIVO
+        function tvInitClock() {
+            var clockEl = document.getElementById('tvLiveClock');
+            var dateEl = document.getElementById('tvLiveDate');
+            
+            function update() {
+                var now = new Date();
+                var h = String(now.getHours()).padStart(2, '0');
+                var m = String(now.getMinutes()).padStart(2, '0');
+                var s = String(now.getSeconds()).padStart(2, '0');
+                if (clockEl) clockEl.innerText = h + ':' + m + ':' + s;
+
+                var options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+                if (dateEl) dateEl.innerText = now.toLocaleDateString('es-PE', options).toUpperCase();
+            }
+            update();
+            setInterval(update, 1000);
+        }
+
+        // 2. INICIALIZAR MAPA LEAFLET EN MODO ALTA DEFINICIÓN TV
+        function tvInitMap() {
+            if (typeof L === 'undefined') return;
+
+            _tvMap = L.map('tvMapContainer', {
+                zoomControl: false,
+                attributionControl: false,
+                fadeAnimation: true,
+                zoomAnimation: true
+            }).setView([-12.0464, -77.0428], 11);
+
+            // Capa Nocturna Oscura (CartoDB Dark Matter)
+            _tvLayers.dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                subdomains: 'abcd'
+            });
+
+            // Capa Satelital de Alta Resolución (ESRI World Imagery)
+            _tvLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}', {
+                maxZoom: 19
+            });
+
+            _tvLayers.dark.addTo(_tvMap);
+        }
+
+        // 3. CARGA DE DATOS DE TELEMETRÍA (WIALON / VPS BACKEND)
+        async function tvFetchData() {
+            try {
+                var res = await fetch('/api/script/obtenerDatosWialon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ args: [] })
+                });
+                var json = await res.json();
+                var data = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
+                _tvData = data;
+                
+                tvActualizarKPIs();
+                tvRenderLista();
+                tvActualizarMarcadores();
+
+                var tickerEl = document.getElementById('tvLiveTicker');
+                if (tickerEl && data.length > 0) {
+                    var moving = data.filter(function(u) { return (u.velocidad || u.speed || 0) > 0; });
+                    if (moving.length > 0) {
+                        var rand = moving[Math.floor(Math.random() * moving.length)];
+                        tickerEl.innerText = '🚛 Unidad ' + (rand.placa || rand.name) + ' en marcha a ' + Math.round(rand.velocidad || rand.speed || 0) + ' km/h en ' + (rand.direccion || rand.address || 'ruta activa');
+                    }
+                }
+            } catch (err) {
+                console.error('Error obteniendo telemetría TV:', err);
+            }
+        }
+
+        // 4. ACTUALIZAR KPIS EN TIEMPO REAL
+        function tvActualizarKPIs() {
+            var total = _tvData.length;
+            var ruta = 0, ralenti = 0, detenido = 0;
+
+            _tvData.forEach(function(u) {
+                var vel = Math.round(u.velocidad || u.speed || 0);
+                var ign = Boolean(u.ignition || u.ignicion || (u.sensores && u.sensores.ignicion));
+                if (vel > 0) ruta++;
+                else if (ign) ralenti++;
+                else detenido++;
+            });
+
+            document.getElementById('tvKpiTotal').innerText = total;
+            document.getElementById('tvKpiRuta').innerText = ruta;
+            document.getElementById('tvKpiRalenti').innerText = ralenti;
+            document.getElementById('tvKpiDetenido').innerText = detenido;
+            document.getElementById('tvCountPill').innerText = total + ' UNIDADES';
+        }
+
+        // 5. RENDERIZAR LISTA LATERAL ACCESIBLE POR CONTROL REMOTO
+        function tvRenderLista() {
+            var listEl = document.getElementById('tvUnitsList');
+            if (!listEl) return;
+
+            var filtradas = _tvData.filter(function(u) {
+                var vel = Math.round(u.velocidad || u.speed || 0);
+                var ign = Boolean(u.ignition || u.ignicion || (u.sensores && u.sensores.ignicion));
+                if (_tvActiveFilter === 'ruta') return vel > 0;
+                if (_tvActiveFilter === 'ralenti') return vel === 0 && ign;
+                if (_tvActiveFilter === 'detenido') return vel === 0 && !ign;
+                return true;
+            });
+
+            listEl.innerHTML = '';
+            filtradas.forEach(function(u, idx) {
+                var placa = u.placa || u.name || '---';
+                var vel = Math.round(u.velocidad || u.speed || 0);
+                var ign = Boolean(u.ignition || u.ignicion || (u.sensores && u.sensores.ignicion));
+                
+                var statusClass = vel > 0 ? '' : (ign ? 'idle' : 'stopped');
+                var statusText = vel > 0 ? (vel + ' km/h') : (ign ? 'Ralentí' : 'Detenido');
+
+                var card = document.createElement('div');
+                card.className = 'tv-unit-card' + (placa === _tvSelectedPlate ? ' is-selected' : '');
+                card.tabIndex = 0;
+                card.id = 'tv-card-' + idx;
+                card.innerHTML = `
+                    <div class="tv-unit-card-top">
+                        <span class="tv-plate-badge">${placa}</span>
+                        <span class="tv-speed-badge ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="tv-unit-meta">
+                        <span class="tv-unit-driver"><i class="bi bi-person"></i> ${u.conductor || u.driver || 'Conductor asignado'}</span>
+                        <span>${u.odometro ? Math.round(u.odometro).toLocaleString() + ' km' : ''}</span>
+                    </div>
+                `;
+
+                card.onclick = function() {
+                    tvSeleccionarUnidad(u);
+                };
+
+                listEl.appendChild(card);
+            });
+        }
+
+        // 6. ACTUALIZAR MARCADORES EN EL MAPA
+        function tvActualizarMarcadores() {
+            if (!_tvMap) return;
+
+            var bounds = [];
+            _tvData.forEach(function(u) {
+                var lat = parseFloat(u.lat || u.latitude || (u.pos && u.pos.y));
+                var lng = parseFloat(u.lng || u.lon || u.longitude || (u.pos && u.pos.x));
+                if (isNaN(lat) || isNaN(lng)) return;
+
+                var placa = u.placa || u.name || '---';
+                var vel = Math.round(u.velocidad || u.speed || 0);
+                bounds.push([lat, lng]);
+
+                var iconHtml = `
+                    <div class="tv-custom-marker">
+                        <div class="tv-marker-label">${placa} ${vel > 0 ? '(' + vel + 'k)' : ''}</div>
+                        <div class="tv-marker-icon-box ${vel === 0 ? 'stopped' : ''}">
+                            <i class="bi bi-truck"></i>
+                        </div>
+                    </div>
+                `;
+
+                var customIcon = L.divIcon({
+                    className: 'tv-marker-wrapper',
+                    html: iconHtml,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
+                });
+
+                if (_tvMarkers[placa]) {
+                    _tvMarkers[placa].setLatLng([lat, lng]);
+                    _tvMarkers[placa].setIcon(customIcon);
+                } else {
+                    var m = L.marker([lat, lng], { icon: customIcon }).addTo(_tvMap);
+                    m.on('click', function() {
+                        tvSeleccionarUnidad(u);
+                    });
+                    _tvMarkers[placa] = m;
+                }
+            });
+
+            if (bounds.length > 0 && !_tvSelectedPlate) {
+                _tvMap.fitBounds(bounds, { padding: [120, 120], maxZoom: 13 });
+            }
+        }
+
+        // 7. SELECCIONAR Y ENFOCAR UNIDAD
+        function tvSeleccionarUnidad(u) {
+            var placa = u.placa || u.name;
+            _tvSelectedPlate = placa;
+
+            var lat = parseFloat(u.lat || u.latitude || (u.pos && u.pos.y));
+            var lng = parseFloat(u.lng || u.lon || u.longitude || (u.pos && u.pos.x));
+            if (!isNaN(lat) && !isNaN(lng) && _tvMap) {
+                _tvMap.flyTo([lat, lng], 16, { duration: 1.2 });
+            }
+
+            var hud = document.getElementById('tvTelemetryHud');
+            if (hud) {
+                hud.style.display = 'flex';
+                document.getElementById('tvHudPlate').innerText = placa;
+                var vel = Math.round(u.velocidad || u.speed || 0);
+                document.getElementById('tvHudSpeed').innerText = vel;
+                var ign = Boolean(u.ignition || u.ignicion || (u.sensores && u.sensores.ignicion));
+                document.getElementById('tvHudIgnition').innerText = 'IGNICIÓN: ' + (ign ? 'ON' : 'OFF');
+                document.getElementById('tvHudDriver').innerText = u.conductor || u.driver || 'No asignado';
+                document.getElementById('tvHudBattery').innerText = (u.bateria || u.battery || '24.2') + ' V';
+                document.getElementById('tvHudOdometer').innerText = (u.odometro ? Math.round(u.odometro).toLocaleString() : '0') + ' km';
+                document.getElementById('tvHudCourse').innerText = (u.curso || u.course || 0) + '°';
+                document.getElementById('tvHudAddress').innerText = u.direccion || u.address || 'Ubicación satelital en tiempo real';
+            }
+
+            tvRenderLista();
+        }
+
+        // 8. MOTOR DE NAVEGACIÓN POR CONTROL REMOTO (D-PAD SMART TV)
+        window.addEventListener('keydown', function(e) {
+            var key = e.key;
+
+            if (key === 'ArrowDown') {
+                e.preventDefault();
+                var cards = document.querySelectorAll('.tv-unit-card');
+                if (cards.length > 0) {
+                    _tvSelectedIndex = (_tvSelectedIndex + 1) % cards.length;
+                    cards[_tvSelectedIndex].focus();
+                    cards[_tvSelectedIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            } else if (key === 'ArrowUp') {
+                e.preventDefault();
+                var cards = document.querySelectorAll('.tv-unit-card');
+                if (cards.length > 0) {
+                    _tvSelectedIndex = (_tvSelectedIndex - 1 + cards.length) % cards.length;
+                    cards[_tvSelectedIndex].focus();
+                    cards[_tvSelectedIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            } else if (key === 'Enter') {
+                var activeCard = document.activeElement;
+                if (activeCard && activeCard.classList.contains('tv-unit-card')) {
+                    activeCard.click();
+                }
+            } else if (key === 'c' || key === 'C') {
+                tvToggleAutoCycle();
+            } else if (key === 's' || key === 'S') {
+                tvToggleLayer();
+            } else if (key === 'f' || key === 'F') {
+                tvToggleFullscreen();
+            } else if (key === 'Escape' || key === 'Back') {
+                _tvSelectedPlate = null;
+                document.getElementById('tvTelemetryHud').style.display = 'none';
+                tvRenderLista();
+                tvActualizarMarcadores();
+            }
+        });
+
+        // 9. MODO KIOSCO: CARRUSEL AUTOMÁTICO DE TELEMETRÍA (15 SEG)
+        function tvToggleAutoCycle() {
+            _tvAutoCycle = !_tvAutoCycle;
+            var statusEl = document.getElementById('tvAutoCycleStatus');
+            if (statusEl) statusEl.innerText = 'Carrusel [' + (_tvAutoCycle ? 'ON' : 'OFF') + ']';
+
+            if (_tvAutoCycle) {
+                var moving = _tvData.filter(function(u) { return (u.velocidad || u.speed || 0) > 0; });
+                var pool = moving.length > 0 ? moving : _tvData;
+                var cycleIndex = 0;
+
+                _tvAutoCycleTimer = setInterval(function() {
+                    if (pool.length > 0) {
+                        tvSeleccionarUnidad(pool[cycleIndex]);
+                        cycleIndex = (cycleIndex + 1) % pool.length;
+                    }
+                }, 15000);
+            } else {
+                clearInterval(_tvAutoCycleTimer);
+            }
+        }
+
+        // 10. CAMBIAR CAPA DEL MAPA (SATÉLITE / OSCURO)
+        function tvToggleLayer() {
+            if (!_tvMap) return;
+            if (_tvCurrentLayer === 'dark') {
+                _tvMap.removeLayer(_tvLayers.dark);
+                _tvLayers.satellite.addTo(_tvMap);
+                _tvCurrentLayer = 'satellite';
+            } else {
+                _tvMap.removeLayer(_tvLayers.satellite);
+                _tvLayers.dark.addTo(_tvMap);
+                _tvCurrentLayer = 'dark';
+            }
+        }
+
+        // 11. PANTALLA COMPLETA
+        function tvToggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(function(){});
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen().catch(function(){});
+            }
+        }
+
+        // 12. FILTRO DE KPIS
+        function tvFiltrarFlota(tipo) {
+            _tvActiveFilter = tipo;
+            document.querySelectorAll('.tv-kpi-chip').forEach(function(c) {
+                c.classList.remove('active');
+            });
+            var activeChip = document.getElementById('chip-' + tipo);
+            if (activeChip) activeChip.classList.add('active');
+            tvRenderLista();
+        }
+
+        // 13. QR PAIRING MODAL
+        function tvToggleQrModal() {
+            var modal = document.getElementById('tvQrModal');
+            if (modal) {
+                modal.classList.toggle('is-open');
+                var hostEl = document.getElementById('tvHostDisplay');
+                var qrImg = document.getElementById('tvQrImage');
+                var currentUrl = window.location.origin + '/tv';
+                if (hostEl) hostEl.innerText = window.location.host + '/tv';
+                if (qrImg) qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(currentUrl);
+            }
+        }
+
+        // INICIALIZACIÓN GLOBAL
+        document.addEventListener('DOMContentLoaded', function() {
+            tvInitClock();
+            tvInitMap();
+            tvFetchData();
+            // Polling en vivo cada 4 segundos
+            setInterval(tvFetchData, 4000);
+        });
+    </script>
+</body>
+</html>

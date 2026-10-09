@@ -24,8 +24,10 @@
         <p>Cargando Azkell Fleet...</p>
     </div>
     <script>
-        // Redirige a la app en producción
-        window.location.href = 'https://azkell-crm.onrender.com';
+        // Si detecta Smart TV o pantalla grande sin touch, abre directo el War Room TV
+        var isTV = /TV|SmartTV|Android TV|GoogleTV|AppleTV|HbbTV|CrKey|LargeScreen/i.test(navigator.userAgent) || (window.innerWidth >= 1920 && !('ontouchstart' in window));
+        var targetUrl = isTV ? 'https://azkell-crm.onrender.com/tv' : 'https://azkell-crm.onrender.com';
+        window.location.href = targetUrl;
     </script>
 </body>
 </html>
