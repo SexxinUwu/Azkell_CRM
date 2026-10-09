@@ -3399,6 +3399,8 @@ window.abrirModalGenerarOTs = async function(id) {
     if (remolqueTxt) remolqueTxt.value = r.placa_remolque || '—';
 
     // Inicializar valores de telemática (con respaldo de reporte y consulta en vivo inmediata)
+    window._genOT_TableroKm = r.km_inicial ? Number(r.km_inicial) : null;
+    window._genOT_GpsKm = null;
     window._genOT_LiveKm = r.km_inicial ? Number(r.km_inicial) : null;
     window._genOT_LiveHoras = r.horas_motor ? Number(r.horas_motor) : null;
 
@@ -3415,8 +3417,14 @@ window.abrirModalGenerarOTs = async function(id) {
             try {
                 const teleT = await window.ckObtenerTelemetryGPS(r.placa_tracto);
                 if (teleT && teleT.km > 0) {
-                    window._genOT_LiveKm = Math.round(teleT.km);
-                    if (kmTxt) kmTxt.value = Number(window._genOT_LiveKm).toLocaleString() + ' KM';
+                    window._genOT_GpsKm = Math.round(teleT.km);
+                    if (!window._genOT_TableroKm) {
+                        window._genOT_TableroKm = window._genOT_GpsKm;
+                    }
+                    window._genOT_LiveKm = window._genOT_TableroKm;
+                    if (kmTxt) {
+                        kmTxt.value = `${Number(window._genOT_TableroKm).toLocaleString()} KM (GPS: ${Number(window._genOT_GpsKm).toLocaleString()} KM)`;
+                    }
                     updated = true;
                 }
             } catch(e) {}
@@ -4089,13 +4097,16 @@ window.enviarGeneracionOTs = function(e) {
         // Lista de técnicos únicos seleccionados para esta OT
         const tecnicosUnicos = Array.from(new Set(motivosArray.map(m => m.tecnico).filter(Boolean)));
 
-        const otKm = c.unidad === 'Tracto' ? (window._genOT_LiveKm !== undefined && window._genOT_LiveKm !== null ? window._genOT_LiveKm : (r.km_inicial || 0)) : 0;
+        const otTableroKm = c.unidad === 'Tracto' ? (window._genOT_TableroKm !== null && window._genOT_TableroKm !== undefined ? window._genOT_TableroKm : (r.km_inicial ? Number(r.km_inicial) : (window._genOT_LiveKm || 0))) : 0;
+        const otGpsKm = c.unidad === 'Tracto' ? (window._genOT_GpsKm !== null && window._genOT_GpsKm !== undefined ? window._genOT_GpsKm : (window._genOT_LiveKm || 0)) : 0;
         const otHoras = (c.unidad === 'Remolque' || c.unidad === 'Carreta') ? (window._genOT_LiveHoras !== undefined && window._genOT_LiveHoras !== null ? window._genOT_LiveHoras : (r.horas_motor || null)) : null;
 
         otsPayload.push({
             unidad: c.unidad,
             placa: c.placa,
-            km: otKm,
+            km: otTableroKm || otGpsKm || 0,
+            km_tablero: otTableroKm || otGpsKm || 0,
+            km_gps: otGpsKm || 0,
             horas_motor: otHoras,
             tipo_ot: c.tipo_ot || 'Correctivo',
             subtipo_ot: c.subtipo_ot || 'Falla',
