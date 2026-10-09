@@ -824,10 +824,11 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
         const tenantInfo = req.tenant || {};
         const empresaNombre = tenantInfo.nombre || 'Marsisa SAC';
 
-        // 1. OTs
+        // 1. OTs (Solo en estado 'En Proceso')
         const [otsRaw] = await activeDb.promise().query(`
             SELECT ticket_entrada, id_ot, placa, estado, fecha_ingreso, fecha_inicio_ot, creado_por, iniciado_por, detalles_json
             FROM ordenes_trabajo
+            WHERE LOWER(estado) = 'en proceso' OR estado = 'En Proceso'
             ORDER BY id_ot DESC
             LIMIT 60
         `).catch(() => [[]]);
@@ -861,10 +862,11 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
             else if (est.includes('anul')) otKPIs.anulado += r.c;
         });
 
-        // 2. Backlog
+        // 2. Backlog (Solo en estado 'Pendiente')
         const [backlogRaw] = await activeDb.promise().query(`
             SELECT id, backlog_id, placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por, creado_en, ticket_ot
             FROM ot_backlog
+            WHERE LOWER(estado) = 'pendiente' OR estado = 'Pendiente' OR estado IS NULL
             ORDER BY id DESC
             LIMIT 60
         `).catch(() => [[]]);
@@ -1049,6 +1051,41 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
             }
         }
 
+        // 5. Status Rampa (Unidades en Rampa y Horas de Salida)
+        const [rampasRaw] = await activeDb.promise().query(`
+            SELECT id, rampa, placa, km, conductor, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, estado, creado_en
+            FROM taller_rampas
+            WHERE estado != 'Liberado' AND (fecha_liberado IS NULL OR estado = 'Activo')
+            ORDER BY rampa ASC, hora_salida ASC, id DESC
+            LIMIT 60
+        `).catch(() => [[]]);
+
+        const rampasList = (rampasRaw || []).map(r => {
+            let hIngreso = r.hora_ingreso ? String(r.hora_ingreso).substring(0, 5) : '-';
+            let hSalida = r.hora_salida ? String(r.hora_salida).substring(0, 5) : '-';
+            let obsClean = (r.obs || 'Mantenimiento en rampa').split('\n').filter(Boolean).slice(0, 2).join(' • ');
+
+            return {
+                id: r.id,
+                rampa: r.rampa ? `Rampa ${r.rampa}` : 'Rampa General',
+                rampa_num: r.rampa || 1,
+                placa: r.placa || 'S/P',
+                conductor: r.conductor || 'Asignado a taller',
+                km: r.km ? `${Number(r.km).toLocaleString('es-PE')} km` : '-',
+                hora_ingreso: hIngreso,
+                hora_salida: hSalida,
+                fecha_salida: r.fecha_salida,
+                situacion: r.situacion || 'En atención',
+                trabajo: obsClean || 'Revisión y mantenimiento'
+            };
+        });
+
+        const rampasKPIs = {
+            total_activas: rampasList.length,
+            rampas_ocupadas: new Set(rampasList.map(r => r.rampa_num)).size,
+            total_rampas: 16
+        };
+
         const gpsData = wialonResult.data || [];
         const gpsKPIs = {
             total: gpsData.length,
@@ -1076,6 +1113,10 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
             fallas: {
                 kpis: fallasKPIs,
                 list: fallasList
+            },
+            rampas: {
+                kpis: rampasKPIs,
+                list: rampasList
             }
         });
     } catch (e) {
