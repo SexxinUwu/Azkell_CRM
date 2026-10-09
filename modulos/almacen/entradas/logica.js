@@ -1569,6 +1569,8 @@ window.abrirModalEditarEntrada = function(id) {
 
     var mon = document.getElementById('ent-f-moneda');
     if (mon && entrada.moneda) mon.value = entrada.moneda;
+    var fTc = document.getElementById('ent-f-tc');
+    if (fTc && (entrada.tipo_cambio || window._entTC)) fTc.value = entrada.tipo_cambio || window._entTC;
     window._entOnMonedaChange();
 
     window._entSetIgvMode(entrada.tipo_igv || 'sin_igv');
@@ -1786,10 +1788,13 @@ window._entRender = function() {
         var esModificable = (estadoLimpio === 'registrado' || estadoLimpio === 'registrada' || estadoLimpio === 'pendiente' || estadoLimpio === 'observado' || estadoLimpio === 'observada' || !d.estado);
         var canEditRow = canEdit && !isAnulado && esModificable;
 
-        var tp = parseFloat(d.total_pen || 0);
         var isUSD = (d.moneda === 'USD');
         var tc = parseFloat(d.tipo_cambio || 1);
+        var tp = parseFloat(d.total_pen || 0);
         var toc = parseFloat(d.total_oc != null ? d.total_oc : (isUSD && tc > 0 ? tp / tc : tp));
+        if (isUSD && tc > 0) {
+            tp = (tp > 0 && Math.abs(tp - toc) > 0.01) ? tp : (toc * tc);
+        }
 
         var totalOcFmt = '<strong style="color:#0284c7; font-family:monospace; font-size:0.83rem;">' + (isUSD ? '$ ' : 'S/ ') + toc.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
         var totalPenFmt = '<strong style="color:#16a34a; font-family:monospace; font-size:0.83rem;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
