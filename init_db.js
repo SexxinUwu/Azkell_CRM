@@ -1146,6 +1146,39 @@ async function initDB(defaultDb, specificDb) {
                             FOREIGN KEY (guia_id) REFERENCES guias_remision(id) ON DELETE CASCADE
                         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                     `);
+                    await promisePool.query(`
+                        CREATE TABLE IF NOT EXISTS api_keys (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            nombre VARCHAR(150) NOT NULL,
+                            api_key VARCHAR(80) UNIQUE NOT NULL,
+                            cliente_empresa VARCHAR(150) DEFAULT '',
+                            scopes TEXT NOT NULL,
+                            limite_rpm INT DEFAULT 60,
+                            estado VARCHAR(20) DEFAULT 'activo',
+                            ultimo_uso DATETIME NULL,
+                            peticiones_total INT DEFAULT 0,
+                            creado_por VARCHAR(100) DEFAULT '',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            INDEX idx_api_key (api_key),
+                            INDEX idx_estado (estado)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    `);
+                    await promisePool.query(`
+                        CREATE TABLE IF NOT EXISTS api_logs (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            api_key_id INT NULL,
+                            api_key_nombre VARCHAR(150) DEFAULT '',
+                            endpoint VARCHAR(255) NOT NULL,
+                            metodo VARCHAR(10) NOT NULL,
+                            ip VARCHAR(45) DEFAULT '',
+                            status_code INT NOT NULL,
+                            tiempo_ms INT NOT NULL DEFAULT 0,
+                            fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            INDEX idx_fecha (fecha),
+                            INDEX idx_status (status_code)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    `);
                 } catch(e) {}
             } catch (errSeeds) {
                 console.error(`❌ Error en semillas/migraciones (${dbName}):`, errSeeds.message);
