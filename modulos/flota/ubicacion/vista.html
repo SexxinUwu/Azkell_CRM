@@ -109,6 +109,198 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
 }
 
+/* ── Custom Modern Checkbox Wialon / Bento ────────── */
+.gps-check-custom {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 17px;
+    height: 17px;
+    border: 1.8px solid #94a3b8;
+    border-radius: 5px;
+    background: #ffffff;
+    outline: none;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin: 0;
+}
+.gps-check-custom:hover {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+.gps-check-custom:checked {
+    background-color: #0284c7;
+    border-color: #0284c7;
+    box-shadow: 0 2px 5px rgba(2, 132, 199, 0.35);
+}
+.gps-check-custom:checked::after {
+    content: '';
+    width: 4.5px;
+    height: 8.5px;
+    border: solid #ffffff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-bottom: 2px;
+}
+.gps-check-custom:indeterminate {
+    background-color: #0284c7;
+    border-color: #0284c7;
+}
+.gps-check-custom:indeterminate::after {
+    content: '';
+    width: 8px;
+    height: 2px;
+    background-color: #ffffff;
+    border-radius: 1px;
+}
+
+/* ── Sidebar Toolbar & Tree Groups ────────────────── */
+.gps-sidebar-toolbar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.gps-tool-btn {
+    height: 26px;
+    padding: 0 7px;
+    border-radius: 7px;
+    font-size: 0.70rem;
+    font-weight: 700;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.gps-tool-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #cbd5e1;
+}
+.gps-tool-btn.active {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+    border-color: #0284c7 !important;
+}
+
+.gps-group-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    margin-bottom: 0.45rem;
+    overflow: hidden;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.gps-group-card:hover {
+    border-color: #cbd5e1;
+}
+.gps-group-header {
+    padding: 0.55rem 0.75rem;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid transparent;
+    transition: background 0.15s ease;
+}
+.gps-group-card:not(.is-collapsed) .gps-group-header {
+    border-bottom-color: #e2e8f0;
+    background: #f1f5f9;
+}
+.gps-group-header:hover {
+    background: #edf2f7;
+}
+.gps-group-chevron {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.70rem;
+    color: #64748b;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+}
+.gps-group-card:not(.is-collapsed) .gps-group-chevron {
+    transform: rotate(90deg);
+}
+.gps-group-title {
+    font-size: 0.80rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gps-group-badge-count {
+    font-size: 0.68rem;
+    font-weight: 800;
+    background: #e2e8f0;
+    color: #334155;
+    padding: 1px 6px;
+    border-radius: 6px;
+}
+.gps-group-units {
+    display: flex;
+    flex-direction: column;
+    gap: 0.30rem;
+    padding: 0.40rem 0.50rem;
+    background: #ffffff;
+}
+.gps-group-card.is-collapsed .gps-group-units {
+    display: none;
+}
+
+.gps-unit-row {
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 10px;
+    padding: 0.45rem 0.65rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+}
+.gps-unit-row:hover {
+    border-color: #0284c7;
+    background: #f8fafc;
+    transform: translateX(2px);
+}
+.gps-unit-row.active {
+    background: #eff6ff !important;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
+}
+.gps-unit-row.is-hidden-map {
+    opacity: 0.55;
+    background: #fafafa;
+}
+
 /* ── Split Layout & Unit Cards ───────────────────── */
 .gps-main-split {
     display: flex;
@@ -125,7 +317,7 @@
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.55rem;
     overflow: hidden;
 }
 .gps-list-container {
@@ -133,22 +325,22 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.35rem;
     padding-right: 0.25rem;
     scrollbar-width: thin;
 }
 .gps-unit-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 0.85rem 1rem;
+    border-radius: 14px;
+    padding: 0.75rem 0.90rem;
     cursor: pointer;
     transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: 0.65rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 .gps-unit-card:hover {
@@ -161,16 +353,20 @@
     border-color: #0284c7 !important;
     box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
 }
+.gps-unit-card.is-hidden-map {
+    opacity: 0.55;
+    background: #fafafa;
+}
 .gps-unit-plate {
-    font-size: 0.98rem;
+    font-size: 0.95rem;
     font-weight: 800;
     color: #0f172a;
     letter-spacing: -0.01em;
 }
 .gps-unit-model {
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     color: #64748b;
-    max-width: 180px;
+    max-width: 170px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -791,6 +987,9 @@
             <div class="position-relative flex-grow-1">
                 <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
                 <input type="text" id="busGPSUnidad" class="ck-apple-search" placeholder="Buscar placa, empresa, ciudad (ej. Arequipa)..." oninput="window.filtrarListaGPS(this.value)">
+                <button type="button" id="btn-clear-search-gps" class="btn btn-sm text-muted position-absolute top-50 end-0 translate-middle-y me-2 p-0 border-0" style="display:none; width:22px; height:22px;" onclick="window.gpsLimpiarBusqueda()" title="Limpiar búsqueda">
+                    <i class="bi bi-x-circle-fill"></i>
+                </button>
             </div>
         </div>
 
@@ -825,6 +1024,26 @@
                     <i class="bi bi-map-fill"></i> Ver Mapa General
                 </button>
             </div>
+
+            <!-- Toolbar de Control de Visibilidad & Modo de Vista -->
+            <div class="gps-sidebar-toolbar mb-1">
+                <div class="d-flex align-items-center gap-2" style="min-width:0;">
+                    <input type="checkbox" id="gpsMasterCheckbox" class="gps-check-custom" checked title="Seleccionar / Deseleccionar toda la flota" onchange="window.gpsToggleVisibilidadTodos(this.checked)">
+                    <label for="gpsMasterCheckbox" class="m-0 fw-bold text-dark text-truncate" style="font-size:0.75rem; cursor:pointer;" id="gpsMasterCheckboxLabel">Visibles (<span id="gpsCheckedUnitsCount">0</span>/<span id="gpsTotalUnitsCount">0</span>)</label>
+                </div>
+                <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                    <button type="button" class="gps-tool-btn active" id="btnGpsViewTree" onclick="window.gpsCambiarModoVista('tree')" title="Vista por Grupos / Empresas">
+                        <i class="bi bi-folder2-open"></i> Grupos
+                    </button>
+                    <button type="button" class="gps-tool-btn" id="btnGpsViewFlat" onclick="window.gpsCambiarModoVista('flat')" title="Vista Lista Plana">
+                        <i class="bi bi-list-ul"></i> Lista
+                    </button>
+                    <button type="button" class="gps-tool-btn" id="btnGpsToggleExpandAll" onclick="window.gpsToggleColapsoTodosGrupos()" title="Expandir / Colapsar Grupos">
+                        <i class="bi bi-arrows-expand" id="iconGpsToggleExpandAll"></i>
+                    </button>
+                </div>
+            </div>
+
             <div class="gps-list-container custom-scrollbar" id="listaUnidadesGPS">
                 <div class="text-center py-5 text-muted">
                     <div class="spinner-border spinner-border-sm text-primary me-2"></div>
