@@ -78,6 +78,10 @@ app.use((req, res, next) => {
     });
 });
 
+// ── Open API Gateway Router (APIs Públicas v1 y Gestión de API Keys) ──
+const apiGatewayRouter = require('./routes/api-gateway');
+app.use('/api', apiGatewayRouter);
+
 // ── Helper para generar PNG cuadrado (1:1) centrado con padding automático ──
 // Permite que logos alargados/rectangulares cumplan con la estricta validación 1:1 de PWA/Chrome
 const zlib = require('zlib');

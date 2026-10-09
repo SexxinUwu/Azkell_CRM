@@ -1,0 +1,515 @@
+<!-- Módulo: API Gateway & Desarrolladores — Azkell ERP -->
+<style>
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
+#moduloApiGateway {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 1.25rem 1.5rem 2.5rem 1.5rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* KPIs Apple Bento Cards */
+#moduloApiGateway .gw-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+    user-select: none;
+    min-height: 74px;
+}
+#moduloApiGateway .gw-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.08);
+}
+#moduloApiGateway .gw-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+/* Apple Segmented Tabs */
+#moduloApiGateway .gw-segmented {
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 14px;
+    display: inline-flex;
+    gap: 3px;
+    border: 1px solid #e2e8f0;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+#moduloApiGateway .gw-tab-btn {
+    border: none;
+    background: transparent;
+    padding: 8px 18px;
+    border-radius: 10px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+#moduloApiGateway .gw-tab-btn:hover { color: #0f172a; }
+#moduloApiGateway .gw-tab-btn.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Card Contenedor Principal */
+.gw-panel-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+
+/* Code block & Key pill */
+.gw-key-box {
+    background: #0f172a;
+    color: #38bdf8;
+    font-family: 'JetBrains Mono', monospace, Consolas;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.gw-scope-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+    display: inline-block;
+    margin: 2px;
+}
+
+.gw-doc-endpoint {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.85rem;
+    transition: all 0.2s ease;
+}
+.gw-doc-endpoint:hover {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 14px rgba(15,23,42,0.05);
+}
+
+.gw-code-preview {
+    background: #0f172a;
+    color: #f8fafc;
+    border-radius: 12px;
+    padding: 1rem;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 0.80rem;
+    overflow-x: auto;
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    #moduloApiGateway {
+        padding: 0.75rem 0.75rem 100px 0.75rem !important;
+    }
+}
+</style>
+
+<div id="moduloApiGateway">
+
+    <!-- ── 1. ENCABEZADO PRINCIPAL ────────────────────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 48px; height: 48px; background: #eff6ff; color: #0284c7; border-radius: 14px; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(2,132,199,0.15);">
+                <i class="bi bi-code-slash"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold m-0 text-dark" style="letter-spacing: -0.02em;">Portal de APIs & Desarrolladores</h4>
+                <span class="text-secondary small">Azkell Open API Gateway — Conecta clientes, partners y sistemas externos a tu ERP</span>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2 fw-bold d-flex align-items-center gap-1.5">
+                <span class="spinner-grow spinner-grow-sm text-success" style="width:7px;height:7px;"></span> Gateway v1 Online
+            </span>
+            <button class="btn btn-primary fw-bold rounded-3 px-3 py-2 d-flex align-items-center gap-2 shadow-sm" style="background:#0284c7; border-color:#0284c7;" onclick="window.gwAbrirModalNuevaKey()">
+                <i class="bi bi-key-fill"></i> + Generar API Key
+            </button>
+        </div>
+    </div>
+
+    <!-- ── 2. KPIS BENTO ROW ─────────────────────────────────────────── -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="gw-kpi-card">
+                <div class="gw-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.70rem;">API Keys Activas</span>
+                    <h3 id="gw-kpi-keys" class="fw-bolder m-0 text-dark">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="gw-kpi-card">
+                <div class="gw-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+                    <div class="spinner-grow spinner-grow-sm text-success" style="width:14px;height:14px;"></div>
+                </div>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.70rem;">Peticiones Totales</span>
+                    <h3 id="gw-kpi-requests" class="fw-bolder m-0 text-success">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="gw-kpi-card">
+                <div class="gw-kpi-icon" style="background:#fef3c7; color:#d97706;">
+                    <i class="bi bi-hdd-network-fill"></i>
+                </div>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.70rem;">Endpoints Públicos</span>
+                    <h3 class="fw-bolder m-0 text-dark">5</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="gw-kpi-card">
+                <div class="gw-kpi-icon" style="background:#f8fafc; color:#64748b; border: 1px solid #e2e8f0;">
+                    <i class="bi bi-lightning-charge-fill text-warning"></i>
+                </div>
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.70rem;">Latencia Promedio</span>
+                    <h3 class="fw-bolder m-0 text-dark">~35 ms</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 3. TABS DE NAVEGACIÓN ─────────────────────────────────────── -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <div class="gw-segmented" id="gw-tabs-container">
+            <button type="button" class="gw-tab-btn active" data-tab="keys" onclick="window.gwCambiarTab('keys', this)">
+                <i class="bi bi-key"></i> Gestor de Llaves API
+            </button>
+            <button type="button" class="gw-tab-btn" data-tab="docs" onclick="window.gwCambiarTab('docs', this)">
+                <i class="bi bi-journal-text"></i> Documentación & Sandbox
+            </button>
+            <button type="button" class="gw-tab-btn" data-tab="logs" onclick="window.gwCambiarTab('logs', this)">
+                <i class="bi bi-activity"></i> Auditoría & Peticiones en Vivo
+            </button>
+        </div>
+    </div>
+
+    <!-- ── TAB 1: GESTOR DE LLAVES API ───────────────────────────────── -->
+    <div id="gw-view-keys" class="gw-panel-card">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-2 border-bottom">
+            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                <i class="bi bi-list-check text-primary"></i> Llaves de Acceso API Generadas
+            </h6>
+            <div style="max-width: 280px; width: 100%;">
+                <input type="text" class="form-control form-control-sm" placeholder="Buscar por nombre o cliente…" oninput="window.gwFiltrarKeys(this.value)" style="border-radius: 10px;">
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.84rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="fw-bold text-secondary">NOMBRE & CLIENTE</th>
+                        <th class="fw-bold text-secondary">API KEY (TOKEN)</th>
+                        <th class="fw-bold text-secondary">PERMISOS (SCOPES)</th>
+                        <th class="fw-bold text-secondary text-center">LÍMITE</th>
+                        <th class="fw-bold text-secondary text-center">PETICIONES</th>
+                        <th class="fw-bold text-secondary">ESTADO</th>
+                        <th class="fw-bold text-secondary text-end">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="gw-tabla-keys-body">
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            <div class="spinner-border spinner-border-sm text-primary me-2"></div> Cargando API Keys registradas...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ── TAB 2: DOCUMENTACIÓN INTERACTIVA & EJEMPLOS DE CÓDIGO ─────── -->
+    <div id="gw-view-docs" class="gw-panel-card" style="display:none;">
+        <div class="mb-4">
+            <h5 class="fw-bold text-dark mb-1">Guía Rápida de Conexión REST API v1</h5>
+            <p class="text-secondary small mb-3">
+                Para consultar la información del ERP desde cualquier sistema externo, realiza peticiones HTTP con tu API Key en el encabezado <code class="text-primary fw-bold">Authorization: Bearer ak_live_...</code>.
+            </p>
+            
+            <div class="p-3 bg-light border rounded-3 d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block" style="font-size:0.68rem;">URL Base del ERP:</span>
+                    <span class="font-monospace fw-bold text-dark" id="gw-base-url-text">https://tu-erp.com/api/v1/</span>
+                </div>
+                <span class="badge bg-primary px-3 py-2 rounded-3 fw-bold">Formato: JSON UTF-8</span>
+            </div>
+        </div>
+
+        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-collection-fill text-primary me-1"></i> Catálogo de Endpoints Disponibles:</h6>
+
+        <!-- Endpoint 1: GPS Live -->
+        <div class="gw-doc-endpoint">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-success fw-bold px-2.5 py-1">GET</span>
+                    <span class="font-monospace fw-bold text-dark" style="font-size: 0.95rem;">/api/v1/flota/gps-live</span>
+                </div>
+                <span class="gw-scope-badge"><i class="bi bi-shield-lock me-1"></i>gps:read</span>
+            </div>
+            <p class="text-secondary small mb-2">Retorna la telemetría en tiempo real de toda la flota (coordenadas GPS lat/lng, velocidad en km/h, ignición, odómetro Wialon, horas de motor y dirección geocodificada).</p>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary fw-bold rounded-2" onclick="window.gwCopiarEjemplo('curl', '/api/v1/flota/gps-live')"><i class="bi bi-terminal"></i> Ver cURL</button>
+                <button class="btn btn-sm btn-outline-success fw-bold rounded-2" onclick="window.gwCopiarEjemplo('python', '/api/v1/flota/gps-live')"><i class="bi bi-filetype-py"></i> Python</button>
+                <button class="btn btn-sm btn-outline-warning text-dark fw-bold rounded-2" onclick="window.gwCopiarEjemplo('js', '/api/v1/flota/gps-live')"><i class="bi bi-filetype-js"></i> JavaScript</button>
+            </div>
+        </div>
+
+        <!-- Endpoint 2: Flota Unidades -->
+        <div class="gw-doc-endpoint">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-success fw-bold px-2.5 py-1">GET</span>
+                    <span class="font-monospace fw-bold text-dark" style="font-size: 0.95rem;">/api/v1/flota/unidades</span>
+                </div>
+                <span class="gw-scope-badge"><i class="bi bi-shield-lock me-1"></i>flota:read</span>
+            </div>
+            <p class="text-secondary small mb-2">Catálogo maestro de vehículos (placas, marcas, modelos, tipo de combustible, empresa propietaria y estado operativo).</p>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary fw-bold rounded-2" onclick="window.gwCopiarEjemplo('curl', '/api/v1/flota/unidades')"><i class="bi bi-terminal"></i> Ver cURL</button>
+                <button class="btn btn-sm btn-outline-success fw-bold rounded-2" onclick="window.gwCopiarEjemplo('python', '/api/v1/flota/unidades')"><i class="bi bi-filetype-py"></i> Python</button>
+                <button class="btn btn-sm btn-outline-warning text-dark fw-bold rounded-2" onclick="window.gwCopiarEjemplo('js', '/api/v1/flota/unidades')"><i class="bi bi-filetype-js"></i> JavaScript</button>
+            </div>
+        </div>
+
+        <!-- Endpoint 3: Órdenes de Trabajo -->
+        <div class="gw-doc-endpoint">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-success fw-bold px-2.5 py-1">GET</span>
+                    <span class="font-monospace fw-bold text-dark" style="font-size: 0.95rem;">/api/v1/mantenimiento/ordenes</span>
+                </div>
+                <span class="gw-scope-badge"><i class="bi bi-shield-lock me-1"></i>ot:read</span>
+            </div>
+            <p class="text-secondary small mb-2">Listado de órdenes de trabajo (OTs activas, estado de rampa, motivo de ingreso, supervisor y técnico responsable).</p>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary fw-bold rounded-2" onclick="window.gwCopiarEjemplo('curl', '/api/v1/mantenimiento/ordenes')"><i class="bi bi-terminal"></i> Ver cURL</button>
+                <button class="btn btn-sm btn-outline-success fw-bold rounded-2" onclick="window.gwCopiarEjemplo('python', '/api/v1/mantenimiento/ordenes')"><i class="bi bi-filetype-py"></i> Python</button>
+                <button class="btn btn-sm btn-outline-warning text-dark fw-bold rounded-2" onclick="window.gwCopiarEjemplo('js', '/api/v1/mantenimiento/ordenes')"><i class="bi bi-filetype-js"></i> JavaScript</button>
+            </div>
+        </div>
+
+        <!-- Endpoint 4: Stock Almacén -->
+        <div class="gw-doc-endpoint">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-success fw-bold px-2.5 py-1">GET</span>
+                    <span class="font-monospace fw-bold text-dark" style="font-size: 0.95rem;">/api/v1/almacen/stock</span>
+                </div>
+                <span class="gw-scope-badge"><i class="bi bi-shield-lock me-1"></i>inventario:read</span>
+            </div>
+            <p class="text-secondary small mb-2">Consulta de existencias de repuestos e insumos en tiempo real con stock actual, códigos INV y precios referenciales.</p>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary fw-bold rounded-2" onclick="window.gwCopiarEjemplo('curl', '/api/v1/almacen/stock')"><i class="bi bi-terminal"></i> Ver cURL</button>
+                <button class="btn btn-sm btn-outline-success fw-bold rounded-2" onclick="window.gwCopiarEjemplo('python', '/api/v1/almacen/stock')"><i class="bi bi-filetype-py"></i> Python</button>
+                <button class="btn btn-sm btn-outline-warning text-dark fw-bold rounded-2" onclick="window.gwCopiarEjemplo('js', '/api/v1/almacen/stock')"><i class="bi bi-filetype-js"></i> JavaScript</button>
+            </div>
+        </div>
+
+        <!-- Endpoint 5: Guías de Remisión -->
+        <div class="gw-doc-endpoint">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-success fw-bold px-2.5 py-1">GET</span>
+                    <span class="font-monospace fw-bold text-dark" style="font-size: 0.95rem;">/api/v1/operaciones/guias</span>
+                </div>
+                <span class="gw-scope-badge"><i class="bi bi-shield-lock me-1"></i>guias:read</span>
+            </div>
+            <p class="text-secondary small mb-2">Consulta de guías de remisión de transportista emitidas, datos de carga, tracto, carreta y estado de validación SUNAT.</p>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary fw-bold rounded-2" onclick="window.gwCopiarEjemplo('curl', '/api/v1/operaciones/guias')"><i class="bi bi-terminal"></i> Ver cURL</button>
+                <button class="btn btn-sm btn-outline-success fw-bold rounded-2" onclick="window.gwCopiarEjemplo('python', '/api/v1/operaciones/guias')"><i class="bi bi-filetype-py"></i> Python</button>
+                <button class="btn btn-sm btn-outline-warning text-dark fw-bold rounded-2" onclick="window.gwCopiarEjemplo('js', '/api/v1/operaciones/guias')"><i class="bi bi-filetype-js"></i> JavaScript</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── TAB 3: AUDITORÍA & LOGS EN VIVO ───────────────────────────── -->
+    <div id="gw-view-logs" class="gw-panel-card" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+            <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                <i class="bi bi-activity text-primary"></i> Registro de Peticiones Entrantes en Vivo
+            </h6>
+            <button class="btn btn-sm btn-light border fw-bold rounded-3" onclick="window.gwCargarMetricasYLogs()">
+                <i class="bi bi-arrow-clockwise"></i> Refrescar
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.80rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="fw-bold text-secondary">FECHA & HORA</th>
+                        <th class="fw-bold text-secondary">API KEY / CLIENTE</th>
+                        <th class="fw-bold text-secondary">ENDPOINT</th>
+                        <th class="fw-bold text-secondary">MÉTODO</th>
+                        <th class="fw-bold text-secondary">IP</th>
+                        <th class="fw-bold text-secondary">ESTADO HTTP</th>
+                        <th class="fw-bold text-secondary text-end">LATENCIA</th>
+                    </tr>
+                </thead>
+                <tbody id="gw-tabla-logs-body">
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">Sin peticiones registradas aún.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ================================================================= -->
+<!-- 📋 MODAL CREAR NUEVA API KEY -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalGwNuevaKey" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom py-3 px-4 bg-white">
+                <h5 class="modal-title fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-key-fill text-primary"></i> Generar Nueva API Key
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formGwNuevaKey" onsubmit="window.gwGuardarNuevaKey(event)">
+                <div class="modal-body p-4 bg-light">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-secondary text-uppercase">Nombre Descriptivo (*)</label>
+                        <input type="text" class="form-control" name="nombre" placeholder="Ej. Integración GPS Cliente Marsisa" required style="border-radius:10px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-secondary text-uppercase">Empresa / Partner Asignado</label>
+                        <input type="text" class="form-control" name="cliente_empresa" placeholder="Ej. Marsisa SAC / Empresa Externa" style="border-radius:10px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-secondary text-uppercase">Límite de Peticiones (RPM)</label>
+                        <select class="form-select" name="limite_rpm" style="border-radius:10px;">
+                            <option value="60">60 peticiones por minuto (Estándar)</option>
+                            <option value="120">120 peticiones por minuto (Empresarial)</option>
+                            <option value="300">300 peticiones por minuto (Alta Frecuencia)</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small text-secondary text-uppercase d-block mb-1.5">Permisos / Scopes Autorizados (*)</label>
+                        <div class="d-flex flex-column gap-1.5 bg-white p-3 rounded-3 border">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="scopes" value="gps:read" id="sc_gps" checked>
+                                <label class="form-check-label fw-semibold small" for="sc_gps">
+                                    <strong class="text-primary">gps:read</strong> — Telemetría y ubicación GPS satelital en vivo
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="scopes" value="flota:read" id="sc_flota" checked>
+                                <label class="form-check-label fw-semibold small" for="sc_flota">
+                                    <strong class="text-primary">flota:read</strong> — Catálogo maestro de vehículos y placas
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="scopes" value="ot:read" id="sc_ot">
+                                <label class="form-check-label fw-semibold small" for="sc_ot">
+                                    <strong class="text-primary">ot:read</strong> — Órdenes de Trabajo e historial de mantenimiento
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="scopes" value="inventario:read" id="sc_inv">
+                                <label class="form-check-label fw-semibold small" for="sc_inv">
+                                    <strong class="text-primary">inventario:read</strong> — Existencias y stock de repuestos en almacén
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="scopes" value="guias:read" id="sc_guias">
+                                <label class="form-check-label fw-semibold small" for="sc_guias">
+                                    <strong class="text-primary">guias:read</strong> — Guías de remisión de transportista y viajes
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top py-3 px-4 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light border fw-semibold rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold rounded-3 px-4" id="btnGwCrearKey" style="background:#0284c7; border-color:#0284c7;">
+                        <i class="bi bi-check-circle-fill me-1"></i> Generar Llave
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 🔑 MODAL EXIBIR NUEVA API KEY (TOKEN SECRET) -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalGwKeyCreada" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom py-3 px-4 bg-success text-white">
+                <h5 class="modal-title fw-bold m-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-check"></i> ¡API Key Generada Exitosamente!
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light text-center">
+                <p class="text-secondary small mb-3">
+                    Copia tu API Key ahora. Por seguridad, no podrás volver a ver el token completo después de cerrar esta ventana.
+                </p>
+                
+                <div class="p-3 bg-dark rounded-3 d-flex align-items-center justify-content-between gap-2 mb-3">
+                    <span class="font-monospace text-warning fw-bold text-break text-start" id="gw-token-display" style="font-size:0.85rem;">ak_live_...</span>
+                    <button class="btn btn-sm btn-primary flex-shrink-0 fw-bold" onclick="window.gwCopiarTokenNuevo()" title="Copiar Token">
+                        <i class="bi bi-clipboard me-1"></i> Copiar
+                    </button>
+                </div>
+
+                <div class="alert alert-warning text-start small mb-0 p-2.5 rounded-3">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> <strong>Importante:</strong> Trata esta llave como una contraseña. No la compartas en repositorios públicos.
+                </div>
+            </div>
+            <div class="modal-footer bg-white border-top py-3 px-4 d-flex justify-content-center">
+                <button type="button" class="btn btn-primary fw-bold px-4 rounded-3" data-bs-dismiss="modal" style="background:#0284c7; border-color:#0284c7;">
+                    Entendido, ya la he copiado
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
