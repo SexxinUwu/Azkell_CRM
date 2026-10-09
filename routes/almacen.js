@@ -166,13 +166,16 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     });
 
     // ── Helper: sumar total_pen de detalle (convierte USD con tipo_cambio) ───
-    function _calcularTotalPen(detalles, tc) {
+    function _calcularTotalPen(detalles, tc, monedaCabecera) {
+        const tcNum = parseFloat(tc) || 1;
+        const cabIsUSD = String(monedaCabecera || '').toUpperCase() === 'USD';
         return (detalles || []).reduce((acc, d) => {
             const cant = parseFloat(d.cantidad) || 0;
             const cu = parseFloat(d.costo_unitario) || 0;
             const imp = (d.importe !== undefined && d.importe !== null && d.importe !== '') ? parseFloat(d.importe) : (cant * cu);
             const val = isNaN(imp) ? (cant * cu) : imp;
-            return acc + (d.moneda === 'USD' ? val * parseFloat(tc || 1) : val);
+            const isUSD = (d.moneda === 'USD' || cabIsUSD);
+            return acc + (isUSD ? val * tcNum : val);
         }, 0);
     }
 
@@ -1339,8 +1342,13 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     r.proveedor_email = pInfo?.email || '';
 
                     r.items = itemsMap[r.id] || [];
+                    const isUSD = (r.moneda === 'USD');
+                    const tc = parseFloat(r.tipo_cambio) || 1;
                     const totalOrigCalc = (r.items || []).reduce((acc, it) => acc + (parseFloat(it.importe) || 0), 0);
-                    r.total_oc = totalOrigCalc > 0 ? totalOrigCalc : (r.moneda === 'USD' && parseFloat(r.tipo_cambio) > 0 ? (parseFloat(r.total_pen) / parseFloat(r.tipo_cambio)) : parseFloat(r.total_pen || 0));
+                    r.total_oc = totalOrigCalc > 0 ? totalOrigCalc : (isUSD && tc > 0 ? (parseFloat(r.total_pen) / tc) : parseFloat(r.total_pen || 0));
+                    if (isUSD && tc > 0) {
+                        r.total_pen = r.total_oc * tc;
+                    }
                     r.url_voucher_presigned = r.url_voucher ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/voucher/ver') : null;
                     r.url_cotizacion_presigned = r.url_cotizacion ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/cotizacion/ver') : null;
                     r.url_factura_presigned = r.url_factura ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/factura/ver') : null;
@@ -1488,7 +1496,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const tc = parseFloat(tipo_cambio) || 1;
         _generarCodigoAlmacen('ENT', anio, (err, id) => {
             if (err) return res.status(500).json({ error: err.message });
-            const total_pen = _calcularTotalPen(items || [], tc);
+            const total_pen = _calcularTotalPen(items || [], tc, moneda);
             tdb.query(
                 `INSERT INTO entradas_inv (
                 id, fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, total_pen,
@@ -1588,7 +1596,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             centro_costo, sub_motivo, autoriza, url_cotizacion
         } = req.body;
         const tc = parseFloat(tipo_cambio) || 1;
-        const total_pen = _calcularTotalPen(items || [], tc);
+        const total_pen = _calcularTotalPen(items || [], tc, moneda);
 
         let updateSql = `UPDATE entradas_inv SET
             fecha=?, proveedor_id=?, proveedor_nombre=?, documento_referencia=?, moneda=?, tipo_cambio=?, total_pen=?,
@@ -2195,7 +2203,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             const solUser = creado_por || req.body.usuario || req.body.solicitante || (req.user && req.user.nombre) || null;
             _generarCodigoAlmacen('SAL', anio, (err, id) => {
                 if (err) return res.status(500).json({ error: err.message });
-                const total_pen = _calcularTotalPen(items || [], tc);
+                const total_pen = _calcularTotalPen(items || [], tc, moneda);
                 db.query('INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por,ticket_ot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
                     [id, fecha || new Date().toISOString().split('T')[0], tipo_destino, placa || null, responsable || null,
                         responsable_id || null, moneda || 'PEN', tc || null, total_pen, observaciones || null, solUser, ticket_ot || null],
@@ -2397,7 +2405,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         } else if (accion === 'editar') {
             const { fecha, tipo_destino, placa, responsable, ticket_ot, observaciones, items, moneda, tipo_cambio } = req.body;
             const tc = parseFloat(tipo_cambio) || 1;
-            const total_pen = _calcularTotalPen(items || [], tc);
+            const total_pen = _calcularTotalPen(items || [], tc, moneda);
             db.query(`UPDATE salidas_inv SET fecha=?, tipo_destino=?, placa=?, responsable=?, ticket_ot=?, observaciones=?, moneda=?, tipo_cambio=?, total_pen=? WHERE id=?`,
                 [fecha || null, tipo_destino || null, placa || null, responsable || null, ticket_ot || null, observaciones || null, moneda || 'PEN', tc, total_pen, id],
                 (err) => {
