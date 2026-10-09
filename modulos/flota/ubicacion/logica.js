@@ -82,8 +82,8 @@ window.init_ubicacion = function() {
     window.gpsLimpiarTodo();
 
     // 1. Usar datos en caché de Wialon si existen para renderizado instantáneo
-    var datosCache = (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0)
-        ? CACHE.wialon : [];
+    var rawCache = (typeof CACHE !== 'undefined' && CACHE.wialon) ? CACHE.wialon : null;
+    var datosCache = Array.isArray(rawCache) ? rawCache : (rawCache && Array.isArray(rawCache.data) ? rawCache.data : ((window._datosWialonGPS && window._datosWialonGPS.length > 0) ? window._datosWialonGPS : []));
 
     if (datosCache.length > 0) {
         window.renderListaUnidadesGPS(datosCache, window._datosWialonGrupos || []);
@@ -266,19 +266,33 @@ window._actualizarGpsEnVivo = function(forzar) {
     })
     .then(function(r) {
         if (!r.ok) {
-            return {
-                data: (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon)) ? CACHE.wialon : [],
-                grupos: window._datosWialonGrupos || []
-            };
+            var fallback = (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon)) ? CACHE.wialon : [];
+            return { data: fallback, grupos: window._datosWialonGrupos || [] };
         }
         return r.json().catch(function() { return { data: [], grupos: [] }; });
     })
     .then(function(r) {
-        var d = (r && r.data && Array.isArray(r.data)) ? r.data : [];
-        var grps = (r && r.grupos && Array.isArray(r.grupos)) ? r.grupos : [];
+        var d = [];
+        var grps = [];
+        if (r && Array.isArray(r.data)) {
+            d = r.data;
+            grps = Array.isArray(r.grupos) ? r.grupos : [];
+        } else if (r && r.data && Array.isArray(r.data.data)) {
+            d = r.data.data;
+            grps = Array.isArray(r.data.grupos) ? r.data.grupos : [];
+        } else if (Array.isArray(r)) {
+            d = r;
+        }
 
         if (d.length > 0) {
             if (typeof CACHE !== 'undefined') CACHE.wialon = d;
+            
+            // Sincronizar estado en el botón navbar superior
+            var btnNav = document.getElementById('btn-wialon-status');
+            var txtNav = document.getElementById('wialon-text');
+            if (btnNav) { btnNav.className = 'btn btn-sm ms-2 btn-primary rounded-pill px-3 shadow-sm d-none d-md-inline-flex align-items-center gap-1'; }
+            if (txtNav) { txtNav.innerText = 'GPS Activo'; }
+
             window.renderListaUnidadesGPS(d, grps);
             if (!window._gpsPlaybackActive) {
                 window.gpsActualizarMarcadoresMapa(d);
@@ -297,17 +311,20 @@ window._actualizarGpsEnVivo = function(forzar) {
 // RENDER LISTA UNIDADES & ARBOL DE GRUPOS WIALON
 // ------------------------------------------------------------
 window.renderListaUnidadesGPS = function(datos, grupos) {
-    window._datosWialonGPS = datos || [];
-    if (grupos && Array.isArray(grupos) && grupos.length > 0) {
-        window._datosWialonGrupos = grupos;
+    var arrDatos = Array.isArray(datos) ? datos : (datos && Array.isArray(datos.data) ? datos.data : []);
+    var arrGrupos = Array.isArray(grupos) ? grupos : (datos && Array.isArray(datos.grupos) ? datos.grupos : (window._datosWialonGrupos || []));
+
+    window._datosWialonGPS = arrDatos;
+    if (arrGrupos && arrGrupos.length > 0) {
+        window._datosWialonGrupos = arrGrupos;
     }
 
-    var total = (datos || []).length;
+    var total = arrDatos.length;
     var online = 0;
     var movimiento = 0;
     var offline = 0;
 
-    datos.forEach(function(w) {
+    arrDatos.forEach(function(w) {
         var tienePos = w.lat && w.lat !== 0 && w.lng && w.lng !== 0;
         var speed = (w.velocidad != null ? Number(w.velocidad) : 0) || 0;
         

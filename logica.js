@@ -3171,10 +3171,24 @@ function recargarWialon(forzarVista = false) {
     let txt = document.getElementById('wialon-text');
     if(btn) { btn.className = 'btn btn-sm btn-outline-warning ms-3'; txt.innerText = 'Conectando...'; }
     
-    fetch('/api/script/obtenerDatosWialon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => {
-        let d = r.data || {};
-        if(d && !d.error) {
-            CACHE['wialon'] = d;
+    fetch('/api/script/obtenerDatosWialon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+    .then(r => r.json())
+    .then(r => {
+        let lista = [];
+        let grupos = [];
+        if (Array.isArray(r.data)) {
+            lista = r.data;
+            grupos = Array.isArray(r.grupos) ? r.grupos : [];
+        } else if (r.data && Array.isArray(r.data.data)) {
+            lista = r.data.data;
+            grupos = Array.isArray(r.data.grupos) ? r.data.grupos : [];
+        } else if (Array.isArray(r)) {
+            lista = r;
+        }
+
+        if (lista.length > 0 || (r && !r.error && !(r.data && r.data.error))) {
+            CACHE['wialon'] = lista;
+            if (grupos.length > 0) window._datosWialonGrupos = grupos;
             if(btn) { btn.className = 'btn btn-sm ms-3 btn-primary'; txt.innerText = 'GPS Activo'; }
             
             // Si las tablas están visibles, se refrescan solas para inyectar GPS
@@ -3187,20 +3201,24 @@ function recargarWialon(forzarVista = false) {
             if ((rActual === 'dashboard' || rActual === null || rActual === '') && typeof window.recargarDashboard === 'function') {
                 window.recargarDashboard();
             }
-            if (typeof window.renderListaUnidadesGPS === 'function') window.renderListaUnidadesGPS(d);
+            if (typeof window.renderListaUnidadesGPS === 'function') window.renderListaUnidadesGPS(lista, grupos);
         } else {
             if(btn) { btn.className = 'btn btn-sm btn-danger ms-3 text-white'; txt.innerText = 'Error GPS'; }
-            console.error("Error Wialon:", d.error);
+            console.error("Error Wialon:", r.error || (r.data && r.data.error));
         }
     }).catch(e => {
+        console.error("Error Wialon Fetch:", e);
         if(btn) { btn.className = 'btn btn-sm btn-danger ms-3 text-white'; txt.innerText = 'Error GPS'; }
     });
 }
 
 function buscarWialonPorPlaca(placa) {
-    const wList = (typeof CACHE !== 'undefined' && CACHE.wialon && Array.isArray(CACHE.wialon)) 
+    let wList = (typeof CACHE !== 'undefined' && CACHE.wialon) 
         ? CACHE.wialon 
-        : (window.CACHE && Array.isArray(window.CACHE.wialon) ? window.CACHE.wialon : null);
+        : (window.CACHE && window.CACHE.wialon ? window.CACHE.wialon : null);
+    if (wList && !Array.isArray(wList) && Array.isArray(wList.data)) {
+        wList = wList.data;
+    }
     if(!wList || !Array.isArray(wList) || !wList.length) return null;
     let placaStr = placa ? placa.toString().trim() : '';
     if (!placaStr) return null;

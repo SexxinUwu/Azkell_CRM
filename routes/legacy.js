@@ -1310,15 +1310,23 @@ router.post('/:metodo', async (req, res) => {
     if (metodo === 'obtenerDatosWialon') {
         const now = Date.now();
         if (_wialonCache && (now - _wialonCacheTime < WIALON_CACHE_TTL)) {
-            return res.json({ data: _wialonCache });
+            if (_wialonCache.data && Array.isArray(_wialonCache.data)) {
+                return res.json(_wialonCache);
+            }
+            return res.json({ data: Array.isArray(_wialonCache) ? _wialonCache : [], grupos: [] });
         }
 
         if (_wialonInFlightPromise) {
             try {
-                const data = await _wialonInFlightPromise;
-                return res.json({ data });
+                const result = await _wialonInFlightPromise;
+                if (result && result.data && Array.isArray(result.data)) {
+                    return res.json(result);
+                }
+                const data = Array.isArray(result) ? result : [];
+                return res.json({ data, grupos: [] });
             } catch(e) {
-                return res.json({ data: [] });
+                const fallbackData = _wialonCache && _wialonCache.data ? _wialonCache.data : (_wialonCache || []);
+                return res.json({ data: Array.isArray(fallbackData) ? fallbackData : [], grupos: (_wialonCache && _wialonCache.grupos) || [] });
             }
         }
 
