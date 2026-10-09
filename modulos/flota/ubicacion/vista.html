@@ -939,24 +939,25 @@
     
     /* Ficha inferior flotante compacta (Bento Bottom Sheet) */
     .gps-floating-telemetry {
-        left: 6px !important;
-        right: 6px !important;
-        bottom: 6px !important;
-        padding: 0.45rem 0.70rem 0.60rem 0.70rem !important;
-        border-radius: 16px !important;
-        max-height: 22vh !important;
+        left: 8px !important;
+        right: 8px !important;
+        bottom: calc(96px + env(safe-area-inset-bottom, 16px)) !important;
+        padding: 0.50rem 0.75rem 0.60rem 0.75rem !important;
+        border-radius: 18px !important;
+        max-height: 48vh !important;
+        z-index: 1045 !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25) !important;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.35) !important;
         transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s ease !important;
     }
     
     .gps-floating-telemetry.is-expanded {
-        max-height: 58vh !important;
+        max-height: 68vh !important;
     }
     .gps-floating-telemetry.is-minimized {
-        max-height: 48px !important;
+        max-height: 50px !important;
         overflow: hidden !important;
     }
     
@@ -1016,13 +1017,14 @@
     }
     
     .gps-playback-panel {
-        left: 6px !important;
-        right: 6px !important;
-        bottom: 6px !important;
+        left: 8px !important;
+        right: 8px !important;
+        bottom: calc(96px + env(safe-area-inset-bottom, 16px)) !important;
         padding: 0.60rem 0.75rem !important;
         border-radius: 16px !important;
-        max-height: 38vh !important;
+        max-height: 48vh !important;
         overflow-y: auto !important;
+        z-index: 1045 !important;
     }
     
     .ck-apple-segmented {

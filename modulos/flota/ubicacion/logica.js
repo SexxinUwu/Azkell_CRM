@@ -1106,8 +1106,8 @@ window.abrirDetalleGPS = function(placa) {
             setTimeout(function() {
                 window._gpsMapInstance.invalidateSize();
                 if (tienePos) {
-                    // Compensación latitudinal hacia el sur (-0.0022) para que el camión quede perfectamente visible en la zona superior libre del mapa
-                    window._gpsMapInstance.flyTo([w.lat - 0.0022, w.lng], 16, { duration: 0.5 });
+                    // Compensación latitudinal hacia el sur (-0.0026) para que el camión quede perfectamente visible en la zona superior libre del mapa
+                    window._gpsMapInstance.flyTo([w.lat - 0.0026, w.lng], 16, { duration: 0.5 });
                 }
             }, 180);
         }
