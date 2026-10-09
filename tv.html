@@ -28,6 +28,8 @@
 
     <style>
         :root {
+            --tv-safe-x: 26px;
+            --tv-safe-y: 12px;
             --tv-bg: #f1f5f9;
             --tv-surface: #ffffff;
             --tv-surface-subtle: #f8fafc;
@@ -82,7 +84,7 @@
         .tv-tab-btn:focus, 
         .tv-tab-btn:focus-visible, 
         .tv-action-btn:focus, 
-        .tv-action-btn:focus-visible,
+        .tv-action-btn:focus-visible, 
         input:focus {
             outline: none !important;
         }
@@ -115,12 +117,15 @@
             flex-direction: column;
             width: 100vw;
             height: 100vh;
+            max-width: 100vw;
+            max-height: 100vh;
             overflow: hidden;
+            box-sizing: border-box;
         }
 
         /* ── TOP NAV & CONTROL BAR (APPLE COMPACT SEAMLESS) ──────── */
         .tv-header-bar {
-            height: 50px;
+            height: calc(50px + var(--tv-safe-y));
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -128,11 +133,12 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 16px;
+            padding: var(--tv-safe-y) var(--tv-safe-x) 0 var(--tv-safe-x);
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 3px 8px rgba(0, 0, 0, 0.02);
             z-index: 100;
             flex-shrink: 0;
             gap: 10px;
+            box-sizing: border-box;
         }
 
         .tv-brand-box {
@@ -417,9 +423,10 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 10px;
-            padding: 8px 16px 6px 16px;
+            padding: 8px var(--tv-safe-x) 6px var(--tv-safe-x);
             background: transparent;
             flex-shrink: 0;
+            box-sizing: border-box;
         }
         .tv-kpi-card {
             background: rgba(255, 255, 255, 0.95);
@@ -481,10 +488,11 @@
         .tv-gps-body {
             flex: 1;
             display: flex;
-            padding: 0 16px 10px 16px;
+            padding: 0 var(--tv-safe-x) 8px var(--tv-safe-x);
             gap: 12px;
             overflow: hidden;
             position: relative;
+            box-sizing: border-box;
         }
         
         /* Lateral Izquierdo de Unidades */
@@ -768,8 +776,9 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            padding: 0 16px 8px 16px;
+            padding: 0 var(--tv-safe-x) 8px var(--tv-safe-x);
             overflow: hidden;
+            box-sizing: border-box;
         }
         .tv-table-card {
             flex: 1;
@@ -834,6 +843,10 @@
             border-bottom: 1px solid var(--tv-border);
             white-space: nowrap;
         }
+        .tv-modern-table th:last-child,
+        .tv-modern-table td:last-child {
+            padding-right: 18px;
+        }
         .tv-modern-table td {
             padding: 7px 12px;
             border-bottom: 1px solid var(--tv-border);
@@ -883,16 +896,17 @@
 
         /* ── BOTTOM CONTROL & TICKER BAR ─────────────────────────── */
         .tv-footer-bar {
-            height: 38px;
+            height: calc(38px + var(--tv-safe-y));
             background: var(--tv-surface);
             border-top: 1px solid var(--tv-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 16px;
+            padding: 0 var(--tv-safe-x) var(--tv-safe-y) var(--tv-safe-x);
             flex-shrink: 0;
             box-shadow: 0 -1px 6px rgba(0,0,0,0.02);
             z-index: 100;
+            box-sizing: border-box;
         }
         .tv-ticker-area {
             display: flex;
@@ -951,19 +965,185 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         }
 
+        /* ── 4K & ULTRA-HD SMART TV (2500px+) ─────────────────────── */
+        @media screen and (min-width: 2500px) {
+            :root {
+                --tv-safe-x: 52px;
+                --tv-safe-y: 24px;
+            }
+            body, html {
+                font-size: 20px !important;
+            }
+            .tv-header-bar {
+                height: calc(74px + var(--tv-safe-y));
+            }
+            .tv-brand-logo {
+                width: 48px;
+                height: 48px;
+                font-size: 1.6rem;
+                border-radius: 12px;
+            }
+            .tv-brand-title {
+                font-size: 1.45rem;
+            }
+            .tv-brand-sub {
+                font-size: 0.85rem;
+            }
+            .tv-tabs-nav {
+                padding: 4px;
+                border-radius: 14px;
+                gap: 5px;
+            }
+            .tv-tab-btn {
+                height: 46px;
+                padding: 0 18px;
+                font-size: 1.1rem;
+                border-radius: 10px;
+                gap: 8px;
+            }
+            .tv-tab-badge {
+                font-size: 0.95rem;
+                padding: 2px 9px;
+            }
+            .tv-action-btn {
+                height: 46px;
+                padding: 0 16px;
+                font-size: 1.05rem;
+                border-radius: 10px;
+                gap: 7px;
+            }
+            .tv-action-btn.icon-only {
+                width: 46px;
+                font-size: 1.25rem;
+            }
+            .tv-clock-pill {
+                height: 46px;
+                padding: 0 16px;
+                border-radius: 10px;
+                gap: 9px;
+            }
+            .tv-clock-time {
+                font-size: 1.28rem;
+            }
+            .tv-clock-date {
+                font-size: 0.9rem;
+            }
+            .tv-kpi-strip {
+                gap: 16px;
+                padding: 12px var(--tv-safe-x) 10px var(--tv-safe-x);
+            }
+            .tv-kpi-card {
+                height: 80px;
+                padding: 10px 20px;
+                border-radius: 16px;
+                gap: 16px;
+            }
+            .tv-kpi-icon-wrap {
+                width: 52px;
+                height: 52px;
+                font-size: 1.7rem;
+                border-radius: 12px;
+            }
+            .tv-kpi-label {
+                font-size: 0.85rem;
+                letter-spacing: 0.5px;
+            }
+            .tv-kpi-value {
+                font-size: 2.3rem;
+            }
+            .tv-units-panel {
+                width: 500px;
+                border-radius: 16px;
+            }
+            .tv-unit-card {
+                padding: 14px 18px;
+                border-radius: 12px;
+                margin-bottom: 8px;
+            }
+            .tv-unit-plate {
+                font-size: 1.45rem;
+            }
+            .tv-speed-pill {
+                font-size: 0.95rem;
+                padding: 4px 10px;
+                border-radius: 8px;
+            }
+            .tv-unit-row-mid {
+                font-size: 1.05rem;
+                margin-top: 4px;
+            }
+            .tv-unit-address {
+                font-size: 0.95rem;
+                margin-top: 3px;
+            }
+            .tv-table-card {
+                border-radius: 18px;
+            }
+            .tv-table-header-strip {
+                padding: 14px 24px;
+            }
+            .tv-table-title {
+                font-size: 1.45rem;
+                gap: 10px;
+            }
+            .tv-table-subtitle {
+                font-size: 0.95rem;
+            }
+            .tv-search-input-box {
+                height: 44px;
+                padding: 0 14px;
+                border-radius: 10px;
+                font-size: 1.05rem;
+            }
+            .tv-modern-table th {
+                padding: 14px 20px;
+                font-size: 0.95rem;
+                letter-spacing: 0.6px;
+            }
+            .tv-modern-table td {
+                padding: 14px 20px;
+                font-size: 1.05rem;
+            }
+            .tv-status-badge {
+                font-size: 0.95rem;
+                padding: 4px 12px;
+                border-radius: 8px;
+            }
+            .tv-footer-bar {
+                height: calc(54px + var(--tv-safe-y));
+            }
+            .tv-ticker-tag {
+                font-size: 0.9rem;
+                padding: 4px 10px;
+                border-radius: 7px;
+            }
+            .tv-ticker-msg {
+                font-size: 1.05rem;
+            }
+            .tv-key-guide {
+                font-size: 0.95rem;
+                gap: 6px;
+            }
+            .tv-key-btn {
+                font-size: 0.9rem;
+                padding: 3px 8px;
+                border-radius: 6px;
+            }
+        }
+
         /* Responsive Media Queries para Smart TVs de baja resolución o DPR alto */
         @media screen and (max-height: 800px) {
             body, html { font-size: 12.5px; }
-            .tv-header-bar { height: 46px; padding: 0 12px; }
-            .tv-kpi-strip { padding: 6px 12px 4px 12px; gap: 8px; }
+            .tv-header-bar { height: calc(46px + var(--tv-safe-y)); }
+            .tv-kpi-strip { padding: 6px var(--tv-safe-x) 4px var(--tv-safe-x); gap: 8px; }
             .tv-kpi-card { height: 46px; padding: 4px 10px; }
             .tv-kpi-icon-wrap { width: 30px; height: 30px; font-size: 1rem; }
             .tv-kpi-value { font-size: 1.25rem; }
-            .tv-table-view-body { padding: 0 12px 6px 12px; }
+            .tv-table-view-body { padding: 0 var(--tv-safe-x) 6px var(--tv-safe-x); }
             .tv-table-header-strip { padding: 6px 12px; }
             .tv-modern-table th { padding: 5px 8px; font-size: 0.66rem; }
             .tv-modern-table td { padding: 5px 8px; font-size: 0.74rem; }
-            .tv-footer-bar { height: 34px; padding: 0 12px; }
+            .tv-footer-bar { height: calc(34px + var(--tv-safe-y)); }
         }
 
         /* ── MODAL QR / DETALLE ──────────────────────────────────── */
@@ -1100,6 +1280,9 @@
             </button>
             <button class="tv-action-btn" id="tvBtnCarousel" onclick="tvToggleCarousel()" title="Rotación Automática cada 30 segundos (Tecla C)">
                 <i class="bi bi-arrow-repeat"></i> <span id="tvCarouselText">Carrusel</span>
+            </button>
+            <button class="tv-action-btn" id="tvBtnMargin" onclick="tvCycleMargin()" title="Ajustar Margen de Pantalla TV / Overscan (Tecla M)">
+                <i class="bi bi-aspect-ratio"></i> <span id="tvMarginText">Margen TV</span>
             </button>
             <button class="tv-action-btn" onclick="tvToggleQrModal()" title="Vincular teléfono móvil">
                 <i class="bi bi-qr-code"></i> <span>Móvil</span>
@@ -1539,6 +1722,9 @@
             </div>
             <div class="tv-key-guide">
                 <span class="tv-key-btn">S</span> <span>Satélite</span>
+            </div>
+            <div class="tv-key-guide">
+                <span class="tv-key-btn">M</span> <span id="tvKeyMarginTxt">Margen TV</span>
             </div>
             <div class="tv-key-guide">
                 <span class="tv-key-btn">F</span> <span>Pantalla Completa</span>
@@ -2238,14 +2424,56 @@
         }
     }
 
-    // 14. FORZAR RECARGA OMITIENDO CACHÉ DE GOOGLE TV
+    // 14. GESTIÓN DE MARGEN SEGURO / OVERSCAN SMART TV
+    var _tvMarginModes = ['safe', 'wide', 'none'];
+    var _tvMarginLabels = {
+        'safe': 'Margen TV [Seguro]',
+        'wide': 'Margen TV [Amplio]',
+        'none': 'Margen TV [Sin Margen]'
+    };
+    var _tvCurrentMarginIndex = 0;
+
+    function tvApplyMargin(mode, save) {
+        var root = document.documentElement;
+        var is4K = window.innerWidth >= 2500;
+        if (mode === 'wide') {
+            root.style.setProperty('--tv-safe-x', is4K ? '72px' : '44px');
+            root.style.setProperty('--tv-safe-y', is4K ? '36px' : '22px');
+        } else if (mode === 'none') {
+            root.style.setProperty('--tv-safe-x', is4K ? '18px' : '8px');
+            root.style.setProperty('--tv-safe-y', is4K ? '8px' : '2px');
+        } else { // 'safe'
+            mode = 'safe';
+            root.style.setProperty('--tv-safe-x', is4K ? '52px' : '26px');
+            root.style.setProperty('--tv-safe-y', is4K ? '24px' : '12px');
+        }
+        var btnTxt = document.getElementById('tvMarginText');
+        if (btnTxt) btnTxt.textContent = _tvMarginLabels[mode];
+        var keyTxt = document.getElementById('tvKeyMarginTxt');
+        if (keyTxt) keyTxt.textContent = mode === 'safe' ? 'Margen TV' : (mode === 'wide' ? 'Margen Amplio' : 'Sin Margen');
+        
+        if (save) {
+            try { localStorage.setItem('tv_safe_margin', mode); } catch(e) {}
+        }
+        if (_tvMap && typeof _tvMap.invalidateSize === 'function') {
+            setTimeout(function() { _tvMap.invalidateSize(); }, 200);
+        }
+    }
+
+    function tvCycleMargin() {
+        _tvCurrentMarginIndex = (_tvCurrentMarginIndex + 1) % _tvMarginModes.length;
+        var mode = _tvMarginModes[_tvCurrentMarginIndex];
+        tvApplyMargin(mode, true);
+    }
+
+    // 15. FORZAR RECARGA OMITIENDO CACHÉ DE GOOGLE TV
     function tvForceReload() {
         var base = window.location.pathname || '/tv';
         window.location.href = base + '?_v=' + Date.now();
     }
 
     // Auto-detección de nueva versión desplegada en VPS
-    var _tvClientBuild = 2026100902;
+    var _tvClientBuild = 2026100903;
     async function tvCheckAutoUpdate() {
         try {
             var res = await fetch('/api/tv/version?_t=' + Date.now());
@@ -2343,6 +2571,9 @@
             return;
         }
 
+        // Margen TV / Overscan (M)
+        if (key === 'm' || key === 'M') { tvCycleMargin(); return; }
+
         // Fullscreen (F)
         if (key === 'f' || key === 'F') { tvToggleFullscreen(); return; }
 
@@ -2366,8 +2597,14 @@
         }
     });
 
-    // 16. INICIO Y CICLO DE REFRESH AUTOMÁTICO (CADA 5 SEGUNDOS)
+    // 17. INICIO Y CICLO DE REFRESH AUTOMÁTICO (CADA 5 SEGUNDOS)
     document.addEventListener('DOMContentLoaded', function() {
+        var savedMargin = 'safe';
+        try { savedMargin = localStorage.getItem('tv_safe_margin') || 'safe'; } catch(e) {}
+        _tvCurrentMarginIndex = _tvMarginModes.indexOf(savedMargin);
+        if (_tvCurrentMarginIndex === -1) _tvCurrentMarginIndex = 0;
+        tvApplyMargin(_tvMarginModes[_tvCurrentMarginIndex], false);
+
         tvInitClock();
         tvInitMap();
         tvFetchData();
