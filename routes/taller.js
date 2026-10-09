@@ -460,7 +460,13 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 if (supervisor !== undefined) det.supervisor = supervisor;
                 if (situacion_inicial !== undefined) det.situacion_inicial = situacion_inicial;
                 if (motivo !== undefined) det.motivo = motivo;
-                if (km !== undefined) det.km = parseInt(km) || 0;
+                if (km !== undefined) {
+                    det.km = parseInt(km) || 0;
+                    det.km_tablero = parseInt(km) || 0;
+                }
+                if (req.body.km_gps !== undefined) {
+                    det.km_gps = parseInt(req.body.km_gps) || 0;
+                }
 
                 if (tecnicos !== undefined) {
                     const arrTec = Array.isArray(tecnicos) ? tecnicos.filter(Boolean) : (tecnicos ? [tecnicos] : []);

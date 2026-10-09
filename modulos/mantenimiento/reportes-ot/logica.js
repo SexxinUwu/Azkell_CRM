@@ -1953,8 +1953,88 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
     var iniDT = formatDT(ot.fecha_inicio_ot || ot.fecha_ingreso);
     var finDT = formatDT(ot.fecha_hora_salida);
 
+    // ── Kilometraje Tablero y GPS ──
+    var rawKmTablero = (det.km_tablero !== undefined && det.km_tablero !== null && det.km_tablero !== '') ? det.km_tablero 
+                     : ((det.km !== undefined && det.km !== null && det.km !== '') ? det.km 
+                     : (ot.km_tablero || ot.km || ''));
+    var rawKmGps = (det.km_gps !== undefined && det.km_gps !== null && det.km_gps !== '') ? det.km_gps 
+                 : (ot.km_gps || det.kilometraje_gps || '');
+
+    // Consulta de respaldo a Wialon GPS en vivo si no vino en el registro
+    if ((!rawKmGps || rawKmGps === '—' || rawKmGps === 0) && ot.placa && typeof window.buscarWialonPorPlaca === 'function') {
+        try {
+            var wD = window.buscarWialonPorPlaca(ot.placa);
+            if (wD && wD.km) rawKmGps = Math.round(wD.km);
+        } catch(eW) {}
+    }
+
+    var dispKmTablero = '—';
+    if (det.horas_motor) {
+        var numH = Number(det.horas_motor);
+        dispKmTablero = (!isNaN(numH) ? numH.toLocaleString('es-PE') : det.horas_motor) + ' hrs';
+    } else if (rawKmTablero !== '' && rawKmTablero !== null && rawKmTablero !== undefined && rawKmTablero !== '—') {
+        var numT = Number(String(rawKmTablero).replace(/[^0-9\.]/g, ''));
+        dispKmTablero = (!isNaN(numT) && numT >= 0) ? numT.toLocaleString('es-PE') + ' km' : (String(rawKmTablero).trim() || '—');
+    }
+
+    var dispKmGps = '—';
+    if (rawKmGps !== '' && rawKmGps !== null && rawKmGps !== undefined && rawKmGps !== '—') {
+        var numG = Number(String(rawKmGps).replace(/[^0-9\.]/g, ''));
+        dispKmGps = (!isNaN(numG) && numG > 0) ? numG.toLocaleString('es-PE') + ' km' : (String(rawKmGps).trim() || '—');
+    }
+
+    // ── Obtener técnicos asignados a la OT ──
+    var otTecsArr = [];
+    if (Array.isArray(det.tecnicos)) {
+        otTecsArr = det.tecnicos.filter(Boolean);
+    } else if (typeof det.tecnicos === 'string' && det.tecnicos.trim()) {
+        otTecsArr = det.tecnicos.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    } else if (det.tecnicos_str) {
+        otTecsArr = det.tecnicos_str.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    } else if (det.tecnico) {
+        otTecsArr = [det.tecnico.trim()];
+    }
+    var otTecsGeneral = otTecsArr.length > 0 ? otTecsArr.join(', ') : '';
+
     var htmlMotivos = '';
-    // Obtener la lista completa de motivos de ingreso
+    var itemsMotivos = [];
+
+    // 1. Si viene motivos_array con técnicos específicos por falla
+    if (Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
+        det.motivos_array.forEach(function(m, idx) {
+            var motText = typeof m === 'string' ? m : (m.motivo || m.item || m.descripcion || m.obs || '—');
+            var cleanText = rotCleanObsText(String(motText || '').replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim());
+            if (!cleanText || cleanText.toLowerCase() === 'sin observaciones registradas') return;
+            
+            var rowTec = '';
+            if (typeof m === 'object') {
+                rowTec = (m.tecnico || m.tecnico_nombre || m.personal || m.mecanico || m.responsable || '').trim();
+            }
+            if (!rowTec) {
+                if (otTecsArr.length > 0) {
+                    rowTec = (otTecsArr.length === 1) ? otTecsArr[0] : (otTecsArr[idx] || otTecsGeneral);
+                } else {
+                    rowTec = det.supervisor || ot.supervisor || '—';
+                }
+            }
+            itemsMotivos.push({ texto: cleanText, tecnico: rowTec });
+        });
+    }
+
+    // 2. Si no hubo motivos_array pero hay trabajos_det
+    if (itemsMotivos.length === 0 && Array.isArray(det.trabajos_det) && det.trabajos_det.length > 0) {
+        det.trabajos_det.forEach(function(td, idx) {
+            var descClean = rotCleanObsText(String(td.desc || td.trabajo || '').replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim());
+            if (!descClean) return;
+            var rowTec = (td.tecnico || td.personal || td.mecanico || '').trim();
+            if (!rowTec) {
+                rowTec = otTecsGeneral || det.supervisor || ot.supervisor || '—';
+            }
+            itemsMotivos.push({ texto: descClean, tecnico: rowTec });
+        });
+    }
+
+    // 3. Fallback: Parsear texto limpio de rotGetCleanMotivoDisplay
     var motivosTextoRaw = rotGetCleanMotivoDisplay(det, ot);
     var lineasMotivos = (motivosTextoRaw || '')
         .split('\n')
@@ -1965,34 +2045,24 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
             return low !== 'sin observaciones registradas' && low !== 'sin observación' && low !== 'sin observacion';
         });
 
-    if (lineasMotivos.length > 0) {
-        htmlMotivos = lineasMotivos.map(function(mText, idx) {
-            var tec = det.supervisor || ot.supervisor || '—';
+    if (itemsMotivos.length === 0 && lineasMotivos.length > 0) {
+        lineasMotivos.forEach(function(mText, idx) {
+            var rowTec = '';
+            if (otTecsArr.length > 0) {
+                rowTec = (otTecsArr.length === 1) ? otTecsArr[0] : (otTecsArr[idx] || otTecsGeneral);
+            } else {
+                rowTec = det.supervisor || ot.supervisor || '—';
+            }
+            itemsMotivos.push({ texto: mText, tecnico: rowTec });
+        });
+    }
+
+    if (itemsMotivos.length > 0) {
+        htmlMotivos = itemsMotivos.map(function(item, idx) {
             return '<tr>'
                 + '<td class="text-center">' + (idx + 1) + '</td>'
-                + '<td>' + rotEscHtml(mText) + '</td>'
-                + '<td class="text-center">' + rotEscHtml(tec) + '</td>'
-                + '</tr>';
-        }).join('');
-    } else if (det.motivos_array && Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
-        htmlMotivos = det.motivos_array.map(function(m, idx) {
-            var motText = typeof m === 'string' ? m : (m.motivo || m.item || m.descripcion || '—');
-            var cleanText = String(motText || '').replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim();
-            var tecText = typeof m === 'object' ? (m.tecnico || m.tecnico_nombre || det.supervisor || '—') : (det.supervisor || '—');
-            return '<tr>'
-                + '<td class="text-center">' + (idx + 1) + '</td>'
-                + '<td>' + rotEscHtml(rotCleanObsText(cleanText)) + '</td>'
-                + '<td class="text-center">' + rotEscHtml(tecText) + '</td>'
-                + '</tr>';
-        }).join('');
-    } else if (det.trabajos_det && Array.isArray(det.trabajos_det) && det.trabajos_det.length > 0) {
-        htmlMotivos = det.trabajos_det.map(function(td, idx) {
-            var descClean = String(td.desc || '').replace(/^(?:\d+[\.\)\-]?\s*)+/, '').trim();
-            var tecName = td.tecnico || det.supervisor || '—';
-            return '<tr>'
-                + '<td class="text-center">' + (idx + 1) + '</td>'
-                + '<td>' + rotEscHtml(rotCleanObsText(descClean)) + '</td>'
-                + '<td class="text-center">' + rotEscHtml(tecName) + '</td>'
+                + '<td>' + rotEscHtml(item.texto) + '</td>'
+                + '<td class="text-center">' + rotEscHtml(item.tecnico) + '</td>'
                 + '</tr>';
         }).join('');
     } else {
@@ -2203,8 +2273,8 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
             </tr>
             <tr>
                 <td>Cliente: <span class="val-normal">${rotEscHtml(pCliente || '—')}</span></td>
-                <td>Kms GPS: <span class="val-normal">${rotEscHtml(det.km_gps || '—')}</span></td>
-                <td>Kms Tablero: <span class="val-normal">${rotEscHtml(det.km || '—')}</span></td>
+                <td>Kms GPS: <span class="val-normal">${rotEscHtml(dispKmGps)}</span></td>
+                <td>Kms Tablero: <span class="val-normal">${rotEscHtml(dispKmTablero)}</span></td>
             </tr>
             <tr>
                 <td>Tipo OT: <span class="val-normal">${rotEscHtml(det.tipo_ot || '—')}</span></td>
@@ -2329,8 +2399,15 @@ window.rotGenerarPlantillaLlantasOT = async function(idOt) {
     var tipoOT = (ot.tipo_ot || ot.tipo || 'Preventivo').toUpperCase();
     var fechaInicio = ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || new Date().toISOString().split('T')[0];
     try { fechaInicio = String(fechaInicio).split('T')[0]; } catch(e){}
-    var kmTablero = ot.km_tablero || ot.km_gps || ot.km || '---';
-    var rampa = ot.txtRampa || ot.rampa || '---';
+    var detL = {};
+    try { detL = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); } catch(e){}
+    var rawKmL = detL.km_tablero || detL.km || ot.km_tablero || ot.km || ot.km_gps || '';
+    var kmTablero = '---';
+    if (rawKmL) {
+        var nKmL = Number(String(rawKmL).replace(/[^0-9\.]/g, ''));
+        kmTablero = (!isNaN(nKmL) && nKmL > 0) ? nKmL.toLocaleString('es-PE') + ' km' : String(rawKmL);
+    }
+    var rampa = detL.rampa_origen || detL.rampa || ot.txtRampa || ot.rampa || '---';
 
     // Obtener logo y datos de empresa
     var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || '';
@@ -3882,8 +3959,24 @@ window.rotEliminarTrabajo = function() {
 
 // ── Agregar Salida (material) — form rico multi-artículo ──────────
 window.rotAgregarSalida = function(idOt) {
-    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
-    var estadoOT = ot ? (ot.estado || 'Pendiente') : 'Pendiente';
+    var ot = null;
+    if (window.rotData && Array.isArray(window.rotData)) {
+        ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+    }
+    if (!ot && window.srOtData && Array.isArray(window.srOtData)) {
+        ot = window.srOtData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+    }
+    if (!ot && window.srData && Array.isArray(window.srData)) {
+        ot = window.srData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+    }
+    if (!ot && window.srEntradas && Array.isArray(window.srEntradas)) {
+        ot = window.srEntradas.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+    }
+    if (!ot && window._rotOtActual && String(window._rotOtActual.ticket_entrada || window._rotOtActual.id_ot || '') === String(idOt)) {
+        ot = window._rotOtActual;
+    }
+
+    var estadoOT = ot ? (ot.estado || 'En Proceso') : 'En Proceso';
     if (estadoOT === 'Anulado') {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La OT está cerrada. No se pueden agregar salidas de material.', 'warning');
         return;
@@ -3894,7 +3987,7 @@ window.rotAgregarSalida = function(idOt) {
     }
     var lbl = document.getElementById('rot-mat-ot-lbl'); if (lbl) lbl.textContent = 'OT: ' + idOt;
     var hid = document.getElementById('rot-mat-ot-id');  if (hid) hid.value = idOt;
-    var otObj = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+    var otObj = ot;
     var placa = otObj ? (otObj.placa || '') : '';
     
     var vis = document.getElementById('rot-mat-ot-vis');
@@ -3923,7 +4016,7 @@ window.rotAgregarSalida = function(idOt) {
     _rotAgregarItemMat();
 
     // Cargar inventario si no está cargado
-    if (!window._rotInvData.length) {
+    if (!window._rotInvData || !window._rotInvData.length) {
         fetch('/api/almacen/inventario')
             .then(function(r) { return r.json(); })
             .then(function(d) {
@@ -5101,12 +5194,21 @@ window.rotAbrirSubDrawer = function(id) {
         }
         d.style.zIndex = '1150';
         d.classList.add('open');
+        var back = document.getElementById('rotDrawerBackdrop');
+        if (back) {
+            back.style.zIndex = '1140';
+            back.classList.add('open');
+        }
     }
 };
 
 window.rotCerrarSubDrawer = function(drawerId) {
     var d = document.getElementById(drawerId);
     if (d) d.classList.remove('open');
+    var back = document.getElementById('rotDrawerBackdrop');
+    if (back) {
+        back.style.zIndex = '1089';
+    }
 };
 
 

@@ -1048,6 +1048,23 @@ module.exports = function (db, broadcast, logAudit) {
                 } catch(ePl) {}
 
                 const kmVal = (item.km !== undefined && item.km !== null && item.km !== '') ? Number(item.km) : (item.unidad === 'Tracto' ? (rep.km_inicial || 0) : 0);
+                const kmTableroVal = (item.km_tablero !== undefined && item.km_tablero !== null && item.km_tablero !== '') 
+                    ? Number(item.km_tablero) 
+                    : (item.unidad === 'Tracto' ? (rep.km_inicial || kmVal || 0) : (kmVal || 0));
+                let kmGpsVal = (item.km_gps !== undefined && item.km_gps !== null && item.km_gps !== '') ? Number(item.km_gps) : null;
+
+                if (!kmGpsVal && placa) {
+                    try {
+                        const [snapRows] = await tdb.promise().query(
+                            'SELECT km_gps FROM km_snapshots WHERE (REPLACE(placa, "-", "") = ? OR placa = ?) ORDER BY fecha DESC LIMIT 1',
+                            [placa.replace(/[^A-Z0-9]/ig, ''), placa]
+                        );
+                        if (snapRows && snapRows.length && snapRows[0].km_gps > 0) {
+                            kmGpsVal = snapRows[0].km_gps;
+                        }
+                    } catch(eSnap) {}
+                }
+
                 const horasMotorVal = (item.horas_motor !== undefined && item.horas_motor !== null && item.horas_motor !== '') ? item.horas_motor : ((item.unidad === 'Remolque' || item.unidad === 'Carreta') ? rep.horas_motor : null) || null;
 
                 const motivosArray = Array.isArray(item.motivos_array) ? item.motivos_array : [];
@@ -1065,8 +1082,9 @@ module.exports = function (db, broadcast, logAudit) {
                 const detallesObj = {
                     cliente: clienteNombre,
                     ruc_dni: rucDni,
-                    km: kmVal,
-                    km_tablero: kmVal,
+                    km: kmTableroVal || kmVal,
+                    km_tablero: kmTableroVal || kmVal,
+                    km_gps: kmGpsVal || 0,
                     horas_motor: horasMotorVal,
                     conductor: rep.conductor || '',
                     chofer: rep.conductor || '',
