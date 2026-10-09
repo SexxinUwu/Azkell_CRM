@@ -3,7 +3,7 @@
   "appName": "Azkell Fleet",
   "webDir": "web",
   "server": {
-    "url": "https://azkell-crm.onrender.com",
+    "url": "https://marsisa.azkell.com",
     "cleartext": false,
     "androidScheme": "https"
   },
