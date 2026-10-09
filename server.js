@@ -759,14 +759,26 @@ app.get(['/tv', '/tv/gps'], (req, res) => {
 });
 
 // ── DESCARGA DIRECTA DEL APK PARA SMART TV / ANDROID ─────────────
-app.get(['/tv.apk', '/AzkellFleetTV.apk', '/download/tv.apk'], (req, res) => {
+app.get(['/tv.apk', '/AzkellFleetTV.apk', '/download/tv.apk', '/marsisa.apk'], (req, res) => {
     const apkPath = path.join(__dirname, 'AzkellFleetTV.apk');
     if (fs.existsSync(apkPath)) {
         res.setHeader('Content-Type', 'application/vnd.android.package-archive');
-        res.setHeader('Content-Disposition', 'attachment; filename="AzkellFleetTV.apk"');
+        res.setHeader('Content-Disposition', 'attachment; filename="MarsisaFleetTV.apk"');
         return res.sendFile(apkPath);
     }
     return res.status(404).send('APK no encontrado en el servidor.');
+});
+
+// ── CONTROL DE VERSIONES AUTO-UPDATE (TIPO XUPER TV / SMART TV) ───
+app.get('/api/tv/version', (req, res) => {
+    return res.json({
+        appName: 'Marsisa Fleet',
+        versionCode: 2,
+        versionName: '2.0',
+        apkUrl: 'https://marsisa.azkell.com/tv.apk',
+        forceUpdate: false,
+        changeLog: 'Actualización oficial con logo de Marsisa y Centro de Control Satelital 4K'
+    });
 });
 
 // ============================================================
