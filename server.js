@@ -748,6 +748,27 @@ app.get('/', async (req, res) => {
     }
 });
 
+// ── RUTA DEDICADA PARA SMART TV (CENTRO DE CONTROL / WAR ROOM) ─────
+app.get(['/tv', '/tv/gps'], (req, res) => {
+    try {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.sendFile(path.join(__dirname, 'tv.html'));
+    } catch (e) {
+        return res.status(500).send('Error cargando interfaz TV: ' + e.message);
+    }
+});
+
+// ── DESCARGA DIRECTA DEL APK PARA SMART TV / ANDROID ─────────────
+app.get(['/tv.apk', '/AzkellFleetTV.apk', '/download/tv.apk'], (req, res) => {
+    const apkPath = path.join(__dirname, 'AzkellFleetTV.apk');
+    if (fs.existsSync(apkPath)) {
+        res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+        res.setHeader('Content-Disposition', 'attachment; filename="AzkellFleetTV.apk"');
+        return res.sendFile(apkPath);
+    }
+    return res.status(404).send('APK no encontrado en el servidor.');
+});
+
 // ============================================================
 // 🔥 CONEXIÓN A LA BASE DE DATOS MULTI-TENANT (PROXY DINÁMICO POR SUBDOMINIO)
 // ============================================================
