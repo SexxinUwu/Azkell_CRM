@@ -29,9 +29,9 @@ public class MainActivity extends Activity {
     private ProgressBar mProgressBar;
     private FrameLayout mErrorLayout;
     
-    // URL Principal del ERP (Smart TV War Room & Operaciones)
-    private static final String PRIMARY_URL = "https://azkell-crm.onrender.com/tv";
-    private static final String MARSISA_URL = "https://marsisa.azkell.com/tv";
+    // URL Principal del ERP en VPS Propio (Marsisa / Azkell)
+    private static final String PRIMARY_URL = "https://marsisa.azkell.com/tv";
+    private static final String FALLBACK_URL = "https://azkell.com/tv";
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -125,9 +125,9 @@ public class MainActivity extends Activity {
             @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 super.onReceivedError(view, errorCode, description, failingUrl);
-                // Si la URL principal falla momentáneamente, intentar fallback
-                if (failingUrl != null && failingUrl.contains("onrender.com")) {
-                    view.loadUrl(MARSISA_URL);
+                // Si la URL de Marsisa tiene intermitencia momentánea, intentar con azkell.com
+                if (failingUrl != null && failingUrl.contains("marsisa.azkell.com")) {
+                    view.loadUrl(FALLBACK_URL);
                 } else {
                     mErrorLayout.setVisibility(View.VISIBLE);
                 }

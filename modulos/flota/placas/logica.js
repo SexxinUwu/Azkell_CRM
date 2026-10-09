@@ -1827,7 +1827,7 @@ window.abrirQRPlaca = function(placa) {
     if (label) label.textContent = placa;
 
     // URL que abrirá directamente la ficha de esa placa en la app
-    var appUrl = (window.location.origin || 'https://azkell-crm.onrender.com') +
+    var appUrl = (window.location.origin || 'https://marsisa.azkell.com') +
                  '/?placa=' + encodeURIComponent(placa);
     var urlLabel = document.getElementById('qr-url-label');
     if (urlLabel) urlLabel.textContent = appUrl;
