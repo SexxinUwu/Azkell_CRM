@@ -645,6 +645,24 @@
         </div>
     </div>
 
+    <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasFleetrun" aria-labelledby="offcanvasFleetrunLabel" style="width: min(480px, 100vw); border-left: 1px solid var(--border); z-index: 1065;">
+        <div class="offcanvas-header border-bottom py-3 px-4" style="background-color: var(--surface);">
+            <div class="d-flex align-items-center gap-2">
+                <div class="rounded-3 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background: rgba(2, 132, 199, 0.1); color: #0284c7;">
+                    <i class="bi bi-shield-check fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="offcanvas-title fw-bold text-dark m-0" id="offcanvasFleetrunLabel" style="font-size: 1rem;">Detalle de Mantenimiento</h5>
+                    <small class="text-muted" style="font-size: 0.72rem;">Preventivo & Telemetría Wialon</small>
+                </div>
+            </div>
+            <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-3 p-md-4 custom-scrollbar" id="detalleFleetrunContenido" style="background: var(--bg);">
+        </div>
+    </div>
+
+
 
     <div class="modal fade" id="modalConfirmarEliminar" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-danger border-2"><div class="modal-header bg-danger"><h5 class="modal-title fw-bold text-white">Confirmación</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body text-center p-4"><p class="fs-5 mb-1">Eliminar: <strong id="delete-record-id" class="text-danger"></strong></p><div class="mt-4 text-start"><label class="form-label" id="label-confirmar">Escribe Si:</label><input type="text" id="input-confirmar-eliminar" class="form-control text-center fw-bold" autocomplete="off"><div id="msg-error-eliminar" class="text-danger mt-2 fw-bold text-center" style="display: none;">Error.</div></div></div><div class="modal-footer justify-content-center"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-danger" id="btn-procesar-eliminar" onclick="procesarEliminacion()">Eliminar</button></div></div></div></div>
 

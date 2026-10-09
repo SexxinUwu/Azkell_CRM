@@ -859,3 +859,25 @@
     </div>
   </div>
 </div>
+
+<!-- ================================================================= -->
+<!-- 📄 OFFCANVAS DETALLE MANTENIMIENTO PREVENTIVO (FLEETRUN) -->
+<!-- ================================================================= -->
+<div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasFleetrun" aria-labelledby="offcanvasFleetrunLabel" style="width: min(480px, 100vw); border-left: 1px solid #e2e8f0; z-index: 1065;">
+  <div class="offcanvas-header border-bottom py-3 px-4 bg-white d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-2">
+      <div class="rounded-3 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background: rgba(2, 132, 199, 0.1); color: #0284c7;">
+        <i class="bi bi-shield-check fs-5"></i>
+      </div>
+      <div>
+        <h5 class="offcanvas-title fw-bold text-dark m-0" id="offcanvasFleetrunLabel" style="font-size: 1rem;">Detalle de Mantenimiento</h5>
+        <small class="text-muted" style="font-size: 0.72rem;">Preventivo & Telemetría Wialon</small>
+      </div>
+    </div>
+    <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body p-3 p-md-4 custom-scrollbar" id="detalleFleetrunContenido" style="background: #f8fafc;">
+    <!-- Se inyecta dinámicamente con mostrarDetalleFleetrun -->
+  </div>
+</div>
+

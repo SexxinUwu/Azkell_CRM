@@ -995,11 +995,14 @@ window.mostrarDetalleFleetrun = function(index) {
         `;
     }
 
-    document.getElementById('detalleFleetrunContenido').innerHTML = html;
+    let contEl = document.getElementById('detalleFleetrunContenido');
+    if (contEl) contEl.innerHTML = html;
     let offcanvasElement = document.getElementById('offcanvasFleetrun');
-    let bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement);
-    if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(offcanvasElement);
-    bsOffcanvas.show();
+    if (offcanvasElement && typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
+        let bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement);
+        if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(offcanvasElement);
+        bsOffcanvas.show();
+    }
 };
 
 function abrirModalEditarFleetrun(idReg) {
