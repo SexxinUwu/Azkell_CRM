@@ -3946,29 +3946,6 @@ window.rotAgregarSalida = function(idOt) {
     rotAbrirSubDrawer('rot-drawer-material');
 };
 
-// ── Directorio de Personal / Solicitantes para Reportes OT ──────────
-window._rotPersonalItems = window._rotPersonalItems || [];
-window.rotAsegurarPersonalItems = async function(cb) {
-    if (window._rotPersonalItems && window._rotPersonalItems.length > 0) {
-        if (typeof cb === 'function') cb(window._rotPersonalItems);
-        return window._rotPersonalItems;
-    }
-    try {
-        var res = await fetch('/api/conductores-lista');
-        if (res.ok) {
-            var data = await res.json();
-            var list = (Array.isArray(data) ? data : (data.data || [])).map(function(c) {
-                return (typeof c === 'string' ? c : (c.nombre || c.conductor || c[1] || '')).trim();
-            }).filter(Boolean);
-            window._rotPersonalItems = Array.from(new Set(list)).sort().map(function(p) { return { value: p, label: p }; });
-            if (typeof cb === 'function') cb(window._rotPersonalItems);
-            return window._rotPersonalItems;
-        }
-    } catch(e) {}
-    if (typeof cb === 'function') cb([]);
-    return [];
-};
-
 // ── Lógica de Kits de Mantenimiento para Solicitud OT ───────────────
 window._rotKitsDisponibles = window._rotKitsDisponibles || [];
 window._rotKitSeleccionado = window._rotKitSeleccionado || null;
@@ -5276,7 +5253,7 @@ window._rotEotTrabajosCount = 0;
 
 window.rotAsegurarPersonalItems = function(callback) {
     if (window._rotPersonalItems && window._rotPersonalItems.length > 0) {
-        if (typeof callback === 'function') callback();
+        if (typeof callback === 'function') callback(window._rotPersonalItems);
         return;
     }
 
@@ -5291,7 +5268,7 @@ window.rotAsegurarPersonalItems = function(callback) {
 
     if (list.length > 0) {
         window._rotPersonalItems = Array.from(new Set(list)).sort().map(function(p) { return { value: p, label: p }; });
-        if (typeof callback === 'function') callback();
+        if (typeof callback === 'function') callback(window._rotPersonalItems);
         return;
     }
 
@@ -5312,9 +5289,9 @@ window.rotAsegurarPersonalItems = function(callback) {
         }
 
         window._rotPersonalItems = finalArr.map(function(p) { return { value: p, label: p }; });
-        if (typeof callback === 'function') callback();
+        if (typeof callback === 'function') callback(window._rotPersonalItems);
     }).catch(function() {
-        if (typeof callback === 'function') callback();
+        if (typeof callback === 'function') callback(window._rotPersonalItems || []);
     });
 };
 
