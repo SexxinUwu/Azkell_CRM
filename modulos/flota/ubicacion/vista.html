@@ -745,8 +745,13 @@
 /* ── Adaptación Móvil (<768px) Master-Detail ─────────── */
 @media (max-width: 768px) {
     #moduloUbicacionGPS {
-        padding: 0.5rem 0.5rem 80px 0.5rem !important;
-        min-height: auto !important;
+        padding: 0.5rem 0.5rem 0 0.5rem !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
     }
     
     #moduloUbicacionGPS.in-detail-mobile {
@@ -763,38 +768,100 @@
         display: none !important;
     }
     
+    #gps-page-header {
+        flex-shrink: 0 !important;
+        margin-bottom: 0.35rem !important;
+    }
+
+    #gps-search-filter-row {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.45rem !important;
+        margin-bottom: 0.55rem !important;
+        flex-shrink: 0 !important;
+    }
+    #gps-search-filter-row > div {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
     .gps-main-split {
-        display: block !important;
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 0 !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
         gap: 0 !important;
     }
     .gps-sidebar-panel {
         width: 100% !important;
-        display: block !important;
-        height: auto !important;
-        overflow: visible !important;
-        flex: none !important;
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 0 !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        gap: 0.45rem !important;
+    }
+    .gps-sidebar-toolbar {
+        flex-shrink: 0 !important;
     }
     .gps-list-container {
         display: flex !important;
         flex-direction: column !important;
-        gap: 0.65rem !important;
-        height: auto !important;
-        min-height: 120px !important;
-        max-height: none !important;
-        overflow: visible !important;
-        flex: none !important;
-        padding-right: 0 !important;
+        gap: 0.55rem !important;
+        flex: 1 1 0 !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        max-height: 100% !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain !important;
+        padding-right: 2px !important;
+        padding-bottom: calc(110px + env(safe-area-inset-bottom, 24px)) !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: #0284c7 #f1f5f9 !important;
     }
+    .gps-list-container::-webkit-scrollbar {
+        width: 6px !important;
+        display: block !important;
+    }
+    .gps-list-container::-webkit-scrollbar-track {
+        background: #f1f5f9 !important;
+        border-radius: 4px !important;
+    }
+    .gps-list-container::-webkit-scrollbar-thumb {
+        background: #0284c7 !important;
+        border-radius: 4px !important;
+    }
+
     .gps-group-units {
-        max-height: none !important;
-        overflow: visible !important;
+        max-height: 320px !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain !important;
         padding: 0.45rem 0.55rem !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: #cbd5e1 #f8fafc !important;
     }
+    .gps-group-units::-webkit-scrollbar {
+        width: 5px !important;
+        display: block !important;
+    }
+    .gps-group-units::-webkit-scrollbar-track {
+        background: #f8fafc !important;
+        border-radius: 3px !important;
+    }
+    .gps-group-units::-webkit-scrollbar-thumb {
+        background: #cbd5e1 !important;
+        border-radius: 3px !important;
+    }
+
     .gps-group-card {
-        margin-bottom: 0.65rem !important;
+        margin-bottom: 0.55rem !important;
     }
     .gps-map-panel {
         display: none !important;
