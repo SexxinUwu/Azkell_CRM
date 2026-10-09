@@ -7,7 +7,7 @@
 
 #moduloUbicacionGPS {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    padding: 1rem 1.25rem 2rem 1.25rem !important;
+    padding: 1rem 1.25rem 1.5rem 1.25rem !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
@@ -15,7 +15,8 @@
     flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
-    overflow-y: auto;
+    height: 100%;
+    overflow: hidden;
 }
 
 /* ── KPIs Apple Compact Bento Cards ─────────────── */
@@ -113,10 +114,10 @@
 .gps-check-custom {
     appearance: none;
     -webkit-appearance: none;
-    width: 17px;
-    height: 17px;
-    border: 1.8px solid #94a3b8;
-    border-radius: 5px;
+    width: 19px;
+    height: 19px;
+    border: 2px solid #94a3b8;
+    border-radius: 6px;
     background: #ffffff;
     outline: none;
     cursor: pointer;
@@ -130,7 +131,7 @@
 }
 .gps-check-custom:hover {
     border-color: #0284c7;
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18);
 }
 .gps-check-custom:checked {
     background-color: #0284c7;
@@ -139,8 +140,8 @@
 }
 .gps-check-custom:checked::after {
     content: '';
-    width: 4.5px;
-    height: 8.5px;
+    width: 5px;
+    height: 9.5px;
     border: solid #ffffff;
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
@@ -152,8 +153,8 @@
 }
 .gps-check-custom:indeterminate::after {
     content: '';
-    width: 8px;
-    height: 2px;
+    width: 9px;
+    height: 2.5px;
     background-color: #ffffff;
     border-radius: 1px;
 }
@@ -162,19 +163,20 @@
 .gps-sidebar-toolbar {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 6px 10px;
+    border-radius: 14px;
+    padding: 8px 12px;
+    min-height: 42px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 .gps-tool-btn {
-    height: 26px;
-    padding: 0 7px;
-    border-radius: 7px;
-    font-size: 0.70rem;
+    height: 28px;
+    padding: 0 9px;
+    border-radius: 8px;
+    font-size: 0.74rem;
     font-weight: 700;
     border: 1px solid #e2e8f0;
     background: #f8fafc;
@@ -198,23 +200,24 @@
 
 .gps-group-card {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    margin-bottom: 0.45rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    margin-bottom: 0.55rem;
     overflow: hidden;
     transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 .gps-group-card:hover {
     border-color: #cbd5e1;
 }
 .gps-group-header {
-    padding: 0.55rem 0.75rem;
+    padding: 0.65rem 0.85rem;
+    min-height: 46px;
     background: #f8fafc;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 0.6rem;
     cursor: pointer;
     user-select: none;
     border-bottom: 1px solid transparent;
@@ -228,12 +231,12 @@
     background: #edf2f7;
 }
 .gps-group-chevron {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.70rem;
+    font-size: 0.78rem;
     color: #64748b;
     transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     cursor: pointer;
@@ -242,12 +245,12 @@
     transform: rotate(90deg);
 }
 .gps-group-title {
-    font-size: 0.80rem;
-    font-weight: 700;
+    font-size: 0.85rem;
+    font-weight: 800;
     color: #0f172a;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     flex: 1;
     min-width: 0;
     white-space: nowrap;
@@ -255,18 +258,18 @@
     text-overflow: ellipsis;
 }
 .gps-group-badge-count {
-    font-size: 0.68rem;
+    font-size: 0.70rem;
     font-weight: 800;
     background: #e2e8f0;
-    color: #334155;
-    padding: 1px 6px;
-    border-radius: 6px;
+    color: #1e293b;
+    padding: 2px 7px;
+    border-radius: 7px;
 }
 .gps-group-units {
     display: flex;
     flex-direction: column;
-    gap: 0.30rem;
-    padding: 0.40rem 0.50rem;
+    gap: 0.35rem;
+    padding: 0.50rem 0.60rem;
     background: #ffffff;
 }
 .gps-group-card.is-collapsed .gps-group-units {
@@ -275,16 +278,17 @@
 
 .gps-unit-row {
     background: #ffffff;
-    border: 1px solid #f1f5f9;
-    border-radius: 10px;
-    padding: 0.45rem 0.65rem;
+    border: 1.5px solid #f1f5f9;
+    border-radius: 12px;
+    padding: 0.60rem 0.80rem;
+    min-height: 52px;
     cursor: pointer;
     transition: all 0.15s ease;
     user-select: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.55rem;
+    gap: 0.70rem;
 }
 .gps-unit-row:hover {
     border-color: #0284c7;
@@ -297,7 +301,7 @@
     box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
 }
 .gps-unit-row.is-hidden-map {
-    opacity: 0.55;
+    opacity: 0.50;
     background: #fafafa;
 }
 
@@ -308,39 +312,46 @@
     gap: 1.25rem;
     width: 100% !important;
     padding: 0 !important;
-    min-height: 540px;
-    height: calc(100vh - 270px);
+    min-height: 0;
+    height: 100%;
     overflow: hidden;
 }
 .gps-sidebar-panel {
-    width: 380px;
+    width: 400px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 0.55rem;
+    height: 100%;
+    min-height: 0;
     overflow: hidden;
 }
 .gps-list-container {
     flex: 1 1 0;
+    min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    padding-right: 0.25rem;
+    gap: 0.40rem;
+    padding-right: 0.35rem;
     scrollbar-width: thin;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
 .gps-unit-card {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
+    border: 1.5px solid #e2e8f0;
     border-radius: 14px;
-    padding: 0.75rem 0.90rem;
+    padding: 0.80rem 0.95rem;
+    min-height: 54px;
     cursor: pointer;
     transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.65rem;
+    gap: 0.70rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 .gps-unit-card:hover {

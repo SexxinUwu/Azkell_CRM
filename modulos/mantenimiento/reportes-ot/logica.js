@@ -3912,7 +3912,8 @@ window.rotAgregarSalida = function(idOt) {
     var placaTxt = document.getElementById('rot-mat-placa-txt'); if (placaTxt) placaTxt.value = (placa || '').toUpperCase();
 
     var tipoEl = document.getElementById('rot-mat-tipo'); if (tipoEl) tipoEl.value = 'Vehiculo';
-    var solic = document.getElementById('rot-mat-solicitante'); if (solic) solic.value = '';
+    var solicEl = document.getElementById('rot-mat-solicitante'); if (solicEl) solicEl.value = '';
+    var solicTxt = document.getElementById('rot-mat-solicitante-txt'); if (solicTxt) solicTxt.value = '';
     var obs   = document.getElementById('rot-mat-obs');         if (obs)   obs.value   = '';
 
     // Limpiar items
@@ -3921,30 +3922,51 @@ window.rotAgregarSalida = function(idOt) {
     var tot = document.getElementById('rot-mat-items-total'); if (tot) tot.textContent = 'S/. 0.00';
     _rotAgregarItemMat();
 
-    // Cargar inventario y conductores si no están cargados
+    // Cargar inventario si no está cargado
     if (!window._rotInvData.length) {
         fetch('/api/almacen/inventario')
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 window._rotInvData = d || [];
-                var dl = document.getElementById('rot-mat-inv-list');
-                if (dl) dl.innerHTML = (d || []).map(function(a) {
-                    return '<option value="' + rotEscHtml(a.id + ' — ' + a.descripcion) + '">';
-                }).join('');
             })
             .catch(function() {});
     }
-    fetch('/api/conductores-lista')
-        .then(function(r) { return r.ok ? r.json() : []; })
-        .then(function(d) {
-            var dl = document.getElementById('rot-mat-list-personal');
-            if (dl) dl.innerHTML = (Array.isArray(d) ? d : []).map(function(c) {
-                return '<option value="' + rotEscHtml(c.nombre || '') + '">';
-            }).join('');
-        })
-        .catch(function() {});
+
+    // Cargar personal / solicitante con combobox moderno
+    window.rotAsegurarPersonalItems(function(items) {
+        if (typeof window._cbInit === 'function' && items && items.length) {
+            window._cbInit('rot-mat-solicitante', items, 'Buscar personal / solicitante...');
+            // Preseleccionar supervisor si existe en la OT
+            if (otObj && otObj.supervisor) {
+                window._cbSet('rot-mat-solicitante', otObj.supervisor, otObj.supervisor);
+            }
+        }
+    });
 
     rotAbrirSubDrawer('rot-drawer-material');
+};
+
+// ── Directorio de Personal / Solicitantes para Reportes OT ──────────
+window._rotPersonalItems = window._rotPersonalItems || [];
+window.rotAsegurarPersonalItems = async function(cb) {
+    if (window._rotPersonalItems && window._rotPersonalItems.length > 0) {
+        if (typeof cb === 'function') cb(window._rotPersonalItems);
+        return window._rotPersonalItems;
+    }
+    try {
+        var res = await fetch('/api/conductores-lista');
+        if (res.ok) {
+            var data = await res.json();
+            var list = (Array.isArray(data) ? data : (data.data || [])).map(function(c) {
+                return (typeof c === 'string' ? c : (c.nombre || c.conductor || c[1] || '')).trim();
+            }).filter(Boolean);
+            window._rotPersonalItems = Array.from(new Set(list)).sort().map(function(p) { return { value: p, label: p }; });
+            if (typeof cb === 'function') cb(window._rotPersonalItems);
+            return window._rotPersonalItems;
+        }
+    } catch(e) {}
+    if (typeof cb === 'function') cb([]);
+    return [];
 };
 
 // ── Lógica de Kits de Mantenimiento para Solicitud OT ───────────────
@@ -5019,7 +5041,9 @@ window.rotGuardarMaterial = function() {
     var fecha = ((document.getElementById('rot-mat-fecha')       || {}).value || '');
     var tipo  = ((document.getElementById('rot-mat-tipo')        || {}).value || 'Vehiculo');
     var placa = ((document.getElementById('rot-mat-placa')       || {}).value || '').trim();
-    var solic = ((document.getElementById('rot-mat-solicitante') || {}).value || '').trim();
+    var solicEl = document.getElementById('rot-mat-solicitante');
+    var solicTxt = document.getElementById('rot-mat-solicitante-txt');
+    var solic = ((solicEl && solicEl.value) ? solicEl.value : (solicTxt ? solicTxt.value : '')).trim();
     var obs   = ((document.getElementById('rot-mat-obs')         || {}).value || '').trim();
 
     // Recoger items
