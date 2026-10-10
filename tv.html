@@ -1129,6 +1129,28 @@
                 padding: 3px 8px;
                 border-radius: 6px;
             }
+            #tvHudToast {
+                top: calc(28px + var(--tv-safe-y));
+                right: calc(36px + var(--tv-safe-x));
+                padding: 16px 28px;
+                font-size: 1.45rem;
+                border-radius: 20px;
+                gap: 14px;
+            }
+            #tvHudToast .hud-icon {
+                font-size: 1.9rem;
+            }
+            #tvHudToast .hud-key-tag {
+                font-size: 1.1rem;
+                padding: 3px 10px;
+                border-radius: 8px;
+            }
+            .tv-key-num-badge {
+                font-size: 0.85rem;
+                padding: 2px 7px;
+                border-radius: 6px;
+                margin-right: 5px;
+            }
         }
 
         /* Responsive Media Queries para Smart TVs de baja resolución o DPR alto */
@@ -1220,9 +1242,84 @@
         .tv-marker-icon-box.moving { background: #10b981; }
         .tv-marker-icon-box.stopped { background: #ef4444; }
         .tv-marker-icon-box.idle { background: #f59e0b; }
+
+        /* ── HUD NOTIFICACIÓN SMART TV (FEEDBACK VISUAL AL PULSAR CONTROL) ── */
+        #tvHudToast {
+            position: fixed;
+            top: calc(18px + var(--tv-safe-y));
+            right: calc(24px + var(--tv-safe-x));
+            background: rgba(15, 23, 42, 0.94);
+            color: #ffffff;
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            padding: 10px 18px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(-16px) scale(0.96);
+            pointer-events: none;
+            transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #tvHudToast.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        #tvHudToast .hud-icon {
+            font-size: 1.25rem;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+        }
+        #tvHudToast .hud-text {
+            white-space: nowrap;
+        }
+        #tvHudToast .hud-key-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 800;
+            background: rgba(255, 255, 255, 0.16);
+            padding: 2px 7px;
+            border-radius: 5px;
+            color: #e2e8f0;
+            margin-left: 4px;
+        }
+
+        .tv-key-num-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 800;
+            background: rgba(15, 23, 42, 0.08);
+            color: var(--tv-text-muted);
+            padding: 1px 5px;
+            border-radius: 4px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 3px;
+        }
+        .tv-tab-btn.active .tv-key-num-badge {
+            background: rgba(2, 132, 199, 0.15);
+            color: var(--tv-primary);
+        }
     </style>
 </head>
 <body>
+
+<!-- HUD TOAST FLOTANTE PARA FEEDBACK DE CONTROL REMOTO SMART TV -->
+<div id="tvHudToast" role="status" aria-live="polite">
+    <span class="hud-icon"><i class="bi bi-tv"></i></span>
+    <span class="hud-text">Centro de Control Listo</span>
+    <span class="hud-key-tag">OK</span>
+</div>
 
 <div id="tvCarouselProgressBar"></div>
 
@@ -1246,27 +1343,32 @@
 
         <!-- Pestañas de Navegación de Vistas (Apple Segmented Control) -->
         <nav class="tv-tabs-nav" id="tvTabsNav">
-            <button class="tv-tab-btn active" onclick="tvSwitchView('gps')" id="tabGps" data-view="gps">
+            <button class="tv-tab-btn active" onclick="tvSwitchView('gps')" id="tabGps" data-view="gps" title="Presiona 1 en el control">
+                <span class="tv-key-num-badge">1</span>
                 <i class="bi bi-geo-alt-fill text-primary"></i>
                 <span>GPS Flota</span>
                 <span class="tv-tab-badge" id="kpiBadgeGps">62</span>
             </button>
-            <button class="tv-tab-btn" onclick="tvSwitchView('ot')" id="tabOt" data-view="ot">
+            <button class="tv-tab-btn" onclick="tvSwitchView('ot')" id="tabOt" data-view="ot" title="Presiona 2 en el control">
+                <span class="tv-key-num-badge">2</span>
                 <i class="bi bi-tools text-amber"></i>
                 <span>Reportes OT</span>
                 <span class="tv-tab-badge" id="kpiBadgeOt">1</span>
             </button>
-            <button class="tv-tab-btn" onclick="tvSwitchView('backlog')" id="tabBacklog" data-view="backlog">
+            <button class="tv-tab-btn" onclick="tvSwitchView('backlog')" id="tabBacklog" data-view="backlog" title="Presiona 3 en el control">
+                <span class="tv-key-num-badge">3</span>
                 <i class="bi bi-clipboard-check text-purple"></i>
                 <span>BackLog</span>
                 <span class="tv-tab-badge" id="kpiBadgeBacklog">20</span>
             </button>
-            <button class="tv-tab-btn" onclick="tvSwitchView('fallas')" id="tabFallas" data-view="fallas">
+            <button class="tv-tab-btn" onclick="tvSwitchView('fallas')" id="tabFallas" data-view="fallas" title="Presiona 4 en el control">
+                <span class="tv-key-num-badge">4</span>
                 <i class="bi bi-exclamation-octagon-fill text-danger"></i>
                 <span>Reporte Fallas</span>
                 <span class="tv-tab-badge danger" id="kpiBadgeFallas">43</span>
             </button>
-            <button class="tv-tab-btn" onclick="tvSwitchView('rampas')" id="tabRampas" data-view="rampas">
+            <button class="tv-tab-btn" onclick="tvSwitchView('rampas')" id="tabRampas" data-view="rampas" title="Presiona 5 en el control">
+                <span class="tv-key-num-badge">5</span>
                 <i class="bi bi-ev-front-fill text-primary"></i>
                 <span>Status Rampa</span>
                 <span class="tv-tab-badge" id="kpiBadgeRampas">33</span>
@@ -1275,19 +1377,19 @@
 
         <!-- Reloj y Herramientas -->
         <div class="tv-header-tools">
-            <button class="tv-action-btn" onclick="tvForceReload()" title="Actualizar / Forzar Recarga de Interfaz (Tecla R o 0)">
-                <i class="bi bi-arrow-clockwise text-primary"></i> <span>Recargar</span>
+            <button class="tv-action-btn" onclick="tvForceReload()" title="Actualizar / Forzar Recarga de Interfaz (Tecla 0)">
+                <i class="bi bi-arrow-clockwise text-primary"></i> <span>Recargar [0]</span>
             </button>
-            <button class="tv-action-btn" id="tvBtnCarousel" onclick="tvToggleCarousel()" title="Rotación Automática cada 30 segundos (Tecla C)">
-                <i class="bi bi-arrow-repeat"></i> <span id="tvCarouselText">Carrusel</span>
+            <button class="tv-action-btn" id="tvBtnCarousel" onclick="tvToggleCarousel()" title="Rotación Automática cada 30 segundos (Tecla 6)">
+                <i class="bi bi-arrow-repeat"></i> <span id="tvCarouselText">Carrusel [6]</span>
             </button>
-            <button class="tv-action-btn" id="tvBtnMargin" onclick="tvCycleMargin()" title="Ajustar Margen de Pantalla TV / Overscan (Tecla M)">
-                <i class="bi bi-aspect-ratio"></i> <span id="tvMarginText">Margen TV</span>
+            <button class="tv-action-btn" id="tvBtnMargin" onclick="tvCycleMargin()" title="Ajustar Margen de Pantalla TV / Overscan (Tecla 7)">
+                <i class="bi bi-aspect-ratio"></i> <span id="tvMarginText">Margen [7]</span>
             </button>
             <button class="tv-action-btn" onclick="tvToggleQrModal()" title="Vincular teléfono móvil">
                 <i class="bi bi-qr-code"></i> <span>Móvil</span>
             </button>
-            <button class="tv-action-btn icon-only" onclick="tvToggleFullscreen()" title="Pantalla Completa (Tecla F)">
+            <button class="tv-action-btn icon-only" onclick="tvToggleFullscreen()" title="Pantalla Completa (Tecla 9 o F)">
                 <i class="bi bi-arrows-fullscreen"></i>
             </button>
             
@@ -1368,8 +1470,8 @@
                         <button class="tv-map-btn active" id="btnLayerStreet" onclick="tvSetMapLayer('street')">
                             <i class="bi bi-map"></i> Callejero
                         </button>
-                        <button class="tv-map-btn" id="btnLayerSat" onclick="tvSetMapLayer('satellite')">
-                            <i class="bi bi-globe-americas"></i> Satelital
+                        <button class="tv-map-btn" id="btnLayerSat" onclick="tvToggleMapLayer()">
+                            <i class="bi bi-globe-americas"></i> Satelital [8]
                         </button>
                         <button class="tv-map-btn" onclick="tvFitAllUnits()">
                             <i class="bi bi-arrows-angle-expand"></i> Toda la Flota
@@ -1702,32 +1804,32 @@
         </div>
 
         <div class="tv-remote-shortcuts">
-            <div class="tv-key-guide">
-                <span class="tv-key-btn">1..5</span> <span>Cambiar Vista</span>
+            <div class="tv-key-guide" title="Teclas 1 al 5 para cambiar de vista">
+                <span class="tv-key-btn">1..5</span> <span>Vistas</span>
             </div>
-            <div class="tv-key-guide">
+            <div class="tv-key-guide" title="Tecla 6 para rotación automática">
+                <span class="tv-key-btn">6</span> <span id="tvKeyCarouselTxt">Carrusel [OFF]</span>
+            </div>
+            <div class="tv-key-guide" title="Tecla 7 para ajustar margen de pantalla y evitar cortes">
+                <span class="tv-key-btn">7</span> <span id="tvKeyMarginTxt">Margen TV</span>
+            </div>
+            <div class="tv-key-guide" title="Tecla 8 para cambiar satélite">
+                <span class="tv-key-btn">8</span> <span>Satélite</span>
+            </div>
+            <div class="tv-key-guide" title="Tecla 9 para pantalla completa">
+                <span class="tv-key-btn">9</span> <span>Full HD/4K</span>
+            </div>
+            <div class="tv-key-guide" title="Tecla 0 para recargar datos">
+                <span class="tv-key-btn">0</span> <span>Recargar</span>
+            </div>
+            <div class="tv-key-guide" title="Flechas para cambiar de pestaña">
                 <span class="tv-key-btn">◄ ►</span> <span>Pestañas</span>
             </div>
-            <div class="tv-key-guide">
+            <div class="tv-key-guide" title="Flechas para navegar filas y unidades">
                 <span class="tv-key-btn">▲ ▼</span> <span>Navegar</span>
             </div>
-            <div class="tv-key-guide">
+            <div class="tv-key-guide" title="Botón OK o Enter">
                 <span class="tv-key-btn">OK</span> <span>Enfocar</span>
-            </div>
-            <div class="tv-key-guide">
-                <span class="tv-key-btn">R</span> <span>Recargar</span>
-            </div>
-            <div class="tv-key-guide">
-                <span class="tv-key-btn">C</span> <span id="tvKeyCarouselTxt">Carrusel [OFF]</span>
-            </div>
-            <div class="tv-key-guide">
-                <span class="tv-key-btn">S</span> <span>Satélite</span>
-            </div>
-            <div class="tv-key-guide">
-                <span class="tv-key-btn">M</span> <span id="tvKeyMarginTxt">Margen TV</span>
-            </div>
-            <div class="tv-key-guide">
-                <span class="tv-key-btn">F</span> <span>Pantalla Completa</span>
             </div>
         </div>
     </footer>
@@ -2319,8 +2421,35 @@
         });
     }
 
+    // 10.5 NOTIFICACIONES HUD EN PANTALLA PARA CONTROL REMOTO SMART TV
+    var _tvHudTimer = null;
+    function tvShowHud(iconHtml, text, keyBadge) {
+        var toast = document.getElementById('tvHudToast');
+        if (!toast) return;
+        var iconEl = toast.querySelector('.hud-icon');
+        var textEl = toast.querySelector('.hud-text');
+        var keyEl = toast.querySelector('.hud-key-tag');
+
+        if (iconEl) iconEl.innerHTML = iconHtml || '<i class="bi bi-broadcast"></i>';
+        if (textEl) textEl.textContent = text || '';
+        if (keyEl) {
+            if (keyBadge) {
+                keyEl.textContent = 'Tecla [' + keyBadge + ']';
+                keyEl.style.display = 'inline-block';
+            } else {
+                keyEl.style.display = 'none';
+            }
+        }
+
+        toast.classList.add('show');
+        if (_tvHudTimer) clearTimeout(_tvHudTimer);
+        _tvHudTimer = setTimeout(function() {
+            toast.classList.remove('show');
+        }, 2500);
+    }
+
     // 11. CAMBIO ENTRE VISTAS (RESET DE FOCO Y ESTADO)
-    function tvSwitchView(viewName) {
+    function tvSwitchView(viewName, isFromCarousel) {
         _tvCurrentView = viewName;
 
         // Desenfocar cualquier elemento activo para evitar bordes o focus fantasmas de Smart TV
@@ -2351,18 +2480,31 @@
         if (viewName === 'gps' && _tvMap) {
             setTimeout(function() { _tvMap.invalidateSize(); }, 150);
         }
+
+        // Notificación HUD visual en pantalla
+        var viewMeta = {
+            'gps': { num: '1', title: 'GPS Flota en Tiempo Real', icon: '<i class="bi bi-geo-alt-fill text-primary"></i>' },
+            'ot': { num: '2', title: 'Reportes Órdenes de Trabajo (OT)', icon: '<i class="bi bi-tools text-amber"></i>' },
+            'backlog': { num: '3', title: 'BackLog de Mantenimiento', icon: '<i class="bi bi-clipboard-check text-purple"></i>' },
+            'fallas': { num: '4', title: 'Reporte de Fallas Críticas', icon: '<i class="bi bi-exclamation-octagon-fill text-danger"></i>' },
+            'rampas': { num: '5', title: 'Status Operativo de Rampas', icon: '<i class="bi bi-ev-front-fill text-primary"></i>' }
+        };
+        var m = viewMeta[viewName];
+        if (m) {
+            tvShowHud(m.icon, (isFromCarousel ? 'Carrusel: ' : 'Vista ') + m.title, m.num);
+        }
     }
 
     function tvNextView() {
         var idx = _tvViews.indexOf(_tvCurrentView);
         var nextIdx = (idx + 1) % _tvViews.length;
-        tvSwitchView(_tvViews[nextIdx]);
+        tvSwitchView(_tvViews[nextIdx], _tvCarouselActive);
     }
 
     function tvPrevView() {
         var idx = _tvViews.indexOf(_tvCurrentView);
         var prevIdx = (idx - 1 + _tvViews.length) % _tvViews.length;
-        tvSwitchView(_tvViews[prevIdx]);
+        tvSwitchView(_tvViews[prevIdx], false);
     }
 
     // 12. CARRUSEL AUTOMÁTICO TV (WAR ROOM ROTATION)
@@ -2375,7 +2517,7 @@
 
         if (_tvCarouselActive) {
             if (btn) btn.classList.add('active');
-            if (txt) txt.innerText = 'Carrusel [ON]';
+            if (txt) txt.innerText = 'Carrusel [6]';
             if (keyTxt) keyTxt.innerText = 'Carrusel [ON]';
             _tvCarouselTimerCount = 0;
             if (bar) bar.style.width = '0%';
@@ -2391,22 +2533,39 @@
                     tvNextView();
                 }
             }, 1000);
+
+            tvShowHud('<i class="bi bi-arrow-repeat text-success"></i>', 'Carrusel TV: ACTIVADO (Rotación cada 30s)', '6');
         } else {
             if (btn) btn.classList.remove('active');
-            if (txt) txt.innerText = 'Carrusel Auto';
+            if (txt) txt.innerText = 'Carrusel [6]';
             if (keyTxt) keyTxt.innerText = 'Carrusel [OFF]';
             if (bar) bar.style.width = '0%';
             if (_tvCarouselInterval) clearInterval(_tvCarouselInterval);
             _tvCarouselInterval = null;
+
+            tvShowHud('<i class="bi bi-pause-circle text-muted"></i>', 'Carrusel TV: DESACTIVADO', '6');
         }
     }
 
     // 13. PANTALLA COMPLETA & MODAL QR
     function tvToggleFullscreen() {
         if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(function(e){});
+            var el = document.documentElement;
+            var req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+            if (req) {
+                req.call(el).then(function() {
+                    tvShowHud('<i class="bi bi-arrows-fullscreen text-primary"></i>', 'Pantalla Completa TV: ACTIVADA', '9');
+                }).catch(function(e) {
+                    tvShowHud('<i class="bi bi-arrows-fullscreen text-amber"></i>', 'Modo TV: Maximizado', '9');
+                });
+            }
         } else {
-            if (document.exitFullscreen) document.exitFullscreen().catch(function(e){});
+            var exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+            if (exit) {
+                exit.call(document).then(function() {
+                    tvShowHud('<i class="bi bi-fullscreen-exit text-muted"></i>', 'Pantalla Completa: DESACTIVADA', '9');
+                }).catch(function(e) {});
+            }
         }
     }
 
@@ -2424,12 +2583,21 @@
         }
     }
 
-    // 14. GESTIÓN DE MARGEN SEGURO / OVERSCAN SMART TV
-    var _tvMarginModes = ['safe', 'wide', 'none'];
+    // Alternar capa Satelital / Callejero en el Mapa
+    function tvToggleMapLayer() {
+        var nextLayer = (_tvCurrentMapLayer === 'street' ? 'satellite' : 'street');
+        tvSetMapLayer(nextLayer);
+        tvShowHud(nextLayer === 'satellite' ? '<i class="bi bi-globe-americas text-primary"></i>' : '<i class="bi bi-map text-primary"></i>',
+                  'Mapa: ' + (nextLayer === 'satellite' ? 'Capa Satelital Google' : 'Capa Callejero OSM'), '8');
+    }
+
+    // 14. GESTIÓN DE MARGEN SEGURO / OVERSCAN SMART TV (CALIBRACIÓN 4K)
+    var _tvMarginModes = ['safe', 'wide', 'ultra', 'compact'];
     var _tvMarginLabels = {
-        'safe': 'Margen TV [Seguro]',
-        'wide': 'Margen TV [Amplio]',
-        'none': 'Margen TV [Sin Margen]'
+        'safe': 'Seguro (Recomendado)',
+        'wide': 'Amplio (Antirecorte 4K)',
+        'ultra': 'Ultra (Máximo Margen)',
+        'compact': 'Mínimo (Completo)'
     };
     var _tvCurrentMarginIndex = 0;
 
@@ -2437,23 +2605,27 @@
         var root = document.documentElement;
         var is4K = window.innerWidth >= 2500;
         if (mode === 'wide') {
-            root.style.setProperty('--tv-safe-x', is4K ? '72px' : '44px');
-            root.style.setProperty('--tv-safe-y', is4K ? '36px' : '22px');
-        } else if (mode === 'none') {
-            root.style.setProperty('--tv-safe-x', is4K ? '18px' : '8px');
-            root.style.setProperty('--tv-safe-y', is4K ? '8px' : '2px');
+            root.style.setProperty('--tv-safe-x', is4K ? '96px' : '48px');
+            root.style.setProperty('--tv-safe-y', is4K ? '48px' : '24px');
+        } else if (mode === 'ultra') {
+            root.style.setProperty('--tv-safe-x', is4K ? '140px' : '70px');
+            root.style.setProperty('--tv-safe-y', is4K ? '70px' : '35px');
+        } else if (mode === 'compact') {
+            root.style.setProperty('--tv-safe-x', is4K ? '20px' : '10px');
+            root.style.setProperty('--tv-safe-y', is4K ? '10px' : '4px');
         } else { // 'safe'
             mode = 'safe';
             root.style.setProperty('--tv-safe-x', is4K ? '52px' : '26px');
             root.style.setProperty('--tv-safe-y', is4K ? '24px' : '12px');
         }
         var btnTxt = document.getElementById('tvMarginText');
-        if (btnTxt) btnTxt.textContent = _tvMarginLabels[mode];
+        if (btnTxt) btnTxt.textContent = 'Margen [7]';
         var keyTxt = document.getElementById('tvKeyMarginTxt');
-        if (keyTxt) keyTxt.textContent = mode === 'safe' ? 'Margen TV' : (mode === 'wide' ? 'Margen Amplio' : 'Sin Margen');
+        if (keyTxt) keyTxt.textContent = _tvMarginLabels[mode] || 'Margen TV';
         
         if (save) {
             try { localStorage.setItem('tv_safe_margin', mode); } catch(e) {}
+            tvShowHud('<i class="bi bi-aspect-ratio text-info"></i>', 'Margen TV: ' + _tvMarginLabels[mode], '7');
         }
         if (_tvMap && typeof _tvMap.invalidateSize === 'function') {
             setTimeout(function() { _tvMap.invalidateSize(); }, 200);
@@ -2468,12 +2640,15 @@
 
     // 15. FORZAR RECARGA OMITIENDO CACHÉ DE GOOGLE TV
     function tvForceReload() {
-        var base = window.location.pathname || '/tv';
-        window.location.href = base + '?_v=' + Date.now();
+        tvShowHud('<i class="bi bi-arrow-clockwise text-primary"></i>', 'Recargando Centro de Control ERP...', '0');
+        setTimeout(function() {
+            var base = window.location.pathname || '/tv';
+            window.location.href = base + '?_v=' + Date.now();
+        }, 300);
     }
 
     // Auto-detección de nueva versión desplegada en VPS
-    var _tvClientBuild = 2026100903;
+    var _tvClientBuild = 2026101001;
     async function tvCheckAutoUpdate() {
         try {
             var res = await fetch('/api/tv/version?_t=' + Date.now());
@@ -2487,9 +2662,10 @@
         } catch(e) {}
     }
 
-    // 15. CONTROL REMOTO SMART TV (D-PAD & HOTKEYS)
+    // 16. CONTROL REMOTO SMART TV (TECLADO NUMÉRICO 0..9 Y D-PAD)
     window.addEventListener('keydown', function(e) {
         var key = e.key;
+        var code = e.keyCode || e.which;
 
         // Si el usuario está escribiendo en un input de búsqueda con un teclado físico
         var isInputFocused = (document.activeElement && document.activeElement.tagName === 'INPUT');
@@ -2511,89 +2687,151 @@
             return;
         }
 
-        // Teclas Numéricas (1, 2, 3, 4, 5)
-        if (key === '1') { tvSwitchView('gps'); return; }
-        if (key === '2') { tvSwitchView('ot'); return; }
-        if (key === '3') { tvSwitchView('backlog'); return; }
-        if (key === '4') { tvSwitchView('fallas'); return; }
-        if (key === '5') { tvSwitchView('rampas'); return; }
+        // ============================================================
+        // 🎮 TECLAS NUMÉRICAS CONTROL REMOTO (0 AL 9)
+        // ============================================================
+        
+        // Tecla 1: GPS Flota
+        if (key === '1' || code === 49 || code === 97) {
+            e.preventDefault();
+            tvSwitchView('gps');
+            return;
+        }
 
-        // Recargar / Actualizar Interfaz (R o 0)
-        if (key === 'r' || key === 'R' || key === '0') {
+        // Tecla 2: Reportes OT
+        if (key === '2' || code === 50 || code === 98) {
+            e.preventDefault();
+            tvSwitchView('ot');
+            return;
+        }
+
+        // Tecla 3: BackLog
+        if (key === '3' || code === 51 || code === 99) {
+            e.preventDefault();
+            tvSwitchView('backlog');
+            return;
+        }
+
+        // Tecla 4: Reporte Fallas
+        if (key === '4' || code === 52 || code === 100) {
+            e.preventDefault();
+            tvSwitchView('fallas');
+            return;
+        }
+
+        // Tecla 5: Status Rampa
+        if (key === '5' || code === 53 || code === 101) {
+            e.preventDefault();
+            tvSwitchView('rampas');
+            return;
+        }
+
+        // Tecla 6 o C: Carrusel Automático (Rotación cada 30s)
+        if (key === '6' || code === 54 || code === 102 || key === 'c' || key === 'C') {
+            e.preventDefault();
+            tvToggleCarousel();
+            return;
+        }
+
+        // Tecla 7 o M: Margen TV / Overscan (Seguro / Amplio / Ultra / Compacto)
+        if (key === '7' || code === 55 || code === 103 || key === 'm' || key === 'M') {
+            e.preventDefault();
+            tvCycleMargin();
+            return;
+        }
+
+        // Tecla 8 o S: Alternar Mapa Satelital / Callejero
+        if (key === '8' || code === 56 || code === 104 || key === 's' || key === 'S') {
+            e.preventDefault();
+            tvToggleMapLayer();
+            return;
+        }
+
+        // Tecla 9 o F: Pantalla Completa (Full Screen)
+        if (key === '9' || code === 57 || code === 105 || key === 'f' || key === 'F') {
+            e.preventDefault();
+            tvToggleFullscreen();
+            return;
+        }
+
+        // Tecla 0 o R: Recargar Interfaz / Forzar Actualización
+        if (key === '0' || code === 48 || code === 96 || key === 'r' || key === 'R') {
+            e.preventDefault();
             tvForceReload();
             return;
         }
 
-        // Flechas Horizontales
-        if (key === 'ArrowRight') { tvNextView(); return; }
-        if (key === 'ArrowLeft') { tvPrevView(); return; }
+        // Flechas Horizontales (◄ / ►)
+        if (key === 'ArrowRight' || code === 39) {
+            e.preventDefault();
+            tvNextView();
+            return;
+        }
+        if (key === 'ArrowLeft' || code === 37) {
+            e.preventDefault();
+            tvPrevView();
+            return;
+        }
 
-        // Flechas Verticales (Navegar filas / unidades)
-        if (key === 'ArrowDown') {
+        // Flechas Verticales (▲ / ▼)
+        if (key === 'ArrowDown' || code === 40) {
             e.preventDefault();
             tvNavigateTable(1);
             return;
         }
-        if (key === 'ArrowUp') {
+        if (key === 'ArrowUp' || code === 38) {
             e.preventDefault();
             tvNavigateTable(-1);
             return;
         }
 
-        // Page Down / Page Up (Scroll rápido)
-        if (key === 'PageDown') {
+        // Page Down / Page Up
+        if (key === 'PageDown' || code === 34) {
             e.preventDefault();
             tvNavigateTable(5);
             return;
         }
-        if (key === 'PageUp') {
+        if (key === 'PageUp' || code === 33) {
             e.preventDefault();
             tvNavigateTable(-5);
             return;
         }
-        if (key === 'Home') {
+
+        // Inicio / Fin
+        if (key === 'Home' || code === 36) {
             e.preventDefault();
             tvNavigateTable(-9999);
             return;
         }
-        if (key === 'End') {
+        if (key === 'End' || code === 35) {
             e.preventDefault();
             tvNavigateTable(9999);
             return;
         }
 
-        // Carrusel (C)
-        if (key === 'c' || key === 'C') { tvToggleCarousel(); return; }
-
-        // Satélite (S)
-        if (key === 's' || key === 'S') {
-            tvSetMapLayer(_tvCurrentMapLayer === 'street' ? 'satellite' : 'street');
-            return;
-        }
-
-        // Margen TV / Overscan (M)
-        if (key === 'm' || key === 'M') { tvCycleMargin(); return; }
-
-        // Fullscreen (F)
-        if (key === 'f' || key === 'F') { tvToggleFullscreen(); return; }
-
-        // Enter / OK
-        if (key === 'Enter') {
+        // Enter / OK (KeyCode 13)
+        if (key === 'Enter' || code === 13) {
+            e.preventDefault();
             if (_tvCurrentView === 'gps') {
                 var units = (_tvData.gps.unidades || []);
                 if (units.length > 0) {
                     var unit = units[_tvSelectedUnitIndex % units.length];
-                    if (unit) tvFocusUnit(unit.placa);
+                    if (unit) {
+                        tvFocusUnit(unit.placa);
+                        tvShowHud('<i class="bi bi-geo-alt"></i>', 'Unidad: ' + unit.placa + ' enfocada', 'OK');
+                    }
                 }
             }
             return;
         }
 
-        // Escape
-        if (key === 'Escape') {
+        // Tecla Volver / Escape / Smart TV Return (KeyCode 27, 8, 10009)
+        if (key === 'Escape' || code === 27 || code === 8 || code === 10009) {
             tvCloseDrawer();
             var modal = document.getElementById('tvQrModal');
-            if (modal) modal.style.display = 'none';
+            if (modal && modal.style.display === 'flex') {
+                modal.style.display = 'none';
+            }
         }
     });
 
