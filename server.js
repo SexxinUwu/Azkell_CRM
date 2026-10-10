@@ -777,11 +777,11 @@ app.get(['/tv.apk', '/AzkellFleetTV.apk', '/download/tv.apk', '/marsisa.apk'], (
 app.get('/api/tv/version', (req, res) => {
     return res.json({
         appName: 'Marsisa Fleet',
-        versionCode: 2026100903,
-        versionName: '2.1',
+        versionCode: 2026101001,
+        versionName: '2.2',
         apkUrl: 'https://marsisa.azkell.com/tv.apk',
         forceUpdate: false,
-        changeLog: 'Ajuste de márgenes seguros Anti-Overscan y optimización nativa para pantallas 4K Ultra-HD'
+        changeLog: 'Mapeo total de control remoto numérico (0 al 9), notificaciones HUD flotantes y calibración de márgenes anti-recorte para 4K'
     });
 });
 
