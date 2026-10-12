@@ -79,6 +79,7 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
   - [x] Importar desde Excel (con revisión previa) y eliminar (desde la ficha o varias a la vez)
   - [ ] Endpoint propio `/api/v2/placas` con Prisma
 - [ ] **Fase 4 — Módulos por grupos** (abajo)
+  - [x] Inspecciones, parte 1 (2026-10-12): consulta. Corregido: cachés de inspecciones/GPS/TV compartidas entre empresas (fuga de datos) y fallas sin foto guardadas como "https://empresa.azkell.com/"
   - [x] Conductores (2026-10-12). Corregido: la foto nunca se guardaba (columna TEXT) y rbac dejaba borrar/importar conductores y cambiar métricas sin permiso
 - [ ] **Fase 5 — Cierre:** borrar `Index.html`, `logica.js`, `Modulos/`, `routes/`; cookies HttpOnly; 2FA
 
@@ -104,7 +105,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 ### C. Mantenimiento
 - [ ] mantenimiento/dashboard
 - [ ] mantenimiento/ordenes · mantenimiento/trabajos-ot · mantenimiento/reportes-ot
-- [ ] mantenimiento/inspecciones
+- [ ] mantenimiento/inspecciones *(parte 1 en /app: estado de la flota, historial y ficha; falta registrar/editar/PDF)*
 - [ ] mantenimiento/checklist
 - [ ] mantenimiento/planificacion · mantenimiento/configuracion-mp · mantenimiento/tipos-mp · mantenimiento/kits-mp
 - [ ] mantenimiento/backlog-taller

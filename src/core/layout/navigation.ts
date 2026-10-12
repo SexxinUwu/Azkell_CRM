@@ -61,7 +61,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'reportes-ot', label: 'Órdenes de trabajo', clasico: 'mantenimiento/reportes-ot', icon: ScrollText, permissions: ver('reportes_ot', 'ot') },
       { key: 'trabajos-ot', label: 'Trabajos de OT', clasico: 'mantenimiento/trabajos-ot', icon: Wrench, permissions: ver('trabajos_ot') },
       { key: 'checklist', label: 'Checklist', clasico: 'mantenimiento/checklist', icon: ClipboardCheck, permissions: ver('checklist') },
-      { key: 'inspecciones', label: 'Inspecciones', clasico: 'mantenimiento/inspecciones', icon: ClipboardList, permissions: ver('insp') },
+      { key: 'inspecciones', label: 'Inspecciones', to: '/inspecciones', icon: ClipboardList, permissions: ver('insp') },
       { key: 'fleetrun', label: 'Fleetrun', clasico: 'mantenimiento/fleetrun', icon: Gauge, permissions: ver('fleetrun', 'fleet') },
       { key: 'neumaticos', label: 'Neumáticos', clasico: 'mantenimiento/neumaticos-ultimas', icon: Disc3, permissions: ver('neumaticos') },
       { key: 'planificacion', label: 'Planificación', clasico: 'mantenimiento/planificacion', icon: History, permissions: ver('plan') },

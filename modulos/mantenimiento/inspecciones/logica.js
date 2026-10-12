@@ -2469,8 +2469,11 @@ window.procesarGuardadoInspeccion = async function() {
                             }
                         } else {
                             let prevImg = document.getElementById(`prev_img_${uid}`);
-                            if (prevImg && prevImg.src && prevImg.src.startsWith('http')) {
-                                fotoEvidencia = prevImg.src;
+                            // getAttribute: un <img> sin src devuelve la URL de la página en .src, y se guardaba
+                            // 'https://empresa.azkell.com/' como si fuera una foto. Solo se conserva una foto real.
+                            const srcPrevio = prevImg ? (prevImg.getAttribute('src') || '') : '';
+                            if (/^https?:\/\/[^/]+\/.+/.test(srcPrevio)) {
+                                fotoEvidencia = srcPrevio;
                             }
                         }
                     }

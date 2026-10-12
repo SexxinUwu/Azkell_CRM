@@ -12,6 +12,7 @@ import { PerfilPage } from './modules/perfil/PerfilPage';
 import { Inactividad } from './core/auth/Inactividad';
 // Pantallas de módulos: se descargan aparte, al abrirlas (el marco de la app ya está en pantalla)
 const PlacasPage = lazy(() => import('./modules/placas/PlacasPage').then(m => ({ default: m.PlacasPage })));
+const InspeccionesPage = lazy(() => import('./modules/inspecciones/InspeccionesPage').then(m => ({ default: m.InspeccionesPage })));
 const ConductoresPage = lazy(() => import('./modules/conductores/ConductoresPage').then(m => ({ default: m.ConductoresPage })));
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
           <Route index element={<InicioPage />} />
           <Route path="perfil" element={<PerfilPage />} />
           <Route path="placas" element={<RequirePermission any={['placas.ver']}><PlacasPage /></RequirePermission>} />
+          <Route path="inspecciones" element={<RequirePermission any={['insp.ver']}><InspeccionesPage /></RequirePermission>} />
           <Route path="conductores" element={<RequirePermission any={['cond.ver']}><ConductoresPage /></RequirePermission>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
