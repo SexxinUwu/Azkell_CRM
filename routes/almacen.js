@@ -989,10 +989,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     router.get('/sistemas', (req, res) => {
         db.query(`SELECT * FROM almacen_sistemas ORDER BY orden, nombre`, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            // Parse sub_sistemas JSON
+            // sub_sistemas es columna JSON: el driver ya la entrega como lista
             rows.forEach(r => {
+                if (Array.isArray(r.sub_sistemas)) return;
                 try { r.sub_sistemas = r.sub_sistemas ? JSON.parse(r.sub_sistemas) : []; }
                 catch (e) { r.sub_sistemas = []; }
+                if (!Array.isArray(r.sub_sistemas)) r.sub_sistemas = [];
             });
             res.json(rows);
         });

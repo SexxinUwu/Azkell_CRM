@@ -14,6 +14,7 @@ import { Inactividad } from './core/auth/Inactividad';
 const PlacasPage = lazy(() => import('./modules/placas/PlacasPage').then(m => ({ default: m.PlacasPage })));
 const InspeccionesPage = lazy(() => import('./modules/inspecciones/InspeccionesPage').then(m => ({ default: m.InspeccionesPage })));
 const RegistrarInspeccionPage = lazy(() => import('./modules/inspecciones/RegistrarInspeccionPage').then(m => ({ default: m.RegistrarInspeccionPage })));
+const CatalogoRuta = lazy(() => import('./modules/catalogos/CatalogoRuta').then(m => ({ default: m.CatalogoRuta })));
 const ConductoresPage = lazy(() => import('./modules/conductores/ConductoresPage').then(m => ({ default: m.ConductoresPage })));
 
 export default function App() {
@@ -30,6 +31,14 @@ export default function App() {
           <Route path="placas" element={<RequirePermission any={['placas.ver']}><PlacasPage /></RequirePermission>} />
           <Route path="inspecciones" element={<RequirePermission any={['insp.ver']}><InspeccionesPage /></RequirePermission>} />
           <Route path="inspecciones/nueva" element={<RequirePermission any={['insp.crear']}><RegistrarInspeccionPage /></RequirePermission>} />
+          <Route path="almacen/familias" element={<CatalogoRuta clave="familias" />} />
+          <Route path="almacen/marcas" element={<CatalogoRuta clave="marcas" />} />
+          <Route path="almacen/unidades" element={<CatalogoRuta clave="unidades" />} />
+          <Route path="almacen/sistemas" element={<CatalogoRuta clave="sistemas" />} />
+          <Route path="almacen/almacenes" element={<CatalogoRuta clave="almacenes" />} />
+          <Route path="mantenimiento/tipos-mp" element={<CatalogoRuta clave="tipos-mp" />} />
+          <Route path="mantenimiento/personal" element={<CatalogoRuta clave="personal-taller" />} />
+          <Route path="preferencias/situaciones" element={<CatalogoRuta clave="situaciones" />} />
           <Route path="conductores" element={<RequirePermission any={['cond.ver']}><ConductoresPage /></RequirePermission>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

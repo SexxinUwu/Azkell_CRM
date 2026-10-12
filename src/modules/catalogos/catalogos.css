@@ -1,0 +1,48 @@
+/* Catálogos — lista simple con acciones en línea */
+
+.catalogo-descripcion { margin: calc(var(--s-3) * -1) 0 var(--s-5); font-size: 0.9375rem; max-width: 46rem; }
+
+.catalogo-lista {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: var(--s-2);
+}
+.catalogo-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 64px;
+  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.catalogo-item--inactivo { opacity: 0.62; }
+.catalogo-item__icono {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+}
+.catalogo-item__texto { flex: 1; min-width: 0; }
+.catalogo-item__nombre { display: flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.9375rem; }
+.catalogo-item__detalle { font-size: 0.8125rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catalogo-item__acciones { display: flex; gap: 2px; flex-shrink: 0; }
+.catalogo-accion {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--label-2);
+  cursor: pointer;
+}
+.catalogo-accion:hover { background: var(--fill); color: var(--label); }
+.catalogo-accion--peligro:hover { background: var(--red-tint); color: var(--red-ink); }

@@ -90,10 +90,10 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 ### A. Catálogos
 - [x] directorio/conductores *(en /app: consulta, crear/editar con RENIEC y foto, importar, eliminar)*
 - [ ] directorio/clientes
-- [ ] preferencias/situaciones
-- [ ] almacen/familias · almacen/marcas · almacen/sistemas · almacen/unidades
+- [x] preferencias/situaciones *(en /app)*
+- [x] almacen/familias · almacen/marcas · almacen/sistemas · almacen/unidades *(en /app; pantalla común `src/modules/catalogos`)*
 - [ ] almacen/proveedores
-- [ ] almacen/almacenes
+- [x] almacen/almacenes *(en /app)*
 
 ### B. Flota
 - [x] flota/placas *(piloto completo en /app; pendiente solo la API propia con Prisma)*
@@ -107,13 +107,13 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [ ] mantenimiento/ordenes · mantenimiento/trabajos-ot · mantenimiento/reportes-ot
 - [ ] mantenimiento/inspecciones *(en /app: estado de la flota, historial, ficha y registrar; falta editar/PDF/importar)*
 - [ ] mantenimiento/checklist
-- [ ] mantenimiento/planificacion · mantenimiento/configuracion-mp · mantenimiento/tipos-mp · mantenimiento/kits-mp
+- [ ] mantenimiento/planificacion · mantenimiento/configuracion-mp · mantenimiento/kits-mp *(tipos-mp ya en /app)*
 - [ ] mantenimiento/backlog-taller
 - [ ] mantenimiento/status-rampa
 - [ ] mantenimiento/neumaticos-ultimas · mantenimiento/neumaticos-analisis
 - [ ] mantenimiento/fleetrun · administracion/fleetrun-config
 - [ ] mantenimiento/config-metrica
-- [ ] mantenimiento/personal · mantenimiento/productividad · mantenimiento/kpis-taller · mantenimiento/finanzas-taller
+- [ ] mantenimiento/productividad · mantenimiento/kpis-taller · mantenimiento/finanzas-taller *(mantenimiento/personal ya en /app)*
 - [ ] mantenimiento/incidencias-ruta
 - [ ] mantenimiento/otros
 - [ ] mantenimiento/combustible · mantenimiento/combustible-vales · mantenimiento/combustible-analisis ⚠️ (¿duplican operaciones/combustible-*?)

@@ -8,7 +8,7 @@
 // Permisos: 'clave.ver' según la matriz de permisos actual (ver core/auth/permisos.ts y la
 // visibilidad de la barra lateral en logica.js). Los administradores ven todo.
 import {
-  Banknote, Boxes, ClipboardCheck, ClipboardList, Disc3, FileText, Fuel, Gauge, History, House, IdCard, LayoutDashboard,
+  Banknote, Boxes, CircleDot, ClipboardCheck, Cog, Layers, Ruler, Tag, ClipboardList, Disc3, FileText, Fuel, Gauge, History, House, IdCard, LayoutDashboard,
   type LucideIcon, MapPin, PackageMinus, PackagePlus, Route, ScrollText, ShieldCheck, Truck, UserCog, Users, Warehouse, Wrench,
 } from 'lucide-react';
 
@@ -119,6 +119,19 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'nomina', label: 'Nómina', clasico: 'rrhh/nomina', icon: Banknote, permissions: ver('rrhh_nomina') },
       { key: 'seg-unidades', label: 'Garita: unidades', clasico: 'seguridad/unidades', icon: ShieldCheck, permissions: ver('seguridad_unidades', 'seg_unidades', 'seg_checklist') },
       { key: 'conductor-portal', label: 'Portal del conductor', clasico: 'operaciones/conductor-portal', icon: IdCard, permissions: ver('conductor_portal') },
+    ],
+  },
+  {
+    title: 'Configuración',
+    items: [
+      { key: 'familias', label: 'Familias', to: '/almacen/familias', icon: Layers, permissions: ver('cfg_familias') },
+      { key: 'marcas', label: 'Marcas', to: '/almacen/marcas', icon: Tag, permissions: ver('cfg_marcas') },
+      { key: 'unidades', label: 'Unidades de medida', to: '/almacen/unidades', icon: Ruler, permissions: ver('cfg_unidades') },
+      { key: 'sistemas', label: 'Sistemas del vehículo', to: '/almacen/sistemas', icon: Cog, permissions: ver('cfg_sistemas') },
+      { key: 'almacenes', label: 'Almacenes', to: '/almacen/almacenes', icon: Warehouse, permissions: ver('cfg_almacen', 'inv') },
+      { key: 'tipos-mp', label: 'Tipos de MP', to: '/mantenimiento/tipos-mp', icon: Wrench, permissions: ver('cfg_mant') },
+      { key: 'personal-taller', label: 'Personal de taller', to: '/mantenimiento/personal', icon: UserCog, permissions: ver('pers_mant') },
+      { key: 'situaciones', label: 'Situaciones', to: '/preferencias/situaciones', icon: CircleDot, permissions: ver('cfg_situacion') },
     ],
   },
   {
