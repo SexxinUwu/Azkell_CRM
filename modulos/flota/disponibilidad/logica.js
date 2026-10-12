@@ -1124,6 +1124,11 @@ window.dispAbrirModalNuevo = function () {
     if (!modalEl) return;
 
     document.getElementById('disp-f-id').value = '';
+    const origCam = document.getElementById('disp-f-placa-camion-orig');
+    if (origCam) origCam.value = '';
+    const origCar = document.getElementById('disp-f-placa-carreta-orig');
+    if (origCar) origCar.value = '';
+
     document.getElementById('disp-f-placa-camion').value = '';
     document.getElementById('disp-f-placa-carreta').value = '';
     document.getElementById('disp-f-conductor-asignado').value = '';
@@ -1164,9 +1169,17 @@ window.dispEditarFila = function (placaCamion, placaCarreta, id) {
     const modalEl = document.getElementById('modalDisponibilidad');
     if (!modalEl) return;
 
+    const camVal = item.placa_camion || '';
+    const carVal = item.placa_carreta || '';
+
     document.getElementById('disp-f-id').value = item.id || '';
-    document.getElementById('disp-f-placa-camion').value = item.placa_camion || '';
-    document.getElementById('disp-f-placa-carreta').value = item.placa_carreta || '';
+    const origCam = document.getElementById('disp-f-placa-camion-orig');
+    if (origCam) origCam.value = camVal;
+    const origCar = document.getElementById('disp-f-placa-carreta-orig');
+    if (origCar) origCar.value = carVal;
+
+    document.getElementById('disp-f-placa-camion').value = camVal;
+    document.getElementById('disp-f-placa-carreta').value = carVal;
     document.getElementById('disp-f-conductor-asignado').value = item.conductor_asignado || '';
     document.getElementById('disp-f-marca').value = item.marca || '';
     document.getElementById('disp-f-capacidad').value = item.capacidad_tanque || '';
@@ -1174,7 +1187,7 @@ window.dispEditarFila = function (placaCamion, placaCarreta, id) {
     document.getElementById('disp-f-estado').value = item.estado || 'En Base';
     document.getElementById('disp-f-observaciones').value = item.observaciones || '';
 
-    const labelPlaca = item.placa_camion || item.placa_carreta || 'Unidad';
+    const labelPlaca = camVal || carVal || 'Unidad';
     document.getElementById('disp-modal-title').innerText = `Editar Disponibilidad (${labelPlaca})`;
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
 };
@@ -1185,6 +1198,8 @@ window.guardarFormularioDisponibilidad = async function (e) {
     const id = document.getElementById('disp-f-id').value;
     const cam = (document.getElementById('disp-f-placa-camion').value || '').trim().toUpperCase();
     const car = (document.getElementById('disp-f-placa-carreta').value || '').trim().toUpperCase();
+    const camOrig = (document.getElementById('disp-f-placa-camion-orig')?.value || '').trim().toUpperCase();
+    const carOrig = (document.getElementById('disp-f-placa-carreta-orig')?.value || '').trim().toUpperCase();
 
     if (!cam && !car) {
         alert('Ingresa al menos la Placa de Camión o la Placa de Carreta.');
@@ -1193,8 +1208,11 @@ window.guardarFormularioDisponibilidad = async function (e) {
 
     const estadoVal = (document.getElementById('disp-f-estado').value || 'En Base').trim();
     const payload = {
+        id: id || null,
         placa_camion: cam,
         placa_carreta: car,
+        placa_camion_orig: camOrig,
+        placa_carreta_orig: carOrig,
         conductor_asignado: (document.getElementById('disp-f-conductor-asignado').value || '').trim(),
         marca: (document.getElementById('disp-f-marca').value || '').trim().toUpperCase(),
         capacidad_tanque: (document.getElementById('disp-f-capacidad').value || '').trim(),
@@ -1228,6 +1246,15 @@ window.guardarFormularioDisponibilidad = async function (e) {
             window.mostrarToast('Disponibilidad actualizada exitosamente', 'success');
         } else {
             alert('✅ Registro guardado correctamente');
+        }
+
+        // Si el usuario tenía un filtro en el buscador que ocultaría la unidad recién guardada, limpiamos el buscador
+        const buscadorEl = document.getElementById('dispBuscador');
+        if (buscadorEl && buscadorEl.value) {
+            const q = buscadorEl.value.trim().toUpperCase();
+            if ((cam && !cam.includes(q)) && (car && !car.includes(q))) {
+                buscadorEl.value = '';
+            }
         }
 
         await window.dispCargarDatos(true);
@@ -1289,7 +1316,7 @@ window.dispBuscarPlacaCamion = function (val) {
     }
 
     panel.innerHTML = matches.map(p => `
-        <div class="disp-combo-item d-flex justify-content-between align-items-center" onclick="window.dispSeleccionarPlacaCamion('${_dispEsc(p.placa)}')">
+        <div class="disp-combo-item d-flex justify-content-between align-items-center" onmousedown="event.preventDefault(); window.dispSeleccionarPlacaCamion('${_dispEsc(p.placa)}')">
             <span class="fw-bold">${_dispEsc(p.placa)}</span>
             <span class="text-muted small">${_dispEsc(p.marca || '')} • ${_dispEsc(p.tipo || '')}</span>
         </div>
@@ -1332,7 +1359,7 @@ window.dispBuscarPlacaCarreta = function (val) {
     }
 
     panel.innerHTML = matches.map(p => `
-        <div class="disp-combo-item d-flex justify-content-between align-items-center" onclick="window.dispSeleccionarPlacaCarreta('${_dispEsc(p.placa)}')">
+        <div class="disp-combo-item d-flex justify-content-between align-items-center" onmousedown="event.preventDefault(); window.dispSeleccionarPlacaCarreta('${_dispEsc(p.placa)}')">
             <span class="fw-bold">${_dispEsc(p.placa)}</span>
             <span class="text-muted small">${_dispEsc(p.tipo || 'Carreta')}</span>
         </div>
@@ -1366,7 +1393,7 @@ window.dispBuscarConductor = function (val) {
     panel.innerHTML = matches.map(c => {
         const nombre = c.nombre || c.nombres || c.conductor || '';
         return `
-            <div class="disp-combo-item" onclick="window.dispSeleccionarConductor('${_dispEsc(nombre)}')">
+            <div class="disp-combo-item" onmousedown="event.preventDefault(); window.dispSeleccionarConductor('${_dispEsc(nombre)}')">
                 <span class="fw-bold">${_dispEsc(nombre)}</span>
             </div>
         `;
