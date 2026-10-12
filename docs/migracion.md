@@ -42,7 +42,9 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
   - [x] Comparar esquemas entre empresas → [fase1-esquema.md](fase1-esquema.md) (4 empresas, 107 tablas, 64 diferencias de columnas)
   - [x] Respaldo de las 6 bases, restaurado y verificado
   - [x] Casos especiales decididos; SQL de igualación generado y probado en copia ([sql/igualacion-2026-10/](../sql/igualacion-2026-10/))
-  - [ ] Aplicar la igualación en producción (una empresa a la vez)
+  - [x] Igualación aplicada en producción el 2026-10-12 (Trahesa, Yogui, Rosymar, Marsisa): 6–10 s por empresa, 0 filas perdidas, 0 diferencias con la copia probada. Respaldo previo en `C:\Users\teffa\Respaldos_Azkell\2026-10-12_1457_antes_igualacion\`
+  - [x] `server.js` ya no revierte `frecuencia_horas` al arrancar
+  - [ ] Esquema Prisma por módulo en el proyecto (modelos en singular con mayúscula + `@@map`; columnas con su nombre actual)
   - [ ] Quitar los `CREATE TABLE` / `ALTER TABLE` del arranque (75 tablas, 261 `ALTER` en el código)
 - [ ] **Fase 2 — Base técnica**
   - [ ] 2A. Vite + React + TS; copiar de KINTSUGI `tokens.css`, `base.css`, `motion.ts`, `haptics.ts`, `src/core/ui/`
