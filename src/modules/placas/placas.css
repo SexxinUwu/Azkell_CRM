@@ -1,0 +1,186 @@
+/* Flota › Placas — tarjetas con la placa peruana, filtros y ficha */
+
+/* ─── Resumen ─── */
+.placas-resumen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+}
+@media (min-width: 768px) {
+  .placas-resumen { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-4); }
+}
+.placas-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: var(--s-4) var(--s-5);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.placas-kpi__valor {
+  font-size: clamp(1.75rem, 1.4rem + 1.2vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.placas-kpi__label { font-size: 0.8125rem; color: var(--label-2); }
+.placas-kpi--green .placas-kpi__valor { color: var(--green-ink); }
+.placas-kpi--accent .placas-kpi__valor { color: var(--accent-ink); }
+.placas-kpi--gray .placas-kpi__valor { color: var(--label-3); }
+
+/* ─── Barra de filtros ─── */
+.placas-toolbar__buscar { flex: 1 1 18rem; min-width: 0; }
+.placas-toolbar__vista {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--fill);
+}
+.placas-vista-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--label-2);
+  cursor: pointer;
+}
+.placas-vista-btn[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--label);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.placas-tipos { margin: calc(var(--s-1) * -1) 0 var(--s-3); }
+.placas-conteo { margin-bottom: var(--s-3); }
+.placas-limpiar {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ─── Tarjetas ─── */
+.placas-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  gap: var(--s-3);
+}
+@media (min-width: 768px) { .placas-grid { gap: var(--s-4); } }
+
+.placa-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  border: 0;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+@media (hover: hover) {
+  .placa-card:hover {
+    box-shadow: 0 0 0 1px var(--separator), 0 12px 28px -12px rgba(0, 0, 0, 0.22);
+    transform: translateY(-2px);
+  }
+}
+.placa-card__top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin-bottom: var(--s-1);
+}
+.placa-card__titulo { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; }
+.placa-card__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  color: var(--label-2);
+}
+.placa-card__cliente {
+  margin-top: auto;
+  padding-top: var(--s-2);
+  width: 100%;
+  border-top: 1px solid var(--separator);
+  font-size: 0.8125rem;
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Estado: punto + texto en cápsula */
+.placa-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.placa-estado::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.placa-estado--on { background: var(--green-tint); color: var(--green-ink); }
+.placa-estado--off { background: var(--fill); color: var(--label-2); }
+
+/* ─── Lista ─── */
+.placas-fila {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  gap: var(--s-3);
+}
+
+/* ─── Ficha ─── */
+.ficha { display: flex; flex-direction: column; gap: var(--s-5); }
+.ficha__hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-6) var(--s-4) var(--s-5);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(120% 90% at 50% 0%, var(--accent-tint), transparent 70%),
+    var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--separator);
+  text-align: center;
+}
+.ficha__titulo { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
+.ficha__chips { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-2); }
+.chip--static { cursor: default; pointer-events: none; }
+.ficha__grupo .list__header { margin-top: 0; }
+.ficha__dato { gap: var(--s-3); }
+.ficha__label { color: var(--label-2); font-size: 0.9375rem; }
+.ficha__valor { font-weight: 500; text-align: right; overflow-wrap: anywhere; }
+.ficha__valor--mono { font-family: var(--font-mono); font-size: 0.875rem; }
+.ficha__valor--vacio { color: var(--label-3); font-weight: 400; }

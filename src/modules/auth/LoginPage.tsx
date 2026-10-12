@@ -12,6 +12,7 @@ import { firstName } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 import { spring, springSnappy } from '../../core/lib/motion';
 import { startWelcome } from './welcome';
+import { MOTIVO_SALIDA } from '../../core/auth/Inactividad';
 import './login.css';
 
 // "Recuérdame" guarda en este dispositivo quién ingresó (nunca la contraseña)
@@ -44,6 +45,10 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const welcomeName = useRef('');
+  // Si la sesión se cerró sola (inactividad), se explica una vez
+  const [porInactividad] = useState(() => {
+    try { const m = sessionStorage.getItem(MOTIVO_SALIDA); sessionStorage.removeItem(MOTIVO_SALIDA); return m === 'inactividad'; } catch { return false; }
+  });
   // Nombre de la empresa del subdominio (la ruta es pública)
   const [empresa, setEmpresa] = useState(() => nombreEmpresa(localStorage.getItem('fleet_empresa_nombre') ?? ''));
   useEffect(() => {
@@ -134,6 +139,10 @@ export function LoginPage() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {porInactividad && (
+            <p className="login__message" role="status"><CircleAlert size={15} /> Tu sesión se cerró por inactividad. Vuelve a ingresar.</p>
+          )}
 
           <form className="login__form" onSubmit={handleSubmit} noValidate>
             <div ref={fieldsScope} className={`login__fields${error ? ' login__fields--error' : ''}`}>

@@ -64,7 +64,7 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
 - [ ] **Fase 2 — Base técnica**
   - [x] 2A. Vite + React + TS en `src/`, publicada en `/app/` (`npm run build` → `dist/app`, servida por `server.js`); núcleo de KINTSUGI copiado (`styles`, `ui`, `lib`, `auth`, `layout`)
   - [x] 2B. Login, bienvenida y despedida con el logo de cada empresa; sesión compartida con la versión actual (mismas claves `fleet_*`); permisos de la matriz convertidos a nombres en el cliente
-  - [ ] 2B. Control de inactividad (aviso a los 5 min, salida a los 10 min, como en la versión actual)
+  - [x] 2B. Control de inactividad igual a la versión actual (aviso a los 30 min, salida a los 35; clave compartida `fleet_ultimo_acceso`), con anillo de cuenta regresiva
   - [x] 2C. `AppShell`, barra lateral, `TabBar`, `navigation.ts` con todos los módulos (los no migrados abren la versión actual con ↗), Inicio y Mi cuenta
   - [ ] `server/core`: empresa por subdominio, `requirePermission`, `HttpError`, `audit`, SSE
   - [ ] Conversión de permisos (`insp.l` → `inspecciones.ver`, etc.) con script sobre `permisos_json`
@@ -73,6 +73,9 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
   - [ ] Revocar el token al cerrar sesión (hoy el JWT sigue válido hasta vencer; el servidor no revisa `sesiones_activas`)
   - [ ] Avisos en vivo (SSE) entre dispositivos: hoy el aviso de conexión solo usa la red del dispositivo
 - [ ] **Fase 3 — Piloto: Flota › Placas**
+  - [x] Consulta en `/app/placas`: resumen animado, búsqueda, filtros, tarjetas/lista y ficha (datos de la API actual)
+  - [ ] Edición en la app nueva (sobre `guardarPlaca`, mismas reglas)
+  - [ ] Endpoint propio `/api/v2/placas` con Prisma
 - [ ] **Fase 4 — Módulos por grupos** (abajo)
 - [ ] **Fase 5 — Cierre:** borrar `Index.html`, `logica.js`, `Modulos/`, `routes/`; cookies HttpOnly; 2FA
 
@@ -89,7 +92,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [ ] almacen/almacenes
 
 ### B. Flota
-- [ ] flota/placas *(piloto)*
+- [ ] flota/placas *(piloto: consulta lista en /app; edición pendiente)*
 - [ ] flota/documentos
 - [ ] flota/disponibilidad
 - [ ] flota/ubicacion (GPS Wialon)

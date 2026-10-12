@@ -1,0 +1,47 @@
+/* Aviso de inactividad: anillo que se vacía con la cuenta regresiva */
+
+.inactividad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-2) 0 var(--s-1);
+  text-align: center;
+}
+.inactividad__anillo {
+  position: relative;
+  width: 132px;
+  height: 132px;
+}
+.inactividad__anillo svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg); /* el anillo empieza arriba, como un reloj */
+}
+.inactividad__pista {
+  fill: none;
+  stroke: var(--fill);
+  stroke-width: 8;
+}
+.inactividad__progreso {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+.inactividad__tiempo {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.inactividad__texto {
+  max-width: 22rem;
+  color: var(--label-2);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+.inactividad__texto strong { color: var(--label); }

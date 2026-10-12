@@ -46,7 +46,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Flota',
     items: [
-      { key: 'placas', label: 'Placas', clasico: 'flota/placas', icon: Truck, permissions: ver('placas') },
+      { key: 'placas', label: 'Placas', to: '/placas', icon: Truck, permissions: ver('placas') },
       { key: 'disponibilidad', label: 'Disponibilidad', clasico: 'flota/disponibilidad', icon: Gauge, permissions: ver('disponibilidad') },
       { key: 'ubicacion', label: 'Ubicación GPS', clasico: 'flota/ubicacion', icon: MapPin, permissions: ver('gps') },
       { key: 'documentos', label: 'Documentos', clasico: 'flota/documentos', icon: FileText, permissions: ver('docs_flota') },
