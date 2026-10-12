@@ -114,6 +114,7 @@ module.exports = function globalRBAC(req, res, next) {
     
     // ALMACEN & CONFIGURACION
     else if (path.startsWith('/perfil')) return next();
+    else if (path === '/auth/logout') return next(); // cerrar la propia sesión: cualquier usuario con sesión
     else if (path.startsWith('/almacen/almacenes-lista') || path.startsWith('/almacen/almacenes')) {
         mod = (req.method === 'GET') ? ['inv', 'ent_inv', 'sal_inv', 'kardex', 'cfg_almacen', 'almacenes'] : ['cfg_almacen', 'almacenes', 'inv'];
     }

@@ -11,7 +11,10 @@
     "cap:build": "npx cap sync && npx cap open android",
     "db:validate": "prisma validate && prisma validate --schema prisma/master/schema.prisma",
     "db:estado": "node scripts/prisma_empresas.js estado",
-    "db:deploy": "node scripts/prisma_empresas.js deploy"
+    "db:deploy": "node scripts/prisma_empresas.js deploy",
+    "build": "vite build",
+    "dev:app": "vite",
+    "typecheck": "tsc --noEmit -p ."
   },
   "keywords": [],
   "author": "",
@@ -19,6 +22,8 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1058.0",
     "@aws-sdk/s3-request-presigner": "^3.1058.0",
+    "@tanstack/react-query": "5.104.1",
+    "@vitejs/plugin-react": "6.1.2",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
     "compression": "^1.8.1",
@@ -29,16 +34,27 @@
     "express-rate-limit": "^8.3.2",
     "helmet": "8.1.0",
     "jsonwebtoken": "^9.0.3",
+    "lucide-react": "1.55.0",
+    "motion": "14.1.0",
     "multer": "^2.1.1",
     "mysql2": "^3.18.2",
     "nodemailer": "^8.0.5",
+    "qrcode": "1.5.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "7.18.4",
+    "vite": "8.3.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@capacitor/android": "^8.3.0",
     "@capacitor/cli": "^8.3.0",
     "@capacitor/core": "^8.3.0",
-    "prisma": "6.19.3"
+    "@types/qrcode": "1.5.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "prisma": "6.19.3",
+    "typescript": "6.0.2"
   },
   "prisma": {
     "schema": "prisma/schema"

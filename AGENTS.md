@@ -55,6 +55,16 @@ Esquema por módulo en `prisma/schema/<modulo>.prisma` (modelos en singular con 
 
 Nunca uses `prisma db push`: todo cambio de esquema va en una **migración** (`prisma/schema/migrations/`), versionada en git y aplicada en cada base de empresa. Mientras conviva la versión antigua, las migraciones solo **agregan** (columnas, tablas, índices); borrar o renombrar espera a que ninguna pantalla antigua lo use. Respaldo de cada base antes de aplicar.
 
+## Comandos
+
+```bash
+npm start            # versión actual + /app (si está compilada) en :3000
+npm run dev:app      # app nueva con recarga en :5173 (usa la API de :3000)
+npm run build        # compila la app nueva en dist/app (Coolify lo corre al desplegar)
+npm run typecheck    # revisa los tipos de src/
+npm run db:estado    # migraciones pendientes por empresa
+```
+
 ## Despliegue
 
 Coolify (Docker). Variables marcadas como *Runtime only*: `DATABASE_URL`/`DB_*`, `JWT_SECRET`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `WIALON_TOKEN`, credenciales de S3.

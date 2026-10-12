@@ -1,0 +1,65 @@
+/* Bienvenida tras iniciar sesión (ver WelcomeTransition.tsx) */
+
+.welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  cursor: pointer;
+}
+.welcome__backdrop {
+  position: absolute;
+  inset: 0;
+}
+
+.welcome__card {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  transform-origin: 50% 50%;
+  background: var(--glass-thick);
+  box-shadow: var(--glass-shadow);
+  will-change: transform, opacity;
+}
+/* La placa blanca del ícono aparece mientras la tarjeta se encoge (los logos traen sus colores) */
+.welcome__tile {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--surface);
+}
+.welcome__logo {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  flex-shrink: 0;
+  pointer-events: none;
+  user-select: none;
+}
+/* Trazo del borde, del tamaño final del ícono */
+.welcome__ring {
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  pointer-events: none;
+}
+/* Brillo especular que cruza el logo */
+.welcome__sheen {
+  position: absolute;
+  inset: -20% auto -20% 0;
+  width: 55%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  pointer-events: none;
+}
+
+.welcome__hello {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--label);
+}

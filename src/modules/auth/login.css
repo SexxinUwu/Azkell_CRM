@@ -1,0 +1,244 @@
+/* Inicio de sesión — tarjeta Liquid Glass sobre un fondo cálido y quieto.
+   El fondo no se anima (sin movimiento constante a pantalla completa: skill apple-design §14). */
+
+/* Fondo compartido con la bienvenida (WelcomeTransition): el cambio de pantalla no se nota */
+.login-backdrop {
+  background:
+    radial-gradient(70rem 36rem at 50% -12%, rgba(255, 138, 61, 0.16), transparent 70%),
+    var(--bg);
+  overflow: hidden;
+  isolation: isolate;
+}
+.login__glow {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+/* Dos luces suaves: le dan al vidrio algo que difuminar */
+.login__glow--a {
+  width: 36rem;
+  height: 36rem;
+  top: -14rem;
+  left: 50%;
+  translate: -78% 0;
+  background: radial-gradient(circle, rgba(255, 138, 61, 0.5), rgba(255, 138, 61, 0) 68%);
+}
+.login__glow--b {
+  width: 30rem;
+  height: 30rem;
+  bottom: -12rem;
+  right: -8rem;
+  background: radial-gradient(circle, rgba(245, 99, 0, 0.28), rgba(245, 99, 0, 0) 70%);
+}
+
+.login {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--s-8) + var(--safe-top)) var(--s-4) calc(var(--s-5) + var(--safe-bottom));
+}
+
+.login__card {
+  margin-top: auto; /* con el margen automático del pie queda centrada ópticamente */
+  width: 100%;
+  max-width: 25.5rem;
+  border-radius: 2rem;
+  background: var(--glass-thick);
+  backdrop-filter: var(--glass-blur-thick);
+  -webkit-backdrop-filter: var(--glass-blur-thick);
+}
+.login__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--s-8) var(--s-6) var(--s-6);
+}
+@media (max-width: 420px) {
+  .login__content { padding: var(--s-6) var(--s-5) var(--s-5); }
+}
+
+.login__heading { margin-top: var(--s-5); display: flex; flex-direction: column; align-items: center; gap: var(--s-1); }
+.login__subtitle { color: var(--label-2); font-size: 1rem; }
+.login__link { color: var(--accent-ink); font-weight: 500; padding: 0.15rem 0.2rem; border-radius: var(--r-xs); }
+.login__link:hover { background: var(--accent-tint); }
+
+.login__form {
+  width: 100%;
+  margin-top: var(--s-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  text-align: left;
+}
+
+/* ─── Campos con etiqueta flotante (como el ingreso de Apple) ─── */
+.login__fields {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: 0 0 0 1px var(--separator-strong), 0 1px 2px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  transition: box-shadow 150ms ease;
+}
+.login__fields:focus-within { box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 5px var(--accent-ring); }
+.login__fields--error,
+.login__fields--error:focus-within { box-shadow: 0 0 0 1.5px var(--red), 0 0 0 5px var(--red-tint); }
+
+.float { position: relative; }
+.float + .float:not([hidden]),
+.float[hidden] + .float { box-shadow: inset 0 1px 0 var(--separator); }
+.float[hidden] + .float { box-shadow: none; }
+.float input {
+  display: block;
+  width: 100%;
+  height: 3.75rem;
+  padding: 1.35rem var(--s-5) 0.35rem;
+  border: none;
+  background: transparent;
+  font-size: 1.0625rem;
+  outline: none;
+}
+.float--password input { padding-right: 3.5rem; }
+.float label {
+  position: absolute;
+  left: var(--s-5);
+  top: 0;
+  transform: translateY(1.17rem);
+  transform-origin: left top;
+  color: var(--label-2);
+  font-size: 1.0625rem;
+  line-height: 1.4;
+  pointer-events: none;
+  transition: transform 200ms var(--ease-out), color 150ms ease;
+}
+/* Al enfocar o escribir, la etiqueta sube y se achica */
+.float input:focus + label,
+.float input:not(:placeholder-shown) + label,
+.float input:-webkit-autofill + label {
+  transform: translateY(0.5rem) scale(0.76);
+}
+.float input:focus + label { color: var(--accent-ink); }
+/* Autocompletado del navegador: sin el fondo amarillo */
+.float input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 100px var(--surface) inset;
+  -webkit-text-fill-color: var(--label);
+}
+.float__eye {
+  position: absolute;
+  right: var(--s-2);
+  top: 50%;
+  translate: 0 -50%;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  color: var(--label-2);
+  transition: background-color 150ms ease, color 150ms ease, transform 100ms ease-out;
+}
+.float__eye:hover { background: var(--fill-subtle); color: var(--label); }
+.float__eye:active { transform: scale(0.9); }
+.float__eye[aria-pressed='true'] { color: var(--accent-ink); }
+
+.login__message {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  overflow: hidden;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--amber-ink);
+  padding-left: var(--s-1);
+}
+.login__message svg { flex-shrink: 0; }
+.login__message--error { color: var(--red-ink); }
+
+/* ─── Recuérdame ─── */
+.login__remember {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 var(--s-1);
+}
+.login__remember label { flex: 1; display: flex; flex-direction: column; cursor: pointer; min-width: 0; }
+.login__remember-title { font-size: 0.9375rem; font-weight: 600; }
+.login__remember-hint { font-size: 0.8125rem; color: var(--label-2); }
+
+/* ─── Botón principal ─── */
+.login__submit {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 3.375rem;
+  border-radius: var(--r-full);
+  background: var(--ink);
+  color: var(--label-inverse);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  transition: transform 100ms ease-out, background-color 150ms ease, opacity 150ms ease;
+}
+.login__submit:hover:not(:disabled) { background: var(--ink-hover); }
+.login__submit:active:not(:disabled) { transform: scale(var(--press-scale)); }
+.login__submit:disabled { cursor: default; }
+.login__submit:disabled:not(:has(.login__submit-ok)):not(:has(.spinner)) { opacity: 0.35; }
+.login__submit-label { display: inline-flex; align-items: center; gap: var(--s-2); }
+.login__submit-ok { display: grid; place-items: center; }
+.login__submit .spinner { color: #fff; }
+
+.login__help {
+  margin-top: var(--s-5);
+  font-size: 0.8125rem;
+  color: var(--label-2);
+}
+
+/* ─── Cuentas de prueba (solo desarrollo) ─── */
+.login__demo {
+  margin-top: var(--s-5);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.login__demo-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--accent-ink);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+}
+.login__demo-toggle:hover { background: var(--accent-tint); }
+.login__demo-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-2);
+  overflow: hidden;
+  padding-top: var(--s-3);
+}
+.login__chip {
+  height: 2rem;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  box-shadow: var(--shadow-card), 0 0 0 1px var(--separator);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+.login__chip:hover { box-shadow: var(--shadow-card), 0 0 0 1px var(--separator-strong); }
+
+.login__footer {
+  margin-top: auto;
+  padding-top: var(--s-8);
+  font-size: 0.75rem;
+  color: var(--label-3);
+  letter-spacing: 0.02em;
+}

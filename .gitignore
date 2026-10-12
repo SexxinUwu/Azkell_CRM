@@ -3,3 +3,6 @@ node_modules/
 tmpclaude*
 # Cliente Prisma generado de la base maestra
 prisma/master/generated/
+
+# App nueva compilada (se genera en el build de Coolify)
+dist/

@@ -62,13 +62,16 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
 5. Nunca `prisma db push` ni `migrate dev` contra producción.
   - [ ] Quitar los `CREATE TABLE` / `ALTER TABLE` del arranque (75 tablas, 261 `ALTER` en el código)
 - [ ] **Fase 2 — Base técnica**
-  - [ ] 2A. Vite + React + TS; copiar de KINTSUGI `tokens.css`, `base.css`, `motion.ts`, `haptics.ts`, `src/core/ui/`
-  - [ ] 2B. Login, bienvenida y despedida (con ícono de Azkell), sesión compartida con la versión actual, control de inactividad
-  - [ ] 2C. `AppShell`, barra lateral, `TabBar`, `ConnectionBanner`, `navigation.ts` con todos los módulos
+  - [x] 2A. Vite + React + TS en `src/`, publicada en `/app/` (`npm run build` → `dist/app`, servida por `server.js`); núcleo de KINTSUGI copiado (`styles`, `ui`, `lib`, `auth`, `layout`)
+  - [x] 2B. Login, bienvenida y despedida con el logo de cada empresa; sesión compartida con la versión actual (mismas claves `fleet_*`); permisos de la matriz convertidos a nombres en el cliente
+  - [ ] 2B. Control de inactividad (aviso a los 5 min, salida a los 10 min, como en la versión actual)
+  - [x] 2C. `AppShell`, barra lateral, `TabBar`, `navigation.ts` con todos los módulos (los no migrados abren la versión actual con ↗), Inicio y Mi cuenta
   - [ ] `server/core`: empresa por subdominio, `requirePermission`, `HttpError`, `audit`, SSE
   - [ ] Conversión de permisos (`insp.l` → `inspecciones.ver`, etc.) con script sobre `permisos_json`
   - [ ] Capacitor apuntando al build de Vite (Android y TV)
   - [ ] Asistente con Gemini en cadena
+  - [ ] Revocar el token al cerrar sesión (hoy el JWT sigue válido hasta vencer; el servidor no revisa `sesiones_activas`)
+  - [ ] Avisos en vivo (SSE) entre dispositivos: hoy el aviso de conexión solo usa la red del dispositivo
 - [ ] **Fase 3 — Piloto: Flota › Placas**
 - [ ] **Fase 4 — Módulos por grupos** (abajo)
 - [ ] **Fase 5 — Cierre:** borrar `Index.html`, `logica.js`, `Modulos/`, `routes/`; cookies HttpOnly; 2FA

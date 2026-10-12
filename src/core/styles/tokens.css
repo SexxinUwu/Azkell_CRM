@@ -1,0 +1,143 @@
+/* ═══════════════════════════════════════════════════════════════
+   KINTSUGI — Design tokens
+   Modo claro estilo apple.com: blanco, grises, negro y naranja como único acento.
+   Regla: el naranja se usa para marcar (activo, foco, interruptores, marca);
+   las acciones principales son negras. Ver docs/diseno.md.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: light;
+
+  /* ─── Superficies ─── */
+  --bg: #f5f5f7;                 /* fondo de página (gris Apple) */
+  --surface: #ffffff;            /* tarjetas y listas */
+  --surface-sunken: #fbfbfd;     /* filas alternas, zonas secundarias */
+  --fill: rgba(118, 118, 128, 0.12);   /* campos, controles segmentados */
+  --fill-strong: rgba(118, 118, 128, 0.2);
+  --fill-subtle: rgba(118, 118, 128, 0.06);
+
+  /* ─── Texto ─── */
+  --label: #1d1d1f;              /* principal (casi negro Apple) */
+  --label-2: #6e6e73;            /* secundario — 5.0:1 sobre blanco */
+  --label-3: #86868b;            /* terciario: solo metadatos y texto grande */
+  --label-inverse: #ffffff;
+
+  /* ─── Separadores ─── */
+  --separator: rgba(0, 0, 0, 0.08);
+  --separator-strong: rgba(0, 0, 0, 0.14);
+
+  /* ─── Acento naranja ─── */
+  --accent: #f56300;             /* relleno: marca, activo, interruptores */
+  --accent-hover: #e35b00;
+  --accent-ink: #c2410c;         /* texto naranja sobre blanco — 5.2:1 */
+  --accent-tint: rgba(245, 99, 0, 0.1);
+  --accent-ring: rgba(245, 99, 0, 0.32);
+
+  /* ─── Negro (acciones principales) ─── */
+  --ink: #1d1d1f;
+  --ink-hover: #3a3a3c;
+
+  /* ─── Semánticos (relleno / texto / tinte) ─── */
+  --green: #34c759;  --green-ink: #1a7f37;  --green-tint: rgba(52, 199, 89, 0.14);
+  --amber: #ff9f0a;  --amber-ink: #935400;  --amber-tint: rgba(255, 159, 10, 0.16);
+  --red: #ff3b30;    --red-ink: #d70015;    --red-tint: rgba(255, 59, 48, 0.12);
+  --gray: #aeaeb2;   --gray-ink: #6e6e73;   --gray-tint: rgba(118, 118, 128, 0.12);
+
+  /* ─── Materiales translúcidos ─── */
+  --material-bar: rgba(255, 255, 255, 0.72);     /* barras sobre contenido */
+  --material-sidebar: rgba(242, 242, 245, 0.82); /* más denso: separa regiones */
+  --material-sheet: rgba(255, 255, 255, 0.94);
+  --material-blur: blur(20px) saturate(180%);
+  --scrim: rgba(0, 0, 0, 0.28);
+
+  /* ─── Liquid Glass ───
+     Capa funcional que flota sobre el contenido (pestañas, barra lateral, hojas, botones flotantes).
+     Borde de luz arriba (el material "atrapa" la luz), sombra suave y amplia abajo. */
+  --glass: rgba(255, 255, 255, 0.58);
+  --glass-thick: rgba(255, 255, 255, 0.82);    /* superficies grandes: hojas, barra lateral */
+  --glass-lens: rgba(255, 255, 255, 0.72);     /* selección que se desliza dentro del vidrio */
+  --glass-blur: blur(22px) saturate(190%);
+  --glass-blur-thick: blur(36px) saturate(200%);
+  --glass-rim: inset 0 1px 0.5px rgba(255, 255, 255, 0.95), inset 0 0 0 0.5px rgba(255, 255, 255, 0.6);
+  --glass-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.07);
+  --glass-shadow: var(--glass-rim), var(--glass-edge), 0 8px 24px rgba(0, 0, 0, 0.08), 0 24px 56px -16px rgba(0, 0, 0, 0.16);
+  --glass-shadow-sm: var(--glass-rim), var(--glass-edge), 0 2px 8px rgba(0, 0, 0, 0.06), 0 10px 24px -10px rgba(0, 0, 0, 0.14);
+  /* Brillo especular: más claro arriba, se desvanece hacia abajo */
+  --glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.08) 42%, rgba(255, 255, 255, 0) 60%);
+
+  /* ─── Profundidad ─── */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 12px rgba(0, 0, 0, 0.03);
+  --shadow-raised: 0 2px 6px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(0, 0, 0, 0.06);
+  --shadow-pop: 0 4px 12px rgba(0, 0, 0, 0.06), 0 24px 64px rgba(0, 0, 0, 0.16);
+
+  /* ─── Radios ─── */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 22px;
+  --r-2xl: 28px;
+  --r-full: 999px;
+
+  /* ─── Espaciado (rem: escala con el tamaño de texto del usuario) ─── */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.25rem;
+  --s-6: 1.5rem;
+  --s-8: 2rem;
+  --s-10: 2.5rem;
+  --s-12: 3rem;
+  --s-16: 4rem;
+
+  /* ─── Tipografía ───
+     Fuente del sistema primero (SF en Apple). En Windows, Inter es lo más cercano a SF. */
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+
+  /* ─── Movimiento ─── */
+  --press-scale: 0.97;
+  --ease-out: cubic-bezier(0.25, 1, 0.5, 1);
+
+  /* ─── Layout ─── */
+  --sidebar-w: 16.5rem;
+  --tabbar-h: 3.875rem;   /* pestañas flotantes (cápsula de vidrio) */
+  --tabbar-gap: 0.625rem; /* separación de la cápsula con el borde inferior */
+  --topbar-h: 3.25rem;
+  --content-max: 76rem;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Transparencia reducida: materiales sólidos, sin desenfoque */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --material-bar: #ffffff;
+    --material-sidebar: #f2f2f5;
+    --material-sheet: #ffffff;
+    --material-blur: none;
+    --glass: #ffffff;
+    --glass-thick: #ffffff;
+    --glass-lens: #f2f2f5;
+    --glass-blur: none;
+    --glass-blur-thick: none;
+    --glass-sheen: none;
+  }
+}
+
+/* Más contraste: bordes definidos y texto secundario más oscuro */
+@media (prefers-contrast: more) {
+  :root {
+    --label-2: #3a3a3c;
+    --label-3: #515154;
+    --separator: rgba(0, 0, 0, 0.3);
+    --separator-strong: rgba(0, 0, 0, 0.45);
+    --material-bar: #ffffff;
+    --material-sidebar: #f2f2f5;
+    --accent-ink: #9a3412;
+    --glass: #ffffff;
+    --glass-thick: #ffffff;
+    --glass-edge: 0 0 0 1px rgba(0, 0, 0, 0.45);
+  }
+}

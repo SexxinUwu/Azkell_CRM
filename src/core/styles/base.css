@@ -1,0 +1,173 @@
+/* KINTSUGI — reset, tipografía y utilidades base */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 100%; /* respeta el tamaño de texto del usuario */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.47;
+  letter-spacing: -0.011em;
+  color: var(--label);
+  background: var(--bg);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 100dvh;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+a {
+  color: var(--accent-ink);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+::selection {
+  background: var(--accent-tint);
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+/* ─── Escala tipográfica ───
+   El tracking cambia con el tamaño: negativo en títulos grandes, ~0 en cuerpo,
+   ligeramente positivo en texto pequeño. El interlineado baja al crecer. */
+
+.t-display {
+  font-size: clamp(2.25rem, 1.6rem + 2.4vw, 3.25rem);
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+  font-weight: 700;
+}
+
+.t-title1 {
+  font-size: clamp(1.75rem, 1.5rem + 1vw, 2.125rem);
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+  font-weight: 700;
+}
+
+.t-title2 {
+  font-size: 1.375rem;
+  line-height: 1.2;
+  letter-spacing: -0.016em;
+  font-weight: 600;
+}
+
+.t-title3 {
+  font-size: 1.125rem;
+  line-height: 1.28;
+  letter-spacing: -0.012em;
+  font-weight: 600;
+}
+
+.t-headline {
+  font-size: 1rem;
+  line-height: 1.35;
+  letter-spacing: -0.011em;
+  font-weight: 600;
+}
+
+.t-body {
+  font-size: 1rem;
+  line-height: 1.47;
+}
+
+.t-callout {
+  font-size: 0.9375rem;
+  line-height: 1.42;
+  letter-spacing: -0.006em;
+}
+
+.t-footnote {
+  font-size: 0.8125rem;
+  line-height: 1.38;
+  letter-spacing: 0;
+}
+
+.t-caption {
+  font-size: 0.75rem;
+  line-height: 1.33;
+  letter-spacing: 0.006em;
+}
+
+.t-eyebrow {
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: 0.002em;
+  color: var(--accent-ink);
+}
+
+.t-numeric {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.c-secondary { color: var(--label-2); }
+.c-tertiary { color: var(--label-3); }
+.c-accent { color: var(--accent-ink); }
+.c-danger { color: var(--red-ink); }
+.c-success { color: var(--green-ink); }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Movimiento reducido: sin desplazamientos ni escalas; solo fundidos breves */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+  .pressable:active {
+    transform: none !important;
+  }
+}

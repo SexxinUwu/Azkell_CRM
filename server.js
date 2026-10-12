@@ -464,6 +464,17 @@ app.use((req, res, next) => {
     next();
 });
 
+// ── App nueva (React, compilada por `npm run build` en dist/app) ─────────────
+// Archivos con hash → caché larga; cualquier otra ruta de /app → index.html (rutas del cliente).
+const DIST_APP = path.join(__dirname, 'dist', 'app');
+app.use('/app/assets', express.static(path.join(DIST_APP, 'assets'), { maxAge: '1y', immutable: true, index: false }));
+app.get(/^\/app(\/.*)?$/, (req, res, next) => {
+    const indice = path.join(DIST_APP, 'index.html');
+    if (!fs.existsSync(indice)) return next(); // sin compilar (p. ej. en desarrollo sin build)
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(indice);
+});
+
 
 
 // ── CONFIGURACION ERP ─────────────────────────────────────────────────────────
