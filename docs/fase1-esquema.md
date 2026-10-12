@@ -60,6 +60,8 @@ Casos especiales **aprobados**. El SQL está en [`sql/igualacion-2026-10/`](../s
 - **Respaldo:** las 6 bases (`azkell_master`, `azkell_fleet` y las 4 empresas) en `C:\Users\teffa\Respaldos_Azkell\2026-10-12_1426\`, **restauradas y verificadas** fila por fila en un MySQL 8.4 aislado.
 - **Prueba sobre la copia:** el SQL se aplicó sin errores en segundos. Después: 107 tablas en las 4 empresas, 0 columnas faltantes, tipos idénticos, **0 filas perdidas** (165 462 antes y después).
 - **Quedan a propósito 14 diferencias de valor por defecto** (`''` frente a ninguno, y los de tesorería): cambiarlas alteraría lo que guarda la app actual cuando no envía el campo. No afectan a Prisma.
+- **Verificado con Prisma:** `prisma db pull` de las 4 empresas igualadas da el **mismo esquema** (107 modelos, 36 listas), salvo las diferencias aceptadas de abajo.
+- **Índices duplicados exactos** (mismas columnas que otro índice que ya los cubre, por ejemplo tres índices de `viaje` en Marsisa o `uq_idregistro`, que repite la llave primaria): se quitan. No cambian ningún comportamiento y solo hacían más lentas las escrituras.
 - **Índices:** se agregan los normales que faltan. Dos únicos no se agregan: `tipos_mantenimiento.uq_config` (solo Marsisa) y `flota_disponibilidad.uq_placa_camion` (Marsisa tiene placas repetidas).
 
 ### Errores del sistema actual encontrados y corregidos

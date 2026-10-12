@@ -1,4 +1,4 @@
-## azkell_tenant_marsisa (26 cambios)
+## azkell_tenant_marsisa (33 cambios)
 - + tabla guias_items
 - + tabla guias_remitente
 - + tabla guias_transportista
@@ -14,7 +14,6 @@
 - ~ usuarios.firma_digital: text → longtext
 - ~ usuarios.preferencias_json: text → longtext
 - + índice neumaticos_inspecciones.idx_neu_insp_placa_fecha (placa,fecha_inspeccion)
-- + índice neumaticos_inspecciones.idx_placa_fecha (placa,fecha_inspeccion)
 - + índice neumaticos_inspecciones_det.idx_insp_pos (id_inspeccion,posicion)
 - + índice ot_materiales.idx_estado (estado)
 - + índice reportes_fallas.idx_orden_viaje (orden_viaje)
@@ -25,8 +24,16 @@
 - + índice tesoreria_cuentas.idx_placa_car (placa_carreta)
 - + índice checklist_config_sistemas.idx_unidad_orden (unidad,orden)
 - + índice guias_remision.idx_gre_relacionada (gre_relacionada_id)
+- - índice duplicado api_keys.idx_api_key (api_key); ya lo cubre api_key
+- - índice duplicado fleetrun.uq_idregistro (idRegistro); ya lo cubre PRIMARY
+- - índice duplicado guias_remision.idx_numero_guia (numero_guia); ya lo cubre numero_guia
+- - índice duplicado marsisa_combustible_vales.idx_mcv_viaje (viaje); ya lo cubre idx_viaje
+- - índice duplicado marsisa_ordenes_viaje.idx_mov_viaje (viaje); ya lo cubre uq_viaje
+- - índice duplicado marsisa_ordenes_viaje_rutas.idx_movr_viaje (viaje); ya lo cubre idx_viaje
+- - índice duplicado oc_approval_tokens.idx_token (token); ya lo cubre token
+- - índice duplicado ordenes_compra.idx_oc_codigo (codigo); ya lo cubre codigo
 
-## azkell_tenant_rosymarperu (62 cambios)
+## azkell_tenant_rosymarperu (70 cambios)
 - + tabla guias_items
 - + tabla guias_remitente
 - + tabla guias_transportista
@@ -89,8 +96,16 @@
 - + índice tesoreria_cuentas.idx_placa_car (placa_carreta)
 - + índice checklist_config_sistemas.idx_unidad_orden (unidad,orden)
 - + índice guias_remision.idx_gre_relacionada (gre_relacionada_id)
+- - índice duplicado api_keys.idx_api_key (api_key); ya lo cubre api_key
+- - índice duplicado guias_remision.idx_numero_guia (numero_guia); ya lo cubre numero_guia
+- - índice duplicado neumaticos_inspecciones.idx_placa_fecha (placa,fecha_inspeccion); ya lo cubre idx_neu_insp_placa_fecha
+- - índice duplicado neumaticos_inspecciones_det.idx_neu_det_insp (id_inspeccion); ya lo cubre idx_insp
+- - índice duplicado oc_approval_tokens.idx_token (token); ya lo cubre token
+- - índice duplicado ordenes_compra.idx_oc_codigo (codigo); ya lo cubre codigo
+- - índice duplicado placas.idx_placa_lookup (placa); ya lo cubre PRIMARY
+- - índice duplicado placas.idx_placas_placa (placa); ya lo cubre PRIMARY
 
-## azkell_tenant_yoguitransport (54 cambios)
+## azkell_tenant_yoguitransport (57 cambios)
 - ~ checklist_config_sistemas.titulo: varchar(120) → varchar(150)
 - ~ checklist_config_sistemas.icono: varchar(60) → varchar(100)
 - ~ checklist_config_sistemas.updated_at: se actualiza sola al modificar
@@ -141,12 +156,15 @@
 - + índice ot_materiales.idx_ticket_ot (ticket_ot)
 - + índice placa_auditoria.idx_fecha (fecha)
 - + índice neumaticos_inspecciones.idx_neu_insp_placa_fecha (placa,fecha_inspeccion)
-- + índice neumaticos_inspecciones.idx_placa_fecha (placa,fecha_inspeccion)
 - + índice neumaticos_inspecciones_det.idx_insp_pos (id_inspeccion,posicion)
 - + índice checklist_config_sistemas.idx_unidad_orden (unidad,orden)
 - + índice guias_remision.idx_gre_relacionada (gre_relacionada_id)
+- - índice duplicado api_keys.idx_api_key (api_key); ya lo cubre api_key
+- - índice duplicado guias_remision.idx_numero_guia (numero_guia); ya lo cubre numero_guia
+- - índice duplicado oc_approval_tokens.idx_token (token); ya lo cubre token
+- - índice duplicado ordenes_compra.idx_oc_codigo (codigo); ya lo cubre codigo
 
-## azkell_tenant_trahesa (66 cambios)
+## azkell_tenant_trahesa (69 cambios)
 - + tabla guias_items
 - + tabla guias_remitente
 - + tabla guias_transportista
@@ -211,8 +229,11 @@
 - + índice ot_materiales.idx_ticket_ot (ticket_ot)
 - + índice placa_auditoria.idx_fecha (fecha)
 - + índice neumaticos_inspecciones.idx_neu_insp_placa_fecha (placa,fecha_inspeccion)
-- + índice neumaticos_inspecciones.idx_placa_fecha (placa,fecha_inspeccion)
 - + índice neumaticos_inspecciones_det.idx_insp_pos (id_inspeccion,posicion)
+- - índice duplicado api_keys.idx_api_key (api_key); ya lo cubre api_key
+- - índice duplicado guias_remision.idx_numero_guia (numero_guia); ya lo cubre numero_guia
+- - índice duplicado oc_approval_tokens.idx_token (token); ya lo cubre token
+- - índice duplicado ordenes_compra.idx_oc_codigo (codigo); ya lo cubre codigo
 
 ## Sin resolver (2)
 - índice único tipos_mantenimiento.uq_config (marca,tipo_mp,uts,combustible,modelo) falta en rosymarperu, yoguitransport, trahesa: no se agrega (cambiaría lo que la app acepta)

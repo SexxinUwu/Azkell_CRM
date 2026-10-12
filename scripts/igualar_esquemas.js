@@ -203,6 +203,7 @@ function definicion(tipo, c, { nulo, onUpdate }) {
     idx[d] = r;
   }
   const vistos = new Set();
+  const propagados = {}; // tabla|columnas → nombre que se agregó a otras empresas
   for (const d0 of bases) for (const ix of idx[d0]) {
     const clave = `${ix.t}.${ix.i}`;
     if (vistos.has(clave) || ix.i === 'PRIMARY' || (QUITAR[ix.t] || []).some(c => ix.cs.split(',').includes(c))) continue;
@@ -220,8 +221,35 @@ function definicion(tipo, c, { nulo, onUpdate }) {
       // Ya lo tiene (o uno con las mismas columnas con otro nombre), o la tabla se crea completa
       if (tieneIdx(d)) continue;
       const colsIdx = ix.cs.split(',').map(q).join(', ');
+      propagados[`${ix.t}|${ix.cs}`] = ix.i;
+      idx[d].push({ t: ix.t, i: ix.i, nu: ix.nu, cs: ix.cs }); // para no agregarlo otra vez con otro nombre
       sql[d].push(`ALTER TABLE ${q(ix.t)} ADD ${unico ? 'UNIQUE ' : ''}INDEX ${q(ix.i)} (${colsIdx});`);
       cambios[d].push(`+ índice ${unico ? 'único ' : ''}${clave} (${ix.cs})`);
+    }
+  }
+  // ── Índices duplicados exactos (mismas columnas que otro índice que ya los cubre): se quitan ──
+  // Se conserva PRIMARY, luego los únicos, luego el nombre que más empresas comparten.
+  const nombreComun = (t, cs) => {
+    const cuenta = {};
+    for (const d of bases) for (const x of idx[d]) if (x.t === t && x.cs === cs) cuenta[x.i] = (cuenta[x.i] || 0) + 1;
+    // El nombre que se propagó a otras empresas manda: así todas quedan con el mismo
+    if (propagados[`${t}|${cs}`]) cuenta[propagados[`${t}|${cs}`]] = 1000;
+    return cuenta;
+  };
+  for (const d of bases) {
+    const grupos = {};
+    for (const x of idx[d]) (grupos[`${x.t}|${x.cs}`] ||= []).push(x);
+    for (const g of Object.values(grupos)) {
+      if (g.length < 2) continue;
+      const cuenta = nombreComun(g[0].t, g[0].cs);
+      const rango = x => (x.i === 'PRIMARY' ? 3 : !x.nu ? 2 : 1) * 100 + (cuenta[x.i] || 0);
+      const [queda, ...sobran] = [...g].sort((a, b) => rango(b) - rango(a));
+      for (const x of sobran) {
+        if (x.i === 'PRIMARY') continue;
+        if (!x.nu && queda.nu) continue; // nunca quitar un único si lo que queda no lo es
+        sql[d].push(`ALTER TABLE ${q(x.t)} DROP INDEX ${q(x.i)};`);
+        cambios[d].push(`- índice duplicado ${x.t}.${x.i} (${x.cs}); ya lo cubre ${queda.i}`);
+      }
     }
   }
   await conn.end();

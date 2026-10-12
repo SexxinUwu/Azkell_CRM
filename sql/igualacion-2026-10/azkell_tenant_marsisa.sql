@@ -1,4 +1,4 @@
--- Igualación de esquema · azkell_tenant_marsisa · generado 2026-10-12T19:43:30.940Z
+-- Igualación de esquema · azkell_tenant_marsisa · generado 2026-10-12T19:52:16.115Z
 -- Revisar antes de ejecutar. Requiere respaldo previo.
 USE `azkell_tenant_marsisa`;
 SET FOREIGN_KEY_CHECKS=0;
@@ -149,7 +149,6 @@ ALTER TABLE `usuarios` MODIFY COLUMN `banner_url` text CHARACTER SET utf8mb4 COL
 ALTER TABLE `usuarios` MODIFY COLUMN `firma_digital` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL;
 ALTER TABLE `usuarios` MODIFY COLUMN `preferencias_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL;
 ALTER TABLE `neumaticos_inspecciones` ADD INDEX `idx_neu_insp_placa_fecha` (`placa`, `fecha_inspeccion`);
-ALTER TABLE `neumaticos_inspecciones` ADD INDEX `idx_placa_fecha` (`placa`, `fecha_inspeccion`);
 ALTER TABLE `neumaticos_inspecciones_det` ADD INDEX `idx_insp_pos` (`id_inspeccion`, `posicion`);
 ALTER TABLE `ot_materiales` ADD INDEX `idx_estado` (`estado`);
 ALTER TABLE `reportes_fallas` ADD INDEX `idx_orden_viaje` (`orden_viaje`);
@@ -160,4 +159,12 @@ ALTER TABLE `tesoreria_cuentas` ADD INDEX `idx_placa_cam` (`placa_camion`);
 ALTER TABLE `tesoreria_cuentas` ADD INDEX `idx_placa_car` (`placa_carreta`);
 ALTER TABLE `checklist_config_sistemas` ADD INDEX `idx_unidad_orden` (`unidad`, `orden`);
 ALTER TABLE `guias_remision` ADD INDEX `idx_gre_relacionada` (`gre_relacionada_id`);
+ALTER TABLE `api_keys` DROP INDEX `idx_api_key`;
+ALTER TABLE `fleetrun` DROP INDEX `uq_idregistro`;
+ALTER TABLE `guias_remision` DROP INDEX `idx_numero_guia`;
+ALTER TABLE `marsisa_combustible_vales` DROP INDEX `idx_mcv_viaje`;
+ALTER TABLE `marsisa_ordenes_viaje` DROP INDEX `idx_mov_viaje`;
+ALTER TABLE `marsisa_ordenes_viaje_rutas` DROP INDEX `idx_movr_viaje`;
+ALTER TABLE `oc_approval_tokens` DROP INDEX `idx_token`;
+ALTER TABLE `ordenes_compra` DROP INDEX `idx_oc_codigo`;
 SET FOREIGN_KEY_CHECKS=1;

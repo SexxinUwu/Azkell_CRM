@@ -1,4 +1,4 @@
--- Igualación de esquema · azkell_tenant_rosymarperu · generado 2026-10-12T19:43:30.942Z
+-- Igualación de esquema · azkell_tenant_rosymarperu · generado 2026-10-12T19:52:16.116Z
 -- Revisar antes de ejecutar. Requiere respaldo previo.
 USE `azkell_tenant_rosymarperu`;
 SET FOREIGN_KEY_CHECKS=0;
@@ -345,4 +345,12 @@ ALTER TABLE `tesoreria_cuentas` ADD INDEX `idx_placa_cam` (`placa_camion`);
 ALTER TABLE `tesoreria_cuentas` ADD INDEX `idx_placa_car` (`placa_carreta`);
 ALTER TABLE `checklist_config_sistemas` ADD INDEX `idx_unidad_orden` (`unidad`, `orden`);
 ALTER TABLE `guias_remision` ADD INDEX `idx_gre_relacionada` (`gre_relacionada_id`);
+ALTER TABLE `api_keys` DROP INDEX `idx_api_key`;
+ALTER TABLE `guias_remision` DROP INDEX `idx_numero_guia`;
+ALTER TABLE `neumaticos_inspecciones` DROP INDEX `idx_placa_fecha`;
+ALTER TABLE `neumaticos_inspecciones_det` DROP INDEX `idx_neu_det_insp`;
+ALTER TABLE `oc_approval_tokens` DROP INDEX `idx_token`;
+ALTER TABLE `ordenes_compra` DROP INDEX `idx_oc_codigo`;
+ALTER TABLE `placas` DROP INDEX `idx_placa_lookup`;
+ALTER TABLE `placas` DROP INDEX `idx_placas_placa`;
 SET FOREIGN_KEY_CHECKS=1;

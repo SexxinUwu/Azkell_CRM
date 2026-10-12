@@ -1,4 +1,4 @@
--- Igualación de esquema · azkell_tenant_yoguitransport · generado 2026-10-12T19:43:30.942Z
+-- Igualación de esquema · azkell_tenant_yoguitransport · generado 2026-10-12T19:52:16.117Z
 -- Revisar antes de ejecutar. Requiere respaldo previo.
 USE `azkell_tenant_yoguitransport`;
 SET FOREIGN_KEY_CHECKS=0;
@@ -53,8 +53,11 @@ ALTER TABLE `operaciones_combustible_vales` ADD INDEX `idx_vehiculo_fecha_viaje`
 ALTER TABLE `ot_materiales` ADD INDEX `idx_ticket_ot` (`ticket_ot`);
 ALTER TABLE `placa_auditoria` ADD INDEX `idx_fecha` (`fecha`);
 ALTER TABLE `neumaticos_inspecciones` ADD INDEX `idx_neu_insp_placa_fecha` (`placa`, `fecha_inspeccion`);
-ALTER TABLE `neumaticos_inspecciones` ADD INDEX `idx_placa_fecha` (`placa`, `fecha_inspeccion`);
 ALTER TABLE `neumaticos_inspecciones_det` ADD INDEX `idx_insp_pos` (`id_inspeccion`, `posicion`);
 ALTER TABLE `checklist_config_sistemas` ADD INDEX `idx_unidad_orden` (`unidad`, `orden`);
 ALTER TABLE `guias_remision` ADD INDEX `idx_gre_relacionada` (`gre_relacionada_id`);
+ALTER TABLE `api_keys` DROP INDEX `idx_api_key`;
+ALTER TABLE `guias_remision` DROP INDEX `idx_numero_guia`;
+ALTER TABLE `oc_approval_tokens` DROP INDEX `idx_token`;
+ALTER TABLE `ordenes_compra` DROP INDEX `idx_oc_codigo`;
 SET FOREIGN_KEY_CHECKS=1;
