@@ -105,7 +105,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 ### C. Mantenimiento
 - [ ] mantenimiento/dashboard
 - [ ] mantenimiento/ordenes · mantenimiento/trabajos-ot · mantenimiento/reportes-ot
-- [ ] mantenimiento/inspecciones *(parte 1 en /app: estado de la flota, historial y ficha; falta registrar/editar/PDF)*
+- [ ] mantenimiento/inspecciones *(en /app: estado de la flota, historial, ficha y registrar; falta editar/PDF/importar)*
 - [ ] mantenimiento/checklist
 - [ ] mantenimiento/planificacion · mantenimiento/configuracion-mp · mantenimiento/tipos-mp · mantenimiento/kits-mp
 - [ ] mantenimiento/backlog-taller

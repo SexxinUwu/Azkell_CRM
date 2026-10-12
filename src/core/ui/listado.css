@@ -210,3 +210,18 @@
 .importar__tag--revisar { background: var(--red-tint); color: var(--red-ink); }
 .importar--listo { align-items: center; text-align: center; padding: var(--s-4) 0; }
 .importar__check { width: 72px; height: 72px; }
+
+/* Vista previa de la placa en formularios (Placas, Inspecciones) */
+.placa-form__preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-5) var(--s-4);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(120% 90% at 50% 0%, var(--accent-tint), transparent 70%),
+    var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--separator);
+}
+.placa-form__preview-texto { font-size: 0.9375rem; font-weight: 600; color: var(--label-2); }

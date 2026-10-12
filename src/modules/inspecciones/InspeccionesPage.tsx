@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight, ClipboardCheck, Disc3, SearchX, Wrench } from 'lucide-react';
+import { ArrowUpRight, ClipboardCheck, Disc3, Plus, SearchX, Wrench } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../core/auth/AuthProvider';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -32,6 +34,8 @@ export function InspeccionesPage() {
   const neu = useInspeccionesNeumaticos();
   const placasQ = usePlacas();
   const reduce = useReducedMotion();
+  const navigate = useNavigate();
+  const { can } = useAuth();
   const [vista, setVista] = useState<Vista>('flota');
   const [busqueda, setBusqueda] = useState('');
   const [clase, setClase] = useState<Clase>('todas');
@@ -87,9 +91,10 @@ export function InspeccionesPage() {
         title="Inspecciones"
         subtitle={cargando ? 'Cargando…' : `${total} unidades en operación · ${(insp.data ?? []).length} inspecciones registradas`}
         actions={
-          <Button variant="secondary" icon={<ArrowUpRight size={16} />} onClick={() => abrirClasico('mantenimiento/inspecciones')}>
-            Registrar en la versión actual
-          </Button>
+          <>
+            <Button variant="secondary" icon={<ArrowUpRight size={16} />} onClick={() => abrirClasico('mantenimiento/inspecciones')}>Versión actual</Button>
+            {can('insp.crear') && <Button variant="primary" icon={<Plus size={16} />} onClick={() => navigate('/inspecciones/nueva')}>Nueva inspección</Button>}
+          </>
         }
       />
 
