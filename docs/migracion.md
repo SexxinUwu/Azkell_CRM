@@ -79,6 +79,7 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
   - [x] Importar desde Excel (con revisión previa) y eliminar (desde la ficha o varias a la vez)
   - [ ] Endpoint propio `/api/v2/placas` con Prisma
 - [ ] **Fase 4 — Módulos por grupos** (abajo)
+  - [x] Conductores (2026-10-12). Corregido: la foto nunca se guardaba (columna TEXT) y rbac dejaba borrar/importar conductores y cambiar métricas sin permiso
 - [ ] **Fase 5 — Cierre:** borrar `Index.html`, `logica.js`, `Modulos/`, `routes/`; cookies HttpOnly; 2FA
 
 ## Catálogo de pantallas (93)
@@ -86,7 +87,7 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
 Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplicado a revisar antes de migrar.
 
 ### A. Catálogos
-- [ ] directorio/conductores
+- [x] directorio/conductores *(en /app: consulta, crear/editar con RENIEC y foto, importar, eliminar)*
 - [ ] directorio/clientes
 - [ ] preferencias/situaciones
 - [ ] almacen/familias · almacen/marcas · almacen/sistemas · almacen/unidades

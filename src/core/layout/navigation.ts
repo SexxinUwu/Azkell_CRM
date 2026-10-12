@@ -97,7 +97,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Directorio',
     items: [
-      { key: 'conductores', label: 'Conductores', clasico: 'directorio/conductores', icon: IdCard, permissions: ver('cond') },
+      { key: 'conductores', label: 'Conductores', to: '/conductores', icon: IdCard, permissions: ver('cond') },
       { key: 'clientes', label: 'Clientes', clasico: 'directorio/clientes', icon: Users, permissions: ver('clientes') },
     ],
   },

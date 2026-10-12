@@ -12,8 +12,11 @@ module.exports = function globalRBAC(req, res, next) {
         '/guias-remision/pdf-apisunat', '/guias-remision/pdf',
         '/whatsapp/qr', '/approvals/oc'
     ];
+    // Listas de consulta: exentas solo para leer. Borrar, importar o modificar exige el permiso del módulo
+    // (antes, DELETE /conductores/:id o PUT /config-metrica/:placa pasaban sin permiso).
+    const soloLectura = new Set(['/conductores', '/conductores-lista', '/placas-lista', '/config-metrica', '/clientes-placas', '/marcas-placas', '/catalogos_taller']);
     if (
-        ignoredPaths.some(ip => path === ip || path.startsWith(ip)) || 
+        ignoredPaths.some(ip => (path === ip || path.startsWith(ip)) && (!soloLectura.has(ip) || req.method === 'GET')) || 
         path.startsWith('/whatsapp/') ||
         path.startsWith('/approvals/') ||
         path.endsWith('/presign-read') || 
@@ -172,7 +175,8 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/tesoreria')) mod = ['tesoreria', 'tes_motivos', 'liquidaciones_gastos', 'cond', 'conductores'];
     else if (path.startsWith('/inspecciones') || path.startsWith('/mantenimiento/inspecciones')) mod = ['insp'];
     else if (path.startsWith('/planificacion')) mod = ['plan'];
-    else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica')) mod = ['cfg_mant'];
+    else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento')) mod = ['cfg_mant'];
+    else if (path.startsWith('/config-metrica')) mod = ['cfg_metrica', 'cfg_mant'];
     else if (path.startsWith('/backlog') || path.startsWith('/ot-backlog')) mod = ['ot', 'status_rampa'];
     // Legacy & API Endpoints
     else if (path.startsWith('/placas') || path.startsWith('/placa') || path.toLowerCase().includes('placa')) mod = ['placas', 'fleet'];

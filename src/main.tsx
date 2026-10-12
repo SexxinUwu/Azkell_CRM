@@ -6,6 +6,7 @@ import { MotionConfig } from 'motion/react';
 import './core/styles/tokens.css';
 import './core/styles/base.css';
 import './core/ui/ui.css';
+import './core/ui/listado.css';
 import { AuthProvider } from './core/auth/AuthProvider';
 import { ToastProvider } from './core/ui/Toast';
 import { ApiError } from './core/api/client';

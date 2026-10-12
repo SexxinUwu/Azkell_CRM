@@ -179,6 +179,6 @@ function isActive(item: NavItem, pathname: string) {
 }
 
 function shortLabel(item: NavItem) {
-  const short: Record<string, string> = { inicio: 'Inicio', placas: 'Placas' };
+  const short: Record<string, string> = { inicio: 'Inicio', placas: 'Placas', conductores: 'Conductores' };
   return short[item.key] ?? item.label;
 }

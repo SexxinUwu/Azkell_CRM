@@ -1,0 +1,200 @@
+import { useMemo, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { useQueryClient } from '@tanstack/react-query';
+import { FileSpreadsheet, IdCard, MessageCircle, Phone, Plus, SearchX } from 'lucide-react';
+import { Button, PageLoader } from '../../core/ui/Button';
+import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
+import { SearchField } from '../../core/ui/Field';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { ToggleChips } from '../../core/ui/Chips';
+import { ConfirmSheet } from '../../core/ui/Sheet';
+import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
+import { useToast } from '../../core/ui/Toast';
+import { errorMessage } from '../../core/api/client';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { spring } from '../../core/lib/motion';
+import { haptic } from '../../core/lib/haptics';
+import { coincide, eliminarConductor, useConductores, whatsapp, type Conductor } from './api';
+import { ConductorFicha } from './ConductorFicha';
+import { ConductorFormulario } from './ConductorFormulario';
+import { ImportarConductores } from './ImportarConductores';
+import { FotoConductor } from './FotoConductor';
+import './conductores.css';
+
+type FiltroEstado = 'todos' | 'activos' | 'inactivos';
+const activo = (c: Conductor) => c.estado.toLowerCase() === 'activo';
+
+// Directorio › Conductores: consulta, alta, edición, importación y eliminación.
+export function ConductoresPage() {
+  const { data, isLoading, isError, error } = useConductores();
+  const { can } = useAuth();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const reduce = useReducedMotion();
+  const [busqueda, setBusqueda] = useState('');
+  const [estado, setEstado] = useState<FiltroEstado>('todos');
+  const [empresas, setEmpresas] = useState<string[]>([]);
+  const [abierto, setAbierto] = useState<Conductor | null>(null);
+  const [formulario, setFormulario] = useState<{ conductor: Conductor | null } | null>(null);
+  const [importando, setImportando] = useState(false);
+  const [porEliminar, setPorEliminar] = useState<Conductor | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+
+  const puedeCrear = can('cond.crear');
+  const puedeEditar = can('cond.editar', 'cond.crear'); // la versión actual exige "crear" para guardar
+  const puedeEliminar = can('cond.eliminar');
+
+  const conductores = data ?? [];
+  const resumen = useMemo(() => ({
+    activos: conductores.filter(activo).length,
+    inactivos: conductores.filter(c => !activo(c)).length,
+    conLicencia: conductores.filter(c => c.licencia).length,
+    sinDni: conductores.filter(c => !c.dni).length,
+  }), [conductores]);
+  // Empresas más frecuentes como filtro rápido
+  const empresasFrecuentes = useMemo(() => {
+    const cuenta = new Map<string, number>();
+    conductores.forEach(c => c.empresa && cuenta.set(c.empresa, (cuenta.get(c.empresa) ?? 0) + 1));
+    return [...cuenta.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([e]) => e);
+  }, [conductores]);
+
+  const visibles = useMemo(() => conductores.filter(c =>
+    (estado === 'todos' || (estado === 'activos' ? activo(c) : !activo(c)))
+    && (!empresas.length || empresas.includes(c.empresa))
+    && coincide(c, busqueda),
+  ), [conductores, estado, empresas, busqueda]);
+  const hayFiltros = !!busqueda || estado !== 'todos' || empresas.length > 0;
+
+  async function eliminar() {
+    if (!porEliminar) return;
+    setEliminando(true);
+    try {
+      await eliminarConductor(porEliminar.id);
+      toast(`${porEliminar.nombre} eliminado del directorio`);
+      haptic('success');
+      await qc.invalidateQueries({ queryKey: ['conductores'] });
+      setPorEliminar(null);
+      setAbierto(null);
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+      haptic('warning');
+    } finally {
+      setEliminando(false);
+    }
+  }
+
+  return (
+    <Page>
+      <PageHeader
+        eyebrow="Directorio"
+        title="Conductores"
+        subtitle={isLoading ? 'Cargando…' : `${conductores.length} personas · ${resumen.activos} activas`}
+        actions={puedeCrear ? (
+          <>
+            <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => setImportando(true)}>Importar</Button>
+            <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ conductor: null })}>Nuevo conductor</Button>
+          </>
+        ) : undefined}
+      />
+
+      {isLoading ? <PageLoader /> : isError ? <Notice tone="error">{errorMessage(error)}</Notice> : (
+        <>
+          <div className="placas-resumen">
+            {[
+              { label: 'Activos', value: resumen.activos, tone: 'green' },
+              { label: 'Inactivos', value: resumen.inactivos, tone: 'gray' },
+              { label: 'Con licencia', value: resumen.conLicencia, tone: 'accent' },
+              { label: 'Sin DNI', value: resumen.sinDni, tone: resumen.sinDni ? 'amber' : 'gray' },
+            ].map((k, i) => (
+              <motion.div key={k.label} className={`placas-kpi placas-kpi--${k.tone}`}
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: reduce ? 0 : 0.05 * i }}>
+                <AnimatedNumber value={k.value} className="placas-kpi__valor t-numeric" />
+                <span className="placas-kpi__label">{k.label}</span>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="toolbar placas-toolbar">
+            <div className="placas-toolbar__buscar">
+              <SearchField value={busqueda} onChange={setBusqueda} placeholder="Nombre, DNI, licencia, empresa o teléfono" />
+            </div>
+            <SegmentedControl<FiltroEstado> label="Estado" value={estado} onChange={setEstado}
+              options={[{ value: 'todos', label: 'Todos' }, { value: 'activos', label: 'Activos' }, { value: 'inactivos', label: 'Inactivos' }]} />
+          </div>
+          {empresasFrecuentes.length > 1 && (
+            <div className="placas-tipos">
+              <ToggleChips label="Empresa" value={empresas} onChange={setEmpresas} options={empresasFrecuentes.map(e => ({ value: e, label: e }))} />
+            </div>
+          )}
+
+          <p className="placas-conteo t-footnote c-secondary" aria-live="polite">
+            {visibles.length === conductores.length ? `${conductores.length} personas` : `${visibles.length} de ${conductores.length} personas`}
+            {hayFiltros && <> · <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setEstado('todos'); setEmpresas([]); }}>Quitar filtros</button></>}
+          </p>
+
+          {visibles.length === 0 ? (
+            <EmptyState icon={<SearchX size={22} />} title="No hay conductores con esos filtros">Prueba con otra búsqueda o quita los filtros.</EmptyState>
+          ) : (
+            <motion.ul className="conductores-grid" layout={!reduce}>
+              <AnimatePresence mode="popLayout" initial={!reduce}>
+                {visibles.map((c, i) => {
+                  const wa = whatsapp(c.telefono);
+                  return (
+                    <motion.li key={c.id} layout={!reduce}
+                      initial={{ opacity: 0, y: 14, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
+                      transition={{ ...spring, delay: reduce ? 0 : Math.min(i, 12) * 0.025 }}>
+                      <div className="conductor-card">
+                        <button type="button" className="conductor-card__principal pressable" onClick={() => setAbierto(c)}>
+                          <FotoConductor conductor={c} size={52} />
+                          <div className="conductor-card__texto">
+                            <div className="conductor-card__nombre">{c.nombre || 'Sin nombre'}</div>
+                            <div className="conductor-card__meta">
+                              <IdCard size={13} />
+                              <span>{[c.dni && `DNI ${c.dni}`, c.licencia].filter(Boolean).join(' · ') || 'Sin documentos'}</span>
+                            </div>
+                            <div className="conductor-card__empresa">{c.empresa || 'Sin empresa'}</div>
+                          </div>
+                          {!activo(c) && <span className="placa-estado placa-estado--off">{c.estado}</span>}
+                        </button>
+                        {(c.telefono || wa) && (
+                          <div className="conductor-card__acciones">
+                            {c.telefono && <a className="conductor-accion pressable" href={`tel:${c.telefono.replace(/\s/g, '')}`} aria-label={`Llamar a ${c.nombre}`}><Phone size={16} /></a>}
+                            {wa && <a className="conductor-accion conductor-accion--wa pressable" href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" aria-label={`WhatsApp a ${c.nombre}`}><MessageCircle size={16} /></a>}
+                          </div>
+                        )}
+                      </div>
+                    </motion.li>
+                  );
+                })}
+              </AnimatePresence>
+            </motion.ul>
+          )}
+        </>
+      )}
+
+      <ConductorFicha
+        conductor={abierto}
+        onClose={() => setAbierto(null)}
+        onEditar={puedeEditar ? c => { setAbierto(null); setFormulario({ conductor: c }); } : undefined}
+        onEliminar={puedeEliminar ? c => setPorEliminar(c) : undefined}
+      />
+      <ConductorFormulario
+        open={!!formulario}
+        conductor={formulario?.conductor ?? null}
+        existentes={conductores}
+        onClose={() => setFormulario(null)}
+        onGuardado={() => setFormulario(null)}
+      />
+      <ImportarConductores open={importando} onClose={() => setImportando(false)} existentes={conductores} />
+      <ConfirmSheet
+        open={!!porEliminar}
+        onClose={() => !eliminando && setPorEliminar(null)}
+        onConfirm={eliminar}
+        loading={eliminando}
+        title={`¿Eliminar a ${porEliminar?.nombre ?? ''}?`}
+        message="Se borra del directorio de conductores. Los viajes, vales y registros que ya tiene no se modifican. Esta acción no se puede deshacer."
+        confirmLabel="Eliminar conductor"
+      />
+    </Page>
+  );
+}

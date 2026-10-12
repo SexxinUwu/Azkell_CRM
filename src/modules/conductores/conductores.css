@@ -1,0 +1,129 @@
+/* Directorio › Conductores — tarjetas con foto, contacto rápido y formulario con RENIEC */
+
+.foto-conductor {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px var(--separator);
+}
+.foto-conductor--iniciales {
+  color: var(--label-inverse);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* ─── Tarjetas ─── */
+.conductores-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--s-3);
+}
+@media (min-width: 768px) { .conductores-grid { gap: var(--s-4); } }
+
+.conductor-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+@media (hover: hover) {
+  .conductor-card:hover { box-shadow: 0 0 0 1px var(--separator), 0 12px 28px -12px rgba(0, 0, 0, 0.22); transform: translateY(-2px); }
+}
+.conductor-card__principal {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border: 0;
+  background: transparent;
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.conductor-card__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.conductor-card__nombre { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; }
+.conductor-card__meta { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8125rem; color: var(--label-2); font-family: var(--font-mono); }
+.conductor-card__empresa { font-size: 0.8125rem; color: var(--label-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conductor-card__acciones {
+  display: flex;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-4) var(--s-3);
+  border-top: 1px solid var(--separator);
+}
+.conductor-accion {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--label);
+}
+.conductor-accion--wa { background: var(--green-tint); color: var(--green-ink); }
+
+/* ─── Ficha: botones de contacto ─── */
+.ficha__contacto { display: flex; gap: var(--s-2); margin-top: var(--s-1); }
+.contacto-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--label-inverse);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+.contacto-btn--wa { background: var(--green); }
+
+/* ─── Formulario ─── */
+.conductor-form__foto { display: flex; flex-direction: column; align-items: center; gap: var(--s-2); }
+.conductor-form__foto-btn {
+  position: relative;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.conductor-form__camara {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--label-inverse);
+  box-shadow: 0 0 0 3px var(--surface);
+}
+.conductor-form__dni { position: relative; }
+.conductor-form__girando {
+  position: absolute;
+  right: var(--s-3);
+  top: 50%;
+  margin-top: -8px;
+  color: var(--accent-ink);
+  animation: girar 0.8s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .conductor-form__girando { animation: none; } }
+.conductor-form__reniec { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--accent-ink); font-weight: 600; }
+
+/* ─── Importar: vista previa de personas ─── */
+.importar__personas { list-style: none; display: flex; flex-direction: column; gap: var(--s-2); }
+.importar__personas li { display: flex; align-items: center; gap: var(--s-3); }
