@@ -5,14 +5,15 @@ const router = express.Router();
 module.exports = (db, broadcast, logAudit) => {
 
 // ── IN-MEMORY CACHE (HIGH PERFORMANCE ERP SPEEDUP) ───────────────
-let _inspeccionesCache = null;
-let _inspeccionesCacheTime = 0;
-let _inspeccionesInFlight = null;
+// Caché POR EMPRESA (antes era una sola para todas: una empresa podía recibir las inspecciones
+// o las posiciones GPS de otra mientras la caché estaba vigente).
+const _cachePorEmpresa = new Map();
+const _ce = (req) => {
+    const k = (req && (req.tenantSlug || (req.tenantInfo && req.tenantInfo.db_name))) || 'default';
+    if (!_cachePorEmpresa.has(k)) _cachePorEmpresa.set(k, { insp: null, inspTime: 0, inspVuelo: null, wialon: null, wialonTime: 0, wialonVuelo: null });
+    return _cachePorEmpresa.get(k);
+};
 const INSP_CACHE_TTL = 45000; // 45s
-
-let _wialonCache = null;
-let _wialonCacheTime = 0;
-let _wialonInFlightPromise = null;
 const WIALON_CACHE_TTL = 4000; // 4s de refresco ultra rápido para tiempo real y animación fluida
 
 function parseMesInt(val) {
@@ -707,12 +708,12 @@ router.post('/:metodo', async (req, res) => {
 
     if (metodo === 'obtenerDatosInspecciones') {
         const now = Date.now();
-        if (_inspeccionesCache && (now - _inspeccionesCacheTime < INSP_CACHE_TTL)) {
-            return res.json({ data: _inspeccionesCache });
+        if (_ce(req).insp && (now - _ce(req).inspTime < INSP_CACHE_TTL)) {
+            return res.json({ data: _ce(req).insp });
         }
 
-        if (_inspeccionesInFlight) {
-            _inspeccionesInFlight.then(data => {
+        if (_ce(req).inspVuelo) {
+            _ce(req).inspVuelo.then(data => {
                 return res.json({ data });
             }).catch(err => {
                 return res.json({ data: [] });
@@ -720,9 +721,9 @@ router.post('/:metodo', async (req, res) => {
             return;
         }
 
-        _inspeccionesInFlight = new Promise((resolve) => {
+        _ce(req).inspVuelo = new Promise((resolve) => {
             reqDb.query('SELECT * FROM inspecciones', (err, results) => {
-                _inspeccionesInFlight = null;
+                _ce(req).inspVuelo = null;
                 if (err) {
                     console.error('Error BD inspecciones:', err);
                     return resolve([]);
@@ -738,13 +739,13 @@ router.post('/:metodo', async (req, res) => {
                 const data = results.map(r => Object.assign({}, r, {
                     fecha_ingreso: _fmtFechaInsp(r.fecha_ingreso)
                 }));
-                _inspeccionesCache = data;
-                _inspeccionesCacheTime = Date.now();
+                _ce(req).insp = data;
+                _ce(req).inspTime = Date.now();
                 resolve(data);
             });
         });
 
-        _inspeccionesInFlight.then(data => {
+        _ce(req).inspVuelo.then(data => {
             return res.json({ data });
         });
         return;
@@ -794,7 +795,7 @@ router.post('/:metodo', async (req, res) => {
                             return res.json({ data: "Error al guardar inspección" });
                         }
                         
-                        _inspeccionesCache = null;
+                        _ce(req).insp = null;
                         console.log("✅ Inspección creada correctamente con ID:", nextId);
                         broadcast('inspecciones', metodo);
                         const usuario = (datos && (datos.tecnico || datos.usuarioAutor || datos.usuario)) || (req.body && (req.body.usuario || req.body.usuarioAutor)) || (req.user && (req.user.nombre || req.user.correo)) || 'NIXON PEREZ PEREZ';
@@ -827,7 +828,7 @@ router.post('/:metodo', async (req, res) => {
                     console.error("Error BD Inspecciones (UPDATE):", updateErr);
                     return res.json({ data: "Error al actualizar inspección" });
                 }
-                _inspeccionesCache = null;
+                _ce(req).insp = null;
                 console.log("✅ Inspección actualizada correctamente:", datos.id);
                 broadcast('inspecciones', metodo);
                 const usuario = (datos && (datos.tecnico || datos.usuarioAutor || datos.usuario)) || (req.body && (req.body.usuario || req.body.usuarioAutor)) || (req.user && (req.user.nombre || req.user.correo)) || 'NIXON PEREZ PEREZ';
@@ -937,7 +938,7 @@ router.post('/:metodo', async (req, res) => {
         if (coleccion === 'Placas') sql = 'DELETE FROM placas WHERE placa IN (?)';
         else if (coleccion === 'Inspecciones' || coleccion === 'statusMant') {
             sql = 'DELETE FROM inspecciones WHERE id IN (?)';
-            _inspeccionesCache = null;
+            _ce(req).insp = null;
         }
         else if (coleccion === 'Fleetrun' || coleccion === 'Mantenimientos') sql = 'DELETE FROM fleetrun WHERE idRegistro IN (?)';
         else if (coleccion === 'Usuarios') sql = 'DELETE FROM usuarios WHERE idUsuario IN (?)';
@@ -1309,28 +1310,28 @@ router.post('/:metodo', async (req, res) => {
 
     if (metodo === 'obtenerDatosWialon') {
         const now = Date.now();
-        if (_wialonCache && (now - _wialonCacheTime < WIALON_CACHE_TTL)) {
-            if (_wialonCache.data && Array.isArray(_wialonCache.data)) {
-                return res.json(_wialonCache);
+        if (_ce(req).wialon && (now - _ce(req).wialonTime < WIALON_CACHE_TTL)) {
+            if (_ce(req).wialon.data && Array.isArray(_ce(req).wialon.data)) {
+                return res.json(_ce(req).wialon);
             }
-            return res.json({ data: Array.isArray(_wialonCache) ? _wialonCache : [], grupos: [] });
+            return res.json({ data: Array.isArray(_ce(req).wialon) ? _ce(req).wialon : [], grupos: [] });
         }
 
-        if (_wialonInFlightPromise) {
+        if (_ce(req).wialonVuelo) {
             try {
-                const result = await _wialonInFlightPromise;
+                const result = await _ce(req).wialonVuelo;
                 if (result && result.data && Array.isArray(result.data)) {
                     return res.json(result);
                 }
                 const data = Array.isArray(result) ? result : [];
                 return res.json({ data, grupos: [] });
             } catch(e) {
-                const fallbackData = _wialonCache && _wialonCache.data ? _wialonCache.data : (_wialonCache || []);
-                return res.json({ data: Array.isArray(fallbackData) ? fallbackData : [], grupos: (_wialonCache && _wialonCache.grupos) || [] });
+                const fallbackData = _ce(req).wialon && _ce(req).wialon.data ? _ce(req).wialon.data : (_ce(req).wialon || []);
+                return res.json({ data: Array.isArray(fallbackData) ? fallbackData : [], grupos: (_ce(req).wialon && _ce(req).wialon.grupos) || [] });
             }
         }
 
-        _wialonInFlightPromise = (async () => {
+        _ce(req).wialonVuelo = (async () => {
             // Lee token desde DB; si no hay, cae en .env como fallback
             const obtenerTokenWialon = () => new Promise((resolve) => {
                 db.query(
@@ -1529,30 +1530,30 @@ router.post('/:metodo', async (req, res) => {
                 });
 
                 const payload = { data: vehiculosLive, grupos: wialonGrupos };
-                _wialonCache = payload;
-                _wialonCacheTime = Date.now();
+                _ce(req).wialon = payload;
+                _ce(req).wialonTime = Date.now();
                 return payload;
             } catch(fetchErr) {
                 console.warn('Advertencia Wialon Fetch:', fetchErr.message);
-                if (_wialonCache) {
-                    return _wialonCache;
+                if (_ce(req).wialon) {
+                    return _ce(req).wialon;
                 }
                 return { error: 'No se pudo conectar con el servidor GPS: ' + fetchErr.message };
             }
         })();
 
         try {
-            const result = await _wialonInFlightPromise;
-            _wialonInFlightPromise = null;
+            const result = await _ce(req).wialonVuelo;
+            _ce(req).wialonVuelo = null;
             if (result && result.data && Array.isArray(result.data)) {
                 return res.json(result);
             }
             const data = Array.isArray(result) ? result : [];
             return res.json({ data, grupos: [] });
         } catch (error) {
-            _wialonInFlightPromise = null;
-            const data = _wialonCache && _wialonCache.data ? _wialonCache.data : (_wialonCache || []);
-            return res.json({ data, grupos: (_wialonCache && _wialonCache.grupos) || [] });
+            _ce(req).wialonVuelo = null;
+            const data = _ce(req).wialon && _ce(req).wialon.data ? _ce(req).wialon.data : (_ce(req).wialon || []);
+            return res.json({ data, grupos: (_ce(req).wialon && _ce(req).wialon.grupos) || [] });
         }
     }
 

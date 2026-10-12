@@ -867,8 +867,9 @@ const db = new Proxy({}, {
 });
 
 // ── SMART TV / WAR ROOM DATA FEED (UBICACIÓN GPS, REPORTES OT, BACKLOG, FALLAS) ──
-let _tvWialonCache = null;
-let _tvWialonCacheTime = 0;
+// Caché del GPS para la TV, POR EMPRESA (antes era una sola: una TV podía mostrar la flota de otra empresa)
+const _tvWialonPorEmpresa = new Map();
+const _tvCe = (req) => { const k = (req && (req.tenantSlug || (req.tenantInfo && req.tenantInfo.db_name))) || 'default'; if (!_tvWialonPorEmpresa.has(k)) _tvWialonPorEmpresa.set(k, { data: null, time: 0 }); return _tvWialonPorEmpresa.get(k); };
 const _TV_WIALON_CACHE_TTL = 4000;
 
 app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) => {
@@ -998,8 +999,8 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
         // 4. GPS Wialon
         let wialonResult = { data: [], grupos: [] };
         const now = Date.now();
-        if (_tvWialonCache && (now - _tvWialonCacheTime < _TV_WIALON_CACHE_TTL)) {
-            wialonResult = _tvWialonCache;
+        if (_tvCe(req).data && (now - _tvCe(req).time < _TV_WIALON_CACHE_TTL)) {
+            wialonResult = _tvCe(req).data;
         } else {
             try {
                 const [tokenRows] = await activeDb.promise().query("SELECT valor FROM integraciones_api WHERE clave = 'wialon_token' LIMIT 1").catch(() => [[]]);
@@ -1095,8 +1096,8 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
                         }
 
                         wialonResult = { data: vehiculos, grupos };
-                        _tvWialonCache = wialonResult;
-                        _tvWialonCacheTime = Date.now();
+                        _tvCe(req).data = wialonResult;
+                        _tvCe(req).time = Date.now();
                     }
                 }
             } catch(eWialon) {
