@@ -3,15 +3,15 @@ require('dotenv').config();
 
 async function verify() {
     console.log("Configuración remota cargada desde .env / fallback:");
-    console.log("Host:", process.env.REMOTE_FUEL_HOST || '168.231.98.23');
-    console.log("User:", process.env.REMOTE_FUEL_USER || 'prov_combustible');
-    console.log("Database:", process.env.REMOTE_FUEL_DATABASE || 'marsisa_promax');
+    console.log("Host:", process.env.REMOTE_FUEL_HOST);
+    console.log("User:", process.env.REMOTE_FUEL_USER);
+    console.log("Database:", process.env.REMOTE_FUEL_DATABASE);
 
     const pool = mysql.createPool({
-        host: process.env.REMOTE_FUEL_HOST || '168.231.98.23',
-        user: process.env.REMOTE_FUEL_USER || 'prov_combustible',
-        password: process.env.REMOTE_FUEL_PASSWORD || '32f2dc8b2b27fc021c81674c04c2326e',
-        database: process.env.REMOTE_FUEL_DATABASE || 'marsisa_promax',
+        host: process.env.REMOTE_FUEL_HOST,
+        user: process.env.REMOTE_FUEL_USER,
+        password: process.env.REMOTE_FUEL_PASSWORD,
+        database: process.env.REMOTE_FUEL_DATABASE,
         connectTimeout: 15000,
         waitForConnections: true,
         connectionLimit: 5,

@@ -14,7 +14,7 @@ async function checkWialonTemplates() {
         const [rows] = await conn.query("SELECT clave, valor FROM integraciones_api WHERE clave IN ('wialon_token', 'wialon_url')");
         await conn.end();
 
-        let token = process.env.WIALON_TOKEN || '';
+        let token = process.env.WIALON_TOKEN;
         let baseUrl = process.env.WIALON_BASE_URL || 'https://hst-api.wialon.us/wialon/ajax.html';
 
         rows.forEach(r => {

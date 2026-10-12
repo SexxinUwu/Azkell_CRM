@@ -6,7 +6,7 @@ async function resyncMarsisaClean() {
     const REMOTE_CONFIG = {
         host: '168.231.98.23',
         user: 'prov_combustible',
-        password: '32f2dc8b2b27fc021c81674c04c2326e',
+        password: process.env.REMOTE_FUEL_PASSWORD,
         database: 'marsisadb_prod'
     };
 

@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const DB_HOST = process.env.DB_HOST || '82.39.109.226';
 const DB_USER = process.env.DB_USER || 'root';
-const DB_PASSWORD = process.env.DB_PASSWORD || '';
+const DB_PASSWORD = process.env.DB_PASSWORD;
 const DB_PORT = process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306;
 const DB_SSL = process.env.DB_HOST && (process.env.DB_HOST.includes('railway') || process.env.DB_HOST.includes('aiven') || process.env.DB_SSL === 'true') ? { rejectUnauthorized: false } : undefined;
 

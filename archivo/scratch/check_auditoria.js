@@ -5,7 +5,7 @@ require('dotenv').config();
     const conn = await mysql.createConnection({
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '',
+        password: process.env.DB_PASSWORD,
         database: 'azkell_tenant_marsisa'
     });
     const [rows] = await conn.query('SELECT * FROM auditoria WHERE idAuditoria >= 3000 ORDER BY idAuditoria DESC LIMIT 20');

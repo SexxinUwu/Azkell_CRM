@@ -4,7 +4,7 @@
  */
 
 const EVOLUTION_URL = process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085';
-const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY || 'AZKELL_ERP_WA_SECRET_2026';
+const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY;
 const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || 'azkell_erp_bot';
 
 /**

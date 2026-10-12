@@ -48,10 +48,10 @@ module.exports = function (db, broadcast, logAudit) {
 
     // Configuración de conexión al host remoto de combustible
     const REMOTE_CONFIG = {
-        host: process.env.REMOTE_FUEL_HOST || '168.231.98.23',
-        user: process.env.REMOTE_FUEL_USER || 'prov_combustible',
-        password: process.env.REMOTE_FUEL_PASSWORD || '32f2dc8b2b27fc021c81674c04c2326e',
-        database: process.env.REMOTE_FUEL_DATABASE || 'marsisa_promax',
+        host: process.env.REMOTE_FUEL_HOST,
+        user: process.env.REMOTE_FUEL_USER,
+        password: process.env.REMOTE_FUEL_PASSWORD,
+        database: process.env.REMOTE_FUEL_DATABASE,
         connectTimeout: 15000,
         waitForConnections: true,
         connectionLimit: 5,

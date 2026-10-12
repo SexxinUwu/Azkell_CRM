@@ -6,7 +6,7 @@ async function check() {
     const localConn = await mysql.createConnection({
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '',
+        password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME || 'azkell_fleet',
         port: process.env.DB_PORT || 3306
     });
@@ -28,10 +28,10 @@ async function check() {
 
     // 2. Conectar a BD remota Marsisa para analizar cómo vienen los vales en el origen
     const remoteConn = await mysql.createConnection({
-        host: process.env.REMOTE_FUEL_HOST || '168.231.98.23',
-        user: process.env.REMOTE_FUEL_USER || 'prov_combustible',
-        password: process.env.REMOTE_FUEL_PASSWORD || '32f2dc8b2b27fc021c81674c04c2326e',
-        database: process.env.REMOTE_FUEL_DATABASE || 'marsisadb_prod'
+        host: process.env.REMOTE_FUEL_HOST,
+        user: process.env.REMOTE_FUEL_USER,
+        password: process.env.REMOTE_FUEL_PASSWORD,
+        database: process.env.REMOTE_FUEL_DATABASE_2
     });
 
     const [valesRemoto] = await remoteConn.query(`

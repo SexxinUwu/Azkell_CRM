@@ -27,11 +27,14 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
 - [ ] **Fase 0 — Inventario y limpieza**
   - [x] Skill `apple-design` en `.claude/skills/`
   - [x] `AGENTS.md`, `docs/diseno.md`, este documento
-  - [ ] Revocar la clave de Gemini expuesta en `Código.js` y quitar el archivo (legado de Apps Script)
+  - [x] Quitar `Código.js` (legado de Apps Script con clave de Gemini)
   - [x] Mover los scripts sueltos de la raíz a `archivo/` (158 archivos; nada del sistema los usa)
-  - [ ] 🔴 **Credenciales en scripts:** contraseña `root` de MySQL del VPS escrita en ~15 scripts (y otra en `scripts/reimport_vales_cmd.js`), versionadas en git. Cambiar las contraseñas y pasar los scripts a `process.env`
-  - [ ] 🔴 **Raíz publicada:** `express.static(__dirname)` en `server.js` sirve toda la carpeta del proyecto (código del servidor, scripts con contraseñas, `Código.js`, `archivo/`). Servir solo una lista de carpetas y archivos públicos
-  - [ ] Seguridad: `JWT_SECRET` obligatorio, cerrar `/test-s3` y `/seguridad/limpiar-plantillas`, `helmet`
+  - [x] Secretos fuera del código (95 archivos): todo se lee de `process.env`; valores movidos al `.env`
+  - [x] Raíz publicada: `server.js` ahora sirve solo una lista de archivos y las carpetas `modulos/`, `icons/`, `web/` (y `libs/`)
+  - [x] `JWT_SECRET` obligatorio al arrancar; sin `MASTER_KEY` la clave maestra ya no da acceso
+  - [ ] Rotar los secretos que quedaron en el historial de git (ver lista en la conversación del 2026-10-12)
+  - [ ] Superadmin: el acceso por `Host: localhost` se puede falsificar; quitarlo o limitarlo a desarrollo
+  - [ ] Seguridad: cerrar `/test-s3` y `/seguridad/limpiar-plantillas`, `helmet`
   - [ ] Detallar reglas y endpoints de cada pantalla (se hace al empezar cada módulo)
 - [ ] **Fase 1 — Prisma sobre la base existente**
   - [ ] `prisma db pull` de una base de empresa; modelos repartidos por módulo con `@@map`

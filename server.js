@@ -1,4 +1,9 @@
 require('dotenv').config();
+// Sin JWT_SECRET no se pueden firmar ni verificar sesiones: no arrancar con un valor inventado
+if (!process.env.JWT_SECRET) {
+    console.error('[Arranque] Falta la variable de entorno JWT_SECRET. Configúrala en .env o en Coolify.');
+    process.exit(1);
+}
 const { initDB } = require('./init_db');
 const express = require('express');
 const mysql = require('mysql2');
@@ -414,8 +419,12 @@ app.use('/libs', express.static(path.join(__dirname, 'libs'), {
     maxAge: '30d',
     immutable: true
 }));
-// El resto de archivos (logica.js, estilos.css, vistas) → no cachear para reflejar cambios
-app.use(express.static(__dirname, {
+// El resto de archivos (logica.js, estilos.css, vistas) → no cachear para reflejar cambios.
+// Solo se publica lo que necesita el navegador: el código del servidor, los scripts,
+// archivo/ y cualquier otro archivo del proyecto nunca se sirven.
+const _staticRaiz = express.static(__dirname, {
+    dotfiles: 'deny',
+    index: false,
     setHeaders: function(res, filePath) {
         if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -423,7 +432,23 @@ app.use(express.static(__dirname, {
             res.setHeader('Expires', '0');
         }
     }
-}));
+});
+const CARPETAS_PUBLICAS = new Set(['modulos', 'icons', 'web']);
+const ARCHIVOS_PUBLICOS = new Set([
+    'Index.html', 'tv.html', 'wialon_callback.html',
+    'logica.js', 'utils.js', 'lazy-libs.js', 'sw.js',
+    'estilos.css', 'manifest.json',
+    'AzkellFleetTV.apk', 'MarsisaFleetTV.apk', 'tv.apk'
+]);
+app.use((req, res, next) => {
+    const partes = req.path.split('/').filter(Boolean);
+    if (partes.length === 0) return next();
+    const primero = partes[0];
+    const esCarpetaPublica = partes.length > 1 && CARPETAS_PUBLICAS.has(primero.toLowerCase());
+    const esArchivoPublico = partes.length === 1 && (ARCHIVOS_PUBLICOS.has(primero) || /\.(png|ico|svg|webp|jpe?g)$/i.test(primero));
+    if (esCarpetaPublica || esArchivoPublico) return _staticRaiz(req, res, next);
+    next();
+});
 
 
 app.use('/api/superadmin', require('./routes/superadmin')());
@@ -3577,7 +3602,7 @@ app.get('/api/documentos-flota/upload-url', async (req, res) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
         if (!token) return res.status(401).json({ error: 'No autorizado' });
-        jwt.verify(token, process.env.JWT_SECRET || 'secreto_super_seguro');
+        jwt.verify(token, process.env.JWT_SECRET);
 
         const { filename, contentType } = req.query;
         if (!filename) return res.status(400).json({ error: 'Falta filename' });
@@ -3628,7 +3653,7 @@ app.delete('/api/documentos-flota/delete', async (req, res) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
         if (!token) return res.status(401).json({ error: 'No autorizado' });
-        jwt.verify(token, process.env.JWT_SECRET || 'secreto_super_seguro');
+        jwt.verify(token, process.env.JWT_SECRET);
 
         const { url } = req.query;
         if (!url) return res.status(400).json({ error: 'Falta url' });
@@ -4483,7 +4508,7 @@ app.get('/api/whatsapp/qr', async (req, res) => {
     try {
         const { ensureInstanceExists } = require('./services/whatsappService');
         const evoUrl = process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085';
-        const evoKey = process.env.EVOLUTION_API_KEY || 'AZKELL_ERP_WA_SECRET_2026';
+        const evoKey = process.env.EVOLUTION_API_KEY;
         
         // Modelo A: Instancia por cada empresa / tenant (ej: marsisa_bot)
         const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);

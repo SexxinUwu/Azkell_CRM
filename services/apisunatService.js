@@ -12,8 +12,8 @@ class ApisunatService {
      */
     static async getCredenciales(dbConn) {
         const defaults = {
-            persona_id: '6ab586529196160021bb3224',
-            persona_token: 'PRD_U98dbhFf4LSo9ZtoJmssGtIXVUdd7a5dIehcSmbGrcrVUlW61eMwiCk01ATA5AV1',
+            persona_id: process.env.APISUNAT_PERSONA_ID || '',
+            persona_token: process.env.APISUNAT_PERSONA_TOKEN || '',
             ruc_emisor: '20609532484',
             razon_social: 'YOGUI TRANSPORT S.A.C.',
             modo: 'produccion'
