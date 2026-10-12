@@ -71,7 +71,18 @@ Casos especiales **aprobados**. El SQL está en [`sql/igualacion-2026-10/`](../s
 
 Ambos se probaron en la copia con el `INSERT` real del código: funcionan en las 4 empresas.
 
-## Cómo se aplicaría (sin detener la app)
+### Pendiente de decisión: fórmula del promedio de neumáticos
+
+En las 4 bases, `neumaticos_inspecciones_det.remanente_promedio` se calcula como `(r1+r2+r3)/3`. El código más nuevo de `routes/neumaticos.js` define `CASE WHEN r4 > 0 THEN (r1+r2+r3+r4)/4 ELSE (r1+r2+r3)/3 END`, pero solo aplica a tablas nuevas. Hoy hay 80 inspecciones con 4ª medición (14 en Marsisa, 66 en Rosymar) y 16 mostrarían otro promedio con la fórmula nueva. Se mantiene la fórmula de producción (también en `init_db.js` y en `0_baseline`) hasta que se decida.
+
+## Prisma (2026-10-12)
+
+- `prisma db pull` de las 4 empresas igualadas → mismo esquema. Convertido con `scripts/prisma_por_modulo.js` a `prisma/schema/<modulo>.prisma`.
+- `prisma migrate diff` de cada empresa contra el esquema: solo las diferencias aceptadas (valores por defecto y los 2 índices únicos, que quedan fuera del esquema).
+- `0_baseline` generada con `prisma migrate diff --from-empty` y completada con `scripts/prisma_baseline.js` (lo que Prisma no representa: `ON UPDATE CURRENT_TIMESTAMP` y la columna calculada). Una base vacía con solo `prisma migrate deploy` queda igual que las empresas reales.
+- Marcada como aplicada en producción con `node scripts/prisma_empresas.js resolver 0_baseline` (crea `_prisma_migrations` en cada base; no toca las tablas existentes).
+
+## Cómo se aplicó (sin detener la app)
 
 1. **Respaldo** completo de las 4 bases (`mysqldump`) y prueba de que el respaldo se puede restaurar.
 2. Un script genera el SQL de igualación **por empresa** y lo deja para revisión (no lo ejecuta).

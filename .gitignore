@@ -1,3 +1,5 @@
 node_modules/
 .env
 tmpclaude*
+# Cliente Prisma generado de la base maestra
+prisma/master/generated/

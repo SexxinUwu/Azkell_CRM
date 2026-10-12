@@ -1,0 +1,474 @@
+// Mantenimiento: OT, inspecciones, checklist, planificación, preventivos, Fleetrun y taller
+
+model BacklogMantenimiento {
+  id                Int                            @id @default(autoincrement())
+  placa             String?                        @db.VarChar(100)
+  descripcion_falla String                         @db.Text
+  prioridad         BacklogMantenimientoPrioridad? @default(Media)
+  estado            BacklogMantenimientoEstado?    @default(Pendiente)
+  reportado_por     String?                        @db.VarChar(100)
+  fecha_reporte     DateTime?                      @default(now()) @db.Timestamp(0)
+
+  @@map("backlog_mantenimiento")
+}
+
+model CatRampa {
+  id           Int     @id @default(autoincrement())
+  nombre_rampa String  @db.VarChar(50)
+  sede         String  @db.VarChar(50)
+  estado       String? @default("Disponible") @db.VarChar(20)
+  orden        Int     @default(0)
+  color        String? @default("#ef4444") @db.VarChar(50)
+
+  @@map("cat_rampas")
+}
+
+model ChecklistConfigSistema {
+  id             Int       @id @default(autoincrement())
+  unidad         String    @db.VarChar(20)
+  sistema_key    String    @db.VarChar(60)
+  titulo         String    @db.VarChar(150)
+  icono          String?   @default("bi-gear") @db.VarChar(100)
+  orden          Int?      @default(0)
+  items_json     String    @db.LongText
+  creado_en      DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en DateTime? @default(now()) @db.Timestamp(0)
+  activo         Boolean   @default(true)
+  created_at     DateTime  @default(now()) @db.Timestamp(0)
+  updated_at     DateTime  @default(now()) @db.Timestamp(0)
+
+  @@unique([unidad, sistema_key], map: "uk_unidad_sys")
+  @@index([unidad, orden], map: "idx_unidad_orden")
+  @@map("checklist_config_sistemas")
+}
+
+model Fleetrun {
+  idRegistro    String    @id @db.VarChar(50)
+  fecha         DateTime? @db.Date
+  mes           Int?
+  anio          Int?
+  placa         String?   @default("") @db.VarChar(20)
+  marca         String    @default("") @db.VarChar(50)
+  dueno         String    @default("") @db.VarChar(100)
+  uts           String    @default("") @db.VarChar(20)
+  tipo_mp       String    @default("") @db.VarChar(60)
+  km_actual     Int?
+  frecuencia_km Int?
+  km_proximo    Int?
+  observacion   String?   @db.Text
+  tecnico       String    @default("") @db.VarChar(100)
+  km_gps        Int?
+  creado_en     DateTime? @default(now()) @db.Timestamp(0)
+  combustible   String?   @db.VarChar(50)
+  modelo        String?   @db.VarChar(50)
+
+  @@index([fecha], map: "idx_fecha")
+  @@index([placa], map: "idx_placa")
+  @@map("fleetrun")
+}
+
+model Inspeccion {
+  id              String    @id @db.VarChar(50)
+  placa           String?   @db.VarChar(100)
+  fecha_ingreso   DateTime? @db.Date
+  cliente         String    @default("") @db.VarChar(100)
+  tecnico         String    @default("") @db.VarChar(100)
+  km_tablero      Int?
+  dias_propuestos Int       @default(0)
+  detalles_json   String?   @db.LongText
+  url_firma       String?   @db.Text
+  id_ot           String?   @db.VarChar(50)
+  tipo_inspeccion String?   @default("General") @db.VarChar(50)
+
+  @@index([fecha_ingreso], map: "idx_fecha")
+  @@index([placa], map: "idx_placa")
+  @@map("inspecciones")
+}
+
+model MantIncidenciaRuta {
+  id               Int                             @id @default(autoincrement())
+  codigo           String                          @unique(map: "codigo") @db.VarChar(60)
+  fecha_falla      DateTime                        @db.Date
+  placa            String                          @db.VarChar(20)
+  conductor        String?                         @default("") @db.VarChar(150)
+  marca            String?                         @default("") @db.VarChar(50)
+  ubicacion        String?                         @default("") @db.VarChar(150)
+  tipo_unidad      String?                         @default("") @db.VarChar(50)
+  transbordo       MantIncidenciasRutaTransbordo?  @default(NO)
+  motivo           String?                         @default("") @db.VarChar(255)
+  falla            String?                         @db.Text
+  area_responsable String?                         @default("Mantenimiento") @db.VarChar(60)
+  responsable      String?                         @default("") @db.VarChar(100)
+  costos_detalle   Json?
+  total_costo      Decimal?                        @default(0.00) @db.Decimal(12, 2)
+  solucionado      MantIncidenciasRutaSolucionado? @default(Pendiente)
+  observaciones    String?                         @db.Text
+  creado_por       String?                         @default("") @db.VarChar(100)
+  created_at       DateTime?                       @default(now()) @db.Timestamp(0)
+  updated_at       DateTime?                       @default(now()) @db.Timestamp(0)
+
+  @@index([area_responsable], map: "idx_area")
+  @@index([fecha_falla], map: "idx_fecha")
+  @@index([placa], map: "idx_placa")
+  @@index([solucionado], map: "idx_solucionado")
+  @@map("mant_incidencias_ruta")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model MantInspTemplate {
+  id          Int      @id @default(autoincrement())
+  template_id String   @unique(map: "uq_template_id") @db.VarChar(30)
+  titulo      String   @db.VarChar(150)
+  items_json  Json
+  orden       Int      @default(0)
+  activo      Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  updated_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("mant_insp_templates")
+}
+
+model MantenimientoKit {
+  id              Int      @id @default(autoincrement())
+  marca_vehiculo  String   @db.VarChar(50)
+  modelo_vehiculo String?  @default("TODOS LOS MODELOS") @db.VarChar(100)
+  tipo_mp         String   @db.VarChar(60)
+  nombre_kit      String?  @db.VarChar(150)
+  item_codigo     String   @db.VarChar(30)
+  item_nombre     String   @db.VarChar(200)
+  cantidad        Decimal  @db.Decimal(10, 2)
+  unidad_medida   String   @db.VarChar(10)
+  costo_unitario  Decimal  @default(0.00) @db.Decimal(10, 2)
+  costo_total     Decimal  @default(0.00) @db.Decimal(10, 2)
+  orden           Int      @default(1)
+  activo          Boolean  @default(true)
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+  updated_at      DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([marca_vehiculo, tipo_mp], map: "idx_marca_mp")
+  @@map("mantenimiento_kits")
+}
+
+model OrdenTrabajo {
+  ticket_entrada    String    @id @db.VarChar(50)
+  id_ot             String    @db.VarChar(50)
+  placa             String?   @db.VarChar(100)
+  estado            String    @default("Recepción") @db.VarChar(30)
+  id_situacion      Int?
+  id_rampa          Int?
+  detalles_json     Json?
+  creado_por        String    @default("") @db.VarChar(100)
+  fecha_ingreso     DateTime  @db.DateTime(0)
+  fecha_hora_salida DateTime? @db.DateTime(0)
+  sistema           String?   @db.VarChar(100)
+  sub_sistema       String?   @db.VarChar(100)
+  fecha_inicio_ot   DateTime? @db.DateTime(0)
+  iniciado_por      String?   @db.VarChar(100)
+  fecha_pausa1      DateTime? @db.DateTime(0)
+  fecha_fin_pausa1  DateTime? @db.DateTime(0)
+  motivo_pausa1     String?   @db.VarChar(255)
+  pausado_por1      String?   @db.VarChar(100)
+  fecha_pausa2      DateTime? @db.DateTime(0)
+  fecha_fin_pausa2  DateTime? @db.DateTime(0)
+  motivo_pausa2     String?   @db.VarChar(255)
+  pausado_por2      String?   @db.VarChar(100)
+  fecha_pausa3      DateTime? @db.DateTime(0)
+  fecha_fin_pausa3  DateTime? @db.DateTime(0)
+  motivo_pausa3     String?   @db.VarChar(255)
+  pausado_por3      String?   @db.VarChar(100)
+  comentario_cierre String?   @db.Text
+  cerrado_por       String?   @db.VarChar(100)
+
+  @@index([estado], map: "idx_estado")
+  @@index([placa], map: "idx_placa")
+  @@map("ordenes_trabajo")
+}
+
+model OtBacklog {
+  id            Int       @id @default(autoincrement())
+  backlog_id    String    @unique(map: "backlog_id") @db.VarChar(30)
+  placa         String?   @db.VarChar(100)
+  km            Int       @default(0)
+  tema          String    @default("") @db.VarChar(100)
+  tarea         String    @db.Text
+  reportado_por String    @default("") @db.VarChar(100)
+  fecha_reporte DateTime? @db.Date
+  estado        String    @default("Pendiente") @db.VarChar(20)
+  creado_por    String    @default("") @db.VarChar(100)
+  creado_en     DateTime? @default(now()) @db.Timestamp(0)
+  ticket_ot     String?   @db.VarChar(50)
+
+  @@index([estado], map: "idx_estado")
+  @@index([placa], map: "idx_placa")
+  @@map("ot_backlog")
+}
+
+model OtMaterial {
+  id                   Int       @id @default(autoincrement())
+  id_solicitud         String    @unique(map: "id_solicitud") @db.VarChar(30)
+  ticket_ot            String    @db.VarChar(50)
+  producto             String    @db.VarChar(200)
+  cantidad             Decimal   @default(1.000) @db.Decimal(10, 3)
+  unidad_medida        String    @default("Pza") @db.VarChar(20)
+  costo_unit           Decimal   @default(0.00) @db.Decimal(10, 2)
+  costo_total          Decimal   @default(0.00) @db.Decimal(10, 2)
+  personal_solicitante String    @default("") @db.VarChar(100)
+  observacion          String?   @db.Text
+  estado               String    @default("Pendiente") @db.VarChar(20)
+  creado_por           String    @default("") @db.VarChar(100)
+  creado_en            DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([estado], map: "idx_estado")
+  @@index([ticket_ot], map: "idx_ticket_ot")
+  @@map("ot_materiales")
+}
+
+model Planificacion {
+  id                     String                 @id @db.VarChar(50)
+  placa                  String?                @db.VarChar(100)
+  configuracion_flota_id Int?
+  tipo_mp                String                 @db.VarChar(60)
+  fecha_inicio_ventana   DateTime               @db.Date
+  fecha_fin_ventana      DateTime               @db.Date
+  mes_ejecucion          Int
+  anio_ejecucion         Int
+  km_estimado            Int                    @default(0)
+  km_minimo              Int?
+  km_maximo              Int?
+  tecnico_asignado       String?                @db.VarChar(100)
+  prioridad              PlanificacionPrioridad @default(Normal)
+  observaciones_plan     String?                @db.Text
+  estado                 PlanificacionEstado    @default(Programada)
+  motivo_cancelacion     String?                @db.Text
+  fleetrun_id_ejecutado  String?                @db.VarChar(50)
+  fecha_real_ejecucion   DateTime?              @db.Date
+  km_real_ejecucion      Int?
+  desviacion_km          Int?
+  desviacion_dias        Int?
+  fecha_primer_retraso   DateTime?              @db.Date
+  alertas_enviadas       Int                    @default(0) @db.TinyInt
+  source                 PlanificacionSource    @default(manual_excel)
+  created_by             String?                @db.VarChar(100)
+  created_at             DateTime               @default(now()) @db.Timestamp(0)
+  updated_at             DateTime               @default(now()) @db.Timestamp(0)
+
+  @@index([estado], map: "idx_estado")
+  @@index([fecha_fin_ventana], map: "idx_fecha_ventana")
+  @@index([mes_ejecucion, anio_ejecucion], map: "idx_mes_anio")
+  @@index([placa], map: "idx_placa")
+  @@map("planificacion")
+}
+
+model ReporteFalla {
+  id                   Int       @id @default(autoincrement())
+  folio                String    @unique(map: "folio") @db.VarChar(50)
+  orden_viaje          String?   @db.VarChar(60)
+  fecha_reporte        DateTime? @default(now()) @db.DateTime(0)
+  placa_tracto         String?   @db.VarChar(20)
+  placa_remolque       String?   @db.VarChar(20)
+  km_inicial           Int?      @default(0)
+  km_final             Int?      @default(0)
+  horas_motor          String?   @db.VarChar(50)
+  conductor            String?   @db.VarChar(150)
+  procedencia          String?   @db.VarChar(150)
+  ubicacion_gps        String?   @db.VarChar(255)
+  fallas_tracto_json   String?   @db.LongText
+  fallas_remolque_json String?   @db.LongText
+  fallas_libres_text   String?   @db.Text
+  fotos_json           String?   @db.LongText
+  firma_conductor      String?   @db.LongText
+  estado               String?   @default("Pendiente") @db.VarChar(30)
+  id_rampa             String?   @db.VarChar(50)
+  ots_generadas_json   String?   @db.LongText
+  creado_por           String?   @db.VarChar(100)
+  creado_en            DateTime? @default(now()) @db.DateTime(0)
+
+  @@index([orden_viaje], map: "idx_orden_viaje")
+  @@index([placa_tracto], map: "idx_placa_tracto")
+  @@map("reportes_fallas")
+}
+
+model RequerimientoPlanificacion {
+  id                  Int                                  @id @default(autoincrement())
+  plan_id             String                               @db.VarChar(50)
+  mes_ejecucion       Int
+  anio_ejecucion      Int
+  item_codigo         String?                              @db.VarChar(30)
+  item_nombre         String                               @db.VarChar(200)
+  cantidad_requerida  Decimal                              @db.Decimal(10, 2)
+  unidad_medida       String                               @db.VarChar(10)
+  costo_unitario      Decimal                              @default(0.00) @db.Decimal(10, 2)
+  costo_total         Decimal                              @default(0.00) @db.Decimal(10, 2)
+  estado_req          RequerimientosPlanificacionEstadoReq @default(Pendiente)
+  fecha_solicitud     DateTime?                            @db.Date
+  fecha_entrega       DateTime?                            @db.Date
+  responsable_almacen String?                              @db.VarChar(100)
+  observaciones       String?                              @db.Text
+  created_at          DateTime                             @default(now()) @db.Timestamp(0)
+  updated_at          DateTime                             @default(now()) @db.Timestamp(0)
+
+  @@index([estado_req], map: "idx_estado_req")
+  @@index([mes_ejecucion, anio_ejecucion], map: "idx_mes_req")
+  @@index([plan_id], map: "idx_plan")
+  @@map("requerimientos_planificacion")
+}
+
+model TallerPersonal {
+  id             Int       @id @default(autoincrement())
+  nombre         String    @db.VarChar(100)
+  sueldo_mensual Decimal?  @default(0.00) @db.Decimal(10, 2)
+  costo_hora     Decimal?  @default(0.00) @db.Decimal(10, 2)
+  creado_en      DateTime? @default(now()) @db.Timestamp(0)
+
+  @@map("taller_personal")
+}
+
+model TallerRampa {
+  id                Int       @id @default(autoincrement())
+  rampa             Int
+  placa             String?   @db.VarChar(100)
+  km                String?   @db.VarChar(20)
+  fecha_ingreso     DateTime? @db.Date
+  hora_ingreso      DateTime? @db.Time(0)
+  fecha_salida      DateTime? @db.Date
+  hora_salida       DateTime? @db.Time(0)
+  situacion         String    @default("") @db.VarChar(80)
+  obs               String?   @db.Text
+  creado_por        String    @default("") @db.VarChar(100)
+  creado_en         DateTime? @default(now()) @db.Timestamp(0)
+  fecha_liberado    DateTime? @db.DateTime(0)
+  estado            String    @default("Activo") @db.VarChar(20)
+  liberado_por      String?   @db.VarChar(100)
+  fecha_salida_real DateTime? @db.Date
+  hora_salida_real  DateTime? @db.Time(0)
+  evidencia_url     String?   @db.VarChar(255)
+  conductor         String?   @db.VarChar(255)
+
+  @@index([placa], map: "idx_placa")
+  @@index([rampa], map: "idx_rampa")
+  @@map("taller_rampas")
+}
+
+model TipoMantenimiento {
+  id               Int      @id @default(autoincrement())
+  marca            String   @default("") @db.VarChar(100)
+  tipo_mp          String   @default("") @db.VarChar(100)
+  uts              String   @default("") @db.VarChar(50)
+  frecuencia_km    Decimal? @db.Decimal(10, 2)
+  frecuencia_horas Decimal? @db.Decimal(10, 2)
+  frecuencia_dias  Int?
+  tipo             String?  @db.VarChar(100)
+  sistema          String?  @db.VarChar(100)
+  descripcion      String?  @db.Text
+  created_at       DateTime @default(now()) @db.Timestamp(0)
+  updated_at       DateTime @default(now()) @db.Timestamp(0)
+  combustible      String?  @db.VarChar(50)
+  modelo           String?  @db.VarChar(100)
+
+  @@map("tipos_mantenimiento")
+}
+
+model TipoPreventivo {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique(map: "nombre") @db.VarChar(100)
+  descripcion String?  @db.Text
+  activo      Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  updated_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("tipos_preventivo")
+}
+
+model TpMp {
+  id                    Int     @id @default(autoincrement())
+  tipo_mantenimiento_id Int
+  marca_vehiculo        String  @db.VarChar(50)
+  modelo_vehiculo       String? @db.VarChar(50)
+  repuestos_json        Json?
+
+  @@map("tp_mp")
+}
+
+model TrabajoOt {
+  id_ot             String    @id @db.VarChar(50)
+  ticket_visita     String    @db.VarChar(50)
+  tipo_ot           String    @default("") @db.VarChar(50)
+  sub_tipo          String    @default("") @db.VarChar(50)
+  estado            String    @default("Recepción") @db.VarChar(30)
+  detalles_json     Json?
+  creado_por        String    @default("") @db.VarChar(100)
+  trabajo_realizado String?   @db.Text
+  tecnico           String?   @db.VarChar(100)
+  fecha_trabajo     DateTime? @db.DateTime(0)
+  fecha_salida      DateTime? @db.DateTime(0)
+  fecha_creacion    DateTime? @default(now()) @db.Timestamp(0)
+  costo             Decimal?  @default(0.00) @db.Decimal(10, 2)
+  placa             String?   @db.VarChar(50)
+
+  @@index([ticket_visita], map: "idx_ticket")
+  @@map("trabajos_ot")
+}
+
+model TrabajoOtRepuesto {
+  id              Int     @id @default(autoincrement())
+  id_ot           String  @db.VarChar(50)
+  item            String  @db.VarChar(200)
+  cantidad        Decimal @default(1.00) @db.Decimal(10, 2)
+  precio_unitario Decimal @default(0.00) @db.Decimal(10, 2)
+  total           Decimal @default(0.00) @db.Decimal(10, 2)
+
+  @@index([id_ot], map: "idx_id_ot")
+  @@map("trabajos_ot_repuestos")
+}
+
+enum BacklogMantenimientoPrioridad {
+  Baja
+  Media
+  Alta
+  Cr_tica @map("Crítica")
+}
+
+enum BacklogMantenimientoEstado {
+  Pendiente
+  En_Proceso @map("En Proceso")
+  Resuelto
+}
+
+enum MantIncidenciasRutaTransbordo {
+  SI
+  NO
+}
+
+enum RequerimientosPlanificacionEstadoReq {
+  Pendiente
+  Solicitado
+  Recibido
+  Entregado_al_Taller @map("Entregado al Taller")
+  Cancelado
+}
+
+enum PlanificacionPrioridad {
+  Baja
+  Normal
+  Alta
+  Cr_tica @map("Crítica")
+}
+
+enum PlanificacionEstado {
+  Programada
+  Confirmada
+  En_Progreso @map("En Progreso")
+  Completada
+  Cancelada
+  Diferida
+}
+
+enum MantIncidenciasRutaSolucionado {
+  Atendido
+  Pendiente
+}
+
+enum PlanificacionSource {
+  manual_excel
+  auto_generada
+}

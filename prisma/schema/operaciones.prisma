@@ -1,0 +1,201 @@
+// Operaciones: órdenes de viaje y de servicio
+
+model MarsisaOrdenViaje {
+  id             Int       @id @default(autoincrement())
+  id_remoto      BigInt?
+  viaje          String    @unique(map: "uq_viaje") @db.VarChar(60)
+  fecha_viaje    DateTime? @db.DateTime(0)
+  id_conductor   Int?
+  conductor      String    @default("") @db.VarChar(150)
+  placa_tracto   String    @default("") @db.VarChar(20)
+  placa_remolque String?   @db.VarChar(20)
+  peso           Decimal?  @default(0.00) @db.Decimal(12, 2)
+  ruta           String?   @db.VarChar(255)
+  origen         String?   @db.VarChar(100)
+  destino        String?   @db.VarChar(100)
+  estado         String    @default("ACTIVO") @db.VarChar(30)
+  creado_en      DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([fecha_viaje], map: "idx_fecha_viaje")
+  @@index([id_remoto], map: "idx_id_remoto")
+  @@index([placa_tracto, placa_remolque], map: "idx_mov_placas")
+  @@index([placa_remolque], map: "idx_placa_remolque")
+  @@index([placa_tracto], map: "idx_placa_tracto")
+  @@map("marsisa_ordenes_viaje")
+}
+
+model MarsisaOrdenViajeRuta {
+  id             Int       @id @default(autoincrement())
+  viaje          String    @db.VarChar(60)
+  orden          String    @db.VarChar(60)
+  ruta           String?   @db.VarChar(255)
+  tipo_servicio  String?   @db.VarChar(100)
+  es_retorno     Boolean   @default(false)
+  peso_total     Decimal?  @default(0.00) @db.Decimal(12, 2)
+  cantidad_total Decimal?  @default(0.00) @db.Decimal(12, 2)
+  volumen_total  Decimal?  @default(0.000) @db.Decimal(12, 3)
+  creado_en      DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([viaje, orden], map: "uq_viaje_orden")
+  @@index([es_retorno], map: "idx_es_retorno")
+  @@index([orden], map: "idx_orden")
+  @@index([viaje], map: "idx_viaje")
+  @@map("marsisa_ordenes_viaje_rutas")
+}
+
+model OrdenServicio {
+  id                       Int       @id @default(autoincrement())
+  serie                    String    @default("2026") @db.VarChar(10)
+  numero                   String    @db.VarChar(20)
+  codigo_orden             String    @unique(map: "uq_codigo_orden") @db.VarChar(40)
+  fecha                    DateTime  @db.Date
+  fecha_fin                DateTime? @db.Date
+  moneda                   String?   @default("SOLES") @db.VarChar(20)
+  tipo_cambio              Decimal?  @default(3.750) @db.Decimal(8, 3)
+  tipo_contratacion        String?   @default("CLIENTE DIRECTO") @db.VarChar(50)
+  modalidad_ejecucion      String?   @default("PROPIO") @db.VarChar(50)
+  cliente_id               Int?
+  cliente_nombre           String    @db.VarChar(255)
+  tipo_servicio            String?   @default("CARGA GENERAL") @db.VarChar(100)
+  es_retorno               Boolean?  @default(false)
+  tipo_costo               String?   @default("POR VIAJE") @db.VarChar(50)
+  impuesto                 String?   @default("IGV 18%") @db.VarChar(50)
+  costo_flete              Decimal?  @default(0.00) @db.Decimal(12, 2)
+  puntos_carga             Int?      @default(1)
+  puntos_destino           Int?      @default(1)
+  destinatario             String?   @db.VarChar(255)
+  sustento_url             String?   @db.VarChar(255)
+  observaciones            String?   @db.Text
+  viaje_asignado           String?   @db.VarChar(60)
+  estado_viaje             String?   @default("Sin asignar") @db.VarChar(30)
+  estado_servicio          String?   @default("INICIADO") @db.VarChar(30)
+  estado_liquidacion       String?   @default("PENDIENTE") @db.VarChar(30)
+  estado_descarga          String?   @default("PENDIENTE") @db.VarChar(30)
+  conductor                String?   @db.VarChar(150)
+  placa_tracto             String?   @db.VarChar(20)
+  placa_carreta            String?   @db.VarChar(20)
+  ruta_sistema             String?   @db.VarChar(255)
+  tipo_medida              String?   @default("VIAJE") @db.VarChar(50)
+  costo_medida             Decimal?  @default(0.00) @db.Decimal(12, 2)
+  cargos_adicionales       Decimal?  @default(0.00) @db.Decimal(12, 2)
+  descuentos               Decimal?  @default(0.00) @db.Decimal(12, 2)
+  subtotal                 Decimal?  @default(0.00) @db.Decimal(12, 2)
+  igv                      Decimal?  @default(0.00) @db.Decimal(12, 2)
+  kilometraje_fin          Int?
+  usuario_creacion         String?   @default("ADMINISTRADOR") @db.VarChar(100)
+  factura                  String?   @db.VarChar(60)
+  creado_en                DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en           DateTime? @default(now()) @db.Timestamp(0)
+  proveedor_tercero_nombre String?   @db.VarChar(200)
+  proveedor_tercero_ruc    String?   @db.VarChar(20)
+  costo_tercero            Decimal?  @default(0.00) @db.Decimal(12, 2)
+  doc_tercero              String?   @db.VarChar(100)
+  remitente_generador      String?   @db.VarChar(255)
+
+  @@index([cliente_nombre], map: "idx_cliente")
+  @@index([fecha], map: "idx_fecha")
+  @@index([viaje_asignado], map: "idx_viaje")
+  @@map("operaciones_ordenes_servicio")
+}
+
+model OrdenServicioDoc {
+  id                Int       @id @default(autoincrement())
+  orden_servicio_id Int
+  codigo_orden      String    @db.VarChar(40)
+  guia_remision_id  Int?
+  numero_documento  String    @db.VarChar(50)
+  tipo_documento    String?   @default("GRE") @db.VarChar(50)
+  gr_remitente      String?   @db.VarChar(50)
+  numero_transporte String?   @db.VarChar(50)
+  placa_referencia  String?   @db.VarChar(20)
+  volumen           Decimal?  @default(0.000) @db.Decimal(12, 3)
+  cantidad          Decimal?  @default(0.00) @db.Decimal(12, 2)
+  peso              Decimal?  @default(0.00) @db.Decimal(12, 2)
+  remitente         String?   @db.VarChar(255)
+  destinatario      String?   @db.VarChar(255)
+  fecha_carga       DateTime? @db.Date
+  fecha_entrega     DateTime? @db.Date
+  creado_en         DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([guia_remision_id], map: "idx_guia_id")
+  @@index([codigo_orden], map: "idx_os_codigo")
+  @@index([orden_servicio_id], map: "idx_os_id")
+  @@map("operaciones_ordenes_servicio_docs")
+}
+
+model OrdenServicioRuta {
+  id                Int       @id @default(autoincrement())
+  orden_servicio_id Int
+  codigo_orden      String    @db.VarChar(40)
+  ruta              String?   @db.VarChar(255)
+  distancia_km      Decimal?  @default(0.00) @db.Decimal(10, 2)
+  galones           Decimal?  @default(0.00) @db.Decimal(10, 2)
+  creado_en         DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([codigo_orden], map: "idx_os_rutas_cod")
+  @@index([orden_servicio_id], map: "idx_os_rutas_id")
+  @@map("operaciones_ordenes_servicio_rutas")
+}
+
+model OrdenViaje {
+  id                     Int       @id @default(autoincrement())
+  id_remoto              BigInt?
+  viaje                  String    @unique(map: "uq_viaje") @db.VarChar(60)
+  fecha_viaje            DateTime? @db.DateTime(0)
+  id_conductor           Int?
+  conductor              String    @default("") @db.VarChar(150)
+  placa_tracto           String    @default("") @db.VarChar(20)
+  placa_remolque         String?   @db.VarChar(20)
+  configuracion_tracto   String?   @db.VarChar(20)
+  configuracion_remolque String?   @db.VarChar(20)
+  ruta                   String?   @db.VarChar(255)
+  origen                 String?   @db.VarChar(100)
+  destino                String?   @db.VarChar(100)
+  ubigeo_partida         String?   @db.VarChar(10)
+  direccion_partida      String?   @db.VarChar(255)
+  ubigeo_llegada         String?   @db.VarChar(10)
+  direccion_llegada      String?   @db.VarChar(255)
+  escolta                String?   @db.VarChar(150)
+  observaciones          String?   @db.Text
+  estado                 String    @default("ACTIVO") @db.VarChar(30)
+  creado_en              DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en         DateTime? @default(now()) @db.Timestamp(0)
+  peso                   Decimal?  @default(0.00) @db.Decimal(12, 2)
+  kilometraje_inicial    Int?
+  kilometraje_final      Int?
+  horas_motor_remolque   Int?
+  fecha_inicio           DateTime? @db.DateTime(0)
+  fecha_fin              DateTime? @db.DateTime(0)
+  usuario_creacion       String?   @default("ADMINISTRADOR DEL SISTEMA") @db.VarChar(150)
+  usuario_finalizacion   String?   @db.VarChar(150)
+
+  @@index([fecha_viaje], map: "idx_fecha_viaje")
+  @@index([id_remoto], map: "idx_id_remoto")
+  @@index([placa_remolque], map: "idx_placa_remolque")
+  @@index([placa_tracto], map: "idx_placa_tracto")
+  @@map("operaciones_ordenes_viaje")
+}
+
+model OrdenViajeRuta {
+  id             Int       @id @default(autoincrement())
+  viaje          String    @db.VarChar(60)
+  orden          String    @db.VarChar(60)
+  ruta           String?   @db.VarChar(255)
+  tipo_servicio  String?   @db.VarChar(100)
+  es_retorno     Boolean   @default(false)
+  peso_total     Decimal?  @default(0.00) @db.Decimal(12, 2)
+  cantidad_total Decimal?  @default(0.00) @db.Decimal(12, 2)
+  volumen_total  Decimal?  @default(0.000) @db.Decimal(12, 3)
+  creado_en      DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en DateTime? @default(now()) @db.Timestamp(0)
+  distancia_km   Decimal?  @db.Decimal(10, 2)
+  galones        Decimal?  @db.Decimal(10, 2)
+
+  @@unique([viaje, orden], map: "uq_viaje_orden")
+  @@index([es_retorno], map: "idx_es_retorno")
+  @@index([orden], map: "idx_orden")
+  @@index([viaje], map: "idx_viaje")
+  @@map("operaciones_ordenes_viaje_rutas")
+}

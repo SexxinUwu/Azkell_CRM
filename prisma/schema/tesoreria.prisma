@@ -1,0 +1,204 @@
+// Tesorería: caja, bancos, cuentas y liquidaciones
+
+model TesoreriaBanco {
+  id             Int       @id @default(autoincrement())
+  banco          String    @db.VarChar(100)
+  titular        String?   @db.VarChar(150)
+  moneda         String    @default("SOLES") @db.VarChar(20)
+  tipo_cuenta    String    @default("CORRIENTE") @db.VarChar(50)
+  numero_cuenta  String    @db.VarChar(100)
+  cci            String?   @db.VarChar(100)
+  saldo_inicial  Decimal   @default(0.00) @db.Decimal(12, 2)
+  estado         String    @default("ACTIVO") @db.VarChar(20)
+  creado_en      DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en DateTime? @default(now()) @db.Timestamp(0)
+
+  @@map("tesoreria_bancos")
+}
+
+model TesoreriaCaja {
+  id                         Int       @id @default(autoincrement())
+  fecha                      DateTime  @db.Date
+  hora                       String    @default("00:00:00") @db.VarChar(10)
+  fecha_valuta               DateTime? @db.Date
+  hora_valuta                String?   @db.VarChar(10)
+  numero_constancia_deposito String?   @db.VarChar(100)
+  numero_factura             String?   @db.VarChar(100)
+  serie                      String    @default("2026") @db.VarChar(50)
+  numero                     String    @default("") @db.VarChar(50)
+  orden_viaje                String?   @db.VarChar(100)
+  conductor                  String?   @db.VarChar(150)
+  ruta_viaje                 String?   @db.VarChar(255)
+  placa                      String?   @db.VarChar(50)
+  autoriza                   String    @db.VarChar(150)
+  motivo                     String    @db.VarChar(150)
+  centro_costo               String?   @db.VarChar(150)
+  sub_motivo                 String?   @db.VarChar(150)
+  modalidad_pago             String    @db.VarChar(100)
+  moneda                     String    @default("SOLES") @db.VarChar(20)
+  tipo_persona               String    @db.VarChar(50)
+  persona                    String    @db.VarChar(200)
+  tipo_movimiento            String    @default("EGRESO") @db.VarChar(20)
+  subtotal                   Decimal   @default(0.00) @db.Decimal(12, 2)
+  retencion_detraccion       Decimal   @default(0.00) @db.Decimal(12, 2)
+  importe_total              Decimal   @default(0.00) @db.Decimal(12, 2)
+  tipo_cambio                Decimal   @default(1.0000) @db.Decimal(8, 4)
+  descripcion                String    @db.Text
+  tipo_comprobante           String?   @db.VarChar(100)
+  cuenta_bancaria_persona    String?   @db.VarChar(200)
+  cuenta_bancaria_empresa    String?   @db.VarChar(200)
+  voucher_url                String?   @db.Text
+  sustento_url               String?   @db.Text
+  observacion                String?   @db.Text
+  no_aplica_liquidacion      Boolean   @default(false)
+  estado                     String    @default("PENDIENTE") @db.VarChar(50)
+  comentario                 String?   @db.Text
+  usuario_creacion           String?   @db.VarChar(150)
+  usuario_aprobacion         String?   @db.VarChar(150)
+  fecha_aprobacion           DateTime? @db.DateTime(0)
+  motivo_anulacion           String?   @db.Text
+  creado_en                  DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en             DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([estado], map: "idx_caja_estado")
+  @@index([fecha], map: "idx_caja_fecha")
+  @@index([serie, numero], map: "idx_caja_numero")
+  @@index([orden_viaje], map: "idx_caja_orden")
+  @@index([placa], map: "idx_caja_placa")
+  @@map("tesoreria_caja")
+}
+
+model TesoreriaCentroCosto {
+  id              Int       @id @default(autoincrement())
+  codigo          String    @unique(map: "codigo") @db.VarChar(50)
+  nombre          String    @db.VarChar(150)
+  nivel           String    @default("Principal") @db.VarChar(50)
+  cuenta_contable String?   @db.VarChar(100)
+  requiere_placa  Boolean   @default(false)
+  descripcion     String?   @db.Text
+  estado          String    @default("ACTIVO") @db.VarChar(20)
+  creado_en       DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en  DateTime? @default(now()) @db.Timestamp(0)
+
+  @@map("tesoreria_centros_costos")
+}
+
+model TesoreriaCuenta {
+  id                    Int       @id @default(autoincrement())
+  orden_servicio        String    @default("") @db.VarChar(60)
+  codigo_liquidacion    String    @default("") @db.VarChar(60)
+  fecha_liquidacion     DateTime? @db.Date
+  numero_viaje          String    @default("") @db.VarChar(60)
+  fecha_servicio        DateTime? @db.Date
+  razon_social          String    @default("") @db.VarChar(150)
+  placa_camion          String    @default("") @db.VarChar(50)
+  placa_carreta         String    @default("") @db.VarChar(50)
+  placa                 String    @default("") @db.VarChar(50)
+  conductor             String    @default("") @db.VarChar(150)
+  cliente               String    @default("") @db.VarChar(150)
+  lugar                 String    @default("") @db.VarChar(150)
+  flete                 Decimal   @default(0.00) @db.Decimal(12, 2)
+  comision_porcentaje   Decimal   @default(0.00) @db.Decimal(5, 2)
+  tarifa                Decimal   @default(0.00) @db.Decimal(12, 2)
+  gastos_operativos     Decimal   @default(0.00) @db.Decimal(12, 2)
+  base_imponible        Decimal   @default(0.00) @db.Decimal(12, 2)
+  igv                   Decimal   @default(0.00) @db.Decimal(12, 2)
+  total                 Decimal   @default(0.00) @db.Decimal(12, 2)
+  adelanto              Decimal   @default(0.00) @db.Decimal(12, 2)
+  detraccion            Decimal   @default(0.00) @db.Decimal(12, 2)
+  neto_cobrar           Decimal   @default(0.00) @db.Decimal(12, 2)
+  neto_cobrado          Decimal?  @db.Decimal(12, 2)
+  mes_facturacion       String    @default("") @db.VarChar(50)
+  fecha_factura         DateTime? @db.Date
+  serie                 String    @default("") @db.VarChar(30)
+  factura               String    @default("") @db.VarChar(50)
+  factura_documento_url String?   @db.Text
+  nota_credito          String    @default("") @db.VarChar(60)
+  nota_credito_url      String?   @db.Text
+  credito_dias          Int       @default(0)
+  fecha_cobrar          DateTime? @db.Date
+  fecha_deposito        DateTime? @db.Date
+  estado_servicio       String    @default("PENDIENTE") @db.VarChar(50)
+  diferencia            Decimal   @default(0.00) @db.Decimal(12, 2)
+  observacion           String?   @db.Text
+  documento_url         String?   @db.Text
+  sustento_pago_url     String?   @db.Text
+  creado_en             DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en        DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([cliente], map: "idx_cliente")
+  @@index([codigo_liquidacion], map: "idx_cod_liq")
+  @@index([estado_servicio], map: "idx_estado")
+  @@index([serie, factura], map: "idx_factura")
+  @@index([fecha_liquidacion], map: "idx_fecha_liq")
+  @@index([numero_viaje], map: "idx_num_viaje")
+  @@index([placa], map: "idx_placa")
+  @@index([placa_camion], map: "idx_placa_cam")
+  @@index([placa_carreta], map: "idx_placa_car")
+  @@map("tesoreria_cuentas")
+}
+
+model TesoreriaCuentaHistorialFactura {
+  id                      Int       @id @default(autoincrement())
+  cuenta_id               Int
+  factura_anterior_serie  String    @default("") @db.VarChar(30)
+  factura_anterior_numero String    @default("") @db.VarChar(50)
+  factura_anterior_url    String?   @db.Text
+  nota_credito_serie      String    @default("") @db.VarChar(30)
+  nota_credito_numero     String    @default("") @db.VarChar(50)
+  nota_credito_url        String?   @db.Text
+  motivo_anulacion        String    @default("") @db.VarChar(255)
+  factura_nueva_serie     String    @default("") @db.VarChar(30)
+  factura_nueva_numero    String    @default("") @db.VarChar(50)
+  factura_nueva_url       String?   @db.Text
+  usuario_registro        String?   @default("ADMINISTRADOR") @db.VarChar(150)
+  fecha_registro          DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([cuenta_id], map: "idx_cuenta_id")
+  @@index([nota_credito_serie, nota_credito_numero], map: "idx_nc")
+  @@map("tesoreria_cuentas_historial_facturas")
+}
+
+model TesoreriaLiquidacionGasto {
+  id               Int       @id @default(autoincrement())
+  orden_viaje      String    @db.VarChar(100)
+  fecha            DateTime  @db.Date
+  conductor        String?   @db.VarChar(150)
+  tipo_gasto       String    @db.VarChar(100)
+  sub_motivo       String?   @db.VarChar(150)
+  tipo_comprobante String    @default("BOLETA") @db.VarChar(50)
+  serie            String?   @db.VarChar(30)
+  numero           String?   @db.VarChar(50)
+  proveedor_ruc    String?   @db.VarChar(20)
+  proveedor_nombre String?   @db.VarChar(200)
+  detalle          String?   @db.Text
+  importe          Decimal   @default(0.00) @db.Decimal(12, 2)
+  sustento_url     String?   @db.Text
+  estado           String    @default("APROBADO") @db.VarChar(50)
+  usuario_registro String?   @db.VarChar(150)
+  creado_en        DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([fecha], map: "idx_liq_fecha")
+  @@index([orden_viaje], map: "idx_liq_viaje")
+  @@map("tesoreria_liquidaciones_gastos")
+}
+
+model TesoreriaMotivoGasto {
+  id                  Int                           @id @default(autoincrement())
+  motivo              String                        @db.VarChar(150)
+  sub_motivo          String                        @db.VarChar(150)
+  centro_costo_codigo String?                       @db.VarChar(50)
+  estado              TesoreriaMotivosGastosEstado? @default(ACTIVO)
+  created_at          DateTime?                     @default(now()) @db.Timestamp(0)
+  updated_at          DateTime?                     @default(now()) @db.Timestamp(0)
+
+  @@index([centro_costo_codigo], map: "idx_cc_codigo")
+  @@index([motivo], map: "idx_motivo")
+  @@index([sub_motivo], map: "idx_submotivo")
+  @@map("tesoreria_motivos_gastos")
+}
+
+enum TesoreriaMotivosGastosEstado {
+  ACTIVO
+  INACTIVO
+}

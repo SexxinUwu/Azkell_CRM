@@ -44,7 +44,19 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
   - [x] Casos especiales decididos; SQL de igualación generado y probado en copia ([sql/igualacion-2026-10/](../sql/igualacion-2026-10/))
   - [x] Igualación aplicada en producción el 2026-10-12 (Trahesa, Yogui, Rosymar, Marsisa): 6–10 s por empresa, 0 filas perdidas, 0 diferencias con la copia probada. Respaldo previo en `C:\Users\teffa\Respaldos_Azkell\2026-10-12_1457_antes_igualacion\`
   - [x] `server.js` ya no revierte `frecuencia_horas` al arrancar
-  - [ ] Esquema Prisma por módulo en el proyecto (modelos en singular con mayúscula + `@@map`; columnas con su nombre actual)
+  - [x] Esquema Prisma por módulo en `prisma/schema/` (13 módulos, 107 modelos; singular con mayúscula + `@@map`; columnas con su nombre actual) y base maestra en `prisma/master/`
+  - [x] Migración `0_baseline` (completada con `scripts/prisma_baseline.js`: 43 columnas `ON UPDATE CURRENT_TIMESTAMP` y 1 calculada) — probada creando una empresa nueva desde cero
+  - [x] `0_baseline` marcada como aplicada en producción (maestra + 4 empresas): `npm run db:estado` → todas al día
+  - [ ] Decidir la fórmula del promedio de neumáticos: hoy `(r1+r2+r3)/3` en todas las bases; el código nuevo de `routes/neumaticos.js` usa la 4ª medición si existe (afectaría a 16 inspecciones)
+  - [ ] Apagar el "auto-sync" de `services/tenant_master.js` y los `ALTER` de arranque (`server.js`, `init_db.js`, rutas) cuando el servidor nuevo use Prisma: hoy siguen copiando tablas y columnas desde `DB_NAME` a todas las empresas por fuera de las migraciones
+
+### Cómo se cambia el esquema desde ahora
+
+1. Editar el módulo en `prisma/schema/<modulo>.prisma`.
+2. Crear la migración contra una copia local (nunca contra producción): `npx prisma migrate dev --name <cambio>` con `DATABASE_URL` apuntando a la copia.
+3. Revisar el SQL generado: mientras conviva la versión actual, **solo agregar** (columnas, tablas, índices).
+4. Respaldo, y luego `npm run db:deploy` aplica la migración en la maestra y en cada empresa (`--solo <slug>` para una sola). `npm run db:estado` muestra qué falta.
+5. Nunca `prisma db push` ni `migrate dev` contra producción.
   - [ ] Quitar los `CREATE TABLE` / `ALTER TABLE` del arranque (75 tablas, 261 `ALTER` en el código)
 - [ ] **Fase 2 — Base técnica**
   - [ ] 2A. Vite + React + TS; copiar de KINTSUGI `tokens.css`, `base.css`, `motion.ts`, `haptics.ts`, `src/core/ui/`

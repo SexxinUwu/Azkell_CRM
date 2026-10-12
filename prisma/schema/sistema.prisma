@@ -1,0 +1,181 @@
+// Sistema: usuarios, roles, sesiones, auditoría, API y configuración
+
+model ApiKey {
+  id               Int       @id @default(autoincrement())
+  nombre           String    @db.VarChar(150)
+  api_key          String    @unique(map: "api_key") @db.VarChar(80)
+  cliente_empresa  String?   @default("") @db.VarChar(150)
+  scopes           String    @db.Text
+  limite_rpm       Int?      @default(60)
+  estado           String?   @default("activo") @db.VarChar(20)
+  ultimo_uso       DateTime? @db.DateTime(0)
+  peticiones_total Int?      @default(0)
+  creado_por       String?   @default("") @db.VarChar(100)
+  created_at       DateTime? @default(now()) @db.Timestamp(0)
+  updated_at       DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([estado], map: "idx_estado")
+  @@map("api_keys")
+}
+
+model ApiLog {
+  id             Int       @id @default(autoincrement())
+  api_key_id     Int?
+  api_key_nombre String?   @default("") @db.VarChar(150)
+  endpoint       String    @db.VarChar(255)
+  metodo         String    @db.VarChar(10)
+  ip             String?   @default("") @db.VarChar(45)
+  status_code    Int
+  tiempo_ms      Int       @default(0)
+  fecha          DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([fecha], map: "idx_fecha")
+  @@index([status_code], map: "idx_status")
+  @@map("api_logs")
+}
+
+model Auditoria {
+  idAuditoria Int       @id @default(autoincrement())
+  fecha       DateTime? @default(now()) @db.Timestamp(0)
+  usuario     String    @default("") @db.VarChar(150)
+  modulo      String?   @db.VarChar(50)
+  accion      String    @default("") @db.VarChar(50)
+  detalle     String?   @db.Text
+  submodulo   String?   @db.VarChar(50)
+
+  @@map("auditoria")
+}
+
+model ConfiguracionEmail {
+  id                   Int       @id @default(autoincrement())
+  smtp_host            String    @default("smtp.gmail.com") @db.VarChar(150)
+  smtp_port            Int       @default(587)
+  smtp_secure          Boolean   @default(false)
+  smtp_user            String?   @db.VarChar(150)
+  smtp_pass            String?   @db.VarChar(255)
+  from_name            String?   @default("Azkell ERP Alertas") @db.VarChar(150)
+  from_email           String?   @db.VarChar(150)
+  alertas_checklist    Boolean?  @default(true)
+  alertas_vencimientos Boolean?  @default(true)
+  alertas_planes       Boolean?  @default(true)
+  actualizado_en       DateTime? @default(now()) @db.Timestamp(0)
+
+  @@map("configuracion_email")
+}
+
+model ConfiguracionErp {
+  clave String  @id @db.VarChar(50)
+  valor String? @db.LongText
+
+  @@map("configuracion_erp")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model DestinatarioAlerta {
+  id                 Int      @id @default(autoincrement())
+  nombre             String   @db.VarChar(100)
+  correo             String   @unique(map: "uq_correo") @db.VarChar(150)
+  cargo              String?  @db.VarChar(80)
+  notif_1d           Boolean  @default(true)
+  notif_3d           Boolean  @default(true)
+  notif_7d           Boolean  @default(true)
+  notif_completada   Boolean  @default(false)
+  activo             Boolean  @default(true)
+  created_at         DateTime @default(now()) @db.Timestamp(0)
+  notif_checklist    Boolean? @default(true)
+  notif_vencimientos Boolean? @default(true)
+
+  @@map("destinatarios_alertas")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model IntegracionApi {
+  id              Int       @id @default(autoincrement())
+  clave           String    @unique(map: "clave") @db.VarChar(100)
+  valor           String?   @db.Text
+  descripcion     String?   @db.VarChar(255)
+  actualizado_por String?   @db.VarChar(100)
+  actualizado_en  DateTime? @default(now()) @db.DateTime(0)
+  creado_en       DateTime? @default(now()) @db.DateTime(0)
+
+  @@map("integraciones_api")
+}
+
+model ReporteProgramacionEmail {
+  id                    Int       @id @default(autoincrement())
+  nombre_reporte        String    @db.VarChar(150)
+  modulo                String    @db.VarChar(100)
+  destinatarios_para    String    @db.Text
+  destinatarios_cc      String?   @db.Text
+  destinatarios_cco     String?   @db.Text
+  frecuencia            String    @default("DIARIO") @db.VarChar(50)
+  hora_envio            String?   @default("08:00") @db.VarChar(10)
+  dias_semana           String?   @db.VarChar(50)
+  asunto_personalizado  String?   @db.VarChar(255)
+  mensaje_personalizado String?   @db.Text
+  incluir_pdf           Boolean?  @default(true)
+  incluir_excel         Boolean?  @default(false)
+  activo                Boolean?  @default(true)
+  ultimo_envio          DateTime? @db.DateTime(0)
+  creado_en             DateTime? @default(now()) @db.Timestamp(0)
+
+  @@map("reportes_programaciones_email")
+}
+
+model Rol {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @db.VarChar(100)
+  color         String?  @default("#5865F2") @db.VarChar(20)
+  permisos_json String?  @db.Text
+  es_admin      Boolean? @default(false)
+  orden         Int      @default(0)
+
+  @@map("roles")
+}
+
+model Secuencia {
+  id            Int    @id @default(autoincrement())
+  modulo        String @unique(map: "modulo") @db.VarChar(50)
+  prefijo       String @db.VarChar(10)
+  ultimo_numero Int?   @default(0)
+
+  @@map("secuencias")
+}
+
+model SesionActiva {
+  id               Int      @id @default(autoincrement())
+  usuario_correo   String   @db.VarChar(255)
+  token            String   @db.Text
+  ip               String?  @db.VarChar(80)
+  dispositivo      String?  @db.VarChar(255)
+  fecha_login      DateTime @db.DateTime(0)
+  ultima_actividad DateTime @db.DateTime(0)
+
+  @@map("sesiones_activas")
+}
+
+model Usuario {
+  idUsuario          String    @id @db.VarChar(20)
+  nombre             String    @default("") @db.VarChar(100)
+  cargo              String    @default("") @db.VarChar(100)
+  correo             String    @unique(map: "uq_correo") @db.VarChar(150)
+  password           String    @default("") @db.VarChar(255)
+  password_visible   String    @default("") @db.VarChar(255)
+  rol                String    @default("usuario") @db.VarChar(50)
+  estado             String    @default("Activo") @db.VarChar(20)
+  permisos_json      Json?
+  rol_id             Int?
+  ultimo_acceso      DateTime? @db.DateTime(0)
+  ultimo_ip          String?   @db.VarChar(80)
+  ultimo_dispositivo String?   @db.VarChar(200)
+  creado_en          DateTime? @default(now()) @db.Timestamp(0)
+  roles_ids          String?   @default("[]") @db.VarChar(255)
+  avatar_url         String?   @db.Text
+  banner_url         String?   @db.Text
+  telefono           String?   @db.VarChar(50)
+  firma_digital      String?   @db.LongText
+  preferencias_json  String?   @db.LongText
+  dni                String?   @db.VarChar(30)
+
+  @@map("usuarios")
+}

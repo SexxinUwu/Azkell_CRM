@@ -1,0 +1,14 @@
+// AZKELL FLEET — esquema base: conexión.
+// El modelo de datos está dividido por módulo en esta carpeta (prisma/schema/*.prisma).
+// Una base por empresa: DATABASE_URL apunta a la base de la empresa sobre la que se trabaja;
+// en ejecución, el cliente de cada empresa se crea con su propia URL (server/core/db).
+// Convención: modelos en singular con mayúscula y @@map a la tabla; columnas con su nombre actual.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}

@@ -1,0 +1,28 @@
+// Directorio: clientes y conductores
+
+model Cliente {
+  id             Int       @id @default(autoincrement())
+  ruc_dni        String?   @db.VarChar(50)
+  razon_social   String    @unique(map: "uq_razon") @db.VarChar(255)
+  direccion      String?   @db.Text
+  telefono       String?   @db.VarChar(50)
+  email          String?   @db.VarChar(100)
+  estado         String?   @default("Activo") @db.VarChar(20)
+  notas          String?   @db.Text
+  fecha_creacion DateTime? @default(now()) @db.DateTime(0)
+
+  @@map("clientes")
+}
+
+model Conductor {
+  idConductor Int     @id @default(autoincrement())
+  nombre      String  @default("") @db.VarChar(100)
+  empresa     String  @default("") @db.VarChar(100)
+  telefono    String  @default("") @db.VarChar(20)
+  dni         String  @default("") @db.VarChar(20)
+  licencia    String  @default("") @db.VarChar(50)
+  estado      String  @default("Activo") @db.VarChar(20)
+  foto        String? @db.Text
+
+  @@map("conductores")
+}

@@ -8,7 +8,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "cap:sync": "npx cap sync",
     "cap:android": "npx cap open android",
-    "cap:build": "npx cap sync && npx cap open android"
+    "cap:build": "npx cap sync && npx cap open android",
+    "db:validate": "prisma validate && prisma validate --schema prisma/master/schema.prisma",
+    "db:estado": "node scripts/prisma_empresas.js estado",
+    "db:deploy": "node scripts/prisma_empresas.js deploy"
   },
   "keywords": [],
   "author": "",
@@ -33,6 +36,10 @@
   "devDependencies": {
     "@capacitor/android": "^8.3.0",
     "@capacitor/cli": "^8.3.0",
-    "@capacitor/core": "^8.3.0"
+    "@capacitor/core": "^8.3.0",
+    "prisma": "6.19.3"
+  },
+  "prisma": {
+    "schema": "prisma/schema"
   }
 }

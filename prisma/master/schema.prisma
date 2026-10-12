@@ -1,0 +1,36 @@
+// AZKELL FLEET — base maestra (azkell_master): el registro de empresas.
+// Cada empresa tiene su propia base (db_name); el servidor elige la base según el subdominio (slug).
+// Cliente propio, separado del de las empresas: se genera en prisma/master/generated (ignorado por git).
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("MASTER_DATABASE_URL")
+}
+
+model Empresa {
+  id             Int            @id @default(autoincrement())
+  slug           String         @unique(map: "slug") @db.VarChar(50)
+  nombre_empresa String         @db.VarChar(150)
+  ruc            String?        @db.VarChar(20)
+  db_name        String         @unique(map: "db_name") @db.VarChar(100)
+  db_host        String?        @db.VarChar(150)
+  estado         EmpresaEstado? @default(activo)
+  plan           String?        @default("Profesional") @db.VarChar(50)
+  max_unidades   Int?           @default(100)
+  admin_email    String?        @db.VarChar(150)
+  fecha_creacion DateTime?      @default(now()) @db.DateTime(0)
+
+  @@index([slug], map: "idx_slug")
+  @@map("empresas")
+}
+
+enum EmpresaEstado {
+  activo
+  suspendido
+  demo
+}

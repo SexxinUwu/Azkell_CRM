@@ -1,0 +1,205 @@
+// Flota: placas, documentos, disponibilidad y status
+
+model CatSituacion {
+  id          Int    @id @default(autoincrement())
+  codigo      String @unique(map: "codigo") @db.VarChar(20)
+  descripcion String @db.VarChar(100)
+
+  @@map("cat_situaciones")
+}
+
+model ConfiguracionFlota {
+  id               Int      @id @default(autoincrement())
+  marca            String   @db.VarChar(50)
+  uts_categoria    String   @db.VarChar(20)
+  km_mensuales     Int      @default(0)
+  dias_operativos  Int      @default(26)
+  mp1_intervalo_km Int      @default(5000)
+  mp2_intervalo_km Int      @default(10000)
+  mp3_intervalo_km Int      @default(20000)
+  activa           Boolean  @default(true)
+  observaciones    String?  @db.Text
+  created_at       DateTime @default(now()) @db.Timestamp(0)
+  updated_at       DateTime @default(now()) @db.Timestamp(0)
+
+  @@unique([marca, uts_categoria], map: "uq_marca_uts")
+  @@map("configuracion_flota")
+}
+
+model DocumentoFlota {
+  id                String    @id @db.VarChar(50)
+  placa             String    @db.VarChar(50)
+  tipo_documento    String    @db.VarChar(100)
+  entidad           String?   @db.VarChar(100)
+  nro_constancia    String?   @db.VarChar(100)
+  fecha_emision     DateTime? @db.Date
+  fecha_vencimiento DateTime? @db.Date
+  pago              String?   @db.VarChar(50)
+  asesor            String?   @db.VarChar(100)
+  observaciones     String?   @db.Text
+  usuario           String?   @db.VarChar(100)
+  creado_en         DateTime? @default(now()) @db.Timestamp(0)
+
+  @@map("documentos_flota")
+}
+
+model FlotaDisponibilidad {
+  id                  Int       @id @default(autoincrement())
+  flota               String?   @default("") @db.VarChar(100)
+  conductor_eventual  String?   @default("") @db.VarChar(150)
+  conductor_asignado  String?   @default("") @db.VarChar(150)
+  placa_camion        String?   @default("") @db.VarChar(50)
+  placa_carreta       String?   @default("") @db.VarChar(20)
+  capacidad_tanque    String?   @default("") @db.VarChar(50)
+  marca               String?   @default("") @db.VarChar(50)
+  categoria_conductor String?   @default("") @db.VarChar(50)
+  tipo_unidad         String?   @default("") @db.VarChar(100)
+  estado_conductor    String    @default("Disponible") @db.VarChar(50)
+  estado_unidad       String    @default("Disponible") @db.VarChar(50)
+  ubicacion_manual    String?   @db.Text
+  observaciones       String?   @db.Text
+  creado_por          String?   @default("") @db.VarChar(100)
+  actualizado_por     String?   @default("") @db.VarChar(100)
+  fecha_creacion      DateTime? @default(now()) @db.Timestamp(0)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([estado_conductor], map: "idx_estado_con")
+  @@index([estado_unidad], map: "idx_estado_uni")
+  @@map("flota_disponibilidad")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model KmSnapshot {
+  id          Int      @id @default(autoincrement())
+  placa       String?  @db.VarChar(100)
+  fecha       DateTime @db.Date
+  km_gps      Int      @default(0)
+  horas_motor Decimal  @default(0.0) @db.Decimal(10, 1)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@unique([placa, fecha], map: "uq_placa_fecha")
+  @@index([fecha], map: "idx_fecha")
+  @@index([placa], map: "idx_placa")
+  @@map("km_snapshots")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model PlacaAuditoria {
+  id          Int       @id @default(autoincrement())
+  placa       String?   @db.VarChar(100)
+  campo       String    @db.VarChar(60)
+  valor_ant   String?   @db.Text
+  valor_nuevo String?   @db.Text
+  usuario     String?   @db.VarChar(150)
+  ip          String?   @db.VarChar(80)
+  fecha       DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([fecha], map: "idx_fecha")
+  @@index([placa], map: "idx_placa")
+  @@map("placa_auditoria")
+}
+
+model Placa {
+  placa            String  @id @db.VarChar(100)
+  cliente          String  @default("") @db.VarChar(100)
+  ruc_dni          String  @default("") @db.VarChar(20)
+  marca            String  @default("") @db.VarChar(50)
+  modelo_uts       String  @default("") @db.VarChar(100)
+  tipo             String  @default("") @db.VarChar(50)
+  sub_tipo         String  @default("") @db.VarChar(50)
+  color            String  @default("") @db.VarChar(30)
+  nro_motor        String  @default("") @db.VarChar(50)
+  nro_caja         String  @default("") @db.VarChar(50)
+  nro_corona       String  @default("") @db.VarChar(50)
+  nro_vin          String  @default("") @db.VarChar(50)
+  configuracion    String  @default("") @db.VarChar(50)
+  anio             String  @default("") @db.VarChar(10)
+  combustible      String  @default("") @db.VarChar(30)
+  carga_util       String  @default("") @db.VarChar(20)
+  peso_neto        String  @default("") @db.VarChar(20)
+  peso_bruto       String  @default("") @db.VarChar(20)
+  estado           String  @default("Activa") @db.VarChar(20)
+  uts              String  @default("") @db.VarChar(20)
+  motora           String  @default("") @db.VarChar(10)
+  llantas          String  @default("") @db.VarChar(10)
+  en_uso           String  @default("") @db.VarChar(10)
+  metrica          String  @default("km") @db.VarChar(10)
+  wialon_name      String? @db.VarChar(100)
+  tanque_1         String  @default("") @db.VarChar(20)
+  tanque_2         String  @default("") @db.VarChar(20)
+  tanque_3         String  @default("") @db.VarChar(20)
+  capacidad_tanque String  @default("") @db.VarChar(20)
+  tara             String  @default("") @db.VarChar(20)
+  modelo_motor     String? @db.VarChar(100)
+
+  @@map("placas")
+}
+
+model StatusFlota {
+  idRegistro       String    @id @db.VarChar(50)
+  fecha            DateTime? @db.Date
+  corte            String    @default("") @db.VarChar(30)
+  unidad_motora    String    @default("") @db.VarChar(20)
+  unidad_no_motora String    @default("") @db.VarChar(20)
+  cliente_motora   String    @default("") @db.VarChar(100)
+  cliente_nomotora String    @default("") @db.VarChar(100)
+  zona             String    @default("") @db.VarChar(50)
+  conductor        String    @default("") @db.VarChar(100)
+  estado           String    @default("") @db.VarChar(30)
+  observaciones    String?   @db.Text
+  usuario          String    @default("") @db.VarChar(150)
+
+  @@index([fecha], map: "idx_fecha")
+  @@index([unidad_motora], map: "idx_motora")
+  @@index([unidad_no_motora], map: "idx_nomotora")
+  @@map("status_flota")
+}
+
+model VehiculoFlota {
+  placa              String    @id @db.VarChar(10)
+  tipo               String?   @db.VarChar(50)
+  propiedad          String?   @default("PROPIA") @db.VarChar(50)
+  empresa            String?   @default("MARSISA") @db.VarChar(100)
+  fecha_entrega      DateTime? @db.Date
+  anio               Int?
+  marca              String?   @db.VarChar(50)
+  modelo             String?   @db.VarChar(50)
+  color              String?   @db.VarChar(50)
+  chasis             String?   @db.VarChar(100)
+  tc_vencimiento     DateTime? @db.Date
+  tc_constancia      String?   @db.VarChar(50)
+  soat_entidad       String?   @db.VarChar(50)
+  soat_pago          Decimal?  @db.Decimal(10, 2)
+  soat_vencimiento   DateTime? @db.Date
+  matpel_constancia  String?   @db.VarChar(50)
+  matpel_vencimiento DateTime? @db.Date
+  rt_emision         DateTime? @db.Date
+  rt_vencimiento     DateTime? @db.Date
+  boni_emision       DateTime? @db.Date
+  boni_vencimiento   DateTime? @db.Date
+  sv_entidad         String?   @db.VarChar(50)
+  sv_asesor          String?   @db.VarChar(100)
+  sv_vencimiento     DateTime? @db.Date
+  sc_entidad         String?   @db.VarChar(50)
+  sc_asesor          String?   @db.VarChar(100)
+  sc_vencimiento     DateTime? @db.Date
+  fum_emision        DateTime? @db.Date
+  fum_vencimiento    DateTime? @db.Date
+  ext_emision        DateTime? @db.Date
+  ext_vencimiento    DateTime? @db.Date
+  ext_cantidad       Int?      @default(1)
+  created_at         DateTime? @default(now()) @db.Timestamp(0)
+  updated_at         DateTime? @default(now()) @db.Timestamp(0)
+  tc_url             String?   @db.VarChar(255)
+  soat_url           String?   @db.VarChar(255)
+  matpel_url         String?   @db.VarChar(255)
+  rt_url             String?   @db.VarChar(255)
+  boni_url           String?   @db.VarChar(255)
+  sv_url             String?   @db.VarChar(255)
+  sc_url             String?   @db.VarChar(255)
+  fum_url            String?   @db.VarChar(255)
+  ext_url            String?   @db.VarChar(255)
+  wialon_name        String?   @db.VarChar(100)
+
+  @@map("vehiculos_flota")
+}

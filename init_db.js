@@ -826,7 +826,7 @@ const TABLAS = [
             r2 INT NOT NULL,
             r3 INT NOT NULL,
             r4 INT DEFAULT 0,
-            remanente_promedio DECIMAL(4,1) GENERATED ALWAYS AS (CASE WHEN r4 > 0 THEN (r1 + r2 + r3 + r4) / 4.0 ELSE (r1 + r2 + r3) / 3.0 END) STORED,
+            remanente_promedio DECIMAL(4,1) GENERATED ALWAYS AS ((r1 + r2 + r3) / 3.0) STORED, -- misma fórmula que las bases en producción (ver docs/fase1-esquema.md)
             presion_ant INT DEFAULT 0,
             presion_actual INT DEFAULT 0,
             estado VARCHAR(30) NOT NULL DEFAULT 'NUEVA',

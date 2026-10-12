@@ -1,0 +1,168 @@
+// Seguridad: garita, unidades y entrega de vehículos
+
+model SegAsistencia {
+  id             Int      @id @default(autoincrement())
+  dni            String   @db.VarChar(12)
+  nombre         String   @db.VarChar(150)
+  cargo          String?  @db.VarChar(100)
+  fecha_ingreso  String   @db.VarChar(10)
+  hora_ingreso   String   @db.VarChar(8)
+  fecha_salida   String?  @db.VarChar(10)
+  hora_salida    String?  @db.VarChar(8)
+  registrado_por String?  @db.VarChar(100)
+  created_at     DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([dni], map: "idx_dni")
+  @@index([hora_salida], map: "idx_estado")
+  @@index([fecha_ingreso], map: "idx_fecha_ingreso")
+  @@map("seg_asistencia")
+}
+
+model SegChecklistTemplate {
+  id          Int      @id @default(autoincrement())
+  template_id String   @unique(map: "uq_template_id") @db.VarChar(30)
+  titulo      String   @db.VarChar(150)
+  items_json  Json
+  orden       Int      @default(0)
+  activo      Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  updated_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("seg_checklist_templates")
+}
+
+model SegEntregaVehiculo {
+  id                     String    @id @db.VarChar(50)
+  numero_inventario      String?   @db.VarChar(50)
+  fecha                  DateTime  @db.Date
+  motivo                 String    @default("ENTREGA DE UNIDAD") @db.VarChar(150)
+  quien_entrega          String    @db.VarChar(150)
+  quien_recibe           String    @db.VarChar(150)
+  clase                  String?   @db.VarChar(50)
+  marca                  String?   @db.VarChar(50)
+  tipo                   String?   @db.VarChar(50)
+  modelo                 String?   @db.VarChar(50)
+  placa                  String    @db.VarChar(20)
+  color                  String?   @db.VarChar(50)
+  cilindros              String?   @db.VarChar(20)
+  numero_motor           String?   @db.VarChar(50)
+  numero_serie           String?   @db.VarChar(50)
+  kilometraje            Decimal   @default(0.00) @db.Decimal(12, 2)
+  llantas_del_der_marca  String?   @db.VarChar(50)
+  llantas_del_izq_marca  String?   @db.VarChar(50)
+  llantas_tra_der_marca  String?   @db.VarChar(50)
+  llantas_tra_izq_marca  String?   @db.VarChar(50)
+  llantas_repuesto_marca String?   @db.VarChar(50)
+  llantas_ref_json       Json?
+  inventario_partes_json Json?
+  observaciones          String?   @db.Text
+  croquis_danos_json     Json?
+  firma_entrega          String?   @db.LongText
+  firma_recibe           String?   @db.LongText
+  doc_entrega            String?   @db.VarChar(50)
+  doc_recibe             String?   @db.VarChar(50)
+  empresa                String    @default("MARSISA") @db.VarChar(100)
+  creado_por             String?   @db.VarChar(100)
+  creado_en              DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en         DateTime? @default(now()) @db.Timestamp(0)
+  configuracion          String?   @db.VarChar(50)
+  estilo_cabina          String?   @db.VarChar(50)
+
+  @@index([empresa], map: "idx_empresa")
+  @@index([fecha], map: "idx_fecha")
+  @@index([placa], map: "idx_placa")
+  @@map("seg_entrega_vehiculos")
+}
+
+model SegUnidadBase {
+  id             Int       @id @default(autoincrement())
+  fecha          DateTime  @db.Date
+  corte          String    @db.VarChar(20)
+  corte_hora     String?   @db.VarChar(10)
+  placa_camion   String    @db.VarChar(50)
+  placa_carreta  String?   @db.VarChar(50)
+  conductor      String?   @db.VarChar(150)
+  zona           String?   @default("Base Central") @db.VarChar(100)
+  estado         String?   @default("Disponible") @db.VarChar(50)
+  observacion    String?   @db.Text
+  usuario        String?   @db.VarChar(100)
+  creado_en      DateTime? @default(now()) @db.DateTime(0)
+  actualizado_en DateTime? @default(now()) @db.DateTime(0)
+
+  @@index([fecha, corte], map: "idx_fecha_corte")
+  @@index([placa_camion], map: "idx_placa_camion")
+  @@map("seg_unidades_base")
+}
+
+model SegUnidadFoto {
+  id          Int                  @id @default(autoincrement())
+  registro_id String?              @db.VarChar(50)
+  tipo        SegUnidadesFotosTipo
+  url         String?              @db.VarChar(500)
+  orden       Int                  @default(0)
+  created_at  DateTime             @default(now()) @db.Timestamp(0)
+
+  @@index([registro_id], map: "idx_registro")
+  @@index([tipo], map: "idx_tipo")
+  @@map("seg_unidades_fotos")
+}
+
+model SegUnidadRegistro {
+  id                       String                     @id @db.VarChar(50)
+  placa_tracto             String                     @db.VarChar(20)
+  placa_carreta            String?                    @db.VarChar(20)
+  retorno_placa_carreta    String?                    @db.VarChar(20)
+  conductor                String                     @db.VarChar(100)
+  retorno_conductor        String?                    @db.VarChar(100)
+  destino                  String?                    @db.VarChar(150)
+  tipo_salida              String                     @default("RUTA") @db.VarChar(30)
+  estado                   SegUnidadesRegistrosEstado @default(en_ruta)
+  salida_fecha             String?                    @db.VarChar(10)
+  salida_hora              String?                    @db.VarChar(5)
+  salida_km                String?                    @db.VarChar(20)
+  salida_template_json     Json?
+  salida_checklist_json    Json?
+  salida_has_alert         Boolean                    @default(false)
+  retorno_fecha            String?                    @db.VarChar(10)
+  retorno_hora             String?                    @db.VarChar(5)
+  retorno_km               String?                    @db.VarChar(20)
+  retorno_template_json    Json?
+  retorno_checklist_json   Json?
+  retorno_has_alert        Boolean                    @default(false)
+  creado_por               String?                    @db.VarChar(100)
+  created_at               DateTime                   @default(now()) @db.Timestamp(0)
+  updated_at               DateTime                   @default(now()) @db.Timestamp(0)
+  retorno_creado_por       String?                    @db.VarChar(100)
+  firma_salida_conductor   String?                    @db.LongText
+  firma_salida_vigilancia  String?                    @db.LongText
+  firma_retorno_conductor  String?                    @db.LongText
+  firma_retorno_vigilancia String?                    @db.LongText
+  salida_observaciones     String?                    @db.Text
+  retorno_observaciones    String?                    @db.Text
+  orden_viaje              String?                    @db.VarChar(50)
+
+  @@index([estado], map: "idx_estado")
+  @@index([placa_tracto], map: "idx_placa_tracto")
+  @@index([salida_fecha], map: "idx_salida_fecha")
+  @@map("seg_unidades_registros")
+}
+
+model Seguridad {
+  id               Int       @id @default(autoincrement())
+  usuario_id       Int
+  token_sesion     String    @db.VarChar(255)
+  fecha_expiracion DateTime  @db.DateTime(0)
+  creado_en        DateTime? @default(now()) @db.Timestamp(0)
+
+  @@map("seguridad")
+}
+
+enum SegUnidadesFotosTipo {
+  salida
+  retorno
+}
+
+enum SegUnidadesRegistrosEstado {
+  en_ruta
+  completado
+}

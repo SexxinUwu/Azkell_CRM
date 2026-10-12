@@ -1,0 +1,297 @@
+// Almacén: inventario, entradas, salidas y proveedores
+
+model Almacen {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique(map: "nombre") @db.VarChar(100)
+  descripcion String?  @db.VarChar(255)
+  es_sistema  Boolean  @default(false)
+  activo      Boolean  @default(true)
+  orden       Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  updated_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("almacen_almacenes")
+}
+
+model AlmacenFamilia {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique(map: "nombre") @db.VarChar(100)
+  descripcion String?  @db.VarChar(200)
+  activo      Boolean  @default(true)
+  orden       Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("almacen_familias")
+}
+
+model AlmacenMarca {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique(map: "nombre") @db.VarChar(100)
+  descripcion String?  @db.VarChar(200)
+  activo      Boolean  @default(true)
+  orden       Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("almacen_marcas")
+}
+
+model AlmacenSistema {
+  id           Int      @id @default(autoincrement())
+  nombre       String   @unique(map: "nombre") @db.VarChar(100)
+  sub_sistemas Json?
+  activo       Boolean  @default(true)
+  orden        Int      @default(0)
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("almacen_sistemas")
+}
+
+model AlmacenUnidad {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique(map: "nombre") @db.VarChar(20)
+  descripcion String?  @db.VarChar(200)
+  activo      Boolean  @default(true)
+  orden       Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("almacen_unidades")
+}
+
+model ConfiguracionAlmacen {
+  clave       String  @id @db.VarChar(50)
+  valor       String  @default("") @db.VarChar(500)
+  descripcion String? @db.VarChar(200)
+
+  @@map("configuracion_almacen")
+}
+
+model DetalleEntradaInv {
+  id             Int                      @id @default(autoincrement())
+  entrada_id     String                   @db.VarChar(20)
+  inventario_id  String                   @db.VarChar(20)
+  descripcion    String?                  @db.VarChar(400)
+  cantidad       Decimal                  @db.Decimal(14, 4)
+  costo_unitario Decimal                  @default(0.0000) @db.Decimal(14, 4)
+  moneda         DetalleEntradasInvMoneda @default(PEN)
+  importe        Decimal                  @default(0.0000) @db.Decimal(14, 4)
+  created_at     DateTime?                @default(now()) @db.Timestamp(0)
+
+  @@index([entrada_id], map: "idx_entrada")
+  @@index([inventario_id], map: "idx_item")
+  @@map("detalle_entradas_inv")
+}
+
+model DetalleSalidaInv {
+  id             Int                     @id @default(autoincrement())
+  salida_id      String                  @db.VarChar(20)
+  inventario_id  String?                 @db.VarChar(20)
+  descripcion    String?                 @db.VarChar(400)
+  cantidad       Decimal                 @db.Decimal(14, 4)
+  costo_unitario Decimal                 @default(0.0000) @db.Decimal(14, 4)
+  moneda         DetalleSalidasInvMoneda @default(PEN)
+  importe        Decimal                 @default(0.0000) @db.Decimal(14, 4)
+  created_at     DateTime?               @default(now()) @db.Timestamp(0)
+
+  @@index([inventario_id], map: "idx_item")
+  @@index([salida_id], map: "idx_salida")
+  @@map("detalle_salidas_inv")
+}
+
+model EntradaInv {
+  id                        String            @id @db.VarChar(20)
+  fecha                     DateTime          @default(now()) @db.DateTime(0)
+  proveedor_id              String?           @db.VarChar(20)
+  proveedor_nombre          String?           @db.VarChar(200)
+  documento_referencia      String?           @db.VarChar(100)
+  moneda                    EntradasInvMoneda @default(PEN)
+  tipo_cambio               Decimal?          @db.Decimal(8, 4)
+  total_pen                 Decimal           @default(0.0000) @db.Decimal(14, 4)
+  observaciones             String?           @db.Text
+  tipo_igv                  String?           @default("sin_igv") @db.VarChar(20)
+  creado_por                String?           @db.VarChar(100)
+  aprobado_por              String?           @default("Dirección / Gerencia") @db.VarChar(150)
+  created_at                DateTime          @default(now()) @db.Timestamp(0)
+  estado                    String?           @db.VarChar(50)
+  motivo_anulacion          String?           @db.VarChar(255)
+  url_voucher               String?           @db.Text
+  url_cotizacion            String?           @db.Text
+  url_factura               String?           @db.Text
+  motivo_entrada            String?           @db.VarChar(255)
+  placa                     String?           @db.VarChar(50)
+  tipo_orden                String?           @default("Orden de compra") @db.VarChar(50)
+  condicion_pago            String?           @default("Al contado") @db.VarChar(50)
+  dias_credito              Int?              @default(30)
+  ot_id                     String?           @db.VarChar(50)
+  numero_correlativo        String?           @db.VarChar(50)
+  serie                     String?           @db.VarChar(20)
+  dias_pagar                Int?              @default(0)
+  prioridad                 String?           @default("Normal") @db.VarChar(30)
+  cuenta_bancaria_proveedor String?           @db.VarChar(150)
+  cuenta_bancaria_empresa   String?           @db.VarChar(150)
+  solicitante               String?           @db.VarChar(150)
+  estado_factura            String?           @default("Pendiente") @db.VarChar(50)
+  numero_operacion          String?           @db.VarChar(100)
+  fecha_pago                DateTime?         @db.DateTime(0)
+  pagado_por                String?           @db.VarChar(150)
+  fecha_aprobacion          DateTime?         @db.DateTime(0)
+  centro_costo              String?           @db.VarChar(50)
+  sub_motivo                String?           @db.VarChar(100)
+  autoriza                  String?           @db.VarChar(150)
+
+  @@index([fecha], map: "idx_fecha")
+  @@map("entradas_inv")
+}
+
+model Inventario {
+  id                   String             @id @db.VarChar(20)
+  descripcion          String             @db.VarChar(400)
+  familia              String?            @db.VarChar(100)
+  sub_familia          String?            @db.VarChar(100)
+  almacen              String?            @db.VarChar(100)
+  unidad               String?            @db.VarChar(30)
+  moneda               InventarioMoneda   @default(PEN)
+  costo_referencial    Decimal            @default(0.0000) @db.Decimal(14, 4)
+  costo_soles          Decimal?           @db.Decimal(14, 4)
+  tipo_cambio          Decimal?           @db.Decimal(10, 4)
+  stock_regularizado   Decimal            @default(0.0000) @db.Decimal(14, 4)
+  fecha_regularizacion DateTime?          @db.DateTime(0)
+  proveedor_id         String?            @db.VarChar(20)
+  marca                String?            @db.VarChar(100)
+  activo               Boolean            @default(true)
+  observaciones        String?            @db.Text
+  created_at           DateTime           @default(now()) @db.Timestamp(0)
+  updated_at           DateTime           @default(now()) @db.Timestamp(0)
+  codigo_item          String?            @db.VarChar(100)
+  marca_unidad         String?            @db.Text
+  sistema              String?            @db.VarChar(100)
+  sub_sistema          String?            @db.VarChar(100)
+  tipo                 String?            @db.VarChar(50)
+  sub_tipo             InventarioSubTipo?
+  ubicacion            String?            @db.VarChar(150)
+  anaquel              String?            @db.VarChar(50)
+  stock_min            Decimal            @default(0.0000) @db.Decimal(14, 4)
+  stock_max            Decimal            @default(0.0000) @db.Decimal(14, 4)
+  estado_art           String?            @default("Activo") @db.VarChar(50)
+  codigo_barras        String?            @db.VarChar(100)
+  imagen_url           String?            @db.Text
+  articulo             String?            @db.VarChar(300)
+  codigo_articulo      String?            @db.VarChar(100)
+
+  @@index([activo], map: "idx_activo")
+  @@index([almacen], map: "idx_almacen")
+  @@index([familia], map: "idx_familia")
+  @@map("inventario")
+}
+
+model ProveedorCuentaBancaria {
+  id            Int                                 @id @default(autoincrement())
+  proveedor_id  String                              @db.VarChar(20)
+  banco         String                              @db.VarChar(100)
+  tipo_cuenta   ProveedorCuentasBancariasTipoCuenta
+  numero_cuenta String                              @db.VarChar(100)
+  detraccion    Boolean?                            @default(false)
+  estado        Boolean?                            @default(true)
+  created_at    DateTime                            @default(now()) @db.Timestamp(0)
+  moneda        String?                             @default("SOLES") @db.VarChar(20)
+
+  @@index([proveedor_id], map: "idx_prov_cuenta")
+  @@map("proveedor_cuentas_bancarias")
+}
+
+model ProveedorMarcaInv {
+  id           Int    @id @default(autoincrement())
+  proveedor_id String @db.VarChar(20)
+  marca        String @db.VarChar(100)
+
+  @@index([proveedor_id], map: "idx_prov")
+  @@map("proveedor_marcas_inv")
+}
+
+model ProveedorInv {
+  id               String                       @id @db.VarChar(20)
+  nombre           String                       @db.VarChar(200)
+  razon_social     String?                      @db.VarChar(200)
+  tipo_documento   ProveedoresInvTipoDocumento? @default(RUC)
+  numero_documento String?                      @db.VarChar(20)
+  telefono         String?                      @db.VarChar(30)
+  email            String?                      @db.VarChar(150)
+  direccion        String?                      @db.Text
+  estado           ProveedoresInvEstado?        @default(Activo)
+  observaciones    String?                      @db.Text
+  created_at       DateTime                     @default(now()) @db.Timestamp(0)
+  updated_at       DateTime                     @default(now()) @db.Timestamp(0)
+
+  @@map("proveedores_inv")
+}
+
+model SalidaInv {
+  id               String           @id @db.VarChar(20)
+  fecha            DateTime         @default(now()) @db.DateTime(0)
+  tipo_destino     String           @db.VarChar(50)
+  placa            String?          @db.VarChar(100)
+  responsable      String?          @db.VarChar(150)
+  responsable_id   Int?
+  moneda           SalidasInvMoneda @default(PEN)
+  tipo_cambio      Decimal?         @db.Decimal(8, 4)
+  total_pen        Decimal          @default(0.0000) @db.Decimal(14, 4)
+  observaciones    String?          @db.Text
+  creado_por       String?          @db.VarChar(100)
+  created_at       DateTime         @default(now()) @db.Timestamp(0)
+  ticket_ot        String?          @db.VarChar(30)
+  estado           String           @default("Despachado") @db.VarChar(20)
+  motivo_anulacion String?          @db.VarChar(255)
+  tipo_orden       String           @default("Orden de Salida") @db.VarChar(60)
+
+  @@index([fecha], map: "idx_fecha")
+  @@index([placa], map: "idx_placa")
+  @@index([ticket_ot], map: "idx_ticket_ot")
+  @@map("salidas_inv")
+}
+
+enum ProveedorCuentasBancariasTipoCuenta {
+  CUENTA_CORRIENTE  @map("CUENTA CORRIENTE")
+  CUENTA_DE_AHORROS @map("CUENTA DE AHORROS")
+  CUENTA_REMUNERADA @map("CUENTA REMUNERADA")
+}
+
+enum ProveedoresInvTipoDocumento {
+  RUC
+  DNI
+  CE
+  Otro
+}
+
+enum EntradasInvMoneda {
+  PEN
+  USD
+}
+
+enum DetalleEntradasInvMoneda {
+  PEN
+  USD
+}
+
+enum DetalleSalidasInvMoneda {
+  PEN
+  USD
+}
+
+enum InventarioMoneda {
+  PEN
+  USD
+}
+
+enum SalidasInvMoneda {
+  PEN
+  USD
+}
+
+enum ProveedoresInvEstado {
+  Activo
+  Inactivo
+}
+
+enum InventarioSubTipo {
+  Nuevo
+  Reparado
+}

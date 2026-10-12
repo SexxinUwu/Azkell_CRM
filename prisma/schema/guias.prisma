@@ -1,0 +1,229 @@
+// Guías de remisión SUNAT
+
+model GuiaItem {
+  id            Int                @id @default(autoincrement())
+  guia_tipo     GuiasItemsGuiaTipo
+  guia_id       Int
+  item_numero   Int?               @default(1)
+  codigo        String?            @db.VarChar(50)
+  descripcion   String             @db.Text
+  cantidad      Decimal?           @default(1.00) @db.Decimal(12, 2)
+  unidad_medida String?            @default("NIU") @db.VarChar(20)
+  peso_unitario Decimal?           @default(0.00) @db.Decimal(12, 2)
+  created_at    DateTime?          @default(now()) @db.Timestamp(0)
+
+  @@index([guia_tipo, guia_id], map: "idx_guia")
+  @@map("guias_items")
+}
+
+model GuiaRemision {
+  id                         Int                @id @default(autoincrement())
+  numero_guia                String             @unique(map: "numero_guia") @db.VarChar(30)
+  tipo_documento             String?            @default("31") @db.VarChar(10)
+  fecha_emision              DateTime?          @db.Date
+  fecha_traslado             DateTime?          @db.Date
+  remitente_ruc              String?            @db.VarChar(20)
+  remitente_razon_social     String?            @db.VarChar(255)
+  destinatario_ruc           String?            @db.VarChar(20)
+  destinatario_razon_social  String?            @db.VarChar(255)
+  punto_partida_direccion    String?            @db.Text
+  punto_partida_ubigeo       String?            @db.VarChar(10)
+  punto_llegada_direccion    String?            @db.Text
+  punto_llegada_ubigeo       String?            @db.VarChar(10)
+  placa_tracto               String?            @db.VarChar(20)
+  placa_carreta              String?            @db.VarChar(20)
+  conductor_tipo_doc         String?            @default("DNI") @db.VarChar(10)
+  conductor_num_doc          String?            @db.VarChar(20)
+  conductor_nombre           String?            @db.VarChar(200)
+  conductor_licencia         String?            @db.VarChar(30)
+  peso_bruto_total           Decimal?           @default(0.00) @db.Decimal(12, 2)
+  unidad_medida              String?            @default("KGM") @db.VarChar(10)
+  estado_sunat               String?            @default("ACEPTADO") @db.VarChar(50)
+  codigo_respuesta_sunat     String?            @default("0") @db.VarChar(20)
+  observaciones_sunat        String?            @db.Text
+  datos_json                 String?            @db.LongText
+  created_at                 DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at                 DateTime?          @default(now()) @db.Timestamp(0)
+  gre_relacionada_id         Int?
+  gre_relacionada_numero     String?            @db.VarChar(30)
+  num_ticket                 String?            @db.VarChar(50)
+  xml_hash                   String?            @db.VarChar(100)
+  modo_emision               String?            @default("SIMULACION") @db.VarChar(20)
+  motivo_traslado            String?            @default("01") @db.VarChar(10)
+  hora_emision               String?            @db.VarChar(20)
+  fecha_cdr                  DateTime?          @db.DateTime(0)
+  hora_cdr                   String?            @db.VarChar(20)
+  descripcion_motivo         String?            @db.VarChar(255)
+  modalidad_traslado         String?            @default("Público") @db.VarChar(50)
+  indicador_transbordo       Boolean?           @default(false)
+  indicador_retorno_vacio    Boolean?           @default(false)
+  indicador_m1_l             Boolean?           @default(false)
+  transportista_ruc          String?            @db.VarChar(20)
+  transportista_razon_social String?            @db.VarChar(255)
+  registro_mtc               String?            @db.VarChar(50)
+  volumen_m3                 Decimal?           @db.Decimal(12, 3)
+  xml_contenido              String?            @db.LongText
+  orden_servicio             String?            @db.VarChar(60)
+  orden_viaje                String?            @db.VarChar(60)
+  foto_evidencia             String?            @db.LongText
+  fecha_entrega              DateTime?          @db.Date
+  numero_transporte          String?            @db.VarChar(50)
+  apisunat_document_id       String?            @db.VarChar(60)
+  xml_url                    String?            @db.Text
+  cdr_url                    String?            @db.Text
+  pdf_url                    String?            @db.Text
+  apisunat_status            String?            @db.VarChar(30)
+  apisunat_faults            String?            @db.Text
+  guias_remision_items       GuiaRemisionItem[]
+
+  @@index([fecha_emision], map: "idx_fecha_emision")
+  @@index([gre_relacionada_id], map: "idx_gre_relacionada")
+  @@index([placa_tracto], map: "idx_placa_tracto")
+  @@map("guias_remision")
+}
+
+model GuiaRemisionItem {
+  id                Int          @id @default(autoincrement())
+  guia_id           Int
+  codigo            String?      @db.VarChar(50)
+  descripcion       String       @db.Text
+  cantidad          Decimal?     @default(1.00) @db.Decimal(12, 2)
+  unidad_medida     String?      @default("NIU") @db.VarChar(20)
+  peso_unitario     Decimal?     @default(0.00) @db.Decimal(12, 2)
+  created_at        DateTime?    @default(now()) @db.Timestamp(0)
+  item_numero       Int?         @default(1)
+  bien_normalizado  String?      @default("NO") @db.VarChar(10)
+  codigo_bien       String?      @db.VarChar(50)
+  codigo_sunat      String?      @db.VarChar(30)
+  codigo_gtin       String?      @db.VarChar(30)
+  codigo_subpartida String?      @db.VarChar(30)
+  guias_remision    GuiaRemision @relation(fields: [guia_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "guias_remision_items_ibfk_1")
+
+  @@index([guia_id], map: "idx_guia_id")
+  @@map("guias_remision_items")
+}
+
+model GuiaRemitente {
+  id                               Int       @id @default(autoincrement())
+  numero_guia                      String    @unique(map: "numero_guia") @db.VarChar(30)
+  serie                            String?   @default("T001") @db.VarChar(10)
+  correlativo                      Int?      @default(1)
+  fecha_emision                    DateTime  @db.Date
+  fecha_traslado                   DateTime  @db.Date
+  modalidad_transporte             String?   @default("01") @db.VarChar(2)
+  motivo_traslado                  String?   @default("01") @db.VarChar(4)
+  descripcion_motivo               String?   @default("VENTA") @db.VarChar(255)
+  remitente_ruc                    String    @db.VarChar(20)
+  remitente_razon_social           String    @db.VarChar(255)
+  remitente_tipo_doc               String?   @default("6") @db.Char(1)
+  destinatario_ruc                 String    @db.VarChar(20)
+  destinatario_razon_social        String    @db.VarChar(255)
+  destinatario_tipo_doc            String?   @default("6") @db.Char(1)
+  peso_total                       Decimal?  @default(0.00) @db.Decimal(12, 2)
+  unidad_medida                    String?   @default("KGM") @db.VarChar(10)
+  total_bultos                     Int?      @default(1)
+  indicador_transbordo             Boolean?  @default(false)
+  indicador_retorno_vehiculo_vacio Boolean?  @default(false)
+  indicador_retorno_envases_vacios Boolean?  @default(false)
+  indicador_traslado_total_m1_l    Boolean?  @default(false)
+  partida_ubigeo                   String    @db.VarChar(6)
+  partida_direccion                String    @db.Text
+  llegada_ubigeo                   String    @db.VarChar(6)
+  llegada_direccion                String    @db.Text
+  transportista_ruc                String?   @db.VarChar(20)
+  transportista_razon_social       String?   @db.VarChar(255)
+  transportista_reg_mtc            String?   @db.VarChar(50)
+  vehiculo_placa                   String?   @db.VarChar(20)
+  vehiculo_secundario_placa        String?   @db.VarChar(20)
+  conductor_tipo_doc               String?   @default("1") @db.Char(1)
+  conductor_num_doc                String?   @db.VarChar(20)
+  conductor_nombres                String?   @db.VarChar(200)
+  conductor_apellidos              String?   @db.VarChar(200)
+  conductor_licencia               String?   @db.VarChar(30)
+  apisunat_document_id             String?   @db.VarChar(60)
+  apisunat_status                  String?   @db.VarChar(30)
+  apisunat_faults                  String?   @db.Text
+  xml_url                          String?   @db.Text
+  cdr_url                          String?   @db.Text
+  pdf_url                          String?   @db.Text
+  estado                           String?   @default("BORRADOR") @db.VarChar(30)
+  observaciones                    String?   @db.Text
+  grt_vinculada_id                 Int?
+  grt_vinculada_numero             String?   @db.VarChar(30)
+  orden_servicio                   String?   @db.VarChar(60)
+  orden_viaje                      String?   @db.VarChar(60)
+  datos_json                       String?   @db.LongText
+  created_at                       DateTime? @default(now()) @db.Timestamp(0)
+  updated_at                       DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([estado], map: "idx_estado")
+  @@index([fecha_emision], map: "idx_fecha")
+  @@index([modalidad_transporte], map: "idx_modalidad")
+  @@index([serie, correlativo], map: "idx_serie_corr")
+  @@map("guias_remitente")
+}
+
+model GuiaTransportista {
+  id                          Int       @id @default(autoincrement())
+  numero_guia                 String    @unique(map: "numero_guia") @db.VarChar(30)
+  serie                       String?   @default("V001") @db.VarChar(10)
+  correlativo                 Int?      @default(1)
+  fecha_emision               DateTime  @db.Date
+  fecha_traslado              DateTime  @db.Date
+  transportista_ruc           String    @db.VarChar(20)
+  transportista_razon_social  String    @db.VarChar(255)
+  transportista_reg_mtc       String?   @db.VarChar(50)
+  remitente_ruc               String    @db.VarChar(20)
+  remitente_razon_social      String    @db.VarChar(255)
+  remitente_tipo_doc          String?   @default("6") @db.Char(1)
+  destinatario_ruc            String    @db.VarChar(20)
+  destinatario_razon_social   String    @db.VarChar(255)
+  destinatario_tipo_doc       String?   @default("6") @db.Char(1)
+  motivo_traslado             String?   @default("01") @db.VarChar(4)
+  descripcion_motivo          String?   @default("VENTA") @db.VarChar(255)
+  peso_total                  Decimal?  @default(0.00) @db.Decimal(12, 2)
+  unidad_medida               String?   @default("KGM") @db.VarChar(10)
+  indicador_transbordo        Boolean?  @default(false)
+  partida_ubigeo              String    @db.VarChar(6)
+  partida_direccion           String    @db.Text
+  llegada_ubigeo              String    @db.VarChar(6)
+  llegada_direccion           String    @db.Text
+  vehiculo_placa              String    @db.VarChar(20)
+  vehiculo_secundario_placa   String?   @db.VarChar(20)
+  conductor_tipo_doc          String?   @default("1") @db.Char(1)
+  conductor_num_doc           String    @db.VarChar(20)
+  conductor_nombres           String    @db.VarChar(200)
+  conductor_apellidos         String?   @db.VarChar(200)
+  conductor_licencia          String    @db.VarChar(30)
+  apisunat_document_id        String?   @db.VarChar(60)
+  apisunat_status             String?   @db.VarChar(30)
+  apisunat_faults             String?   @db.Text
+  xml_url                     String?   @db.Text
+  cdr_url                     String?   @db.Text
+  pdf_url                     String?   @db.Text
+  estado                      String?   @default("BORRADOR") @db.VarChar(30)
+  costo_flete                 Decimal?  @default(0.00) @db.Decimal(12, 2)
+  observaciones               String?   @db.Text
+  gre_vinculada_id            Int?
+  gre_vinculada_numero        String?   @db.VarChar(30)
+  orden_servicio              String?   @db.VarChar(60)
+  orden_viaje                 String?   @db.VarChar(60)
+  datos_json                  String?   @db.LongText
+  created_at                  DateTime? @default(now()) @db.Timestamp(0)
+  updated_at                  DateTime? @default(now()) @db.Timestamp(0)
+  gre_vinculada_ruc           String?   @db.VarChar(20)
+  gre_vinculada_tipo          String?   @default("09") @db.VarChar(10)
+  subcontratista_ruc          String?   @db.VarChar(20)
+  subcontratista_razon_social String?   @db.VarChar(255)
+
+  @@index([estado], map: "idx_estado")
+  @@index([fecha_emision], map: "idx_fecha")
+  @@index([vehiculo_placa], map: "idx_placa")
+  @@index([serie, correlativo], map: "idx_serie_corr")
+  @@map("guias_transportista")
+}
+
+enum GuiasItemsGuiaTipo {
+  GRE
+  GRT
+}

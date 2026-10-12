@@ -1,0 +1,205 @@
+// Recursos humanos
+
+model RrhhLicencia {
+  id            Int                  @id @default(autoincrement())
+  personal_id   Int
+  tipo          RrhhLicenciasTipo
+  fecha_inicio  DateTime             @db.Date
+  fecha_fin     DateTime             @db.Date
+  dias_totales  Int
+  motivo        String?              @db.Text
+  sustento_url  String?              @db.Text
+  estado        RrhhLicenciasEstado? @default(APROBADO)
+  aprobado_por  String?              @db.VarChar(100)
+  creado_en     DateTime?            @default(now()) @db.Timestamp(0)
+  rrhh_personal RrhhPersonal         @relation(fields: [personal_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rrhh_licencias_ibfk_1")
+
+  @@index([personal_id], map: "personal_id")
+  @@map("rrhh_licencias")
+}
+
+model RrhhPersonal {
+  id                             Int                             @id @default(autoincrement())
+  tipo_documento                 String?                         @default("DNI") @db.VarChar(20)
+  numero_documento               String                          @unique(map: "numero_documento") @db.VarChar(20)
+  nombres                        String                          @db.VarChar(100)
+  apellidos                      String                          @db.VarChar(100)
+  sexo                           RrhhPersonalSexo?               @default(M)
+  fecha_nacimiento               DateTime?                       @db.Date
+  nacionalidad                   String?                         @default("PERUANA") @db.VarChar(50)
+  estado_civil                   String?                         @default("SOLTERO(A)") @db.VarChar(30)
+  direccion                      String?                         @db.Text
+  distrito                       String?                         @db.VarChar(100)
+  provincia                      String?                         @db.VarChar(100)
+  departamento                   String?                         @db.VarChar(100)
+  telefono                       String?                         @db.VarChar(30)
+  email                          String?                         @db.VarChar(100)
+  contacto_emergencia_nombre     String?                         @db.VarChar(100)
+  contacto_emergencia_parentesco String?                         @db.VarChar(50)
+  contacto_emergencia_telefono   String?                         @db.VarChar(30)
+  categoria_rol                  RrhhPersonalCategoriaRol?       @default(ADMINISTRATIVO)
+  cargo                          String                          @db.VarChar(100)
+  area                           String?                         @default("OPERACIONES") @db.VarChar(100)
+  sede                           String?                         @default("BASE PRINCIPAL") @db.VarChar(100)
+  centro_costo_codigo            String?                         @default("CC-100") @db.VarChar(20)
+  jefe_inmediato                 String?                         @db.VarChar(100)
+  fecha_ingreso                  DateTime                        @db.Date
+  fecha_cese                     DateTime?                       @db.Date
+  motivo_cese                    String?                         @db.VarChar(255)
+  estado                         RrhhPersonalEstado?             @default(ACTIVO)
+  tipo_contrato                  RrhhPersonalTipoContrato?       @default(PLAZO_FIJO)
+  fecha_inicio_contrato          DateTime?                       @db.Date
+  fecha_fin_contrato             DateTime?                       @db.Date
+  regimen_pensionario            RrhhPersonalRegimenPensionario? @default(ONP)
+  tipo_comision_afp              RrhhPersonalTipoComisionAfp?    @default(FLUJO)
+  cuspp                          String?                         @db.VarChar(30)
+  tiene_asignacion_familiar      Boolean?                        @default(false)
+  sueldo_basico                  Decimal?                        @default(0.00) @db.Decimal(12, 2)
+  bono_fijo                      Decimal?                        @default(0.00) @db.Decimal(12, 2)
+  banco_haberes                  String?                         @db.VarChar(100)
+  cuenta_haberes                 String?                         @db.VarChar(50)
+  cci_haberes                    String?                         @db.VarChar(50)
+  banco_cts                      String?                         @db.VarChar(100)
+  cuenta_cts                     String?                         @db.VarChar(50)
+  licencia_conducir              String?                         @db.VarChar(30)
+  licencia_categoria             String?                         @db.VarChar(20)
+  licencia_vencimiento           DateTime?                       @db.Date
+  sctr_salud_vigente             Boolean?                        @default(true)
+  sctr_pension_vigente           Boolean?                        @default(true)
+  emo_fecha_vencimiento          DateTime?                       @db.Date
+  emo_condicion                  RrhhPersonalEmoCondicion?       @default(APTO)
+  grupo_sanguineo                String?                         @db.VarChar(10)
+  talla_polo                     String?                         @db.VarChar(10)
+  talla_pantalon                 String?                         @db.VarChar(10)
+  talla_calzado                  String?                         @db.VarChar(10)
+  talla_chaleco                  String?                         @db.VarChar(10)
+  foto_url                       String?                         @db.LongText
+  creado_en                      DateTime?                       @default(now()) @db.Timestamp(0)
+  actualizado_en                 DateTime?                       @default(now()) @db.Timestamp(0)
+  rrhh_licencias                 RrhhLicencia[]
+  rrhh_sst_registros             RrhhSstRegistro[]
+  rrhh_tareo                     RrhhTareo[]
+
+  @@map("rrhh_personal")
+}
+
+model RrhhSstRegistro {
+  id                Int                          @id @default(autoincrement())
+  personal_id       Int
+  tipo_registro     RrhhSstRegistrosTipoRegistro
+  fecha_registro    DateTime                     @db.Date
+  descripcion       String                       @db.Text
+  fecha_vencimiento DateTime?                    @db.Date
+  documento_url     String?                      @db.Text
+  firmado           Boolean?                     @default(false)
+  creado_en         DateTime?                    @default(now()) @db.Timestamp(0)
+  rrhh_personal     RrhhPersonal                 @relation(fields: [personal_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rrhh_sst_registros_ibfk_1")
+
+  @@index([personal_id], map: "personal_id")
+  @@map("rrhh_sst_registros")
+}
+
+model RrhhTareo {
+  id                 Int              @id @default(autoincrement())
+  personal_id        Int
+  fecha              DateTime         @db.Date
+  estado             RrhhTareoEstado? @default(A)
+  hora_entrada       DateTime?        @db.Time(0)
+  hora_salida        DateTime?        @db.Time(0)
+  minutos_tardanza   Int?             @default(0)
+  horas_extras       Decimal?         @default(0.00) @db.Decimal(4, 2)
+  observacion        String?          @db.VarChar(255)
+  orden_viaje_codigo String?          @db.VarChar(50)
+  usuario_registro   String?          @db.VarChar(100)
+  creado_en          DateTime?        @default(now()) @db.Timestamp(0)
+  rrhh_personal      RrhhPersonal     @relation(fields: [personal_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rrhh_tareo_ibfk_1")
+
+  @@unique([personal_id, fecha], map: "uq_personal_fecha")
+  @@map("rrhh_tareo")
+}
+
+enum RrhhLicenciasTipo {
+  VACACIONES
+  DESCANSO_MEDICO
+  PERMISO_CON_GOCE
+  PERMISO_SIN_GOCE
+  LICENCIA_PATERNIDAD
+  LICENCIA_MATERNIDAD
+  SUSPENSION
+}
+
+enum RrhhSstRegistrosTipoRegistro {
+  ENTREGA_EPP
+  CAPACITACION_SST
+  EXAMEN_MEDICO_EMO
+  INDUCCION
+  ENTREGA_RIT_RISST
+}
+
+enum RrhhTareoEstado {
+  A
+  T
+  F
+  R
+  DM
+  V
+  P
+  D
+  FER
+}
+
+enum RrhhPersonalSexo {
+  M
+  F
+}
+
+enum RrhhLicenciasEstado {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+}
+
+enum RrhhPersonalCategoriaRol {
+  CONDUCTOR
+  MECANICO_TALLER
+  ADMINISTRATIVO
+  LIMPIEZA_SERVICIOS
+  SEGURIDAD_CONTROL
+  OTRO
+}
+
+enum RrhhPersonalEstado {
+  ACTIVO
+  VACACIONES
+  SUSPENDIDO
+  CESADO
+}
+
+enum RrhhPersonalTipoContrato {
+  INDETERMINADO
+  PLAZO_FIJO
+  PERIODO_PRUEBA
+  LOCACION_SERVICIOS
+  PRACTICANTE
+}
+
+enum RrhhPersonalRegimenPensionario {
+  ONP
+  AFP_HABITAT
+  AFP_INTEGRA
+  AFP_PRIMA
+  AFP_PROFUTURO
+  SIN_REGIMEN
+}
+
+enum RrhhPersonalTipoComisionAfp {
+  FLUJO
+  MIXTA
+}
+
+enum RrhhPersonalEmoCondicion {
+  APTO
+  APTO_RESTRICCIONES
+  NO_APTO
+  PENDIENTE
+}

@@ -1,0 +1,109 @@
+// Compras: órdenes de compra, recepciones y aprobaciones
+
+model DetalleRecepcionOc {
+  id                Int     @id @default(autoincrement())
+  recepcion_id      Int
+  oc_id             String  @db.VarChar(50)
+  inventario_id     String? @db.VarChar(20)
+  descripcion       String? @db.VarChar(400)
+  cantidad_recibida Decimal @db.Decimal(14, 4)
+  costo_unitario    Decimal @default(0.0000) @db.Decimal(14, 4)
+  moneda            String  @default("PEN") @db.VarChar(10)
+  almacen           String? @default("ALM CENTRAL") @db.VarChar(100)
+
+  @@index([inventario_id], map: "idx_drec_item")
+  @@index([oc_id], map: "idx_drec_oc")
+  @@index([recepcion_id], map: "idx_drec_rec")
+  @@map("detalle_recepciones_oc")
+}
+
+model OcApprovalToken {
+  id                 Int                     @id @default(autoincrement())
+  orden_compra_id    Int
+  token              String                  @unique(map: "token") @db.VarChar(128)
+  aprobador_telefono String                  @db.VarChar(20)
+  aprobador_nombre   String?                 @db.VarChar(100)
+  estado             OcApprovalTokensEstado? @default(PENDIENTE)
+  motivo_rechazo     String?                 @db.Text
+  expira_en          DateTime                @db.DateTime(0)
+  usado_en           DateTime?               @db.DateTime(0)
+  creado_en          DateTime?               @default(now()) @db.Timestamp(0)
+  ordenes_compra     OrdenCompra             @relation(fields: [orden_compra_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "oc_approval_tokens_ibfk_1")
+
+  @@index([estado], map: "idx_token_estado")
+  @@index([orden_compra_id], map: "orden_compra_id")
+  @@map("oc_approval_tokens")
+}
+
+model OrdenCompra {
+  id                      Int                  @id @default(autoincrement())
+  codigo                  String               @unique(map: "codigo") @db.VarChar(50)
+  proveedor_nombre        String               @db.VarChar(200)
+  proveedor_ruc           String?              @db.VarChar(20)
+  monto_total             Decimal              @default(0.00) @db.Decimal(12, 2)
+  moneda                  String               @default("PEN") @db.VarChar(10)
+  motivo_solicitud        String?              @db.Text
+  sustento_cotizacion_url String?              @db.Text
+  estado                  OrdenesCompraEstado? @default(PENDIENTE_APROBACION)
+  motivo_rechazo          String?              @db.Text
+  aprobado_por            String?              @db.VarChar(100)
+  aprobado_en             DateTime?            @db.DateTime(0)
+  solicitado_por          String?              @db.VarChar(100)
+  creado_en               DateTime?            @default(now()) @db.Timestamp(0)
+  actualizado_en          DateTime?            @default(now()) @db.Timestamp(0)
+  oc_approval_tokens      OcApprovalToken[]
+  ordenes_compra_items    OrdenCompraItem[]
+
+  @@index([estado], map: "idx_oc_estado")
+  @@map("ordenes_compra")
+}
+
+model OrdenCompraItem {
+  id              Int         @id @default(autoincrement())
+  orden_compra_id Int
+  descripcion     String      @db.Text
+  cantidad        Decimal     @default(1.00) @db.Decimal(12, 2)
+  unidad_medida   String?     @default("UND") @db.VarChar(20)
+  precio_unitario Decimal     @default(0.00) @db.Decimal(12, 2)
+  subtotal        Decimal     @default(0.00) @db.Decimal(12, 2)
+  creado_en       DateTime?   @default(now()) @db.Timestamp(0)
+  ordenes_compra  OrdenCompra @relation(fields: [orden_compra_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ordenes_compra_items_ibfk_1")
+
+  @@index([orden_compra_id], map: "idx_items_oc_id")
+  @@map("ordenes_compra_items")
+}
+
+model RecepcionOc {
+  id              Int                        @id @default(autoincrement())
+  oc_id           String                     @db.VarChar(50)
+  fecha_recepcion DateTime                   @db.DateTime(0)
+  usuario         String?                    @db.VarChar(150)
+  almacen         String?                    @default("ALM CENTRAL") @db.VarChar(100)
+  sustento_url    String?                    @db.Text
+  observacion     String?                    @db.Text
+  tipo_recepcion  RecepcionesOcTipoRecepcion @default(TOTAL)
+  created_at      DateTime                   @default(now()) @db.Timestamp(0)
+
+  @@index([fecha_recepcion], map: "idx_rec_fecha")
+  @@index([oc_id], map: "idx_rec_oc")
+  @@map("recepciones_oc")
+}
+
+enum OcApprovalTokensEstado {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+}
+
+enum RecepcionesOcTipoRecepcion {
+  PARCIAL
+  TOTAL
+}
+
+enum OrdenesCompraEstado {
+  BORRADOR
+  PENDIENTE_APROBACION
+  APROBADA
+  RECHAZADA
+  RECIBIDA
+}
