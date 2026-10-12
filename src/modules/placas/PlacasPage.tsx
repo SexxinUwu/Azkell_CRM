@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight, Container, LayoutGrid, List, SearchX, Truck } from 'lucide-react';
+import { ArrowUpRight, Container, LayoutGrid, List, Plus, SearchX, Truck } from 'lucide-react';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -13,6 +13,8 @@ import { spring } from '../../core/lib/motion';
 import { abrirClasico } from '../../core/layout/navigation';
 import { coincide, usePlacas, type Placa } from './api';
 import { PlacaFicha } from './PlacaFicha';
+import { PlacaFormulario } from './PlacaFormulario';
+import { useAuth } from '../../core/auth/AuthProvider';
 import './placas.css';
 
 type Clase = 'todas' | 'motoras' | 'no-motoras';
@@ -33,6 +35,8 @@ export function PlacasPage() {
   const [tipos, setTipos] = useState<string[]>([]);
   const [vista, setVista] = useState<Vista>(() => (localStorage.getItem(VISTA_KEY) as Vista) || 'tarjetas');
   const [abierta, setAbierta] = useState<Placa | null>(null);
+  const [formulario, setFormulario] = useState<{ modo: 'crear' | 'editar'; placa: Placa | null } | null>(null);
+  const { can } = useAuth();
 
   const placas = data ?? [];
   const tiposDisponibles = useMemo(() => [...new Set(placas.map(p => p.tipo).filter(Boolean))].sort(), [placas]);
@@ -63,9 +67,16 @@ export function PlacasPage() {
         title="Placas"
         subtitle={isLoading ? 'Cargando unidades…' : `${resumen.total} unidades · ${resumen.motoras} motoras · ${resumen.noMotoras} no motoras`}
         actions={
-          <Button variant="secondary" icon={<ArrowUpRight size={16} />} onClick={() => abrirClasico('flota/placas')}>
-            Editar en la versión actual
-          </Button>
+          <>
+            <Button variant="secondary" icon={<ArrowUpRight size={16} />} onClick={() => abrirClasico('flota/placas')}>
+              Versión actual
+            </Button>
+            {can('placas.crear') && (
+              <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ modo: 'crear', placa: null })}>
+                Nueva placa
+              </Button>
+            )}
+          </>
         }
       />
 
@@ -171,7 +182,19 @@ export function PlacasPage() {
         </>
       )}
 
-      <PlacaFicha placa={abierta} onClose={() => setAbierta(null)} />
+      <PlacaFicha
+        placa={abierta}
+        onClose={() => setAbierta(null)}
+        onEditar={can('placas.editar') ? p => { setAbierta(null); setFormulario({ modo: 'editar', placa: p }); } : undefined}
+      />
+      <PlacaFormulario
+        open={!!formulario}
+        modo={formulario?.modo ?? 'crear'}
+        placa={formulario?.placa ?? null}
+        existentes={placas}
+        onClose={() => setFormulario(null)}
+        onGuardada={p => { setFormulario(null); setAbierta(p); }}
+      />
     </Page>
   );
 }

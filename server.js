@@ -4122,7 +4122,7 @@ app.put('/api/placas/:placa', (req, res) => {
     const usuario = (req.user?.correo || req.body.usuario_autor || '').substring(0, 100);
     const ip      = (req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '').substring(0, 80);
     const campos  = ['cliente','ruc_dni','marca','modelo_uts','tipo','sub_tipo','color',
-                     'nro_motor','nro_caja','nro_corona','nro_vin','configuracion',
+                     'nro_motor','modelo_motor','nro_caja','nro_corona','nro_vin','configuracion',
                      'tanque_1','tanque_2','tanque_3','capacidad_tanque',
                      'anio','combustible','tara','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica','wialon_name'];
 
@@ -4131,7 +4131,10 @@ app.put('/api/placas/:placa', (req, res) => {
         if (!rows.length) return res.status(404).json({ error: 'Placa no encontrada' });
 
         const actual = rows[0];
-        const nuevo  = req.body;
+        const nuevo  = { ...req.body };
+        // Un campo que no se envía conserva su valor (antes quedaba vacío). La pantalla actual no tiene
+        // campo de métrica: sin esto, cada edición la volvía a 'km'.
+        campos.forEach(c => { if (nuevo[c] === undefined) nuevo[c] = actual[c]; });
 
         const t1 = parseFloat(nuevo.tanque_1) || 0;
         const t2 = parseFloat(nuevo.tanque_2) || 0;
@@ -4169,7 +4172,7 @@ app.put('/api/placas/:placa', (req, res) => {
 
 // ── GET /api/placas/:placa/historial ──────────────────────────────────────────
 app.get('/api/placas/:placa/historial', (req, res) => {
-    db.query(
+    (req.db || db).query(
         `SELECT id, campo, valor_ant, valor_nuevo, usuario, ip, fecha
          FROM placa_auditoria
          WHERE placa = ?

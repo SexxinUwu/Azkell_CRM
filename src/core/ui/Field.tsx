@@ -6,15 +6,17 @@ interface FieldProps {
   label: string;
   hint?: ReactNode;
   error?: string | null;
+  /** Ocupa las dos columnas de .form-grid */
+  wide?: boolean;
   children: (props: { id: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string }) => ReactNode;
 }
 
 // Etiqueta + control + ayuda/error, conectados para lectores de pantalla.
-export function Field({ label, hint, error, children }: FieldProps) {
+export function Field({ label, hint, error, wide, children }: FieldProps) {
   const id = useId();
   const descId = `${id}-desc`;
   return (
-    <div className="field">
+    <div className={`field${wide ? ' field--wide' : ''}`}>
       <label className="field__label" htmlFor={id}>{label}</label>
       {children({ id, 'aria-invalid': error ? true : undefined, 'aria-describedby': error || hint ? descId : undefined })}
       {error ? (

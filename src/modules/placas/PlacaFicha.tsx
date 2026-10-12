@@ -1,15 +1,16 @@
 import { useRef, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, History, Pencil } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { spring } from '../../core/lib/motion';
 import { abrirClasico } from '../../core/layout/navigation';
-import type { Placa } from './api';
+import { useHistorial, type Placa } from './api';
+import { formatRelative } from '../../core/lib/format';
 
 // Ficha de una unidad: placa grande y datos agrupados. Solo consulta.
-export function PlacaFicha({ placa, onClose }: { placa: Placa | null; onClose: () => void }) {
+export function PlacaFicha({ placa, onClose, onEditar }: { placa: Placa | null; onClose: () => void; onEditar?: (p: Placa) => void }) {
   // Se conserva la última placa mientras la hoja se cierra (anima con su contenido)
   const ultima = useRef<Placa | null>(null);
   if (placa) ultima.current = placa;
@@ -30,9 +31,11 @@ export function PlacaFicha({ placa, onClose }: { placa: Placa | null; onClose: (
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cerrar</Button>
-          <Button variant="primary" icon={<ArrowUpRight size={16} />} onClick={() => abrirClasico('flota/placas')}>
-            Editar en la versión actual
-          </Button>
+          {onEditar && p ? (
+            <Button variant="primary" icon={<Pencil size={16} />} onClick={() => onEditar(p)}>Editar</Button>
+          ) : (
+            <Button variant="secondary" icon={<ArrowUpRight size={16} />} onClick={() => abrirClasico('flota/placas')}>Versión actual</Button>
+          )}
         </>
       }
     >
@@ -89,6 +92,10 @@ export function PlacaFicha({ placa, onClose }: { placa: Placa | null; onClose: (
               <Dato label="Unidad en Wialon (GPS)" value={p.wialon} />
             </Grupo>
           </motion.div>
+
+          <motion.div {...seccion(4)}>
+            <Historial placa={placa ? p.placa : null} />
+          </motion.div>
         </div>
       )}
     </Sheet>
@@ -110,5 +117,49 @@ function Dato({ label, value, mono }: { label: string; value: string; mono?: boo
       <span className="row__main ficha__label">{label}</span>
       <span className={`ficha__valor${mono ? ' ficha__valor--mono' : ''}${value ? '' : ' ficha__valor--vacio'}`}>{value || '—'}</span>
     </div>
+  );
+}
+
+const NOMBRES: Record<string, string> = {
+  cliente: 'Cliente', ruc_dni: 'RUC / DNI', marca: 'Marca', modelo_uts: 'Modelo', tipo: 'Tipo', sub_tipo: 'Sub tipo', color: 'Color',
+  nro_motor: 'N.º de motor', modelo_motor: 'Modelo de motor', nro_caja: 'N.º de caja', nro_corona: 'N.º de corona', nro_vin: 'VIN',
+  configuracion: 'Configuración', tanque_1: 'Tanque 1', tanque_2: 'Tanque 2', tanque_3: 'Tanque 3', capacidad_tanque: 'Capacidad total',
+  anio: 'Año', combustible: 'Combustible', tara: 'Tara', carga_util: 'Carga útil', peso_neto: 'Peso neto', peso_bruto: 'Peso bruto',
+  estado: 'Estado', uts: 'UTS', motora: 'Clase', llantas: 'Llantas', en_uso: 'En uso', metrica: 'Métrica', wialon_name: 'Wialon',
+};
+
+// Historial de cambios (placa_auditoria): quién cambió qué y cuándo
+function Historial({ placa }: { placa: string | null }) {
+  const { data, isLoading } = useHistorial(placa);
+  const reduce = useReducedMotion();
+  const cambios = data ?? [];
+  return (
+    <section className="ficha__grupo">
+      <div className="list__header">Historial de cambios</div>
+      {isLoading ? (
+        <p className="t-footnote c-secondary historial__vacio">Cargando…</p>
+      ) : cambios.length === 0 ? (
+        <p className="t-footnote c-secondary historial__vacio"><History size={14} /> Sin cambios registrados.</p>
+      ) : (
+        <ol className="historial">
+          {cambios.slice(0, 30).map((c, i) => (
+            <motion.li key={c.id} className="historial__item"
+              initial={{ opacity: 0, x: reduce ? 0 : -8 }} animate={{ opacity: 1, x: 0 }}
+              transition={{ ...spring, delay: reduce ? 0 : Math.min(i, 10) * 0.03 }}>
+              <span className="historial__punto" aria-hidden />
+              <div className="historial__cuerpo">
+                <div className="historial__titulo"><strong>{NOMBRES[c.campo] ?? c.campo}</strong></div>
+                <div className="historial__valores">
+                  <span className="historial__antes">{c.valor_ant || 'vacío'}</span>
+                  <span aria-hidden>→</span>
+                  <span className="historial__despues">{c.valor_nuevo || 'vacío'}</span>
+                </div>
+                <div className="t-caption c-tertiary">{[c.usuario, formatRelative(c.fecha)].filter(Boolean).join(' · ')}</div>
+              </div>
+            </motion.li>
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }

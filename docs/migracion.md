@@ -74,7 +74,8 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
   - [ ] Avisos en vivo (SSE) entre dispositivos: hoy el aviso de conexión solo usa la red del dispositivo
 - [ ] **Fase 3 — Piloto: Flota › Placas**
   - [x] Consulta en `/app/placas`: resumen animado, búsqueda, filtros, tarjetas/lista y ficha (datos de la API actual)
-  - [ ] Edición en la app nueva (sobre `guardarPlaca`, mismas reglas)
+  - [x] Crear y editar en la app nueva (mismos endpoints y reglas), con historial de cambios en la ficha
+  - [x] Corregido en el servidor actual: la edición ponía la métrica en 'km' siempre, no guardaba 'modelo de motor' y el historial leía de la base por defecto (no de la empresa)
   - [ ] Endpoint propio `/api/v2/placas` con Prisma
 - [ ] **Fase 4 — Módulos por grupos** (abajo)
 - [ ] **Fase 5 — Cierre:** borrar `Index.html`, `logica.js`, `Modulos/`, `routes/`; cookies HttpOnly; 2FA
@@ -92,7 +93,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [ ] almacen/almacenes
 
 ### B. Flota
-- [ ] flota/placas *(piloto: consulta lista en /app; edición pendiente)*
+- [ ] flota/placas *(piloto: consulta, crear y editar en /app; falta importar Excel, eliminar y API propia)*
 - [ ] flota/documentos
 - [ ] flota/disponibilidad
 - [ ] flota/ubicacion (GPS Wialon)

@@ -16,8 +16,12 @@ Piloto de la migración (Fase 3). Ruta: `/app/placas`. Permiso: `placas.ver`.
 - **Filtros:** Todas / Motoras / No motoras y tipo de unidad (varios a la vez). "Quitar filtros" los limpia.
 - **Tarjetas o lista** (se recuerda en el dispositivo). Al filtrar, las tarjetas se reacomodan con animación.
 - **Ficha:** placa peruana grande, estado, clase, tipo y configuración; datos agrupados en General, Técnico, Capacidad y Operación.
-- **Solo consulta.** Crear, editar, importar desde Excel y eliminar siguen en la versión actual ("Editar en la versión actual"), sin cambios en sus reglas.
+- **Crear y editar** en la app nueva (permisos `placas.crear` y `placas.editar`), con validación al salir de cada campo: placa (formato y repetidas), tipo, RUC/DNI, año y números. La placa se dibuja mientras se escribe y la capacidad total se suma en vivo.
+  - Editar: `PUT /api/placas/:placa` (envía todas las columnas; conserva la métrica km/horas de `/api/config-metrica`). El servidor registra cada campo cambiado en `placa_auditoria`.
+  - Crear: `guardarPlaca` (inserta o actualiza): por eso la pantalla bloquea antes las placas repetidas.
+- **Historial de cambios** en la ficha (`GET /api/placas/:placa/historial`): campo, antes → después, quién y cuándo.
+- Importar desde Excel y eliminar siguen en la versión actual.
 
 ## Siguiente paso
 
-Edición en la app nueva: formulario con validación en línea sobre `POST /api/script/guardarPlaca` (mismas reglas), y luego el endpoint propio `/api/v2/placas` con Prisma.
+Endpoint propio `/api/v2/placas` con Prisma, permisos por nombre en el servidor y auditoría con antes/después.
