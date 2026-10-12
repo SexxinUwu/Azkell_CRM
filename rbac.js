@@ -3,7 +3,7 @@ module.exports = function globalRBAC(req, res, next) {
     const path = req.path;
     // Rutas públicas o helpers que no requieren permisos de módulo
     const ignoredPaths = [
-        '/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas', 
+        '/login', '/ping', '/eventos', 
         '/cambiar-password', '/conductores', '/conductores-lista', '/placas-lista', '/config-metrica', 
         '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/notificaciones',
         '/script/obtener', '/script/buscar', '/integraciones', '/catalogos_taller',

@@ -109,9 +109,7 @@ module.exports = function (db, broadcast, logAudit) {
             r2 INT DEFAULT 0,
             r3 INT DEFAULT 0,
             r4 INT DEFAULT 0,
-            remanente_promedio DECIMAL(4,1) GENERATED ALWAYS AS (
-                CASE WHEN r4 > 0 THEN (r1 + r2 + r3 + r4) / 4.0 ELSE (r1 + r2 + r3) / 3.0 END
-            ) STORED,
+            remanente_promedio DECIMAL(4,1) GENERATED ALWAYS AS ((r1 + r2 + r3) / 3.0) STORED, -- promedio de 3 mediciones (decisión 2026-10-12)
             presion_ant INT DEFAULT 100,
             presion_actual INT DEFAULT 100,
             estado VARCHAR(30) DEFAULT 'NUEVA',

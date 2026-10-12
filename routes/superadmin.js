@@ -12,15 +12,14 @@ module.exports = function () {
 
     // ── Middleware de Seguridad SuperAdmin (Requiere Clave de Acceso Master) ──
     router.use((req, res, next) => {
-        const masterKey = req.headers['x-master-key'] || req.query.master_key;
-        const SECRET_MASTER_KEY = process.env.MASTER_KEY;
+        // Solo con sesión de Fundador/SuperAdmin (ya verificada por verifyToken, montado antes).
+        // El dominio o "localhost" no dan acceso: la cabecera Host la escribe quien hace la petición.
+        // La antigua clave maestra (X-Master-Key) se eliminó: su valor estaba publicado en el frontend.
+        const esFundador = req.user && (
+            (req.user.correo || '').toLowerCase() === 'admin@azkell.com' ||
+            req.user.rol === 'Fundador' || req.user.rol === 'SuperAdmin');
 
-        // Permitir peticiones ÚNICAMENTE si viene del subdominio admin, localhost, o tiene rol Fundador/SuperAdmin
-        if ((SECRET_MASTER_KEY && masterKey === SECRET_MASTER_KEY) || 
-            (req.headers.host && (req.headers.host.includes('admin.azkell.com') || req.headers.host.includes('localhost'))) || 
-            (req.user && (req.user.rol === 'Fundador' || req.user.rol === 'SuperAdmin'))) {
-            return next();
-        }
+        if (esFundador) return next();
 
         // Si se llama desde la API local o para crear empresa durante onboarding inicial
         if (req.method === 'POST' && req.path === '/empresas' && process.env.ALLOW_PUBLIC_REGISTRATION === 'true') {

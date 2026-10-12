@@ -26,6 +26,20 @@ const app = express();
 // pueda identificar IPs correctamente desde el header X-Forwarded-For
 app.set('trust proxy', 1);
 
+// ── Cabeceras de seguridad (helmet) ───────────────────────────────
+// Configuración conservadora para la versión actual: la CSP estricta llega con la app nueva
+// (hoy hay scripts en línea y de CDN). Los iframes de la app (PDF de guías, vouchers, formato OT)
+// son del mismo dominio; Wialon usa ventana emergente con window.opener.
+app.use(require('helmet')({
+    contentSecurityPolicy: false,
+    frameguard: { action: 'sameorigin' },
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    strictTransportSecurity: { maxAge: 15552000, includeSubDomains: false }
+}));
+
 // ── Compresión gzip (reduce 60-70% el tamaño de respuestas) ───────
 app.use(compression());
 
@@ -451,7 +465,6 @@ app.use((req, res, next) => {
 });
 
 
-app.use('/api/superadmin', require('./routes/superadmin')());
 
 // ── CONFIGURACION ERP ─────────────────────────────────────────────────────────
 app.get('/api/configuracion', async (req, res) => {
@@ -2168,7 +2181,7 @@ const sseClients = new Set();
 // ============================================================
 function verifyToken(req, res, next) {
     const PUBLIC_PATHS = [
-        '/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas',
+        '/login', '/ping', '/eventos',
         '/whatsapp/qr', '/approvals/oc', '/approvals/oc/action'
     ];
     if (
@@ -2236,6 +2249,8 @@ function verifyToken(req, res, next) {
     }
 }
 app.use('/api', verifyToken);
+// Panel SuperAdmin: después de la sesión (exige Fundador o clave maestra) y antes de los permisos por módulo
+app.use('/api/superadmin', require('./routes/superadmin')());
 app.use('/api', globalRBAC);
 
 // ============================================================

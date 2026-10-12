@@ -33,8 +33,11 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
   - [x] Raíz publicada: `server.js` ahora sirve solo una lista de archivos y las carpetas `modulos/`, `icons/`, `web/` (y `libs/`)
   - [x] `JWT_SECRET` obligatorio al arrancar; sin `MASTER_KEY` la clave maestra ya no da acceso
   - [ ] Rotar los secretos que quedaron en el historial de git (ver lista en la conversación del 2026-10-12)
-  - [ ] Superadmin: el acceso por `Host: localhost` se puede falsificar; quitarlo o limitarlo a desarrollo
-  - [ ] Seguridad: cerrar `/test-s3` y `/seguridad/limpiar-plantillas`, `helmet`
+  - [x] Superadmin: solo con sesión de Fundador (montado después de verifyToken); se quitaron el acceso por dominio/`localhost` y la clave maestra, que estaba escrita en el frontend
+  - [x] Eliminados `/test-s3` y `/seguridad/limpiar-plantillas` (públicos: subían a S3 y borraban plantillas)
+  - [x] `helmet` con configuración conservadora (CSP estricta pendiente para la app nueva)
+  - [x] Sincronización de combustible: errores de conexión en español, sin mostrar valores de configuración
+  - [ ] Usuario MySQL propio para la app (hoy usa `root` abierto a internet)
   - [ ] Detallar reglas y endpoints de cada pantalla (se hace al empezar cada módulo)
 - [ ] **Fase 1 — Prisma sobre la base existente**
   - [ ] `prisma db pull` de una base de empresa; modelos repartidos por módulo con `@@map`
@@ -47,7 +50,7 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
   - [x] Esquema Prisma por módulo en `prisma/schema/` (13 módulos, 107 modelos; singular con mayúscula + `@@map`; columnas con su nombre actual) y base maestra en `prisma/master/`
   - [x] Migración `0_baseline` (completada con `scripts/prisma_baseline.js`: 43 columnas `ON UPDATE CURRENT_TIMESTAMP` y 1 calculada) — probada creando una empresa nueva desde cero
   - [x] `0_baseline` marcada como aplicada en producción (maestra + 4 empresas): `npm run db:estado` → todas al día
-  - [ ] Decidir la fórmula del promedio de neumáticos: hoy `(r1+r2+r3)/3` en todas las bases; el código nuevo de `routes/neumaticos.js` usa la 4ª medición si existe (afectaría a 16 inspecciones)
+  - [x] Fórmula del promedio de neumáticos: se queda `(r1+r2+r3)/3` (decisión 2026-10-12), igual en las bases, `init_db.js`, `routes/neumaticos.js` y `0_baseline`
   - [ ] Apagar el "auto-sync" de `services/tenant_master.js` y los `ALTER` de arranque (`server.js`, `init_db.js`, rutas) cuando el servidor nuevo use Prisma: hoy siguen copiando tablas y columnas desde `DB_NAME` a todas las empresas por fuera de las migraciones
 
 ### Cómo se cambia el esquema desde ahora

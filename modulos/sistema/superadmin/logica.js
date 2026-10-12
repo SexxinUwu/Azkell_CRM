@@ -19,9 +19,7 @@ function saasCargarEmpresas() {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-secondary"><div class="spinner-border spinner-border-sm me-2 text-primary"></div>Cargando empresas registradas...</td></tr>';
     }
 
-    fetch('/api/superadmin/empresas', {
-        headers: { 'X-Master-Key': 'azkell_saas_secret_2026' }
-    })
+    fetch('/api/superadmin/empresas')
         .then(r => {
             if (!r.ok) throw new Error('No autorizado o error del servidor');
             return r.json();
@@ -152,8 +150,7 @@ function saasGuardarEdicion(e) {
     fetch(`/api/superadmin/empresas/${id}`, {
         method: 'PUT',
         headers: {
-            'Content-Type': 'application/json',
-            'X-Master-Key': 'azkell_saas_secret_2026'
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({ nombre_empresa, ruc, admin_email, plan, max_unidades, estado })
     })
@@ -241,8 +238,7 @@ function saasGuardarEmpresa(e) {
     fetch('/api/superadmin/empresas', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'X-Master-Key': 'azkell_saas_secret_2026'
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({
             slug,
@@ -305,8 +301,7 @@ function saasCambiarEstado(id, nuevoEstado) {
         fetch(`/api/superadmin/empresas/${id}/estado`, {
             method: 'PUT',
             headers: {
-                'Content-Type': 'application/json',
-                'X-Master-Key': 'azkell_saas_secret_2026'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({ estado: nuevoEstado })
         })

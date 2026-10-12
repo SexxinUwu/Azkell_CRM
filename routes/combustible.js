@@ -59,8 +59,27 @@ module.exports = function (db, broadcast, logAudit) {
         dateStrings: true
     };
 
+    // Errores de conexión al servidor remoto: mensaje claro en español, sin mostrar valores de configuración
+    const ERRORES_REMOTOS = {
+        ER_TOO_LONG_IDENT: 'el nombre de la base remota (REMOTE_FUEL_DATABASE) no es válido',
+        ER_BAD_DB_ERROR: 'la base remota (REMOTE_FUEL_DATABASE) no existe',
+        ER_DBACCESS_DENIED_ERROR: 'el usuario remoto no tiene acceso a esa base (REMOTE_FUEL_DATABASE)',
+        ER_ACCESS_DENIED_ERROR: 'usuario o contraseña remotos incorrectos (REMOTE_FUEL_USER / REMOTE_FUEL_PASSWORD)',
+        ECONNREFUSED: 'el servidor remoto rechazó la conexión (REMOTE_FUEL_HOST)',
+        ETIMEDOUT: 'el servidor remoto no respondió a tiempo (REMOTE_FUEL_HOST)',
+        ENOTFOUND: 'no se encontró el servidor remoto (REMOTE_FUEL_HOST)',
+        FALTA_CONFIG: 'faltan variables REMOTE_FUEL_* en la configuración del servidor',
+    };
+    function mensajeErrorRemoto(err) {
+        const causa = ERRORES_REMOTOS[err && err.code];
+        return causa ? `No se pudo conectar con el servidor de combustible: ${causa}.` : (err && err.message) || 'Error desconocido';
+    }
+
     let _remotePool = null;
     function getRemoteDb() {
+        if (!REMOTE_CONFIG.host || !REMOTE_CONFIG.user || !REMOTE_CONFIG.database) {
+            const e = new Error(ERRORES_REMOTOS.FALTA_CONFIG); e.code = 'FALTA_CONFIG'; throw e;
+        }
         if (!_remotePool) {
             _remotePool = mysql.createPool(REMOTE_CONFIG);
         }
@@ -384,7 +403,7 @@ module.exports = function (db, broadcast, logAudit) {
             });
         } catch (err) {
             console.error("❌ Error en sincronización remota de combustible:", err);
-            res.status(500).json({ ok: false, error: err.message });
+            res.status(500).json({ ok: false, error: mensajeErrorRemoto(err) });
         }
     });
 
@@ -425,7 +444,7 @@ module.exports = function (db, broadcast, logAudit) {
             res.json({ ok: true, data: rows || [] });
         } catch (err) {
             console.error("Error al listar matriz de combustible:", err);
-            res.status(500).json({ ok: false, error: err.message });
+            res.status(500).json({ ok: false, error: mensajeErrorRemoto(err) });
         }
     });
 
@@ -462,7 +481,7 @@ module.exports = function (db, broadcast, logAudit) {
             res.json({ ok: true, id: result.insertId, message: 'Ruta agregada a la matriz exitosamente.' });
         } catch (err) {
             console.error("Error al guardar ruta en matriz:", err);
-            res.status(500).json({ ok: false, error: err.message });
+            res.status(500).json({ ok: false, error: mensajeErrorRemoto(err) });
         }
     });
 

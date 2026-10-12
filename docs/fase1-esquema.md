@@ -71,7 +71,7 @@ Casos especiales **aprobados**. El SQL está en [`sql/igualacion-2026-10/`](../s
 
 Ambos se probaron en la copia con el `INSERT` real del código: funcionan en las 4 empresas.
 
-### Pendiente de decisión: fórmula del promedio de neumáticos
+### Fórmula del promedio de neumáticos (decidido: 3 mediciones)
 
 En las 4 bases, `neumaticos_inspecciones_det.remanente_promedio` se calcula como `(r1+r2+r3)/3`. El código más nuevo de `routes/neumaticos.js` define `CASE WHEN r4 > 0 THEN (r1+r2+r3+r4)/4 ELSE (r1+r2+r3)/3 END`, pero solo aplica a tablas nuevas. Hoy hay 80 inspecciones con 4ª medición (14 en Marsisa, 66 en Rosymar) y 16 mostrarían otro promedio con la fórmula nueva. Se mantiene la fórmula de producción (también en `init_db.js` y en `0_baseline`) hasta que se decida.
 
