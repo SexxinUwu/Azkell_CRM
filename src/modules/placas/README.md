@@ -6,7 +6,9 @@ Piloto de la migración (Fase 3). Ruta: `/app/placas`. Permiso: `placas.ver`.
 | --- | --- |
 | `api.ts` | Datos: `POST /api/script/obtenerDatosPlacas` (versión actual) convertido de fila de 30 posiciones a objeto `Placa`; búsqueda |
 | `PlacasPage.tsx` | Resumen, filtros, tarjetas o lista |
-| `PlacaFicha.tsx` | Ficha de la unidad en hoja (celular) o diálogo (escritorio) |
+| `PlacaFicha.tsx` | Ficha de la unidad en hoja (celular) o diálogo (escritorio), con historial |
+| `PlacaFormulario.tsx` | Crear y editar |
+| `importar.ts` / `ImportarPlacas.tsx` | Leer el Excel, analizar y enviar; plantilla |
 | `placas.css` | Estilos |
 
 ## Comportamiento
@@ -20,7 +22,8 @@ Piloto de la migración (Fase 3). Ruta: `/app/placas`. Permiso: `placas.ver`.
   - Editar: `PUT /api/placas/:placa` (envía todas las columnas; conserva la métrica km/horas de `/api/config-metrica`). El servidor registra cada campo cambiado en `placa_auditoria`.
   - Crear: `guardarPlaca` (inserta o actualiza): por eso la pantalla bloquea antes las placas repetidas.
 - **Historial de cambios** en la ficha (`GET /api/placas/:placa/historial`): campo, antes → después, quién y cuándo.
-- Importar desde Excel y eliminar siguen en la versión actual.
+- **Importar desde Excel** (`importar.ts`, `ImportarPlacas.tsx`) en tres pasos: elegir (arrastrar o buscar; plantilla descargable) → revisar (nuevas, se actualizan, se omiten; aviso de placas que ya existen con otro formato) → listo. Los encabezados se normalizan ("Placa", "AÑO", "Nº Motor"…) a las claves de `POST /api/importarPlacasMasivo`. Solo .xlsx. Permiso `placas.crear`.
+- **Eliminar** desde la ficha o varias a la vez (modo Seleccionar, barra flotante), con confirmación: `POST /api/eliminarMasivo`. Permiso `placas.eliminar`.
 
 ## Siguiente paso
 

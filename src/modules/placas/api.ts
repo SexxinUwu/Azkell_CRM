@@ -165,3 +165,13 @@ export function coincide(p: Placa, busqueda: string) {
   // "A5B-891" encuentra "A5B891" y al revés
   return palabras.every(w => texto.includes(w) || texto.includes(w.replace(/-/g, '')));
 }
+
+/** Eliminar placas: POST /api/eliminarMasivo (exige permiso de eliminar placas en el servidor) */
+export async function eliminarPlacas(placas: string[]) {
+  const r = await api<{ data?: string; afectados?: number; error?: string }>('/eliminarMasivo', {
+    method: 'POST',
+    body: { ids: placas, coleccion: 'Placas' },
+  });
+  if (r.error) throw new Error(r.error);
+  return r.afectados ?? placas.length;
+}

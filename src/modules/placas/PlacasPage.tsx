@@ -1,20 +1,25 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight, Container, LayoutGrid, List, Plus, SearchX, Truck } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowUpRight, Check, CheckSquare, Container, FileSpreadsheet, LayoutGrid, List, Plus, SearchX, Trash2, Truck, X } from 'lucide-react';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ToggleChips } from '../../core/ui/Chips';
+import { ConfirmSheet } from '../../core/ui/Sheet';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
+import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
+import { useAuth } from '../../core/auth/AuthProvider';
 import { spring } from '../../core/lib/motion';
+import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { coincide, usePlacas, type Placa } from './api';
+import { coincide, eliminarPlacas, usePlacas, type Placa } from './api';
 import { PlacaFicha } from './PlacaFicha';
 import { PlacaFormulario } from './PlacaFormulario';
-import { useAuth } from '../../core/auth/AuthProvider';
+import { ImportarPlacas } from './ImportarPlacas';
 import './placas.css';
 
 type Clase = 'todas' | 'motoras' | 'no-motoras';
@@ -25,10 +30,16 @@ const esMotoraTipo = (tipo: string) => /tracto|cami/i.test(tipo);
 export const IconoTipo = ({ placa, size = 18 }: { placa: Placa; size?: number }) =>
   placa.motora || esMotoraTipo(placa.tipo) ? <Truck size={size} strokeWidth={1.8} /> : <Container size={size} strokeWidth={1.8} />;
 
-// Flota › Placas: consulta de unidades con búsqueda al instante, filtros y ficha.
-// La edición sigue en la versión actual (botón "Editar en la versión actual").
+const Estado = ({ p }: { p: Placa }) => (
+  <span className={`placa-estado placa-estado--${p.estado.toLowerCase() === 'activa' ? 'on' : 'off'}`}>{p.estado}</span>
+);
+
+// Flota › Placas: consulta, alta, edición, importación y eliminación de unidades.
 export function PlacasPage() {
   const { data, isLoading, isError, error } = usePlacas();
+  const { can } = useAuth();
+  const qc = useQueryClient();
+  const toast = useToast();
   const reduce = useReducedMotion();
   const [busqueda, setBusqueda] = useState('');
   const [clase, setClase] = useState<Clase>('todas');
@@ -36,7 +47,15 @@ export function PlacasPage() {
   const [vista, setVista] = useState<Vista>(() => (localStorage.getItem(VISTA_KEY) as Vista) || 'tarjetas');
   const [abierta, setAbierta] = useState<Placa | null>(null);
   const [formulario, setFormulario] = useState<{ modo: 'crear' | 'editar'; placa: Placa | null } | null>(null);
-  const { can } = useAuth();
+  const [importando, setImportando] = useState(false);
+  const [seleccionando, setSeleccionando] = useState(false);
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
+  const [porEliminar, setPorEliminar] = useState<string[] | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+
+  const puedeCrear = can('placas.crear');
+  const puedeEditar = can('placas.editar');
+  const puedeEliminar = can('placas.eliminar');
 
   const placas = data ?? [];
   const tiposDisponibles = useMemo(() => [...new Set(placas.map(p => p.tipo).filter(Boolean))].sort(), [placas]);
@@ -60,6 +79,33 @@ export function PlacasPage() {
   const limpiar = () => { setBusqueda(''); setClase('todas'); setTipos([]); };
   const hayFiltros = !!busqueda || clase !== 'todas' || tipos.length > 0;
 
+  const salirSeleccion = () => { setSeleccionando(false); setSeleccion(new Set()); };
+  const alternar = (placa: string) => {
+    haptic('selection');
+    setSeleccion(s => { const n = new Set(s); if (n.has(placa)) n.delete(placa); else n.add(placa); return n; });
+  };
+  const tocar = (p: Placa) => (seleccionando ? alternar(p.placa) : setAbierta(p));
+  const todasVisibles = visibles.length > 0 && visibles.every(p => seleccion.has(p.placa));
+
+  async function eliminar() {
+    if (!porEliminar) return;
+    setEliminando(true);
+    try {
+      const n = await eliminarPlacas(porEliminar);
+      toast(n === 1 ? `Placa ${porEliminar[0]} eliminada` : `${n} placas eliminadas`);
+      haptic('success');
+      await qc.invalidateQueries({ queryKey: ['placas'] });
+      setPorEliminar(null);
+      setAbierta(null);
+      salirSeleccion();
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+      haptic('warning');
+    } finally {
+      setEliminando(false);
+    }
+  }
+
   return (
     <Page>
       <PageHeader
@@ -68,13 +114,14 @@ export function PlacasPage() {
         subtitle={isLoading ? 'Cargando unidades…' : `${resumen.total} unidades · ${resumen.motoras} motoras · ${resumen.noMotoras} no motoras`}
         actions={
           <>
-            <Button variant="secondary" icon={<ArrowUpRight size={16} />} onClick={() => abrirClasico('flota/placas')}>
-              Versión actual
-            </Button>
-            {can('placas.crear') && (
-              <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ modo: 'crear', placa: null })}>
-                Nueva placa
-              </Button>
+            {puedeCrear && (
+              <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => setImportando(true)}>Importar</Button>
+            )}
+            {puedeCrear && (
+              <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ modo: 'crear', placa: null })}>Nueva placa</Button>
+            )}
+            {!puedeCrear && (
+              <Button variant="secondary" icon={<ArrowUpRight size={16} />} onClick={() => abrirClasico('flota/placas')}>Versión actual</Button>
             )}
           </>
         }
@@ -121,6 +168,12 @@ export function PlacasPage() {
                 <List size={18} />
               </button>
             </div>
+            {puedeEliminar && (
+              <Button variant={seleccionando ? 'primary' : 'secondary'} icon={seleccionando ? <X size={16} /> : <CheckSquare size={16} />}
+                onClick={() => (seleccionando ? salirSeleccion() : setSeleccionando(true))}>
+                {seleccionando ? 'Terminar' : 'Seleccionar'}
+              </Button>
+            )}
           </div>
           {tiposDisponibles.length > 1 && (
             <div className="placas-tipos">
@@ -131,6 +184,11 @@ export function PlacasPage() {
           <p className="placas-conteo t-footnote c-secondary" aria-live="polite">
             {visibles.length === placas.length ? `${placas.length} unidades` : `${visibles.length} de ${placas.length} unidades`}
             {hayFiltros && <> · <button type="button" className="placas-limpiar" onClick={limpiar}>Quitar filtros</button></>}
+            {seleccionando && visibles.length > 0 && (
+              <> · <button type="button" className="placas-limpiar" onClick={() => setSeleccion(todasVisibles ? new Set() : new Set(visibles.map(p => p.placa)))}>
+                {todasVisibles ? 'Quitar selección' : `Seleccionar las ${visibles.length}`}
+              </button></>
+            )}
           </p>
 
           {visibles.length === 0 ? (
@@ -138,43 +196,53 @@ export function PlacasPage() {
               Prueba con otra búsqueda o quita los filtros.
             </EmptyState>
           ) : vista === 'tarjetas' ? (
-            <motion.ul className="placas-grid" layout={!reduce}>
+            <motion.ul className={`placas-grid${seleccionando ? ' placas-grid--seleccion' : ''}`} layout={!reduce}>
               <AnimatePresence mode="popLayout" initial={!reduce}>
-                {visibles.map((p, i) => (
-                  <motion.li
-                    key={p.placa}
-                    layout={!reduce}
-                    initial={{ opacity: 0, y: 14, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.96 }}
-                    transition={{ ...spring, delay: reduce ? 0 : Math.min(i, 12) * 0.025 }}
-                  >
-                    <button type="button" className="placa-card pressable" onClick={() => setAbierta(p)}>
-                      <div className="placa-card__top">
-                        <LicensePlate plate={p.placa} size="lg" />
-                        <span className={`placa-estado placa-estado--${p.estado.toLowerCase() === 'activa' ? 'on' : 'off'}`}>{p.estado}</span>
-                      </div>
-                      <div className="placa-card__titulo">{[p.marca, p.modelo].filter(Boolean).join(' ') || 'Sin marca'}</div>
-                      <div className="placa-card__meta">
-                        <IconoTipo placa={p} size={15} />
-                        <span>{[p.tipo, p.anio].filter(Boolean).join(' · ') || 'Sin tipo'}</span>
-                      </div>
-                      <div className="placa-card__cliente">{p.cliente || 'Sin cliente'}</div>
-                    </button>
-                  </motion.li>
-                ))}
+                {visibles.map((p, i) => {
+                  const marcada = seleccion.has(p.placa);
+                  return (
+                    <motion.li
+                      key={p.placa}
+                      layout={!reduce}
+                      initial={{ opacity: 0, y: 14, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.96 }}
+                      transition={{ ...spring, delay: reduce ? 0 : Math.min(i, 12) * 0.025 }}
+                    >
+                      <button type="button" className={`placa-card pressable${marcada ? ' placa-card--marcada' : ''}`} onClick={() => tocar(p)} aria-pressed={seleccionando ? marcada : undefined}>
+                        <div className="placa-card__top">
+                          <LicensePlate plate={p.placa} size="lg" />
+                          {seleccionando ? (
+                            <motion.span className={`placa-check${marcada ? ' placa-check--on' : ''}`} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={spring}>
+                              {marcada && <Check size={14} strokeWidth={3} />}
+                            </motion.span>
+                          ) : <Estado p={p} />}
+                        </div>
+                        <div className="placa-card__titulo">{[p.marca, p.modelo].filter(Boolean).join(' ') || 'Sin marca'}</div>
+                        <div className="placa-card__meta">
+                          <IconoTipo placa={p} size={15} />
+                          <span>{[p.tipo, p.anio].filter(Boolean).join(' · ') || 'Sin tipo'}</span>
+                        </div>
+                        <div className="placa-card__cliente">{p.cliente || 'Sin cliente'}</div>
+                      </button>
+                    </motion.li>
+                  );
+                })}
               </AnimatePresence>
             </motion.ul>
           ) : (
             <motion.div className="list placas-lista" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={spring}>
               {visibles.map(p => (
-                <button key={p.placa} type="button" className="row placas-fila" onClick={() => setAbierta(p)}>
+                <button key={p.placa} type="button" className={`row placas-fila${seleccion.has(p.placa) ? ' placas-fila--marcada' : ''}`} onClick={() => tocar(p)}>
+                  {seleccionando && (
+                    <span className={`placa-check${seleccion.has(p.placa) ? ' placa-check--on' : ''}`}>{seleccion.has(p.placa) && <Check size={14} strokeWidth={3} />}</span>
+                  )}
                   <LicensePlate plate={p.placa} size="sm" />
                   <div className="row__main">
                     <div className="row__title">{[p.marca, p.modelo].filter(Boolean).join(' ') || 'Sin marca'}</div>
                     <div className="row__subtitle">{[p.tipo, p.anio, p.cliente].filter(Boolean).join(' · ')}</div>
                   </div>
-                  <span className={`placa-estado placa-estado--${p.estado.toLowerCase() === 'activa' ? 'on' : 'off'}`}>{p.estado}</span>
+                  <Estado p={p} />
                 </button>
               ))}
             </motion.div>
@@ -182,10 +250,31 @@ export function PlacasPage() {
         </>
       )}
 
+      {/* Barra flotante de la selección */}
+      <AnimatePresence>
+        {seleccionando && seleccion.size > 0 && (
+          <motion.div
+            className="seleccion-barra glass"
+            initial={{ opacity: 0, y: 40, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 40, scale: 0.96 }}
+            transition={spring}
+            role="toolbar"
+            aria-label="Acciones de la selección"
+          >
+            <span className="seleccion-barra__conteo">
+              <AnimatedNumber value={seleccion.size} className="t-numeric" /> {seleccion.size === 1 ? 'seleccionada' : 'seleccionadas'}
+            </span>
+            <Button variant="destructive" icon={<Trash2 size={16} />} onClick={() => setPorEliminar([...seleccion])}>Eliminar</Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <PlacaFicha
         placa={abierta}
         onClose={() => setAbierta(null)}
-        onEditar={can('placas.editar') ? p => { setAbierta(null); setFormulario({ modo: 'editar', placa: p }); } : undefined}
+        onEditar={puedeEditar ? p => { setAbierta(null); setFormulario({ modo: 'editar', placa: p }); } : undefined}
+        onEliminar={puedeEliminar ? p => setPorEliminar([p.placa]) : undefined}
       />
       <PlacaFormulario
         open={!!formulario}
@@ -194,6 +283,22 @@ export function PlacasPage() {
         existentes={placas}
         onClose={() => setFormulario(null)}
         onGuardada={p => { setFormulario(null); setAbierta(p); }}
+      />
+      <ImportarPlacas open={importando} onClose={() => setImportando(false)} existentes={placas} />
+      <ConfirmSheet
+        open={!!porEliminar}
+        onClose={() => !eliminando && setPorEliminar(null)}
+        onConfirm={eliminar}
+        loading={eliminando}
+        title={porEliminar?.length === 1 ? `¿Eliminar la placa ${porEliminar[0]}?` : `¿Eliminar ${porEliminar?.length ?? 0} placas?`}
+        message={
+          <>
+            Se borra la ficha de {porEliminar?.length === 1 ? 'la unidad' : 'las unidades'}
+            {porEliminar && porEliminar.length > 1 && porEliminar.length <= 8 ? ` (${porEliminar.join(', ')})` : ''}.
+            Esta acción no se puede deshacer.
+          </>
+        }
+        confirmLabel={porEliminar?.length === 1 ? 'Eliminar placa' : `Eliminar ${porEliminar?.length ?? 0} placas`}
       />
     </Page>
   );

@@ -1,6 +1,6 @@
 import { useRef, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight, History, Pencil } from 'lucide-react';
+import { ArrowUpRight, History, Pencil, Trash2 } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -10,7 +10,7 @@ import { useHistorial, type Placa } from './api';
 import { formatRelative } from '../../core/lib/format';
 
 // Ficha de una unidad: placa grande y datos agrupados. Solo consulta.
-export function PlacaFicha({ placa, onClose, onEditar }: { placa: Placa | null; onClose: () => void; onEditar?: (p: Placa) => void }) {
+export function PlacaFicha({ placa, onClose, onEditar, onEliminar }: { placa: Placa | null; onClose: () => void; onEditar?: (p: Placa) => void; onEliminar?: (p: Placa) => void }) {
   // Se conserva la última placa mientras la hoja se cierra (anima con su contenido)
   const ultima = useRef<Placa | null>(null);
   if (placa) ultima.current = placa;
@@ -30,7 +30,11 @@ export function PlacaFicha({ placa, onClose, onEditar }: { placa: Placa | null; 
       title={p ? `Unidad ${p.placa}` : 'Unidad'}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+          {onEliminar && p ? (
+            <Button variant="plain" className="ficha__eliminar" icon={<Trash2 size={16} />} onClick={() => onEliminar(p)}>Eliminar</Button>
+          ) : (
+            <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+          )}
           {onEditar && p ? (
             <Button variant="primary" icon={<Pencil size={16} />} onClick={() => onEditar(p)}>Editar</Button>
           ) : (
