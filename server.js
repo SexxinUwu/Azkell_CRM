@@ -1606,7 +1606,7 @@ db.query(
  'ALTER TABLE tipos_mantenimiento MODIFY COLUMN tipo VARCHAR(100) NULL DEFAULT NULL',
  'ALTER TABLE tipos_mantenimiento MODIFY COLUMN sistema VARCHAR(100) NULL DEFAULT NULL',
  'ALTER TABLE tipos_mantenimiento MODIFY COLUMN frecuencia_km DECIMAL(10,2) NULL DEFAULT NULL',
- 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN frecuencia_horas VARCHAR(50) NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN frecuencia_horas DECIMAL(10,2) NULL DEFAULT NULL',
  'ALTER TABLE tipos_mantenimiento MODIFY COLUMN frecuencia_dias INT NULL DEFAULT NULL'
 ].forEach(function(sql) {
     db.query(sql, function(e) {
