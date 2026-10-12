@@ -21,3 +21,9 @@ scratch/
 diff.txt
 test.txt
 *.sql
+
+# Excepto: migraciones de Prisma (las usa prisma migrate deploy)
+!prisma/**/migration.sql
+
+# La app nueva se compila dentro de la imagen
+dist/

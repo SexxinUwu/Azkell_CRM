@@ -12,9 +12,9 @@
     "db:validate": "prisma validate && prisma validate --schema prisma/master/schema.prisma",
     "db:estado": "node scripts/prisma_empresas.js estado",
     "db:deploy": "node scripts/prisma_empresas.js deploy",
-    "build": "vite build",
     "dev:app": "vite",
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "build:app": "vite build"
   },
   "keywords": [],
   "author": "",

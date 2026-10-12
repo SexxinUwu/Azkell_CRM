@@ -60,7 +60,7 @@ Nunca uses `prisma db push`: todo cambio de esquema va en una **migración** (`p
 ```bash
 npm start            # versión actual + /app (si está compilada) en :3000
 npm run dev:app      # app nueva con recarga en :5173 (usa la API de :3000)
-npm run build        # compila la app nueva en dist/app (Coolify lo corre al desplegar)
+npm run build:app    # compila la app nueva en dist/app (el Dockerfile lo corre al desplegar)
 npm run typecheck    # revisa los tipos de src/
 npm run db:estado    # migraciones pendientes por empresa
 ```
