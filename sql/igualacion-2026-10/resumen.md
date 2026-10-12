@@ -1,0 +1,219 @@
+## azkell_tenant_marsisa (26 cambios)
+- + tabla guias_items
+- + tabla guias_remitente
+- + tabla guias_transportista
+- ~ checklist_config_sistemas.titulo: varchar(120) → varchar(150)
+- ~ checklist_config_sistemas.icono: varchar(60) → varchar(100)
+- ~ checklist_config_sistemas.updated_at: se actualiza sola al modificar
+- ~ placa_auditoria.usuario: varchar(100) → varchar(150)
+- ~ placa_auditoria.fecha: ahora admite vacío
+- ~ salidas_inv.tipo_destino: enum('Vehiculo','Personal') → varchar(50)
+- ~ tipos_mantenimiento.frecuencia_horas: varchar(50) → decimal(10,2)
+- ~ usuarios.avatar_url: varchar(255) → text
+- ~ usuarios.banner_url: varchar(255) → text
+- ~ usuarios.firma_digital: text → longtext
+- ~ usuarios.preferencias_json: text → longtext
+- + índice neumaticos_inspecciones.idx_neu_insp_placa_fecha (placa,fecha_inspeccion)
+- + índice neumaticos_inspecciones.idx_placa_fecha (placa,fecha_inspeccion)
+- + índice neumaticos_inspecciones_det.idx_insp_pos (id_inspeccion,posicion)
+- + índice ot_materiales.idx_estado (estado)
+- + índice reportes_fallas.idx_orden_viaje (orden_viaje)
+- + índice reportes_fallas.idx_placa_tracto (placa_tracto)
+- + índice tesoreria_cuentas.idx_cod_liq (codigo_liquidacion)
+- + índice tesoreria_cuentas.idx_num_viaje (numero_viaje)
+- + índice tesoreria_cuentas.idx_placa_cam (placa_camion)
+- + índice tesoreria_cuentas.idx_placa_car (placa_carreta)
+- + índice checklist_config_sistemas.idx_unidad_orden (unidad,orden)
+- + índice guias_remision.idx_gre_relacionada (gre_relacionada_id)
+
+## azkell_tenant_rosymarperu (62 cambios)
+- + tabla guias_items
+- + tabla guias_remitente
+- + tabla guias_transportista
+- + tabla rrhh_personal
+- + tabla rrhh_licencias
+- + tabla rrhh_sst_registros
+- + tabla rrhh_tareo
+- + tabla tesoreria_cuentas_historial_facturas
+- + tabla tesoreria_liquidaciones_gastos
+- ~ backlog_mantenimiento.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ checklist_config_sistemas.titulo: varchar(120) → varchar(150)
+- ~ checklist_config_sistemas.icono: varchar(60) → varchar(100)
+- ~ checklist_config_sistemas.updated_at: se actualiza sola al modificar
+- + entradas_inv.centro_costo varchar(50)
+- + entradas_inv.sub_motivo varchar(100)
+- + entradas_inv.autoriza varchar(150)
+- ~ fleetrun.placa: ahora admite vacío
+- + guias_remision.orden_servicio varchar(60)
+- + guias_remision.orden_viaje varchar(60)
+- + guias_remision.apisunat_faults text
+- ~ inspecciones.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ inspecciones.km_tablero: ahora admite vacío
+- ~ inventario.anaquel: decimal(6,2) → varchar(50)
+- ~ ordenes_trabajo.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ ot_backlog.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ placa_auditoria.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ placa_auditoria.campo: varchar(50) → varchar(60)
+- ~ placa_auditoria.usuario: ahora admite vacío
+- ~ placas.placa: varchar(20) → varchar(100)
+- ~ salidas_inv.tipo_destino: enum('Vehiculo','Personal') → varchar(50)
+- + seg_unidades_base.corte_hora varchar(10)
+- + seg_unidades_registros.retorno_placa_carreta varchar(20)
+- + seg_unidades_registros.retorno_conductor varchar(100)
+- + seg_unidades_registros.tipo_salida varchar(30)
+- ~ taller_rampas.placa: varchar(20) → varchar(100), ahora admite vacío
+- + tesoreria_cuentas.orden_servicio varchar(60)
+- + tesoreria_cuentas.neto_cobrado decimal(12,2)
+- + tesoreria_cuentas.factura_documento_url text
+- + tesoreria_cuentas.nota_credito varchar(60)
+- + tesoreria_cuentas.nota_credito_url text
+- + tesoreria_cuentas.sustento_pago_url text
+- ~ tipos_mantenimiento.marca: varchar(50) → varchar(100)
+- ~ tipos_mantenimiento.tipo_mp: varchar(60) → varchar(100)
+- ~ tipos_mantenimiento.uts: varchar(20) → varchar(50)
+- ~ tipos_mantenimiento.frecuencia_km: int → decimal(10,2)
+- ~ tipos_mantenimiento.updated_at: se actualiza sola al modificar
+- ~ trabajos_ot.fecha_trabajo: date → datetime
+- + índice marsisa_combustible_vales.idx_fecha_estado (fecha,estado)
+- + índice marsisa_combustible_vales.idx_vehiculo_fecha_viaje (vehiculo,fecha,viaje)
+- + índice marsisa_ordenes_viaje.idx_mov_placas (placa_tracto,placa_remolque)
+- + índice operaciones_combustible_vales.idx_fecha_estado (fecha,estado)
+- + índice operaciones_combustible_vales.idx_vehiculo_fecha_viaje (vehiculo,fecha,viaje)
+- + índice placa_auditoria.idx_fecha (fecha)
+- + índice ot_materiales.idx_estado (estado)
+- + índice reportes_fallas.idx_orden_viaje (orden_viaje)
+- + índice reportes_fallas.idx_placa_tracto (placa_tracto)
+- + índice tesoreria_cuentas.idx_cod_liq (codigo_liquidacion)
+- + índice tesoreria_cuentas.idx_num_viaje (numero_viaje)
+- + índice tesoreria_cuentas.idx_placa_cam (placa_camion)
+- + índice tesoreria_cuentas.idx_placa_car (placa_carreta)
+- + índice checklist_config_sistemas.idx_unidad_orden (unidad,orden)
+- + índice guias_remision.idx_gre_relacionada (gre_relacionada_id)
+
+## azkell_tenant_yoguitransport (54 cambios)
+- ~ checklist_config_sistemas.titulo: varchar(120) → varchar(150)
+- ~ checklist_config_sistemas.icono: varchar(60) → varchar(100)
+- ~ checklist_config_sistemas.updated_at: se actualiza sola al modificar
+- + entradas_inv.centro_costo varchar(50)
+- + entradas_inv.sub_motivo varchar(100)
+- + entradas_inv.autoriza varchar(150)
+- ~ fleetrun.fecha: ahora admite vacío
+- ~ fleetrun.placa: ahora admite vacío
+- ~ fleetrun.km_actual: ahora admite vacío
+- - fleetrun.modulo (columna sobrante de init_db.js; tabla vacía)
+- - fleetrun.prefijo (columna sobrante de init_db.js; tabla vacía)
+- - fleetrun.ultimo_numero (columna sobrante de init_db.js; tabla vacía)
+- ~ flota_disponibilidad.placa_camion: varchar(20) → varchar(50), ahora admite vacío
+- ~ inspecciones.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ inspecciones.km_tablero: ahora admite vacío
+- ~ inventario.anaquel: decimal(6,2) → varchar(50)
+- ~ mant_incidencias_ruta.codigo: varchar(30) → varchar(60)
+- ~ mant_incidencias_ruta.area_responsable: enum('Mantenimiento','Flota','Operaciones') → varchar(60)
+- ~ neumaticos_inspecciones_det.remanente_promedio: pasa a calculada (tabla vacía)
+- ~ ordenes_trabajo.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ ot_backlog.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ placa_auditoria.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ placa_auditoria.campo: varchar(50) → varchar(60)
+- ~ placa_auditoria.usuario: ahora admite vacío
+- ~ placas.placa: varchar(20) → varchar(100)
+- + seg_unidades_base.corte_hora varchar(10)
+- + seg_unidades_registros.retorno_placa_carreta varchar(20)
+- + seg_unidades_registros.retorno_conductor varchar(100)
+- + seg_unidades_registros.tipo_salida varchar(30)
+- ~ taller_rampas.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ tipos_mantenimiento.marca: varchar(50) → varchar(100)
+- ~ tipos_mantenimiento.tipo_mp: varchar(60) → varchar(100)
+- ~ tipos_mantenimiento.uts: varchar(20) → varchar(50)
+- ~ tipos_mantenimiento.frecuencia_km: int → decimal(10,2)
+- ~ tipos_mantenimiento.tipo: varchar(50) → varchar(100), ahora admite vacío
+- ~ tipos_mantenimiento.sistema: ahora admite vacío
+- ~ tipos_mantenimiento.descripcion: varchar(255) → text, ahora admite vacío
+- ~ tipos_mantenimiento.updated_at: se actualiza sola al modificar
+- ~ trabajos_ot.fecha_trabajo: date → datetime
+- + índice combustible_vales.idx_fecha_estado (fecha,estado)
+- + índice combustible_vales.idx_vehiculo_fecha_viaje (vehiculo,fecha,viaje)
+- + índice fleetrun.idx_fecha (fecha)
+- + índice marsisa_combustible_vales.idx_fecha_estado (fecha,estado)
+- + índice marsisa_combustible_vales.idx_vehiculo_fecha_viaje (vehiculo,fecha,viaje)
+- + índice marsisa_ordenes_viaje.idx_mov_placas (placa_tracto,placa_remolque)
+- + índice operaciones_combustible_vales.idx_fecha_estado (fecha,estado)
+- + índice operaciones_combustible_vales.idx_vehiculo_fecha_viaje (vehiculo,fecha,viaje)
+- + índice ot_materiales.idx_ticket_ot (ticket_ot)
+- + índice placa_auditoria.idx_fecha (fecha)
+- + índice neumaticos_inspecciones.idx_neu_insp_placa_fecha (placa,fecha_inspeccion)
+- + índice neumaticos_inspecciones.idx_placa_fecha (placa,fecha_inspeccion)
+- + índice neumaticos_inspecciones_det.idx_insp_pos (id_inspeccion,posicion)
+- + índice checklist_config_sistemas.idx_unidad_orden (unidad,orden)
+- + índice guias_remision.idx_gre_relacionada (gre_relacionada_id)
+
+## azkell_tenant_trahesa (66 cambios)
+- + tabla guias_items
+- + tabla guias_remitente
+- + tabla guias_transportista
+- + tabla tesoreria_cuentas_historial_facturas
+- + tabla tesoreria_liquidaciones_gastos
+- ~ checklist_config_sistemas.unidad: enum('tracto','remolque') → varchar(20)
+- ~ checklist_config_sistemas.sistema_key: varchar(50) → varchar(60)
+- ~ checklist_config_sistemas.orden: ahora admite vacío
+- ~ checklist_config_sistemas.items_json: json → longtext
+- + checklist_config_sistemas.creado_en timestamp
+- + checklist_config_sistemas.actualizado_en timestamp
+- + entradas_inv.centro_costo varchar(50)
+- + entradas_inv.sub_motivo varchar(100)
+- + entradas_inv.autoriza varchar(150)
+- ~ fleetrun.fecha: ahora admite vacío
+- ~ fleetrun.placa: ahora admite vacío
+- ~ fleetrun.km_actual: ahora admite vacío
+- - fleetrun.modulo (columna sobrante de init_db.js; tabla vacía)
+- - fleetrun.prefijo (columna sobrante de init_db.js; tabla vacía)
+- - fleetrun.ultimo_numero (columna sobrante de init_db.js; tabla vacía)
+- ~ flota_disponibilidad.placa_camion: varchar(20) → varchar(50), ahora admite vacío
+- + guias_remision.orden_servicio varchar(60)
+- + guias_remision.orden_viaje varchar(60)
+- + guias_remision.apisunat_faults text
+- ~ inspecciones.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ inspecciones.km_tablero: ahora admite vacío
+- ~ inventario.anaquel: decimal(6,2) → varchar(50)
+- ~ mant_incidencias_ruta.codigo: varchar(30) → varchar(60)
+- ~ mant_incidencias_ruta.area_responsable: enum('Mantenimiento','Flota','Operaciones') → varchar(60)
+- ~ neumaticos_inspecciones_det.remanente_promedio: pasa a calculada (tabla vacía)
+- ~ ordenes_trabajo.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ ot_backlog.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ placa_auditoria.placa: varchar(20) → varchar(100), ahora admite vacío
+- ~ placa_auditoria.campo: varchar(50) → varchar(60)
+- ~ placa_auditoria.usuario: ahora admite vacío
+- ~ placas.placa: varchar(20) → varchar(100)
+- ~ taller_rampas.placa: varchar(20) → varchar(100), ahora admite vacío
+- + tesoreria_cuentas.orden_servicio varchar(60)
+- + tesoreria_cuentas.neto_cobrado decimal(12,2)
+- + tesoreria_cuentas.factura_documento_url text
+- + tesoreria_cuentas.nota_credito varchar(60)
+- + tesoreria_cuentas.nota_credito_url text
+- + tesoreria_cuentas.sustento_pago_url text
+- ~ tipos_mantenimiento.marca: varchar(50) → varchar(100)
+- ~ tipos_mantenimiento.tipo_mp: varchar(60) → varchar(100)
+- ~ tipos_mantenimiento.uts: varchar(20) → varchar(50)
+- ~ tipos_mantenimiento.frecuencia_km: int → decimal(10,2)
+- ~ tipos_mantenimiento.tipo: varchar(50) → varchar(100), ahora admite vacío
+- ~ tipos_mantenimiento.sistema: ahora admite vacío
+- ~ tipos_mantenimiento.descripcion: varchar(255) → text, ahora admite vacío
+- ~ tipos_mantenimiento.updated_at: se actualiza sola al modificar
+- ~ trabajos_ot.fecha_trabajo: date → datetime
+- + índice único checklist_config_sistemas.uk_unidad_sys (unidad,sistema_key)
+- + índice combustible_vales.idx_fecha_estado (fecha,estado)
+- + índice combustible_vales.idx_vehiculo_fecha_viaje (vehiculo,fecha,viaje)
+- + índice fleetrun.idx_fecha (fecha)
+- + índice marsisa_combustible_vales.idx_fecha_estado (fecha,estado)
+- + índice marsisa_combustible_vales.idx_vehiculo_fecha_viaje (vehiculo,fecha,viaje)
+- + índice marsisa_ordenes_viaje.idx_mov_placas (placa_tracto,placa_remolque)
+- + índice operaciones_combustible_vales.idx_fecha_estado (fecha,estado)
+- + índice operaciones_combustible_vales.idx_vehiculo_fecha_viaje (vehiculo,fecha,viaje)
+- + índice ot_materiales.idx_ticket_ot (ticket_ot)
+- + índice placa_auditoria.idx_fecha (fecha)
+- + índice neumaticos_inspecciones.idx_neu_insp_placa_fecha (placa,fecha_inspeccion)
+- + índice neumaticos_inspecciones.idx_placa_fecha (placa,fecha_inspeccion)
+- + índice neumaticos_inspecciones_det.idx_insp_pos (id_inspeccion,posicion)
+
+## Sin resolver (2)
+- índice único tipos_mantenimiento.uq_config (marca,tipo_mp,uts,combustible,modelo) falta en rosymarperu, yoguitransport, trahesa: no se agrega (cambiaría lo que la app acepta)
+- índice único flota_disponibilidad.uq_placa_camion (placa_camion) falta en marsisa, rosymarperu: no se agrega (cambiaría lo que la app acepta)

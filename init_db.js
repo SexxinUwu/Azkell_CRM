@@ -262,10 +262,7 @@ const TABLAS = [
             tecnico       VARCHAR(100) NOT NULL DEFAULT '',
             km_gps        INT          NULL,
             creado_en     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_placa (placa),
-            modulo        VARCHAR(50) UNIQUE NOT NULL,
-            prefijo       VARCHAR(10) NOT NULL,
-            ultimo_numero INT DEFAULT 0
+            INDEX idx_placa (placa)
         )`
     },
     {
@@ -457,10 +454,7 @@ const TABLAS = [
             tecnico       VARCHAR(100) NOT NULL DEFAULT '',
             km_gps        INT          NULL,
             creado_en     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_placa (placa),
-            modulo        VARCHAR(50) UNIQUE NOT NULL,
-            prefijo       VARCHAR(10) NOT NULL,
-            ultimo_numero INT DEFAULT 0
+            INDEX idx_placa (placa)
         )`
     },
     {
@@ -832,7 +826,7 @@ const TABLAS = [
             r2 INT NOT NULL,
             r3 INT NOT NULL,
             r4 INT DEFAULT 0,
-            remanente_promedio DECIMAL(4,1) DEFAULT 0.0,
+            remanente_promedio DECIMAL(4,1) GENERATED ALWAYS AS (CASE WHEN r4 > 0 THEN (r1 + r2 + r3 + r4) / 4.0 ELSE (r1 + r2 + r3) / 3.0 END) STORED,
             presion_ant INT DEFAULT 0,
             presion_actual INT DEFAULT 0,
             estado VARCHAR(30) NOT NULL DEFAULT 'NUEVA',

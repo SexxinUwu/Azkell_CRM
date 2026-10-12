@@ -10,7 +10,8 @@ services:
     environment:
       - SERVER_PORT=8080
       - SERVER_URL=http://localhost:8080
-      - AUTHENTICATION_API_KEY=AZKELL_ERP_WA_SECRET_2026
+      # Misma clave que EVOLUTION_API_KEY del .env (docker compose lee el .env de esta carpeta)
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:?Falta EVOLUTION_API_KEY en .env}
       # Base de datos interna SQLite para guardar tokens de sesión de WhatsApp persistentes
       - DATABASE_ENABLED=true
       - DATABASE_CONNECTION_CLIENT_NAME=evolution_local

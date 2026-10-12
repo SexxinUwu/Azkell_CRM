@@ -39,7 +39,10 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
 - [ ] **Fase 1 — Prisma sobre la base existente**
   - [ ] `prisma db pull` de una base de empresa; modelos repartidos por módulo con `@@map`
   - [ ] Migración `0_baseline` marcada como aplicada en cada base de empresa
-  - [ ] Comparar esquemas entre empresas y crear la migración que los iguale
+  - [x] Comparar esquemas entre empresas → [fase1-esquema.md](fase1-esquema.md) (4 empresas, 107 tablas, 64 diferencias de columnas)
+  - [x] Respaldo de las 6 bases, restaurado y verificado
+  - [x] Casos especiales decididos; SQL de igualación generado y probado en copia ([sql/igualacion-2026-10/](../sql/igualacion-2026-10/))
+  - [ ] Aplicar la igualación en producción (una empresa a la vez)
   - [ ] Quitar los `CREATE TABLE` / `ALTER TABLE` del arranque (75 tablas, 261 `ALTER` en el código)
 - [ ] **Fase 2 — Base técnica**
   - [ ] 2A. Vite + React + TS; copiar de KINTSUGI `tokens.css`, `base.css`, `motion.ts`, `haptics.ts`, `src/core/ui/`
