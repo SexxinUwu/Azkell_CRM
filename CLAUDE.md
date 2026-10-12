@@ -2,6 +2,8 @@
 
 **Responder siempre en ESPAÑOL. Nunca mezclar inglés en respuestas de texto.**
 
+> **Migración en curso:** este archivo describe la versión **actual** (`Index.html`, `logica.js`, `Modulos/`, `routes/`). El código nuevo en `src/`, `server/` y `prisma/` sigue [AGENTS.md](AGENTS.md) (arquitectura KINTSUGI, React + TypeScript, diseño con la skill `apple-design`). Avance y plan en [docs/migracion.md](docs/migracion.md).
+
 ---
 
 ## 1. Identidad del Proyecto
