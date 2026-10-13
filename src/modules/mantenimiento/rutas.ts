@@ -20,4 +20,28 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./StatusRampaPage').then(m => ({ default: m.StatusRampaPage }))),
     nav: { key: 'status-rampa', label: 'Status de rampa', to: '/mantenimiento/status-rampa', icon: 'Wrench', permisos: ['status_rampa.ver'] },
   },
+  {
+    path: 'mantenimiento/fleetrun/*',
+    permisos: ['fleetrun.ver', 'fleet.ver'],
+    Page: lazy(() => import('./FleetrunPage').then(m => ({ default: m.FleetrunPage }))),
+    nav: { key: 'fleetrun', label: 'Fleetrun', to: '/mantenimiento/fleetrun', icon: 'Gauge', permisos: ['fleetrun.ver', 'fleet.ver'] },
+  },
+  {
+    path: 'mantenimiento/neumaticos/*',
+    permisos: ['neumaticos.ver'],
+    Page: lazy(() => import('./NeumaticosPage').then(m => ({ default: m.NeumaticosPage }))),
+    nav: { key: 'neumaticos', label: 'Neumáticos', to: '/mantenimiento/neumaticos', icon: 'Disc3', permisos: ['neumaticos.ver'] },
+  },
+  {
+    path: 'mantenimiento/planificacion/*',
+    permisos: ['plan.ver'],
+    Page: lazy(() => import('./PlanificacionPage').then(m => ({ default: m.PlanificacionPage }))),
+    nav: { key: 'planificacion', label: 'Planificación', to: '/mantenimiento/planificacion', icon: 'History', permisos: ['plan.ver'] },
+  },
+  {
+    path: 'mantenimiento/incidencias/*',
+    permisos: ['incidencias_ruta.ver'],
+    Page: lazy(() => import('./IncidenciasPage').then(m => ({ default: m.IncidenciasPage }))),
+    nav: { key: 'incidencias', label: 'Incidencias en ruta', to: '/mantenimiento/incidencias', icon: 'ShieldCheck', permisos: ['incidencias_ruta.ver'] },
+  },
 ];

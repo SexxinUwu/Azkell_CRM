@@ -195,3 +195,166 @@ export function useCatalogosTaller() {
     staleTime: 300_000,
   });
 }
+
+// ─── Fleetrun ────────────────────────────────────────────────────────────────
+// La API legada devuelve arrays posicionales: [id, ?, ?, fecha, placa, ?, cliente, uts, tipo_mp, km_cambio, frecuencia, km_prox, obs, ?, km_gps]
+export type FleetrunFila = (string | number | null)[];
+
+export function frPlaca(r: FleetrunFila)   { return String(r[4] ?? '') || '—'; }
+export function frFecha(r: FleetrunFila)   { return String(r[3] ?? '') || '—'; }
+export function frTipo(r: FleetrunFila)    { return String(r[8] ?? '') || '—'; }
+export function frKmCambio(r: FleetrunFila){ return Number(r[9]) || 0; }
+export function frKmProx(r: FleetrunFila)  { return Number(r[11]) || 0; }
+export function frObs(r: FleetrunFila)     { return String(r[12] ?? ''); }
+export function frId(r: FleetrunFila)      { return String(r[0] ?? ''); }
+
+export function useFleetrun() {
+  return useQuery<FleetrunFila[]>({
+    queryKey: ['mant', 'fleetrun'],
+    queryFn: () =>
+      api('/script/obtenerDatosFleetrun', { method: 'POST', body: { args: [] } }).then(
+        (r: unknown) => (r as { data?: FleetrunFila[] })?.data ?? []
+      ),
+    staleTime: 60_000,
+  });
+}
+
+// ─── Neumáticos ──────────────────────────────────────────────────────────────
+export interface NeumaticosUltimas {
+  ok: boolean;
+  data: NeuVehiculo[];
+}
+
+export interface NeuVehiculo {
+  placa: string;
+  dueno: string | null;
+  tipo_unidad: string | null;
+  fecha_inspeccion: string | null;
+  inspector: string | null;
+  estado_general: string | null;
+  total_llantas: number | null;
+  llantas_ok: number | null;
+  llantas_reparar: number | null;
+  llantas_cambiar: number | null;
+  [key: string]: unknown;
+}
+
+export interface NeuRequerimiento {
+  placa: string;
+  dueno: string | null;
+  tipo_llanta: string | null;
+  medida: string | null;
+  cantidad: number | null;
+  motivo: string | null;
+  fecha_solicitud: string | null;
+  estado: string | null;
+  [key: string]: unknown;
+}
+
+export function useNeumaticos() {
+  return useQuery<{ ultimas: NeuVehiculo[]; requerimientos: NeuRequerimiento[] }>({
+    queryKey: ['mant', 'neumaticos'],
+    queryFn: async () => {
+      const [u, r] = await Promise.all([
+        api('/neumaticos/ultimas') as Promise<NeumaticosUltimas>,
+        api('/neumaticos/requerimientos') as Promise<{ ok: boolean; data: NeuRequerimiento[] }>,
+      ]);
+      return { ultimas: u?.data ?? [], requerimientos: r?.data ?? [] };
+    },
+    staleTime: 60_000,
+  });
+}
+
+// ─── Planificación ───────────────────────────────────────────────────────────
+export interface PlanificacionItem {
+  id: number | string;
+  placa: string;
+  tipo_mp: string;
+  estado: string | null;
+  fecha_inicio_ventana: string | null;
+  fecha_fin_ventana: string | null;
+  km_actual: number | null;
+  km_objetivo: number | null;
+  responsable: string | null;
+  observaciones: string | null;
+  [key: string]: unknown;
+}
+
+export type EstadoPlan = 'completada' | 'cancelada' | 'diferida' | 'atrasada' | 'porvencer' | 'vigente' | 'programada';
+
+export function planEstado(p: PlanificacionItem): EstadoPlan {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const fin = p.fecha_fin_ventana ? new Date(p.fecha_fin_ventana.split('T')[0] + 'T00:00:00') : null;
+  const ini = p.fecha_inicio_ventana ? new Date(p.fecha_inicio_ventana.split('T')[0] + 'T00:00:00') : null;
+  const est = (p.estado ?? '').toLowerCase();
+  if (est === 'completada') return 'completada';
+  if (est === 'cancelada')  return 'cancelada';
+  if (est === 'diferida')   return 'diferida';
+  if (fin && hoy > fin) return 'atrasada';
+  if (fin) {
+    const diff = Math.round((fin.getTime() - hoy.getTime()) / 86_400_000);
+    if (diff <= 3) return 'porvencer';
+  }
+  if (ini && fin && hoy >= ini && hoy <= fin) return 'vigente';
+  return 'programada';
+}
+
+export function planEstadoColor(e: EstadoPlan): string {
+  switch (e) {
+    case 'completada': return 'green';
+    case 'cancelada':  return 'neutral';
+    case 'diferida':   return 'amber';
+    case 'atrasada':   return 'red';
+    case 'porvencer':  return 'amber';
+    case 'vigente':    return 'blue';
+    default:           return 'neutral';
+  }
+}
+
+export function usePlanificacion(mes: number, anio: number) {
+  return useQuery<PlanificacionItem[]>({
+    queryKey: ['mant', 'planificacion', mes, anio],
+    queryFn: () =>
+      api(`/planificacion?mes=${mes}&anio=${anio}`).then(
+        (r: unknown) => {
+          if (Array.isArray(r)) return r as PlanificacionItem[];
+          return (r as { data?: PlanificacionItem[] }).data ?? [];
+        }
+      ),
+    staleTime: 30_000,
+  });
+}
+
+// ─── Incidencias en ruta ──────────────────────────────────────────────────────
+export interface IncidenciaRuta {
+  id: number | string;
+  fecha_falla: string | null;
+  placa: string | null;
+  conductor: string | null;
+  ubicacion: string | null;
+  motivo: string | null;
+  falla: string | null;
+  area_responsable: string | null;
+  total_costo: number | string | null;
+  solucionado: string | null;
+  [key: string]: unknown;
+}
+
+export function useIncidencias(pagina = 1, limit = 50, busqueda = '') {
+  return useQuery<{ data: IncidenciaRuta[]; total: number }>({
+    queryKey: ['mant', 'incidencias', pagina, limit, busqueda],
+    queryFn: () => {
+      const p = new URLSearchParams({ limit: String(limit), page: String(pagina) });
+      if (busqueda) p.set('search', busqueda);
+      return api(`/mantenimiento/incidencias-ruta?${p.toString()}`).then(
+        (r: unknown) => {
+          if (Array.isArray(r)) return { data: r as IncidenciaRuta[], total: (r as IncidenciaRuta[]).length };
+          const obj = r as { data?: IncidenciaRuta[]; total?: number };
+          return { data: obj.data ?? [], total: obj.total ?? 0 };
+        }
+      );
+    },
+    staleTime: 30_000,
+    placeholderData: prev => prev,
+  });
+}

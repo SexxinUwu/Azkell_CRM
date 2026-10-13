@@ -32,4 +32,10 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./ProveedoresPage').then(m => ({ default: m.ProveedoresPage }))),
     nav: { key: 'proveedores', label: 'Proveedores', to: '/almacen/proveedores', icon: 'Warehouse', permisos: ['prov_inv.ver'] },
   },
+  {
+    path: 'almacen/recepcion-compras/*',
+    permisos: ['rec_compras.ver', 'ent_inv.ver'],
+    Page: lazy(() => import('./RecepcionComprasPage').then(m => ({ default: m.RecepcionComprasPage }))),
+    nav: { key: 'recepcion', label: 'Recepción de compras', to: '/almacen/recepcion-compras', icon: 'PackagePlus', permisos: ['rec_compras.ver', 'ent_inv.ver'] },
+  },
 ];

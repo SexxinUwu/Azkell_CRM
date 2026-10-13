@@ -252,6 +252,44 @@ export async function eliminarProveedor(id: number) {
   return api(`/almacen/proveedores/${id}`, { method: 'DELETE' });
 }
 
+// ─── Recepción de compras ────────────────────────────────────────────────────
+
+export interface ItemRecepcion {
+  inventario_id?: string | null;
+  descripcion: string;
+  cantidad_oc: number;
+  cantidad_recibida: number;
+  unidad?: string | null;
+  costo_unitario?: number | null;
+}
+
+export interface RecepcionOC {
+  id: string | number;
+  proveedor: string | null;
+  solicitante: string | null;
+  estado_oc: string | null;
+  estado_recepcion: 'PENDIENTE' | 'PARCIAL' | 'COMPLETO' | string | null;
+  fecha_oc: string | null;
+  fecha_recepcion: string | null;
+  almacen: string | null;
+  total_pen: number | null;
+  observaciones: string | null;
+  items: ItemRecepcion[];
+  [key: string]: unknown;
+}
+
+export function useRecepcionesOC() {
+  return useQuery<RecepcionOC[]>({
+    queryKey: ['almacen', 'recepciones-oc'],
+    queryFn: () => api('/almacen/recepciones-oc'),
+    staleTime: 30_000,
+  });
+}
+
+export async function registrarRecepcion(data: Partial<RecepcionOC>) {
+  return api('/almacen/recepciones-oc/registrar', { method: 'POST', body: data });
+}
+
 // ─── Listas de opciones (catálogos) ──────────────────────────────────────────
 
 export function familiasUnicas(items: ArticuloInv[]): string[] {
