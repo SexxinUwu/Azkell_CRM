@@ -16,8 +16,11 @@ export function AprobacionesCajaPage() {
           ]} />
         }
       />
-      <EmptyState icon={<ClipboardCheck size={28} />} title="Disponible en la versión actual">
-        La aprobación de movimientos de caja con flujo de autorización está en la versión actual.
+      <EmptyState
+        icon={<ClipboardCheck size={28} />}
+        title="Flujo de aprobación de movimientos de caja"
+      >
+        Revisa y aprueba los movimientos de caja pendientes con flujo de autorización por WhatsApp.
       </EmptyState>
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--s-4)' }}>
         <Button variant="primary" onClick={() => abrirClasico('gerencia/aprobaciones-caja')}>

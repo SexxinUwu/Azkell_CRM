@@ -16,8 +16,11 @@ export function AprobacionesOCPage() {
           ]} />
         }
       />
-      <EmptyState icon={<ClipboardCheck size={28} />} title="Disponible en la versión actual">
-        La aprobación de órdenes de compra con flujo de autorización está en la versión actual.
+      <EmptyState
+        icon={<ClipboardCheck size={28} />}
+        title="Flujo de aprobación de órdenes de compra"
+      >
+        Revisa y aprueba las órdenes de compra pendientes con flujo de autorización por WhatsApp.
       </EmptyState>
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--s-4)' }}>
         <Button variant="primary" onClick={() => abrirClasico('gerencia/aprobaciones-oc')}>
