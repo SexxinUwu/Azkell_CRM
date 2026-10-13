@@ -1,0 +1,80 @@
+/* Flota — estilos específicos del módulo */
+
+/* Grid de tarjetas de disponibilidad */
+.disp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--s-3);
+}
+
+.disp-card {
+  background: var(--fill-2);
+  border-radius: var(--radius-2);
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  border-left: 3px solid var(--disp-color, var(--separator));
+  cursor: pointer;
+  transition: background 120ms;
+}
+.disp-card:hover {
+  background: var(--fill-3);
+}
+.disp-card__placa {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.0625rem;
+  color: var(--accent);
+  letter-spacing: 0.03em;
+}
+.disp-card__tipo {
+  font-size: 0.8125rem;
+  color: var(--label-2);
+}
+.disp-card__conductor {
+  font-size: 0.875rem;
+  color: var(--label-1);
+  font-weight: 500;
+}
+
+/* Tabla de documentos */
+.doc-fila {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  cursor: pointer;
+  transition: background 100ms;
+  border-radius: var(--radius-1);
+}
+.doc-fila:hover { background: var(--fill-3); }
+.doc-fila__indicador {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.doc-fila__placa {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--accent);
+  min-width: 5.5rem;
+}
+.doc-fila__tipo {
+  flex: 1;
+  font-weight: 500;
+  font-size: 0.9375rem;
+}
+.doc-fila__numero {
+  font-size: 0.8125rem;
+  color: var(--label-2);
+  font-family: var(--font-mono);
+}
+.doc-fila__venc {
+  font-size: 0.8125rem;
+  font-family: var(--font-mono);
+  min-width: 6rem;
+  text-align: right;
+}
