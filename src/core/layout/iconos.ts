@@ -1,7 +1,57 @@
-// Íconos que los módulos piden por nombre en su rutas.ts. Se importan uno por uno
-// (importar todo lucide-react pesaría cientos de KB). Si falta uno, se usa el genérico.
-import { Circle, type LucideIcon } from 'lucide-react';
+import {
+  Banknote,
+  BarChart2,
+  Boxes,
+  CalendarDays,
+  Circle,
+  ClipboardCheck,
+  ClipboardList,
+  Cog,
+  Disc3,
+  Droplets,
+  FileText,
+  Fuel,
+  Gauge,
+  History,
+  IdCard,
+  type LucideIcon,
+  MapPin,
+  PackageMinus,
+  PackagePlus,
+  ScrollText,
+  ShieldCheck,
+  Truck,
+  UserCog,
+  Users,
+  Warehouse,
+  Wrench,
+} from 'lucide-react';
 
-const ICONOS: Record<string, LucideIcon> = {};
+const ICONOS: Record<string, LucideIcon> = {
+  Banknote,
+  BarChart2,
+  Boxes,
+  CalendarDays,
+  ClipboardCheck,
+  ClipboardList,
+  Cog,
+  Disc3,
+  Droplets,
+  FileText,
+  Fuel,
+  Gauge,
+  History,
+  IdCard,
+  MapPin,
+  PackageMinus,
+  PackagePlus,
+  ScrollText,
+  ShieldCheck,
+  Truck,
+  UserCog,
+  Users,
+  Warehouse,
+  Wrench,
+};
 
 export const iconoDe = (nombre: string): LucideIcon => ICONOS[nombre] ?? Circle;
