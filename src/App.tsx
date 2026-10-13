@@ -10,6 +10,7 @@ import { FarewellTransition } from './modules/auth/FarewellTransition';
 import { InicioPage } from './modules/inicio/InicioPage';
 import { PerfilPage } from './modules/perfil/PerfilPage';
 import { Inactividad } from './core/auth/Inactividad';
+import { RUTAS_MODULOS } from './core/layout/navigation';
 // Pantallas de módulos: se descargan aparte, al abrirlas (el marco de la app ya está en pantalla)
 const PlacasPage = lazy(() => import('./modules/placas/PlacasPage').then(m => ({ default: m.PlacasPage })));
 const InspeccionesPage = lazy(() => import('./modules/inspecciones/InspeccionesPage').then(m => ({ default: m.InspeccionesPage })));
@@ -42,6 +43,9 @@ export default function App() {
           <Route path="preferencias/situaciones" element={<CatalogoRuta clave="situaciones" />} />
           <Route path="conductores" element={<RequirePermission any={['cond.ver']}><ConductoresPage /></RequirePermission>} />
           <Route path="directorio/personal/:id?" element={<RequirePermission any={['rrhh_personal.ver']}><PersonalPage /></RequirePermission>} />
+          {RUTAS_MODULOS.map(({ path, permisos, Page }) => (
+            <Route key={path} path={path} element={<RequirePermission any={permisos}><Page /></RequirePermission>} />
+          ))}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

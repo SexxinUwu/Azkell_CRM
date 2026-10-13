@@ -11,6 +11,8 @@ import {
   Banknote, Boxes, Contact, CircleDot, ClipboardCheck, Cog, Layers, Ruler, Tag, ClipboardList, Disc3, FileText, Fuel, Gauge, History, House, IdCard, LayoutDashboard,
   type LucideIcon, MapPin, PackageMinus, PackagePlus, Route, ScrollText, ShieldCheck, Truck, UserCog, Users, Warehouse, Wrench,
 } from 'lucide-react';
+import type { RutaModulo } from '../../modules/personal/rutas.tipos';
+import { iconoDe } from './iconos';
 
 export interface NavItem {
   key: string;
@@ -33,7 +35,7 @@ export interface NavSection {
 
 const ver = (...claves: string[]) => claves.map(c => `${c}.ver`);
 
-export const NAV_SECTIONS: NavSection[] = [
+const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Gerencia',
     items: [
@@ -51,6 +53,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'ubicacion', label: 'Ubicación GPS', clasico: 'flota/ubicacion', icon: MapPin, permissions: ver('gps') },
       { key: 'documentos', label: 'Documentos', clasico: 'flota/documentos', icon: FileText, permissions: ver('docs_flota') },
       { key: 'entrega', label: 'Entrega de vehículos', clasico: 'flota/entrega-vehiculos', icon: ClipboardList, permissions: ver('entrega_vehiculos', 'seguridad_unidades', 'seg_unidades', 'placas') },
+      { key: 'checklist', label: 'Reporte de fallas', clasico: 'mantenimiento/checklist', icon: ClipboardCheck, permissions: ver('checklist') },
     ],
   },
   {
@@ -60,7 +63,6 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'status-rampa', label: 'Status de rampa', clasico: 'mantenimiento/status-rampa', icon: Wrench, permissions: ver('status_rampa') },
       { key: 'reportes-ot', label: 'Órdenes de trabajo', clasico: 'mantenimiento/reportes-ot', icon: ScrollText, permissions: ver('reportes_ot', 'ot') },
       { key: 'trabajos-ot', label: 'Trabajos de OT', clasico: 'mantenimiento/trabajos-ot', icon: Wrench, permissions: ver('trabajos_ot') },
-      { key: 'checklist', label: 'Checklist', clasico: 'mantenimiento/checklist', icon: ClipboardCheck, permissions: ver('checklist') },
       { key: 'inspecciones', label: 'Inspecciones', to: '/inspecciones', icon: ClipboardList, permissions: ver('insp') },
       { key: 'fleetrun', label: 'Fleetrun', clasico: 'mantenimiento/fleetrun', icon: Gauge, permissions: ver('fleetrun', 'fleet') },
       { key: 'neumaticos', label: 'Neumáticos', clasico: 'mantenimiento/neumaticos-ultimas', icon: Disc3, permissions: ver('neumaticos') },
@@ -77,6 +79,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'salidas', label: 'Salidas', clasico: 'almacen/salidas', icon: PackageMinus, permissions: ver('sal_inv') },
       { key: 'kardex', label: 'Kardex', clasico: 'almacen/kardex', icon: History, permissions: ver('kardex') },
       { key: 'proveedores', label: 'Proveedores', clasico: 'almacen/proveedores', icon: Warehouse, permissions: ver('prov_inv') },
+      { key: 'almacen-otros', label: 'Otros', clasico: 'almacen/otros', icon: Layers, permissions: ver('almacen_otros', 'inv') },
     ],
   },
   {
@@ -132,6 +135,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'tipos-mp', label: 'Tipos de MP', to: '/mantenimiento/tipos-mp', icon: Wrench, permissions: ver('cfg_mant') },
       { key: 'personal-taller', label: 'Personal de taller', to: '/mantenimiento/personal', icon: UserCog, permissions: ver('pers_mant') },
       { key: 'situaciones', label: 'Situaciones', to: '/preferencias/situaciones', icon: CircleDot, permissions: ver('cfg_situacion') },
+      { key: 'integraciones', label: 'Integraciones', clasico: 'sistema/integraciones', icon: Cog, permissions: ver('integraciones', 'administracion') },
     ],
   },
   {
@@ -142,6 +146,28 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
 ];
+
+// Pantallas que declara cada módulo en src/modules/<modulo>/rutas.ts (ver personal/rutas.tipos.ts):
+// si la key ya está en el menú, la pantalla pasa de la versión actual a la nueva; si no, se agrega a su sección.
+const MODULOS = import.meta.glob<{ RUTAS?: RutaModulo[] }>('../../modules/*/rutas.{ts,tsx}', { eager: true });
+export const RUTAS_MODULOS: RutaModulo[] = Object.values(MODULOS).flatMap(m => m.RUTAS ?? []);
+
+function conModulos(base: NavSection[]): NavSection[] {
+  const secciones = base.map(s => ({ ...s, items: [...s.items] }));
+  for (const r of RUTAS_MODULOS) {
+    const n = r.nav;
+    if (!n) continue;
+    const item: NavItem = { key: n.key, label: n.label, to: n.to, icon: iconoDe(n.icon), permissions: n.permisos, soloEmpresa: n.soloEmpresa };
+    const existente = secciones.flatMap(s => s.items).find(i => i.key === n.key);
+    if (existente) { Object.assign(existente, item, { clasico: undefined }); continue; }
+    let seccion = secciones.find(s => s.title === n.seccion);
+    if (!seccion) { seccion = { title: n.seccion ?? 'Otros', items: [] }; secciones.splice(secciones.length - 1, 0, seccion); }
+    seccion.items.push(item);
+  }
+  return secciones;
+}
+
+export const NAV_SECTIONS: NavSection[] = conModulos(SECCIONES_BASE);
 
 const empresaDelDominio = () => (typeof window === 'undefined' ? '' : window.location.hostname.split('.')[0].toLowerCase());
 

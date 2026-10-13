@@ -212,6 +212,10 @@
                             <div class="nav-icon"><i class="bi bi-clipboard2-check-fill text-success"></i></div>
                             <span class="link-text">Entrega de Vehículos</span>
                         </a>
+                        <a id="nav-reporte-fallas-flota" class="nav-item" onclick="cargarModuloAislado('mantenimiento/checklist')">
+                            <i class="bi bi-clipboard2-check nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.checklist">Reporte de Fallas</span>
+                        </a>
                     </div>
                 </div>
 
@@ -226,10 +230,6 @@
                         <a id="nav-mantenimiento-dashboard" class="nav-item" onclick="cargarModuloAislado('mantenimiento/dashboard')">
                             <i class="bi bi-speedometer2 nav-icon text-primary"></i>
                             <span class="link-text">Dashboard Mantenimiento</span>
-                        </a>
-                        <a id="nav-checklist" class="nav-item" onclick="cargarModuloAislado('mantenimiento/checklist')">
-                            <i class="bi bi-clipboard2-check nav-icon"></i>
-                            <span class="link-text" data-i18n="nav.checklist">Reporte de Fallas</span>
                         </a>
                         <a id="nav-status-rampa" class="nav-item" onclick="cargarModuloAislado('mantenimiento/status-rampa')">
                             <i class="bi bi-grid-3x3-gap-fill nav-icon"></i>
@@ -330,6 +330,16 @@
                             <i class="bi bi-building-fill nav-icon"></i>
                             <span class="link-text">Proveedores</span>
                         </a>
+                        <a id="nav-almacen-otros" class="nav-item" onclick="cargarModuloAislado('almacen/otros')">
+                            <i class="bi bi-grid-fill nav-icon"></i>
+                            <span class="link-text">Otros</span>
+                        </a>
+                        <!-- Ítems accesibles vía hub “Otros” de Almacén (ocultos del sidebar) -->
+                        <a id="nav-almacen-familias"   class="nav-item" style="display:none!important" onclick="cargarModuloAislado('almacen/familias')"></a>
+                        <a id="nav-almacen-unidades"   class="nav-item" style="display:none!important" onclick="cargarModuloAislado('almacen/unidades')"></a>
+                        <a id="nav-almacen-sistemas"   class="nav-item" style="display:none!important" onclick="cargarModuloAislado('almacen/sistemas')"></a>
+                        <a id="nav-almacen-marcas"     class="nav-item" style="display:none!important" onclick="cargarModuloAislado('almacen/marcas')"></a>
+                        <a id="nav-almacen-almacenes"  class="nav-item" style="display:none!important" onclick="cargarModuloAislado('almacen/almacenes')"></a>
                     </div>
                 </div>
 
@@ -521,14 +531,11 @@
                             <i class="bi bi-translate nav-icon"></i>
                             <span class="link-text" data-i18n="cfg.nav.language">Idioma</span>
                         </a>
-                        <!-- Administración -->
-                        <div id="wrap-administracion">
-                            <a id="nav-administracion" class="nav-item" onclick="cargarModuloAislado('administracion')">
-                                <i class="bi bi-grid-fill nav-icon"></i>
-                                <span class="link-text" data-i18n="nav.administracion">Administración</span>
-                                <span class="section-badge" style="margin-left:auto;">11</span>
-                            </a>
-                        </div>
+                        <!-- Integraciones en Configuración -->
+                        <a id="nav-integraciones" class="nav-item" onclick="cargarModuloAislado('sistema/integraciones')">
+                            <i class="bi bi-plug-fill nav-icon text-purple"></i>
+                            <span class="link-text">Integraciones</span>
+                        </a>
                     </div>
                 </div>
             </nav>
@@ -1044,6 +1051,14 @@
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
+                <div id="mbnav-reporte-fallas-flota" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetFlota')).hide(); cargarModuloAislado('mantenimiento/checklist'); setBottomNavActive('bnav-flota');">
+                    <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-clipboard2-check"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title" data-i18n="nav.checklist">Reporte de Fallas</p>
+                        <p class="bnav-row-desc">Incidencias y fallas de unidades</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
             </div>
         </div>
     </div>
@@ -1061,14 +1076,6 @@
                     <div class="bnav-row-content">
                         <p class="bnav-row-title">Dashboard Mantenimiento</p>
                         <p class="bnav-row-desc">Clima dinámico, flota y Fleetrun</p>
-                    </div>
-                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
-                </div>
-                <div id="mbnav-checklist" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/checklist'); setBottomNavActive('bnav-mantenimiento');">
-                    <div class="bnav-row-icon" style="color: #f59e0b;"><i class="bi bi-clipboard2-check"></i></div>
-                    <div class="bnav-row-content">
-                        <p class="bnav-row-title" data-i18n="nav.checklist">Reporte de Fallas</p>
-                        <p class="bnav-row-desc">Incidencias y fallas de unidades</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>
@@ -1223,6 +1230,14 @@
                     <div class="bnav-row-content">
                         <p class="bnav-row-title">Proveedores</p>
                         <p class="bnav-row-desc">Directorio y contactos comerciales</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
+                <div id="mbnav-almacen-otros" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/otros'); setBottomNavActive('bnav-almacen');">
+                    <div class="bnav-row-icon" style="color: #10b981;"><i class="bi bi-grid-fill"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Otros</p>
+                        <p class="bnav-row-desc">Almacenes, familias, marcas y catálogos</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>

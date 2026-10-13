@@ -1,0 +1,224 @@
+/* Almacén — Inventario, Entradas, Salidas, Kardex, Proveedores */
+
+/* ─── Lista de artículos ─────────────────────────────────────────────────── */
+.inv-lista { display: flex; flex-direction: column; gap: 0.375rem; }
+
+.inv-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4);
+  min-height: 3.75rem;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+  text-align: left;
+  width: 100%;
+}
+.inv-card:hover { background: var(--fill-subtle); }
+.inv-card:active { background: var(--fill); }
+.inv-card--activo { background: var(--ink); color: var(--label-inverse); box-shadow: none; }
+.inv-card--activo:hover { background: var(--ink); }
+
+.inv-card__icono {
+  width: 2.5rem; height: 2.5rem; border-radius: var(--r-md); flex-shrink: 0;
+  display: grid; place-items: center;
+  background: var(--fill); color: var(--label-2);
+}
+.inv-card--activo .inv-card__icono { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.85); }
+
+.inv-card__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+.inv-card__nombre {
+  font-size: 0.9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+.inv-card__sub {
+  font-size: 0.75rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.inv-card--activo .inv-card__sub { color: rgba(255,255,255,0.6); }
+
+.inv-card__stock { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
+.inv-card__num { font-size: 1.25rem; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+.inv-card__unidad { font-size: 0.6875rem; color: var(--label-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.inv-card--activo .inv-card__unidad { color: rgba(255,255,255,0.6); }
+
+/* Badges de estado de stock */
+.inv-badge {
+  font-size: 0.625rem; font-weight: 700; padding: 0.1875rem 0.5rem; border-radius: var(--r-full);
+  text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0;
+}
+.inv-badge--ok { background: var(--green-tint); color: var(--green-ink); }
+.inv-badge--warning { background: var(--amber-tint); color: var(--amber-ink); }
+.inv-badge--critical { background: var(--red-tint); color: var(--red-ink); }
+
+/* ─── Resumen de métricas ───────────────────────────────────────────────── */
+.inv-metricas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+.inv-metrica {
+  display: flex; flex-direction: column; gap: var(--s-1); padding: var(--s-3) var(--s-4);
+  background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-card);
+}
+.inv-metrica__num { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.inv-metrica__label { font-size: 0.75rem; color: var(--label-2); font-weight: 500; }
+.inv-metrica__num--warning { color: var(--amber-ink); }
+.inv-metrica__num--critical { color: var(--red-ink); }
+
+/* ─── Ficha del artículo ────────────────────────────────────────────────── */
+.inv-ficha { display: flex; flex-direction: column; gap: var(--s-5); padding-bottom: var(--s-8); }
+.inv-ficha__hero {
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-2);
+  padding: var(--s-4) 0 var(--s-3);
+}
+.inv-ficha__imagen {
+  width: 6rem; height: 6rem; border-radius: var(--r-lg); object-fit: cover;
+  box-shadow: var(--shadow-card);
+  background: var(--fill);
+}
+.inv-ficha__imagen-vacia {
+  width: 6rem; height: 6rem; border-radius: var(--r-lg);
+  background: var(--fill); display: grid; place-items: center; color: var(--label-3);
+  box-shadow: var(--shadow-card);
+}
+.inv-ficha__id { font-size: 0.8125rem; font-weight: 700; color: var(--accent); font-family: var(--font-mono); }
+.inv-ficha__nombre { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.02em; text-align: center; }
+.inv-ficha__sub { font-size: 0.875rem; color: var(--label-2); text-align: center; }
+
+.inv-ficha__stock-big {
+  display: flex; flex-direction: column; align-items: center; padding: var(--s-4);
+  background: var(--surface); border-radius: var(--r-xl); box-shadow: var(--shadow-card);
+  gap: var(--s-1);
+}
+.inv-ficha__stock-num { font-size: 3rem; font-weight: 900; letter-spacing: -0.05em; line-height: 1; }
+.inv-ficha__stock-label { font-size: 0.875rem; color: var(--label-2); font-weight: 500; }
+.inv-ficha__stock-min { font-size: 0.75rem; color: var(--label-3); }
+
+/* Acciones de la ficha (3 botones: regularizar/editar/más) */
+.inv-ficha__acciones { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
+.inv-ficha__accion {
+  display: flex; flex-direction: column; align-items: center; gap: 0.25rem; min-height: 3.75rem;
+  padding: var(--s-2); border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow-card);
+  font-size: 0.75rem; font-weight: 500; color: var(--accent-ink, var(--accent)); cursor: pointer;
+}
+
+/* ─── Tabla de Kardex ────────────────────────────────────────────────────── */
+.inv-kardex { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.inv-kardex th { font-size: 0.75rem; font-weight: 600; color: var(--label-2); padding: var(--s-1) var(--s-3); text-align: left; border-bottom: 1px solid var(--separator); }
+.inv-kardex td { padding: var(--s-2) var(--s-3); border-bottom: 0.5px solid var(--separator); }
+.inv-kardex tr:last-child td { border-bottom: none; }
+.inv-kardex__entrada { color: var(--green-ink); font-weight: 700; }
+.inv-kardex__salida { color: var(--red-ink); font-weight: 700; }
+
+/* ─── Layout dividido (igual que personal) ──────────────────────────────── */
+.inv-dividido {
+  display: grid;
+  grid-template-columns: minmax(18rem, 22rem) 1fr;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  height: calc(100dvh - var(--topbar-h, 3.5rem) - 11rem);
+  min-height: 32rem;
+}
+.inv-dividido__lista {
+  overflow-y: auto; overscroll-behavior: contain;
+  border-right: 1px solid var(--separator);
+  background: var(--surface-sunken);
+}
+.inv-dividido__detalle { overflow-y: auto; overscroll-behavior: contain; padding: var(--s-4); }
+
+.inv-dividido__filtros {
+  position: sticky; top: 0; z-index: 3;
+  padding: var(--s-3);
+  background: color-mix(in srgb, var(--surface-sunken) 82%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid var(--separator);
+  display: flex; flex-direction: column; gap: var(--s-2);
+}
+
+.inv-sin-seleccion {
+  height: 100%; min-height: 20rem; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--s-2); color: var(--label-3); font-size: 0.9375rem;
+}
+
+/* ─── Formulario de artículo ────────────────────────────────────────────── */
+.inv-form__foto-btn {
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-2);
+  padding: var(--s-4) 0;
+}
+.inv-form__foto {
+  width: 5rem; height: 5rem; border-radius: var(--r-lg); object-fit: cover;
+  background: var(--fill); display: grid; place-items: center; color: var(--label-3);
+  cursor: pointer; overflow: hidden;
+}
+
+/* ─── Proveedores: tabla simple ─────────────────────────────────────────── */
+.prov-fila { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-4); min-height: 3rem; cursor: pointer; }
+.prov-fila + .prov-fila { border-top: 0.5px solid var(--separator); }
+.prov-fila:hover { background: var(--fill-subtle); }
+.prov-fila__nombre { font-weight: 600; font-size: 0.9375rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prov-fila__ruc { font-size: 0.8125rem; color: var(--label-2); flex-shrink: 0; }
+
+/* ─── Filas de movimiento (entradas / salidas) ──────────────────────────── */
+.mov-fila {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4); min-height: 4rem; width: 100%;
+  text-align: left; cursor: pointer;
+  border-bottom: 0.5px solid var(--separator);
+  transition: background-color 120ms ease;
+}
+.mov-fila:last-child { border-bottom: none; }
+.mov-fila:hover { background: var(--fill-subtle); }
+.mov-fila:active { background: var(--fill); }
+
+.mov-fila__icon {
+  width: 2.25rem; height: 2.25rem; border-radius: var(--r-md); flex-shrink: 0;
+  display: grid; place-items: center;
+}
+.mov-fila__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+.mov-fila__titulo { font-size: 0.9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mov-fila__sub { font-size: 0.75rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mov-fila__derecha { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
+.mov-fila__monto { font-size: 0.9375rem; font-weight: 700; }
+
+/* ─── Tabla de ítems en formulario ──────────────────────────────────────── */
+.items-tabla { width: 100%; border-collapse: collapse; }
+.items-tabla th { font-size: 0.75rem; font-weight: 600; color: var(--label-2); padding: var(--s-1) var(--s-2); text-align: left; border-bottom: 1px solid var(--separator); }
+.items-tabla td { padding: var(--s-1) var(--s-2); border-bottom: 0.5px solid var(--separator); vertical-align: middle; }
+.items-tabla tr:last-child td { border-bottom: none; }
+.items-tabla .input { font-size: 0.875rem; padding: var(--s-1) var(--s-2); min-height: 2.25rem; }
+
+/* ─── Kardex: header de artículo seleccionado ───────────────────────────── */
+.kardex-header {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-card);
+}
+.kardex-header__icon {
+  width: 2.5rem; height: 2.5rem; border-radius: var(--r-md); flex-shrink: 0;
+  display: grid; place-items: center; background: var(--fill); color: var(--label-2);
+}
+.kardex-header__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+.kardex-header__id { font-size: 0.8125rem; font-weight: 700; color: var(--accent); font-family: var(--font-mono); }
+.kardex-header__nombre { font-size: 0.9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kardex-header__sub { font-size: 0.75rem; color: var(--label-2); }
+.kardex-header__limpiar {
+  width: 2rem; height: 2rem; border-radius: var(--r-full); flex-shrink: 0;
+  display: grid; place-items: center; font-size: 1.25rem; line-height: 1;
+  background: var(--fill); color: var(--label-2); cursor: pointer;
+  border: none;
+}
+.kardex-header__limpiar:hover { background: var(--fill-subtle); color: var(--label); }
+
+.inv-kardex__reg { color: var(--amber-ink); font-weight: 700; }
+
+@media (max-width: 639px) {
+  .inv-metricas { grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
+  .inv-metrica__num { font-size: 1.375rem; }
+}

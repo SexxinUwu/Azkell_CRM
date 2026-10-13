@@ -298,15 +298,18 @@ window.verificarSesionGuardada = function() {
     safe('nav-entrega-vehiculos',  vEntregaVehiculos);
     safe('mbnav-entrega-vehiculos', vEntregaVehiculos);
 
-    var showFlota = vDisponibilidad || vGps || vPlacas || vDocsFlota || vEntregaVehiculos;
+    var vChecklist = showFlotaHub && _cL('checklist');
+    safe('nav-reporte-fallas-flota',   vChecklist);
+    safe('mbnav-reporte-fallas-flota', vChecklist);
+
+    var showFlota = vDisponibilidad || vGps || vPlacas || vDocsFlota || vEntregaVehiculos || vChecklist;
     safe('wrap-flota', showFlota);
     safe('bnav-flota', showFlota);
 
     // MANTENIMIENTO
     var showMantHub  = _cHub('hub_mant');
-    var vMantDashboard = showMantHub && (_cL('mant_dashboard') || _cL('dashboard') || _cL('status_rampa') || _cL('checklist') || true);
+    var vMantDashboard = showMantHub && (_cL('mant_dashboard') || _cL('dashboard') || _cL('status_rampa') || true);
     var vStatusRampa = showMantHub && _cL('status_rampa');
-    var vChecklist   = showMantHub && _cL('checklist');
     var vInsp        = showMantHub && _cL('insp');
     var vFleetrun    = showMantHub && (_cL('fleetrun') || _cL('fleet'));
     var vReportesOT  = showMantHub && _cL('reportes_ot');
@@ -325,8 +328,6 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-mantenimiento-dashboard', vMantDashboard);
     safe('nav-status-rampa',    vStatusRampa);
     safe('mbnav-status-rampa',  vStatusRampa);
-    safe('nav-checklist',       vChecklist);
-    safe('mbnav-checklist',     vChecklist);
     safe('nav-inspecciones',    vInsp);
     safe('mbnav-inspecciones',  vInsp);
     safe('nav-fleetrun',        vFleetrun);
@@ -344,7 +345,7 @@ window.verificarSesionGuardada = function() {
     safe('nav-otros-mant',      showOtrosMant);
     safe('mbnav-otros-mant',    showOtrosMant);
 
-    var showMant = vMantDashboard || vStatusRampa || vChecklist || vInsp || vFleetrun || vReportesOT || vTrabajosOT || vNeumaticos || vIncidencias || showOtrosMant;
+    var showMant = vMantDashboard || vStatusRampa || vInsp || vFleetrun || vReportesOT || vTrabajosOT || vNeumaticos || vIncidencias || showOtrosMant;
     safe('wrap-mantenimiento', showMant);
     safe('bnav-mantenimiento', showMant);
 
@@ -372,8 +373,11 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-kardex',        vKardex);
     safe('nav-proveedores-inv', vProv);
     safe('mbnav-proveedores-inv', vProv);
+    var vAlmOtros = showAlmacenHub && (_cL('almacen_otros') || _cL('inv') || _cL('cfg_familias') || isAdm);
+    safe('nav-almacen-otros', vAlmOtros);
+    safe('mbnav-almacen-otros', vAlmOtros);
 
-    var showAlm = vDashAlm || vInv || vEnt || vRec || vSal || vKardex || vProv;
+    var showAlm = vDashAlm || vInv || vEnt || vRec || vSal || vKardex || vProv || vAlmOtros;
     safe('wrap-almacen', showAlm);
     safe('bnav-almacen', showAlm);
 
@@ -548,9 +552,12 @@ window.verificarSesionGuardada = function() {
     safe('nav-cfg-empresa', vCfgEmpresa);
     safe('mbnav-cfg-empresa', vCfgEmpresa);
 
-    safe('wrap-administracion', showAdm);
-    safe('nav-administracion',  showAdm);
-    safe('mbnav-administracion', showAdm);
+    safe('wrap-administracion', false);
+    safe('nav-administracion',  false);
+    safe('mbnav-administracion', false);
+    var vInteg = isAdm || _cL('integraciones') || _cL('cfg_integ') || _cL('administracion');
+    safe('nav-integraciones', vInteg);
+    safe('mbnav-integraciones', vInteg);
     var showConfiguracion = true; // Accesible para todos los usuarios (preferencias personales)
     safe('wrap-configuracion', showConfiguracion);
     safe('mbnav-configuracion', showConfiguracion);
@@ -756,6 +763,9 @@ window.verificarSesionGuardada = function() {
             'almacen/salidas': 'sal_inv',
             'almacen/kardex': 'kardex',
             'almacen/proveedores': 'prov_inv',
+            'almacen/otros': 'inv',
+            'almacen/almacenes': 'cfg_familias',
+            'administracion/fleetrun-config': 'cfg_fleetrun',
             'gerencia/aprobaciones-oc': 'gerencia_aprobaciones_oc',
             'gerencia/aprobaciones-caja': 'gerencia_aprobaciones_caja',
             'directorio/conductores': 'cond',
@@ -796,13 +806,23 @@ window.verificarSesionGuardada = function() {
             'seguridad/unidades': 'seguridad_unidades',
             'seguridad/entrega-vehiculos': 'seguridad_unidades',
             'seguridad/unidades-base': 'unidades_base',
-            'operaciones/reporte-viajes': 'op_guias_remision',
+            'operaciones/reporte-viajes': 'op_reporte_viajes',
             'sistema/usuarios': 'usuarios',
             'sistema/auditoria': 'mod_auditoria',
+            'sistema/integraciones': 'integraciones',
             'administracion': 'administracion'
         };
 
         // Fallbacks inteligentes para submódulos
+        if (r === 'almacen/otros' || r === 'almacen/familias' || r === 'almacen/unidades' || r === 'almacen/sistemas' || r === 'almacen/marcas' || r === 'almacen/almacenes') {
+            return window.checkPerm('almacen_otros', 'l') || window.checkPerm('inv', 'l') || isAdm;
+        }
+        if (r === 'sistema/integraciones') {
+            return window.checkPerm('integraciones', 'l') || window.checkPerm('cfg_integ', 'l') || window.checkPerm('administracion', 'l') || isAdm;
+        }
+        if (r === 'mantenimiento/checklist') {
+            return window.checkPerm('checklist', 'l') || window.checkPerm('disponibilidad', 'l') || isAdm;
+        }
         if (r === 'almacen/recepcion-compras') {
             return window.checkPerm('rec_compras', 'l') || window.checkPerm('ent_inv', 'l') || window.checkPerm('inv', 'l');
         }
@@ -1985,6 +2005,9 @@ window.checkPerm = function(modKey, action) {
             'clientes': ['clientes'],
 
             'checklist': ['checklist', 'mant_fallas'],
+            'otros_mant': ['otros_mant', 'plan', 'cfg_mant', 'administracion'],
+            'almacen_otros': ['almacen_otros', 'inv', 'cfg_familias', 'administracion'],
+            'integraciones': ['integraciones', 'cfg_integ', 'administracion', 'usuarios'],
             'seguridad_unidades': ['seguridad_unidades', 'seg_unidades', 'seg_checklist'],
             'seg_unidades': ['seg_unidades', 'seguridad_unidades', 'seg_checklist'],
             'seg_checklist': ['seg_checklist', 'seguridad_unidades'],
@@ -4102,6 +4125,8 @@ const TITULOS_MODULOS = {
     'sistema/usuarios':            'Gestión de Usuarios',
     'sistema/auditoria':           'Bitácora de Auditoría',
     'administracion':              'Administración',
+    'almacen/otros':               'Catálogos de Almacén',
+    'administracion/fleetrun-config': 'Configuración Fleetrun',
     'sistema/superadmin':          'SuperAdmin SaaS Master',
     'seguridad/unidades':          'Control de Unidades',
     'seguridad/unidades-base':     'Status "Unidades en Base"',
@@ -4161,12 +4186,14 @@ const MENU_IDS = {
     'mantenimiento/fleetrun':      'nav-fleetrun',
     'mantenimiento/otros':         'nav-otros-mant',
     'mantenimiento/planificacion': 'nav-otros-mant',
-    'mantenimiento/configuracion-mp':  'nav-administracion',
-    'mantenimiento/kits-mp':           'nav-administracion',
-    'mantenimiento/tipos-mp':          'nav-administracion',
-    'mantenimiento/config-metrica':    'nav-administracion',
+    'mantenimiento/configuracion-mp':  'nav-otros-mant',
+    'mantenimiento/kits-mp':           'nav-otros-mant',
+    'mantenimiento/tipos-mp':          'nav-otros-mant',
+    'mantenimiento/config-metrica':    'nav-otros-mant',
+    'administracion/fleetrun-config':  'nav-otros-mant',
     'mantenimiento/ordenes':           'nav-ordenes',
-    'mantenimiento/checklist':         'nav-checklist',
+    'mantenimiento/checklist':         'nav-reporte-fallas-flota',
+    'sistema/integraciones':           'nav-integraciones',
     'mantenimiento/status-rampa':      'nav-status-rampa',
     'mantenimiento/incidencias-ruta':  'nav-incidencias-ruta',
     'mantenimiento/reportes-ot':       'nav-reportes-ot',
@@ -4187,12 +4214,13 @@ const MENU_IDS = {
     'almacen/proveedores':         'nav-proveedores-inv',
     'almacen/kardex':              'nav-kardex',
     'almacen/costos':              'nav-costos-inv',
-    'almacen/unidades':            'nav-administracion',
-    'almacen/sistemas':            'nav-administracion',
-    'almacen/familias':            'nav-administracion',
-    'almacen/marcas':              'nav-administracion',
-    'preferencias/situaciones':    'nav-administracion',
-    'administracion':              'nav-administracion',
+    'almacen/otros':               'nav-almacen-otros',
+    'almacen/unidades':            'nav-almacen-otros',
+    'almacen/sistemas':            'nav-almacen-otros',
+    'almacen/familias':            'nav-almacen-otros',
+    'almacen/marcas':              'nav-almacen-otros',
+    'almacen/almacenes':           'nav-almacen-otros',
+    'preferencias/situaciones':    'nav-otros-mant',
     'flota/disponibilidad':        'nav-disponibilidad-flota',
     'flota/documentos':            'nav-documentos-flota',
     'flota/ubicacion':             'nav-ubicacion',
@@ -4234,13 +4262,17 @@ const MENU_SECTION = {
     'almacen/sistemas':           'almacen',
     'almacen/familias':           'almacen',
     'almacen/marcas':             'almacen',
-    'preferencias/situaciones':   'administracion',
-    'administracion':             'administracion',
-    'mantenimiento/configuracion-mp': 'administracion',
-    'mantenimiento/kits-mp':          'administracion',
-    'mantenimiento/tipos-mp':         'administracion',
-    'mantenimiento/config-metrica':   'administracion',
-    'mantenimiento/checklist':        'mantenimiento',
+    'preferencias/situaciones':       'mantenimiento',
+    'administracion':                 'configuracion',
+    'almacen/otros':                  'almacen',
+    'almacen/almacenes':              'almacen',
+    'administracion/fleetrun-config': 'mantenimiento',
+    'mantenimiento/configuracion-mp': 'mantenimiento',
+    'mantenimiento/kits-mp':          'mantenimiento',
+    'mantenimiento/tipos-mp':         'mantenimiento',
+    'mantenimiento/config-metrica':   'mantenimiento',
+    'mantenimiento/checklist':        'flota',
+    'sistema/integraciones':          'configuracion',
     'mantenimiento/status-rampa':     'mantenimiento',
     'mantenimiento/incidencias-ruta': 'mantenimiento',
     'mantenimiento/reportes-ot':      'mantenimiento',
@@ -4326,17 +4358,21 @@ const BREADCRUMB_MAP = {
     'mantenimiento/otros':        ['Mantenimiento','Otros'],
     'almacen/dashboard-financiero': ['Almacén','Dashboard Financiero'],
     'almacen/inventario':         ['Almacén','Inventario'],
-    'almacen/unidades':           ['Administración','Unidades de Medida'],
-    'almacen/sistemas':           ['Administración','Sistemas'],
-    'almacen/familias':           ['Administración','Familias'],
-    'almacen/marcas':             ['Administración','Marcas'],
-    'preferencias/situaciones':   ['Administración','Situaciones'],
-    'mantenimiento/configuracion-mp': ['Administración','Frecuencias MP'],
-    'mantenimiento/kits-mp':          ['Administración','Kits MP'],
-    'mantenimiento/tipos-mp':         ['Administración','Tipos MP'],
-    'mantenimiento/config-metrica':   ['Preferencias','Config. Métrica'],
+    'almacen/otros':               ['Almacén','Catálogos'],
+    'almacen/almacenes':           ['Almacén','Catálogos','Almacenes & Sucursales'],
+    'almacen/unidades':           ['Almacén','Catálogos','Unidades de Medida'],
+    'almacen/sistemas':           ['Almacén','Catálogos','Sistemas'],
+    'almacen/familias':           ['Almacén','Catálogos','Familias'],
+    'almacen/marcas':             ['Almacén','Catálogos','Marcas'],
+    'preferencias/situaciones':   ['Mantenimiento','Otros','Situaciones'],
+    'administracion/fleetrun-config': ['Mantenimiento','Otros','Config. Fleetrun'],
+    'mantenimiento/configuracion-mp': ['Mantenimiento','Otros','Frecuencias MP'],
+    'mantenimiento/kits-mp':          ['Mantenimiento','Otros','Kits MP'],
+    'mantenimiento/tipos-mp':         ['Mantenimiento','Otros','Tipos MP'],
+    'mantenimiento/config-metrica':   ['Mantenimiento','Otros','Config. Métrica'],
     'mantenimiento/ordenes':          ['Mantenimiento','Órdenes de Mto.'],
-    'mantenimiento/checklist':        ['Mantenimiento','Reporte de Fallas'],
+    'mantenimiento/checklist':        ['Flota','Reporte de Fallas'],
+    'sistema/integraciones':          ['Configuración','Integraciones'],
     'mantenimiento/status-rampa':     ['Mantenimiento','Status Rampa'],
     'mantenimiento/incidencias-ruta': ['Mantenimiento','Incidencias en Ruta'],
     'mantenimiento/reportes-ot':      ['Mantenimiento','Reportes OT'],
@@ -4661,25 +4697,36 @@ window.cargarModuloAislado = async function(rutaModulo) {
         root.classList.add('module-transitioning');
         root.innerHTML = await respHTML.text();
 
-        // ← Botón "Atrás a Administración" para sub-módulos admin
-        const ADMIN_SUBRUTAS = [
-            'almacen/familias','almacen/unidades',
-            'almacen/sistemas','almacen/marcas',
+        // ← Botón "Atrás" para sub-módulos que ahora viven en sus hubs respectivos
+        const MANT_OTROS_SUBRUTAS = [
             'mantenimiento/configuracion-mp','mantenimiento/kits-mp',
             'mantenimiento/tipos-mp','mantenimiento/config-metrica',
-            'mantenimiento/personal','preferencias/situaciones','sistema/integraciones'
+            'mantenimiento/personal','preferencias/situaciones',
+            'administracion/fleetrun-config'
         ];
-        if (ADMIN_SUBRUTAS.includes(rutaModulo)) {
+        const ALM_OTROS_SUBRUTAS = [
+            'almacen/familias','almacen/unidades',
+            'almacen/sistemas','almacen/marcas','almacen/almacenes'
+        ];
+        const CFG_SUBRUTAS = ['sistema/integraciones'];
+
+        var backDestino = null;
+        var backLabel = null;
+        if (MANT_OTROS_SUBRUTAS.includes(rutaModulo)) { backDestino = 'mantenimiento/otros'; backLabel = 'Otros'; }
+        else if (ALM_OTROS_SUBRUTAS.includes(rutaModulo)) { backDestino = 'almacen/otros'; backLabel = 'Catálogos'; }
+        else if (CFG_SUBRUTAS.includes(rutaModulo)) { backDestino = null; backLabel = null; } // Integraciones: sin botón forzado
+
+        if (backDestino) {
             var backBtn = document.createElement('div');
             backBtn.style.cssText = 'flex-shrink:0;padding:.45rem 1rem .25rem;';
-            backBtn.innerHTML = '<button onclick="cargarModuloAislado(\'administracion\')" ' +
+            backBtn.innerHTML = '<button onclick="cargarModuloAislado(\'' + backDestino + '\')" ' +
                 'style="display:inline-flex;align-items:center;gap:.45rem;padding:.42rem 1rem;' +
                 'border-radius:10px;border:none;background:#1e293b;' +
                 'color:#fff;font-size:.78rem;font-weight:700;cursor:pointer;' +
                 'box-shadow:0 2px 8px rgba(0,0,0,.18);transition:background .15s,transform .1s;"' +
                 ' onmouseover="this.style.background=\'#0f172a\';this.style.transform=\'translateX(-2px)\'"' +
                 ' onmouseout="this.style.background=\'#1e293b\';this.style.transform=\'\'">' +
-                '<i class="bi bi-arrow-left" style="font-size:.9rem;"></i>Administración</button>';
+                '<i class="bi bi-arrow-left" style="font-size:.9rem;"></i>' + backLabel + '</button>';
             root.insertBefore(backBtn, root.firstChild);
         }
         if (typeof window.applyI18n === 'function') window.applyI18n();

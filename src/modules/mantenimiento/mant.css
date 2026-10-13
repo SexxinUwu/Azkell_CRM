@@ -1,0 +1,130 @@
+/* Mantenimiento — Órdenes de Trabajo, Trabajos OT, Status Rampa */
+
+/* ─── Chip de estado OT ─────────────────────────────────────────────────────── */
+.ot-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.1875rem 0.5rem;
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+}
+.ot-estado--green   { background: var(--green-tint);   color: var(--green-ink); }
+.ot-estado--amber   { background: var(--amber-tint);   color: var(--amber-ink); }
+.ot-estado--blue    { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+.ot-estado--neutral { background: var(--fill);          color: var(--label-2); }
+.ot-estado--red     { background: var(--red-tint);      color: var(--red-ink); }
+
+/* ─── Fila de OT ────────────────────────────────────────────────────────────── */
+.ot-fila {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  min-height: 4.25rem;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 0.5px solid var(--separator);
+  transition: background-color 120ms ease;
+}
+.ot-fila:last-child { border-bottom: none; }
+.ot-fila:hover  { background: var(--fill-subtle); }
+.ot-fila:active { background: var(--fill); }
+
+.ot-fila__icono {
+  width: 2.5rem; height: 2.5rem; border-radius: var(--r-md); flex-shrink: 0;
+  display: grid; place-items: center;
+  background: var(--fill); color: var(--label-2);
+}
+.ot-fila__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+.ot-fila__id     { font-size: 0.9375rem; font-weight: 700; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ot-fila__placa  { font-size: 0.8125rem; font-weight: 700; color: var(--accent); font-family: var(--font-mono); }
+.ot-fila__sub    { font-size: 0.75rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ot-fila__derecha { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
+.ot-fila__fecha  { font-size: 0.75rem; color: var(--label-3); font-family: var(--font-mono); }
+.ot-fila__costo  { font-size: 0.875rem; font-weight: 700; }
+
+/* ─── Detalle OT ────────────────────────────────────────────────────────────── */
+.ot-ficha { display: flex; flex-direction: column; gap: var(--s-5); padding-bottom: var(--s-8); }
+
+.ot-ficha__hero {
+  display: flex; flex-direction: column; align-items: center;
+  padding: var(--s-4) 0 var(--s-3); gap: var(--s-2);
+}
+.ot-ficha__placa {
+  font-size: 1.75rem; font-weight: 900; letter-spacing: -0.02em; font-family: var(--font-mono);
+}
+.ot-ficha__id {
+  font-size: 0.875rem; color: var(--label-2); font-family: var(--font-mono);
+}
+
+/* ─── Grid de rampas ─────────────────────────────────────────────────────────── */
+.sr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--s-3);
+}
+
+.sr-card {
+  display: flex; flex-direction: column; gap: var(--s-2);
+  padding: var(--s-4);
+  background: var(--surface); border-radius: var(--r-xl);
+  box-shadow: var(--shadow-card);
+  position: relative; overflow: hidden;
+}
+.sr-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: var(--sr-color, var(--accent));
+}
+.sr-card--libre { opacity: 0.6; }
+.sr-card--libre::before { background: var(--fill); }
+
+.sr-card__nombre {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--label-2);
+}
+.sr-card__placa {
+  font-size: 1.5rem; font-weight: 900; letter-spacing: -0.02em;
+  font-family: var(--font-mono);
+  color: var(--sr-color, var(--ink));
+}
+.sr-card__libre-label {
+  font-size: 1.125rem; font-weight: 600; color: var(--label-3);
+}
+.sr-card__info { display: flex; flex-direction: column; gap: 0.25rem; }
+.sr-card__dato { font-size: 0.8125rem; color: var(--label-2); display: flex; gap: 0.375rem; }
+.sr-card__dato strong { color: var(--label); font-weight: 600; }
+.sr-card__situacion {
+  margin-top: var(--s-1);
+  display: inline-flex; align-items: center;
+  font-size: 0.75rem; font-weight: 700;
+  padding: 0.1875rem 0.625rem; border-radius: var(--r-full);
+  background: var(--fill); color: var(--label-2);
+}
+
+/* ─── Fila historial rampa ───────────────────────────────────────────────────── */
+.sr-hist-fila {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4); min-height: 3.75rem;
+  border-bottom: 0.5px solid var(--separator);
+  cursor: pointer; text-align: left;
+  transition: background-color 120ms ease;
+}
+.sr-hist-fila:last-child { border-bottom: none; }
+.sr-hist-fila:hover { background: var(--fill-subtle); }
+.sr-hist-fila__placa {
+  font-size: 0.9375rem; font-weight: 700; font-family: var(--font-mono); color: var(--accent);
+}
+.sr-hist-fila__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+.sr-hist-fila__sub { font-size: 0.75rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-hist-fila__fecha { font-size: 0.75rem; color: var(--label-3); font-family: var(--font-mono); flex-shrink: 0; }
+
+@media (max-width: 639px) {
+  .sr-grid { grid-template-columns: 1fr; }
+}
