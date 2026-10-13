@@ -316,13 +316,7 @@ window.verificarSesionGuardada = function() {
     var vTrabajosOT  = showMantHub && _cL('trabajos_ot');
     var vNeumaticos  = showMantHub && _cL('neumaticos');
     
-    var showOtrosMantHub = showMantHub && _cHub('otros_mant');
-    var vPlan        = showOtrosMantHub && _cL('plan');
-    var vBacklog     = showOtrosMantHub && _cL('backlog');
-    var vKpis        = showOtrosMantHub && _cL('kpis');
-    var vProduct     = showOtrosMantHub && _cL('productividad');
-    var vFinTaller   = showOtrosMantHub && _cL('fin_taller');
-    var showOtrosMant = vPlan || vBacklog || vKpis || vProduct || vFinTaller;
+    var vOtrosMant = showMantHub && (_cL('otros_mant') || _cL('plan') || _cL('backlog') || _cL('kpis') || _cL('productividad') || _cL('fin_taller') || _cL('cfg_mant') || _cL('administracion') || isAdm);
 
     safe('nav-mantenimiento-dashboard',   vMantDashboard);
     safe('mbnav-mantenimiento-dashboard', vMantDashboard);
@@ -342,10 +336,10 @@ window.verificarSesionGuardada = function() {
     var vIncidencias = showMantHub && _cL('incidencias_ruta');
     safe('nav-incidencias-ruta',   vIncidencias);
     safe('mbnav-incidencias-ruta', vIncidencias);
-    safe('nav-otros-mant',      showOtrosMant);
-    safe('mbnav-otros-mant',    showOtrosMant);
+    safe('nav-otros-mant',      vOtrosMant);
+    safe('mbnav-otros-mant',    vOtrosMant);
 
-    var showMant = vMantDashboard || vStatusRampa || vInsp || vFleetrun || vReportesOT || vTrabajosOT || vNeumaticos || vIncidencias || showOtrosMant;
+    var showMant = vMantDashboard || vStatusRampa || vInsp || vFleetrun || vReportesOT || vTrabajosOT || vNeumaticos || vIncidencias || vOtrosMant;
     safe('wrap-mantenimiento', showMant);
     safe('bnav-mantenimiento', showMant);
 
@@ -814,6 +808,9 @@ window.verificarSesionGuardada = function() {
         };
 
         // Fallbacks inteligentes para submódulos
+        if (r === 'mantenimiento/otros' || r.startsWith('mantenimiento/config') || r.startsWith('mantenimiento/kits') || r.startsWith('mantenimiento/tipos') || r === 'preferencias/situaciones' || r === 'administracion/fleetrun-config') {
+            return window.checkPerm('otros_mant', 'l') || window.checkPerm('plan', 'l') || window.checkPerm('mant_dashboard', 'l') || isAdm;
+        }
         if (r === 'almacen/otros' || r === 'almacen/familias' || r === 'almacen/unidades' || r === 'almacen/sistemas' || r === 'almacen/marcas' || r === 'almacen/almacenes') {
             return window.checkPerm('almacen_otros', 'l') || window.checkPerm('inv', 'l') || isAdm;
         }
@@ -2005,7 +2002,7 @@ window.checkPerm = function(modKey, action) {
             'clientes': ['clientes'],
 
             'checklist': ['checklist', 'mant_fallas'],
-            'otros_mant': ['otros_mant', 'plan', 'cfg_mant', 'administracion'],
+            'otros_mant': ['otros_mant', 'plan', 'backlog', 'kpis', 'productividad', 'fin_taller', 'cfg_mant', 'administracion', 'cfg_frec', 'cfg_kits', 'cfg_tipos_mp', 'cfg_metrica', 'cfg_situacion', 'cfg_personal', 'cfg_fleetrun'],
             'almacen_otros': ['almacen_otros', 'inv', 'cfg_familias', 'administracion'],
             'integraciones': ['integraciones', 'cfg_integ', 'administracion', 'usuarios'],
             'seguridad_unidades': ['seguridad_unidades', 'seg_unidades', 'seg_checklist'],
