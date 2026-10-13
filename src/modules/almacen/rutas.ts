@@ -38,4 +38,10 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./RecepcionComprasPage').then(m => ({ default: m.RecepcionComprasPage }))),
     nav: { key: 'recepcion', label: 'Recepción de compras', to: '/almacen/recepcion-compras', icon: 'PackagePlus', permisos: ['rec_compras.ver', 'ent_inv.ver'] },
   },
+  {
+    path: 'almacen/otros/*',
+    permisos: ['almacen_otros.ver', 'inv.ver', 'admin'],
+    Page: lazy(() => import('./AlmacenOtrosPage').then(m => ({ default: m.AlmacenOtrosPage }))),
+    nav: { key: 'almacen-otros', label: 'Otros', to: '/almacen/otros', icon: 'Layers', permisos: ['almacen_otros.ver', 'inv.ver', 'admin'] },
+  },
 ];

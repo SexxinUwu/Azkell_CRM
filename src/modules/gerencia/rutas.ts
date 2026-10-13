@@ -3,6 +3,12 @@ import type { RutaModulo } from '../personal/rutas.tipos';
 
 export const RUTAS: RutaModulo[] = [
   {
+    path: 'dashboard/*',
+    permisos: ['dashboard.ver', 'dash.ver', 'admin'],
+    Page: lazy(() => import('./DashboardPage').then(m => ({ default: m.DashboardPage }))),
+    nav: { key: 'dashboard', label: 'Centro de Comando', to: '/dashboard', icon: 'LayoutDashboard', permisos: ['dashboard.ver', 'dash.ver', 'admin'] },
+  },
+  {
     path: 'gerencia/aprobaciones-oc/*',
     permisos: ['gerencia.ver'],
     Page: lazy(() => import('./AprobacionesOCPage').then(m => ({ default: m.AprobacionesOCPage }))),

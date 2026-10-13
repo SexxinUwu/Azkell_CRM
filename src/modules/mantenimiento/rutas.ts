@@ -3,6 +3,12 @@ import type { RutaModulo } from '../personal/rutas.tipos';
 
 export const RUTAS: RutaModulo[] = [
   {
+    path: 'mantenimiento/dashboard/*',
+    permisos: ['mant_dashboard.ver', 'status_rampa.ver', 'admin'],
+    Page: lazy(() => import('./MantDashboardPage').then(m => ({ default: m.MantDashboardPage }))),
+    nav: { key: 'mant-dashboard', label: 'Resumen de taller', to: '/mantenimiento/dashboard', icon: 'LayoutDashboard', permisos: ['mant_dashboard.ver', 'status_rampa.ver', 'admin'] },
+  },
+  {
     path: 'mantenimiento/reportes-ot/*',
     permisos: ['reportes_ot.ver', 'ot.ver'],
     Page: lazy(() => import('./OrdenesTrabajoPage').then(m => ({ default: m.OrdenesTrabajoPage }))),
