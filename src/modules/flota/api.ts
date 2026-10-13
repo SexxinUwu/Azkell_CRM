@@ -210,8 +210,8 @@ export function useGPS() {
         const obj = r as { gps?: GPSData };
         return obj.gps ?? { kpis: { total: 0, con_senal: 0, en_movimiento: 0, sin_senal: 0 }, unidades: [], grupos: [] };
       }),
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+    staleTime: 3_000,
+    refetchInterval: 4_000,
   });
 }
 
