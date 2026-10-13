@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Lock, Pencil, Plus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
+import { MenuOtros } from '../../core/ui/MenuOtros';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, TextInput } from '../../core/ui/Field';
 import { Sheet, ConfirmSheet } from '../../core/ui/Sheet';
@@ -83,7 +84,7 @@ export function CatalogoPage({ config }: { config: ConfigCatalogo }) {
         subtitle={datos.isLoading ? 'Cargando…' : `${lista.length} ${lista.length === 1 ? config.singular.toLowerCase() : config.titulo.toLowerCase()}${tieneActivo ? ` · ${activos} ${config.femenino ? 'activas' : 'activos'}` : ''}`}
         actions={
           <>
-            {config.extra && puedeCrear && <Button variant="secondary" icon={<RefreshCw size={16} />} onClick={extra} loading={ocupado}>{config.extra.label}</Button>}
+            {config.extra && puedeCrear && <MenuOtros opciones={[{ label: config.extra.label, icon: <RefreshCw size={17} />, disabled: ocupado, onSelect: extra }]} />}
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setEditando({ registro: null })}>{nuevo} {config.singular.toLowerCase()}</Button>}
           </>
         }

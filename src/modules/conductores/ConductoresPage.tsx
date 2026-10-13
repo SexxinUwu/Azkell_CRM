@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { FileSpreadsheet, IdCard, MessageCircle, Phone, Plus, SearchX } from 'lucide-react';
+import { ArrowUpRight, FileSpreadsheet, IdCard, MessageCircle, Phone, Plus, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
+import { MenuOtros } from '../../core/ui/MenuOtros';
+import { abrirClasico } from '../../core/layout/navigation';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -89,12 +91,15 @@ export function ConductoresPage() {
         eyebrow="Directorio"
         title="Conductores"
         subtitle={isLoading ? 'Cargando…' : `${conductores.length} personas · ${resumen.activos} activas`}
-        actions={puedeCrear ? (
+        actions={
           <>
-            <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => setImportando(true)}>Importar</Button>
-            <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ conductor: null })}>Nuevo conductor</Button>
+            <MenuOtros opciones={[
+              puedeCrear && { label: 'Importar desde Excel', detalle: 'Agrega conductores en lote', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
+              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('directorio/conductores') },
+            ]} />
+            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ conductor: null })}>Nuevo conductor</Button>}
           </>
-        ) : undefined}
+        }
       />
 
       {isLoading ? <PageLoader /> : isError ? <Notice tone="error">{errorMessage(error)}</Notice> : (

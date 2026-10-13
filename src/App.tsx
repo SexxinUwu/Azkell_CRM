@@ -16,6 +16,7 @@ const InspeccionesPage = lazy(() => import('./modules/inspecciones/InspeccionesP
 const RegistrarInspeccionPage = lazy(() => import('./modules/inspecciones/RegistrarInspeccionPage').then(m => ({ default: m.RegistrarInspeccionPage })));
 const CatalogoRuta = lazy(() => import('./modules/catalogos/CatalogoRuta').then(m => ({ default: m.CatalogoRuta })));
 const ConductoresPage = lazy(() => import('./modules/conductores/ConductoresPage').then(m => ({ default: m.ConductoresPage })));
+const PersonalPage = lazy(() => import('./modules/personal/PersonalPage').then(m => ({ default: m.PersonalPage })));
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="mantenimiento/personal" element={<CatalogoRuta clave="personal-taller" />} />
           <Route path="preferencias/situaciones" element={<CatalogoRuta clave="situaciones" />} />
           <Route path="conductores" element={<RequirePermission any={['cond.ver']}><ConductoresPage /></RequirePermission>} />
+          <Route path="directorio/personal/:id?" element={<RequirePermission any={['rrhh_personal.ver']}><PersonalPage /></RequirePermission>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

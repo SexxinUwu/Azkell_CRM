@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
+import { MenuOtros } from '../../core/ui/MenuOtros';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -92,7 +93,9 @@ export function InspeccionesPage() {
         subtitle={cargando ? 'Cargando…' : `${total} unidades en operación · ${(insp.data ?? []).length} inspecciones registradas`}
         actions={
           <>
-            <Button variant="secondary" icon={<ArrowUpRight size={16} />} onClick={() => abrirClasico('mantenimiento/inspecciones')}>Versión actual</Button>
+            <MenuOtros opciones={[
+              { label: 'Abrir en la versión actual', detalle: 'Editar, PDF e importar', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/inspecciones') },
+            ]} />
             {can('insp.crear') && <Button variant="primary" icon={<Plus size={16} />} onClick={() => navigate('/inspecciones/nueva')}>Nueva inspección</Button>}
           </>
         }

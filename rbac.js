@@ -114,6 +114,10 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/seguridad/entrega-vehiculos') || path.startsWith('/flota/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas'];
     else if (path.startsWith('/seguridad')) mod = ['seguridad_unidades', 'seguridad', 'checklist', 'placas', 'unid'];
     else if (path.startsWith('/configuracion-flota')) mod = 'cfg_mant';
+    // RRHH: cada pantalla con su permiso (antes no estaba mapeado y solo entraban administradores)
+    else if (path.startsWith('/rrhh/tareo')) mod = ['rrhh_asistencia'];
+    else if (path.startsWith('/rrhh/nomina')) mod = ['rrhh_nomina'];
+    else if (path.startsWith('/rrhh/')) mod = ['rrhh_personal'];
     
     // ALMACEN & CONFIGURACION
     else if (path.startsWith('/perfil')) return next();

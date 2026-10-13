@@ -8,7 +8,7 @@
 // Permisos: 'clave.ver' según la matriz de permisos actual (ver core/auth/permisos.ts y la
 // visibilidad de la barra lateral en logica.js). Los administradores ven todo.
 import {
-  Banknote, Boxes, CircleDot, ClipboardCheck, Cog, Layers, Ruler, Tag, ClipboardList, Disc3, FileText, Fuel, Gauge, History, House, IdCard, LayoutDashboard,
+  Banknote, Boxes, Contact, CircleDot, ClipboardCheck, Cog, Layers, Ruler, Tag, ClipboardList, Disc3, FileText, Fuel, Gauge, History, House, IdCard, LayoutDashboard,
   type LucideIcon, MapPin, PackageMinus, PackagePlus, Route, ScrollText, ShieldCheck, Truck, UserCog, Users, Warehouse, Wrench,
 } from 'lucide-react';
 
@@ -97,6 +97,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Directorio',
     items: [
+      { key: 'personal', label: 'Personal', to: '/directorio/personal', icon: Contact, permissions: ver('rrhh_personal') },
       { key: 'conductores', label: 'Conductores', to: '/conductores', icon: IdCard, permissions: ver('cond') },
       { key: 'clientes', label: 'Clientes', clasico: 'directorio/clientes', icon: Users, permissions: ver('clientes') },
     ],
@@ -114,7 +115,6 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Personas y seguridad',
     items: [
-      { key: 'personal', label: 'Personal', clasico: 'rrhh/personal', icon: Users, permissions: ver('rrhh_personal') },
       { key: 'asistencia', label: 'Asistencia', clasico: 'rrhh/asistencia', icon: ClipboardCheck, permissions: ver('rrhh_asistencia') },
       { key: 'nomina', label: 'Nómina', clasico: 'rrhh/nomina', icon: Banknote, permissions: ver('rrhh_nomina') },
       { key: 'seg-unidades', label: 'Garita: unidades', clasico: 'seguridad/unidades', icon: ShieldCheck, permissions: ver('seguridad_unidades', 'seg_unidades', 'seg_checklist') },

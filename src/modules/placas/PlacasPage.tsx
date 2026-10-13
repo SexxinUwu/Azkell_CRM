@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, Check, CheckSquare, Container, FileSpreadsheet, LayoutGrid, List, Plus, SearchX, Trash2, Truck, X } from 'lucide-react';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
+import { MenuOtros } from '../../core/ui/MenuOtros';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -114,14 +115,12 @@ export function PlacasPage() {
         subtitle={isLoading ? 'Cargando unidades…' : `${resumen.total} unidades · ${resumen.motoras} motoras · ${resumen.noMotoras} no motoras`}
         actions={
           <>
-            {puedeCrear && (
-              <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => setImportando(true)}>Importar</Button>
-            )}
+            <MenuOtros opciones={[
+              puedeCrear && { label: 'Importar desde Excel', detalle: 'Crea o actualiza placas en lote', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
+              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('flota/placas') },
+            ]} />
             {puedeCrear && (
               <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ modo: 'crear', placa: null })}>Nueva placa</Button>
-            )}
-            {!puedeCrear && (
-              <Button variant="secondary" icon={<ArrowUpRight size={16} />} onClick={() => abrirClasico('flota/placas')}>Versión actual</Button>
             )}
           </>
         }

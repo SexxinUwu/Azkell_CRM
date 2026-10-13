@@ -869,3 +869,48 @@ label.row__main { cursor: pointer; }
 .combobox__create:not(:first-child) { margin-top: var(--s-1); border-top: 1px solid var(--separator); border-top-left-radius: 0; border-top-right-radius: 0; }
 .combobox__empty { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3); font-size: 0.875rem; color: var(--label-2); }
 .field:has(.combobox) { scroll-margin-top: var(--s-2); }
+
+/* ─── Casilla "Otros" (acciones secundarias de cada pantalla) ─── */
+.otros { position: relative; display: inline-flex; }
+.otros__menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + var(--s-2));
+  right: 0;
+  min-width: 15rem;
+  max-width: min(20rem, calc(100vw - 2rem));
+  padding: var(--s-1);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-pop);
+  transform-origin: top right;
+  display: flex;
+  flex-direction: column;
+}
+.otros__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 2.75rem;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  text-align: left;
+  color: var(--label);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.otros__item:hover:not(:disabled), .otros__item:focus-visible { background: var(--fill); outline: none; }
+.otros__item:active:not(:disabled) { background: var(--fill-strong); }
+.otros__item:disabled { opacity: 0.45; cursor: not-allowed; }
+.otros__item--separado { margin-top: var(--s-2); }
+.otros__item--separado::before {
+  content: ''; position: absolute; top: calc(var(--s-1) * -1); left: var(--s-3); right: var(--s-3);
+  height: 1px; background: var(--separator);
+}
+.otros__item--destructiva { color: var(--red-ink); }
+.otros__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.otros__label { font-size: 0.9375rem; font-weight: 500; }
+.otros__detalle { font-size: 0.75rem; color: var(--label-2); }
+.otros__icono { display: inline-grid; place-items: center; width: 1.25rem; color: var(--label-2); flex-shrink: 0; }
+.otros__item--destructiva .otros__icono { color: var(--red-ink); }

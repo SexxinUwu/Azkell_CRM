@@ -89,6 +89,8 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 
 ### A. Catálogos
 - [x] directorio/conductores *(en /app: consulta, crear/editar con RENIEC y foto, importar, eliminar)*
+
+> Regla de pantallas nuevas: solo la acción principal en el encabezado; todo lo demás (importar, exportar, imprimir, versión actual…) va en la casilla **Otros** (`src/core/ui/MenuOtros.tsx`).
 - [ ] directorio/clientes
 - [x] preferencias/situaciones *(en /app)*
 - [x] almacen/familias · almacen/marcas · almacen/sistemas · almacen/unidades *(en /app; pantalla común `src/modules/catalogos`)*
@@ -144,7 +146,8 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [ ] gerencia/aprobaciones-oc · gerencia/aprobaciones-caja · gerencia/aprobaciones/caja ⚠️
 
 ### G. RRHH y Seguridad
-- [ ] rrhh/personal · rrhh/asistencia · rrhh/nomina
+- [x] rrhh/personal *(en /app como Directorio › Personal, estilo Contactos: lista A–Z, tarjeta, RENIEC, foto, fotocheck, ficha, vCard, Excel). Corregido: rbac no mapeaba /rrhh y solo entraban administradores*
+- [ ] rrhh/asistencia · rrhh/nomina
 - [ ] seguridad/unidades · seguridad/unidades-base
 
 ### H. Sistema
