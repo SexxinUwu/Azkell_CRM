@@ -67,7 +67,7 @@ export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, o
       {/* Stock grande */}
       <div className="inv-ficha__stock-big">
         <span className={`inv-ficha__stock-num${tono === 'critical' ? ' inv-metrica__num--critical' : tono === 'warning' ? ' inv-metrica__num--warning' : ''}`}>
-          {a.stock_actual % 1 === 0 ? a.stock_actual : a.stock_actual.toFixed(3)}
+          {Number(a.stock_actual) % 1 === 0 ? Number(a.stock_actual) : Number(a.stock_actual).toFixed(3)}
         </span>
         <span className="inv-ficha__stock-label">{a.unidad ?? 'unidades'} en stock</span>
         {a.stock_min > 0 && (
@@ -104,9 +104,9 @@ export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, o
       <div>
         <p className="tarjeta__grupo-titulo">Costos</p>
         <div className="tarjeta__lista">
-          <Dato label="Costo referencial" valor={`${a.moneda === 'USD' ? 'US$ ' : 'S/ '}${a.costo_referencial?.toFixed(2) ?? '0.00'}`} />
-          {a.moneda === 'USD' && a.tipo_cambio && <Dato label="Tipo de cambio" valor={`S/ ${a.tipo_cambio.toFixed(3)}`} />}
-          {a.moneda === 'USD' && <Dato label="Costo en soles" valor={`S/ ${a.costo_soles?.toFixed(2) ?? '0.00'}`} />}
+          <Dato label="Costo referencial" valor={`${a.moneda === 'USD' ? 'US$ ' : 'S/ '}${Number(a.costo_referencial ?? 0).toFixed(2)}`} />
+          {a.moneda === 'USD' && a.tipo_cambio != null && <Dato label="Tipo de cambio" valor={`S/ ${Number(a.tipo_cambio).toFixed(3)}`} />}
+          {a.moneda === 'USD' && <Dato label="Costo en soles" valor={`S/ ${Number(a.costo_soles ?? 0).toFixed(2)}`} />}
           <Dato label="Último proveedor" valor={a.ultimo_proveedor} />
         </div>
       </div>

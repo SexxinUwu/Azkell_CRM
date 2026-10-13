@@ -213,7 +213,7 @@ export function InventarioPage() {
                             <span className="inv-card__sub">{[a.familia, a.sistema, a.id].filter(Boolean).join(' · ')}</span>
                           </div>
                           <div className="inv-card__stock">
-                            <span className="inv-card__num">{a.stock_actual % 1 === 0 ? a.stock_actual : a.stock_actual.toFixed(2)}</span>
+                            <span className="inv-card__num">{Number(a.stock_actual) % 1 === 0 ? Number(a.stock_actual) : Number(a.stock_actual).toFixed(2)}</span>
                             <span className="inv-card__unidad">{a.unidad ?? 'und'}</span>
                             <span className={`inv-badge inv-badge--${tono}`}>{stockLabel(a)}</span>
                           </div>

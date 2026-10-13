@@ -10,18 +10,18 @@ import { MenuOtros } from '../../core/ui/MenuOtros';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { docEstadoColor, docEstadoLabel, useDocumentosFlota, type DocumentoFlota } from './api';
+import { docEstadoColor, docEstadoLabel, expandirDocumentos, useVehiculosFlota, type DocumentoFlota } from './api';
 
 const TODOS = 'Todos';
 const FILTROS = [TODOS, 'Vigente', 'Por vencer', 'Vencido'] as const;
 
 export function DocumentosPage() {
-  const { data, isLoading, isError, error } = useDocumentosFlota();
+  const { data, isLoading, isError, error } = useVehiculosFlota();
   const [filtro, setFiltro] = useState(TODOS);
   const [busqueda, setBusqueda] = useState('');
   const [seleccionado, setSeleccionado] = useState<DocumentoFlota | null>(null);
 
-  const docs = data ?? [];
+  const docs = useMemo(() => expandirDocumentos(data ?? []), [data]);
 
   const conteos = useMemo(() => {
     const m: Record<string, number> = {};
@@ -40,7 +40,7 @@ export function DocumentosPage() {
       lista = lista.filter(d =>
         d.placa.toUpperCase().includes(q) ||
         d.tipo_documento.toUpperCase().includes(q) ||
-        (d.numero ?? '').toUpperCase().includes(q)
+        (d.entidad ?? '').toUpperCase().includes(q)
       );
     }
     return lista;
@@ -53,6 +53,8 @@ export function DocumentosPage() {
       </Page>
     );
   }
+
+  const vencidosCount = conteos['Vencido'] ?? 0;
 
   return (
     <Page>
@@ -71,6 +73,12 @@ export function DocumentosPage() {
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+          {vencidosCount > 0 && (
+            <Notice tone="error">
+              {vencidosCount} documento{vencidosCount > 1 ? 's' : ''} vencido{vencidosCount > 1 ? 's' : ''} — revisar con urgencia.
+            </Notice>
+          )}
+
           <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
             {FILTROS.map(f => {
               const cnt = f === TODOS ? docs.length : (conteos[f] ?? 0);
@@ -84,14 +92,14 @@ export function DocumentosPage() {
             })}
           </div>
 
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, tipo de documento, número…" />
+          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, tipo de documento, entidad…" />
 
           {visibles.length === 0 ? (
             <EmptyState icon={busqueda ? <SearchX size={22} /> : <FileText size={22} />}
               title={busqueda ? 'Sin coincidencias' : 'Sin documentos'}>
               {busqueda
                 ? <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Quitar búsqueda</button>
-                : 'Los documentos de flota aparecerán aquí.'}
+                : 'No hay documentos registrados para los filtros actuales.'}
             </EmptyState>
           ) : (
             <div className="tarjeta__lista">
@@ -100,17 +108,20 @@ export function DocumentosPage() {
                   const color = docEstadoColor(d);
                   const label = docEstadoLabel(d);
                   return (
-                    <motion.button key={String(d.id)} type="button"
+                    <motion.button key={d.id} type="button"
                       className="doc-fila"
                       onClick={() => { haptic('selection'); setSeleccionado(d); }}
                       layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <span className="doc-fila__indicador" style={{ background: `var(--${color}-ink)` }} />
                       <span className="doc-fila__placa">{d.placa}</span>
                       <span className="doc-fila__tipo">{d.tipo_documento}</span>
-                      {d.numero && <span className="doc-fila__numero">{d.numero}</span>}
+                      {d.entidad && <span className="doc-fila__numero">{d.entidad}</span>}
                       <span className={`ot-estado ot-estado--${color}`}>{label}</span>
                       {d.fecha_vencimiento && (
-                        <span className="doc-fila__venc" style={{ color: color === 'red' ? 'var(--red-ink)' : color === 'amber' ? 'var(--amber-ink)' : 'var(--label-2)' }}>
+                        <span className="doc-fila__venc" style={{
+                          color: color === 'red' ? 'var(--red-ink)' : color === 'amber' ? 'var(--amber-ink)' : 'var(--label-2)',
+                          fontWeight: color !== 'green' ? 600 : undefined,
+                        }}>
                           {String(d.fecha_vencimiento).split('T')[0]}
                         </span>
                       )}
@@ -129,6 +140,12 @@ export function DocumentosPage() {
 function DocumentoDetalle({ doc, onVolver }: { doc: DocumentoFlota; onVolver: () => void }) {
   const color = docEstadoColor(doc);
   const label = docEstadoLabel(doc);
+  const diasRestantes = doc.fecha_vencimiento ? (() => {
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const venc = new Date(String(doc.fecha_vencimiento).split('T')[0] + 'T00:00:00');
+    return Math.round((venc.getTime() - hoy.getTime()) / 86_400_000);
+  })() : null;
+
   return (
     <div className="ot-ficha">
       <div className="tarjeta__barra">
@@ -144,10 +161,23 @@ function DocumentoDetalle({ doc, onVolver }: { doc: DocumentoFlota; onVolver: ()
       <div>
         <p className="tarjeta__grupo-titulo">Documento</p>
         <div className="tarjeta__lista">
-          {doc.numero && <div className="dato"><span className="dato__label">Número</span><span className="dato__valor" style={{ fontFamily: 'var(--font-mono)' }}>{doc.numero}</span></div>}
-          {doc.fecha_emision && <div className="dato"><span className="dato__label">Emisión</span><span className="dato__valor">{String(doc.fecha_emision).split('T')[0]}</span></div>}
-          {doc.fecha_vencimiento && <div className="dato"><span className="dato__label">Vencimiento</span><span className="dato__valor" style={{ color: color === 'red' ? 'var(--red-ink)' : color === 'amber' ? 'var(--amber-ink)' : undefined, fontWeight: color !== 'green' ? 600 : undefined }}>{String(doc.fecha_vencimiento).split('T')[0]}</span></div>}
-          {doc.observaciones && <div className="dato"><span className="dato__label">Observaciones</span><span className="dato__valor">{doc.observaciones}</span></div>}
+          {doc.entidad && <div className="dato"><span className="dato__label">Entidad</span><span className="dato__valor">{doc.entidad}</span></div>}
+          {doc.fecha_vencimiento && (
+            <div className="dato">
+              <span className="dato__label">Vencimiento</span>
+              <span className="dato__valor" style={{
+                color: color === 'red' ? 'var(--red-ink)' : color === 'amber' ? 'var(--amber-ink)' : undefined,
+                fontWeight: color !== 'green' ? 700 : undefined,
+              }}>
+                {String(doc.fecha_vencimiento).split('T')[0]}
+                {diasRestantes !== null && (
+                  <span style={{ marginLeft: 6, fontSize: '0.8125rem', opacity: 0.8 }}>
+                    ({diasRestantes < 0 ? `vencido hace ${Math.abs(diasRestantes)}d` : `${diasRestantes} días`})
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
         </div>
       </div>
       {doc.archivo_url && (

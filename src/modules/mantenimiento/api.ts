@@ -200,13 +200,16 @@ export function useCatalogosTaller() {
 // La API legada devuelve arrays posicionales: [id, ?, ?, fecha, placa, ?, cliente, uts, tipo_mp, km_cambio, frecuencia, km_prox, obs, ?, km_gps]
 export type FleetrunFila = (string | number | null)[];
 
-export function frPlaca(r: FleetrunFila)   { return String(r[4] ?? '') || '—'; }
-export function frFecha(r: FleetrunFila)   { return String(r[3] ?? '') || '—'; }
-export function frTipo(r: FleetrunFila)    { return String(r[8] ?? '') || '—'; }
-export function frKmCambio(r: FleetrunFila){ return Number(r[9]) || 0; }
-export function frKmProx(r: FleetrunFila)  { return Number(r[11]) || 0; }
-export function frObs(r: FleetrunFila)     { return String(r[12] ?? ''); }
-export function frId(r: FleetrunFila)      { return String(r[0] ?? ''); }
+export function frPlaca(r: FleetrunFila)     { return String(r[4] ?? '') || '—'; }
+export function frFecha(r: FleetrunFila)     { return String(r[3] ?? '') || '—'; }
+export function frTipo(r: FleetrunFila)      { return String(r[8] ?? '') || '—'; }
+export function frUts(r: FleetrunFila)       { return String(r[7] ?? ''); }      // modelo/uts
+export function frKmCambio(r: FleetrunFila)  { return Number(r[9])  || 0; }
+export function frFrecuencia(r: FleetrunFila){ return Number(r[10]) || 0; }
+export function frKmProx(r: FleetrunFila)    { return Number(r[11]) || 0; }
+export function frObs(r: FleetrunFila)       { return String(r[12] ?? ''); }
+export function frId(r: FleetrunFila)        { return String(r[0]  ?? ''); }
+export function frKmGps(r: FleetrunFila)     { return Number(r[14]) || 0; }     // km_gps Wialon
 
 export function useFleetrun() {
   return useQuery<FleetrunFila[]>({
