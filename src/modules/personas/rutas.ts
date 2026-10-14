@@ -26,4 +26,10 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./PortalConductorPage').then(m => ({ default: m.PortalConductorPage }))),
     nav: { key: 'conductor-portal', label: 'Portal del conductor', to: '/personas/portal-conductor', icon: 'IdCard', permisos: ['conductor_portal.ver'] },
   },
+  {
+    path: 'personas/seg-patrimonial/*',
+    permisos: ['seg_patrimonial.ver', 'seguridad_unidades.ver', 'admin'],
+    Page: lazy(() => import('./SegPatrimonialPage').then(m => ({ default: m.SegPatrimonialPage }))),
+    nav: { key: 'seg-patrimonial', label: 'Panel patrimonial', to: '/personas/seg-patrimonial', icon: 'ShieldAlert', permisos: ['seg_patrimonial.ver', 'seguridad_unidades.ver', 'admin'] },
+  },
 ];

@@ -32,4 +32,10 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./ChecklistPage').then(m => ({ default: m.ChecklistPage }))),
     nav: { key: 'checklist', label: 'Reporte de fallas', to: '/flota/checklist', icon: 'ClipboardCheck', permisos: ['checklist.ver'] },
   },
+  {
+    path: 'flota/checklist-entrega/*',
+    permisos: ['entrega_vehiculos.ver', 'seg_unidades.ver', 'admin'],
+    Page: lazy(() => import('./ChecklistEntregaPage').then(m => ({ default: m.ChecklistEntregaPage }))),
+    nav: { key: 'checklist-entrega', label: 'Checklist de entrega', to: '/flota/checklist-entrega', icon: 'ClipboardList', permisos: ['entrega_vehiculos.ver', 'seg_unidades.ver', 'admin'] },
+  },
 ];

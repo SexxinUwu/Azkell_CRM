@@ -2210,12 +2210,24 @@ function verifyToken(req, res, next) {
     ) return next();
 
     let token = null;
-    const auth = req.headers['authorization'];
-    if (auth && auth.startsWith('Bearer ')) {
-        token = auth.slice(7);
-    } else if (req.query && req.query.token) {
-        token = req.query.token;
+    // 1) Cookie HttpOnly (prioridad sobre Bearer — protección XSS)
+    const rawCookies = req.headers['cookie'] || '';
+    rawCookies.split(';').forEach(c => {
+        const idx = c.indexOf('=');
+        if (idx < 0) return;
+        const k = c.slice(0, idx).trim();
+        const v = c.slice(idx + 1).trim();
+        if (k === 'azkell_session') {
+            try { token = decodeURIComponent(v); } catch { token = v; }
+        }
+    });
+    // 2) Authorization: Bearer (apps móviles, TV, ERP clásico)
+    if (!token) {
+        const auth = req.headers['authorization'];
+        if (auth && auth.startsWith('Bearer ')) token = auth.slice(7);
     }
+    // 3) ?token= en query string (PDFs, enlaces directos firmados)
+    if (!token && req.query && req.query.token) token = req.query.token;
 
     if (!token) return res.status(401).json({ error: 'No autorizado' });
     try {
@@ -2316,6 +2328,29 @@ function broadcast(modulo, accion, detalle) {
 // ============================================================
 // ⏰ RUTA DESPERTADOR (MANTIENE VIVO EL SERVIDOR Y LA BD)
 // ============================================================
+// Cierra sesión: borra la cookie HttpOnly y la sesión activa
+app.post('/api/logout', (req, res) => {
+    res.clearCookie('azkell_session', { path: '/' });
+    // Invalidar token en tabla de sesiones activas (best-effort)
+    try {
+        const rawCookies = req.headers['cookie'] || '';
+        let tok = null;
+        rawCookies.split(';').forEach(c => {
+            const idx = c.indexOf('=');
+            if (idx < 0) return;
+            if (c.slice(0, idx).trim() === 'azkell_session') {
+                try { tok = decodeURIComponent(c.slice(idx + 1).trim()); } catch { tok = c.slice(idx + 1).trim(); }
+            }
+        });
+        if (!tok) {
+            const auth = req.headers['authorization'];
+            if (auth && auth.startsWith('Bearer ')) tok = auth.slice(7);
+        }
+        if (tok) db.query('DELETE FROM sesiones_activas WHERE token=?', [tok], () => {});
+    } catch (_) { /* sin estado activo */ }
+    res.json({ ok: true });
+});
+
 app.get('/api/ping', (req, res) => {
     db.query("SELECT 1", (err) => {
         if (err) {
@@ -2415,6 +2450,16 @@ app.post('/api/login', (req, res) => {
                     [usuario.correo, token, ip, dispositivo],
                     (err) => { if (err) console.warn('INSERT sesiones_activas:', err.message); }
                 );
+
+                // Cookie HttpOnly — protección XSS: el JS del cliente no puede leerla
+                const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
+                res.cookie('azkell_session', token, {
+                    httpOnly: true,
+                    secure: isSecure,
+                    sameSite: isSecure ? 'strict' : 'lax',
+                    maxAge: 12 * 60 * 60 * 1000,
+                    path: '/'
+                });
 
                 return res.json({
                     exito: true,
@@ -4526,6 +4571,8 @@ app.use('/api/guia-transportista', require('./routes/guia_transportista')(db, br
 app.use('/api/guia-remitente', require('./routes/guia_remitente')(db, broadcast, logAudit));
 app.use('/api/tesoreria', require('./routes/tesoreria')(db, broadcast, logAudit));
 app.use('/api/rrhh', require('./routes/rrhh')(db, broadcast, logAudit));
+app.use('/api/telemetria', require('./routes/telemetria')(db));
+app.use('/api/fallas', require('./routes/fallas')(db));
 
 // Módulo Órdenes de Compra y Aprobación Móvil vía WhatsApp (Magic Link)
 app.get('/aprobaciones/oc', (req, res) => {

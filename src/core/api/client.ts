@@ -81,6 +81,7 @@ export async function api<T>(path: string, { method = 'GET', body, query, header
     res = await fetch(`/api${path}${qs === '?' ? '' : qs}`, {
       method,
       headers,
+      credentials: 'include', // envía la cookie HttpOnly azkell_session
       body: isBlob ? (body as Blob) : body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {

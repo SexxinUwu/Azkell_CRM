@@ -1,11 +1,11 @@
 import './flota.css';
 import '../mantenimiento/mant.css';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Layers, RefreshCw } from 'lucide-react';
+import { ArrowUpRight, Database, Layers, RefreshCw } from 'lucide-react';
 import { PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { errorMessage } from '../../core/api/client';
+import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
 import { estadoMotorColor, estadoMotorLabel, useGPS, type UnidadGPS } from './api';
 
@@ -102,6 +102,8 @@ export function UbicacionPage() {
   const [capaMapa, setCapaMapa] = useState<'calle' | 'satelite'>('calle');
   const capaRef = useRef<{ calle: ReturnType<typeof window.L.tileLayer> | null; satelite: ReturnType<typeof window.L.tileLayer> | null }>({ calle: null, satelite: null });
   const [countdown, setCountdown] = useState(4);
+  const [guardandoCAN, setGuardandoCAN] = useState(false);
+  const [msgCAN, setMsgCAN] = useState('');
 
   // Countdown 4→1 sincronizado con dataUpdatedAt
   useEffect(() => {
@@ -277,6 +279,33 @@ export function UbicacionPage() {
 
             <MenuOtros opciones={[
               { label: 'Actualizar ahora', icon: <RefreshCw size={17} />, onSelect: () => refetch() },
+              {
+                label: guardandoCAN ? 'Guardando…' : 'Guardar telemetría CAN',
+                icon: <Database size={17} />,
+                onSelect: async () => {
+                  const unidades = data?.unidades ?? [];
+                  if (!unidades.length || guardandoCAN) return;
+                  setGuardandoCAN(true);
+                  try {
+                    await api('/telemetria/guardar-lote', {
+                      method: 'POST',
+                      body: {
+                        items: unidades.map(v => ({
+                          placa: v.placa,
+                          recorrido_km: v.km,
+                          lat_ultimo: v.lat,
+                          lng_ultimo: v.lng,
+                          estado_motor: v.estado_motor,
+                          raw_json: v,
+                        })),
+                      },
+                    });
+                    setMsgCAN(`✓ Telemetría guardada para ${unidades.length} unidades`);
+                    setTimeout(() => setMsgCAN(''), 4000);
+                  } catch { setMsgCAN('Error al guardar telemetría'); setTimeout(() => setMsgCAN(''), 4000); }
+                  finally { setGuardandoCAN(false); }
+                },
+              },
               { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/ubicacion') },
             ]} />
           </div>
@@ -284,6 +313,7 @@ export function UbicacionPage() {
       />
 
       {isError && <Notice tone="error">{errorMessage(error)}</Notice>}
+      {msgCAN && <Notice tone={msgCAN.startsWith('✓') ? 'success' : 'error'}>{msgCAN}</Notice>}
 
       {kpis && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 'var(--s-2)', marginBottom: 'var(--s-3)' }}>

@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Banknote,
   BarChart2,
   Boxes,
@@ -21,6 +22,7 @@ import {
   PackageMinus,
   PackagePlus,
   ScrollText,
+  ShieldAlert,
   ShieldCheck,
   Truck,
   UserCog,
@@ -30,6 +32,7 @@ import {
 } from 'lucide-react';
 
 const ICONOS: Record<string, LucideIcon> = {
+  AlertTriangle,
   Banknote,
   BarChart2,
   Boxes,
@@ -50,6 +53,7 @@ const ICONOS: Record<string, LucideIcon> = {
   PackageMinus,
   PackagePlus,
   ScrollText,
+  ShieldAlert,
   ShieldCheck,
   Truck,
   UserCog,
