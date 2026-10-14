@@ -151,6 +151,67 @@ export function useVehiculosFlota() {
   });
 }
 
+// ─── Escritura de documentos ─────────────────────────────────────────────────
+// POST /api/vehiculos-flota es un UPSERT de la fila completa: omitir un campo lo borra.
+// Por eso se parte siempre del registro completo del vehículo y solo se cambian los campos del documento.
+
+export type CampoDoc = { campo: string; label: string; tipo: 'date' | 'text' | 'number' };
+
+/** Campos propios de cada documento (el prefijo es el de las columnas: soat_vencimiento → "soat") */
+export const CAMPOS_DOC: Record<string, { label: string; campos: CampoDoc[] }> = {
+  tc:     { label: 'Tarjeta de circulación', campos: [{ campo: 'tc_constancia', label: 'N° de constancia', tipo: 'text' }, { campo: 'tc_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
+  soat:   { label: 'SOAT', campos: [{ campo: 'soat_entidad', label: 'Aseguradora', tipo: 'text' }, { campo: 'soat_pago', label: 'Pago', tipo: 'text' }, { campo: 'soat_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
+  matpel: { label: 'MATPEL', campos: [{ campo: 'matpel_constancia', label: 'N° de constancia', tipo: 'text' }, { campo: 'matpel_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
+  rt:     { label: 'Revisión técnica', campos: [{ campo: 'rt_emision', label: 'Emisión', tipo: 'date' }, { campo: 'rt_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
+  boni:   { label: 'Bonificación', campos: [{ campo: 'boni_emision', label: 'Emisión', tipo: 'date' }, { campo: 'boni_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
+  sv:     { label: 'Seguro vehicular', campos: [{ campo: 'sv_entidad', label: 'Aseguradora', tipo: 'text' }, { campo: 'sv_asesor', label: 'Asesor', tipo: 'text' }, { campo: 'sv_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
+  sc:     { label: 'SCTR', campos: [{ campo: 'sc_entidad', label: 'Aseguradora', tipo: 'text' }, { campo: 'sc_asesor', label: 'Asesor', tipo: 'text' }, { campo: 'sc_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
+  fum:    { label: 'FUM / Fumigación', campos: [{ campo: 'fum_emision', label: 'Emisión', tipo: 'date' }, { campo: 'fum_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
+  ext:    { label: 'Extintor', campos: [{ campo: 'ext_emision', label: 'Emisión', tipo: 'date' }, { campo: 'ext_vencimiento', label: 'Vencimiento', tipo: 'date' }, { campo: 'ext_cantidad', label: 'Cantidad', tipo: 'number' }] },
+};
+
+/** Sube el archivo a S3 con una URL firmada y devuelve la URL final para guardarla en el documento */
+export async function subirArchivoDocumento(file: File): Promise<string> {
+  const r = await api<{ uploadUrl: string; fileUrl: string }>(
+    `/documentos-flota/upload-url?filename=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(file.type || 'application/pdf')}`);
+  const put = await fetch(r.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type || 'application/pdf' } });
+  if (!put.ok) throw new Error('No se pudo subir el archivo. Intenta de nuevo.');
+  return r.fileUrl;
+}
+
+/** URL temporal para ver un archivo guardado en S3 (el bucket es privado) */
+export async function urlTemporalDocumento(url: string): Promise<string> {
+  const r = await api<Record<string, string>>('/documentos-flota/presign-read', { method: 'POST', body: { urls: [url] } });
+  return r[url] || url;
+}
+
+export async function guardarDocumentoVehiculo(opts: {
+  vehiculo: Partial<VehiculoFlota> & { placa: string };
+  prefijo: string;
+  valores: Record<string, string>;
+  archivoUrl: string | null;
+  usuario: string;
+}) {
+  const { vehiculo, prefijo, valores, archivoUrl, usuario } = opts;
+  const cuerpo: Record<string, unknown> = { ...vehiculo, ...valores };
+  if (archivoUrl) cuerpo[`${prefijo}_url`] = archivoUrl;
+  await api('/vehiculos-flota', { method: 'POST', body: cuerpo });
+
+  // Historial del documento (no bloquea el guardado si falla)
+  const cfg = CAMPOS_DOC[prefijo];
+  try {
+    await api('/documentos-flota/guardar-historial', {
+      method: 'POST',
+      body: {
+        placa: vehiculo.placa, tipo_documento: cfg?.label ?? prefijo,
+        entidad: valores[`${prefijo}_entidad`] || null, nro_constancia: valores[`${prefijo}_constancia`] || null,
+        fecha_emision: valores[`${prefijo}_emision`] || null, fecha_vencimiento: valores[`${prefijo}_vencimiento`] || null,
+        pago: valores[`${prefijo}_pago`] || null, asesor: valores[`${prefijo}_asesor`] || null, usuario,
+      },
+    });
+  } catch { /* el historial es complementario */ }
+}
+
 // ─── GPS / Wialon ─────────────────────────────────────────────────────────────
 // Endpoint real: GET /api/tv/gps-feed → { gps: { kpis, unidades, grupos } }
 

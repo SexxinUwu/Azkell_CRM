@@ -2,15 +2,19 @@ import './flota.css';
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowUpRight, FileText, SearchX } from 'lucide-react';
-import { PageLoader } from '../../core/ui/Button';
+import { ArrowUpRight, FileSpreadsheet, FileText, Plus, RefreshCw, SearchX } from 'lucide-react';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
+import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { docEstadoColor, docEstadoLabel, expandirDocumentos, useVehiculosFlota, type DocumentoFlota } from './api';
+import { docEstadoColor, docEstadoLabel, expandirDocumentos, urlTemporalDocumento, useVehiculosFlota, type DocumentoFlota } from './api';
+import { DocumentoFormulario } from './DocumentoFormulario';
 
 const TODOS = 'Todos';
 const FILTROS = [TODOS, 'Vigente', 'Por vencer', 'Vencido'] as const;
@@ -20,6 +24,10 @@ export function DocumentosPage() {
   const [filtro, setFiltro] = useState(TODOS);
   const [busqueda, setBusqueda] = useState('');
   const [seleccionado, setSeleccionado] = useState<DocumentoFlota | null>(null);
+  const [formulario, setFormulario] = useState<{ placa: string | null; prefijo: string | null } | null>(null);
+  const { can, user } = useAuth();
+  const toast = useToast();
+  const puedeEditar = can('docs_flota.crear', 'docs_flota.editar');
 
   const docs = useMemo(() => expandirDocumentos(data ?? []), [data]);
 
@@ -47,11 +55,27 @@ export function DocumentosPage() {
   }, [docs, filtro, busqueda]);
 
   if (seleccionado) {
+    const prefijo = seleccionado.id.slice(seleccionado.placa.length + 1).replace('_vencimiento', '');
     return (
       <Page push>
-        <DocumentoDetalle doc={seleccionado} onVolver={() => setSeleccionado(null)} />
+        <DocumentoDetalle
+          doc={seleccionado}
+          onVolver={() => setSeleccionado(null)}
+          onRenovar={puedeEditar ? () => setFormulario({ placa: seleccionado.placa, prefijo }) : undefined}
+        />
+        <DocumentoFormulario open={!!formulario} placa={formulario?.placa ?? null} prefijo={formulario?.prefijo ?? null}
+          usuario={user?.name ?? ''} onClose={() => { setFormulario(null); setSeleccionado(null); }} />
       </Page>
     );
+  }
+
+  async function exportar() {
+    try {
+      await exportarExcel('Documentos-flota', 'Documentos',
+        ['Placa', 'Documento', 'Estado', 'Vencimiento', 'Entidad'],
+        visibles.map(d => [d.placa, d.tipo_documento, docEstadoLabel(d), String(d.fecha_vencimiento ?? '').split('T')[0], d.entidad]));
+      haptic('success');
+    } catch (err) { toast(errorMessage(err), 'error'); }
   }
 
   const vencidosCount = conteos['Vencido'] ?? 0;
@@ -63,9 +87,13 @@ export function DocumentosPage() {
         title="Documentos"
         subtitle={isLoading ? 'Cargando…' : `${docs.length} documentos`}
         actions={
-          <MenuOtros opciones={[
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/documentos') },
-          ]} />
+          <>
+            <MenuOtros opciones={[
+              { label: 'Exportar Excel', detalle: `${visibles.length} documentos`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+              { label: 'Importar vehículos y alta de unidades', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('flota/documentos') },
+            ]} />
+            {puedeEditar && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ placa: null, prefijo: null })}>Cargar</Button>}
+          </>
         }
       />
 
@@ -133,11 +161,23 @@ export function DocumentosPage() {
           )}
         </div>
       )}
+
+      <DocumentoFormulario open={!!formulario} placa={formulario?.placa ?? null} prefijo={formulario?.prefijo ?? null}
+        usuario={user?.name ?? ''} onClose={() => setFormulario(null)} />
     </Page>
   );
 }
 
-function DocumentoDetalle({ doc, onVolver }: { doc: DocumentoFlota; onVolver: () => void }) {
+function DocumentoDetalle({ doc, onVolver, onRenovar }: { doc: DocumentoFlota; onVolver: () => void; onRenovar?: () => void }) {
+  const toast = useToast();
+  const [abriendo, setAbriendo] = useState(false);
+  async function verArchivo() {
+    if (!doc.archivo_url) return;
+    setAbriendo(true);
+    try { window.open(await urlTemporalDocumento(String(doc.archivo_url)), '_blank', 'noopener,noreferrer'); }
+    catch (err) { toast(errorMessage(err), 'error'); }
+    finally { setAbriendo(false); }
+  }
   const color = docEstadoColor(doc);
   const label = docEstadoLabel(doc);
   const diasRestantes = doc.fecha_vencimiento ? (() => {
@@ -152,6 +192,11 @@ function DocumentoDetalle({ doc, onVolver }: { doc: DocumentoFlota; onVolver: ()
         <button type="button" className="tarjeta__volver" onClick={onVolver}>
           <span style={{ fontSize: '1.2rem' }}>‹</span> Documentos
         </button>
+        {onRenovar && (
+          <div className="tarjeta__barra-acciones">
+            <Button variant="primary" icon={<RefreshCw size={16} />} onClick={onRenovar}>Renovar</Button>
+          </div>
+        )}
       </div>
       <div className="ot-ficha__hero">
         <span className={`ot-estado ot-estado--${color}`}>{label}</span>
@@ -182,10 +227,7 @@ function DocumentoDetalle({ doc, onVolver }: { doc: DocumentoFlota; onVolver: ()
       </div>
       {doc.archivo_url && (
         <div style={{ paddingTop: 'var(--s-3)' }}>
-          <a href={String(doc.archivo_url)} target="_blank" rel="noopener noreferrer"
-            className="btn btn--secondary btn--sm">
-            Ver archivo
-          </a>
+          <Button variant="secondary" onClick={verArchivo} loading={abriendo}>Ver archivo</Button>
         </div>
       )}
     </div>
