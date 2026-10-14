@@ -1,0 +1,40 @@
+/* Asistencia: matriz mensual de tareo */
+.asis-leyenda { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.asis-leyenda .asis-celda { width: auto; padding: 0 var(--s-2); gap: 0.35rem; cursor: default; }
+.asis-leyenda small { font-weight: 500; font-size: 0.6875rem; }
+
+.asis-tabla-wrap { overflow: auto; border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card); max-height: 70vh; }
+.asis-tabla { border-collapse: separate; border-spacing: 0; font-size: 0.8125rem; min-width: max-content; }
+.asis-tabla th, .asis-tabla td { padding: 4px 2px; text-align: center; border-bottom: 0.5px solid var(--separator); }
+.asis-tabla thead th {
+  position: sticky; top: 0; z-index: 2; background: var(--surface); font-size: 0.75rem; font-weight: 700; color: var(--label-2);
+  min-width: 34px; line-height: 1.2;
+}
+.asis-tabla thead th span { display: block; font-size: 0.625rem; font-weight: 600; opacity: 0.7; }
+.asis-tabla .asis-finde { background: var(--fill-subtle); }
+.asis-col-nombre {
+  position: sticky; left: 0; z-index: 1; background: var(--surface); text-align: left !important; min-width: 12rem; max-width: 14rem;
+  padding-left: var(--s-3) !important; border-right: 0.5px solid var(--separator);
+}
+.asis-tabla thead .asis-col-nombre { z-index: 3; }
+.asis-col-nombre strong { display: block; font-size: 0.8125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.asis-col-nombre small { color: var(--label-2); font-size: 0.6875rem; font-family: var(--font-mono); }
+.asis-hoy { background: var(--accent-tint); }
+
+.asis-celda {
+  display: inline-grid; place-items: center; width: 30px; height: 28px; border-radius: 8px; border: 0;
+  font: inherit; font-size: 0.6875rem; font-weight: 700; cursor: pointer;
+  background: var(--fill-subtle); color: var(--label-3);
+}
+.asis-celda:disabled { cursor: default; }
+.asis-celda--A { background: var(--green-tint); color: var(--green-ink); }
+.asis-celda--R { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-ink); }
+.asis-celda--T { background: var(--amber-tint); color: var(--amber-ink); }
+.asis-celda--F { background: var(--red-tint); color: var(--red-ink); }
+.asis-celda--DM { background: color-mix(in srgb, #a855f7 18%, transparent); color: #9333ea; }
+.asis-celda--V { background: color-mix(in srgb, #0ea5e9 18%, transparent); color: #0284c7; }
+.asis-celda--D { background: var(--gray-tint); color: var(--gray-ink); }
+.asis-celda--FER { background: color-mix(in srgb, #f97316 18%, transparent); color: #c2410c; }
+
+.asis-tot { font-family: var(--font-mono); font-weight: 700; min-width: 32px; }
+.asis-tot--A { color: var(--green-ink); } .asis-tot--R { color: var(--accent-ink); } .asis-tot--F { color: var(--red-ink); } .asis-tot--T { color: var(--amber-ink); }
