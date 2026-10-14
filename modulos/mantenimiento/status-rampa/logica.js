@@ -4609,7 +4609,7 @@ window.srDescargarPlantillaParabrisas = function(id) {
 // ================================================================
 // PDF OFICIAL DE STATUS RAMPA HORIZONTAL (F-MAN-005) - 1 SOLA PÁGINA
 // ================================================================
-window.srAbrirPDFStatus = function() {
+window._srPrepararDatosStatus = function() {
     // Solo las rampas con el ojito activo salen en el PDF (y en WhatsApp, que usa el mismo reporte)
     var rampas = (window.srCatRampas || []).filter(function(r) { return r.en_reporte !== 0; });
     if (!rampas.length) {
@@ -4680,7 +4680,6 @@ window.srAbrirPDFStatus = function() {
     }
 
     // Generar filas de la tabla
-    var filasHtml = '';
     var _datosPdf = []; // mismas filas, como datos: con ellas se arma el PDF vectorial (texto real)
     rampas.forEach(function(rampaObj, idx) {
         var rampaId   = rampaObj.id;
@@ -4693,19 +4692,6 @@ window.srAbrirPDFStatus = function() {
 
         if (!entradas.length) {
             _datosPdf.push({ rampa: rampaNom, fIn: '—', hIn: '—', placa: '—', insp: '—', inspColor: '#64748b', sit: 'LIBRE', sitColor: '#64748b', obs: 'Disponible para ingreso', fOut: '—', hOut: '—', hTaller: '—', libre: true });
-            filasHtml += `
-            <tr style="background:#fff; color:#000;">
-                <td style="font-weight:800; color:#000; padding:4px 6px; font-size:8.5px;">${_srEsc(rampaNom)}</td>
-                <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
-                <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
-                <td style="text-align:center; font-weight:800; padding:4px 2px; color:#000;">—</td>
-                <td style="text-align:center; padding:4px 2px;"><span style="color:#64748b !important; font-weight:700; font-size:8px;">—</span></td>
-                <td style="text-align:center; padding:4px 2px;"><span style="color:#64748b !important; font-weight:800; font-size:8.5px;">LIBRE</span></td>
-                <td style="padding:4px 6px; color:#000; font-size:8px; font-weight:500;">Disponible para ingreso</td>
-                <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
-                <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
-                <td style="text-align:center; padding:4px 2px; color:#000;">—</td>
-            </tr>`;
         } else {
             entradas.forEach(function(e) {
                 var otsPlaca = (window.srOtData || []).filter(function(o) {
@@ -4744,329 +4730,27 @@ window.srAbrirPDFStatus = function() {
 
                 _datosPdf.push({ rampa: rampaNom, fIn: fIn, hIn: hIn, placa: e.placa || '—', insp: inspInfo.texto, inspColor: inspColor, sit: e.situacion || '—', sitColor: sitColor,
                     obs: obsTextoCol || '—', fOut: fOut, hOut: hOut, hTaller: hTaller, libre: false });
-
-                filasHtml += `
-                <tr style="background:#fff; color:#000;">
-                    <td style="font-weight:900; color:#000; padding:4px 6px; font-size:8.5px;">${_srEsc(rampaNom)}</td>
-                    <td style="text-align:center; padding:4px 2px; font-size:8px; font-weight:700; color:#000;">${fIn}</td>
-                    <td style="text-align:center; padding:4px 2px; font-size:8px; font-weight:700; color:#000;">${hIn}</td>
-                    <td style="text-align:center; font-weight:900; color:#000; font-size:10px; padding:4px 2px; letter-spacing:0.3px;">${_srEsc(e.placa || '—')}</td>
-                    <td style="text-align:center; padding:4px 2px;">
-                        <span style="color:${inspColor} !important; font-weight:900; font-size:8.5px;">
-                            ${inspInfo.texto}
-                        </span>
-                    </td>
-                    <td style="text-align:center; padding:4px 2px;">
-                        <span style="color:${sitColor} !important; font-size:8.5px; font-weight:800;">
-                            ${_srEsc(e.situacion || '—')}
-                        </span>
-                    </td>
-                    <td style="padding:4px 6px; font-size:8px; font-weight:600; color:#000; line-height:1.25;" title="${_srEsc(obsTextoCol)}">
-                        ${_srEsc(obsTextoCol || '—')}
-                    </td>
-                    <td style="text-align:center; padding:4px 2px; font-size:8px; font-weight:700; color:#000;">${fOut}</td>
-                    <td style="text-align:center; padding:4px 2px; font-size:8px; font-weight:700; color:#000;">${hOut}</td>
-                    <td style="text-align:center; font-weight:900; color:#000; padding:4px 2px; font-size:8.5px;">${hTaller}</td>
-                </tr>`;
             });
         }
     });
 
     window._srLastPdfData = { empresa: empNombre, logo: empLogoUrl, emisor: emisorNombre, fecha: fechaEmisionStr,
         total: totalRampas, ocupadas: ocupadas, espera: espera, libres: libres, filas: _datosPdf };
-    window._srLastHtmlDoc = null;
-    var htmlDoc = `<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estatus de Unidades en Taller - F-MAN-005</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Oswald:wght@600;700;800&display=swap" rel="stylesheet">
-    <style>
-        * {
-            box-sizing: border-box;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-        @page {
-            size: landscape;
-            margin: 5mm 6mm;
-        }
-        body {
-            margin: 0;
-            padding: 12px;
-            background-color: #f1f5f9;
-            font-family: 'Montserrat', sans-serif;
-            color: #000;
-            display: flex;
-            justify-content: center;
-        }
-        .page-container {
-            width: 285mm;
-            max-height: 198mm;
-            background: #fff;
-            padding: 6mm 8mm;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            border: 2px solid #000;
-        }
-        .header-box {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 2px solid #000;
-            padding-bottom: 5px;
-            margin-bottom: 6px;
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            width: 28%;
-        }
-        .company-logo {
-            height: 38px;
-            max-width: 120px;
-            object-fit: contain;
-        }
-        .company-name {
-            font-size: 11px;
-            font-weight: 900;
-            color: #000;
-            line-height: 1.1;
-            text-transform: uppercase;
-        }
-        .header-center {
-            text-align: center;
-            flex: 1;
-        }
-        .doc-title {
-            font-size: 14px;
-            font-weight: 900;
-            letter-spacing: 0.05em;
-            color: #000;
-            margin: 0;
-            text-transform: uppercase;
-        }
-        .doc-subtitle {
-            font-size: 8.5px;
-            font-weight: 800;
-            color: #000;
-            margin-top: 1px;
-        }
-        .header-right {
-            border: 1.5px solid #000;
-            padding: 3px 8px;
-            font-size: 8px;
-            font-weight: 900;
-            color: #000;
-            text-align: right;
-            line-height: 1.3;
-            width: 22%;
-            background: #fff;
-        }
-        .kpi-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #f8fafc;
-            border: 1.5px solid #000;
-            border-radius: 4px;
-            padding: 4px 8px;
-            margin-bottom: 6px;
-            font-size: 8px;
-            color: #000;
-        }
-        .kpi-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            color: #000;
-            font-weight: 700;
-        }
-        .kpi-val {
-            font-weight: 900;
-            font-size: 10px;
-        }
-        .status-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 8px;
-            table-layout: fixed;
-            color: #000;
-        }
-        .status-table th {
-            background: #000;
-            color: #fff;
-            font-weight: 900;
-            text-transform: uppercase;
-            padding: 5px 3px;
-            border: 1px solid #000;
-            font-size: 8px;
-            letter-spacing: 0.02em;
-        }
-        .status-table td {
-            border: 1px solid #000;
-            padding: 3px 4px;
-            vertical-align: middle;
-            color: #000;
-        }
-        .footer-box {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-top: 1.5px solid #000;
-            padding-top: 4px;
-            margin-top: 6px;
-            font-size: 8px;
-            color: #000;
-            font-weight: 700;
-        }
-        #btnPdfPrint {
-            position: fixed;
-            top: 8px;
-            right: 14px;
-            background: #0284c7;
-            color: #fff;
-            border: none;
-            padding: 5px 12px;
-            font-family: 'Montserrat', sans-serif;
-            font-size: 10px;
-            font-weight: 700;
-            border-radius: 5px;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(2,132,199,0.35);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            z-index: 9999;
-        }
-        #btnPdfPrint:hover {
-            background: #0369a1;
-        }
-        @media print {
-            body {
-                background: transparent !important;
-                padding: 0 !important;
-            }
-            .page-container {
-                box-shadow: none !important;
-                border: 2px solid #000 !important;
-                width: 100% !important;
-                height: 100% !important;
-                max-height: 198mm !important;
-                margin: 0 !important;
-                padding: 4mm 6mm !important;
-            }
-            #btnPdfPrint {
-                display: none !important;
-            }
-        }
-    </style>
-</head>
-<body>
-    <button id="btnPdfPrint" onclick="window.print()">
-        <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
-        Imprimir
-    </button>
+    return true;
+};
 
-    <div class="page-container">
-        <div>
-            <!-- Header Oficial ISO -->
-            <div class="header-box">
-                <div class="header-left">
-                    <img src="${empLogoUrl}" alt="Logo" class="company-logo">
-                    <span class="company-name">${_srEsc(empNombre)}</span>
-                </div>
-                <div class="header-center">
-                    <h1 class="doc-title">ESTATUS DE UNIDADES EN TALLER</h1>
-                    <div class="doc-subtitle">CONTROL DE OCUPACIÓN DE RAMPA Y TURNOS DE MANTENIMIENTO</div>
-                </div>
-                <div class="header-right">
-                    <div>CÓDIGO: F-MAN-005</div>
-                    <div>VERSIÓN: 0</div>
-                    <div>F. EMISIÓN: 10/11/2025</div>
-                </div>
-            </div>
-
-            <!-- Barra Resumen KPIs & Metadatos -->
-            <div class="kpi-bar">
-                <div class="kpi-item">
-                    <span>EMISIÓN:</span>
-                    <strong style="color:#000;">${fechaEmisionStr}</strong>
-                </div>
-                <div class="kpi-item">
-                    <span>EMITIDO POR:</span>
-                    <strong style="color:#000;">${_srEsc(emisorNombre)}</strong>
-                </div>
-                <div style="border-left:1.5px solid #000; height:14px;"></div>
-                <div class="kpi-item">
-                    <span>TOTAL RAMPAS:</span>
-                    <span class="kpi-val" style="color:#000;">${totalRampas}</span>
-                </div>
-                <div class="kpi-item">
-                    <span>OCUPADAS:</span>
-                    <span class="kpi-val" style="color:#dc2626;">${ocupadas}</span>
-                </div>
-                <div class="kpi-item">
-                    <span>EN ESPERA / LAVADO:</span>
-                    <span class="kpi-val" style="color:#b45309;">${espera}</span>
-                </div>
-                <div class="kpi-item">
-                    <span>LIBRES:</span>
-                    <span class="kpi-val" style="color:#15803d;">${libres}</span>
-                </div>
-            </div>
-
-            <!-- Tabla Consolidada Horizontal (Sin columnas # y OT Relacionadas, optimizada) -->
-            <table class="status-table">
-                <thead>
-                    <tr>
-                        <th style="width:85px; text-align:left; padding-left:6px;">RAMPA</th>
-                        <th style="width:68px; text-align:center;">F. INGRESO</th>
-                        <th style="width:44px; text-align:center;">HORA</th>
-                        <th style="width:68px; text-align:center;">PLACA</th>
-                        <th style="width:72px; text-align:center;">INSPECCIÓN?</th>
-                        <th style="width:82px; text-align:center;">SITUACIÓN</th>
-                        <th style="text-align:left; padding-left:6px;">OBSERVACIONES / TRABAJOS A REALIZAR</th>
-                        <th style="width:68px; text-align:center;">SALIDA (EST.)</th>
-                        <th style="width:44px; text-align:center;">HORA</th>
-                        <th style="width:55px; text-align:center;">H. TALLER</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${filasHtml}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Footer Oficial -->
-        <div class="footer-box">
-            <div>Sistema ERP Azkell Fleet · Módulo de Control de Rampa y Mantenimiento</div>
-            <div style="text-align:center;">Semáforo Inspección: <span style="color:#15803d; font-weight:900;">>7d Vigente</span> | <span style="color:#854d0e; font-weight:900;">0-7d Próximo</span> | <span style="color:#b91c1c; font-weight:900;"><0d Vencido</span></div>
-            <div style="font-weight:900;">DOCUMENTO OFICIAL · HOJA 1 DE 1</div>
-        </div>
-    </div>
-</body>
-</html>`;
-
-    window._srLastHtmlDoc = htmlDoc;
-
+// El botón PDF y WhatsApp usan el MISMO archivo (jsPDF): así el PDF visto es idéntico al enviado.
+window.srAbrirPDFStatus = async function() {
     var win = window.open('', '_blank');
-    if (!win) {
-        alert('Por favor, permite ventanas emergentes para previsualizar el PDF.');
-        return;
+    if (!win) { alert('Permite las ventanas emergentes para ver el PDF.'); return; }
+    try {
+        if (!window._srPrepararDatosStatus()) { win.close(); return; }
+        var blob = await window._srConstruirPdfVectorial();
+        win.location.href = URL.createObjectURL(blob);
+    } catch (e) {
+        win.close();
+        alert('No se pudo generar el PDF: ' + e.message);
     }
-    win.document.open();
-    win.document.write(htmlDoc);
-    win.document.close();
-    win.onload = function() {
-        setTimeout(function() {
-            win.print();
-        }, 400);
-    };
 };
 
 // ================================================================
@@ -5204,21 +4888,10 @@ window.srCompartirWhatsApp = async function () {
         window.mostrarToast('Preparando PDF de Status Rampa...', 'info');
     }
 
-    // Interceptar window.open para capturar el HTML sin abrir ventana real
-    var winOrigOpen = window.open;
-    var htmlDoc = null;
-    window.open = function() {
-        return {
-            document: { open: function(){}, write: function(h){ htmlDoc = h; }, close: function(){} },
-            onload: null
-        };
-    };
-    try { window.srAbrirPDFStatus(); } catch(e) {}
-    window.open = winOrigOpen;
+    var listo = false;
+    try { listo = window._srPrepararDatosStatus(); } catch(e) { listo = false; }
 
-    if (!htmlDoc) htmlDoc = window._srLastHtmlDoc;
-
-    if (!htmlDoc && !window._srLastPdfData) {
+    if (!listo) {
         if (typeof window.mostrarToast === 'function') window.mostrarToast('No hay datos para exportar', 'danger');
         if (btn) { btn.innerHTML = '<i class="bi bi-whatsapp text-success fs-5"></i>'; btn.style.pointerEvents = 'auto'; }
         return;
