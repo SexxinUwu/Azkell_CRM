@@ -47,13 +47,44 @@ export function useLiquidaciones() {
 }
 
 export interface CuentaPorCobrar {
-  id?: number | string;
-  cliente?: string | null;
-  numero_factura?: string | null;
-  monto?: number | string | null;
-  saldo?: number | string | null;
-  estado?: string | null;
-  fecha_vencimiento?: string | null;
+  id: number;
+  codigo_liquidacion: string | null;
+  orden_servicio: string | null;
+  fecha_liquidacion: string | null;
+  numero_viaje: string | null;
+  fecha_servicio: string | null;
+  razon_social: string | null;
+  placa_camion: string | null;
+  placa_carreta: string | null;
+  conductor: string | null;
+  cliente: string | null;
+  lugar: string | null;
+  flete: number | string | null;
+  comision_porcentaje: number | string | null;
+  tarifa: number | string | null;
+  gastos_operativos: number | string | null;
+  base_imponible: number | string | null;
+  igv: number | string | null;
+  total: number | string | null;
+  adelanto: number | string | null;
+  detraccion: number | string | null;
+  neto_cobrar: number | string | null;
+  neto_cobrado: number | string | null;
+  mes_facturacion: string | null;
+  fecha_factura: string | null;
+  serie: string | null;
+  factura: string | null;
+  factura_documento_url: string | null;
+  nota_credito: string | null;
+  nota_credito_url: string | null;
+  credito_dias: number | null;
+  fecha_cobrar: string | null;
+  fecha_deposito: string | null;
+  estado_servicio: string | null;    // PENDIENTE | PAGADO | ANULADO
+  diferencia: number | string | null;
+  observacion: string | null;
+  documento_url: string | null;
+  sustento_pago_url: string | null;
   [key: string]: unknown;
 }
 
