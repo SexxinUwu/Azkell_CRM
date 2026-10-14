@@ -34,6 +34,15 @@
   --accent-tint: color-mix(in srgb, var(--accent) 11%, transparent);
   --accent-ring: color-mix(in srgb, var(--accent) 34%, transparent);
 
+  /* ─── Alias usados por pantallas migradas (se resuelven con el tema activo) ─── */
+  --fill-1: var(--fill-subtle);
+  --fill-2: var(--fill);
+  --fill-3: var(--fill-strong);
+  --label-1: var(--label);
+  --radius-1: var(--r-sm);
+  --radius-2: var(--r-lg);
+  --blue: #0a84ff;  --blue-ink: #0060df;  --blue-tint: rgba(10, 132, 255, 0.14);
+
   /* ─── Negro (acciones principales) ─── */
   --ink: #1d1d1f;
   --ink-hover: #3a3a3c;
@@ -136,6 +145,7 @@
 
   --ink: #f5f5f7;
   --ink-hover: #d1d1d6;
+  --blue-ink: #64b5ff;  --blue-tint: rgba(10, 132, 255, 0.22);
 
   --green: #30d158;  --green-ink: #4ade80;  --green-tint: rgba(48, 209, 88, 0.18);
   --amber: #ff9f0a;  --amber-ink: #ffb340;  --amber-tint: rgba(255, 159, 10, 0.2);
@@ -184,6 +194,7 @@
 
   --ink: #f5f5f7;
   --ink-hover: #d1d1d6;
+  --blue-ink: #64b5ff;  --blue-tint: rgba(10, 132, 255, 0.22);
 
   --green: #30d158;  --green-ink: #4ade80;  --green-tint: rgba(48, 209, 88, 0.18);
   --amber: #ff9f0a;  --amber-ink: #ffb340;  --amber-tint: rgba(255, 159, 10, 0.2);
