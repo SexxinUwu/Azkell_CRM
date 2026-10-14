@@ -14,6 +14,7 @@ function tokenDeSesion(req) {
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const { motivoClaveRechazada } = require('../services/politica_clave');
 
 module.exports = (db, logAudit) => {
     // GET /api/perfil/me
@@ -120,9 +121,13 @@ module.exports = (db, logAudit) => {
             }
             
             if (!esValida) return res.status(400).json({ error: 'Contraseña actual incorrecta' });
-            
+
+            const motivo = await motivoClaveRechazada(nueva, actual);
+            if (motivo) return res.status(400).json({ error: motivo });
+
+            // La clave nueva solo se guarda como hash; password_visible queda vacío (no hay texto plano)
             const newHash = await bcrypt.hash(nueva, 10);
-            db.query('UPDATE usuarios SET password=?, password_visible=? WHERE correo=?', [newHash, nueva, req.user.correo], (err2) => {
+            db.query('UPDATE usuarios SET password=?, password_visible=? WHERE correo=?', [newHash, '', req.user.correo], (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 if (logAudit) logAudit(req.user.correo, 'perfil', 'CAMBIO CLAVE', 'Cambió su contraseña');
                 res.json({ ok: true });

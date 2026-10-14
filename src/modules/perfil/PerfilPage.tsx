@@ -1,13 +1,16 @@
-import { LogOut, UserRound } from 'lucide-react';
+import { KeyRound, LogOut, UserRound } from 'lucide-react';
+import { useState } from 'react';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { Avatar, Page, PageHeader } from '../../core/ui/Display';
 import { abrirClasico } from '../../core/layout/navigation';
 import { AccentPicker } from '../../core/ui/AccentPicker';
 import { ThemeSelector } from '../../core/ui/ThemeToggle';
+import { CambiarPasswordSheet } from './CambiarPasswordSheet';
 
-// Mi cuenta: datos de la sesión. Editar el perfil (foto, firma, contraseña) sigue en la versión actual.
+// Mi cuenta: datos de la sesión, apariencia, contraseña. Foto y firma siguen en la versión actual.
 export function PerfilPage() {
   const { user, logout } = useAuth();
+  const [claveAbierta, setClaveAbierta] = useState(false);
   if (!user) return null;
   return (
     <Page narrow>
@@ -37,15 +40,21 @@ export function PerfilPage() {
       <div className="list"><AccentPicker /></div>
 
       <div className="list" style={{ marginTop: 'var(--s-6)' }}>
+        <button type="button" className="row" onClick={() => setClaveAbierta(true)}>
+          <KeyRound size={20} strokeWidth={1.8} />
+          <span className="row__main row__title">Cambiar contraseña</span>
+        </button>
         <button type="button" className="row" onClick={() => abrirClasico('sistema/perfil')}>
           <UserRound size={20} strokeWidth={1.8} />
-          <span className="row__main row__title">Editar perfil, foto y contraseña</span>
+          <span className="row__main row__title">Editar perfil y foto</span>
         </button>
         <button type="button" className="row" onClick={logout} style={{ color: 'var(--red-ink)' }}>
           <LogOut size={20} strokeWidth={1.8} />
           <span className="row__main row__title">Cerrar sesión</span>
         </button>
       </div>
+
+      <CambiarPasswordSheet open={claveAbierta} onClose={() => setClaveAbierta(false)} />
     </Page>
   );
 }

@@ -3772,9 +3772,11 @@ app.post('/api/cambiar-password', async (req, res) => {
         const esHash = hash && (hash.startsWith('$2b$') || hash.startsWith('$2a$'));
         const valida = esHash ? await bcrypt.compare(passwordActual, hash) : (passwordActual === hash);
         if (!valida) return res.status(400).json({ error: 'Contraseña actual incorrecta' });
+        const motivo = await require('./services/politica_clave').motivoClaveRechazada(passwordNueva, passwordActual);
+        if (motivo) return res.status(400).json({ error: motivo });
         const nuevoHash = await bcrypt.hash(passwordNueva, 10);
         db.query('UPDATE usuarios SET password=?, password_visible=? WHERE correo=?',
-            [nuevoHash, passwordNueva, correo],
+            [nuevoHash, '', correo],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 logAudit(correo, 'usuarios', 'CAMBIÓ CONTRASEÑA', 'Auto-cambio de clave');
