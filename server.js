@@ -3379,27 +3379,28 @@ app.get('/api/auditoria', (req, res) => {
     db.query('ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL', () => {
         db.query('ALTER TABLE auditoria ADD COLUMN submodulo VARCHAR(50) DEFAULT NULL', () => {
             const { modulo, submodulo, accion, usuario, q, search, desde, hasta, limit } = req.query;
-            let sql = `SELECT 
-                idAuditoria AS id, 
-                fecha, 
-                CASE 
-                    WHEN usuario = '[object Object]' OR usuario LIKE '%[object %' THEN 'Sthefano Avila' 
+            let sql = `SELECT
+                idAuditoria AS id,
+                fecha AS created_at,
+                CASE
+                    WHEN usuario = '[object Object]' OR usuario LIKE '%[object %' THEN 'Sthefano Avila'
                     WHEN UPPER(usuario) IN ('ADMINISTRADOR', 'ADMIN', 'SISTEMA', 'SISTEMA / AUTOMÁTICO', 'UNDEFINED', 'NULL', '') THEN 'Sthefano Avila'
                     WHEN UPPER(usuario) IN ('NIXON', 'ELVIS', 'TECNICO', 'MECANICO') THEN 'Sthefano Avila'
                     WHEN usuario IS NULL THEN 'Sthefano Avila'
-                    ELSE usuario 
-                END AS usuario, 
-                IFNULL(modulo, 'GENERAL') AS modulo, 
-                IFNULL(submodulo, '') AS submodulo, 
-                CASE 
+                    ELSE usuario
+                END AS usuario,
+                IFNULL(ip, '') AS ip,
+                IFNULL(modulo, 'GENERAL') AS modulo,
+                IFNULL(submodulo, '') AS submodulo,
+                CASE
                     WHEN accion = 'ACCIÓN' OR accion IS NULL OR accion = '' THEN 'MODIFICÓ'
-                    ELSE accion 
-                END AS accion, 
-                CASE 
-                    WHEN detalle IS NULL OR detalle = '' OR detalle = '/' OR detalle = '—' THEN 
+                    ELSE accion
+                END AS accion,
+                CASE
+                    WHEN detalle IS NULL OR detalle = '' OR detalle = '/' OR detalle = '—' THEN
                         CONCAT('Actualización y verificación de estado en módulo ', IFNULL(modulo, 'Sistema'))
-                    ELSE detalle 
-                END AS detalle 
+                    ELSE detalle
+                END AS detalle
             FROM auditoria`;
             
             const params = [];
