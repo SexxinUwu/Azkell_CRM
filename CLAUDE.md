@@ -282,8 +282,8 @@ if (el) { el.style.display = 'none'; }
 ### 📌 Migración React
 
 - [x] ~~Stubs de Almacén, Mantenimiento, Operaciones, Tesorería y Sistema~~ — todos tienen implementación real en `src/modules/` (la lista de stubs anterior estaba desactualizada). Operaciones: varias pantallas redirigen al clásico por decisión.
-- [x] ~~`MantDashboardPage.tsx`: conectar endpoints reales~~ — corregido `/taller/status` → `/taller-rampas` y vigencia de inspecciones con `evaluarCiclo` (antes adivinaba campos que no existen).
-- [x] ~~`gerencia/DashboardPage.tsx`: conectar endpoints reales~~ — corregido `/taller/status` → `/taller-rampas` y campos de inventario (`stock_actual` / `stock_min`).
+- [x] ~~`MantDashboardPage.tsx`: conectar endpoints reales~~ — ahora usa `/taller-rampas` (ocupación real de rampas; `/taller/status` existe en `server.js` pero lista OTs, no rampas) y vigencia de inspecciones con `evaluarCiclo` (antes adivinaba campos que no existen).
+- [x] ~~`gerencia/DashboardPage.tsx`: conectar endpoints reales~~ — ahora usa `/taller-rampas` y los campos de inventario correctos (`stock_actual` / `stock_min`).
 - [ ] Decidir librería de gráficos: SVG inline (la usan ambos dashboards) vs Recharts/Tremor. Hoy SVG inline funciona; solo hay que decidir si se mantiene.
 - [ ] `mant-dashboard` y `dashboard` (Centro de Comando) siguen con gráficos Chart.js en el clásico; la versión React es un resumen.
 

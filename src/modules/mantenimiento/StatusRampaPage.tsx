@@ -1,14 +1,19 @@
 import './mant.css';
 import { useMemo, useState } from 'react';
-import { ArrowUpRight, Clock, LayoutDashboard, SearchX, Wrench } from 'lucide-react';
-import { PageLoader } from '../../core/ui/Button';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowUpRight, Clock, FileSpreadsheet, LayoutDashboard, LogOut, Pencil, Plus, RotateCcw, SearchX, Wrench } from 'lucide-react';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
+import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { rampaConductor, rampaId, useStatusRampa, type RampaEntrada } from './api';
+import { reactivarRampa, rampaConductor, rampaId, useStatusRampa, type RampaEntrada } from './api';
+import { LiberarRampa, RampaFormulario } from './RampaFormulario';
 
 const TABS = ['Activas', 'Historial'] as const;
 
@@ -166,19 +171,19 @@ export function StatusRampaPage() {
   const { data, isLoading, isError, error } = useStatusRampa();
   const [tab, setTab] = useState<'Activas' | 'Historial'>('Activas');
   const [busqueda, setBusqueda] = useState('');
-  const [seleccionada, setSeleccionada] = useState<RampaEntrada | null>(null);
+  const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
+  const [formulario, setFormulario] = useState<{ entrada: RampaEntrada | null } | null>(null);
+  const { can, user } = useAuth();
+  const toast = useToast();
 
   const entradas = data ?? [];
+  // Se busca por id para que el detalle se refresque solo tras liberar o editar
+  const seleccionada = entradas.find(e => rampaId(e) === seleccionadaId) ?? null;
+  const puedeCrear = can('status_rampa.crear');
+  const puedeEditar = can('status_rampa.editar');
 
-  const activas = useMemo(() =>
-    entradas.filter(e => !e.fecha_salida && e.situacion !== 'Finalizado' && e.estado !== 'Liberado' && e.estado !== 'Entregado'),
-    [entradas]
-  );
-
-  const historial = useMemo(() =>
-    entradas.filter(e => e.fecha_salida || e.situacion === 'Finalizado' || e.estado === 'Liberado' || e.estado === 'Entregado'),
-    [entradas]
-  );
+  const activas = useMemo(() => entradas.filter(e => e.estado !== 'Liberado'), [entradas]);
+  const historial = useMemo(() => entradas.filter(e => e.estado === 'Liberado'), [entradas]);
 
   const lista = tab === 'Activas' ? activas : historial;
 
@@ -203,9 +208,21 @@ export function StatusRampaPage() {
           title="Status de rampa"
           subtitle={isLoading ? 'Cargando…' : `${activas.length} rampas activas`}
           actions={
-            <MenuOtros opciones={[
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/status-rampa') },
-            ]} />
+            <>
+              <MenuOtros opciones={[
+                { label: 'Exportar historial a Excel', detalle: `${historial.length} registros`, icon: <FileSpreadsheet size={17} />,
+                  onSelect: async () => {
+                    try {
+                      await exportarExcel('Status-rampa', 'Rampas',
+                        ['Rampa', 'Placa', 'Conductor', 'Km', 'Ingreso', 'Salida real', 'Situación', 'Observaciones'],
+                        [...activas, ...historial].map(e => [e.rampa, e.placa, rampaConductor(e), e.km, e.fecha_ingreso?.split('T')[0],
+                          e.fecha_salida?.split('T')[0], e.situacion, e.observaciones]));
+                    } catch (err) { toast(errorMessage(err), 'error'); }
+                  } },
+                { label: 'OT, trabajos y catálogos de rampas', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/status-rampa') },
+              ]} />
+              {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ entrada: null })}>Ingresar</Button>}
+            </>
           }
         />
       )}
@@ -215,7 +232,10 @@ export function StatusRampaPage() {
       ) : soloDetalle ? (
         <RampaDetalle
           entrada={seleccionada}
-          onVolver={() => setSeleccionada(null)}
+          puedeEditar={puedeEditar}
+          usuario={user?.name ?? ''}
+          onEditar={() => setFormulario({ entrada: seleccionada })}
+          onVolver={() => setSeleccionadaId(null)}
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
@@ -269,7 +289,7 @@ export function StatusRampaPage() {
                   <RampaCard
                     key={rampaId(e)}
                     entrada={e}
-                    onClick={() => { haptic('selection'); setSeleccionada(e); }}
+                    onClick={() => { haptic('selection'); setSeleccionadaId(rampaId(e)); }}
                   />
                 ))}
               </div>
@@ -290,7 +310,7 @@ export function StatusRampaPage() {
                     key={rampaId(e)}
                     type="button"
                     className="sr-hist-fila"
-                    onClick={() => { haptic('selection'); setSeleccionada(e); }}
+                    onClick={() => { haptic('selection'); setSeleccionadaId(rampaId(e)); }}
                   >
                     <div className="sr-hist-fila__cuerpo">
                       <span className="sr-hist-fila__placa">{e.placa ?? '—'}</span>
@@ -318,6 +338,8 @@ export function StatusRampaPage() {
           )}
         </div>
       )}
+
+      <RampaFormulario open={!!formulario} entrada={formulario?.entrada ?? null} usuario={user?.name ?? ''} onClose={() => setFormulario(null)} />
     </Page>
   );
 }
@@ -380,11 +402,29 @@ function RampaCard({ entrada: e, onClick }: CardProps) {
 
 interface RampaDetalleProps {
   entrada: RampaEntrada;
+  puedeEditar: boolean;
+  usuario: string;
+  onEditar: () => void;
   onVolver: () => void;
 }
 
-function RampaDetalle({ entrada: e, onVolver }: RampaDetalleProps) {
+function RampaDetalle({ entrada: e, puedeEditar, usuario, onEditar, onVolver }: RampaDetalleProps) {
   const horas = horasEnRampa(e.fecha_ingreso);
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [liberando, setLiberando] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
+  const liberada = e.estado === 'Liberado';
+
+  async function reactivar() {
+    setOcupado(true);
+    try {
+      await reactivarRampa(rampaId(e), usuario);
+      haptic('success'); toast(`${e.rampa} reactivada`);
+      await qc.invalidateQueries({ queryKey: ['mant', 'rampas'] });
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+    finally { setOcupado(false); }
+  }
 
   return (
     <div className="ot-ficha">
@@ -392,6 +432,14 @@ function RampaDetalle({ entrada: e, onVolver }: RampaDetalleProps) {
         <button type="button" className="tarjeta__volver" onClick={onVolver}>
           <span style={{ fontSize: '1.2rem' }}>‹</span> Rampas
         </button>
+        {puedeEditar && (
+          <div className="tarjeta__barra-acciones">
+            {!liberada && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar</Button>}
+            {!liberada
+              ? <Button variant="primary" icon={<LogOut size={16} />} onClick={() => setLiberando(true)}>Liberar</Button>
+              : <Button variant="secondary" icon={<RotateCcw size={16} />} onClick={reactivar} loading={ocupado}>Reactivar</Button>}
+          </div>
+        )}
       </div>
 
       <div className="ot-ficha__hero">
@@ -420,6 +468,9 @@ function RampaDetalle({ entrada: e, onVolver }: RampaDetalleProps) {
           <div className="dato"><span className="dato__label">Conductor</span><span className="dato__valor">{rampaConductor(e)}</span></div>
           {e.km && <div className="dato"><span className="dato__label">Km</span><span className="dato__valor dato__valor--mono">{String(e.km)}</span></div>}
           {e.ticket_entrada && <div className="dato"><span className="dato__label">Ticket</span><span className="dato__valor dato__valor--mono">{e.ticket_entrada}</span></div>}
+          {e.salida_programada && <div className="dato"><span className="dato__label">Salida estimada</span><span className="dato__valor dato__valor--mono">{e.salida_programada.split('T')[0]} {e.hora_salida_programada ?? ''}</span></div>}
+          {e.liberado_por && <div className="dato"><span className="dato__label">Liberada por</span><span className="dato__valor">{e.liberado_por}</span></div>}
+          {e.evidencia_url && <div className="dato"><span className="dato__label">Evidencia</span><a className="dato__valor dato__valor--enlace" href={e.evidencia_url} target="_blank" rel="noreferrer">Ver archivo</a></div>}
         </div>
       </div>
 
@@ -452,6 +503,8 @@ function RampaDetalle({ entrada: e, onVolver }: RampaDetalleProps) {
           </div>
         </div>
       )}
+
+      <LiberarRampa entrada={e} usuario={usuario} open={liberando} onClose={() => setLiberando(false)} />
     </div>
   );
 }

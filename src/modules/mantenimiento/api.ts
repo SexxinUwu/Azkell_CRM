@@ -164,7 +164,8 @@ export function useTrabajosOT() {
 export interface RampaEntrada {
   _id?: string;
   id?: string;
-  rampa: string;
+  rampa: string;                 // nombre de la rampa (del catálogo)
+  rampaCatId: string;            // id de la rampa en el catálogo
   placa: string | null;
   conductor: string | null;
   chofer: string | null;
@@ -172,12 +173,16 @@ export interface RampaEntrada {
   ticket_entrada: string | null;
   fecha_ingreso: string | null;
   hora_ingreso: string | null;
-  fecha_salida: string | null;
+  fecha_salida: string | null;   // salida REAL (solo si ya fue liberada)
+  salida_programada: string | null;
+  hora_salida_programada: string | null;
   situacion: string | null;
-  estado: string | null;
+  estado: string | null;         // Activo | Liberado
   color: string | null;
   km: string | number | null;
   observaciones: string | null;
+  evidencia_url: string | null;
+  liberado_por: string | null;
 }
 
 export function rampaId(e: RampaEntrada): string {
@@ -189,47 +194,69 @@ export function rampaConductor(e: RampaEntrada): string {
 }
 
 export interface CatalogosTaller {
-  situaciones: Array<{ descripcion?: string; nombre?: string }>;
-  rampas: Array<{ nombre?: string; color?: string }>;
+  situaciones: Array<{ id?: number; descripcion?: string; nombre?: string }>;
+  rampas: Array<{ id: number | string; nombre_rampa?: string; nombre?: string; color?: string }>;
 }
 
+const txt = (v: unknown) => (v == null ? null : String(v));
+
+export function useCatalogosTaller() {
+  return useQuery<CatalogosTaller>({
+    queryKey: ['mant', 'catalogos-taller'],
+    queryFn: () => api<CatalogosTaller>('/catalogos_taller'),
+    staleTime: 300_000,
+  });
+}
+
+/** Ocupación de rampas (taller_rampas): las activas y el historial de liberadas, con el nombre y color del catálogo */
 export function useStatusRampa() {
   return useQuery<RampaEntrada[]>({
     queryKey: ['mant', 'rampas'],
-    queryFn: () =>
-      api('/taller/status').then((r: unknown) => {
-        const rows = Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? []);
-        return (rows as Record<string, unknown>[]).map(row => ({
-          _id:            String(row.id_ot ?? ''),
-          id:             String(row.id_ot ?? ''),
-          rampa:          String(row.txtRampa ?? row.id_rampa ?? '—'),
-          placa:          row.placa ? String(row.placa) : null,
-          conductor:      row.creado_por ? String(row.creado_por) : null,
-          chofer:         null,
-          reportado_por:  row.creado_por ? String(row.creado_por) : null,
-          ticket_entrada: row.ticket_entrada ? String(row.ticket_entrada) : null,
-          fecha_ingreso:  row.fecha_ingreso  ? String(row.fecha_ingreso)  : null,
-          hora_ingreso:   null,
-          fecha_salida:   row.fecha_hora_salida ? String(row.fecha_hora_salida) : null,
-          situacion:      row.txtSituacion  ? String(row.txtSituacion)  : (row.fase_ot ? String(row.fase_ot) : null),
-          estado:         row.fase_ot       ? String(row.fase_ot)       : null,
-          color:          null,
-          km:             null,
-          observaciones:  null,
-        } as RampaEntrada));
-      }),
+    queryFn: async () => {
+      const [act, his, cat] = await Promise.all([
+        api<unknown>('/taller-rampas'),
+        api<unknown>('/taller-rampas?historial=1'),
+        api<CatalogosTaller>('/catalogos_taller').catch(() => ({ rampas: [], situaciones: [] }) as CatalogosTaller),
+      ]);
+      const lista = (r: unknown) => (Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? [])) as Record<string, unknown>[];
+      const nombre = (id: unknown) => {
+        const c = (cat.rampas ?? []).find(x => String(x.id) === String(id));
+        return { nombre: c ? (c.nombre_rampa ?? c.nombre ?? String(id)) : String(id ?? '—'), color: c?.color ?? null };
+      };
+      return [...lista(act), ...lista(his)].map(row => {
+        const n = nombre(row.rampa);
+        const liberada = String(row.estado ?? '') === 'Liberado';
+        return {
+          _id: String(row.id ?? ''), id: String(row.id ?? ''),
+          rampa: n.nombre, rampaCatId: String(row.rampa ?? ''), color: n.color,
+          placa: txt(row.placa), conductor: txt(row.conductor), chofer: null, reportado_por: txt(row.creado_por),
+          ticket_entrada: null,
+          fecha_ingreso: txt(row.fecha_ingreso), hora_ingreso: txt(row.hora_ingreso),
+          fecha_salida: liberada ? (txt(row.fecha_salida_real) ?? txt(row.fecha_liberado)) : null,
+          salida_programada: txt(row.fecha_salida), hora_salida_programada: txt(row.hora_salida),
+          situacion: txt(row.situacion), estado: txt(row.estado) ?? 'Activo',
+          km: row.km == null ? null : String(row.km), observaciones: txt(row.obs),
+          evidencia_url: txt(row.evidencia_url), liberado_por: txt(row.liberado_por),
+        } as RampaEntrada;
+      });
+    },
     staleTime: 20_000,
     refetchInterval: 60_000,
   });
 }
 
-export function useCatalogosTaller() {
-  return useQuery<CatalogosTaller>({
-    queryKey: ['mant', 'catalogos-taller'],
-    queryFn: () => api('/catalogos_taller'),
-    staleTime: 300_000,
-  });
+export interface RampaPayload {
+  rampa: string; placa: string; km?: string; conductor?: string;
+  fecha_ingreso?: string | null; hora_ingreso?: string | null; fecha_salida?: string | null; hora_salida?: string | null;
+  situacion?: string; obs?: string; creado_por?: string; evidencia_url?: string | null;
 }
+
+export const ingresarRampa = (d: RampaPayload) => api<{ ok: boolean; id: number }>('/taller-rampas', { method: 'POST', body: d });
+export const actualizarRampa = (id: string, d: RampaPayload) => api<{ ok: boolean }>(`/taller-rampas/${id}`, { method: 'PUT', body: d });
+export const liberarRampa = (id: string, d: { liberado_por: string; fecha_salida_real: string; hora_salida_real: string; situacion?: string; usuario?: string }) =>
+  api<{ ok: boolean }>(`/taller-rampas/${id}`, { method: 'PUT', body: { accion: 'liberar', ...d } });
+export const reactivarRampa = (id: string, usuario: string) =>
+  api<{ ok: boolean }>(`/taller-rampas/${id}`, { method: 'PUT', body: { accion: 'reactivar', usuario } });
 
 // ─── Fleetrun ────────────────────────────────────────────────────────────────
 // La API legada devuelve arrays posicionales: [id, ?, ?, fecha, placa, ?, cliente, uts, tipo_mp, km_cambio, frecuencia, km_prox, obs, ?, km_gps]
