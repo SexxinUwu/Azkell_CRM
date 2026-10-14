@@ -276,33 +276,29 @@ if (el) { el.style.display = 'none'; }
 
 ## 13. Pendientes del ERP
 
-### 📌 Backlog / Próximas Tareas
+> Estado verificado en el código el 2026-10-14. Marca `[x]` = completado.
 
-#### Migración React (estado real al 2026-10-14)
-- 93 pantallas en catálogo total. Lo que falta es implementar la lógica en cada stub (todas ya tienen archivo en `src/modules/`).
-- Completamente migrados: `placas` (piloto), `conductores`, `personal`, `inspecciones` (consulta), `UsuariosPage`, `FleetrunPage`, `NeumaticosPage` (inspecciones), `OrdenesTrabajoPage` (crear OT + backlog + materiales), `KitsMpPage`, `PagoRequerimientosPage`.
-- Pendiente decidir librería de gráficos: SVG inline (ya usada en DashboardPage y MantDashboardPage) vs Recharts/Tremor.
+### 📌 Migración React
 
-**Dashboards pendientes de conectar (stubs con estructura lista):**
-- [ ] `src/modules/mantenimiento/MantDashboardPage.tsx` — 5 queries React Query, componentes SVG propios. Falta conectar endpoints reales. **Prioridad alta** (más avanzado).
-- [ ] `src/modules/gerencia/DashboardPage.tsx` — 5 queries React Query (`dashboard/flota`, `ots`, `inventario`, `liquidaciones`, `combustible`). **Prioridad media**.
+- [x] ~~Stubs de Almacén, Mantenimiento, Operaciones, Tesorería y Sistema~~ — todos tienen implementación real en `src/modules/` (la lista de stubs anterior estaba desactualizada). Operaciones: varias pantallas redirigen al clásico por decisión.
+- [x] ~~`MantDashboardPage.tsx`: conectar endpoints reales~~ — corregido `/taller/status` → `/taller-rampas` y vigencia de inspecciones con `evaluarCiclo` (antes adivinaba campos que no existen).
+- [x] ~~`gerencia/DashboardPage.tsx`: conectar endpoints reales~~ — corregido `/taller/status` → `/taller-rampas` y campos de inventario (`stock_actual` / `stock_min`).
+- [ ] Decidir librería de gráficos: SVG inline (la usan ambos dashboards) vs Recharts/Tremor. Hoy SVG inline funciona; solo hay que decidir si se mantiene.
+- [ ] `mant-dashboard` y `dashboard` (Centro de Comando) siguen con gráficos Chart.js en el clásico; la versión React es un resumen.
 
-**Stubs de módulos operativos (falta implementar lógica real):**
-- [ ] Almacén: Inventario, Entradas, Salidas, Kardex, Recepción, Proveedores
-- [ ] Mantenimiento: Status Rampa, Planificación, Fallas, Incidencias
-- [ ] Operaciones: Órdenes Viaje, Servicios, Vales, Guías, Combustible, Urea (muchos son redirects intencionales al clásico)
-- [ ] Tesorería: Caja, Liquidaciones, Bancos, CCs, Cuentas
-- [ ] Sistema: Auditoría, Integraciones, Usuarios
+### 🧪 Pruebas en navegador (sin verificar)
+- [ ] Almacén > Inventario: KPIs cambian al buscar y el Excel exporta solo lo filtrado (`modulos/almacen/inventario/logica.js`).
+- [ ] `server.js`: límite general 600 req/min (ya en el código; falta reiniciar el servidor para que aplique).
+- [ ] Almacén > Otros: tarjeta Kits MP abre el mismo módulo en `modulos/almacen/otros/vista.html` y `AlmacenOtrosPage.tsx`.
+- [ ] Probar en navegador los dos dashboards corregidos (Mantenimiento y Gerencia).
 
----
+### 🌙 Ciberseguridad & Arquitectura
+- [ ] **Cookies HttpOnly en frontend**: el backend ya escribe/lee `azkell_session`; falta que `src/core/api/client.ts` (`tokenStore`) y el clásico dejen de guardar el JWT en `localStorage`. Cambio transversal: requiere prueba de login completa.
+- [ ] **CSP estricta**: `contentSecurityPolicy: false` en Helmet mientras haya scripts inline y CDN en la SPA.
+- [x] ~~Desacople de `cdn.tailwindcss.com` en reportes OT/Inspecciones~~ — ya usan `/libs/tailwind.min.js` local; en `Index.html` solo queda el filtro del aviso.
+- [~] **Audit trail criptográfico**: `log_auditoria` ya existe con firma HMAC-SHA256, IP y usuario. Falta guardar el estado **antes/después** (hoy solo `body_resumen`).
 
-### 🌙 Ciberseguridad & Arquitectura (pendiente)
-- [ ] **Cookies HttpOnly en frontend**: backend ya las escribe/lee; falta que el frontend deje el JWT de `localStorage`.
-- [ ] **CSP estricta**: deshabilitada mientras haya scripts inline y CDN en la SPA.
-- [ ] **Desacople de CDNs externas**: quitar `cdn.tailwindcss.com` de reportes OT/Inspecciones.
-- [ ] **Audit trail criptográfico**: tabla `log_auditoria` inmutable (quién, cuándo, IP, antes/después).
-
-**Seguridad ya activa:** JWT_SECRET obligatorio, cookie HttpOnly `azkell_session`, rate limiting (login 20/15min, general 600/min), Helmet (HSTS, frameguard), 2FA TOTP (Admin/Gerencia).
+**Seguridad ya activa:** JWT_SECRET obligatorio, cookie HttpOnly `azkell_session`, rate limiting (login 20/15min, general 600/min), Helmet (HSTS, frameguard), 2FA TOTP (Admin/Gerencia), `log_auditoria` firmada.
 
 ---
 

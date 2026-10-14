@@ -67,7 +67,7 @@ export function DashboardPage() {
   });
   const rampas = useQuery({
     queryKey: ['dashboard', 'rampas'],
-    queryFn: () => api('/taller/status').then(r => arr<Record<string, unknown>>(r)),
+    queryFn: () => api('/taller-rampas').then(r => arr<Record<string, unknown>>(r)),
     staleTime: 30_000,
   });
   const reqs = useQuery({
@@ -114,8 +114,9 @@ export function DashboardPage() {
 
   // ─── Inventario ──────────────────────────────────────────────────────────────
   const invBajoStock = inventarioData.filter(i => {
-    const stock = Number(i.stock ?? i.cantidad ?? 0);
-    const min   = Number(i.stock_minimo ?? i.minimo ?? 0);
+    if (Number(i.activo ?? 1) === 0) return false;
+    const stock = Number(i.stock_actual ?? 0);
+    const min   = Number(i.stock_min ?? 0);
     return min > 0 && stock <= min;
   }).length;
 

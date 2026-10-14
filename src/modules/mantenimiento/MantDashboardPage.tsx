@@ -1,12 +1,16 @@
 import './mant.css';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, ArrowUpRight, CheckCircle, Clock, LayoutDashboard, Truck, Wrench } from 'lucide-react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { api } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { clavePlaca, useInspecciones, useInspeccionesNeumaticos } from '../inspecciones/api';
+import { evaluarCiclo } from '../inspecciones/vigencia';
+import { usePlacas } from '../placas/api';
 
 function arr<T>(r: unknown): T[] {
   if (Array.isArray(r)) return r as T[];
@@ -112,17 +116,12 @@ export function MantDashboardPage() {
   });
   const rampas = useQuery({
     queryKey: ['mant-dashboard', 'rampas'],
-    queryFn: () => api('/taller/status').then(r => arr<Record<string, unknown>>(r)),
+    queryFn: () => api('/taller-rampas').then(r => arr<Record<string, unknown>>(r)),
     staleTime: 30_000,
   });
-  const inspeccionesQ = useQuery({
-    queryKey: ['mant-dashboard', 'inspecciones'],
-    queryFn: () =>
-      api('/script/obtenerDatosInspecciones', { method: 'POST', body: { args: [] } }).then(
-        (r: unknown) => arr<Record<string, unknown>>(r)
-      ),
-    staleTime: 120_000,
-  });
+  const insp = useInspecciones();
+  const neu = useInspeccionesNeumaticos();
+  const placasQ = usePlacas();
   const fallasQ = useQuery<FallasStats>({
     queryKey: ['mant-dashboard', 'fallas-stats'],
     queryFn: () => api('/fallas/stats') as Promise<FallasStats>,
@@ -134,7 +133,6 @@ export function MantDashboardPage() {
   const otsData          = ots.data ?? [];
   const flotaData        = flota.data ?? [];
   const rampasData       = rampas.data ?? [];
-  const inspeccionesData = inspeccionesQ.data ?? [];
   const fallasStats      = fallasQ.data ?? {};
 
   const hoy = new Date().toISOString().split('T')[0];
@@ -167,38 +165,27 @@ export function MantDashboardPage() {
   const flotaOperativa  = Math.max(0, flotaTotal - flotaEnTaller);
   const pctOperativa    = flotaTotal > 0 ? Math.round((flotaOperativa / flotaTotal) * 100) : 0;
 
-  // ─── Inspecciones + próximas a vencer ────────────────────────────────────
-  const hoyDate = new Date(); hoyDate.setHours(0, 0, 0, 0);
+  // ─── Vigencia de inspecciones (misma regla que el módulo Inspecciones) ───
+  const ciclos = useMemo(() => {
+    const ultimaMec = new Map<string, NonNullable<typeof insp.data>[number]>();
+    [...(insp.data ?? [])].filter(i => i.tipo !== 'Solo Frenos')
+      .sort((x, y) => (y.fecha?.getTime() ?? 0) - (x.fecha?.getTime() ?? 0))
+      .forEach(i => { const k = clavePlaca(i.placa); if (!ultimaMec.has(k)) ultimaMec.set(k, i); });
+    const ultimaNeu = new Map<string, NonNullable<typeof neu.data>[number]>();
+    (neu.data ?? []).forEach(n => { const k = clavePlaca(n.placa); if (!ultimaNeu.has(k)) ultimaNeu.set(k, n); });
+    return (placasQ.data ?? [])
+      .filter(p => p.estado.toLowerCase() === 'activa' && p.enUso)
+      .map(p => ({ placa: p.placa, ciclo: evaluarCiclo(ultimaMec.get(clavePlaca(p.placa)) ?? null, ultimaNeu.get(clavePlaca(p.placa)) ?? null) }));
+  }, [insp.data, neu.data, placasQ.data]);
 
-  const proximas30: { placa: string; tipo: string; diasRestantes: number }[] = [];
-  const inspPorPlaca = new Map<string, Record<string, unknown>[]>();
+  const proximas30 = ciclos
+    .filter(c => c.ciclo.dias !== null && c.ciclo.dias <= 7)
+    .map(c => ({ placa: c.placa, tipo: c.ciclo.texto, diasRestantes: c.ciclo.dias as number }))
+    .sort((a, b) => a.diasRestantes - b.diasRestantes);
 
-  for (const insp of inspeccionesData) {
-    const placa = String(insp.placa ?? insp.nombre ?? '');
-    if (!placa) continue;
-    if (!inspPorPlaca.has(placa)) inspPorPlaca.set(placa, []);
-    inspPorPlaca.get(placa)!.push(insp);
-  }
-
-  for (const [placa, insps] of inspPorPlaca) {
-    for (const i of insps) {
-      const vencRaw = i.fecha_vencimiento ?? i.vencimiento ?? i.vigente_hasta;
-      if (!vencRaw) continue;
-      const vencDate = new Date(String(vencRaw).split('T')[0] + 'T00:00:00');
-      const dias = Math.round((vencDate.getTime() - hoyDate.getTime()) / 86_400_000);
-      if (dias <= 30) {
-        proximas30.push({
-          placa,
-          tipo: String(i.tipo ?? i.tipo_inspeccion ?? i.descripcion ?? 'Inspección'),
-          diasRestantes: dias,
-        });
-      }
-    }
-  }
-  proximas30.sort((a, b) => a.diasRestantes - b.diasRestantes);
-
-  const totalInsp    = inspeccionesData.length;
-  const inspVencidos = proximas30.filter(x => x.diasRestantes <= 0).length;
+  const totalInsp    = ciclos.length;
+  const inspVencidos = ciclos.filter(c => c.ciclo.estado === 'vencido').length;
+  const inspProximos = ciclos.filter(c => c.ciclo.estado === 'proximo').length;
   const inspVigentes = totalInsp - inspVencidos;
   const pctVigentes  = totalInsp > 0 ? Math.round((inspVigentes / totalInsp) * 100) : 0;
 
@@ -335,7 +322,7 @@ export function MantDashboardPage() {
                   </div>
                   <div style={{ flex: 1, minWidth: 160, display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
                     <BarraKpi label="Vigentes" valor={inspVigentes} total={totalInsp} color="var(--green-ink)" />
-                    <BarraKpi label="Vencidas / próximas 30d" valor={inspVencidos + proximas30.filter(x => x.diasRestantes > 0 && x.diasRestantes <= 30).length} total={totalInsp} color="var(--red-ink)" />
+                    <BarraKpi label="No vigentes / próximas a vencer" valor={inspVencidos + inspProximos} total={totalInsp} color="var(--red-ink)" />
                   </div>
                 </div>
 
@@ -344,7 +331,7 @@ export function MantDashboardPage() {
                   <div>
                     <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--label-2)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
                       <Clock size={11} />
-                      Próximas a vencer (30 días)
+                      Próximas a vencer (7 días)
                       <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--amber-ink)' }}>{proximas30.length}</span>
                     </div>
                     <ProximasVencer items={proximas30} />
