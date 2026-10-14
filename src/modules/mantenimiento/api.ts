@@ -100,22 +100,36 @@ export async function eliminarOT(idOT: string) {
 // ─── Trabajos de OT ─────────────────────────────────────────────────────────
 
 export interface TrabajoOT {
-  id_ot: string;
-  ticket_visita: string | null;
+  id?: number;
+  id_ot: string;                    // TR-2026-001
+  ticket_visita: string | null;     // ticket de entrada de la OT a la que pertenece
+  ot_id?: string | null;
   placa: string | null;
-  tecnico: string | null;
-  supervisor: string | null;
-  tipo_trabajo: string | null;
-  descripcion: string | null;
-  estado: string | null;
-  costo_material: number | null;
-  costo_mano_obra: number | null;
-  costo_total: number | null;
-  detalles_json: string | null;
+  estado: string | null;            // Pendiente | Aprobado | …
+  trabajo_realizado: string | null;
+  tecnico: string | null;           // personal separado por coma
+  fecha_trabajo: string | null;
+  fecha_salida: string | null;
+  creado_por: string | null;
+  fecha_creacion?: string | null;
+  detalles_json: string | null;     // { personal, costo, … }
   ot_detalles_json: string | null;
-  fecha_ingreso: string | null;
-  created_at: string | null;
 }
+
+/** Costo declarado en los detalles del trabajo */
+export function trabajoCosto(t: TrabajoOT): number {
+  try { const d = JSON.parse(t.detalles_json ?? '{}'); return Number(d.costo) || 0; } catch { return 0; }
+}
+
+export const editarTrabajo = (id: string, d: {
+  trabajo_realizado: string; fecha_trabajo: string | null; fecha_salida: string | null; personal: string; costo: number; estado: string;
+}) => api<{ ok: boolean }>(`/ot-trabajos/${encodeURIComponent(id)}`, { method: 'PUT', body: { accion: 'editar', ...d } });
+
+export const aprobarTrabajo = (id: string, usuario: string) =>
+  api<{ ok: boolean }>(`/ot-trabajos/${encodeURIComponent(id)}`, { method: 'PUT', body: { accion: 'aprobar', usuario } });
+
+export const eliminarTrabajo = (id: string) =>
+  api<{ ok: boolean }>(`/ot-trabajos/${encodeURIComponent(id)}`, { method: 'DELETE' });
 
 export function trabajoId(t: TrabajoOT): string {
   return String(t.id_ot || '').trim() || String(t.ticket_visita || '').trim() || '';
