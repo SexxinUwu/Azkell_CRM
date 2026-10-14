@@ -87,13 +87,45 @@ export function useBancos() {
 }
 
 export interface CentroCosto {
-  id?: number | string;
-  nombre?: string | null;
-  codigo?: string | null;
-  descripcion?: string | null;
-  activo?: boolean | number;
+  id: number;
+  codigo: string;
+  nombre: string;
+  nivel: string | null;
+  cuenta_contable: string | null;
+  requiere_placa: number | boolean;
+  descripcion: string | null;
+  estado: string;
   [key: string]: unknown;
 }
+
+export interface MotivoGasto {
+  id: number;
+  motivo: string;
+  sub_motivo: string;
+  centro_costo_codigo: string | null;
+  estado: string;
+}
+
+export function useMotivosGastos() {
+  return useQuery<MotivoGasto[]>({
+    queryKey: ['tesoreria', 'motivos-gastos'],
+    queryFn: () => api('/tesoreria/motivos-gastos').then(r => arr<MotivoGasto>(r)),
+    staleTime: 120_000,
+  });
+}
+
+/** Las escrituras de tesorería responden { ok, error }: un ok:false se convierte en excepción */
+export async function escribirTesoreria(path: string, method: 'POST' | 'PUT' | 'DELETE', body?: unknown) {
+  const r = await api<{ ok?: boolean; error?: string; message?: string; id?: number }>(path, { method, body });
+  if (r && r.ok === false) throw new Error(r.error || 'No se pudo guardar');
+  return r;
+}
+export const guardarCentroCosto = (id: number | null, d: Record<string, unknown>) =>
+  id ? escribirTesoreria(`/tesoreria/centros-costos/${id}`, 'PUT', d) : escribirTesoreria('/tesoreria/centros-costos', 'POST', d);
+export const eliminarCentroCosto = (id: number) => escribirTesoreria(`/tesoreria/centros-costos/${id}`, 'DELETE');
+export const guardarMotivoGasto = (id: number | null, d: Record<string, unknown>) =>
+  id ? escribirTesoreria(`/tesoreria/motivos-gastos/${id}`, 'PUT', d) : escribirTesoreria('/tesoreria/motivos-gastos', 'POST', d);
+export const eliminarMotivoGasto = (id: number) => escribirTesoreria(`/tesoreria/motivos-gastos/${id}`, 'DELETE');
 
 export function useCentrosCostos() {
   return useQuery<CentroCosto[]>({
