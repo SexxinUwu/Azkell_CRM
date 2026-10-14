@@ -2197,16 +2197,20 @@ function verifyToken(req, res, next) {
         '/whatsapp/qr', '/approvals/oc', '/approvals/oc/action'
     ];
     if (
-        PUBLIC_PATHS.includes(req.path) || 
+        PUBLIC_PATHS.includes(req.path) ||
         req.path.startsWith('/tv') ||
         req.path.startsWith('/api/tv') ||
         req.path.startsWith('/whatsapp/') ||
         req.path.startsWith('/approvals/') ||
-        req.path.endsWith('/ver') || 
+        req.path.endsWith('/ver') ||
         (req.path.includes('/archivo/') && req.path.endsWith('/ver')) ||
         req.path.includes('/pdf-apisunat/') ||
         req.path.includes('/pdf/') ||
-        req.path.includes('/imprimir/')
+        req.path.includes('/imprimir/') ||
+        // 2FA: validar TOTP y obtener opciones WebAuthn no requieren sesión (ocurren durante el login)
+        req.path === '/2fa/totp/validate' ||
+        req.path === '/2fa/webauthn/auth-options' ||
+        req.path === '/2fa/webauthn/auth-verify'
     ) return next();
 
     let token = null;
@@ -4573,6 +4577,7 @@ app.use('/api/tesoreria', require('./routes/tesoreria')(db, broadcast, logAudit)
 app.use('/api/rrhh', require('./routes/rrhh')(db, broadcast, logAudit));
 app.use('/api/telemetria', require('./routes/telemetria')(db));
 app.use('/api/fallas', require('./routes/fallas')(db));
+app.use('/api/2fa', require('./routes/auth2fa')(db));
 
 // Módulo Órdenes de Compra y Aprobación Móvil vía WhatsApp (Magic Link)
 app.get('/aprobaciones/oc', (req, res) => {

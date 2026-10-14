@@ -20,4 +20,10 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./IntegracionesPage').then(m => ({ default: m.IntegracionesPage }))),
     nav: { key: 'integraciones', label: 'Integraciones', to: '/sistema/integraciones', icon: 'Cog', permisos: ['integraciones.ver', 'administracion.ver', 'admin'] },
   },
+  {
+    path: 'sistema/2fa/*',
+    permisos: [],
+    Page: lazy(() => import('./Seguridad2FAPage').then(m => ({ default: m.Seguridad2FAPage }))),
+    nav: { key: '2fa', label: 'Seguridad 2FA', to: '/sistema/2fa', icon: 'KeyRound', permisos: [] },
+  },
 ];
