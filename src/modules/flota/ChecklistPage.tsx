@@ -1,12 +1,17 @@
 import './flota.css';
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
-import { ArrowUpRight, ClipboardCheck, SearchX } from 'lucide-react';
-import { PageLoader } from '../../core/ui/Button';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowUpRight, ClipboardCheck, FileSpreadsheet, SearchX, Trash2 } from 'lucide-react';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { errorMessage } from '../../core/api/client';
+import { ConfirmSheet } from '../../core/ui/Sheet';
+import { useToast } from '../../core/ui/Toast';
+import { api, errorMessage } from '../../core/api/client';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { fallaEstadoColor, useChecklist, type ReporteFalla } from './api';
@@ -18,6 +23,12 @@ export function ChecklistPage() {
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState(TODOS);
   const [seleccionado, setSeleccionado] = useState<ReporteFalla | null>(null);
+  const [porEliminar, setPorEliminar] = useState<ReporteFalla | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+  const { can } = useAuth();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const puedeEliminar = can('checklist.eliminar');
 
   const items = data ?? [];
 
@@ -41,10 +52,38 @@ export function ChecklistPage() {
     return lista;
   }, [items, filtroEstado, busqueda]);
 
+  async function eliminar() {
+    if (!porEliminar) return;
+    setEliminando(true);
+    try {
+      await api(`/mantenimiento/checklist/${porEliminar.id}`, { method: 'DELETE' });
+      haptic('success'); toast(`Reporte ${porEliminar.folio} eliminado`);
+      setPorEliminar(null); setSeleccionado(null);
+      await qc.invalidateQueries({ queryKey: ['flota', 'checklist'] });
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+    finally { setEliminando(false); }
+  }
+
+  async function exportar() {
+    try {
+      await exportarExcel('Reporte-de-fallas', 'Reportes',
+        ['Folio', 'Fecha', 'Estado', 'Tracto', 'Remolque', 'Conductor', 'Procedencia', 'Km inicial', 'Km final', 'Orden de viaje', 'Fallas / observaciones'],
+        visibles.map(f => [f.folio, String(f.fecha_reporte ?? '').split('T')[0], f.estado, f.placa_tracto, f.placa_remolque,
+          f.conductor, f.procedencia, f.km_inicial, f.km_final, f.orden_viaje, f.fallas_libres_text]));
+      haptic('success');
+    } catch (err) { toast(errorMessage(err), 'error'); }
+  }
+
   if (seleccionado) {
     return (
       <Page push>
-        <FallaDetalle falla={seleccionado} onVolver={() => setSeleccionado(null)} />
+        <FallaDetalle
+          falla={seleccionado}
+          onVolver={() => setSeleccionado(null)}
+          onEliminar={puedeEliminar ? () => setPorEliminar(seleccionado) : undefined}
+        />
+        <ConfirmSheet open={!!porEliminar} onClose={() => !eliminando && setPorEliminar(null)} onConfirm={eliminar} loading={eliminando}
+          title={`¿Eliminar ${porEliminar?.folio ?? 'el reporte'}?`} message="Esta acción no se puede deshacer." confirmLabel="Eliminar" />
       </Page>
     );
   }
@@ -57,7 +96,8 @@ export function ChecklistPage() {
         subtitle={isLoading ? 'Cargando…' : `${items.length} reportes`}
         actions={
           <MenuOtros opciones={[
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/checklist') },
+            { label: 'Exportar Excel', detalle: `${visibles.length} reportes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+            { label: 'Nuevo reporte y generar OTs', detalle: 'Con fotos y firma del conductor', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/checklist') },
           ]} />
         }
       />
@@ -130,7 +170,7 @@ export function ChecklistPage() {
   );
 }
 
-function FallaDetalle({ falla, onVolver }: { falla: ReporteFalla; onVolver: () => void }) {
+function FallaDetalle({ falla, onVolver, onEliminar }: { falla: ReporteFalla; onVolver: () => void; onEliminar?: () => void }) {
   const color = fallaEstadoColor(falla);
   const placa = falla.placa_tracto || falla.placa_remolque || '—';
 
@@ -155,6 +195,11 @@ function FallaDetalle({ falla, onVolver }: { falla: ReporteFalla; onVolver: () =
         <button type="button" className="tarjeta__volver" onClick={onVolver}>
           <span style={{ fontSize: '1.2rem' }}>‹</span> Reporte de fallas
         </button>
+        {onEliminar && (
+          <div className="tarjeta__barra-acciones">
+            <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>
+          </div>
+        )}
       </div>
       <div className="ot-ficha__hero">
         <span className={`ot-estado ot-estado--${color}`}>{falla.estado}</span>

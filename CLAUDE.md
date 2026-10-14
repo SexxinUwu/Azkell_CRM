@@ -297,10 +297,17 @@ if (el) { el.style.display = 'none'; }
 
 ### 🔧 Lógica por migrar (pantallas React de solo lectura: crear/editar/eliminar siguen en el clásico)
 Prioridad alta (uso diario):
-- [ ] Almacén: Kardex, Recepción de compras
-- [ ] Mantenimiento: Planificación, Trabajos de OT, Status de rampa (escritura)
-- [ ] Flota: Disponibilidad, Documentos, Entrega de vehículos, Reporte de fallas / Checklist de entrega
-- [ ] Inspecciones (registro nuevo)
+- [x] ~~Almacén: Recepción de compras~~ (registrar entrega con sustento, historial, revertir, Excel; tipos corregidos al backend real)
+- [x] ~~Almacén: Kardex~~ (filtro por fechas + Excel)
+- [x] ~~Mantenimiento: Planificación~~ (programar, reprogramar, completar con Fleetrun, cancelar, sugerir fechas, Excel)
+- [x] ~~Mantenimiento: Trabajos de OT~~ (editar, aprobar, eliminar, Excel; campos reales de `trabajos_ot`)
+- [x] ~~Mantenimiento: Status de rampa~~ (ahora sobre `taller_rampas`: ingresar, editar, liberar, reactivar, Excel)
+- [x] ~~Flota: Disponibilidad~~ (registrar, editar, eliminar, Excel)
+- [x] ~~Flota: Documentos~~ (cargar/renovar con archivo a S3, ver archivo con URL firmada, historial, Excel)
+- [~] Flota: Reporte de fallas / Checklist — hecho: eliminar y Excel. **Falta:** nuevo reporte (asistente con fotos y firma) y "Generar OTs" hacia Status de rampa
+- [ ] Flota: Entrega de vehículos y Checklist de entrega (asistentes con fotos y firma; ~2100 líneas en el clásico)
+- [x] ~~Inspecciones (registro nuevo)~~ ya existe `RegistrarInspeccionPage`
+- [ ] Status de rampa: subir evidencia, crear OT/trabajos desde la rampa y eliminar rampa (borra OTs hijas) siguen en el clásico
 Prioridad media:
 - [ ] Operaciones: Órdenes de viaje (+Marsisa), Órdenes de servicio, Vales (+Marsisa), Guías de remitente / transportista, Análisis de combustible, Urea, Programación
 - [ ] Tesorería: Caja, Liquidaciones, Cuentas por cobrar, Bancos, Centros de costos
