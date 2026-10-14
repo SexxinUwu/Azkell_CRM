@@ -286,6 +286,9 @@ if (el) { el.style.display = 'none'; }
 - [ ] Decidir librería de gráficos: SVG inline (la usan ambos dashboards) vs Recharts/Tremor. Hoy SVG inline funciona; solo hay que decidir si se mantiene.
 - [ ] `mant-dashboard` y `dashboard` (Centro de Comando) siguen con gráficos Chart.js en el clásico; la versión React es un resumen.
 
+- [x] ~~Inventario: filtro de familias tapaba la lista~~ — ahora es una casilla desplegable multiselect (`src/core/ui/MultiSelect.tsx`).
+- [x] ~~Ficha sin estilos (`.dato`, `.tarjeta__*`)~~ — el CSS compartido vivía en `personal.css`; movido a `src/core/ui/ui.css` (afectaba ~45 pantallas).
+
 ### 🧪 Pruebas en navegador (sin verificar)
 - [ ] Almacén > Inventario: KPIs cambian al buscar y el Excel exporta solo lo filtrado (`modulos/almacen/inventario/logica.js`).
 - [ ] `server.js`: límite general 600 req/min (ya en el código; falta reiniciar el servidor para que aplique).

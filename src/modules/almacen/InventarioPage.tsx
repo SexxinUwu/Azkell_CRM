@@ -9,7 +9,7 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
-import { ToggleChips } from '../../core/ui/Chips';
+import { MultiSelect } from '../../core/ui/MultiSelect';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
@@ -182,8 +182,7 @@ export function InventarioPage() {
                   { value: 'ok', label: 'OK' },
                 ]} />
               {familiasDisp.length > 1 && (
-                <ToggleChips label="Familia" value={familias} onChange={setFamilias}
-                  options={familiasDisp.map(f => ({ value: f, label: f }))} />
+                <MultiSelect label="Familia" value={familias} onChange={setFamilias} options={familiasDisp} />
               )}
             </div>
 
