@@ -4741,6 +4741,7 @@ window.srAbrirPDFStatus = function() {
         }
     });
 
+    window._srLastHtmlDoc = null;
     var htmlDoc = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5018,6 +5019,8 @@ window.srAbrirPDFStatus = function() {
 </body>
 </html>`;
 
+    window._srLastHtmlDoc = htmlDoc;
+
     var win = window.open('', '_blank');
     if (!win) {
         alert('Por favor, permite ventanas emergentes para previsualizar el PDF.');
@@ -5032,4 +5035,142 @@ window.srAbrirPDFStatus = function() {
         }, 400);
     };
 };
+
+// ================================================================
+// 📲 COMPARTIR REPORTE DE STATUS RAMPA POR WHATSAPP
+// ================================================================
+window.srCompartirWhatsApp = async function () {
+    var btn = document.getElementById('sr-btn-whatsapp');
+    if (btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm text-success"></span>';
+        btn.style.pointerEvents = 'none';
+    }
+
+    if (typeof window.mostrarToast === 'function') {
+        window.mostrarToast('Preparando PDF de Status Rampa...', 'info');
+    }
+
+    // Interceptar window.open para capturar el HTML sin abrir ventana real
+    var winOrigOpen = window.open;
+    var htmlDoc = null;
+    window.open = function() {
+        return {
+            document: { open: function(){}, write: function(h){ htmlDoc = h; }, close: function(){} },
+            onload: null
+        };
+    };
+    try { window.srAbrirPDFStatus(); } catch(e) {}
+    window.open = winOrigOpen;
+
+    if (!htmlDoc) htmlDoc = window._srLastHtmlDoc;
+
+    if (!htmlDoc) {
+        if (typeof window.mostrarToast === 'function') window.mostrarToast('No hay datos para exportar', 'danger');
+        if (btn) { btn.innerHTML = '<i class="bi bi-whatsapp text-success fs-5"></i>'; btn.style.pointerEvents = 'auto'; }
+        return;
+    }
+
+    var ahora = new Date();
+    var dd = String(ahora.getDate()).padStart(2, '0');
+    var mm = String(ahora.getMonth() + 1).padStart(2, '0');
+    var yyyy = ahora.getFullYear();
+    var filename = 'Status_Rampa_' + dd + mm + yyyy + '.pdf';
+
+    try {
+        var pdfBlob = await new Promise(function(resolve, reject) {
+            var iframe = document.createElement('iframe');
+            iframe.style.cssText = 'position:fixed;top:-10000px;left:-10000px;width:1100px;height:900px;border:none;z-index:-999;';
+            document.body.appendChild(iframe);
+            var doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+                + '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>'
+                + '</head><body><div id="sr-pdf-root"></div></body></html>');
+            doc.close();
+            iframe.onload = async function() {
+                try {
+                    await new Promise(function(r){ setTimeout(r, 500); });
+                    var parser = new DOMParser();
+                    var srcDoc = parser.parseFromString(htmlDoc, 'text/html');
+                    var root = doc.getElementById('sr-pdf-root');
+                    root.innerHTML = srcDoc.body.innerHTML;
+                    srcDoc.querySelectorAll('style').forEach(function(s) {
+                        var st = doc.createElement('style');
+                        st.textContent = s.textContent;
+                        doc.head.appendChild(st);
+                    });
+                    await new Promise(function(r){ setTimeout(r, 600); });
+                    var opt = {
+                        margin: 0, filename: filename,
+                        image: { type: 'jpeg', quality: 0.97 },
+                        html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 1100 },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                    };
+                    var pdfB = await iframe.contentWindow.html2pdf().set(opt).from(root).outputPdf('blob');
+                    iframe.remove();
+                    resolve(pdfB);
+                } catch(e) { iframe.remove(); reject(e); }
+            };
+        });
+
+        var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            try {
+                await navigator.share({ files: [pdfFile], title: filename });
+                return;
+            } catch(shareErr) {
+                if (shareErr.name === 'AbortError') return;
+                if (shareErr.name !== 'NotAllowedError') throw shareErr;
+            }
+        }
+
+        _srMostrarModalWhatsApp(pdfFile, filename);
+
+    } catch(err) {
+        console.error('Error al compartir Status Rampa por WhatsApp:', err);
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast('Error al generar PDF: ' + err.message, 'danger');
+        }
+    } finally {
+        if (btn) {
+            btn.innerHTML = '<i class="bi bi-whatsapp text-success fs-5"></i>';
+            btn.style.pointerEvents = 'auto';
+        }
+    }
+};
+
+function _srMostrarModalWhatsApp(pdfFile, filename) {
+    var existing = document.getElementById('sr-whatsapp-overlay');
+    if (existing) existing.remove();
+
+    var div = document.createElement('div');
+    div.id = 'sr-whatsapp-overlay';
+    div.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);';
+    div.innerHTML = '<div style="background:#fff;border-radius:24px;padding:26px 20px;text-align:center;max-width:320px;width:88%;box-shadow:0 20px 40px rgba(0,0,0,0.25);">'
+        + '<div style="width:58px;height:58px;background:#25D366;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px;">'
+        + '<i class="bi bi-whatsapp"></i>'
+        + '</div>'
+        + '<h5 style="font-weight:800;color:#0f172a;margin-bottom:8px;font-size:1.1rem;">PDF de Rampa Listo</h5>'
+        + '<p style="color:#64748b;font-size:0.83rem;margin-bottom:20px;">Toca el botón para abrir WhatsApp y seleccionar el destinatario.</p>'
+        + '<button id="sr-btn-touch-share" style="background:#25D366;color:#fff;font-weight:700;border:none;padding:12px 24px;border-radius:14px;width:100%;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(37,211,102,0.35);">'
+        + '<i class="bi bi-share-fill"></i> Enviar por WhatsApp'
+        + '</button>'
+        + '<button onclick="document.getElementById(\'sr-whatsapp-overlay\').remove()" style="background:transparent;color:#94a3b8;font-weight:600;border:none;margin-top:12px;font-size:0.8rem;cursor:pointer;">Cancelar</button>'
+        + '</div>';
+    document.body.appendChild(div);
+
+    document.getElementById('sr-btn-touch-share').onclick = async function() {
+        div.remove();
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            try {
+                await navigator.share({ files: [pdfFile], title: filename });
+            } catch(e) {
+                if (e.name !== 'AbortError') window.location.href = 'whatsapp://';
+            }
+        } else {
+            window.location.href = 'whatsapp://';
+        }
+    };
+}
 

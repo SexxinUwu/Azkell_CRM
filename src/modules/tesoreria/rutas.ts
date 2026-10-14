@@ -32,4 +32,10 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./CentrosCostosPage').then(m => ({ default: m.CentrosCostosPage }))),
     nav: { key: 'centros-costos', label: 'Centros de costos', to: '/tesoreria/centros-costos', icon: 'Boxes', permisos: ['tesoreria_centros_costos.ver', 'tesoreria_caja.ver'] },
   },
+  {
+    path: 'tesoreria/pago-requerimientos/*',
+    permisos: ['tesoreria_caja.ver'],
+    Page: lazy(() => import('./PagoRequerimientosPage').then(m => ({ default: m.PagoRequerimientosPage }))),
+    nav: { key: 'pago-requerimientos', label: 'Pago de requerimientos', to: '/tesoreria/pago-requerimientos', icon: 'CreditCard', permisos: ['tesoreria_caja.ver'] },
+  },
 ];

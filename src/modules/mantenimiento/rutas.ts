@@ -57,6 +57,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'fallas', label: 'Fallas en ruta', to: '/mantenimiento/fallas', icon: 'AlertTriangle', permisos: ['fallas.ver', 'admin'] },
   },
   {
+    path: 'mantenimiento/kits-mp/*',
+    permisos: ['plan.ver', 'admin'],
+    Page: lazy(() => import('./KitsMpPage').then(m => ({ default: m.KitsMpPage }))),
+    nav: { key: 'kits-mp', label: 'Kits de mantenimiento', to: '/mantenimiento/kits-mp', icon: 'PackageCheck', permisos: ['plan.ver', 'admin'] },
+  },
+  {
     path: 'mantenimiento/otros/*',
     permisos: ['admin', 'status_rampa.ver', 'ot.ver'],
     Page: lazy(() => import('./MantOtrosPage').then(m => ({ default: m.MantOtrosPage }))),
