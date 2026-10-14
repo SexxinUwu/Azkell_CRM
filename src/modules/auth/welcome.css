@@ -100,3 +100,14 @@
 }
 .welcome--c .welcome__hello { top: calc(50% + 52px); }
 .welcome--c { touch-action: none; }
+
+/* ─── Transición en celular: sin desenfoques ni sombras grandes mientras la tarjeta se escala ───
+   El blur de 36 px y la sombra de 56 px se volvían a calcular en cada fotograma sobre toda la
+   pantalla. En la web la GPU lo aguanta; en el celular bajaban los cuadros o cerraban la app. */
+html.fx-ligero .welcome *,
+html.fx-ligero .login__card,
+html.fx-ligero .login__fields {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html.fx-ligero .welcome__card { box-shadow: none !important; }

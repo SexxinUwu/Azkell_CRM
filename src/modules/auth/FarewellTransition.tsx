@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
@@ -6,6 +6,7 @@ import { registerFarewell } from '../../core/auth/farewell';
 import { haptic } from '../../core/lib/haptics';
 import { LOGO_URL } from '../../core/layout/BrandMark';
 import { LiteSplash } from './LiteSplash';
+import { escalaCubre, fxLigero } from '../../core/lib/rendimiento';
 import './welcome.css';
 
 const SWITCH_AT = 1150; // ms: el trazo ya se retiró; se cierra la sesión y el login se monta debajo
@@ -84,6 +85,8 @@ function FarewellOverlay({ name, done, onEnd }: Farewell & { onEnd: () => void }
   const [phase, setPhase] = useState<'in' | 'morph' | 'out'>('in');
   const [destino, setDestino] = useState<{ x: number; y: number; sx: number; sy: number } | null>(null);
   const switched = useRef(false);
+  const K = useMemo(() => escalaCubre(), []);
+  useEffect(() => { fxLigero(true); return () => fxLigero(false); }, []);
 
   async function switchToLogin() {
     if (switched.current) return;
@@ -136,7 +139,7 @@ function FarewellOverlay({ name, done, onEnd }: Farewell & { onEnd: () => void }
       <motion.div
         ref={card}
         className="welcome__card"
-        initial={{ scaleX: 14, scaleY: 14, opacity: 0, x: 0, y: 0 }}
+        initial={{ scaleX: K, scaleY: K, opacity: 0, x: 0, y: 0 }}
         animate={phase === 'morph' && destino
           ? { x: destino.x, y: destino.y, scaleX: destino.sx, scaleY: destino.sy, opacity: 1 }
           : { x: 0, y: 0, scaleX: 1, scaleY: 1, opacity: 1 }}

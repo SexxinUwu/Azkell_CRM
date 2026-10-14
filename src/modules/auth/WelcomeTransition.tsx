@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { haptic } from '../../core/lib/haptics';
 import { LOGO_URL } from '../../core/layout/BrandMark';
 import { endWelcome, useWelcome, type WelcomeState } from './welcome';
 import { LiteSplash } from './LiteSplash';
+import { escalaCubre, fxLigero } from '../../core/lib/rendimiento';
 import './welcome.css';
 
 const REVEAL_AT = 1250;    // ms: el ícono se abre sobre la pantalla principal
@@ -46,6 +47,8 @@ interface Inicio { x: number; y: number; sx: number; sy: number }
 function WelcomeOverlay({ from, name }: WelcomeState) {
   const medida = useRef<HTMLDivElement>(null);
   const [inicio, setInicio] = useState<Inicio | null>(null);
+  const K = useMemo(() => escalaCubre(), []);
+  useEffect(() => { fxLigero(true); return () => fxLigero(false); }, []);
   const [revealing, setRevealing] = useState(false);
   const ended = useRef(false);
 
@@ -98,7 +101,7 @@ function WelcomeOverlay({ from, name }: WelcomeState) {
           className="welcome__card"
           initial={{ x: inicio.x, y: inicio.y, scaleX: inicio.sx, scaleY: inicio.sy, opacity: 1 }}
           animate={revealing
-            ? { x: 0, y: 0, scaleX: 14, scaleY: 14, opacity: 0 }
+            ? { x: 0, y: 0, scaleX: K, scaleY: K, opacity: 0 }
             : { x: 0, y: 0, scaleX: 1, scaleY: 1, opacity: 1 }}
           transition={revealing
             ? { duration: REVEAL_MS / 1000, ease: [0.7, 0, 0.84, 0] }
