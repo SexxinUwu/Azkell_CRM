@@ -124,6 +124,7 @@ fleet_user           // email del usuario
 fleet_rol            // rol del usuario (admin, usuario, etc)
 fleet_correo         // email (duplicado con fleet_user)
 fleet_permisos       // JSON de permisos RBAC
+fleet_sesion         // bandera '1' de sesión activa (el JWT va en la cookie HttpOnly; en nativo se usa fleet_token)
 fleet_ultimo_acceso  // timestamp último login
 fleet_rutaActual     // ruta del módulo actual (navegación SPA)
 ```
@@ -294,9 +295,11 @@ if (el) { el.style.display = 'none'; }
 - [ ] `server.js`: límite general 600 req/min (ya en el código; falta reiniciar el servidor para que aplique).
 - [ ] Almacén > Otros: tarjeta Kits MP abre el mismo módulo en `modulos/almacen/otros/vista.html` y `AlmacenOtrosPage.tsx`.
 - [ ] Probar en navegador los dos dashboards corregidos (Mantenimiento y Gerencia).
+- [ ] Probar Inventario: Exportar (solo filtrado), Importar desde Excel y Descargar plantilla (ahora nativos).
+- [ ] Probar Auditoría: `/api/auditoria` corregido (faltaba la columna `ip`, ahora se crea y usa la base del cliente).
 
 ### 🌙 Ciberseguridad & Arquitectura
-- [ ] **Cookies HttpOnly en frontend**: bloqueado por el clásico. La app React ya autentica solo por cookie `azkell_session` (`credentials: 'include'`), pero `fleet_token` en `localStorage` sigue siendo usado por 45 referencias en 12 archivos del clásico (`logica.js`, `modulos/login`, `almacen/entradas`, `conductores`, `entrega-vehiculos`, `combustible-matriz`, `reporte-viajes`, `seguridad/*`, `perfil`, `usuarios`) y como bandera de sesión en `AuthProvider.tsx`. Orden seguro: (1) migrar esos módulos clásicos a `credentials: 'include'`, (2) cambiar `AuthProvider` a `/api/me`, (3) dejar de guardar el token.
+- [x] ~~Cookies HttpOnly en frontend~~: en web el JWT ya no se guarda en `localStorage`; solo la bandera `fleet_sesion` ('1') y la cookie `azkell_session` autentica (el interceptor de `logica.js` envía `credentials: 'include'`). En Capacitor nativo se conserva `fleet_token` como respaldo (la cookie no cruza orígenes). Sesiones antiguas se migran solas al abrir. Servidor: `tokenDeSesion(req)` (cookie → Bearer) en `server.js` y `routes/perfil.js` para sesiones activas y `documentos-flota`. **Falta probar:** login, F5, cerrar sesión, Perfil > sesiones activas, y documentos de flota.
 - [~] **CSP estricta**: activa en modo SOLO REPORTE (`server.js`, Helmet). No bloquea; las violaciones salen en consola como `[CSP]` desde `/csp-report`. Siguiente: revisar avisos reales, ajustar la lista y pasar a bloqueo (quitar `reportOnly`).
 - [x] ~~Desacople de `cdn.tailwindcss.com` en reportes OT/Inspecciones~~ — ya usan `/libs/tailwind.min.js` local; en `Index.html` solo queda el filtro del aviso.
 - [x] ~~**Audit trail criptográfico**~~: `log_auditoria` firma HMAC-SHA256 y ahora guarda `antes` / `despues` con `firma_estado`. "Después" = respuesta del servidor (automático); "antes" = el handler lo fija con `req.auditAntes = {...}` (aún ningún handler lo usa). Visible en Sistema > Auditoría > "Registro firmado".

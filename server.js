@@ -2336,6 +2336,19 @@ app.use('/api', verifyToken);
 app.use('/api/superadmin', require('./routes/superadmin')());
 app.use('/api', globalRBAC);
 
+// Token de la sesión de la petición: cookie HttpOnly primero, luego Authorization: Bearer (apps nativas).
+function tokenDeSesion(req) {
+    const cookies = String((req.headers && req.headers['cookie']) || '');
+    for (const c of cookies.split(';')) {
+        const idx = c.indexOf('=');
+        if (idx < 0 || c.slice(0, idx).trim() !== 'azkell_session') continue;
+        const v = c.slice(idx + 1).trim();
+        try { return decodeURIComponent(v); } catch { return v; }
+    }
+    const auth = req.headers && req.headers['authorization'];
+    return auth && auth.startsWith('Bearer ') && auth.slice(7) ? auth.slice(7) : '';
+}
+
 // ── Middleware de Audit Trail criptográfico ───────────────────────
 // Registra en log_auditoria toda mutación (POST/PUT/PATCH/DELETE) con firma HMAC.
 // Se ejecuta DESPUÉS de verifyToken para tener req.user disponible.
@@ -3541,9 +3554,11 @@ app.get('/api/log-auditoria', (req, res) => {
 // 📋 MÓDULO AUDITORÍA
 // ============================================================
 app.get('/api/auditoria', (req, res) => {
-    // Garantizar columnas modulo y submodulo antes de consultar
-    db.query('ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL', () => {
-        db.query('ALTER TABLE auditoria ADD COLUMN submodulo VARCHAR(50) DEFAULT NULL', () => {
+    // Garantizar columnas modulo, submodulo e ip antes de consultar (en la base del cliente)
+    const targetDb = req.db || db;
+    targetDb.query('ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL', () => {
+        targetDb.query('ALTER TABLE auditoria ADD COLUMN submodulo VARCHAR(50) DEFAULT NULL', () => {
+          targetDb.query('ALTER TABLE auditoria ADD COLUMN ip VARCHAR(45) DEFAULT NULL', () => {
             const { modulo, submodulo, accion, usuario, q, search, desde, hasta, limit } = req.query;
             let sql = `SELECT
                 idAuditoria AS id,
@@ -3589,10 +3604,11 @@ app.get('/api/auditoria', (req, res) => {
             sql += ' ORDER BY idAuditoria DESC LIMIT ?';
             params.push(Math.min(parseInt(limit) || 500, 1000));
             
-            db.query(sql, params, (err, results) => {
+            targetDb.query(sql, params, (err, results) => {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ data: results });
             });
+          });
         });
     });
 });
@@ -3843,7 +3859,7 @@ app.get('/api/placas-lista', (req, res) => {
 // ==========================================
 app.get('/api/documentos-flota/upload-url', async (req, res) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
+        const token = tokenDeSesion(req);
         if (!token) return res.status(401).json({ error: 'No autorizado' });
         jwt.verify(token, process.env.JWT_SECRET);
 
@@ -3869,7 +3885,7 @@ app.get('/api/documentos-flota/upload-url', async (req, res) => {
 
 app.post('/api/documentos-flota/presign-read', async (req, res) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
+        const token = tokenDeSesion(req);
         if (!token) return res.status(401).json({ error: 'No autorizado' });
         
         const { urls } = req.body;
@@ -3894,7 +3910,7 @@ app.post('/api/documentos-flota/presign-read', async (req, res) => {
 
 app.delete('/api/documentos-flota/delete', async (req, res) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
+        const token = tokenDeSesion(req);
         if (!token) return res.status(401).json({ error: 'No autorizado' });
         jwt.verify(token, process.env.JWT_SECRET);
 

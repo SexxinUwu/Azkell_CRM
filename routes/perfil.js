@@ -1,3 +1,16 @@
+// Token de la sesión de la petición: cookie HttpOnly primero, luego Authorization: Bearer (apps nativas).
+function tokenDeSesion(req) {
+    const cookies = String((req.headers && req.headers['cookie']) || '');
+    for (const c of cookies.split(';')) {
+        const idx = c.indexOf('=');
+        if (idx < 0 || c.slice(0, idx).trim() !== 'azkell_session') continue;
+        const v = c.slice(idx + 1).trim();
+        try { return decodeURIComponent(v); } catch { return v; }
+    }
+    const auth = req.headers && req.headers['authorization'];
+    return auth && auth.startsWith('Bearer ') && auth.slice(7) ? auth.slice(7) : '';
+}
+
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -129,7 +142,7 @@ module.exports = (db, logAudit) => {
 
         db.query(
             'SELECT id, ip, dispositivo, fecha_login, ultima_actividad, (token = ?) as actual FROM sesiones_activas WHERE usuario_correo = ? ORDER BY ultima_actividad DESC',
-            [req.headers.authorization?.slice(7) || '', req.user.correo],
+            [tokenDeSesion(req), req.user.correo],
             (err, results) => {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json(results);
@@ -140,7 +153,7 @@ module.exports = (db, logAudit) => {
     // DELETE /api/perfil/sesiones-otras (Cerrar todas las demás sesiones excepto la actual)
     router.delete('/perfil/sesiones-otras', (req, res) => {
         if (!req.user || !req.user.correo) return res.status(401).json({ error: 'No autenticado' });
-        const currentToken = req.headers.authorization?.slice(7) || '';
+        const currentToken = tokenDeSesion(req);
         
         db.query(
             'DELETE FROM sesiones_activas WHERE usuario_correo = ? AND token != ?',
@@ -168,7 +181,7 @@ module.exports = (db, logAudit) => {
 
     // POST /api/auth/logout (Eliminar token de base de datos)
     router.post('/auth/logout', (req, res) => {
-        const token = req.headers.authorization?.slice(7) || '';
+        const token = tokenDeSesion(req);
         if (token) {
             db.query('DELETE FROM sesiones_activas WHERE token = ?', [token], () => {});
         }

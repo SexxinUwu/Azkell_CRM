@@ -52,7 +52,13 @@ async function iniciarSesion(event, formObj) {
             localStorage.setItem('fleet_permisos', respuesta.permisos || '{}');
             window._permCache = null; // Invalidar cache de permisos
             localStorage.setItem('fleet_ultimo_acceso', Date.now());
-            localStorage.setItem('fleet_token', respuesta.token || '');
+            // Web: la sesión viaja en la cookie HttpOnly; el JWT no se guarda. Nativo (Capacitor): respaldo en fleet_token.
+            if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+                localStorage.setItem('fleet_token', respuesta.token || '');
+            } else {
+                localStorage.removeItem('fleet_token');
+            }
+            localStorage.setItem('fleet_sesion', '1');
             formObj.reset();
             
             setTimeout(() => {

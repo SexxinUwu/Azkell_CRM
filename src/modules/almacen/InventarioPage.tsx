@@ -25,6 +25,8 @@ import {
 } from './api';
 import { InventarioFicha } from './InventarioFicha';
 import { InventarioFormulario } from './InventarioFormulario';
+import { ImportarInventario } from './ImportarInventario';
+import { descargarPlantilla, exportar } from './excelInventario';
 import './almacen.css';
 
 type Filtro = 'todos' | 'ok' | 'warning' | 'critical';
@@ -46,6 +48,7 @@ export function InventarioPage() {
   const [formulario, setFormulario] = useState<{ articulo: ArticuloInv | null } | null>(null);
   const [porEliminar, setPorEliminar] = useState<ArticuloInv | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  const [importando, setImportando] = useState(false);
 
   const puedeCrear = can('inv.crear');
   const puedeEditar = can('inv.editar');
@@ -105,10 +108,15 @@ export function InventarioPage() {
       { label: 'Salidas', icon: <PackageMinus size={17} />, onSelect: () => abrirClasico('almacen/salidas') },
       { label: 'Kardex', icon: <RefreshCw size={17} />, onSelect: () => abrirClasico('almacen/kardex') },
       { label: 'Recepción de compras', icon: <Package size={17} />, onSelect: () => abrirClasico('almacen/recepcion-compras') },
-      { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, separado: true,
-        onSelect: () => abrirClasico('almacen/inventario') },
-      { label: 'Importar desde Excel', icon: <FileSpreadsheet size={17} />,
-        onSelect: () => abrirClasico('almacen/inventario') },
+      { label: 'Exportar Excel', detalle: hayFiltros ? `Solo los ${visibles.length} filtrados` : `${visibles.length} artículos`,
+        icon: <FileSpreadsheet size={17} />, separado: true,
+        onSelect: async () => {
+          try { await exportar(visibles); haptic('success'); } catch (err) { toast(errorMessage(err), 'error'); }
+        } },
+      puedeCrear && { label: 'Importar desde Excel', detalle: 'Crea artículos en lote', icon: <FileSpreadsheet size={17} />,
+        onSelect: () => setImportando(true) },
+      puedeCrear && { label: 'Descargar plantilla', icon: <FileSpreadsheet size={17} />,
+        onSelect: async () => { try { await descargarPlantilla(); } catch (err) { toast(errorMessage(err), 'error'); } } },
       { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true,
         onSelect: () => abrirClasico('almacen/inventario') },
     ]} />
@@ -258,6 +266,8 @@ export function InventarioPage() {
           });
         }}
       />
+
+      <ImportarInventario open={importando} onClose={() => setImportando(false)} existentes={items} />
 
       <ConfirmSheet
         open={!!porEliminar}

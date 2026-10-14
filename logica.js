@@ -133,7 +133,13 @@ window.verificarSesionGuardada = function() {
     const guardadoCorreo   = localStorage.getItem('fleet_correo');
     const guardadoPermisos = localStorage.getItem('fleet_permisos');
     const guardadoRol      = localStorage.getItem('fleet_rol');
-    const guardadoToken    = localStorage.getItem('fleet_token');
+    const _esNativo        = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    // Sesión anterior: pasar el JWT a bandera y borrarlo de localStorage (en web la cookie HttpOnly autentica)
+    if (!_esNativo && localStorage.getItem('fleet_token')) {
+        localStorage.setItem('fleet_sesion', '1');
+        localStorage.removeItem('fleet_token');
+    }
+    const guardadoToken    = localStorage.getItem('fleet_token') || localStorage.getItem('fleet_sesion');
 
     if (!guardadoUser || !guardadoTime || !guardadoToken || Date.now() - parseInt(guardadoTime) >= TIEMPO_MAX_INACTIVIDAD) {
         cerrarSesion();
@@ -1224,6 +1230,7 @@ function cerrarSesion() {
     localStorage.removeItem('fleet_ultimo_acceso'); 
     localStorage.removeItem('fleet_permisos'); 
     localStorage.removeItem('fleet_token');
+    localStorage.removeItem('fleet_sesion');
     sessionStorage.removeItem('fleet_rutaActual');
     usuarioLogueado = ''; rolLogueado = ''; permisosUsuario = {};
 

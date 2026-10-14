@@ -2,10 +2,18 @@
 // Usa rutas relativas (/api) para que funcione igual en localhost, en el celular
 // por Wi‑Fi (proxy de Vite) y en producción (mismo dominio).
 //
-// Sesión compartida con la versión actual a través de fleet_token en localStorage (leído por logica.js).
-// La app nueva autentica vía cookie HttpOnly `azkell_session` (no envía Authorization header).
+// Sesión compartida con la versión actual (logica.js) a través de localStorage.
+// En la web la autenticación es SOLO la cookie HttpOnly `azkell_session`: el JWT ya no se guarda en
+// localStorage (un XSS no puede leerlo). Se guarda únicamente una bandera `fleet_sesion` que indica
+// "hay sesión". En la app nativa (Capacitor) la cookie no viaja entre orígenes, así que ahí se
+// conserva el JWT en `fleet_token` como respaldo.
 
 const TOKEN_KEY = 'fleet_token';
+const SESION_KEY = 'fleet_sesion';
+const esNativo = () => {
+  try { return !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.(); }
+  catch { return false; }
+};
 const PROFILE_KEY = 'fleet_app_perfil'; // usuario y permisos de la última sesión: abrir la app sin señal
 export const UNAUTHORIZED_EVENT = 'azkell:unauthorized';
 
@@ -25,14 +33,26 @@ export class ApiError extends Error {
 export const isNetworkError = (err: unknown) => err instanceof ApiError && err.status === 0;
 
 // Claves que también usa la versión actual (logica.js). Se borran juntas al cerrar sesión.
-const LEGACY_KEYS = ['fleet_user', 'fleet_rol', 'fleet_correo', 'fleet_dni', 'fleet_ultimo_acceso', 'fleet_permisos', 'fleet_token'];
+const LEGACY_KEYS = ['fleet_user', 'fleet_rol', 'fleet_correo', 'fleet_dni', 'fleet_ultimo_acceso', 'fleet_permisos', 'fleet_token', 'fleet_sesion'];
 
 export const tokenStore = {
+  /** Token (nativo) o bandera de sesión (web). Solo sirve para saber si hay sesión guardada. */
   get(): string | null {
-    try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+    try {
+      const legado = localStorage.getItem(TOKEN_KEY);
+      if (legado && !esNativo()) {
+        // Sesión anterior a este cambio: pasar a bandera y borrar el JWT de localStorage
+        localStorage.setItem(SESION_KEY, '1');
+        localStorage.removeItem(TOKEN_KEY);
+      }
+      return (esNativo() ? localStorage.getItem(TOKEN_KEY) : null) ?? localStorage.getItem(SESION_KEY);
+    } catch { return null; }
   },
   set(token: string) {
-    try { localStorage.setItem(TOKEN_KEY, token); } catch { /* modo privado */ }
+    try {
+      if (esNativo()) localStorage.setItem(TOKEN_KEY, token);
+      else { localStorage.setItem(SESION_KEY, '1'); localStorage.removeItem(TOKEN_KEY); }
+    } catch { /* modo privado */ }
   },
   clear() {
     try {
