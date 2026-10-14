@@ -81,11 +81,15 @@ module.exports = (db, logAudit) => {
         if (fields.length === 0) return res.json({ ok: true });
         
         values.push(req.user.correo);
-        
-        db.query(`UPDATE usuarios SET ${fields.join(',')} WHERE correo=?`, values, (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            if (logAudit) logAudit(req.user.correo, 'perfil', 'ACTUALIZÓ', 'Datos de perfil');
-            res.json({ ok: true });
+
+        // "Antes" para el registro firmado: los datos de perfil tal como estaban (sin fotos ni firma)
+        db.query('SELECT nombre, telefono FROM usuarios WHERE correo=?', [req.user.correo], (errA, filasA) => {
+            if (!errA && filasA && filasA[0]) req.auditAntes = filasA[0];
+            db.query(`UPDATE usuarios SET ${fields.join(',')} WHERE correo=?`, values, (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                if (logAudit) logAudit(req.user.correo, 'perfil', 'ACTUALIZÓ', 'Datos de perfil');
+                res.json({ ok: true });
+            });
         });
     });
 

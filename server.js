@@ -3750,12 +3750,16 @@ app.put('/api/usuarios-v2/:id', async (req, res) => {
         fields.push('password_visible=?'); values.push('');
     }
     values.push(id);
-    targetDb.query(`UPDATE usuarios SET ${fields.join(',')} WHERE idUsuario=?`, values, (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        broadcast('usuarios', 'actualizar');
-        const editor = req.body.editado_por || 'admin';
-        logAudit(editor, 'usuarios', 'MODIFICÓ', `${nombre || correo}`);
-        res.json({ data: 'Éxito' });
+    // "Antes" para el registro firmado: los datos del usuario tal como estaban (nunca la clave)
+    targetDb.query('SELECT nombre, dni, cargo, correo, estado, rol, rol_id FROM usuarios WHERE idUsuario=?', [id], (errA, filasA) => {
+        if (!errA && filasA && filasA[0]) req.auditAntes = filasA[0];
+        targetDb.query(`UPDATE usuarios SET ${fields.join(',')} WHERE idUsuario=?`, values, (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            broadcast('usuarios', 'actualizar');
+            const editor = req.body.editado_por || 'admin';
+            logAudit(editor, 'usuarios', 'MODIFICÓ', `${nombre || correo}`);
+            res.json({ data: 'Éxito' });
+        });
     });
 });
 

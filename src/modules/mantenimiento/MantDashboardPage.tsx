@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
+import { BarrasGrafico, DonaGrafico } from '../../core/ui/Graficos';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { api } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
@@ -18,41 +19,6 @@ function arr<T>(r: unknown): T[] {
 }
 
 // ─── Componentes de visualización ────────────────────────────────────────────
-
-function Donut({ pct, color, label, size = 64 }: { pct: number; color: string; label?: string; size?: number }) {
-  const r = 15.9155;
-  const circ = 2 * Math.PI * r;
-  const dash = (Math.max(0, Math.min(100, pct)) / 100) * circ;
-  return (
-    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg width={size} height={size} viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx="18" cy="18" r={r} fill="none" stroke="var(--fill-3)" strokeWidth="3.5" />
-        <circle cx="18" cy="18" r={r} fill="none" stroke={color} strokeWidth="3.5"
-          strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round" />
-      </svg>
-      {label !== undefined && (
-        <span style={{ position: 'absolute', fontSize: size < 60 ? '0.7rem' : '0.85rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color }}>
-          {label}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function BarraKpi({ label, valor, total, color }: { label: string; valor: number; total: number; color: string }) {
-  const pct = total > 0 ? Math.round((valor / total) * 100) : 0;
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, marginBottom: 3 }}>
-        <span style={{ color: 'var(--label-2)' }}>{label}</span>
-        <span style={{ fontFamily: 'var(--font-mono)', color }}>{valor} <span style={{ color: 'var(--label-2)', fontWeight: 400 }}>/ {total}</span></span>
-      </div>
-      <div style={{ height: 5, borderRadius: 99, background: 'var(--fill-3)', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99, transition: 'width 600ms ease' }} />
-      </div>
-    </div>
-  );
-}
 
 function KpiCard({ icon, label, valor, sub, color, onClick }: {
   icon: React.ReactNode; label: string; valor: number | string; sub?: string; color?: string; onClick?: () => void;
@@ -234,6 +200,16 @@ export function MantDashboardPage() {
             </div>
           </div>
 
+          {otsData.length > 0 && (
+            <div style={{ background: 'var(--fill-1)', borderRadius: 'var(--radius-2)', padding: 'var(--s-3)', marginTop: 'calc(-1 * var(--s-2))' }}>
+              <BarrasGrafico porciones={[
+                { nombre: 'Pendientes', valor: otsPendientes, color: 'var(--amber-ink)' },
+                { nombre: 'En proceso', valor: otsProceso, color: 'var(--accent)' },
+                { nombre: 'Cerradas hoy', valor: otsCerradasHoy, color: 'var(--green-ink)' },
+              ]} />
+            </div>
+          )}
+
           {/* ─── Fallas en ruta ──────────────────────────────────────── */}
           {(fallasStats.abiertas ?? 0) > 0 && (
             <div>
@@ -265,14 +241,11 @@ export function MantDashboardPage() {
               <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--label-2)', textTransform: 'uppercase', marginBottom: 'var(--s-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Truck size={13} /> Disponibilidad de flota
               </div>
-              <div style={{ background: 'var(--fill-1)', borderRadius: 'var(--radius-2)', padding: 'var(--s-3)', display: 'flex', gap: 'var(--s-4)', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Donut pct={pctOperativa} color="var(--green-ink)" label={`${pctOperativa}%`} size={76} />
-                </div>
-                <div style={{ flex: 1, minWidth: 160, display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-                  <BarraKpi label="Operativas" valor={flotaOperativa} total={flotaTotal} color="var(--green-ink)" />
-                  <BarraKpi label="En taller / rampa" valor={flotaEnTaller} total={flotaTotal} color="var(--amber-ink)" />
-                </div>
+              <div style={{ background: 'var(--fill-1)', borderRadius: 'var(--radius-2)', padding: 'var(--s-3)' }}>
+                <DonaGrafico centro={`${pctOperativa}%`} porciones={[
+                  { nombre: 'Operativas', valor: flotaOperativa, color: 'var(--green-ink)' },
+                  { nombre: 'En taller / rampa', valor: flotaEnTaller, color: 'var(--amber-ink)' },
+                ]} />
               </div>
               {placasEnRampa.length > 0 && (
                 <div style={{ marginTop: 'var(--s-2)', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -316,14 +289,12 @@ export function MantDashboardPage() {
                 <CheckCircle size={13} /> Inspecciones
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-                <div style={{ background: 'var(--fill-1)', borderRadius: 'var(--radius-2)', padding: 'var(--s-3)', display: 'flex', gap: 'var(--s-4)', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Donut pct={pctVigentes} color="var(--green-ink)" label={`${pctVigentes}%`} size={76} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 160, display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-                    <BarraKpi label="Vigentes" valor={inspVigentes} total={totalInsp} color="var(--green-ink)" />
-                    <BarraKpi label="No vigentes / próximas a vencer" valor={inspVencidos + inspProximos} total={totalInsp} color="var(--red-ink)" />
-                  </div>
+                <div style={{ background: 'var(--fill-1)', borderRadius: 'var(--radius-2)', padding: 'var(--s-3)' }}>
+                  <DonaGrafico centro={`${pctVigentes}%`} porciones={[
+                    { nombre: 'Vigentes', valor: inspVigentes - inspProximos, color: 'var(--green-ink)' },
+                    { nombre: 'Por vencer (7 días)', valor: inspProximos, color: 'var(--amber-ink)' },
+                    { nombre: 'Vencidas', valor: inspVencidos, color: 'var(--red-ink)' },
+                  ]} />
                 </div>
 
                 {/* Próximas a vencer */}

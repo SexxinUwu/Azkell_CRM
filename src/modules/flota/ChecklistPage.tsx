@@ -2,7 +2,7 @@ import './flota.css';
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, ClipboardCheck, FileSpreadsheet, Plus, SearchX, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ClipboardCheck, FileSpreadsheet, Plus, SearchX, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -16,6 +16,7 @@ import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { fallaEstadoColor, useChecklist, type ReporteFalla } from './api';
 import { ReporteFallaNuevo } from './ReporteFallaNuevo';
+import { GenerarOTsSheet } from './GenerarOTsSheet';
 
 const TODOS = 'Todos';
 
@@ -27,6 +28,7 @@ export function ChecklistPage() {
   const [porEliminar, setPorEliminar] = useState<ReporteFalla | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const [nuevo, setNuevo] = useState(false);
+  const [generando, setGenerando] = useState<ReporteFalla | null>(null);
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
@@ -84,7 +86,9 @@ export function ChecklistPage() {
           falla={seleccionado}
           onVolver={() => setSeleccionado(null)}
           onEliminar={puedeEliminar ? () => setPorEliminar(seleccionado) : undefined}
+          onGenerarOTs={puedeCrear && !/final|anula/i.test(seleccionado.estado) ? () => setGenerando(seleccionado) : undefined}
         />
+        {generando && <GenerarOTsSheet falla={generando} open onClose={() => setGenerando(null)} />}
         <ConfirmSheet open={!!porEliminar} onClose={() => !eliminando && setPorEliminar(null)} onConfirm={eliminar} loading={eliminando}
           title={`¿Eliminar ${porEliminar?.folio ?? 'el reporte'}?`} message="Esta acción no se puede deshacer." confirmLabel="Eliminar" />
       </Page>
@@ -101,7 +105,7 @@ export function ChecklistPage() {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} reportes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Generar OTs y configurar sistemas', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/checklist') },
+              { label: 'Configurar sistemas de revisión', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/checklist') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNuevo(true)}>Nuevo reporte</Button>}
           </>
@@ -177,7 +181,9 @@ export function ChecklistPage() {
   );
 }
 
-function FallaDetalle({ falla, onVolver, onEliminar }: { falla: ReporteFalla; onVolver: () => void; onEliminar?: () => void }) {
+function FallaDetalle({ falla, onVolver, onEliminar, onGenerarOTs }: {
+  falla: ReporteFalla; onVolver: () => void; onEliminar?: () => void; onGenerarOTs?: () => void;
+}) {
   const color = fallaEstadoColor(falla);
   const placa = falla.placa_tracto || falla.placa_remolque || '—';
 
@@ -202,9 +208,10 @@ function FallaDetalle({ falla, onVolver, onEliminar }: { falla: ReporteFalla; on
         <button type="button" className="tarjeta__volver" onClick={onVolver}>
           <span style={{ fontSize: '1.2rem' }}>‹</span> Reporte de fallas
         </button>
-        {onEliminar && (
+        {(onGenerarOTs || onEliminar) && (
           <div className="tarjeta__barra-acciones">
-            <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>
+            {onGenerarOTs && <Button variant="primary" icon={<Wrench size={16} />} onClick={onGenerarOTs}>Generar OTs</Button>}
+            {onEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>}
           </div>
         )}
       </div>

@@ -1,7 +1,8 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Ban, CircleAlert, FileSpreadsheet, Fuel, Pencil, Plus, SearchX } from 'lucide-react';
+import { ArrowUpRight, Ban, CircleAlert, FileSpreadsheet, Fuel, Pencil, Plus, RefreshCw, SearchX, Upload } from 'lucide-react';
+import { ImportarValesSheet } from './ImportarValesSheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -47,6 +48,9 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
   const [abierto, setAbierto] = useState<Vale | null>(null);
   const [formulario, setFormulario] = useState<{ vale: Vale | null } | null>(null);
   const [porAnular, setPorAnular] = useState<Vale | null>(null);
+  const [importando, setImportando] = useState(false);
+  const [sincronizar, setSincronizar] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
   const [ocupado, setOcupado] = useState(false);
 
   useEffect(() => { setPagina(1); }, [search, estado, combustible, desde, hasta]);
@@ -112,7 +116,9 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${lista.length} de esta página`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Importar Excel, sincronizar y eliminación masiva', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico(marsisa ? 'operaciones/marsisa-combustible-vales' : 'operaciones/combustible-vales') },
+              { label: 'Importar desde Excel', icon: <Upload size={17} />, separado: true, onSelect: () => setImportando(true) },
+              { label: 'Sincronizar con MarsisaSoft', icon: <RefreshCw size={17} />, onSelect: () => setSincronizar(true) },
+              { label: 'Eliminación masiva', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico(marsisa ? 'operaciones/marsisa-combustible-vales' : 'operaciones/combustible-vales') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ vale: null })}>Nuevo vale</Button>}
           </>
@@ -202,6 +208,20 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
 
       <FormularioVale open={!!formulario} vale={formulario?.vale ?? null} cat={cat.data} modulo={modulo} onClose={() => setFormulario(null)} onGuardado={refrescar} />
 
+      <ImportarValesSheet open={importando} onClose={() => setImportando(false)} marsisa={marsisa} />
+      <ConfirmSheet open={sincronizar} onClose={() => !sincronizando && setSincronizar(false)} loading={sincronizando}
+        title="¿Sincronizar vales con MarsisaSoft?" message="Trae los vales nuevos desde la base externa. Los que ya existen no se duplican."
+        confirmLabel="Sincronizar"
+        onConfirm={async () => {
+          setSincronizando(true);
+          try {
+            const r = await api<{ mensaje?: string }>('/combustible/sincronizar-remoto', { method: 'POST' });
+            haptic('success'); toast(r.mensaje ?? 'Sincronización completada');
+            setSincronizar(false);
+            await refrescar();
+          } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+          finally { setSincronizando(false); }
+        }} />
       <ConfirmSheet open={!!porAnular} onClose={() => !ocupado && setPorAnular(null)} onConfirm={anular} loading={ocupado}
         title="¿Anular este vale?" message="Queda marcado como ANULADO y deja de contar en los totales." confirmLabel="Anular" />
     </Page>

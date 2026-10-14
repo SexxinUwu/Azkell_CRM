@@ -151,6 +151,34 @@ export function trabajoKmHoras(t: TrabajoOT): string {
   return '—';
 }
 
+// ─── OTs hijas de una visita (rampa) ────────────────────────────────────────
+
+export interface OTHija {
+  id_ot: string;
+  ticket_visita: string | null;
+  tipo_ot: string | null;
+  sub_tipo: string | null;
+  estado: string | null;
+  fecha_creacion?: string | null;
+}
+
+/** Órdenes de trabajo hijas de una visita, por su ticket de entrada */
+export function useOTsHijas(ticket: string | null) {
+  return useQuery<OTHija[]>({
+    queryKey: ['mant', 'ots-hijas', ticket],
+    enabled: !!ticket,
+    queryFn: () => api<{ data?: OTHija[] }>(`/taller/trabajos/${encodeURIComponent(ticket ?? '')}`).then(r => r.data ?? []),
+    staleTime: 10_000,
+  });
+}
+
+export const crearOTHija = (ticket: string, tipo_ot: string, sub_tipo: string, usuario: string) =>
+  api<{ data?: string; id_ot?: string }>('/taller/generar_ot', { method: 'POST', body: { ticket_visita: ticket, tipo_ot, sub_tipo, usuario } });
+
+/** Elimina la rampa y, con ella, todas sus OTs, trabajos e inspecciones (el servidor lo hace en cadena) */
+export const eliminarRampaRegistro = (id: string, usuario: string) =>
+  api<{ ok: boolean }>(`/taller-rampas/${encodeURIComponent(id)}`, { method: 'DELETE', body: { usuario } });
+
 export function useTrabajosOT() {
   return useQuery<TrabajoOT[]>({
     queryKey: ['mant', 'trabajos-ot'],

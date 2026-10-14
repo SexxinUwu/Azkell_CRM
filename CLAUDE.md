@@ -284,7 +284,7 @@ if (el) { el.style.display = 'none'; }
 - [x] ~~Stubs de Almacén, Mantenimiento, Operaciones, Tesorería y Sistema~~ — todos tienen implementación real en `src/modules/` (la lista de stubs anterior estaba desactualizada). Operaciones: varias pantallas redirigen al clásico por decisión.
 - [x] ~~`MantDashboardPage.tsx`: conectar endpoints reales~~ — ahora usa `/taller-rampas` (ocupación real de rampas; `/taller/status` existe en `server.js` pero lista OTs, no rampas) y vigencia de inspecciones con `evaluarCiclo` (antes adivinaba campos que no existen).
 - [x] ~~`gerencia/DashboardPage.tsx`: conectar endpoints reales~~ — ahora usa `/taller-rampas` y los campos de inventario correctos (`stock_actual` / `stock_min`).
-- [ ] Decidir librería de gráficos: SVG inline (la usan ambos dashboards) vs Recharts/Tremor. Hoy SVG inline funciona; solo hay que decidir si se mantiene.
+- [x] ~~Librería de gráficos~~: **Recharts 3.10.1** (fijada). Tremor se descartó porque exige Tailwind y este proyecto usa CSS propio. Los donuts SVG a mano se retiraron.
 - [ ] `mant-dashboard` y `dashboard` (Centro de Comando) siguen con gráficos Chart.js en el clásico; la versión React es un resumen.
 
 - [x] ~~Inventario: filtro de familias tapaba la lista~~ — ahora es una casilla desplegable multiselect (`src/core/ui/MultiSelect.tsx`).
@@ -301,18 +301,18 @@ Todas las pantallas del menú ya tienen versión React con **datos reales y escr
 **Hecho (con alta/edición/acciones/Excel):** Recepción de compras, Kardex, Planificación, Trabajos de OT, Status de rampa (ingresar/editar/liberar/reactivar/evidencia), Disponibilidad, Documentos de flota, Reporte de fallas (nuevo con fotos y firma, eliminar), Entrega de vehículos (acta con inventario y firmas), Checklist de entrega, Bancos, Centros de costos y motivos, Liquidaciones (compensación), Cuentas por cobrar, Caja, Asistencia (tareo), Nómina (planilla y SST), Clientes, Proveedores (directorio), Integraciones (Wialon/SUNAT), Órdenes de viaje (+Marsisa), Vales de combustible (+Marsisa), Órdenes de servicio (estado), Guías de remitente y transportista (emitir/sincronizar), Análisis de combustible y urea (auditoría), Programación (agenda), Garita (salida/retorno), Panel patrimonial (registro por corte), Portal del conductor (gastos).
 
 **Pendiente en el clásico (por diseño, con enlace):**
-- [ ] Reporte de fallas: **generar OTs** hacia Status de rampa y configurar sistemas.
-- [ ] Status de rampa: crear OT/trabajos desde la rampa y **eliminar rampa** (borra OTs hijas).
+- [x] ~~Reporte de fallas: **generar OTs**~~ — `GenerarOTsSheet.tsx` (desde el detalle del reporte). Configurar sistemas de revisión sigue en el clásico.
+- [x] ~~Status de rampa: crear OT y **eliminar rampa**~~ — "Nueva OT" en la visita y "Eliminar" con confirmación (borra OTs hijas en cadena).
 - [ ] Órdenes de viaje: rutas y órdenes de servicio del viaje, gastos del viaje, importación.
 - [ ] Órdenes de servicio: **crear/editar** con documentos, rutas y costos.
 - [ ] Guías de remitente/transportista: **redactar guía nueva**, emisión masiva y credenciales.
-- [ ] Vales: importación masiva de Excel, sincronización remota y eliminación masiva.
+- [~] Vales: importación de Excel y sincronización con MarsisaSoft hechas en React (`ImportarValesSheet.tsx`); **eliminación masiva** sigue en el clásico (necesita selección de filas).
 - [ ] Cuentas por cobrar: importación masiva y cambio de factura con nota de crédito.
 - [ ] Garita: checklist de revisión, fotos y PDF; Entrega de vehículos: croquis de daños y PDF.
 - [ ] Planificación: importar Excel, tipos de MP, kits y alertas.
 - [ ] Análisis de combustible: matriz de rendimiento y telemetría Wialon.
 - [ ] Trabajos de OT: importación masiva.
-- [ ] Centro de Comando: gráficos Chart.js completos (en React hay resumen con SVG).
+- [x] ~~Centro de Comando y dashboard de mantenimiento: gráficos~~ — con Recharts (`src/core/ui/Graficos.tsx`: dona y barras que siguen el tema). Faltan los gráficos por flota del Centro de Comando clásico (motoras / no motoras), que no están en React.
 
 ### 🧪 Pruebas en navegador (sin verificar)
 - [ ] Almacén > Inventario: KPIs cambian al buscar y el Excel exporta solo lo filtrado (`modulos/almacen/inventario/logica.js`).
@@ -326,7 +326,8 @@ Todas las pantallas del menú ya tienen versión React con **datos reales y escr
 - [x] ~~Cookies HttpOnly en frontend~~: en web el JWT ya no se guarda en `localStorage`; solo la bandera `fleet_sesion` ('1') y la cookie `azkell_session` autentica (el interceptor de `logica.js` envía `credentials: 'include'`). En Capacitor nativo se conserva `fleet_token` como respaldo (la cookie no cruza orígenes). Sesiones antiguas se migran solas al abrir. Servidor: `tokenDeSesion(req)` (cookie → Bearer) en `server.js` y `routes/perfil.js` para sesiones activas y `documentos-flota`. **Falta probar:** login, F5, cerrar sesión, Perfil > sesiones activas, y documentos de flota.
 - [~] **CSP estricta**: activa en modo SOLO REPORTE (`server.js`, Helmet). No bloquea; las violaciones salen en consola como `[CSP]` desde `/csp-report`. Siguiente: revisar avisos reales, ajustar la lista y pasar a bloqueo (quitar `reportOnly`).
 - [x] ~~Desacople de `cdn.tailwindcss.com` en reportes OT/Inspecciones~~ — ya usan `/libs/tailwind.min.js` local; en `Index.html` solo queda el filtro del aviso.
-- [x] ~~**Audit trail criptográfico**~~: `log_auditoria` firma HMAC-SHA256 y ahora guarda `antes` / `despues` con `firma_estado`. "Después" = respuesta del servidor (automático); "antes" = el handler lo fija con `req.auditAntes = {...}` (aún ningún handler lo usa). Visible en Sistema > Auditoría > "Registro firmado".
+- [x] ~~**Audit trail criptográfico**~~: `log_auditoria` firma HMAC-SHA256 y guarda `antes` / `despues` con `firma_estado`. "Después" = respuesta del servidor (automático); "antes" = el handler lo fija con `req.auditAntes = {...}`. Ya lo usan `PUT /api/usuarios-v2/:id` y `PUT /api/perfil/me` (sin claves). Visible en Sistema > Auditoría > "Registro firmado".
+- [x] ~~**Cambio de contraseña manual**~~ (Mi cuenta): mínimo 10 caracteres, distinta de la actual, no común y no filtrada (consulta k-anonymity a la base de filtraciones; si el servicio no responde, no bloquea). Reglas en `services/politica_clave.js`, usadas por `/api/perfil/password` y `/api/cambiar-password`. Ya no se guarda la clave en `password_visible`. Tras cambiarla, usar la clave nueva al ingresar para que el navegador deje de avisar.
 
 **Seguridad ya activa:** JWT_SECRET obligatorio, cookie HttpOnly `azkell_session`, rate limiting (login 20/15min, general 600/min), Helmet (HSTS, frameguard), 2FA TOTP (Admin/Gerencia), `log_auditoria` firmada.
 

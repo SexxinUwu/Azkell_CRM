@@ -34,7 +34,8 @@ export function CambiarPasswordSheet({ open, onClose }: { open: boolean; onClose
     try {
       await api('/perfil/password', { method: 'PUT', body: { actual, nueva } });
       haptic('success');
-      toast('Contraseña actualizada');
+      // Al entrar con la clave nueva, el navegador la guarda y deja de avisar que la anterior se filtró
+      toast('Contraseña actualizada. Úsala en tu próximo ingreso.');
       onClose();
     } catch (err) { setError(errorMessage(err)); haptic('warning'); }
     finally { setEnviando(false); }
