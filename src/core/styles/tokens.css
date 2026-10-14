@@ -27,11 +27,12 @@
   --separator-strong: rgba(0, 0, 0, 0.14);
 
   /* ─── Acento naranja ─── */
-  --accent: #f56300;             /* relleno: marca, activo, interruptores */
-  --accent-hover: #e35b00;
-  --accent-ink: #c2410c;         /* texto naranja sobre blanco — 5.2:1 */
-  --accent-tint: rgba(245, 99, 0, 0.1);
-  --accent-ring: rgba(245, 99, 0, 0.32);
+  /* El color de la app se elige en Ajustes (core/lib/accent.ts) y llega en --accent-base */
+  --accent: var(--accent-base, #f56300);   /* relleno: marca, activo, interruptores */
+  --accent-hover: color-mix(in srgb, var(--accent) 88%, black);
+  --accent-ink: color-mix(in srgb, var(--accent) 72%, black);   /* texto de acento sobre claro */
+  --accent-tint: color-mix(in srgb, var(--accent) 11%, transparent);
+  --accent-ring: color-mix(in srgb, var(--accent) 34%, transparent);
 
   /* ─── Negro (acciones principales) ─── */
   --ink: #1d1d1f;
@@ -108,6 +109,105 @@
   --content-max: 76rem;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ─── Modo oscuro ───
+   Claro es el predeterminado. Oscuro con data-theme="dark"; "auto" sigue al sistema. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #000000;
+  --surface: #1c1c1e;
+  --surface-sunken: #161618;
+  --fill: rgba(235, 235, 245, 0.16);
+  --fill-strong: rgba(235, 235, 245, 0.24);
+  --fill-subtle: rgba(235, 235, 245, 0.08);
+
+  --label: #f5f5f7;
+  --label-2: #a1a1a6;
+  --label-3: #8e8e93;
+  --label-inverse: #1d1d1f;
+
+  --separator: rgba(255, 255, 255, 0.1);
+  --separator-strong: rgba(255, 255, 255, 0.18);
+
+  --accent-hover: color-mix(in srgb, var(--accent) 86%, white);
+  --accent-ink: color-mix(in srgb, var(--accent) 62%, white);   /* texto de acento sobre oscuro */
+
+  --ink: #f5f5f7;
+  --ink-hover: #d1d1d6;
+
+  --green: #30d158;  --green-ink: #4ade80;  --green-tint: rgba(48, 209, 88, 0.18);
+  --amber: #ff9f0a;  --amber-ink: #ffb340;  --amber-tint: rgba(255, 159, 10, 0.2);
+  --red: #ff453a;    --red-ink: #ff6961;    --red-tint: rgba(255, 69, 58, 0.2);
+  --gray: #636366;   --gray-ink: #aeaeb2;   --gray-tint: rgba(235, 235, 245, 0.14);
+
+  --material-bar: rgba(28, 28, 30, 0.72);
+  --material-sidebar: rgba(22, 22, 24, 0.82);
+  --material-sheet: rgba(28, 28, 30, 0.94);
+  --scrim: rgba(0, 0, 0, 0.55);
+
+  --glass: rgba(44, 44, 46, 0.62);
+  --glass-thick: rgba(44, 44, 46, 0.86);
+  --glass-lens: rgba(99, 99, 102, 0.55);
+  --glass-rim: inset 0 1px 0.5px rgba(255, 255, 255, 0.2), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  --glass-edge: 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+  --glass-shadow: var(--glass-rim), var(--glass-edge), 0 8px 24px rgba(0, 0, 0, 0.4), 0 24px 56px -16px rgba(0, 0, 0, 0.6);
+  --glass-shadow-sm: var(--glass-rim), var(--glass-edge), 0 2px 8px rgba(0, 0, 0, 0.35), 0 10px 24px -10px rgba(0, 0, 0, 0.55);
+  --glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 42%, rgba(255, 255, 255, 0) 60%);
+
+  --shadow-card: 0 0 0 0.5px rgba(255, 255, 255, 0.06), 0 2px 12px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 2px 6px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 4px 12px rgba(0, 0, 0, 0.5), 0 24px 64px rgba(0, 0, 0, 0.7);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='auto'] {
+  color-scheme: dark;
+
+  --bg: #000000;
+  --surface: #1c1c1e;
+  --surface-sunken: #161618;
+  --fill: rgba(235, 235, 245, 0.16);
+  --fill-strong: rgba(235, 235, 245, 0.24);
+  --fill-subtle: rgba(235, 235, 245, 0.08);
+
+  --label: #f5f5f7;
+  --label-2: #a1a1a6;
+  --label-3: #8e8e93;
+  --label-inverse: #1d1d1f;
+
+  --separator: rgba(255, 255, 255, 0.1);
+  --separator-strong: rgba(255, 255, 255, 0.18);
+
+  --accent-hover: color-mix(in srgb, var(--accent) 86%, white);
+  --accent-ink: color-mix(in srgb, var(--accent) 62%, white);   /* texto de acento sobre oscuro */
+
+  --ink: #f5f5f7;
+  --ink-hover: #d1d1d6;
+
+  --green: #30d158;  --green-ink: #4ade80;  --green-tint: rgba(48, 209, 88, 0.18);
+  --amber: #ff9f0a;  --amber-ink: #ffb340;  --amber-tint: rgba(255, 159, 10, 0.2);
+  --red: #ff453a;    --red-ink: #ff6961;    --red-tint: rgba(255, 69, 58, 0.2);
+  --gray: #636366;   --gray-ink: #aeaeb2;   --gray-tint: rgba(235, 235, 245, 0.14);
+
+  --material-bar: rgba(28, 28, 30, 0.72);
+  --material-sidebar: rgba(22, 22, 24, 0.82);
+  --material-sheet: rgba(28, 28, 30, 0.94);
+  --scrim: rgba(0, 0, 0, 0.55);
+
+  --glass: rgba(44, 44, 46, 0.62);
+  --glass-thick: rgba(44, 44, 46, 0.86);
+  --glass-lens: rgba(99, 99, 102, 0.55);
+  --glass-rim: inset 0 1px 0.5px rgba(255, 255, 255, 0.2), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  --glass-edge: 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+  --glass-shadow: var(--glass-rim), var(--glass-edge), 0 8px 24px rgba(0, 0, 0, 0.4), 0 24px 56px -16px rgba(0, 0, 0, 0.6);
+  --glass-shadow-sm: var(--glass-rim), var(--glass-edge), 0 2px 8px rgba(0, 0, 0, 0.35), 0 10px 24px -10px rgba(0, 0, 0, 0.55);
+  --glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 42%, rgba(255, 255, 255, 0) 60%);
+
+  --shadow-card: 0 0 0 0.5px rgba(255, 255, 255, 0.06), 0 2px 12px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 2px 6px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 4px 12px rgba(0, 0, 0, 0.5), 0 24px 64px rgba(0, 0, 0, 0.7);
+  }
 }
 
 /* Transparencia reducida: materiales sólidos, sin desenfoque */

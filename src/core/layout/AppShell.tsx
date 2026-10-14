@@ -12,6 +12,7 @@ import { Sheet } from '../ui/Sheet';
 import { BrandMark, Wordmark } from './BrandMark';
 import { ModuleDock, type DockItem } from './ModuleDock';
 import { AccentPicker } from '../ui/AccentPicker';
+import { ThemeButton, ThemeSelector } from '../ui/ThemeToggle';
 import { ConnectionBanner } from './ConnectionBanner';
 import { AsistenteFab } from '../../modules/asistente/components/AsistenteFab';
 import { useLiveUpdates } from '../api/live';
@@ -111,10 +112,13 @@ export function AppShell() {
               <div className="user-chip__role">{user.roleName}</div>
             </div>
           </NavLink>
-          <button type="button" className="nav-item" style={{ width: '100%', marginTop: 'var(--s-1)' }} onClick={logout}>
-            <LogOut size={18} strokeWidth={1.9} />
-            Cerrar sesión
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-1)', marginTop: 'var(--s-1)' }}>
+            <button type="button" className="nav-item" style={{ flex: 1 }} onClick={logout}>
+              <LogOut size={18} strokeWidth={1.9} />
+              Cerrar sesión
+            </button>
+            <ThemeButton />
+          </div>
         </div>
       </aside>
 
@@ -122,6 +126,7 @@ export function AppShell() {
         <header className={`topbar${scrolled ? ' is-scrolled' : ''}`}>
           <Link to={homePath(can)} className="topbar__brand" aria-label="Inicio"><BrandMark size={28} /></Link>
           <div className="topbar__title" aria-hidden>{pageTitle}</div>
+          <ThemeButton className="topbar__tema" />
           <Link to="/perfil" className="topbar__avatar" aria-label="Mi cuenta">
             <Avatar name={user.name} size="sm" accent />
           </Link>
@@ -161,6 +166,11 @@ export function AppShell() {
           </span>
           <ChevronRight size={18} className="modulo-fila__flecha" />
         </NavLink>
+
+        <div className="more-section">
+          <div className="list__header">Apariencia</div>
+          <div className="list"><ThemeSelector /></div>
+        </div>
 
         <div className="more-section">
           <div className="list__header"><Palette size={14} style={{ verticalAlign: '-2px' }} /> Color de la app</div>

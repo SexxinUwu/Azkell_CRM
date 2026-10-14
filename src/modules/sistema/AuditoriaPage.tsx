@@ -68,6 +68,20 @@ interface Evento {
   ip: string;
 }
 
+/** Frase en lenguaje natural: "Administrador ingresó al sistema", "Ana creó …" */
+function frase(usuario: string, tipo: ReturnType<typeof clasificar>, accion: string, detalle: string, modulo: unknown): string {
+  const d = detalle.trim();
+  if (d && d.toLowerCase().startsWith(usuario.toLowerCase())) return d;
+  const bajo = `${accion} ${d}`.toLowerCase();
+  if (tipo === 'acceso') {
+    const salio = /cerr|cierre|logout/.test(bajo);
+    return `${usuario} ${salio ? 'cerró sesión' : 'ingresó al sistema'}${d && !/^(ingreso|cierre)/i.test(d) ? ` (${d})` : ''}`;
+  }
+  const verbo = { crear: 'creó', editar: 'modificó', eliminar: 'eliminó', otro: 'realizó una acción' }[tipo];
+  const donde = modulo ? ` en ${String(modulo)}` : '';
+  return d ? `${usuario} ${verbo}${donde}: ${d}` : `${usuario} ${verbo}${donde}`;
+}
+
 function aEvento(e: AuditoriaEntrada, i: number): Evento | null {
   const fecha = e.created_at ? new Date(e.created_at) : null;
   if (!fecha || Number.isNaN(fecha.getTime())) return null;
@@ -78,7 +92,7 @@ function aEvento(e: AuditoriaEntrada, i: number): Evento | null {
   return {
     id: e.id ?? i, fecha, usuario, tipo, accion,
     modulo: [e.modulo, e.submodulo].filter(Boolean).join(' / '),
-    texto: detalle || `${accion || 'Actividad'} en ${e.modulo || 'el sistema'}`,
+    texto: frase(usuario, tipo, accion, detalle, e.modulo),
     ip: String(e.ip ?? ''),
   };
 }

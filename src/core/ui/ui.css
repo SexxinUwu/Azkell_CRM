@@ -294,7 +294,7 @@ button.row:active { background: var(--fill); }
 .badge--green { background: var(--green-tint); color: var(--green-ink); }
 .badge--amber { background: var(--amber-tint); color: var(--amber-ink); }
 .badge--red { background: var(--red-tint); color: var(--red-ink); }
-.badge--ink { background: var(--ink); color: #fff; }
+.badge--ink { background: var(--ink); color: var(--label-inverse); }
 
 .dot {
   width: 0.5rem;
@@ -1037,3 +1037,12 @@ label.row__main { cursor: pointer; }
   font-size: 0.8125rem; font-weight: 600; color: var(--label-2); cursor: pointer;
 }
 
+
+/* ─── Selector de tema ─── */
+.theme-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); padding: var(--s-3) var(--s-4); }
+.theme-selector__op {
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-1);
+  padding: var(--s-3) var(--s-2); border: 0; border-radius: var(--r-md); cursor: pointer;
+  background: var(--fill); color: var(--label-2); font: inherit; font-size: 0.8125rem; font-weight: 600;
+}
+.theme-selector__op--sel { background: var(--ink); color: var(--label-inverse); }

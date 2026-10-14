@@ -3,6 +3,7 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { Avatar, Page, PageHeader } from '../../core/ui/Display';
 import { abrirClasico } from '../../core/layout/navigation';
 import { AccentPicker } from '../../core/ui/AccentPicker';
+import { ThemeSelector } from '../../core/ui/ThemeToggle';
 
 // Mi cuenta: datos de la sesión. Editar el perfil (foto, firma, contraseña) sigue en la versión actual.
 export function PerfilPage() {
@@ -28,6 +29,9 @@ export function PerfilPage() {
           <span className="c-secondary">{user.companyName}</span>
         </div>
       </div>
+
+      <div className="list__header" style={{ marginTop: 'var(--s-6)' }}>Apariencia</div>
+      <div className="list"><ThemeSelector /></div>
 
       <div className="list__header" style={{ marginTop: 'var(--s-6)' }}>Color de la app</div>
       <div className="list"><AccentPicker /></div>

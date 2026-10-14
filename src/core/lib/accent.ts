@@ -11,26 +11,19 @@ export const PALETA_ACENTO: { nombre: string; hex: string }[] = [
   { nombre: 'Rojo', hex: '#d92d20' },
   { nombre: 'Verde', hex: '#12a150' },
   { nombre: 'Turquesa', hex: '#0c8f9c' },
-  { nombre: 'Grafito', hex: '#3a3a3c' },
+  { nombre: 'Grafito', hex: '#636366' },
 ];
 
 export const ACENTO_POR_DEFECTO = PALETA_ACENTO[0].hex;
 
-const VARS = ['--accent', '--accent-hover', '--accent-ink', '--accent-tint', '--accent-ring'] as const;
 const esHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v);
 
-/** Aplica el color a toda la app (sin guardar). El texto de acento se oscurece para mantener contraste. */
+/** Aplica el color a toda la app (sin guardar). Los derivados (hover, texto, tinte) los calcula tokens.css,
+ *  distintos en claro y oscuro, a partir de --accent-base. */
 export function aplicarAcento(hex: string) {
   const el = document.documentElement.style;
-  if (!esHex(hex) || hex.toLowerCase() === ACENTO_POR_DEFECTO) {
-    VARS.forEach(v => el.removeProperty(v));
-    return;
-  }
-  el.setProperty('--accent', hex);
-  el.setProperty('--accent-hover', `color-mix(in srgb, ${hex} 88%, black)`);
-  el.setProperty('--accent-ink', `color-mix(in srgb, ${hex} 72%, black)`);
-  el.setProperty('--accent-tint', `color-mix(in srgb, ${hex} 11%, transparent)`);
-  el.setProperty('--accent-ring', `color-mix(in srgb, ${hex} 34%, transparent)`);
+  if (!esHex(hex) || hex.toLowerCase() === ACENTO_POR_DEFECTO) el.removeProperty('--accent-base');
+  else el.setProperty('--accent-base', hex);
 }
 
 export function acentoGuardado(): string {
