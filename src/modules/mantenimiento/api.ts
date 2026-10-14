@@ -182,7 +182,28 @@ export interface CatalogosTaller {
 export function useStatusRampa() {
   return useQuery<RampaEntrada[]>({
     queryKey: ['mant', 'rampas'],
-    queryFn: () => api('/taller-rampas'),
+    queryFn: () =>
+      api('/taller/status').then((r: unknown) => {
+        const rows = Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? []);
+        return (rows as Record<string, unknown>[]).map(row => ({
+          _id:            String(row.id_ot ?? ''),
+          id:             String(row.id_ot ?? ''),
+          rampa:          String(row.txtRampa ?? row.id_rampa ?? '—'),
+          placa:          row.placa ? String(row.placa) : null,
+          conductor:      row.creado_por ? String(row.creado_por) : null,
+          chofer:         null,
+          reportado_por:  row.creado_por ? String(row.creado_por) : null,
+          ticket_entrada: row.ticket_entrada ? String(row.ticket_entrada) : null,
+          fecha_ingreso:  row.fecha_ingreso  ? String(row.fecha_ingreso)  : null,
+          hora_ingreso:   null,
+          fecha_salida:   row.fecha_hora_salida ? String(row.fecha_hora_salida) : null,
+          situacion:      row.txtSituacion  ? String(row.txtSituacion)  : (row.fase_ot ? String(row.fase_ot) : null),
+          estado:         row.fase_ot       ? String(row.fase_ot)       : null,
+          color:          null,
+          km:             null,
+          observaciones:  null,
+        } as RampaEntrada));
+      }),
     staleTime: 20_000,
     refetchInterval: 60_000,
   });

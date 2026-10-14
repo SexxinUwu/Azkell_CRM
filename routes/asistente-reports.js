@@ -135,7 +135,7 @@ async function buildReport(db, user, tipo, query) {
   if (tipo === 'inspecciones') {
     const { fromKey, toKey } = resolveRange(query.desde, query.hasta);
     const rows = await db_query(targetDb,
-      'SELECT id, placa, fecha_ingreso, tipo, estado, km_tablero FROM inspecciones WHERE fecha_ingreso BETWEEN ? AND ? ORDER BY fecha_ingreso DESC LIMIT 3000',
+      'SELECT id, placa, fecha_ingreso, tipo_inspeccion, estado, km_tablero FROM inspecciones WHERE fecha_ingreso BETWEEN ? AND ? ORDER BY fecha_ingreso DESC LIMIT 3000',
       [fromKey, toKey]
     );
     const fmt = (f) => f instanceof Date ? f.toISOString().slice(0, 10) : (String(f || '').split('T')[0] || '');
@@ -146,7 +146,7 @@ async function buildReport(db, user, tipo, query) {
         { key: 'id', label: 'ID' },
         { key: 'placa', label: 'Placa' },
         { key: 'fecha_ingreso', label: 'Fecha' },
-        { key: 'tipo', label: 'Tipo' },
+        { key: 'tipo_inspeccion', label: 'Tipo' },
         { key: 'estado', label: 'Estado' },
         { key: 'km_tablero', label: 'Km tablero', type: 'number' },
       ],
@@ -154,7 +154,7 @@ async function buildReport(db, user, tipo, query) {
         id: r.id ?? '',
         placa: r.placa ?? '',
         fecha_ingreso: fmt(r.fecha_ingreso),
-        tipo: r.tipo ?? '',
+        tipo_inspeccion: r.tipo_inspeccion ?? '',
         estado: r.estado ?? '',
         km_tablero: r.km_tablero != null ? Number(r.km_tablero) : null,
       })),
