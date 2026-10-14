@@ -11,6 +11,7 @@ const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const speakeasy = require('speakeasy');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 const fs = require('fs');
@@ -2403,6 +2404,18 @@ app.post('/api/login', (req, res) => {
             if (passwordValida) {
                 if (usuario.estado === 'Inactivo' && loginInput.toLowerCase() !== 'admin@azkell.com') {
                     return res.json({ exito: false, mensaje: "Cuenta inactiva." });
+                }
+
+                const fa = await new Promise((resolve) => db.query(
+                    'SELECT totp_secret, totp_activo FROM usuarios_2fa WHERE usuario_id=?',
+                    [usuario.idUsuario],
+                    (e, rows) => resolve(e ? null : rows?.[0])
+                ));
+                if (fa?.totp_activo) {
+                    const codigo = String(req.body.totp_code || '').replace(/\s/g, '');
+                    if (!codigo) return res.json({ exito: false, requiere2fa: true, mensaje: 'Ingresa el código de tu app de autenticación.' });
+                    const codigoValido = speakeasy.totp.verify({ secret: fa.totp_secret, encoding: 'base32', token: codigo, window: 1 });
+                    if (!codigoValido) return res.json({ exito: false, requiere2fa: true, mensaje: 'Código 2FA incorrecto.' });
                 }
 
                 let permisosFinales;

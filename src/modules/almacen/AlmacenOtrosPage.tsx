@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowUpRight, Boxes, ClipboardCheck, FileText, Layers, PackagePlus, Tag, Ruler, Cog, Warehouse, History } from 'lucide-react';
+import { ArrowUpRight, Boxes, ClipboardCheck, Layers, PackagePlus, Tag, Ruler, Cog, Warehouse, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Page, PageHeader } from '../../core/ui/Display';
 import { MenuOtros } from '../../core/ui/MenuOtros';
@@ -71,11 +71,11 @@ export function AlmacenOtrosPage() {
 
   const compras: Tarjeta[] = [
     {
-      titulo: 'Órdenes de compra',
-      descripcion: 'Crea y gestiona requerimientos de compra a proveedores.',
-      icon: <FileText size={20} />,
+      titulo: 'Proveedores',
+      descripcion: 'Directorio de proveedores para las órdenes de compra.',
+      icon: <Warehouse size={20} />,
       color: 'var(--accent)',
-      accion: () => abrirClasico('almacen/ordenes-compra'),
+      accion: () => nav('/almacen/proveedores'),
     },
     {
       titulo: 'Aprobación de O/C',
@@ -89,9 +89,7 @@ export function AlmacenOtrosPage() {
       descripcion: 'Registra la entrada de mercadería recibida de proveedores.',
       icon: <PackagePlus size={20} />,
       color: 'var(--amber-ink)',
-      accion: () => nav('/almacen/recepcion-compras'),
-      esBadge: 'Nuevo',
-    },
+      accion: () => nav('/almacen/recepcion-compras'),    },
   ];
 
   const catalogos: Tarjeta[] = [
@@ -100,57 +98,43 @@ export function AlmacenOtrosPage() {
       descripcion: 'Categorías para clasificar el inventario.',
       icon: <Layers size={20} />,
       color: 'var(--accent)',
-      accion: () => nav('/almacen/familias'),
-      esBadge: 'Nuevo',
-    },
+      accion: () => nav('/almacen/familias'),    },
     {
       titulo: 'Marcas',
       descripcion: 'Marcas registradas en el catálogo de almacén.',
       icon: <Tag size={20} />,
       color: 'var(--accent)',
-      accion: () => nav('/almacen/marcas'),
-      esBadge: 'Nuevo',
-    },
+      accion: () => nav('/almacen/marcas'),    },
     {
       titulo: 'Unidades de medida',
       descripcion: 'Unidades para el manejo de stock (kg, und, lt, etc.).',
       icon: <Ruler size={20} />,
       color: 'var(--accent)',
-      accion: () => nav('/almacen/unidades'),
-      esBadge: 'Nuevo',
-    },
+      accion: () => nav('/almacen/unidades'),    },
     {
       titulo: 'Sistemas del vehículo',
       descripcion: 'Clasificación de sistemas para repuestos y mantenimiento.',
       icon: <Cog size={20} />,
       color: 'var(--accent)',
-      accion: () => nav('/almacen/sistemas'),
-      esBadge: 'Nuevo',
-    },
+      accion: () => nav('/almacen/sistemas'),    },
     {
       titulo: 'Almacenes',
       descripcion: 'Configuración de bodegas y ubicaciones físicas.',
       icon: <Warehouse size={20} />,
       color: 'var(--accent)',
-      accion: () => nav('/almacen/almacenes'),
-      esBadge: 'Nuevo',
-    },
+      accion: () => nav('/almacen/almacenes'),    },
     {
       titulo: 'Inventario completo',
       descripcion: 'Vista general con todos los artículos y stock actual.',
       icon: <Boxes size={20} />,
       color: 'var(--accent)',
-      accion: () => nav('/almacen/inventario'),
-      esBadge: 'Nuevo',
-    },
+      accion: () => nav('/almacen/inventario'),    },
     {
       titulo: 'Kardex de movimientos',
       descripcion: 'Historial completo de entradas y salidas por artículo.',
       icon: <History size={20} />,
       color: 'var(--label-2)',
-      accion: () => nav('/almacen/kardex'),
-      esBadge: 'Nuevo',
-    },
+      accion: () => nav('/almacen/kardex'),    },
   ];
 
   return (

@@ -2,13 +2,13 @@ import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { ArrowUpRight, CheckCircle, Coins, SearchX, XCircle } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PageLoader } from '../../core/ui/Button';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
+import { Sheet } from '../../core/ui/Sheet';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
-import { SlideUpModal, ModalBtn } from '../../core/ui/SlideUpModal';
 
 interface CajaMov {
   id: string | number;
@@ -223,17 +223,16 @@ export function AprobacionesCajaPage() {
       )}
 
       {/* Modal de confirmación */}
-      <SlideUpModal
+      <Sheet
         open={!!accion}
         onClose={() => { setAccion(null); setMotivoAnulacion(''); }}
         title={accion?.tipo === 'aprobar' ? 'Aprobar movimiento' : 'Anular movimiento'}
-        subtitle={accion?.tipo === 'aprobar' ? 'Se marcará este movimiento como APROBADO.' : 'Se marcará como ANULADO. Esta acción no se puede deshacer.'}
         footer={
           <>
-            <ModalBtn variant="ghost" onClick={() => { setAccion(null); setMotivoAnulacion(''); }}>Cancelar</ModalBtn>
-            <ModalBtn variant={accion?.tipo === 'aprobar' ? 'primary' : 'danger'} onClick={ejecutarAccion} loading={procesando}>
+            <Button variant="secondary" onClick={() => { setAccion(null); setMotivoAnulacion(''); }}>Cancelar</Button>
+            <Button variant={accion?.tipo === 'aprobar' ? 'primary' : 'danger'} onClick={ejecutarAccion} loading={procesando}>
               {accion?.tipo === 'aprobar' ? 'Confirmar aprobación' : 'Confirmar anulación'}
-            </ModalBtn>
+            </Button>
           </>
         }
       >
@@ -255,7 +254,7 @@ export function AprobacionesCajaPage() {
             Confirma que deseas aprobar este movimiento de caja.
           </div>
         )}
-      </SlideUpModal>
+      </Sheet>
     </Page>
   );
 }

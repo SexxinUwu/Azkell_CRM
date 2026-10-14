@@ -2,13 +2,13 @@ import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { ArrowUpRight, CheckCircle, ClipboardCheck, SearchX, XCircle } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PageLoader } from '../../core/ui/Button';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
+import { Sheet } from '../../core/ui/Sheet';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
-import { SlideUpModal, ModalBtn } from '../../core/ui/SlideUpModal';
 
 interface OC {
   id: string | number;
@@ -206,17 +206,16 @@ export function AprobacionesOCPage() {
       )}
 
       {/* Modal de confirmación */}
-      <SlideUpModal
+      <Sheet
         open={!!accion}
         onClose={() => { setAccion(null); setComentario(''); }}
         title={accion?.tipo === 'aprobar' ? 'Aprobar OC' : 'Rechazar OC'}
-        subtitle={accion?.tipo === 'aprobar' ? 'Se marcará esta orden de compra como aprobada.' : 'Se marcará como rechazada. Esta acción se registrará en el sistema.'}
         footer={
           <>
-            <ModalBtn variant="ghost" onClick={() => { setAccion(null); setComentario(''); }}>Cancelar</ModalBtn>
-            <ModalBtn variant={accion?.tipo === 'aprobar' ? 'primary' : 'danger'} onClick={ejecutarAccion} loading={procesando}>
+            <Button variant="secondary" onClick={() => { setAccion(null); setComentario(''); }}>Cancelar</Button>
+            <Button variant={accion?.tipo === 'aprobar' ? 'primary' : 'danger'} onClick={ejecutarAccion} loading={procesando}>
               {accion?.tipo === 'aprobar' ? 'Confirmar aprobación' : 'Confirmar rechazo'}
-            </ModalBtn>
+            </Button>
           </>
         }
       >
@@ -232,7 +231,7 @@ export function AprobacionesOCPage() {
             style={{ width: '100%', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', padding: '8px 10px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
           />
         </div>
-      </SlideUpModal>
+      </Sheet>
     </Page>
   );
 }

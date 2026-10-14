@@ -28,14 +28,17 @@ interface AuthState {
   status: 'loading' | 'authenticated' | 'anonymous';
   user: SessionUser | null;
   permissions: Set<string>;
-  login: (email: string, password: string, remember?: boolean) => Promise<SessionUser>;
+  login: (email: string, password: string, remember?: boolean, codigo?: string) => Promise<SessionUser>;
   logout: () => Promise<void>;
   /** true si tiene al menos uno de los permisos (los administradores, siempre) */
   can: (...perms: string[]) => boolean;
   refresh: () => Promise<void>;
 }
 
-interface LoginResponse { exito: boolean; mensaje?: string; token?: string; nombre?: string; dni?: string; rol?: string; permisos?: unknown }
+/** La contraseña es correcta, pero la cuenta tiene 2FA y falta el código */
+export class Requiere2FA extends Error {}
+
+interface LoginResponse { exito: boolean; requiere2fa?: boolean; mensaje?: string; token?: string; nombre?: string; dni?: string; rol?: string; permisos?: unknown }
 interface PerfilResponse { nombre?: string; correo?: string; rol?: string; permisos?: unknown }
 interface EmpresaResponse { empresa_nombre?: string }
 
@@ -108,9 +111,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, clear);
   }, [clear]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await api<LoginResponse>('/login', { method: 'POST', body: { correo: email, password } });
+  const login = useCallback(async (email: string, password: string, _remember?: boolean, codigo?: string) => {
+    const res = await api<LoginResponse>('/login', { method: 'POST', body: { correo: email, password, totp_code: codigo } });
     // La API actual responde 200 con exito:false ante datos incorrectos
+    if (res.requiere2fa) throw new Requiere2FA(res.mensaje);
     if (!res.exito || !res.token) throw new ApiError(401, res.mensaje || 'Correo o contraseña incorrectos.');
     tokenStore.set(res.token);
     try {

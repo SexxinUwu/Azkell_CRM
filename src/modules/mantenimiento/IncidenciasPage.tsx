@@ -1,31 +1,79 @@
 import './mant.css';
-import { useState } from 'react';
-import { ArrowLeft, ArrowRight, ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, Plus, ShieldCheck } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { errorMessage } from '../../core/api/client';
+import { Sheet } from '../../core/ui/Sheet';
+import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { useIncidencias, type IncidenciaRuta } from './api';
 
 const LIMITE = 50;
+const SOLUCION_INICIAL = { fecha_falla: '', placa: '', conductor: '', motivo: '', falla: '', ubicacion: '', area_responsable: 'Mantenimiento', solucionado: 'Pendiente', observaciones: '' };
+
+interface CatalogoIncidencias {
+  data: { placa: string; marca: string; tipo: string }[];
+  conductores: string[];
+}
+
+const campo = { width: '100%', boxSizing: 'border-box' as const, padding: '8px 11px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', fontSize: '0.875rem' };
+const etiqueta = { fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 4 };
 
 export function IncidenciasPage() {
+  const qc = useQueryClient();
   const [pagina, setPagina] = useState(1);
   const [busqueda, setBusqueda] = useState('');
   const [busquedaActiva, setBusquedaActiva] = useState('');
   const [seleccionada, setSeleccionada] = useState<IncidenciaRuta | null>(null);
+  const [mostrarForm, setMostrarForm] = useState(false);
+  const [form, setForm] = useState(SOLUCION_INICIAL);
+  const [enviando, setEnviando] = useState(false);
+  const [errorForm, setErrorForm] = useState('');
 
   const { data, isLoading, isError, error, isFetching } = useIncidencias(pagina, LIMITE, busquedaActiva);
   const items = data?.data ?? [];
   const total = data?.total ?? 0;
   const totalPaginas = Math.ceil(total / LIMITE) || 1;
 
+  const catalogo = useQuery<CatalogoIncidencias>({
+    queryKey: ['mant', 'incidencias', 'catalogo'],
+    queryFn: () => api<CatalogoIncidencias>('/mantenimiento/incidencias-ruta/catalogo-placas'),
+    enabled: mostrarForm,
+    staleTime: 5 * 60_000,
+  });
+
   function buscar() {
     setBusquedaActiva(busqueda);
     setPagina(1);
+  }
+
+  function abrirRegistro() {
+    setForm(SOLUCION_INICIAL);
+    setErrorForm('');
+    setMostrarForm(true);
+  }
+
+  async function registrar(e: FormEvent) {
+    e.preventDefault();
+    if (!form.fecha_falla || !form.placa) {
+      setErrorForm('Fecha de falla y placa son obligatorios.');
+      return;
+    }
+    setEnviando(true);
+    setErrorForm('');
+    try {
+      await api('/mantenimiento/incidencias-ruta', { method: 'POST', body: form });
+      qc.invalidateQueries({ queryKey: ['mant', 'incidencias'] });
+      setMostrarForm(false);
+    } catch (err) {
+      setErrorForm(errorMessage(err));
+    } finally {
+      setEnviando(false);
+    }
   }
 
   const soloDetalle = !!seleccionada;
@@ -39,6 +87,7 @@ export function IncidenciasPage() {
           subtitle={isLoading ? 'Cargando…' : `${total} registros`}
           actions={
             <MenuOtros opciones={[
+              { label: 'Registrar incidencia', icon: <Plus size={17} />, onSelect: abrirRegistro },
               { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/incidencias-ruta') },
             ]} />
           }
@@ -125,6 +174,82 @@ export function IncidenciasPage() {
           )}
         </div>
       )}
+
+      <Sheet
+        open={mostrarForm}
+        onClose={() => setMostrarForm(false)}
+        title="Registrar incidencia en ruta"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setMostrarForm(false)}>Cancelar</Button>
+            <Button variant="primary" loading={enviando} onClick={() => document.getElementById('form-registrar-incidencia')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))}>
+              Registrar
+            </Button>
+          </>
+        }
+      >
+        <form id="form-registrar-incidencia" onSubmit={registrar} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+          {errorForm && <Notice tone="error">{errorForm}</Notice>}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={etiqueta}>Fecha y hora de la falla *</label>
+              <input type="datetime-local" value={form.fecha_falla} onChange={e => setForm(f => ({ ...f, fecha_falla: e.target.value }))} required style={campo} />
+            </div>
+            <div>
+              <label style={etiqueta}>Placa *</label>
+              <select value={form.placa} onChange={e => setForm(f => ({ ...f, placa: e.target.value }))} required style={campo}>
+                <option value="">Selecciona una placa</option>
+                {(catalogo.data?.data ?? []).map(p => <option key={p.placa} value={p.placa}>{p.placa}{p.marca ? ` · ${p.marca}` : ''}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={etiqueta}>Conductor</label>
+              <select value={form.conductor} onChange={e => setForm(f => ({ ...f, conductor: e.target.value }))} style={campo}>
+                <option value="">Sin asignar</option>
+                {(catalogo.data?.conductores ?? []).map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={etiqueta}>Ubicación</label>
+              <input value={form.ubicacion} onChange={e => setForm(f => ({ ...f, ubicacion: e.target.value }))} placeholder="Ruta, km o punto de referencia" style={campo} />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={etiqueta}>Motivo</label>
+              <input value={form.motivo} onChange={e => setForm(f => ({ ...f, motivo: e.target.value }))} placeholder="Ej: Parada por falla" style={campo} />
+            </div>
+            <div>
+              <label style={etiqueta}>Falla</label>
+              <input value={form.falla} onChange={e => setForm(f => ({ ...f, falla: e.target.value }))} placeholder="Ej: Fuga de aceite" style={campo} />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={etiqueta}>Área responsable</label>
+              <input value={form.area_responsable} onChange={e => setForm(f => ({ ...f, area_responsable: e.target.value }))} style={campo} />
+            </div>
+            <div>
+              <label style={etiqueta}>Estado</label>
+              <select value={form.solucionado} onChange={e => setForm(f => ({ ...f, solucionado: e.target.value }))} style={campo}>
+                <option value="Pendiente">Pendiente</option>
+                <option value="Atendido">Atendido</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label style={etiqueta}>Observaciones</label>
+            <textarea value={form.observaciones} onChange={e => setForm(f => ({ ...f, observaciones: e.target.value }))} rows={3} style={{ ...campo, resize: 'vertical' }} />
+          </div>
+        </form>
+      </Sheet>
     </Page>
   );
 }

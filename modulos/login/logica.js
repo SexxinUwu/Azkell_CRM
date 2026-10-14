@@ -15,13 +15,25 @@ async function iniciarSesion(event, formObj) {
     if(msg) msg.style.display = 'none';
 
     try {
+        const codigoInput = document.getElementById('codigo-2fa');
         const response = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ correo: formObj.correo.value, password: formObj.password.value })
+            body: JSON.stringify({ correo: formObj.correo.value, password: formObj.password.value, totp_code: codigoInput ? codigoInput.value : '' })
         });
 
         const respuesta = await response.json();
+
+        if (respuesta.requiere2fa) {
+            const bloque2fa = document.getElementById('bloque-2fa');
+            if (bloque2fa) bloque2fa.style.display = 'block';
+            if (codigoInput) { codigoInput.value = ''; codigoInput.focus(); }
+            if(window.showLoginToast) window.showLoginToast(respuesta.mensaje, 'error');
+            else if(msg) { msg.innerText = respuesta.mensaje; msg.style.display = 'block'; }
+            btn.classList.remove('loading');
+            btn.disabled = false;
+            return;
+        }
 
         if (respuesta.exito) {
             // Guardar o eliminar el correo según la opción "Recordarme"

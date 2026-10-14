@@ -2,13 +2,13 @@ import './mant.css';
 import { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowUpRight, CheckCircle, Plus, SearchX, Wrench } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PageLoader } from '../../core/ui/Button';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
+import { Sheet } from '../../core/ui/Sheet';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
-import { SlideUpModal, ModalBtn } from '../../core/ui/SlideUpModal';
 
 interface Falla {
   id: string | number;
@@ -232,18 +232,17 @@ export function FallasPage() {
       )}
 
       {/* Modal de reporte */}
-      <SlideUpModal
+      <Sheet
         open={mostrarForm}
         onClose={() => setMostrarForm(false)}
         title="Reportar falla en ruta"
-        subtitle="Registra la falla para alertar al taller y almacén"
         footer={
           <>
-            <ModalBtn variant="ghost" onClick={() => setMostrarForm(false)}>Cancelar</ModalBtn>
-            <ModalBtn variant="primary" type="submit" loading={enviando}
+            <Button variant="secondary" onClick={() => setMostrarForm(false)}>Cancelar</Button>
+            <Button variant="primary" loading={enviando}
               onClick={() => { document.getElementById('form-reportar-falla')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }}>
               Reportar falla
-            </ModalBtn>
+            </Button>
           </>
         }
       >
@@ -301,7 +300,7 @@ export function FallasPage() {
             </div>
           )}
         </form>
-      </SlideUpModal>
+      </Sheet>
     </Page>
   );
 }

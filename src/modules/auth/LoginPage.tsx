@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from 'motion/react';
 import { ArrowRight, Check, CircleAlert } from 'lucide-react';
-import { nombreEmpresa, useAuth } from '../../core/auth/AuthProvider';
+import { nombreEmpresa, Requiere2FA, useAuth } from '../../core/auth/AuthProvider';
 import { api, errorMessage } from '../../core/api/client';
 import { Spinner } from '../../core/ui/Button';
 import { Switch } from '../../core/ui/Switch';
@@ -43,6 +43,8 @@ export function LoginPage() {
   const [capsLock, setCapsLock] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [paso2fa, setPaso2fa] = useState(false);
+  const [codigo, setCodigo] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   const welcomeName = useRef('');
   // Si la sesión se cerró sola (inactividad), se explica una vez
@@ -67,7 +69,7 @@ export function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const user = await login(email.trim(), password, remember);
+      const user = await login(email.trim(), password, remember, paso2fa ? codigo.replace(/\s/g, '') : undefined);
       try {
         if (remember) localStorage.setItem(REMEMBERED_KEY, JSON.stringify({ email: user.email, name: firstName(user.name) }));
         else localStorage.removeItem(REMEMBERED_KEY);
@@ -77,6 +79,7 @@ export function LoginPage() {
       setLoading(false);
     } catch (err) {
       setLoading(false);
+      if (err instanceof Requiere2FA) { setPaso2fa(true); setCodigo(''); }
       setError(errorMessage(err));
       haptic('warning');
       // "No": la tarjeta niega con la cabeza, como el ingreso de macOS
@@ -187,6 +190,23 @@ export function LoginPage() {
                   <EyeIcon visible={showPassword} size={21} />
                 </button>
               </div>
+              {paso2fa && (
+                <div className="float">
+                  <input
+                    id="login-totp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder=" "
+                    maxLength={8}
+                    value={codigo}
+                    onChange={e => { setCodigo(e.target.value); setError(null); }}
+                    autoFocus
+                    required
+                  />
+                  <label htmlFor="login-totp">Código de verificación</label>
+                </div>
+              )}
             </div>
 
             <AnimatePresence initial={false}>
