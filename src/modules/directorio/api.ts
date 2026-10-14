@@ -12,6 +12,10 @@ export interface Cliente {
   direccion?: string | null;
   empresa?: string | null;
   activo?: boolean | number | null;
+  ruc_dni?: string | null;
+  estado?: string | null;          // Activo | Inactivo
+  notas?: string | null;
+  total_flota?: number | string | null;
   [key: string]: unknown;
 }
 
