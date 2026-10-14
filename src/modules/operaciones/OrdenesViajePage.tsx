@@ -2,7 +2,7 @@ import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowUpRight, CheckCircle2, CircleAlert, FileSpreadsheet, MapPin, Pencil, Play, Plus, SearchX, Trash2, Truck,
+  ArrowUpRight, CheckCircle2, CircleAlert, FileSpreadsheet, MapPin, Pencil, Play, Plus, RefreshCw, SearchX, Trash2, Truck,
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -14,6 +14,8 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
+import { OrdenServicioSheet } from './OrdenServicioSheet';
+import { SeccionGastosViaje, SeccionOrdenesServicioViaje } from './ViajeExtras';
 import { abrirClasico } from '../../core/layout/navigation';
 import { usePlacas } from '../placas/api';
 
@@ -76,6 +78,9 @@ export function OrdenesViajePage() {
   const [accion, setAccion] = useState<{ tipo: 'iniciar' | 'finalizar'; viaje: Viaje } | null>(null);
   const [porEliminar, setPorEliminar] = useState<Viaje | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [nuevaOS, setNuevaOS] = useState<string | null>(null);
+  const [sincronizar, setSincronizar] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
 
   const { data, isLoading, isError, error } = useViajes(q);
   const lista = data ?? [];
@@ -120,7 +125,8 @@ export function OrdenesViajePage() {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} viajes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Rutas, órdenes de servicio y gastos del viaje', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('operaciones/ordenes-viaje') },
+              ...(puedeCrear ? [{ label: 'Sincronizar con MarsisaSoft', icon: <RefreshCw size={17} />, separado: true, onSelect: () => setSincronizar(true) }] : []),
+              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: !puedeCrear, onSelect: () => abrirClasico('operaciones/ordenes-viaje') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ viaje: null })}>Nuevo viaje</Button>}
           </>
@@ -173,7 +179,22 @@ export function OrdenesViajePage() {
         onIniciar={puedeEditar && abierto?.estado === 'ACTIVO' ? () => setAccion({ tipo: 'iniciar', viaje: abierto }) : undefined}
         onFinalizar={puedeEditar && abierto?.estado === 'INICIADO' ? () => setAccion({ tipo: 'finalizar', viaje: abierto }) : undefined}
         onEliminar={puedeEliminar && abierto ? () => setPorEliminar(abierto) : undefined}
+        onNuevaOS={puedeEditar && abierto ? () => { setNuevaOS(abierto.viaje); setAbiertoId(null); } : undefined}
       />
+      <OrdenServicioSheet open={!!nuevaOS} orden={null} viajeInicial={nuevaOS ?? ''} onClose={() => { setNuevaOS(null); refrescar(); }} />
+      <ConfirmSheet open={sincronizar} onClose={() => !sincronizando && setSincronizar(false)} loading={sincronizando}
+        title="¿Sincronizar viajes con MarsisaSoft?" message="Trae los viajes nuevos desde la base externa. Los que ya existen no se duplican." confirmLabel="Sincronizar"
+        onConfirm={async () => {
+          setSincronizando(true);
+          try {
+            const r = await api<{ ok?: boolean; insertados?: number; syncSkipped?: boolean; error?: string; mensaje?: string }>('/operaciones/ordenes-viaje/sincronizar', { method: 'POST' });
+            if (r.ok === false) throw new Error(r.error || 'No se pudo sincronizar');
+            haptic('success'); toast(r.mensaje ?? `Sincronizados: ${r.insertados ?? 0} viajes nuevos`);
+            setSincronizar(false);
+            await refrescar();
+          } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+          finally { setSincronizando(false); }
+        }} />
       <FormularioViaje open={!!formulario} viaje={formulario?.viaje ?? null} usuario={user?.name ?? ''} onClose={() => setFormulario(null)} onGuardado={refrescar} />
       <AccionViaje accion={accion} usuario={user?.name ?? ''} onClose={() => setAccion(null)} onHecho={refrescar} />
       <ConfirmSheet open={!!porEliminar} onClose={() => !ocupado && setPorEliminar(null)} onConfirm={eliminar} loading={ocupado}
@@ -182,8 +203,8 @@ export function OrdenesViajePage() {
   );
 }
 
-function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onEliminar }: {
-  viaje: Viaje | null; onClose: () => void; onEditar?: () => void; onIniciar?: () => void; onFinalizar?: () => void; onEliminar?: () => void;
+function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onEliminar, onNuevaOS }: {
+  viaje: Viaje | null; onClose: () => void; onEditar?: () => void; onIniciar?: () => void; onFinalizar?: () => void; onEliminar?: () => void; onNuevaOS?: () => void;
 }) {
   const fila = (label: string, valor: unknown, mono = false) => (valor === null || valor === undefined || valor === '' ? null : (
     <div className="dato"><span className="dato__label">{label}</span><span className={`dato__valor${mono ? ' dato__valor--mono' : ''}`}>{String(valor)}</span></div>
@@ -216,6 +237,8 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
             {fila('Km inicial', v.kilometraje_inicial?.toLocaleString('es-PE'), true)}{fila('Km final', v.kilometraje_final?.toLocaleString('es-PE'), true)}
             {fila('Horas motor remolque', v.horas_motor_remolque, true)}{fila('Observaciones', v.observaciones)}{fila('Creado por', v.usuario_creacion)}
           </div>
+          <SeccionOrdenesServicioViaje codigo={v.viaje} onNueva={onNuevaOS ?? (() => undefined)} puedeCrear={!!onNuevaOS} />
+          <SeccionGastosViaje codigo={v.viaje} />
         </div>
       )}
     </Sheet>

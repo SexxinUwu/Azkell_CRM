@@ -285,7 +285,7 @@ if (el) { el.style.display = 'none'; }
 - [x] ~~`MantDashboardPage.tsx`: conectar endpoints reales~~ — ahora usa `/taller-rampas` (ocupación real de rampas; `/taller/status` existe en `server.js` pero lista OTs, no rampas) y vigencia de inspecciones con `evaluarCiclo` (antes adivinaba campos que no existen).
 - [x] ~~`gerencia/DashboardPage.tsx`: conectar endpoints reales~~ — ahora usa `/taller-rampas` y los campos de inventario correctos (`stock_actual` / `stock_min`).
 - [x] ~~Librería de gráficos~~: **Recharts 3.10.1** (fijada). Tremor se descartó porque exige Tailwind y este proyecto usa CSS propio. Los donuts SVG a mano se retiraron.
-- [ ] `mant-dashboard` y `dashboard` (Centro de Comando) siguen con gráficos Chart.js en el clásico; la versión React es un resumen.
+- [x] `mant-dashboard` y `dashboard` (Centro de Comando): gráficos migrados a Recharts en React (ver §13).
 
 - [x] ~~Inventario: filtro de familias tapaba la lista~~ — ahora es una casilla desplegable multiselect (`src/core/ui/MultiSelect.tsx`).
 - [x] ~~Ficha sin estilos (`.dato`, `.tarjeta__*`)~~ — el CSS compartido vivía en `personal.css`; movido a `src/core/ui/ui.css` (afectaba ~45 pantallas).
@@ -303,18 +303,19 @@ Todas las pantallas del menú ya tienen versión React con **datos reales y escr
 **Pendiente en el clásico (por diseño, con enlace):**
 - [x] ~~Reporte de fallas: **generar OTs**~~ — `GenerarOTsSheet.tsx` (desde el detalle del reporte). Configurar sistemas de revisión sigue en el clásico.
 - [x] ~~Status de rampa: crear OT y **eliminar rampa**~~ — "Nueva OT" en la visita y "Eliminar" con confirmación (borra OTs hijas en cadena).
-- [ ] Órdenes de viaje: rutas y órdenes de servicio del viaje, gastos del viaje, importación.
-- [ ] Órdenes de servicio: **crear/editar** con documentos, rutas y costos.
-- [ ] Guías de remitente/transportista: **redactar guía nueva**, emisión masiva y credenciales.
-- [~] Vales: importación de Excel y sincronización con MarsisaSoft hechas en React (`ImportarValesSheet.tsx`); **eliminación masiva** sigue en el clásico (necesita selección de filas).
-- [ ] Cuentas por cobrar: importación masiva y cambio de factura con nota de crédito.
-- [ ] Garita: checklist de revisión, fotos y PDF; Entrega de vehículos: croquis de daños y PDF.
-- [ ] Planificación: importar Excel, tipos de MP, kits y alertas.
-- [ ] Análisis de combustible: matriz de rendimiento y telemetría Wialon.
-- [ ] Trabajos de OT: importación masiva.
-- [x] ~~Centro de Comando y dashboard de mantenimiento: gráficos~~ — con Recharts (`src/core/ui/Graficos.tsx`: dona y barras que siguen el tema). Faltan los gráficos por flota del Centro de Comando clásico (motoras / no motoras), que no están en React.
+- [x] ~~Órdenes de viaje~~: órdenes de servicio del viaje (las rutas son sus OS, `SeccionOrdenesServicioViaje`), "Nueva OS" con el viaje precargado, gastos del viaje en solo lectura (depósitos y liquidaciones; se registran en Tesorería) y sincronización con MarsisaSoft (`ViajeExtras.tsx`).
+- [x] ~~Órdenes de servicio: **crear/editar**~~ con rutas, flete e impuesto, y guías (GRE) de "disponibles sin servicio" (`OrdenServicioSheet.tsx`).
+- [ ] Guías de remitente/transportista: **redactar guía nueva**, emisión masiva y credenciales. **Sin migrar a propósito:** emiten documentos a SUNAT (no reversible); requiere pruebas supervisadas en ambiente de prueba antes de pasar a React.
+- [x] ~~Vales~~: importación de Excel (`ImportarValesSheet.tsx`), sincronización con MarsisaSoft y eliminación masiva con selección.
+- [x] ~~Cuentas por cobrar~~: importación masiva (`importarCuentas.ts`, mismos encabezados que el clásico) y cambio de factura con nota de crédito (`NotaCreditoSheet.tsx`).
+- [~] Garita: checklist de revisión, firmas y fotos hechos en React (`garitaComponentes.tsx`). **PDF del registro** sigue en el clásico (acta HTML). Entrega de vehículos: **croquis de daños y PDF** siguen en el clásico (diagrama SVG + PDF por html2canvas); hay que validarlos visualmente contra el original antes de migrarlos.
+- [x] ~~Planificación~~: importar Excel (`ImportarPlanificacionSheet.tsx`), tipos de MP y destinatarios de alertas (`TiposAlertasPage.tsx`). Los kits ya tienen pantalla propia (`kits-mp`).
+- [x] ~~Análisis de combustible: matriz de rendimiento y telemetría Wialon~~: matriz en React (`MatrizRendimientoSheet.tsx`) y telemetría CAN Bus por viaje en el detalle (`TelemetriaViaje`). **Auditoría avanzada** del clásico (~2.200 líneas) sigue en la versión actual.
+- [x] ~~Trabajos de OT: importación masiva~~ (`ImportarTrabajosSheet.tsx`).
+- [x] ~~Centro de Comando y dashboard de mantenimiento: gráficos~~ — con Recharts (`src/core/ui/Graficos.tsx`). Centro de Comando: vigencia de inspecciones en total, motoras y no motoras; mantenimiento: disponibilidad y vigencia.
 
 ### 🧪 Pruebas en navegador (sin verificar)
+- [ ] **Almacén de flota** (Flota > Almacén de flota, nuevo): asignar artículos a una unidad (salida despachada con destino `Vehiculo`) y devolverlos (entrada de ajuste + `flota_devoluciones`). Endpoints en `routes/almacen-flota.js` (montado en `routes/almacen.js`). Probar con datos reales: saldo por unidad, stock del almacén antes/después y Kardex.
 - [ ] Almacén > Inventario: KPIs cambian al buscar y el Excel exporta solo lo filtrado (`modulos/almacen/inventario/logica.js`).
 - [ ] `server.js`: límite general 600 req/min (ya en el código; falta reiniciar el servidor para que aplique).
 - [ ] Almacén > Otros: tarjeta Kits MP abre el mismo módulo en `modulos/almacen/otros/vista.html` y `AlmacenOtrosPage.tsx`.

@@ -14,6 +14,8 @@ import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { fmtMonto, useCuentas, type CuentaPorCobrar } from './api';
+import { ImportarCuentasSheet } from './ImportarCuentasSheet';
+import { NotaCreditoSheet } from './NotaCreditoSheet';
 
 const ESTADOS = ['PENDIENTE', 'PAGADO', 'ANULADO'];
 const MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SETIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
@@ -49,6 +51,8 @@ export function CuentasPage() {
   const [formulario, setFormulario] = useState<{ cuenta: CuentaPorCobrar | null } | null>(null);
   const [pagando, setPagando] = useState<CuentaPorCobrar | null>(null);
   const [porEliminar, setPorEliminar] = useState<CuentaPorCobrar | null>(null);
+  const [importando, setImportando] = useState(false);
+  const [notaCredito, setNotaCredito] = useState<CuentaPorCobrar | null>(null);
   const [eliminando, setEliminando] = useState(false);
 
   const lista: CuentaPorCobrar[] = data ?? [];
@@ -107,7 +111,8 @@ export function CuentasPage() {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} registros`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Importar Excel y notas de crédito', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('tesoreria/cuentas') },
+              ...(puedeCrear ? [{ label: 'Importar desde Excel', icon: <FileSpreadsheet size={17} />, separado: true, onSelect: () => setImportando(true) }] : []),
+              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: !puedeCrear, onSelect: () => abrirClasico('tesoreria/cuentas') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ cuenta: null })}>Nuevo</Button>}
           </>
@@ -173,10 +178,13 @@ export function CuentasPage() {
         cuenta={abierta}
         onClose={() => setAbiertoId(null)}
         onEditar={puedeEditar && abierta ? () => setFormulario({ cuenta: abierta }) : undefined}
+        onNotaCredito={puedeEditar && abierta ? () => { setNotaCredito(abierta); setAbiertoId(null); } : undefined}
         onPagar={puedeEditar && abierta && String(abierta.estado_servicio).toUpperCase() === 'PENDIENTE' ? () => setPagando(abierta) : undefined}
         onEliminar={puedeEliminar && abierta && String(abierta.estado_servicio).toUpperCase() !== 'PAGADO' ? () => setPorEliminar(abierta) : undefined}
       />
       <FormularioCuenta open={!!formulario} cuenta={formulario?.cuenta ?? null} onClose={() => setFormulario(null)} />
+      <ImportarCuentasSheet open={importando} onClose={() => setImportando(false)} />
+      <NotaCreditoSheet cuenta={notaCredito} onClose={() => setNotaCredito(null)} />
       <PagoCuenta cuenta={pagando} onClose={() => setPagando(null)} usuario={user?.name ?? ''} />
       <ConfirmSheet open={!!porEliminar} onClose={() => !eliminando && setPorEliminar(null)} onConfirm={eliminar} loading={eliminando}
         title="¿Eliminar este registro?" message={porEliminar ? `${porEliminar.cliente ?? ''} · ${porEliminar.serie ?? ''}-${porEliminar.factura ?? ''}` : ''} confirmLabel="Eliminar" />
@@ -184,8 +192,8 @@ export function CuentasPage() {
   );
 }
 
-function DetalleCuenta({ cuenta: c, onClose, onEditar, onPagar, onEliminar }: {
-  cuenta: CuentaPorCobrar | null; onClose: () => void; onEditar?: () => void; onPagar?: () => void; onEliminar?: () => void;
+function DetalleCuenta({ cuenta: c, onClose, onEditar, onPagar, onEliminar, onNotaCredito }: {
+  cuenta: CuentaPorCobrar | null; onClose: () => void; onEditar?: () => void; onPagar?: () => void; onEliminar?: () => void; onNotaCredito?: () => void;
 }) {
   const fila = (label: string, valor: unknown, mono = false) => (valor === null || valor === undefined || valor === '' ? null : (
     <div className="dato"><span className="dato__label">{label}</span><span className={`dato__valor${mono ? ' dato__valor--mono' : ''}`}>{String(valor)}</span></div>
@@ -198,9 +206,10 @@ function DetalleCuenta({ cuenta: c, onClose, onEditar, onPagar, onEliminar }: {
       footer={
         <>
           {onEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>}
+          {onNotaCredito && <Button variant="secondary" icon={<FileText size={16} />} onClick={onNotaCredito}>Nota de crédito</Button>}
           {onEditar && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar</Button>}
           {onPagar && <Button variant="primary" icon={<Banknote size={16} />} onClick={onPagar}>Registrar pago</Button>}
-          {!onEliminar && !onEditar && !onPagar && <Button variant="secondary" onClick={onClose}>Cerrar</Button>}
+          {!onEliminar && !onEditar && !onPagar && !onNotaCredito && <Button variant="secondary" onClick={onClose}>Cerrar</Button>}
         </>
       }>
       {c && (

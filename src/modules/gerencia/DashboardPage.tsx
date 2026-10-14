@@ -1,10 +1,14 @@
 import '../mantenimiento/mant.css';
 import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Boxes, Clock, Fuel, Package, Truck, Wrench } from 'lucide-react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarrasGrafico, DonaGrafico } from '../../core/ui/Graficos';
+import { clavePlaca, useInspecciones, useInspeccionesNeumaticos } from '../inspecciones/api';
+import { evaluarCiclo } from '../inspecciones/vigencia';
+import { usePlacas } from '../placas/api';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { api } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
@@ -57,6 +61,9 @@ export function DashboardPage() {
     queryFn: () => api('/taller-rampas').then(r => arr<Record<string, unknown>>(r)),
     staleTime: 30_000,
   });
+  const insp = useInspecciones();
+  const neu = useInspeccionesNeumaticos();
+  const placasQ = usePlacas();
   const reqs = useQuery({
     queryKey: ['dashboard', 'reqs'],
     queryFn: () => api('/tesoreria/pago-requerimientos').then(r => arr<Record<string, unknown>>(r)),
@@ -88,6 +95,28 @@ export function DashboardPage() {
   const flotaOperativa = Math.max(0, flotaTotal - flotaEnTaller);
   const pctOperativa = flotaTotal > 0 ? Math.round((flotaOperativa / flotaTotal) * 100) : 0;
   const pctTaller    = flotaTotal > 0 ? Math.round((flotaEnTaller / flotaTotal) * 100) : 0;
+
+  // ─── Vigencia de inspecciones: total, motoras y no motoras (misma regla que Mantenimiento) ───
+  const vigencia = useMemo(() => {
+    const ultimaMec = new Map<string, NonNullable<typeof insp.data>[number]>();
+    [...(insp.data ?? [])].filter(i => i.tipo !== 'Solo Frenos')
+      .sort((x, y) => (y.fecha?.getTime() ?? 0) - (x.fecha?.getTime() ?? 0))
+      .forEach(i => { const k = clavePlaca(i.placa); if (!ultimaMec.has(k)) ultimaMec.set(k, i); });
+    const ultimaNeu = new Map<string, NonNullable<typeof neu.data>[number]>();
+    (neu.data ?? []).forEach(n => { const k = clavePlaca(n.placa); if (!ultimaNeu.has(k)) ultimaNeu.set(k, n); });
+    const conteo = (filtro: (motora: boolean) => boolean) => {
+      const c = { vigente: 0, proximo: 0, vencido: 0, sinRegistro: 0 };
+      (placasQ.data ?? []).filter(p => p.estado.toLowerCase() === 'activa' && p.enUso && filtro(p.motora)).forEach(p => {
+        const { estado } = evaluarCiclo(ultimaMec.get(clavePlaca(p.placa)) ?? null, ultimaNeu.get(clavePlaca(p.placa)) ?? null);
+        if (estado === 'vigente') c.vigente++;
+        else if (estado === 'proximo') c.proximo++;
+        else if (estado === 'vencido') c.vencido++;
+        else c.sinRegistro++;
+      });
+      return c;
+    };
+    return { total: conteo(() => true), motoras: conteo(m => m), noMotoras: conteo(m => !m) };
+  }, [insp.data, neu.data, placasQ.data]);
 
   // ─── OTs ─────────────────────────────────────────────────────────────────────
   const otsPendientes = otsData.filter(o => {
@@ -187,6 +216,32 @@ export function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* ─── Vigencia de inspecciones ─────────────────────────────── */}
+          {(placasQ.data ?? []).length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--label-2)', textTransform: 'uppercase', marginBottom: 'var(--s-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Truck size={13} /> Vigencia de inspecciones
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+                {([['Toda la flota', vigencia.total], ['Motoras', vigencia.motoras], ['No motoras', vigencia.noMotoras]] as const).map(([titulo, c]) => {
+                  const total = c.vigente + c.proximo + c.vencido + c.sinRegistro;
+                  const vigPct = total > 0 ? Math.round((c.vigente / total) * 100) : 0;
+                  return (
+                    <div key={titulo} style={{ background: 'var(--fill-1)', borderRadius: 'var(--radius-2)', padding: 'var(--s-3)' }}>
+                      <div style={{ fontSize: '0.8125rem', fontWeight: 700, marginBottom: 'var(--s-2)' }}>{titulo}</div>
+                      <DonaGrafico centro={`${vigPct}%`} porciones={[
+                        { nombre: 'Vigentes', valor: c.vigente, color: 'var(--green-ink)' },
+                        { nombre: 'Por vencer (7 días)', valor: c.proximo, color: 'var(--amber-ink)' },
+                        { nombre: 'Vencidas', valor: c.vencido, color: 'var(--red-ink)' },
+                        { nombre: 'Sin registro', valor: c.sinRegistro, color: 'var(--fill-3)' },
+                      ]} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ─── Mantenimiento ───────────────────────────────────────────── */}
           <div>

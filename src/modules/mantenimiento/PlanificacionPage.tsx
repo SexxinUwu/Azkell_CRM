@@ -1,7 +1,8 @@
 import './mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CalendarClock, CheckCircle2, CircleAlert, FileSpreadsheet, History, Pencil, Plus, SearchX, XCircle } from 'lucide-react';
+import { CalendarClock, CheckCircle2, CircleAlert, FileSpreadsheet, History, Pencil, Plus, SearchX, Wrench, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -12,12 +13,12 @@ import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import {
   cancelarPlan, completarPlan, planEstado, planEstadoColor, usePlanificacion,
   type EstadoPlan, type PlanificacionItem,
 } from './api';
 import { PlanificacionFormulario } from './PlanificacionFormulario';
+import { ImportarPlanificacionSheet } from './ImportarPlanificacionSheet';
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const LABEL_ESTADO: Record<EstadoPlan, string> = {
@@ -27,6 +28,7 @@ const LABEL_ESTADO: Record<EstadoPlan, string> = {
 const dia = (s: string | null | undefined) => (s ? String(s).split('T')[0] : '—');
 
 export function PlanificacionPage() {
+  const navigate = useNavigate();
   const hoy = new Date();
   const { can, user } = useAuth();
   const [mes, setMes] = useState(hoy.getMonth() + 1);
@@ -35,6 +37,7 @@ export function PlanificacionPage() {
   const [filtro, setFiltro] = useState<'todos' | EstadoPlan>('todos');
   const [seleccionadoId, setSeleccionadoId] = useState<string | number | null>(null);
   const [formulario, setFormulario] = useState<{ plan: PlanificacionItem | null } | null>(null);
+  const [importando, setImportando] = useState(false);
   const toast = useToast();
 
   const { data, isLoading, isError, error } = usePlanificacion(mes, anio);
@@ -80,7 +83,8 @@ export function PlanificacionPage() {
             <>
               <MenuOtros opciones={[
                 { label: 'Exportar Excel', detalle: `${visibles.length} planes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-                { label: 'Importar desde Excel, tipos de MP y alertas', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/planificacion') },
+                { label: 'Importar desde Excel', icon: <FileSpreadsheet size={17} />, separado: true, onSelect: () => setImportando(true) },
+                { label: 'Tipos de MP y alertas', icon: <Wrench size={17} />, onSelect: () => navigate('/mantenimiento/tipos-mp') },
               ]} />
               {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ plan: null })}>Programar</Button>}
             </>
@@ -152,6 +156,7 @@ export function PlanificacionPage() {
         usuario={user?.name ?? ''}
         onClose={() => setFormulario(null)}
       />
+      <ImportarPlanificacionSheet open={importando} onClose={() => setImportando(false)} mesInicial={mes} anioInicial={anio} />
     </Page>
   );
 }

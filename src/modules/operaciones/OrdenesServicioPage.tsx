@@ -1,7 +1,8 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CheckCircle2, FileSpreadsheet, Play, ScrollText, SearchX, XCircle } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, FileSpreadsheet, Pencil, Play, Plus, ScrollText, SearchX, XCircle } from 'lucide-react';
+import { OrdenServicioSheet, type OrdenParaEditar } from './OrdenServicioSheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -22,7 +23,7 @@ interface Orden {
   es_retorno: number | boolean | null; modalidad_ejecucion: string | null; tipo_contratacion: string | null;
 }
 interface Detalle extends Orden {
-  documentos?: { id: number; guia?: string; descripcion?: string; peso?: number | string; volumen?: number | string; fecha_carga_fmt?: string; fecha_entrega_fmt?: string }[];
+  documentos?: { id: number; numero_documento?: string; guia?: string; descripcion?: string; peso?: number | string; volumen?: number | string; fecha_carga_fmt?: string; fecha_entrega_fmt?: string }[];
   rutas?: { id: number; ruta: string; distancia_km?: number | string; galones?: number | string }[];
 }
 
@@ -30,8 +31,7 @@ const ESTADOS = ['PENDIENTE', 'INICIADO', 'FINALIZADO', 'ANULADO'];
 const n = (v: unknown) => Number(v) || 0;
 const color = (e: string | null) => ({ PENDIENTE: 'amber', INICIADO: 'accent', FINALIZADO: 'green', ANULADO: 'gray' }[String(e ?? '').toUpperCase()] ?? 'gray');
 
-// Operaciones › Órdenes de servicio: consulta, seguimiento de estado y exportación.
-// Crear o editar una orden (con sus documentos, rutas y costos) sigue en la versión actual.
+// Operaciones › Órdenes de servicio: consulta, seguimiento de estado, alta/edición con rutas y guías, y exportación.
 export function OrdenesServicioPage() {
   const { can } = useAuth();
   const qc = useQueryClient();
@@ -41,6 +41,7 @@ export function OrdenesServicioPage() {
   const [estado, setEstado] = useState('');
   const [abiertoId, setAbiertoId] = useState<number | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [formulario, setFormulario] = useState<{ orden: OrdenParaEditar | null } | null>(null);
 
   const lista = useQuery<Orden[]>({
     queryKey: ['operaciones', 'ordenes-servicio', q],
@@ -57,6 +58,7 @@ export function OrdenesServicioPage() {
   const visibles = useMemo(() => datos.filter(o => !estado || String(o.estado_servicio ?? 'PENDIENTE').toUpperCase() === estado), [datos, estado]);
   const conteo = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, datos.filter(o => String(o.estado_servicio ?? 'PENDIENTE').toUpperCase() === e).length])), [datos]);
   const puedeEditar = can('op_ordenes_servicio.editar', 'op_ordenes_servicio.crear', 'op_ordenes_viaje.editar');
+  const puedeCrear = can('op_ordenes_servicio.crear', 'op_ordenes_servicio.editar', 'op_ordenes_viaje.editar');
   const abierta = datos.find(o => o.id === abiertoId) ?? null;
   const o = det.data ?? abierta;
 
@@ -94,12 +96,18 @@ export function OrdenesServicioPage() {
         title="Órdenes de servicio"
         subtitle={lista.isLoading ? 'Cargando…' : `${datos.length} órdenes · ${conteo.INICIADO ?? 0} en curso`}
         actions={
-          <MenuOtros opciones={[
-            { label: 'Exportar Excel', detalle: `${visibles.length} órdenes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-            { label: 'Crear o editar con documentos y rutas', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('operaciones/ordenes-servicio') },
-          ]} />
+          <>
+            <MenuOtros opciones={[
+              { label: 'Exportar Excel', detalle: `${visibles.length} órdenes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('operaciones/ordenes-servicio') },
+            ]} />
+            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ orden: null })}>Nueva orden</Button>}
+          </>
         }
       />
+
+      <OrdenServicioSheet open={!!formulario} orden={formulario?.orden ?? null} onClose={() => setFormulario(null)} />
+
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
@@ -129,7 +137,7 @@ export function OrdenesServicioPage() {
                   <span className="mov-fila__sub">{[x.tipo_servicio, x.fecha_fmt, x.viaje_asignado && `Viaje ${x.viaje_asignado}`, x.conductor].filter(Boolean).join(' · ')}</span>
                 </div>
                 <div className="mov-fila__derecha">
-                  <span className="mov-fila__monto">{x.moneda === 'DOLARES' ? 'US$' : 'S/'} {n(x.costo_flete).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                  <span className="mov-fila__monto">{/DOL/i.test(String(x.moneda ?? '')) ? 'US$' : 'S/'} {n(x.costo_flete).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                   <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${color(x.estado_servicio)}-ink)` }}>{String(x.estado_servicio ?? 'PENDIENTE').toUpperCase()}</span>
                 </div>
               </button>
@@ -142,6 +150,7 @@ export function OrdenesServicioPage() {
         footer={
           puedeEditar && abierta && est !== 'FINALIZADO' && est !== 'ANULADO' ? (
             <>
+              <Button variant="secondary" icon={<Pencil size={16} />} onClick={() => { if (det.data) { setFormulario({ orden: det.data as unknown as OrdenParaEditar }); setAbiertoId(null); } }} disabled={!det.data}>Editar</Button>
               <Button variant="secondary" icon={<XCircle size={16} />} onClick={() => cambiarEstado('ANULADO')} loading={ocupado}>Anular</Button>
               {est === 'PENDIENTE' && <Button variant="primary" icon={<Play size={16} />} onClick={() => cambiarEstado('INICIADO')} loading={ocupado}>Iniciar</Button>}
               {est === 'INICIADO' && <Button variant="primary" icon={<CheckCircle2 size={16} />} onClick={() => cambiarEstado('FINALIZADO')} loading={ocupado}>Finalizar</Button>}
@@ -159,7 +168,7 @@ export function OrdenesServicioPage() {
               {fila('Cliente', o.cliente_nombre)}{fila('Servicio', o.tipo_servicio)}{fila('Modalidad', [o.tipo_contratacion, o.modalidad_ejecucion].filter(Boolean).join(' · '))}
               {fila('Viaje', o.viaje_asignado, true)}{fila('Conductor', o.conductor)}{fila('Tracto / carreta', [o.placa_tracto, o.placa_carreta].filter(Boolean).join(' / '), true)}
               {fila('Fecha', [o.fecha_fmt, o.fecha_fin_fmt].filter(Boolean).join(' → '), true)}{fila('Origen', o.puntos_carga)}{fila('Destino', o.puntos_destino)}{fila('Destinatario', o.destinatario)}
-              {fila('Flete', `${o.moneda === 'DOLARES' ? 'US$' : 'S/'} ${n(o.costo_flete).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`)}{fila('Observaciones', o.observaciones)}
+              {fila('Flete', `${/DOL/i.test(String(o.moneda ?? '')) ? 'US$' : 'S/'} ${n(o.costo_flete).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`)}{fila('Observaciones', o.observaciones)}
             </div>
             {det.isLoading && <PageLoader />}
             {(det.data?.rutas ?? []).length > 0 && (
@@ -176,7 +185,7 @@ export function OrdenesServicioPage() {
                 <div className="tarjeta__lista">
                   {det.data!.documentos!.map(d => (
                     <div key={d.id} className="dato">
-                      <span className="dato__label">{d.guia || d.descripcion || `Documento ${d.id}`}</span>
+                      <span className="dato__label">{d.numero_documento || d.guia || d.descripcion || `Documento ${d.id}`}</span>
                       <span className="dato__valor">{n(d.peso).toLocaleString('es-PE')} kg · {n(d.volumen)} m³ {d.fecha_carga_fmt ? `· carga ${d.fecha_carga_fmt}` : ''}</span>
                     </div>
                   ))}

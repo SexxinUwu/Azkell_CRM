@@ -27,6 +27,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'entrega', label: 'Entrega de vehículos', to: '/flota/entrega-vehiculos', icon: 'ClipboardList', permisos: ['entrega_vehiculos.ver', 'seg_unidades.ver', 'placas.ver'] },
   },
   {
+    path: 'flota/almacen-flota/*',
+    permisos: ['inv.ver', 'sal_inv.ver', 'ent_inv.ver'],
+    Page: lazy(() => import('./AlmacenFlotaPage').then(m => ({ default: m.AlmacenFlotaPage }))),
+    nav: { key: 'almacen-flota', label: 'Almacén de flota', to: '/flota/almacen-flota', icon: 'Warehouse', permisos: ['inv.ver', 'sal_inv.ver', 'ent_inv.ver'] },
+  },
+  {
     path: 'flota/checklist/*',
     permisos: ['checklist.ver'],
     Page: lazy(() => import('./ChecklistPage').then(m => ({ default: m.ChecklistPage }))),

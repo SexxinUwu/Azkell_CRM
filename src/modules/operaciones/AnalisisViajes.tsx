@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowUpRight, Droplets, FileSpreadsheet, Fuel, SearchX } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Droplets, FileSpreadsheet, Fuel, RefreshCw, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -13,6 +13,7 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
+import { MatrizRendimientoSheet } from './MatrizRendimientoSheet';
 
 interface Stats { kmInicio: number; kmFin: number; recorridoKm: number; totalGalones: number; totalGasto: number; rendimiento: number }
 interface Voucher { id: number | string; fecha?: string; producto?: string; galones?: number; importe?: number; odometro?: number; estacion?: string; esPuntoPartida?: boolean }
@@ -25,6 +26,55 @@ interface Trip {
 interface Resp { ok: boolean; trips: Trip[]; kpis: { totalViajes: number; totalGalones: number; totalGasto: number; totalKm: number; promGalViaje: number; promPrecioGal: number; promKmGal: number } }
 
 const n = (v: unknown) => Number(v) || 0;
+interface TelemetriaWialon {
+  recorridoKmGps: number | null; combustibleConsumidoGps: number | null; rendimientoGps: number | null;
+  velocidadMaxGps: number | null; rpmMediaGps: number | null; rpmMaxGps: number | null; horasMotorGps: number | null; consumoRalentiGps: number | null;
+}
+
+// Telemetría CAN Bus de Wialon para el periodo del viaje (de la primera a la última carga). Solo se consulta al pedirla.
+function TelemetriaViaje({ trip }: { trip: Trip }) {
+  const [pedida, setPedida] = useState(false);
+  const rango = useMemo(() => {
+    const fechas = (trip.vouchers ?? []).map(v => String(v.fecha ?? '')).filter(Boolean).sort();
+    return { ini: fechas[0] || trip.fechaInicio, fin: fechas[fechas.length - 1] || trip.fechaFin };
+  }, [trip]);
+  const q = useQuery({
+    queryKey: ['operaciones', 'wialon', trip.viaje, trip.placa, rango.ini, rango.fin],
+    enabled: pedida && !!trip.placa,
+    retry: false,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const p = new URLSearchParams({ placa: trip.placa, fechaInicio: rango.ini, fechaFin: rango.fin });
+      const r = await api<{ ok?: boolean; data?: TelemetriaWialon; error?: string }>(`/combustible/wialon-telemetria?${p.toString()}`);
+      if (!r.ok || !r.data) throw new Error(r.error || 'Sin telemetría para este viaje');
+      return r.data;
+    },
+  });
+  const t = q.data;
+  const dato = (label: string, valor: number | null | undefined, unidad: string) => (
+    <div className="dato"><span className="dato__label">{label}</span><span className="dato__valor dato__valor--mono">{valor == null ? '—' : `${fmt(valor, 1)} ${unidad}`}</span></div>
+  );
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <p className="tarjeta__grupo-titulo">Telemetría Wialon (CAN Bus)</p>
+        {!pedida && <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={() => setPedida(true)} disabled={!trip.placa}>Consultar</Button>}
+      </div>
+      {!pedida && <div className="tarjeta__lista"><div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>Consulta el recorrido, consumo y RPM reportados por el GPS en las fechas del viaje.</span></div></div>}
+      {pedida && q.isFetching && <div className="tarjeta__lista"><div className="dato"><span className="dato__valor">Consultando Wialon…</span></div></div>}
+      {pedida && q.isError && <Notice tone="error">{errorMessage(q.error)}</Notice>}
+      {t && (
+        <div className="tarjeta__lista">
+          {dato('Recorrido GPS', t.recorridoKmGps, 'km')}{dato('Combustible consumido', t.combustibleConsumidoGps, 'gl')}
+          {dato('Rendimiento GPS', t.rendimientoGps, 'km/gl')}{dato('Consumo en ralentí', t.consumoRalentiGps, 'gl')}
+          {dato('Velocidad máxima', t.velocidadMaxGps, 'km/h')}{dato('RPM media', t.rpmMediaGps, 'rpm')}{dato('RPM máxima', t.rpmMaxGps, 'rpm')}
+          {dato('Horas de motor', t.horasMotorGps, 'h')}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const fmt = (v: unknown, d = 1) => n(v).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d });
 const AUDIT = ['PENDIENTE', 'CONFORME', 'OBSERVADO'];
 const colorAudit = (e: string) => ({ CONFORME: 'green', OBSERVADO: 'amber', PENDIENTE: 'gray' }[e] ?? 'gray');
@@ -81,6 +131,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
 
   const t = trips.find(x => x.viaje === abierto) ?? null;
   const Icono = urea ? Droplets : Fuel;
+  const [matriz, setMatriz] = useState(false);
   const puedeAuditar = can('combustible_analisis.editar', 'combustible.editar', 'urea_analisis.editar', 'combustible_analisis.crear');
 
   async function exportar() {
@@ -101,7 +152,8 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         actions={
           <MenuOtros opciones={[
             { label: 'Exportar Excel', detalle: `${visibles.length} viajes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-            { label: 'Matriz de rendimiento y telemetría', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico(urea ? 'operaciones/urea-analisis' : 'operaciones/combustible-analisis') },
+            ...(urea ? [] : [{ label: 'Matriz de rendimiento', icon: <Fuel size={17} />, separado: true, onSelect: () => setMatriz(true) }]),
+            { label: 'Telemetría y auditoría avanzada', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, separado: !urea, onSelect: () => abrirClasico(urea ? 'operaciones/urea-analisis' : 'operaciones/combustible-analisis') },
           ]} />
         }
       />
@@ -154,6 +206,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       </div>
 
       <DetalleViaje trip={t} urea={urea} puedeAuditar={puedeAuditar} modulo={modulo} usuario={user?.name ?? ''} onClose={() => setAbierto(null)} cifras={cifras} />
+      <MatrizRendimientoSheet open={matriz} onClose={() => setMatriz(false)} puedeEditar={puedeAuditar} />
     </Page>
   );
 }
@@ -202,6 +255,8 @@ function DetalleViaje({ trip: t, urea, puedeAuditar, modulo, usuario, onClose, c
           {fila('Peso ida / retorno', `${fmt(t.pesoIda, 1)} / ${fmt(t.pesoRetorno, 1)} t`)}{fila('Galones ida / retorno', `${fmt(t.galonesIda, 1)} / ${fmt(t.galonesRetorno, 1)}`)}
           {fila('Periodo', `${t.fechaInicio} → ${t.fechaFin}`, true)}
         </div>
+
+        {!urea && <TelemetriaViaje trip={t} />}
 
         {vales.length > 0 && (
           <div>

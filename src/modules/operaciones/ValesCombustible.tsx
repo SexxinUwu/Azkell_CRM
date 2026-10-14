@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Ban, CircleAlert, FileSpreadsheet, Fuel, Pencil, Plus, RefreshCw, SearchX, Upload } from 'lucide-react';
+import { Ban, CircleAlert, FileSpreadsheet, Fuel, ListChecks, Pencil, Plus, RefreshCw, SearchX, Trash2, Upload } from 'lucide-react';
 import { ImportarValesSheet } from './ImportarValesSheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -13,7 +13,6 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 
 interface Vale {
   id: number; fecha: string | null; estado: string; correlativo: string | null; estado_pago: string | null; viaje: string | null;
@@ -51,6 +50,10 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
   const [importando, setImportando] = useState(false);
   const [sincronizar, setSincronizar] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
+  const [seleccionando, setSeleccionando] = useState(false);
+  const [seleccion, setSeleccion] = useState<Set<number>>(new Set());
+  const [borrandoMasivo, setBorrandoMasivo] = useState(false);
+  const [confirmarMasivo, setConfirmarMasivo] = useState(false);
   const [ocupado, setOcupado] = useState(false);
 
   useEffect(() => { setPagina(1); }, [search, estado, combustible, desde, hasta]);
@@ -79,6 +82,7 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
   const k = q.data?.kpis;
   const puedeCrear = can('combustible_vales.crear', 'combustible.crear');
   const puedeEditar = can('combustible_vales.editar', 'combustible_vales.crear', 'combustible.editar');
+  const puedeEliminar = can('combustible_vales.eliminar', 'combustible.eliminar');
   const refrescar = () => qc.invalidateQueries({ queryKey: ['operaciones'] });
 
   async function anular() {
@@ -118,7 +122,7 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
               { label: 'Exportar Excel', detalle: `${lista.length} de esta página`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
               { label: 'Importar desde Excel', icon: <Upload size={17} />, separado: true, onSelect: () => setImportando(true) },
               { label: 'Sincronizar con MarsisaSoft', icon: <RefreshCw size={17} />, onSelect: () => setSincronizar(true) },
-              { label: 'Eliminación masiva', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico(marsisa ? 'operaciones/marsisa-combustible-vales' : 'operaciones/combustible-vales') },
+              ...(puedeEliminar ? [{ label: seleccionando ? 'Terminar selección' : 'Seleccionar varios', icon: <ListChecks size={17} />, separado: true, onSelect: () => { setSeleccionando(v => !v); setSeleccion(new Set()); } }] : []),
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ vale: null })}>Nuevo vale</Button>}
           </>
@@ -154,8 +158,15 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
             <div className="tarjeta__lista">
               {lista.map(v => {
                 const anulado = v.estado === 'ANULADO';
+                const marcado = seleccion.has(Number(v.id));
                 return (
-                  <button key={v.id} type="button" className="mov-fila" onClick={() => { haptic('selection'); setAbierto(v); }} style={{ opacity: anulado ? 0.6 : 1 }}>
+                  <button key={v.id} type="button" className="mov-fila" style={{ opacity: anulado ? 0.6 : 1, outline: marcado ? '2px solid var(--accent)' : undefined }}
+                    onClick={() => {
+                      haptic('selection');
+                      if (!seleccionando) { setAbierto(v); return; }
+                      setSeleccion(prev => { const nx = new Set(prev); nx.has(Number(v.id)) ? nx.delete(Number(v.id)) : nx.add(Number(v.id)); return nx; });
+                    }}>
+                    {seleccionando && <span aria-hidden style={{ width: 20, height: 20, borderRadius: 6, border: '2px solid var(--accent)', background: marcado ? 'var(--accent)' : 'transparent', flexShrink: 0 }} />}
                     <div className="mov-fila__icon" style={{ background: anulado ? 'var(--gray-tint)' : 'var(--accent-tint)', color: anulado ? 'var(--gray-ink)' : 'var(--accent-ink)' }}><Fuel size={16} /></div>
                     <div className="mov-fila__cuerpo">
                       <span className="mov-fila__titulo">{v.vehiculo || 'Sin placa'} · {n(v.galones).toLocaleString('es-PE', { maximumFractionDigits: 2 })} gl {v.tipo_combustible ?? ''}</span>
@@ -209,6 +220,25 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
       <FormularioVale open={!!formulario} vale={formulario?.vale ?? null} cat={cat.data} modulo={modulo} onClose={() => setFormulario(null)} onGuardado={refrescar} />
 
       <ImportarValesSheet open={importando} onClose={() => setImportando(false)} marsisa={marsisa} />
+      {seleccionando && seleccion.size > 0 && (
+        <div style={{ position: 'sticky', bottom: 'var(--s-3)', display: 'flex', justifyContent: 'center', marginTop: 'var(--s-3)' }}>
+          <Button variant="primary" icon={<Trash2 size={16} />} onClick={() => setConfirmarMasivo(true)}>Eliminar {seleccion.size} vales</Button>
+        </div>
+      )}
+      <ConfirmSheet open={confirmarMasivo} onClose={() => !borrandoMasivo && setConfirmarMasivo(false)} loading={borrandoMasivo}
+        title={`¿Eliminar ${seleccion.size} vales?`} message="Se borran definitivamente. Esta acción no se puede deshacer."
+        confirmLabel="Eliminar definitivamente"
+        onConfirm={async () => {
+          setBorrandoMasivo(true);
+          try {
+            const r = await api<{ ok?: boolean; mensaje?: string; error?: string }>('/combustible/vales/eliminar-masivo?hard=true', { method: 'POST', body: { ids: [...seleccion] } });
+            if (r.ok === false) throw new Error(r.error || 'No se pudieron eliminar los vales');
+            haptic('success'); toast(r.mensaje ?? 'Vales eliminados');
+            setConfirmarMasivo(false); setSeleccion(new Set()); setSeleccionando(false);
+            await refrescar();
+          } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+          finally { setBorrandoMasivo(false); }
+        }} />
       <ConfirmSheet open={sincronizar} onClose={() => !sincronizando && setSincronizar(false)} loading={sincronizando}
         title="¿Sincronizar vales con MarsisaSoft?" message="Trae los vales nuevos desde la base externa. Los que ya existen no se duplican."
         confirmLabel="Sincronizar"

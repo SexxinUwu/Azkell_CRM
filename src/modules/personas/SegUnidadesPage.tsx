@@ -1,5 +1,5 @@
 import '../mantenimiento/mant.css';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowUpRight, CircleAlert, FileSpreadsheet, LogIn, LogOut, Plus, SearchX, ShieldCheck, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
@@ -14,6 +14,8 @@ import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { usePlacas } from '../placas/api';
+import type { FirmaHandle } from '../inspecciones/Firma';
+import { ChecklistGarita, FirmaPar, FotosGarita, hayObservado, subirFotosGarita, useTemplateGarita, type ValoresChk } from './garitaComponentes';
 
 interface Registro {
   id: string; placa_tracto: string; placa_carreta: string | null; conductor: string; destino: string | null; tipo_salida: string | null;
@@ -31,7 +33,7 @@ const ahora = () => new Date().toTimeString().slice(0, 5);
 const TIPOS = ['RUTA', 'LOCAL', 'TALLER', 'TRASLADO', 'OTRO'];
 
 // Personas y seguridad › Garita: control de salida y retorno de unidades.
-// El checklist de revisión, las firmas y las fotos se capturan en la versión actual.
+// Con checklist, firmas y fotos. El PDF del registro sigue en la versión actual.
 export function SegUnidadesPage() {
   const { can } = useAuth();
   const qc = useQueryClient();
@@ -96,7 +98,7 @@ export function SegUnidadesPage() {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} registros`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Checklist, firmas, fotos y PDF', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('seguridad/unidades') },
+              { label: 'PDF del registro', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('seguridad/unidades') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<LogOut size={16} />} onClick={() => setSalida(true)}>Registrar salida</Button>}
           </>
@@ -190,13 +192,18 @@ function SalidaSheet({ open, onClose, onHecho }: { open: boolean; onClose: () =>
   const toast = useToast();
   const { user } = useAuth();
   const placas = usePlacas();
+  const plantilla = useTemplateGarita();
   const [v, setV] = useState<Record<string, string>>({});
+  const [chk, setChk] = useState<ValoresChk>({});
+  const [fotos, setFotos] = useState<File[]>([]);
+  const firmaC = useRef<FirmaHandle>(null);
+  const firmaV = useRef<FirmaHandle>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    setError(null);
+    setError(null); setChk({}); setFotos([]);
     setV({ placa_tracto: '', placa_carreta: '', conductor: '', destino: '', tipo_salida: 'RUTA', orden_viaje: '', salida_fecha: hoy(), salida_hora: ahora(), salida_km: '', salida_observaciones: '' });
   }, [open]);
 
@@ -218,11 +225,20 @@ function SalidaSheet({ open, onClose, onHecho }: { open: boolean; onClose: () =>
     setEnviando(true); setError(null);
     try {
       const r = await api<{ ok?: boolean; id?: string; error?: string }>('/seguridad/unidades', {
-        method: 'POST', body: { ...v, salida_km: v.salida_km || null, salida_has_alert: false, creado_por: user?.name },
+        method: 'POST',
+        body: {
+          ...v, salida_km: v.salida_km || null, salida_has_alert: hayObservado(chk), creado_por: user?.name,
+          salida_checklist_json: chk, salida_template_json: plantilla.data ?? [],
+          firma_salida_conductor: firmaC.current?.obtener() ?? '', firma_salida_vigilancia: firmaV.current?.obtener() ?? '',
+        },
       });
       if (r.ok === false) throw new Error(r.error || 'No se pudo registrar');
       haptic('success'); toast(`Salida registrada: ${r.id ?? ''}`);
       await onHecho(); onClose();
+      if (r.id && fotos.length) {
+        try { await subirFotosGarita(r.id, 'salida', fotos); toast(`${fotos.length} foto(s) guardadas`); }
+        catch (err) { toast(errorMessage(err), 'error'); }
+      }
     } catch (err) { setError(errorMessage(err)); haptic('warning'); }
     finally { setEnviando(false); }
   }
@@ -254,6 +270,13 @@ function SalidaSheet({ open, onClose, onHecho }: { open: boolean; onClose: () =>
         {txt('salida_hora', 'Hora', { type: 'time' })}
         {txt('salida_km', 'Kilometraje', { mode: 'numeric' })}
         {txt('salida_observaciones', 'Observaciones', { wide: true })}
+
+        <div className="field field--wide"><p className="tarjeta__grupo-titulo" style={{ margin: '8px 0 4px' }}>Checklist de revisión</p>
+          <ChecklistGarita plantilla={plantilla.data ?? []} valores={chk} onCambio={setChk} /></div>
+        <div className="field field--wide"><p className="tarjeta__grupo-titulo" style={{ margin: '8px 0 4px' }}>Firmas</p>
+          <FirmaPar etiquetaConductor="Firma del conductor" etiquetaVigilancia="Firma de vigilancia" refConductor={firmaC} refVigilancia={firmaV} /></div>
+        <div className="field field--wide"><p className="tarjeta__grupo-titulo" style={{ margin: '8px 0 4px' }}>Fotos de evidencia</p>
+          <FotosGarita fotos={fotos} onCambio={setFotos} /></div>
       </div>
     </Sheet>
   );
@@ -262,14 +285,19 @@ function SalidaSheet({ open, onClose, onHecho }: { open: boolean; onClose: () =>
 function RetornoSheet({ registro, onClose, onHecho }: { registro: Registro | null; onClose: () => void; onHecho: () => Promise<unknown> }) {
   const toast = useToast();
   const { user } = useAuth();
+  const plantilla = useTemplateGarita();
   const [fecha, setFecha] = useState('');
   const [hora, setHora] = useState('');
   const [km, setKm] = useState('');
   const [obs, setObs] = useState('');
+  const [chk, setChk] = useState<ValoresChk>({});
+  const [fotos, setFotos] = useState<File[]>([]);
+  const firmaC = useRef<FirmaHandle>(null);
+  const firmaV = useRef<FirmaHandle>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { if (registro) { setFecha(hoy()); setHora(ahora()); setKm(''); setObs(''); setError(null); } }, [registro]);
+  useEffect(() => { if (registro) { setFecha(hoy()); setHora(ahora()); setKm(''); setObs(''); setChk({}); setFotos([]); setError(null); } }, [registro]);
   if (!registro) return <Sheet open={false} onClose={onClose} title=""><span /></Sheet>;
 
   async function guardar() {
@@ -280,10 +308,19 @@ function RetornoSheet({ registro, onClose, onHecho }: { registro: Registro | nul
     try {
       await api(`/seguridad/unidades/${registro.id}`, {
         method: 'PUT',
-        body: { retorno_fecha: fecha, retorno_hora: hora, retorno_km: km, retorno_observaciones: obs, retorno_has_alert: false, estado: 'completado', retorno_creado_por: user?.name },
+        body: {
+          retorno_fecha: fecha, retorno_hora: hora, retorno_km: km, retorno_observaciones: obs, retorno_has_alert: hayObservado(chk),
+          retorno_checklist_json: chk, retorno_template_json: plantilla.data ?? [],
+          firma_retorno_conductor: firmaC.current?.obtener() ?? '', firma_retorno_vigilancia: firmaV.current?.obtener() ?? '',
+          estado: 'completado', retorno_creado_por: user?.name,
+        },
       });
       haptic('success'); toast(`Retorno registrado: ${registro.placa_tracto}`);
       await onHecho(); onClose();
+      if (fotos.length) {
+        try { await subirFotosGarita(registro.id, 'retorno', fotos); toast(`${fotos.length} foto(s) guardadas`); }
+        catch (err) { toast(errorMessage(err), 'error'); }
+      }
     } catch (err) { setError(errorMessage(err)); haptic('warning'); }
     finally { setEnviando(false); }
   }
@@ -300,6 +337,13 @@ function RetornoSheet({ registro, onClose, onHecho }: { registro: Registro | nul
           {p => <TextInput {...p} inputMode="numeric" value={km} onChange={e => setKm(e.target.value.replace(/\D/g, ''))} autoFocus />}
         </Field>
         <Field label="Observaciones" wide>{p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} />}</Field>
+
+        <div className="field field--wide"><p className="tarjeta__grupo-titulo" style={{ margin: '8px 0 4px' }}>Checklist de revisión</p>
+          <ChecklistGarita plantilla={plantilla.data ?? []} valores={chk} onCambio={setChk} /></div>
+        <div className="field field--wide"><p className="tarjeta__grupo-titulo" style={{ margin: '8px 0 4px' }}>Firmas</p>
+          <FirmaPar etiquetaConductor="Firma del conductor" etiquetaVigilancia="Firma de vigilancia" refConductor={firmaC} refVigilancia={firmaV} /></div>
+        <div className="field field--wide"><p className="tarjeta__grupo-titulo" style={{ margin: '8px 0 4px' }}>Fotos de evidencia</p>
+          <FotosGarita fotos={fotos} onCambio={setFotos} /></div>
       </div>
     </Sheet>
   );

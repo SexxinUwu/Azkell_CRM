@@ -71,7 +71,10 @@ async function subirFoto(dataUrl: string, idTemporal: string): Promise<string> {
       method: 'POST', body: { idInsp: idTemporal, fileName: 'foto.jpg', fileType: 'image/jpeg' },
     });
     if (!r.ok || !r.uploadUrl || !r.finalUrl) return dataUrl;
-    const blob = await (await fetch(dataUrl)).blob();
+    // Sin fetch(dataUrl): la CSP (connect-src) no permite data: y el aviso llegaba al servidor
+    const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: 'image/jpeg' });
     const put = await fetch(r.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
     return put.ok ? r.finalUrl : dataUrl;
   } catch {

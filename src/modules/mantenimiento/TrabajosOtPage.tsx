@@ -1,7 +1,7 @@
 import './mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CheckCircle2, CircleAlert, FileSpreadsheet, Pencil, SearchX, Trash2, Wrench } from 'lucide-react';
+import { CheckCircle2, CircleAlert, FileSpreadsheet, Pencil, SearchX, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -13,7 +13,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
+import { ImportarTrabajosSheet } from './ImportarTrabajosSheet';
 import {
   aprobarTrabajo, editarTrabajo, eliminarTrabajo, trabajoCosto, trabajoId, trabajoKmHoras, useTrabajosOT, type TrabajoOT,
 } from './api';
@@ -41,6 +41,7 @@ export function TrabajosOtPage() {
   const [busqueda, setBusqueda] = useState('');
   const [estado, setEstado] = useState('');
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
+  const [importando, setImportando] = useState(false);
 
   const trabajos = data ?? [];
   const seleccionado = trabajos.find(t => trabajoId(t) === seleccionadoId) ?? null;
@@ -74,11 +75,12 @@ export function TrabajosOtPage() {
           actions={
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} trabajos`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Importar desde Excel', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/trabajos-ot') },
+              { label: 'Importar desde Excel', icon: <FileSpreadsheet size={17} />, separado: true, onSelect: () => setImportando(true) },
             ]} />
           }
         />
       )}
+      <ImportarTrabajosSheet open={importando} onClose={() => setImportando(false)} />
 
       {isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
