@@ -4592,6 +4592,7 @@ app.use('/api/rrhh', require('./routes/rrhh')(db, broadcast, logAudit));
 app.use('/api/telemetria', require('./routes/telemetria')(db));
 app.use('/api/fallas', require('./routes/fallas')(db));
 app.use('/api/2fa', require('./routes/auth2fa')(db));
+app.use('/api/asistente', require('./routes/asistente')(db));
 
 // Módulo Órdenes de Compra y Aprobación Móvil vía WhatsApp (Magic Link)
 app.get('/aprobaciones/oc', (req, res) => {

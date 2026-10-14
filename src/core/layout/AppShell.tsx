@@ -9,6 +9,7 @@ import { Sheet } from '../ui/Sheet';
 import { BrandMark, Wordmark } from './BrandMark';
 import { TabBar } from './TabBar';
 import { ConnectionBanner } from './ConnectionBanner';
+import { AsistenteFab } from '../../modules/asistente/components/AsistenteFab';
 import { useLiveUpdates } from '../api/live';
 import { abrirClasico, findNavItem, homePath, mobileTabs, visibleSections, type NavItem } from './navigation';
 import './layout.css';
@@ -113,6 +114,7 @@ export function AppShell() {
       </div>
 
       <ConnectionBanner state={live} />
+      <AsistenteFab />
 
       <TabBar
         tabs={tabs.map(t => ({ key: t.key, label: shortLabel(t), icon: t.icon, to: t.to! }))}
