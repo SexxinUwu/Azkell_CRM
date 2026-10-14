@@ -293,10 +293,10 @@ if (el) { el.style.display = 'none'; }
 - [ ] Probar en navegador los dos dashboards corregidos (Mantenimiento y Gerencia).
 
 ### 🌙 Ciberseguridad & Arquitectura
-- [ ] **Cookies HttpOnly en frontend**: el backend ya escribe/lee `azkell_session`; falta que `src/core/api/client.ts` (`tokenStore`) y el clásico dejen de guardar el JWT en `localStorage`. Cambio transversal: requiere prueba de login completa.
-- [ ] **CSP estricta**: `contentSecurityPolicy: false` en Helmet mientras haya scripts inline y CDN en la SPA.
+- [ ] **Cookies HttpOnly en frontend**: bloqueado por el clásico. La app React ya autentica solo por cookie `azkell_session` (`credentials: 'include'`), pero `fleet_token` en `localStorage` sigue siendo usado por 45 referencias en 12 archivos del clásico (`logica.js`, `modulos/login`, `almacen/entradas`, `conductores`, `entrega-vehiculos`, `combustible-matriz`, `reporte-viajes`, `seguridad/*`, `perfil`, `usuarios`) y como bandera de sesión en `AuthProvider.tsx`. Orden seguro: (1) migrar esos módulos clásicos a `credentials: 'include'`, (2) cambiar `AuthProvider` a `/api/me`, (3) dejar de guardar el token.
+- [~] **CSP estricta**: activa en modo SOLO REPORTE (`server.js`, Helmet). No bloquea; las violaciones salen en consola como `[CSP]` desde `/csp-report`. Siguiente: revisar avisos reales, ajustar la lista y pasar a bloqueo (quitar `reportOnly`).
 - [x] ~~Desacople de `cdn.tailwindcss.com` en reportes OT/Inspecciones~~ — ya usan `/libs/tailwind.min.js` local; en `Index.html` solo queda el filtro del aviso.
-- [~] **Audit trail criptográfico**: `log_auditoria` ya existe con firma HMAC-SHA256, IP y usuario. Falta guardar el estado **antes/después** (hoy solo `body_resumen`).
+- [x] ~~**Audit trail criptográfico**~~: `log_auditoria` firma HMAC-SHA256 y ahora guarda `antes` / `despues` con `firma_estado`. "Después" = respuesta del servidor (automático); "antes" = el handler lo fija con `req.auditAntes = {...}` (aún ningún handler lo usa). Visible en Sistema > Auditoría > "Registro firmado".
 
 **Seguridad ya activa:** JWT_SECRET obligatorio, cookie HttpOnly `azkell_session`, rate limiting (login 20/15min, general 600/min), Helmet (HSTS, frameguard), 2FA TOTP (Admin/Gerencia), `log_auditoria` firmada.
 

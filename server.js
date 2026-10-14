@@ -32,8 +32,26 @@ app.set('trust proxy', 1);
 // Configuración conservadora para la versión actual: la CSP estricta llega con la app nueva
 // (hoy hay scripts en línea y de CDN). Los iframes de la app (PDF de guías, vouchers, formato OT)
 // son del mismo dominio; Wialon usa ventana emergente con window.opener.
+// CSP en modo SOLO REPORTE: no bloquea nada; las violaciones llegan a /csp-report (consola del servidor).
+// Cuando no queden avisos legítimos: quitar reportOnly y los 'unsafe-inline'/'unsafe-eval' que se pueda.
 app.use(require('helmet')({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+        useDefaults: false,
+        reportOnly: true,
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://unpkg.com'],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://unpkg.com'],
+            fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net'],
+            imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+            connectSrc: ["'self'", 'https:', 'wss:'],
+            frameSrc: ["'self'", 'blob:', 'https:'],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            frameAncestors: ["'self'"],
+            reportUri: ['/csp-report']
+        }
+    },
     frameguard: { action: 'sameorigin' },
     crossOriginOpenerPolicy: false,
     crossOriginEmbedderPolicy: false,
@@ -41,6 +59,13 @@ app.use(require('helmet')({
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     strictTransportSecurity: { maxAge: 15552000, includeSubDomains: false }
 }));
+
+// Receptor de reportes CSP (sin autenticación: el navegador los envía solo). Deja solo un resumen en consola.
+app.post('/csp-report', express.json({ type: ['application/csp-report', 'application/json'], limit: '10kb' }), (req, res) => {
+    const r = (req.body && (req.body['csp-report'] || req.body)) || {};
+    console.warn('[CSP]', r['violated-directive'] || r.effectiveDirective || '?', '→', String(r['blocked-uri'] || r.blockedURL || '').slice(0, 200), 'en', String(r['document-uri'] || '').slice(0, 120));
+    res.status(204).end();
+});
 
 // ── Compresión gzip (reduce 60-70% el tamaño de respuestas) ───────
 app.use(compression());
@@ -880,6 +905,10 @@ defaultDbPool.query(`
     if (err && !err.message.includes('already exists')) {
         console.error('[log_auditoria] Error al crear tabla:', err.message);
     }
+    // Estado antes/después y su firma (columnas aditivas; ignorar si ya existen)
+    ['antes MEDIUMTEXT NULL', 'despues MEDIUMTEXT NULL', 'firma_estado VARCHAR(64) NULL'].forEach(col => {
+        defaultDbPool.query('ALTER TABLE log_auditoria ADD COLUMN ' + col, () => {});
+    });
 });
 
 // Proxy global 'db' que delega automáticamente las peticiones al pool de la empresa según el subdominio activo
@@ -2340,13 +2369,37 @@ app.use('/api', (req, res, next) => {
     const fechaStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const firma = _auditFirma({ fechaStr, usuario, correo, ip, metodo: req.method, ruta, modulo, accion, bodyResumen });
 
+    // "Después": lo que respondió el servidor. "Antes": lo fija el handler con req.auditAntes = {...}
+    let despuesRaw = null;
+    const _json = res.json.bind(res);
+    res.json = (payload) => { despuesRaw = payload; return _json(payload); };
+    const _resumir = (v) => {
+        if (v === undefined || v === null) return null;
+        try {
+            const str = JSON.stringify(v, (k, val) => (/(password|pass|secret|token|firma|hash)/i.test(k) ? undefined : val));
+            return str.length > 4000 ? str.slice(0, 3997) + '…' : str;
+        } catch { return null; }
+    };
+
     res.on('finish', () => {
         const targetDb = req.db || db;
+        const antes = _resumir(req.auditAntes);
+        const despues = res.statusCode < 400 ? _resumir(despuesRaw) : null;
+        const firmaEstado = _auditFirma({ firma, antes: antes || '', despues: despues || '' });
         targetDb.query(
-            `INSERT INTO log_auditoria (fecha, usuario, correo, ip, metodo, ruta, modulo, accion, body_resumen, status_codigo, firma)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [fechaStr, usuario, correo, ip, req.method, ruta, modulo, accion, bodyResumen || null, res.statusCode, firma],
-            () => {}
+            `INSERT INTO log_auditoria (fecha, usuario, correo, ip, metodo, ruta, modulo, accion, body_resumen, status_codigo, firma, antes, despues, firma_estado)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [fechaStr, usuario, correo, ip, req.method, ruta, modulo, accion, bodyResumen || null, res.statusCode, firma, antes, despues, firmaEstado],
+            (err) => {
+                if (!err) return;
+                // La base aún no tiene las columnas nuevas: registrar igual con el formato anterior
+                targetDb.query(
+                    `INSERT INTO log_auditoria (fecha, usuario, correo, ip, metodo, ruta, modulo, accion, body_resumen, status_codigo, firma)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [fechaStr, usuario, correo, ip, req.method, ruta, modulo, accion, bodyResumen || null, res.statusCode, firma],
+                    () => {}
+                );
+            }
         );
     });
     next();
@@ -3459,7 +3512,7 @@ app.put('/api/taller/entradas/:ticket/estado', (req, res) => {
 // ============================================================
 app.get('/api/log-auditoria', (req, res) => {
     const { modulo, usuario, desde, hasta, q, limit } = req.query;
-    let sql = `SELECT id, fecha AS created_at, usuario, correo, ip, metodo, ruta, modulo, accion, body_resumen AS detalle, status_codigo, firma FROM log_auditoria`;
+    let sql = `SELECT id, fecha AS created_at, usuario, correo, ip, metodo, ruta, modulo, accion, body_resumen AS detalle, status_codigo, firma, antes, despues, firma_estado FROM log_auditoria`;
     const params = [], conditions = [];
     if (modulo)  { conditions.push('modulo = ?');             params.push(modulo); }
     if (usuario) { conditions.push('usuario LIKE ?');          params.push('%' + usuario + '%'); }
@@ -3472,7 +3525,14 @@ app.get('/api/log-auditoria', (req, res) => {
     params.push(Math.min(parseInt(limit) || 500, 1000));
     const targetDb = req.db || db;
     targetDb.query(sql, params, (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            // Base sin las columnas antes/después: consulta con el formato anterior
+            const sqlBase = sql.replace(', antes, despues, firma_estado FROM', ' FROM');
+            return targetDb.query(sqlBase, params, (err2, rows2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ data: rows2 });
+            });
+        }
         res.json({ data: rows });
     });
 });
