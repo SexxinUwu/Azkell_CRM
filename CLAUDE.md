@@ -310,8 +310,11 @@ Prioridad alta (uso diario):
 - [ ] Status de rampa: subir evidencia, crear OT/trabajos desde la rampa y eliminar rampa (borra OTs hijas) siguen en el clásico
 Prioridad media:
 - [ ] Operaciones: Órdenes de viaje (+Marsisa), Órdenes de servicio, Vales (+Marsisa), Guías de remitente / transportista, Análisis de combustible, Urea, Programación
-- [ ] Tesorería: Caja, Liquidaciones, Cuentas por cobrar, Bancos, Centros de costos
+- [x] ~~Tesorería: Bancos~~ (campos reales `banco/titular/tipo_cuenta/cci`, alta, eliminar, Excel)
+- [ ] Tesorería: Caja, Liquidaciones, Cuentas por cobrar, Centros de costos
 - [ ] Personas: Asistencia, Nómina, Garita (unidades), Seg. patrimonial, Portal del conductor
+- [x] ~~Directorio de Proveedores~~ estilo Conductores (iniciales, llamar/WhatsApp a la derecha, orden alfabético, Excel)
+- [x] ~~Empresas duplicadas~~: `core/lib/empresa.ts` agrupa "MARSISA SAC" = "Marsisa S.A.C." (filtros y selector de Conductores). Los datos guardados no se tocaron.
 - [ ] Directorio: Clientes
 Prioridad baja:
 - [ ] Sistema: Integraciones

@@ -27,7 +27,8 @@
 .conductor-card {
   height: 100%;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: stretch;
   border-radius: var(--r-xl);
   background: var(--surface);
   box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -39,6 +40,7 @@
 }
 .conductor-card__principal {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: var(--s-3);
@@ -56,15 +58,17 @@
 .conductor-card__empresa { font-size: 0.8125rem; color: var(--label-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conductor-card__acciones {
   display: flex;
+  flex-direction: column;
+  justify-content: center;
   gap: var(--s-2);
-  padding: var(--s-2) var(--s-4) var(--s-3);
-  border-top: 1px solid var(--separator);
+  padding: var(--s-2) var(--s-3) var(--s-2) 0;
+  flex-shrink: 0;
 }
 .conductor-accion {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   background: var(--fill);
   color: var(--label);

@@ -1,3 +1,4 @@
+import { agruparEmpresas } from '../../core/lib/empresa';
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -86,8 +87,8 @@ export function ConductorFormulario({ conductor, existentes, open, onClose, onGu
   }, [c.dni, open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const empresas = useMemo(() => {
-    const todas = new Set([...(empresasApi.data ?? []), ...existentes.map(x => x.empresa)].map(e => e.trim()).filter(Boolean));
-    return [...todas].sort((a, b) => a.localeCompare(b)).map(e => ({ value: e, label: e }));
+    const todas = [...(empresasApi.data ?? []), ...existentes.map(x => x.empresa)];
+    return agruparEmpresas(todas).map(g => g.nombre).sort((a, b) => a.localeCompare(b, 'es')).map(e => ({ value: e, label: e }));
   }, [empresasApi.data, existentes]);
 
   async function elegirFoto(archivo: File | undefined) {

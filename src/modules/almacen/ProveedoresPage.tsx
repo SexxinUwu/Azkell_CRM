@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Building2, Plus, SearchX } from 'lucide-react';
+import { ArrowUpRight, Building2, FileSpreadsheet, MessageCircle, Phone, Plus, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -13,8 +13,17 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
+import { exportarExcel } from '../../core/lib/excel';
+import { initials } from '../../core/lib/format';
+import { whatsapp } from '../conductores/api';
+import '../conductores/conductores.css';
+import './almacen.css';
 import { eliminarProveedor, useProveedores, type ProveedorInv } from './api';
 import { ProveedorFormulario } from './ProveedorFormulario';
+
+// Tonos para las iniciales: el mismo proveedor siempre tiene el mismo color
+const TONOS = ['#f56300', '#0a84ff', '#30a46c', '#bf5af2', '#ff375f', '#5e5ce6', '#ac8e68', '#0fa3b1'];
+const tono = (s: string) => TONOS[[...s].reduce((a, ch) => a + ch.charCodeAt(0), 0) % TONOS.length];
 
 export function ProveedoresPage() {
   const { data, isLoading, isError, error } = useProveedores();
@@ -35,7 +44,7 @@ export function ProveedoresPage() {
 
   const proveedores = data ?? [];
 
-  const visibles = useMemo(() => proveedores.filter(p => {
+  const visibles = useMemo(() => [...proveedores].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).filter(p => {
     if (!busqueda) return true;
     const q = busqueda.toUpperCase();
     return (
@@ -76,7 +85,12 @@ export function ProveedoresPage() {
           actions={
             <>
               <MenuOtros opciones={[
-                { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('almacen/proveedores') },
+                { label: 'Exportar Excel', detalle: `${visibles.length} proveedores`, icon: <FileSpreadsheet size={17} />,
+                  onSelect: () => exportarExcel('Proveedores', 'Proveedores',
+                    ['Proveedor', 'RUC', 'Contacto', 'Teléfono', 'Correo', 'Dirección', 'Banco', 'Cuenta', 'CCI', 'Moneda'],
+                    visibles.map(p => [p.nombre, p.ruc, p.contacto, p.telefono, p.correo, p.direccion, p.banco, p.cuenta, p.cci, p.moneda_pago]))
+                    .catch(err => toast(errorMessage(err), 'error')) },
+                { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('almacen/proveedores') },
               ]} />
               {puedeCrear && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ proveedor: null })}>
@@ -116,32 +130,39 @@ export function ProveedoresPage() {
               </button>
             </EmptyState>
           ) : (
-            <div className="tarjeta__lista">
+            <ul className="conductores-grid">
               <AnimatePresence initial={false}>
-                {visibles.map(p => (
-                  <motion.div key={p.id} layout={!reduce} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring}>
-                    <button type="button" className="mov-fila" onClick={() => { haptic('selection'); setSeleccionado(p); }}>
-                      <div className="mov-fila__icon" style={{ background: 'var(--fill)', color: 'var(--label-2)' }}>
-                        <Building2 size={16} />
+                {visibles.map(p => {
+                  const wa = whatsapp(p.telefono ?? '');
+                  const tel = (p.telefono ?? '').trim();
+                  return (
+                    <motion.li key={p.id} layout={!reduce} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={spring}>
+                      <div className="conductor-card">
+                        <button type="button" className="conductor-card__principal pressable" onClick={() => { haptic('selection'); setSeleccionado(p); }}>
+                          <span className="foto-conductor foto-conductor--iniciales" aria-hidden
+                            style={{ width: 52, height: 52, fontSize: 52 * 0.38, background: `linear-gradient(145deg, ${tono(p.nombre)}, color-mix(in srgb, ${tono(p.nombre)} 70%, #000))` }}>
+                            {initials(p.nombre) || <Building2 size={20} />}
+                          </span>
+                          <div className="conductor-card__texto">
+                            <div className="conductor-card__nombre">{p.nombre}</div>
+                            <div className="conductor-card__meta"><span>{p.ruc ? `RUC ${p.ruc}` : 'Sin RUC'}</span></div>
+                            <div className="conductor-card__empresa">
+                              {[p.contacto, tel].filter(Boolean).join(' · ') || 'Sin contacto'}
+                            </div>
+                          </div>
+                        </button>
+                        {(tel || wa) && (
+                          <div className="conductor-card__acciones">
+                            {tel && <a className="conductor-accion pressable" href={`tel:${tel.replace(/\s/g, '')}`} aria-label={`Llamar a ${p.nombre}`}><Phone size={16} /></a>}
+                            {wa && <a className="conductor-accion conductor-accion--wa pressable" href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" aria-label={`WhatsApp a ${p.nombre}`}><MessageCircle size={16} /></a>}
+                          </div>
+                        )}
                       </div>
-                      <div className="mov-fila__cuerpo">
-                        <span className="mov-fila__titulo">{p.nombre}</span>
-                        <span className="mov-fila__sub">
-                          {p.ruc ? `RUC: ${p.ruc}` : 'Sin RUC'}
-                          {p.contacto ? ` · ${p.contacto}` : ''}
-                          {p.telefono ? ` · ${p.telefono}` : ''}
-                        </span>
-                      </div>
-                      {p.banco && (
-                        <div className="mov-fila__derecha">
-                          <span style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>{p.banco}</span>
-                        </div>
-                      )}
-                    </button>
-                  </motion.div>
-                ))}
+                    </motion.li>
+                  );
+                })}
               </AnimatePresence>
-            </div>
+            </ul>
           )}
         </div>
       )}
@@ -198,6 +219,12 @@ function ProveedorDetalle({ proveedor: p, onVolver, onEditar, onEliminar }: Deta
         <span className="inv-ficha__id">#{p.id}</span>
         <h2 className="inv-ficha__nombre">{p.nombre}</h2>
         {p.ruc && <span className="inv-ficha__sub">RUC: {p.ruc}</span>}
+        {(p.telefono || p.correo) && (
+          <div className="ficha__contacto" style={{ justifyContent: 'center' }}>
+            {p.telefono && <a className="conductor-accion pressable" href={`tel:${p.telefono.replace(/\s/g, '')}`} aria-label="Llamar"><Phone size={16} /></a>}
+            {whatsapp(p.telefono ?? '') && <a className="conductor-accion conductor-accion--wa pressable" href={`https://wa.me/${whatsapp(p.telefono ?? '')}`} target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle size={16} /></a>}
+          </div>
+        )}
       </div>
 
       <div>
