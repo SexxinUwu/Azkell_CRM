@@ -4655,6 +4655,7 @@ window.srAbrirPDFStatus = function() {
 
     // Generar filas de la tabla
     var filasHtml = '';
+    var _datosPdf = []; // mismas filas, como datos: con ellas se arma el PDF vectorial (texto real)
     rampas.forEach(function(rampaObj, idx) {
         var rampaId   = rampaObj.id;
         var rampaNom  = rampaObj.nombre_rampa || ('Rampa ' + rampaId);
@@ -4665,6 +4666,7 @@ window.srAbrirPDFStatus = function() {
         });
 
         if (!entradas.length) {
+            _datosPdf.push({ rampa: rampaNom, fIn: '—', hIn: '—', placa: '—', insp: '—', inspColor: '#64748b', sit: 'LIBRE', sitColor: '#64748b', obs: 'Disponible para ingreso', fOut: '—', hOut: '—', hTaller: '—', libre: true });
             filasHtml += `
             <tr style="background:#fff; color:#000;">
                 <td style="font-weight:800; color:#000; padding:4px 6px; font-size:8.5px;">${_srEsc(rampaNom)}</td>
@@ -4714,6 +4716,9 @@ window.srAbrirPDFStatus = function() {
 
                 var sitColor = getSitColorPdf(e.situacion);
 
+                _datosPdf.push({ rampa: rampaNom, fIn: fIn, hIn: hIn, placa: e.placa || '—', insp: inspInfo.texto, inspColor: inspColor, sit: e.situacion || '—', sitColor: sitColor,
+                    obs: obsTextoCol || '—', fOut: fOut, hOut: hOut, hTaller: hTaller, libre: false });
+
                 filasHtml += `
                 <tr style="background:#fff; color:#000;">
                     <td style="font-weight:900; color:#000; padding:4px 6px; font-size:8.5px;">${_srEsc(rampaNom)}</td>
@@ -4741,6 +4746,8 @@ window.srAbrirPDFStatus = function() {
         }
     });
 
+    window._srLastPdfData = { empresa: empNombre, logo: empLogoUrl, emisor: emisorNombre, fecha: fechaEmisionStr,
+        total: totalRampas, ocupadas: ocupadas, espera: espera, libres: libres, filas: _datosPdf };
     window._srLastHtmlDoc = null;
     var htmlDoc = `<!DOCTYPE html>
 <html lang="es">
@@ -5037,6 +5044,127 @@ window.srAbrirPDFStatus = function() {
 };
 
 // ================================================================
+// 📄 PDF VECTORIAL DEL STATUS DE RAMPA (jsPDF + autoTable)
+// Texto real y seleccionable, igual que un PDF descargado. Sin imágenes de la página.
+// ================================================================
+window._srConstruirPdfVectorial = async function () {
+    var d = window._srLastPdfData;
+    if (!d) throw new Error('No hay datos del status de rampa para exportar');
+    if (typeof window.loadPDF === 'function') await window.loadPDF();
+    if (!window.jspdf || !window.jspdf.jsPDF) throw new Error('No se pudo cargar la librería de PDF');
+
+    var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    var W = doc.internal.pageSize.getWidth();   // 297
+    var H = doc.internal.pageSize.getHeight();  // 210
+    var M = 7;
+
+    function rgb(hex) {
+        var h = String(hex || '#000000').replace('#', '');
+        if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+        return [parseInt(h.substr(0, 2), 16) || 0, parseInt(h.substr(2, 2), 16) || 0, parseInt(h.substr(4, 2), 16) || 0];
+    }
+
+    // Marco exterior
+    doc.setDrawColor(0); doc.setLineWidth(0.7);
+    doc.rect(M - 2, M - 2, W - 2 * (M - 2), H - 2 * (M - 2));
+
+    // Logo (si se puede leer; si no, solo el nombre)
+    var xTexto = M + 2;
+    try {
+        var resp = await fetch(d.logo, { mode: 'cors' });
+        if (resp.ok) {
+            var blob = await resp.blob();
+            var dataUrl = await new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = rej; r.readAsDataURL(blob); });
+            var fmt = /image\/png/i.test(dataUrl) ? 'PNG' : 'JPEG';
+            doc.addImage(dataUrl, fmt, M + 1, M + 1, 22, 17);
+            xTexto = M + 26;
+        }
+    } catch (e) { /* sin logo */ }
+
+    doc.setFont('helvetica', 'bold'); doc.setTextColor(0);
+    doc.setFontSize(12); doc.text(String(d.empresa || '').toUpperCase(), xTexto, M + 11);
+
+    doc.setFontSize(16);
+    doc.text('ESTATUS DE UNIDADES EN TALLER', W / 2, M + 8, { align: 'center' });
+    doc.setFontSize(8.5);
+    doc.text('CONTROL DE OCUPACIÓN DE RAMPA Y TURNOS DE MANTENIMIENTO', W / 2, M + 14, { align: 'center' });
+
+    // Caja de control de documento (derecha)
+    var bx = W - M - 62, by = M, bw = 60, bh = 17;
+    doc.setLineWidth(0.4); doc.rect(bx, by, bw, bh);
+    doc.setFontSize(8);
+    doc.text('CÓDIGO: F-MAN-005', bx + bw - 2, by + 5, { align: 'right' });
+    doc.text('VERSIÓN: 0', bx + bw - 2, by + 9.5, { align: 'right' });
+    doc.text('F. EMISIÓN: 10/11/2025', bx + bw - 2, by + 14, { align: 'right' });
+
+    doc.setLineWidth(0.8); doc.line(M, M + 20, W - M, M + 20);
+
+    // Barra de resumen
+    var ky = M + 23, kh = 8;
+    doc.setLineWidth(0.5); doc.roundedRect(M, ky, W - 2 * M, kh, 2, 2);
+    doc.setFontSize(8);
+    var yT = ky + 5.3;
+    doc.setFont('helvetica', 'normal'); doc.text('EMISIÓN:', M + 3, yT);
+    doc.setFont('helvetica', 'bold'); doc.text(String(d.fecha), M + 18, yT);
+    doc.setFont('helvetica', 'normal'); doc.text('EMITIDO POR:', M + 55, yT);
+    doc.setFont('helvetica', 'bold'); doc.text(String(d.emisor), M + 76, yT);
+    var items = [['TOTAL RAMPAS:', d.total, '#000000'], ['OCUPADAS:', d.ocupadas, '#dc2626'], ['EN ESPERA / LAVADO:', d.espera, '#b45309'], ['LIBRES:', d.libres, '#15803d']];
+    var xk = W - M - 125;
+    items.forEach(function (it) {
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(0);
+        doc.text(it[0], xk, yT);
+        var w = doc.getTextWidth(it[0]);
+        doc.setFont('helvetica', 'bold'); doc.setTextColor.apply(doc, rgb(it[2]));
+        doc.text(String(it[1]), xk + w + 1.5, yT);
+        xk += w + 14;
+    });
+    doc.setTextColor(0);
+
+    // Tabla
+    var head = [['RAMPA', 'F. INGRESO', 'HORA', 'PLACA', 'INSPECCIÓN?', 'SITUACIÓN', 'OBSERVACIONES / TRABAJOS A REALIZAR', 'SALIDA (EST.)', 'HORA', 'H. TALLER']];
+    var body = d.filas.map(function (f) { return [f.rampa, f.fIn, f.hIn, f.placa, f.insp, f.sit, f.obs, f.fOut, f.hOut, f.hTaller]; });
+
+    doc.autoTable({
+        head: head, body: body, startY: ky + kh + 4, margin: { left: M, right: M, bottom: 14 },
+        theme: 'grid',
+        styles: { font: 'helvetica', fontSize: 7.6, cellPadding: 1.6, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.25, valign: 'middle', overflow: 'linebreak' },
+        headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 7.4 },
+        columnStyles: {
+            0: { fontStyle: 'bold', cellWidth: 28 }, 1: { halign: 'center', cellWidth: 20 }, 2: { halign: 'center', cellWidth: 13 },
+            3: { halign: 'center', fontStyle: 'bold', fontSize: 9, cellWidth: 22 }, 4: { halign: 'center', fontStyle: 'bold', cellWidth: 21 },
+            5: { halign: 'center', fontStyle: 'bold', cellWidth: 26 }, 6: { halign: 'left' },
+            7: { halign: 'center', cellWidth: 20 }, 8: { halign: 'center', cellWidth: 13 }, 9: { halign: 'center', fontStyle: 'bold', cellWidth: 18 }
+        },
+        didParseCell: function (data) {
+            if (data.section !== 'body') return;
+            var f = d.filas[data.row.index];
+            if (!f) return;
+            if (data.column.index === 4) data.cell.styles.textColor = rgb(f.inspColor);
+            if (data.column.index === 5) data.cell.styles.textColor = rgb(f.sitColor);
+            if (f.libre && data.column.index !== 0 && data.column.index !== 5) data.cell.styles.fontStyle = 'normal';
+        }
+    });
+
+    // Pie
+    var fy = H - M - 1;
+    doc.setLineWidth(0.4); doc.line(M, fy - 4, W - M, fy - 4);
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(0);
+    doc.text('Sistema ERP Azkell Fleet · Módulo de Control de Rampa y Mantenimiento', M, fy);
+    doc.setFont('helvetica', 'bold');
+    var txt = 'Semáforo Inspección:  ';
+    var xs = W / 2 - 38;
+    doc.setFont('helvetica', 'normal'); doc.text(txt, xs, fy);
+    var ww = doc.getTextWidth(txt);
+    var sem = [['>7d Vigente', '#15803d'], ['0-7d Próximo', '#854d0e'], ['<0d Vencido', '#b91c1c']];
+    doc.setFont('helvetica', 'bold');
+    sem.forEach(function (it) { doc.setTextColor.apply(doc, rgb(it[1])); doc.text(it[0], xs + ww, fy); ww += doc.getTextWidth(it[0]) + 4; });
+    doc.setTextColor(0);
+    doc.text('DOCUMENTO OFICIAL · HOJA 1 DE 1', W - M, fy, { align: 'right' });
+
+    return doc.output('blob');
+};
+
+// ================================================================
 // 📲 COMPARTIR REPORTE DE STATUS RAMPA POR WHATSAPP
 // ================================================================
 window.srCompartirWhatsApp = async function () {
@@ -5064,7 +5192,7 @@ window.srCompartirWhatsApp = async function () {
 
     if (!htmlDoc) htmlDoc = window._srLastHtmlDoc;
 
-    if (!htmlDoc) {
+    if (!htmlDoc && !window._srLastPdfData) {
         if (typeof window.mostrarToast === 'function') window.mostrarToast('No hay datos para exportar', 'danger');
         if (btn) { btn.innerHTML = '<i class="bi bi-whatsapp text-success fs-5"></i>'; btn.style.pointerEvents = 'auto'; }
         return;
@@ -5077,41 +5205,7 @@ window.srCompartirWhatsApp = async function () {
     var filename = 'Status_Rampa_' + dd + mm + yyyy + '.pdf';
 
     try {
-        var pdfBlob = await new Promise(function(resolve, reject) {
-            var iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed;top:-10000px;left:-10000px;width:1100px;height:900px;border:none;z-index:-999;';
-            document.body.appendChild(iframe);
-            var doc = iframe.contentWindow.document;
-            doc.open();
-            doc.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
-                + '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>'
-                + '</head><body><div id="sr-pdf-root"></div></body></html>');
-            doc.close();
-            iframe.onload = async function() {
-                try {
-                    await new Promise(function(r){ setTimeout(r, 500); });
-                    var parser = new DOMParser();
-                    var srcDoc = parser.parseFromString(htmlDoc, 'text/html');
-                    var root = doc.getElementById('sr-pdf-root');
-                    root.innerHTML = srcDoc.body.innerHTML;
-                    srcDoc.querySelectorAll('style').forEach(function(s) {
-                        var st = doc.createElement('style');
-                        st.textContent = s.textContent;
-                        doc.head.appendChild(st);
-                    });
-                    await new Promise(function(r){ setTimeout(r, 600); });
-                    var opt = {
-                        margin: 0, filename: filename,
-                        image: { type: 'jpeg', quality: 0.97 },
-                        html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 1100 },
-                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-                    };
-                    var pdfB = await iframe.contentWindow.html2pdf().set(opt).from(root).outputPdf('blob');
-                    iframe.remove();
-                    resolve(pdfB);
-                } catch(e) { iframe.remove(); reject(e); }
-            };
-        });
+        var pdfBlob = await window._srConstruirPdfVectorial();
 
         var pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
