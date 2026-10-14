@@ -85,3 +85,18 @@
 @media (prefers-reduced-motion: reduce) {
   .welcome--lite, .welcome--lite .welcome__card, .welcome--lite .welcome__hello { animation: none; transition-duration: 0.01ms; }
 }
+
+/* ─── Versión con transformaciones (web y celular): el ícono se centra con CSS ─── */
+.welcome--c .welcome__card {
+  left: 50%;
+  top: 50%;
+  width: 112px;
+  height: 112px;
+  margin: -84px 0 0 -56px;   /* sube 28 px para dejar sitio al saludo */
+  border-radius: 30px;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+  contain: layout paint;
+}
+.welcome--c .welcome__hello { top: calc(50% + 52px); }
+.welcome--c { touch-action: none; }

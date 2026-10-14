@@ -293,7 +293,7 @@ if (el) { el.style.display = 'none'; }
 - [x] ~~Barra del celular con nombres de módulo~~: `ModuleDock` (Inicio, un botón por módulo, Ajustes al final). Tocar un módulo abre su lista de pantallas; Ajustes reúne cuenta, color, Configuración, Sistema, instalar app y cerrar sesión. Reemplaza a `TabBar`.
 - [x] ~~Color de la app elegible~~: `src/core/lib/accent.ts` + `AccentPicker` (Ajustes en celular, Mi cuenta en escritorio). Guardado por dispositivo en `fleet_accent`.
 - [x] ~~Auditoría renovada~~: línea de tiempo por día con filtros (tipo, persona, fechas) y vista "Registro firmado".
-- [x] ~~Bienvenida/despedida en celular~~: versión liviana (`LiteSplash`) solo con opacidad y escala; la completa queda en escritorio. **Falta probar en teléfono real.**
+- [x] ~~Bienvenida/despedida~~: misma animación en web y celular, solo con transform y opacidad (FLIP), centrada con CSS (`WelcomeTransition`, `FarewellTransition`). `LiteSplash` queda solo para "reducir movimiento". **Falta probar en teléfono real.**
 
 ### 🔧 Lógica por migrar — estado al 2026-10-14
 Todas las pantallas del menú ya tienen versión React con **datos reales y escritura**. Lo que sigue en la versión actual son flujos largos o de riesgo, enlazados desde "Otros" de cada pantalla.
