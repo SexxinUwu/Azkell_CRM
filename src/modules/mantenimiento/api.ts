@@ -294,13 +294,25 @@ export interface PlanificacionItem {
   id: number | string;
   placa: string;
   tipo_mp: string;
-  estado: string | null;
+  estado: string | null;            // Programada | Completada | Cancelada | Diferida
   fecha_inicio_ventana: string | null;
   fecha_fin_ventana: string | null;
-  km_actual: number | null;
-  km_objetivo: number | null;
-  responsable: string | null;
-  observaciones: string | null;
+  mes_ejecucion: number | null;
+  anio_ejecucion: number | null;
+  km_estimado: number | null;
+  km_minimo: number | null;
+  km_maximo: number | null;
+  tecnico_asignado: string | null;
+  prioridad: string | null;         // Normal | Alta | Urgente …
+  observaciones_plan: string | null;
+  motivo_cancelacion: string | null;
+  fleetrun_id_ejecutado: string | null;
+  fecha_real_ejecucion: string | null;
+  km_real_ejecucion: number | null;
+  desviacion_km: number | null;
+  desviacion_dias: number | null;
+  marca: string | null;
+  cliente: string | null;
   [key: string]: unknown;
 }
 
@@ -334,6 +346,38 @@ export function planEstadoColor(e: EstadoPlan): string {
     default:           return 'neutral';
   }
 }
+
+export interface PlanNuevo {
+  placa: string; tipo_mp: string; fecha_inicio_ventana: string; fecha_fin_ventana: string;
+  mes_ejecucion: number; anio_ejecucion: number; km_estimado?: number; km_minimo?: number | null; km_maximo?: number | null;
+  tecnico_asignado?: string; prioridad?: string; observaciones_plan?: string; created_by?: string;
+}
+
+export const crearPlan = (d: PlanNuevo) => api<{ ok: boolean; id: string }>('/planificacion', { method: 'POST', body: d });
+
+export const editarPlan = (id: string | number, d: Partial<PlanNuevo> & { estado?: string; motivo_cancelacion?: string }) =>
+  api<{ ok: boolean }>(`/planificacion/${id}`, { method: 'PUT', body: d });
+
+export const completarPlan = (id: string | number, d: { fleetrun_id: string; fecha_real?: string; km_real?: number; usuario?: string }) =>
+  api<{ ok: boolean; ya_completado?: boolean }>(`/planificacion/${id}/completar`, { method: 'POST', body: d });
+
+export const cancelarPlan = (id: string | number, d: { motivo: string; usuario?: string }) =>
+  api<{ ok: boolean }>(`/planificacion/${id}`, { method: 'DELETE', body: d });
+
+export interface TipoMantenimiento { id: number; marca: string | null; tipo_mp: string; uts: string | null; frecuencia_km: number | null; frecuencia_dias: number | null }
+export function useTiposMantenimiento() {
+  return useQuery<TipoMantenimiento[]>({
+    queryKey: ['mant', 'tipos-mantenimiento'],
+    queryFn: () => api('/tipos-mantenimiento').then((r: unknown) => (Array.isArray(r) ? r : ((r as { data?: TipoMantenimiento[] }).data ?? [])) as TipoMantenimiento[]),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export interface SugerenciaPlan {
+  ok: boolean; mensaje?: string; fecha_sugerida?: string | null; fecha_fin_sugerida?: string | null; km_sugerido?: number | null;
+}
+export const sugerirPlan = (placa: string, tipomp: string) =>
+  api<SugerenciaPlan>(`/planificacion-sugerir?placa=${encodeURIComponent(placa)}&tipomp=${encodeURIComponent(tipomp)}`);
 
 export function usePlanificacion(mes: number, anio: number) {
   return useQuery<PlanificacionItem[]>({
