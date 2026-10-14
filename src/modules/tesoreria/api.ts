@@ -7,25 +7,72 @@ function arr<T>(r: unknown): T[] {
 }
 
 export interface CajaMovimiento {
-  id?: number | string;
-  numero?: string | null;
-  concepto?: string | null;
-  importe?: number | string | null;
-  tipo?: string | null;
-  estado?: string | null;
-  fecha?: string | null;
-  solicitante?: string | null;
-  aprobado_por?: string | null;
+  id: number;
+  fecha: string | null;
+  hora: string | null;
+  fecha_valuta: string | null;
+  numero_constancia_deposito: string | null;
+  numero_factura: string | null;
+  serie: string | null;
+  numero: string | null;
+  orden_viaje: string | null;
+  conductor: string | null;
+  ruta_viaje: string | null;
+  placa: string | null;
+  autoriza: string | null;
+  motivo: string | null;
+  centro_costo: string | null;
+  sub_motivo: string | null;
+  modalidad_pago: string | null;
+  moneda: string | null;
+  tipo_persona: string | null;
+  persona: string | null;
+  tipo_movimiento: string | null;       // EGRESO | INGRESO
+  subtotal: number | string | null;
+  retencion_detraccion: number | string | null;
+  importe_total: number | string | null;
+  tipo_cambio: number | string | null;
+  descripcion: string | null;
+  tipo_comprobante: string | null;
+  cuenta_bancaria_persona: string | null;
+  cuenta_bancaria_empresa: string | null;
+  voucher_url: string | null;
+  sustento_url: string | null;
+  observacion: string | null;
+  no_aplica_liquidacion: number | boolean | null;
+  estado: string;                       // REGISTRADO | PENDIENTE | APROBADO | PROCESADO | PAGADO | ANULADO
+  usuario_creacion: string | null;
+  usuario_aprobacion: string | null;
+  fecha_aprobacion: string | null;
+  motivo_anulacion: string | null;
   [key: string]: unknown;
 }
 
-export function useCaja() {
+export interface CajaFiltros { desde?: string; hasta?: string; estado?: string; buscar?: string }
+
+export function useCaja(f: CajaFiltros = {}) {
   return useQuery<CajaMovimiento[]>({
-    queryKey: ['tesoreria', 'caja'],
-    queryFn: () => api('/tesoreria/caja').then(r => arr<CajaMovimiento>(r)),
+    queryKey: ['tesoreria', 'caja', f],
+    queryFn: () => {
+      const p = new URLSearchParams();
+      if (f.desde) p.set('fecha_desde', f.desde);
+      if (f.hasta) p.set('fecha_hasta', f.hasta);
+      if (f.estado) p.set('estado', f.estado);
+      if (f.buscar) p.set('buscar', f.buscar);
+      const qs = p.toString();
+      return api(`/tesoreria/caja${qs ? '?' + qs : ''}`).then(r => arr<CajaMovimiento>(r));
+    },
     staleTime: 30_000,
   });
 }
+
+export interface OrdenViajeCaja { viaje: string; conductor: string | null; placa_tracto: string | null; placa_remolque: string | null; ruta: string | null; fecha_viaje: string | null }
+
+export const buscarOrdenesViaje = (q: string) =>
+  api<{ data?: OrdenViajeCaja[] }>(`/tesoreria/caja/buscar-ordenes-viaje?q=${encodeURIComponent(q)}`).then(r => r.data ?? []);
+
+export const siguienteNumeroCaja = (serie: string) =>
+  api<{ numero?: string }>(`/tesoreria/caja/siguiente-numero?serie=${encodeURIComponent(serie)}`).then(r => r.numero ?? '');
 
 export interface Liquidacion {
   id?: number | string;
