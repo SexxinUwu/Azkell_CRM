@@ -20,6 +20,7 @@ const rateLimit = require('express-rate-limit');
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl } = require('./utils/s3');
 const { AsyncLocalStorage } = require('async_hooks');
 const tenantStorage = new AsyncLocalStorage();
+const crypto = require('crypto');
 
 const app = express();
 
@@ -855,6 +856,30 @@ const defaultDbPool = mysql.createPool({
 
 defaultDbPool.on('connection', (connection) => {
     connection.query('SET SESSION group_concat_max_len = 10485760');
+});
+
+// ── Tabla de auditoría inmutable (log_auditoria) ─────────────────
+// Se crea al arrancar. No tiene UPDATE ni DELETE intencional — la integridad
+// se verifica mediante firma HMAC-SHA256 de cada fila.
+defaultDbPool.query(`
+  CREATE TABLE IF NOT EXISTS log_auditoria (
+    id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    fecha        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    usuario      VARCHAR(150)    NOT NULL DEFAULT '',
+    correo       VARCHAR(150)    NOT NULL DEFAULT '',
+    ip           VARCHAR(45)     NOT NULL DEFAULT '',
+    metodo       VARCHAR(10)     NOT NULL DEFAULT '',
+    ruta         VARCHAR(400)    NOT NULL DEFAULT '',
+    modulo       VARCHAR(80)     NOT NULL DEFAULT '',
+    accion       VARCHAR(50)     NOT NULL DEFAULT '',
+    body_resumen TEXT,
+    status_codigo SMALLINT       DEFAULT NULL,
+    firma        VARCHAR(64)     NOT NULL DEFAULT ''
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+`, (err) => {
+    if (err && !err.message.includes('already exists')) {
+        console.error('[log_auditoria] Error al crear tabla:', err.message);
+    }
 });
 
 // Proxy global 'db' que delega automáticamente las peticiones al pool de la empresa según el subdominio activo
@@ -2282,6 +2307,51 @@ app.use('/api', verifyToken);
 app.use('/api/superadmin', require('./routes/superadmin')());
 app.use('/api', globalRBAC);
 
+// ── Middleware de Audit Trail criptográfico ───────────────────────
+// Registra en log_auditoria toda mutación (POST/PUT/PATCH/DELETE) con firma HMAC.
+// Se ejecuta DESPUÉS de verifyToken para tener req.user disponible.
+const AUDIT_SKIP_PATHS = ['/login', '/logout', '/2fa', '/ping', '/eventos', '/tv'];
+function _auditFirma(campos) {
+    return crypto
+        .createHmac('sha256', process.env.JWT_SECRET || 'audit')
+        .update(Object.values(campos).join('|'))
+        .digest('hex');
+}
+app.use('/api', (req, res, next) => {
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
+    if (AUDIT_SKIP_PATHS.some(p => req.path.startsWith(p))) return next();
+    const usuario = (req.user && (req.user.nombre || req.user.correo)) || 'Anónimo';
+    const correo  = (req.user && req.user.correo) || '';
+    const ip      = req.ip || req.headers['x-forwarded-for'] || '';
+    const ruta    = req.path.slice(0, 400);
+    const seg     = ruta.split('/').filter(Boolean);
+    const modulo  = seg[0] || 'general';
+    const accionMap = { POST: 'crear', PUT: 'editar', PATCH: 'editar', DELETE: 'eliminar' };
+    const accion  = accionMap[req.method] || req.method.toLowerCase();
+    let bodyResumen = '';
+    try {
+        const b = req.body || {};
+        const sinSecretos = Object.fromEntries(
+            Object.entries(b).filter(([k]) => !/(password|pass|secret|token|firma|hash)/i.test(k))
+        );
+        const str = JSON.stringify(sinSecretos);
+        bodyResumen = str.length > 500 ? str.slice(0, 497) + '…' : str;
+    } catch {}
+    const fechaStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const firma = _auditFirma({ fechaStr, usuario, correo, ip, metodo: req.method, ruta, modulo, accion, bodyResumen });
+
+    res.on('finish', () => {
+        const targetDb = req.db || db;
+        targetDb.query(
+            `INSERT INTO log_auditoria (fecha, usuario, correo, ip, metodo, ruta, modulo, accion, body_resumen, status_codigo, firma)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [fechaStr, usuario, correo, ip, req.method, ruta, modulo, accion, bodyResumen || null, res.statusCode, firma],
+            () => {}
+        );
+    });
+    next();
+});
+
 // ============================================================
 // 🛡️ MIDDLEWARE RBAC (Control de Acceso Basado en Roles)
 // ============================================================
@@ -3381,6 +3451,29 @@ app.put('/api/taller/entradas/:ticket/estado', (req, res) => {
     db.query("UPDATE ordenes_trabajo SET estado = ? WHERE ticket_entrada = ?", [req.body.estado, req.params.ticket], (err) => {
         if(err) return res.status(500).json({error: err.message});
         res.json({data: 'Situación actualizada correctamente'});
+    });
+});
+
+// ============================================================
+// 📋 LOG DE AUDITORÍA CRIPTOGRÁFICO (tabla log_auditoria)
+// ============================================================
+app.get('/api/log-auditoria', (req, res) => {
+    const { modulo, usuario, desde, hasta, q, limit } = req.query;
+    let sql = `SELECT id, fecha AS created_at, usuario, correo, ip, metodo, ruta, modulo, accion, body_resumen AS detalle, status_codigo, firma FROM log_auditoria`;
+    const params = [], conditions = [];
+    if (modulo)  { conditions.push('modulo = ?');             params.push(modulo); }
+    if (usuario) { conditions.push('usuario LIKE ?');          params.push('%' + usuario + '%'); }
+    if (desde)   { conditions.push('DATE(fecha) >= ?');        params.push(desde); }
+    if (hasta)   { conditions.push('DATE(fecha) <= ?');        params.push(hasta); }
+    if (q)       { conditions.push('(usuario LIKE ? OR ruta LIKE ? OR modulo LIKE ? OR accion LIKE ?)');
+                   const s = '%' + q + '%'; params.push(s, s, s, s); }
+    if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
+    sql += ' ORDER BY id DESC LIMIT ?';
+    params.push(Math.min(parseInt(limit) || 500, 1000));
+    const targetDb = req.db || db;
+    targetDb.query(sql, params, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: rows });
     });
 });
 

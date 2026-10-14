@@ -1863,7 +1863,7 @@
             var doc = iframe.contentWindow.document;
             doc.open();
             doc.write('<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n'
-                + '<script src="https://cdn.tailwindcss.com"></script>\n'
+                + '<script src="/libs/tailwind.min.js"></script>\n'
                 + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
                 + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
                 + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
@@ -1908,7 +1908,7 @@
         var finalHtml = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n'
             + '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
             + '<title>' + (titulo || 'Acta de Entrega de Vehículo • Marsisa SGC 2026') + '</title>\n'
-            + '<script src="https://cdn.tailwindcss.com"></script>\n'
+            + '<script src="/libs/tailwind.min.js"></script>\n'
             + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
             + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
             + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">\n'

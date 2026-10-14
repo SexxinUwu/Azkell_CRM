@@ -6025,7 +6025,7 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km, rampa) {
         };
         const s = document.createElement('script');
         s.id = 'tailwind-cdn-injected';
-        s.src = "https://cdn.tailwindcss.com";
+        s.src = "/libs/tailwind.min.js";
         document.head.appendChild(s);
     }
 })();

@@ -1207,16 +1207,13 @@ window._cerrarEscaner = function() {
 };
 
 function cerrarSesion() {
-    var token = localStorage.getItem('fleet_token');
-    if (token) {
-        try {
-            fetch('/api/auth/logout', {
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + token },
-                keepalive: true
-            }).catch(function(){});
-        } catch(e) {}
-    }
+    try {
+        fetch('/api/logout', {
+            method: 'POST',
+            credentials: 'include',
+            keepalive: true
+        }).catch(function(){});
+    } catch(e) {}
     if (window.cerrarSSE) window.cerrarSSE();
     if (typeof detenerCuentaRegresivaSesion === 'function') detenerCuentaRegresivaSesion();
 
@@ -1320,9 +1317,7 @@ window.initSSE = function() {
 };
 
 window.sincronizarPermisosSesion = function(forceReloadIfChanged) {
-    var guardadoToken = localStorage.getItem('fleet_token');
-    if (!guardadoToken) return;
-    fetch('/api/perfil/me', { headers: { 'Authorization': 'Bearer ' + guardadoToken } })
+    fetch('/api/perfil/me', { credentials: 'include' })
         .then(function(r) { return r.ok ? r.json() : null; })
         .then(function(data) {
             if (data && data.permisos) {
@@ -2440,7 +2435,9 @@ window.applyAccent = function(hex, save) {
 };
 
 // ============================================================
-// 🔑 INTERCEPTOR FETCH GLOBAL — inyecta JWT en todas las peticiones /api/
+// 🔑 INTERCEPTOR FETCH GLOBAL — usa cookie HttpOnly azkell_session
+// Bearer solo queda como fallback para apps Capacitor nativas donde
+// las cookies no viajan cross-origin con URL absoluta.
 // ============================================================
 (function installFetchInterceptor() {
     if (window._fetchInterceptorInstalled) return;
@@ -2451,21 +2448,25 @@ window.applyAccent = function(hex, save) {
         const urlStr = typeof url === 'string' ? url : String(url);
         if (!urlStr.startsWith('/api/')) return _orig(url, options);
         let urlFinal = url;
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform());
+        if (isNative) {
             const base = window._FLEET_API_BASE || '';
             if (base) urlFinal = base + urlStr;
         }
-        const token = localStorage.getItem('fleet_token');
-        if (token) {
-            options = Object.assign({}, options);
-            options.headers = Object.assign({}, options.headers || {}, { 'Authorization': 'Bearer ' + token });
+        options = Object.assign({}, options);
+        if (isNative) {
+            // En Capacitor la cookie no viaja cross-origin: usar Bearer como respaldo
+            const token = localStorage.getItem('fleet_token');
+            if (token) options.headers = Object.assign({}, options.headers || {}, { 'Authorization': 'Bearer ' + token });
+        } else {
+            // Web: la cookie HttpOnly azkell_session se envía automáticamente
+            options.credentials = options.credentials || 'include';
         }
         const response = await _orig(urlFinal, options);
         if (response.status === 401) {
-            // Ignorar 401 provenientes de servicios de terceros o configuraciones externas (ej. Wialon GPS)
-            const urlIgnore = ['/api/login', '/api/script/obtenerDatosWialon', '/api/wialon', '/api/configuracion', '/api/proxy'];
+            const urlIgnore = ['/api/login', '/api/logout', '/api/script/obtenerDatosWialon', '/api/wialon', '/api/configuracion', '/api/proxy'];
             const shouldIgnore = urlIgnore.some(u => urlStr.includes(u));
-            if (!shouldIgnore && token) {
+            if (!shouldIgnore) {
                 setTimeout(function() { if (typeof cerrarSesion === 'function') cerrarSesion(); }, 0);
             }
         }
