@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { ArrowUpRight, History, Package, SearchX } from 'lucide-react';
+import { ArrowUpRight, FileSpreadsheet, History, Package, SearchX } from 'lucide-react';
 import { PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { exportarExcel } from '../../core/lib/excel';
+import { useToast } from '../../core/ui/Toast';
 import { stockLabel, stockTono, useInventario, useKardex, type ArticuloInv } from './api';
 
 function fmtQty(n: number): string {
@@ -17,6 +19,9 @@ export function KardexPage() {
   const [busqueda, setBusqueda] = useState('');
   const [seleccionado, setSeleccionado] = useState<ArticuloInv | null>(null);
   const [filtroTabla, setFiltroTabla] = useState('');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const toast = useToast();
 
   const { data: kardex, isLoading: loadingKardex } = useKardex(seleccionado?.id ?? null);
 
@@ -33,15 +38,30 @@ export function KardexPage() {
 
   const movimientosFiltrados = useMemo(() => {
     if (!kardex) return [];
-    if (!filtroTabla) return kardex;
     const q = filtroTabla.toUpperCase();
-    return kardex.filter(k =>
-      (k.documento ?? '').toUpperCase().includes(q) ||
-      (k.proveedor_destino ?? '').toUpperCase().includes(q) ||
-      (k.observaciones ?? '').toUpperCase().includes(q) ||
-      k.tipo.toUpperCase().includes(q)
-    );
-  }, [kardex, filtroTabla]);
+    return kardex.filter(k => {
+      const f = (k.fecha ?? '').split('T')[0];
+      if (desde && f < desde) return false;
+      if (hasta && f > hasta) return false;
+      if (!q) return true;
+      return (k.documento ?? '').toUpperCase().includes(q) ||
+        (k.proveedor_destino ?? '').toUpperCase().includes(q) ||
+        (k.observaciones ?? '').toUpperCase().includes(q) ||
+        k.tipo.toUpperCase().includes(q);
+    });
+  }, [kardex, filtroTabla, desde, hasta]);
+
+  async function exportar() {
+    if (!seleccionado) return;
+    try {
+      await exportarExcel(`Kardex-${seleccionado.id}`, 'Kardex',
+        ['Fecha', 'Tipo', 'Documento', 'Contraparte / Motivo', 'Entrada', 'Salida', 'Costo unitario', 'Saldo'],
+        movimientosFiltrados.map(k => [
+          (k.fecha ?? '').split('T')[0], k.tipo, k.documento ?? '', k.proveedor_destino ?? k.observaciones ?? '',
+          k.tipo !== 'SALIDA' ? k.cantidad : '', k.tipo === 'SALIDA' ? k.cantidad : '', k.costo_unitario ?? '', k.saldo,
+        ]));
+    } catch (err) { toast(errorMessage(err), 'error'); }
+  }
 
   const kpis = useMemo(() => {
     if (!kardex) return null;
@@ -55,12 +75,14 @@ export function KardexPage() {
     setSeleccionado(a);
     setBusqueda(a.articulo || a.id);
     setFiltroTabla('');
+    setDesde(''); setHasta('');
   }
 
   function limpiar() {
     setSeleccionado(null);
     setBusqueda('');
     setFiltroTabla('');
+    setDesde(''); setHasta('');
   }
 
   return (
@@ -71,6 +93,7 @@ export function KardexPage() {
         subtitle="Historial de movimientos de stock por artículo"
         actions={
           <MenuOtros opciones={[
+            seleccionado && { label: 'Exportar Excel', detalle: `${movimientosFiltrados.length} movimientos`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
             { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('almacen/kardex') },
           ]} />
         }
@@ -170,11 +193,19 @@ export function KardexPage() {
                     onChange={setFiltroTabla}
                     placeholder="Filtrar por documento, contraparte o motivo"
                   />
+                  <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+                    <label className="aud-fecha"><span>Desde</span>
+                      <input type="date" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} />
+                    </label>
+                    <label className="aud-fecha"><span>Hasta</span>
+                      <input type="date" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} />
+                    </label>
+                  </div>
 
                   {movimientosFiltrados.length === 0 ? (
-                    <EmptyState icon={<SearchX size={22} />} title={filtroTabla ? 'Sin coincidencias' : 'Sin movimientos'}>
-                      {filtroTabla ? (
-                        <button type="button" className="placas-limpiar" onClick={() => setFiltroTabla('')}>
+                    <EmptyState icon={<SearchX size={22} />} title={filtroTabla || desde || hasta ? 'Sin coincidencias' : 'Sin movimientos'}>
+                      {filtroTabla || desde || hasta ? (
+                        <button type="button" className="placas-limpiar" onClick={() => { setFiltroTabla(''); setDesde(''); setHasta(''); }}>
                           Quitar filtro
                         </button>
                       ) : 'Este artículo no tiene movimientos registrados.'}

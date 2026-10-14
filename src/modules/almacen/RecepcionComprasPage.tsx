@@ -1,14 +1,20 @@
 import './almacen.css';
 import { useMemo, useState } from 'react';
-import { ArrowUpRight, PackagePlus, SearchX } from 'lucide-react';
-import { PageLoader } from '../../core/ui/Button';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowUpRight, FileSpreadsheet, ImageIcon, PackagePlus, SearchX, Trash2 } from 'lucide-react';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
+import { ConfirmSheet } from '../../core/ui/Sheet';
+import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { useRecepcionesOC, type RecepcionOC } from './api';
+import { eliminarRecepcion, useRecepcionesOC, type HistorialRecepcion, type RecepcionOC } from './api';
+import { RegistrarRecepcion } from './RegistrarRecepcion';
 
 type FiltroEstado = 'TODOS' | 'PENDIENTE' | 'PARCIAL' | 'COMPLETO';
 
@@ -16,51 +22,58 @@ const FILTROS: FiltroEstado[] = ['TODOS', 'PENDIENTE', 'PARCIAL', 'COMPLETO'];
 const LABEL_FILTRO: Record<FiltroEstado, string> = {
   TODOS: 'Todas', PENDIENTE: 'Pendientes', PARCIAL: 'Parciales', COMPLETO: 'Completas',
 };
-const TONO_ESTADO: Record<string, string> = {
-  PENDIENTE: 'amber', PARCIAL: 'blue', COMPLETO: 'green',
-};
+const TONO_ESTADO: Record<string, string> = { PENDIENTE: 'amber', PARCIAL: 'blue', COMPLETO: 'green' };
+const fmt = (n: number) => (n % 1 === 0 ? String(n) : n.toFixed(2));
+const dia = (s: string | null | undefined) => (s ? String(s).split('T')[0] : '—');
 
 export function RecepcionComprasPage() {
   const { data, isLoading, isError, error } = useRecepcionesOC();
+  const { can } = useAuth();
   const [filtro, setFiltro] = useState<FiltroEstado>('TODOS');
   const [busqueda, setBusqueda] = useState('');
-  const [seleccionada, setSeleccionada] = useState<RecepcionOC | null>(null);
+  const [seleccionadaId, setSeleccionadaId] = useState<string | number | null>(null);
 
   const ocs = data ?? [];
+  // Se busca por id para que el detalle se actualice solo tras registrar o revertir
+  const seleccionada = ocs.find(o => o.id === seleccionadaId) ?? null;
 
   const conteos = useMemo(() => ({
-    PENDIENTE: ocs.filter(o => !o.estado_recepcion || o.estado_recepcion === 'PENDIENTE').length,
+    PENDIENTE: ocs.filter(o => o.estado_recepcion === 'PENDIENTE').length,
     PARCIAL: ocs.filter(o => o.estado_recepcion === 'PARCIAL').length,
     COMPLETO: ocs.filter(o => o.estado_recepcion === 'COMPLETO').length,
   }), [ocs]);
 
   const visibles = useMemo(() => {
-    const q = busqueda.toUpperCase();
+    const q = busqueda.trim().toUpperCase();
     return ocs.filter(o => {
-      if (filtro === 'PENDIENTE' && o.estado_recepcion && o.estado_recepcion !== 'PENDIENTE') return false;
-      if (filtro === 'PARCIAL' && o.estado_recepcion !== 'PARCIAL') return false;
-      if (filtro === 'COMPLETO' && o.estado_recepcion !== 'COMPLETO') return false;
+      if (filtro !== 'TODOS' && o.estado_recepcion !== filtro) return false;
       if (!q) return true;
-      return (
-        String(o.id ?? '').toUpperCase().includes(q) ||
-        (o.proveedor ?? '').toUpperCase().includes(q) ||
-        (o.solicitante ?? '').toUpperCase().includes(q)
-      );
+      return String(o.id).toUpperCase().includes(q) || o.proveedor.toUpperCase().includes(q) || o.solicitante.toUpperCase().includes(q);
     });
   }, [ocs, filtro, busqueda]);
 
-  const soloDetalle = !!seleccionada;
+  const toast = useToast();
+  async function exportar() {
+    try {
+      await exportarExcel('Recepciones-compras', 'Recepciones',
+        ['Orden', 'Fecha', 'Proveedor', 'Solicitante', 'Importe', 'Moneda', 'Estado OC', 'Estado recepción', 'Total pedido', 'Total recibido', 'Pendiente'],
+        visibles.map(o => [o.id, o.fecha, o.proveedor, o.solicitante, o.importe, o.moneda, o.estado_oc, o.estado_recepcion,
+          o.total_pedido, o.total_recibido, Math.max(0, o.total_pedido - o.total_recibido)]));
+      haptic('success');
+    } catch (err) { toast(errorMessage(err), 'error'); }
+  }
 
   return (
     <Page>
-      {!soloDetalle && (
+      {!seleccionada && (
         <PageHeader
           eyebrow="Almacén"
           title="Recepción de compras"
-          subtitle={isLoading ? 'Cargando…' : `${ocs.length} órdenes`}
+          subtitle={isLoading ? 'Cargando…' : `${ocs.length} órdenes · ${conteos.PENDIENTE} pendientes`}
           actions={
             <MenuOtros opciones={[
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('almacen/recepcion-compras') },
+              { label: 'Exportar Excel', detalle: `${visibles.length} órdenes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('almacen/recepcion-compras') },
             ]} />
           }
         />
@@ -68,11 +81,15 @@ export function RecepcionComprasPage() {
 
       {isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
-      ) : soloDetalle ? (
-        <RecepcionDetalle oc={seleccionada} onVolver={() => setSeleccionada(null)} />
+      ) : seleccionada ? (
+        <RecepcionDetalle
+          oc={seleccionada}
+          puedeRecibir={can('rec_compras.crear', 'ent_inv.crear')}
+          puedeRevertir={can('rec_compras.eliminar', 'ent_inv.eliminar')}
+          onVolver={() => setSeleccionadaId(null)}
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          {/* KPI chips */}
           <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
             {FILTROS.map(f => (
               <button key={f} type="button" onClick={() => setFiltro(f)}
@@ -84,12 +101,8 @@ export function RecepcionComprasPage() {
                 }}>
                 {LABEL_FILTRO[f]}
                 {f !== 'TODOS' && (
-                  <span style={{
-                    marginLeft: '0.375rem',
-                    background: filtro === f ? 'rgba(255,255,255,0.2)' : 'var(--fill-subtle)',
-                    borderRadius: 'var(--r-full)', padding: '0 0.375rem', fontSize: '0.75rem',
-                  }}>
-                    {conteos[f as keyof typeof conteos]}
+                  <span style={{ marginLeft: '0.375rem', background: 'var(--fill-subtle)', borderRadius: 'var(--r-full)', padding: '0 0.375rem', fontSize: '0.75rem' }}>
+                    {conteos[f]}
                   </span>
                 )}
               </button>
@@ -105,28 +118,21 @@ export function RecepcionComprasPage() {
             </EmptyState>
           ) : (
             <div className="tarjeta__lista">
-              {visibles.map((oc, i) => {
-                const est = oc.estado_recepcion ?? 'PENDIENTE';
-                const tono = TONO_ESTADO[est] ?? 'neutral';
+              {visibles.map(oc => {
+                const tono = TONO_ESTADO[oc.estado_recepcion] ?? 'amber';
                 return (
-                  <button key={String(oc.id ?? i)} type="button" className="mov-fila"
-                    onClick={() => { haptic('selection'); setSeleccionada(oc); }}>
-                    <div className="mov-fila__icon" style={{ background: `var(--${tono}-tint)`, color: `var(--${tono}-ink)` }}>
+                  <button key={String(oc.id)} type="button" className="mov-fila"
+                    onClick={() => { haptic('selection'); setSeleccionadaId(oc.id); }}>
+                    <div className="mov-fila__icon" style={{ background: `var(--${tono === 'blue' ? 'accent' : tono}-tint)`, color: `var(--${tono === 'blue' ? 'accent' : tono}-ink)` }}>
                       <PackagePlus size={16} />
                     </div>
                     <div className="mov-fila__cuerpo">
-                      <span className="mov-fila__titulo">{String(oc.id)}</span>
-                      <span className="mov-fila__sub">
-                        {oc.proveedor ?? 'Sin proveedor'}
-                        {oc.solicitante ? ` · ${oc.solicitante}` : ''}
-                      </span>
+                      <span className="mov-fila__titulo">{String(oc.id)} · {oc.proveedor}</span>
+                      <span className="mov-fila__sub">{oc.solicitante} · {oc.fecha ?? ''}</span>
                     </div>
                     <div className="mov-fila__derecha">
-                      <span className={`inv-badge inv-badge--${tono === 'green' ? 'ok' : tono === 'amber' ? 'warning' : 'ok'}`}
-                        style={tono === 'blue' ? { background: 'color-mix(in srgb, var(--accent) 12%, transparent)', color: 'var(--accent)' } : {}}>
-                        {est}
-                      </span>
-                      {oc.fecha_oc && <span style={{ fontSize: '0.75rem', color: 'var(--label-3)', fontFamily: 'var(--font-mono)' }}>{oc.fecha_oc.split('T')[0]}</span>}
+                      <span className="mov-fila__monto">{fmt(oc.total_recibido)} / {fmt(oc.total_pedido)}</span>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${tono === 'blue' ? 'accent' : tono}-ink)` }}>{oc.estado_recepcion}</span>
                     </div>
                   </button>
                 );
@@ -139,10 +145,48 @@ export function RecepcionComprasPage() {
   );
 }
 
-function RecepcionDetalle({ oc, onVolver }: { oc: RecepcionOC; onVolver: () => void }) {
-  const est = oc.estado_recepcion ?? 'PENDIENTE';
-  const tono = TONO_ESTADO[est] ?? 'neutral';
-  const items = oc.items ?? [];
+function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onVolver }: {
+  oc: RecepcionOC; puedeRecibir: boolean; puedeRevertir: boolean; onVolver: () => void;
+}) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [registrando, setRegistrando] = useState(false);
+  const [porRevertir, setPorRevertir] = useState<HistorialRecepcion | null>(null);
+  const [revirtiendo, setRevirtiendo] = useState(false);
+
+  const tono = TONO_ESTADO[oc.estado_recepcion] ?? 'amber';
+  const color = tono === 'blue' ? 'accent' : tono;
+  const pendiente = Math.max(0, oc.total_pedido - oc.total_recibido);
+  const pct = oc.total_pedido > 0 ? Math.min(100, Math.round((oc.total_recibido / oc.total_pedido) * 100)) : 0;
+
+  async function revertir() {
+    if (!porRevertir) return;
+    setRevirtiendo(true);
+    try {
+      const r = await eliminarRecepcion(porRevertir.recepcion_id, user?.name ?? '');
+      if (r.ok === false) throw new Error(r.error || 'No se pudo revertir la entrega');
+      haptic('success');
+      toast('Entrega revertida: el stock volvió a su valor anterior');
+      setPorRevertir(null);
+      await qc.invalidateQueries({ queryKey: ['almacen'] });
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+      haptic('warning');
+    } finally {
+      setRevirtiendo(false);
+    }
+  }
+
+  // El historial viene por renglón: se agrupa por entrega (recepcion_id)
+  const entregas = useMemo(() => {
+    const m = new Map<number, { cab: HistorialRecepcion; lineas: HistorialRecepcion[] }>();
+    for (const h of oc.historial_recepciones) {
+      if (!m.has(h.recepcion_id)) m.set(h.recepcion_id, { cab: h, lineas: [] });
+      m.get(h.recepcion_id)!.lineas.push(h);
+    }
+    return [...m.values()].reverse();
+  }, [oc.historial_recepciones]);
 
   return (
     <div className="inv-ficha">
@@ -150,49 +194,57 @@ function RecepcionDetalle({ oc, onVolver }: { oc: RecepcionOC; onVolver: () => v
         <button type="button" className="tarjeta__volver" onClick={onVolver}>
           <span style={{ fontSize: '1.2rem' }}>‹</span> Recepciones
         </button>
+        <div className="tarjeta__barra-acciones">
+          {puedeRecibir && pendiente > 0 && (
+            <Button variant="primary" icon={<PackagePlus size={16} />} onClick={() => setRegistrando(true)}>Recepcionar</Button>
+          )}
+        </div>
       </div>
 
       <div className="inv-ficha__hero" style={{ paddingTop: 'var(--s-2)' }}>
         <div className="inv-ficha__imagen-vacia"><PackagePlus size={28} /></div>
         <span className="inv-ficha__id">{String(oc.id)}</span>
-        <h2 className="inv-ficha__nombre">{oc.proveedor ?? 'Sin proveedor'}</h2>
-        <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.1875rem 0.625rem', borderRadius: 'var(--r-full)', background: `var(--${tono === 'blue' ? 'accent' : tono}-tint, var(--fill))`, color: `var(--${tono === 'blue' ? 'accent' : tono}-ink, var(--label-2))` }}>
-          {est}
+        <h2 className="inv-ficha__nombre">{oc.proveedor}</h2>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.1875rem 0.625rem', borderRadius: 'var(--r-full)', background: `var(--${color}-tint)`, color: `var(--${color}-ink)` }}>
+          {oc.estado_recepcion}
         </span>
+      </div>
+
+      <div className="inv-metricas">
+        <div className="inv-metrica"><span className="inv-metrica__num">{fmt(oc.total_pedido)}</span><span className="inv-metrica__label">Pedido</span></div>
+        <div className="inv-metrica"><span className="inv-metrica__num" style={{ color: 'var(--green-ink)' }}>{fmt(oc.total_recibido)}</span><span className="inv-metrica__label">Recibido</span></div>
+        <div className="inv-metrica"><span className="inv-metrica__num inv-metrica__num--warning">{fmt(pendiente)}</span><span className="inv-metrica__label">Pendiente</span></div>
+      </div>
+      <div style={{ height: 6, borderRadius: 99, background: 'var(--fill)', overflow: 'hidden' }} aria-label={`${pct}% recibido`}>
+        <div style={{ height: '100%', width: `${pct}%`, background: 'var(--green)', transition: 'width 500ms var(--ease-out)' }} />
       </div>
 
       <div>
         <p className="tarjeta__grupo-titulo">Datos</p>
         <div className="tarjeta__lista">
-          {oc.solicitante && <div className="dato"><span className="dato__label">Solicitante</span><span className="dato__valor">{oc.solicitante}</span></div>}
-          {oc.estado_oc && <div className="dato"><span className="dato__label">Estado OC</span><span className="dato__valor">{oc.estado_oc}</span></div>}
-          {oc.almacen && <div className="dato"><span className="dato__label">Almacén</span><span className="dato__valor">{oc.almacen}</span></div>}
-          {oc.fecha_oc && <div className="dato"><span className="dato__label">Fecha OC</span><span className="dato__valor dato__valor--mono">{oc.fecha_oc.split('T')[0]}</span></div>}
-          {oc.fecha_recepcion && <div className="dato"><span className="dato__label">Fecha recep.</span><span className="dato__valor dato__valor--mono">{oc.fecha_recepcion.split('T')[0]}</span></div>}
-          {oc.total_pen != null && <div className="dato"><span className="dato__label">Total</span><span className="dato__valor" style={{ fontWeight: 700 }}>S/ {Number(oc.total_pen).toFixed(2)}</span></div>}
+          <div className="dato"><span className="dato__label">Solicitante</span><span className="dato__valor">{oc.solicitante}</span></div>
+          <div className="dato"><span className="dato__label">Autoriza</span><span className="dato__valor">{oc.autoriza}</span></div>
+          <div className="dato"><span className="dato__label">Almacén</span><span className="dato__valor">{oc.almacen}</span></div>
+          <div className="dato"><span className="dato__label">Fecha OC</span><span className="dato__valor dato__valor--mono">{oc.fecha ?? '—'}</span></div>
+          <div className="dato"><span className="dato__label">Importe</span><span className="dato__valor" style={{ fontWeight: 700 }}>{oc.moneda} {oc.importe.toFixed(2)}</span></div>
         </div>
       </div>
 
-      {items.length > 0 && (
+      {oc.items.length > 0 && (
         <div>
-          <p className="tarjeta__grupo-titulo">Ítems ({items.length})</p>
+          <p className="tarjeta__grupo-titulo">Ítems ({oc.items.length})</p>
           <div className="tarjeta__lista" style={{ overflow: 'auto' }}>
-            <table className="items-tabla" style={{ minWidth: '24rem' }}>
+            <table className="items-tabla" style={{ minWidth: '26rem' }}>
               <thead>
-                <tr>
-                  <th>Descripción</th>
-                  <th style={{ textAlign: 'right' }}>Cant. OC</th>
-                  <th style={{ textAlign: 'right' }}>Recibido</th>
-                </tr>
+                <tr><th>Descripción</th><th style={{ textAlign: 'right' }}>Pedido</th><th style={{ textAlign: 'right' }}>Recibido</th><th style={{ textAlign: 'right' }}>Pendiente</th></tr>
               </thead>
               <tbody>
-                {items.map((it, i) => (
+                {oc.items.map((it, i) => (
                   <tr key={i}>
                     <td style={{ fontSize: '0.875rem' }}>{it.descripcion}</td>
-                    <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{it.cantidad_oc}</td>
-                    <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: it.cantidad_recibida >= it.cantidad_oc ? 'var(--green-ink)' : 'var(--amber-ink)' }}>
-                      {it.cantidad_recibida}
-                    </td>
+                    <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{fmt(it.pedido)}</td>
+                    <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--green-ink)' }}>{fmt(it.recepcionado)}</td>
+                    <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: it.pendiente > 0 ? 'var(--amber-ink)' : 'var(--label-3)' }}>{fmt(it.pendiente)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -201,14 +253,53 @@ function RecepcionDetalle({ oc, onVolver }: { oc: RecepcionOC; onVolver: () => v
         </div>
       )}
 
-      {oc.observaciones && (
+      {entregas.length > 0 && (
         <div>
-          <p className="tarjeta__grupo-titulo">Observaciones</p>
+          <p className="tarjeta__grupo-titulo">Entregas registradas ({entregas.length})</p>
           <div className="tarjeta__lista">
-            <div className="dato"><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{String(oc.observaciones)}</span></div>
+            {entregas.map(({ cab, lineas }) => (
+              <div key={cab.recepcion_id} className="dato" style={{ gap: 'var(--s-1)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
+                  <span className="dato__label" style={{ fontWeight: 700, flex: 1 }}>
+                    {dia(cab.fecha_recepcion)} · {cab.tipo_recepcion ?? 'ENTREGA'}
+                  </span>
+                  {cab.sustento_url_presigned && (
+                    <a href={cab.sustento_url_presigned} target="_blank" rel="noreferrer" aria-label="Ver sustento" className="placas-limpiar">
+                      <ImageIcon size={15} style={{ verticalAlign: '-3px' }} /> Sustento
+                    </a>
+                  )}
+                  {puedeRevertir && (
+                    <button type="button" className="placas-limpiar" style={{ color: 'var(--red-ink)' }}
+                      onClick={() => setPorRevertir(cab)} aria-label="Revertir esta entrega">
+                      <Trash2 size={15} style={{ verticalAlign: '-3px' }} /> Revertir
+                    </button>
+                  )}
+                </div>
+                {lineas.map(l => (
+                  <span key={l.detalle_id} className="dato__valor" style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>
+                    +{fmt(l.cantidad_recibida)} {l.descripcion}
+                  </span>
+                ))}
+                <span className="dato__valor" style={{ fontSize: '0.75rem', color: 'var(--label-3)' }}>
+                  {[cab.usuario, cab.almacen, cab.observacion].filter(Boolean).join(' · ')}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
+
+      <RegistrarRecepcion oc={oc} usuario={user?.name ?? ''} open={registrando} onClose={() => setRegistrando(false)} />
+
+      <ConfirmSheet
+        open={!!porRevertir}
+        onClose={() => !revirtiendo && setPorRevertir(null)}
+        onConfirm={revertir}
+        loading={revirtiendo}
+        title="¿Revertir esta entrega?"
+        message="Se descuenta del inventario el stock que ingresó y el saldo pendiente vuelve a quedar disponible en la orden."
+        confirmLabel="Revertir"
+      />
     </div>
   );
 }

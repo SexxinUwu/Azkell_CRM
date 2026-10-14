@@ -76,7 +76,7 @@ type Query = Record<string, string | number | undefined | null>;
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
-  /** Objeto → JSON. Blob (una foto) → se envía tal cual, con su tipo. */
+  /** Objeto → JSON. Blob (una foto) o FormData (archivos + campos) → se envía tal cual. */
   body?: unknown;
   query?: Query;
   headers?: Record<string, string>;
@@ -90,12 +90,13 @@ export async function api<T>(path: string, { method = 'GET', body, query, header
     : '';
 
   const isBlob = typeof Blob !== 'undefined' && body instanceof Blob;
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData; // el navegador pone el boundary
   const headers: Record<string, string> = { 'x-azkell-tab': TAB_ID, ...extra };
   // La autenticación usa la cookie HttpOnly `azkell_session` (credentials: 'include').
   // No se envía el token por header para evitar que XSS pueda leer o reutilizar el JWT.
   // La SPA clásica sigue usando Authorization: Bearer con su propio fleet_token.
   if (isBlob) headers['Content-Type'] = (body as Blob).type || 'application/octet-stream';
-  else if (body !== undefined) headers['Content-Type'] = 'application/json';
+  else if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
 
   let res: Response;
   try {
@@ -103,7 +104,7 @@ export async function api<T>(path: string, { method = 'GET', body, query, header
       method,
       headers,
       credentials: 'include', // envía la cookie HttpOnly azkell_session
-      body: isBlob ? (body as Blob) : body !== undefined ? JSON.stringify(body) : undefined,
+      body: isBlob || isForm ? (body as Blob | FormData) : body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
     throw new ApiError(0, 'No hay conexión con el servidor. Revisa tu conexión a internet.');

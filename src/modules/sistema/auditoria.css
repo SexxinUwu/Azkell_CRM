@@ -2,12 +2,6 @@
 .aud-filtros { display: flex; flex-direction: column; gap: var(--s-3); margin-bottom: var(--s-4); }
 .aud-filtros__fila { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
 .aud-filtros__fila > .select, .aud-filtros__fila > select { flex: 1 1 11rem; min-width: 0; }
-.aud-fecha {
-  display: inline-flex; align-items: center; gap: var(--s-2); flex: 1 1 10rem;
-  padding: 0 var(--s-3); min-height: 2.75rem; border-radius: var(--r-md); background: var(--fill-2);
-  font-size: 0.8125rem; color: var(--label-2); font-weight: 600;
-}
-.aud-fecha input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 0.9375rem; color: var(--label); outline: 0; }
 .aud-conteo { font-size: 0.8125rem; color: var(--label-2); margin: 0 var(--s-1) var(--s-3); }
 
 .aud-dia { margin-bottom: var(--s-5); }

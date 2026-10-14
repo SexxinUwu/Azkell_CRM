@@ -255,39 +255,95 @@ export async function eliminarProveedor(id: number) {
 // ─── Recepción de compras ────────────────────────────────────────────────────
 
 export interface ItemRecepcion {
-  inventario_id?: string | null;
+  inventario_id: string;
   descripcion: string;
-  cantidad_oc: number;
+  unidad: string;
+  pedido: number;
+  recepcionado: number;
+  pendiente: number;
+  costo_unitario: number;
+  moneda: string;
+}
+
+export interface HistorialRecepcion {
+  recepcion_id: number;
+  detalle_id: number;
+  oc_id: string | number;
+  fecha_recepcion: string;
+  usuario: string | null;
+  almacen: string | null;
+  observacion: string | null;
+  tipo_recepcion: string | null;
+  inventario_id: string | null;
+  descripcion: string | null;
   cantidad_recibida: number;
-  unidad?: string | null;
-  costo_unitario?: number | null;
+  sustento_url_presigned?: string | null;
 }
 
 export interface RecepcionOC {
   id: string | number;
-  proveedor: string | null;
-  solicitante: string | null;
-  estado_oc: string | null;
-  estado_recepcion: 'PENDIENTE' | 'PARCIAL' | 'COMPLETO' | string | null;
-  fecha_oc: string | null;
-  fecha_recepcion: string | null;
-  almacen: string | null;
-  total_pen: number | null;
-  observaciones: string | null;
+  fecha: string | null;
+  proveedor: string;
+  solicitante: string;
+  autoriza: string;
+  almacen: string;
+  moneda: string;
+  importe: number;
+  estado_oc: string;
+  total_pedido: number;
+  total_recibido: number;
+  estado_recepcion: 'PENDIENTE' | 'PARCIAL' | 'COMPLETO';
+  progreso_label: string;
   items: ItemRecepcion[];
-  [key: string]: unknown;
+  historial_recepciones: HistorialRecepcion[];
 }
 
 export function useRecepcionesOC() {
   return useQuery<RecepcionOC[]>({
     queryKey: ['almacen', 'recepciones-oc'],
-    queryFn: () => api('/almacen/recepciones-oc'),
+    queryFn: () => api<RecepcionOC[]>('/almacen/recepciones-oc').then(r => (Array.isArray(r) ? r : [])),
     staleTime: 30_000,
   });
 }
 
-export async function registrarRecepcion(data: Partial<RecepcionOC>) {
-  return api('/almacen/recepciones-oc/registrar', { method: 'POST', body: data });
+export interface RecepcionItemEnvio {
+  inventario_id: string;
+  descripcion: string;
+  cantidad_recibida: number;
+  costo_unitario: number;
+  moneda: string;
+  almacen: string;
+}
+
+/** Registra una entrega (parcial o total) de una OC. Multipart: lleva la foto de sustento. */
+export async function registrarRecepcion(d: {
+  oc_id: string | number; fecha_recepcion: string; usuario: string; observacion: string;
+  almacen: string; tipo_recepcion: 'TOTAL' | 'PARCIAL'; items: RecepcionItemEnvio[]; sustento?: File | null;
+}) {
+  const f = new FormData();
+  f.append('oc_id', String(d.oc_id));
+  f.append('fecha_recepcion', d.fecha_recepcion);
+  f.append('usuario', d.usuario);
+  f.append('observacion', d.observacion);
+  f.append('almacen', d.almacen);
+  f.append('tipo_recepcion', d.tipo_recepcion);
+  f.append('items_json', JSON.stringify(d.items));
+  if (d.sustento) f.append('sustento', d.sustento);
+  return api<{ ok?: boolean }>('/almacen/recepciones-oc/registrar', { method: 'POST', body: f });
+}
+
+/** Revierte una entrega: baja el stock ingresado y devuelve el saldo pendiente a la OC */
+export async function eliminarRecepcion(recepcionId: number, usuario: string) {
+  return api<{ ok?: boolean; error?: string }>(`/almacen/recepciones-oc/${recepcionId}`, { method: 'DELETE', body: { usuario } });
+}
+
+export interface AlmacenLista { id: number; nombre: string }
+export function useAlmacenesLista() {
+  return useQuery<AlmacenLista[]>({
+    queryKey: ['almacen', 'almacenes-lista'],
+    queryFn: () => api<AlmacenLista[]>('/almacen/almacenes-lista').then(r => (Array.isArray(r) ? r : [])),
+    staleTime: 5 * 60_000,
+  });
 }
 
 // ─── Listas de opciones (catálogos) ──────────────────────────────────────────

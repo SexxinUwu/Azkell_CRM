@@ -1046,3 +1046,11 @@ label.row__main { cursor: pointer; }
   background: var(--fill); color: var(--label-2); font: inherit; font-size: 0.8125rem; font-weight: 600;
 }
 .theme-selector__op--sel { background: var(--ink); color: var(--label-inverse); }
+
+/* Campo de fecha compacto con etiqueta (filtros Desde / Hasta) */
+.aud-fecha {
+  display: inline-flex; align-items: center; gap: var(--s-2); flex: 1 1 10rem;
+  padding: 0 var(--s-3); min-height: 2.75rem; border-radius: var(--r-md); background: var(--fill-2);
+  font-size: 0.8125rem; color: var(--label-2); font-weight: 600;
+}
+.aud-fecha input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 0.9375rem; color: var(--label); outline: 0; }
