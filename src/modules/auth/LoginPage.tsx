@@ -249,6 +249,7 @@ export function LoginPage() {
           </form>
 
           <p className="login__help">¿Olvidaste tu contraseña? Pide a Sistemas que la restablezca.</p>
+          <p className="login__help login__help--cuenta">¿No tienes cuenta? Pide tus credenciales al Administrador de Sistemas.</p>
 
         </motion.div>
       </motion.div>

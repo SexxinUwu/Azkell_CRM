@@ -196,6 +196,7 @@
   font-size: 0.8125rem;
   color: var(--label-2);
 }
+.login__help--cuenta { margin-top: var(--s-2); }
 
 /* ─── Cuentas de prueba (solo desarrollo) ─── */
 .login__demo {
