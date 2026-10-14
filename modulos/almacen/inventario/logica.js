@@ -731,17 +731,6 @@ window.filtrarInventario = function() {
         var sa = parseFloat(d.stock_actual || 0);
         var sm = parseFloat(d.stock_min || 0);
 
-        kpiTot++;
-        if (d.tipo === 'Servicio') {
-            kpiOpt++;
-        } else if (sa <= 0) {
-            kpiQui++;
-        } else if (sa <= sm) {
-            kpiAle++;
-        } else {
-            kpiOpt++;
-        }
-
         var matchB = !buscar ||
             (d.id               || '').toLowerCase().includes(buscar) ||
             (d.descripcion      || '').toLowerCase().includes(buscar) ||
@@ -780,6 +769,20 @@ window.filtrarInventario = function() {
             matchKpi = d.tipo !== 'Servicio' && sa <= sm && sa > 0;
         } else if (fKpi === 'quiebre') {
             matchKpi = d.tipo !== 'Servicio' && sa <= 0;
+        }
+
+        // Contar KPIs solo para ítems que pasan búsqueda y filtros avanzados
+        if (matchB && matchAnaquel && matchAdv) {
+            kpiTot++;
+            if (d.tipo === 'Servicio') {
+                kpiOpt++;
+            } else if (sa <= 0) {
+                kpiQui++;
+            } else if (sa <= sm) {
+                kpiAle++;
+            } else {
+                kpiOpt++;
+            }
         }
 
         return matchB && matchAnaquel && matchAdv && matchKpi;
@@ -2155,7 +2158,7 @@ window.eliminarArticuloInv = function(id) {
 
 // ── Export Excel ──────────────────────────────────────────────────
 window.exportarInventarioExcel = function() {
-    var datos = window._invData || [];
+    var datos = (window._invFiltrados && window._invFiltrados.length) ? window._invFiltrados : (window._invData || []);
     if (!datos.length) { alert('No hay datos para exportar.'); return; }
     var cabeceras = [
         'Código','Descripción','Familia','Sub-Familia','Almacén','Unidad','Moneda','Costo Ref.',

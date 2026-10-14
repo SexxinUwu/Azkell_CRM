@@ -48,7 +48,7 @@ app.use(compression());
 // ── Rate Limiting (protección contra bots y abuso de API) ─────────
 const limiterGeneral = rateLimit({
     windowMs: 60 * 1000,       // ventana: 1 minuto
-    max: 200,                   // máximo 200 requests por IP por minuto
+    max: 600,                   // máximo 600 requests por IP por minuto (SPA dispara ~18 requests en arranque)
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Demasiadas solicitudes. Intenta en un momento.' }
