@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { haptic } from '../../core/lib/haptics';
 import { LOGO_URL } from '../../core/layout/BrandMark';
 import { endWelcome, useWelcome, type WelcomeState } from './welcome';
+import { esLiviano, LiteSplash } from './LiteSplash';
 import './welcome.css';
 
 const ICON = 112;          // tamaño final del ícono (px)
@@ -17,7 +18,28 @@ const ease = [0.25, 1, 0.5, 1] as const;
 export function WelcomeTransition() {
   const welcome = useWelcome();
   if (!welcome) return null;
-  return createPortal(<WelcomeOverlay key={welcome.id} {...welcome} />, document.body);
+  return createPortal(
+    esLiviano() ? <LiteWelcome key={welcome.id} name={welcome.name} /> : <WelcomeOverlay key={welcome.id} {...welcome} />,
+    document.body,
+  );
+}
+
+// Celular: aparece el ícono centrado y se desvanece. Sin medir la tarjeta ni escalarla.
+function LiteWelcome({ name }: { name: string }) {
+  const [saliendo, setSaliendo] = useState(false);
+  const cerrado = useRef(false);
+  function terminar() {
+    if (cerrado.current) return;
+    cerrado.current = true;
+    setSaliendo(true);
+    setTimeout(endWelcome, 260);
+  }
+  useEffect(() => {
+    haptic('success');
+    const t = setTimeout(terminar, 850);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return <LiteSplash saludo={`Hola, ${name}`} etiqueta={`Bienvenido, ${name}`} saliendo={saliendo} onTap={terminar} />;
 }
 
 function WelcomeOverlay({ from, name }: WelcomeState) {

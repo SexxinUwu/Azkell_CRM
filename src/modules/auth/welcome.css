@@ -63,3 +63,25 @@
   letter-spacing: -0.02em;
   color: var(--label);
 }
+
+/* ─── Versión liviana (celular / táctil): centrada con CSS, solo opacidad y escala ─── */
+.welcome--lite { transition: opacity 240ms ease-out; opacity: 1; }
+.welcome--lite.welcome--saliendo { opacity: 0; pointer-events: none; }
+.welcome--lite .welcome__card {
+  left: 50%;
+  top: 50%;
+  width: 112px;
+  height: 112px;
+  margin: -84px 0 0 -56px;
+  border-radius: 30px;
+  animation: welcome-lite-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.welcome--lite .welcome__hello {
+  top: calc(50% + 52px);
+  animation: welcome-lite-text 280ms ease-out 120ms both;
+}
+@keyframes welcome-lite-in { from { opacity: 0; transform: scale(0.88); } to { opacity: 1; transform: scale(1); } }
+@keyframes welcome-lite-text { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .welcome--lite, .welcome--lite .welcome__card, .welcome--lite .welcome__hello { animation: none; transition-duration: 0.01ms; }
+}

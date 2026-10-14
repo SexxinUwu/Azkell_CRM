@@ -1,29 +1,34 @@
 import { Suspense, useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { ArrowUpRight, LogOut, Share, SquarePlus, Smartphone, UserRound } from 'lucide-react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import {
+  ArrowUpRight, Banknote, Boxes, ChevronRight, Contact, House, LogOut, MapPin, Palette, Route, Settings, Share, ShieldCheck,
+  SquarePlus, Smartphone, Users, Wrench, type LucideIcon,
+} from 'lucide-react';
 import { useInstallApp } from '../lib/useInstallApp';
 import { useAuth } from '../auth/AuthProvider';
 import { Avatar } from '../ui/Display';
 import { Button, PageLoader } from '../ui/Button';
 import { Sheet } from '../ui/Sheet';
 import { BrandMark, Wordmark } from './BrandMark';
-import { TabBar } from './TabBar';
+import { ModuleDock, type DockItem } from './ModuleDock';
+import { AccentPicker } from '../ui/AccentPicker';
 import { ConnectionBanner } from './ConnectionBanner';
 import { AsistenteFab } from '../../modules/asistente/components/AsistenteFab';
 import { useLiveUpdates } from '../api/live';
-import { abrirClasico, findNavItem, homePath, mobileTabs, visibleSections, type NavItem } from './navigation';
+import { abrirClasico, findNavItem, homePath, visibleSections, type NavItem, type NavSection } from './navigation';
 import './layout.css';
 
 export function AppShell() {
   const { user, can, logout } = useAuth();
   const location = useLocation();
-  const [moreOpen, setMoreOpen] = useState(false);
+  const navigate = useNavigate();
+  const [moreOpen, setMoreOpen] = useState(false); // hoja de Ajustes
+  const [moduloAbierto, setModuloAbierto] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [iosHelp, setIosHelp] = useState(false);
   const app = useInstallApp();
   const live = useLiveUpdates(); // cambios de otros dispositivos, al instante
   const sections = visibleSections(can);
-  const tabs = mobileTabs(can);
   const current = findNavItem(location.pathname);
   const pageTitle = location.pathname === '/perfil' ? 'Mi cuenta'
     : location.pathname.startsWith('/q/') ? 'Unidad'
@@ -41,12 +46,29 @@ export function AppShell() {
   useEffect(() => {
     window.scrollTo(0, 0);
     setMoreOpen(false);
+    setModuloAbierto(null);
   }, [location.pathname]);
 
   if (!user) return null;
-  const tabIndex = tabs.findIndex(t => isActive(t, location.pathname));
-  // La lente se queda en "Más" mientras su hoja está abierta o si la pantalla no tiene pestaña propia
-  const activeTab = moreOpen || tabIndex < 0 ? tabs.length : tabIndex;
+  // Barra del celular: Inicio, un botón por módulo (con su nombre) y Ajustes al final.
+  // Configuración y Sistema viven en Ajustes.
+  const modulos = sections.filter(sec => !SECCIONES_AJUSTES.includes(sec.title))
+    .map(sec => ({ ...sec, items: sec.items.filter(i => i.key !== 'inicio') }))
+    .filter(sec => sec.items.length > 0);
+  const ajustes = sections.filter(sec => SECCIONES_AJUSTES.includes(sec.title));
+  const moduloActual = modulos.find(m => m.items.some(i => isActive(i, location.pathname)))?.title;
+  const enInicio = location.pathname === '/';
+  const dock: DockItem[] = [
+    { key: 'inicio', label: 'Inicio', icon: House, active: enInicio && !moreOpen && !moduloAbierto, onSelect: () => navigate(homePath(can)) },
+    ...modulos.map(m => ({
+      key: m.title, label: etiquetaModulo(m.title), icon: iconoModulo(m.title),
+      active: moduloAbierto ? moduloAbierto === m.title : !moreOpen && moduloActual === m.title,
+      onSelect: () => { setMoreOpen(false); setModuloAbierto(m.title); },
+    })),
+    { key: 'ajustes', label: 'Ajustes', icon: Settings, active: moreOpen || location.pathname === '/perfil',
+      onSelect: () => { setModuloAbierto(null); setMoreOpen(true); } },
+  ];
+  const moduloSheet = modulos.find(m => m.title === moduloAbierto);
 
   return (
     <div className="app">
@@ -116,34 +138,39 @@ export function AppShell() {
       <ConnectionBanner state={live} />
       <AsistenteFab />
 
-      <TabBar
-        tabs={tabs.map(t => ({ key: t.key, label: shortLabel(t), icon: t.icon, to: t.to! }))}
-        activeIndex={activeTab}
-        onMore={() => setMoreOpen(true)}
-      />
+      <ModuleDock items={dock} />
 
-      <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Todos los módulos">
-        {sections.map(section => (
-          <div key={section.title} className="more-section">
-            <div className="list__header">{section.title}</div>
-            <div className="list">
-              {section.items.map(item => (
-                item.to ? (
-                  <NavLink key={item.key} to={item.to} end={item.to === '/'} className="row" style={{ color: 'var(--label)', textDecoration: 'none' }}>
-                    <item.icon size={20} strokeWidth={1.8} />
-                    <span className="row__main row__title">{item.label}</span>
-                  </NavLink>
-                ) : (
-                  <a key={item.key} href="/" className="row" style={{ color: 'var(--label)', textDecoration: 'none' }} onClick={e => { e.preventDefault(); abrirClasico(item.clasico!); }}>
-                    <item.icon size={20} strokeWidth={1.8} />
-                    <span className="row__main row__title">{item.label}</span>
-                    <ArrowUpRight size={16} className="c-tertiary" aria-label="Se abre en la versión actual" />
-                  </a>
-                )
-              ))}
-            </div>
+      {/* Lista de pantallas del módulo elegido */}
+      <Sheet open={!!moduloSheet} onClose={() => setModuloAbierto(null)} title={moduloSheet?.title ?? ''}>
+        {moduloSheet && (
+          <div className="modulo-lista">
+            {moduloSheet.items.map(item => (
+              <FilaModulo key={item.key} item={item} activa={isActive(item, location.pathname)} onNavegar={() => setModuloAbierto(null)} />
+            ))}
           </div>
+        )}
+      </Sheet>
+
+      {/* Ajustes: cuenta, color, instalación y configuración */}
+      <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Ajustes">
+        <NavLink to="/perfil" className="modulo-fila" style={{ marginBottom: 'var(--s-4)' }}>
+          <Avatar name={user.name} accent />
+          <span className="modulo-fila__texto">
+            {user.name}
+            <span className="modulo-fila__sub">{user.roleName} · {user.companyName}</span>
+          </span>
+          <ChevronRight size={18} className="modulo-fila__flecha" />
+        </NavLink>
+
+        <div className="more-section">
+          <div className="list__header"><Palette size={14} style={{ verticalAlign: '-2px' }} /> Color de la app</div>
+          <div className="list"><AccentPicker /></div>
+        </div>
+
+        {ajustes.map(section => (
+          <AjusteSeccion key={section.title} section={section} activa={location.pathname} />
         ))}
+
         <div className="more-section">
           <div className="list">
             {!app.standalone && (app.canPrompt || app.needsIosSteps) && (
@@ -152,10 +179,6 @@ export function AppShell() {
                 <span className="row__main row__title">Instalar app en este teléfono</span>
               </button>
             )}
-            <NavLink to="/perfil" className="row" style={{ color: 'var(--label)', textDecoration: 'none' }}>
-              <UserRound size={20} strokeWidth={1.8} />
-              <span className="row__main row__title">Mi cuenta</span>
-            </NavLink>
             <button type="button" className="row" onClick={logout} style={{ color: 'var(--red-ink)' }}>
               <LogOut size={20} strokeWidth={1.8} />
               <span className="row__main row__title">Cerrar sesión</span>
@@ -180,7 +203,57 @@ function isActive(item: NavItem, pathname: string) {
   return item.to === '/' ? pathname === '/' : pathname.startsWith(item.to);
 }
 
-function shortLabel(item: NavItem) {
-  const short: Record<string, string> = { inicio: 'Inicio', placas: 'Placas', conductores: 'Conductores', inspecciones: 'Inspecciones' };
-  return short[item.key] ?? item.label;
+const SECCIONES_AJUSTES = ['Configuración', 'Sistema'];
+
+const ICONOS_MODULO: Record<string, LucideIcon> = {
+  Gerencia: ShieldCheck, Flota: MapPin, Mantenimiento: Wrench, 'Almacén': Boxes, Operaciones: Route,
+  Directorio: Contact, 'Tesorería': Banknote, 'Personas y seguridad': Users,
+};
+const ETIQUETAS_MODULO: Record<string, string> = {
+  Mantenimiento: 'Mant.', Operaciones: 'Operac.', 'Personas y seguridad': 'Personas',
+};
+const iconoModulo = (titulo: string): LucideIcon => ICONOS_MODULO[titulo] ?? Boxes;
+const etiquetaModulo = (titulo: string) => ETIQUETAS_MODULO[titulo] ?? titulo;
+
+function FilaModulo({ item, activa, onNavegar }: { item: NavItem; activa: boolean; onNavegar: () => void }) {
+  const contenido = (
+    <>
+      <span className="modulo-fila__icono"><item.icon size={20} strokeWidth={1.9} /></span>
+      <span className="modulo-fila__texto">{item.label}</span>
+      {item.to
+        ? <ChevronRight size={18} className="modulo-fila__flecha" />
+        : <ArrowUpRight size={16} className="modulo-fila__flecha" aria-label="Se abre en la versión actual" />}
+    </>
+  );
+  const clase = `modulo-fila${activa ? ' modulo-fila--activa' : ''}`;
+  return item.to ? (
+    <NavLink to={item.to} end={item.to === '/'} className={clase} onClick={onNavegar}>{contenido}</NavLink>
+  ) : (
+    <button type="button" className={clase} onClick={() => abrirClasico(item.clasico!)}>{contenido}</button>
+  );
+}
+
+function AjusteSeccion({ section, activa }: { section: NavSection; activa: string }) {
+  return (
+    <div className="more-section">
+      <div className="list__header">{section.title}</div>
+      <div className="list">
+        {section.items.map(item => (
+          item.to ? (
+            <NavLink key={item.key} to={item.to} className="row" style={{ color: 'var(--label)', textDecoration: 'none' }}
+              aria-current={isActive(item, activa) ? 'page' : undefined}>
+              <item.icon size={20} strokeWidth={1.8} />
+              <span className="row__main row__title">{item.label}</span>
+            </NavLink>
+          ) : (
+            <button key={item.key} type="button" className="row" onClick={() => abrirClasico(item.clasico!)}>
+              <item.icon size={20} strokeWidth={1.8} />
+              <span className="row__main row__title">{item.label}</span>
+              <ArrowUpRight size={16} className="c-tertiary" aria-label="Se abre en la versión actual" />
+            </button>
+          )
+        ))}
+      </div>
+    </div>
+  );
 }

@@ -290,6 +290,26 @@ if (el) { el.style.display = 'none'; }
 - [x] ~~Inventario: filtro de familias tapaba la lista~~ — ahora es una casilla desplegable multiselect (`src/core/ui/MultiSelect.tsx`).
 - [x] ~~Ficha sin estilos (`.dato`, `.tarjeta__*`)~~ — el CSS compartido vivía en `personal.css`; movido a `src/core/ui/ui.css` (afectaba ~45 pantallas).
 
+- [x] ~~Barra del celular con nombres de módulo~~: `ModuleDock` (Inicio, un botón por módulo, Ajustes al final). Tocar un módulo abre su lista de pantallas; Ajustes reúne cuenta, color, Configuración, Sistema, instalar app y cerrar sesión. Reemplaza a `TabBar`.
+- [x] ~~Color de la app elegible~~: `src/core/lib/accent.ts` + `AccentPicker` (Ajustes en celular, Mi cuenta en escritorio). Guardado por dispositivo en `fleet_accent`.
+- [x] ~~Auditoría renovada~~: línea de tiempo por día con filtros (tipo, persona, fechas) y vista "Registro firmado".
+- [x] ~~Bienvenida/despedida en celular~~: versión liviana (`LiteSplash`) solo con opacidad y escala; la completa queda en escritorio. **Falta probar en teléfono real.**
+
+### 🔧 Lógica por migrar (pantallas React de solo lectura: crear/editar/eliminar siguen en el clásico)
+Prioridad alta (uso diario):
+- [ ] Almacén: Kardex, Recepción de compras
+- [ ] Mantenimiento: Planificación, Trabajos de OT, Status de rampa (escritura)
+- [ ] Flota: Disponibilidad, Documentos, Entrega de vehículos, Reporte de fallas / Checklist de entrega
+- [ ] Inspecciones (registro nuevo)
+Prioridad media:
+- [ ] Operaciones: Órdenes de viaje (+Marsisa), Órdenes de servicio, Vales (+Marsisa), Guías de remitente / transportista, Análisis de combustible, Urea, Programación
+- [ ] Tesorería: Caja, Liquidaciones, Cuentas por cobrar, Bancos, Centros de costos
+- [ ] Personas: Asistencia, Nómina, Garita (unidades), Seg. patrimonial, Portal del conductor
+- [ ] Directorio: Clientes
+Prioridad baja:
+- [ ] Sistema: Integraciones
+- [ ] Centro de Comando (gráficos Chart.js completos)
+
 ### 🧪 Pruebas en navegador (sin verificar)
 - [ ] Almacén > Inventario: KPIs cambian al buscar y el Excel exporta solo lo filtrado (`modulos/almacen/inventario/logica.js`).
 - [ ] `server.js`: límite general 600 req/min (ya en el código; falta reiniciar el servidor para que aplique).

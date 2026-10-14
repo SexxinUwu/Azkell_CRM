@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { registerFarewell } from '../../core/auth/farewell';
 import { haptic } from '../../core/lib/haptics';
 import { LOGO_URL } from '../../core/layout/BrandMark';
+import { esLiviano, LiteSplash } from './LiteSplash';
 import './welcome.css';
 
 const ICON = 112;
@@ -22,7 +23,45 @@ export function FarewellTransition() {
     setState(s => ({ id: (s?.id ?? 0) + 1, name, done }));
   })), []);
   if (!state) return null;
-  return createPortal(<FarewellOverlay key={state.id} {...state} onEnd={() => setState(null)} />, document.body);
+  const Overlay = esLiviano() ? LiteFarewell : FarewellOverlay;
+  return createPortal(<Overlay key={state.id} {...state} onEnd={() => setState(null)} />, document.body);
+}
+
+// Celular: el ícono aparece centrado, se cierra la sesión y, con el login ya montado debajo, se desvanece.
+function LiteFarewell({ name, done, onEnd }: Farewell & { onEnd: () => void }) {
+  const navigate = useNavigate();
+  const [saliendo, setSaliendo] = useState(false);
+  const cambiado = useRef(false);
+
+  function cambiar() {
+    if (cambiado.current) return;
+    cambiado.current = true;
+    done(); // se cierra la sesión: el login se monta debajo
+    let intentos = 0;
+    const esperar = () => {
+      const listo = !!document.querySelector('.login__card');
+      if (!listo && intentos++ < 40) { requestAnimationFrame(esperar); return; }
+      if (listo) navigate('/login', { replace: true });
+      setSaliendo(true);
+      setTimeout(onEnd, 260);
+    };
+    requestAnimationFrame(esperar);
+  }
+
+  useEffect(() => {
+    haptic('selection');
+    const t = setTimeout(cambiar, 550);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <LiteSplash
+      saludo={name ? `Hasta pronto, ${name}` : ''}
+      etiqueta={name ? `Sesión cerrada. Hasta pronto, ${name}` : 'Sesión cerrada'}
+      saliendo={saliendo}
+      onTap={cambiar}
+    />
+  );
 }
 
 // Dónde quedará la tarjeta del login cuando termine de entrar (sin su desplazamiento inicial)

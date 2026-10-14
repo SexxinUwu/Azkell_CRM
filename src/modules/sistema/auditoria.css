@@ -1,0 +1,40 @@
+/* Auditoría: línea de tiempo por día */
+.aud-filtros { display: flex; flex-direction: column; gap: var(--s-3); margin-bottom: var(--s-4); }
+.aud-filtros__fila { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
+.aud-filtros__fila > .select, .aud-filtros__fila > select { flex: 1 1 11rem; min-width: 0; }
+.aud-fecha {
+  display: inline-flex; align-items: center; gap: var(--s-2); flex: 1 1 10rem;
+  padding: 0 var(--s-3); min-height: 2.75rem; border-radius: var(--r-md); background: var(--fill-2);
+  font-size: 0.8125rem; color: var(--label-2); font-weight: 600;
+}
+.aud-fecha input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 0.9375rem; color: var(--label); outline: 0; }
+.aud-conteo { font-size: 0.8125rem; color: var(--label-2); margin: 0 var(--s-1) var(--s-3); }
+
+.aud-dia { margin-bottom: var(--s-5); }
+.aud-dia__titulo {
+  font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.01em; color: var(--label-2);
+  margin: 0 var(--s-3) var(--s-2); text-transform: none;
+}
+.aud-lista { background: var(--surface); border-radius: var(--r-xl); box-shadow: var(--shadow-card); overflow: hidden; }
+.aud-evento { position: relative; display: flex; gap: var(--s-3); padding: var(--s-3) var(--s-4); align-items: flex-start; }
+.aud-evento + .aud-evento::before {
+  content: ''; position: absolute; top: 0; left: calc(var(--s-4) + 2.25rem + var(--s-3)); right: 0; height: 0.5px; background: var(--separator);
+}
+.aud-evento__icono {
+  width: 2.25rem; height: 2.25rem; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center;
+}
+.aud-evento__icono--verde { background: var(--green-tint, rgba(52, 199, 89, 0.14)); color: var(--green-ink, #1f8a3d); }
+.aud-evento__icono--ambar { background: var(--amber-tint); color: var(--amber-ink); }
+.aud-evento__icono--rojo { background: var(--red-tint); color: var(--red-ink); }
+.aud-evento__icono--azul { background: var(--accent-tint); color: var(--accent-ink); }
+.aud-evento__icono--gris { background: var(--fill-2); color: var(--label-2); }
+.aud-evento__cuerpo { min-width: 0; flex: 1; }
+.aud-evento__texto { font-size: 0.9375rem; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.aud-evento__meta { font-size: 0.75rem; color: var(--label-2); margin-top: 0.125rem; overflow-wrap: anywhere; }
+.aud-evento__detalle { margin-top: var(--s-2); font-size: 0.8125rem; }
+.aud-evento__detalle summary { cursor: pointer; color: var(--accent-ink); font-weight: 600; }
+.aud-evento__detalle pre {
+  margin: 0.25rem 0 var(--s-2); padding: var(--s-2); border-radius: var(--r-md); background: var(--fill-1, var(--fill-2));
+  font-family: var(--font-mono); font-size: 0.75rem; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 9rem; overflow: auto;
+}
+.aud-evento__detalle code { font-size: 0.6875rem; color: var(--label-3); }

@@ -11,6 +11,9 @@ import { AuthProvider } from './core/auth/AuthProvider';
 import { ToastProvider } from './core/ui/Toast';
 import { ApiError } from './core/api/client';
 import App from './App';
+import { iniciarAcento } from './core/lib/accent';
+
+iniciarAcento(); // color elegido, antes de pintar
 
 const queryClient = new QueryClient({
   defaultOptions: {

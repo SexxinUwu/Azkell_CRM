@@ -1,47 +1,135 @@
 import '../mantenimiento/mant.css';
-import { useState } from 'react';
-import { ArrowUpRight, SearchX, ShieldCheck } from 'lucide-react';
+import './auditoria.css';
+import { useMemo, useState } from 'react';
+import {
+  ArrowUpRight, Eye, LogIn, LogOut, Pencil, Plus, SearchX, ShieldCheck, Trash2, type LucideIcon,
+} from 'lucide-react';
 import { PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
+import { SearchField, SelectInput } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
-import { useAuditoria, useLogFirmado, type AuditoriaEntrada } from './api';
+import { useAuditoria, useLogFirmado, type AuditoriaEntrada, type LogFirmado } from './api';
 
-function fechaHora(s: string | null | undefined): string {
-  if (!s) return '—';
-  const d = new Date(s);
-  return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
-    + ' ' + d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+type Tipo = 'todos' | 'crear' | 'editar' | 'eliminar' | 'acceso';
+type Vista = 'actividad' | 'firmado';
+
+const TIPOS: { value: Tipo; label: string }[] = [
+  { value: 'todos', label: 'Todo' },
+  { value: 'crear', label: 'Creaciones' },
+  { value: 'editar', label: 'Cambios' },
+  { value: 'eliminar', label: 'Eliminaciones' },
+  { value: 'acceso', label: 'Accesos' },
+];
+
+/** Clasifica una acción libre ("CREÓ", "Ingreso", "MODIFICÓ"…) en un tipo con ícono y color */
+function clasificar(accion: string | null | undefined, detalle?: string | null): Exclude<Tipo, 'todos'> | 'otro' {
+  const t = `${accion ?? ''} ${detalle ?? ''}`.toLowerCase();
+  if (/cerr[óo] sesi|cierre de sesi|logout/.test(t)) return 'acceso';
+  if (/ingres[óo]|inicio de sesi|login|inici[óo] sesi/.test(t)) return 'acceso';
+  if (/elimin|delet|borr|remov|anul/.test(t)) return 'eliminar';
+  if (/cre[óo]|crear|creat|registr|insert|agreg|import/.test(t)) return 'crear';
+  if (/edit|modific|actualiz|updat|cambi/.test(t)) return 'editar';
+  return 'otro';
 }
 
-function accionColor(a: string | null | undefined): string {
-  if (!a) return 'neutral';
-  const l = a.toLowerCase();
-  if (l.includes('elimin') || l.includes('delet') || l.includes('remov')) return 'red';
-  if (l.includes('creó') || l.includes('creo') || l.includes('creat') || l.includes('registr')) return 'green';
-  if (l.includes('editó') || l.includes('edito') || l.includes('updat') || l.includes('modific')) return 'amber';
-  return 'blue';
+const ICONO: Record<string, { Icono: LucideIcon; tono: string }> = {
+  crear: { Icono: Plus, tono: 'verde' },
+  editar: { Icono: Pencil, tono: 'ambar' },
+  eliminar: { Icono: Trash2, tono: 'rojo' },
+  acceso: { Icono: LogIn, tono: 'azul' },
+  otro: { Icono: Eye, tono: 'gris' },
+};
+
+const clave = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+function etiquetaDia(d: Date): string {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const dia = new Date(d); dia.setHours(0, 0, 0, 0);
+  const diff = Math.round((hoy.getTime() - dia.getTime()) / 86_400_000);
+  if (diff === 0) return 'Hoy';
+  if (diff === 1) return 'Ayer';
+  const txt = d.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', ...(d.getFullYear() !== hoy.getFullYear() ? { year: 'numeric' } : {}) });
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
 }
 
+const hora = (d: Date) => d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+
+interface Evento {
+  id: string | number;
+  fecha: Date;
+  usuario: string;
+  tipo: ReturnType<typeof clasificar>;
+  accion: string;
+  modulo: string;
+  texto: string;
+  ip: string;
+}
+
+function aEvento(e: AuditoriaEntrada, i: number): Evento | null {
+  const fecha = e.created_at ? new Date(e.created_at) : null;
+  if (!fecha || Number.isNaN(fecha.getTime())) return null;
+  const usuario = String(e.usuario ?? '').trim() || 'Sistema';
+  const detalle = String(e.detalle ?? '').trim();
+  const accion = String(e.accion ?? '').trim();
+  const tipo = clasificar(accion, detalle);
+  return {
+    id: e.id ?? i, fecha, usuario, tipo, accion,
+    modulo: [e.modulo, e.submodulo].filter(Boolean).join(' / '),
+    texto: detalle || `${accion || 'Actividad'} en ${e.modulo || 'el sistema'}`,
+    ip: String(e.ip ?? ''),
+  };
+}
+
+// Sistema › Auditoría: línea de tiempo por día — quién hizo qué y cuándo.
 export function AuditoriaPage() {
+  const [vista, setVista] = useState<Vista>('actividad');
   const [busqueda, setBusqueda] = useState('');
-  const [vista, setVista] = useState<'actividad' | 'firmado'>('actividad');
+  const [tipo, setTipo] = useState<Tipo>('todos');
+  const [persona, setPersona] = useState('');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+
   const act = useAuditoria({ q: busqueda || undefined });
   const log = useLogFirmado(busqueda || undefined, vista === 'firmado');
   const firmado = vista === 'firmado';
   const { isLoading, isError, error } = firmado ? log : act;
-  const entradas: AuditoriaEntrada[] = act.data ?? [];
-  const filas = log.data ?? [];
-  const total = firmado ? filas.length : entradas.length;
+
+  const eventos = useMemo(() => (act.data ?? []).map(aEvento).filter((e): e is Evento => !!e), [act.data]);
+  const personas = useMemo(() => [...new Set(eventos.map(e => e.usuario))].sort((a, b) => a.localeCompare(b, 'es')), [eventos]);
+
+  const visibles = useMemo(() => eventos.filter(e => {
+    if (tipo !== 'todos' && e.tipo !== tipo) return false;
+    if (persona && e.usuario !== persona) return false;
+    const k = clave(e.fecha);
+    if (desde && k < desde) return false;
+    if (hasta && k > hasta) return false;
+    return true;
+  }), [eventos, tipo, persona, desde, hasta]);
+
+  const dias = useMemo(() => {
+    const m = new Map<string, { fecha: Date; items: Evento[] }>();
+    for (const e of visibles) {
+      const k = clave(e.fecha);
+      if (!m.has(k)) m.set(k, { fecha: e.fecha, items: [] });
+      m.get(k)!.items.push(e);
+    }
+    return [...m.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1)).map(([k, v]) => ({ k, ...v }));
+  }, [visibles]);
+
+  const filas: LogFirmado[] = log.data ?? [];
+  const hayFiltros = tipo !== 'todos' || !!persona || !!desde || !!hasta || !!busqueda;
+  const limpiar = () => { setTipo('todos'); setPersona(''); setDesde(''); setHasta(''); setBusqueda(''); };
+  const total = firmado ? filas.length : visibles.length;
 
   return (
     <Page>
       <PageHeader
         eyebrow="Sistema"
         title="Auditoría"
-        subtitle={isLoading ? 'Cargando…' : `${total} registros`}
+        subtitle={isLoading ? 'Cargando…' : 'Quién hizo qué y cuándo. Los registros no se pueden editar ni borrar.'}
         actions={
           <MenuOtros opciones={[
             { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('sistema/auditoria') },
@@ -49,88 +137,103 @@ export function AuditoriaPage() {
         }
       />
 
+      <div className="aud-filtros">
+        <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar en la actividad" />
+        <SegmentedControl<Vista> label="Vista" value={vista} onChange={setVista}
+          options={[{ value: 'actividad', label: 'Actividad' }, { value: 'firmado', label: 'Registro firmado' }]} />
+        {!firmado && (
+          <div className="aud-filtros__fila">
+            <SelectInput value={tipo} onChange={e => setTipo(e.target.value as Tipo)} aria-label="Tipo de actividad">
+              {TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </SelectInput>
+            <SelectInput value={persona} onChange={e => setPersona(e.target.value)} aria-label="Persona">
+              <option value="">Todas las personas</option>
+              {personas.map(p => <option key={p} value={p}>{p}</option>)}
+            </SelectInput>
+            <label className="aud-fecha"><span>Desde</span>
+              <input type="date" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} />
+            </label>
+            <label className="aud-fecha"><span>Hasta</span>
+              <input type="date" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} />
+            </label>
+          </div>
+        )}
+      </div>
+
       {isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
-            <button type="button" className={`ot-estado ot-estado--${firmado ? 'neutral' : 'blue'}`} onClick={() => setVista('actividad')}>Actividad</button>
-            <button type="button" className={`ot-estado ot-estado--${firmado ? 'blue' : 'neutral'}`} onClick={() => setVista('firmado')}>Registro firmado (antes / después)</button>
-          </div>
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Usuario, módulo, acción…" />
+        <>
+          <p className="aud-conteo">{total} registro{total !== 1 ? 's' : ''}{hayFiltros && !firmado ? ' con estos filtros' : ''}</p>
 
           {firmado ? (
             filas.length === 0 ? (
               <EmptyState icon={<ShieldCheck size={22} />} title="Sin registros">No hay mutaciones registradas.</EmptyState>
             ) : (
-              <div className="tarjeta__lista" style={{ overflow: 'auto' }}>
-                <table className="inv-kardex" style={{ minWidth: '60rem' }}>
-                  <thead>
-                    <tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Ruta</th><th>Antes</th><th>Después</th><th>Firma</th></tr>
-                  </thead>
-                  <tbody>
-                    {filas.map(f => (
-                      <tr key={f.id}>
-                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{fechaHora(f.created_at)}</td>
-                        <td style={{ fontWeight: 600, fontSize: '0.875rem' }}>{f.usuario || '—'}</td>
-                        <td><span className={`ot-estado ot-estado--${accionColor(f.accion)}`}>{f.accion || '—'}</span></td>
-                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--label-2)' }}>{f.metodo} {f.ruta}</td>
-                        <td title={f.antes ?? ''} style={{ color: 'var(--label-2)', fontSize: '0.8125rem', maxWidth: '12rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.antes || '—'}</td>
-                        <td title={f.despues ?? f.detalle ?? ''} style={{ color: 'var(--label-2)', fontSize: '0.8125rem', maxWidth: '12rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.despues || f.detalle || '—'}</td>
-                        <td title={f.firma_estado ?? f.firma} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--label-3)' }}>{(f.firma_estado ?? f.firma).slice(0, 8)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="aud-dia">
+                <div className="aud-lista">
+                  {filas.map(f => <FilaFirmada key={f.id} f={f} />)}
+                </div>
               </div>
             )
-          ) : entradas.length === 0 ? (
-            <EmptyState icon={busqueda ? <SearchX size={22} /> : <ShieldCheck size={22} />}
-              title={busqueda ? 'Sin coincidencias' : 'Sin registros'}>
-              {busqueda
-                ? <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Quitar búsqueda</button>
-                : 'No hay registros de auditoría.'}
+          ) : dias.length === 0 ? (
+            <EmptyState icon={hayFiltros ? <SearchX size={22} /> : <ShieldCheck size={22} />}
+              title={hayFiltros ? 'Sin coincidencias' : 'Sin registros'}>
+              {hayFiltros
+                ? <button type="button" className="placas-limpiar" onClick={limpiar}>Quitar filtros</button>
+                : 'Aún no hay actividad registrada.'}
             </EmptyState>
           ) : (
-            <div className="tarjeta__lista" style={{ overflow: 'auto' }}>
-              <table className="inv-kardex" style={{ minWidth: '48rem' }}>
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Usuario</th>
-                    <th>Módulo</th>
-                    <th>Acción</th>
-                    <th>IP</th>
-                    <th>Detalle</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entradas.map((e, i) => (
-                    <tr key={String(e.id ?? i)}>
-                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
-                        {fechaHora(e.created_at)}
-                      </td>
-                      <td style={{ fontWeight: 600, fontSize: '0.875rem' }}>{e.usuario || '—'}</td>
-                      <td style={{ color: 'var(--label-2)', fontSize: '0.8125rem' }}>
-                        {[e.modulo, e.submodulo].filter(Boolean).join(' / ') || '—'}
-                      </td>
-                      <td>
-                        <span className={`ot-estado ot-estado--${accionColor(e.accion)}`}>{e.accion || '—'}</span>
-                      </td>
-                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--label-3)' }}>
-                        {e.ip || '—'}
-                      </td>
-                      <td style={{ color: 'var(--label-2)', fontSize: '0.8125rem', maxWidth: '14rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {String(e.detalle ?? '') || '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            dias.map(d => (
+              <section key={d.k} className="aud-dia">
+                <h2 className="aud-dia__titulo">{etiquetaDia(d.fecha)}</h2>
+                <div className="aud-lista">
+                  {d.items.map(e => {
+                    const { Icono, tono } = e.tipo === 'acceso' && /cerr|cierre|logout/i.test(`${e.accion} ${e.texto}`)
+                      ? { Icono: LogOut, tono: 'gris' } : ICONO[e.tipo];
+                    return (
+                      <article key={e.id} className="aud-evento">
+                        <span className={`aud-evento__icono aud-evento__icono--${tono}`}><Icono size={17} strokeWidth={2} /></span>
+                        <div className="aud-evento__cuerpo">
+                          <div className="aud-evento__texto">{e.texto}</div>
+                          <div className="aud-evento__meta">
+                            {[e.accion, hora(e.fecha), e.usuario, e.modulo, e.ip].filter(Boolean).join(' · ')}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            ))
           )}
-        </div>
+        </>
       )}
     </Page>
+  );
+}
+
+function FilaFirmada({ f }: { f: LogFirmado }) {
+  const tipo = clasificar(f.accion, f.ruta);
+  const { Icono, tono } = ICONO[tipo];
+  const fecha = new Date(f.created_at);
+  return (
+    <article className="aud-evento">
+      <span className={`aud-evento__icono aud-evento__icono--${tono}`}><Icono size={17} strokeWidth={2} /></span>
+      <div className="aud-evento__cuerpo">
+        <div className="aud-evento__texto">{f.usuario || 'Sistema'} · {f.metodo} {f.ruta}</div>
+        <div className="aud-evento__meta">
+          {[f.accion, `${etiquetaDia(fecha)} ${hora(fecha)}`, f.ip, f.status_codigo ? `HTTP ${f.status_codigo}` : ''].filter(Boolean).join(' · ')}
+        </div>
+        {(f.antes || f.despues || f.detalle) && (
+          <details className="aud-evento__detalle">
+            <summary>Antes / después</summary>
+            <div><strong>Antes</strong><pre>{f.antes || '—'}</pre></div>
+            <div><strong>Después</strong><pre>{f.despues || f.detalle || '—'}</pre></div>
+            <code title={f.firma_estado ?? f.firma}>Firma {(f.firma_estado ?? f.firma).slice(0, 12)}</code>
+          </details>
+        )}
+      </div>
+    </article>
   );
 }
