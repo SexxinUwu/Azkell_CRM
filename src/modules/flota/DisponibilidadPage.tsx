@@ -1,16 +1,22 @@
 import './flota.css';
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowUpRight, Gauge, SearchX } from 'lucide-react';
-import { PageLoader } from '../../core/ui/Button';
+import { ArrowUpRight, FileSpreadsheet, Gauge, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { errorMessage } from '../../core/api/client';
+import { ConfirmSheet } from '../../core/ui/Sheet';
+import { useToast } from '../../core/ui/Toast';
+import { api, errorMessage } from '../../core/api/client';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { estadoDispColor, useDisponibilidad, type VehiculoDisponibilidad } from './api';
+import { DisponibilidadFormulario } from './DisponibilidadFormulario';
 
 const TODOS = 'Todos';
 const FILTROS = [TODOS, 'En Base', 'En Ruta', 'En Mantenimiento'] as const;
@@ -20,8 +26,39 @@ export function DisponibilidadPage() {
   const [filtro, setFiltro] = useState(TODOS);
   const [busqueda, setBusqueda] = useState('');
   const [seleccionado, setSeleccionado] = useState<VehiculoDisponibilidad | null>(null);
+  const [formulario, setFormulario] = useState<{ veh: VehiculoDisponibilidad | null } | null>(null);
+  const [porEliminar, setPorEliminar] = useState<VehiculoDisponibilidad | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+  const { can, user } = useAuth();
+  const qc = useQueryClient();
+  const toast = useToast();
 
   const vehiculos = data ?? [];
+  const puedeCrear = can('disponibilidad.crear');
+  const puedeEditar = can('disponibilidad.editar');
+  const puedeEliminar = can('disponibilidad.eliminar');
+
+  async function eliminar() {
+    if (!porEliminar?.id) return;
+    setEliminando(true);
+    try {
+      const r = await api<{ error?: string }>(`/disponibilidad-flota/${porEliminar.id}`, { method: 'DELETE' });
+      if (r?.error) throw new Error(r.error);
+      haptic('success'); toast('Registro eliminado');
+      setPorEliminar(null); setSeleccionado(null);
+      await qc.invalidateQueries({ queryKey: ['flota', 'disponibilidad'] });
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+    finally { setEliminando(false); }
+  }
+
+  async function exportar() {
+    try {
+      await exportarExcel('Disponibilidad-flota', 'Disponibilidad',
+        ['Placa camión', 'Placa carreta', 'Estado', 'Conductor', 'Empresa', 'Marca', 'Tipo', 'Capacidad', 'Observaciones'],
+        visibles.map(v => [v.placa_camion, v.placa_carreta, v.estado, v.conductor_asignado, v.empresa, v.marca, v.tipo_unidad, v.capacidad_tanque, v.observaciones]));
+      haptic('success');
+    } catch (err) { toast(errorMessage(err), 'error'); }
+  }
 
   const conteos = useMemo(() => {
     const m: Record<string, number> = { 'En Base': 0, 'En Ruta': 0, 'En Mantenimiento': 0 };
@@ -59,7 +96,16 @@ export function DisponibilidadPage() {
   if (seleccionado) {
     return (
       <Page push>
-        <DisponibilidadDetalle veh={seleccionado} onVolver={() => setSeleccionado(null)} />
+        <DisponibilidadDetalle
+          veh={seleccionado}
+          onVolver={() => setSeleccionado(null)}
+          onEditar={puedeEditar && seleccionado.id ? () => setFormulario({ veh: seleccionado }) : undefined}
+          onEliminar={puedeEliminar && seleccionado.id ? () => setPorEliminar(seleccionado) : undefined}
+        />
+        <DisponibilidadFormulario open={!!formulario} veh={formulario?.veh ?? null} usuario={user?.name ?? ''}
+          onClose={() => { setFormulario(null); setSeleccionado(null); }} />
+        <ConfirmSheet open={!!porEliminar} onClose={() => !eliminando && setPorEliminar(null)} onConfirm={eliminar} loading={eliminando}
+          title="¿Eliminar este registro?" message="Se quita la unidad de la disponibilidad. No afecta el registro de placas." confirmLabel="Eliminar" />
       </Page>
     );
   }
@@ -73,9 +119,13 @@ export function DisponibilidadPage() {
         title="Disponibilidad"
         subtitle={isLoading ? 'Cargando…' : `${vehiculos.length} unidades${actualizado ? ` · ${actualizado}` : ''}`}
         actions={
-          <MenuOtros opciones={[
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/disponibilidad') },
-          ]} />
+          <>
+            <MenuOtros opciones={[
+              { label: 'Exportar Excel', detalle: `${visibles.length} unidades`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+              { label: 'GPS, conductores y reportes', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('flota/disponibilidad') },
+            ]} />
+            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ veh: null })}>Registrar</Button>}
+          </>
         }
       />
 
@@ -142,11 +192,15 @@ export function DisponibilidadPage() {
           )}
         </div>
       )}
+
+      <DisponibilidadFormulario open={!!formulario} veh={formulario?.veh ?? null} usuario={user?.name ?? ''} onClose={() => setFormulario(null)} />
     </Page>
   );
 }
 
-function DisponibilidadDetalle({ veh, onVolver }: { veh: VehiculoDisponibilidad; onVolver: () => void }) {
+function DisponibilidadDetalle({ veh, onVolver, onEditar, onEliminar }: {
+  veh: VehiculoDisponibilidad; onVolver: () => void; onEditar?: () => void; onEliminar?: () => void;
+}) {
   const color = estadoDispColor(veh.estado);
   const placaPrincipal = veh.placa_camion || veh.placa_carreta;
   return (
@@ -155,6 +209,12 @@ function DisponibilidadDetalle({ veh, onVolver }: { veh: VehiculoDisponibilidad;
         <button type="button" className="tarjeta__volver" onClick={onVolver}>
           <span style={{ fontSize: '1.2rem' }}>‹</span> Disponibilidad
         </button>
+        {(onEditar || onEliminar) && (
+          <div className="tarjeta__barra-acciones">
+            {onEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>}
+            {onEditar && <Button variant="primary" icon={<Pencil size={16} />} onClick={onEditar}>Editar</Button>}
+          </div>
+        )}
       </div>
       <div className="ot-ficha__hero">
         <span className={`ot-estado ot-estado--${color}`}>{veh.estado}</span>
