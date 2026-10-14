@@ -219,11 +219,9 @@ const ICONOS_MODULO: Record<string, LucideIcon> = {
   Gerencia: ShieldCheck, Flota: MapPin, Mantenimiento: Wrench, 'Almacén': Boxes, Operaciones: Route,
   Directorio: Contact, 'Tesorería': Banknote, 'Personas y seguridad': Users,
 };
-const ETIQUETAS_MODULO: Record<string, string> = {
-  Mantenimiento: 'Mant.', Operaciones: 'Operac.', 'Personas y seguridad': 'Personas',
-};
 const iconoModulo = (titulo: string): LucideIcon => ICONOS_MODULO[titulo] ?? Boxes;
-const etiquetaModulo = (titulo: string) => ETIQUETAS_MODULO[titulo] ?? titulo;
+// El nombre del módulo va completo, tal cual aparece en el menú
+const etiquetaModulo = (titulo: string) => titulo;
 
 function FilaModulo({ item, activa, onNavegar }: { item: NavItem; activa: boolean; onNavegar: () => void }) {
   const contenido = (

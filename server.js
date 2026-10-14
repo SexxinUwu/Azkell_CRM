@@ -495,6 +495,9 @@ app.use((req, res, next) => {
 // Archivos con hash → caché larga; cualquier otra ruta de /app → index.html (rutas del cliente).
 const DIST_APP = path.join(__dirname, 'dist', 'app');
 app.use('/app/assets', express.static(path.join(DIST_APP, 'assets'), { maxAge: '1y', immutable: true, index: false }));
+// Un archivo de compilación que ya no existe (la página quedó de una versión anterior) debe dar 404,
+// no el index.html: si no, el navegador lo rechaza con "MIME type text/html" y la página se rompe.
+app.use('/app/assets', (req, res) => res.status(404).type('text/plain').send('Archivo no encontrado'));
 app.get(/^\/app(\/.*)?$/, (req, res, next) => {
     const indice = path.join(DIST_APP, 'index.html');
     if (!fs.existsSync(indice)) return next(); // sin compilar (p. ej. en desarrollo sin build)

@@ -150,18 +150,30 @@ const SECCIONES_BASE: NavSection[] = [
 // Pantallas que declara cada módulo en src/modules/<modulo>/rutas.ts (ver personal/rutas.tipos.ts):
 // si la key ya está en el menú, la pantalla pasa de la versión actual a la nueva; si no, se agrega a su sección.
 const MODULOS = import.meta.glob<{ RUTAS?: RutaModulo[] }>('../../modules/*/rutas.{ts,tsx}', { eager: true });
-export const RUTAS_MODULOS: RutaModulo[] = Object.values(MODULOS).flatMap(m => m.RUTAS ?? []);
+
+// Cada carpeta de módulo es una sección del menú. Así una pantalla nueva cae en su sección
+// aunque su rutas.ts no declare `seccion` (antes aparecía en una sección "Otros").
+const SECCION_DE_CARPETA: Record<string, string> = {
+  almacen: 'Almacén', directorio: 'Directorio', flota: 'Flota', gerencia: 'Gerencia', mantenimiento: 'Mantenimiento',
+  operaciones: 'Operaciones', personas: 'Personas y seguridad', sistema: 'Sistema', tesoreria: 'Tesorería',
+};
+const RUTAS_CON_SECCION: Array<{ ruta: RutaModulo; seccion: string | undefined }> = Object.entries(MODULOS).flatMap(([archivo, m]) => {
+  const carpeta = archivo.split('/').slice(-2)[0];
+  return (m.RUTAS ?? []).map(ruta => ({ ruta, seccion: SECCION_DE_CARPETA[carpeta] }));
+});
+export const RUTAS_MODULOS: RutaModulo[] = RUTAS_CON_SECCION.map(x => x.ruta);
 
 function conModulos(base: NavSection[]): NavSection[] {
   const secciones = base.map(s => ({ ...s, items: [...s.items] }));
-  for (const r of RUTAS_MODULOS) {
+  for (const { ruta: r, seccion: seccionCarpeta } of RUTAS_CON_SECCION) {
     const n = r.nav;
     if (!n) continue;
     const item: NavItem = { key: n.key, label: n.label, to: n.to, icon: iconoDe(n.icon), permissions: n.permisos, soloEmpresa: n.soloEmpresa };
     const existente = secciones.flatMap(s => s.items).find(i => i.key === n.key);
     if (existente) { Object.assign(existente, item, { clasico: undefined }); continue; }
-    let seccion = secciones.find(s => s.title === n.seccion);
-    if (!seccion) { seccion = { title: n.seccion ?? 'Otros', items: [] }; secciones.splice(secciones.length - 1, 0, seccion); }
+    const titulo = n.seccion ?? seccionCarpeta ?? 'Otros';
+    let seccion = secciones.find(s => s.title === titulo);
+    if (!seccion) { seccion = { title: titulo, items: [] }; secciones.splice(secciones.length - 1, 0, seccion); }
     seccion.items.push(item);
   }
   return secciones;
