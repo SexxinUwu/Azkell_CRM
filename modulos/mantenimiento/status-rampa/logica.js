@@ -3326,6 +3326,10 @@ function srRenderConfigRampas() {
                 'style="width:32px; height:32px; border:none; border-radius:50%; cursor:pointer; background:none; padding:0; flex-shrink:0;" ' +
                 'title="Cambiar color de rampa" ' +
                 'onchange="window.srGuardarColorRampa(' + r.id + ', this.value)">' +
+            '<button type="button" class="btn btn-sm p-1 border-0 flex-shrink-0 sr-cfg-ojo" onclick="window.srToggleReporteRampa(' + r.id + ')" ' +
+                'title="' + (r.en_reporte === 0 ? 'Oculta en el PDF y WhatsApp (clic para mostrar)' : 'Sale en el PDF y WhatsApp (clic para ocultar)') + '" ' +
+                'style="font-size:1.05rem; line-height:1; color:' + (r.en_reporte === 0 ? 'var(--label-3,#94a3b8)' : '#15803d') + ';">' +
+                '<i class="bi ' + (r.en_reporte === 0 ? 'bi-eye-slash' : 'bi-eye-fill') + '"></i></button>' +
             '<input type="text" value="' + _srEsc(r.nombre_rampa) + '" id="sr-cfg-nom-' + r.id + '" ' +
                 'class="form-control form-control-sm bg-light fw-bold" ' +
                 'style="flex:1; border-radius:8px; font-size:0.85rem;" ' +
@@ -3337,6 +3341,27 @@ function srRenderConfigRampas() {
     }).join('');
     srInitDragRampas(list);
 }
+
+// Ojito: muestra u oculta la rampa en el PDF y en WhatsApp (no cambia la pantalla de tablero)
+window.srToggleReporteRampa = function(id) {
+    var r = (window.srCatRampas || []).find(function(x){ return x.id === id; });
+    if (!r) return;
+    var nuevo = r.en_reporte === 0 ? 1 : 0;
+    r.en_reporte = nuevo;
+    srRenderConfigRampas();
+    fetch('/api/cat-rampas/' + id, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ en_reporte: nuevo })
+    }).then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        if (typeof window.mostrarToast === 'function') window.mostrarToast(nuevo ? 'La rampa saldrá en el reporte' : 'La rampa no saldrá en el reporte', 'success');
+    }).catch(function() {
+        r.en_reporte = nuevo ? 0 : 1;
+        srRenderConfigRampas();
+        if (typeof window.mostrarToast === 'function') window.mostrarToast('No se pudo guardar. Intenta de nuevo.', 'danger');
+    });
+};
 
 window.srGuardarColorRampa = function(id, nuevoColor) {
     if (!nuevoColor) return;
@@ -4585,7 +4610,8 @@ window.srDescargarPlantillaParabrisas = function(id) {
 // PDF OFICIAL DE STATUS RAMPA HORIZONTAL (F-MAN-005) - 1 SOLA PÁGINA
 // ================================================================
 window.srAbrirPDFStatus = function() {
-    var rampas = window.srCatRampas || [];
+    // Solo las rampas con el ojito activo salen en el PDF (y en WhatsApp, que usa el mismo reporte)
+    var rampas = (window.srCatRampas || []).filter(function(r) { return r.en_reporte !== 0; });
     if (!rampas.length) {
         alert('No hay rampas configuradas para exportar.');
         return;

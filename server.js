@@ -3021,14 +3021,17 @@ app.use('/api/mantenimiento/checklist', checklistRoutes);
 function getCatRampasSafe(targetDb, cb) {
     targetDb.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
         targetDb.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
-            targetDb.query('SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC', (err, rows) => {
-                if (err) {
-                    targetDb.query('SELECT * FROM cat_rampas ORDER BY id ASC', (err2, rows2) => {
-                        cb(err2, rows2 || []);
-                    });
-                } else {
-                    cb(null, rows || []);
-                }
+            // Ojito de "Configurar": si está en 0, la rampa no sale en el PDF ni en WhatsApp
+            targetDb.query('ALTER TABLE cat_rampas ADD COLUMN en_reporte TINYINT(1) NOT NULL DEFAULT 1', () => {
+                targetDb.query('SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC', (err, rows) => {
+                    if (err) {
+                        targetDb.query('SELECT * FROM cat_rampas ORDER BY id ASC', (err2, rows2) => {
+                            cb(err2, rows2 || []);
+                        });
+                    } else {
+                        cb(null, rows || []);
+                    }
+                });
             });
         });
     });
@@ -3073,18 +3076,21 @@ app.put('/api/cat-rampas/reorder', (req, res) => {
 });
 
 app.put('/api/cat-rampas/:id', (req, res) => {
-    const { nombre_rampa, estado, color } = req.body;
+    const { nombre_rampa, estado, color, en_reporte } = req.body;
     const sets = [];
     const vals = [];
     if (nombre_rampa !== undefined) { sets.push('nombre_rampa=?'); vals.push(nombre_rampa.trim()); }
     if (estado !== undefined) { sets.push('estado=?'); vals.push(estado); }
     if (color !== undefined) { sets.push('color=?'); vals.push(color.trim()); }
+    if (en_reporte !== undefined) { sets.push('en_reporte=?'); vals.push(en_reporte ? 1 : 0); }
     if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
     vals.push(req.params.id);
     db.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
-        db.query(`UPDATE cat_rampas SET ${sets.join(',')} WHERE id=?`, vals, (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true });
+        db.query('ALTER TABLE cat_rampas ADD COLUMN en_reporte TINYINT(1) NOT NULL DEFAULT 1', () => {
+            db.query(`UPDATE cat_rampas SET ${sets.join(',')} WHERE id=?`, vals, (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ ok: true });
+            });
         });
     });
 });
