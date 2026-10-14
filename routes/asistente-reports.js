@@ -135,10 +135,18 @@ async function buildReport(db, user, tipo, query) {
   if (tipo === 'inspecciones') {
     const { fromKey, toKey } = resolveRange(query.desde, query.hasta);
     const rows = await db_query(targetDb,
-      'SELECT id, placa, fecha_ingreso, tipo_inspeccion, estado, km_tablero FROM inspecciones WHERE fecha_ingreso BETWEEN ? AND ? ORDER BY fecha_ingreso DESC LIMIT 3000',
+      'SELECT id, placa, fecha_ingreso, tipo_inspeccion, dias_propuestos, km_tablero FROM inspecciones WHERE fecha_ingreso BETWEEN ? AND ? ORDER BY fecha_ingreso DESC LIMIT 3000',
       [fromKey, toKey]
     );
     const fmt = (f) => f instanceof Date ? f.toISOString().slice(0, 10) : (String(f || '').split('T')[0] || '');
+    // La tabla no guarda estado: se calcula igual que en Inspecciones (fecha de ingreso + días propuestos, 30 por defecto)
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const estadoDe = (f, dias) => {
+      const base = f instanceof Date ? new Date(f) : new Date(String(f || '').split('T')[0] + 'T00:00:00');
+      if (Number.isNaN(base.getTime())) return '';
+      base.setDate(base.getDate() + (Number(dias) || 30));
+      return base >= hoy ? 'Vigente' : 'Vencida';
+    };
     return {
       title: REPORTS.inspecciones.label,
       subtitle: `Del ${fromKey} al ${toKey} · Generado el ${subtitle}`,
@@ -155,7 +163,7 @@ async function buildReport(db, user, tipo, query) {
         placa: r.placa ?? '',
         fecha_ingreso: fmt(r.fecha_ingreso),
         tipo_inspeccion: r.tipo_inspeccion ?? '',
-        estado: r.estado ?? '',
+        estado: estadoDe(r.fecha_ingreso, r.dias_propuestos),
         km_tablero: r.km_tablero != null ? Number(r.km_tablero) : null,
       })),
       truncated: rows.length >= 3000,
