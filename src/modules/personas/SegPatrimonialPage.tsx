@@ -8,6 +8,7 @@ import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { UnidadesBase } from './UnidadesBase';
 
 interface UnidadBase {
   placa?: string;
@@ -55,7 +56,7 @@ function MiniDonut({ pct, color }: { pct: number; color: string }) {
 
 export function SegPatrimonialPage() {
   const [busqueda, setBusqueda] = useState('');
-  const [vista, setVista] = useState<'panorama' | 'empresas'>('panorama');
+  const [vista, setVista] = useState<'panorama' | 'empresas' | 'base'>('panorama');
 
   const panorama = useQuery<UnidadBase[]>({
     queryKey: ['seg-patrimonial', 'panorama'],
@@ -143,9 +144,10 @@ export function SegPatrimonialPage() {
             {[
               { key: 'panorama', label: 'Panorama en vivo' },
               { key: 'empresas', label: 'Por empresa' },
+              { key: 'base', label: 'Registro por corte' },
             ].map(t => (
               <button key={t.key} type="button"
-                onClick={() => setVista(t.key as 'panorama' | 'empresas')}
+                onClick={() => setVista(t.key as 'panorama' | 'empresas' | 'base')}
                 style={{ padding: '6px 14px', borderRadius: 8, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', background: vista === t.key ? 'var(--accent)' : 'var(--fill-2)', color: vista === t.key ? '#fff' : 'var(--label-2)', border: `1px solid ${vista === t.key ? 'var(--accent)' : 'var(--separator)'}` }}>
                 {t.label}
               </button>
@@ -197,6 +199,8 @@ export function SegPatrimonialPage() {
               </div>
             )
           )}
+
+          {vista === 'base' && <UnidadesBase />}
 
           {/* Vista: por empresa */}
           {vista === 'empresas' && (
