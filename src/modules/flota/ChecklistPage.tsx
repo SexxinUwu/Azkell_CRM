@@ -2,7 +2,7 @@ import './flota.css';
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, ClipboardCheck, FileSpreadsheet, SearchX, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ClipboardCheck, FileSpreadsheet, Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -15,6 +15,7 @@ import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { fallaEstadoColor, useChecklist, type ReporteFalla } from './api';
+import { ReporteFallaNuevo } from './ReporteFallaNuevo';
 
 const TODOS = 'Todos';
 
@@ -25,10 +26,12 @@ export function ChecklistPage() {
   const [seleccionado, setSeleccionado] = useState<ReporteFalla | null>(null);
   const [porEliminar, setPorEliminar] = useState<ReporteFalla | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  const [nuevo, setNuevo] = useState(false);
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
   const puedeEliminar = can('checklist.eliminar');
+  const puedeCrear = can('checklist.crear');
 
   const items = data ?? [];
 
@@ -95,10 +98,13 @@ export function ChecklistPage() {
         title="Reporte de fallas"
         subtitle={isLoading ? 'Cargando…' : `${items.length} reportes`}
         actions={
-          <MenuOtros opciones={[
-            { label: 'Exportar Excel', detalle: `${visibles.length} reportes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-            { label: 'Nuevo reporte y generar OTs', detalle: 'Con fotos y firma del conductor', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/checklist') },
-          ]} />
+          <>
+            <MenuOtros opciones={[
+              { label: 'Exportar Excel', detalle: `${visibles.length} reportes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+              { label: 'Generar OTs y configurar sistemas', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/checklist') },
+            ]} />
+            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNuevo(true)}>Nuevo reporte</Button>}
+          </>
         }
       />
 
@@ -166,6 +172,7 @@ export function ChecklistPage() {
           )}
         </div>
       )}
+      <ReporteFallaNuevo open={nuevo} onClose={() => setNuevo(false)} onHecho={() => qc.invalidateQueries({ queryKey: ['flota', 'checklist'] })} />
     </Page>
   );
 }
