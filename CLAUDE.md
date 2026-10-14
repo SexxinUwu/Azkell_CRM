@@ -174,19 +174,13 @@ if(isAdm) { /* permitir */ }
 
 ---
 
-## 8. Bugs Corregidos (Historial)
+## 8. Patrones de Bugs Recurrentes (no repetir)
 
-| Problema | Causa | Solución |
-|----------|-------|----------|
-| Login 500 | `FROM Usuarios` (mayúscula) | Cambiar a `FROM usuarios` (minúscula) |
-| "Error Red" en fetch | URLs absolutas `http://127.0.0.1:3000/api/...` | URLs relativas `/api/...` |
-| UTF-8 corrupto | Encoding DB no UTF-8 | Configurar collation MySQL UTF-8 |
-| Dashboard UI rota | Referencias a funciones removidas | Defensive checks: `if (typeof func === 'function')` |
-| F5 → GPS Flota | Legacy `setTimeout(300ms)` leía `ultimoModuloCRM` | Eliminar setTimeout, usar `fleet_rutaActual` |
-| Fleetrun vacío | Race condition: `dataGlobalPlacas` aún cargando | Precarga en `verificarSesionGuardada()` + re-render trigger |
-| Chart stale canvas | SPA re-injecciona HTML, instances obsoletas | Destruir canvas antes de new Chart (validar DOM) |
-| `poblarSelectsFormularios` crash | Función removida de monolito | Implementar stub → lógica real |
-| Modal zombie | Navegación con modal abierto = backdrop bloqueante | Cleanup en `cargarModuloAislado()` (removeChild backdrop, reset body.style) |
+- Tablas MySQL en minúsculas exactas (`FROM usuarios`, nunca `Usuarios`).
+- Fetch siempre con URL relativa (`/api/...`), nunca absoluta con IP/puerto.
+- Antes de `new Chart()`: destruir instancia previa y validar que el canvas siga en el DOM.
+- Al navegar con `cargarModuloAislado()`: limpiar cualquier modal/backdrop abierto para evitar bloqueo de UI.
+- Precargar datos en `verificarSesionGuardada()` para evitar módulos vacíos por race condition.
 
 ---
 
@@ -285,57 +279,30 @@ if (el) { el.style.display = 'none'; }
 ### 📌 Backlog / Próximas Tareas
 
 #### Migración React (estado real al 2026-10-14)
-- 93 pantallas en catálogo total. ~8-10 completamente migradas. ~50 tienen stub React pero sin lógica real.
-- **Ninguna pantalla falta crear** — todas tienen su archivo en `src/modules/`. Lo que falta es implementar la lógica en cada stub.
-- Módulos completamente migrados: `placas` (piloto), `conductores`, `personal`, `inspecciones` (consulta).
+- 93 pantallas en catálogo total. Lo que falta es implementar la lógica en cada stub (todas ya tienen archivo en `src/modules/`).
+- Completamente migrados: `placas` (piloto), `conductores`, `personal`, `inspecciones` (consulta), `UsuariosPage`, `FleetrunPage`, `NeumaticosPage` (inspecciones), `OrdenesTrabajoPage` (crear OT + backlog + materiales), `KitsMpPage`, `PagoRequerimientosPage`.
 - Pendiente decidir librería de gráficos: SVG inline (ya usada en DashboardPage y MantDashboardPage) vs Recharts/Tremor.
 
 **Dashboards pendientes de conectar (stubs con estructura lista):**
 - [ ] `src/modules/mantenimiento/MantDashboardPage.tsx` — 5 queries React Query, componentes SVG propios. Falta conectar endpoints reales. **Prioridad alta** (más avanzado).
-- [ ] `src/modules/gerencia/DashboardPage.tsx` — 5 queries React Query (`dashboard/flota`, `ots`, `inventario`, `liquidaciones`, `combustible`). Clásico no usa Chart.js (solo DOM), migración sin deuda de gráficos. **Prioridad media**.
+- [ ] `src/modules/gerencia/DashboardPage.tsx` — 5 queries React Query (`dashboard/flota`, `ots`, `inventario`, `liquidaciones`, `combustible`). **Prioridad media**.
 
 **Stubs de módulos operativos (falta implementar lógica real):**
 - [ ] Almacén: Inventario, Entradas, Salidas, Kardex, Recepción, Proveedores
-- [ ] Mantenimiento: OTs, Trabajos OT, Status Rampa, Neumáticos, Planificación, Fleetrun, Fallas, Incidencias
+- [ ] Mantenimiento: Status Rampa, Planificación, Fallas, Incidencias
 - [ ] Operaciones: Órdenes Viaje, Servicios, Vales, Guías, Combustible, Urea (muchos son redirects intencionales al clásico)
 - [ ] Tesorería: Caja, Liquidaciones, Bancos, CCs, Cuentas
 - [ ] Sistema: Auditoría, Integraciones, Usuarios
 
-#### ERP / Funcionalidades
-- [ ] **Mejorar Gráficos de Mantenimiento (app nueva):**
-  - Optimización de analíticas e indicadores para Status Rampa en la versión React.
-
-### ✅ Módulos ERP Implementados (SPA — pendientes de migrar a React)
-- [x] **Telemetría CAN Bus:** `routes/telemetria.js` + tabla `telemetria_can`. Rutas: `GET/POST /api/telemetria`, `POST /api/telemetria/guardar-lote`. Persiste snapshot completo de Wialon en MySQL.
-- [x] **Fallas por Conductor + Alertas Almacén:** `routes/fallas.js` + tabla `fallas_conductor`. Folio auto (FAL-YYYY-NNNN), estados REPORTADA→ATENDIDA, email a almaceneros si requiere repuesto.
-- [x] **Checklist de Entrega de Unidades:** `routes/checklist.js` + tablas `reportes_fallas`, `checklist_config_sistemas`, `seg_entrega_vehiculos`. Frontend en `modulos/seguridad/entrega-vehiculos/`. 44+47 ítems norma ISO F-MAN-001.
-- [x] **Status de Seguridad (Garita):** `routes/seguridad.js` (~1900 líneas). Tablas `seg_unidades_registros`, `seg_asistencia`, `seg_unidades_base`, fotos en S3. Control salida/retorno con firmas, alertas patrimoniales, panorama en vivo.
-
 ---
 
-### 🌙 Ciberseguridad & Arquitectura
-- [ ] **Migración completa a Cookies HttpOnly (frontend)**: Backend ya escribe y lee `azkell_session` (HttpOnly, Secure). Falta que el frontend deje de guardar el JWT en `localStorage` y de enviarlo en el header `Authorization`.
-- [ ] **CSP estricta**: Helmet instalado con configuración conservadora (CSP deshabilitada mientras haya scripts inline y CDN en la SPA). Activar CSP estricta cuando la app nueva sea el único frontend.
-- [ ] **Desacople de CDNs Externas (Tailwind / Scripts)**: Empaquetar utilidades de reporte de OT e Inspecciones de forma local/offline sin invocar `cdn.tailwindcss.com`.
-- [ ] **Registro de Auditoría Criptográfica (Audit Trail)**: Implementar tabla `log_auditoria` inmutable para registrar modificaciones críticas (quién, cuándo, IP, estado anterior y nuevo).
+### 🌙 Ciberseguridad & Arquitectura (pendiente)
+- [ ] **Cookies HttpOnly en frontend**: backend ya las escribe/lee; falta que el frontend deje el JWT de `localStorage`.
+- [ ] **CSP estricta**: deshabilitada mientras haya scripts inline y CDN en la SPA.
+- [ ] **Desacople de CDNs externas**: quitar `cdn.tailwindcss.com` de reportes OT/Inspecciones.
+- [ ] **Audit trail criptográfico**: tabla `log_auditoria` inmutable (quién, cuándo, IP, antes/después).
 
-### ✅ Seguridad Completada
-- [x] `JWT_SECRET` obliga a fallar en arranque si falta (sin valores por defecto en texto plano).
-- [x] `/test-s3` y `/seguridad/limpiar-plantillas` eliminados (eran públicos).
-- [x] Cookie HttpOnly `azkell_session` escrita en login y leída en verifyToken (prioridad sobre Bearer).
-- [x] Rate limiting en `/api/login` (20 intentos / 15 min) y general (200 req/min).
-- [x] Helmet con HSTS, frameguard sameorigin, referrer policy strict.
-- [x] `POST /api/configuracion` y `/api/proxy/*` protegidos con `verifyToken` (antes eran públicos).
-- [x] 2FA TOTP para roles Admin y Gerencia.
-
----
-
-### ✅ Tareas Completadas Recientemente
-- [x] **Asistente de IA (Gemini):** FAB flotante, panel chat, cadena de modelos con quota por modelo/día, reportes Excel y PDF sin gastar cuota de IA.
-- [x] **Mantenimientos Preventivos Trahesa:** Configuración y calendarización.
-- [x] **UX / Seguridad: Control de Inactividad y Modal "¡Despertamos!":** Aviso a los 5 min, logout a los 10 min.
-- [x] **Módulo Operaciones: Análisis de Combustible (D2) y Análisis de Urea (Separados):** Módulos independientes y consulta CAN Bus en lote.
-- [x] **Multi-tenant / Rosymar Perú:** Corrección de sincronización remota en subdominios secundarios.
+**Seguridad ya activa:** JWT_SECRET obligatorio, cookie HttpOnly `azkell_session`, rate limiting (login 20/15min, general 600/min), Helmet (HSTS, frameguard), 2FA TOTP (Admin/Gerencia).
 
 ---
 
