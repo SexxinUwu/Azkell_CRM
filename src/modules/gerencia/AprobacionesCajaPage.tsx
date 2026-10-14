@@ -8,6 +8,7 @@ import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { SlideUpModal, ModalBtn } from '../../core/ui/SlideUpModal';
 
 interface CajaMov {
   id: string | number;
@@ -222,44 +223,39 @@ export function AprobacionesCajaPage() {
       )}
 
       {/* Modal de confirmación */}
-      {accion && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 }}>
-          <div style={{ background: 'var(--bg-1)', borderRadius: 14, padding: 'var(--s-4)', maxWidth: 380, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-            <div style={{ fontWeight: 700, fontSize: '1.05rem', marginBottom: 'var(--s-2)' }}>
-              {accion.tipo === 'aprobar' ? '✅ Aprobar movimiento' : '❌ Anular movimiento'}
-            </div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--label-2)', marginBottom: 'var(--s-3)' }}>
-              {accion.tipo === 'aprobar'
-                ? 'Se marcará este movimiento como APROBADO.'
-                : 'Se marcará como ANULADO. Esta acción no se puede deshacer.'}
-            </div>
-            {accion.tipo === 'anular' && (
-              <div style={{ marginBottom: 'var(--s-3)' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--label-2)', display: 'block', marginBottom: 4 }}>
-                  Motivo de anulación
-                </label>
-                <textarea
-                  value={motivoAnulacion}
-                  onChange={e => setMotivoAnulacion(e.target.value)}
-                  placeholder="Describe el motivo…"
-                  rows={2}
-                  style={{ width: '100%', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', padding: '8px 10px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
-                />
-              </div>
-            )}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => { setAccion(null); setMotivoAnulacion(''); }}
-                style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-2)', color: 'var(--label-1)', fontWeight: 600, cursor: 'pointer' }}>
-                Cancelar
-              </button>
-              <button type="button" onClick={ejecutarAccion} disabled={procesando}
-                style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: accion.tipo === 'aprobar' ? 'var(--green-ink)' : 'var(--accent)', color: '#fff', fontWeight: 700, cursor: procesando ? 'not-allowed' : 'pointer', opacity: procesando ? 0.6 : 1 }}>
-                {procesando ? 'Procesando…' : accion.tipo === 'aprobar' ? 'Confirmar aprobación' : 'Confirmar anulación'}
-              </button>
-            </div>
+      <SlideUpModal
+        open={!!accion}
+        onClose={() => { setAccion(null); setMotivoAnulacion(''); }}
+        title={accion?.tipo === 'aprobar' ? 'Aprobar movimiento' : 'Anular movimiento'}
+        subtitle={accion?.tipo === 'aprobar' ? 'Se marcará este movimiento como APROBADO.' : 'Se marcará como ANULADO. Esta acción no se puede deshacer.'}
+        footer={
+          <>
+            <ModalBtn variant="ghost" onClick={() => { setAccion(null); setMotivoAnulacion(''); }}>Cancelar</ModalBtn>
+            <ModalBtn variant={accion?.tipo === 'aprobar' ? 'primary' : 'danger'} onClick={ejecutarAccion} loading={procesando}>
+              {accion?.tipo === 'aprobar' ? 'Confirmar aprobación' : 'Confirmar anulación'}
+            </ModalBtn>
+          </>
+        }
+      >
+        {accion?.tipo === 'anular' ? (
+          <div>
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--label-2)', display: 'block', marginBottom: 6 }}>
+              Motivo de anulación
+            </label>
+            <textarea
+              value={motivoAnulacion}
+              onChange={e => setMotivoAnulacion(e.target.value)}
+              placeholder="Describe el motivo…"
+              rows={3}
+              style={{ width: '100%', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', padding: '8px 10px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
+            />
           </div>
-        </div>
-      )}
+        ) : (
+          <div style={{ padding: '12px 0', color: 'var(--label-2)', fontSize: '0.875rem' }}>
+            Confirma que deseas aprobar este movimiento de caja.
+          </div>
+        )}
+      </SlideUpModal>
     </Page>
   );
 }

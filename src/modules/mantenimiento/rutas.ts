@@ -56,4 +56,10 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./FallasPage').then(m => ({ default: m.FallasPage }))),
     nav: { key: 'fallas', label: 'Fallas en ruta', to: '/mantenimiento/fallas', icon: 'AlertTriangle', permisos: ['fallas.ver', 'admin'] },
   },
+  {
+    path: 'mantenimiento/otros/*',
+    permisos: ['admin', 'status_rampa.ver', 'ot.ver'],
+    Page: lazy(() => import('./MantOtrosPage').then(m => ({ default: m.MantOtrosPage }))),
+    nav: { key: 'mant-otros', label: 'Otros', to: '/mantenimiento/otros', icon: 'Layers', permisos: ['admin', 'status_rampa.ver', 'ot.ver'] },
+  },
 ];

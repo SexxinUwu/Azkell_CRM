@@ -170,11 +170,24 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/taller/trabajos') || path.startsWith('/ot-trabajos')) mod = ['trabajos_ot', 'ot', 'status_rampa'];
     else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/repuestos')) mod = ['ot', 'trabajos_ot', 'status_rampa', 'sal_inv', 'inv'];
     else if (path.startsWith('/taller/historial')) mod = ['ot'];
-    else if (path.startsWith('/checklist')) {
+    else if (path.startsWith('/checklist') || path.startsWith('/mantenimiento/checklist')) {
         if (req.user && req.user.rol && req.user.rol.toLowerCase().includes('conductor')) {
             return next();
         }
         mod = ['checklist', 'ot', 'insp', 'status_rampa', 'cond', 'conductores', 'op_conductor', 'conductor_portal'];
+    }
+    else if (path.startsWith('/fallas')) {
+        mod = ['fallas', 'ot', 'status_rampa', 'reportes_ot', 'placas'];
+    }
+    else if (path.startsWith('/2fa')) {
+        // 2FA es gestión personal de cuenta: cualquier usuario autenticado puede usar estas rutas
+        return next();
+    }
+    else if (path.startsWith('/mantenimiento/incidencias') || path.startsWith('/incidencias-ruta')) {
+        mod = ['incidencias', 'ot', 'status_rampa', 'fleet', 'fleetrun', 'placas'];
+    }
+    else if (path.startsWith('/telemetria')) {
+        mod = ['fleet', 'fleetrun', 'gps', 'placas'];
     }
     else if (path.startsWith('/tesoreria')) mod = ['tesoreria', 'tes_motivos', 'liquidaciones_gastos', 'cond', 'conductores'];
     else if (path.startsWith('/inspecciones') || path.startsWith('/mantenimiento/inspecciones')) mod = ['insp'];

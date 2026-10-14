@@ -263,7 +263,16 @@ export function Seguridad2FAPage() {
 
   if (status.isLoading) return <Page><PageLoader /></Page>;
 
-  const s = status.data!;
+  if (status.isError || !status.data) {
+    return (
+      <Page>
+        <PageHeader eyebrow="Sistema" title="Seguridad de cuenta — 2FA" subtitle="Protege tu cuenta con un segundo factor de autenticación" />
+        <Notice tone="error">No se pudo cargar el estado 2FA. Verifica tu sesión e intenta de nuevo.</Notice>
+      </Page>
+    );
+  }
+
+  const s = status.data;
 
   return (
     <Page>

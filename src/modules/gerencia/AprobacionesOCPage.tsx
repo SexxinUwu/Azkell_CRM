@@ -8,6 +8,7 @@ import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { SlideUpModal, ModalBtn } from '../../core/ui/SlideUpModal';
 
 interface OC {
   id: string | number;
@@ -205,42 +206,33 @@ export function AprobacionesOCPage() {
       )}
 
       {/* Modal de confirmación */}
-      {accion && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 }}>
-          <div style={{ background: 'var(--bg-1)', borderRadius: 14, padding: 'var(--s-4)', maxWidth: 380, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-            <div style={{ fontWeight: 700, fontSize: '1.05rem', marginBottom: 'var(--s-2)' }}>
-              {accion.tipo === 'aprobar' ? '✅ Aprobar OC' : '❌ Rechazar OC'}
-            </div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--label-2)', marginBottom: 'var(--s-3)' }}>
-              {accion.tipo === 'aprobar'
-                ? 'Se marcará esta orden de compra como aprobada.'
-                : 'Se marcará como rechazada. Esta acción se registrará en el sistema.'}
-            </div>
-            <div style={{ marginBottom: 'var(--s-3)' }}>
-              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--label-2)', display: 'block', marginBottom: 4 }}>
-                Comentario (opcional)
-              </label>
-              <textarea
-                value={comentario}
-                onChange={e => setComentario(e.target.value)}
-                placeholder="Observación o motivo…"
-                rows={2}
-                style={{ width: '100%', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', padding: '8px 10px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => { setAccion(null); setComentario(''); }}
-                style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-2)', color: 'var(--label-1)', fontWeight: 600, cursor: 'pointer' }}>
-                Cancelar
-              </button>
-              <button type="button" onClick={ejecutarAccion} disabled={procesando}
-                style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: accion.tipo === 'aprobar' ? 'var(--green-ink)' : 'var(--accent)', color: '#fff', fontWeight: 700, cursor: procesando ? 'not-allowed' : 'pointer', opacity: procesando ? 0.6 : 1 }}>
-                {procesando ? 'Procesando…' : accion.tipo === 'aprobar' ? 'Confirmar aprobación' : 'Confirmar rechazo'}
-              </button>
-            </div>
-          </div>
+      <SlideUpModal
+        open={!!accion}
+        onClose={() => { setAccion(null); setComentario(''); }}
+        title={accion?.tipo === 'aprobar' ? 'Aprobar OC' : 'Rechazar OC'}
+        subtitle={accion?.tipo === 'aprobar' ? 'Se marcará esta orden de compra como aprobada.' : 'Se marcará como rechazada. Esta acción se registrará en el sistema.'}
+        footer={
+          <>
+            <ModalBtn variant="ghost" onClick={() => { setAccion(null); setComentario(''); }}>Cancelar</ModalBtn>
+            <ModalBtn variant={accion?.tipo === 'aprobar' ? 'primary' : 'danger'} onClick={ejecutarAccion} loading={procesando}>
+              {accion?.tipo === 'aprobar' ? 'Confirmar aprobación' : 'Confirmar rechazo'}
+            </ModalBtn>
+          </>
+        }
+      >
+        <div>
+          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--label-2)', display: 'block', marginBottom: 6 }}>
+            Comentario (opcional)
+          </label>
+          <textarea
+            value={comentario}
+            onChange={e => setComentario(e.target.value)}
+            placeholder="Observación o motivo…"
+            rows={3}
+            style={{ width: '100%', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', padding: '8px 10px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
+          />
         </div>
-      )}
+      </SlideUpModal>
     </Page>
   );
 }

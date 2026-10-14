@@ -8,6 +8,7 @@ import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { SlideUpModal, ModalBtn } from '../../core/ui/SlideUpModal';
 
 interface Falla {
   id: string | number;
@@ -231,78 +232,76 @@ export function FallasPage() {
       )}
 
       {/* Modal de reporte */}
-      {mostrarForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 }}>
-          <div style={{ background: 'var(--bg-1)', borderRadius: 16, padding: 'var(--s-4)', maxWidth: 460, width: '100%', boxShadow: '0 24px 64px rgba(0,0,0,0.35)', maxHeight: '90vh', overflow: 'auto' }}>
-            <div style={{ fontWeight: 700, fontSize: '1.05rem', marginBottom: 'var(--s-3)' }}>Reportar falla en ruta</div>
-            <form onSubmit={submitFalla} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 3 }}>Placa *</label>
-                  <input value={form.placa} onChange={e => setForm(f => ({ ...f, placa: e.target.value.toUpperCase() }))}
-                    placeholder="ABC123" required style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', fontFamily: 'var(--font-mono)', fontWeight: 700 }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 3 }}>Conductor</label>
-                  <input value={form.conductor} onChange={e => setForm(f => ({ ...f, conductor: e.target.value }))}
-                    placeholder="Nombre del conductor" style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)' }} />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 3 }}>Tipo de falla *</label>
-                  <select value={form.tipo_falla} onChange={e => setForm(f => ({ ...f, tipo_falla: e.target.value }))}
-                    style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)' }}>
-                    {TIPOS_FALLA.map(t => <option key={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 3 }}>Severidad</label>
-                  <select value={form.severidad} onChange={e => setForm(f => ({ ...f, severidad: e.target.value }))}
-                    style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)' }}>
-                    {SEVERIDADES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 3 }}>Descripción *</label>
-                <textarea value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
-                  required placeholder="Describe la falla con detalle…" rows={3}
-                  style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', resize: 'vertical' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }}>
-                  <input type="checkbox" checked={form.requiere_repuesto} onChange={e => setForm(f => ({ ...f, requiere_repuesto: e.target.checked }))} />
-                  Requiere repuesto / pieza
-                </label>
-              </div>
-
-              {form.requiere_repuesto && (
-                <div>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 3 }}>Descripción del repuesto</label>
-                  <input value={form.repuesto_descripcion} onChange={e => setForm(f => ({ ...f, repuesto_descripcion: e.target.value }))}
-                    placeholder="Ej: Filtro de aceite, pastillas de freno…"
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)' }} />
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-                <button type="button" onClick={() => setMostrarForm(false)}
-                  style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-2)', color: 'var(--label-1)', fontWeight: 600, cursor: 'pointer' }}>
-                  Cancelar
-                </button>
-                <button type="submit" disabled={enviando}
-                  style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 700, cursor: enviando ? 'not-allowed' : 'pointer', opacity: enviando ? 0.7 : 1 }}>
-                  {enviando ? 'Registrando…' : 'Reportar falla'}
-                </button>
-              </div>
-            </form>
+      <SlideUpModal
+        open={mostrarForm}
+        onClose={() => setMostrarForm(false)}
+        title="Reportar falla en ruta"
+        subtitle="Registra la falla para alertar al taller y almacén"
+        footer={
+          <>
+            <ModalBtn variant="ghost" onClick={() => setMostrarForm(false)}>Cancelar</ModalBtn>
+            <ModalBtn variant="primary" type="submit" loading={enviando}
+              onClick={() => { document.getElementById('form-reportar-falla')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }}>
+              Reportar falla
+            </ModalBtn>
+          </>
+        }
+      >
+        <form id="form-reportar-falla" onSubmit={submitFalla} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 4 }}>Placa *</label>
+              <input value={form.placa} onChange={e => setForm(f => ({ ...f, placa: e.target.value.toUpperCase() }))}
+                placeholder="ABC123" required style={{ width: '100%', boxSizing: 'border-box', padding: '8px 11px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.875rem' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 4 }}>Conductor</label>
+              <input value={form.conductor} onChange={e => setForm(f => ({ ...f, conductor: e.target.value }))}
+                placeholder="Nombre del conductor" style={{ width: '100%', boxSizing: 'border-box', padding: '8px 11px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', fontSize: '0.875rem' }} />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 4 }}>Tipo de falla *</label>
+              <select value={form.tipo_falla} onChange={e => setForm(f => ({ ...f, tipo_falla: e.target.value }))}
+                style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', fontSize: '0.875rem' }}>
+                {TIPOS_FALLA.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 4 }}>Severidad</label>
+              <select value={form.severidad} onChange={e => setForm(f => ({ ...f, severidad: e.target.value }))}
+                style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', fontSize: '0.875rem' }}>
+                {SEVERIDADES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 4 }}>Descripción *</label>
+            <textarea value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
+              required placeholder="Describe la falla con el mayor detalle posible…" rows={4}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '8px 11px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', resize: 'vertical', fontSize: '0.875rem' }} />
+          </div>
+
+          <div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: 'var(--label-1)', padding: '8px 12px', borderRadius: 8, background: 'var(--fill-1)', border: '1px solid var(--separator)' }}>
+              <input type="checkbox" checked={form.requiere_repuesto} onChange={e => setForm(f => ({ ...f, requiere_repuesto: e.target.checked }))} />
+              Requiere repuesto / pieza de reemplazo
+            </label>
+          </div>
+
+          {form.requiere_repuesto && (
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 4 }}>Descripción del repuesto</label>
+              <input value={form.repuesto_descripcion} onChange={e => setForm(f => ({ ...f, repuesto_descripcion: e.target.value }))}
+                placeholder="Ej: Filtro de aceite, pastillas de freno…"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '8px 11px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', fontSize: '0.875rem' }} />
+            </div>
+          )}
+        </form>
+      </SlideUpModal>
     </Page>
   );
 }
