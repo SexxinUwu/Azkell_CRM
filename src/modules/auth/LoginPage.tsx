@@ -160,7 +160,6 @@ export function LoginPage() {
                   placeholder=" "
                   value={email}
                   onChange={e => { setEmail(e.target.value); setError(null); }}
-                  autoFocus={!remembered}
                   required
                 />
                 <label htmlFor="login-email">Correo</label>
@@ -176,7 +175,6 @@ export function LoginPage() {
                   onChange={e => { setPassword(e.target.value); setError(null); }}
                   onKeyDown={onKey}
                   onKeyUp={onKey}
-                  autoFocus={!!remembered}
                   required
                 />
                 <label htmlFor="login-password">Contraseña</label>
