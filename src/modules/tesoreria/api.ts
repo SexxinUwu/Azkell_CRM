@@ -67,11 +67,14 @@ export function useCuentas() {
 
 export interface Banco {
   id?: number | string;
-  nombre?: string | null;
+  banco?: string | null;
+  titular?: string | null;
+  moneda?: string | null;           // SOLES | DOLARES
+  tipo_cuenta?: string | null;      // CORRIENTE | AHORROS | …
   numero_cuenta?: string | null;
-  tipo?: string | null;
-  moneda?: string | null;
-  saldo?: number | string | null;
+  cci?: string | null;
+  saldo_inicial?: number | string | null;
+  estado?: string | null;           // ACTIVO | INACTIVO
   [key: string]: unknown;
 }
 
