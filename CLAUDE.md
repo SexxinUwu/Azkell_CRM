@@ -295,30 +295,24 @@ if (el) { el.style.display = 'none'; }
 - [x] ~~Auditoría renovada~~: línea de tiempo por día con filtros (tipo, persona, fechas) y vista "Registro firmado".
 - [x] ~~Bienvenida/despedida en celular~~: versión liviana (`LiteSplash`) solo con opacidad y escala; la completa queda en escritorio. **Falta probar en teléfono real.**
 
-### 🔧 Lógica por migrar (pantallas React de solo lectura: crear/editar/eliminar siguen en el clásico)
-Prioridad alta (uso diario):
-- [x] ~~Almacén: Recepción de compras~~ (registrar entrega con sustento, historial, revertir, Excel; tipos corregidos al backend real)
-- [x] ~~Almacén: Kardex~~ (filtro por fechas + Excel)
-- [x] ~~Mantenimiento: Planificación~~ (programar, reprogramar, completar con Fleetrun, cancelar, sugerir fechas, Excel)
-- [x] ~~Mantenimiento: Trabajos de OT~~ (editar, aprobar, eliminar, Excel; campos reales de `trabajos_ot`)
-- [x] ~~Mantenimiento: Status de rampa~~ (ahora sobre `taller_rampas`: ingresar, editar, liberar, reactivar, Excel)
-- [x] ~~Flota: Disponibilidad~~ (registrar, editar, eliminar, Excel)
-- [x] ~~Flota: Documentos~~ (cargar/renovar con archivo a S3, ver archivo con URL firmada, historial, Excel)
-- [~] Flota: Reporte de fallas / Checklist — hecho: eliminar y Excel. **Falta:** nuevo reporte (asistente con fotos y firma) y "Generar OTs" hacia Status de rampa
-- [ ] Flota: Entrega de vehículos y Checklist de entrega (asistentes con fotos y firma; ~2100 líneas en el clásico)
-- [x] ~~Inspecciones (registro nuevo)~~ ya existe `RegistrarInspeccionPage`
-- [ ] Status de rampa: subir evidencia, crear OT/trabajos desde la rampa y eliminar rampa (borra OTs hijas) siguen en el clásico
-Prioridad media:
-- [ ] Operaciones: Órdenes de viaje (+Marsisa), Órdenes de servicio, Vales (+Marsisa), Guías de remitente / transportista, Análisis de combustible, Urea, Programación
-- [x] ~~Tesorería: Bancos~~ (campos reales `banco/titular/tipo_cuenta/cci`, alta, eliminar, Excel)
-- [ ] Tesorería: Caja, Liquidaciones, Cuentas por cobrar, Centros de costos
-- [ ] Personas: Asistencia, Nómina, Garita (unidades), Seg. patrimonial, Portal del conductor
-- [x] ~~Directorio de Proveedores~~ estilo Conductores (iniciales, llamar/WhatsApp a la derecha, orden alfabético, Excel)
-- [x] ~~Empresas duplicadas~~: `core/lib/empresa.ts` agrupa "MARSISA SAC" = "Marsisa S.A.C." (filtros y selector de Conductores). Los datos guardados no se tocaron.
-- [ ] Directorio: Clientes
-Prioridad baja:
-- [ ] Sistema: Integraciones
-- [ ] Centro de Comando (gráficos Chart.js completos)
+### 🔧 Lógica por migrar — estado al 2026-10-14
+Todas las pantallas del menú ya tienen versión React con **datos reales y escritura**. Lo que sigue en la versión actual son flujos largos o de riesgo, enlazados desde "Otros" de cada pantalla.
+
+**Hecho (con alta/edición/acciones/Excel):** Recepción de compras, Kardex, Planificación, Trabajos de OT, Status de rampa (ingresar/editar/liberar/reactivar/evidencia), Disponibilidad, Documentos de flota, Reporte de fallas (nuevo con fotos y firma, eliminar), Entrega de vehículos (acta con inventario y firmas), Checklist de entrega, Bancos, Centros de costos y motivos, Liquidaciones (compensación), Cuentas por cobrar, Caja, Asistencia (tareo), Nómina (planilla y SST), Clientes, Proveedores (directorio), Integraciones (Wialon/SUNAT), Órdenes de viaje (+Marsisa), Vales de combustible (+Marsisa), Órdenes de servicio (estado), Guías de remitente y transportista (emitir/sincronizar), Análisis de combustible y urea (auditoría), Programación (agenda), Garita (salida/retorno), Panel patrimonial (registro por corte), Portal del conductor (gastos).
+
+**Pendiente en el clásico (por diseño, con enlace):**
+- [ ] Reporte de fallas: **generar OTs** hacia Status de rampa y configurar sistemas.
+- [ ] Status de rampa: crear OT/trabajos desde la rampa y **eliminar rampa** (borra OTs hijas).
+- [ ] Órdenes de viaje: rutas y órdenes de servicio del viaje, gastos del viaje, importación.
+- [ ] Órdenes de servicio: **crear/editar** con documentos, rutas y costos.
+- [ ] Guías de remitente/transportista: **redactar guía nueva**, emisión masiva y credenciales.
+- [ ] Vales: importación masiva de Excel, sincronización remota y eliminación masiva.
+- [ ] Cuentas por cobrar: importación masiva y cambio de factura con nota de crédito.
+- [ ] Garita: checklist de revisión, fotos y PDF; Entrega de vehículos: croquis de daños y PDF.
+- [ ] Planificación: importar Excel, tipos de MP, kits y alertas.
+- [ ] Análisis de combustible: matriz de rendimiento y telemetría Wialon.
+- [ ] Trabajos de OT: importación masiva.
+- [ ] Centro de Comando: gráficos Chart.js completos (en React hay resumen con SVG).
 
 ### 🧪 Pruebas en navegador (sin verificar)
 - [ ] Almacén > Inventario: KPIs cambian al buscar y el Excel exporta solo lo filtrado (`modulos/almacen/inventario/logica.js`).
