@@ -2,8 +2,8 @@
 // Usa rutas relativas (/api) para que funcione igual en localhost, en el celular
 // por Wi‑Fi (proxy de Vite) y en producción (mismo dominio).
 //
-// Sesión compartida con la versión actual: el token vive en localStorage['fleet_token'],
-// la misma clave que usa logica.js. Así, entrar en una versión deja la sesión abierta en la otra.
+// Sesión compartida con la versión actual a través de fleet_token en localStorage (leído por logica.js).
+// La app nueva autentica vía cookie HttpOnly `azkell_session` (no envía Authorization header).
 
 const TOKEN_KEY = 'fleet_token';
 const PROFILE_KEY = 'fleet_app_perfil'; // usuario y permisos de la última sesión: abrir la app sin señal
@@ -71,8 +71,9 @@ export async function api<T>(path: string, { method = 'GET', body, query, header
 
   const isBlob = typeof Blob !== 'undefined' && body instanceof Blob;
   const headers: Record<string, string> = { 'x-azkell-tab': TAB_ID, ...extra };
-  const token = tokenStore.get();
-  if (token) headers.Authorization = `Bearer ${token}`;
+  // La autenticación usa la cookie HttpOnly `azkell_session` (credentials: 'include').
+  // No se envía el token por header para evitar que XSS pueda leer o reutilizar el JWT.
+  // La SPA clásica sigue usando Authorization: Bearer con su propio fleet_token.
   if (isBlob) headers['Content-Type'] = (body as Blob).type || 'application/octet-stream';
   else if (body !== undefined) headers['Content-Type'] = 'application/json';
 

@@ -283,37 +283,55 @@ if (el) { el.style.display = 'none'; }
 ## 13. Pendientes del ERP
 
 ### 📌 Backlog / Próximas Tareas
-- [ ] **Persistencia en BD de Telemetría CAN Bus (GPS) por Viaje:**
-  - Guardar telemetría CAN (`recorrido_km_gps`, `combustible_consumido_gps`, `rendimiento_gps`, `velocidad_max_gps`, `consumo_ralenti_gps`, `horas_motor_gps`, `synced_at`) en MySQL en VPS.
-  - Cargar los datos telemétricos guardados al instante sin necesidad de llamar a la API de Wialon en cada visita.
-  - El botón `Consultar CAN (GPS)` se usará únicamente para re-sincronizar o para viajes nuevos.
-- [ ] **Reporte de Fallas por Conductor y Alertas a Almacén (Repuestos & Stock):**
-  - Formulario/interfaz para que el conductor reporte fallas (mecánica, eléctrica, neumáticos, carrocería, etc.).
-  - Si requiere repuestos/piezas, enviar alerta instantánea al Almacenero.
-  - El almacenero verifica stock disponible:
-    - **Con stock:** Reservar / generar vale de salida a taller.
-    - **Sin stock / Stock bajo:** Generar solicitud/requerimiento de compra a Proveedores.
-- [ ] **Checklist de Entrega de Unidades:**
-  - Formato digital de entrega/recepción de flota y actas de custodia.
-- [ ] **Status de Seguridad:**
-  - Panel de control y monitoreo patrimonial de incidentes.
-- [ ] **Mejorar Gráficos de Mantenimiento:**
-  - Optimización de analíticas e indicadores para Status Rampa.
+
+#### Migración React (estado real al 2026-10-14)
+- 93 pantallas en catálogo total. ~8-10 completamente migradas. ~50 tienen stub React pero sin lógica real.
+- **Ninguna pantalla falta crear** — todas tienen su archivo en `src/modules/`. Lo que falta es implementar la lógica en cada stub.
+- Módulos completamente migrados: `placas` (piloto), `conductores`, `personal`, `inspecciones` (consulta).
+- Pendiente decidir librería de gráficos: SVG inline (ya usada en DashboardPage y MantDashboardPage) vs Recharts/Tremor.
+
+**Dashboards pendientes de conectar (stubs con estructura lista):**
+- [ ] `src/modules/mantenimiento/MantDashboardPage.tsx` — 5 queries React Query, componentes SVG propios. Falta conectar endpoints reales. **Prioridad alta** (más avanzado).
+- [ ] `src/modules/gerencia/DashboardPage.tsx` — 5 queries React Query (`dashboard/flota`, `ots`, `inventario`, `liquidaciones`, `combustible`). Clásico no usa Chart.js (solo DOM), migración sin deuda de gráficos. **Prioridad media**.
+
+**Stubs de módulos operativos (falta implementar lógica real):**
+- [ ] Almacén: Inventario, Entradas, Salidas, Kardex, Recepción, Proveedores
+- [ ] Mantenimiento: OTs, Trabajos OT, Status Rampa, Neumáticos, Planificación, Fleetrun, Fallas, Incidencias
+- [ ] Operaciones: Órdenes Viaje, Servicios, Vales, Guías, Combustible, Urea (muchos son redirects intencionales al clásico)
+- [ ] Tesorería: Caja, Liquidaciones, Bancos, CCs, Cuentas
+- [ ] Sistema: Auditoría, Integraciones, Usuarios
+
+#### ERP / Funcionalidades
+- [ ] **Mejorar Gráficos de Mantenimiento (app nueva):**
+  - Optimización de analíticas e indicadores para Status Rampa en la versión React.
+
+### ✅ Módulos ERP Implementados (SPA — pendientes de migrar a React)
+- [x] **Telemetría CAN Bus:** `routes/telemetria.js` + tabla `telemetria_can`. Rutas: `GET/POST /api/telemetria`, `POST /api/telemetria/guardar-lote`. Persiste snapshot completo de Wialon en MySQL.
+- [x] **Fallas por Conductor + Alertas Almacén:** `routes/fallas.js` + tabla `fallas_conductor`. Folio auto (FAL-YYYY-NNNN), estados REPORTADA→ATENDIDA, email a almaceneros si requiere repuesto.
+- [x] **Checklist de Entrega de Unidades:** `routes/checklist.js` + tablas `reportes_fallas`, `checklist_config_sistemas`, `seg_entrega_vehiculos`. Frontend en `modulos/seguridad/entrega-vehiculos/`. 44+47 ítems norma ISO F-MAN-001.
+- [x] **Status de Seguridad (Garita):** `routes/seguridad.js` (~1900 líneas). Tablas `seg_unidades_registros`, `seg_asistencia`, `seg_unidades_base`, fotos en S3. Control salida/retorno con firmas, alertas patrimoniales, panorama en vivo.
 
 ---
 
-### 🌙 Revisar Fuera de Horario (Ciberseguridad & Arquitectura Apple / Google Tier)
-- [ ] **Migración a Cookies HttpOnly (Protección XSS)**: Reemplazar el almacenamiento de JWT en `localStorage` por Cookies `HttpOnly`, `Secure` y `SameSite=Strict`.
-- [ ] **Blindaje de Headers con Helmet**: Instalar y configurar `helmet` con políticas estrictas de CSP (Content-Security-Policy), HSTS y `X-Frame-Options: DENY`.
-- [ ] **Cierre de Endpoints Públicos Sensibles**: Blindar o retirar rutas expuestas sin autenticación en `server.js` (`/seguridad/limpiar-plantillas`, `/test-s3`, etc.).
-- [ ] **Eliminación de Fallbacks JWT Inseguros**: Exigir `process.env.JWT_SECRET` estricto en el arranque del servidor sin valores por defecto en texto plano.
+### 🌙 Ciberseguridad & Arquitectura
+- [ ] **Migración completa a Cookies HttpOnly (frontend)**: Backend ya escribe y lee `azkell_session` (HttpOnly, Secure). Falta que el frontend deje de guardar el JWT en `localStorage` y de enviarlo en el header `Authorization`.
+- [ ] **CSP estricta**: Helmet instalado con configuración conservadora (CSP deshabilitada mientras haya scripts inline y CDN en la SPA). Activar CSP estricta cuando la app nueva sea el único frontend.
 - [ ] **Desacople de CDNs Externas (Tailwind / Scripts)**: Empaquetar utilidades de reporte de OT e Inspecciones de forma local/offline sin invocar `cdn.tailwindcss.com`.
-- [ ] **Autenticación 2FA / WebAuthn**: Diseñar soporte para segundo factor de autenticación (TOTP / Google Authenticator / Biometría) para roles de Administrador y Gerencia.
 - [ ] **Registro de Auditoría Criptográfica (Audit Trail)**: Implementar tabla `log_auditoria` inmutable para registrar modificaciones críticas (quién, cuándo, IP, estado anterior y nuevo).
+
+### ✅ Seguridad Completada
+- [x] `JWT_SECRET` obliga a fallar en arranque si falta (sin valores por defecto en texto plano).
+- [x] `/test-s3` y `/seguridad/limpiar-plantillas` eliminados (eran públicos).
+- [x] Cookie HttpOnly `azkell_session` escrita en login y leída en verifyToken (prioridad sobre Bearer).
+- [x] Rate limiting en `/api/login` (20 intentos / 15 min) y general (200 req/min).
+- [x] Helmet con HSTS, frameguard sameorigin, referrer policy strict.
+- [x] `POST /api/configuracion` y `/api/proxy/*` protegidos con `verifyToken` (antes eran públicos).
+- [x] 2FA TOTP para roles Admin y Gerencia.
 
 ---
 
 ### ✅ Tareas Completadas Recientemente
+- [x] **Asistente de IA (Gemini):** FAB flotante, panel chat, cadena de modelos con quota por modelo/día, reportes Excel y PDF sin gastar cuota de IA.
 - [x] **Mantenimientos Preventivos Trahesa:** Configuración y calendarización.
 - [x] **UX / Seguridad: Control de Inactividad y Modal "¡Despertamos!":** Aviso a los 5 min, logout a los 10 min.
 - [x] **Módulo Operaciones: Análisis de Combustible (D2) y Análisis de Urea (Separados):** Módulos independientes y consulta CAN Bus en lote.

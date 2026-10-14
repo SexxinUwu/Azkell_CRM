@@ -112,7 +112,7 @@ export function MantDashboardPage() {
   });
   const rampas = useQuery({
     queryKey: ['mant-dashboard', 'rampas'],
-    queryFn: () => api('/taller-rampas').then(r => arr<Record<string, unknown>>(r)),
+    queryFn: () => api('/taller/status').then(r => arr<Record<string, unknown>>(r)),
     staleTime: 30_000,
   });
   const inspeccionesQ = useQuery({

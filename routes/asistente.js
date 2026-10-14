@@ -6,7 +6,7 @@ const { KNOWLEDGE } = require('./asistente-knowledge');
 const { detectReport } = require('./asistente-intents');
 const { REPORTS, availableReports, buildReport, resolveRange, todayForPrompt } = require('./asistente-reports');
 
-const MODELS = (process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash,gemini-2.0-flash,gemini-1.5-flash')
+const MODELS = (process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3.8-flash')
   .split(',').map(m => m.trim()).filter(Boolean);
 const DAILY_LIMIT = Number(process.env.ASISTENTE_LIMITE_DIARIO) || 30;
 const OFF_TOPIC = 'Solo puedo ayudarte con el uso de Azkell Fleet. Si tu duda es sobre el sistema, cuéntame qué quieres hacer.';
@@ -60,6 +60,7 @@ function reportTool(allowed) {
 
 const asistenteEnabled = () => !!process.env.GEMINI_API_KEY?.trim();
 
+// ── Límite por usuario ────────────────────────────────────────────────────────
 const usage = new Map();
 
 function consume(userId) {
@@ -75,6 +76,23 @@ function consume(userId) {
   if (usage.size > 5000) usage.clear();
 }
 
+// ── Quota por modelo (evita reintentar un modelo ya agotado hoy) ──────────────
+const modelQuota = new Map(); // clave: "modelo:YYYY-MM-DD"
+
+function dayKey() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+}
+
+function isModelExhausted(model) {
+  return modelQuota.get(`${model}:${dayKey()}`) === true;
+}
+
+function markModelExhausted(model) {
+  modelQuota.set(`${model}:${dayKey()}`, true);
+  if (modelQuota.size > 2000) modelQuota.clear();
+}
+
+// ── Llamada a un modelo con reintento en 503 ──────────────────────────────────
 async function callModel(model, body) {
   let res = null;
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -91,21 +109,55 @@ async function callModel(model, body) {
   return { status: res.status, data };
 }
 
+// ── Cadena de modelos con manejo de errores por tipo ─────────────────────────
 async function callGemini(body) {
   let quota = false;
   for (const model of MODELS) {
+    if (isModelExhausted(model)) {
+      console.info(`[asistente] ${model}: agotado hoy, pasando al siguiente`);
+      quota = true;
+      continue;
+    }
     let r;
     try {
       r = await callModel(model, body);
     } catch (err) {
-      console.error(`Gemini (${model}): sin respuesta`, err.name);
+      console.error(`[asistente] ${model}: sin respuesta (${err.name})`);
       continue;
     }
+
     if (r.status === 200) return (r.data?.candidates?.[0]?.content?.parts ?? []).filter(p => !p.thought);
-    console.error(`Gemini (${model}): ${r.status}`, r.data?.error?.message?.slice(0, 160) ?? '');
-    if (r.status === 429) quota = true;
-    if (![429, 404, 503].includes(r.status)) break;
+
+    const detail = r.data?.error?.message?.slice(0, 160) ?? '';
+    console.error(`[asistente] ${model}: HTTP ${r.status}`, detail);
+
+    if (r.status === 429) {
+      markModelExhausted(model);
+      quota = true;
+      continue;
+    }
+    if (r.status === 404) {
+      console.warn(`[asistente] ${model}: modelo no encontrado — quítalo de GEMINI_MODEL en Coolify`);
+      continue;
+    }
+    if (r.status === 503) {
+      // callModel ya reintentó una vez; si sigue fallando, pasamos al siguiente
+      continue;
+    }
+    if (r.status === 401 || r.status === 403) {
+      const err = new Error('La clave de API de Gemini no es válida. Avisa al administrador.');
+      err.status = 500;
+      throw err;
+    }
+    if (r.status === 400) {
+      const err = new Error('El asistente recibió una solicitud con formato incorrecto. Avisa al administrador.');
+      err.status = 500;
+      throw err;
+    }
+    // Cualquier otro código inesperado: cortar cadena
+    break;
   }
+
   if (quota) {
     const err = new Error('El asistente llegó a su límite de uso por hoy. Los reportes se pueden pedir igual, por ejemplo: "reporte de placas en Excel".');
     err.status = 503;

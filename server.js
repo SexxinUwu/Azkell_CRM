@@ -511,7 +511,7 @@ app.get('/api/configuracion', async (req, res) => {
     }
 });
 
-app.post('/api/configuracion', async (req, res) => {
+app.post('/api/configuracion', verifyToken, async (req, res) => {
     try {
         const payload = req.body;
         for (const clave in payload) {
@@ -559,7 +559,7 @@ app.post('/api/configuracion', async (req, res) => {
     }
 });
 
-app.get(['/api/proxy/documento', '/api/proxy/sunat'], async (req, res) => {
+app.get(['/api/proxy/documento', '/api/proxy/sunat'], verifyToken, async (req, res) => {
     let numero = (req.query.numero || req.query.doc || '').trim();
     if (!numero) return res.status(400).json({ error: "Número de documento (RUC o DNI) requerido" });
     
@@ -605,7 +605,7 @@ app.get(['/api/proxy/documento', '/api/proxy/sunat'], async (req, res) => {
 
 
 const _geoCacheMap = new Map();
-app.get('/api/proxy/geocode', async (req, res) => {
+app.get('/api/proxy/geocode', verifyToken, async (req, res) => {
     let lat = parseFloat(req.query.lat);
     let lon = parseFloat(req.query.lon || req.query.lng);
     if (isNaN(lat) || isNaN(lon)) {
@@ -692,7 +692,7 @@ app.get('/api/proxy/geocode', async (req, res) => {
     }
 });
 
-app.get('/api/proxy/placa', async (req, res) => {
+app.get('/api/proxy/placa', verifyToken, async (req, res) => {
     let rawNum = (req.query.numero || '').trim().toUpperCase();
     let numero = rawNum.replace(/[^A-Z0-9]/g, '');
     if (!numero) return res.status(400).json({ error: "Número de placa requerido" });

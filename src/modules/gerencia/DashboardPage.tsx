@@ -67,7 +67,7 @@ export function DashboardPage() {
   });
   const rampas = useQuery({
     queryKey: ['dashboard', 'rampas'],
-    queryFn: () => api('/taller-rampas').then(r => arr<Record<string, unknown>>(r)),
+    queryFn: () => api('/taller/status').then(r => arr<Record<string, unknown>>(r)),
     staleTime: 30_000,
   });
   const reqs = useQuery({
