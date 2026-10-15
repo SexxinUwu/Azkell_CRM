@@ -129,7 +129,7 @@ export function PlacasPage() {
   };
 
   return (
-    <Page wide>
+    <Page wide fill>
       <PageHeader
         eyebrow="Flota"
         title="Placas"
@@ -230,6 +230,7 @@ export function PlacasPage() {
             )}
           </p>
 
+          <div className="placas-area">
           {visibles.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="No hay unidades con esos filtros">
               Prueba con otra búsqueda o quita los filtros.
@@ -286,6 +287,7 @@ export function PlacasPage() {
               ))}
             </motion.div>
           )}
+          </div>
         </>
       )}
 
