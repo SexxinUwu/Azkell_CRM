@@ -2491,14 +2491,22 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     router.get('/recepciones-oc', async (req, res) => {
         try {
             const targetDb = req.db || db;
-            // 1. Obtener SOLO las órdenes de compra que ya fueron APROBADAS Y PAGADAS / PROCESADAS (con voucher/pago en tesorería)
+            // 1. Órdenes que llegan a recepción:
+            //    - Al contado: solo cuando ya están pagadas / procesadas (flujo de siempre).
+            //    - A crédito: desde que Gerencia las aprueba (V°B), sin esperar el pago. Si se anulan o rechazan, no salen.
             const sqlOCs = `
             SELECT e.*, 
                    COALESCE(SUM(de.cantidad), 0) AS total_items_oc,
                    COUNT(DISTINCT de.id) AS total_renglones
             FROM entradas_inv e
             LEFT JOIN detalle_entradas_inv de ON de.entrada_id = e.id
-            WHERE LOWER(COALESCE(e.estado, '')) IN ('procesado', 'procesada', 'pagado', 'pagada')
+            WHERE (
+                LOWER(COALESCE(e.estado, '')) IN ('procesado', 'procesada', 'pagado', 'pagada')
+                OR (
+                    LOWER(COALESCE(e.condicion_pago, '')) LIKE 'a cr%'
+                    AND (LOWER(COALESCE(e.estado, '')) LIKE 'aprob%' OR LOWER(COALESCE(e.estado, '')) LIKE 'autoriz%')
+                )
+            )
             GROUP BY e.id
             ORDER BY e.fecha DESC, e.id DESC
         `;
