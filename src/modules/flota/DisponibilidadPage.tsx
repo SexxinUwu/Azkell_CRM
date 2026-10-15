@@ -1,29 +1,60 @@
 import './flota.css';
 import '../mantenimiento/mant.css';
+import './disponibilidad.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowUpRight, FileSpreadsheet, Gauge, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
+import { ArrowUpRight, Briefcase, FileSpreadsheet, FileText, Gauge, MapPin, MessageCircle, Navigation, Pencil, Plus, RefreshCw, SearchX, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
+import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
+import { spring } from '../../core/lib/motion';
 import { abrirClasico } from '../../core/layout/navigation';
-import { estadoDispColor, useDisponibilidad, type VehiculoDisponibilidad } from './api';
+import { estadoDispColor, useDisponibilidad, useUbicacionesGps, type UbicacionGps, type VehiculoDisponibilidad } from './api';
 import { DisponibilidadFormulario } from './DisponibilidadFormulario';
+import { compartirDisponibilidadPDF, descargarDisponibilidadPDF } from './disponibilidadReporte';
 
-const TODOS = 'Todos';
-const FILTROS = [TODOS, 'En Base', 'En Ruta', 'En Mantenimiento'] as const;
+// Un vehículo está "En Base", "En Ruta" o "En Mantenimiento" según el texto de su estado (igual que la versión actual)
+type Estado = 'En Base' | 'En Ruta' | 'En Mantenimiento';
+type Filtro = 'Todos' | Estado;
+const COLOR_ESTADO: Record<Estado, string> = { 'En Base': 'green', 'En Ruta': 'blue', 'En Mantenimiento': 'red' };
+
+const categoria = (v: VehiculoDisponibilidad): Estado => {
+  const e = (v.estado || '').toLowerCase();
+  if (e.includes('ruta')) return 'En Ruta';
+  if (e.includes('mantenimiento') || e.includes('taller')) return 'En Mantenimiento';
+  return 'En Base';
+};
+
+const nombreEmpresa = (s: string | null | undefined) => {
+  const t = (s ?? '').trim();
+  return t && t !== '-' && t.toUpperCase() !== 'CLIENTE' ? t : '';
+};
+
+// Empresa del vehículo: la del camión o la de la carreta, sin distinguir escritura
+const coincideEmpresa = (v: VehiculoDisponibilidad, clave: string) =>
+  claveEmpresa(v.empresa || v.cliente) === clave || claveEmpresa(v.empresa_carreta) === clave;
+
+const placaLimpia = (s: string) => s.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+
+const KPI_TONO = { Todos: 'ink', 'En Base': 'green', 'En Ruta': 'blue', 'En Mantenimiento': 'red' } as const;
 
 export function DisponibilidadPage() {
   const { data, isLoading, isError, error, dataUpdatedAt } = useDisponibilidad();
-  const [filtro, setFiltro] = useState(TODOS);
+  const gps = useUbicacionesGps();
+  const [filtro, setFiltro] = useState<Filtro>('Todos');
+  const [empresa, setEmpresa] = useState('TODAS');
+  const [vista, setVista] = useState<'tablero' | 'graficos'>('tablero');
   const [busqueda, setBusqueda] = useState('');
   const [seleccionado, setSeleccionado] = useState<VehiculoDisponibilidad | null>(null);
   const [formulario, setFormulario] = useState<{ veh: VehiculoDisponibilidad | null } | null>(null);
@@ -37,50 +68,28 @@ export function DisponibilidadPage() {
   const puedeCrear = can('disponibilidad.crear');
   const puedeEditar = can('disponibilidad.editar');
   const puedeEliminar = can('disponibilidad.eliminar');
+  const mapaGps = gps.data ?? new Map<string, UbicacionGps>();
 
-  async function eliminar() {
-    if (!porEliminar?.id) return;
-    setEliminando(true);
-    try {
-      const r = await api<{ error?: string }>(`/disponibilidad-flota/${porEliminar.id}`, { method: 'DELETE' });
-      if (r?.error) throw new Error(r.error);
-      haptic('success'); toast('Registro eliminado');
-      setPorEliminar(null); setSeleccionado(null);
-      await qc.invalidateQueries({ queryKey: ['flota', 'disponibilidad'] });
-    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
-    finally { setEliminando(false); }
-  }
+  // Empresas como botones (la forma más usada de cada una)
+  const empresas = useMemo(() => agruparEmpresas(vehiculos.flatMap(v => [nombreEmpresa(v.empresa || v.cliente), nombreEmpresa(v.empresa_carreta)])), [vehiculos]);
+  const nombreDeEmpresa = empresas.find(e => e.clave === empresa)?.nombre ?? '';
 
-  async function exportar() {
-    try {
-      await exportarExcel('Disponibilidad-flota', 'Disponibilidad',
-        ['Placa camión', 'Placa carreta', 'Estado', 'Conductor', 'Empresa', 'Marca', 'Tipo', 'Capacidad', 'Observaciones'],
-        visibles.map(v => [v.placa_camion, v.placa_carreta, v.estado, v.conductor_asignado, v.empresa, v.marca, v.tipo_unidad, v.capacidad_tanque, v.observaciones]));
-      haptic('success');
-    } catch (err) { toast(errorMessage(err), 'error'); }
-  }
-
-  const conteos = useMemo(() => {
-    const m: Record<string, number> = { 'En Base': 0, 'En Ruta': 0, 'En Mantenimiento': 0 };
-    for (const v of vehiculos) {
-      const e = (v.estado || '').toLowerCase();
-      if (e.includes('ruta')) m['En Ruta'] = (m['En Ruta'] ?? 0) + 1;
-      else if (e.includes('mantenimiento') || e.includes('taller')) m['En Mantenimiento'] = (m['En Mantenimiento'] ?? 0) + 1;
-      else m['En Base'] = (m['En Base'] ?? 0) + 1;
+  // Cifras y tabla se calculan sobre la empresa elegida
+  const delEmpresa = useMemo(() => vehiculos.filter(v => empresa === 'TODAS' || coincideEmpresa(v, empresa)), [vehiculos, empresa]);
+  const cifras = useMemo(() => {
+    const c = { total: delEmpresa.length, base: 0, ruta: 0, mantenimiento: 0 };
+    for (const v of delEmpresa) {
+      const k = categoria(v);
+      if (k === 'En Base') c.base++;
+      else if (k === 'En Ruta') c.ruta++;
+      else c.mantenimiento++;
     }
-    return m;
-  }, [vehiculos]);
+    return c;
+  }, [delEmpresa]);
 
   const visibles = useMemo(() => {
-    let lista = vehiculos;
-    if (filtro !== TODOS) {
-      lista = lista.filter(v => {
-        const e = (v.estado || '').toLowerCase();
-        if (filtro === 'En Ruta') return e.includes('ruta');
-        if (filtro === 'En Mantenimiento') return e.includes('mantenimiento') || e.includes('taller');
-        return !e.includes('ruta') && !e.includes('mantenimiento') && !e.includes('taller');
-      });
-    }
+    let lista = delEmpresa;
+    if (filtro !== 'Todos') lista = lista.filter(v => categoria(v) === filtro);
     if (busqueda) {
       const q = busqueda.toUpperCase();
       lista = lista.filter(v =>
@@ -91,7 +100,64 @@ export function DisponibilidadPage() {
       );
     }
     return lista;
-  }, [vehiculos, filtro, busqueda]);
+  }, [delEmpresa, filtro, busqueda]);
+
+  const matriz = useMemo(() => {
+    const m = new Map<string, { total: number; base: number; ruta: number; mantenimiento: number }>();
+    for (const v of visibles) {
+      const k = v.sub_tipo || v.tipo_unidad || '—';
+      const f = m.get(k) ?? { total: 0, base: 0, ruta: 0, mantenimiento: 0 };
+      f.total++;
+      const c = categoria(v);
+      if (c === 'En Base') f.base++;
+      else if (c === 'En Ruta') f.ruta++;
+      else f.mantenimiento++;
+      m.set(k, f);
+    }
+    return [...m.entries()].sort((a, b) => b[1].total - a[1].total);
+  }, [visibles]);
+
+  const criterios = [
+    filtro !== 'Todos' && `Estado: ${filtro}`,
+    empresa !== 'TODAS' && `Empresa: ${nombreDeEmpresa}`,
+    busqueda.trim() && `Búsqueda: «${busqueda.trim()}»`,
+  ].filter((c): c is string => !!c);
+
+  const aviso = (err: unknown) => toast(errorMessage(err), 'error');
+
+  async function eliminar() {
+    if (!porEliminar?.id) return;
+    setEliminando(true);
+    try {
+      const r = await api<{ error?: string }>(`/disponibilidad-flota/${porEliminar.id}`, { method: 'DELETE' });
+      if (r?.error) throw new Error(r.error);
+      haptic('success'); toast('Registro eliminado');
+      setPorEliminar(null); setSeleccionado(null);
+      await qc.invalidateQueries({ queryKey: ['flota', 'disponibilidad'] });
+    } catch (err) { aviso(err); haptic('warning'); }
+    finally { setEliminando(false); }
+  }
+
+  const excel = async () => {
+    try {
+      await exportarExcel('Disponibilidad-flota', 'Disponibilidad',
+        ['Placa camión', 'Placa carreta', 'Estado', 'Conductor', 'Empresa', 'Marca', 'Tipo', 'Capacidad', 'Observaciones'],
+        visibles.map(v => [v.placa_camion, v.placa_carreta, v.estado, v.conductor_asignado, v.empresa, v.marca, v.tipo_unidad, v.capacidad_tanque, v.observaciones]));
+      haptic('success');
+    } catch (err) { aviso(err); }
+  };
+  const pdf = async () => {
+    try {
+      await descargarDisponibilidadPDF(visibles, cifras, criterios, user?.companyName ?? '');
+      toast('PDF descargado');
+    } catch (err) { aviso(err); }
+  };
+  const whatsapp = async () => {
+    try {
+      const r = await compartirDisponibilidadPDF(visibles, cifras, criterios, user?.companyName ?? '');
+      if (r === 'descargado') toast('PDF descargado. Adjúntalo en la conversación de WhatsApp.');
+    } catch (err) { aviso(err); }
+  };
 
   if (seleccionado) {
     return (
@@ -111,20 +177,33 @@ export function DisponibilidadPage() {
   }
 
   const actualizado = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '';
+  const kpis: Array<{ clave: Filtro; label: string; valor: number; icono: React.ReactNode }> = [
+    { clave: 'Todos', label: 'Total flota', valor: cifras.total, icono: <Briefcase size={18} strokeWidth={1.9} /> },
+    { clave: 'En Base', label: 'En base', valor: cifras.base, icono: <MapPin size={18} strokeWidth={1.9} /> },
+    { clave: 'En Ruta', label: 'En ruta', valor: cifras.ruta, icono: <Navigation size={18} strokeWidth={1.9} /> },
+    { clave: 'En Mantenimiento', label: 'En mantenimiento', valor: cifras.mantenimiento, icono: <Wrench size={18} strokeWidth={1.9} /> },
+  ];
 
   return (
     <Page>
       <PageHeader
         eyebrow="Flota"
-        title="Disponibilidad"
-        subtitle={isLoading ? 'Cargando…' : `${vehiculos.length} unidades${actualizado ? ` · ${actualizado}` : ''}`}
+        title="Disponibilidad de flota"
+        subtitle={isLoading ? 'Cargando…' : `Control de disponibilidad operativa y asignación de flota${actualizado ? ` · ${actualizado}` : ''}`}
         actions={
           <>
+            <Button variant="secondary" iconOnly icon={<RefreshCw size={16} />} aria-label="Actualizar" title="Actualizar"
+              onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'disponibilidad'] })} />
+            <Button variant="secondary" iconOnly icon={<MessageCircle size={16} />} aria-label="Compartir PDF por WhatsApp" title="Compartir PDF por WhatsApp"
+              disabled={!visibles.length} onClick={whatsapp} />
+            <Button variant="secondary" iconOnly icon={<FileText size={16} />} aria-label="Descargar PDF" title="Descargar PDF"
+              disabled={!visibles.length} onClick={pdf} />
+            <Button variant="secondary" iconOnly icon={<FileSpreadsheet size={16} />} aria-label="Exportar Excel" title="Exportar Excel"
+              disabled={!visibles.length} onClick={excel} />
             <MenuOtros opciones={[
-              { label: 'Exportar Excel', detalle: `${visibles.length} unidades`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'GPS, conductores y reportes', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('flota/disponibilidad') },
+              { label: 'GPS, conductores y reportes', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/disponibilidad') },
             ]} />
-            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ veh: null })}>Registrar</Button>}
+            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ veh: null })}>Registrar unidad</Button>}
           </>
         }
       />
@@ -132,69 +211,154 @@ export function DisponibilidadPage() {
       {isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
-            {FILTROS.map(f => {
-              const cnt = f === TODOS ? vehiculos.length : (conteos[f] ?? 0);
-              const color = f === TODOS ? '' : estadoDispColor(f);
-              return (
-                <button key={f} type="button"
-                  className={`chip${filtro === f ? ' chip--active' : ''}`}
-                  onClick={() => { setFiltro(f); haptic('selection'); }}>
-                  {f !== TODOS && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: `var(--${color}-ink)`, marginRight: 4 }} />}
-                  {f} <span className="chip__badge">{cnt}</span>
-                </button>
-              );
-            })}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
+          <div className="disp-kpis">
+            {kpis.map((k, i) => (
+              <motion.button key={k.clave} type="button" className={`disp-kpi disp-kpi--${KPI_TONO[k.clave]}`}
+                aria-pressed={filtro === k.clave}
+                onClick={() => { haptic('selection'); setFiltro(f => (f === k.clave ? 'Todos' : k.clave)); }}
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.05 * i }}>
+                <span>
+                  <span className="disp-kpi__label">{k.label}</span>
+                  <AnimatedNumber value={k.valor} className="disp-kpi__valor t-numeric" />
+                </span>
+                <span className="disp-kpi__icono" aria-hidden>{k.icono}</span>
+              </motion.button>
+            ))}
           </div>
 
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, conductor, empresa…" />
+          <div className="disp-barra">
+            <div className="disp-barra__buscar">
+              <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar camión, carreta, chofer…" />
+            </div>
+            <SegmentedControl label="Vista" value={vista} onChange={setVista} options={[
+              { value: 'tablero', label: 'Tablero' }, { value: 'graficos', label: 'Gráficos' },
+            ]} />
+          </div>
+
+          {empresas.length > 1 && (
+            <div className="disp-barra__empresas" role="group" aria-label="Empresa">
+              <SegmentedControl label="Empresa" value={empresa} onChange={setEmpresa} options={[
+                { value: 'TODAS', label: 'Todas' },
+                ...empresas.map(e => ({ value: e.clave, label: e.nombre })),
+              ]} />
+            </div>
+          )}
 
           {visibles.length === 0 ? (
-            <EmptyState icon={busqueda ? <SearchX size={22} /> : <Gauge size={22} />}
-              title={busqueda ? 'Sin coincidencias' : 'Sin vehículos'}>
+            <EmptyState icon={busqueda ? <SearchX size={22} /> : <Gauge size={22} />} title={busqueda ? 'Sin coincidencias' : 'Sin vehículos'}>
               {busqueda
                 ? <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Quitar búsqueda</button>
                 : 'No hay vehículos para los filtros actuales.'}
             </EmptyState>
-          ) : (
-            <div className="disp-grid">
-              <AnimatePresence mode="popLayout">
-                {visibles.map((v, i) => {
-                  const color = estadoDispColor(v.estado);
-                  const placaPrincipal = v.placa_camion || v.placa_carreta;
-                  return (
-                    <motion.button key={`${placaPrincipal}-${i}`} type="button"
-                      className="disp-card"
-                      style={{ '--disp-color': `var(--${color}-ink)` } as React.CSSProperties}
-                      onClick={() => { haptic('selection'); setSeleccionado(v); }}
-                      layout initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <span className="disp-card__placa">{placaPrincipal || '—'}</span>
-                        <span className={`ot-estado ot-estado--${color}`}>{v.estado}</span>
-                      </div>
-                      {v.placa_carreta && v.placa_camion && (
-                        <span className="disp-card__tipo" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
-                          + {v.placa_carreta}
-                        </span>
-                      )}
-                      <span className="disp-card__tipo">{[v.sub_tipo, v.marca].filter(Boolean).join(' · ') || v.tipo_unidad || '—'}</span>
-                      {v.conductor_asignado && <span className="disp-card__conductor">{v.conductor_asignado}</span>}
-                      {v.empresa && v.empresa !== v.conductor_asignado && (
-                        <span className="disp-card__tipo">{v.empresa}</span>
-                      )}
-                      {v.observaciones && <span className="disp-card__tipo" style={{ color: 'var(--label-2)', fontSize: '0.75rem' }}>{v.observaciones}</span>}
-                    </motion.button>
-                  );
-                })}
-              </AnimatePresence>
+          ) : vista === 'graficos' ? (
+            <div className="disp-tabla-wrap">
+              <table className="disp-matriz">
+                <thead>
+                  <tr><th>Sub tipo de unidad</th><th>Total</th><th>En base</th><th>En ruta</th><th>En mantenimiento</th></tr>
+                </thead>
+                <tbody>
+                  {matriz.map(([nombre, f]) => (
+                    <tr key={nombre}><td>{nombre}</td><td>{f.total}</td><td>{f.base}</td><td>{f.ruta}</td><td>{f.mantenimiento}</td></tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+          ) : (
+            <>
+              {/* Escritorio: tabla */}
+              <div className="disp-tabla-wrap disp-solo-escritorio">
+                <table className="disp-tabla">
+                  <thead>
+                    <tr>
+                      <th className="disp-num">#</th>
+                      <th>Camión</th><th>Carreta</th><th>Conductor</th><th>Estado</th><th>Marca</th>
+                      <th>Capacidad de tanque</th><th>Tipo unidad</th><th>Observaciones</th><th>Ubicación GPS</th>
+                      <th style={{ textAlign: 'right' }}>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibles.map((v, i) => {
+                      const cat = categoria(v);
+                      return (
+                        <tr key={`${v.id ?? i}-${v.placa_camion}`} className="disp-fila" onClick={() => { haptic('selection'); setSeleccionado(v); }}>
+                          <td className="disp-num">{i + 1}</td>
+                          <td>{v.placa_camion ? <span className="disp-placa">{v.placa_camion}</span> : <span className="disp-sin">—</span>}</td>
+                          <td>{v.placa_carreta ? <span className="disp-placa">{v.placa_carreta}</span> : <span className="disp-sin">—</span>}</td>
+                          <td className="disp-conductor">{v.conductor_asignado || <span className="disp-sin">—</span>}</td>
+                          <td><span className={`disp-estado disp-estado--${COLOR_ESTADO[cat]}`}>{v.estado || cat}</span></td>
+                          <td>{v.marca || <span className="disp-sin">—</span>}</td>
+                          <td>{v.capacidad_tanque || <span className="disp-sin">—</span>}</td>
+                          <td>{v.tipo_unidad || <span className="disp-sin">—</span>}</td>
+                          <td className="disp-obs">{v.observaciones || <span className="disp-sin">—</span>}</td>
+                          <td><GpsCelda v={v} mapa={mapaGps} /></td>
+                          <td className="disp-acciones">
+                            {puedeEditar && v.id && (
+                              <Button variant="secondary" size="sm" iconOnly icon={<Pencil size={14} />} aria-label="Editar"
+                                onClick={e => { e.stopPropagation(); setFormulario({ veh: v }); }} />
+                            )}
+                            {puedeEliminar && v.id && (
+                              <Button variant="secondary" size="sm" iconOnly icon={<Trash2 size={14} />} aria-label="Eliminar"
+                                onClick={e => { e.stopPropagation(); setPorEliminar(v); }} />
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Celular: tarjetas */}
+              <div className="disp-grid disp-solo-movil">
+                <AnimatePresence mode="popLayout">
+                  {visibles.map((v, i) => {
+                    const color = estadoDispColor(v.estado);
+                    const placaPrincipal = v.placa_camion || v.placa_carreta;
+                    return (
+                      <motion.button key={`${placaPrincipal}-${i}`} type="button" className="disp-card"
+                        style={{ '--disp-color': `var(--${color}-ink)` } as React.CSSProperties}
+                        onClick={() => { haptic('selection'); setSeleccionado(v); }}
+                        layout initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <span className="disp-card__placa">{placaPrincipal || '—'}</span>
+                          <span className={`ot-estado ot-estado--${color}`}>{v.estado}</span>
+                        </div>
+                        {v.placa_carreta && v.placa_camion && (
+                          <span className="disp-card__tipo" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>+ {v.placa_carreta}</span>
+                        )}
+                        <span className="disp-card__tipo">{[v.sub_tipo, v.marca].filter(Boolean).join(' · ') || v.tipo_unidad || '—'}</span>
+                        {v.conductor_asignado && <span className="disp-card__conductor">{v.conductor_asignado}</span>}
+                        {v.empresa && v.empresa !== v.conductor_asignado && <span className="disp-card__tipo">{v.empresa}</span>}
+                        {v.observaciones && <span className="disp-card__tipo" style={{ color: 'var(--label-2)', fontSize: '0.75rem' }}>{v.observaciones}</span>}
+                      </motion.button>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+            </>
           )}
         </div>
       )}
 
       <DisponibilidadFormulario open={!!formulario} veh={formulario?.veh ?? null} usuario={user?.name ?? ''} onClose={() => setFormulario(null)} />
+      <ConfirmSheet open={!!porEliminar} onClose={() => !eliminando && setPorEliminar(null)} onConfirm={eliminar} loading={eliminando}
+        title="¿Eliminar este registro?" message="Se quita la unidad de la disponibilidad. No afecta el registro de placas." confirmLabel="Eliminar" />
     </Page>
+  );
+}
+
+/** Ubicación del GPS de la unidad (camión o carreta), con enlace al mapa */
+function GpsCelda({ v, mapa }: { v: VehiculoDisponibilidad; mapa: Map<string, UbicacionGps> }) {
+  const g = mapa.get(placaLimpia(v.placa_camion || v.placa_carreta || ''));
+  if (!g) return <span className="disp-sin">Sin señal GPS</span>;
+  const texto = g.ubicacion || `${g.lat.toFixed(4)}, ${g.lng.toFixed(4)}`;
+  return (
+    <a className="disp-gps" href={`https://maps.google.com/maps?q=${g.lat},${g.lng}`} target="_blank" rel="noopener noreferrer"
+      title={texto} onClick={e => e.stopPropagation()}>
+      <MapPin size={14} strokeWidth={2} />
+      <span>{texto}</span>
+    </a>
   );
 }
 

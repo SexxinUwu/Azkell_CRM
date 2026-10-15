@@ -1,393 +1,288 @@
 import './flota.css';
 import '../mantenimiento/mant.css';
-import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Database, Layers, RefreshCw } from 'lucide-react';
-import { PageLoader } from '../../core/ui/Button';
+import './disponibilidad.css';
+import './ubicacion.css';
+import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { ArrowUpRight, Briefcase, MapPin, MessageCircle, Navigation, RefreshCw, Truck, Wrench, X } from 'lucide-react';
+import { Button, PageLoader } from '../../core/ui/Button';
+import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { api, errorMessage } from '../../core/api/client';
+import { errorMessage } from '../../core/api/client';
+import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
+import { haptic } from '../../core/lib/haptics';
+import { spring } from '../../core/lib/motion';
 import { abrirClasico } from '../../core/layout/navigation';
-import { estadoMotorColor, estadoMotorLabel, useGPS, type UnidadGPS } from './api';
+import { COLOR_ESTADO, UbicacionMapa, type CapaMapa } from './UbicacionMapa';
+import { estadoUnidad, useDisponibilidad, useUnidadesGps, type EstadoUnidad, type UnidadMapa } from './api';
 
-declare global {
-  interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    L: any;
-  }
+const CAPAS: Array<{ value: CapaMapa; label: string }> = [{ value: 'calle', label: 'Callejero' }, { value: 'satelite', label: 'Satelital' }];
+const VISTAS: Array<{ value: 'lista' | 'mapa'; label: string }> = [{ value: 'lista', label: 'Lista' }, { value: 'mapa', label: 'Mapa' }];
+const CARDINALES = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+
+const rumboTexto = (grados: number) => CARDINALES[Math.round(((grados % 360) + 360) % 360 / 45) % 8];
+const corta = (empresa: string) => claveEmpresa(empresa).split(' ')[0] || '—';
+const placaLimpia = (s: string) => s.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+
+/** Texto corto del estado: velocidad si se mueve, "Ralentí", "Detenido" o "Sin señal" */
+function etiquetaCorta(u: UnidadMapa, estado: EstadoUnidad) {
+  if (estado === 'movimiento') return `${Math.round(u.velocidad)} km/h`;
+  if (estado === 'ralenti') return 'Ralentí';
+  if (estado === 'detenido') return 'Detenido';
+  return 'Sin señal';
 }
+const COLOR_BADGE: Record<EstadoUnidad, string> = { movimiento: 'blue', ralenti: 'orange', detenido: 'green', sin_senal: 'gray' };
 
-const LEAFLET_CSS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-const LEAFLET_JS  = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-
-function cargarLeaflet(): Promise<void> {
-  return new Promise((resolve) => {
-    if (window.L) { resolve(); return; }
-    if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet'; link.href = LEAFLET_CSS;
-      document.head.appendChild(link);
-    }
-    if (document.querySelector(`script[src="${LEAFLET_JS}"]`)) {
-      const wait = () => window.L ? resolve() : setTimeout(wait, 50);
-      wait(); return;
-    }
-    const script = document.createElement('script');
-    script.src = LEAFLET_JS;
-    script.onload = () => resolve();
-    document.head.appendChild(script);
-  });
-}
-
-const COLOR_MOTOR: Record<string, string> = {
-  en_marcha: '#16a34a',
-  ralenti:   '#d97706',
-  detenido:  '#2563eb',
-  offline:   '#6b7280',
-};
-
-// Icono SVG de camión con rotación según curso
-function crearIcono(estado: string, curso?: number) {
-  const color = COLOR_MOTOR[estado] ?? COLOR_MOTOR.offline;
-  const rot = curso ?? 0;
-  const html = `<div style="width:38px;height:38px;display:flex;align-items:center;justify-content:center">
-    <div style="transform:rotate(${rot}deg);display:flex;align-items:center;justify-content:center">
-      <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="${color}" filter="drop-shadow(0 1px 2px rgba(0,0,0,.5))">
-        <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
-      </svg>
-    </div>
-  </div>`;
-  return window.L.divIcon({ html, className: '', iconSize: [38, 38], iconAnchor: [19, 19] });
-}
-
-// Interpolación lineal suave entre dos posiciones (60 FPS)
-function animarMarcador(
-  marker: ReturnType<typeof window.L.marker>,
-  desde: [number, number],
-  hasta: [number, number],
-  duracionMs: number,
-  animFrames: React.MutableRefObject<Record<string, number>>,
-  placa: string,
-) {
-  if (animFrames.current[placa]) cancelAnimationFrame(animFrames.current[placa]);
-  const latDiff = hasta[0] - desde[0];
-  const lngDiff = hasta[1] - desde[1];
-  if (Math.abs(latDiff) < 0.00001 && Math.abs(lngDiff) < 0.00001) {
-    marker.setLatLng(hasta);
-    return;
-  }
-  const inicio = performance.now();
-  function step(now: number) {
-    const elapsed = now - inicio;
-    const t = Math.min(elapsed / duracionMs, 1);
-    marker.setLatLng([desde[0] + latDiff * t, desde[1] + lngDiff * t]);
-    if (t < 1) {
-      animFrames.current[placa] = requestAnimationFrame(step);
-    } else {
-      delete animFrames.current[placa];
-    }
-  }
-  animFrames.current[placa] = requestAnimationFrame(step);
-}
-
+// Ubicación GPS de la flota: lista de unidades, mapa y ficha de cada una. Misma fuente que la versión actual.
 export function UbicacionPage() {
-  const { data, isLoading, isError, error, refetch, isFetching, dataUpdatedAt } = useGPS();
-  const mapRef        = useRef<HTMLDivElement>(null);
-  const mapInst       = useRef<ReturnType<typeof window.L.map> | null>(null);
-  const markersMap    = useRef<Record<string, ReturnType<typeof window.L.marker>>>({});
-  const posicionesRef = useRef<Record<string, [number, number]>>({});
-  const animFrames    = useRef<Record<string, number>>({});
-  const [leafletListo, setLeafletListo] = useState(!!window.L);
-  const [seleccionada, setSeleccionada] = useState<UnidadGPS | null>(null);
-  const [empresa, setEmpresa] = useState('Todas');
-  const [capaMapa, setCapaMapa] = useState<'calle' | 'satelite'>('calle');
-  const capaRef = useRef<{ calle: ReturnType<typeof window.L.tileLayer> | null; satelite: ReturnType<typeof window.L.tileLayer> | null }>({ calle: null, satelite: null });
-  const [countdown, setCountdown] = useState(4);
-  const [guardandoCAN, setGuardandoCAN] = useState(false);
-  const [msgCAN, setMsgCAN] = useState('');
+  const { data, isLoading, isError, error, dataUpdatedAt, isFetching, refetch } = useUnidadesGps();
+  const disp = useDisponibilidad();
+  const unidades = data ?? [];
+  const [empresa, setEmpresa] = useState('TODAS');
+  const [busqueda, setBusqueda] = useState('');
+  const [ocultas, setOcultas] = useState<Set<string>>(() => new Set());
+  const [seleccionada, setSeleccionada] = useState<string | null>(null);
+  const [capa, setCapa] = useState<CapaMapa>('calle');
+  const [encuadre, setEncuadre] = useState(0);
+  const [vistaMovil, setVistaMovil] = useState<'lista' | 'mapa'>('lista');
+  const [ahora, setAhora] = useState(() => Date.now());
 
-  // Countdown 4→1 sincronizado con dataUpdatedAt
   useEffect(() => {
-    setCountdown(4);
-    const timer = setInterval(() => setCountdown(c => Math.max(1, c - 1)), 1000);
-    return () => clearInterval(timer);
-  }, [dataUpdatedAt]);
-
-  // Cargar Leaflet
-  useEffect(() => {
-    if (window.L) { setLeafletListo(true); return; }
-    cargarLeaflet().then(() => setLeafletListo(true));
+    const t = setInterval(() => setAhora(Date.now()), 1000);
+    return () => clearInterval(t);
   }, []);
+  const segundos = dataUpdatedAt ? Math.max(0, Math.round((ahora - dataUpdatedAt) / 1000)) : null;
 
-  // Crear mapa cuando Leaflet esté listo
-  useEffect(() => {
-    if (!leafletListo || !mapRef.current || mapInst.current) return;
-    const L = window.L;
+  const empresas = useMemo(() => agruparEmpresas(unidades.map(u => u.empresa)), [unidades]);
+  const delEmpresa = useMemo(() => unidades.filter(u => empresa === 'TODAS' || claveEmpresa(u.empresa) === empresa), [unidades, empresa]);
+  const lista = useMemo(() => {
+    const q = busqueda.trim().toUpperCase();
+    if (!q) return delEmpresa;
+    return delEmpresa.filter(u => [u.placa, u.empresa, u.ubicacion, u.nombre, u.marcaModelo].some(t => t.toUpperCase().includes(q)));
+  }, [delEmpresa, busqueda]);
 
-    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-      maxZoom: 19,
+  const cifras = useMemo(() => {
+    let conSenal = 0;
+    let enMovimiento = 0;
+    for (const u of delEmpresa) {
+      const e = estadoUnidad(u);
+      if (e !== 'sin_senal') conSenal++;
+      if (e === 'movimiento') enMovimiento++;
+    }
+    return { total: delEmpresa.length, conSenal, enMovimiento, sinSenal: delEmpresa.length - conSenal };
+  }, [delEmpresa]);
+
+  const enLista = lista.filter(u => u.lat != null).length;
+  const visiblesEnMapa = lista.filter(u => u.lat != null && !ocultas.has(u.placa)).length;
+  const todasVisibles = lista.length > 0 && lista.every(u => !ocultas.has(u.placa));
+  const seleccion = unidades.find(u => u.placa === seleccionada) ?? null;
+
+  const conductorDe = (placa: string) =>
+    disp.data?.find(d => placaLimpia(d.placa_camion || '') === placa || placaLimpia(d.placa_carreta || '') === placa)?.conductor_asignado || 'Sin asignar';
+
+  const alternarUnidad = (placa: string) => {
+    haptic('selection');
+    setOcultas(prev => {
+      const n = new Set(prev);
+      if (n.has(placa)) n.delete(placa); else n.add(placa);
+      return n;
     });
-    const satLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-      attribution: '© Google',
-      maxZoom: 20,
+  };
+  const alternarTodas = () => {
+    haptic('selection');
+    setOcultas(prev => {
+      const n = new Set(prev);
+      for (const u of lista) { if (todasVisibles) n.add(u.placa); else n.delete(u.placa); }
+      return n;
     });
-    capaRef.current = { calle: osmLayer, satelite: satLayer };
-
-    const map = L.map(mapRef.current, {
-      center: [-9.19, -75.01],
-      zoom: 6,
-      zoomControl: true,
-      attributionControl: false,
-      layers: [osmLayer],
-    });
-    map.zoomControl.setPosition('bottomright');
-    mapInst.current = map;
-
-    return () => {
-      Object.values(animFrames.current).forEach(id => cancelAnimationFrame(id));
-      animFrames.current = {};
-    };
-  }, [leafletListo]);
-
-  // Cambiar capa satelital / callejero
-  useEffect(() => {
-    const map = mapInst.current;
-    const capas = capaRef.current;
-    if (!map || !capas.calle || !capas.satelite) return;
-    if (capaMapa === 'satelite') {
-      if (map.hasLayer(capas.calle)) map.removeLayer(capas.calle);
-      capas.satelite.addTo(map);
-    } else {
-      if (map.hasLayer(capas.satelite)) map.removeLayer(capas.satelite);
-      capas.calle.addTo(map);
-    }
-  }, [capaMapa]);
-
-  // Actualizar marcadores con animación cuando cambian los datos
-  useEffect(() => {
-    if (!mapInst.current || !data || !window.L) return;
-    const L = window.L;
-    const map = mapInst.current;
-
-    for (const u of data.unidades) {
-      const placa = u.placa;
-      if (!placa || !u.lat || !u.lng) {
-        if (markersMap.current[placa]) {
-          map.removeLayer(markersMap.current[placa]);
-          delete markersMap.current[placa];
-        }
-        continue;
-      }
-
-      const nuevaPos: [number, number] = [u.lat, u.lng];
-      const icono = crearIcono(u.estado_motor, u.curso as number | undefined);
-      const vel = u.velocidad > 0 ? ` · ${Math.round(u.velocidad)} km/h` : '';
-      const popup = `<div style="font-family:system-ui;font-size:13px;line-height:1.5">
-        <b style="font-size:14px">${u.placa}</b><br>
-        ${u.estado_motor === 'en_marcha' ? '🟢 En movimiento' : u.estado_motor === 'ralenti' ? '🟡 Ralentí' : u.estado_motor === 'detenido' ? '🔵 Detenido' : '⚫ Sin señal'}${vel}<br>
-        ${u.empresa ? `<span style="color:#888;font-size:12px">${u.empresa}</span>` : ''}
-      </div>`;
-
-      if (markersMap.current[placa]) {
-        const marker = markersMap.current[placa];
-        marker.setIcon(icono);
-        const posAnterior = posicionesRef.current[placa];
-        if (posAnterior) {
-          animarMarcador(marker, posAnterior, nuevaPos, 3800, animFrames, placa);
-        } else {
-          marker.setLatLng(nuevaPos);
-        }
-        marker.getPopup()?.setContent(popup);
-      } else {
-        const marker = L.marker(nuevaPos, { icon: icono });
-        marker.bindPopup(popup);
-        marker.addTo(map);
-        markersMap.current[placa] = marker;
-      }
-      posicionesRef.current[placa] = nuevaPos;
-    }
-
-    // Eliminar marcadores de unidades que ya no están en el feed
-    const placasActuales = new Set(data.unidades.map(u => u.placa));
-    for (const placa of Object.keys(markersMap.current)) {
-      if (!placasActuales.has(placa)) {
-        map.removeLayer(markersMap.current[placa]);
-        delete markersMap.current[placa];
-        delete posicionesRef.current[placa];
-      }
-    }
-
-    // Primer encuadre automático
-    const validas = data.unidades.filter(u => u.lat && u.lng);
-    if (validas.length > 0 && !Object.keys(posicionesRef.current).length) {
-      const bounds = L.latLngBounds(validas.map(u => [u.lat, u.lng]));
-      if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40] });
-    }
-  }, [data]);
-
-  const unidades = data?.unidades ?? [];
-  const kpis = data?.kpis;
-  const empresas = ['Todas', ...Array.from(new Set(unidades.map(u => u.empresa ?? '').filter(Boolean)))];
-  const listaFiltrada = empresa === 'Todas' ? unidades : unidades.filter(u => u.empresa === empresa);
-
-  function centrarEnUnidad(u: UnidadGPS) {
-    if (!mapInst.current || !u.lat || !u.lng) return;
-    mapInst.current.setView([u.lat, u.lng], 14);
-    const marker = markersMap.current[u.placa];
-    if (marker) marker.openPopup();
-    setSeleccionada(u);
-  }
-
-  const countdownColor = countdown <= 1 ? 'var(--accent)' : countdown === 2 ? 'var(--amber-ink)' : 'var(--label-2)';
+  };
+  const elegir = (placa: string) => {
+    haptic('selection');
+    setSeleccionada(placa);
+    setVistaMovil('mapa');
+  };
 
   return (
     <Page>
       <PageHeader
         eyebrow="Flota"
         title="Ubicación GPS"
-        subtitle={kpis ? `${kpis.total} unidades · ${kpis.en_movimiento} en movimiento` : undefined}
+        subtitle={isLoading ? 'Cargando unidades…' : `${cifras.total} unidades · ${cifras.enMovimiento} en movimiento`}
         actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
-            {/* Countdown */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              fontSize: '0.75rem', fontWeight: 600, color: countdownColor,
-              fontFamily: 'var(--font-mono)',
-              background: 'var(--fill-2)', borderRadius: 6, padding: '3px 8px',
-              transition: 'color 300ms',
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: isFetching ? 'var(--accent)' : countdownColor, display: 'inline-block' }} />
-              {isFetching ? '…' : `${countdown}s`}
-            </div>
-
-            {/* Toggle capa */}
-            <button
-              type="button"
-              title={capaMapa === 'calle' ? 'Cambiar a satelital' : 'Cambiar a mapa'}
-              onClick={() => setCapaMapa(c => c === 'calle' ? 'satelite' : 'calle')}
-              style={{
-                background: capaMapa === 'satelite' ? 'var(--accent)' : 'var(--fill-2)',
-                color: capaMapa === 'satelite' ? '#fff' : 'var(--label-1)',
-                border: 'none', borderRadius: 6, padding: '5px 8px',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                fontSize: '0.75rem', fontWeight: 600,
-              }}
-            >
-              <Layers size={13} />
-              {capaMapa === 'satelite' ? 'Satelital' : 'Mapa'}
-            </button>
-
+          <>
+            <span className="gps-vivo" aria-live="polite">
+              <span className="gps-vivo__punto" aria-hidden />
+              En vivo{segundos !== null && ` · ${segundos}s`}
+            </span>
+            <Button variant="secondary" iconOnly icon={<RefreshCw size={16} />} aria-label="Actualizar" title="Actualizar"
+              disabled={isFetching} onClick={() => refetch()} />
             <MenuOtros opciones={[
-              { label: 'Actualizar ahora', icon: <RefreshCw size={17} />, onSelect: () => refetch() },
-              {
-                label: guardandoCAN ? 'Guardando…' : 'Guardar telemetría CAN',
-                icon: <Database size={17} />,
-                onSelect: async () => {
-                  const unidades = data?.unidades ?? [];
-                  if (!unidades.length || guardandoCAN) return;
-                  setGuardandoCAN(true);
-                  try {
-                    await api('/telemetria/guardar-lote', {
-                      method: 'POST',
-                      body: {
-                        items: unidades.map(v => ({
-                          placa: v.placa,
-                          recorrido_km: v.km,
-                          lat_ultimo: v.lat,
-                          lng_ultimo: v.lng,
-                          estado_motor: v.estado_motor,
-                          raw_json: v,
-                        })),
-                      },
-                    });
-                    setMsgCAN(`✓ Telemetría guardada para ${unidades.length} unidades`);
-                    setTimeout(() => setMsgCAN(''), 4000);
-                  } catch { setMsgCAN('Error al guardar telemetría'); setTimeout(() => setMsgCAN(''), 4000); }
-                  finally { setGuardandoCAN(false); }
-                },
-              },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/ubicacion') },
+              { label: 'Abrir en la versión actual', detalle: 'Historial y reproducción de rutas', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/ubicacion') },
             ]} />
-          </div>
+          </>
         }
       />
 
-      {isError && <Notice tone="error">{errorMessage(error)}</Notice>}
-      {msgCAN && <Notice tone={msgCAN.startsWith('✓') ? 'success' : 'error'}>{msgCAN}</Notice>}
+      {isLoading ? <PageLoader /> : isError ? (
+        <Notice tone="error">{errorMessage(error)}</Notice>
+      ) : (
+        <div className="gps-cuerpo">
+          <div className="disp-kpis">
+            {([
+              { label: 'Flota monitoreada', valor: cifras.total, tono: 'blue', icono: <Briefcase size={18} strokeWidth={1.9} /> },
+              { label: 'Con señal GPS', valor: cifras.conSenal, tono: 'green', icono: <MapPin size={18} strokeWidth={1.9} /> },
+              { label: 'En movimiento', valor: cifras.enMovimiento, tono: 'blue', icono: <Navigation size={18} strokeWidth={1.9} /> },
+              { label: 'Sin señal', valor: cifras.sinSenal, tono: 'ink', icono: <Wrench size={18} strokeWidth={1.9} /> },
+            ] as const).map(k => (
+              <div key={k.label} className={`disp-kpi disp-kpi--${k.tono}`}>
+                <span>
+                  <span className="disp-kpi__label">{k.label}</span>
+                  <AnimatedNumber value={k.valor} className="disp-kpi__valor t-numeric" />
+                </span>
+                <span className="disp-kpi__icono" aria-hidden>{k.icono}</span>
+              </div>
+            ))}
+          </div>
 
-      {kpis && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 'var(--s-2)', marginBottom: 'var(--s-3)' }}>
-          {[
-            { label: 'Monitoreadas', valor: kpis.total, color: 'accent' },
-            { label: 'Con señal',    valor: kpis.con_senal, color: 'green' },
-            { label: 'En movimiento',valor: kpis.en_movimiento, color: 'blue' },
-            { label: 'Sin señal',    valor: kpis.sin_senal, color: 'neutral' },
-          ].map(k => (
-            <div key={k.label} className="tarjeta__lista" style={{ padding: 'var(--s-3)', textAlign: 'center', opacity: isFetching ? 0.6 : 1, transition: 'opacity 200ms' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: `var(--${k.color === 'neutral' ? 'label-2' : k.color + '-ink'})` }}>{k.valor}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--label-2)', marginTop: 2 }}>{k.label}</div>
-            </div>
-          ))}
-        </div>
-      )}
+          <div className="gps-barra">
+            <input type="search" className="gps-barra__buscar" value={busqueda} onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar placa, empresa, ciudad (ej. Arequipa)…" aria-label="Buscar unidades" />
+            {empresas.length > 1 && (
+              <SegmentedControl label="Empresa" value={empresa} onChange={setEmpresa} options={[
+                { value: 'TODAS', label: 'Todas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre })),
+              ]} />
+            )}
+          </div>
 
-      <div style={{ display: 'flex', gap: 'var(--s-3)', height: '62vh', minHeight: 420 }}>
-        {/* Panel izquierdo: lista */}
-        <div style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-          {empresas.length > 2 && (
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              {empresas.map(e => (
-                <button key={e} type="button"
-                  onClick={() => setEmpresa(e)}
-                  style={{
-                    fontSize: '0.72rem', padding: '3px 8px', borderRadius: 6,
-                    border: `1px solid ${empresa === e ? 'var(--accent)' : 'var(--separator)'}`,
-                    background: empresa === e ? 'var(--accent)' : 'transparent',
-                    color: empresa === e ? '#fff' : 'var(--label-2)',
-                    cursor: 'pointer', fontWeight: 600,
-                  }}>
-                  {e === 'Todas' ? 'Todas' : e.split(' ')[0]}
-                </button>
-              ))}
+          <div className="gps-vistas">
+            <SegmentedControl label="Vista" value={vistaMovil} onChange={setVistaMovil} options={VISTAS} />
+          </div>
+
+          <div className="gps-layout" data-vista={vistaMovil}>
+            <section className="gps-lista" aria-label="Unidades">
+              <div className="gps-lista__cab">
+                <label className="gps-check">
+                  <input type="checkbox" checked={todasVisibles} onChange={alternarTodas} disabled={!lista.length} />
+                  <span>Visibles ({visiblesEnMapa}/{enLista})</span>
+                </label>
+              </div>
+              <ul className="gps-lista__items">
+                {lista.map(u => {
+                  const estado = estadoUnidad(u);
+                  const color = COLOR_ESTADO[estado];
+                  const marcada = seleccionada === u.placa;
+                  return (
+                    <li key={u.placa} className={`gps-tarjeta${marcada ? ' gps-tarjeta--sel' : ''}`}>
+                      <input type="checkbox" className="gps-tarjeta__check" checked={!ocultas.has(u.placa)} onChange={() => alternarUnidad(u.placa)}
+                        aria-label={`Mostrar ${u.placa} en el mapa`} />
+                      <button type="button" className="gps-tarjeta__cuerpo" onClick={() => elegir(u.placa)}>
+                        <span className="gps-punto" style={{ background: color, boxShadow: `0 0 6px ${color}` }} aria-hidden />
+                        <span className="gps-tarjeta__texto">
+                          <span className="gps-tarjeta__linea">
+                            <span className="gps-placa">{u.placa}</span>
+                            <span className="gps-chip">{corta(u.empresa)}</span>
+                            <span className={`gps-estado gps-estado--${COLOR_BADGE[estado]}`}>{etiquetaCorta(u, estado)}</span>
+                          </span>
+                          <span className="gps-tarjeta__dir">
+                            {u.ubicacion ? <><MapPin size={11} aria-hidden />{u.ubicacion}</> : (u.nombre || 'Sin dirección')}
+                          </span>
+                        </span>
+                      </button>
+                      <span className="gps-tarjeta__stats">
+                        <b>{u.km.toLocaleString('es-PE')} km</b>
+                        <span>{u.horas.toLocaleString('es-PE')} hrs</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              {!lista.length && <p className="gps-vacio">Ninguna unidad coincide con la búsqueda.</p>}
+            </section>
+
+            <div className="gps-mapa-wrap">
+              <UbicacionMapa unidades={unidades} ocultas={ocultas} seleccionada={seleccionada} capa={capa}
+                encuadreVersion={encuadre} onElegir={elegir} />
+              <div className="gps-controles">
+                <Button variant="secondary" onClick={() => { haptic('selection'); setEncuadre(v => v + 1); }}>Toda la flota</Button>
+                <SegmentedControl label="Capa del mapa" value={capa} onChange={setCapa} options={CAPAS} />
+              </div>
+              <AnimatePresence>
+                {seleccion && (
+                  <UnidadFicha key={seleccion.placa} u={seleccion} conductor={conductorDe(seleccion.placa)}
+                    onCerrar={() => setSeleccionada(null)} />
+                )}
+              </AnimatePresence>
             </div>
-          )}
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {isLoading ? <PageLoader /> : listaFiltrada.map((u, i) => {
-              const color = estadoMotorColor(u.estado_motor);
-              const activa = seleccionada?.placa === u.placa;
-              return (
-                <button key={u.placa || i} type="button"
-                  onClick={() => centrarEnUnidad(u)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
-                    background: activa ? 'var(--fill-3)' : 'transparent',
-                    borderRadius: 8, cursor: 'pointer', textAlign: 'left', border: 'none',
-                    transition: 'background 100ms',
-                  }}>
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: `var(--${color}-ink)`, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--accent)' }}>{u.placa}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--label-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {estadoMotorLabel(u.estado_motor)}{u.velocidad > 0 ? ` · ${Math.round(u.velocidad)} km/h` : ''}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
           </div>
         </div>
-
-        {/* Mapa */}
-        <div style={{ flex: 1, borderRadius: 'var(--radius-2)', overflow: 'hidden', border: '1px solid var(--separator)', position: 'relative' }}>
-          {!leafletListo ? (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <PageLoader />
-            </div>
-          ) : (
-            <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
-          )}
-        </div>
-      </div>
+      )}
     </Page>
   );
 }
+
+function UnidadFicha({ u, conductor, onCerrar }: { u: UnidadMapa; conductor: string; onCerrar: () => void }) {
+  const estado = estadoUnidad(u);
+  const color = COLOR_ESTADO[estado];
+  const tienePos = u.lat != null && u.lng != null;
+  const etiqueta = estado === 'movimiento' ? `En movimiento · ${Math.round(u.velocidad)} km/h`
+    : estado === 'ralenti' ? 'Ralentí (ON)'
+    : estado === 'detenido' ? 'Detenido (OFF)' : 'Sin señal GPS';
+  const maps = tienePos ? `https://maps.google.com/maps?q=${u.lat},${u.lng}` : '';
+  const waze = tienePos ? `https://waze.com/ul?ll=${u.lat},${u.lng}&navigate=yes` : '';
+  const whatsapp = `https://wa.me/?text=${encodeURIComponent(`Unidad ${u.placa}: ${etiqueta}. ${u.ubicacion} ${maps}`.trim())}`;
+
+  return (
+    <motion.article className="gps-ficha" aria-label={`Ficha de ${u.placa}`}
+      initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 14 }} transition={spring}>
+      <header className="gps-ficha__cab">
+        <span className="gps-ficha__icono"><Truck size={22} strokeWidth={1.9} /></span>
+        <div className="gps-ficha__titulo">
+          <div className="gps-ficha__linea">
+            <strong className="gps-ficha__placa">{u.placa}</strong>
+            {u.tipo && <span className="gps-etiqueta">{u.tipo.toUpperCase()}</span>}
+            <span className="gps-etiqueta" style={{ color, borderColor: color }}>{etiqueta}</span>
+          </div>
+          <span className="gps-ficha__sub">{[u.nombre, u.empresa].filter(Boolean).join(' · ')}</span>
+        </div>
+        <button type="button" className="gps-ficha__cerrar" onClick={onCerrar} aria-label="Cerrar ficha"><X size={16} /></button>
+      </header>
+
+      <div className="gps-ficha__acciones">
+        {tienePos ? (
+          <>
+            <a className="gps-accion" href={waze} target="_blank" rel="noopener noreferrer"><Navigation size={14} />Waze</a>
+            <a className="gps-accion" href={maps} target="_blank" rel="noopener noreferrer"><MapPin size={14} />Maps</a>
+          </>
+        ) : null}
+        <a className="gps-accion" href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle size={14} />WhatsApp</a>
+      </div>
+
+      <div className="gps-ficha__datos">
+        <Dato titulo="Odómetro" valor={`${u.km.toLocaleString('es-PE')} km`} destacado />
+        <Dato titulo="Horómetro" valor={`${u.horas.toLocaleString('es-PE')} hrs`} />
+        <Dato titulo="Batería / ignición" valor={`${u.voltaje ? `${u.voltaje} V` : '—'} · Motor ${u.ignicion ? 'ON' : 'OFF'}`} />
+        <Dato titulo="Satélites / altitud" valor={`${u.satelites ?? '—'} sat · ${u.altitud != null ? `${Math.round(u.altitud)} msnm` : '—'}`} />
+        <Dato titulo="Velocidad / rumbo" valor={`${Math.round(u.velocidad)} km/h · ${rumboTexto(u.rumbo)} (${Math.round(u.rumbo)}°)`} />
+        <Dato titulo="Conductor / operador" valor={conductor} />
+      </div>
+
+      <div className="gps-ficha__direccion">
+        <span className="gps-ficha__direccion-titulo"><MapPin size={13} />Dirección satelital geocodificada</span>
+        <span>{u.ubicacion || 'Sin dirección disponible'}</span>
+        {tienePos && <span className="gps-coords">{u.lat!.toFixed(4)}, {u.lng!.toFixed(4)}</span>}
+      </div>
+    </motion.article>
+  );
+}
+
+function Dato({ titulo, valor, destacado }: { titulo: string; valor: string; destacado?: boolean }) {
+  return (
+    <div className="gps-dato">
+      <span className="gps-dato__titulo">{titulo}</span>
+      <span className={`gps-dato__valor${destacado ? ' gps-dato__valor--acento' : ''}`}>{valor}</span>
+    </div>
+  );
+}
+
