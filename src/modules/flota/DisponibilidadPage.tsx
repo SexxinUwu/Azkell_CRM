@@ -193,7 +193,7 @@ export function DisponibilidadPage() {
         title="Disponibilidad de flota"
         subtitle={isLoading ? 'Cargando…' : `Control de disponibilidad operativa y asignación de flota${actualizado ? ` · ${actualizado}` : ''}`}
         actions={
-          <>
+          <div className="disp-acciones">
             <Button variant="plain" className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
               onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'disponibilidad'] })} />
             <Button variant="plain" className="btn--icono btn--icono-whatsapp" icon={<MessageCircle size={18} />} aria-label="Compartir PDF por WhatsApp" title="Compartir PDF por WhatsApp"
@@ -205,8 +205,8 @@ export function DisponibilidadPage() {
             <MenuOtros opciones={[
               { label: 'GPS, conductores y reportes', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/disponibilidad') },
             ]} />
-            {puedeCrear && <Button variant="primary" className="disp-registrar-escritorio" icon={<Plus size={16} />} onClick={() => setFormulario({ veh: null })}>Registrar unidad</Button>}
-          </>
+            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ veh: null })}>Registrar unidad</Button>}
+          </div>
         }
       />
 
@@ -337,11 +337,6 @@ export function DisponibilidadPage() {
                   );
                 })}
               </div>
-              {puedeCrear && (
-                <button type="button" className="disp-fab disp-solo-movil" aria-label="Registrar unidad" onClick={() => setFormulario({ veh: null })}>
-                  <Plus size={24} strokeWidth={2.2} />
-                </button>
-              )}
             </>
           )}
         </div>
