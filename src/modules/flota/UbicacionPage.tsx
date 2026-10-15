@@ -4,7 +4,7 @@ import './disponibilidad.css';
 import './ubicacion.css';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowUpRight, Briefcase, MapPin, MessageCircle, Navigation, RefreshCw, Truck, Wrench, X } from 'lucide-react';
+import { ArrowUpRight, Briefcase, MapPin, MessageCircle, Navigation, RefreshCw, Route, Truck, Wrench, X } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -18,6 +18,8 @@ import { haptic } from '../../core/lib/haptics';
 import { spring } from '../../core/lib/motion';
 import { abrirClasico } from '../../core/layout/navigation';
 import { COLOR_ESTADO, UbicacionMapa, type CapaMapa } from './UbicacionMapa';
+import { PanelHistorial, type Velocidad } from './UbicacionPlayback';
+import { useHistorial } from './UbicacionHistorial';
 import { estadoUnidad, useDisponibilidad, useUnidadesGps, type EstadoUnidad, type UnidadMapa } from './api';
 
 const CAPAS: Array<{ value: CapaMapa; label: string }> = [{ value: 'calle', label: 'Callejero' }, { value: 'satelite', label: 'Satelital' }];
@@ -37,7 +39,8 @@ function etiquetaCorta(u: UnidadMapa, estado: EstadoUnidad) {
 }
 const COLOR_BADGE: Record<EstadoUnidad, string> = { movimiento: 'blue', ralenti: 'orange', detenido: 'green', sin_senal: 'gray' };
 
-// Ubicación GPS de la flota: lista, mapa y ficha de cada unidad. Misma fuente que la versión actual.
+// Ubicación GPS de la flota: lista, mapa, ficha de cada unidad e historial con reproducción.
+// Misma fuente que la versión actual.
 export function UbicacionPage() {
   const { data, isLoading, isError, error, dataUpdatedAt, isFetching, refetch } = useUnidadesGps();
   const disp = useDisponibilidad();
@@ -47,6 +50,11 @@ export function UbicacionPage() {
   const [busqueda, setBusqueda] = useState('');
   const [ocultas, setOcultas] = useState<Set<string>>(() => new Set());
   const [seleccionada, setSeleccionada] = useState<string | null>(null);
+  const [panel, setPanel] = useState<'ficha' | 'historial'>('ficha');
+  const [horas, setHoras] = useState(24);
+  const [indice, setIndice] = useState(0);
+  const [reproduciendo, setReproduciendo] = useState(false);
+  const [velocidad, setVelocidad] = useState<Velocidad>(1);
   const [capa, setCapa] = useState<CapaMapa>('calle');
   const [encuadre, setEncuadre] = useState(0);
   const [vistaMovil, setVistaMovil] = useState<'lista' | 'mapa'>('lista');
@@ -84,6 +92,34 @@ export function UbicacionPage() {
   // Con búsqueda, el mapa se acerca a lo encontrado (hasta 25 unidades)
   const encuadrarA = busqueda.trim() && lista.length <= 25 ? lista.map(u => u.placa) : [];
 
+  // Historial: solo se pide cuando el panel de historial está abierto
+  const abiertoHistorial = panel === 'historial' && seleccion ? seleccion : null;
+  const historialQ = useHistorial(abiertoHistorial?.placa ?? null, abiertoHistorial?.id ?? null, horas);
+  const historial = abiertoHistorial ? historialQ.data : undefined;
+  const errorHistorial = historialQ.error ? errorMessage(historialQ.error) : '';
+
+  // Datos nuevos o rango nuevo: se vuelve al inicio del recorrido
+  useEffect(() => {
+    setIndice(0);
+    setReproduciendo(false);
+  }, [historial]);
+
+  // Reproducción: avanza un punto cada 300 ms (la velocidad la acelera), como en la versión actual
+  useEffect(() => {
+    if (!reproduciendo || !historial) return;
+    const paso = Math.max(20, Math.round(300 / velocidad));
+    const t = setInterval(() => {
+      setIndice(i => {
+        if (i >= historial.puntos.length - 1) {
+          setReproduciendo(false);
+          return i;
+        }
+        return i + 1;
+      });
+    }, paso);
+    return () => clearInterval(t);
+  }, [reproduciendo, velocidad, historial]);
+
   const conductorDe = (placa: string) =>
     disp.data?.find(d => placaLimpia(d.placa_camion || '') === placa || placaLimpia(d.placa_carreta || '') === placa)?.conductor_asignado || 'Sin asignar';
 
@@ -106,7 +142,15 @@ export function UbicacionPage() {
   const elegir = (placa: string) => {
     haptic('selection');
     setSeleccionada(placa);
+    setPanel('ficha');
+    setIndice(0);
+    setReproduciendo(false);
     setVistaMovil('mapa');
+  };
+  const cerrarPanel = () => {
+    setSeleccionada(null);
+    setPanel('ficha');
+    setReproduciendo(false);
   };
 
   return (
@@ -124,7 +168,7 @@ export function UbicacionPage() {
             <Button variant="plain" iconOnly className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
               disabled={isFetching} onClick={() => refetch()} />
             <MenuOtros opciones={[
-              { label: 'Abrir en la versión actual', detalle: 'Historial y reproducción de rutas', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/ubicacion') },
+              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/ubicacion') },
             ]} />
           </>
         }
@@ -207,17 +251,27 @@ export function UbicacionPage() {
 
             <div className="gps-mapa-wrap">
               <UbicacionMapa unidades={unidades} ocultas={ocultas} seleccionada={seleccionada} fichaAbierta={!!seleccion}
-                capa={capa} encuadreVersion={encuadre} encuadrarA={encuadrarA} onElegir={elegir} />
+                capa={capa} encuadreVersion={encuadre} encuadrarA={encuadrarA}
+                historial={historial ?? null} indice={indice} onElegir={elegir} />
               <div className="gps-controles">
                 <Button variant="secondary" onClick={() => { haptic('selection'); setEncuadre(v => v + 1); }}>Toda la flota</Button>
                 <SegmentedControl label="Capa del mapa" value={capa} onChange={setCapa} options={CAPAS} />
               </div>
             </div>
 
-            <AnimatePresence>
-              {seleccion && (
-                <UnidadFicha key={seleccion.placa} u={seleccion} conductor={conductorDe(seleccion.placa)}
-                  onCerrar={() => setSeleccionada(null)} />
+            <AnimatePresence mode="popLayout">
+              {seleccion && panel === 'ficha' && (
+                <UnidadFicha key="ficha" u={seleccion} conductor={conductorDe(seleccion.placa)}
+                  onCerrar={cerrarPanel} onHistorial={() => { haptic('selection'); setPanel('historial'); }} />
+              )}
+              {seleccion && panel === 'historial' && (
+                <PanelHistorial key="historial" placa={seleccion.placa} horas={horas}
+                  onHoras={setHoras} historial={historial} cargando={historialQ.isFetching && !historial}
+                  error={errorHistorial} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
+                  reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)}
+                  onReiniciar={() => { setIndice(0); setReproduciendo(false); }}
+                  velocidad={velocidad} onVelocidad={setVelocidad}
+                  onSalir={() => { setPanel('ficha'); setReproduciendo(false); }} />
               )}
             </AnimatePresence>
           </div>
@@ -227,7 +281,7 @@ export function UbicacionPage() {
   );
 }
 
-function UnidadFicha({ u, conductor, onCerrar }: { u: UnidadMapa; conductor: string; onCerrar: () => void }) {
+function UnidadFicha({ u, conductor, onCerrar, onHistorial }: { u: UnidadMapa; conductor: string; onCerrar: () => void; onHistorial: () => void }) {
   const estado = estadoUnidad(u);
   const color = COLOR_ESTADO[estado];
   const tienePos = u.lat != null && u.lng != null;
@@ -253,6 +307,10 @@ function UnidadFicha({ u, conductor, onCerrar }: { u: UnidadMapa; conductor: str
         </div>
         <button type="button" className="gps-ficha__cerrar" onClick={onCerrar} aria-label="Cerrar ficha"><X size={16} /></button>
       </header>
+
+      <button type="button" className="gps-accion gps-accion--principal" onClick={onHistorial}>
+        <Route size={15} />Historial / Playback
+      </button>
 
       <div className="gps-ficha__acciones">
         {tienePos && (

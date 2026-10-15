@@ -1,8 +1,10 @@
 // Mapa de la flota con Leaflet (la misma librería y capas que la versión actual):
 // OpenStreetMap para Callejero y Google para Satelital. Cada unidad es un camión con su rumbo y su placa.
 // Entre una actualización y la siguiente, el camión se desliza por el mapa (se ve moverse).
+// Con el historial abierto, se dibuja la ruta y el camión avanza por ella.
 import { useEffect, useRef, useState } from 'react';
 import { estadoUnidad, type EstadoUnidad, type UnidadMapa } from './api';
+import { fechaHora, type Historial } from './UbicacionHistorial';
 
 export type CapaMapa = 'calle' | 'satelite';
 
@@ -61,12 +63,17 @@ function iconoHtml(u: UnidadMapa, estado: EstadoUnidad) {
     </div>`;
 }
 
+/** Pin circular para inicio, fin, paradas y excesos */
+const pinHtml = (color: string, simbolo: string) =>
+  `<div class="gps-pin" style="background:${color}">${simbolo}</div>`;
+
 /** Duración de cada deslizamiento: la misma que el intervalo de actualización (4 s) */
 const DURACION_MOVIMIENTO = 3800;
 
 interface Props {
   unidades: UnidadMapa[];
   ocultas: Set<string>;
+  /** Placa de la unidad elegida (y de su historial, si está abierto) */
   seleccionada: string | null;
   /** Con la ficha abierta en celular, la unidad se ubica en la mitad superior del mapa */
   fichaAbierta: boolean;
@@ -75,22 +82,32 @@ interface Props {
   encuadreVersion: number;
   /** Placas buscadas: el mapa se acerca a ellas */
   encuadrarA: string[];
+  /** Recorrido que se reproduce (null si no hay historial abierto) */
+  historial: Historial | null;
+  /** Punto del recorrido que se muestra */
+  indice: number;
   onElegir: (placa: string) => void;
 }
 
-export function UbicacionMapa({ unidades, ocultas, seleccionada, fichaAbierta, capa, encuadreVersion, encuadrarA, onElegir }: Props) {
+const estadoPunto = (velocidad: number, ignicion: boolean): EstadoUnidad => (velocidad > 3 ? 'movimiento' : ignicion ? 'ralenti' : 'detenido');
+
+export function UbicacionMapa({ unidades, ocultas, seleccionada, fichaAbierta, capa, encuadreVersion, encuadrarA, historial, indice, onElegir }: Props) {
   const contenedor = useRef<HTMLDivElement>(null);
   const leaflet = useRef<Leaflet>(null);
   const mapa = useRef<Leaflet>(null);
   const capas = useRef<Record<CapaMapa, Leaflet> | null>(null);
   const marcadores = useRef(new Map<string, Leaflet>());
   const animaciones = useRef(new Map<string, number>());
+  const grupoHistorial = useRef<Leaflet>(null);
+  const camionHistorial = useRef<Leaflet>(null);
   const elegirRef = useRef(onElegir);
   elegirRef.current = onElegir;
   const encuadradoInicial = useRef(false);
   const [listo, setListo] = useState(false);
   const [error, setError] = useState('');
+  const [atribucion, setAtribucion] = useState(false);
   const claveBusqueda = encuadrarA.join('|');
+  const conHistorial = !!historial;
 
   // Crear el mapa una vez
   useEffect(() => {
@@ -100,13 +117,12 @@ export function UbicacionMapa({ unidades, ocultas, seleccionada, fichaAbierta, c
     cargarLeaflet().then(L => {
       if (!vivo || !contenedor.current) return;
       leaflet.current = L;
-      // Sin "Leaflet" en el pie; la atribución del mapa base queda en letra pequeña
-      const m = L.map(contenedor.current, { center: [-9.19, -75.015], zoom: 6, zoomControl: false });
-      m.attributionControl.setPrefix(false);
+      // Sin el pie de atribución de Leaflet; la atribución de los mapas base está en el botón "i"
+      const m = L.map(contenedor.current, { center: [-9.19, -75.015], zoom: 6, zoomControl: false, attributionControl: false });
       L.control.zoom({ position: 'bottomright' }).addTo(m);
       capas.current = {
-        calle: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }),
-        satelite: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, attribution: '© Google' }),
+        calle: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }),
+        satelite: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20 }),
       };
       capas.current.calle.addTo(m);
       mapa.current = m;
@@ -142,14 +158,15 @@ export function UbicacionMapa({ unidades, ocultas, seleccionada, fichaAbierta, c
     c[capa].addTo(m);
   }, [capa, listo]);
 
-  // Camiones: se crean, se deslizan a su nueva posición y se quitan según la flota visible
+  // Camiones en vivo: se crean, se deslizan a su nueva posición y se quitan según la flota visible.
+  // Con el historial abierto, la flota en vivo se oculta y se ve solo el recorrido.
   useEffect(() => {
     const L = leaflet.current;
     const m = mapa.current;
     if (!listo || !L || !m) return;
     const vigentes = new Set<string>();
     for (const u of unidades) {
-      if (u.lat == null || u.lng == null || ocultas.has(u.placa)) continue;
+      if (conHistorial || u.lat == null || u.lng == null || ocultas.has(u.placa)) continue;
       vigentes.add(u.placa);
       const icono = L.divIcon({ className: 'gps-camion-icono', html: iconoHtml(u, estadoUnidad(u)), iconSize: [64, 50], iconAnchor: [32, 25] });
       const existente = marcadores.current.get(u.placa);
@@ -171,7 +188,7 @@ export function UbicacionMapa({ unidades, ocultas, seleccionada, fichaAbierta, c
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unidades, ocultas, listo]);
+  }, [unidades, ocultas, listo, conHistorial]);
 
   // Desliza el camión desde donde está hasta la posición nueva
   function deslizar(placa: string, marcador: Leaflet, destino: [number, number]) {
@@ -190,11 +207,61 @@ export function UbicacionMapa({ unidades, ocultas, seleccionada, fichaAbierta, c
     animaciones.current.set(placa, requestAnimationFrame(paso));
   }
 
-  // Encuadrar toda la flota: la primera vez y cuando lo pide el usuario
+  // Historial: ruta, inicio, fin, paradas, excesos y el camión de la reproducción
   useEffect(() => {
     const L = leaflet.current;
     const m = mapa.current;
     if (!listo || !L || !m) return;
+    if (grupoHistorial.current) { grupoHistorial.current.remove(); grupoHistorial.current = null; camionHistorial.current = null; }
+    if (!historial || historial.puntos.length === 0) return;
+
+    const puntos = historial.puntos;
+    const ruta = puntos.map(p => [p.lat, p.lng] as [number, number]);
+    const g = L.layerGroup();
+    L.polyline(ruta, { color: '#0284c7', weight: 5, opacity: 0.9, lineJoin: 'round' }).addTo(g);
+
+    const inicio = puntos[0];
+    const fin = puntos[puntos.length - 1];
+    const marcaPin = (p: { lat: number; lng: number }, color: string, simbolo: string, texto: string, clase: string) =>
+      L.marker([p.lat, p.lng], {
+        icon: L.divIcon({ className: `gps-pin-marca ${clase}`, html: pinHtml(color, simbolo), iconSize: [26, 26], iconAnchor: [13, 13] }),
+      }).bindTooltip(texto).addTo(g);
+    marcaPin(inicio, '#16a34a', '▶', `Inicio · ${fechaHora(inicio.tiempo)}`, 'gps-pin-marca--inicio');
+    marcaPin(fin, '#0f172a', '■', `Fin · ${fechaHora(fin.tiempo)}`, 'gps-pin-marca--fin');
+    historial.paradas.forEach((s, i) => marcaPin(s, '#ea580c', 'II', `Parada ${i + 1} · ${s.durMin} min`, 'gps-pin-marca--parada'));
+    historial.excesos.forEach(e => marcaPin(e, '#dc2626', '!', `Exceso · ${Math.round(e.velocidad)} km/h`, 'gps-pin-marca--exceso'));
+
+    const primero = { placa: seleccionada ?? '', nombre: '', empresa: '', tipo: '', marcaModelo: '', km: 0, horas: 0, id: null, altitud: null, satelites: null, voltaje: '', ubicacion: '' };
+    camionHistorial.current = L.marker([inicio.lat, inicio.lng], {
+      icon: L.divIcon({ className: 'gps-camion-icono', html: iconoHtml({ ...primero, lat: inicio.lat, lng: inicio.lng, velocidad: inicio.velocidad, rumbo: inicio.curso, ignicion: inicio.ignicion }, estadoPunto(inicio.velocidad, inicio.ignicion)), iconSize: [64, 50], iconAnchor: [32, 25] }),
+      zIndexOffset: 2000,
+    }).addTo(g);
+    g.addTo(m);
+    grupoHistorial.current = g;
+    m.fitBounds(ruta, { padding: [56, 56] });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historial, listo]);
+
+  // El camión de la reproducción avanza por la ruta, y el mapa lo sigue si se sale de la vista
+  useEffect(() => {
+    const L = leaflet.current;
+    const m = mapa.current;
+    const camion = camionHistorial.current;
+    if (!L || !m || !camion || !historial) return;
+    const p = historial.puntos[indice];
+    if (!p) return;
+    const u = { placa: seleccionada ?? '', nombre: '', empresa: '', tipo: '', marcaModelo: '', km: 0, horas: 0, id: null, altitud: null, satelites: null, voltaje: '', ubicacion: '', lat: p.lat, lng: p.lng, velocidad: p.velocidad, rumbo: p.curso, ignicion: p.ignicion };
+    camion.setLatLng([p.lat, p.lng]);
+    camion.setIcon(L.divIcon({ className: 'gps-camion-icono', html: iconoHtml(u, estadoPunto(p.velocidad, p.ignicion)), iconSize: [64, 50], iconAnchor: [32, 25] }));
+    if (!m.getBounds().contains([p.lat, p.lng])) m.panTo([p.lat, p.lng], { animate: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indice, historial]);
+
+  // Encuadrar toda la flota: la primera vez y cuando lo pide el usuario
+  useEffect(() => {
+    const L = leaflet.current;
+    const m = mapa.current;
+    if (!listo || !L || !m || conHistorial) return;
     const puntos = unidades
       .filter(u => u.lat != null && u.lng != null && !ocultas.has(u.placa))
       .map(u => [u.lat as number, u.lng as number] as [number, number]);
@@ -222,7 +289,7 @@ export function UbicacionMapa({ unidades, ocultas, seleccionada, fichaAbierta, c
   // Al elegir una unidad, el mapa va hasta ella, y la deja visible por encima de la ficha en celular
   useEffect(() => {
     const m = mapa.current;
-    if (!m || !seleccionada) return;
+    if (!m || !seleccionada || conHistorial) return;
     const u = unidades.find(x => x.placa === seleccionada);
     if (!u || u.lat == null || u.lng == null) return;
     m.setView([u.lat, u.lng], Math.max(m.getZoom(), 15), { animate: true });
@@ -234,6 +301,11 @@ export function UbicacionMapa({ unidades, ocultas, seleccionada, fichaAbierta, c
   return (
     <div className="gps-mapa">
       <div ref={contenedor} className="gps-mapa__lienzo" />
+      <div className="gps-atribucion-caja">
+        {atribucion && <div className="gps-atribucion">© OpenStreetMap · © Google</div>}
+        <button type="button" className="gps-atribucion-btn" aria-label="Atribución del mapa" aria-expanded={atribucion}
+          onClick={() => setAtribucion(a => !a)}>i</button>
+      </div>
       {error && <div className="gps-mapa__aviso">{error}</div>}
     </div>
   );
