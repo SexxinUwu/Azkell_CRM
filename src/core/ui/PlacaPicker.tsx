@@ -35,7 +35,7 @@ export function PlacaPicker({ id, value, onChange, opciones, placeholder = 'Elig
       <button
         id={id}
         type="button"
-        className="placa-picker"
+        className="campo-picker"
         disabled={disabled}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
@@ -45,15 +45,15 @@ export function PlacaPicker({ id, value, onChange, opciones, placeholder = 'Elig
         {value ? (
           <>
             <LicensePlate plate={value} size="sm" />
-            <span className="placa-picker__detalle">{detalle ?? ''}</span>
+            <span className="campo-picker__detalle">{detalle ?? ''}</span>
           </>
         ) : (
           <>
             <Search size={16} aria-hidden />
-            <span className="placa-picker__vacio">{placeholder}</span>
+            <span className="campo-picker__vacio">{placeholder}</span>
           </>
         )}
-        <ChevronDown size={16} aria-hidden className="placa-picker__chevron" />
+        <ChevronDown size={16} aria-hidden className="campo-picker__chevron" />
       </button>
       <PlacaSearchSheet
         open={abierto}

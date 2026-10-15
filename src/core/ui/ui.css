@@ -798,7 +798,7 @@ label.row__main { cursor: pointer; }
 .plate-input { text-transform: uppercase; font-weight: 600; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; }
 
 /* ─── Selector de placa (Buscar por placa): campo que muestra la placa dibujada ─── */
-.placa-picker {
+.campo-picker {
   width: 100%;
   min-height: 44px;
   display: flex;
@@ -814,12 +814,12 @@ label.row__main { cursor: pointer; }
   cursor: pointer;
   min-width: 0;
 }
-.placa-picker[aria-invalid='true'] { border-color: var(--red); }
-.placa-picker:disabled { opacity: 0.5; cursor: default; }
-.placa-picker svg { flex-shrink: 0; color: var(--label-2); }
-.placa-picker__vacio { flex: 1; min-width: 0; color: var(--label-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.placa-picker__detalle { flex: 1; min-width: 0; font-size: 0.9375rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.placa-picker__chevron { margin-left: auto; }
+.campo-picker[aria-invalid='true'] { border-color: var(--red); }
+.campo-picker:disabled { opacity: 0.5; cursor: default; }
+.campo-picker svg { flex-shrink: 0; color: var(--label-2); }
+.campo-picker__vacio { flex: 1; min-width: 0; color: var(--label-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.campo-picker__detalle { flex: 1; min-width: 0; font-size: 0.9375rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.campo-picker__chevron { margin-left: auto; }
 
 /* ─── Combobox: elegir de una lista escribiendo ─── */
 .combobox { position: relative; }
@@ -1117,3 +1117,26 @@ label.row__main { cursor: pointer; }
   cursor: pointer;
 }
 
+
+/* ─── Persona: avatar con iniciales dentro del campo y de cada fila ─── */
+.persona-avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--fill-2);
+  color: var(--label-2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.campo-picker .persona-avatar { width: 1.5rem; height: 1.5rem; }
+
+.campo-picker__persona { display: flex; flex-direction: column; gap: 1px; white-space: normal; }
+.campo-picker__nombre { font-size: 0.9375rem; color: var(--label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.campo-picker__sub { font-size: 0.75rem; color: var(--label-2); }
+
+.persona-fila { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.persona-fila > * { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

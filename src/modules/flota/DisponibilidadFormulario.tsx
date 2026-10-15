@@ -9,15 +9,20 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { usePlacas } from '../placas/api';
+import { PlacaPicker } from '../../core/ui/PlacaPicker';
+import { PersonaPicker } from '../../core/ui/PersonaPicker';
 import { ESTADOS_DISP, type VehiculoDisponibilidad } from './api';
 
 const norm = (s: string) => s.trim().toUpperCase();
 
+// Conductores registrados (nombre y DNI), como en la versión actual
 function useConductoresLista() {
   return useQuery({
     queryKey: ['flota', 'conductores-lista'],
     queryFn: () => api<unknown>('/conductores-lista').then(r =>
-      ((Array.isArray(r) ? r : []) as { nombre?: string }[]).map(c => String(c.nombre ?? '').trim()).filter(Boolean)),
+      ((Array.isArray(r) ? r : []) as { nombre?: string; dni?: string }[])
+        .map(c => ({ valor: String(c.nombre ?? '').trim(), detalle: c.dni ? String(c.dni) : null }))
+        .filter(c => c.valor)),
     staleTime: 5 * 60_000,
   });
 }
@@ -52,8 +57,8 @@ export function DisponibilidadFormulario({ veh, usuario, open, onClose }: {
   }, [open, veh]);
 
   const lista = placas.data ?? [];
-  const camiones = lista.filter(p => p.motora).map(p => p.placa);
-  const carretas = lista.filter(p => !p.motora).map(p => p.placa);
+  const camiones = lista.filter(p => p.motora).map(p => ({ placa: p.placa, detalle: p.cliente }));
+  const carretas = lista.filter(p => !p.motora).map(p => ({ placa: p.placa, detalle: p.cliente }));
 
   async function guardar() {
     const cam = norm(camion), car = norm(carreta);
@@ -86,22 +91,16 @@ export function DisponibilidadFormulario({ veh, usuario, open, onClose }: {
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
         <Field label="Placa del camión">
-          {p => (<>
-            <TextInput {...p} list="disp-camiones" value={camion} onChange={e => setCamion(e.target.value.toUpperCase())} />
-            <datalist id="disp-camiones">{camiones.map(c => <option key={c} value={c} />)}</datalist>
-          </>)}
+          {p => <PlacaPicker {...p} value={camion} onChange={setCamion} opciones={camiones} placeholder="Elige el camión" />}
         </Field>
         <Field label="Placa de la carreta">
-          {p => (<>
-            <TextInput {...p} list="disp-carretas" value={carreta} onChange={e => setCarreta(e.target.value.toUpperCase())} />
-            <datalist id="disp-carretas">{carretas.map(c => <option key={c} value={c} />)}</datalist>
-          </>)}
+          {p => <PlacaPicker {...p} value={carreta} onChange={setCarreta} opciones={carretas} placeholder="Elige la carreta" />}
         </Field>
         <Field label="Conductor asignado" wide>
-          {p => (<>
-            <TextInput {...p} list="disp-conductores" value={conductor} onChange={e => setConductor(e.target.value)} />
-            <datalist id="disp-conductores">{(conductores.data ?? []).map(c => <option key={c} value={c} />)}</datalist>
-          </>)}
+          {p => (
+            <PersonaPicker {...p} value={conductor} onChange={setConductor} opciones={conductores.data ?? []}
+              placeholder="Elige el conductor" titulo="Buscar conductor" />
+          )}
         </Field>
         <Field label="Estado">
           {p => (
