@@ -577,7 +577,7 @@
 /* Escritorio: las páginas de lista ocupan la pantalla; el desplazamiento lo tiene cada zona, no la ventana */
 @media (min-width: 1024px) {
   .app:has(.page--fill) { height: 100dvh; min-height: 0; overflow: hidden; }
-  .main:has(.page--fill) { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; padding-bottom: var(--s-6); box-sizing: border-box; }
+  .main:has(.page--fill) { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; padding-bottom: var(--s-3); box-sizing: border-box; }
   .page--fill { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; width: 100%; max-width: none; }
   .page--fill > .page-header { flex: 0 0 auto; }
 }

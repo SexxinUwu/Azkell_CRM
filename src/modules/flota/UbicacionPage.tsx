@@ -71,8 +71,8 @@ export function UbicacionPage() {
   const lista = useMemo(() => {
     const q = busqueda.trim().toUpperCase();
     if (!q) return delEmpresa;
-    // Solo los textos que se muestran en la fila: así cada resultado se explica a simple vista
-    return delEmpresa.filter(u => [u.placa, u.empresa, u.ubicacion, u.nombre].some(t => t.toUpperCase().includes(q)));
+    // Solo por identificador de la unidad: placa, y el nombre en Wialon (ahí aparece la placa cuando el servidor no la extrae)
+    return delEmpresa.filter(u => [u.placa, u.nombre].some(t => t.toUpperCase().includes(q)));
   }, [delEmpresa, busqueda]);
 
   const cifras = useMemo(() => {
@@ -196,7 +196,7 @@ export function UbicacionPage() {
             ))}
           </div>
 
-          <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar placa, empresa, ciudad…"
+          <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar por placa o nombre…"
             activos={empresa !== 'TODAS' ? 1 : 0} onAbrirFiltros={() => setFiltrando(true)}>
             <div className="gps-vistas">
               <SegmentedControl label="Vista" value={vistaMovil} onChange={setVistaMovil} options={VISTAS} />
