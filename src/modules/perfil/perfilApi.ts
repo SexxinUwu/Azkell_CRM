@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
+import { useAuth } from '../../core/auth/AuthProvider';
 
 // Mismos datos que la versión actual (GET/PUT /api/perfil/me). Las imágenes van a S3 por URL firmada
 // y se ven con otra URL firmada, porque el bucket es privado.
@@ -13,10 +14,46 @@ export interface MiPerfil {
   firma_digital: string | null;
 }
 
+// Caché en el dispositivo (como WhatsApp o Facebook): el perfil y las fotos ya descargadas se pintan
+// desde el primer render, sin esperar a la red. Si la foto cambia, la URL cambia y se descarga de nuevo.
+const PREFIJO_PERFIL = 'azkell.perfil.';
+const PREFIJO_FOTO = 'azkell.foto.';
+
+function leerLS(clave: string): string | null {
+  try { return localStorage.getItem(clave); } catch { return null; }
+}
+
+function escribirLS(clave: string, valor: string) {
+  try {
+    localStorage.setItem(clave, valor);
+  } catch {
+    // Sin espacio: se borran las fotos guardadas y se intenta una vez más
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith(PREFIJO_FOTO)).forEach(k => localStorage.removeItem(k));
+      localStorage.setItem(clave, valor);
+    } catch { /* sin caché: se descarga como antes */ }
+  }
+}
+
+const claveDePerfil = (correo: string) => `${PREFIJO_PERFIL}${correo.toLowerCase()}`;
+
+function perfilGuardado(correo: string): MiPerfil | undefined {
+  if (!correo) return undefined;
+  const texto = leerLS(claveDePerfil(correo));
+  try { return texto ? (JSON.parse(texto) as MiPerfil) : undefined; } catch { return undefined; }
+}
+
 export function useMiPerfil() {
+  const { user } = useAuth();
+  const correo = user?.email ?? '';
   return useQuery({
-    queryKey: ['perfil', 'me'],
-    queryFn: () => api<MiPerfil>('/perfil/me'),
+    queryKey: ['perfil', 'me', correo],
+    queryFn: async () => {
+      const perfil = await api<MiPerfil>('/perfil/me');
+      if (correo) escribirLS(claveDePerfil(correo), JSON.stringify(perfil));
+      return perfil;
+    },
+    initialData: () => perfilGuardado(correo),
     staleTime: 30_000,
   });
 }
@@ -80,13 +117,32 @@ export async function subirImagenPerfil(archivo: File, tipo: 'foto' | 'portada',
   return r.fileUrl;
 }
 
-/** URL firmada (1 h) para mostrar una foto o portada guardada */
+const blobADataUrl = (blob: Blob) => new Promise<string>((ok, mal) => {
+  const lector = new FileReader();
+  lector.onload = () => ok(String(lector.result));
+  lector.onerror = () => mal(lector.error);
+  lector.readAsDataURL(blob);
+});
+
+/**
+ * Foto o portada del perfil, lista para mostrar. Si ya está en el dispositivo, aparece en el primer render;
+ * si no, se pide una URL firmada, se descarga y se guarda para la próxima vez.
+ */
 export function useImagenPerfil(url: string | null | undefined) {
   return useQuery({
     queryKey: ['perfil', 'imagen', url],
     enabled: !!url,
-    queryFn: () => api<{ url: string }>('/perfil/imagen-lectura', { method: 'POST', body: { url } }).then(r => r.url),
-    staleTime: 50 * 60_000,
+    initialData: () => (url ? leerLS(PREFIJO_FOTO + url) ?? undefined : undefined),
+    queryFn: async () => {
+      const firmada = await api<{ url: string }>('/perfil/imagen-lectura', { method: 'POST', body: { url } });
+      const respuesta = await fetch(firmada.url);
+      if (!respuesta.ok) throw new Error('No se pudo abrir la imagen.');
+      const dataUrl = await blobADataUrl(await respuesta.blob());
+      if (url) escribirLS(PREFIJO_FOTO + url, dataUrl);
+      return dataUrl;
+    },
+    staleTime: Infinity,
     gcTime: 60 * 60_000,
+    retry: 1,
   });
 }
