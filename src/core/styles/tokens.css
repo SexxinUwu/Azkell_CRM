@@ -122,7 +122,7 @@
   --tabbar-h: 3.875rem;   /* pestañas flotantes (cápsula de vidrio) */
   --tabbar-gap: 0.625rem; /* separación de la cápsula con el borde inferior */
   --topbar-h: 3.25rem;
-  --content-max: 76rem;
+  --content-max: 120rem;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }

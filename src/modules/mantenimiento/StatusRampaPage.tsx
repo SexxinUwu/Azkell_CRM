@@ -1,7 +1,8 @@
 import './mant.css';
+import './StatusRampa.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Clock, FileSpreadsheet, LayoutDashboard, LogOut, Pencil, Plus, RotateCcw, SearchX, Trash2, Wrench } from 'lucide-react';
+import { ArrowUpRight, ChevronRight, Clock, FileSpreadsheet, LayoutDashboard, LogOut, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput } from '../../core/ui/Field';
@@ -177,6 +178,7 @@ export function StatusRampaPage() {
   const [formulario, setFormulario] = useState<{ entrada: RampaEntrada | null } | null>(null);
   const { can, user } = useAuth();
   const toast = useToast();
+  const qc = useQueryClient();
 
   const entradas = data ?? [];
   // Se busca por id para que el detalle se refresque solo tras liberar o editar
@@ -211,6 +213,8 @@ export function StatusRampaPage() {
           subtitle={isLoading ? 'Cargando…' : `${activas.length} rampas activas`}
           actions={
             <>
+              <Button variant="plain" iconOnly className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
+                onClick={() => qc.invalidateQueries({ queryKey: ['mant'] })} />
               <MenuOtros opciones={[
                 { label: 'Exportar historial a Excel', detalle: `${historial.length} registros`, icon: <FileSpreadsheet size={17} />,
                   onSelect: async () => {
@@ -286,15 +290,14 @@ export function StatusRampaPage() {
                 No hay vehículos en rampas actualmente.
               </EmptyState>
             ) : (
-              <div className="sr-grid">
-                {activas.map(e => (
-                  <RampaCard
-                    key={rampaId(e)}
-                    entrada={e}
-                    onClick={() => { haptic('selection'); setSeleccionadaId(rampaId(e)); }}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="rt-solo-web">
+                  <RampaTabla entradas={activas} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
+                </div>
+                <div className="rm-solo-movil">
+                  <RampaMovil entradas={activas} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
+                </div>
+              </>
             )
           ) : (
             visibles.length === 0 ? (
@@ -348,59 +351,91 @@ export function StatusRampaPage() {
 
 // ─── Tarjeta de rampa activa ─────────────────────────────────────────────────
 
-interface CardProps {
-  entrada: RampaEntrada;
-  onClick: () => void;
+// ─── Rampas activas: tabla en escritorio, tarjetas compactas en celular ───────
+
+const COLOR_RAMPA = (e: RampaEntrada) => (e.color && !['#ef4444', '#007aff', '#64748b'].includes(e.color) ? e.color : 'var(--accent)');
+const NUM_RAMPA = (nombre: string) => nombre.match(/\d+/)?.[0] ?? nombre.trim().charAt(0).toUpperCase();
+const soloFecha = (f: string | null | undefined) => (f ? f.split('T')[0] : '—');
+const soloHora = (h: string | null | undefined) => (h ? h.slice(0, 5) : '—');
+function situacionTono(s: string | null) {
+  const t = (s ?? '').toLowerCase();
+  if (t.includes('espera')) return 'amber';
+  if (t.includes('atenc')) return 'green';
+  return 'gray';
 }
 
-function RampaCard({ entrada: e, onClick }: CardProps) {
-  const color = e.color && e.color !== '#ef4444' && e.color !== '#007aff' && e.color !== '#64748b' ? e.color : 'var(--accent)';
-  const horas = horasEnRampa(e.fecha_ingreso);
-  const tColor = tiempoColor(horas);
-
+function RampaTabla({ entradas, onAbrir }: { entradas: RampaEntrada[]; onAbrir: (e: RampaEntrada) => void }) {
   return (
-    <button
-      type="button"
-      className="sr-card"
-      style={{ '--sr-color': color } as React.CSSProperties}
-      onClick={onClick}
-    >
-      <span className="sr-card__nombre">{e.rampa}</span>
-      <span className="sr-card__placa">{e.placa ?? '—'}</span>
-      <div className="sr-card__info">
-        <span className="sr-card__dato"><strong>Conductor:</strong> {rampaConductor(e)}</span>
-        {e.fecha_ingreso && (
-          <span className="sr-card__dato"><strong>Ingreso:</strong> {e.fecha_ingreso.split('T')[0]}</span>
-        )}
-        {e.km && (
-          <span className="sr-card__dato"><strong>Km:</strong> {String(e.km)}</span>
-        )}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--s-1)' }}>
-        {e.situacion && (
-          <span className="sr-card__situacion">{e.situacion}</span>
-        )}
-        {horas > 0 && (
-          <span style={{
-            marginLeft: 'auto',
-            fontSize: '0.72rem',
-            fontFamily: 'var(--font-mono)',
-            fontWeight: 700,
-            color: tColor,
-            background: `color-mix(in srgb, ${tColor} 12%, transparent)`,
-            padding: '2px 7px',
-            borderRadius: 99,
-          }}>
-            <Clock size={10} style={{ display: 'inline', marginRight: 3, verticalAlign: 'middle' }} />
-            {formatTiempo(horas)}
-          </span>
-        )}
-      </div>
-    </button>
+    <div className="rt-caja">
+      <table className="rt">
+        <thead>
+          <tr>
+            <th>Rampa</th><th>Ingreso</th><th>Hora</th><th>Placa</th><th>Situación</th><th>Observaciones</th>
+            <th>Salida est.</th><th>Hora</th><th>H. taller</th><th>OT</th><th aria-label="Abrir" />
+          </tr>
+        </thead>
+        <tbody>
+          {entradas.map(e => {
+            const horas = horasEnRampa(e.fecha_ingreso);
+            return (
+              <tr key={rampaId(e)} className="rt__fila" tabIndex={0} onClick={() => onAbrir(e)}
+                onKeyDown={ev => { if (ev.key === 'Enter') onAbrir(e); }}>
+                <td>
+                  <span className="rt__rampa">
+                    <span className="rt__num" style={{ background: COLOR_RAMPA(e) }}>{NUM_RAMPA(e.rampa)}</span>
+                    {e.rampa}
+                  </span>
+                </td>
+                <td>{soloFecha(e.fecha_ingreso)}</td>
+                <td>{soloHora(e.hora_ingreso)}</td>
+                <td><span className="rt__placa">{e.placa ?? '—'}</span></td>
+                <td><span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{e.situacion ?? '—'}</span></td>
+                <td className="rt__obs">{e.observaciones ?? '—'}</td>
+                <td>{soloFecha(e.salida_programada)}</td>
+                <td>{soloHora(e.hora_salida_programada)}</td>
+                <td><span className="rt__tiempo" style={{ color: tiempoColor(horas) }}>{horas > 0 ? formatTiempo(horas) : '—'}</span></td>
+                <td>{e.ticket_entrada ? <span className="rt__ot">{e.ticket_entrada}</span> : '—'}</td>
+                <td><ChevronRight size={16} className="rt__flecha" aria-hidden /></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
-// ─── Detalle de entrada de rampa ─────────────────────────────────────────────
+function RampaMovil({ entradas, onAbrir }: { entradas: RampaEntrada[]; onAbrir: (e: RampaEntrada) => void }) {
+  return (
+    <div className="rm-lista">
+      {entradas.map(e => {
+        const horas = horasEnRampa(e.fecha_ingreso);
+        return (
+          <button key={rampaId(e)} type="button" className="rm-card" onClick={() => onAbrir(e)}>
+            <span className="rm-num" style={{ background: COLOR_RAMPA(e) }}>{NUM_RAMPA(e.rampa)}</span>
+            <span className="rm-cuerpo">
+              <span className="rm-cab">
+                <span className="rm-rampa">{e.rampa}</span>
+                <span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{e.situacion ?? '—'}</span>
+              </span>
+              <strong className="rm-placa">{e.placa ?? '—'}</strong>
+              <span className="rm-fechas">
+                <span className="rm-chip rm-chip--in">Entrada {soloFecha(e.fecha_ingreso)} · {soloHora(e.hora_ingreso)}</span>
+                <span className="rm-chip rm-chip--out">Salida est. {soloFecha(e.salida_programada)} · {soloHora(e.hora_salida_programada)}</span>
+              </span>
+              <span className="rm-pie">
+                <span className="rm-km">KM: {e.km ? String(e.km) : '—'}</span>
+                {horas > 0 && (
+                  <span className="rt__tiempo" style={{ color: tiempoColor(horas) }}><Clock size={11} /> {formatTiempo(horas)}</span>
+                )}
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 interface RampaDetalleProps {
   entrada: RampaEntrada;
