@@ -129,7 +129,7 @@ export function PlacasPage() {
   };
 
   return (
-    <Page>
+    <Page wide>
       <PageHeader
         eyebrow="Flota"
         title="Placas"

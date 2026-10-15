@@ -3,13 +3,14 @@ import '../mantenimiento/mant.css';
 import './disponibilidad.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AnimatePresence, motion } from 'motion/react';
+import { motion } from 'motion/react';
+import { BarChart3, LayoutGrid, Truck } from 'lucide-react';
 import { ArrowUpRight, Briefcase, FileSpreadsheet, FileText, Gauge, MapPin, MessageCircle, Navigation, Pencil, Plus, RefreshCw, SearchX, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
@@ -55,6 +56,7 @@ export function DisponibilidadPage() {
   const [filtro, setFiltro] = useState<Filtro>('Todos');
   const [empresa, setEmpresa] = useState('TODAS');
   const [vista, setVista] = useState<'tablero' | 'graficos'>('tablero');
+  const [filtrando, setFiltrando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [seleccionado, setSeleccionado] = useState<VehiculoDisponibilidad | null>(null);
   const [formulario, setFormulario] = useState<{ veh: VehiculoDisponibilidad | null } | null>(null);
@@ -185,25 +187,25 @@ export function DisponibilidadPage() {
   ];
 
   return (
-    <Page>
+    <Page wide>
       <PageHeader
         eyebrow="Flota"
         title="Disponibilidad de flota"
         subtitle={isLoading ? 'Cargando…' : `Control de disponibilidad operativa y asignación de flota${actualizado ? ` · ${actualizado}` : ''}`}
         actions={
           <>
-            <Button variant="secondary" iconOnly icon={<RefreshCw size={16} />} aria-label="Actualizar" title="Actualizar"
+            <Button variant="plain" className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
               onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'disponibilidad'] })} />
-            <Button variant="secondary" iconOnly icon={<MessageCircle size={16} />} aria-label="Compartir PDF por WhatsApp" title="Compartir PDF por WhatsApp"
+            <Button variant="plain" className="btn--icono btn--icono-whatsapp" icon={<MessageCircle size={18} />} aria-label="Compartir PDF por WhatsApp" title="Compartir PDF por WhatsApp"
               disabled={!visibles.length} onClick={whatsapp} />
-            <Button variant="secondary" iconOnly icon={<FileText size={16} />} aria-label="Descargar PDF" title="Descargar PDF"
+            <Button variant="plain" className="btn--icono btn--icono-pdf" icon={<FileText size={18} />} aria-label="Descargar PDF" title="Descargar PDF"
               disabled={!visibles.length} onClick={pdf} />
-            <Button variant="secondary" iconOnly icon={<FileSpreadsheet size={16} />} aria-label="Exportar Excel" title="Exportar Excel"
+            <Button variant="plain" className="btn--icono btn--icono-excel" icon={<FileSpreadsheet size={18} />} aria-label="Exportar Excel" title="Exportar Excel"
               disabled={!visibles.length} onClick={excel} />
             <MenuOtros opciones={[
               { label: 'GPS, conductores y reportes', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/disponibilidad') },
             ]} />
-            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ veh: null })}>Registrar unidad</Button>}
+            {puedeCrear && <Button variant="primary" className="disp-registrar-escritorio" icon={<Plus size={16} />} onClick={() => setFormulario({ veh: null })}>Registrar unidad</Button>}
           </>
         }
       />
@@ -227,23 +229,24 @@ export function DisponibilidadPage() {
             ))}
           </div>
 
-          <div className="disp-barra">
-            <div className="disp-barra__buscar">
-              <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar camión, carreta, chofer…" />
+          <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar camión, carreta, chofer…"
+            activos={(empresa !== 'TODAS' ? 1 : 0) + (filtro !== 'Todos' ? 1 : 0)} onAbrirFiltros={() => setFiltrando(true)}>
+            <div className="placas-toolbar__vista" role="group" aria-label="Vista">
+              <button type="button" className="placas-vista-btn pressable" aria-pressed={vista === 'tablero'} onClick={() => setVista('tablero')} aria-label="Ver tablero"><LayoutGrid size={18} /></button>
+              <button type="button" className="placas-vista-btn pressable" aria-pressed={vista === 'graficos'} onClick={() => setVista('graficos')} aria-label="Ver gráficos"><BarChart3 size={18} /></button>
             </div>
-            <SegmentedControl label="Vista" value={vista} onChange={setVista} options={[
-              { value: 'tablero', label: 'Tablero' }, { value: 'graficos', label: 'Gráficos' },
-            ]} />
-          </div>
-
-          {empresas.length > 1 && (
-            <div className="disp-barra__empresas" role="group" aria-label="Empresa">
-              <SegmentedControl label="Empresa" value={empresa} onChange={setEmpresa} options={[
-                { value: 'TODAS', label: 'Todas' },
-                ...empresas.map(e => ({ value: e.clave, label: e.nombre })),
+          </BarraFiltros>
+          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={(empresa !== 'TODAS' ? 1 : 0) + (filtro !== 'Todos' ? 1 : 0)}
+            onLimpiar={() => { setEmpresa('TODAS'); setFiltro('Todos'); }} resultado={visibles.length} unidad="unidad">
+            <GrupoFiltro titulo="Empresa">
+              <ChoiceChips label="Empresa" value={empresa} onChange={setEmpresa} options={[{ value: 'TODAS', label: 'Todas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre }))]} />
+            </GrupoFiltro>
+            <GrupoFiltro titulo="Estado">
+              <ChoiceChips label="Estado" value={filtro} onChange={v => setFiltro(v as Filtro)} options={[
+                { value: 'Todos', label: 'Todos' }, { value: 'En Base', label: 'En base' }, { value: 'En Ruta', label: 'En ruta' }, { value: 'En Mantenimiento', label: 'En mantenimiento' },
               ]} />
-            </div>
-          )}
+            </GrupoFiltro>
+          </HojaFiltros>
 
           {visibles.length === 0 ? (
             <EmptyState icon={busqueda ? <SearchX size={22} /> : <Gauge size={22} />} title={busqueda ? 'Sin coincidencias' : 'Sin vehículos'}>
@@ -309,33 +312,36 @@ export function DisponibilidadPage() {
                 </table>
               </div>
 
-              {/* Celular: tarjetas */}
-              <div className="disp-grid disp-solo-movil">
-                <AnimatePresence mode="popLayout">
-                  {visibles.map((v, i) => {
-                    const color = estadoDispColor(v.estado);
-                    const placaPrincipal = v.placa_camion || v.placa_carreta;
-                    return (
-                      <motion.button key={`${placaPrincipal}-${i}`} type="button" className="disp-card"
-                        style={{ '--disp-color': `var(--${color}-ink)` } as React.CSSProperties}
-                        onClick={() => { haptic('selection'); setSeleccionado(v); }}
-                        layout initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <span className="disp-card__placa">{placaPrincipal || '—'}</span>
-                          <span className={`ot-estado ot-estado--${color}`}>{v.estado}</span>
+              {/* Celular: tarjetas como en la versión actual */}
+              <div className="disp-lista-movil disp-solo-movil">
+                {visibles.map((v, i) => {
+                  const cat = categoria(v);
+                  return (
+                    <article key={`${v.id ?? i}-${v.placa_camion}`} className="disp-mcard" onClick={() => { haptic('selection'); setSeleccionado(v); }}>
+                      <div className="disp-mcard__cab">
+                        <span className="disp-placa disp-placa--camion"><Truck size={13} strokeWidth={1.9} />{v.placa_camion || '—'}</span>
+                        {v.placa_carreta && <span className="disp-placa">+ {v.placa_carreta}</span>}
+                        <span className={`disp-estado disp-estado--${COLOR_ESTADO[cat]}`}>{v.estado || cat}</span>
+                      </div>
+                      <strong className="disp-mcard__titulo">{v.conductor_asignado || 'Sin conductor asignado'}</strong>
+                      <span className="disp-mcard__sub">{[v.marca, v.tipo_unidad, v.capacidad_tanque && `Tanque: ${v.capacidad_tanque}`].filter(Boolean).join(' • ')}</span>
+                      {v.observaciones && <span className="disp-mcard__obs">{v.observaciones}</span>}
+                      <GpsCelda v={v} mapa={mapaGps} />
+                      {puedeEditar && v.id && (
+                        <div className="disp-mcard__pie">
+                          <Button variant="secondary" size="sm" icon={<Pencil size={14} />}
+                            onClick={e => { e.stopPropagation(); setFormulario({ veh: v }); }}>Editar</Button>
                         </div>
-                        {v.placa_carreta && v.placa_camion && (
-                          <span className="disp-card__tipo" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>+ {v.placa_carreta}</span>
-                        )}
-                        <span className="disp-card__tipo">{[v.sub_tipo, v.marca].filter(Boolean).join(' · ') || v.tipo_unidad || '—'}</span>
-                        {v.conductor_asignado && <span className="disp-card__conductor">{v.conductor_asignado}</span>}
-                        {v.empresa && v.empresa !== v.conductor_asignado && <span className="disp-card__tipo">{v.empresa}</span>}
-                        {v.observaciones && <span className="disp-card__tipo" style={{ color: 'var(--label-2)', fontSize: '0.75rem' }}>{v.observaciones}</span>}
-                      </motion.button>
-                    );
-                  })}
-                </AnimatePresence>
+                      )}
+                    </article>
+                  );
+                })}
               </div>
+              {puedeCrear && (
+                <button type="button" className="disp-fab disp-solo-movil" aria-label="Registrar unidad" onClick={() => setFormulario({ veh: null })}>
+                  <Plus size={24} strokeWidth={2.2} />
+                </button>
+              )}
             </>
           )}
         </div>

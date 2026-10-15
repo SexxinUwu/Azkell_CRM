@@ -9,6 +9,8 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -36,6 +38,7 @@ export function DocumentosPage() {
   const toast = useToast();
   const [vista, setVista] = useState<Vista>('expediente');
   const [empresa, setEmpresa] = useState('TODAS');
+  const [filtrando, setFiltrando] = useState(false);
   const [grupo, setGrupo] = useState<Grupo>('todos');
   const [busqueda, setBusqueda] = useState('');
   const [placa, setPlaca] = useState<string | null>(null);
@@ -82,14 +85,14 @@ export function DocumentosPage() {
   ];
 
   return (
-    <Page>
+    <Page wide>
       <PageHeader
         eyebrow="Flota"
         title="Documentos de flota"
         subtitle="Control y gestión de documentación vehicular"
         actions={
           <>
-            <Button variant="secondary" iconOnly icon={<RefreshCw size={16} />} aria-label="Actualizar" title="Actualizar"
+            <Button variant="plain" className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
               disabled={isFetching} onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] })} />
             {puedeEditar && (
               <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ placa: null, prefijo: null })}>Nuevo documento</Button>
@@ -116,16 +119,21 @@ export function DocumentosPage() {
             ))}
           </div>
 
-          <div className="doc-barra">
-            <input type="search" className="doc-barra__buscar" value={busqueda} onChange={e => setBusqueda(e.target.value)}
-              placeholder="Buscar placa, tipo o marca…" aria-label="Buscar unidades" />
+          <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar placa, tipo o marca…"
+            activos={(empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0)} onAbrirFiltros={() => setFiltrando(true)}>
             <SegmentedControl label="Vista" value={vista} onChange={setVista} options={VISTAS} />
-            {empresas.length > 1 && (
-              <SegmentedControl label="Empresa" value={empresa} onChange={setEmpresa} options={[
-                { value: 'TODAS', label: 'Todas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre })),
+          </BarraFiltros>
+          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={(empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0)}
+            onLimpiar={() => { setEmpresa('TODAS'); setGrupo('todos'); }} resultado={filas.length} unidad="documento">
+            <GrupoFiltro titulo="Empresa">
+              <ChoiceChips label="Empresa" value={empresa} onChange={setEmpresa} options={[{ value: 'TODAS', label: 'Todas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre }))]} />
+            </GrupoFiltro>
+            <GrupoFiltro titulo="Estado del documento">
+              <ChoiceChips label="Estado del documento" value={grupo} onChange={v => setGrupo(v as Grupo)} options={[
+                { value: 'todos', label: 'Todos' }, { value: 'vigente', label: 'Vigentes' }, { value: 'alerta', label: 'En alerta' }, { value: 'vencido', label: 'Vencidos' }, { value: 'sin', label: 'Sin documentos' },
               ]} />
-            )}
-          </div>
+            </GrupoFiltro>
+          </HojaFiltros>
 
           {vista === 'expediente' && (
             <DocExpediente filas={filas} placa={placa} onElegir={setPlaca} puedeEditar={puedeEditar}

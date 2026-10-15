@@ -44,6 +44,7 @@
   margin: 0 auto;
 }
 .page--narrow { max-width: 44rem; }
+.page--ancho { max-width: none; }
 
 /* ─── Barra lateral (escritorio ≥ 1024px): riel de iconos que se expande ───
    Por defecto muestra solo iconos (riel). Al pasar el puntero, o al enfocarla con teclado,
