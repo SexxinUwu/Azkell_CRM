@@ -1,0 +1,40 @@
+/* Almacén de flota: acciones del encabezado que se parten en celular y placas en las listas. */
+
+/* La página no puede ser más ancha que la pantalla: si lo es, ModuleDock (scrollIntoView) desplaza toda la app */
+.af-page {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.af-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  justify-content: flex-end;
+  max-width: 100%;
+  min-width: 0;
+}
+.af-acciones > * { flex: 0 0 auto; }
+
+.af-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-1);
+  min-width: 0;
+}
+.af-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--label-2);
+}
+
+@media (max-width: 639px) {
+  .af-acciones { justify-content: stretch; width: 100%; }
+  .af-acciones > * { flex: 1 1 auto; }
+}

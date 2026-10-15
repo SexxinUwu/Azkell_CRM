@@ -1,10 +1,14 @@
 import '../mantenimiento/mant.css';
+import '../almacen/almacen.css';
+import './almacenFlota.css';
 import { useMemo, useState, type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowDownToLine, ArrowUpFromLine, CircleAlert, Package, Pencil, Plus, SearchX, Truck, Warehouse } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, SearchField, TextInput } from '../../core/ui/Field';
+import { LicensePlate } from '../../core/ui/LicensePlate';
+import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
@@ -16,7 +20,7 @@ import {
   asignarAUnidad, guardarArticulo, ingresarAFlota, num, reingresarDeUnidad, useArticuloFlota, useArticulosFlota,
   useHistorialFlota, useUnidadFlota, useUnidadesFlota,
   type ArticuloBase, type ArticuloFlota, type FiltrosHistorial, type LineaCantidad, type MovimientoFlota,
-  type PlacaCantidad, type TipoMov, type UnidadFlota,
+  type TipoMov, type UnidadFlota,
 } from './almacenFlota';
 
 const money = (v: unknown) => num(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -36,12 +40,6 @@ function detalleMov(m: { tipo: TipoMov; placa?: string | null; referencia?: stri
   if (m.tipo === 'ASIGNACION') return `a ${m.placa ?? '—'}`;
   if (m.tipo === 'REINGRESO') return `desde ${m.placa ?? '—'}`;
   return m.referencia ? `ref. ${m.referencia}` : '';
-}
-
-// Lista corta de placas: "ABC123 (2) · XYZ987 (1) y 3 más"
-function resumenPlacas(placas: PlacaCantidad[]) {
-  const primeras = placas.slice(0, 3).map(p => `${p.placa} (${cant(p.cantidad)})`).join(' · ');
-  return placas.length > 3 ? `${primeras} y ${placas.length - 3} más` : primeras;
 }
 
 type Vista = 'articulos' | 'unidades' | 'historial';
@@ -106,16 +104,17 @@ export function AlmacenFlotaPage() {
 
   return (
     <Page>
+      <div className="af-page">
       <PageHeader
         eyebrow="Flota"
         title="Almacén de flota"
         subtitle={articulos.isLoading ? 'Cargando…' : `${lista.length} artículos · S/ ${money(totales.valor)}`}
         actions={puedeEditar ? (
-          <>
+          <div className="af-acciones">
             <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setEditar('nuevo')}>Nuevo artículo</Button>
             <Button variant="secondary" icon={<ArrowDownToLine size={16} />} onClick={() => setMovimiento({ modo: 'ingreso', placa: null })}>Ingresar</Button>
             <Button variant="primary" icon={<ArrowUpFromLine size={16} />} onClick={() => setMovimiento({ modo: 'asignar', placa: null })}>Asignar a unidad</Button>
-          </>
+          </div>
         ) : undefined}
       />
 
@@ -156,6 +155,7 @@ export function AlmacenFlotaPage() {
       )}
 
       <Sheets editar={editar} setEditar={setEditar} movimiento={movimiento} setMovimiento={setMovimiento} refrescar={refrescar} usuario={usuario} toast={toast} />
+      </div>
     </Page>
   );
 }
@@ -212,9 +212,15 @@ function ArticulosVista({ articulos, busqueda, onAbrir }: {
             <div className="mov-fila__icon" style={{ background: 'var(--accent-tint)', color: 'var(--accent-ink)' }}><Package size={16} /></div>
             <div className="mov-fila__cuerpo">
               <span className="mov-fila__titulo">{a.descripcion}</span>
-              <span className="mov-fila__sub">
-                {a.placas.length ? `En ${a.placas.length} unidad(es): ${resumenPlacas(a.placas)}` : 'No está en ninguna unidad'}
-              </span>
+              <span className="mov-fila__sub">{a.placas.length ? `En ${a.placas.length} unidad(es)` : 'No está en ninguna unidad'}</span>
+              {a.placas.length > 0 && (
+                <span className="af-chips">
+                  {a.placas.slice(0, 3).map(p => (
+                    <span key={p.placa} className="af-chip"><LicensePlate plate={p.placa} size="sm" /><span>{cant(p.cantidad)}</span></span>
+                  ))}
+                  {a.placas.length > 3 && <span className="mov-fila__sub">y {a.placas.length - 3} más</span>}
+                </span>
+              )}
               {bajoMinimo && <span className="mov-fila__sub" style={{ color: 'var(--red-ink, #b91c1c)' }}>Bajo el mínimo ({cant(a.stock_minimo)})</span>}
             </div>
             <div className="mov-fila__derecha" style={{ textAlign: 'right' }}>
@@ -247,7 +253,7 @@ function UnidadesVista({ unidades, busqueda, onAbrir, cargando }: {
         <button key={u.placa} type="button" className="mov-fila" onClick={() => { haptic('selection'); onAbrir(u.placa); }}>
           <div className="mov-fila__icon" style={{ background: 'var(--accent-tint)', color: 'var(--accent-ink)' }}><Truck size={16} /></div>
           <div className="mov-fila__cuerpo">
-            <span className="mov-fila__titulo" style={{ fontFamily: 'var(--font-mono)' }}>{u.placa}</span>
+            <LicensePlate plate={u.placa} size="sm" />
             <span className="mov-fila__sub">{u.articulos} artículo(s) · {cant(u.piezas)} pieza(s) · último movimiento {dia(u.ultimo)}</span>
           </div>
           <div className="mov-fila__derecha">
@@ -313,6 +319,7 @@ function ArticuloDetalle({ id, puedeEditar, onVolver, onEditar, onVerUnidad }: {
   const f = q.data;
   return (
     <Page push>
+      <div className="af-page">
       <div className="ot-ficha">
         <div className="tarjeta__barra">
           <button type="button" className="tarjeta__volver" onClick={onVolver}><span style={{ fontSize: '1.2rem' }}>‹</span> Almacén de flota</button>
@@ -345,7 +352,7 @@ function ArticuloDetalle({ id, puedeEditar, onVolver, onEditar, onVerUnidad }: {
                 <div className="tarjeta__lista">
                   {f.placas.map(p => (
                     <button key={p.placa} type="button" className="dato" style={{ textAlign: 'left', width: '100%' }} onClick={() => { haptic('selection'); onVerUnidad(p.placa); }}>
-                      <span className="dato__label" style={{ fontFamily: 'var(--font-mono)' }}>{p.placa}</span>
+                      <span className="dato__label"><LicensePlate plate={p.placa} size="sm" /></span>
                       <span className="dato__valor dato__valor--mono">{cant(p.cantidad)} {f.articulo.unidad ?? ''}</span>
                     </button>
                   ))}
@@ -377,6 +384,7 @@ function ArticuloDetalle({ id, puedeEditar, onVolver, onEditar, onVerUnidad }: {
           </>
         )}
       </div>
+      </div>
     </Page>
   );
 }
@@ -394,11 +402,12 @@ function UnidadDetalle({ placa, puedeEditar, onVolver, onMovimiento, onVerArticu
 
   return (
     <Page push>
+      <div className="af-page">
       <div className="ot-ficha">
         <div className="tarjeta__barra">
           <button type="button" className="tarjeta__volver" onClick={onVolver}><span style={{ fontSize: '1.2rem' }}>‹</span> Almacén de flota</button>
           {puedeEditar && (
-            <div className="tarjeta__barra-acciones">
+            <div className="tarjeta__barra-acciones af-acciones">
               <Button variant="secondary" icon={<ArrowDownToLine size={16} />} onClick={() => onMovimiento('reingresar', placa)} disabled={!saldo.length}>Reingresar</Button>
               <Button variant="primary" icon={<ArrowUpFromLine size={16} />} onClick={() => onMovimiento('asignar', placa)}>Asignar</Button>
             </div>
@@ -407,7 +416,7 @@ function UnidadDetalle({ placa, puedeEditar, onVolver, onMovimiento, onVerArticu
 
         <div className="ot-ficha__hero">
           <span className="ot-estado ot-estado--neutral">Unidad</span>
-          <h2 className="ot-ficha__placa">{placa}</h2>
+          <LicensePlate plate={placa} size="lg" />
           <span className="ot-ficha__id">{saldo.length} artículo(s) · {cant(piezas)} pieza(s) · S/ {money(valor)}</span>
         </div>
 
@@ -449,6 +458,7 @@ function UnidadDetalle({ placa, puedeEditar, onVolver, onMovimiento, onVerArticu
             </div>
           </>
         )}
+      </div>
       </div>
     </Page>
   );
@@ -620,12 +630,10 @@ function MovimientoSheet({ open, modo, placaInicial, usuario, onClose, onHecho, 
         {modo !== 'ingreso' && !placaInicial && (
           <Field label={modo === 'reingresar' ? 'Unidad que devuelve' : 'Unidad'} wide>
             {p => (
-              <SelectInput {...p} value={placa} onChange={e => { setPlaca(e.target.value); setCantidades({}); }}>
-                <option value="">Elige la unidad…</option>
-                {modo === 'reingresar'
-                  ? (unidades.data ?? []).map(u => <option key={u.placa} value={u.placa}>{u.placa} · {u.articulos} artículo(s)</option>)
-                  : (placas.data ?? []).map(x => <option key={x.placa} value={x.placa}>{x.placa}{x.cliente ? ` — ${x.cliente}` : ''}</option>)}
-              </SelectInput>
+              <PlacaPicker {...p} value={placa} onChange={v => { setPlaca(v); setCantidades({}); }}
+                opciones={modo === 'reingresar'
+                  ? (unidades.data ?? []).map(u => ({ placa: u.placa, detalle: `${u.articulos} artículo(s) · ${cant(u.piezas)} pieza(s)` }))
+                  : (placas.data ?? []).map(x => ({ placa: x.placa, detalle: x.cliente }))} />
             )}
           </Field>
         )}

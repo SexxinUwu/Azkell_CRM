@@ -5,6 +5,7 @@ import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
@@ -105,11 +106,9 @@ export function PlanificacionFormulario({ plan, usuario, open, onClose }: {
         <div className="form-grid">
           <Field label="Placa">
             {p => (
-              <SelectInput {...p} value={placa} onChange={e => setPlaca(e.target.value)} disabled={editando}>
-                <option value="">Elige una placa…</option>
-                {(placas.data ?? []).filter(x => x.estado.toLowerCase() === 'activa' || x.placa === plan?.placa)
-                  .map(x => <option key={x.placa} value={x.placa}>{x.placa}{x.cliente ? ` — ${x.cliente}` : ''}</option>)}
-              </SelectInput>
+              <PlacaPicker {...p} value={placa} onChange={setPlaca} disabled={editando}
+                opciones={(placas.data ?? []).filter(x => x.estado.toLowerCase() === 'activa' || x.placa === plan?.placa)
+                  .map(x => ({ placa: x.placa, detalle: x.cliente }))} />
             )}
           </Field>
           <Field label="Tipo de MP">

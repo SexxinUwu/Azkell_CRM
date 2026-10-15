@@ -797,6 +797,30 @@ label.row__main { cursor: pointer; }
 .textarea--short { min-height: 0; resize: none; }
 .plate-input { text-transform: uppercase; font-weight: 600; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; }
 
+/* ─── Selector de placa (Buscar por placa): campo que muestra la placa dibujada ─── */
+.placa-picker {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--fill-1);
+  border: 1px solid var(--separator);
+  color: var(--label-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.placa-picker[aria-invalid='true'] { border-color: var(--red); }
+.placa-picker:disabled { opacity: 0.5; cursor: default; }
+.placa-picker svg { flex-shrink: 0; color: var(--label-2); }
+.placa-picker__vacio { flex: 1; min-width: 0; color: var(--label-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.placa-picker__detalle { flex: 1; min-width: 0; font-size: 0.9375rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.placa-picker__chevron { margin-left: auto; }
+
 /* ─── Combobox: elegir de una lista escribiendo ─── */
 .combobox { position: relative; }
 .combobox__field { position: relative; }

@@ -5,6 +5,7 @@ import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
@@ -111,11 +112,7 @@ export function RampaFormulario({ entrada, usuario, open, onClose }: {
         </Field>
         <Field label="Placa">
           {p => (
-            <SelectInput {...p} value={placa} onChange={e => setPlaca(e.target.value)}>
-              <option value="">Elige una placa…</option>
-              {(placas.data ?? []).map(x => <option key={x.placa} value={x.placa}>{x.placa}{x.cliente ? ` — ${x.cliente}` : ''}</option>)}
-              {placa && !(placas.data ?? []).some(x => x.placa === placa) && <option value={placa}>{placa}</option>}
-            </SelectInput>
+            <PlacaPicker {...p} value={placa} onChange={setPlaca} opciones={(placas.data ?? []).map(x => ({ placa: x.placa, detalle: x.cliente }))} />
           )}
         </Field>
         <Field label="Conductor">{p => <TextInput {...p} value={conductor} onChange={e => setConductor(e.target.value)} />}</Field>

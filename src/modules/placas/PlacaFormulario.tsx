@@ -10,6 +10,7 @@ import { SwitchRow } from '../../core/ui/forms';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
+import { formatPlateInput, normalizePlate } from '../../core/lib/peru';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { actualizarPlaca, crearPlaca, sumaTanques, useMetricas, type Placa } from './api';
@@ -29,7 +30,7 @@ function validar(p: Placa, modo: 'crear' | 'editar', existentes: Placa[]): Parti
   const e: Partial<Record<Campo, string>> = {};
   if (modo === 'crear') {
     if (!p.placa) e.placa = 'Escribe la placa.';
-    else if (!/^[A-Z0-9-]{5,8}$/.test(p.placa)) e.placa = 'Usa solo letras, números y guion (por ejemplo ABC-123).';
+    else if (!normalizePlate(p.placa)) e.placa = 'Escribe la placa completa. Ejemplo: ABC-123';
     else if (existentes.some(x => sinGuion(x.placa) === sinGuion(p.placa))) e.placa = 'Ya existe una unidad con esta placa.';
   }
   if (!p.tipo) e.tipo = 'Elige el tipo de unidad.';
@@ -96,7 +97,7 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
     setIntento(true);
     if (Object.keys(errores).length) { haptic('warning'); return; }
     setGuardando(true);
-    const final: Placa = { ...p, capacidadTanque: total || p.capacidadTanque };
+    const final: Placa = { ...p, capacidadTanque: total || p.capacidadTanque, ...(modo === 'crear' ? { placa: normalizePlate(p.placa) ?? p.placa } : {}) };
     try {
       if (modo === 'editar') {
         const metrica = metricas.data?.get(final.placa) ?? 'km';
@@ -145,7 +146,7 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
       <div className="placa-form">
         {/* La placa se dibuja mientras se escribe */}
         <motion.div className="placa-form__preview" layout transition={spring}>
-          <LicensePlate plate={p.placa} size="xl" />
+          <LicensePlate plate={modo === 'crear' ? (normalizePlate(p.placa) ?? p.placa) : p.placa} size="xl" />
           <AnimatePresence initial={false}>
             {(p.marca || p.modelo) && (
               <motion.span className="placa-form__preview-texto" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={spring}>
@@ -160,8 +161,9 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
           <div className="form-grid">
             <Field label="Placa" error={error('placa')} hint={modo === 'editar' ? 'La placa no se puede cambiar.' : undefined} wide>
               {props => (
-                <TextInput {...props} {...texto('placa', v => v.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 8))}
-                  disabled={modo === 'editar'} placeholder="ABC-123" autoCapitalize="characters" autoFocus={modo === 'crear'} />
+                <TextInput {...props} {...texto('placa', formatPlateInput)}
+                  disabled={modo === 'editar'} placeholder="ABC-123" className="plate-input" autoComplete="off"
+                  autoCapitalize="characters" spellCheck={false} autoFocus={modo === 'crear'} />
               )}
             </Field>
             <Field label="Cliente" wide>

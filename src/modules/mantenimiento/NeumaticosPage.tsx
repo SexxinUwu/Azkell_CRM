@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, Disc3, Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { SearchField, TextInput } from '../../core/ui/Field';
+import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { Sheet } from '../../core/ui/Sheet';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
@@ -319,10 +320,7 @@ export function NeumaticosPage() {
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4, color: 'var(--label-2)' }}>
               Placa *
             </label>
-            <SelectInput value={placa} onChange={e => autoCargarPlaca(e.target.value)}>
-              <option value="">Selecciona placa…</option>
-              {placasOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </SelectInput>
+            <PlacaPicker value={placa} onChange={autoCargarPlaca} opciones={placasOpts.map(o => ({ placa: o.value }))} />
           </div>
           {([
             { lbl: 'Fecha de inspección *', val: fecha, set: setFecha, type: 'date' },

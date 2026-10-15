@@ -6,6 +6,7 @@ import { AlertCircle, ArrowUpRight, BookOpen, Package, Plus, ScrollText, SearchX
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
@@ -397,10 +398,7 @@ export function OrdenesTrabajoPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Placa */}
           <SimpleLabel label="Placa *">
-            <SelectInput value={nPlaca} onChange={e => setNPlaca(e.target.value)}>
-              <option value="">Selecciona placa…</option>
-              {(placas ?? []).map(p => <option key={p} value={p}>{p}</option>)}
-            </SelectInput>
+            <PlacaPicker value={nPlaca} onChange={setNPlaca} opciones={(placas ?? []).map(p => ({ placa: p }))} />
           </SimpleLabel>
 
           {/* Tipo y subtipo */}
@@ -471,10 +469,7 @@ export function OrdenesTrabajoPage() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <SimpleLabel label="Placa *">
-            <SelectInput value={bkPlaca} onChange={e => setBkPlaca(e.target.value)}>
-              <option value="">Selecciona placa…</option>
-              {(placas ?? []).map(p => <option key={p} value={p}>{p}</option>)}
-            </SelectInput>
+            <PlacaPicker value={bkPlaca} onChange={setBkPlaca} opciones={(placas ?? []).map(p => ({ placa: p }))} />
           </SimpleLabel>
           <SimpleLabel label="Tarea / Descripción *">
             <TextInput value={bkTarea} onChange={e => setBkTarea(e.target.value)} placeholder="Describe el trabajo pendiente…" />
