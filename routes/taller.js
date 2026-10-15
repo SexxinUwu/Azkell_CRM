@@ -133,9 +133,9 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     // ── Helper: genera ID secuencial por año  (ej. OT-2026-0001) ─────
     // Solo busca IDs con sufijo de exactamente 4 dígitos (nuevo formato),
     // ignorando los IDs legacy con sufijos largos.
-    function generarId(tabla, columna, prefijo, anio, cb) {
+    function generarId(tdb, tabla, columna, prefijo, anio, cb) {
         const regex = `^${prefijo}-${anio}-[0-9]{4}$`;
-        db.query(`SELECT MAX(${columna}) AS ultimo FROM ${tabla} WHERE ${columna} REGEXP ?`, [regex], (err, rows) => {
+        tdb.query(`SELECT MAX(${columna}) AS ultimo FROM ${tabla} WHERE ${columna} REGEXP ?`, [regex], (err, rows) => {
             if (err || !rows.length || !rows[0].ultimo) return cb(`${prefijo}-${anio}-0001`);
             const parts = String(rows[0].ultimo).split('-');
             const num = parseInt(parts[parts.length - 1], 10) || 0;
@@ -201,7 +201,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         if (!placa) return res.status(400).json({ error: 'placa es requerida' });
         const anio = new Date().getFullYear();
         const detJson = typeof detalles_json === 'string' ? detalles_json : JSON.stringify(detalles_json || {});
-        generarId('ordenes_trabajo', 'id_ot', 'OT', anio, (nuevoId) => {
+        generarId(req.db || db, 'ordenes_trabajo', 'id_ot', 'OT', anio, (nuevoId) => {
             const targetDb = req.db || db;
             targetDb.query(
                 `INSERT INTO ordenes_trabajo (ticket_entrada, id_ot, placa, estado, detalles_json, creado_por, fecha_ingreso, id_rampa)
@@ -412,7 +412,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                         } else {
                             // Si NO se realizó y NO viene de un backlog ya registrado como pendiente
                             if (!item.backlog_id && !item.id_backlog) {
-                                generarId('ot_backlog', 'backlog_id', 'BK', anioBk, (nuevoBkId) => {
+                                generarId(req.db || db, 'ot_backlog', 'backlog_id', 'BK', anioBk, (nuevoBkId) => {
                                     targetDb.query(
                                         `INSERT INTO ot_backlog (backlog_id, placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por, ticket_ot)
                                      VALUES (?, ?, ?, 'Pendiente de OT', ?, ?, NOW(), 'Pendiente', ?, ?)`,
@@ -577,7 +577,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.get('/inspecciones-por-ot', (req, res) => {
         const { id_ot } = req.query;
         if (!id_ot) return res.status(400).json({ error: 'id_ot requerido' });
-        db.query('SELECT * FROM inspecciones WHERE id_ot = ? ORDER BY fecha_ingreso DESC', [id_ot], (err, rows) => {
+        (req.db || db).query('SELECT * FROM inspecciones WHERE id_ot = ? ORDER BY fecha_ingreso DESC', [id_ot], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -612,8 +612,8 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         const detJson = typeof detalles_json === 'string' ? detalles_json : JSON.stringify(detalles_json || {});
         const personal = (typeof detalles_json === 'object' && detalles_json) ? (detalles_json.personal || '') : '';
         // Generar id_ot único (TR-YYYY-NNN); ticket_visita = FK al ticket_entrada del OT
-        generarId('trabajos_ot', 'id_ot', 'TR', anio, (nuevoId) => {
-            db.query(
+        generarId(req.db || db, 'trabajos_ot', 'id_ot', 'TR', anio, (nuevoId) => {
+            (req.db || db).query(
                 `INSERT INTO trabajos_ot (id_ot, ticket_visita, estado, trabajo_realizado, tecnico, fecha_trabajo, fecha_salida, creado_por, detalles_json)
              VALUES (?, ?, 'Pendiente', ?, ?, ?, ?, ?, ?)`,
                 [nuevoId, ticketEntrada || '', trabajo_realizado || '', personal, fecha_trabajo || null, fecha_salida || null, creado_por || '', detJson],
@@ -656,8 +656,8 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
             try {
                 await new Promise((resolve, reject) => {
-                    generarId('trabajos_ot', 'id_ot', 'TR', anio, (nuevoId) => {
-                        db.query(
+                    generarId(req.db || db, 'trabajos_ot', 'id_ot', 'TR', anio, (nuevoId) => {
+                        (req.db || db).query(
                             `INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, estado, trabajo_realizado, tecnico, fecha_trabajo, fecha_salida, creado_por, detalles_json)
                          VALUES (?, ?, ?, 'Pendiente', ?, ?, ?, ?, ?, ?)`,
                             [nuevoId, ticketEntrada, placa, trabajoRealizado, personal, fechaTrabajo, fechaSalida, creadoPor, detJson],
@@ -682,7 +682,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         const idTrabajo = req.params.id;
         const { accion } = req.body;
         if (accion === 'aprobar') {
-            db.query("UPDATE trabajos_ot SET estado = 'Aprobado' WHERE id_ot = ?", [idTrabajo], (err) => {
+            (req.db || db).query("UPDATE trabajos_ot SET estado = 'Aprobado' WHERE id_ot = ?", [idTrabajo], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
@@ -692,7 +692,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             const { trabajo_realizado, fecha_trabajo, fecha_salida, personal, costo, estado } = req.body;
             const detJson = JSON.stringify({ personal: personal || '', costo: parseFloat(costo) || 0 });
             // Fallback: registros viejos pueden tener id_ot vacío → usar ticket_visita
-            db.query(
+            (req.db || db).query(
                 `UPDATE trabajos_ot SET trabajo_realizado=?, tecnico=?, fecha_trabajo=?, fecha_salida=?, detalles_json=?, estado=?
              WHERE (id_ot = ? AND id_ot != '') OR (id_ot = '' AND ticket_visita = ?)`,
                 [trabajo_realizado || '', personal || '', fecha_trabajo || null, fecha_salida || null, detJson, estado || 'Pendiente', idTrabajo, idTrabajo],
@@ -707,7 +707,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     });
 
     router.delete('/ot-trabajos/limpiar-importados', (req, res) => {
-        db.query(
+        (req.db || db).query(
             "DELETE FROM trabajos_ot WHERE creado_por = 'Importación Masiva'",
             (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
@@ -719,7 +719,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.delete('/ot-trabajos/:id', (req, res) => {
         const id = req.params.id;
         // Fallback: registros viejos pueden tener id_ot vacío → usar ticket_visita como ID
-        db.query(
+        (req.db || db).query(
             'DELETE FROM trabajos_ot WHERE (id_ot = ? AND id_ot != \'\') OR (id_ot = \'\' AND ticket_visita = ?)',
             [id, id],
             (err) => {
@@ -774,7 +774,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             if (err) return res.status(500).json({ error: String(err) });
             const total_pen = _calcularTotalPen(items || [], tc);
             const solicitanteVal = creado_por || req.body.usuario || req.body.solicitante || (req.user && req.user.nombre) || null;
-            db.query(
+            (req.db || db).query(
                 'INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por,ticket_ot,estado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
                 [id, fecha, tipo_destino || 'Vehiculo', placa || null, responsable || null, responsable_id || null,
                     moneda || 'PEN', tc, total_pen, observaciones || null, solicitanteVal, ticket_ot, 'Pendiente'],
@@ -787,7 +787,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                         .map(d => d.descripcion);
                     const resolver = (cb) => {
                         if (!descsParaResolver.length) return cb({});
-                        db.query(
+                        (req.db || db).query(
                             'SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1',
                             [descsParaResolver],
                             (e, rows) => {
@@ -805,7 +805,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                                 d.moneda || moneda || 'PEN',
                                 parseFloat(d.importe) || ((parseFloat(d.cantidad) || 0) * (parseFloat(d.costo_unitario) || 0))];
                         });
-                        db.query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => { });
+                        (req.db || db).query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => { });
                         if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
                     });
                 }
@@ -963,7 +963,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         if (estado) { conds.push('estado = ?'); params.push(estado); }
         if (conds.length) sql += ' WHERE ' + conds.join(' AND ');
         sql += ' ORDER BY creado_en DESC';
-        db.query(sql, params, (err, rows) => {
+        (req.db || db).query(sql, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -973,8 +973,8 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         const { placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por, ticket_ot } = req.body;
         if (!placa || !tarea) return res.status(400).json({ error: 'placa y tarea son requeridos' });
         const anio = new Date().getFullYear();
-        generarId('ot_backlog', 'backlog_id', 'BK', anio, (nuevoId) => {
-            db.query(
+        generarId(req.db || db, 'ot_backlog', 'backlog_id', 'BK', anio, (nuevoId) => {
+            (req.db || db).query(
                 `INSERT INTO ot_backlog (backlog_id, placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por, ticket_ot)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [nuevoId, placa.toUpperCase(), km || 0, tema || '', tarea, reportado_por || '', fecha_reporte || null, estado || 'Pendiente', creado_por || '', ticket_ot || null],
@@ -1001,14 +1001,14 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             if (ticket_ot !== undefined) { fields.push('ticket_ot = ?'); vals.push(ticket_ot || null); }
             if (estado !== undefined) { fields.push('estado = ?'); vals.push(estado); }
             vals.push(req.params.id);
-            db.query('UPDATE ot_backlog SET ' + fields.join(', ') + ' WHERE id = ?', vals, (err) => {
+            (req.db || db).query('UPDATE ot_backlog SET ' + fields.join(', ') + ' WHERE id = ?', vals, (err) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
         } else {
             // Modo cambio de estado simple
             if (!estado) return res.status(400).json({ error: 'estado requerido' });
-            db.query('UPDATE ot_backlog SET estado = ? WHERE id = ?', [estado, req.params.id], (err) => {
+            (req.db || db).query('UPDATE ot_backlog SET estado = ? WHERE id = ?', [estado, req.params.id], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
@@ -1016,7 +1016,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     });
 
     router.delete('/ot-backlog/:id', (req, res) => {
-        db.query('DELETE FROM ot_backlog WHERE id = ?', [req.params.id], (err) => {
+        (req.db || db).query('DELETE FROM ot_backlog WHERE id = ?', [req.params.id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
@@ -1042,26 +1042,26 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     // ============================================================
 
     // Migración: agregar columna estado a taller_rampas
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'Activo'`, (e) => {
+    (req.db || db).query(`ALTER TABLE taller_rampas ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'Activo'`, (e) => {
         if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas estado:', e.message);
         else console.log('✅ Columna estado verificada en taller_rampas');
     });
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN fecha_liberado DATETIME NULL`, (e) => {
+    (req.db || db).query(`ALTER TABLE taller_rampas ADD COLUMN fecha_liberado DATETIME NULL`, (e) => {
         if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas fecha_liberado:', e.message);
     });
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN liberado_por VARCHAR(100) NULL`, (e) => {
+    (req.db || db).query(`ALTER TABLE taller_rampas ADD COLUMN liberado_por VARCHAR(100) NULL`, (e) => {
         if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas liberado_por:', e.message);
     });
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN fecha_salida_real DATE NULL`, (e) => {
+    (req.db || db).query(`ALTER TABLE taller_rampas ADD COLUMN fecha_salida_real DATE NULL`, (e) => {
         if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas fecha_salida_real:', e.message);
     });
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN hora_salida_real TIME NULL`, (e) => {
+    (req.db || db).query(`ALTER TABLE taller_rampas ADD COLUMN hora_salida_real TIME NULL`, (e) => {
         if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas hora_salida_real:', e.message);
     });
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN creado_en TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP`, (e) => {
+    (req.db || db).query(`ALTER TABLE taller_rampas ADD COLUMN creado_en TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP`, (e) => {
         if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas creado_en:', e.message);
     });
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN evidencia_url VARCHAR(255) NULL`, (e) => {
+    (req.db || db).query(`ALTER TABLE taller_rampas ADD COLUMN evidencia_url VARCHAR(255) NULL`, (e) => {
         if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas evidencia_url:', e.message);
     });
 
@@ -1087,7 +1087,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         'cerrado_por VARCHAR(100) NULL'
     ].forEach(function (colDef) {
         var colName = colDef.split(' ')[0];
-        db.query('ALTER TABLE ordenes_trabajo ADD COLUMN ' + colDef, function (e) {
+        (req.db || db).query('ALTER TABLE ordenes_trabajo ADD COLUMN ' + colDef, function (e) {
             if (e && !e.message.includes('Duplicate column')) console.warn('ALTER ordenes_trabajo ' + colName + ':', e.message);
         });
     });
@@ -1267,7 +1267,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
     // ✨ TALLER PERSONAL ✨
     router.get('/taller-personal', (req, res) => {
-        db.query('SELECT * FROM taller_personal ORDER BY nombre ASC', (err, rows) => {
+        (req.db || db).query('SELECT * FROM taller_personal ORDER BY nombre ASC', (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -1275,7 +1275,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
     router.post('/taller-personal', (req, res) => {
         const { nombre, sueldo_mensual, costo_hora } = req.body;
-        db.query(
+        (req.db || db).query(
             'INSERT INTO taller_personal (nombre, sueldo_mensual, costo_hora) VALUES (?, ?, ?)',
             [nombre, sueldo_mensual || 0, costo_hora || 0],
             (err, result) => {
@@ -1287,7 +1287,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
     router.put('/taller-personal/:id', (req, res) => {
         const { nombre, sueldo_mensual, costo_hora } = req.body;
-        db.query(
+        (req.db || db).query(
             'UPDATE taller_personal SET nombre=?, sueldo_mensual=?, costo_hora=? WHERE id=?',
             [nombre, sueldo_mensual || 0, costo_hora || 0, req.params.id],
             (err) => {
@@ -1298,7 +1298,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     });
 
     router.delete('/taller-personal/:id', (req, res) => {
-        db.query('DELETE FROM taller_personal WHERE id=?', [req.params.id], (err) => {
+        (req.db || db).query('DELETE FROM taller_personal WHERE id=?', [req.params.id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true });
         });
