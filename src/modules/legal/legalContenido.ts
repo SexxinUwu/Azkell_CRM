@@ -1,6 +1,9 @@
 // Textos legales de Azkell Fleet. BORRADOR: todo lo que va entre [COMPLETAR: …] es un dato que
 // hay que confirmar o escribir antes de publicar. Se redactó a partir de lo que la app hace hoy
 // (ver docs/legal-inventario.md). Debe revisarlo un abogado en Perú antes de usarse con clientes.
+//
+// Modelo: Azkell Fleet es un software de pago por empresa. Cada empresa cliente (por ejemplo, MARSISA S.A.C.)
+// es la responsable de sus datos y Azkell actúa como encargado del tratamiento. No hay cobros dentro del sistema.
 
 export interface Seccion {
   titulo: string;
@@ -21,42 +24,59 @@ export const DOCUMENTOS: Documento[] = [
   {
     id: 'privacidad',
     titulo: 'Política de privacidad',
-    resumen: 'Qué datos personales trata Azkell Fleet, para qué, con quién se comparten y cómo ejercer tus derechos.',
+    resumen: 'Qué datos personales se tratan en Azkell Fleet, para qué, con quién se comparten y cómo ejercer tus derechos.',
     secciones: [
       {
-        titulo: '1. Quién trata tus datos',
+        titulo: '1. Quién es responsable de tus datos',
         parrafos: [
-          'La empresa que contrata Azkell Fleet es la responsable de los datos de sus trabajadores, conductores, unidades y clientes. Azkell actúa como encargado: opera el software por cuenta de esa empresa.',
-          'Responsable: [COMPLETAR: razón social y RUC de la empresa cliente]. Encargado: [COMPLETAR: razón social y RUC de Azkell].',
-          'Domicilio: [COMPLETAR: domicilio fiscal]. Correo para tus derechos: [COMPLETAR: correo de contacto]. Inscripción del banco de datos en el Registro Nacional de Protección de Datos Personales: [COMPLETAR: código, o indicar que no aplica].',
+          'Azkell Fleet es un software de gestión de flotas que cada empresa contrata para su propia operación. Por eso hay dos roles:',
+        ],
+        lista: [
+          'Responsable: la empresa cliente que usa el sistema (por ejemplo, [COMPLETAR: razón social y RUC del cliente]). Decide para qué se usan sus datos y quién los ve.',
+          'Encargado: Azkell ([COMPLETAR: razón social y RUC de Azkell]), que opera el software y guarda los datos por cuenta de cada empresa cliente.',
         ],
       },
       {
-        titulo: '2. Qué datos se tratan',
+        titulo: '2. Dónde ejercer tus derechos',
+        parrafos: [
+          'Si tus datos están en el sistema de una empresa cliente (por ejemplo, si eres trabajador o conductor de esa empresa), presenta tu solicitud a esa empresa. Ella responde por el tratamiento. Si no sabes a quién escribir o la empresa no responde, escríbenos a [COMPLETAR: correo de contacto de Azkell] y te orientamos.',
+          'Domicilio de Azkell: [COMPLETAR: domicilio fiscal registrado en SUNAT].',
+        ],
+      },
+      {
+        titulo: '3. Inscripción de bancos de datos',
+        parrafos: [
+          'Según la Ley 29733, cada empresa cliente debe inscribir en el Registro Nacional de Protección de Datos Personales el banco de datos donde guarda sus datos, e indicar a Azkell como encargado. Azkell inscribe los bancos de datos que son propios (por ejemplo, los contactos comerciales). Código de inscripción de los bancos de Azkell: [COMPLETAR: código, o indicar que está en trámite].',
+        ],
+      },
+      {
+        titulo: '4. Qué datos se tratan',
         lista: [
           'Identificación y contacto de usuarios y personal: nombre, DNI, correo, teléfono, cargo, rol y firma digital.',
           'Datos de conductores y unidades: placas, documentos de la unidad, inspecciones, reportes de falla, fotos y firmas en actas de entrega y garita.',
           'Ubicación de las unidades (GPS). Puede identificar al conductor que la maneja.',
-          'Datos de acceso y seguridad: fecha y hora de inicio de sesión, dirección IP y dispositivo, sesiones activas y el registro de auditoría de cambios (firmado).',
-          'Datos de negocio que pueden incluir datos personales: órdenes de servicio, guías de remisión, vales de combustible, pagos y liquidaciones.',
+          'Datos de acceso y seguridad: fecha y hora de inicio de sesión, dirección IP, dispositivo, sesiones activas y el registro de auditoría de cambios.',
+          'Datos de negocio que pueden incluir datos personales: órdenes de servicio, guías de remisión, vales de combustible, pagos, liquidaciones y asistencia.',
+          'Texto que escribes en el asistente de ayuda y el historial de esa conversación.',
         ],
       },
       {
-        titulo: '3. Para qué se usan',
+        titulo: '5. Para qué se usan',
         lista: [
           'Operar la gestión de flota, mantenimiento, almacén, operaciones, tesorería, personal y seguridad de la empresa cliente.',
           'Controlar el acceso, proteger las cuentas y mantener la trazabilidad de los cambios.',
           'Cumplir obligaciones legales, como la emisión de guías y comprobantes electrónicos ante SUNAT.',
+          'Responder preguntas de uso en el asistente de ayuda.',
         ],
       },
       {
-        titulo: '4. Base legal',
+        titulo: '6. Base legal',
         parrafos: [
-          'El tratamiento se basa en la relación laboral o contractual con la empresa cliente, en obligaciones legales y, cuando corresponda, en el consentimiento de la persona. [COMPLETAR: confirmar la base legal para cada tipo de dato, con abogado].',
+          'El tratamiento se basa en la relación laboral o contractual con la empresa cliente, en obligaciones legales y, cuando corresponda, en el consentimiento de la persona. [COMPLETAR: confirmar con abogado la base legal de cada tipo de dato, sobre todo ubicación GPS y firmas].',
         ],
       },
       {
-        titulo: '5. Con quién se comparten',
+        titulo: '7. Con quién se comparten',
         parrafos: [
           'Solo con proveedores que el sistema necesita para funcionar. Cada uno trata los datos para su servicio:',
         ],
@@ -65,43 +85,53 @@ export const DOCUMENTOS: Documento[] = [
           'Wialon: datos de GPS de las unidades.',
           'SUNAT: envío de guías y comprobantes electrónicos.',
           'APISPERU: consulta de DNI y RUC. La consulta se hace desde nuestro servidor.',
-          'WhatsApp (proveedor de la integración): envío de avisos de aprobación y notificaciones.',
+          'WhatsApp (integración de avisos): envío de notificaciones de aprobación. [COMPLETAR: confirmar el proveedor de la instancia].',
           'MarsisaSoft: sincronización de vales de combustible y órdenes de viaje, cuando la empresa la activa.',
-          'Have I Been Pwned (k-anonymity): verifica si una contraseña nueva aparece en filtraciones. No se envía la contraseña completa.',
-          'Google: tipografías, mapas y el asistente de IA. [COMPLETAR: confirmar si al asistente se envían datos personales].',
-          'Open-Meteo: datos de clima. No se envían datos personales. [COMPLETAR: confirmar la licencia de uso comercial].',
+          'Google Gemini (asistente de ayuda): recibe solo el texto que escribes en el chat y el historial de esa conversación, no datos de la base de datos. Antes de enviarlo, el sistema oculta DNI, teléfonos y correos. Con el plan de pago de Google, sus condiciones vigentes indican que esas consultas no se usan para mejorar sus productos. [COMPLETAR: confirmar que la clave del asistente pertenece a un proyecto con facturación activa y revisar las condiciones vigentes de Google].',
+          'Have I Been Pwned (verificación de contraseñas): se envía solo un prefijo de la huella de la contraseña. Nunca la contraseña completa.',
+          'Open-Meteo (clima del taller): se envían latitud y longitud del taller, sin datos personales. [COMPLETAR: plan comercial contratado, o retirar este widget].',
+          'Google Fonts, mapas y enlaces de Google Maps o Waze: los recibe tu navegador al cargar la página o al tocar el enlace.',
         ],
       },
       {
-        titulo: '6. Transferencias fuera del Perú',
+        titulo: '8. Separación entre empresas',
         parrafos: [
-          'Algunos proveedores pueden almacenar o procesar datos fuera del Perú. [COMPLETAR: región de almacenamiento y garantías contractuales con cada proveedor].',
+          'Cada empresa cliente tiene su propia base de datos. Azkell no comparte los datos de una empresa con otra, ni los usa para fines propios salvo los datos de contacto comercial de Azkell.',
         ],
       },
       {
-        titulo: '7. Cuánto tiempo se conservan',
-        parrafos: ['[COMPLETAR: plazo de conservación por tipo de dato, y qué ocurre al terminar el contrato].'],
+        titulo: '9. Transferencias fuera del Perú',
+        parrafos: [
+          'Algunos proveedores almacenan o procesan datos fuera del Perú (por ejemplo, Amazon Web Services y Google). [COMPLETAR: región de almacenamiento confirmada en producción y garantías contractuales con cada proveedor].',
+        ],
       },
       {
-        titulo: '8. Cómo proteger tus datos',
+        titulo: '10. Cuánto tiempo se conservan',
+        parrafos: [
+          'Los datos se conservan mientras la empresa cliente use el servicio. Al terminar el contrato, Azkell los devuelve o los elimina según lo pactado. [COMPLETAR: plazo de eliminación después del término del contrato y plazo de conservación de las copias de respaldo].',
+        ],
+      },
+      {
+        titulo: '11. Cómo se protegen tus datos',
         lista: [
-          'Conexión cifrada (HTTPS) con cabeceras de seguridad (HSTS y protección contra incrustación en otros sitios).',
+          'Conexión cifrada (HTTPS) y cabeceras de seguridad (HSTS y protección contra incrustación en otros sitios).',
           'Contraseñas guardadas con hash bcrypt; nunca en texto plano.',
-          'Sesión en una cookie HttpOnly que el navegador no expone a scripts.',
+          'Sesión en una cookie HttpOnly, que los scripts de la página no pueden leer.',
           'Verificación en dos pasos (código TOTP) para cuentas de administración y gerencia.',
           'Límite de intentos de inicio de sesión y de peticiones por minuto.',
-          'Registro de auditoría con firma HMAC para detectar cambios no autorizados.',
+          'Registro de auditoría firmado (HMAC) para detectar cambios no autorizados.',
+          'Asistente de ayuda que oculta DNI, teléfonos y correos antes de enviar el texto a Google.',
         ],
       },
       {
-        titulo: '9. Tus derechos',
+        titulo: '12. Tus derechos',
         parrafos: [
-          'Puedes pedir acceso, rectificación, cancelación u oposición al tratamiento de tus datos (derechos ARCO), y revocar el consentimiento cuando corresponda. Escribe a [COMPLETAR: correo de contacto]. Si la empresa cliente es la responsable, la solicitud se atiende con ella.',
+          'Puedes pedir acceso, rectificación, cancelación u oposición al tratamiento de tus datos (derechos ARCO) y revocar tu consentimiento cuando corresponda. Para hacerlo, sigue la indicación de la sección 2.',
           'Si no recibes respuesta, puedes presentar un reclamo ante la Autoridad Nacional de Protección de Datos Personales (Ministerio de Justicia y Derechos Humanos).',
         ],
       },
       {
-        titulo: '10. Cambios en esta política',
+        titulo: '13. Cambios en esta política',
         parrafos: [`Cuando cambie esta política lo indicaremos aquí con la nueva fecha de vigencia (${FECHA_VIGENCIA}).`],
       },
     ],
@@ -112,9 +142,10 @@ export const DOCUMENTOS: Documento[] = [
     resumen: 'Condiciones de uso de Azkell Fleet para las empresas clientes y sus usuarios.',
     secciones: [
       {
-        titulo: '1. Qué es Azkell Fleet',
+        titulo: '1. Qué es Azkell Fleet y cómo se contrata',
         parrafos: [
-          'Azkell Fleet es un sistema de gestión (ERP) para flotas de transporte. Se usa con cuentas creadas por el administrador de sistemas de cada empresa cliente. No hay registro público: nadie puede crear una cuenta por su cuenta.',
+          'Azkell Fleet es un software de gestión para empresas de transporte. Se contrata por empresa, mediante un contrato comercial. Dentro del sistema no hay compras ni cobros a los usuarios.',
+          'No hay registro público: el administrador de sistemas de cada empresa crea las cuentas de sus usuarios.',
         ],
       },
       {
@@ -128,42 +159,54 @@ export const DOCUMENTOS: Documento[] = [
       {
         titulo: '3. Uso permitido',
         parrafos: [
-          'El sistema se usa solo para la operación de la empresa cliente. Está prohibido intentar vulnerarlo, extraer datos de forma masiva sin autorización, o usarlo para fines ajenos a la empresa.',
+          'El sistema se usa solo para la operación de la empresa cliente. Está prohibido intentar vulnerarlo, extraer datos de forma masiva sin autorización o usarlo para fines ajenos a la empresa.',
+          'Pedimos no escribir datos personales de terceros en el asistente de ayuda. El asistente no los necesita para responder.',
         ],
       },
       {
         titulo: '4. Disponibilidad del servicio',
         parrafos: [
-          'Trabajamos para mantener el servicio disponible, pero no garantizamos que funcione sin interrupciones. Pueden existir mantenimientos y fallas de proveedores externos (GPS, SUNAT, WhatsApp, almacenamiento). [COMPLETAR: compromiso de disponibilidad, si existe en el contrato].',
+          'Trabajamos para mantener el servicio disponible, pero no garantizamos que funcione sin interrupciones. Pueden existir mantenimientos y fallas de proveedores externos (GPS, SUNAT, WhatsApp, almacenamiento, servicios de IA).',
+          '[COMPLETAR: compromiso de disponibilidad (SLA), si está en el contrato. Si no existe, dejar esta frase sin compromiso numérico.]',
         ],
       },
       {
         titulo: '5. Servicios de terceros',
         parrafos: [
-          'Las integraciones (GPS, SUNAT, WhatsApp, MarsisaSoft, mapas) se rigen también por los términos de cada proveedor. Azkell no controla los servicios de terceros.',
+          'Las integraciones (GPS, SUNAT, WhatsApp, MarsisaSoft, mapas, servicios de IA) se rigen también por los términos de cada proveedor. Azkell no controla los servicios de terceros.',
         ],
       },
       {
         titulo: '6. Propiedad intelectual',
         parrafos: [
-          'El software, su diseño y la marca Azkell Fleet pertenecen a Azkell. [COMPLETAR: titular de la marca y registro, si existe]. Los datos que la empresa cargue en el sistema pertenecen a esa empresa.',
+          'El software, su diseño y la marca Azkell Fleet pertenecen a [COMPLETAR: titular de la marca]. Los datos que cada empresa carga en el sistema pertenecen a esa empresa.',
         ],
       },
       {
         titulo: '7. Responsabilidad',
         parrafos: [
-          'Azkell responde por los daños directos que cause por incumplimiento de estas condiciones, dentro de los límites que permite la ley peruana. [COMPLETAR: límite de responsabilidad, revisado con abogado].',
+          'El límite de responsabilidad es el monto máximo que Azkell puede tener que pagar si incumple estas condiciones. Es una decisión comercial que debe quedar en el contrato con cada empresa.',
+          'Propuesta para decidir con el abogado: [COMPLETAR: límite, por ejemplo, el monto que la empresa haya pagado a Azkell en los últimos 12 meses].',
         ],
       },
       {
-        titulo: '8. Cambios, ley aplicable y jurisdicción',
+        titulo: '8. Ley aplicable y jurisdicción',
         parrafos: [
-          'Podemos actualizar estas condiciones; lo avisaremos en el sistema. Estas condiciones se rigen por las leyes de la República del Perú. Para controversias, las partes se someten a [COMPLETAR: jurisdicción].',
+          'La ley aplicable es la de la República del Perú. La jurisdicción es el lugar y el tribunal que resuelven las disputas si no se llega a un acuerdo.',
+          'Propuesta para decidir con el abogado: [COMPLETAR: jurisdicción, por ejemplo, los jueces de Lima].',
         ],
       },
       {
-        titulo: '9. Contacto',
-        parrafos: ['[COMPLETAR: correo y domicilio de contacto]. Vigencia: ' + FECHA_VIGENCIA + '.'],
+        titulo: '9. Prevalece el contrato',
+        parrafos: [
+          'Si el contrato comercial firmado con una empresa dice algo distinto a estos términos, prevalece el contrato.',
+        ],
+      },
+      {
+        titulo: '10. Cambios y contacto',
+        parrafos: [
+          'Podemos actualizar estas condiciones y lo avisaremos en el sistema. Contacto: [COMPLETAR: correo y domicilio de Azkell]. Vigencia: ' + FECHA_VIGENCIA + '.',
+        ],
       },
     ],
   },
@@ -210,37 +253,39 @@ export const DOCUMENTOS: Documento[] = [
   },
   {
     id: 'reembolsos',
-    titulo: 'Política de reembolsos y cancelación',
-    resumen: 'Cómo se cancela el servicio y cuándo corresponde devolver dinero.',
+    titulo: 'Cancelación y reembolsos',
+    resumen: 'Cómo se cancela el servicio y cómo se devuelve dinero. Lo que dice el contrato comercial prevalece.',
     secciones: [
       {
-        titulo: '1. Alcance',
+        titulo: '1. Cobros fuera del sistema',
         parrafos: [
-          'Esta política aplica a las empresas que contratan Azkell Fleet. [COMPLETAR: si el servicio se vende también a consumidores finales; en ese caso, aplican además las obligaciones del Código de Protección y Defensa del Consumidor (Ley 29571), incluido el Libro de Reclamaciones].',
+          'Azkell Fleet no cobra dentro de la aplicación. El monto, la forma de pago, la moneda y los periodos se acuerdan con cada empresa en su contrato comercial.',
         ],
       },
       {
-        titulo: '2. Cobro',
+        titulo: '2. Cancelación',
         parrafos: [
-          '[COMPLETAR: modalidad de cobro (mensual, anual, por usuario o por unidad), moneda y forma de pago.]',
+          'La empresa puede cancelar el servicio según lo pactado en el contrato. [COMPLETAR: plazo de aviso previo y fecha desde la cual deja de facturarse el servicio.]',
         ],
       },
       {
-        titulo: '3. Cancelación',
+        titulo: '3. Reembolsos',
         parrafos: [
-          '[COMPLETAR: cómo se solicita la cancelación, con cuánta anticipación y desde cuándo deja de cobrarse.]',
+          'Las devoluciones de dinero se rigen por el contrato. [COMPLETAR: condiciones de reembolso pactadas, si las hay, y el plazo para pedirlo.]',
+          'Los periodos ya prestados o iniciados no se devuelven, salvo que el contrato o la ley establezcan otra cosa. [COMPLETAR: confirmar con abogado.]',
         ],
       },
       {
-        titulo: '4. Reembolsos',
+        titulo: '4. Cómo pedir una cancelación o devolución',
         parrafos: [
-          '[COMPLETAR: condiciones del reembolso, plazo para solicitarlo y plazo de devolución.]',
-          'Los servicios ya prestados o los periodos ya iniciados no se reembolsan, salvo que la ley o el contrato establezcan otra cosa. [COMPLETAR: confirmar con abogado.]',
+          'Escribe a [COMPLETAR: correo de contacto de Azkell] con la razón social de la empresa y el número de contrato.',
         ],
       },
       {
-        titulo: '5. Cómo pedir un reembolso',
-        parrafos: ['Escribe a [COMPLETAR: correo de contacto] con los datos de la empresa y el comprobante de pago.'],
+        titulo: '5. Alcance',
+        parrafos: [
+          'Esta política es para empresas que contratan el servicio. Si en el futuro se ofreciera a consumidores finales, se publicará una versión que cumpla el Código de Protección y Defensa del Consumidor (Ley 29571).',
+        ],
       },
     ],
   },

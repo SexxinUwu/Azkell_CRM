@@ -12,6 +12,15 @@ const DAILY_LIMIT = Number(process.env.ASISTENTE_LIMITE_DIARIO) || 30;
 const OFF_TOPIC = 'Solo puedo ayudarte con el uso de Azkell Fleet. Si tu duda es sobre el sistema, cuéntame qué quieres hacer.';
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
+// Antes de enviar el chat a Gemini se ocultan DNI, teléfonos y correos que el usuario escriba por error.
+// El asistente nunca recibe datos de la base de datos (solo el prompt fijo, en KNOWLEDGE).
+function ocultarDatosPersonales(texto) {
+  return String(texto ?? '')
+    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '[correo]')
+    .replace(/(?:\+?51[\s-]?)?\b9\d{2}[\s-]?\d{3}[\s-]?\d{3}\b/g, '[teléfono]')
+    .replace(/\b\d{8}\b/g, '[DNI]');
+}
+
 function systemPrompt(allowed) {
   const { today, weekday } = todayForPrompt();
   const reports = allowed.length
@@ -207,9 +216,10 @@ async function ask(userId, user, history, message) {
   }
 
   consume(userId);
-  const contents = [...history, { role: 'user', text: message }].map(t => ({
+  // Solo los últimos 6 mensajes del historial: menos texto enviado, menos datos expuestos
+  const contents = [...history.slice(-6), { role: 'user', text: message }].map(t => ({
     role: t.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: t.text }],
+    parts: [{ text: ocultarDatosPersonales(t.text) }],
   }));
 
   const parts = await callGemini(JSON.stringify({
