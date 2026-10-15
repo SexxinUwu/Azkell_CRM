@@ -292,9 +292,15 @@ export function UbicacionMapa({ unidades, ocultas, seleccionada, fichaAbierta, c
     if (!m || !seleccionada || conHistorial) return;
     const u = unidades.find(x => x.placa === seleccionada);
     if (!u || u.lat == null || u.lng == null) return;
-    m.setView([u.lat, u.lng], Math.max(m.getZoom(), 15), { animate: true });
+    // El mapa acaba de mostrarse (antes tenía tamaño cero): se recalcula antes de centrar
+    m.invalidateSize({ animate: false });
+    // En celular con el detalle abierto, la unidad queda en la parte de arriba del mapa: se centra un punto al sur
+    const z = Math.max(m.getZoom(), 15);
     const movil = window.matchMedia('(max-width: 899px)').matches;
-    if (movil && fichaAbierta) m.panBy([0, m.getSize().y * 0.3], { animate: true });
+    const destino = movil && fichaAbierta
+      ? m.unproject(m.project([u.lat, u.lng], z).add([0, m.getSize().y * 0.2]), z)
+      : [u.lat, u.lng];
+    m.setView(destino, z, { animate: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seleccionada]);
 

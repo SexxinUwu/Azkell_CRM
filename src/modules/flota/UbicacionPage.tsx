@@ -4,7 +4,7 @@ import './disponibilidad.css';
 import './ubicacion.css';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowUpRight, Briefcase, MapPin, MessageCircle, Navigation, RefreshCw, Route, Truck, Wrench, X } from 'lucide-react';
+import { ArrowUpRight, Briefcase, ChevronLeft, MapPin, MessageCircle, Navigation, RefreshCw, Route, Truck, Wrench, X } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -177,7 +177,7 @@ export function UbicacionPage() {
       {isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
-        <div className="gps-cuerpo">
+        <div className="gps-cuerpo" data-vista={vistaMovil}>
           <div className="disp-kpis gps-kpis">
             {([
               { label: 'Flota monitoreada', valor: cifras.total, tono: 'blue', icono: <Briefcase size={16} strokeWidth={1.9} /> },
@@ -254,10 +254,15 @@ export function UbicacionPage() {
                 capa={capa} encuadreVersion={encuadre} encuadrarA={encuadrarA}
                 historial={historial ?? null} indice={indice} onElegir={elegir} />
               <div className="gps-controles">
+                <button type="button" className="gps-volver" onClick={() => { haptic('selection'); setVistaMovil('lista'); }}><ChevronLeft size={16} />Lista</button>
                 <Button variant="secondary" onClick={() => { haptic('selection'); setEncuadre(v => v + 1); }}>Toda la flota</Button>
                 <SegmentedControl label="Capa del mapa" value={capa} onChange={setCapa} options={CAPAS} />
               </div>
             </div>
+
+            {vistaMovil === 'mapa' && !seleccion && (
+              <p className="gps-mapa-hint">Toca una unidad en el mapa o en la lista para ver su detalle.</p>
+            )}
 
             <AnimatePresence mode="popLayout">
               {seleccion && panel === 'ficha' && (
