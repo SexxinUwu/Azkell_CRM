@@ -1,6 +1,7 @@
 // Filtros de la lista de placas. Un solo lugar define qué unidades entran: la lista, el Excel y el
 // reporte PDF usan `filtrarPlacas`, así lo que se ve es lo que se exporta.
 import { coincide, type Placa } from './api';
+import { opcionesUnicas } from './valoresPlaca';
 
 export type Clase = 'todas' | 'motoras' | 'no-motoras';
 export type SiNo = 'todas' | 'si' | 'no';
@@ -45,7 +46,7 @@ export function filtrarPlacas(placas: Placa[], f: FiltrosPlacas, busqueda: strin
 /** Valores distintos de un campo, ordenados y sin vacíos (opciones de cada filtro) */
 export function valoresDe(placas: Placa[], campo: keyof Placa): string[] {
   const valores = placas.map(p => String(p[campo] ?? '').trim()).filter(Boolean);
-  return [...new Set(valores)].sort((a, b) => a.localeCompare(b, 'es'));
+  return opcionesUnicas(valores);
 }
 
 /** Criterios activos en lenguaje de persona, para el encabezado del reporte */
