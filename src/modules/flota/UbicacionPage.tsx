@@ -71,7 +71,8 @@ export function UbicacionPage() {
   const lista = useMemo(() => {
     const q = busqueda.trim().toUpperCase();
     if (!q) return delEmpresa;
-    return delEmpresa.filter(u => [u.placa, u.empresa, u.ubicacion, u.nombre, u.marcaModelo].some(t => t.toUpperCase().includes(q)));
+    // Solo los textos que se muestran en la fila: así cada resultado se explica a simple vista
+    return delEmpresa.filter(u => [u.placa, u.empresa, u.ubicacion, u.nombre].some(t => t.toUpperCase().includes(q)));
   }, [delEmpresa, busqueda]);
 
   const cifras = useMemo(() => {
@@ -85,7 +86,7 @@ export function UbicacionPage() {
     return { total: delEmpresa.length, conSenal, enMovimiento, sinSenal: delEmpresa.length - conSenal };
   }, [delEmpresa]);
 
-  const enLista = lista.filter(u => u.lat != null).length;
+  const enLista = lista.length;
   const visiblesEnMapa = lista.filter(u => u.lat != null && !ocultas.has(u.placa)).length;
   const todasVisibles = lista.length > 0 && lista.every(u => !ocultas.has(u.placa));
   const seleccion = unidades.find(u => u.placa === seleccionada) ?? null;
