@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, SearchX, ShieldCheck, UserCog, Users } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
@@ -8,6 +8,7 @@ import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { RolSheet } from './RolSheet';
+import { UsuarioFila } from './UsuarioFila';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -50,14 +51,6 @@ function usuarioId(u: Usuario): string {
 function usuarioActivo(u: Usuario): boolean {
   if (u.estado) return u.estado.toLowerCase() === 'activo';
   return u.activo === true || u.activo === 1 || u.activo === '1';
-}
-
-function rolColor(rol: string): string {
-  const r = (rol ?? '').toLowerCase();
-  if (r === 'admin' || r.includes('admin') || r.includes('fundador')) return 'accent';
-  if (r.includes('gerencia') || r.includes('gerente')) return 'blue';
-  if (r.includes('tecnico') || r.includes('taller')) return 'amber';
-  return 'neutral';
 }
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
@@ -227,6 +220,30 @@ export function UsuariosPage() {
     }
   }
 
+  const conAcceso = visibles.filter(usuarioActivo);
+  const sinAcceso = visibles.filter(u => !usuarioActivo(u));
+
+  // RENIEC: al escribir un DNI de 8 dígitos se completa el nombre, como en la versión actual.
+  // Si el correo está vacío, sugiere el DNI como usuario de acceso.
+  const dniConsultado = useRef('');
+  useEffect(() => {
+    if (!modalAbierto) { dniConsultado.current = ''; return; }
+    const dni = form.dni.replace(/\D/g, '');
+    if (dni.length !== 8 || dni === dniConsultado.current || form.nombre.trim()) return;
+    dniConsultado.current = dni;
+    let vigente = true;
+    api<Record<string, string | undefined>>(`/proxy/documento?tipo=DNI&numero=${dni}`)
+      .then(d => {
+        if (!vigente) return;
+        const nombre = [d.nombres, d.apellidoPaterno ?? d.apellido_paterno, d.apellidoMaterno ?? d.apellido_materno]
+          .filter(Boolean).join(' ').trim() || (d.nombre ?? '').trim();
+        if (!nombre) return;
+        setForm(f => ({ ...f, nombre: nombre.toUpperCase(), correo: f.correo.trim() ? f.correo : dni }));
+      })
+      .catch(() => { /* sin RENIEC: el nombre se escribe a mano */ });
+    return () => { vigente = false; };
+  }, [form.dni, modalAbierto]);
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -270,74 +287,30 @@ export function UsuariosPage() {
                   <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Limpiar búsqueda</button>
                 </EmptyState>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {visibles.map((u, i) => {
-                    const id     = usuarioId(u);
-                    const correo = String(u.correo ?? u.email ?? '—');
-                    const nombre = String(u.nombre ?? u.nombre_completo ?? correo);
-                    const rol    = String(u.rol ?? 'Usuario');
-                    const cargo  = String(u.cargo ?? '');
-                    const color  = rolColor(rol);
-                    const actv   = usuarioActivo(u);
-                    return (
-                      <div key={id || i} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '10px 12px', borderRadius: 8,
-                        background: 'var(--fill-1)', border: '1px solid var(--separator)',
-                        opacity: actv ? 1 : 0.55,
-                      }}>
-                        {/* Avatar */}
-                        <div style={{
-                          width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                          background: `var(--${color}-tint)`, color: `var(--${color}-ink)`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontWeight: 800, fontSize: '0.95rem',
-                        }}>
-                          {nombre[0]?.toUpperCase() ?? '?'}
-                        </div>
-                        {/* Info */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {nombre}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--label-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {correo}{cargo ? ` · ${cargo}` : ''}
-                          </div>
-                        </div>
-                        {/* Rol badge */}
-                        <span style={{
-                          fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 5, whiteSpace: 'nowrap',
-                          background: `var(--${color}-tint)`, color: `var(--${color}-ink)`,
-                          border: `1px solid var(--${color}-ink)`,
-                        }}>
-                          {rol}
-                        </span>
-                        {/* Estado */}
-                        {!actv && (
-                          <span style={{ fontSize: '0.72rem', color: 'var(--label-3)', fontWeight: 600 }}>Inactivo</span>
-                        )}
-                        {/* Acciones */}
-                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button type="button" title="Editar"
-                            onClick={() => abrirEditar(u)}
-                            style={{ background: 'none', border: '1px solid var(--separator)', borderRadius: 6,
-                              padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--label-1)' }}>
-                            Editar
-                          </button>
-                          <button type="button"
-                            title={actv ? 'Desactivar' : 'Activar'}
-                            disabled={toggling === id}
-                            onClick={() => setConfirmToggle(u)}
-                            style={{ background: 'none', border: '1px solid var(--separator)', borderRadius: 6,
-                              padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem',
-                              color: actv ? 'var(--red-ink)' : 'var(--green-ink)' }}>
-                            {actv ? 'Desactivar' : 'Activar'}
-                          </button>
-                        </div>
+              <div>
+                {[{ titulo: 'Con acceso', grupo: conAcceso }, { titulo: 'Sin acceso', grupo: sinAcceso }]
+                  .filter(s => s.grupo.length > 0)
+                  .map(s => (
+                    <div key={s.titulo}>
+                      <div className="list__header">{s.titulo} · {s.grupo.length}</div>
+                      <div className="list">
+                        {s.grupo.map((u, i) => {
+                          const id = usuarioId(u);
+                          const correo = String(u.correo ?? u.email ?? '—');
+                          const nombre = String(u.nombre ?? u.nombre_completo ?? correo);
+                          const rol = String(u.rol ?? '');
+                          const colorRol = roles.find(r => r.nombre === rol)?.color
+                            ?? (typeof u.rol_color === 'string' ? u.rol_color : null);
+                          return (
+                            <UsuarioFila key={id || i} nombre={nombre} correo={correo} cargo={String(u.cargo ?? '')}
+                              rol={rol} rolColor={colorRol} activo={usuarioActivo(u)} ocupado={toggling === id}
+                              onEditar={() => abrirEditar(u)} onCambiarEstado={() => setConfirmToggle(u)} />
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  ))}
+              </div>
               )}
             </div>
           )}
@@ -399,12 +372,11 @@ export function UsuariosPage() {
                 placeholder="Ej. Juan Pérez" />
             )}
           </Field>
-          <Field label="Correo electrónico">
+          <Field label="Correo electrónico" hint={editando ? 'Si lo cambias, el usuario entra con el nuevo correo.' : undefined}>
             {props => (
               <TextInput {...props} type="email" value={form.correo}
                 onChange={e => setForm(f => ({ ...f, correo: e.target.value }))}
-                placeholder="usuario@empresa.com"
-                disabled={!!editando} />
+                placeholder="usuario@empresa.com" />
             )}
           </Field>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-2)' }}>
@@ -415,7 +387,7 @@ export function UsuariosPage() {
                   placeholder="Ej. Técnico" />
               )}
             </Field>
-            <Field label="DNI">
+            <Field label="DNI" hint="Al escribirlo se completa el nombre.">
               {props => (
                 <TextInput {...props} value={form.dni}
                   onChange={e => setForm(f => ({ ...f, dni: e.target.value }))}

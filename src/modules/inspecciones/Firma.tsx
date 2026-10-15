@@ -15,7 +15,6 @@ export const Firma = forwardRef<FirmaHandle, { onCambio?: (firmada: boolean) => 
     ctx.lineWidth = 2.6;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#1d1d1f';
   }, []);
 
   const punto = (e: PointerEvent) => {
@@ -26,6 +25,8 @@ export const Firma = forwardRef<FirmaHandle, { onCambio?: (firmada: boolean) => 
     canvas.current!.setPointerCapture(e.pointerId);
     dibujando.current = true;
     const ctx = canvas.current!.getContext('2d')!;
+    // Tinta del tema actual (clara en modo oscuro), leída del color del texto
+    ctx.strokeStyle = getComputedStyle(canvas.current!).color;
     const p = punto(e);
     ctx.beginPath();
     ctx.moveTo(p.x, p.y);
@@ -52,8 +53,30 @@ export const Firma = forwardRef<FirmaHandle, { onCambio?: (firmada: boolean) => 
     onCambio?.(false);
   };
 
+  // PNG para el documento: fondo blanco y tinta oscura, sin importar el tema de la pantalla
+  const exportar = (): string => {
+    const src = canvas.current!;
+    const tinta = document.createElement('canvas');
+    tinta.width = src.width;
+    tinta.height = src.height;
+    const tc = tinta.getContext('2d')!;
+    tc.drawImage(src, 0, 0);
+    tc.globalCompositeOperation = 'source-in';
+    tc.fillStyle = '#1d1d1f';
+    tc.fillRect(0, 0, tinta.width, tinta.height);
+
+    const salida = document.createElement('canvas');
+    salida.width = src.width;
+    salida.height = src.height;
+    const ctx = salida.getContext('2d')!;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, salida.width, salida.height);
+    ctx.drawImage(tinta, 0, 0);
+    return salida.toDataURL('image/png');
+  };
+
   useImperativeHandle(ref, () => ({
-    obtener: () => (firmada ? canvas.current!.toDataURL('image/png') : ''),
+    obtener: () => (firmada ? exportar() : ''),
     vacia: () => !firmada,
     limpiar,
   }));
@@ -65,6 +88,7 @@ export const Firma = forwardRef<FirmaHandle, { onCambio?: (firmada: boolean) => 
         width={630}
         height={140}
         className="firma__lienzo"
+        style={{ color: 'var(--label)' }}
         onPointerDown={empezar}
         onPointerMove={mover}
         onPointerUp={terminar}

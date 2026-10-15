@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useInstallApp } from '../lib/useInstallApp';
 import { useAuth } from '../auth/AuthProvider';
-import { Avatar } from '../ui/Display';
+import { AvatarPropio } from '../../modules/perfil/AvatarPropio';
 import { Button, PageLoader } from '../ui/Button';
 import { Sheet } from '../ui/Sheet';
 import { BrandMark, Wordmark } from './BrandMark';
@@ -106,7 +106,7 @@ export function AppShell() {
 
         <div className="sidebar__footer">
           <NavLink to="/perfil" className="user-chip">
-            <Avatar name={user.name} accent />
+            <AvatarPropio name={user.name} accent />
             <div style={{ minWidth: 0, flex: 1 }}>
               <div className="user-chip__name">{user.name}</div>
               <div className="user-chip__role">{user.roleName}</div>
@@ -128,7 +128,7 @@ export function AppShell() {
           <div className="topbar__title" aria-hidden>{pageTitle}</div>
           <ThemeButton className="topbar__tema" />
           <Link to="/perfil" className="topbar__avatar" aria-label="Mi cuenta">
-            <Avatar name={user.name} size="sm" accent />
+            <AvatarPropio name={user.name} size="sm" accent />
           </Link>
         </header>
 
@@ -159,7 +159,7 @@ export function AppShell() {
       {/* Ajustes: cuenta, color, instalación y configuración */}
       <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Ajustes">
         <NavLink to="/perfil" className="modulo-fila" style={{ marginBottom: 'var(--s-4)' }}>
-          <Avatar name={user.name} accent />
+          <AvatarPropio name={user.name} accent />
           <span className="modulo-fila__texto">
             {user.name}
             <span className="modulo-fila__sub">{user.roleName} · {user.companyName}</span>
