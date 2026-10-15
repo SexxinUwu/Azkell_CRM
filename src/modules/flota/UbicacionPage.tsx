@@ -154,7 +154,7 @@ export function UbicacionPage() {
   };
 
   return (
-    <Page wide>
+    <Page wide fill>
       <PageHeader
         eyebrow="Flota"
         title="Ubicación GPS"

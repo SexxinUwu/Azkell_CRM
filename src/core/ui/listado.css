@@ -236,3 +236,9 @@
 .placas-filtros__grupo { display: flex; flex-direction: column; gap: var(--s-2); }
 .placas-filtros__titulo { font-weight: 600; color: var(--label-2); }
 @media (max-width: 639px) { .placas-filtros__texto { display: none; } }
+
+/* Placas: el área de tarjetas, lista o vacío se desplaza dentro de la pantalla */
+.placas-area { min-height: 0; }
+@media (min-width: 1024px) {
+  .page--fill .placas-area { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: var(--s-2); }
+}

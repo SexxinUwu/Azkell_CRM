@@ -110,3 +110,12 @@
 @media (max-width: 767px) {
   .disp-kpi__label { font-size: 0.66rem; letter-spacing: 0.04em; overflow-wrap: anywhere; }
 }
+
+/* Disponibilidad: la tabla se desplaza dentro de la pantalla; acciones en fila */
+@media (min-width: 1024px) {
+  .page--fill .disp-pagina { flex: 1 1 auto; min-height: 0; }
+  .page--fill .disp-tabla-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; }
+}
+.disp-celda-acciones { text-align: right; white-space: nowrap; }
+.disp-botones { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.disp-botones .btn { margin: 0; }

@@ -56,10 +56,11 @@ export function PageHeader({ eyebrow, title, subtitle, actions }: { eyebrow?: st
 // Contenedor de página con entrada suave.
 // `push`: pantalla de detalle (un nivel más adentro) — entra desde la derecha, como en iOS.
 /** wide: usa todo el ancho de la pantalla (listas, mapas y tablas) */
-export function Page({ children, narrow, wide, push }: { children: ReactNode; narrow?: boolean; wide?: boolean; push?: boolean }) {
+/** fill: la página ocupa exactamente la pantalla; cada zona (tabla, lista, mapa) tiene su propia barra de desplazamiento */
+export function Page({ children, narrow, wide, fill, push }: { children: ReactNode; narrow?: boolean; wide?: boolean; fill?: boolean; push?: boolean }) {
   return (
     <motion.div
-      className={`page${narrow ? ' page--narrow' : ''}${wide ? ' page--ancho' : ''}`}
+      className={`page${narrow ? ' page--narrow' : ''}${wide ? ' page--ancho' : ''}${fill ? ' page--fill' : ''}`}
       initial={push ? { opacity: 0, x: 28 } : { opacity: 0 }}
       animate={push ? { opacity: 1, x: 0 } : { opacity: 1 }}
       transition={push ? spring : { duration: 0.25 }}

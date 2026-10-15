@@ -187,7 +187,7 @@ export function DisponibilidadPage() {
   ];
 
   return (
-    <Page wide>
+    <Page wide fill>
       <PageHeader
         eyebrow="Flota"
         title="Disponibilidad de flota"
@@ -213,7 +213,7 @@ export function DisponibilidadPage() {
       {isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
+        <div className="disp-pagina" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
           <div className="disp-kpis">
             {kpis.map((k, i) => (
               <motion.button key={k.clave} type="button" className={`disp-kpi disp-kpi--${KPI_TONO[k.clave]}`}
@@ -295,7 +295,7 @@ export function DisponibilidadPage() {
                           <td>{v.tipo_unidad || <span className="disp-sin">—</span>}</td>
                           <td className="disp-obs">{v.observaciones || <span className="disp-sin">—</span>}</td>
                           <td><GpsCelda v={v} mapa={mapaGps} /></td>
-                          <td className="disp-acciones">
+                          <td className="disp-celda-acciones"><span className="disp-botones">
                             {puedeEditar && v.id && (
                               <Button variant="secondary" size="sm" iconOnly icon={<Pencil size={14} />} aria-label="Editar"
                                 onClick={e => { e.stopPropagation(); setFormulario({ veh: v }); }} />
@@ -304,7 +304,7 @@ export function DisponibilidadPage() {
                               <Button variant="secondary" size="sm" iconOnly icon={<Trash2 size={14} />} aria-label="Eliminar"
                                 onClick={e => { e.stopPropagation(); setPorEliminar(v); }} />
                             )}
-                          </td>
+                          </span></td>
                         </tr>
                       );
                     })}

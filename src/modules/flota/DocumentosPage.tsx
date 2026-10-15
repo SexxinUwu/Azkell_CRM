@@ -85,7 +85,7 @@ export function DocumentosPage() {
   ];
 
   return (
-    <Page wide>
+    <Page wide fill>
       <PageHeader
         eyebrow="Flota"
         title="Documentos de flota"
