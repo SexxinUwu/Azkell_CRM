@@ -9,6 +9,8 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { errorMessage } from '../../core/api/client';
 import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
@@ -35,12 +37,13 @@ function etiquetaCorta(u: UnidadMapa, estado: EstadoUnidad) {
 }
 const COLOR_BADGE: Record<EstadoUnidad, string> = { movimiento: 'blue', ralenti: 'orange', detenido: 'green', sin_senal: 'gray' };
 
-// Ubicación GPS de la flota: lista de unidades, mapa y ficha de cada una. Misma fuente que la versión actual.
+// Ubicación GPS de la flota: lista, mapa y ficha de cada unidad. Misma fuente que la versión actual.
 export function UbicacionPage() {
   const { data, isLoading, isError, error, dataUpdatedAt, isFetching, refetch } = useUnidadesGps();
   const disp = useDisponibilidad();
   const unidades = data ?? [];
   const [empresa, setEmpresa] = useState('TODAS');
+  const [filtrando, setFiltrando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [ocultas, setOcultas] = useState<Set<string>>(() => new Set());
   const [seleccionada, setSeleccionada] = useState<string | null>(null);
@@ -78,6 +81,8 @@ export function UbicacionPage() {
   const visiblesEnMapa = lista.filter(u => u.lat != null && !ocultas.has(u.placa)).length;
   const todasVisibles = lista.length > 0 && lista.every(u => !ocultas.has(u.placa));
   const seleccion = unidades.find(u => u.placa === seleccionada) ?? null;
+  // Con búsqueda, el mapa se acerca a lo encontrado (hasta 25 unidades)
+  const encuadrarA = busqueda.trim() && lista.length <= 25 ? lista.map(u => u.placa) : [];
 
   const conductorDe = (placa: string) =>
     disp.data?.find(d => placaLimpia(d.placa_camion || '') === placa || placaLimpia(d.placa_carreta || '') === placa)?.conductor_asignado || 'Sin asignar';
@@ -105,7 +110,7 @@ export function UbicacionPage() {
   };
 
   return (
-    <Page>
+    <Page wide>
       <PageHeader
         eyebrow="Flota"
         title="Ubicación GPS"
@@ -116,7 +121,7 @@ export function UbicacionPage() {
               <span className="gps-vivo__punto" aria-hidden />
               En vivo{segundos !== null && ` · ${segundos}s`}
             </span>
-            <Button variant="secondary" iconOnly icon={<RefreshCw size={16} />} aria-label="Actualizar" title="Actualizar"
+            <Button variant="plain" iconOnly className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
               disabled={isFetching} onClick={() => refetch()} />
             <MenuOtros opciones={[
               { label: 'Abrir en la versión actual', detalle: 'Historial y reproducción de rutas', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/ubicacion') },
@@ -129,12 +134,12 @@ export function UbicacionPage() {
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
         <div className="gps-cuerpo">
-          <div className="disp-kpis">
+          <div className="disp-kpis gps-kpis">
             {([
-              { label: 'Flota monitoreada', valor: cifras.total, tono: 'blue', icono: <Briefcase size={18} strokeWidth={1.9} /> },
-              { label: 'Con señal GPS', valor: cifras.conSenal, tono: 'green', icono: <MapPin size={18} strokeWidth={1.9} /> },
-              { label: 'En movimiento', valor: cifras.enMovimiento, tono: 'blue', icono: <Navigation size={18} strokeWidth={1.9} /> },
-              { label: 'Sin señal', valor: cifras.sinSenal, tono: 'ink', icono: <Wrench size={18} strokeWidth={1.9} /> },
+              { label: 'Flota monitoreada', valor: cifras.total, tono: 'blue', icono: <Briefcase size={16} strokeWidth={1.9} /> },
+              { label: 'Con señal GPS', valor: cifras.conSenal, tono: 'green', icono: <MapPin size={16} strokeWidth={1.9} /> },
+              { label: 'En movimiento', valor: cifras.enMovimiento, tono: 'blue', icono: <Navigation size={16} strokeWidth={1.9} /> },
+              { label: 'Sin señal', valor: cifras.sinSenal, tono: 'ink', icono: <Wrench size={16} strokeWidth={1.9} /> },
             ] as const).map(k => (
               <div key={k.label} className={`disp-kpi disp-kpi--${k.tono}`}>
                 <span>
@@ -146,21 +151,20 @@ export function UbicacionPage() {
             ))}
           </div>
 
-          <div className="gps-barra">
-            <input type="search" className="gps-barra__buscar" value={busqueda} onChange={e => setBusqueda(e.target.value)}
-              placeholder="Buscar placa, empresa, ciudad (ej. Arequipa)…" aria-label="Buscar unidades" />
-            {empresas.length > 1 && (
-              <SegmentedControl label="Empresa" value={empresa} onChange={setEmpresa} options={[
-                { value: 'TODAS', label: 'Todas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre })),
-              ]} />
-            )}
-          </div>
+          <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar placa, empresa, ciudad…"
+            activos={empresa !== 'TODAS' ? 1 : 0} onAbrirFiltros={() => setFiltrando(true)}>
+            <div className="gps-vistas">
+              <SegmentedControl label="Vista" value={vistaMovil} onChange={setVistaMovil} options={VISTAS} />
+            </div>
+          </BarraFiltros>
+          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={empresa !== 'TODAS' ? 1 : 0}
+            onLimpiar={() => setEmpresa('TODAS')} resultado={lista.length} unidad="unidad">
+            <GrupoFiltro titulo="Empresa">
+              <ChoiceChips label="Empresa" value={empresa} onChange={setEmpresa} options={[{ value: 'TODAS', label: 'Todas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre }))]} />
+            </GrupoFiltro>
+          </HojaFiltros>
 
-          <div className="gps-vistas">
-            <SegmentedControl label="Vista" value={vistaMovil} onChange={setVistaMovil} options={VISTAS} />
-          </div>
-
-          <div className="gps-layout" data-vista={vistaMovil}>
+          <div className="gps-layout" data-vista={vistaMovil} data-ficha={seleccion ? 'si' : 'no'}>
             <section className="gps-lista" aria-label="Unidades">
               <div className="gps-lista__cab">
                 <label className="gps-check">
@@ -202,19 +206,20 @@ export function UbicacionPage() {
             </section>
 
             <div className="gps-mapa-wrap">
-              <UbicacionMapa unidades={unidades} ocultas={ocultas} seleccionada={seleccionada} capa={capa}
-                encuadreVersion={encuadre} onElegir={elegir} />
+              <UbicacionMapa unidades={unidades} ocultas={ocultas} seleccionada={seleccionada} fichaAbierta={!!seleccion}
+                capa={capa} encuadreVersion={encuadre} encuadrarA={encuadrarA} onElegir={elegir} />
               <div className="gps-controles">
                 <Button variant="secondary" onClick={() => { haptic('selection'); setEncuadre(v => v + 1); }}>Toda la flota</Button>
                 <SegmentedControl label="Capa del mapa" value={capa} onChange={setCapa} options={CAPAS} />
               </div>
-              <AnimatePresence>
-                {seleccion && (
-                  <UnidadFicha key={seleccion.placa} u={seleccion} conductor={conductorDe(seleccion.placa)}
-                    onCerrar={() => setSeleccionada(null)} />
-                )}
-              </AnimatePresence>
             </div>
+
+            <AnimatePresence>
+              {seleccion && (
+                <UnidadFicha key={seleccion.placa} u={seleccion} conductor={conductorDe(seleccion.placa)}
+                  onCerrar={() => setSeleccionada(null)} />
+              )}
+            </AnimatePresence>
           </div>
         </div>
       )}
@@ -235,7 +240,7 @@ function UnidadFicha({ u, conductor, onCerrar }: { u: UnidadMapa; conductor: str
 
   return (
     <motion.article className="gps-ficha" aria-label={`Ficha de ${u.placa}`}
-      initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 14 }} transition={spring}>
+      initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }} transition={spring}>
       <header className="gps-ficha__cab">
         <span className="gps-ficha__icono"><Truck size={22} strokeWidth={1.9} /></span>
         <div className="gps-ficha__titulo">
@@ -250,12 +255,12 @@ function UnidadFicha({ u, conductor, onCerrar }: { u: UnidadMapa; conductor: str
       </header>
 
       <div className="gps-ficha__acciones">
-        {tienePos ? (
+        {tienePos && (
           <>
             <a className="gps-accion" href={waze} target="_blank" rel="noopener noreferrer"><Navigation size={14} />Waze</a>
             <a className="gps-accion" href={maps} target="_blank" rel="noopener noreferrer"><MapPin size={14} />Maps</a>
           </>
-        ) : null}
+        )}
         <a className="gps-accion" href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle size={14} />WhatsApp</a>
       </div>
 
@@ -285,4 +290,3 @@ function Dato({ titulo, valor, destacado }: { titulo: string; valor: string; des
     </div>
   );
 }
-

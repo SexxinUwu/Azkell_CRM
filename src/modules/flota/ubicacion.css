@@ -1,6 +1,8 @@
-/* Ubicación GPS: lista de unidades a la izquierda, mapa a la derecha y ficha de cada unidad */
+/* Ubicación GPS: lista de unidades, mapa a toda la altura y la ficha en su propia columna */
 
-.gps-cuerpo { display: flex; flex-direction: column; gap: var(--s-4); }
+.gps-cuerpo { display: flex; flex-direction: column; gap: var(--s-3); }
+.gps-kpis .disp-kpi { padding: var(--s-3) var(--s-4); }
+.gps-kpis .disp-kpi__valor { font-size: 1.5rem; }
 
 /* ─── En vivo ─── */
 .gps-vivo {
@@ -8,21 +10,16 @@
   background: var(--green-tint); color: var(--green-ink); font-size: 0.8125rem; font-weight: 600; white-space: nowrap;
 }
 .gps-vivo__punto { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px var(--green-tint); }
-
-/* ─── Barra: búsqueda y empresa ─── */
-.gps-barra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); }
-.gps-barra__buscar {
-  flex: 1 1 280px; min-width: 0; height: 40px; padding: 0 var(--s-3); border: 0; border-radius: var(--r-md);
-  background: var(--fill); color: var(--label); font: inherit; font-size: 0.9375rem;
-}
-.gps-barra__buscar:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .gps-vistas { display: none; }
 
-/* ─── Diseño: lista + mapa ─── */
+/* ─── Lista + mapa + ficha ─── */
 .gps-layout {
-  display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: var(--s-4);
-  height: clamp(520px, calc(100dvh - 330px), 760px);
+  position: relative;
+  display: grid; grid-template-columns: minmax(300px, 340px) minmax(0, 1fr); gap: var(--s-3);
+  height: clamp(540px, calc(100dvh - 250px), 960px);
 }
+.gps-layout[data-ficha='si'] { grid-template-columns: minmax(300px, 340px) minmax(0, 1fr) minmax(320px, 380px); }
+
 .gps-lista {
   display: flex; flex-direction: column; min-height: 0; overflow: hidden;
   border-radius: var(--r-xl); background: var(--surface); box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -63,8 +60,8 @@
 .gps-tarjeta__stats { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; font-family: var(--font-mono); font-size: 0.7rem; color: var(--label-2); }
 .gps-tarjeta__stats b { color: var(--blue-ink); font-size: 0.75rem; }
 
-/* ─── Mapa ─── */
-.gps-mapa-wrap { position: relative; min-height: 0; overflow: hidden; border-radius: var(--r-xl); box-shadow: 0 0 0 1px var(--separator); }
+/* ─── Mapa: ocupa toda la altura ─── */
+.gps-mapa-wrap { position: relative; min-width: 0; min-height: 0; overflow: hidden; border-radius: var(--r-xl); box-shadow: 0 0 0 1px var(--separator); }
 .gps-mapa { position: absolute; inset: 0; }
 .gps-mapa__lienzo { position: absolute; inset: 0; background: #e5e7eb; }
 .gps-mapa__aviso { position: absolute; inset: auto 12px 12px auto; padding: 6px 10px; border-radius: 8px; background: var(--surface); font-size: 0.8125rem; z-index: 900; }
@@ -74,6 +71,12 @@
 }
 .gps-controles > * { pointer-events: auto; }
 .gps-controles .btn { background: var(--surface); box-shadow: var(--shadow-pop); }
+/* Atribución del mapa: legible pero discreta, en una esquina */
+.leaflet-control-attribution {
+  background: transparent !important; box-shadow: none !important; color: rgba(60, 60, 67, 0.55) !important;
+  font-size: 9px !important; line-height: 1.2 !important; padding: 0 4px !important;
+}
+.leaflet-control-attribution a { color: inherit !important; }
 
 /* Camión en el mapa */
 .gps-camion-icono.leaflet-div-icon { background: transparent; border: 0; }
@@ -85,10 +88,10 @@
   font-family: var(--font-mono); font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
-/* ─── Ficha de la unidad (sobre el mapa) ─── */
+/* ─── Ficha: columna propia a la derecha (no tapa el mapa) ─── */
 .gps-ficha {
-  position: absolute; left: 12px; bottom: 12px; z-index: 850; width: min(400px, calc(100% - 24px)); max-height: 66%;
-  overflow-y: auto; padding: var(--s-4); border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-pop);
+  min-height: 0; height: 100%; overflow-y: auto; padding: var(--s-4); border-radius: var(--r-xl);
+  background: var(--surface); box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 .gps-ficha__cab { display: flex; align-items: center; gap: var(--s-3); }
 .gps-ficha__icono {
@@ -124,19 +127,21 @@
 .gps-ficha__direccion-titulo svg { color: var(--red-ink); }
 .gps-coords { font-family: var(--font-mono); font-size: 0.7rem; color: var(--label-2); }
 
-/* ─── Celular: lista o mapa, con la ficha encima del mapa ─── */
+/* ─── Celular: lista o mapa; la ficha sube sobre el mapa ─── */
 @media (max-width: 899px) {
   .gps-vistas { display: flex; }
-  .gps-layout { display: block; height: auto; }
+  .gps-layout, .gps-layout[data-ficha='si'] { display: block; height: auto; }
   .gps-layout[data-vista='lista'] .gps-mapa-wrap { display: none; }
   .gps-layout[data-vista='mapa'] .gps-lista { display: none; }
   .gps-lista { max-height: 62dvh; }
-  .gps-mapa-wrap { height: 68dvh; }
-  .gps-ficha { max-height: 58%; }
+  .gps-mapa-wrap { height: calc(100dvh - 190px); min-height: 420px; }
+  .gps-layout[data-ficha='si'] .gps-ficha {
+    position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 850; height: auto; max-height: 56%;
+    box-shadow: var(--shadow-pop);
+  }
   .gps-ficha__datos { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 480px) {
-  .gps-ficha { left: 8px; right: 8px; bottom: 8px; width: auto; }
   .gps-ficha__datos { gap: 6px; }
   .gps-dato { padding: var(--s-2); }
   .gps-dato__valor { font-size: 0.8125rem; }

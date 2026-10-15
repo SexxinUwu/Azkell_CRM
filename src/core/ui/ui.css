@@ -1138,3 +1138,12 @@ label.row__main { cursor: pointer; }
 
 .persona-fila { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .persona-fila > * { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ─── Íconos de acción: solo el ícono, con su color (sin fondo) ─── */
+.btn--icono { width: 38px; height: 38px; padding: 0; border: 0; background: transparent; box-shadow: none; border-radius: 10px; }
+.btn--icono:hover:not(:disabled) { background: var(--fill-subtle); }
+.btn--icono-acento { color: var(--accent); }
+.btn--icono-whatsapp { color: #25a244; }
+.btn--icono-pdf { color: #e5484d; }
+.btn--icono-excel { color: #1f9d55; }
+.btn--icono-acento:disabled, .btn--icono-whatsapp:disabled, .btn--icono-pdf:disabled, .btn--icono-excel:disabled { opacity: 0.35; }

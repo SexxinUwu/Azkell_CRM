@@ -80,4 +80,35 @@
 /* ─── Celular: tarjetas; escritorio: tabla ─── */
 /* Dos clases para ganar especificidad frente a .disp-grid de flota.css */
 @media (max-width: 767px) { .disp-tabla-wrap.disp-solo-escritorio { display: none; } }
-@media (min-width: 768px) { .disp-grid.disp-solo-movil { display: none; } }
+@media (min-width: 768px) { .disp-grid.disp-solo-movil, .disp-lista-movil.disp-solo-movil, .disp-fab.disp-solo-movil { display: none; } }
+
+/* ─── Celular: tarjetas como la versión actual ─── */
+.disp-lista-movil { display: flex; flex-direction: column; gap: var(--s-3); }
+.disp-mcard {
+  display: flex; flex-direction: column; gap: 6px; padding: var(--s-4); text-align: left; cursor: pointer;
+  border: 1px solid var(--separator); border-radius: 18px; background: var(--surface); color: var(--label); font: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.disp-mcard__cab { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.disp-mcard__cab .disp-estado { margin-left: auto; }
+.disp-placa--camion { display: inline-flex; align-items: center; gap: 5px; }
+.disp-mcard__titulo { margin-top: 4px; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; }
+.disp-mcard__sub { font-size: 0.8125rem; color: var(--label-2); }
+.disp-mcard__obs { font-size: 0.8125rem; color: var(--label-2); }
+.disp-mcard__pie { display: flex; justify-content: flex-end; margin-top: 4px; }
+
+/* Botón + flotante (celular) */
+.disp-fab {
+  position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); z-index: 60;
+  width: 56px; height: 56px; display: grid; place-items: center; border: 0; border-radius: 50%;
+  background: var(--accent); color: #fff; box-shadow: 0 10px 24px -8px var(--accent-ring); cursor: pointer;
+}
+
+/* Celular: el botón + reemplaza a "Registrar unidad" del encabezado; las tarjetas de resumen no se salen */
+@media (max-width: 767px) { .disp-registrar-escritorio { display: none; } }
+.disp-kpi > span:first-child { min-width: 0; }
+@media (max-width: 767px) {
+  .disp-kpi { padding: var(--s-3); }
+  .disp-kpi__icono { width: 2.1rem; height: 2.1rem; }
+  .disp-kpi__valor { font-size: 1.5rem; }
+}
