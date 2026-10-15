@@ -1,0 +1,83 @@
+/* Disponibilidad de flota: tarjetas de resumen, tabla de escritorio y tarjetas de celular */
+
+/* ─── Barra: búsqueda, vista y empresa ─── */
+.disp-barra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); }
+.disp-barra__buscar { flex: 1 1 260px; min-width: 0; }
+.disp-barra__empresas { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+/* ─── Tarjetas de resumen (también son filtros) ─── */
+.disp-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+@media (min-width: 900px) { .disp-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-4); } }
+.disp-kpi {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  padding: var(--s-4); border: 0; border-radius: var(--r-xl); background: var(--surface);
+  box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
+  color: var(--label); font: inherit; text-align: left; cursor: pointer;
+}
+.disp-kpi[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--accent); }
+.disp-kpi__label { display: block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-2); }
+.disp-kpi__valor { display: block; margin-top: 2px; font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+.disp-kpi__icono {
+  width: 2.5rem; height: 2.5rem; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px;
+  background: var(--kpi-tint); color: var(--kpi-ink);
+}
+.disp-kpi--green { --kpi-tint: var(--green-tint); --kpi-ink: var(--green-ink); }
+.disp-kpi--blue { --kpi-tint: var(--blue-tint); --kpi-ink: var(--blue-ink); }
+.disp-kpi--red { --kpi-tint: var(--red-tint); --kpi-ink: var(--red-ink); }
+.disp-kpi--ink { --kpi-tint: var(--fill); --kpi-ink: var(--label); }
+
+/* ─── Estado y placas ─── */
+.disp-estado {
+  display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; border: 1px solid;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap;
+}
+.disp-estado--green { color: var(--green-ink); background: var(--green-tint); border-color: transparent; }
+.disp-estado--blue { color: var(--blue-ink); background: var(--blue-tint); border-color: transparent; }
+.disp-estado--red { color: var(--red-ink); background: var(--red-tint); border-color: transparent; }
+.disp-placa {
+  display: inline-block; padding: 3px 9px; border-radius: 8px; border: 1px solid var(--separator);
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600; white-space: nowrap;
+}
+.disp-sin { color: var(--label-3); }
+
+/* ─── Tabla de escritorio ─── */
+.disp-tabla-wrap {
+  overflow-x: auto; border-radius: var(--r-xl); background: var(--surface);
+  box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.disp-tabla { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.disp-tabla th {
+  position: sticky; top: 0; z-index: 1; padding: 10px 8px; text-align: left; white-space: nowrap;
+  background: var(--surface); border-bottom: 1px solid var(--separator);
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-2);
+}
+.disp-tabla td { padding: 10px 8px; border-bottom: 1px solid var(--separator); vertical-align: middle; font-size: 0.8125rem; }
+.disp-tabla tr:last-child td { border-bottom: 0; }
+.disp-tabla .disp-num { color: var(--label-3); font-weight: 600; width: 2.5rem; }
+.disp-fila { cursor: pointer; }
+.disp-fila:hover td { background: var(--fill-subtle); }
+.disp-conductor { font-weight: 600; text-transform: uppercase; }
+.disp-obs { max-width: 14rem; color: var(--label-2); }
+.disp-gps {
+  display: inline-flex; align-items: center; gap: 0.3rem; max-width: 17rem;
+  color: var(--label); text-decoration: none; font-size: 0.78rem; font-weight: 500;
+}
+.disp-gps span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-bottom: 1px dashed var(--separator-strong); }
+.disp-gps svg { flex-shrink: 0; color: var(--red-ink); }
+.disp-acciones { text-align: right; white-space: nowrap; }
+.disp-acciones .btn { margin-left: var(--s-1); }
+
+/* ─── Gráficos (matriz por subtipo) ─── */
+.disp-matriz { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.disp-matriz th {
+  padding: var(--s-3); text-align: right; white-space: nowrap; font-size: 0.68rem; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-2); border-bottom: 1px solid var(--separator);
+}
+.disp-matriz th:first-child, .disp-matriz td:first-child { text-align: left; }
+.disp-matriz td { padding: var(--s-3); text-align: right; border-bottom: 1px solid var(--separator); font-variant-numeric: tabular-nums; }
+.disp-matriz tr:last-child td { border-bottom: 0; }
+
+/* ─── Celular: tarjetas; escritorio: tabla ─── */
+/* Dos clases para ganar especificidad frente a .disp-grid de flota.css */
+@media (max-width: 767px) { .disp-tabla-wrap.disp-solo-escritorio { display: none; } }
+@media (min-width: 768px) { .disp-grid.disp-solo-movil { display: none; } }

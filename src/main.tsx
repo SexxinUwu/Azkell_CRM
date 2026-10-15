@@ -30,6 +30,16 @@ const queryClient = new QueryClient({
 
 // Sin service worker propio por ahora: el de la versión actual (/sw.js) controla todo el dominio.
 
+// Si se publicó una versión nueva mientras la pestaña estaba abierta, el archivo de un módulo ya no existe.
+// Se recarga la página una vez (sin bucles) en vez de mostrar el error de carga.
+window.addEventListener('vite:preloadError', (e) => {
+  const ultima = Number(sessionStorage.getItem('fleet_recarga_modulo') || 0);
+  if (Date.now() - ultima < 30_000) return;
+  sessionStorage.setItem('fleet_recarga_modulo', String(Date.now()));
+  e.preventDefault();
+  window.location.reload();
+});
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {/* reducedMotion="user": respeta "Reducir movimiento" del sistema (sin desplazamientos ni escalas) */}

@@ -74,3 +74,49 @@ export async function exportarPDFPorId(
   if (!el) throw new Error(`Elemento #${id} no encontrado en el DOM`);
   return exportarPDF(el, nombreArchivo, opciones);
 }
+
+/**
+ * Monta el elemento para generar su PDF. html2canvas no dibuja lo que está en coordenadas negativas
+ * ni posicionado fuera de flujo, así que va dentro de una caja de 0×0 que lo oculta al usuario.
+ * Devuelve la función que lo quita.
+ */
+export function montarParaPDF(el: HTMLElement): () => void {
+  const caja = document.createElement('div');
+  caja.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;overflow:hidden;';
+  caja.appendChild(el);
+  document.body.appendChild(caja);
+  return () => caja.remove();
+}
+
+/** Descarga un archivo desde el navegador */
+export function descargarArchivo(blob: Blob, nombre: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Envía un PDF por WhatsApp.
+ * - Celular (y navegadores que permiten compartir archivos): hoja de compartir del sistema.
+ * - Escritorio: el PDF se descarga y se abre WhatsApp con el texto, para adjuntarlo ahí.
+ */
+export async function compartirPDF(blob: Blob, nombre: string, texto: string): Promise<'compartido' | 'descargado' | 'cancelado'> {
+  const archivo = new File([blob], nombre, { type: 'application/pdf' });
+  if (navigator.canShare?.({ files: [archivo] })) {
+    try {
+      await navigator.share({ files: [archivo], title: nombre, text: texto });
+      return 'compartido';
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return 'cancelado';
+      // Si el sistema no deja compartir, se sigue por la descarga
+    }
+  }
+  descargarArchivo(blob, nombre);
+  window.open(`https://wa.me/?text=${encodeURIComponent(`${texto}. Adjunta el PDF descargado.`)}`, '_blank', 'noopener');
+  return 'descargado';
+}

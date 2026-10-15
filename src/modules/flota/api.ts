@@ -317,3 +317,106 @@ export function useChecklist() {
     staleTime: 30_000,
   });
 }
+
+// ─── Ubicación GPS de cada unidad (Wialon) ────────────────────────────────────
+// Misma fuente que la versión actual (POST /api/script/obtenerDatosWialon), cruzada por placa sin guiones.
+
+export interface UbicacionGps { ubicacion: string; lat: number; lng: number }
+
+export function useUbicacionesGps() {
+  return useQuery({
+    queryKey: ['flota', 'ubicaciones-gps'],
+    queryFn: async () => {
+      const r = await api<unknown>('/script/obtenerDatosWialon', { method: 'POST', body: { args: [] } });
+      const obj = r as { data?: unknown } | null;
+      const anidado = (obj?.data as { data?: unknown } | undefined)?.data;
+      const lista = (Array.isArray(obj) ? obj : Array.isArray(obj?.data) ? obj?.data : Array.isArray(anidado) ? anidado : []) as Array<Record<string, unknown>>;
+      const mapa = new Map<string, UbicacionGps>();
+      for (const g of lista) {
+        const placa = String(g.placa ?? '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        const lat = Number(g.lat);
+        const lng = Number(g.lng);
+        if (placa && lat && lng) mapa.set(placa, { ubicacion: String(g.ubicacion ?? ''), lat, lng });
+      }
+      return mapa;
+    },
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+}
+
+// ─── Unidades en el mapa (misma fuente que la versión actual: obtenerDatosWialon) ─────────
+
+export interface UnidadMapa {
+  id: number | null;
+  placa: string;
+  nombre: string;
+  empresa: string;
+  tipo: string;
+  marcaModelo: string;
+  km: number;
+  horas: number;
+  lat: number | null;
+  lng: number | null;
+  velocidad: number;
+  rumbo: number;
+  altitud: number | null;
+  satelites: number | null;
+  voltaje: string;
+  ignicion: boolean;
+  ubicacion: string;
+}
+
+/** movimiento: más de 3 km/h · ralenti: encendida y casi quieta · detenido: apagada · sin_senal: sin posición */
+export type EstadoUnidad = 'movimiento' | 'ralenti' | 'detenido' | 'sin_senal';
+
+export function estadoUnidad(u: UnidadMapa): EstadoUnidad {
+  if (u.lat == null || u.lng == null) return 'sin_senal';
+  if (u.velocidad > 3) return 'movimiento';
+  return u.ignicion ? 'ralenti' : 'detenido';
+}
+
+const numero = (v: unknown, defecto = 0) => {
+  const n = Number(v);
+  return v == null || v === '' || !Number.isFinite(n) ? defecto : n;
+};
+
+export function useUnidadesGps() {
+  return useQuery({
+    queryKey: ['flota', 'gps-unidades'],
+    queryFn: async (): Promise<UnidadMapa[]> => {
+      const r = await api<unknown>('/script/obtenerDatosWialon', { method: 'POST', body: { args: [] } });
+      const obj = r as { data?: unknown } | null;
+      const anidado = (obj?.data as { data?: unknown } | undefined)?.data;
+      const lista = (Array.isArray(obj) ? obj : Array.isArray(obj?.data) ? obj?.data : Array.isArray(anidado) ? anidado : []) as Array<Record<string, unknown>>;
+      return lista
+        .map((g): UnidadMapa => {
+          const lat = numero(g.lat, 0);
+          const lng = numero(g.lng, 0);
+          const conPosicion = lat !== 0 && lng !== 0;
+          return {
+            id: g.id == null ? null : numero(g.id),
+            placa: String(g.placa ?? '').trim().toUpperCase(),
+            nombre: String(g.nombre_wialon ?? ''),
+            empresa: String(g.empresa ?? ''),
+            tipo: String(g.tipo_vehiculo ?? ''),
+            marcaModelo: String(g.marca_modelo ?? ''),
+            km: numero(g.km),
+            horas: numero(g.horas),
+            lat: conPosicion ? lat : null,
+            lng: conPosicion ? lng : null,
+            velocidad: numero(g.velocidad),
+            rumbo: numero(g.curso),
+            altitud: g.altitud == null ? null : numero(g.altitud),
+            satelites: g.satelites == null ? null : numero(g.satelites),
+            voltaje: g.voltaje == null ? '' : String(g.voltaje),
+            ignicion: g.ignicion === true || Number(g.ignicion) === 1,
+            ubicacion: String(g.ubicacion ?? ''),
+          };
+        })
+        .filter(u => u.placa);
+    },
+    refetchInterval: 4000,
+    staleTime: 3000,
+  });
+}

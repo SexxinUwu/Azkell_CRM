@@ -1,4 +1,4 @@
-const CACHE_NAME = 'azkell-fleet-v51';
+const CACHE_NAME = 'azkell-fleet-v52';
 const STATIC_CACHE = 'azkell-libs-v2';
 
 // Archivos de la app
@@ -108,7 +108,8 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetchWithTimeout(event.request, 2000)
         .then(resp => {
-          if (resp && resp.status === 200) {
+          // La app nueva (/app) no se guarda: un HTML viejo apunta a módulos que ya no existen
+          if (resp && resp.status === 200 && !url.pathname.startsWith('/app')) {
             const clone = resp.clone();
             caches.open(CACHE_NAME).then(c => c.put(event.request, clone)).catch(() => {});
           }
