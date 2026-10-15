@@ -1208,6 +1208,145 @@
 }
 </style>
 
+<style>
+/* Detalle de la orden de compra: diseño ordenado y sobrio.
+   Solo presentación: los IDs y la lógica (logica.js) no cambian. Las reglas con !important ganan a los estilos en línea. */
+#modalDetalleEntradaOC {
+  --oc-ink: #0f172a;
+  --oc-ink-2: #475569;
+  --oc-ink-3: #64748b;
+  --oc-line: #e5eaf1;
+  --oc-accent: #0369a1;
+  --oc-bg: #f4f6f9;
+}
+#modalDetalleEntradaOC .modal-content {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, system-ui, sans-serif !important;
+  background: var(--oc-bg) !important;
+  border: 0 !important;
+  border-radius: 22px !important;
+  box-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.28) !important;
+  color: var(--oc-ink);
+}
+#modalDetalleEntradaOC .modal-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid var(--oc-line) !important;
+  padding: 18px 24px !important;
+  min-height: 0 !important;
+}
+#modalDetalleEntradaOC .modal-body {
+  background: var(--oc-bg) !important;
+  padding: 18px 24px !important;
+  gap: 14px !important;
+}
+#modalDetalleEntradaOC #det-oc-titulo-num {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em !important;
+}
+
+/* Tarjetas: una sola superficie blanca con borde suave */
+#modalDetalleEntradaOC .card,
+#modalDetalleEntradaOC .row.g-2 > [class*="col-"] > div,
+#modalDetalleEntradaOC .table-responsive {
+  background: #ffffff !important;
+  border: 1px solid var(--oc-line) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+#modalDetalleEntradaOC .row.g-2 > [class*="col-"] > div {
+  padding: 16px 18px !important;
+  gap: 12px !important;
+}
+
+/* Títulos de cada tarjeta: mayúsculas pequeñas, un solo color */
+#modalDetalleEntradaOC .row.g-2 > [class*="col-"] > div > div:first-child {
+  color: var(--oc-accent) !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 700 !important;
+}
+/* Etiquetas y valores */
+#modalDetalleEntradaOC [style*="font-size: 0.66rem"] {
+  font-size: 0.74rem !important;
+  color: var(--oc-ink-3) !important;
+  font-weight: 500 !important;
+  margin-bottom: 2px;
+}
+#modalDetalleEntradaOC .row.g-2 .text-dark.fw-bold {
+  font-size: 0.95rem !important;
+  color: var(--oc-ink) !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+}
+
+/* Tabla de artículos */
+#modalDetalleEntradaOC table {
+  font-size: 0.9rem !important;
+  white-space: normal !important;
+  margin: 0 !important;
+}
+#modalDetalleEntradaOC thead th {
+  background: #f8fafc !important;
+  color: var(--oc-ink-3) !important;
+  font-size: 0.68rem !important;
+  letter-spacing: 0.07em !important;
+  font-weight: 700 !important;
+  border-bottom: 1px solid var(--oc-line) !important;
+  padding: 11px 16px !important;
+}
+#modalDetalleEntradaOC tbody td {
+  padding: 14px 16px !important;
+  border-color: #f1f4f8 !important;
+  color: var(--oc-ink) !important;
+  vertical-align: middle !important;
+}
+#modalDetalleEntradaOC tbody td:last-child,
+#modalDetalleEntradaOC tbody td.text-end {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Barra inferior: total y acciones */
+#modalDetalleEntradaOC .modal-content > .border-top {
+  background: #ffffff !important;
+  border-top: 1px solid var(--oc-line) !important;
+  padding: 16px 24px !important;
+}
+#det-oc-total-neto {
+  font-size: 1.8rem !important;
+  font-weight: 700 !important;
+  color: var(--oc-ink) !important;
+  font-family: inherit !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em !important;
+}
+#modalDetalleEntradaOC .modal-content > .border-top .btn {
+  border-radius: 12px !important;
+  padding: 10px 18px !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  min-height: 44px;
+}
+#modalDetalleEntradaOC .modal-content > .border-top .btn-light {
+  background: #ffffff !important;
+  border-color: var(--oc-line) !important;
+  color: var(--oc-ink-2) !important;
+}
+#modalDetalleEntradaOC .modal-content > .border-top .btn-dark,
+#modalDetalleEntradaOC .modal-content > .border-top .btn[style*="background:#0f172a"] {
+  background: var(--oc-ink) !important;
+  border-color: var(--oc-ink) !important;
+  color: #ffffff !important;
+}
+
+/* En celular: tarjetas a ancho completo y tabla con scroll horizontal */
+@media (max-width: 767px) {
+  #modalDetalleEntradaOC .modal-dialog { width: 100vw !important; max-width: 100vw !important; height: 100vh !important; margin: 0 !important; }
+  #modalDetalleEntradaOC .modal-content { border-radius: 0 !important; height: 100% !important; }
+  #modalDetalleEntradaOC .modal-body { padding: 14px !important; }
+  #modalDetalleEntradaOC #det-oc-total-neto { font-size: 1.5rem !important; }
+}
+</style>
 <div class="modal fade" id="modalDetalleEntradaOC" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 1080px; width: 95vw; height: 92vh; max-height: 92vh; margin: 1rem auto;">
         <div class="modal-content border-0 shadow-2xl overflow-hidden h-100 d-flex flex-column" style="border-radius: 20px; background: #f8fafc; border: 1.5px solid #e2e8f0; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.22); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
@@ -1219,7 +1358,7 @@
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
                     <div>
-                        <span class="text-secondary fw-bold text-uppercase d-block" style="font-size: 0.68rem; letter-spacing: 0.08em; color: #94a3b8;">Órden de Compra</span>
+                        <span class="text-secondary fw-bold text-uppercase d-block" style="font-size: 0.68rem; letter-spacing: 0.08em; color: #94a3b8;">Orden de compra</span>
                         <div class="d-flex align-items-center gap-2">
                             <h3 class="fw-bolder m-0 text-dark" id="det-oc-titulo-num" style="letter-spacing: -0.02em; font-size: 1.40rem; font-weight: 800; color: #0f172a;">
                                 2026-00000
