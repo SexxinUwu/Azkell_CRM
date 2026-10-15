@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight, Banknote, Boxes, ChevronDown, ChevronRight, Contact, IdCard, House, LogOut, Palette, PanelLeftClose, PanelLeftOpen, Route, Settings, Share, ShieldCheck, Truck,
@@ -41,16 +41,21 @@ export function AppShell() {
     : current?.label ?? user?.companyName ?? 'Azkell Fleet';
 
   // La barra superior se vuelve material translúcido solo cuando hay contenido debajo.
+  // En celular el contenido se desplaza dentro de <main> (como la versión actual); en escritorio, la ventana.
+  const mainRef = useRef<HTMLElement>(null);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    const main = mainRef.current;
+    const onScroll = () => setScrolled(Math.max(window.scrollY, main?.scrollTop ?? 0) > 8);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    main?.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); main?.removeEventListener('scroll', onScroll); };
+  }, [!!user]);
 
   // Cada pantalla empieza arriba; cierra "Más" al navegar.
   useEffect(() => {
     window.scrollTo(0, 0);
+    mainRef.current?.scrollTo(0, 0);
     setMoreOpen(false);
     setModuloAbierto(null);
   }, [location.pathname]);
@@ -124,7 +129,7 @@ export function AppShell() {
       </div>
       </aside>
 
-      <div style={{ minWidth: 0 }}>
+      <div className="app__contenido">
         <header className={`topbar${scrolled ? ' is-scrolled' : ''}`}>
           <Link to={homePath(can)} className="topbar__brand" aria-label="Inicio"><BrandMark size={28} /></Link>
           <div className="topbar__title" aria-hidden>{pageTitle}</div>
@@ -134,7 +139,7 @@ export function AppShell() {
           </Link>
         </header>
 
-        <main className="main">
+        <main className="main" ref={mainRef}>
           {/* Pantallas que se descargan aparte: el marco (barras) no se mueve mientras llegan */}
           <Suspense fallback={<PageLoader />}>
             <Outlet />

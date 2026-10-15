@@ -555,3 +555,18 @@
   * { scrollbar-width: none; }
   *::-webkit-scrollbar { display: none; width: 0; height: 0; }
 }
+
+/* Celular: la pantalla ocupa la altura de la ventana y el contenido se desplaza dentro de <main>.
+   Así no depende del desplazamiento del documento (en la app instalada, ese no siempre responde). */
+@media (max-width: 1023px) {
+  .app { height: 100dvh; overflow: hidden; }
+  .app__contenido { height: 100dvh; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .app__contenido > .main {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
