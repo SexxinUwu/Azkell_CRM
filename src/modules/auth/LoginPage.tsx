@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from 'motion/react';
 import { ArrowRight, Check, CircleAlert } from 'lucide-react';
 import { nombreEmpresa, Requiere2FA, useAuth } from '../../core/auth/AuthProvider';
@@ -250,11 +250,20 @@ export function LoginPage() {
 
           <p className="login__help">¿Olvidaste tu contraseña? Pide a Sistemas que la restablezca.</p>
           <p className="login__help login__help--cuenta">¿No tienes cuenta? Pide tus credenciales al Administrador de Sistemas.</p>
+          <p className="login__legal-aviso">Al iniciar sesión aceptas los <Link to="/legal/terminos">Términos</Link> y la <Link to="/legal/privacidad">Política de privacidad</Link>.</p>
 
         </motion.div>
       </motion.div>
 
-      <footer className="login__footer">Azkell Fleet · Lima, Perú</footer>
+      <footer className="login__footer">
+        <nav aria-label="Documentos legales" className="login__legal-nav">
+          <Link to="/legal/privacidad">Privacidad</Link>
+          <Link to="/legal/terminos">Términos</Link>
+          <Link to="/legal/cookies">Cookies</Link>
+          <Link to="/legal/reembolsos">Reembolsos</Link>
+        </nav>
+        <span>Azkell Fleet · Perú</span>
+      </footer>
     </div>
   );
 }

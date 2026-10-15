@@ -1016,7 +1016,7 @@
             const preview = document.getElementById('sunatDetalleFotoPreview');
             const nameEl = document.getElementById('sunatDetalleFotoNombre');
             const wrap = document.getElementById('sunatDetalleFotoPreviewWrap');
-            if (preview) preview.src = guia.foto_evidencia.includes('.pdf') ? 'https://img.icons8.com/color/96/pdf.png' : guia.foto_evidencia;
+            if (preview) preview.src = guia.foto_evidencia.includes('.pdf') ? "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'><rect width='96' height='96' rx='16' fill='%23dc2626'/><text x='48' y='58' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23ffffff'>PDF</text></svg>" : guia.foto_evidencia;
             if (nameEl) nameEl.textContent = 'Evidencia_Adjunta';
             if (wrap) wrap.classList.remove('d-none');
         } else {
@@ -1833,7 +1833,7 @@
                 const preview = document.getElementById('sunatDetalleFotoPreview');
                 const nameEl = document.getElementById('sunatDetalleFotoNombre');
                 const wrap = document.getElementById('sunatDetalleFotoPreviewWrap');
-                if (preview) preview.src = file.type.includes('pdf') ? 'https://img.icons8.com/color/96/pdf.png' : base64;
+                if (preview) preview.src = file.type.includes('pdf') ? "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'><rect width='96' height='96' rx='16' fill='%23dc2626'/><text x='48' y='58' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23ffffff'>PDF</text></svg>" : base64;
                 if (nameEl) nameEl.textContent = file.name;
                 if (wrap) wrap.classList.remove('d-none');
             } else {
@@ -1842,7 +1842,7 @@
                 const nameEl = document.getElementById('manual-gre-foto-nombre');
                 const wrap = document.getElementById('manual-gre-foto-preview-wrap');
                 const empty = document.getElementById('manual-gre-foto-empty');
-                if (preview) preview.src = file.type.includes('pdf') ? 'https://img.icons8.com/color/96/pdf.png' : base64;
+                if (preview) preview.src = file.type.includes('pdf') ? "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'><rect width='96' height='96' rx='16' fill='%23dc2626'/><text x='48' y='58' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23ffffff'>PDF</text></svg>" : base64;
                 if (nameEl) nameEl.textContent = file.name;
                 if (wrap) wrap.classList.remove('d-none');
                 if (empty) empty.classList.add('d-none');

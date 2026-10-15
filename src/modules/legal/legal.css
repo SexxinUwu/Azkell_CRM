@@ -1,0 +1,47 @@
+/* Páginas legales: lectura cómoda, contraste AA y tamaño que se ajusta al celular */
+.legal {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--label);
+  padding: var(--s-4) var(--s-4) var(--s-8);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.legal__cab { max-width: 720px; margin: 0 auto var(--s-4); }
+.legal__volver {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--accent-ink); font-weight: 600; text-decoration: none;
+  min-height: 44px; /* área táctil mínima */
+}
+.legal__volver:focus-visible, .legal__chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.legal__indice { max-width: 720px; margin: 0 auto var(--s-6); display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.legal__chip {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--s-3);
+  border-radius: 999px; background: var(--surface); color: var(--label);
+  text-decoration: none; font-size: 0.9rem; font-weight: 600; box-shadow: var(--shadow-card);
+}
+.legal__chip[aria-current='page'] { background: var(--label); color: var(--label-inverse); }
+.legal__cuerpo {
+  max-width: 720px; margin: 0 auto; background: var(--surface);
+  border-radius: var(--r-lg); padding: var(--s-6) var(--s-5); box-shadow: var(--shadow-card);
+}
+.legal__cuerpo h1 { font-size: clamp(1.6rem, 4vw, 2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 var(--s-2); }
+.legal__cuerpo h2 { font-size: 1.1rem; font-weight: 700; margin: var(--s-6) 0 var(--s-2); }
+.legal__cuerpo p, .legal__cuerpo li { color: var(--label); }
+.legal__cuerpo ul { padding-left: 1.25rem; margin: var(--s-2) 0; }
+.legal__cuerpo li { margin-bottom: var(--s-2); }
+.legal__resumen { color: var(--label-2); margin-bottom: var(--s-4); }
+.legal__borrador {
+  background: var(--amber-tint); color: var(--amber-ink);
+  border-radius: var(--r-md); padding: var(--s-3) var(--s-4); margin: 0 0 var(--s-5); font-size: 0.9rem;
+}
+.legal__pendiente {
+  background: var(--amber-tint); color: var(--amber-ink);
+  border-radius: 4px; padding: 0 4px; font-weight: 600;
+}
+
+/* Pie del login: enlaces legales */
+.login__legal-aviso { font-size: 0.8rem; text-align: center; color: var(--label-2); margin-top: var(--s-3); }
+.login__legal-aviso a, .login__legal-nav a { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 2px; }
+.login__legal-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-3); margin-bottom: var(--s-2); }
+.login__legal-nav a { min-height: 44px; display: inline-flex; align-items: center; }

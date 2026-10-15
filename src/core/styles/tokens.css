@@ -19,7 +19,7 @@
   /* ─── Texto ─── */
   --label: #1d1d1f;              /* principal (casi negro Apple) */
   --label-2: #6e6e73;            /* secundario — 5.0:1 sobre blanco */
-  --label-3: #86868b;            /* terciario: solo metadatos y texto grande */
+  --label-3: #6c6c71;   /* ≥ 4.5:1 sobre blanco, fondo y barra lateral */            /* terciario: solo metadatos y texto grande */
   --label-inverse: #ffffff;
 
   /* ─── Separadores ─── */
@@ -252,8 +252,8 @@
 }
 
 /* Más contraste: bordes definidos y texto secundario más oscuro */
-@media (prefers-contrast: more) {
-  :root {
+@media (prefers-contrast: more) and (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
     --label-2: #3a3a3c;
     --label-3: #515154;
     --separator: rgba(0, 0, 0, 0.3);

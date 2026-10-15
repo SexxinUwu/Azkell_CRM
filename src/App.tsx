@@ -5,6 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { RequirePermission, RequireSession } from './core/auth/guards';
 import { AppShell } from './core/layout/AppShell';
 import { LoginPage } from './modules/auth/LoginPage';
+import { LegalPage } from './modules/legal/LegalPage';
 import { WelcomeTransition } from './modules/auth/WelcomeTransition';
 import { FarewellTransition } from './modules/auth/FarewellTransition';
 import { InicioPage } from './modules/inicio/InicioPage';
@@ -28,6 +29,7 @@ export default function App() {
       <FarewellTransition />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/legal/:pagina" element={<LegalPage />} />
         <Route element={<RequireSession><AppShell /><Inactividad /></RequireSession>}>
           <Route index element={<InicioPage />} />
           <Route path="perfil" element={<PerfilPage />} />
