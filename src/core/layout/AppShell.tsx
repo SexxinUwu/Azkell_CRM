@@ -112,11 +112,13 @@ export function AppShell() {
               {menuFijo ? <PanelLeftClose size={18} strokeWidth={1.9} /> : <PanelLeftOpen size={18} strokeWidth={1.9} />}
               <span className="sidebar__texto">{menuFijo ? 'Contraer menú' : 'Fijar menú abierto'}</span>
             </button>
-            <button type="button" className="nav-item" onClick={logout}>
-              <LogOut size={18} strokeWidth={1.9} />
-              <span className="sidebar__texto">Cerrar sesión</span>
-            </button>
-            <ThemeButton className="nav-item sidebar__tema" />
+            <div className="sidebar__salida">
+              <button type="button" className="nav-item sidebar__salir" onClick={logout}>
+                <LogOut size={18} strokeWidth={1.9} />
+                <span className="sidebar__texto">Cerrar sesión</span>
+              </button>
+              <ThemeButton className="sidebar__tema" />
+            </div>
           </div>
         </div>
       </div>

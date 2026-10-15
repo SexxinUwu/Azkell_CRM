@@ -527,3 +527,25 @@
 .nav-item--soon { cursor: default; opacity: 0.55; }
 .nav-item--soon:hover { background: none; }
 .modulo-fila--pronto { opacity: 0.55; cursor: default; }
+
+/* Salida: "Cerrar sesión" y el botón de tema. En el riel van apilados; desplegado, uno al lado del otro. */
+.sidebar__salida { display: flex; flex-direction: column; gap: 2px; }
+.sidebar:hover .sidebar__salida,
+.sidebar:has(:focus-visible) .sidebar__salida,
+.sidebar--fijo .sidebar__salida { flex-direction: row; align-items: center; }
+.sidebar__salir { flex: 1; min-width: 0; }
+.sidebar__tema {
+  flex-shrink: 0;
+  width: 2.375rem;
+  height: 2.375rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--label-2);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.sidebar__tema:hover { background: var(--fill-subtle); }
+.sidebar__tema:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
