@@ -1,0 +1,67 @@
+/* Status de rampa: tabla de rampas activas (escritorio) y tarjetas compactas (celular) */
+
+@media (max-width: 767px) { .rt-solo-web { display: none; } }
+@media (min-width: 768px) { .rm-solo-movil { display: none; } }
+
+/* ─── Piezas comunes ─── */
+.rt__num {
+  width: 26px; height: 26px; flex-shrink: 0; display: inline-grid; place-items: center; border-radius: 50%;
+  color: #fff; font-size: 0.8125rem; font-weight: 800; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+.rt__pill {
+  display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 600; white-space: nowrap;
+}
+.rt__pill--green { color: var(--green-ink); background: var(--green-tint); }
+.rt__pill--amber { color: var(--amber-ink); background: var(--amber-tint); }
+.rt__pill--gray { color: var(--label-2); background: var(--fill); }
+.rt__placa {
+  display: inline-block; padding: 3px 9px; border: 1px solid var(--separator); border-radius: 8px;
+  font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 700; white-space: nowrap;
+}
+.rt__ot {
+  display: inline-block; padding: 2px 8px; border-radius: 8px; background: var(--accent-tint); color: var(--accent-ink);
+  font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; white-space: nowrap;
+}
+.rt__tiempo { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 700; }
+
+/* ─── Tabla (escritorio) ─── */
+.rt-caja {
+  overflow: auto; max-height: calc(100dvh - 360px); min-height: 240px; border-radius: var(--r-xl);
+  background: var(--surface); box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.rt { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8125rem; }
+.rt th {
+  position: sticky; top: 0; z-index: 1; padding: 11px 12px; text-align: left; white-space: nowrap;
+  background: var(--surface); border-bottom: 1px solid var(--separator);
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-2);
+}
+.rt td { padding: 11px 12px; border-bottom: 1px solid var(--separator); vertical-align: middle; }
+.rt__fila { cursor: pointer; transition: background 0.15s ease; }
+.rt__fila:hover td { background: var(--fill-subtle); }
+.rt__fila:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.rt__rampa { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; white-space: nowrap; }
+.rt__obs { max-width: 22rem; color: var(--label-2); line-height: 1.35; }
+.rt__flecha { color: var(--label-3); }
+
+/* ─── Tarjetas (celular) ─── */
+.rm-lista { display: flex; flex-direction: column; gap: var(--s-3); }
+.rm-card {
+  display: flex; align-items: flex-start; gap: var(--s-3); width: 100%; padding: var(--s-4); text-align: left; cursor: pointer;
+  border: 1px solid var(--separator); border-radius: 18px; background: var(--surface); color: var(--label); font: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.rm-num {
+  width: 34px; height: 34px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%;
+  color: #fff; font-size: 0.9rem; font-weight: 800;
+}
+.rm-cuerpo { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.rm-cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.rm-rampa { font-size: 0.8125rem; font-weight: 600; color: var(--label-2); }
+.rm-placa { font-family: var(--font-mono); font-size: 1.125rem; letter-spacing: 0.02em; }
+.rm-fechas { display: flex; flex-direction: column; gap: 4px; }
+.rm-chip { font-size: 0.75rem; padding: 3px 9px; border-radius: 8px; font-weight: 500; }
+.rm-chip--in { background: var(--green-tint); color: var(--green-ink); }
+.rm-chip--out { background: var(--red-tint); color: var(--red-ink); }
+.rm-pie { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; font-size: 0.8125rem; color: var(--label-2); }
+.rm-km { font-family: var(--font-mono); }
