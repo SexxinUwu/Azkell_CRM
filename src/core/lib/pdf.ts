@@ -19,6 +19,29 @@ export interface OpcionesPDF {
   formato?: 'a4' | 'letter';
   escala?: number;
   margen?: number | [number, number, number, number];
+  /** Corta entre páginas sin partir una fila de tabla */
+  paginado?: boolean;
+}
+
+type Html2pdfWorker = {
+  from(el: HTMLElement): Html2pdfWorker;
+  set(opciones: Record<string, unknown>): Html2pdfWorker;
+  outputPdf(tipo: 'blob'): Promise<Blob>;
+};
+
+function opcionesH2P(nombre: string, opciones: OpcionesPDF) {
+  return {
+    margin: opciones.margen ?? [10, 10, 10, 10],
+    filename: nombre,
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: opciones.escala ?? 2, useCORS: true, logging: false },
+    jsPDF: {
+      unit: 'mm',
+      format: opciones.formato ?? 'a4',
+      orientation: opciones.orientacion ?? 'portrait',
+    },
+    ...(opciones.paginado ? { pagebreak: { mode: ['css', 'legacy'], avoid: 'tr' } } : {}),
+  };
 }
 
 export async function exportarPDF(
@@ -32,17 +55,14 @@ export async function exportarPDF(
     opt: Record<string, unknown>,
   ) => Promise<void>;
   const nombre = nombreArchivo.endsWith('.pdf') ? nombreArchivo : `${nombreArchivo}.pdf`;
-  return h2p(elemento, {
-    margin: opciones.margen ?? [10, 10, 10, 10],
-    filename: nombre,
-    image: { type: 'jpeg', quality: 0.95 },
-    html2canvas: { scale: opciones.escala ?? 2, useCORS: true, logging: false },
-    jsPDF: {
-      unit: 'mm',
-      format: opciones.formato ?? 'a4',
-      orientation: opciones.orientacion ?? 'portrait',
-    },
-  });
+  return h2p(elemento, opcionesH2P(nombre, opciones));
+}
+
+/** Genera el PDF sin descargarlo (para compartirlo como archivo) */
+export async function generarPDFBlob(elemento: HTMLElement, opciones: OpcionesPDF = {}): Promise<Blob> {
+  await cargarHtml2pdf();
+  const h2p = (window as unknown as { html2pdf: () => Html2pdfWorker }).html2pdf;
+  return h2p().from(elemento).set(opcionesH2P('reporte.pdf', opciones)).outputPdf('blob');
 }
 
 export async function exportarPDFPorId(

@@ -223,9 +223,9 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
           <h3 className="form-section__title">Técnico</h3>
           <div className="form-grid">
             {campoLista('modeloMotor', 'Modelo de motor', sugerencias.modeloMotor)}
-            <Field label="N.º de motor">{props => <TextInput {...props} {...texto('nroMotor')} inputMode="numeric" className="input--mono" />}</Field>
-            <Field label="N.º de caja">{props => <TextInput {...props} {...texto('nroCaja')} inputMode="numeric" className="input--mono" />}</Field>
-            <Field label="N.º de corona">{props => <TextInput {...props} {...texto('nroCorona')} inputMode="numeric" className="input--mono" />}</Field>
+            <Field label="N.º de motor">{props => <TextInput {...props} {...texto('nroMotor')} className="input--mono" />}</Field>
+            <Field label="N.º de caja">{props => <TextInput {...props} {...texto('nroCaja')} className="input--mono" />}</Field>
+            <Field label="N.º de corona">{props => <TextInput {...props} {...texto('nroCorona')} className="input--mono" />}</Field>
             <Field label="VIN" wide>{props => <TextInput {...props} {...texto('vin', v => v.toUpperCase())} className="input--mono" />}</Field>
             <Field label="Llantas">{props => <TextInput {...props} {...texto('llantas')} inputMode="numeric" />}</Field>
           </div>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Check, CheckSquare, Container, FileSpreadsheet, LayoutGrid, List, Plus, SearchX, Trash2, Truck, X } from 'lucide-react';
+import { ArrowUpRight, Check, CheckSquare, Container, Download, FileSpreadsheet, FileText, LayoutGrid, List, MessageCircle, Plus, SearchX, SlidersHorizontal, Trash2, Truck, X } from 'lucide-react';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
@@ -16,13 +16,16 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { coincide, eliminarPlacas, usePlacas, type Placa } from './api';
+import { eliminarPlacas, usePlacas, type Placa } from './api';
+import { FILTROS_VACIOS, cuentaFiltros, describirFiltros, filtrarPlacas, type Clase, type FiltrosPlacas } from './filtros';
+import { compartirReportePDF, descargarReportePDF, exportarPlacasExcel } from './reporte';
+import { descargarPlantilla } from './importar';
+import { FiltrosPlacasSheet } from './FiltrosPlacasSheet';
 import { PlacaFicha } from './PlacaFicha';
 import { PlacaFormulario } from './PlacaFormulario';
 import { ImportarPlacas } from './ImportarPlacas';
 import './placas.css';
 
-type Clase = 'todas' | 'motoras' | 'no-motoras';
 type Vista = 'tarjetas' | 'lista';
 const VISTA_KEY = 'azkell.placas.vista';
 
@@ -37,13 +40,13 @@ const Estado = ({ p }: { p: Placa }) => (
 // Flota › Placas: consulta, alta, edición, importación y eliminación de unidades.
 export function PlacasPage() {
   const { data, isLoading, isError, error } = usePlacas();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
   const reduce = useReducedMotion();
   const [busqueda, setBusqueda] = useState('');
-  const [clase, setClase] = useState<Clase>('todas');
-  const [tipos, setTipos] = useState<string[]>([]);
+  const [filtros, setFiltros] = useState<FiltrosPlacas>(FILTROS_VACIOS);
+  const [filtrando, setFiltrando] = useState(false);
   const [vista, setVista] = useState<Vista>(() => (localStorage.getItem(VISTA_KEY) as Vista) || 'tarjetas');
   const [abierta, setAbierta] = useState<Placa | null>(null);
   const [formulario, setFormulario] = useState<{ modo: 'crear' | 'editar'; placa: Placa | null } | null>(null);
@@ -66,18 +69,17 @@ export function PlacasPage() {
     noMotoras: placas.filter(p => !p.motora).length,
   }), [placas]);
 
-  const visibles = useMemo(() => placas.filter(p =>
-    (clase === 'todas' || (clase === 'motoras' ? p.motora : !p.motora))
-    && (!tipos.length || tipos.includes(p.tipo))
-    && coincide(p, busqueda),
-  ), [placas, clase, tipos, busqueda]);
+  const visibles = useMemo(() => filtrarPlacas(placas, filtros, busqueda), [placas, filtros, busqueda]);
+  const cuentaActivos = cuentaFiltros(filtros);
+  const descriptores = describirFiltros(filtros, busqueda);
+  const empresa = user?.companyName ?? '';
 
   const cambiarVista = (v: Vista) => {
     setVista(v);
     try { localStorage.setItem(VISTA_KEY, v); } catch { /* nada */ }
   };
-  const limpiar = () => { setBusqueda(''); setClase('todas'); setTipos([]); };
-  const hayFiltros = !!busqueda || clase !== 'todas' || tipos.length > 0;
+  const limpiar = () => { setBusqueda(''); setFiltros(FILTROS_VACIOS); };
+  const hayFiltros = !!busqueda || cuentaActivos > 0;
 
   const salirSeleccion = () => { setSeleccionando(false); setSeleccion(new Set()); };
   const alternar = (placa: string) => {
@@ -106,6 +108,26 @@ export function PlacasPage() {
     }
   }
 
+  const aviso = (err: unknown) => toast(errorMessage(err), 'error');
+  const excel = async () => {
+    try {
+      await exportarPlacasExcel(visibles);
+      toast(`Excel con ${visibles.length} ${visibles.length === 1 ? 'unidad' : 'unidades'}`);
+    } catch (err) { aviso(err); }
+  };
+  const pdf = async () => {
+    try {
+      await descargarReportePDF(visibles, descriptores, empresa);
+      toast('Reporte descargado');
+    } catch (err) { aviso(err); }
+  };
+  const whatsapp = async () => {
+    try {
+      const r = await compartirReportePDF(visibles, descriptores, empresa);
+      if (r === 'descargado') toast('PDF descargado. Adjúntalo en la conversación de WhatsApp.');
+    } catch (err) { aviso(err); }
+  };
+
   return (
     <Page>
       <PageHeader
@@ -116,6 +138,10 @@ export function PlacasPage() {
           <>
             <MenuOtros opciones={[
               puedeCrear && { label: 'Importar desde Excel', detalle: 'Crea o actualiza placas en lote', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
+              puedeCrear && { label: 'Descargar plantilla', detalle: 'Excel con las columnas para importar', icon: <Download size={17} />, onSelect: () => descargarPlantilla().catch(aviso) },
+              { label: 'Exportar a Excel', detalle: 'Las unidades que ves con los filtros', icon: <FileSpreadsheet size={17} />, separado: true, disabled: !visibles.length, onSelect: excel },
+              { label: 'Reporte en PDF', detalle: 'Descarga el reporte de lo filtrado', icon: <FileText size={17} />, disabled: !visibles.length, onSelect: pdf },
+              { label: 'Enviar por WhatsApp', detalle: 'Comparte el PDF del reporte', icon: <MessageCircle size={17} />, disabled: !visibles.length, onSelect: whatsapp },
               { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('flota/placas') },
             ]} />
             {puedeCrear && (
@@ -152,8 +178,8 @@ export function PlacasPage() {
                   key={k.label}
                   type="button"
                   className={`placas-kpi placas-kpi--${k.tone} placas-kpi--filtro`}
-                  aria-pressed={clase === k.filtro}
-                  onClick={() => { haptic('selection'); setClase(c => (c === k.filtro ? 'todas' : k.filtro!)); }}
+                  aria-pressed={filtros.clase === k.filtro}
+                  onClick={() => { haptic('selection'); setFiltros(f => ({ ...f, clase: f.clase === k.filtro ? 'todas' : k.filtro! })); }}
                   {...animacion}
                 >
                   {contenido}
@@ -178,6 +204,9 @@ export function PlacasPage() {
                 <List size={18} />
               </button>
             </div>
+            <Button variant="secondary" icon={<SlidersHorizontal size={16} />} onClick={() => setFiltrando(true)} aria-label={cuentaActivos ? `Filtros, ${cuentaActivos} activos` : 'Filtros'}>
+              <span className="placas-filtros__texto">Filtros</span>{cuentaActivos > 0 && <span className="placas-filtros__n t-numeric">{cuentaActivos}</span>}
+            </Button>
             {puedeEliminar && (
               <Button variant={seleccionando ? 'primary' : 'secondary'} icon={seleccionando ? <X size={16} /> : <CheckSquare size={16} />}
                 onClick={() => (seleccionando ? salirSeleccion() : setSeleccionando(true))}>
@@ -187,7 +216,7 @@ export function PlacasPage() {
           </div>
           {tiposDisponibles.length > 1 && (
             <div className="placas-tipos">
-              <ToggleChips label="Tipo de unidad" value={tipos} onChange={setTipos} options={tiposDisponibles.map(t => ({ value: t, label: t }))} />
+              <ToggleChips label="Tipo de unidad" value={filtros.tipos} onChange={tipos => setFiltros(f => ({ ...f, tipos }))} options={tiposDisponibles.map(t => ({ value: t, label: t }))} />
             </div>
           )}
 
@@ -294,6 +323,7 @@ export function PlacasPage() {
         onClose={() => setFormulario(null)}
         onGuardada={p => { setFormulario(null); setAbierta(p); }}
       />
+      <FiltrosPlacasSheet open={filtrando} onClose={() => setFiltrando(false)} placas={placas} filtros={filtros} onChange={setFiltros} resultado={visibles.length} />
       <ImportarPlacas open={importando} onClose={() => setImportando(false)} existentes={placas} />
       <ConfirmSheet
         open={!!porEliminar}
