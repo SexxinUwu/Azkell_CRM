@@ -1,4 +1,5 @@
 const express = require('express');
+const { normalizarTipo } = require('../utils/tipo_unidad');
 const router = express.Router();
 
 
@@ -259,7 +260,7 @@ router.post('/importarPlacasMasivo', async (req, res) => {
                     r.marca || r.MARCA || '',
                     r.modelo_uts || r['MODELO UTS'] || r.MODELO_UTS || r.modelo || r.MODELO || '',
                     r.modelo_motor || r['MODELO MOTOR'] || r['MODELO DE MOTOR'] || r['Modelo Motor'] || r.motor || r.MOTOR || '',
-                    r.tipo || r.TIPO || '',
+                    normalizarTipo(r.tipo || r.TIPO || ''),
                     r.sub_tipo || r['SUB TIPO'] || r.SUB_TIPO || '',
                     r.color || r.COLOR || '',
                     r.nro_motor || r['Nº MOTOR'] || r['NRO MOTOR'] || r.NRO_MOTOR || '',
@@ -1066,7 +1067,7 @@ router.post('/:metodo', async (req, res) => {
         const ruc = isEdit ? form.editP_ruc : form.p_ruc;
         const marca = isEdit ? form.editP_marca : form.p_marca;
         const modelo = isEdit ? form.editP_modelo : form.p_modelo;
-        const tipo = isEdit ? form.editP_tipo : form.p_tipo;
+        const tipo = normalizarTipo(isEdit ? form.editP_tipo : form.p_tipo);
         const sub_tipo = isEdit ? form.editP_sub_tipo : form.p_sub_tipo;
         const color = isEdit ? form.editP_color : form.p_color;
         const nro_motor = isEdit ? form.editP_nro_motor : form.p_nro_motor;

@@ -3,6 +3,7 @@
 // Cuando el servidor nuevo tenga /api/v2/placas (Prisma), solo cambia este archivo.
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
+import { normalizarTipo } from './tiposUnidad';
 
 export interface Placa {
   placa: string;
@@ -46,7 +47,7 @@ function desdeFila(f: unknown[]): Placa {
     ruc: txt(f[2]),
     marca: txt(f[3]),
     modelo: txt(f[4]),
-    tipo: txt(f[5]),
+    tipo: normalizarTipo(txt(f[5])),
     subTipo: txt(f[6]),
     color: txt(f[7]),
     nroMotor: txt(f[8]),

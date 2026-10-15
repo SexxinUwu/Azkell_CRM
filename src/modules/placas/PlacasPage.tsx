@@ -7,7 +7,6 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
-import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ToggleChips } from '../../core/ui/Chips';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
@@ -130,35 +129,47 @@ export function PlacasPage() {
         <>
           {/* Resumen con cifras que cuentan al aparecer */}
           <div className="placas-resumen">
-            {[
-              { label: 'Activas', value: resumen.activas, tone: 'green' },
-              { label: 'Motoras', value: resumen.motoras, tone: 'accent' },
-              { label: 'No motoras', value: resumen.noMotoras, tone: 'ink' },
-              { label: 'Inactivas', value: resumen.total - resumen.activas, tone: 'gray' },
-            ].map((k, i) => (
-              <motion.div
-                key={k.label}
-                className={`placas-kpi placas-kpi--${k.tone}`}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ ...spring, delay: reduce ? 0 : 0.05 * i }}
-              >
-                <AnimatedNumber value={k.value} className="placas-kpi__valor t-numeric" />
-                <span className="placas-kpi__label">{k.label}</span>
-              </motion.div>
-            ))}
+            {([
+              { label: 'Activas', value: resumen.activas, tone: 'green', filtro: null },
+              { label: 'Motoras', value: resumen.motoras, tone: 'accent', filtro: 'motoras' },
+              { label: 'No motoras', value: resumen.noMotoras, tone: 'ink', filtro: 'no-motoras' },
+              { label: 'Inactivas', value: resumen.total - resumen.activas, tone: 'gray', filtro: null },
+            ] as Array<{ label: string; value: number; tone: string; filtro: Clase | null }>).map((k, i) => {
+              const animacion = {
+                initial: { opacity: 0, y: 12 },
+                animate: { opacity: 1, y: 0 },
+                transition: { ...spring, delay: reduce ? 0 : 0.05 * i },
+              };
+              const contenido = (
+                <>
+                  <AnimatedNumber value={k.value} className="placas-kpi__valor t-numeric" />
+                  <span className="placas-kpi__label">{k.label}</span>
+                </>
+              );
+              // Motoras y No motoras son filtros: la tarjeta reemplaza a la barra que repetía estos datos
+              return k.filtro ? (
+                <motion.button
+                  key={k.label}
+                  type="button"
+                  className={`placas-kpi placas-kpi--${k.tone} placas-kpi--filtro`}
+                  aria-pressed={clase === k.filtro}
+                  onClick={() => { haptic('selection'); setClase(c => (c === k.filtro ? 'todas' : k.filtro!)); }}
+                  {...animacion}
+                >
+                  {contenido}
+                </motion.button>
+              ) : (
+                <motion.div key={k.label} className={`placas-kpi placas-kpi--${k.tone}`} {...animacion}>
+                  {contenido}
+                </motion.div>
+              );
+            })}
           </div>
 
           <div className="toolbar placas-toolbar">
             <div className="placas-toolbar__buscar">
               <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, cliente, marca, modelo o VIN" />
             </div>
-            <SegmentedControl<Clase>
-              label="Clase de unidad"
-              value={clase}
-              onChange={setClase}
-              options={[{ value: 'todas', label: 'Todas' }, { value: 'motoras', label: 'Motoras' }, { value: 'no-motoras', label: 'No motoras' }]}
-            />
             <div className="placas-toolbar__vista" role="group" aria-label="Vista">
               <button type="button" className="placas-vista-btn pressable" aria-pressed={vista === 'tarjetas'} onClick={() => cambiarVista('tarjetas')} aria-label="Ver en tarjetas">
                 <LayoutGrid size={18} />

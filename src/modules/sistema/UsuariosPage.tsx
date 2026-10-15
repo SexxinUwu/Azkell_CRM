@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, SearchX, ShieldCheck, UserCog, Users } from 'lucide-react';
+import { Plus, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, PasswordInput, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
-import { RolSheet } from './RolSheet';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { RolesPanel } from './RolesPanel';
 import { UsuarioFila } from './UsuarioFila';
+import './sistema.css';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -116,7 +118,6 @@ export function UsuariosPage() {
   const { data: roles = [] } = useRoles();
 
   const [tab, setTab]             = useState<typeof TABS[number]>('Usuarios');
-  const [rolSheet, setRolSheet]   = useState<{ rol: Rol | null } | null>(null);
   const [busqueda, setBusqueda]   = useState('');
   const [form, setForm]           = useState<FormUsuario>(FORM_VACIO);
   const [editando, setEditando]   = useState<Usuario | null>(null);
@@ -263,16 +264,9 @@ export function UsuariosPage() {
 
       {isError && <Notice tone="error">{errorMessage(error)}</Notice>}
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 'var(--s-3)' }}>
-        {TABS.map(t => (
-          <button key={t} type="button"
-            className={`chip${tab === t ? ' chip--active' : ''}`}
-            onClick={() => setTab(t)}>
-            {t === 'Usuarios' ? <><Users size={13} style={{ marginRight: 4 }} />{t} <span className="chip__badge">{lista.length}</span></>
-              : <><ShieldCheck size={13} style={{ marginRight: 4 }} />{t} <span className="chip__badge">{roles.length}</span></>}
-          </button>
-        ))}
+      <div className="sis-tabs">
+        <SegmentedControl<typeof TABS[number]> label="Sección" block value={tab} onChange={setTab}
+          options={[{ value: 'Usuarios', label: `Usuarios · ${lista.length}` }, { value: 'Roles', label: `Roles · ${roles.length}` }]} />
       </div>
 
       {isLoading ? <PageLoader /> : (
@@ -315,38 +309,7 @@ export function UsuariosPage() {
             </div>
           )}
 
-          {/* ── TAB: ROLES ── */}
-          {tab === 'Roles' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-              <div>
-                <Button variant="primary" onClick={() => setRolSheet({ rol: null })}><Plus size={16} /> Nuevo rol</Button>
-              </div>
-              {roles.length === 0 ? (
-                <EmptyState icon={<UserCog size={22} />} title="Sin roles configurados" />
-              ) : roles.map(r => (
-                <button type="button" key={r.id} onClick={() => setRolSheet({ rol: r })} style={{
-                  width: '100%', textAlign: 'left', font: 'inherit', color: 'inherit', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '10px 14px', borderRadius: 8,
-                  background: 'var(--fill-1)', border: '1px solid var(--separator)',
-                }}>
-                  <div style={{
-                    width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
-                    background: r.color || 'var(--accent)',
-                  }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{r.nombre}</div>
-                    {r.es_admin ? (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>Acceso de administrador</div>
-                    ) : null}
-                  </div>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--label-2)', fontFamily: 'var(--font-mono)' }}>
-                    {r.miembros ?? 0} usuarios
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+          {tab === 'Roles' && <RolesPanel roles={roles} />}
         </>
       )}
 
@@ -426,9 +389,6 @@ export function UsuariosPage() {
           </div>
         </div>
       </Sheet>
-
-      {/* ── Confirm toggle estado ── */}
-      <RolSheet open={rolSheet !== null} onClose={() => setRolSheet(null)} rol={rolSheet?.rol ?? null} />
 
       <ConfirmSheet
         open={!!confirmToggle}

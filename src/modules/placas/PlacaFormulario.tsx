@@ -14,6 +14,7 @@ import { formatPlateInput, normalizePlate } from '../../core/lib/peru';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { actualizarPlaca, crearPlaca, sumaTanques, useMetricas, type Placa } from './api';
+import { normalizarTipo, TIPOS_UNIDAD } from './tiposUnidad';
 
 const VACIA: Placa = {
   placa: '', cliente: '', ruc: '', marca: '', modelo: '', tipo: '', subTipo: '', color: '', nroMotor: '', nroCaja: '',
@@ -84,7 +85,8 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
     value: c, label: c, description: existentes.find(x => x.cliente === c && x.ruc)?.ruc,
   })), [existentes]); // eslint-disable-line react-hooks/exhaustive-deps
   const marcas = useMemo(() => unicos(x => x.marca).map(m => ({ value: m, label: m })), [existentes]); // eslint-disable-line react-hooks/exhaustive-deps
-  const tipos = useMemo(() => unicos(x => x.tipo).map(t => ({ value: t, label: t })), [existentes]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Solo la lista oficial, sin repetidos: lo que ya está en la base se muestra con el mismo nombre
+  const tipos = useMemo(() => TIPOS_UNIDAD.map(t => ({ value: t, label: t })), []);
   const sugerencias = useMemo(() => ({
     subTipo: unicos(x => x.subTipo), color: unicos(x => x.color), configuracion: unicos(x => x.configuracion),
     combustible: unicos(x => x.combustible),
@@ -97,7 +99,7 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
     setIntento(true);
     if (Object.keys(errores).length) { haptic('warning'); return; }
     setGuardando(true);
-    const final: Placa = { ...p, capacidadTanque: total || p.capacidadTanque, ...(modo === 'crear' ? { placa: normalizePlate(p.placa) ?? p.placa } : {}) };
+    const final: Placa = { ...p, tipo: normalizarTipo(p.tipo), capacidadTanque: total || p.capacidadTanque,...(modo === 'crear' ? { placa: normalizePlate(p.placa) ?? p.placa } : {}) };
     try {
       if (modo === 'editar') {
         const metrica = metricas.data?.get(final.placa) ?? 'km';

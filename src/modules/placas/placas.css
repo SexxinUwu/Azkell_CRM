@@ -1,5 +1,9 @@
 /* Flota › Placas — tarjetas con la placa peruana, filtros y ficha */
 
+/* Motoras / No motoras: filtros dentro de las tarjetas de resumen */
+.placas-kpi--filtro { font: inherit; text-align: inherit; border: 0; cursor: pointer; }
+.placas-kpi--filtro[aria-pressed='true'] { box-shadow: inset 0 0 0 2px var(--accent); }
+
 /* ─── Tarjetas ─── */
 .placas-grid {
   list-style: none;

@@ -1,0 +1,228 @@
+/* Sistema › Usuarios y roles: lista de personas, roles en lista y detalle, y permisos por módulo. */
+
+/* ─── Usuarios: una fila por persona ─── */
+.usr-fila { gap: var(--s-3); padding: var(--s-3) var(--s-4); min-height: 4.25rem; transition: opacity 0.2s ease; }
+.usr-fila--inactivo .usr-fila__main { opacity: 0.55; }
+
+.usr-fila__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.usr-fila__main:active { opacity: 0.6; }
+.usr-fila__main:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--r-md); }
+
+.usr-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--fill-2);
+  color: var(--label-2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.usr-fila__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.usr-fila__nombre {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.usr-fila__sub { font-size: 0.8125rem; color: var(--label-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Rol: un punto del color del rol y el nombre, sin fondo de color */
+.usr-rol {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  max-width: 11rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.usr-rol::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--rol, var(--label-3));
+}
+@media (max-width: 480px) { .usr-rol { max-width: 6.5rem; } }
+
+/* ─── Roles: lista y detalle ─── */
+.roles { display: flex; flex-direction: column; gap: var(--s-5); min-width: 0; }
+.roles__lista-cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: 0 var(--s-1) var(--s-2); }
+.roles__lista-titulo { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-2); }
+.roles__items { padding: var(--s-1) 0; }
+
+.role-item { align-items: center; padding: var(--s-3) var(--s-4); }
+.role-item[aria-current='true'] { background: var(--accent-tint); }
+.role-item[aria-current='true'] .row__title { color: var(--accent-ink); }
+.role-item__punto { width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; }
+.role-item__nombre { font-weight: 600; }
+
+.roles__detalle { display: flex; flex-direction: column; gap: var(--s-5); min-width: 0; }
+.roles__contenido { display: flex; flex-direction: column; gap: var(--s-5); min-width: 0; }
+.roles__volver {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 2.75rem;
+  margin-left: calc(-1 * var(--s-2));
+  padding: 0 var(--s-2);
+  border: 0;
+  background: none;
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.role-cabecera { display: flex; flex-direction: column; gap: var(--s-4); padding: var(--s-5); }
+.role-name-input { font-size: 1.25rem; font-weight: 600; }
+.role-colores { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.role-color {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--c);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.role-color:active { transform: scale(0.92); }
+.role-color[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--c); }
+.role-meta { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.role-admin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--separator);
+}
+.role-admin__titulo { font-weight: 600; }
+.role-admin__sub { font-size: 0.8125rem; color: var(--label-2); }
+.role-nota { color: var(--label-2); }
+
+/* ─── Permisos por grupo (una tarjeta por grupo) ─── */
+.perm-grupo { background: var(--surface); border-radius: var(--r-xl); box-shadow: var(--shadow-card); overflow: hidden; }
+.perm-grupo__cab {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--separator);
+}
+.perm-grupo__icono {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--fill-1);
+  color: var(--label-2);
+}
+.perm-grupo__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.perm-grupo__titulo { font-weight: 600; font-size: 0.9375rem; }
+.perm-grupo__sub { font-size: 0.8125rem; color: var(--label-2); }
+.perm-grupo__todos {
+  min-height: 2.5rem;
+  padding: 0 var(--s-2);
+  border: 0;
+  background: none;
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.perm-modulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s-3) var(--s-4);
+  padding: var(--s-3) var(--s-5);
+}
+.perm-modulo + .perm-modulo { border-top: 1px solid var(--separator); }
+.perm-modulo__info { flex: 1 1 13rem; min-width: 0; display: flex; flex-direction: column; }
+.perm-modulo__nombre { font-weight: 500; font-size: 0.9375rem; }
+.perm-modulo__desc { font-size: 0.8125rem; color: var(--label-2); }
+.perm-modulo__acciones { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ─── Barra de cambios sin guardar ─── */
+.save-bar {
+  position: fixed;
+  left: var(--s-4);
+  right: var(--s-4);
+  bottom: calc(var(--tabbar-h) + var(--tabbar-gap) + var(--s-3) + var(--safe-bottom));
+  z-index: 50;
+  max-width: 30rem;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-5);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+@media (min-width: 1024px) { .save-bar { bottom: var(--s-6); } }
+.save-bar__texto { font-size: 0.875rem; font-weight: 600; }
+.save-bar__acciones { display: flex; gap: var(--s-2); }
+
+@media (min-width: 900px) {
+  .roles { display: grid; grid-template-columns: 17rem minmax(0, 1fr); align-items: start; }
+  .roles__lista { position: sticky; top: var(--s-4); }
+  .roles__volver { display: none; }
+}
+@media (max-width: 899px) {
+  .roles__detalle { padding-bottom: 6rem; }
+}
+@media (min-width: 640px) {
+  .perm-modulo__acciones { flex-wrap: nowrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .role-color, .usr-fila { transition: none; }
+}
+
+/* Selector Usuarios / Roles */
+.sis-tabs { margin-bottom: var(--s-4); }
+
+/* Fila de rol: nombre y detalle en columna */
+.role-item .row__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.role-item .row__title, .role-item .row__subtitle { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* En celular el rol va debajo del nombre, para que el nombre tenga espacio */
+.usr-fila__rol-movil { display: none; }
+@media (max-width: 480px) {
+  .usr-rol { display: none; }
+  .usr-fila__rol-movil { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
+  .usr-fila__rol-movil::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--rol, var(--label-3)); }
+}
