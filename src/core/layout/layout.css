@@ -549,3 +549,9 @@
 }
 .sidebar__tema:hover { background: var(--fill-subtle); }
 .sidebar__tema:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Celular: el contenido se desplaza con el dedo y la barra de desplazamiento no se ve */
+@media (max-width: 1023px) {
+  * { scrollbar-width: none; }
+  *::-webkit-scrollbar { display: none; width: 0; height: 0; }
+}

@@ -3690,3 +3690,10 @@ body:has(#modal-sesion-expirada.show) .modal-backdrop.show,
 }
 
 
+
+/* Celular: el contenido se desplaza con el dedo y la barra de desplazamiento no se ve */
+@media (max-width: 1023px) {
+    #root-dinamico { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    * { scrollbar-width: none; }
+    *::-webkit-scrollbar { display: none; width: 0; height: 0; }
+}
