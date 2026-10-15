@@ -240,3 +240,13 @@
   .gps-layout[data-vista='mapa'] .gps-mapa-wrap { flex: 0 0 auto; height: 44dvh; min-height: 260px; }
   .gps-layout[data-vista='mapa'][data-ficha='si'] .gps-ficha { flex: 1 1 0; }
 }
+
+/* Controles del mapa: "Lista", "Toda la flota" y Callejero/Satelital en una sola línea, sobre fondo sólido */
+.gps-controles .segmented { background: var(--surface); box-shadow: var(--shadow-pop); }
+@media (max-width: 899px) {
+  .gps-controles { flex-wrap: nowrap; align-items: center; gap: 6px; }
+  .gps-controles > .segmented { margin-left: auto; flex-shrink: 0; }
+  .gps-controles .btn, .gps-volver { padding: 7px 10px; font-size: 0.8125rem; white-space: nowrap; }
+  .gps-controles .segmented .segmented__opcion, .gps-controles .segmented button { font-size: 0.75rem; padding: 5px 8px; }
+  .gps-volver { padding: 7px 10px 7px 6px; }
+}
