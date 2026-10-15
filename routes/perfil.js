@@ -15,6 +15,12 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { motivoClaveRechazada } = require('../services/politica_clave');
+const crypto = require('crypto');
+const { getPresignedUploadUrl, getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+
+// Fotos y portadas de perfil: solo imágenes, siempre bajo perfil/ (el bucket es privado)
+const TIPOS_IMAGEN_PERFIL = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+const CLAVE_IMAGEN_PERFIL = /^perfil\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
 
 module.exports = (db, logAudit) => {
     // GET /api/perfil/me
@@ -186,6 +192,36 @@ module.exports = (db, logAudit) => {
                 res.json({ ok: true });
             }
         );
+    });
+
+    // GET /api/perfil/imagen-upload-url — URL firmada para subir foto o portada directo a S3 (solo imágenes)
+    router.get('/perfil/imagen-upload-url', async (req, res) => {
+        if (!req.user || !req.user.correo) return res.status(401).json({ error: 'No autenticado' });
+        const tipo = String(req.query.contentType || '').toLowerCase();
+        if (!TIPOS_IMAGEN_PERFIL[tipo]) return res.status(400).json({ error: 'Formato no permitido. Usa JPG, PNG o WebP.' });
+        try {
+            const key = `perfil/${crypto.randomUUID()}.${TIPOS_IMAGEN_PERFIL[tipo]}`;
+            const uploadUrl = await getPresignedUploadUrl(key, tipo, 300);
+            const region = (process.env.AWS_REGION || 'us-east-2').trim();
+            const bucket = (process.env.AWS_BUCKET_NAME || '').trim();
+            res.json({ uploadUrl, fileUrl: `https://${bucket}.s3.${region}.amazonaws.com/${key}` });
+        } catch (e) {
+            console.error('Error generando URL de imagen de perfil:', e);
+            res.status(500).json({ error: 'No se pudo preparar la subida. Intenta de nuevo.' });
+        }
+    });
+
+    // POST /api/perfil/imagen-lectura — URL firmada (1 h) para ver una foto o portada de perfil
+    router.post('/perfil/imagen-lectura', async (req, res) => {
+        if (!req.user || !req.user.correo) return res.status(401).json({ error: 'No autenticado' });
+        const clave = s3KeyFromUrl(String((req.body && req.body.url) || ''));
+        if (!clave || !CLAVE_IMAGEN_PERFIL.test(clave)) return res.status(400).json({ error: 'Imagen no válida' });
+        try {
+            res.json({ url: await getPresignedUrl(clave, 3600) });
+        } catch (e) {
+            console.error('Error firmando imagen de perfil:', e);
+            res.status(500).json({ error: 'No se pudo abrir la imagen.' });
+        }
     });
 
     // POST /api/auth/logout (Eliminar token de base de datos)

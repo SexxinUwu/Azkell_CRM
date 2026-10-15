@@ -278,41 +278,6 @@
 }
 @media (max-width: 767px) { .wiz-pie { bottom: calc(96px + env(safe-area-inset-bottom)); } }
 
-/* Firma */
-.firma { position: relative; }
-.firma__lienzo {
-  display: block;
-  width: 100%;
-  aspect-ratio: 630 / 140;
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--separator-strong);
-  touch-action: none;
-  cursor: crosshair;
-}
-.firma__ayuda {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: var(--label-3);
-  font-size: 0.9375rem;
-  pointer-events: none;
-}
-.firma__linea { position: absolute; left: 8%; right: 8%; bottom: 26%; border-bottom: 1px dashed var(--separator-strong); pointer-events: none; }
-.firma__limpiar {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  margin-top: var(--s-2);
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent-ink);
-  font: inherit;
-  font-size: 0.875rem;
-  cursor: pointer;
-}
 
 /* Pantalla final */
 .insp-listo { display: flex; flex-direction: column; align-items: center; gap: var(--s-3); padding: var(--s-8) 0; text-align: center; }

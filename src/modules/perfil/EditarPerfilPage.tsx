@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Camera, CircleAlert, Eraser, ImagePlus } from 'lucide-react';
+import { ArrowLeft, Camera, CircleAlert, ImagePlus } from 'lucide-react';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { Avatar, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Button } from '../../core/ui/Button';
@@ -10,7 +10,7 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { Firma, type FirmaHandle } from '../inspecciones/Firma';
-import { guardarMiPerfil, subirImagenPerfil, useMiPerfil } from './perfilApi';
+import { guardarMiPerfil, subirImagenPerfil, useImagenPerfil, useMiPerfil } from './perfilApi';
 
 // Editar perfil y foto dentro de la app nueva (antes abría el perfil de la versión actual).
 // Mismos campos y endpoints que esa pantalla: nombre, teléfono, foto, portada y firma digital.
@@ -20,6 +20,9 @@ export function EditarPerfilPage() {
   const qc = useQueryClient();
   const { refresh } = useAuth();
   const perfil = useMiPerfil();
+  const datos = perfil.data;
+  const fotoFirmada = useImagenPerfil(datos?.avatar_url);
+  const portadaFirmada = useImagenPerfil(datos?.banner_url);
   const firma = useRef<FirmaHandle>(null);
   const inputFoto = useRef<HTMLInputElement>(null);
   const inputPortada = useRef<HTMLInputElement>(null);
@@ -28,28 +31,26 @@ export function EditarPerfilPage() {
   const [telefono, setTelefono] = useState('');
   const [firmaNueva, setFirmaNueva] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [subiendo, setSubiendo] = useState<'foto' | 'portada' | null>(null);
+  const [subiendo, setSubiendo] = useState<{ tipo: 'foto' | 'portada'; pct: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Rellena el formulario una sola vez con los datos guardados
   const [cargado, setCargado] = useState(false);
   useEffect(() => {
-    if (!perfil.data || cargado) return;
-    setNombre(perfil.data.nombre ?? '');
-    setTelefono(perfil.data.telefono ?? '');
+    if (!datos || cargado) return;
+    setNombre(datos.nombre ?? '');
+    setTelefono(datos.telefono ?? '');
     setCargado(true);
-  }, [perfil.data, cargado]);
-
-  const datos = perfil.data;
+  }, [datos, cargado]);
 
   async function refrescarSesion() {
     await Promise.all([qc.invalidateQueries({ queryKey: ['perfil'] }), refresh()]);
   }
 
   async function subirImagen(tipo: 'foto' | 'portada', archivo: File) {
-    setSubiendo(tipo); setError(null);
+    setSubiendo({ tipo, pct: 0 }); setError(null);
     try {
-      const url = await subirImagenPerfil(archivo);
+      const url = await subirImagenPerfil(archivo, tipo, pct => setSubiendo({ tipo, pct }));
       await guardarMiPerfil(tipo === 'foto' ? { avatar_url: url } : { banner_url: url });
       haptic('success');
       toast(tipo === 'foto' ? 'Foto actualizada.' : 'Portada actualizada.');
@@ -77,13 +78,15 @@ export function EditarPerfilPage() {
   if (perfil.isLoading) return <Page narrow><p className="c-secondary">Cargando…</p></Page>;
   if (perfil.isError || !datos) return <Page narrow><Notice tone="error" icon={<CircleAlert size={16} />}>{errorMessage(perfil.error)}</Notice></Page>;
 
+  const ocupado = subiendo !== null;
+
   return (
     <Page narrow>
       <button type="button" className="btn btn--plain" onClick={() => navigate('/perfil')} style={{ marginBottom: 'var(--s-2)' }}>
         <ArrowLeft size={16} /> Mi cuenta
       </button>
       <PageHeader eyebrow="Cuenta" title="Editar perfil"
-        actions={<Button variant="primary" onClick={guardar} loading={guardando} disabled={subiendo !== null}>Guardar</Button>} />
+        actions={<Button variant="primary" onClick={guardar} loading={guardando} disabled={ocupado}>Guardar</Button>} />
 
       {error && <div style={{ marginBottom: 'var(--s-4)' }}><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
 
@@ -91,21 +94,21 @@ export function EditarPerfilPage() {
       <div className="list">
         <div style={{
           height: 120, borderRadius: 'var(--r-md)', position: 'relative', overflow: 'hidden',
-          background: datos.banner_url ? `center / cover no-repeat url("${datos.banner_url}")` : 'linear-gradient(135deg, #3b82f6, #ec4899)',
+          background: portadaFirmada.data ? `center / cover no-repeat url("${portadaFirmada.data}")` : 'linear-gradient(135deg, #3b82f6, #ec4899)',
         }}>
           <button type="button" className="btn btn--plain" onClick={() => inputPortada.current?.click()}
-            disabled={subiendo !== null} style={{ position: 'absolute', right: 'var(--s-3)', bottom: 'var(--s-3)', background: 'var(--surface)' }}>
-            <ImagePlus size={16} /> {subiendo === 'portada' ? 'Subiendo…' : 'Cambiar portada'}
+            disabled={ocupado} style={{ position: 'absolute', right: 'var(--s-3)', bottom: 'var(--s-3)', background: 'var(--surface)' }}>
+            <ImagePlus size={16} /> {subiendo?.tipo === 'portada' ? `Subiendo ${subiendo.pct}%` : 'Cambiar portada'}
           </button>
         </div>
         <div className="row" style={{ alignItems: 'center' }}>
-          <Avatar name={nombre || datos.nombre} size="lg" accent src={datos.avatar_url} />
+          <Avatar name={nombre || datos.nombre} size="lg" accent src={fotoFirmada.data ?? null} />
           <div className="row__main">
             <div className="row__title">{nombre || datos.nombre}</div>
             <div className="row__subtitle">{datos.cargo || 'Usuario del sistema'}</div>
           </div>
-          <Button variant="secondary" onClick={() => inputFoto.current?.click()} disabled={subiendo !== null}>
-            <Camera size={16} /> {subiendo === 'foto' ? 'Subiendo…' : 'Cambiar foto'}
+          <Button variant="secondary" onClick={() => inputFoto.current?.click()} disabled={ocupado}>
+            <Camera size={16} /> {subiendo?.tipo === 'foto' ? `Subiendo ${subiendo.pct}%` : 'Cambiar foto'}
           </Button>
         </div>
       </div>
@@ -126,7 +129,7 @@ export function EditarPerfilPage() {
         </Field>
       </div>
 
-      {/* Firma digital */}
+      {/* Firma digital: el componente ya trae su botón "Borrar firma" */}
       <div className="list__header" style={{ marginTop: 'var(--s-6)' }}>Firma digital</div>
       <div className="list" style={{ padding: 'var(--s-4)' }}>
         <p className="c-secondary" style={{ marginTop: 0 }}>
@@ -136,11 +139,6 @@ export function EditarPerfilPage() {
           <img src={datos.firma_digital} alt="Firma guardada" style={{ maxWidth: '100%', height: 'auto', background: '#fff', borderRadius: 'var(--r-sm)', marginBottom: 'var(--s-3)' }} />
         )}
         <Firma ref={firma} onCambio={setFirmaNueva} />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--s-3)' }}>
-          <Button variant="secondary" onClick={() => { firma.current?.limpiar(); setFirmaNueva(false); }}>
-            <Eraser size={16} /> Limpiar
-          </Button>
-        </div>
       </div>
     </Page>
   );

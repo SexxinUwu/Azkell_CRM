@@ -7,7 +7,7 @@ import { AccentPicker } from '../../core/ui/AccentPicker';
 import { ThemeSelector } from '../../core/ui/ThemeToggle';
 import { CambiarPasswordSheet } from './CambiarPasswordSheet';
 import { SesionesSheet } from './SesionesSheet';
-import { useMiPerfil } from './perfilApi';
+import { useImagenPerfil, useMiPerfil } from './perfilApi';
 
 // Mi cuenta: datos de la sesión, apariencia, contraseña y sesiones activas. Foto y firma siguen en la versión actual.
 export function PerfilPage() {
@@ -16,13 +16,14 @@ export function PerfilPage() {
   const [sesionesAbiertas, setSesionesAbiertas] = useState(false);
   const navigate = useNavigate();
   const perfil = useMiPerfil();
+  const foto = useImagenPerfil(perfil.data?.avatar_url);
   if (!user) return null;
   return (
     <Page narrow>
       <PageHeader eyebrow="Cuenta" title="Mi cuenta" />
       <div className="list">
         <div className="row">
-          <Avatar name={user.name} size="lg" accent src={perfil.data?.avatar_url} />
+          <Avatar name={user.name} size="lg" accent src={foto.data ?? null} />
           <div className="row__main">
             <div className="row__title">{user.name}</div>
             <div className="row__subtitle">{user.email}</div>

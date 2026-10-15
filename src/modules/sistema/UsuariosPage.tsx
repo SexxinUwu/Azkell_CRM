@@ -7,6 +7,7 @@ import { Field, PasswordInput, SearchField, SelectInput, TextInput } from '../..
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
+import { RolSheet } from './RolSheet';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ interface Rol {
   nombre: string;
   color?: string;
   es_admin?: number;
+  orden?: number | null;
+  permisos_json?: string | null;
   miembros?: number;
 }
 
@@ -59,15 +62,35 @@ function rolColor(rol: string): string {
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
 
+// El servidor manda cada usuario como fila, en el mismo orden que usa la versión actual
+// (routes/legacy.js → obtenerDatosUsuarios). Aquí se convierte a objeto para la pantalla.
+function desdeFila(f: unknown[]): Usuario {
+  return {
+    idUsuario: String(f[0] ?? ''),
+    nombre: String(f[1] ?? ''),
+    cargo: String(f[2] ?? ''),
+    correo: String(f[3] ?? ''),
+    rol: String(f[4] ?? ''),
+    estado: String(f[5] ?? ''),
+    permisos: f[7],
+    rol_id: (f[8] as number | string | null) ?? null,
+    rol_color: f[9] ?? null,
+    ultimo_acceso: f[10] ? String(f[10]) : undefined,
+    dni: String(f[13] ?? ''),
+  };
+}
+
 function useUsuarios() {
   return useQuery<Usuario[]>({
     queryKey: ['sistema', 'usuarios'],
-    queryFn: () =>
-      api('/script/obtenerDatosUsuarios', { method: 'POST', body: { args: [] } }).then((r: unknown) => {
-        if (Array.isArray(r)) return r as Usuario[];
-        const obj = r as { data?: Usuario[]; usuarios?: Usuario[] };
-        return obj.data ?? obj.usuarios ?? [];
-      }),
+    queryFn: async () => {
+      const r = await api<unknown>('/script/obtenerDatosUsuarios', { method: 'POST', body: { args: [] } });
+      const filas = Array.isArray(r) ? r : (r as { data?: unknown } | null)?.data;
+      if (!Array.isArray(filas)) {
+        throw new Error(typeof filas === 'string' ? filas : 'No se pudieron cargar los usuarios.');
+      }
+      return filas.map(f => (Array.isArray(f) ? desdeFila(f) : (f as Usuario)));
+    },
     staleTime: 60_000,
   });
 }
@@ -100,6 +123,7 @@ export function UsuariosPage() {
   const { data: roles = [] } = useRoles();
 
   const [tab, setTab]             = useState<typeof TABS[number]>('Usuarios');
+  const [rolSheet, setRolSheet]   = useState<{ rol: Rol | null } | null>(null);
   const [busqueda, setBusqueda]   = useState('');
   const [form, setForm]           = useState<FormUsuario>(FORM_VACIO);
   const [editando, setEditando]   = useState<Usuario | null>(null);
@@ -321,10 +345,14 @@ export function UsuariosPage() {
           {/* ── TAB: ROLES ── */}
           {tab === 'Roles' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+              <div>
+                <Button variant="primary" onClick={() => setRolSheet({ rol: null })}><Plus size={16} /> Nuevo rol</Button>
+              </div>
               {roles.length === 0 ? (
                 <EmptyState icon={<UserCog size={22} />} title="Sin roles configurados" />
               ) : roles.map(r => (
-                <div key={r.id} style={{
+                <button type="button" key={r.id} onClick={() => setRolSheet({ rol: r })} style={{
+                  width: '100%', textAlign: 'left', font: 'inherit', color: 'inherit', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '10px 14px', borderRadius: 8,
                   background: 'var(--fill-1)', border: '1px solid var(--separator)',
@@ -342,11 +370,8 @@ export function UsuariosPage() {
                   <span style={{ fontSize: '0.8rem', color: 'var(--label-2)', fontFamily: 'var(--font-mono)' }}>
                     {r.miembros ?? 0} usuarios
                   </span>
-                </div>
+                </button>
               ))}
-              <p style={{ fontSize: '0.8rem', color: 'var(--label-3)', marginTop: 8 }}>
-                Para crear o editar roles con permisos granulares, usa la versión actual del sistema.
-              </p>
             </div>
           )}
         </>
@@ -431,6 +456,8 @@ export function UsuariosPage() {
       </Sheet>
 
       {/* ── Confirm toggle estado ── */}
+      <RolSheet open={rolSheet !== null} onClose={() => setRolSheet(null)} rol={rolSheet?.rol ?? null} />
+
       <ConfirmSheet
         open={!!confirmToggle}
         onClose={() => setConfirmToggle(null)}
