@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { Eye, FileText, Truck } from 'lucide-react';
 import { EmptyState } from '../../core/ui/Display';
+import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button } from '../../core/ui/Button';
 import { spring } from '../../core/lib/motion';
 import type { VehiculoFlota } from './api';
@@ -34,11 +35,8 @@ export function DocExpediente({ filas, placa, onElegir, puedeEditar, onCargar, o
           return (
             <li key={v.placa}>
               <button type="button" className={`doc-unidad${activa ? ' doc-unidad--activa' : ''}`} onClick={() => onElegir(v.placa)} aria-current={activa}>
-                <span className="doc-unidad__icono"><Truck size={18} strokeWidth={1.8} /></span>
-                <span className="doc-unidad__texto">
-                  <span className="doc-unidad__placa">{v.placa}</span>
-                  <span className="doc-unidad__tipo">{(v.tipo || 'Sin tipo').toUpperCase()}</span>
-                </span>
+                <span className="doc-unidad__icono" style={{ background: `${m.peor.color}1f`, color: m.peor.color }} aria-hidden><FileText size={17} strokeWidth={1.9} /></span>
+                <LicensePlate plate={v.placa} size="sm" />
                 <span className="doc-punto" style={{ background: m.peor.color }} title={m.peor.texto} aria-hidden />
               </button>
             </li>
