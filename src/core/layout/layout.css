@@ -502,3 +502,28 @@
 .accent-picker__reset { border: 0; background: transparent; color: var(--accent-ink); font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
 
 .topbar__tema { flex-shrink: 0; width: 2.75rem; height: 2.75rem; border-radius: 50%; }
+
+/* ─── Menú: submenús, contadores de pendientes y opciones "Pronto" ─── */
+.nav-grupo__cab { width: 100%; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+.nav-grupo__hijos { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.nav-grupo__flecha { margin-left: auto; color: var(--label-3); transition: transform 200ms var(--ease-out); }
+.nav-grupo__flecha--abierta { transform: rotate(180deg); }
+
+.nav-item__contador {
+  margin-left: auto;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--red);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.nav-item--soon { cursor: default; opacity: 0.55; }
+.nav-item--soon:hover { background: none; }
+.modulo-fila--pronto { opacity: 0.55; cursor: default; }

@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowUpRight, Banknote, Boxes, ChevronRight, Contact, House, LogOut, MapPin, Palette, PanelLeftClose, PanelLeftOpen, Route, Settings, Share, ShieldCheck,
+  ArrowUpRight, Banknote, Boxes, ChevronDown, ChevronRight, Contact, IdCard, House, LogOut, Palette, PanelLeftClose, PanelLeftOpen, Route, Settings, Share, ShieldCheck, Truck,
   SquarePlus, Smartphone, Users, Wrench, type LucideIcon,
 } from 'lucide-react';
 import { useInstallApp } from '../lib/useInstallApp';
@@ -16,6 +16,7 @@ import { ThemeButton, ThemeSelector } from '../ui/ThemeToggle';
 import { ConnectionBanner } from './ConnectionBanner';
 import { AsistenteFab } from '../../modules/asistente/components/AsistenteFab';
 import { useLiveUpdates } from '../api/live';
+import { useNavBadges } from './useNavBadges';
 import { abrirClasico, findNavItem, homePath, visibleSections, type NavItem, type NavSection } from './navigation';
 import './layout.css';
 
@@ -33,6 +34,7 @@ export function AppShell() {
   const app = useInstallApp();
   const live = useLiveUpdates(); // cambios de otros dispositivos, al instante
   const sections = visibleSections(can);
+  const contador = useNavBadges(can('gerencia.ver'));
   const current = findNavItem(location.pathname);
   const pageTitle = location.pathname === '/perfil' ? 'Mi cuenta'
     : location.pathname.startsWith('/q/') ? 'Unidad'
@@ -56,7 +58,7 @@ export function AppShell() {
   if (!user) return null;
   // Barra del celular: Inicio, un botón por módulo (con su nombre) y Ajustes al final.
   // Configuración y Sistema viven en Ajustes.
-  const modulos = sections.filter(sec => !SECCIONES_AJUSTES.includes(sec.title))
+  const modulos = sections.filter(sec => !SECCIONES_AJUSTES.includes(sec.title) && sec.title !== SECCION_INICIO)
     .map(sec => ({ ...sec, items: sec.items.filter(i => i.key !== 'inicio') }))
     .filter(sec => sec.items.length > 0);
   const ajustes = sections.filter(sec => SECCIONES_AJUSTES.includes(sec.title));
@@ -91,18 +93,7 @@ export function AppShell() {
             <div key={section.title}>
               <div className="nav-section__title sidebar__texto">{section.title}</div>
               {section.items.map(item => (
-                item.to ? (
-                  <NavLink key={item.key} to={item.to} end={item.to === '/'} className="nav-item">
-                    <item.icon size={18} strokeWidth={1.9} />
-                    <span className="sidebar__texto">{item.label}</span>
-                  </NavLink>
-                ) : (
-                  <a key={item.key} href="/" className="nav-item" onClick={e => { e.preventDefault(); abrirClasico(item.clasico!); }}>
-                    <item.icon size={18} strokeWidth={1.9} />
-                    <span className="sidebar__texto">{item.label}</span>
-                    <ArrowUpRight size={14} className="nav-item__ext sidebar__texto" aria-label="Se abre en la versión actual" />
-                  </a>
-                )
+                <NavEscritorio key={item.key} item={item} pathname={location.pathname} contador={contador} />
               ))}
             </div>
           ))}
@@ -158,9 +149,7 @@ export function AppShell() {
       <Sheet open={!!moduloSheet} onClose={() => setModuloAbierto(null)} title={moduloSheet?.title ?? ''}>
         {moduloSheet && (
           <div className="modulo-lista">
-            {moduloSheet.items.map(item => (
-              <FilaModulo key={item.key} item={item} activa={isActive(item, location.pathname)} onNavegar={() => setModuloAbierto(null)} />
-            ))}
+            <ListaModulo items={moduloSheet.items} pathname={location.pathname} contador={contador} onNavegar={() => setModuloAbierto(null)} />
           </div>
         )}
       </Sheet>
@@ -187,7 +176,7 @@ export function AppShell() {
         </div>
 
         {ajustes.map(section => (
-          <AjusteSeccion key={section.title} section={section} activa={location.pathname} />
+          <AjusteSeccion key={section.title} section={section} activa={location.pathname} contador={contador} />
         ))}
 
         <div className="more-section">
@@ -222,26 +211,94 @@ function isActive(item: NavItem, pathname: string) {
   return item.to === '/' ? pathname === '/' : pathname.startsWith(item.to);
 }
 
-const SECCIONES_AJUSTES = ['Configuración', 'Sistema'];
+const SECCIONES_AJUSTES = ['Configuración'];
+// El inicio ya está en la barra inferior (Inicio), así que su sección no genera un botón aparte
+const SECCION_INICIO = 'Dashboard';
 
 const ICONOS_MODULO: Record<string, LucideIcon> = {
-  Gerencia: ShieldCheck, Flota: MapPin, Mantenimiento: Wrench, 'Almacén': Boxes, Operaciones: Route,
-  Directorio: Contact, 'Tesorería': Banknote, 'Personas y seguridad': Users,
+  Operaciones: Route, 'Operaciones Marsisa': Route, Flota: Truck, Mantenimiento: Wrench, 'Almacén': Boxes,
+  Gerencia: ShieldCheck, RRHH: Users, 'Tesorería': Banknote, Conductor: IdCard, Seguridad: ShieldCheck, Directorio: Contact,
 };
 const iconoModulo = (titulo: string): LucideIcon => ICONOS_MODULO[titulo] ?? Boxes;
 // El nombre del módulo va completo, tal cual aparece en el menú
 const etiquetaModulo = (titulo: string) => titulo;
 
-function FilaModulo({ item, activa, onNavegar }: { item: NavItem; activa: boolean; onNavegar: () => void }) {
+type Contador = Record<string, number>;
+
+function Insignia({ item, contador, className }: { item: NavItem; contador: Contador; className: string }) {
+  const n = item.badge ? (contador[item.badge] ?? 0) : 0;
+  return n > 0 ? <span className={className}>{n}</span> : null;
+}
+
+// Escritorio: un enlace, una opción con destino en la versión actual, un grupo desplegable o una opción "Pronto"
+function NavEscritorio({ item, pathname, contador }: { item: NavItem; pathname: string; contador: Contador }) {
+  const hayActivo = !!item.children?.some(c => isActive(c, pathname));
+  const [abierto, setAbierto] = useState(hayActivo);
+  useEffect(() => { if (hayActivo) setAbierto(true); }, [hayActivo]);
+
+  if (item.children) {
+    return (
+      <div className="nav-grupo">
+        <button type="button" className="nav-item nav-grupo__cab" aria-expanded={abierto} onClick={() => setAbierto(v => !v)}>
+          <item.icon size={18} strokeWidth={1.9} />
+          <span className="sidebar__texto">{item.label}</span>
+          <ChevronDown size={16} aria-hidden className={`nav-grupo__flecha sidebar__texto${abierto ? ' nav-grupo__flecha--abierta' : ''}`} />
+        </button>
+        {abierto && (
+          <div className="nav-grupo__hijos">
+            {item.children.map(c => <NavEscritorio key={c.key} item={c} pathname={pathname} contador={contador} />)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const contenido = (
+    <>
+      <item.icon size={18} strokeWidth={1.9} />
+      <span className="sidebar__texto">{item.label}</span>
+      <Insignia item={item} contador={contador} className="nav-item__contador sidebar__texto" />
+      {item.pronto && <span className="nav-item__tag sidebar__texto">Pronto</span>}
+      {!item.pronto && !item.to && <ArrowUpRight size={14} className="nav-item__ext sidebar__texto" aria-label="Se abre en la versión actual" />}
+    </>
+  );
+  if (item.pronto) return <span className="nav-item nav-item--soon" aria-disabled="true">{contenido}</span>;
+  if (item.to) return <NavLink to={item.to} end={item.to === '/'} className="nav-item">{contenido}</NavLink>;
+  return <a href="/" className="nav-item" onClick={e => { e.preventDefault(); abrirClasico(item.clasico!); }}>{contenido}</a>;
+}
+
+// Celular: la lista de pantallas de un módulo (los submenús salen como encabezado con sus opciones)
+function ListaModulo({ items, pathname, contador, onNavegar }: { items: NavItem[]; pathname: string; contador: Contador; onNavegar: () => void }) {
+  return (
+    <>
+      {items.map(item => item.children ? (
+        <div key={item.key} className="more-section">
+          <div className="list__header">{item.label}</div>
+          <div className="modulo-lista">
+            {item.children.map(c => <FilaModulo key={c.key} item={c} activa={isActive(c, pathname)} contador={contador} onNavegar={onNavegar} />)}
+          </div>
+        </div>
+      ) : (
+        <FilaModulo key={item.key} item={item} activa={isActive(item, pathname)} contador={contador} onNavegar={onNavegar} />
+      ))}
+    </>
+  );
+}
+
+function FilaModulo({ item, activa, contador, onNavegar }: { item: NavItem; activa: boolean; contador: Contador; onNavegar: () => void }) {
   const contenido = (
     <>
       <span className="modulo-fila__icono"><item.icon size={20} strokeWidth={1.9} /></span>
       <span className="modulo-fila__texto">{item.label}</span>
-      {item.to
-        ? <ChevronRight size={18} className="modulo-fila__flecha" />
-        : <ArrowUpRight size={16} className="modulo-fila__flecha" aria-label="Se abre en la versión actual" />}
+      <Insignia item={item} contador={contador} className="nav-item__contador" />
+      {item.pronto
+        ? <span className="nav-item__tag">Pronto</span>
+        : item.to
+          ? <ChevronRight size={18} className="modulo-fila__flecha" />
+          : <ArrowUpRight size={16} className="modulo-fila__flecha" aria-label="Se abre en la versión actual" />}
     </>
   );
+  if (item.pronto) return <span className="modulo-fila modulo-fila--pronto" aria-disabled="true">{contenido}</span>;
   const clase = `modulo-fila${activa ? ' modulo-fila--activa' : ''}`;
   return item.to ? (
     <NavLink to={item.to} end={item.to === '/'} className={clase} onClick={onNavegar}>{contenido}</NavLink>
@@ -250,17 +307,24 @@ function FilaModulo({ item, activa, onNavegar }: { item: NavItem; activa: boolea
   );
 }
 
-function AjusteSeccion({ section, activa }: { section: NavSection; activa: string }) {
+function AjusteSeccion({ section, activa, contador }: { section: NavSection; activa: string; contador: Contador }) {
   return (
     <div className="more-section">
       <div className="list__header">{section.title}</div>
       <div className="list">
-        {section.items.map(item => (
-          item.to ? (
+        {section.items.flatMap(i => i.children ?? [i]).map(item => (
+          item.pronto ? (
+            <div key={item.key} className="row" aria-disabled="true" style={{ color: 'var(--label-2)' }}>
+              <item.icon size={20} strokeWidth={1.8} />
+              <span className="row__main row__title">{item.label}</span>
+              <span className="nav-item__tag">Pronto</span>
+            </div>
+          ) : item.to ? (
             <NavLink key={item.key} to={item.to} className="row" style={{ color: 'var(--label)', textDecoration: 'none' }}
               aria-current={isActive(item, activa) ? 'page' : undefined}>
               <item.icon size={20} strokeWidth={1.8} />
               <span className="row__main row__title">{item.label}</span>
+              <Insignia item={item} contador={contador} className="nav-item__contador" />
             </NavLink>
           ) : (
             <button key={item.key} type="button" className="row" onClick={() => abrirClasico(item.clasico!)}>

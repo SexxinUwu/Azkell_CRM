@@ -20,7 +20,8 @@ export function InicioPage() {
   const { user, can } = useAuth();
   const navigate = useNavigate();
   const sections = visibleSections(can)
-    .map(s => ({ ...s, items: s.items.filter(i => i.key !== 'inicio') }))
+    // Los submenús se muestran como accesos sueltos; lo que todavía no existe (Pronto) no se muestra
+    .map(s => ({ ...s, items: s.items.flatMap(i => i.children ?? [i]).filter(i => i.key !== 'inicio' && !i.pronto) }))
     .filter(s => s.items.length > 0);
 
   const abrir = (item: NavItem) => (item.to ? navigate(item.to) : abrirClasico(item.clasico!));
