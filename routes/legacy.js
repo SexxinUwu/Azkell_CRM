@@ -9,6 +9,10 @@ module.exports = (db, broadcast, logAudit) => {
 // Caché POR EMPRESA (antes era una sola para todas: una empresa podía recibir las inspecciones
 // o las posiciones GPS de otra mientras la caché estaba vigente).
 const _cachePorEmpresa = new Map();
+// Direcciones ya geocodificadas, por posición redondeada (≈110 m): no se vuelven a pedir a Wialon
+const _geoCache = new Map();
+const claveGeo = (lat, lng) => `${Number(lat).toFixed(3)},${Number(lng).toFixed(3)}`;
+const guardarGeo = (coord, texto) => { if (_geoCache.size > 20000) _geoCache.clear(); _geoCache.set(claveGeo(coord.lat, coord.lon), texto); };
 const _ce = (req) => {
     const k = (req && (req.tenantSlug || (req.tenantInfo && req.tenantInfo.db_name))) || 'default';
     if (!_cachePorEmpresa.has(k)) _cachePorEmpresa.set(k, { insp: null, inspTime: 0, inspVuelo: null, wialon: null, wialonTime: 0, wialonVuelo: null });
@@ -1318,7 +1322,7 @@ router.post('/:metodo', async (req, res) => {
             return res.json({ data: Array.isArray(_ce(req).wialon) ? _ce(req).wialon : [], grupos: [] });
         }
 
-        if (_ce(req).wialonVuelo) {
+        if (_ce(req).wialonVuelo && !_ce(req).wialon) {
             try {
                 const result = await _ce(req).wialonVuelo;
                 if (result && result.data && Array.isArray(result.data)) {
@@ -1332,7 +1336,7 @@ router.post('/:metodo', async (req, res) => {
             }
         }
 
-        _ce(req).wialonVuelo = (async () => {
+        const refrescarWialon = (req) => (async () => {
             // Lee token desde DB; si no hay, cae en .env como fallback
             const obtenerTokenWialon = () => new Promise((resolve) => {
                 db.query(
@@ -1482,8 +1486,9 @@ router.post('/:metodo', async (req, res) => {
                         };
 
                         if (lat && lng) {
-                            coordsToGeocode.push({ lat, lon: lng });
-                            coordIndexMap.push(vehiculosLive.length);
+                            const claveG = claveGeo(lat, lng);
+                            if (_geoCache.has(claveG)) { vObj.ubicacion = _geoCache.get(claveG); }
+                            else { coordsToGeocode.push({ lat, lon: lng }); coordIndexMap.push(vehiculosLive.length); }
                         }
 
                         vehiculosLive.push(vObj);
@@ -1507,6 +1512,7 @@ router.post('/:metodo', async (req, res) => {
                                     const targetIdx = coordIndexMap[i];
                                     if (vehiculosLive[targetIdx] && typeof addr === 'string') {
                                         vehiculosLive[targetIdx].ubicacion = addr.trim();
+                                        guardarGeo(coordsToGeocode[i], addr.trim());
                                     }
                                 });
                             }
@@ -1542,6 +1548,18 @@ router.post('/:metodo', async (req, res) => {
                 return { error: 'No se pudo conectar con el servidor GPS: ' + fetchErr.message };
             }
         })();
+
+        // Ya hay datos: se responden de inmediato y se refrescan en segundo plano (sin esperar a Wialon)
+        if (_ce(req).wialon) {
+            const ce = _ce(req);
+            if (!ce.wialonVuelo) {
+                ce.wialonVuelo = refrescarWialon(req).catch(e => { console.warn('Wialon en segundo plano:', e.message); return null; }).finally(() => { ce.wialonVuelo = null; });
+            }
+            const snap = ce.wialon;
+            return res.json(snap && snap.data ? snap : { data: Array.isArray(snap) ? snap : [], grupos: [] });
+        }
+
+        _ce(req).wialonVuelo = refrescarWialon(req);
 
         try {
             const result = await _ce(req).wialonVuelo;
