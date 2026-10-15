@@ -4,7 +4,7 @@
 const express = require('express');
 const { KNOWLEDGE } = require('./asistente-knowledge');
 const { detectReport } = require('./asistente-intents');
-const { REPORTS, availableReports, buildReport, resolveRange, todayForPrompt } = require('./asistente-reports');
+const { REPORTS, availableReports, buildReport, resolveRange, todayForPrompt, filtrosPlaca, filtrosPlacasDelMensaje, tituloReporte } = require('./asistente-reports');
 
 const MODELS = (process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3.8-flash')
   .split(',').map(m => m.trim()).filter(Boolean);
@@ -60,6 +60,10 @@ function reportTool(allowed) {
           formato: { type: 'STRING', enum: ['excel', 'pdf'], description: 'excel para Excel; pdf para PDF' },
           desde: { type: 'STRING', description: 'Solo inspecciones y fleetrun: fecha inicial YYYY-MM-DD' },
           hasta: { type: 'STRING', description: 'Solo inspecciones y fleetrun: fecha final YYYY-MM-DD' },
+          cliente: { type: 'STRING', description: 'Solo placas: nombre o parte del cliente, por ejemplo MARSISA. Omitir si no lo nombra.' },
+          marca: { type: 'STRING', description: 'Solo placas: marca del vehículo, por ejemplo SCANIA.' },
+          tipo_unidad: { type: 'STRING', description: 'Solo placas: tipo de unidad, por ejemplo Tracto, Carreta o Camión.' },
+          estado: { type: 'STRING', description: 'Solo placas: Activa o Inactiva.' },
         },
         required: ['tipo', 'formato'],
       },
@@ -182,6 +186,7 @@ function toReport(call, allowed) {
   const tipo = String(args.tipo ?? '');
   if (!allowed.includes(tipo)) return 'No puedo preparar ese reporte con tus permisos.';
   const formato = args.formato === 'pdf' ? 'pdf' : 'excel';
+  if (tipo === 'placas') return { tipo, formato, title: tituloReporte(tipo, filtrosPlaca(args)), ...filtrosPlaca(args) };
   if (!REPORTS[tipo].range) return { tipo, formato, title: REPORTS[tipo].label };
   const desde = typeof args.desde === 'string' && DATE_KEY.test(args.desde) ? args.desde : undefined;
   const hasta = typeof args.hasta === 'string' && DATE_KEY.test(args.hasta) ? args.hasta : undefined;
@@ -200,7 +205,7 @@ function reportAnswer(report) {
   return `Listo, preparé el reporte de ${report.title.toLowerCase()}${range} en ${format}.`;
 }
 
-async function ask(userId, user, history, message) {
+async function ask(userId, user, history, message, db) {
   if (!asistenteEnabled()) {
     const err = new Error('El asistente aún no está activado. Avisa al administrador.');
     err.status = 503;
@@ -210,6 +215,7 @@ async function ask(userId, user, history, message) {
 
   const direct = detectReport(message);
   if (direct) {
+    if (direct.tipo === 'placas') Object.assign(direct, await filtrosPlacasDelMensaje(db, message));
     const report = toReport({ name: 'generar_reporte', args: direct }, allowed);
     if (typeof report === 'string') return { answer: report };
     return { answer: reportAnswer(report), report };
@@ -256,7 +262,7 @@ module.exports = function (db) {
       if (!Array.isArray(history)) return res.status(400).json({ error: 'Historial no válido.' });
 
       const userId = String(req.user?.id || req.user?.correo || 'anon');
-      const result = await ask(userId, req.user, history, message.trim());
+      const result = await ask(userId, req.user, history, message.trim(), req.db || db);
       res.json(result);
     } catch (err) {
       res.status(err.status || 500).json({ error: err.message || 'Error inesperado.' });
@@ -267,7 +273,7 @@ module.exports = function (db) {
     try {
       const targetDb = req.db || db;
       const { desde, hasta } = req.query;
-      const data = await buildReport(targetDb, req.user, req.params.tipo, { desde, hasta });
+      const data = await buildReport(targetDb, req.user, req.params.tipo, { desde, hasta, ...filtrosPlaca(req.query) });
       res.json(data);
     } catch (err) {
       res.status(err.status || 500).json({ error: err.message || 'Error al generar el reporte.' });

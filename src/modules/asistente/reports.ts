@@ -3,7 +3,18 @@
 import { api } from '../../core/api/client';
 
 export type ReportType = 'placas' | 'inspecciones' | 'conductores' | 'fleetrun';
-export interface ReportRequest { tipo: ReportType; formato: 'excel' | 'pdf'; desde?: string; hasta?: string; title: string }
+export interface ReportRequest {
+  tipo: ReportType;
+  formato: 'excel' | 'pdf';
+  desde?: string;
+  hasta?: string;
+  /** Solo placas */
+  cliente?: string;
+  marca?: string;
+  tipo_unidad?: string;
+  estado?: string;
+  title: string;
+}
 
 interface ReportColumn { key: string; label: string; type?: 'text' | 'number' | 'money' }
 interface ReportData {
@@ -130,7 +141,8 @@ async function toPdf(data: ReportData, req: ReportRequest): Promise<Blob> {
 
 /** Pide los datos al servidor y arma el archivo (Excel o PDF) en el navegador. */
 export async function buildReportFile(req: ReportRequest): Promise<ReportFile> {
-  const data = await api<ReportData>(`/asistente/reportes/${req.tipo}`, { query: { desde: req.desde, hasta: req.hasta } });
+  const query = { desde: req.desde, hasta: req.hasta, cliente: req.cliente, marca: req.marca, tipo_unidad: req.tipo_unidad, estado: req.estado };
+  const data = await api<ReportData>(`/asistente/reportes/${req.tipo}`, { query });
   const blob = req.formato === 'pdf' ? await toPdf(data, req) : await toExcel(data);
   return { blob, fileName: buildFileName(req, req.formato === 'pdf' ? 'pdf' : 'xlsx'), rows: data.rows.length, truncated: !!data.truncated };
 }
