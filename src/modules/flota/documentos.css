@@ -23,13 +23,17 @@
   border-radius: var(--r-xl); background: var(--surface); box-shadow: 0 0 0 1px var(--separator);
 }
 .doc-unidad {
-  width: 100%; display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3);
-  border: 1px solid transparent; border-radius: var(--r-lg); background: var(--fill-subtle); color: inherit; font: inherit; text-align: left; cursor: pointer;
+  width: 100%; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--separator); border-radius: 14px; background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
-.doc-unidad--activa { border-color: var(--accent); background: var(--accent-tint); }
+.doc-unidad:hover { border-color: var(--separator-strong); }
+.doc-unidad--activa { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .doc-unidad__icono {
-  width: 34px; height: 34px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px; background: var(--surface); color: var(--label-2);
+  width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px;
 }
+.doc-unidad .plate { flex-shrink: 0; }
+.doc-unidad .doc-punto { margin-left: auto; }
 .doc-unidad__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .doc-unidad__placa { font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700; }
 .doc-unidad__tipo { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em; color: var(--label-2); }
