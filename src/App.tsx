@@ -9,6 +9,7 @@ import { WelcomeTransition } from './modules/auth/WelcomeTransition';
 import { FarewellTransition } from './modules/auth/FarewellTransition';
 import { InicioPage } from './modules/inicio/InicioPage';
 import { PerfilPage } from './modules/perfil/PerfilPage';
+import { EditarPerfilPage } from './modules/perfil/EditarPerfilPage';
 import { Inactividad } from './core/auth/Inactividad';
 import { RUTAS_MODULOS } from './core/layout/navigation';
 // Pantallas de módulos: se descargan aparte, al abrirlas (el marco de la app ya está en pantalla)
@@ -30,6 +31,7 @@ export default function App() {
         <Route element={<RequireSession><AppShell /><Inactividad /></RequireSession>}>
           <Route index element={<InicioPage />} />
           <Route path="perfil" element={<PerfilPage />} />
+          <Route path="perfil/editar" element={<EditarPerfilPage />} />
           <Route path="placas" element={<RequirePermission any={['placas.ver']}><PlacasPage /></RequirePermission>} />
           <Route path="inspecciones" element={<RequirePermission any={['insp.ver']}><InspeccionesPage /></RequirePermission>} />
           <Route path="inspecciones/nueva" element={<RequirePermission any={['insp.crear']}><RegistrarInspeccionPage /></RequirePermission>} />

@@ -2,24 +2,27 @@ import { KeyRound, LogOut, Monitor, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { Avatar, Page, PageHeader } from '../../core/ui/Display';
-import { abrirClasico } from '../../core/layout/navigation';
+import { useNavigate } from 'react-router-dom';
 import { AccentPicker } from '../../core/ui/AccentPicker';
 import { ThemeSelector } from '../../core/ui/ThemeToggle';
 import { CambiarPasswordSheet } from './CambiarPasswordSheet';
 import { SesionesSheet } from './SesionesSheet';
+import { useMiPerfil } from './perfilApi';
 
 // Mi cuenta: datos de la sesión, apariencia, contraseña y sesiones activas. Foto y firma siguen en la versión actual.
 export function PerfilPage() {
   const { user, logout } = useAuth();
   const [claveAbierta, setClaveAbierta] = useState(false);
   const [sesionesAbiertas, setSesionesAbiertas] = useState(false);
+  const navigate = useNavigate();
+  const perfil = useMiPerfil();
   if (!user) return null;
   return (
     <Page narrow>
       <PageHeader eyebrow="Cuenta" title="Mi cuenta" />
       <div className="list">
         <div className="row">
-          <Avatar name={user.name} size="lg" accent />
+          <Avatar name={user.name} size="lg" accent src={perfil.data?.avatar_url} />
           <div className="row__main">
             <div className="row__title">{user.name}</div>
             <div className="row__subtitle">{user.email}</div>
@@ -50,7 +53,7 @@ export function PerfilPage() {
           <Monitor size={20} strokeWidth={1.8} />
           <span className="row__main row__title">Sesiones activas</span>
         </button>
-        <button type="button" className="row" onClick={() => abrirClasico('sistema/perfil')}>
+        <button type="button" className="row" onClick={() => navigate('/perfil/editar')}>
           <UserRound size={20} strokeWidth={1.8} />
           <span className="row__main row__title">Editar perfil y foto</span>
         </button>

@@ -5,12 +5,10 @@ import { CircleAlert } from 'lucide-react';
 import { initials } from '../lib/format';
 import { spring } from '../lib/motion';
 
-export function Avatar({ name, size, accent }: { name: string; size?: 'sm' | 'lg'; accent?: boolean }) {
-  return (
-    <span className={`avatar${size ? ` avatar--${size}` : ''}${accent ? ' avatar--accent' : ''}`} aria-hidden>
-      {initials(name)}
-    </span>
-  );
+export function Avatar({ name, size, accent, src }: { name: string; size?: 'sm' | 'lg'; accent?: boolean; src?: string | null }) {
+  const clases = `avatar${size ? ` avatar--${size}` : ''}${accent ? ' avatar--accent' : ''}`;
+  if (src) return <img className={`${clases} avatar--foto`} src={src} alt="" aria-hidden />;
+  return <span className={clases} aria-hidden>{initials(name)}</span>;
 }
 
 type BadgeTone = 'gray' | 'accent' | 'green' | 'amber' | 'red' | 'ink';

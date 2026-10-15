@@ -17,6 +17,7 @@ export function useTema() {
 export function ThemeSelector() {
   const tema = useTema();
   return (
+    <>
     <div className="theme-selector" role="radiogroup" aria-label="Tema de la app">
       {OPCIONES.map(o => (
         <button key={o.value} type="button" role="radio" aria-checked={tema === o.value}
@@ -27,6 +28,12 @@ export function ThemeSelector() {
         </button>
       ))}
     </div>
+    {tema === 'auto' && (
+      <p className="c-secondary" style={{ margin: 0, padding: '0 var(--s-4) var(--s-3)', fontSize: '0.8125rem' }}>
+        Sigue la configuración de tu dispositivo: ahora se ve {esOscuro('auto') ? 'oscuro' : 'claro'}.
+      </p>
+    )}
+    </>
   );
 }
 

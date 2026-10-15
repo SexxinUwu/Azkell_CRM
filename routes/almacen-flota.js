@@ -19,7 +19,11 @@ const TABLA_DEVOLUCIONES = `CREATE TABLE IF NOT EXISTS flota_devoluciones (
     usuario VARCHAR(120) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_fd_placa (placa, inventario_id)
-)`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+
+// Las tablas de inventario y de flota no tienen la misma collation: MySQL no mezcla columnas de texto
+// en UNION ni en JOIN ("Illegal mix of collations"). Toda columna de texto que se cruza pasa por aquí.
+const C = c => `CONVERT(${c} USING utf8mb4) COLLATE utf8mb4_unicode_ci`;
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const placaLimpia = v => String(v ?? '').trim().toUpperCase();
@@ -30,13 +34,13 @@ function sqlSaldo(filtro = '') {
     return `
         SELECT x.placa, x.inventario_id, ROUND(SUM(x.cant), 4) AS saldo
         FROM (
-            SELECT UPPER(TRIM(s.placa)) AS placa, d.inventario_id, d.cantidad AS cant
+            SELECT ${C('UPPER(TRIM(s.placa))')} AS placa, ${C('d.inventario_id')} AS inventario_id, d.cantidad AS cant
             FROM detalle_salidas_inv d
             JOIN salidas_inv s ON s.id = d.salida_id
             WHERE s.estado = 'Despachado' AND s.tipo_destino = 'Vehiculo'
               AND s.placa IS NOT NULL AND d.inventario_id IS NOT NULL
             UNION ALL
-            SELECT fd.placa, fd.inventario_id, -fd.cantidad AS cant
+            SELECT ${C('fd.placa')} AS placa, ${C('fd.inventario_id')} AS inventario_id, -fd.cantidad AS cant
             FROM flota_devoluciones fd
         ) x
         ${filtro}
@@ -76,15 +80,15 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
                 SELECT z.placa, COUNT(*) AS articulos, ROUND(SUM(z.saldo), 4) AS piezas,
                        ROUND(SUM(z.saldo * COALESCE(i.costo_referencial, 0)), 2) AS valor
                 FROM (${sqlSaldo()}) z
-                LEFT JOIN inventario i ON i.id = z.inventario_id
+                LEFT JOIN inventario i ON ${C('i.id')} = z.inventario_id
                 GROUP BY z.placa
                 ORDER BY z.placa`);
             const [ult] = await p.query(`
                 SELECT placa, MAX(fecha) AS ultimo FROM (
-                    SELECT UPPER(TRIM(s.placa)) AS placa, DATE(s.fecha) AS fecha FROM salidas_inv s
+                    SELECT ${C('UPPER(TRIM(s.placa))')} AS placa, DATE(s.fecha) AS fecha FROM salidas_inv s
                     WHERE s.tipo_destino = 'Vehiculo' AND s.estado = 'Despachado' AND s.placa IS NOT NULL
                     UNION ALL
-                    SELECT fd.placa, fd.fecha FROM flota_devoluciones fd
+                    SELECT ${C('fd.placa')} AS placa, fd.fecha FROM flota_devoluciones fd
                 ) m GROUP BY placa`);
             const ultimo = new Map(ult.map(r => [r.placa, r.ultimo]));
             res.json({
@@ -108,22 +112,22 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
                 SELECT z.inventario_id, z.saldo, i.descripcion, i.unidad, i.familia,
                        COALESCE(i.costo_referencial, 0) AS costo_referencial
                 FROM (${sqlSaldo('WHERE x.placa = ?')}) z
-                LEFT JOIN inventario i ON i.id = z.inventario_id
+                LEFT JOIN inventario i ON ${C('i.id')} = z.inventario_id
                 ORDER BY i.descripcion`, [placa]);
             const [movimientos] = await p.query(`
                 SELECT * FROM (
-                    SELECT s.fecha AS fecha, 'ASIGNACION' AS tipo, s.id AS documento, d.inventario_id,
-                           COALESCE(i.descripcion, d.descripcion) AS descripcion, d.cantidad, s.creado_por AS usuario,
-                           s.observaciones
+                    SELECT s.fecha AS fecha, 'ASIGNACION' AS tipo, ${C('s.id')} AS documento, ${C('d.inventario_id')} AS inventario_id,
+                           ${C('COALESCE(i.descripcion, d.descripcion)')} AS descripcion, d.cantidad, ${C('s.creado_por')} AS usuario,
+                           ${C('s.observaciones')} AS observaciones
                     FROM detalle_salidas_inv d
                     JOIN salidas_inv s ON s.id = d.salida_id
-                    LEFT JOIN inventario i ON i.id = d.inventario_id
+                    LEFT JOIN inventario i ON ${C('i.id')} = ${C('d.inventario_id')}
                     WHERE UPPER(TRIM(s.placa)) = ? AND s.tipo_destino = 'Vehiculo' AND s.estado = 'Despachado'
                     UNION ALL
-                    SELECT fd.fecha, 'DEVOLUCION', fd.entrada_id, fd.inventario_id, i.descripcion, fd.cantidad,
-                           fd.usuario, fd.observaciones
+                    SELECT fd.fecha, 'DEVOLUCION', ${C('fd.entrada_id')}, ${C('fd.inventario_id')}, ${C('i.descripcion')}, fd.cantidad,
+                           ${C('fd.usuario')}, ${C('fd.observaciones')}
                     FROM flota_devoluciones fd
-                    LEFT JOIN inventario i ON i.id = fd.inventario_id
+                    LEFT JOIN inventario i ON ${C('i.id')} = ${C('fd.inventario_id')}
                     WHERE fd.placa = ?
                 ) h
                 ORDER BY h.fecha DESC, h.documento DESC
@@ -199,7 +203,7 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
             const [saldo] = await p.query(
                 `SELECT z.inventario_id, z.saldo, i.descripcion, COALESCE(i.costo_referencial, 0) AS costo_referencial
                  FROM (${sqlSaldo('WHERE x.placa = ? AND x.inventario_id IN (?)')}) z
-                 LEFT JOIN inventario i ON i.id = z.inventario_id`,
+                 LEFT JOIN inventario i ON ${C('i.id')} = z.inventario_id`,
                 [pl, lineas.map(l => l.inventario_id)]);
             const mapa = new Map(saldo.map(r => [r.inventario_id, r]));
             const faltan = [];

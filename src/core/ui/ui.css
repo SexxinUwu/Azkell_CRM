@@ -1038,6 +1038,8 @@ label.row__main { cursor: pointer; }
 }
 
 
+.avatar--foto { object-fit: cover; }
+
 /* ─── Selector de tema ─── */
 .theme-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); padding: var(--s-3) var(--s-4); }
 .theme-selector__op {
