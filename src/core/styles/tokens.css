@@ -118,6 +118,7 @@
 
   /* ─── Layout ─── */
   --sidebar-w: 16.5rem;
+  --rail-w: 4.5rem;
   --tabbar-h: 3.875rem;   /* pestañas flotantes (cápsula de vidrio) */
   --tabbar-gap: 0.625rem; /* separación de la cápsula con el borde inferior */
   --topbar-h: 3.25rem;

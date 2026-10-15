@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowUpRight, Banknote, Boxes, ChevronRight, Contact, House, LogOut, MapPin, Palette, Route, Settings, Share, ShieldCheck,
+  ArrowUpRight, Banknote, Boxes, ChevronRight, Contact, House, LogOut, MapPin, Palette, PanelLeftClose, PanelLeftOpen, Route, Settings, Share, ShieldCheck,
   SquarePlus, Smartphone, Users, Wrench, type LucideIcon,
 } from 'lucide-react';
 import { useInstallApp } from '../lib/useInstallApp';
@@ -27,6 +27,9 @@ export function AppShell() {
   const [moduloAbierto, setModuloAbierto] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [iosHelp, setIosHelp] = useState(false);
+  // Barra lateral fijada abierta (escritorio). Se recuerda en este navegador.
+  const [menuFijo, setMenuFijo] = useState(() => { try { return localStorage.getItem('fleet_nav_fijo') === '1'; } catch { return false; } });
+  const alternarMenuFijo = () => setMenuFijo(v => { const nv = !v; try { localStorage.setItem('fleet_nav_fijo', nv ? '1' : '0'); } catch { /* nada */ } return nv; });
   const app = useInstallApp();
   const live = useLiveUpdates(); // cambios de otros dispositivos, al instante
   const sections = visibleSections(can);
@@ -73,10 +76,11 @@ export function AppShell() {
 
   return (
     <div className="app">
-      <aside className="sidebar" aria-label="Navegación principal">
+      <aside className={`sidebar${menuFijo ? ' sidebar--fijo' : ''}`} aria-label="Navegación principal">
+      <div className="sidebar__panel">
         <Link to={homePath(can)} className="sidebar__brand">
           <BrandMark size={30} />
-          <div>
+          <div className="sidebar__texto">
             <Wordmark />
             <div className="t-caption c-secondary">{user.companyName}</div>
           </div>
@@ -85,18 +89,18 @@ export function AppShell() {
         <nav className="sidebar__nav">
           {sections.map(section => (
             <div key={section.title}>
-              <div className="nav-section__title">{section.title}</div>
+              <div className="nav-section__title sidebar__texto">{section.title}</div>
               {section.items.map(item => (
                 item.to ? (
                   <NavLink key={item.key} to={item.to} end={item.to === '/'} className="nav-item">
                     <item.icon size={18} strokeWidth={1.9} />
-                    {item.label}
+                    <span className="sidebar__texto">{item.label}</span>
                   </NavLink>
                 ) : (
                   <a key={item.key} href="/" className="nav-item" onClick={e => { e.preventDefault(); abrirClasico(item.clasico!); }}>
                     <item.icon size={18} strokeWidth={1.9} />
-                    {item.label}
-                    <ArrowUpRight size={14} className="nav-item__ext" aria-label="Se abre en la versión actual" />
+                    <span className="sidebar__texto">{item.label}</span>
+                    <ArrowUpRight size={14} className="nav-item__ext sidebar__texto" aria-label="Se abre en la versión actual" />
                   </a>
                 )
               ))}
@@ -107,19 +111,24 @@ export function AppShell() {
         <div className="sidebar__footer">
           <NavLink to="/perfil" className="user-chip">
             <AvatarPropio name={user.name} accent />
-            <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="sidebar__texto" style={{ minWidth: 0, flex: 1 }}>
               <div className="user-chip__name">{user.name}</div>
               <div className="user-chip__role">{user.roleName}</div>
             </div>
           </NavLink>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-1)', marginTop: 'var(--s-1)' }}>
-            <button type="button" className="nav-item" style={{ flex: 1 }} onClick={logout}>
-              <LogOut size={18} strokeWidth={1.9} />
-              Cerrar sesión
+          <div className="sidebar__acciones">
+            <button type="button" className="nav-item" onClick={alternarMenuFijo} aria-pressed={menuFijo}>
+              {menuFijo ? <PanelLeftClose size={18} strokeWidth={1.9} /> : <PanelLeftOpen size={18} strokeWidth={1.9} />}
+              <span className="sidebar__texto">{menuFijo ? 'Contraer menú' : 'Fijar menú abierto'}</span>
             </button>
-            <ThemeButton />
+            <button type="button" className="nav-item" onClick={logout}>
+              <LogOut size={18} strokeWidth={1.9} />
+              <span className="sidebar__texto">Cerrar sesión</span>
+            </button>
+            <ThemeButton className="nav-item sidebar__tema" />
           </div>
         </div>
+      </div>
       </aside>
 
       <div style={{ minWidth: 0 }}>
