@@ -66,7 +66,7 @@
         const cardCont = document.getElementById('recCardContainer');
 
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-secondary"><div class="spinner-border spinner-border-sm text-primary me-2"></div> Consultando recepciones del ERP...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-secondary"><div class="spinner-border spinner-border-sm text-primary me-2"></div> Consultando recepciones del ERP...</td></tr>`;
         }
         if (cardCont) {
             cardCont.innerHTML = `<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div> Cargando recepciones...</div>`;
@@ -85,7 +85,7 @@
             .catch(err => {
                 console.error('Error al cargar recepciones:', err);
                 if (tbody) {
-                    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-2"></i> Error: ${err.message}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-2"></i> Error: ${err.message}</td></tr>`;
                 }
                 if (cardCont) {
                     cardCont.innerHTML = `<div class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-2"></i> Error: ${err.message}</div>`;
@@ -172,7 +172,7 @@
         // Renderizar Vista Desktop
         if (tbody) {
             if (filtradas.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-secondary"><i class="bi bi-inbox fs-3 d-block mb-2 text-muted"></i> No se encontraron órdenes de compra para el filtro seleccionado.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-secondary"><i class="bi bi-inbox fs-3 d-block mb-2 text-muted"></i> No se encontraron órdenes de compra para el filtro seleccionado.</td></tr>`;
             } else {
                 tbody.innerHTML = filtradas.map(oc => {
                     let badgeProgreso = '';
@@ -193,6 +193,16 @@
                         badgeOc = `<span class="badge" style="background:#0284c7;color:#fff;font-size:0.68rem;font-weight:800;border-radius:4px;padding:3px 7px;">PROCESADO</span>`;
                     }
 
+                    const condPagoRaw = (oc.condicion_pago || 'Al contado').trim();
+                    const esCredito = condPagoRaw.toLowerCase().includes('crédito') || condPagoRaw.toLowerCase().includes('credito');
+                    let badgeCond = '';
+                    if (esCredito) {
+                        const diasTxt = oc.dias_credito ? ` (${oc.dias_credito}d)` : '';
+                        badgeCond = `<span class="badge" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;font-size:0.72rem;font-weight:700;border-radius:6px;padding:3px 8px;"><i class="bi bi-clock-history me-1"></i>Crédito${diasTxt}</span>`;
+                    } else {
+                        badgeCond = `<span class="badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;font-size:0.72rem;font-weight:700;border-radius:6px;padding:3px 8px;"><i class="bi bi-cash-stack me-1"></i>Contado</span>`;
+                    }
+
                     const esCompleto = oc.estado_recepcion === 'COMPLETO';
                     const codLimpio = String(oc.id || '').replace(/^ENT-/i, '');
 
@@ -210,6 +220,7 @@
                                 <i class="bi bi-person text-muted"></i> <span>${_escHtml(oc.solicitante || 'SISTEMA')}</span>
                             </div>
                         </td>
+                        <td class="text-center text-nowrap">${badgeCond}</td>
                         <td class="fw-bolder text-dark text-nowrap text-end" style="font-size:0.86rem;">
                             <span class="${oc.moneda === 'USD' ? 'text-primary' : 'text-success'}">${oc.moneda || 'PEN'} ${(parseFloat(oc.importe) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                         </td>
@@ -270,7 +281,10 @@
                             </div>
                             <div class="d-flex align-items-center justify-content-between text-secondary mb-2">
                                 <span><i class="bi bi-person me-1"></i> ${_escHtml(oc.solicitante || 'SISTEMA')}</span>
-                                <span class="fw-bolder text-dark">${oc.moneda || 'PEN'} ${(parseFloat(oc.importe) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                                <div class="d-flex align-items-center gap-1.5">
+                                    ${badgeCond}
+                                    <span class="fw-bolder text-dark">${oc.moneda || 'PEN'} ${(parseFloat(oc.importe) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                                </div>
                             </div>
 
                             <!-- Progress Bar -->
@@ -647,13 +661,14 @@
         const ocs = window._recCompras.ordenes || [];
         if (!ocs.length) return alert('No hay órdenes de compra para exportar.');
 
-        let csv = 'Orden;Fecha;Proveedor;Solicitante;Importe;Moneda;Estado OC;Estado Recepcion;Total Pedido;Total Recibido;Pendiente\n';
+        let csv = 'Orden;Fecha;Proveedor;Solicitante;Condicion Pago;Importe;Moneda;Estado OC;Estado Recepcion;Total Pedido;Total Recibido;Pendiente\n';
         ocs.forEach(o => {
             const row = [
                 o.id,
                 o.fecha || '',
                 `"${(o.proveedor || '').replace(/"/g, '""')}"`,
                 `"${(o.solicitante || '').replace(/"/g, '""')}"`,
+                `"${(o.condicion_pago || 'Al contado').replace(/"/g, '""')}"`,
                 o.importe || 0,
                 o.moneda || 'PEN',
                 o.estado_oc || '',

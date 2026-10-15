@@ -73,9 +73,10 @@ app.use(compression());
 // ── Rate Limiting (protección contra bots y abuso de API) ─────────
 const limiterGeneral = rateLimit({
     windowMs: 60 * 1000,       // ventana: 1 minuto
-    max: 600,                   // máximo 600 requests por IP por minuto (SPA dispara ~18 requests en arranque)
+    max: 2000,                  // máximo 2000 requests por IP por minuto (ERP multiusuario con varias personas por oficina)
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => req.path === '/eventos' || req.path === '/tenant-logo' || req.path.startsWith('/tenant-logo'),
     message: { error: 'Demasiadas solicitudes. Intenta en un momento.' }
 });
 const limiterLogin = rateLimit({

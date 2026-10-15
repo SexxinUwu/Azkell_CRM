@@ -2513,6 +2513,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
             targetDb.query(sqlOCs, async (errOC, ocs) => {
                 if (errOC) return res.status(500).json({ error: errOC.message });
+                const idsOC = (ocs || []).map(o => o.id);
+                if (!idsOC.length) return res.json([]);
 
                 // 2. Obtener todas las recepciones registradas agrupadas por OC
                 const sqlRecs = `
@@ -2520,10 +2522,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                        dr.inventario_id, dr.descripcion, dr.cantidad_recibida, dr.costo_unitario, dr.moneda
                 FROM recepciones_oc r
                 JOIN detalle_recepciones_oc dr ON dr.recepcion_id = r.id
+                WHERE r.oc_id IN (?)
                 ORDER BY r.fecha_recepcion ASC
             `;
 
-                targetDb.query(sqlRecs, async (errRec, recRows) => {
+                targetDb.query(sqlRecs, [idsOC], async (errRec, recRows) => {
                     if (errRec) return res.status(500).json({ error: errRec.message });
 
                     // Mapear recepciones por oc_id
@@ -2540,9 +2543,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                            i.descripcion AS inv_nombre, i.unidad
                     FROM detalle_entradas_inv de
                     LEFT JOIN inventario i ON i.id = de.inventario_id
+                    WHERE de.entrada_id IN (?)
                 `;
 
-                    targetDb.query(sqlDetalle, async (errDet, detRows) => {
+                    targetDb.query(sqlDetalle, [idsOC], async (errDet, detRows) => {
                         if (errDet) return res.status(500).json({ error: errDet.message });
 
                         const itemsPorOC = {};
@@ -2632,6 +2636,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                 almacen: oc.almacen || 'ALM CENTRAL',
                                 moneda: oc.moneda || 'PEN',
                                 importe: parseFloat(oc.total_pen || 0),
+                                condicion_pago: oc.condicion_pago || 'Al contado',
+                                dias_credito: oc.dias_credito || null,
                                 estado_oc: (oc.estado || 'PAGADA').toUpperCase(),
                                 total_pedido: totalPedido,
                                 total_recibido: totalRecibido,

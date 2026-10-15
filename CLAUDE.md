@@ -315,7 +315,7 @@ Todas las pantallas del menú ya tienen versión React con **datos reales y escr
 - [x] ~~Centro de Comando y dashboard de mantenimiento: gráficos~~ — con Recharts (`src/core/ui/Graficos.tsx`). Centro de Comando: vigencia de inspecciones en total, motoras y no motoras; mantenimiento: disponibilidad y vigencia.
 
 ### 🧪 Pruebas en navegador (sin verificar)
-- [ ] **Almacén de flota** (Flota > Almacén de flota, nuevo): asignar artículos a una unidad (salida despachada con destino `Vehiculo`) y devolverlos (entrada de ajuste + `flota_devoluciones`). Endpoints en `routes/almacen-flota.js` (montado en `routes/almacen.js`). Probar con datos reales: saldo por unidad, stock del almacén antes/después y Kardex.
+- [ ] **Almacén de flota** (Flota > Almacén de flota): stock propio, separado del inventario general. Tablas `flota_articulos`, `flota_documentos` (códigos FI/FA/FR) y `flota_movimientos` (kardex); saldos calculados desde los movimientos. Operaciones: ingreso, asignar a unidad y reingreso desde unidad (bloquea artículos con `FOR UPDATE`). Vistas: Artículos (almacén, unidades y placas), Unidades, Historial y kardex por artículo. Endpoints en `routes/almacen-flota.js` (montado en `routes/almacen.js`). **Falta probar con datos reales** y decidir si se carga el stock inicial.
 - [ ] Almacén > Inventario: KPIs cambian al buscar y el Excel exporta solo lo filtrado (`modulos/almacen/inventario/logica.js`).
 - [ ] `server.js`: límite general 600 req/min (ya en el código; falta reiniciar el servidor para que aplique).
 - [ ] Almacén > Otros: tarjeta Kits MP abre el mismo módulo en `modulos/almacen/otros/vista.html` y `AlmacenOtrosPage.tsx`.

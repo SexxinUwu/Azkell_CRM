@@ -56,8 +56,8 @@ export function RecepcionComprasPage() {
   async function exportar() {
     try {
       await exportarExcel('Recepciones-compras', 'Recepciones',
-        ['Orden', 'Fecha', 'Proveedor', 'Solicitante', 'Importe', 'Moneda', 'Estado OC', 'Estado recepción', 'Total pedido', 'Total recibido', 'Pendiente'],
-        visibles.map(o => [o.id, o.fecha, o.proveedor, o.solicitante, o.importe, o.moneda, o.estado_oc, o.estado_recepcion,
+        ['Orden', 'Fecha', 'Proveedor', 'Solicitante', 'Condición pago', 'Importe', 'Moneda', 'Estado OC', 'Estado recepción', 'Total pedido', 'Total recibido', 'Pendiente'],
+        visibles.map(o => [o.id, o.fecha, o.proveedor, o.solicitante, o.condicion_pago ?? 'Al contado', o.importe, o.moneda, o.estado_oc, o.estado_recepcion,
           o.total_pedido, o.total_recibido, Math.max(0, o.total_pedido - o.total_recibido)]));
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
@@ -128,7 +128,7 @@ export function RecepcionComprasPage() {
                     </div>
                     <div className="mov-fila__cuerpo">
                       <span className="mov-fila__titulo">{String(oc.id)} · {oc.proveedor}</span>
-                      <span className="mov-fila__sub">{oc.solicitante} · {oc.fecha ?? ''}</span>
+                      <span className="mov-fila__sub">{oc.solicitante} · {oc.condicion_pago ?? 'Al contado'} · {oc.fecha ?? ''}</span>
                     </div>
                     <div className="mov-fila__derecha">
                       <span className="mov-fila__monto">{fmt(oc.total_recibido)} / {fmt(oc.total_pedido)}</span>

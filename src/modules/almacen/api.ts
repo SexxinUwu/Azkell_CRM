@@ -289,6 +289,8 @@ export interface RecepcionOC {
   almacen: string;
   moneda: string;
   importe: number;
+  condicion_pago?: string | null;
+  dias_credito?: number | null;
   estado_oc: string;
   total_pedido: number;
   total_recibido: number;
