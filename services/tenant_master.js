@@ -381,9 +381,14 @@ async function resolveTenantMiddleware(req, res, next) {
     const master = getMasterPool();
     master.query('SELECT * FROM empresas WHERE slug = ? OR db_name = ? LIMIT 1', [tenantSlug, tenantSlug], (err, rows) => {
         if (err || !rows || rows.length === 0) {
-            req.tenantSlug = tenantSlug;
-            req.db = getTenantPool(process.env.DB_NAME || 'azkell_tenant_marsisa');
-            return next();
+            // Antes se usaba en silencio la base de Marsisa: así una empresa no registrada escribía y leía datos de otra.
+            // Ahora solo el desarrollo local usa la base por defecto; cualquier otro subdominio desconocido se rechaza.
+            if (/localhost|^\d+\.\d+\.\d+\.\d+/.test(host)) {
+                req.tenantSlug = tenantSlug;
+                req.db = getTenantPool(process.env.DB_NAME || 'azkell_tenant_marsisa');
+                return next();
+            }
+            return res.status(err ? 503 : 404).json({ error: err ? 'No se pudo validar la empresa. Intente de nuevo.' : `La empresa "${tenantSlug}" no está registrada en Azkell.` });
         }
 
         const tenant = rows[0];
