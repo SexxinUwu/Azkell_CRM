@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Ellipsis } from 'lucide-react';
 import { springSnappy } from '../lib/motion';
@@ -26,6 +27,7 @@ export function MenuOtros({ opciones, label = 'Otros', soloIcono }: { opciones: 
   const visibles = opciones.filter((o): o is OpcionOtros => !!o);
   const [abierto, setAbierto] = useState(false);
   const [ocupado, setOcupado] = useState<number | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; origen: string } | null>(null);
   const reduce = useReducedMotion();
   const id = useId();
   const raiz = useRef<HTMLDivElement>(null);
@@ -34,7 +36,11 @@ export function MenuOtros({ opciones, label = 'Otros', soloIcono }: { opciones: 
 
   useEffect(() => {
     if (!abierto) return;
-    const fuera = (e: PointerEvent) => { if (!raiz.current?.contains(e.target as Node)) setAbierto(false); };
+    // El menú vive en <body>: un toque dentro del menú no cuenta como toque afuera
+    const fuera = (e: PointerEvent) => { const t = e.target as Node; if (!raiz.current?.contains(t) && !menu.current?.contains(t)) setAbierto(false); };
+    // Al desplazarse, el menú se cierra (está fijo sobre la pantalla, no sigue al botón)
+    const alMover = () => setAbierto(false);
+    document.addEventListener('scroll', alMover, { capture: true, passive: true });
     const tecla = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { e.preventDefault(); setAbierto(false); boton.current?.focus(); return; }
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
@@ -46,7 +52,21 @@ export function MenuOtros({ opciones, label = 'Otros', soloIcono }: { opciones: 
     document.addEventListener('pointerdown', fuera);
     document.addEventListener('keydown', tecla);
     requestAnimationFrame(() => menu.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus());
-    return () => { document.removeEventListener('pointerdown', fuera); document.removeEventListener('keydown', tecla); };
+    return () => {
+      document.removeEventListener('pointerdown', fuera);
+      document.removeEventListener('keydown', tecla);
+      document.removeEventListener('scroll', alMover, { capture: true });
+    };
+  }, [abierto]);
+
+  // Posición del menú medida contra el botón: si el botón está en el borde, el menú entra completo en la pantalla
+  useLayoutEffect(() => {
+    const b = boton.current?.getBoundingClientRect();
+    const m = menu.current;
+    if (!abierto || !b || !m) { setPos(null); return; }
+    const margen = 12;
+    const left = Math.min(Math.max(b.left, margen), window.innerWidth - m.offsetWidth - margen);
+    setPos({ top: b.bottom + 8, left, origen: left < b.left ? 'top right' : 'top left' });
   }, [abierto]);
 
   if (!visibles.length) return null;
@@ -72,7 +92,7 @@ export function MenuOtros({ opciones, label = 'Otros', soloIcono }: { opciones: 
         <Ellipsis size={16} />
         {!soloIcono && label}
       </button>
-      <AnimatePresence>
+      {createPortal(<AnimatePresence>
         {abierto && (
           <motion.div
             ref={menu}
@@ -80,6 +100,7 @@ export function MenuOtros({ opciones, label = 'Otros', soloIcono }: { opciones: 
             role="menu"
             aria-label={label}
             className="otros__menu"
+            style={{ top: pos?.top ?? 0, left: pos?.left ?? 0, transformOrigin: pos?.origen }}
             initial={{ opacity: 0, scale: reduce ? 1 : 0.92, y: reduce ? 0 : -6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: reduce ? 1 : 0.96 }}
@@ -103,7 +124,7 @@ export function MenuOtros({ opciones, label = 'Otros', soloIcono }: { opciones: 
             ))}
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>, document.body)}
     </div>
   );
 }

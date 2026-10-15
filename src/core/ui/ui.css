@@ -897,10 +897,8 @@ label.row__main { cursor: pointer; }
 /* ─── Casilla "Otros" (acciones secundarias de cada pantalla) ─── */
 .otros { position: relative; display: inline-flex; }
 .otros__menu {
-  position: absolute;
+  position: fixed;
   z-index: 40;
-  top: calc(100% + var(--s-2));
-  right: 0;
   min-width: 15rem;
   max-width: min(20rem, calc(100vw - 2rem));
   padding: var(--s-1);
