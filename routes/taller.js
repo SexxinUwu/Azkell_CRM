@@ -1152,13 +1152,13 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.post('/taller-rampas', (req, res) => {
         const { rampa, placa, km, conductor, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url } = req.body;
         if (!rampa || !placa) return res.status(400).json({ error: 'rampa y placa son requeridos' });
-        db.query(
+        (req.db || db).query(
             `INSERT INTO taller_rampas (rampa, placa, km, conductor, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url, estado)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
             [rampa, placa, km || null, conductor || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', creado_por || '', evidencia_url || null],
             (err, result) => {
                 if (err) {
-                    db.query(
+                    (req.db || db).query(
                         `INSERT INTO taller_rampas (rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url, estado)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
                         [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', creado_por || '', evidencia_url || null],
@@ -1178,7 +1178,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         const { accion } = req.body;
         if (accion === 'liberar') {
             const { liberado_por, fecha_salida_real, hora_salida_real, situacion } = req.body;
-            db.query(
+            (req.db || db).query(
                 `UPDATE taller_rampas SET estado='Liberado',
              fecha_liberado = CASE WHEN fecha_salida IS NOT NULL AND hora_salida IS NOT NULL
                               THEN CONCAT(fecha_salida, ' ', hora_salida)
@@ -1195,7 +1195,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             return;
         }
         if (accion === 'reactivar') {
-            db.query(
+            (req.db || db).query(
                 `UPDATE taller_rampas SET estado='Activo', fecha_liberado=NULL, liberado_por=NULL WHERE id=?`,
                 [req.params.id],
                 (err) => {
@@ -1206,19 +1206,19 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             return;
         }
         const { rampa, placa, km, conductor, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, evidencia_url } = req.body;
-        db.query(
+        (req.db || db).query(
             `UPDATE taller_rampas SET rampa=?, placa=?, km=?, conductor=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion=?, obs=?, evidencia_url=? WHERE id=?`,
             [rampa, placa, km || null, conductor || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', evidencia_url || null, req.params.id],
             (err) => {
                 if (err) {
-                    db.query(
+                    (req.db || db).query(
                         `UPDATE taller_rampas SET rampa=?, placa=?, km=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion=?, obs=?, evidencia_url=? WHERE id=?`,
                         [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', evidencia_url || null, req.params.id],
                         () => { }
                     );
                 }
                 if (obs !== undefined) {
-                    db.query('SELECT ticket_entrada, detalles_json FROM ordenes_trabajo WHERE id_rampa = ? OR (UPPER(placa) = UPPER(?) AND estado != "Finalizado")', [req.params.id, placa], (errOTs, rowsOTs) => {
+                    (req.db || db).query('SELECT ticket_entrada, detalles_json FROM ordenes_trabajo WHERE id_rampa = ? OR (UPPER(placa) = UPPER(?) AND estado != "Finalizado")', [req.params.id, placa], (errOTs, rowsOTs) => {
                         if (!errOTs && rowsOTs && rowsOTs.length) {
                             rowsOTs.forEach(row => {
                                 let det = {};
@@ -1229,7 +1229,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                                     det.chofer = conductor;
                                     det.reportado_por = conductor;
                                 }
-                                db.query('UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ?', [JSON.stringify(det), row.ticket_entrada]);
+                                (req.db || db).query('UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ?', [JSON.stringify(det), row.ticket_entrada]);
                             });
                         }
                     });
@@ -1241,11 +1241,11 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
     router.delete('/taller-rampas/:id', (req, res) => {
         const idRampa = req.params.id;
-        db.query('SELECT ticket_entrada FROM ordenes_trabajo WHERE id_rampa = ?', [idRampa], (err, rows) => {
+        (req.db || db).query('SELECT ticket_entrada FROM ordenes_trabajo WHERE id_rampa = ?', [idRampa], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             const tickets = rows.map(r => r.ticket_entrada);
             const finishDelete = () => {
-                db.query('DELETE FROM taller_rampas WHERE id = ?', [idRampa], (errDel) => {
+                (req.db || db).query('DELETE FROM taller_rampas WHERE id = ?', [idRampa], (errDel) => {
                     if (errDel) return res.status(500).json({ error: errDel.message });
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
                     res.json({ ok: true });
@@ -1253,10 +1253,10 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             };
             if (tickets.length === 0) return finishDelete();
 
-            db.query('DELETE FROM trabajos_ot WHERE ticket_visita IN (?)', [tickets], () => {
-                db.query('DELETE FROM salidas_inv WHERE ticket_ot IN (?)', [tickets], () => {
-                    db.query('DELETE FROM inspecciones WHERE id_ot IN (?)', [tickets], () => {
-                        db.query('DELETE FROM ordenes_trabajo WHERE id_rampa = ?', [idRampa], () => {
+            (req.db || db).query('DELETE FROM trabajos_ot WHERE ticket_visita IN (?)', [tickets], () => {
+                (req.db || db).query('DELETE FROM salidas_inv WHERE ticket_ot IN (?)', [tickets], () => {
+                    (req.db || db).query('DELETE FROM inspecciones WHERE id_ot IN (?)', [tickets], () => {
+                        (req.db || db).query('DELETE FROM ordenes_trabajo WHERE id_rampa = ?', [idRampa], () => {
                             finishDelete();
                         });
                     });
