@@ -195,7 +195,8 @@ export function visibleSections(can: (...p: string[]) => boolean): NavSection[] 
 /** Abre una pantalla de la versión actual en esta misma pestaña, con la misma sesión */
 export function abrirClasico(ruta: string) {
   try { sessionStorage.setItem('fleet_rutaActual', ruta); } catch { /* sin almacenamiento */ }
-  window.location.assign('/');
+  // La ruta va en el hash con barra (#sistema/perfil): la versión actual la abre directo, sin depender de sessionStorage
+  window.location.assign(`/#${ruta}`);
 }
 
 // Pestañas inferiores en el celular: solo pantallas de la app nueva (el resto, en "Más").

@@ -212,6 +212,10 @@
                             <div class="nav-icon"><i class="bi bi-clipboard2-check-fill text-success"></i></div>
                             <span class="link-text">Entrega de Vehículos</span>
                         </a>
+                        <a id="nav-almacen-flota" class="nav-item" onclick="cargarModuloAislado('flota/almacen-flota')">
+                            <div class="nav-icon"><i class="bi bi-boxes"></i></div>
+                            <span class="link-text">Almacén de flota</span>
+                        </a>
                         <a id="nav-reporte-fallas-flota" class="nav-item" onclick="cargarModuloAislado('mantenimiento/checklist')">
                             <i class="bi bi-clipboard2-check nav-icon"></i>
                             <span class="link-text" data-i18n="nav.checklist">Reporte de Fallas</span>
@@ -702,7 +706,7 @@
     <script>window._FLEET_API_BASE = window.location.origin || 'https://marsisa.azkell.com';</script>
     <script defer src="./lazy-libs.js"></script>
     <script defer src="./utils.js"></script>
-    <script defer src="./logica.js?v=1.6"></script>
+    <script defer src="./logica.js?v=1.7"></script>
 
 <div class="modal fade" id="modalMapaGPS" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered" style="margin: 0.5rem auto;">
@@ -1048,6 +1052,14 @@
                     <div class="bnav-row-content">
                         <p class="bnav-row-title">Entrega de Vehículos</p>
                         <p class="bnav-row-desc">Acta de entrega y recepción técnica</p>
+                    </div>
+                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
+                </div>
+                <div id="mbnav-almacen-flota" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetFlota')).hide(); cargarModuloAislado('flota/almacen-flota'); setBottomNavActive('bnav-flota');">
+                    <div class="bnav-row-icon" style="color: #0f766e;"><i class="bi bi-boxes"></i></div>
+                    <div class="bnav-row-content">
+                        <p class="bnav-row-title">Almacén de flota</p>
+                        <p class="bnav-row-desc">Artículos asignados a cada unidad</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>

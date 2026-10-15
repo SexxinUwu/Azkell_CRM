@@ -1,4 +1,4 @@
-import { KeyRound, LogOut, UserRound } from 'lucide-react';
+import { KeyRound, LogOut, Monitor, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { Avatar, Page, PageHeader } from '../../core/ui/Display';
@@ -6,11 +6,13 @@ import { abrirClasico } from '../../core/layout/navigation';
 import { AccentPicker } from '../../core/ui/AccentPicker';
 import { ThemeSelector } from '../../core/ui/ThemeToggle';
 import { CambiarPasswordSheet } from './CambiarPasswordSheet';
+import { SesionesSheet } from './SesionesSheet';
 
-// Mi cuenta: datos de la sesión, apariencia, contraseña. Foto y firma siguen en la versión actual.
+// Mi cuenta: datos de la sesión, apariencia, contraseña y sesiones activas. Foto y firma siguen en la versión actual.
 export function PerfilPage() {
   const { user, logout } = useAuth();
   const [claveAbierta, setClaveAbierta] = useState(false);
+  const [sesionesAbiertas, setSesionesAbiertas] = useState(false);
   if (!user) return null;
   return (
     <Page narrow>
@@ -44,6 +46,10 @@ export function PerfilPage() {
           <KeyRound size={20} strokeWidth={1.8} />
           <span className="row__main row__title">Cambiar contraseña</span>
         </button>
+        <button type="button" className="row" onClick={() => setSesionesAbiertas(true)}>
+          <Monitor size={20} strokeWidth={1.8} />
+          <span className="row__main row__title">Sesiones activas</span>
+        </button>
         <button type="button" className="row" onClick={() => abrirClasico('sistema/perfil')}>
           <UserRound size={20} strokeWidth={1.8} />
           <span className="row__main row__title">Editar perfil y foto</span>
@@ -55,6 +61,7 @@ export function PerfilPage() {
       </div>
 
       <CambiarPasswordSheet open={claveAbierta} onClose={() => setClaveAbierta(false)} />
+      <SesionesSheet open={sesionesAbiertas} onClose={() => setSesionesAbiertas(false)} />
     </Page>
   );
 }

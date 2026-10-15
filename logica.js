@@ -304,6 +304,10 @@ window.verificarSesionGuardada = function() {
     safe('nav-entrega-vehiculos',  vEntregaVehiculos);
     safe('mbnav-entrega-vehiculos', vEntregaVehiculos);
 
+    var vAlmFlota = showFlotaHub && (_cL('inv') || _cL('sal_inv') || _cL('ent_inv'));
+    safe('nav-almacen-flota', vAlmFlota);
+    safe('mbnav-almacen-flota', vAlmFlota);
+
     var vChecklist = showFlotaHub && _cL('checklist');
     safe('nav-reporte-fallas-flota',   vChecklist);
     safe('mbnav-reporte-fallas-flota', vChecklist);
@@ -735,6 +739,7 @@ window.verificarSesionGuardada = function() {
             'flota/disponibilidad': 'disponibilidad',
             'flota/ubicacion': 'gps',
             'flota/documentos': 'docs_flota',
+            'flota/almacen-flota': 'inv',
             'flota/placas': 'placas',
             'flota/entrega-vehiculos': 'entrega_vehiculos',
             'mantenimiento/status-rampa': 'status_rampa',
@@ -844,6 +849,9 @@ window.verificarSesionGuardada = function() {
         if (r === 'flota/entrega-vehiculos') {
             return window.checkPerm('entrega_vehiculos', 'l') || window.checkPerm('placas', 'l') || window.checkPerm('seguridad_unidades', 'l');
         }
+        if (r === 'flota/almacen-flota') {
+            return window.checkPerm('inv', 'l') || window.checkPerm('sal_inv', 'l') || window.checkPerm('ent_inv', 'l');
+        }
         if (r === 'operaciones/programacion') {
             return window.checkPerm('op_programacion', 'l') || window.checkPerm('op_guias_remision', 'l') || window.checkPerm('guias_remision', 'l');
         }
@@ -944,6 +952,7 @@ window.verificarSesionGuardada = function() {
         'mantenimiento/status-rampa': 1, 'mantenimiento/reportes-ot': 1, 'mantenimiento/trabajos-ot': 1,
         'mantenimiento/neumaticos-analisis': 1, 'mantenimiento/neumaticos-ultimas': 1, 'mantenimiento/incidencias-ruta': 1,
         'flota/disponibilidad': 1, 'flota/ubicacion': 1, 'flota/documentos': 1,
+        'flota/almacen-flota': 1,
         'almacen/dashboard-financiero': 1, 'almacen/inventario': 1, 'almacen/entradas': 1,
         'almacen/recepcion-compras': 1, 'almacen/salidas': 1, 'almacen/kardex': 1, 'almacen/proveedores': 1,
         'directorio/conductores': 1, 'directorio/clientes': 1,
@@ -951,12 +960,13 @@ window.verificarSesionGuardada = function() {
         'tesoreria/caja': 1, 'tesoreria/liquidaciones': 1, 'tesoreria/cuentas': 1, 'tesoreria/bancos': 1, 'tesoreria/centros-costos': 1,
         'gerencia/aprobaciones-oc': 1, 'gerencia/aprobaciones-caja': 1,
         'seguridad/unidades': 1, 'seguridad/entrega-vehiculos': 1, 'seguridad/unidades-base': 1,
-        'sistema/configuracion': 1, 'sistema/usuarios': 1, 'sistema/auditoria': 1
+        'sistema/configuracion': 1, 'sistema/usuarios': 1, 'sistema/auditoria': 1, 'sistema/perfil': 1
     };
 
     let rutaHash = null;
     try {
         let h = (window.location.hash || '').replace(/^#\/?/, '').trim();
+        if (h && h.indexOf('/') === -1 && MAPA_RUTAS_VALIDAS[h.replace('-', '/')]) h = h.replace('-', '/');
         if (h) {
             if (MAPA_RUTAS_VALIDAS[h] || (typeof window.esRutaValidaYPermitida === 'function' && window.esRutaValidaYPermitida(h))) {
                 rutaHash = h;
@@ -3998,6 +4008,7 @@ var NOMBRES_MODULOS_RECIENTES = {
     'almacen/marcas':             'Marcas',
     'preferencias/situaciones':   'Situaciones',
     'flota/documentos':           'Documentos de Flota',
+    'flota/almacen-flota': 'Almacén de flota',
     'flota/ubicacion':            'GPS',
     'directorio/conductores':     'Personal',
     'sistema/usuarios':           'Usuarios',
@@ -4029,6 +4040,7 @@ var ICONOS_MODULOS_RECIENTES = {
     'almacen/familias':           'bi-tags-fill',
     'almacen/marcas':             'bi-award-fill',
     'flota/documentos':           'bi-folder2-open',
+    'flota/almacen-flota': 'bi-boxes',
     'flota/ubicacion':            'bi-geo-alt-fill',
     'directorio/conductores':     'bi-person-vcard-fill',
     'sistema/usuarios':           'bi-people-fill',
@@ -4133,6 +4145,7 @@ const TITULOS_MODULOS = {
     'mantenimiento/incidencias-ruta': 'Incidencias en Ruta',
     'flota/disponibilidad':        'Disponibilidad de Flota',
     'flota/documentos':            'Documentos de Flota',
+    'flota/almacen-flota': 'Almacén de flota',
     'flota/ubicacion':             'GPS',
     'directorio/conductores':      'Directorio de Personal',
     'sistema/usuarios':            'Gestión de Usuarios',
@@ -4236,6 +4249,7 @@ const MENU_IDS = {
     'preferencias/situaciones':    'nav-otros-mant',
     'flota/disponibilidad':        'nav-disponibilidad-flota',
     'flota/documentos':            'nav-documentos-flota',
+    'flota/almacen-flota': 'nav-almacen-flota',
     'flota/ubicacion':             'nav-ubicacion',
     'flota/entrega-vehiculos':     'nav-entrega-vehiculos',
     'directorio/conductores':      'nav-conductores',
@@ -4300,6 +4314,7 @@ const MENU_SECTION = {
     'mantenimiento/ordenes':          'mantenimiento',
     'flota/ubicacion':            'flota',
     'flota/entrega-vehiculos':    'flota',
+    'flota/almacen-flota': 'flota',
     'directorio/conductores':     'directorio',
     'sistema/usuarios':           'configuracion',
     'sistema/auditoria':          'configuracion',
@@ -4345,6 +4360,7 @@ const BREADCRUMB_MAP = {
     'tesoreria/centros-costos':   ['Tesorería','Centros de Costos'],
     'operaciones/conductor-portal': ['Conductor','Mi Viaje & Rendición'],
     'flota/entrega-vehiculos':    ['Flota','Entrega de Vehículos'],
+    'flota/almacen-flota': ['Flota', 'Almacén de flota'],
     'seguridad/entrega-vehiculos': ['Flota','Entrega de Vehículos'],
     'almacen/recepcion-compras':  ['Almacén','Recepción de Compras'],
     'operaciones/programacion':    ['Operaciones','Programación'],
@@ -5836,6 +5852,7 @@ var FAB_ACCIONES_POR_RUTA = {
     // Sin FAB
     'flota/disponibilidad':     null,
     'flota/documentos':         null,
+    'flota/almacen-flota': null,
     'flota/ubicacion':          null,
     'sistema/auditoria':        null,
     'sistema/configuracion':    null,

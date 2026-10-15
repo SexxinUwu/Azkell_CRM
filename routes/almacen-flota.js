@@ -67,7 +67,7 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     }
 
     // Resumen de todas las unidades que tienen artículos
-    router.get('/flota/almacen/resumen', async (req, res) => {
+    router.get('/flota/resumen', async (req, res) => {
         try {
             const tdb = getDb(req);
             const p = promesa(tdb);
@@ -98,7 +98,7 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     });
 
     // Artículos que tiene una unidad y su historial de asignaciones y devoluciones
-    router.get('/flota/almacen/unidades/:placa', async (req, res) => {
+    router.get('/flota/unidades/:placa', async (req, res) => {
         try {
             const tdb = getDb(req);
             const p = promesa(tdb);
@@ -136,7 +136,7 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     });
 
     // Asignar artículos del almacén a una unidad: genera una salida despachada a la placa
-    router.post('/flota/almacen/asignar', async (req, res) => {
+    router.post('/flota/asignar', async (req, res) => {
         try {
             const tdb = getDb(req);
             const p = promesa(tdb);
@@ -185,7 +185,7 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     });
 
     // Devolver artículos de la unidad al almacén: entrada de ajuste + registro de devolución
-    router.post('/flota/almacen/devolver', async (req, res) => {
+    router.post('/flota/devolver', async (req, res) => {
         try {
             const tdb = getDb(req);
             const p = promesa(tdb);

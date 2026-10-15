@@ -1,0 +1,139 @@
+<style>
+#almFlota {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #1e293b;
+    padding: 0.75rem 1.25rem 3rem 1.25rem;
+    min-height: calc(100vh - 60px);
+}
+#almFlota .alm-head { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; justify-content: space-between; margin-bottom: 1rem; }
+#almFlota .alm-eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #0f766e; }
+#almFlota .alm-title { font-size: 1.5rem; font-weight: 800; margin: 0; }
+#almFlota .alm-sub { color: #64748b; font-size: 0.9rem; margin: 0; }
+#almFlota .alm-card {
+    display: block; width: 100%; text-align: left; background: #fff;
+    border: 1px solid #e2e8f0; border-radius: 14px; padding: 0.9rem 1rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+#almFlota .alm-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08); }
+#almFlota .alm-placa { font-weight: 800; font-size: 1.05rem; letter-spacing: 0.02em; }
+#almFlota .alm-cifras { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.82rem; color: #475569; }
+#almFlota .alm-cifras b { display: block; font-size: 1rem; color: #0f172a; }
+#almFlota .alm-vacio { color: #64748b; text-align: center; padding: 3rem 0; }
+</style>
+
+<div id="almFlota">
+    <div class="alm-head">
+        <div>
+            <div class="alm-eyebrow">Flota</div>
+            <h1 class="alm-title">Almacén de flota</h1>
+            <p class="alm-sub" id="almFlotaSub">Cargando…</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-dark rounded-pill px-3 fw-semibold" id="btnAlmFlotaAsignar" hidden>
+                <i class="bi bi-plus-lg me-1"></i>Asignar artículos
+            </button>
+        </div>
+    </div>
+
+    <div class="mb-3" style="max-width: 360px;">
+        <input type="search" class="form-control" id="almFlotaBuscar" placeholder="Buscar placa…">
+    </div>
+
+    <div class="row g-3" id="almFlotaGrid"></div>
+</div>
+
+<!-- Detalle de la unidad: saldo y movimientos -->
+<div class="modal fade" id="modalAlmFlotaDetalle" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="almFlotaDetTitulo">Unidad</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <button type="button" class="btn btn-dark btn-sm rounded-pill px-3" id="btnAlmFlotaDetAsignar" hidden>Asignar más</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" id="btnAlmFlotaDetDevolver" hidden>Devolver al almacén</button>
+                </div>
+
+                <h6 class="fw-bold">Artículos en la unidad</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Artículo</th><th>Unidad</th><th class="text-end">Saldo</th><th class="text-end">Costo ref.</th><th class="text-end">Valor</th></tr></thead>
+                        <tbody id="almFlotaSaldoBody"></tbody>
+                    </table>
+                </div>
+
+                <h6 class="fw-bold">Movimientos</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Fecha</th><th>Movimiento</th><th>Documento</th><th>Artículo</th><th class="text-end">Cant.</th><th>Usuario</th></tr></thead>
+                        <tbody id="almFlotaMovBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Asignar: sale del almacén hacia la unidad -->
+<div class="modal fade" id="modalAlmFlotaAsignar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Asignar artículos a una unidad</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold small" for="almAsigPlaca">Unidad</label>
+                        <select class="form-select" id="almAsigPlaca"></select>
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label fw-semibold small" for="almAsigObs">Observaciones</label>
+                        <input type="text" class="form-control" id="almAsigObs" placeholder="Opcional">
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-semibold small">Artículos (salen del almacén)</span>
+                    <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-3" id="btnAlmAsigAgregar">
+                        <i class="bi bi-plus-lg me-1"></i>Agregar artículo
+                    </button>
+                </div>
+                <div id="almAsigLineas"></div>
+                <p class="small text-muted mb-0">Solo aparecen artículos con stock en el almacén.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-dark rounded-pill px-4 fw-semibold" id="btnAlmAsigGuardar">Asignar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Devolver: vuelve de la unidad al almacén -->
+<div class="modal fade" id="modalAlmFlotaDevolver" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Devolver al almacén desde <span id="almDevPlacaTxt"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Artículo</th><th class="text-end">En la unidad</th><th class="text-end">Devolver</th></tr></thead>
+                        <tbody id="almDevFilas"></tbody>
+                    </table>
+                </div>
+                <label class="form-label fw-semibold small" for="almDevObs">Observaciones</label>
+                <input type="text" class="form-control" id="almDevObs" placeholder="Opcional">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-dark rounded-pill px-4 fw-semibold" id="btnAlmDevGuardar">Devolver</button>
+            </div>
+        </div>
+    </div>
+</div>
