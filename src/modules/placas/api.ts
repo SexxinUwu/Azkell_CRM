@@ -4,6 +4,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
 import { normalizarTipo } from './tiposUnidad';
+import { normalizarCombustible, normalizarUts } from './valoresPlaca';
 
 export interface Placa {
   placa: string;
@@ -56,12 +57,12 @@ function desdeFila(f: unknown[]): Placa {
     vin: txt(f[11]),
     configuracion: txt(f[12]),
     anio: txt(f[13]),
-    combustible: txt(f[14]),
+    combustible: normalizarCombustible(txt(f[14])),
     cargaUtil: txt(f[15]),
     pesoNeto: txt(f[16]),
     pesoBruto: txt(f[17]),
     estado: txt(f[18]) || 'Inactiva',
-    uts: txt(f[19]),
+    uts: normalizarUts(txt(f[19])),
     motora: txt(f[20]).toLowerCase() === 'motora',
     llantas: txt(f[21]),
     enUso: txt(f[22]).toLowerCase().startsWith('s'),
@@ -175,4 +176,19 @@ export async function eliminarPlacas(placas: string[]) {
   });
   if (r.error) throw new Error(r.error);
   return r.afectados ?? placas.length;
+}
+
+// Nombres de unidades en Wialon (GPS), para el campo "Nombre en Wialon". Misma fuente que la versión actual.
+export function useNombresWialon() {
+  return useQuery({
+    queryKey: ['placas', 'wialon-nombres'],
+    queryFn: async () => {
+      const r = await api<unknown>('/script/obtenerDatosWialon', { method: 'POST', body: { args: [] } });
+      const obj = r as { data?: unknown } | null;
+      const lista = Array.isArray(obj) ? (obj as unknown[]) : Array.isArray(obj?.data) ? (obj!.data as unknown[]) : ((obj?.data as { data?: unknown[] } | undefined)?.data ?? []);
+      const nombres = lista.map(w => String((w as { nombre_wialon?: string }).nombre_wialon ?? '').trim()).filter(Boolean);
+      return [...new Set(nombres)].sort((a, b) => a.localeCompare(b, 'es'));
+    },
+    staleTime: 5 * 60_000,
+  });
 }

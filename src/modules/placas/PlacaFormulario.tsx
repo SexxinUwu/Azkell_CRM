@@ -13,12 +13,13 @@ import { errorMessage } from '../../core/api/client';
 import { formatPlateInput, normalizePlate } from '../../core/lib/peru';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
-import { actualizarPlaca, crearPlaca, sumaTanques, useMetricas, type Placa } from './api';
+import { actualizarPlaca, crearPlaca, sumaTanques, useMetricas, useNombresWialon, type Placa } from './api';
+import { COMBUSTIBLES, UTS_OPCIONES } from './valoresPlaca';
 import { normalizarTipo, TIPOS_UNIDAD } from './tiposUnidad';
 
 const VACIA: Placa = {
   placa: '', cliente: '', ruc: '', marca: '', modelo: '', tipo: '', subTipo: '', color: '', nroMotor: '', nroCaja: '',
-  nroCorona: '', vin: '', configuracion: '', anio: '', combustible: '', cargaUtil: '', pesoNeto: '', pesoBruto: '',
+  nroCorona: '', vin: '', configuracion: '', anio: '', combustible: 'Diésel', cargaUtil: '', pesoNeto: '', pesoBruto: '',
   estado: 'Activa', uts: '', motora: true, llantas: '', enUso: true, wialon: '', tanque1: '', tanque2: '', tanque3: '',
   capacidadTanque: '', tara: '', modeloMotor: '',
 };
@@ -89,8 +90,15 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
   const tipos = useMemo(() => TIPOS_UNIDAD.map(t => ({ value: t, label: t })), []);
   const sugerencias = useMemo(() => ({
     subTipo: unicos(x => x.subTipo), color: unicos(x => x.color), configuracion: unicos(x => x.configuracion),
-    combustible: unicos(x => x.combustible),
+    modeloMotor: unicos(x => x.modeloMotor), combustible: unicos(x => x.combustible),
   }), [existentes]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Modelos de la marca elegida (todos si aún no hay marca): lo que se agregue queda para los próximos registros
+  const modelos = useMemo(() => {
+    const m = (p.marca || '').trim().toUpperCase();
+    const lista = existentes.filter(x => !m || (x.marca || '').trim().toUpperCase() === m).map(x => (x.modelo || '').trim()).filter(Boolean);
+    return [...new Set(lista)].sort((a, b) => a.localeCompare(b, 'es'));
+  }, [existentes, p.marca]);
+  const { data: nombresWialon = [] } = useNombresWialon();
 
   const total = sumaTanques(p.tanque1, p.tanque2, p.tanque3);
   const cambiado = !placa || JSON.stringify(placa) !== JSON.stringify(p);
@@ -120,16 +128,22 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
     }
   }
 
-  const DatalistInput = ({ c, label, lista }: { c: Campo; label: string; lista: string[] }) => (
-    <Field label={label} error={error(c)}>
-      {props => (
-        <>
-          <TextInput {...props} {...texto(c)} list={`${props.id}-opciones`} autoComplete="off" />
-          <datalist id={`${props.id}-opciones`}>{lista.map(v => <option key={v} value={v} />)}</datalist>
-        </>
-      )}
-    </Field>
-  );
+  // Lista desplegable con búsqueda. Lo que se escribe y no existe se agrega (creable); las listas fijas no.
+  // Vacío se permite: al quitar el valor (X) el campo queda en blanco.
+  const campoLista = (c: Campo, label: string, lista: string[], opts: { creable?: boolean; placeholder?: string } = {}) => {
+    const valores = [...new Set([...lista, ...(p[c] ? [String(p[c])] : [])])];
+    const creable = opts.creable !== false;
+    return (
+      <Field label={label} error={error(c)}>
+        {props => (
+          <Combobox {...props} options={valores.map(v => ({ value: v, label: v }))} value={String(p[c] ?? '') || null}
+            onChange={v => { set(c, (v ?? '') as never); tocar(c)(); }}
+            placeholder={opts.placeholder ?? 'Elige o escribe…'}
+            onCreate={creable ? (t => set(c, t.trim() as never)) : undefined} createLabel="Usar" />
+        )}
+      </Field>
+    );
+  };
 
   return (
     <Sheet
@@ -194,24 +208,24 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
               {props => <Combobox {...props} options={tipos} value={p.tipo || null} onChange={v => { set('tipo', v ?? ''); tocar('tipo')(); }}
                 placeholder="Tracto, Carreta…" onCreate={t => set('tipo', t.trim())} createLabel="Usar" />}
             </Field>
-            {DatalistInput({ c: 'subTipo', label: 'Sub tipo', lista: sugerencias.subTipo })}
+            {campoLista('subTipo', 'Sub tipo', sugerencias.subTipo)}
             <Field label="Marca">
               {props => <Combobox {...props} options={marcas} value={p.marca || null} onChange={v => set('marca', v ?? '')}
                 placeholder="Busca la marca" onCreate={t => set('marca', t.trim().toUpperCase())} createLabel="Usar" />}
             </Field>
-            <Field label="Modelo">{props => <TextInput {...props} {...texto('modelo')} />}</Field>
-            {DatalistInput({ c: 'color', label: 'Color', lista: sugerencias.color })}
-            {DatalistInput({ c: 'configuracion', label: 'Configuración', lista: sugerencias.configuracion })}
+            {campoLista('modelo', 'Modelo', modelos, { placeholder: p.marca ? `Modelos de ${p.marca}` : 'Elige o escribe el modelo' })}
+            {campoLista('color', 'Color', sugerencias.color)}
+            {campoLista('configuracion', 'Configuración', sugerencias.configuracion)}
           </div>
         </section>
 
         <section className="form-section">
           <h3 className="form-section__title">Técnico</h3>
           <div className="form-grid">
-            <Field label="Modelo de motor">{props => <TextInput {...props} {...texto('modeloMotor')} />}</Field>
-            <Field label="N.º de motor">{props => <TextInput {...props} {...texto('nroMotor')} className="input--mono" />}</Field>
-            <Field label="N.º de caja">{props => <TextInput {...props} {...texto('nroCaja')} className="input--mono" />}</Field>
-            <Field label="N.º de corona">{props => <TextInput {...props} {...texto('nroCorona')} className="input--mono" />}</Field>
+            {campoLista('modeloMotor', 'Modelo de motor', sugerencias.modeloMotor)}
+            <Field label="N.º de motor">{props => <TextInput {...props} {...texto('nroMotor')} inputMode="numeric" className="input--mono" />}</Field>
+            <Field label="N.º de caja">{props => <TextInput {...props} {...texto('nroCaja')} inputMode="numeric" className="input--mono" />}</Field>
+            <Field label="N.º de corona">{props => <TextInput {...props} {...texto('nroCorona')} inputMode="numeric" className="input--mono" />}</Field>
             <Field label="VIN" wide>{props => <TextInput {...props} {...texto('vin', v => v.toUpperCase())} className="input--mono" />}</Field>
             <Field label="Llantas">{props => <TextInput {...props} {...texto('llantas')} inputMode="numeric" />}</Field>
           </div>
@@ -220,7 +234,7 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
         <section className="form-section">
           <h3 className="form-section__title">Capacidad</h3>
           <div className="form-grid">
-            {DatalistInput({ c: 'combustible', label: 'Combustible', lista: sugerencias.combustible })}
+            {campoLista('combustible', 'Combustible', [...COMBUSTIBLES, ...sugerencias.combustible], { creable: false })}
             <div className="placa-form__total" aria-live="polite">
               <span className="placa-form__total-label">Capacidad total</span>
               <motion.span key={total || p.capacidadTanque} className="placa-form__total-valor t-numeric" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
@@ -252,8 +266,8 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
               <SegmentedControl block label="Clase" value={p.motora ? 'motora' : 'no'} onChange={v => set('motora', v === 'motora')}
                 options={[{ value: 'motora', label: 'Motora' }, { value: 'no', label: 'No motora' }]} />
             </div>
-            <Field label="UTS">{props => <TextInput {...props} {...texto('uts')} />}</Field>
-            <Field label="Nombre en Wialon (GPS)">{props => <TextInput {...props} {...texto('wialon')} />}</Field>
+            {campoLista('uts', 'UTS', [...UTS_OPCIONES], { creable: false, placeholder: 'Local, nacional o vacío' })}
+            {campoLista('wialon', 'Nombre en Wialon (GPS)', nombresWialon, { creable: false, placeholder: 'Búsqueda automática' })}
           </div>
           <div className="list">
             <SwitchRow title="En uso" subtitle="La unidad está operando en la flota" checked={p.enUso} onChange={v => set('enUso', v)} />
