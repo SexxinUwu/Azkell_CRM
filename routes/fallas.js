@@ -137,7 +137,7 @@ module.exports = function(db) {
                             if (transporter) {
                                 await transporter.sendMail({
                                     to: destinos.join(','),
-                                    subject: `[Falla ${severidad?.toUpperCase() || 'MEDIA'}] ${placa} — ${b.tipo_falla}`,
+                                    subject: `[Falla ${(b.severidad || 'media').toUpperCase()}] ${placa} — ${b.tipo_falla}`,
                                     html: `<b>Folio:</b> ${folio}<br><b>Placa:</b> ${placa}<br><b>Tipo:</b> ${b.tipo_falla}<br><b>Descripción:</b> ${b.descripcion}<br><b>Conductor:</b> ${b.conductor || '—'}<br><b>Repuesto requerido:</b> ${b.repuesto_descripcion || 'Ver detalles'}`
                                 }).catch(() => {});
                                 await tdb.promise().query('UPDATE fallas_conductor SET alerta_enviada=1 WHERE id=?', [result.insertId]);

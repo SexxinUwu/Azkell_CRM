@@ -3793,7 +3793,7 @@ app.post('/api/cambiar-password', async (req, res) => {
 // ============================================================
 // RUTAS PLANIFICACION
 // ============================================================
-const planificacionRoutes = require('./routes/planificacion')(db, broadcast, logAudit);
+const planificacionRoutes = require('./routes/planificacion')(db, broadcast, logAudit, { enviarEmailAlerta, verificarAlertasRetraso });
 app.use('/api', planificacionRoutes);
 
 // ── Cloudinary + Multer (memoria) para imágenes de inventario ─────

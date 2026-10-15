@@ -1,4 +1,6 @@
 const express = require('express');
+const path = require('path');
+const { getPresignedUploadUrl, getPresignedUrl } = require('../utils/s3');
 const router = express.Router();
 
 module.exports = (db, logAudit, _generarCodigoAlmacen) => {
@@ -1122,7 +1124,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             if (!fileName) return res.status(400).json({ error: 'fileName requerido' });
             const ext = path.extname(fileName) || '.jpg';
             const uniqueKey = `status-rampa/evidencia_${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
-            const uploadUrl = await s3Service.getUploadUrl(uniqueKey, fileType || 'image/jpeg');
+            const uploadUrl = await getPresignedUploadUrl(uniqueKey, fileType || 'image/jpeg', 300);
             res.json({ uploadUrl, key: uniqueKey, finalUrl: uniqueKey });
         } catch (err) {
             console.error('Error generando S3 presigned PUT para taller_rampas:', err);
@@ -1141,7 +1143,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
                     return res.json({ url: rawUrl });
                 }
-                const presigned = await s3Service.getPresignedUrl(rawUrl, 3600);
+                const presigned = await getPresignedUrl(rawUrl, 3600);
                 return res.json({ url: presigned });
             } catch (e) {
                 return res.status(500).json({ error: 'Error firmando URL de evidencia' });

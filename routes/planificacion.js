@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
-module.exports = (db, broadcast, logAudit) => {
+module.exports = (db, broadcast, logAudit, alertas = {}) => {
+    const { enviarEmailAlerta, verificarAlertasRetraso } = alertas;
 
     // ── Middleware de Auditoría Automática para Planificación ────────────────
     router.use((req, res, next) => {
