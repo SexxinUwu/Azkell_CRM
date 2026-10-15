@@ -65,6 +65,62 @@ const db_query = (db, sql, params) => new Promise((resolve, reject) => {
   }
 });
 
+// Filtros del reporte de placas: cliente, marca, tipo de unidad y estado. Vienen de la frase
+// (ver filtrosPlacasDelMensaje) o de los parámetros del reporte. Siempre se usan como valores de SQL.
+const CAMPOS_PLACA = ['cliente', 'marca', 'tipo_unidad', 'estado'];
+const ETIQUETA_PLACA = { cliente: 'cliente', marca: 'marca', tipo_unidad: 'tipo' };
+
+const normalizar = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const palabrasDe = (s) => normalizar(s).split(/[^a-z0-9ñ]+/).filter(Boolean);
+// Palabras que casi todas las empresas tienen: no bastan para reconocer un cliente
+const PALABRAS_GENERICAS = new Set(['transportes', 'transporte', 'logistica', 'servicios', 'empresa', 'grupo', 'corporacion', 'sociedad', 'comercial', 'industrias', 'peru', 'lima']);
+
+function filtrosPlaca(args) {
+  const out = {};
+  for (const c of CAMPOS_PLACA) {
+    const v = typeof args?.[c] === 'string' ? args[c].trim().slice(0, 60) : '';
+    if (v) out[c] = v;
+  }
+  return out;
+}
+
+function tituloReporte(tipo, filtros = {}) {
+  const partes = CAMPOS_PLACA.filter(c => filtros[c]).map(c => (ETIQUETA_PLACA[c] ? `${ETIQUETA_PLACA[c]} ${filtros[c]}` : filtros[c]));
+  return partes.length ? `${REPORTS[tipo].label} · ${partes.join(' · ')}` : REPORTS[tipo].label;
+}
+
+function condicionesPlaca(f) {
+  const cond = [];
+  const params = [];
+  const like = (v) => `%${v.replace(/[\\%_]/g, '\\$&')}%`;
+  if (f.cliente) { cond.push('cliente LIKE ?'); params.push(like(f.cliente)); }
+  if (f.marca) { cond.push('marca LIKE ?'); params.push(like(f.marca)); }
+  if (f.tipo_unidad) { cond.push('tipo = ?'); params.push(f.tipo_unidad); }
+  if (f.estado) { cond.push('estado = ?'); params.push(f.estado); }
+  return { where: cond.length ? `WHERE ${cond.join(' AND ')}` : '', params };
+}
+
+// Filtros que la persona nombra en la frase, comparados contra lo que existe en la base.
+// Así "placas de marsisa" filtra por el cliente MARSISA sin depender de que la IA adivine.
+async function filtrosPlacasDelMensaje(db, mensaje) {
+  const texto = normalizar(mensaje);
+  const palabras = new Set(palabrasDe(mensaje).filter(p => p.length >= 3));
+  const f = {};
+  if (/\binactiv/.test(texto)) f.estado = 'Inactiva';
+  else if (/\bactiv/.test(texto)) f.estado = 'Activa';
+  if (!palabras.size) return f;
+  const filas = await db_query(db, 'SELECT DISTINCT cliente, marca, tipo FROM placas', []);
+  for (const r of filas) {
+    if (!f.cliente) {
+      const hit = palabrasDe(r.cliente).find(p => p.length >= 4 && !PALABRAS_GENERICAS.has(p) && palabras.has(p));
+      if (hit) f.cliente = hit;
+    }
+    if (!f.marca && r.marca && palabras.has(normalizar(r.marca).trim())) f.marca = r.marca.trim();
+    if (!f.tipo_unidad && r.tipo && palabras.has(normalizar(r.tipo).trim())) f.tipo_unidad = r.tipo.trim();
+  }
+  return f;
+}
+
 async function buildReport(db, user, tipo, query) {
   if (!REPORTS[tipo]) throw { status: 400, message: 'Tipo de reporte no válido.' };
   if (!tienePermiso(user, REPORTS[tipo].perm)) throw { status: 403, message: 'Sin permiso para este reporte.' };
@@ -73,12 +129,14 @@ async function buildReport(db, user, tipo, query) {
   const subtitle = todayForPrompt().today;
 
   if (tipo === 'placas') {
+    const filtros = filtrosPlaca(query);
+    const { where, params } = condicionesPlaca(filtros);
     const rows = await db_query(targetDb,
-      'SELECT placa, cliente, marca, modelo_uts, tipo, sub_tipo, color, anio, estado FROM placas ORDER BY placa LIMIT 3000',
-      []
+      `SELECT placa, cliente, marca, modelo_uts, tipo, sub_tipo, color, anio, estado FROM placas ${where} ORDER BY placa LIMIT 3000`,
+      params
     );
     return {
-      title: REPORTS.placas.label,
+      title: tituloReporte('placas', filtros),
       subtitle: `Generado el ${subtitle}`,
       columns: [
         { key: 'placa', label: 'Placa' },
@@ -201,4 +259,4 @@ async function buildReport(db, user, tipo, query) {
   throw { status: 400, message: 'Tipo de reporte no reconocido.' };
 }
 
-module.exports = { REPORTS, availableReports, buildReport, resolveRange, todayForPrompt };
+module.exports = { REPORTS, availableReports, buildReport, resolveRange, todayForPrompt, filtrosPlaca, filtrosPlacasDelMensaje, tituloReporte, condicionesPlaca };
