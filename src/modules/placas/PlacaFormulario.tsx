@@ -14,7 +14,7 @@ import { formatPlateInput, normalizePlate } from '../../core/lib/peru';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { actualizarPlaca, crearPlaca, sumaTanques, useMetricas, useNombresWialon, type Placa } from './api';
-import { COMBUSTIBLES, UTS_OPCIONES } from './valoresPlaca';
+import { COMBUSTIBLES, UTS_OPCIONES, opcionesUnicas, valorExistente } from './valoresPlaca';
 import { normalizarTipo, TIPOS_UNIDAD } from './tiposUnidad';
 
 const VACIA: Placa = {
@@ -81,7 +81,7 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
   });
 
   // Opciones a partir de lo que ya existe (escribir algo nuevo también se permite)
-  const unicos = (f: (x: Placa) => string) => [...new Set(existentes.map(f).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const unicos = (f: (x: Placa) => string) => opcionesUnicas(existentes.map(f));
   const clientes = useMemo(() => unicos(x => x.cliente).map(c => ({
     value: c, label: c, description: existentes.find(x => x.cliente === c && x.ruc)?.ruc,
   })), [existentes]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -96,7 +96,7 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
   const modelos = useMemo(() => {
     const m = (p.marca || '').trim().toUpperCase();
     const lista = existentes.filter(x => !m || (x.marca || '').trim().toUpperCase() === m).map(x => (x.modelo || '').trim()).filter(Boolean);
-    return [...new Set(lista)].sort((a, b) => a.localeCompare(b, 'es'));
+    return opcionesUnicas(lista);
   }, [existentes, p.marca]);
   const { data: nombresWialon = [] } = useNombresWialon();
 
@@ -139,7 +139,7 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
           <Combobox {...props} options={valores.map(v => ({ value: v, label: v }))} value={String(p[c] ?? '') || null}
             onChange={v => { set(c, (v ?? '') as never); tocar(c)(); }}
             placeholder={opts.placeholder ?? 'Elige o escribe…'}
-            onCreate={creable ? (t => set(c, t.trim() as never)) : undefined} createLabel="Usar" />
+            onCreate={creable ? (t => set(c, valorExistente(t, lista) as never)) : undefined} createLabel="Usar" />
         )}
       </Field>
     );
