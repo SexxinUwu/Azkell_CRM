@@ -439,3 +439,33 @@
 .insp-neu__fila--activa td { background: var(--fill); font-weight: 600; }
 .insp-neu__fila:focus-visible { outline: 2px solid var(--label); outline-offset: -2px; }
 @media (prefers-reduced-motion: reduce) { .insp-neu__aviso--reciente { animation: none; } }
+
+/* ── Esquema del chasis ─────────────────────────────────────────────── */
+.insp-chasis { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4); border-radius: var(--r-xl); background: var(--surface); box-shadow: 0 0 0 1px var(--separator); transition: background-color 0.4s ease; }
+.insp-chasis__cab { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; justify-content: space-between; }
+.insp-chasis__info { font-size: 0.75rem; font-weight: 600; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.insp-chasis__lienzo { padding: var(--s-2) 0; transform-origin: 50% 50%; }
+.insp-chasis__vacio { margin: 0; padding: var(--s-4) 0; text-align: center; font-size: 0.875rem; color: var(--label-2); }
+.insp-chasis__leyenda { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-3); justify-content: center; font-size: 0.6875rem; color: var(--label-2); }
+.insp-chasis__leyenda span { display: inline-flex; align-items: center; gap: 5px; }
+.insp-chasis__leyenda i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+/* Rayos X: fondo oscuro y llantas en cian translúcido */
+.insp-chasis--xray { background: #1c1c1e; box-shadow: 0 0 0 1px rgba(50, 215, 255, 0.25); }
+.insp-chasis--xray .insp-chasis__info, .insp-chasis--xray .insp-chasis__leyenda { color: #9fd9e6; }
+
+/* ── Rotación ───────────────────────────────────────────────────────── */
+.insp-neu__rotar { display: flex; flex-direction: column; gap: var(--s-2); padding-top: var(--s-2); }
+.insp-neu__rotar-control { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
+.insp-neu__rotar-control > div, .insp-neu__rotar-control select { flex: 1; min-width: 12rem; }
+
+/* ── Fotos de la llanta ─────────────────────────────────────────────── */
+.insp-neu__fotos { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: var(--s-3); }
+.insp-neu__foto { display: flex; flex-direction: column; gap: var(--s-2); }
+.insp-neu__foto-etiqueta { font-size: 0.75rem; font-weight: 700; color: var(--label-2); }
+.insp-neu__foto-vacio { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 6.5rem; border: 1.5px dashed var(--separator); border-radius: var(--r-lg); background: var(--fill); color: var(--label-2); font-size: 0.8125rem; cursor: pointer; }
+.insp-neu__foto-vacio:disabled { cursor: progress; opacity: 0.7; }
+.insp-neu__foto-img { width: 100%; height: 6.5rem; object-fit: cover; border-radius: var(--r-lg); box-shadow: 0 0 0 1px var(--separator); }
+.insp-neu__foto-acciones { display: flex; gap: var(--s-2); justify-content: space-between; }
+.insp-neu__foto-acciones button { border: 0; background: none; color: var(--label-2); font-size: 0.75rem; padding: 4px 6px; border-radius: var(--r-sm); cursor: pointer; display: inline-flex; align-items: center; }
+.insp-neu__foto-acciones button:hover { background: var(--fill); color: var(--label); }
+.insp-neu__oculto { display: none; }
