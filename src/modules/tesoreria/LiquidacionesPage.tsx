@@ -25,10 +25,13 @@ interface Viaje {
   total_depositado: number | string;
   total_rendido: number | string;
   saldo_diferencia: number | string;
-  estado_balance: string;       // CUADRADO | SOBRANTE | FALTANTE | PENDIENTE …
+  estado_balance: string;       // CUADRADO | SALDO_EMPRESA (sobrante) | SALDO_CONDUCTOR (faltante)
+  estado?: string;              // estado del viaje: FINALIZADO | LIQUIDADO …
+  fondos_pendientes?: number;   // solicitudes de caja aún no procesadas por tesorería
 }
 
 interface Gasto {
+  estado?: string;
   fecha?: string; tipo_gasto?: string; sub_motivo?: string; detalle?: string; proveedor_nombre?: string;
   tipo_comprobante?: string; numero?: string; importe?: number | string; sustento_view_url?: string; sustento_url?: string;
 }
@@ -38,10 +41,13 @@ interface Caja {
 }
 interface DetalleViaje {
   ok: boolean; total_depositado: number; total_rendido: number; saldo_diferencia: number; estado_balance: string; gastos: Gasto[];
+  estado_viaje?: string | null;
+  total_pendiente_pago?: number;
 }
 
 const num = (v: unknown) => Number(v) || 0;
-const tonoBalance = (e: string) => (e === 'CUADRADO' ? 'green' : e === 'SOBRANTE' ? 'amber' : e === 'FALTANTE' ? 'red' : 'neutral');
+const tonoBalance = (e: string) => (e === 'CUADRADO' ? 'green' : e === 'SALDO_EMPRESA' ? 'amber' : e === 'SALDO_CONDUCTOR' ? 'red' : 'neutral');
+const etiquetaBalance = (e: string) => (e === 'CUADRADO' ? 'Cuadrado' : e === 'SALDO_EMPRESA' ? 'Sobrante' : e === 'SALDO_CONDUCTOR' ? 'Faltante' : e || '—');
 const dia = (s?: string | null) => (s ? String(s).split('T')[0] : '—');
 
 function useViajes(q: string, estado: string) {
@@ -110,9 +116,9 @@ export function LiquidacionesPage() {
         <SelectInput value={estado} onChange={e => setEstado(e.target.value)} aria-label="Estado del balance">
           <option value="">Todos los balances</option>
           <option value="CUADRADO">Cuadrado</option>
-          <option value="SOBRANTE">Sobrante (devuelve el conductor)</option>
-          <option value="FALTANTE">Faltante (reembolso al conductor)</option>
-          <option value="PENDIENTE">Pendiente</option>
+          <option value="SALDO_EMPRESA">Sobrante (devuelve el conductor)</option>
+          <option value="SALDO_CONDUCTOR">Faltante (reembolso al conductor)</option>
+          <option value="PENDIENTE">Sin cuadrar</option>
         </SelectInput>
 
         {isLoading ? <PageLoader /> : isError ? (
@@ -132,11 +138,12 @@ export function LiquidacionesPage() {
                   </div>
                   <div className="mov-fila__cuerpo">
                     <span className="mov-fila__titulo">{v.viaje} · {v.conductor || 'Sin conductor'}</span>
-                    <span className="mov-fila__sub">{[v.placa_tracto, v.placa_remolque, v.ruta].filter(Boolean).join(' · ') || dia(v.fecha)}</span>
+                    <span className="mov-fila__sub">{[v.placa_tracto, v.placa_remolque, v.ruta, v.estado].filter(Boolean).join(' · ') || dia(v.fecha)}</span>
                   </div>
                   <div className="mov-fila__derecha">
                     <span className="mov-fila__monto">{fmtMonto(num(v.saldo_diferencia))}</span>
-                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${t === 'neutral' ? 'gray' : t}-ink)` }}>{v.estado_balance}</span>
+                    {num(v.fondos_pendientes) > 0 && <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--amber-ink)' }}>Pendiente {fmtMonto(num(v.fondos_pendientes))}</span>}
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${t === 'neutral' ? 'gray' : t}-ink)` }}>{etiquetaBalance(v.estado_balance)}</span>
                   </div>
                 </button>
               );
@@ -185,6 +192,12 @@ function DetalleLiquidacion({ viaje, onClose }: { viaje: Viaje | null; onClose: 
     ];
   const destinoEfectivo = destino || opciones[0].value;
   const conductor = cajas.data?.[0]?.conductor || cajas.data?.[0]?.persona || viaje?.conductor || '';
+  // Gastos rendidos por tipo (los rechazados no cuentan, igual que en el total)
+  const porTipo = (d?.gastos ?? []).filter(g => g.estado !== 'RECHAZADO').reduce<Record<string, number>>((acc, g) => {
+    const k = g.tipo_gasto || 'Sin tipo';
+    acc[k] = (acc[k] ?? 0) + num(g.importe);
+    return acc;
+  }, {});
 
   async function generar() {
     if (!tipo) return;
@@ -216,6 +229,17 @@ function DetalleLiquidacion({ viaje, onClose }: { viaje: Viaje | null; onClose: 
             <div className="inv-metrica"><span className={`inv-metrica__num inv-metrica__num--${saldo < 0 ? 'critical' : saldo > 0 ? 'warning' : ''}`}>{fmtMonto(saldo)}</span><span className="inv-metrica__label">Diferencia</span></div>
           </div>
 
+          <Notice tone={d.estado_viaje === 'LIQUIDADO' ? 'success' : 'neutral'}>
+            Estado del viaje: <strong>{d.estado_viaje ?? '—'}</strong>. {d.estado_viaje === 'LIQUIDADO'
+              ? 'El saldo cuadra: el viaje está liquidado.'
+              : 'Pasa a LIQUIDADO solo cuando el saldo cuadra y el viaje está FINALIZADO.'}
+          </Notice>
+          {num(d.total_pendiente_pago) > 0 && (
+            <div role="alert" style={{ display: 'flex', gap: 'var(--s-3)', alignItems: 'flex-start', padding: 'var(--s-3) var(--s-4)', borderRadius: 'var(--r-lg)', background: 'var(--amber-tint)', color: 'var(--amber-ink)', fontSize: '0.875rem', fontWeight: 500 }}>
+              <CircleAlert size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+              <span>Fondos pendientes de entrega o pago: <strong>{fmtMonto(num(d.total_pendiente_pago))}</strong>. El viaje no pasa a LIQUIDADO hasta que tesorería procese o anule esas solicitudes.</span>
+            </div>
+          )}
           {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
 
           {tipo && can('tesoreria_liquidaciones.crear', 'tesoreria_caja.crear') && (
@@ -249,6 +273,18 @@ function DetalleLiquidacion({ viaje, onClose }: { viaje: Viaje | null; onClose: 
                   {url(c) && <a className="dato__valor dato__valor--enlace" href={url(c)} target="_blank" rel="noreferrer"><Paperclip size={13} style={{ verticalAlign: '-2px' }} /> Voucher</a>}
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="tarjeta__grupo-titulo">Resumen</p>
+            <div className="tarjeta__lista">
+              {Object.entries(porTipo).map(([tipoG, total]) => (
+                <div key={tipoG} className="dato"><span className="dato__label">{tipoG}</span><span className="dato__valor"><strong>{fmtMonto(total)}</strong></span></div>
+              ))}
+              <div className="dato"><span className="dato__label">Viáticos entregados</span><span className="dato__valor"><strong>{fmtMonto(d.total_depositado)}</strong></span></div>
+              <div className="dato"><span className="dato__label">Comprobantes rendidos</span><span className="dato__valor">{d.gastos?.length ?? 0} · <strong>{fmtMonto(d.total_rendido)}</strong></span></div>
+              <div className="dato"><span className="dato__label">Saldo {saldo < 0 ? 'a favor del conductor' : saldo > 0 ? 'a favor de la empresa' : ''}</span><span className="dato__valor"><strong>{fmtMonto(saldo)}</strong></span></div>
             </div>
           </div>
 

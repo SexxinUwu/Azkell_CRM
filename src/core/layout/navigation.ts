@@ -183,9 +183,9 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Tesorería',
     items: [
       { key: 'caja', label: 'Caja', clasico: 'tesoreria/caja', icon: Banknote, permissions: ver('tesoreria_caja') },
-      { key: 'pago-requerimientos', label: 'Pago de requerimientos', clasico: 'tesoreria/pago-requerimientos', icon: Wallet, permissions: ver('tesoreria_caja', 'tesoreria_pagos') },
+      { key: 'pago-requerimientos', label: 'Pago de requerimientos', to: '/tesoreria/pago-requerimientos', icon: Wallet, permissions: ver('tesoreria_caja', 'tesoreria_pagos') },
       { key: 'movimientos', label: 'Movimientos', clasico: 'tesoreria/movimientos', icon: ArrowLeftRight, permissions: ver('tesoreria_caja', 'tesoreria_movimientos') },
-      { key: 'liquidaciones', label: 'Liquidación de gastos', clasico: 'tesoreria/liquidaciones', icon: ScrollText, permissions: ver('tesoreria_liquidaciones') },
+      { key: 'liquidaciones', label: 'Liquidación de gastos', to: '/tesoreria/liquidaciones', icon: ScrollText, permissions: ver('tesoreria_liquidaciones') },
       { key: 'cuentas', label: 'Cuentas por cobrar y pagar', clasico: 'tesoreria/cuentas', icon: FileText, permissions: ver('tesoreria_cuentas') },
       { key: 'bancos', label: 'Bancos', clasico: 'tesoreria/bancos', icon: Landmark, permissions: ver('tesoreria_bancos', 'tesoreria_caja') },
       { key: 'centros-costos', label: 'Centros de costos', clasico: 'tesoreria/centros-costos', icon: Boxes, permissions: ver('tesoreria_centros_costos', 'tesoreria_caja') },

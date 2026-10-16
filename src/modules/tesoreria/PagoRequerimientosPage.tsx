@@ -314,8 +314,15 @@ export function PagoRequerimientosPage() {
                     </td>
                     <td>
                       {(() => {
+                        // Al contado se paga al recibir: no hay vencimiento que mostrar
+                        if (!/cr[eé]dito/i.test(String(oc.condicion_pago ?? ''))) return <span style={{ color: 'var(--label-2)', fontSize: '0.8125rem' }}>Al contado</span>;
                         const v = vencimiento(oc.fecha_vencimiento);
-                        return v ? <span className={`ot-estado ot-estado--${v.tono}`} style={{ fontSize: '0.75rem' }}>{v.texto}</span> : <span style={{ color: 'var(--label-2)', fontSize: '0.8125rem' }}>—</span>;
+                        return (
+                          <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 2 }}>
+                            {v ? <span className={`ot-estado ot-estado--${v.tono}`} style={{ fontSize: '0.75rem' }}>{v.texto}</span> : <span style={{ color: 'var(--label-2)', fontSize: '0.8125rem' }}>—</span>}
+                            <span style={{ fontSize: '0.7rem', color: 'var(--label-3)' }}>Crédito · {Number(oc.dias_credito) || 0} días</span>
+                          </span>
+                        );
                       })()}
                     </td>
                     <td>
