@@ -1102,6 +1102,7 @@ label.row__main { cursor: pointer; }
 }
 .firma__linea { position: absolute; left: 8%; right: 8%; bottom: 26%; border-bottom: 1px dashed var(--separator-strong); pointer-events: none; }
 .firma__limpiar {
+  min-height: 2.75rem; /* objetivo táctil de 44 px */
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
