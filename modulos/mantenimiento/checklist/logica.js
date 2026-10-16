@@ -283,6 +283,15 @@ window.ckCargarOrdenesViaje = async function(forceSync) {
     }
 };
 
+// Único punto que escribe el conductor. origen: 'seguridad' | 'viaje' | 'manual'
+window.ckAsignarConductor = function(nombre, origen) {
+    const h = document.getElementById('ck_conductor');
+    const t = document.getElementById('ck_conductor-txt');
+    if (h) { h.value = nombre; h.dataset.origen = origen; }
+    if (t) t.value = nombre;
+    if (typeof window._cbSet === 'function') window._cbSet('ck_conductor', nombre, nombre);
+};
+
 window.ckConsultarUltimoIngresoSeguridad = async function(placa) {
     if (!placa) return;
     const pStr = placa.toString().trim().toUpperCase();
@@ -320,15 +329,11 @@ window.ckConsultarUltimoIngresoSeguridad = async function(placa) {
             }
         }
 
-        // 3. Autocompletar Conductor con el último que ingresó la unidad a base
-        if (data.conductor) {
-            const condHidden = document.getElementById('ck_conductor');
-            const condTxt = document.getElementById('ck_conductor-txt');
-            if (condHidden) condHidden.value = data.conductor;
-            if (condTxt) condTxt.value = data.conductor;
-            if (typeof window._cbSet === 'function') {
-                window._cbSet('ck_conductor', data.conductor, data.conductor);
-            }
+        // 3. Conductor del último ingreso a base: solo si el campo está vacío o lo puso seguridad.
+        // No pisa el conductor de la orden de viaje ni lo que se escribió a mano.
+        const condActual = document.getElementById('ck_conductor');
+        if (data.conductor && (!condActual || !condActual.value || condActual.dataset.origen === 'seguridad')) {
+            window.ckAsignarConductor(data.conductor, 'seguridad');
         }
 
         // 4. Autocompletar Procedencia / Origen / Zona si el campo está vacío
@@ -377,16 +382,8 @@ window.ckConsultarViajeActualPorPlaca = async function(placa) {
                 }
             }
 
-            // 3. Autocompletar Conductor
-            if (viajeActual.conductor) {
-                const condHidden = document.getElementById('ck_conductor');
-                const condTxt = document.getElementById('ck_conductor-txt');
-                if (condHidden) condHidden.value = viajeActual.conductor;
-                if (condTxt) condTxt.value = viajeActual.conductor;
-                if (typeof window._cbSet === 'function') {
-                    window._cbSet('ck_conductor', viajeActual.conductor, viajeActual.conductor);
-                }
-            }
+            // 3. Autocompletar Conductor (la orden de viaje es una acción explícita)
+            if (viajeActual.conductor) window.ckAsignarConductor(viajeActual.conductor, 'viaje');
 
             // 4. Autocompletar Procedencia / Ruta
             if (viajeActual.ruta || viajeActual.origen) {
@@ -572,12 +569,7 @@ window.ckSeleccionarViaje = function(v) {
     }
 
     // Autocompletar Conductor
-    if (v.conductor) {
-        const condHidden = document.getElementById('ck_conductor');
-        const condTxt = document.getElementById('ck_conductor-txt');
-        if (condHidden) condHidden.value = v.conductor;
-        if (condTxt) condTxt.value = v.conductor;
-    }
+    if (v.conductor) window.ckAsignarConductor(v.conductor, 'viaje');
 
     // Autocompletar Procedencia / Ruta
     if (v.ruta) {
@@ -697,6 +689,18 @@ window.poblarPlacasChecklist = function() {
             const txtEl = document.getElementById('ck_placa_remolque-txt');
             if (txtEl) txtEl.value = val || lbl || '';
             window.ckSyncPlacaRemolque();
+        });
+        window._cbOnSelect('ck_conductor', function() {
+            const h = document.getElementById('ck_conductor');
+            if (h) h.dataset.origen = 'manual';
+        });
+    }
+    const txtCond = document.getElementById('ck_conductor-txt');
+    if (txtCond && !txtCond.dataset.origenListo) {
+        txtCond.dataset.origenListo = '1';
+        txtCond.addEventListener('input', function() {
+            const h = document.getElementById('ck_conductor');
+            if (h) h.dataset.origen = 'manual';
         });
     }
 };
