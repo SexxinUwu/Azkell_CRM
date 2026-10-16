@@ -2,7 +2,7 @@ import './mant.css';
 import './StatusRampa.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, ChevronRight, Clock, FileSpreadsheet, LayoutDashboard, LogOut, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Trash2, Wrench } from 'lucide-react';
+import { ArrowUpRight, ChevronRight, Clock, FileSpreadsheet, FileText, LayoutDashboard, LogOut, MessageCircle, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Settings2, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput } from '../../core/ui/Field';
@@ -14,7 +14,8 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { crearOTHija, eliminarRampaRegistro, reactivarRampa, rampaConductor, rampaId, useOTsHijas, useStatusRampa, type RampaEntrada } from './api';
+import { crearOTHija, eliminarRampaRegistro, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useStatusRampa, type OrdenTrabajo, type RampaEntrada } from './api';
+import { ConfigurarRampasSheet, enviarWhatsApp, exportarRampasPDF, textoReporteRampas, type CatRampa } from './RampasHerramientas';
 import { LiberarRampa, RampaFormulario } from './RampaFormulario';
 import { SUBTIPOS_OT, TIPOS_OT } from './tipos-ot';
 
@@ -172,6 +173,9 @@ function PanelAnaliticas({ activas, historial }: { activas: RampaEntrada[]; hist
 
 export function StatusRampaPage() {
   const { data, isLoading, isError, error } = useStatusRampa();
+  const catalogo = useCatalogosTaller();
+  const ordenes = useOrdenesTrabajoData();
+  const [configurando, setConfigurando] = useState(false);
   const [tab, setTab] = useState<'Activas' | 'Historial'>('Activas');
   const [busqueda, setBusqueda] = useState('');
   const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
@@ -225,6 +229,13 @@ export function StatusRampaPage() {
                           e.fecha_salida?.split('T')[0], e.situacion, e.observaciones]));
                     } catch (err) { toast(errorMessage(err), 'error'); }
                   } },
+                { label: 'Configurar rampas', detalle: 'Orden, color y si sale en el reporte', icon: <Settings2 size={17} />, onSelect: () => setConfigurando(true) },
+                { label: 'Exportar reporte a PDF', detalle: `${activas.length} rampas activas`, icon: <FileText size={17} />,
+                  onSelect: async () => {
+                    try { await exportarRampasPDF(activas, (catalogo.data?.rampas ?? []) as CatRampa[]); } catch (err) { toast(errorMessage(err), 'error'); }
+                  } },
+                { label: 'Enviar reporte por WhatsApp', detalle: 'Rampas marcadas en el reporte', icon: <MessageCircle size={17} />,
+                  onSelect: () => enviarWhatsApp(textoReporteRampas(activas, (catalogo.data?.rampas ?? []) as CatRampa[])) },
                 { label: 'OT, trabajos y catálogos de rampas', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/status-rampa') },
               ]} />
               {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ entrada: null })}>Ingresar</Button>}
@@ -292,7 +303,7 @@ export function StatusRampaPage() {
             ) : (
               <>
                 <div className="rt-solo-web">
-                  <RampaTabla entradas={activas} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
+                  <RampaTabla entradas={activas} ots={ordenes.data ?? []} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
                 </div>
                 <div className="rm-solo-movil">
                   <RampaMovil entradas={activas} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
@@ -345,6 +356,7 @@ export function StatusRampaPage() {
       )}
 
       <RampaFormulario open={!!formulario} entrada={formulario?.entrada ?? null} usuario={user?.name ?? ''} onClose={() => setFormulario(null)} />
+      <ConfigurarRampasSheet open={configurando} onClose={() => setConfigurando(false)} />
     </Page>
   );
 }
@@ -364,7 +376,7 @@ function situacionTono(s: string | null) {
   return 'gray';
 }
 
-function RampaTabla({ entradas, onAbrir }: { entradas: RampaEntrada[]; onAbrir: (e: RampaEntrada) => void }) {
+function RampaTabla({ entradas, ots, onAbrir }: { entradas: RampaEntrada[]; ots: OrdenTrabajo[]; onAbrir: (e: RampaEntrada) => void }) {
   return (
     <div className="rt-caja">
       <table className="rt">
@@ -394,7 +406,10 @@ function RampaTabla({ entradas, onAbrir }: { entradas: RampaEntrada[]; onAbrir: 
                 <td>{soloFecha(e.salida_programada)}</td>
                 <td>{soloHora(e.hora_salida_programada)}</td>
                 <td><span className="rt__tiempo" style={{ color: tiempoColor(horas) }}>{horas > 0 ? formatTiempo(horas) : '—'}</span></td>
-                <td>{e.ticket_entrada ? <span className="rt__ot">{e.ticket_entrada}</span> : '—'}</td>
+                <td>{(() => {
+                  const de = ots.filter(o => String(o.id_rampa ?? '') === String(e.id ?? '') && !/cerrad|finaliz|anulad/i.test(String(o.estado ?? '')));
+                  return de.length ? <span className="rt__ot" title={de.map(o => o.id_ot).join(', ')}>{de.length} OT · {de[0].id_ot}</span> : '—';
+                })()}</td>
                 <td><ChevronRight size={16} className="rt__flecha" aria-hidden /></td>
               </tr>
             );
