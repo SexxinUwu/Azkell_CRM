@@ -281,6 +281,11 @@ function _isSuperAdminReq(req) {
     return req.tenantSlug === 'master' || req.tenantSlug === 'admin' || host.startsWith('admin.');
 }
 
+// Base de la empresa de la petición (tenant). Nunca la base por defecto para datos de una empresa.
+function tdbDe(req) {
+    return (req.db || db).promise();
+}
+
 app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
     try {
         if (_isSuperAdminReq(req)) {
@@ -519,7 +524,7 @@ app.get('/api/configuracion', async (req, res) => {
                 empresa_ruc: ''
             });
         }
-        const [rows] = await db.promise().query("SELECT clave, valor FROM configuracion_erp");
+        const [rows] = await tdbDe(req).query("SELECT clave, valor FROM configuracion_erp");
         let config = {};
         for (const r of rows) {
             config[r.clave] = r.valor;
@@ -557,7 +562,7 @@ app.post('/api/configuracion', verifyToken, async (req, res) => {
                     const key = `configuracion/logo_empresa_${Date.now()}.${ext}`;
                     
                     try {
-                        const [oldRows] = await db.promise().query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_logo'");
+                        const [oldRows] = await tdbDe(req).query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_logo'");
                         if (oldRows.length > 0 && oldRows[0].valor && oldRows[0].valor.includes('amazonaws.com')) {
                             const oldKey = s3KeyFromUrl(oldRows[0].valor);
                             if (oldKey) await deleteFromS3(oldKey);
@@ -568,12 +573,12 @@ app.post('/api/configuracion', verifyToken, async (req, res) => {
                 }
             }
 
-            await db.promise().query("INSERT INTO configuracion_erp (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?", [clave, valor, valor]);
+            await tdbDe(req).query("INSERT INTO configuracion_erp (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?", [clave, valor, valor]);
         }
 
         let logoFinal = payload.empresa_logo;
         if (logoFinal && typeof logoFinal === 'string' && logoFinal.startsWith('data:image')) {
-            const [rows] = await db.promise().query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_logo'");
+            const [rows] = await tdbDe(req).query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_logo'");
             if (rows && rows[0] && rows[0].valor) {
                 logoFinal = rows[0].valor;
                 const key = s3KeyFromUrl(logoFinal);
