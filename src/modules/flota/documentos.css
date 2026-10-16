@@ -188,3 +188,17 @@
   .page--fill .doc-matriz-wrap { flex: 1 1 auto; min-height: 0; max-height: none; }
   .page--fill .doc-cal { flex: 1 1 auto; min-height: 0; }
 }
+
+/* Acciones de cada documento y su historial */
+.doc-card__eliminar { color: var(--red-ink); }
+.doc-cal__mas { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; text-align: left; }
+.doc-hist { display: flex; flex-direction: column; gap: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--separator); }
+.doc-hist__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.doc-hist__fila { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--s-2); font-size: 0.75rem; }
+.doc-hist__venc { font-weight: 700; color: var(--label); }
+.doc-hist__detalle { flex: 1 1 auto; min-width: 0; color: var(--label-2); }
+.doc-hist__vacio { margin: 0; font-size: 0.75rem; color: var(--label-2); }
+@media (max-width: 640px) {
+  /* Objetivos táctiles de 44 px en celular */
+  .doc-card__acciones .btn, .doc-card--vacia .btn, .doc-hist .btn { min-height: 2.75rem; }
+}

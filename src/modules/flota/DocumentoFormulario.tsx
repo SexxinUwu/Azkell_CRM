@@ -11,14 +11,21 @@ import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { usePlacas } from '../placas/api';
 import {
-  CAMPOS_DOC, guardarDocumentoVehiculo, subirArchivoDocumento, useVehiculosFlota, type VehiculoFlota,
+  CAMPOS_DOC, guardarDocumentoPersonalizado, guardarDocumentoVehiculo, subirArchivoDocumento, useVehiculosFlota, type VehiculoFlota,
 } from './api';
+import type { DocPersonalizado } from './docsEstado';
 
 const dia = (v: unknown) => (v ? String(v).split('T')[0] : '');
+const TIVE = 'custom:TIVE';
+const OTRO = 'custom:OTRO';
+const esPersonalizado = (sel: string) => sel.startsWith('custom:');
 
-// Cargar o renovar un documento de una unidad (fechas, entidad y archivo).
-export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInicial, usuario, open, onClose }: {
-  placa: string | null; prefijo: string | null; usuario: string; open: boolean; onClose: () => void;
+interface Personalizado { constancia: string; emision: string; vencimiento: string; costo: string }
+const VACIO: Personalizado = { constancia: '', emision: '', vencimiento: '', costo: '' };
+
+// Cargar o renovar un documento de una unidad: estándar, TIVE u otro tipo (fechas, entidad y archivo).
+export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInicial, personalizado, usuario, open, onClose }: {
+  placa: string | null; prefijo: string | null; personalizado: DocPersonalizado | null; usuario: string; open: boolean; onClose: () => void;
 }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -26,23 +33,37 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
   const placas = usePlacas();
 
   const [placa, setPlaca] = useState('');
-  const [prefijo, setPrefijo] = useState('soat');
+  const [seleccion, setSeleccion] = useState('soat');
   const [valores, setValores] = useState<Record<string, string>>({});
+  const [costo, setCosto] = useState('');
+  const [nombreOtro, setNombreOtro] = useState('');
+  const [perso, setPerso] = useState<Personalizado>(VACIO);
   const [archivo, setArchivo] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fijo = !!(placaInicial && prefijoInicial);
+  const fijo = !!(placaInicial && (prefijoInicial || personalizado));
+  const esCustom = esPersonalizado(seleccion);
   const vehiculo: VehiculoFlota | undefined = (vehiculos.data ?? []).find(v => v.placa === placa);
-  const cfg = CAMPOS_DOC[prefijo];
+  const cfg = esCustom ? undefined : CAMPOS_DOC[seleccion];
+  const tieneCostoEnCampos = !!cfg && cfg.campos.some(c => c.campo === `${seleccion}_pago`);
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setArchivo(null);
-    setPlaca(placaInicial ?? ''); setPrefijo(prefijoInicial ?? 'soat');
-  }, [open, placaInicial, prefijoInicial]);
+    setError(null); setArchivo(null); setCosto('');
+    setPlaca(placaInicial ?? '');
+    if (personalizado) {
+      setSeleccion(/TIVE/i.test(personalizado.tipo) ? TIVE : OTRO);
+      setNombreOtro(personalizado.tipo);
+      setPerso({ constancia: personalizado.constancia ?? '', emision: dia(personalizado.emision), vencimiento: dia(personalizado.vencimiento), costo: personalizado.pago ?? '' });
+    } else {
+      setSeleccion(prefijoInicial ?? 'soat');
+      setNombreOtro('');
+      setPerso(VACIO);
+    }
+  }, [open, placaInicial, prefijoInicial, personalizado]);
 
-  // Al elegir unidad/documento: precarga lo que ya tiene
+  // Al elegir unidad/documento estándar: precarga lo que ya tiene
   useEffect(() => {
     if (!open || !cfg) return;
     const v = (vehiculos.data ?? []).find(x => x.placa === placa);
@@ -52,7 +73,7 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
       ini[c.campo] = c.tipo === 'date' ? dia(raw) : raw == null ? '' : String(raw);
     }
     setValores(ini);
-  }, [open, placa, prefijo, cfg, vehiculos.data]);
+  }, [open, placa, seleccion, cfg, vehiculos.data]);
 
   const opcionesPlaca = useMemo(() => {
     const s = new Set<string>();
@@ -61,27 +82,44 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
     return [...s].sort();
   }, [placas.data, vehiculos.data]);
 
+  const nombreTipo = seleccion === TIVE ? 'TIVE' : nombreOtro.trim();
+
   async function guardar() {
     if (!placa) { setError('Elige la unidad.'); return; }
-    const venc = valores[`${prefijo}_vencimiento`];
-    if (!venc) { setError('Indica la fecha de vencimiento.'); return; }
-    const ems = valores[`${prefijo}_emision`];
-    if (ems && venc < ems) { setError('El vencimiento es anterior a la emisión.'); return; }
     setEnviando(true); setError(null);
     try {
-      const url = archivo ? await subirArchivoDocumento(archivo) : null;
-      await guardarDocumentoVehiculo({ vehiculo: vehiculo ?? { placa }, prefijo, valores, archivoUrl: url, usuario });
+      if (esCustom) {
+        if (!nombreTipo) { setError('Escribe el nombre del documento.'); return; }
+        const { emision, vencimiento } = perso;
+        if (emision && vencimiento && vencimiento < emision) { setError('El vencimiento es anterior a la emisión.'); return; }
+        const url = archivo ? await subirArchivoDocumento(archivo) : (personalizado?.url ?? null);
+        await guardarDocumentoPersonalizado({
+          placa, tipo: nombreTipo, constancia: perso.constancia, emision, vencimiento, costo: perso.costo, archivoUrl: url, usuario,
+        });
+        toast(`${nombreTipo} de ${placa} guardado`);
+      } else {
+        const venc = valores[`${seleccion}_vencimiento`];
+        if (!venc) { setError('Indica la fecha de vencimiento.'); return; }
+        const ems = valores[`${seleccion}_emision`];
+        if (ems && venc < ems) { setError('El vencimiento es anterior a la emisión.'); return; }
+        const url = archivo ? await subirArchivoDocumento(archivo) : null;
+        await guardarDocumentoVehiculo({ vehiculo: vehiculo ?? { placa }, prefijo: seleccion, valores, archivoUrl: url, costo, usuario });
+        toast(`${cfg?.label ?? 'Documento'} de ${placa} actualizado`);
+      }
       haptic('success');
-      toast(`${cfg?.label ?? 'Documento'} de ${placa} actualizado`);
-      await qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] }),
+        qc.invalidateQueries({ queryKey: ['flota', 'historial-docs'] }),
+      ]);
       onClose();
     } catch (err) { setError(errorMessage(err)); haptic('warning'); }
     finally { setEnviando(false); }
   }
 
+  const titulo = personalizado ? 'Actualizar documento' : fijo ? `Renovar ${cfg?.label ?? 'documento'}` : 'Cargar documento';
+
   return (
-    <Sheet open={open} onClose={() => !enviando && onClose()}
-      title={fijo ? `Renovar ${cfg?.label ?? 'documento'}` : 'Cargar documento'}
+    <Sheet open={open} onClose={() => !enviando && onClose()} title={titulo}
       footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
         <Button variant="primary" onClick={guardar} loading={enviando}>Guardar</Button></>}>
       <div className="form-grid">
@@ -93,11 +131,37 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
         </Field>
         <Field label="Documento">
           {p => (
-            <SelectInput {...p} value={prefijo} onChange={e => setPrefijo(e.target.value)} disabled={fijo}>
+            <SelectInput {...p} value={seleccion} onChange={e => setSeleccion(e.target.value)} disabled={fijo}>
               {Object.entries(CAMPOS_DOC).map(([k, c]) => <option key={k} value={k}>{c.label}</option>)}
+              <option value={TIVE}>Tarjeta de propiedad (TIVe / SUNARP) · no vence</option>
+              <option value={OTRO}>+ Otro tipo de documento…</option>
             </SelectInput>
           )}
         </Field>
+
+        {seleccion === OTRO && (
+          <Field label="Nombre del documento" wide>
+            {p => <TextInput {...p} value={nombreOtro} onChange={e => setNombreOtro(e.target.value)} disabled={fijo} />}
+          </Field>
+        )}
+
+        {esCustom && (
+          <>
+            <Field label="N° de constancia">
+              {p => <TextInput {...p} value={perso.constancia} onChange={e => setPerso(x => ({ ...x, constancia: e.target.value }))} />}
+            </Field>
+            <Field label="Emisión">
+              {p => <TextInput {...p} type="date" value={perso.emision} onChange={e => setPerso(x => ({ ...x, emision: e.target.value }))} />}
+            </Field>
+            <Field label="Vencimiento" hint="Opcional: sin fecha, el documento queda permanente">
+              {p => <TextInput {...p} type="date" value={perso.vencimiento} onChange={e => setPerso(x => ({ ...x, vencimiento: e.target.value }))} />}
+            </Field>
+            <Field label="Costo / Pago (S/)">
+              {p => <TextInput {...p} inputMode="decimal" value={perso.costo} onChange={e => setPerso(x => ({ ...x, costo: e.target.value }))} />}
+            </Field>
+          </>
+        )}
+
         {cfg?.campos.map(c => (
           <Field key={c.campo} label={c.label} wide={c.tipo === 'text' && c.campo.endsWith('entidad')}>
             {p => (
@@ -107,7 +171,13 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
             )}
           </Field>
         ))}
-        <Field label="Archivo (PDF o foto)" wide hint={archivo ? archivo.name : 'Opcional: si no eliges uno, se conserva el actual'}>
+        {cfg && !tieneCostoEnCampos && (
+          <Field label="Costo / Pago (S/)">
+            {p => <TextInput {...p} inputMode="decimal" value={costo} onChange={e => setCosto(e.target.value)} />}
+          </Field>
+        )}
+
+        <Field label="Archivo (PDF o foto)" wide hint={archivo ? archivo.name : fijo ? 'Opcional: si no eliges uno, se conserva el actual' : 'Opcional'}>
           {p => <TextInput {...p} type="file" accept="image/*,application/pdf" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />}
         </Field>
       </div>

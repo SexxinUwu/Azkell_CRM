@@ -18,6 +18,7 @@ export const COLOR_CLAVE: Record<Clave, string> = {
 };
 
 const SIN_INFO: EstadoDoc = { clave: 'sin', texto: 'Sin información', score: -1, color: COLOR_CLAVE.sin, dias: null };
+const PERMANENTE: EstadoDoc = { clave: 'vigente', texto: 'Permanente', score: 3, color: COLOR_CLAVE.vigente, dias: null };
 
 /** Día (AAAA-MM-DD) de una fecha de la base, sin desfase por zona horaria */
 function diaDe(fecha: string): number | null {
@@ -45,6 +46,8 @@ export interface DocConfig {
   num: number;
   titulo: string;
   corto: string;
+  /** Clave con la que la versión actual guarda el tipo en el historial (tipo_documento) */
+  tipoKey: string;
   /** Campo con la fecha de vencimiento */
   vencimiento: keyof VehiculoFlota;
   /** Datos que se muestran en la tarjeta (N° de constancia, entidad, pago, emisión…) */
@@ -54,16 +57,33 @@ export interface DocConfig {
 }
 
 export const DOCS: DocConfig[] = [
-  { clave: 'tc', num: 1, titulo: 'Tarj. circulación (TUC)', corto: 'TUC', vencimiento: 'tc_vencimiento', prefijo: 'tc', datos: [{ campo: 'tc_constancia', etiqueta: 'N°' }] },
-  { clave: 'soat', num: 2, titulo: 'SOAT', corto: 'SOAT', vencimiento: 'soat_vencimiento', prefijo: 'soat', datos: [{ campo: 'soat_entidad', etiqueta: 'Entidad' }, { campo: 'soat_pago', etiqueta: 'Pago' }] },
-  { clave: 'rt', num: 3, titulo: 'Revisión técnica (CITV)', corto: 'CITV', vencimiento: 'rt_vencimiento', prefijo: 'rt', datos: [{ campo: 'rt_emision', etiqueta: 'Emisión' }] },
-  { clave: 'matpel', num: 4, titulo: 'Autorización MATPEL', corto: 'MATPEL', vencimiento: 'matpel_vencimiento', prefijo: 'matpel', datos: [{ campo: 'matpel_constancia', etiqueta: 'N°' }] },
-  { clave: 'boni', num: 5, titulo: 'Bonificación (MTC)', corto: 'Bonificación', vencimiento: 'boni_vencimiento', prefijo: 'boni', datos: [{ campo: 'boni_emision', etiqueta: 'Emisión' }] },
-  { clave: 'sv', num: 6, titulo: 'Póliza vehicular', corto: 'Póliza vehicular', vencimiento: 'sv_vencimiento', prefijo: 'sv', datos: [{ campo: 'sv_entidad', etiqueta: 'Entidad' }] },
-  { clave: 'sc', num: 7, titulo: 'Póliza carreta', corto: 'Póliza carreta', vencimiento: 'sc_vencimiento', prefijo: 'sc', datos: [{ campo: 'sc_entidad', etiqueta: 'Entidad' }] },
-  { clave: 'fum', num: 8, titulo: 'Cert. fumigación', corto: 'Fumigación', vencimiento: 'fum_vencimiento', prefijo: 'fum', datos: [{ campo: 'fum_emision', etiqueta: 'Emisión' }] },
-  { clave: 'ext', num: 9, titulo: 'Insp. extintores', corto: 'Extintores', vencimiento: 'ext_vencimiento', prefijo: 'ext', datos: [{ campo: 'ext_emision', etiqueta: 'Emisión' }] },
+  { clave: 'tc', num: 1, titulo: 'Tarj. circulación (TUC)', corto: 'TUC', tipoKey: 'TARJETA_PROPIEDAD', vencimiento: 'tc_vencimiento', prefijo: 'tc', datos: [{ campo: 'tc_constancia', etiqueta: 'N°' }] },
+  { clave: 'soat', num: 2, titulo: 'SOAT', corto: 'SOAT', tipoKey: 'SOAT', vencimiento: 'soat_vencimiento', prefijo: 'soat', datos: [{ campo: 'soat_entidad', etiqueta: 'Entidad' }, { campo: 'soat_pago', etiqueta: 'Pago' }] },
+  { clave: 'rt', num: 3, titulo: 'Revisión técnica (CITV)', corto: 'CITV', tipoKey: 'REV_TECNICA', vencimiento: 'rt_vencimiento', prefijo: 'rt', datos: [{ campo: 'rt_emision', etiqueta: 'Emisión' }] },
+  { clave: 'matpel', num: 4, titulo: 'Autorización MATPEL', corto: 'MATPEL', tipoKey: 'MATPEL', vencimiento: 'matpel_vencimiento', prefijo: 'matpel', datos: [{ campo: 'matpel_constancia', etiqueta: 'N°' }] },
+  { clave: 'boni', num: 5, titulo: 'Bonificación (MTC)', corto: 'Bonificación', tipoKey: 'BONIFICACION', vencimiento: 'boni_vencimiento', prefijo: 'boni', datos: [{ campo: 'boni_emision', etiqueta: 'Emisión' }] },
+  { clave: 'sv', num: 6, titulo: 'Póliza vehicular', corto: 'Póliza vehicular', tipoKey: 'SEG_VEHICULAR', vencimiento: 'sv_vencimiento', prefijo: 'sv', datos: [{ campo: 'sv_entidad', etiqueta: 'Entidad' }] },
+  { clave: 'sc', num: 7, titulo: 'Póliza carreta', corto: 'Póliza carreta', tipoKey: 'SEG_CARRETA', vencimiento: 'sc_vencimiento', prefijo: 'sc', datos: [{ campo: 'sc_entidad', etiqueta: 'Entidad' }] },
+  { clave: 'fum', num: 8, titulo: 'Cert. fumigación', corto: 'Fumigación', tipoKey: 'FUMIGACION', vencimiento: 'fum_vencimiento', prefijo: 'fum', datos: [{ campo: 'fum_emision', etiqueta: 'Emisión' }] },
+  { clave: 'ext', num: 9, titulo: 'Insp. extintores', corto: 'Extintores', tipoKey: 'EXTINTOR', vencimiento: 'ext_vencimiento', prefijo: 'ext', datos: [{ campo: 'ext_emision', etiqueta: 'Emisión' }] },
 ];
+
+/** Documento personalizado (docs_personalizados): tipo libre, o TIVE, que no vence */
+export interface DocPersonalizado {
+  id: string;
+  tipo: string;
+  constancia: string | null;
+  emision: string | null;
+  vencimiento: string | null;
+  pago: string | null;
+  url: string | null;
+}
+
+/** Igual que la versión actual: sin vencimiento o TIVE = permanente */
+export function estadoPersonalizado(d: DocPersonalizado): EstadoDoc {
+  if (!d.vencimiento || /TIVE/i.test(d.tipo)) return PERMANENTE;
+  return estadoDeFecha(d.vencimiento);
+}
 
 const valor = (v: VehiculoFlota, campo: keyof VehiculoFlota) => {
   const x = v[campo];
@@ -76,14 +96,24 @@ export function docRegistrado(v: VehiculoFlota, d: DocConfig) {
   return !!valor(v, d.vencimiento) || d.datos.some(x => !!valor(v, x.campo)) || !!valor(v, `${d.prefijo}_url` as keyof VehiculoFlota);
 }
 
+export function personalizadosDe(v: VehiculoFlota): DocPersonalizado[] {
+  return Array.isArray(v.docs_personalizados) ? (v.docs_personalizados as DocPersonalizado[]) : [];
+}
+
 export interface DocVehiculo {
   config: DocConfig;
   registrado: boolean;
   estado: EstadoDoc;
 }
 
+export interface PersonalizadoVehiculo {
+  doc: DocPersonalizado;
+  estado: EstadoDoc;
+}
+
 export interface MetaVehiculo {
   docs: DocVehiculo[];
+  personalizados: PersonalizadoVehiculo[];
   registrados: number;
   /** Porcentaje de documentos registrados que están vigentes */
   salud: number;
@@ -96,13 +126,17 @@ export function metaDeVehiculo(v: VehiculoFlota): MetaVehiculo {
     registrado: docRegistrado(v, d),
     estado: docRegistrado(v, d) ? estadoDeFecha(valor(v, d.vencimiento)) : SIN_INFO,
   }));
-  const reg = docs.filter(d => d.registrado);
-  const vigentes = reg.filter(d => d.estado.score === 3).length;
+  const personalizados = personalizadosDe(v).map(doc => ({ doc, estado: estadoPersonalizado(doc) }));
+  const estados = [...docs.filter(d => d.registrado).map(d => d.estado), ...personalizados.map(p => p.estado)];
+  const vigentes = estados.filter(e => e.score === 3).length;
   let peor: EstadoDoc = SIN_INFO;
-  for (const d of reg) {
-    if (d.estado.score !== -1 && (peor.score === -1 || d.estado.score < peor.score)) peor = d.estado;
+  for (const e of estados) {
+    if (e.score !== -1 && (peor.score === -1 || e.score < peor.score)) peor = e;
   }
-  return { docs, registrados: reg.length, salud: reg.length ? Math.round((vigentes / reg.length) * 100) : 0, peor };
+  return {
+    docs, personalizados, registrados: estados.length,
+    salud: estados.length ? Math.round((vigentes / estados.length) * 100) : 0, peor,
+  };
 }
 
 /** Grupo del indicador de la página: sin documentos, vencido, alerta o vigente */
@@ -114,7 +148,7 @@ export function grupoDe(m: MetaVehiculo): 'sin' | 'vencido' | 'alerta' | 'vigent
 }
 
 export function textoDias(e: EstadoDoc) {
-  if (e.dias == null) return '—';
+  if (e.dias == null) return e.clave === 'vigente' ? 'Permanente (no vence)' : '—';
   if (e.dias < 0) return `Venció hace ${-e.dias} días`;
   if (e.dias === 0) return 'Vence hoy';
   return `Faltan ${e.dias} días (${e.texto})`;
@@ -123,3 +157,5 @@ export function textoDias(e: EstadoDoc) {
 /** Color de cada tipo de documento (el mismo en el expediente, la matriz y el calendario) */
 const PALETA_DOC = ['#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#0ea5e9', '#84cc16', '#f97316'];
 export const colorDoc = (num: number) => PALETA_DOC[(num - 1) % PALETA_DOC.length];
+/** Documentos personalizados: gris neutro, para distinguirlos de los estándar */
+export const COLOR_PERSONALIZADO = '#64748b';

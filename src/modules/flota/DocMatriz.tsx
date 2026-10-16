@@ -10,12 +10,15 @@ const fechaCorta = (f: string | null | undefined) => {
 };
 const celda = (v: unknown) => (v == null || String(v).trim() === '' || String(v).trim() === '---' ? '—' : String(v).trim());
 
+/** Datos generales de la unidad, en el mismo orden que la matriz de la versión actual */
+const GENERALES = ['Placa', 'Tipo', 'Propiedad', 'Empresa', 'F. entrega', 'Año', 'Modelo', 'Color', 'Marca', 'Serie/chasis'];
+
 /** Datos de la tabla que se exportan: los mismos que se ven, uno por columna */
 function encabezadosYFilas(filas: FilaExpediente[]) {
-  const base = ['Placa', 'Color', 'Marca', 'Serie/chasis'];
   const grupos = DOCS.flatMap(d => [...d.datos.map(x => `${d.corto} ${x.etiqueta}`), `${d.corto} F. venc.`, `${d.corto} días`]);
   const datos = filas.map(({ v, m }) => [
-    v.placa, celda(v.color), celda(v.marca), celda(v.chasis),
+    v.placa, celda(v.tipo), celda(v.propiedad), celda(v.empresa), fechaCorta(v.fecha_entrega), celda(v.anio), celda(v.modelo),
+    celda(v.color), celda(v.marca), celda(v.chasis),
     ...DOCS.flatMap(d => {
       const doc = m.docs.find(x => x.config.clave === d.clave);
       return [
@@ -25,7 +28,7 @@ function encabezadosYFilas(filas: FilaExpediente[]) {
       ];
     }),
   ]);
-  return { encabezados: [...base, ...grupos], datos };
+  return { encabezados: [...GENERALES, ...grupos], datos };
 }
 
 // Matriz: una fila por unidad con todos sus documentos y los días que faltan (o que pasaron)
@@ -46,10 +49,7 @@ export function DocMatriz({ filas }: { filas: FilaExpediente[] }) {
           <thead>
             <tr>
               <th rowSpan={2}>N°</th>
-              <th rowSpan={2}>Placa</th>
-              <th rowSpan={2}>Color</th>
-              <th rowSpan={2}>Marca</th>
-              <th rowSpan={2}>Serie / chasis</th>
+              {GENERALES.map(g => <th key={g} rowSpan={2}>{g}</th>)}
               {DOCS.map(d => (
                 <th key={d.clave} colSpan={d.datos.length + 2} className="doc-matriz__grupo" style={{ '--grupo-color': colorDoc(d.num) } as React.CSSProperties}>{d.corto}</th>
               ))}
@@ -67,6 +67,12 @@ export function DocMatriz({ filas }: { filas: FilaExpediente[] }) {
               <tr key={v.placa}>
                 <td className="doc-matriz__num">{i + 1}</td>
                 <td className="doc-matriz__placa">{v.placa}</td>
+                <td>{celda(v.tipo)}</td>
+                <td>{celda(v.propiedad)}</td>
+                <td>{celda(v.empresa)}</td>
+                <td className="doc-matriz__mono">{fechaCorta(v.fecha_entrega)}</td>
+                <td className="doc-matriz__mono">{celda(v.anio)}</td>
+                <td>{celda(v.modelo)}</td>
                 <td>{celda(v.color)}</td>
                 <td>{celda(v.marca)}</td>
                 <td className="doc-matriz__mono">{celda(v.chasis)}</td>

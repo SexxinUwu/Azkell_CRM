@@ -100,7 +100,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 
 ### B. Flota
 - [x] flota/placas *(piloto completo en /app; pendiente solo la API propia con Prisma)*
-- [ ] flota/documentos
+- [x] flota/documentos *(en /app desde 2026-10-16: expediente por placa, matriz con datos generales y Excel, calendario, historial por documento, eliminar, WhatsApp, TIVE y otros tipos personalizados. Eliminar e importar vehículos están en Flota › Placas. Pendiente: quitar archivo en el formulario)*
 - [ ] flota/disponibilidad
 - [ ] flota/ubicacion (GPS Wialon)
 - [ ] flota/entrega-vehiculos · seguridad/entrega-vehiculos ⚠️
