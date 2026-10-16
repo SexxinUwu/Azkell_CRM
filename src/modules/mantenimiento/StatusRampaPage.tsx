@@ -388,6 +388,16 @@ function situacionTono(s: string | null) {
 }
 
 function RampaTabla({ entradas, ots, ultimasInsp, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; ots: OrdenTrabajo[]; ultimasInsp: Map<string, Inspeccion>; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
+  // OT de una rampa: abierta y enlazada a esa rampa, o de la misma placa cuando su rampa ya no está activa
+  // (p. ej. la unidad se liberó y volvió a ingresar: la OT en curso no debe quedar huérfana)
+  const rampasActivas = new Set(entradas.map(x => String(x.id ?? '')));
+  const placa = (s: string | null | undefined) => String(s ?? '').trim().toUpperCase();
+  const otsDe = (e: RampaEntrada) => ots.filter(o => {
+    if (/cerrad|finaliz|anulad/i.test(String(o.estado ?? ''))) return false;
+    const rampaOT = String(o.id_rampa ?? '');
+    if (rampaOT === String(e.id ?? '')) return true;
+    return placa(o.placa) !== '' && placa(o.placa) === placa(e.placa) && !rampasActivas.has(rampaOT);
+  });
   return (
     <div className="rt-caja">
       <table className="rt">
@@ -419,7 +429,7 @@ function RampaTabla({ entradas, ots, ultimasInsp, onInspeccion, onAbrir }: { ent
                 <td>{soloHora(e.hora_salida_programada)}</td>
                 <td><span className="rt__tiempo" style={{ color: tiempoColor(horas) }}>{horas > 0 ? formatTiempo(horas) : '—'}</span></td>
                 <td>{(() => {
-                  const de = ots.filter(o => String(o.id_rampa ?? '') === String(e.id ?? '') && !/cerrad|finaliz|anulad/i.test(String(o.estado ?? '')));
+                  const de = otsDe(e);
                   return de.length ? <span className="rt__ot" title={de.map(o => o.id_ot).join(', ')}>{de.length} OT · {de[0].id_ot}</span> : '—';
                 })()}</td>
                 <td><ChevronRight size={16} className="rt__flecha" aria-hidden /></td>
