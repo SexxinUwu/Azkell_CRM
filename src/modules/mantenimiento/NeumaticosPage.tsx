@@ -210,13 +210,16 @@ export function NeumaticosPage() {
       const res = await api<{ ok: boolean; id_inspeccion: string }>('/neumaticos/inspecciones', {
         method: 'POST',
         body: {
-          placa:            placa.toUpperCase(),
-          fecha_inspeccion: fecha,
-          km_vehiculo:      Number(km) || 0,
-          inspector:        inspector.trim(),
-          dias_propuestos:  Number(diasProp) || 30,
-          observaciones:    obs.trim(),
+          placa:                   placa.toUpperCase(),
+          fecha_inspeccion:        fecha,
+          km_vehiculo:             Number(km) || 0,
+          odometro_km:             String(Number(km) || 0),
+          inspector:               inspector.trim(),
+          dias_propuestos:         Number(diasProp) || 30,
+          observaciones:           obs.trim(),
+          observaciones_generales: obs.trim(),
           items,
+          llantas_inspeccionadas:  items,
         },
       });
       if (res?.ok) {

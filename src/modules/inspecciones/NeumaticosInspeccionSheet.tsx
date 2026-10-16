@@ -278,8 +278,8 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
     try {
       const body = {
         id_ot: null, placa, vehiculo_placa: placa, configuracion: config,
-        fecha_inspeccion: fecha, km_vehiculo: numero(km), dias_propuestos: dias,
-        observaciones: obs.trim(), inspector: usuario, items,
+        fecha_inspeccion: fecha, km_vehiculo: numero(km), odometro_km: String(numero(km)), dias_propuestos: dias,
+        observaciones: obs.trim(), observaciones_generales: obs.trim(), inspector: usuario, items, llantas_inspeccionadas: items,
       };
       const r = await api<{ ok?: boolean; error?: string }>('/neumaticos/inspecciones', { method: 'POST', body });
       if (r.ok === false) throw new Error(r.error || 'No se pudo guardar la inspección');
