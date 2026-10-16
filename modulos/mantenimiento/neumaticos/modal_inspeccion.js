@@ -2110,6 +2110,9 @@
             dias_propuestos: String(dias_propuestos),
             odometro_km: String(km_vehiculo),
             observaciones_generales: observaciones,
+            // Nombres que lee el servidor (POST /api/neumaticos/inspecciones): sin ellos el km y las observaciones no se guardaban
+            km_vehiculo: km_vehiculo,
+            observaciones: observaciones,
             fecha_inspeccion,
             inspector,
             items: window._neuLlantasActuales,
