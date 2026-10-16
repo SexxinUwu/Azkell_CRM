@@ -1754,5 +1754,20 @@ router.post('/:metodo', async (req, res) => {
     res.json({ data: [] });
 });
 
+    // Snapshot diario de km y precarga de Wialon para una empresa (lo llama server.js: cron nocturno y arranque)
+    router.snapshotGpsEmpresa = (tenantSlug) => new Promise((resolve) => {
+        const req = { method: 'POST', url: '/obtenerDatosWialon', originalUrl: '/obtenerDatosWialon', baseUrl: '', path: '/obtenerDatosWialon', headers: {}, query: {}, params: {}, body: { args: [] }, tenantSlug };
+        let listo = false;
+        const fin = (aviso) => { if (listo) return; listo = true; if (aviso) console.warn('Snapshot GPS', tenantSlug, aviso); resolve(); };
+        const res = {
+            statusCode: 200, locals: {},
+            status(c) { this.statusCode = c; return this; },
+            json() { fin(); return this; }, send() { fin(); return this; }, end() { fin(); return this; },
+            set() { return this; }, setHeader() {}, getHeader() {}, removeHeader() {}, writeHead() {}, write() {}, on() {}, once() {},
+        };
+        router.handle(req, res, (err) => fin(err ? err.message : null));
+        setTimeout(() => fin('tiempo agotado'), 120000);
+    });
+
     return router;
 };

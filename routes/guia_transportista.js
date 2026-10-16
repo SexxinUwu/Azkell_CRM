@@ -1,3 +1,4 @@
+const { documentosVencidosPara, mensajeBloqueo } = require('../services/documentos_flota');
 /**
  * RUTAS GUÍA DE REMISIÓN TRANSPORTISTA (GRT)
  * Tipo Documento: 31 | Serie: V001
@@ -372,6 +373,9 @@ module.exports = function(db, broadcast, logAudit) {
             const dbConn = getDb(req);
             await initTables(dbConn);
             const d = req.body;
+
+            const vencidosGuia = await documentosVencidosPara(dbConn, [d.vehiculo_placa, d.vehiculo_secundario_placa]);
+            if (vencidosGuia.length) return res.status(400).json({ error: mensajeBloqueo(vencidosGuia) });
 
             // Obtener credenciales para datos del transportista
             const creds = await ApisunatService.getCredenciales(dbConn);
