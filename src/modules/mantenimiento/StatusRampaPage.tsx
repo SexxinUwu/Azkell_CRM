@@ -18,6 +18,11 @@ import { crearOTHija, eliminarRampaRegistro, reactivarRampa, rampaConductor, ram
 import { ConfigurarRampasSheet, enviarWhatsApp, exportarRampasPDF, textoReporteRampas, type CatRampa } from './RampasHerramientas';
 import { LiberarRampa, RampaFormulario } from './RampaFormulario';
 import { SUBTIPOS_OT, TIPOS_OT } from './tipos-ot';
+import { useInspecciones, type Inspeccion } from '../inspecciones/api';
+import { diasInspeccion, semaforoInspeccion, ultimasPorPlaca } from './inspeccionDias';
+import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
+import { Badge } from '../../core/ui/Display';
+import { clavePlaca } from '../inspecciones/api';
 
 const TABS = ['Activas', 'Historial'] as const;
 
@@ -175,6 +180,9 @@ export function StatusRampaPage() {
   const { data, isLoading, isError, error } = useStatusRampa();
   const catalogo = useCatalogosTaller();
   const ordenes = useOrdenesTrabajoData();
+  const inspecciones = useInspecciones();
+  const ultimasInsp = useMemo(() => ultimasPorPlaca(inspecciones.data ?? []), [inspecciones.data]);
+  const [inspAbierta, setInspAbierta] = useState<Inspeccion | null>(null);
   const [configurando, setConfigurando] = useState(false);
   const [tab, setTab] = useState<'Activas' | 'Historial'>('Activas');
   const [busqueda, setBusqueda] = useState('');
@@ -303,10 +311,10 @@ export function StatusRampaPage() {
             ) : (
               <>
                 <div className="rt-solo-web">
-                  <RampaTabla entradas={activas} ots={ordenes.data ?? []} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
+                  <RampaTabla entradas={activas} ots={ordenes.data ?? []} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
                 </div>
                 <div className="rm-solo-movil">
-                  <RampaMovil entradas={activas} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
+                  <RampaMovil entradas={activas} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
                 </div>
               </>
             )
@@ -357,6 +365,7 @@ export function StatusRampaPage() {
 
       <RampaFormulario open={!!formulario} entrada={formulario?.entrada ?? null} usuario={user?.name ?? ''} onClose={() => setFormulario(null)} />
       <ConfigurarRampasSheet open={configurando} onClose={() => setConfigurando(false)} />
+      <InspeccionFicha inspeccion={inspAbierta} onClose={() => setInspAbierta(null)} />
     </Page>
   );
 }
@@ -376,13 +385,13 @@ function situacionTono(s: string | null) {
   return 'gray';
 }
 
-function RampaTabla({ entradas, ots, onAbrir }: { entradas: RampaEntrada[]; ots: OrdenTrabajo[]; onAbrir: (e: RampaEntrada) => void }) {
+function RampaTabla({ entradas, ots, ultimasInsp, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; ots: OrdenTrabajo[]; ultimasInsp: Map<string, Inspeccion>; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
   return (
     <div className="rt-caja">
       <table className="rt">
         <thead>
           <tr>
-            <th>Rampa</th><th>Ingreso</th><th>Hora</th><th>Placa</th><th>Situación</th><th>Observaciones</th>
+            <th>Rampa</th><th>Ingreso</th><th>Hora</th><th>Placa</th><th>Inspección</th><th>Situación</th><th>Observaciones</th>
             <th>Salida est.</th><th>Hora</th><th>H. taller</th><th>OT</th><th aria-label="Abrir" />
           </tr>
         </thead>
@@ -401,6 +410,7 @@ function RampaTabla({ entradas, ots, onAbrir }: { entradas: RampaEntrada[]; ots:
                 <td>{soloFecha(e.fecha_ingreso)}</td>
                 <td>{soloHora(e.hora_ingreso)}</td>
                 <td><span className="rt__placa">{e.placa ?? '—'}</span></td>
+                <td><BadgeInspeccion placa={e.placa} ultimas={ultimasInsp} onAbrir={onInspeccion} /></td>
                 <td><span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{e.situacion ?? '—'}</span></td>
                 <td className="rt__obs">{e.observaciones ?? '—'}</td>
                 <td>{soloFecha(e.salida_programada)}</td>
@@ -420,7 +430,21 @@ function RampaTabla({ entradas, ots, onAbrir }: { entradas: RampaEntrada[]; ots:
   );
 }
 
-function RampaMovil({ entradas, onAbrir }: { entradas: RampaEntrada[]; onAbrir: (e: RampaEntrada) => void }) {
+/** Código de la última inspección con semáforo; al tocarlo abre el resumen sin salir de la pantalla */
+function BadgeInspeccion({ placa, ultimas, onAbrir }: { placa: string | null; ultimas: Map<string, Inspeccion>; onAbrir: (i: Inspeccion) => void }) {
+  const insp = placa ? ultimas.get(clavePlaca(placa)) ?? null : null;
+  const dias = diasInspeccion(placa, ultimas);
+  if (!insp) return <Badge tone="gray">{dias.texto}</Badge>;
+  return (
+    <button type="button" className="rt__insp" aria-label={`Ver inspección ${insp.id}`}
+      onClick={e => { e.stopPropagation(); onAbrir(insp); }}>
+      <Badge tone={semaforoInspeccion(insp, dias)}>{insp.id}</Badge>
+      <span className="rt__insp-dias" style={{ color: dias.color }}>{dias.texto}</span>
+    </button>
+  );
+}
+
+function RampaMovil({ entradas, ultimasInsp, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; ultimasInsp: Map<string, Inspeccion>; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
   return (
     <div className="rm-lista">
       {entradas.map(e => {
@@ -440,6 +464,7 @@ function RampaMovil({ entradas, onAbrir }: { entradas: RampaEntrada[]; onAbrir: 
               </span>
               <span className="rm-pie">
                 <span className="rm-km">KM: {e.km ? String(e.km) : '—'}</span>
+                <span className="rm-km"><BadgeInspeccion placa={e.placa} ultimas={ultimasInsp} onAbrir={onInspeccion} /></span>
                 {horas > 0 && (
                   <span className="rt__tiempo" style={{ color: tiempoColor(horas) }}><Clock size={11} /> {formatTiempo(horas)}</span>
                 )}

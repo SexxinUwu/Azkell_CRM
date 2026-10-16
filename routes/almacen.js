@@ -2775,94 +2775,101 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             const totalRecepcionadoAhora = items.reduce((sum, it) => sum + (parseFloat(it.cantidad_recibida) || 0), 0);
             const tipoRecepcion = req.body.tipo_recepcion || 'TOTAL';
 
-            // Valorización: costo promedio ponderado en soles, tipo de cambio del día y vencimiento de la cuenta por pagar
-            const pdbRec = targetDb.promise();
-            const [ocRows] = await pdbRec.query('SELECT id, moneda, condicion_pago, dias_credito, estado FROM ordenes_compra WHERE codigo = ? LIMIT 1', [oc_id]);
-            const oc = ocRows[0] || null;
-            const esUSD = oc ? oc.moneda === 'USD' : items.some(it => String(it.moneda || '').toUpperCase() === 'USD');
-            let tipoCambio = parseFloat(req.body.tipo_cambio) || 0;
-            if (esUSD && !(tipoCambio > 0)) {
-                // Sin tipo de cambio en el envío: último TC guardado en el inventario, o 3.75 si no hay ninguno
-                const [ultimo] = await pdbRec.query('SELECT tipo_cambio FROM inventario WHERE tipo_cambio > 0 ORDER BY updated_at DESC LIMIT 1');
-                tipoCambio = Number(ultimo && ultimo[0] && ultimo[0].tipo_cambio) || 3.75;
-            }
-            const fechaDia = fechaHoraSQL.slice(0, 10);
-            const idsInv = [...new Set(items.map(it => it.inventario_id).filter(Boolean))];
-            const stockPrevio = new Map();
-            if (idsInv.length) {
-                // Stock antes de esta recepción (mismo cálculo del inventario; se filtra por id dentro de la consulta)
-                const sqlIds = _stockSQL.replace(/WHERE i\.activo=1\s*ORDER BY i\.id\s*$/, 'WHERE i.activo=1 AND i.id IN (?) ORDER BY i.id');
-                const [filas] = await pdbRec.query(sqlIds, [idsInv]);
-                (filas || []).forEach(fr => stockPrevio.set(String(fr.id), {
-                    stock: Math.max(0, Number(fr.stock_actual) || 0),
-                    costo: Number(fr.costo_soles) || Number(fr.costo_referencial) || 0,
-                }));
-            }
-            for (const it of items) {
-                const cant = parseFloat(it.cantidad_recibida) || 0;
-                if (!it.inventario_id || !(cant > 0)) continue;
-                const moneda = String(it.moneda || (oc && oc.moneda) || 'PEN').toUpperCase();
-                const unitarioSoles = (parseFloat(it.costo_unitario) || 0) * (moneda === 'USD' ? tipoCambio : 1);
-                const prev = stockPrevio.get(String(it.inventario_id)) || { stock: 0, costo: 0 };
-                const total = prev.stock + cant;
-                const promedio = total > 0 ? (prev.stock * prev.costo + cant * unitarioSoles) / total : unitarioSoles;
-                await pdbRec.query(
-                    'UPDATE inventario SET costo_soles = ?, tipo_cambio = COALESCE(?, tipo_cambio) WHERE id = ?',
-                    [Math.round(promedio * 10000) / 10000, moneda === 'USD' ? tipoCambio : null, it.inventario_id]
-                );
-            }
-            if (oc) {
-                const vence = fechaVencimiento(fechaDia, oc.condicion_pago, oc.dias_credito);
-                const nuevoEstado = tipoRecepcion === 'TOTAL' ? 'RECIBIDA' : oc.estado;
-                await pdbRec.query(
-                    'UPDATE ordenes_compra SET fecha_vencimiento = COALESCE(fecha_vencimiento, ?), estado = ? WHERE id = ?',
-                    [vence, nuevoEstado, oc.id]
-                );
-            }
+            // Triple afectación en UNA transacción: costo promedio del inventario, O/C (vencimiento y estado) y
+            // cabecera + detalle de la recepción (de ahí salen el stock y el kardex). Si algo falla, no queda nada a medias.
+            const conn = await targetDb.promise().getConnection();
+            let recepcionId = null;
+            try {
+                await conn.beginTransaction();
 
-            // 1. Insertar Cabecera de Recepción
-            targetDb.query(
-                `INSERT INTO recepciones_oc (oc_id, fecha_recepcion, usuario, almacen, sustento_url, observacion, tipo_recepcion)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [oc_id, fechaHoraSQL, usuario || 'Almacén Central', almacen || 'ALM CENTRAL', sustentoUrl, observacion || null, tipoRecepcion],
-                (errRec, resRec) => {
-                    if (errRec) return res.status(500).json({ error: errRec.message });
-                    const recepcionId = resRec.insertId;
-
-                    // 2. Insertar Detalle de Recepción
-                    const detalleVals = items.map(it => [
-                        recepcionId,
-                        oc_id,
-                        it.inventario_id || null,
-                        it.descripcion || 'Ítem recepcionado',
-                        parseFloat(it.cantidad_recibida) || 0,
-                        parseFloat(it.costo_unitario) || 0,
-                        it.moneda || 'PEN',
-                        it.almacen || almacen || 'ALM CENTRAL'
-                    ]);
-
-                    targetDb.query(
-                        `INSERT INTO detalle_recepciones_oc (recepcion_id, oc_id, inventario_id, descripcion, cantidad_recibida, costo_unitario, moneda, almacen)
-                     VALUES ?`,
-                        [detalleVals],
-                        (errDet) => {
-                            if (errDet) return res.status(500).json({ error: errDet.message });
-
-                            // 3. Auditoría del sistema ERP
-                            if (typeof logAudit === 'function' && usuario) {
-                                logAudit(usuario, 'almacen/recepcion-compras', 'CREÓ', `/api/almacen/recepciones-oc/registrar (${oc_id})`);
-                            }
-
-                            res.json({
-                                ok: true,
-                                mensaje: 'Recepción registrada y stock actualizado con éxito',
-                                recepcion_id: recepcionId,
-                                sustento_url: sustentoUrl
-                            });
-                        }
+                // Valorización: costo promedio ponderado en soles, tipo de cambio del día y vencimiento de la cuenta por pagar
+                const [ocRows] = await conn.query('SELECT id, moneda, condicion_pago, dias_credito, estado FROM ordenes_compra WHERE codigo = ? LIMIT 1 FOR UPDATE', [oc_id]);
+                const oc = ocRows[0] || null;
+                const esUSD = oc ? oc.moneda === 'USD' : items.some(it => String(it.moneda || '').toUpperCase() === 'USD');
+                let tipoCambio = parseFloat(req.body.tipo_cambio) || 0;
+                if (esUSD && !(tipoCambio > 0)) {
+                    // Sin tipo de cambio en el envío: último TC guardado en el inventario, o 3.75 si no hay ninguno
+                    const [ultimo] = await conn.query('SELECT tipo_cambio FROM inventario WHERE tipo_cambio > 0 ORDER BY updated_at DESC LIMIT 1');
+                    tipoCambio = Number(ultimo && ultimo[0] && ultimo[0].tipo_cambio) || 3.75;
+                }
+                const fechaDia = fechaHoraSQL.slice(0, 10);
+                const idsInv = [...new Set(items.map(it => it.inventario_id).filter(Boolean))];
+                const stockPrevio = new Map();
+                if (idsInv.length) {
+                    // Stock antes de esta recepción (mismo cálculo del inventario; se filtra por id dentro de la consulta)
+                    const sqlIds = _stockSQL.replace(/WHERE i\.activo=1\s*ORDER BY i\.id\s*$/, 'WHERE i.activo=1 AND i.id IN (?) ORDER BY i.id');
+                    const [filas] = await conn.query(sqlIds, [idsInv]);
+                    (filas || []).forEach(fr => stockPrevio.set(String(fr.id), {
+                        stock: Math.max(0, Number(fr.stock_actual) || 0),
+                        costo: Number(fr.costo_soles) || Number(fr.costo_referencial) || 0,
+                    }));
+                }
+                for (const it of items) {
+                    const cant = parseFloat(it.cantidad_recibida) || 0;
+                    if (!it.inventario_id || !(cant > 0)) continue;
+                    const moneda = String(it.moneda || (oc && oc.moneda) || 'PEN').toUpperCase();
+                    const unitarioSoles = (parseFloat(it.costo_unitario) || 0) * (moneda === 'USD' ? tipoCambio : 1);
+                    const prev = stockPrevio.get(String(it.inventario_id)) || { stock: 0, costo: 0 };
+                    const total = prev.stock + cant;
+                    const promedio = total > 0 ? (prev.stock * prev.costo + cant * unitarioSoles) / total : unitarioSoles;
+                    await conn.query(
+                        'UPDATE inventario SET costo_soles = ?, tipo_cambio = COALESCE(?, tipo_cambio) WHERE id = ?',
+                        [Math.round(promedio * 10000) / 10000, moneda === 'USD' ? tipoCambio : null, it.inventario_id]
                     );
                 }
-            );
+                if (oc) {
+                    const vence = fechaVencimiento(fechaDia, oc.condicion_pago, oc.dias_credito);
+                    const nuevoEstado = tipoRecepcion === 'TOTAL' ? 'RECIBIDA' : oc.estado;
+                    await conn.query(
+                        'UPDATE ordenes_compra SET fecha_vencimiento = COALESCE(fecha_vencimiento, ?), estado = ? WHERE id = ?',
+                        [vence, nuevoEstado, oc.id]
+                    );
+                }
+
+                // 1. Cabecera de la recepción
+                const [cab] = await conn.query(
+                    `INSERT INTO recepciones_oc (oc_id, fecha_recepcion, usuario, almacen, sustento_url, observacion, tipo_recepcion)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                    [oc_id, fechaHoraSQL, usuario || 'Almacén Central', almacen || 'ALM CENTRAL', sustentoUrl, observacion || null, tipoRecepcion]
+                );
+                recepcionId = cab.insertId;
+
+                // 2. Detalle de la recepción
+                const detalleVals = items.map(it => [
+                    recepcionId,
+                    oc_id,
+                    it.inventario_id || null,
+                    it.descripcion || 'Ítem recepcionado',
+                    parseFloat(it.cantidad_recibida) || 0,
+                    parseFloat(it.costo_unitario) || 0,
+                    it.moneda || 'PEN',
+                    it.almacen || almacen || 'ALM CENTRAL'
+                ]);
+                await conn.query(
+                    `INSERT INTO detalle_recepciones_oc (recepcion_id, oc_id, inventario_id, descripcion, cantidad_recibida, costo_unitario, moneda, almacen)
+                     VALUES ?`,
+                    [detalleVals]
+                );
+
+                await conn.commit();
+            } catch (errTx) {
+                await conn.rollback().catch(() => {});
+                throw errTx;
+            } finally {
+                conn.release();
+            }
+
+            // 3. Auditoría del sistema ERP
+            if (typeof logAudit === 'function' && usuario) {
+                logAudit(usuario, 'almacen/recepcion-compras', 'CREÓ', `/api/almacen/recepciones-oc/registrar (${oc_id})`);
+            }
+
+            res.json({
+                ok: true,
+                mensaje: 'Recepción registrada y stock actualizado con éxito',
+                recepcion_id: recepcionId,
+                sustento_url: sustentoUrl
+            });
         } catch (err) {
             console.error('Error al registrar recepción de OC:', err);
             res.status(500).json({ error: err.message });

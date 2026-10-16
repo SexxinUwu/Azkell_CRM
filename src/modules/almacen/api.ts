@@ -232,12 +232,13 @@ function aKardexItem(m: Record<string, unknown>): KardexItem {
   };
 }
 
+/** Kardex de un artículo: movimientos y stock de apertura (antes de la primera operación registrada) */
 export function useKardex(inventario_id: string | null) {
-  return useQuery<KardexItem[]>({
+  return useQuery<{ items: KardexItem[]; stockBase: number }>({
     queryKey: ['almacen', 'kardex', inventario_id],
     queryFn: async () => {
-      const r = await api<{ movimientos?: Record<string, unknown>[] }>(`/almacen/kardex/${inventario_id}`);
-      return (r.movimientos ?? []).map(aKardexItem);
+      const r = await api<{ movimientos?: Record<string, unknown>[]; stock_base?: number | string }>(`/almacen/kardex/${inventario_id}`);
+      return { items: (r.movimientos ?? []).map(aKardexItem), stockBase: Number(r.stock_base) || 0 };
     },
     enabled: !!inventario_id,
     staleTime: 30_000,
