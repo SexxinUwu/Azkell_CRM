@@ -3,6 +3,7 @@ const mysql = require('mysql2/promise');
 const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
 const { recalcularLiquidacionViaje } = require('../services/liquidacion_viaje');
 const { documentosVencidosPara, mensajeAdvertencia } = require('../services/documentos_flota');
+const { rentabilidadPeriodo } = require('../services/rentabilidad');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
@@ -567,6 +568,22 @@ module.exports = function (db, broadcast, logAudit) {
 
     // ── POST /api/operaciones/ordenes-viaje ────────────────────────
     // Registra una nueva Orden de Viaje generada desde el módulo de Operaciones propio
+    // ── GET /api/operaciones/rentabilidad?mes=AAAA-MM — costo por placa y margen por viaje (solo lectura) ──
+    router.get('/rentabilidad', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+            const ahora = new Date();
+            const mes = /^\d{4}-\d{2}$/.test(String(req.query.mes || '')) ? String(req.query.mes) : `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
+            const [anio, m] = mes.split('-').map(Number);
+            const desde = `${mes}-01`;
+            const hasta = `${mes}-${String(new Date(anio, m, 0).getDate()).padStart(2, '0')}`;
+            res.json({ ok: true, ...(await rentabilidadPeriodo(tdb, desde, hasta)) });
+        } catch (err) {
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     router.post('/ordenes-viaje', async (req, res) => {
         try {
             await ensureTables(req);
