@@ -8,6 +8,7 @@ import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Sheet } from '../../core/ui/Sheet';
 import { api, errorMessage } from '../../core/api/client';
+import './fallas.css';
 import { abrirClasico } from '../../core/layout/navigation';
 
 interface Falla {
@@ -48,6 +49,13 @@ function sevColor(sev: string): string {
   const s = SEVERIDADES.find(x => x.value === (sev ?? '').toLowerCase());
   return s?.color ?? 'neutral';
 }
+
+// Estados guardados (mayúsculas con guion bajo) → texto para la pantalla
+const ETIQUETAS_ESTADO: Record<string, string> = {
+  REPORTADA: 'Reportada', EN_REVISION: 'En revisión', CON_REPUESTO: 'Con repuesto', SIN_STOCK: 'Sin stock',
+  ATENDIDA: 'Atendida', CERRADA: 'Cerrada', ANULADA: 'Anulada',
+};
+const etiquetaEstado = (e: string) => ETIQUETAS_ESTADO[e.toUpperCase()] ?? e;
 
 export function FallasPage() {
   const qc = useQueryClient();
@@ -154,7 +162,7 @@ export function FallasPage() {
           </div>
         ))}
         <button type="button"
-          onClick={() => { setMostrarForm(true); setMsg(null); }}
+          onClick={() => { setMostrarForm(true); setMsg(null); }} className="fallas-nueva"
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
           <Plus size={16} /> Reportar falla
         </button>
@@ -163,15 +171,15 @@ export function FallasPage() {
       {isLoading ? <PageLoader /> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={{ flex: 1, minWidth: '12rem' }}>
+            <div className="fallas-buscar" style={{ flex: 1, minWidth: '12rem' }}>
               <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar placa, conductor, tipo o folio…" />
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div className="fallas-filtros">
               {['', 'REPORTADA', 'EN_REVISION', 'SIN_STOCK', 'ATENDIDA'].map(e => (
-                <button key={e} type="button"
+                <button key={e} type="button" className="fallas-chip"
                   onClick={() => setFiltroEstado(filtroEstado === e ? '' : e)}
                   style={{ padding: '5px 10px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', background: filtroEstado === e ? 'var(--accent)' : 'var(--fill-2)', color: filtroEstado === e ? '#fff' : 'var(--label-2)', border: '1px solid var(--separator)', whiteSpace: 'nowrap' }}>
-                  {e || 'Todos'}
+                  {e ? etiquetaEstado(e) : 'Todos'}
                 </button>
               ))}
             </div>
@@ -192,14 +200,14 @@ export function FallasPage() {
                 const est = estadoColor(String(f.estado ?? ''));
                 const abierta = !['ATENDIDA', 'CERRADA', 'ANULADA'].includes((f.estado ?? '').toUpperCase());
                 return (
-                  <div key={String(f.id || i)} style={{ background: 'var(--fill-1)', borderRadius: 10, padding: 'var(--s-2) var(--s-3)', border: `1px solid var(--separator)`, display: 'flex', gap: 'var(--s-2)', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  <div key={String(f.id || i)} className="fallas-tarjeta" style={{ background: 'var(--fill-1)', borderRadius: 10, padding: 'var(--s-2) var(--s-3)', border: `1px solid var(--separator)`, display: 'flex', gap: 'var(--s-2)', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                     <AlertTriangle size={16} style={{ color: `var(--${sev}-ink)`, flexShrink: 0, marginTop: 2 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
                         <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)', fontSize: '0.85rem' }}>{f.placa ?? '—'}</span>
                         {f.folio && <span style={{ fontSize: '0.72rem', color: 'var(--label-2)', fontFamily: 'var(--font-mono)' }}>{f.folio}</span>}
                         <span className={`ot-estado ot-estado--${sev}`}>{f.severidad?.toUpperCase()}</span>
-                        <span className={`ot-estado ot-estado--${est}`}>{f.estado ?? 'REPORTADA'}</span>
+                        <span className={`ot-estado ot-estado--${est}`}>{etiquetaEstado(String(f.estado ?? 'REPORTADA'))}</span>
                       </div>
                       <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{f.tipo_falla} — {f.conductor ?? '—'}</div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--label-2)', marginTop: 2 }}>{f.descripcion}</div>
@@ -210,13 +218,13 @@ export function FallasPage() {
                       ) : null}
                     </div>
                     {abierta && (
-                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                        <button type="button"
+                      <div className="fallas-acciones">
+                        <button type="button" className="fallas-accion"
                           onClick={() => cambiarEstado(f.id, 'EN_REVISION')}
                           style={{ padding: '3px 9px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 700, background: 'var(--amber-tint)', color: 'var(--amber-ink)', border: '1px solid var(--amber-ink)', cursor: 'pointer' }}>
                           En revisión
                         </button>
-                        <button type="button"
+                        <button type="button" className="fallas-accion"
                           onClick={() => cambiarEstado(f.id, 'ATENDIDA')}
                           style={{ padding: '3px 9px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 700, background: 'var(--green-tint)', color: 'var(--green-ink)', border: '1px solid var(--green-ink)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                           <CheckCircle size={11} /> Atendida

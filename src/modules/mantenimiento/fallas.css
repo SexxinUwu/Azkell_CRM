@@ -1,0 +1,12 @@
+/* Pantalla de fallas: en escritorio todo se queda como está; en celular, objetivos táctiles de 44 px y acciones bajo la tarjeta */
+@media (max-width: 640px) {
+  .fallas-nueva { min-height: 44px; }
+  .fallas-buscar .input, .fallas-buscar input { min-height: 44px !important; height: 44px !important; }
+  .fallas-filtros { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+  .fallas-filtros::-webkit-scrollbar { display: none; }
+  .fallas-chip { min-height: 44px !important; padding: 0 14px !important; font-size: 0.8125rem !important; white-space: nowrap; flex-shrink: 0; }
+  .fallas-tarjeta { flex-wrap: wrap; }
+  .fallas-tarjeta > div:nth-child(2) { min-width: 0; flex-basis: calc(100% - 40px); }
+  .fallas-acciones { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px !important; width: 100%; flex-basis: 100%; }
+  .fallas-accion { min-height: 44px !important; justify-content: center; font-size: 0.8125rem !important; padding: 0 10px !important; }
+}
