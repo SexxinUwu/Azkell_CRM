@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleAlert } from 'lucide-react';
+import { CircleAlert, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
@@ -39,6 +39,8 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
   const [nombreOtro, setNombreOtro] = useState('');
   const [perso, setPerso] = useState<Personalizado>(VACIO);
   const [archivo, setArchivo] = useState<File | null>(null);
+  // Cambia al quitar el archivo elegido: el campo de archivo se vacía de verdad
+  const [claveArchivo, setClaveArchivo] = useState(0);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -178,7 +180,17 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
         )}
 
         <Field label="Archivo (PDF o foto)" wide hint={archivo ? archivo.name : fijo ? 'Opcional: si no eliges uno, se conserva el actual' : 'Opcional'}>
-          {p => <TextInput {...p} type="file" accept="image/*,application/pdf" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />}
+          {p => (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <TextInput {...p} key={claveArchivo} type="file" accept="image/*,application/pdf" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />
+              </div>
+              {archivo && (
+                <Button variant="plain" iconOnly icon={<X size={18} />} aria-label="Quitar el archivo elegido"
+                  onClick={() => { setArchivo(null); setClaveArchivo(c => c + 1); }} />
+              )}
+            </div>
+          )}
         </Field>
       </div>
     </Sheet>
