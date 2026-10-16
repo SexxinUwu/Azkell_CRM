@@ -107,7 +107,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] flota/almacen-flota *(en /app, verificado en navegador 2026-10-16: ingreso, asignación a unidad, reingreso y kardex por artículo, con stock actualizado en cada operación)*
 
 ### C. Mantenimiento
-- [ ] mantenimiento/dashboard
+- [x] mantenimiento/dashboard *(en /app: Torre de Control de taller en tiempo real, visualizador de bahías/rampas con cronómetro en vivo, KPIs de OTs por rango temporal, MTTR en horas, costos acumulados en soles, semáforo preventivo con inspecciones vigentes/próximas/vencidas, alertas de fallas F-MAN-001, clima de Base Lurigancho cuando hay conexión (sin datos si no responde), atajos de teclado [N, R, O, C, F] y hojas laterales de detalle rápido)*
 - [x] mantenimiento/ordenes · mantenimiento/reportes-ot *(tablero por estado, ficha con 4 pestañas, pausas con motivo y cronómetro, checklist, cierre con liberación de rampa y disponibilidad, PDF de cierre, Nueva OT con kilometraje sugerido, rampa y backlog)*
 - [ ] mantenimiento/trabajos-ot *(pendiente: historial de trabajos aún en la versión clásica)*
 - [x] mantenimiento/inspecciones *(estado de la flota, historial, ficha, registrar, editar, PDF oficial, WhatsApp y OT desde la inspección; importación de inspecciones pendiente de confirmar)*

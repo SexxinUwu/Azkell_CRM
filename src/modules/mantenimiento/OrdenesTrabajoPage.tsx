@@ -1,5 +1,6 @@
 import './mant.css';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, ArrowUpRight, BookOpen, Plus, ScrollText, SearchX, Wrench } from 'lucide-react';
@@ -77,6 +78,7 @@ const TABS_MAIN = ['OTs', 'Backlog'] as const;
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export function OrdenesTrabajoPage() {
+  const location = useLocation();
   const { data, isLoading, isError, error } = useOrdenesTrabajoData();
   const { can } = useAuth();
   const qc    = useQueryClient();
@@ -120,6 +122,24 @@ export function OrdenesTrabajoPage() {
   const [bkReportado, setBkReportado] = useState('');
 
   const ots = data ?? [];
+
+  // Desde el dashboard: [N] abre la hoja de nueva OT y "Ver OT" abre esa OT. El estado de navegación
+  // se limpia con replace para que la acción no se repita al recargar o volver atrás.
+  const navegar = useNavigate();
+  const [otPorAbrir, setOtPorAbrir] = useState<string | null>(null);
+  useEffect(() => {
+    const st = location.state as { nuevaOT?: boolean; abrirOT?: string } | null;
+    if (!st?.nuevaOT && !st?.abrirOT) return;
+    if (st.nuevaOT) setModalOT(true);
+    if (st.abrirOT) setOtPorAbrir(st.abrirOT);
+    navegar(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navegar]);
+  useEffect(() => {
+    if (!otPorAbrir || !data) return;
+    const ot = data.find(o => otId(o) === otPorAbrir);
+    if (ot) setSeleccionada(ot);
+    setOtPorAbrir(null);
+  }, [otPorAbrir, data]);
 
   // Datos para el formulario de Nueva OT: inspecciones, averías pendientes de la placa elegida
   const { data: inspecciones } = useInspecciones();
