@@ -3,7 +3,8 @@
 .welcome {
   position: fixed;
   inset: 0;
-  z-index: 300;
+  /* Por encima de las capas de cualquier pantalla (mapa GPS, filtros y leyenda usan 800 y más) */
+  z-index: 3000;
   cursor: pointer;
 }
 .welcome__backdrop {
