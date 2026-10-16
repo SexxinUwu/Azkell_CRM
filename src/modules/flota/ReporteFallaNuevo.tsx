@@ -11,13 +11,13 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { usePlacas } from '../placas/api';
 import { Firma, type FirmaHandle } from '../inspecciones/Firma';
+import { useConfigSistemas, type ReporteFalla } from './api';
+import { leerFallas, textoItem, type FallaGuardada, type SistemaCfg } from './fman';
 
-interface Sistema { key: string; title: string; items: Array<string | { id?: string; label?: string }> }
-interface Config { ok: boolean; tracto: Sistema[]; remolque: Sistema[] }
 interface Marca { obs: string }
+interface Backlog { id: number | string; backlog_id?: string | null; tarea?: string | null; tema?: string | null; ticket_ot?: string | null }
 
 const MAX_FOTOS = 5;
-const nombre = (it: Sistema['items'][number]) => (typeof it === 'string' ? it : it.label || it.id || '');
 
 /** Reduce la foto a 1280 px de lado mayor, JPEG al 80 %: el reporte viaja como JSON.
  *  createImageBitmap decodifica fuera del hilo principal, así una foto de 12 MP no congela la pantalla. */
@@ -42,35 +42,78 @@ async function reducir(file: File): Promise<string> {
   }
 }
 
-// Registrar un reporte de fallas: unidad, sistemas con falla, fallas manuales, fotos y firma del conductor.
-export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; onClose: () => void; onHecho: () => Promise<unknown> }) {
+/** Marcas de un reporte guardado. Lo que viene de backlog y lo de otra versión se conserva tal cual. */
+function marcasDe(lista: FallaGuardada[]) {
+  const marcas: Record<string, Marca> = {};
+  const conservar: FallaGuardada[] = [];
+  let manual = '';
+  for (const f of lista) {
+    if (f.backlog_id) { conservar.push(f); continue; }
+    if (f.sistema === 'MANUAL') { manual ||= String(f.obs ?? f.observacion ?? ''); continue; }
+    const obs = String(f.obs ?? '');
+    marcas[`${f.sistema ?? ''}||${f.item ?? ''}`] = { obs: obs === String(f.item ?? '') ? '' : obs };
+  }
+  return { marcas, conservar, manual };
+}
+
+// Registrar o editar un reporte de fallas: unidad, sistemas con falla, backlog pendiente, fotos y firma del conductor.
+export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
+  open: boolean; reporte?: ReporteFalla | null; onClose: () => void; onHecho: () => Promise<unknown>;
+}) {
   const toast = useToast();
   const { user } = useAuth();
   const placas = usePlacas();
   const firma = useRef<FirmaHandle>(null);
+  const editando = !!reporte;
   const [v, setV] = useState<Record<string, string>>({});
   const [fallasT, setFallasT] = useState<Record<string, Marca>>({});
   const [fallasR, setFallasR] = useState<Record<string, Marca>>({});
+  const [conservarT, setConservarT] = useState<FallaGuardada[]>([]);
+  const [conservarR, setConservarR] = useState<FallaGuardada[]>([]);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [manual, setManual] = useState('');
   const [critica, setCritica] = useState(false);
   const [fotos, setFotos] = useState<string[]>([]);
+  const [backlogSel, setBacklogSel] = useState<Record<string, true>>({});
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cfg = useQuery<Config>({ queryKey: ['flota', 'config-sistemas'], enabled: open, queryFn: () => api<Config>('/mantenimiento/checklist/config-sistemas'), staleTime: 10 * 60_000 });
+  const cfg = useConfigSistemas(open);
+  const placaT = (v.placa_tracto ?? '').trim().toUpperCase();
+  // Backlog pendiente de la unidad: se importa al reporte marcando lo que aplica
+  const backlogs = useQuery<Backlog[]>({
+    queryKey: ['flota', 'backlog', placaT], enabled: open && placaT.length >= 5,
+    queryFn: () => api<Backlog[]>(`/taller/ot-backlog?placa=${encodeURIComponent(placaT)}&estado=Pendiente`),
+    staleTime: 30_000,
+  });
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setFallasT({}); setFallasR({}); setAbierto(null); setManual(''); setFotos([]); setCritica(false);
-    setV({ placa_tracto: '', placa_remolque: '', orden_viaje: '', conductor: '', km_inicial: '', procedencia: '', ubicacion_gps: '' });
+    setError(null); setAbierto(null); setCritica(false); setFotos([]); setBacklogSel({});
     firma.current?.limpiar();
-  }, [open]);
+    if (reporte) {
+      const t = marcasDe(leerFallas(reporte.fallas_tracto_json));
+      const r = marcasDe(leerFallas(reporte.fallas_remolque_json));
+      setFallasT(t.marcas); setConservarT(t.conservar);
+      setFallasR(r.marcas); setConservarR(r.conservar);
+      setManual(t.manual || r.manual);
+      setV({
+        placa_tracto: reporte.placa_tracto ?? '', placa_remolque: reporte.placa_remolque ?? '', orden_viaje: reporte.orden_viaje ?? '',
+        conductor: reporte.conductor ?? '', km_inicial: reporte.km_inicial != null ? String(reporte.km_inicial) : '',
+        procedencia: reporte.procedencia ?? '', ubicacion_gps: reporte.ubicacion_gps ?? '',
+      });
+    } else {
+      setFallasT({}); setFallasR({}); setConservarT([]); setConservarR([]); setManual('');
+      setV({ placa_tracto: '', placa_remolque: '', orden_viaje: '', conductor: '', km_inicial: '', procedencia: '', ubicacion_gps: '' });
+    }
+  }, [open, reporte]);
 
   const set = (k: string, val: string) => setV(a => ({ ...a, [k]: val }));
   const tractos = (placas.data ?? []).filter(p => p.motora).map(p => p.placa);
   const remolques = (placas.data ?? []).filter(p => !p.motora).map(p => p.placa);
-  const total = Object.keys(fallasT).length + Object.keys(fallasR).length + (manual.trim() ? 1 : 0);
+  const seleccionados = (backlogs.data ?? []).filter(b => backlogSel[String(b.id)]);
+  const total = Object.keys(fallasT).length + Object.keys(fallasR).length + (manual.trim() ? 1 : 0)
+    + conservarT.length + conservarR.length + seleccionados.length;
 
   async function agregarFotos(files: FileList | null) {
     if (!files) return;
@@ -83,39 +126,58 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
   async function guardar() {
     if (!v.placa_tracto.trim()) { setError('Indica la placa del tracto.'); return; }
     if (!v.conductor.trim()) { setError('Indica el conductor.'); return; }
-    if (total === 0) { setError('Marca al menos una falla o escribe una falla manual.'); return; }
+    if (total === 0) { setError('Marca al menos una falla, importa un backlog o escribe una falla manual.'); return; }
     const ahora = new Date().toISOString().slice(0, 16).replace('T', ' ');
     const armar = (m: Record<string, Marca>) => Object.entries(m).map(([k, x]) => {
       const [sistema, ...resto] = k.split('||');
       return { sistema, item: resto.join('||'), obs: x.obs, observacion: x.obs, estado: 'FALLA', fecha: ahora };
     });
-    const fT = armar(fallasT);
+    const importados: FallaGuardada[] = seleccionados.map(b => ({
+      sistema: 'MANUAL', item: `Backlog (${b.backlog_id || b.id})`, obs: b.tarea || b.tema || '', observacion: b.tarea || b.tema || '',
+      estado: 'FALLA', fecha: ahora, backlog_id: String(b.backlog_id || b.id),
+    }));
+    const fT: FallaGuardada[] = [...armar(fallasT), ...conservarT, ...importados];
     if (manual.trim()) fT.push({ sistema: 'MANUAL', item: 'Falla manual', obs: manual.trim(), observacion: manual.trim(), estado: 'FALLA', fecha: ahora });
+    const fR = [...armar(fallasR), ...conservarR];
+    const firmaNueva = firma.current && !firma.current.vacia() ? firma.current.obtener() : null;
     setEnviando(true); setError(null);
     try {
-      const r = await api<{ ok?: boolean; error?: string; folio?: string }>('/mantenimiento/checklist', {
-        method: 'POST',
-        body: {
-          orden_viaje: v.orden_viaje.trim(), fecha_reporte: ahora, placa_tracto: v.placa_tracto.trim().toUpperCase(), placa_remolque: v.placa_remolque.trim().toUpperCase(),
-          km_inicial: v.km_inicial, km_final: v.km_inicial, conductor: v.conductor.trim(), procedencia: v.procedencia, ubicacion_gps: v.ubicacion_gps,
-          fallas_tracto: fT, fallas_remolque: armar(fallasR), fallas_libres_text: '', fotos_base64: fotos, falla_critica: critica,
-          firma_conductor: firma.current && !firma.current.vacia() ? firma.current.obtener() : null, creado_por: user?.name ?? 'Sistema',
-        },
-      });
-      if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el reporte');
-      haptic('success'); toast(`Reporte ${r.folio ?? ''} registrado`);
+      if (editando) {
+        const r = await api<{ ok?: boolean; error?: string }>(`/mantenimiento/checklist/${reporte!.id}`, {
+          method: 'PUT',
+          body: {
+            orden_viaje: v.orden_viaje.trim(), placa_tracto: placaT, placa_remolque: v.placa_remolque.trim().toUpperCase(),
+            km_inicial: v.km_inicial, km_final: v.km_inicial, conductor: v.conductor.trim(), procedencia: v.procedencia, ubicacion_gps: v.ubicacion_gps,
+            fallas_tracto: fT, fallas_remolque: fR, fallas_libres_text: '', fotos_base64: fotos, firma_conductor: firmaNueva,
+          },
+        });
+        if (r.ok === false) throw new Error(r.error || 'No se pudo guardar los cambios');
+        haptic('success'); toast(`Reporte ${reporte!.folio} actualizado`);
+      } else {
+        const r = await api<{ ok?: boolean; error?: string; folio?: string }>('/mantenimiento/checklist', {
+          method: 'POST',
+          body: {
+            orden_viaje: v.orden_viaje.trim(), fecha_reporte: ahora, placa_tracto: placaT, placa_remolque: v.placa_remolque.trim().toUpperCase(),
+            km_inicial: v.km_inicial, km_final: v.km_inicial, conductor: v.conductor.trim(), procedencia: v.procedencia, ubicacion_gps: v.ubicacion_gps,
+            fallas_tracto: fT, fallas_remolque: fR, fallas_libres_text: '', fotos_base64: fotos, falla_critica: critica,
+            firma_conductor: firmaNueva, creado_por: user?.name ?? 'Sistema',
+          },
+        });
+        if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el reporte');
+        haptic('success'); toast(`Reporte ${r.folio ?? ''} registrado`);
+      }
       await onHecho(); onClose();
     } catch (err) { setError(errorMessage(err)); haptic('warning'); }
     finally { setEnviando(false); }
   }
 
-  const bloque = (titulo: string, sistemas: Sistema[], marcas: Record<string, Marca>, setMarcas: (f: (m: Record<string, Marca>) => Record<string, Marca>) => void, prefijo: string) => (
+  const bloque = (titulo: string, sistemas: SistemaCfg[], marcas: Record<string, Marca>, setMarcas: (f: (m: Record<string, Marca>) => Record<string, Marca>) => void, prefijo: string) => (
     <div>
       <p className="tarjeta__grupo-titulo">{titulo}</p>
       <div className="tarjeta__lista">
         {sistemas.map(s => {
           const idg = `${prefijo}-${s.key}`;
-          const cuantas = s.items.filter(it => marcas[`${s.title}||${nombre(it)}`]).length;
+          const cuantas = s.items.filter(it => marcas[`${s.title}||${textoItem(it)}`]).length;
           return (
             <div key={idg}>
               <button type="button" className="dato" style={{ flexDirection: 'row', width: '100%', textAlign: 'left', cursor: 'pointer', background: 'transparent', border: 0, alignItems: 'center' }}
@@ -124,13 +186,14 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
                 {cuantas > 0 && <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--red-ink)' }}>{cuantas} con falla</span>}
               </button>
               {abierto === idg && s.items.map(it => {
-                const k = `${s.title}||${nombre(it)}`;
+                const nombreItem = textoItem(it);
+                const k = `${s.title}||${nombreItem}`;
                 const m = marcas[k];
                 return (
                   <div key={k} className="dato" style={{ gap: 'var(--s-1)' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', minHeight: 44, fontSize: '0.875rem', cursor: 'pointer' }}>
                       <input type="checkbox" style={{ width: 22, height: 22, flexShrink: 0 }} checked={!!m} onChange={e => setMarcas(a => { const n2 = { ...a }; if (e.target.checked) n2[k] = { obs: '' }; else delete n2[k]; return n2; })} />
-                      <span style={{ color: m ? 'var(--red-ink)' : undefined, fontWeight: m ? 600 : 400 }}>{nombre(it)}</span>
+                      <span style={{ color: m ? 'var(--red-ink)' : undefined, fontWeight: m ? 600 : 400 }}>{nombreItem}</span>
                     </label>
                     {m && <TextInput value={m.obs} placeholder="Describe la falla (opcional)" onChange={e => setMarcas(a => ({ ...a, [k]: { obs: e.target.value } }))} />}
                   </div>
@@ -143,10 +206,12 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
     </div>
   );
 
+  const pendientes = backlogs.data ?? [];
+
   return (
-    <Sheet open={open} onClose={() => !enviando && onClose()} title="Nuevo reporte de fallas"
+    <Sheet open={open} onClose={() => !enviando && onClose()} title={editando ? `Editar reporte ${reporte!.folio}` : 'Nuevo reporte de fallas'}
       footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
-        <Button variant="primary" onClick={guardar} loading={enviando}>Guardar reporte{total ? ` (${total})` : ''}</Button></>}>
+        <Button variant="primary" onClick={guardar} loading={enviando}>{editando ? 'Guardar cambios' : 'Guardar reporte'}{total ? ` (${total})` : ''}</Button></>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
         {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
         <datalist id="rf-tractos">{tractos.map(x => <option key={x} value={x} />)}</datalist>
@@ -161,7 +226,25 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
           <Field label="Ubicación">{p => <TextInput {...p} value={v.ubicacion_gps ?? ''} onChange={e => set('ubicacion_gps', e.target.value)} />}</Field>
         </div>
 
-        {cfg.isLoading ? <p className="t-footnote c-secondary">Cargando sistemas…</p> : (
+        {pendientes.length > 0 && (
+          <div>
+            <p className="tarjeta__grupo-titulo">Backlog pendiente de la unidad ({pendientes.length})</p>
+            <div className="tarjeta__lista">
+              {pendientes.map(b => (
+                <label key={String(b.id)} className="dato" style={{ flexDirection: 'row', alignItems: 'center', gap: 'var(--s-2)', minHeight: 44, cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ width: 22, height: 22, flexShrink: 0 }} checked={!!backlogSel[String(b.id)]}
+                    onChange={e => setBacklogSel(a => { const n2 = { ...a }; if (e.target.checked) n2[String(b.id)] = true; else delete n2[String(b.id)]; return n2; })} />
+                  <span className="dato__valor" style={{ flex: 1, fontSize: '0.875rem' }}>
+                    {b.tarea || b.tema || 'Sin descripción'}
+                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--label-2)' }}>{b.backlog_id || `Backlog ${b.id}`}{b.ticket_ot ? ` · ${b.ticket_ot}` : ''}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {cfg.isLoading ? <p className="t-footnote c-secondary">Cargando sistemas…</p> : cfg.isError ? <Notice tone="error">No se pudo cargar la configuración de sistemas.</Notice> : (
           <>
             {bloque('Fallas del tracto', cfg.data?.tracto ?? [], fallasT, setFallasT, 'T')}
             {v.placa_remolque && bloque('Fallas del remolque', cfg.data?.remolque ?? [], fallasR, setFallasR, 'R')}
@@ -171,7 +254,7 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
         <Field label="Otra falla (texto libre)" wide>{p => <TextInput {...p} value={manual} onChange={e => setManual(e.target.value)} placeholder="Algo que no está en las listas" />}</Field>
 
         <div>
-          <p className="tarjeta__grupo-titulo">Fotos ({fotos.length}/{MAX_FOTOS})</p>
+          <p className="tarjeta__grupo-titulo">Fotos ({fotos.length}/{MAX_FOTOS}){editando ? ' · las anteriores se conservan' : ''}</p>
           <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
             {fotos.map((f, i) => (
               <div key={i} style={{ position: 'relative' }}>
@@ -192,17 +275,19 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
         </div>
 
         <div>
-          <p className="tarjeta__grupo-titulo">Firma del conductor</p>
+          <p className="tarjeta__grupo-titulo">Firma del conductor{editando && reporte?.firma_conductor ? ' · dibuja una nueva para reemplazarla' : ''}</p>
           <Firma ref={firma} />
         </div>
-        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--s-3)', minHeight: 44, padding: 'var(--s-3)', borderRadius: 'var(--r-lg)', cursor: 'pointer', background: critica ? 'var(--red-tint)' : 'var(--fill-subtle)' }}>
-          <input type="checkbox" checked={critica} onChange={e => setCritica(e.target.checked)} style={{ width: 22, height: 22, flexShrink: 0, marginTop: 2 }} />
-          <span>
-            <b style={{ color: critica ? 'var(--red-ink)' : 'var(--label)' }}>Falla crítica</b>
-            <span style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--label-2)' }}>La unidad no puede salir. Pasa a mantenimiento y se abre un ítem en el backlog.</span>
-          </span>
-        </label>
-        <Field label="Estado inicial">{p => <SelectInput {...p} disabled value="Pendiente"><option>Pendiente</option></SelectInput>}</Field>
+        {!editando && (
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--s-3)', minHeight: 44, padding: 'var(--s-3)', borderRadius: 'var(--r-lg)', cursor: 'pointer', background: critica ? 'var(--red-tint)' : 'var(--fill-subtle)' }}>
+            <input type="checkbox" checked={critica} onChange={e => setCritica(e.target.checked)} style={{ width: 22, height: 22, flexShrink: 0, marginTop: 2 }} />
+            <span>
+              <b style={{ color: critica ? 'var(--red-ink)' : 'var(--label)' }}>Falla crítica</b>
+              <span style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--label-2)' }}>La unidad no puede salir. Pasa a mantenimiento y se abre un ítem en el backlog.</span>
+            </span>
+          </label>
+        )}
+        {!editando && <Field label="Estado inicial">{p => <SelectInput {...p} disabled value="Pendiente"><option>Pendiente</option></SelectInput>}</Field>}
       </div>
     </Sheet>
   );

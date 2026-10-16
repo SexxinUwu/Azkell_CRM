@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
 import { DOCS } from './docsEstado';
+import type { ConfigSistemas } from './fman';
 
 // ─── Disponibilidad ──────────────────────────────────────────────────────────
 // Endpoint real: GET /api/disponibilidad-flota → bare array
@@ -495,5 +496,15 @@ export function useUnidadesGps() {
     },
     refetchInterval: 4000,
     staleTime: 3000,
+  });
+}
+
+/** Sistemas de revisión del checklist (tracto y carreta), como se configuran en la versión actual */
+export function useConfigSistemas(enabled = true) {
+  return useQuery<ConfigSistemas>({
+    queryKey: ['flota', 'config-sistemas'],
+    enabled,
+    queryFn: () => api<ConfigSistemas>('/mantenimiento/checklist/config-sistemas'),
+    staleTime: 10 * 60_000,
   });
 }

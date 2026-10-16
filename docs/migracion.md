@@ -110,7 +110,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [ ] mantenimiento/dashboard
 - [ ] mantenimiento/ordenes · mantenimiento/trabajos-ot · mantenimiento/reportes-ot
 - [ ] mantenimiento/inspecciones *(en /app: estado de la flota, historial, ficha y registrar; falta editar/PDF/importar)*
-- [~] mantenimiento/checklist *(en /app desde 2026-10-16: listado con filtros, Excel, nuevo reporte móvil con foto, firma y falla crítica, y generación de OTs. Configurar sistemas de revisión abre la versión actual. Pendiente: PDF del formato F-MAN-001, envío por WhatsApp, editar reporte e importar backlogs pendientes; hoy están en la versión actual)*
+- [x] mantenimiento/checklist *(en /app, verificado en navegador 2026-10-16: listado con filtros por estado y empresa, Excel, nuevo y editar reporte con foto, firma y falla crítica, backlog pendiente de la unidad, generación de OTs, PDF oficial F-MAN-001 con cuadrícula ✓/✕ y envío por WhatsApp. Configurar sistemas de revisión abre la versión actual)*
 - [ ] mantenimiento/planificacion · mantenimiento/configuracion-mp · mantenimiento/kits-mp *(tipos-mp ya en /app)*
 - [ ] mantenimiento/backlog-taller
 - [~] mantenimiento/status-rampa *(en /app: tablero, ingresar, editar, liberar y reactivar, evidencia, OT desde la visita, eliminar rampa, configurador de rampas, PDF y WhatsApp del reporte. Falta: columna de inspección y PDF por rampa)*
