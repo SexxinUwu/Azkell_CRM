@@ -28,7 +28,7 @@ type Formato = 'tarjetas' | 'tabla';
 type Clase = 'todas' | 'motoras' | 'no-motoras';
 interface Unidad { placa: Placa; ciclo: Ciclo }
 
-const fechaCorta = (d: Date | null) => (d ? d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+const fechaCorta = (d: Date | null) => (d ? `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` : '—');
 const fechaDMY = (d: Date | null) => (d ? `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` : '—');
 const diaTitulo = (d: Date | null) => (d ? d.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : 'Sin fecha');
 const fallas = (i: Inspeccion) => i.puntos.filter(p => p.estado === 'FALLA').length;
@@ -118,7 +118,10 @@ export function InspeccionesPage() {
 
   const botonInspeccionar = (placa: string) => (
     puedeInspeccionar ? (
-      <Button variant="primary" size="sm" icon={<ClipboardCheck size={15} />} onClick={() => inspeccionar(placa)}>Inspeccionar</Button>
+      // Mismo botón azul del clásico (#0284c7) con su respuesta al mouse y al toque
+      <button type="button" className="insp-inspeccionar" onClick={() => inspeccionar(placa)} aria-label={`Inspeccionar ${placa}`}>
+        <Plus size={15} strokeWidth={2.5} /> Inspeccionar
+      </button>
     ) : null
   );
 

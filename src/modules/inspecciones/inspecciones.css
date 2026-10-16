@@ -351,3 +351,91 @@
   .insp-tabla-fallas__fila { grid-template-columns: 1fr; gap: var(--s-1); }
   .insp-tabla-fallas__fila--cab { display: none; }
 }
+
+/* ── Botón Inspeccionar: azul del clásico (#0284c7) con su misma respuesta (sube al pasar el mouse, se encoge al presionar) ── */
+.insp-inspeccionar {
+  display: inline-flex; align-items: center; gap: 6px; height: 2.25rem; padding: 0 0.875rem;
+  border: 0; border-radius: var(--r-md); background: #0284c7; color: #fff;
+  font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.01em; white-space: nowrap; cursor: pointer;
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.25);
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.2s ease;
+}
+@media (hover: hover) {
+  .insp-inspeccionar:hover { background: #0369a1; transform: translateY(-1px); box-shadow: 0 10px 20px -10px rgba(2, 132, 199, 0.6); }
+}
+.insp-inspeccionar:active { transform: scale(0.94); }
+.insp-inspeccionar:focus-visible { outline: 2px solid #0284c7; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .insp-inspeccionar, .insp-inspeccionar:hover, .insp-inspeccionar:active { transition: none; transform: none; }
+}
+
+/* Tarjetas del selector: mismo tratamiento que las tarjetas del clásico (sube y sombra al pasar el mouse) */
+.insp-tipo { transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+@media (hover: hover) {
+  .insp-tipo:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px var(--separator), 0 14px 28px -14px rgba(0, 0, 0, 0.25); }
+}
+.insp-tipo:active { transform: scale(0.98); }
+.insp-tipo__icono--neumaticos { background: #e0f2fe; color: #0284c7; }
+.insp-tipo__icono--mecanica { background: #fef3c7; color: #d97706; }
+@media (prefers-reduced-motion: reduce) { .insp-tipo, .insp-tipo:hover { transition: none; transform: none; } }
+
+/* ── Formulario de neumáticos ───────────────────────────────────────── */
+.insp-neu { display: flex; flex-direction: column; gap: var(--s-4); }
+.insp-neu__bloque { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4); border-radius: var(--r-xl); background: var(--surface); box-shadow: 0 0 0 1px var(--separator); }
+.insp-neu__titulo { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--label-2); margin: 0; }
+.insp-neu__error { margin: 0; font-size: 0.75rem; color: var(--red-ink); }
+.insp-neu__error-general { padding: var(--s-3) var(--s-4); border-radius: var(--r-lg); background: var(--red-tint); color: var(--red-ink); font-size: 0.875rem; }
+
+/* Aviso de última inspección: rojo si fue hace 7 días o menos, azul si es más antigua */
+.insp-neu__aviso { display: flex; gap: var(--s-3); align-items: flex-start; padding: var(--s-3) var(--s-4); border-radius: var(--r-xl); font-size: 0.875rem; line-height: 1.4; box-shadow: inset 0 0 0 1px currentColor; }
+.insp-neu__aviso svg { flex-shrink: 0; margin-top: 2px; }
+.insp-neu__aviso--reciente { background: var(--red-tint); color: var(--red-ink); animation: insp-neu-entrada 0.35s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.insp-neu__aviso--info { background: var(--blue-tint); color: var(--blue-ink); }
+.insp-neu__aviso--neutral { background: var(--fill); color: var(--label-2); }
+.insp-neu__aviso strong { color: inherit; }
+@keyframes insp-neu-entrada { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+/* Días propuestos: control con pasos de 5 */
+.insp-neu__stepper { display: inline-flex; align-items: center; gap: var(--s-2); min-height: 2.75rem; }
+.insp-neu__stepper-valor { min-width: 4.5rem; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.insp-neu__paso { width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border: 0; border-radius: var(--r-md); background: var(--fill); color: var(--label); cursor: pointer; }
+
+/* Configuración vehicular en pastillas */
+.insp-neu__pills { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.insp-neu__pill { display: inline-flex; align-items: center; gap: 6px; min-height: 2.5rem; padding: 0 var(--s-3); border: 0; border-radius: var(--r-full); background: var(--fill); color: var(--label); font-size: 0.8125rem; cursor: pointer; }
+.insp-neu__pill span { color: var(--label-2); }
+.insp-neu__pill--activa { background: var(--ink); color: var(--label-inverse); }
+.insp-neu__pill--activa span { color: inherit; opacity: 0.8; }
+
+/* Chips de posiciones: el de la llanta activa va en negro; el punto indica el remanente */
+.insp-neu__chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.insp-neu__chip { position: relative; min-width: 2.75rem; height: 2.75rem; padding: 0 var(--s-3); border: 0; border-radius: var(--r-full); background: var(--fill); color: var(--label); font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
+.insp-neu__chip--activa { background: var(--ink); color: var(--label-inverse); }
+.insp-neu__chip-prom { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; }
+.insp-neu__agregar { display: inline-flex; gap: var(--s-2); align-items: center; margin-left: auto; }
+.insp-neu__agregar input { width: 6rem; }
+
+/* Editor de la llanta activa */
+.insp-neu__editor { display: flex; flex-direction: column; gap: var(--s-3); padding-top: var(--s-3); border-top: 1px solid var(--separator); }
+.insp-neu__editor-cab { display: flex; justify-content: space-between; align-items: center; gap: var(--s-2); }
+.insp-neu__pos { font-weight: 700; font-size: 1rem; }
+.insp-neu__prom-badge { font-weight: 700; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.insp-neu__mms { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--s-3); }
+.insp-neu__mm { display: flex; flex-direction: column; gap: 6px; }
+.insp-neu__mm-etiqueta { font-size: 0.75rem; font-weight: 700; color: var(--label-2); }
+.insp-neu__mm-control { display: flex; align-items: center; gap: var(--s-2); }
+.insp-neu__mm-valor { width: 100%; min-height: 2.75rem; text-align: center; font-size: 1.125rem; font-weight: 700; font-variant-numeric: tabular-nums; border: 0; border-radius: var(--r-md); background: var(--fill); color: var(--label); }
+.insp-neu__acciones-llanta { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.insp-neu__quitar { width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border: 0; border-radius: var(--r-md); background: var(--red-tint); color: var(--red-ink); cursor: pointer; }
+
+/* Resumen de llantas: tabla con desplazamiento horizontal en el celular */
+.insp-neu__tabla-caja { overflow-x: auto; border-radius: var(--r-lg); box-shadow: 0 0 0 1px var(--separator); }
+.insp-neu__tabla { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.insp-neu__tabla th { text-align: left; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--label-2); padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--separator); white-space: nowrap; }
+.insp-neu__tabla td { padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--separator); white-space: nowrap; }
+.insp-neu__tabla tbody tr:last-child td { border-bottom: 0; }
+.insp-neu__fila { cursor: pointer; }
+.insp-neu__fila:hover td { background: var(--fill); }
+.insp-neu__fila--activa td { background: var(--fill); font-weight: 600; }
+.insp-neu__fila:focus-visible { outline: 2px solid var(--label); outline-offset: -2px; }
+@media (prefers-reduced-motion: reduce) { .insp-neu__aviso--reciente { animation: none; } }
