@@ -2296,6 +2296,8 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             }
 
+            // El descuento o devolución cambia el saldo del viaje: si cuadra, pasa a LIQUIDADO
+            await recalcularLiquidacionViaje(tdb, orden_viaje).catch(() => {});
             res.json({
                 ok: true,
                 cajas_generadas: cajasGeneradas,

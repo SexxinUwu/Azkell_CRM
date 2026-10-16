@@ -2239,7 +2239,27 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             crearSalida();
         }
 
+        // Costo promedio ponderado del inventario para cada repuesto (S/); luego se crea la salida con ese costo
+        function costearItemsSalida(lista, cb) {
+            const ids = [...new Set((lista || []).map(d => d.inventario_id).filter(Boolean))];
+            if (!ids.length) return cb();
+            db.query('SELECT id, costo_soles, costo_referencial FROM inventario WHERE id IN (?)', [ids], (err, rows) => {
+                if (!err && rows) {
+                    const mapa = new Map(rows.map(r => [String(r.id), r]));
+                    lista.forEach(d => {
+                        const inv = d.inventario_id ? mapa.get(String(d.inventario_id)) : null;
+                        if (!inv) return;
+                        const costo = Number(inv.costo_soles) || Number(inv.costo_referencial) || 0;
+                        if (costo > 0) { d.costo_unitario = costo; d.moneda = 'PEN'; delete d.importe; }
+                    });
+                }
+                cb();
+            });
+        }
         function crearSalida() {
+            if (items && items.length && !items.__costeados) {
+                return costearItemsSalida(items, () => { items.__costeados = true; crearSalida(); });
+            }
             const anio = new Date(fecha || Date.now()).getFullYear();
             const tc = parseFloat(tipo_cambio) || 1;
             const solUser = creado_por || req.body.usuario || req.body.solicitante || (req.user && req.user.nombre) || null;
