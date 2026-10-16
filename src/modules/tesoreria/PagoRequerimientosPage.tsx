@@ -10,6 +10,7 @@ import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { haptic } from '../../core/lib/haptics';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -76,9 +77,15 @@ function vencimiento(fecha?: string | null): { tono: string; texto: string } | n
   return { tono: 'green', texto: `${m[3]}/${m[2]}/${m[1]}` };
 }
 
+// Moneda con su símbolo y espacio no divisible: S/ 1,200.00 · US$ 300.00
 function fmtMonto(valor: number, usd: boolean): string {
-  const moneda = usd ? 'USD' : 'PEN';
-  return valor.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + moneda;
+  return `${usd ? 'US$' : 'S/'}\u00a0${valor.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+// Fecha peruana dd/mm/aaaa a partir de AAAA-MM-DD (o ISO), sin cambio de zona horaria
+function fechaPe(v?: string | null): string {
+  const m = String(v ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '—';
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
@@ -107,6 +114,7 @@ export function PagoRequerimientosPage() {
 
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('aprobado');
   const [filtroMoneda, setFiltroMoneda] = useState<'TODAS' | 'PEN' | 'USD'>('TODAS');
+  const [errPago, setErrPago] = useState<{ numero_constancia?: string; monto?: string }>({});
   const [busqueda, setBusqueda]         = useState('');
   const [procesando, setProcesando]     = useState<OrdenCompra | null>(null);
   const [form, setForm]                 = useState(FORM_VACIO);
@@ -155,6 +163,7 @@ export function PagoRequerimientosPage() {
   // Abrir modal de pago
   function abrirProcesar(oc: OrdenCompra) {
     setProcesando(oc);
+    setErrPago({});
     setForm({
       numero_constancia: '',
       cuenta_origen:     oc.cuentas_bancarias?.[0]?.texto ?? '',
@@ -166,8 +175,11 @@ export function PagoRequerimientosPage() {
   // Procesar pago
   async function procesarPago() {
     if (!procesando) return;
-    if (!form.numero_constancia.trim()) { toast('Ingresa el número de constancia', 'error'); return; }
-    if (!form.monto || parseFloat(form.monto) <= 0) { toast('Ingresa el monto pagado', 'error'); return; }
+    const e: { numero_constancia?: string; monto?: string } = {};
+    if (!form.numero_constancia.trim()) e.numero_constancia = 'Ingresa el número de constancia.';
+    if (!form.monto || parseFloat(form.monto) <= 0) e.monto = 'Ingresa un monto mayor que cero.';
+    setErrPago(e);
+    if (e.numero_constancia || e.monto) { haptic('warning'); return; }
     setGuardando(true);
     try {
       await api(`/tesoreria/pago-requerimientos/${procesando.id}/procesar`, {
@@ -211,11 +223,12 @@ export function PagoRequerimientosPage() {
       <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', marginBottom: 'var(--s-3)' }}>
         {[
           { label: 'Por pagar', valor: String(kpis.pendientes), color: 'blue', onClick: () => { setFiltroEstado('aprobado'); setFiltroMoneda('TODAS'); } },
-          { label: 'Total S/', valor: `S/ ${kpis.totalPEN.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`, color: 'amber', onClick: () => { setFiltroEstado('aprobado'); setFiltroMoneda('PEN'); } },
-          { label: 'Total US$', valor: `US$ ${kpis.totalUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: 'amber', onClick: () => { setFiltroEstado('aprobado'); setFiltroMoneda('USD'); } },
+          { label: 'Total S/', valor: fmtMonto(kpis.totalPEN, false), color: 'amber', onClick: () => { setFiltroEstado('aprobado'); setFiltroMoneda('PEN'); } },
+          { label: 'Total US$', valor: fmtMonto(kpis.totalUSD, true), color: 'amber', onClick: () => { setFiltroEstado('aprobado'); setFiltroMoneda('USD'); } },
           { label: 'Pagados', valor: String(kpis.pagados), color: 'green', onClick: () => { setFiltroEstado('procesados'); setFiltroMoneda('TODAS'); } },
         ].map(k => (
-          <div key={k.label} onClick={k.onClick}
+          <div key={k.label} className="pressable" role="button" tabIndex={0} onClick={() => { haptic('selection'); k.onClick(); }}
+            onKeyDown={e => { if (e.key === 'Enter') { haptic('selection'); k.onClick(); } }}
             style={{ flex: 1, minWidth: '9rem', background: 'var(--fill-1)', borderRadius: 10, padding: '10px 14px',
               border: '1px solid var(--separator)', cursor: 'pointer', userSelect: 'none' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1.1rem', color: `var(--${k.color}-ink)` }}>
@@ -234,16 +247,16 @@ export function PagoRequerimientosPage() {
           { key: 'todos' as FiltroEstado, label: 'Todos' },
         ].map(f => (
           <button key={f.key} type="button"
-            className={`chip${filtroEstado === f.key ? ' chip--active' : ''}`}
-            onClick={() => setFiltroEstado(f.key)}>
+            className={`chip pressable${filtroEstado === f.key ? ' chip--active' : ''}`}
+            onClick={() => { haptic('selection'); setFiltroEstado(f.key); }}>
             {f.label}
           </button>
         ))}
         <div style={{ width: 1, height: 18, background: 'var(--separator)', margin: '0 4px' }} />
         {(['TODAS', 'PEN', 'USD'] as const).map(m => (
           <button key={m} type="button"
-            className={`chip${filtroMoneda === m ? ' chip--active' : ''}`}
-            onClick={() => setFiltroMoneda(m)}>
+            className={`chip pressable${filtroMoneda === m ? ' chip--active' : ''}`}
+            onClick={() => { haptic('selection'); setFiltroMoneda(m); }}>
             {m === 'TODAS' ? 'Toda moneda' : m}
           </button>
         ))}
@@ -284,7 +297,7 @@ export function PagoRequerimientosPage() {
                 const pendiente = ['aprobado', 'autorizado'].includes(estado.toLowerCase());
                 return (
                   <tr key={String(oc.id)}>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--label)' }}>
                       {ocCodigo(oc)}
                     </td>
                     <td>
@@ -310,7 +323,7 @@ export function PagoRequerimientosPage() {
                       {oc.solicitante || oc.creado_por_nombre || oc.creado_por || '—'}
                     </td>
                     <td style={{ fontSize: '0.8125rem', fontFamily: 'var(--font-mono)', color: 'var(--label-2)' }}>
-                      {oc.fecha ? String(oc.fecha).split('T')[0] : '—'}
+                      {fechaPe(oc.fecha)}
                     </td>
                     <td>
                       {(() => {
@@ -331,7 +344,7 @@ export function PagoRequerimientosPage() {
                       </span>
                       {oc.fecha_pago && (
                         <div style={{ fontSize: '0.7rem', color: 'var(--label-3)', marginTop: 2 }}>
-                          {String(oc.fecha_pago).split('T')[0]}
+                          {fechaPe(oc.fecha_pago)}
                         </div>
                       )}
                     </td>
@@ -372,24 +385,24 @@ export function PagoRequerimientosPage() {
             <div style={{ background: 'var(--fill-2)', borderRadius: 8, padding: '10px 14px', fontSize: '0.875rem' }}>
               <div style={{ fontWeight: 600 }}>{procesando.proveedor_nombre || 'Proveedor'}</div>
               <div style={{ color: 'var(--label-2)' }}>{procesando.motivo || procesando.sub_motivo || '—'}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, marginTop: 4, color: 'var(--accent)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, marginTop: 4, color: 'var(--label)', fontVariantNumeric: 'tabular-nums' }}>
                 {fmtMonto(ocImporte(procesando), esUSD(procesando.moneda))}
               </div>
             </div>
 
-            <Field label="N° de constancia / operación">
+            <Field label="N° de constancia / operación" error={errPago.numero_constancia}>
               {props => (
                 <TextInput {...props} value={form.numero_constancia}
-                  onChange={e => setForm(f => ({ ...f, numero_constancia: e.target.value }))}
+                  onChange={e => { setErrPago(x => ({ ...x, numero_constancia: undefined })); setForm(f => ({ ...f, numero_constancia: e.target.value })); }}
                   placeholder="Ej. 00123456" autoFocus />
               )}
             </Field>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-2)' }}>
-              <Field label="Monto pagado">
+              <Field label="Monto pagado" error={errPago.monto}>
                 {props => (
                   <TextInput {...props} type="number" value={form.monto}
-                    onChange={e => setForm(f => ({ ...f, monto: e.target.value }))}
+                    onChange={e => { setErrPago(x => ({ ...x, monto: undefined })); setForm(f => ({ ...f, monto: e.target.value })); }}
                     placeholder="0.00" step="0.01" min="0" />
                 )}
               </Field>
