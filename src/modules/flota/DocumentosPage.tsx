@@ -11,20 +11,22 @@ import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
+import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
 import { haptic } from '../../core/lib/haptics';
-import { urlTemporalDocumento, useVehiculosFlota } from './api';
+import { compartirDocumento, eliminarDocumento, urlTemporalDocumento, useVehiculosFlota } from './api';
 import { DocumentoFormulario } from './DocumentoFormulario';
-import { DocExpediente, type FilaExpediente } from './DocExpediente';
+import { DocExpediente, type EliminarDocumento, type FilaExpediente } from './DocExpediente';
 import { DocMatriz } from './DocMatriz';
 import { DocCalendario } from './DocCalendario';
-import { grupoDe, metaDeVehiculo } from './docsEstado';
+import { grupoDe, metaDeVehiculo, type DocPersonalizado } from './docsEstado';
 
 type Vista = 'expediente' | 'matriz' | 'calendario';
 type Grupo = 'todos' | 'vigente' | 'alerta' | 'vencido' | 'sin';
+interface Formulario { placa: string | null; prefijo: string | null; personalizado: DocPersonalizado | null }
 
 const VISTAS: Array<{ value: Vista; label: string }> = [
   { value: 'expediente', label: 'Expediente' }, { value: 'matriz', label: 'Matriz general' }, { value: 'calendario', label: 'Calendario' },
@@ -42,7 +44,9 @@ export function DocumentosPage() {
   const [grupo, setGrupo] = useState<Grupo>('todos');
   const [busqueda, setBusqueda] = useState('');
   const [placa, setPlaca] = useState<string | null>(null);
-  const [formulario, setFormulario] = useState<{ placa: string | null; prefijo: string | null } | null>(null);
+  const [formulario, setFormulario] = useState<Formulario | null>(null);
+  const [aEliminar, setAEliminar] = useState<EliminarDocumento | null>(null);
+  const [eliminando, setEliminando] = useState(false);
   const puedeEditar = can('docs_flota.crear', 'docs_flota.editar');
 
   const vehiculos = data ?? [];
@@ -71,9 +75,29 @@ export function DocumentosPage() {
     haptic('selection');
     urlTemporalDocumento(url).then(u => window.open(u, '_blank', 'noopener,noreferrer')).catch(aviso);
   };
+  const compartir = (url: string, titulo: string, p: string) => {
+    haptic('selection');
+    compartirDocumento(url, titulo, p).catch(aviso);
+  };
+  const refrescar = () => Promise.all([
+    qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] }),
+    qc.invalidateQueries({ queryKey: ['flota', 'historial-docs'] }),
+  ]);
   const cerrarFormulario = () => {
     setFormulario(null);
-    qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] });
+    refrescar();
+  };
+  const confirmarEliminar = async () => {
+    if (!aEliminar) return;
+    setEliminando(true);
+    try {
+      await eliminarDocumento({ placa: aEliminar.placa, tipoKey: aEliminar.tipoKey, urlS3: aEliminar.url });
+      haptic('success');
+      toast(`${aEliminar.titulo} de ${aEliminar.placa} eliminado`);
+      setAEliminar(null);
+      await refrescar();
+    } catch (err) { aviso(err); }
+    finally { setEliminando(false); }
   };
 
   const kpis: Array<{ clave: Grupo; label: string; valor: number; tono: string; icono: React.ReactNode }> = [
@@ -95,7 +119,7 @@ export function DocumentosPage() {
             <Button variant="plain" className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
               disabled={isFetching} onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] })} />
             {puedeEditar && (
-              <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ placa: null, prefijo: null })}>Nuevo documento</Button>
+              <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ placa: null, prefijo: null, personalizado: null })}>Nuevo documento</Button>
             )}
           </>
         }
@@ -137,7 +161,9 @@ export function DocumentosPage() {
 
           {vista === 'expediente' && (
             <DocExpediente filas={filas} placa={placa} onElegir={setPlaca} puedeEditar={puedeEditar}
-              onCargar={(p, prefijo) => setFormulario({ placa: p, prefijo })} onVerArchivo={verArchivo} />
+              onCargar={(p, prefijo) => setFormulario({ placa: p, prefijo, personalizado: null })}
+              onEditarPersonalizado={(p, doc) => setFormulario({ placa: p, prefijo: null, personalizado: doc })}
+              onVerArchivo={verArchivo} onCompartir={compartir} onEliminar={setAEliminar} />
           )}
           {vista === 'matriz' && <DocMatriz filas={filas} />}
           {vista === 'calendario' && (
@@ -147,7 +173,11 @@ export function DocumentosPage() {
       )}
 
       <DocumentoFormulario open={!!formulario} placa={formulario?.placa ?? null} prefijo={formulario?.prefijo ?? null}
-        usuario={user?.name ?? ''} onClose={cerrarFormulario} />
+        personalizado={formulario?.personalizado ?? null} usuario={user?.name ?? ''} onClose={cerrarFormulario} />
+
+      <ConfirmSheet open={!!aEliminar} onClose={() => !eliminando && setAEliminar(null)} onConfirm={confirmarEliminar}
+        title={`Eliminar ${aEliminar?.titulo ?? 'documento'}`} loading={eliminando} confirmLabel="Eliminar"
+        message={`Se borran los datos de ${aEliminar?.titulo ?? 'este documento'} en ${aEliminar?.placa ?? 'la unidad'} y su archivo digital. El historial de ese tipo también se elimina.`} />
     </Page>
   );
 }

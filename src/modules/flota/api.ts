@@ -1,6 +1,7 @@
 // Flota: Disponibilidad, Documentos (vehiculos-flota), Checklist (reportes_fallas), GPS
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
+import { DOCS } from './docsEstado';
 
 // ─── Disponibilidad ──────────────────────────────────────────────────────────
 // Endpoint real: GET /api/disponibilidad-flota → bare array
@@ -185,31 +186,105 @@ export async function urlTemporalDocumento(url: string): Promise<string> {
   return r[url] || url;
 }
 
+/** Registro del historial de documentos (tabla documentos_flota) */
+export interface RegistroHistorial {
+  id: string;
+  placa: string;
+  tipo_documento: string;
+  entidad: string | null;
+  nro_constancia: string | null;
+  fecha_emision: string | null;
+  fecha_vencimiento: string | null;
+  pago: string | null;
+  asesor?: string | null;
+  observaciones: string | null;
+  usuario: string | null;
+}
+
+/** Guarda una fila del historial. Usa la misma clave de tipo que la versión actual (tipo_documento). */
+async function registrarHistorial(fila: Omit<RegistroHistorial, 'id'>) {
+  await api('/documentos-flota/guardar-historial', { method: 'POST', body: fila });
+}
+
+/** Carga o renueva un documento estándar: actualiza la unidad y deja una fila en el historial */
 export async function guardarDocumentoVehiculo(opts: {
   vehiculo: Partial<VehiculoFlota> & { placa: string };
   prefijo: string;
   valores: Record<string, string>;
   archivoUrl: string | null;
+  costo: string;
   usuario: string;
 }) {
-  const { vehiculo, prefijo, valores, archivoUrl, usuario } = opts;
+  const { vehiculo, prefijo, valores, archivoUrl, costo, usuario } = opts;
   const cuerpo: Record<string, unknown> = { ...vehiculo, ...valores };
   if (archivoUrl) cuerpo[`${prefijo}_url`] = archivoUrl;
   await api('/vehiculos-flota', { method: 'POST', body: cuerpo });
 
-  // Historial del documento (no bloquea el guardado si falla)
-  const cfg = CAMPOS_DOC[prefijo];
+  // Historial (no bloquea el guardado si falla). El archivo va en observaciones, como en la versión actual.
+  const tipoKey = DOCS.find(d => d.prefijo === prefijo)?.tipoKey ?? prefijo;
   try {
-    await api('/documentos-flota/guardar-historial', {
-      method: 'POST',
-      body: {
-        placa: vehiculo.placa, tipo_documento: cfg?.label ?? prefijo,
-        entidad: valores[`${prefijo}_entidad`] || null, nro_constancia: valores[`${prefijo}_constancia`] || null,
-        fecha_emision: valores[`${prefijo}_emision`] || null, fecha_vencimiento: valores[`${prefijo}_vencimiento`] || null,
-        pago: valores[`${prefijo}_pago`] || null, asesor: valores[`${prefijo}_asesor`] || null, usuario,
-      },
+    await registrarHistorial({
+      placa: vehiculo.placa, tipo_documento: tipoKey,
+      entidad: valores[`${prefijo}_entidad`] || null, nro_constancia: valores[`${prefijo}_constancia`] || null,
+      fecha_emision: valores[`${prefijo}_emision`] || null, fecha_vencimiento: valores[`${prefijo}_vencimiento`] || null,
+      pago: valores[`${prefijo}_pago`] || costo || null, asesor: valores[`${prefijo}_asesor`] || null,
+      observaciones: archivoUrl ?? (String(vehiculo[`${prefijo}_url`] ?? '').trim() || null), usuario,
     });
   } catch { /* el historial es complementario */ }
+}
+
+/** Carga o renueva un documento personalizado (tipo libre o TIVE): solo vive en el historial */
+export async function guardarDocumentoPersonalizado(opts: {
+  placa: string; tipo: string; constancia: string; emision: string; vencimiento: string; costo: string;
+  archivoUrl: string | null; usuario: string;
+}) {
+  const { placa, tipo, constancia, emision, vencimiento, costo, archivoUrl, usuario } = opts;
+  await registrarHistorial({
+    placa, tipo_documento: tipo.trim(), entidad: null, nro_constancia: constancia || null,
+    fecha_emision: emision || null, fecha_vencimiento: vencimiento || null, pago: costo || null,
+    observaciones: archivoUrl, usuario,
+  });
+}
+
+/** Limpia el documento de la unidad (o el personalizado) y borra su archivo de S3 */
+export async function eliminarDocumento(opts: { placa: string; tipoKey: string; urlS3: string | null }) {
+  await api('/documentos-flota/eliminar-documento', {
+    method: 'POST', body: { placa: opts.placa, tipoDocKey: opts.tipoKey, urlS3: opts.urlS3 ?? '' },
+  });
+}
+
+/** Historial de una unidad (todas sus filas de documentos_flota) */
+export function useHistorialDocumentos(placa: string, enabled: boolean) {
+  return useQuery<RegistroHistorial[]>({
+    queryKey: ['flota', 'historial-docs', placa],
+    enabled: enabled && !!placa,
+    queryFn: () =>
+      api<{ historial?: RegistroHistorial[] }>(`/documentos-flota/historial/${encodeURIComponent(placa)}`).then(r => r.historial ?? []),
+  });
+}
+
+/**
+ * Comparte el archivo por WhatsApp como en la versión actual: adjunto si el navegador puede compartir archivos
+ * (celular); si no, abre WhatsApp con el enlace temporal del documento.
+ */
+export async function compartirDocumento(url: string, titulo: string, placa: string) {
+  const enlace = await urlTemporalDocumento(url);
+  const ext = (url.split('?')[0].split('.').pop() || 'pdf').toLowerCase();
+  const mime = ext === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : /^jpe?g$/.test(ext) ? 'image/jpeg' : 'application/octet-stream';
+  const nombre = `${placa} - ${titulo}.${ext}`;
+  try {
+    const blob = await (await fetch(enlace)).blob();
+    const archivo = new File([blob], nombre, { type: mime });
+    if (navigator.canShare?.({ files: [archivo] })) {
+      await navigator.share({ files: [archivo], title: nombre, text: `📄 Documento: *${titulo}*\n🚗 Placa: *${placa}*` });
+      return;
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') return;
+    // Sin archivo adjunto: se usa el enlace de abajo
+  }
+  const texto = `📄 *DOCUMENTO DE FLOTA*\n🚗 *Placa:* ${placa}\n📑 *Documento:* ${titulo}\n🔗 *Ver/Descargar archivo:* ${enlace}`;
+  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank', 'noopener,noreferrer');
 }
 
 // ─── GPS / Wialon ─────────────────────────────────────────────────────────────

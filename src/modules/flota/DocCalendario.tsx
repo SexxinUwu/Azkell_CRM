@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
-import { DOCS, colorDoc, estadoDeFecha, type DocConfig, type EstadoDoc } from './docsEstado';
+import { COLOR_PERSONALIZADO, DOCS, colorDoc, estadoDeFecha, type EstadoDoc } from './docsEstado';
 import type { FilaExpediente } from './DocExpediente';
 
-interface Evento { placa: string; doc: DocConfig; fecha: string; estado: EstadoDoc }
+const OTROS = 'otros';
+interface Evento { placa: string; clave: string; corto: string; titulo: string; color: string; fecha: string; estado: EstadoDoc }
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const DIAS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
@@ -12,14 +13,19 @@ const TONO: Array<{ value: 'todos' | 'vencido' | 'alerta' | 'vigente'; label: st
   { value: 'todos', label: 'Todos' }, { value: 'vencido', label: 'Vencidos' }, { value: 'alerta', label: 'Por vencer' }, { value: 'vigente', label: 'Vigentes' },
 ];
 
-/** Cada vencimiento de la flota como un evento del calendario */
+/** Cada vencimiento de la flota como un evento del calendario (los permanentes no tienen fecha que mostrar) */
 function eventosDe(filas: FilaExpediente[]): Evento[] {
   const out: Evento[] = [];
-  for (const { v } of filas) {
+  for (const { v, m } of filas) {
     for (const doc of DOCS) {
       const f = String(v[doc.vencimiento] ?? '').slice(0, 10);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(f)) continue;
-      out.push({ placa: v.placa, doc, fecha: f, estado: estadoDeFecha(f) });
+      out.push({ placa: v.placa, clave: doc.clave, corto: doc.corto, titulo: doc.titulo, color: colorDoc(doc.num), fecha: f, estado: estadoDeFecha(f) });
+    }
+    for (const { doc } of m.personalizados) {
+      const f = String(doc.vencimiento ?? '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || /TIVE/i.test(doc.tipo)) continue;
+      out.push({ placa: v.placa, clave: OTROS, corto: doc.tipo, titulo: doc.tipo, color: COLOR_PERSONALIZADO, fecha: f, estado: estadoDeFecha(f) });
     }
   }
   return out.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.placa.localeCompare(b.placa));
@@ -34,6 +40,7 @@ export function DocCalendario({ filas, onElegir }: { filas: FilaExpediente[]; on
   const [tipo, setTipo] = useState<string>('todos');
   const [tono, setTono] = useState<'todos' | 'vencido' | 'alerta' | 'vigente'>('todos');
   const [buscar, setBuscar] = useState('');
+  const [diaAbierto, setDiaAbierto] = useState<string | null>(null);
 
   const todos = useMemo(() => eventosDe(filas), [filas]);
   const delMes = useMemo(() => {
@@ -41,7 +48,7 @@ export function DocCalendario({ filas, onElegir }: { filas: FilaExpediente[]; on
     const q = buscar.trim().toUpperCase();
     return todos.filter(e =>
       e.fecha.startsWith(prefijo)
-      && (tipo === 'todos' || e.doc.clave === tipo)
+      && (tipo === 'todos' || e.clave === tipo)
       && (tono === 'todos' || grupoEstado(e.estado) === tono)
       && (!q || e.placa.includes(q)));
   }, [todos, mes, tipo, tono, buscar]);
@@ -71,8 +78,8 @@ export function DocCalendario({ filas, onElegir }: { filas: FilaExpediente[]; on
   }, [delMes]);
 
   const titulo = mes.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
-  const mover = (n: number) => setMes(m => new Date(m.getFullYear(), m.getMonth() + n, 1));
-  const irHoy = () => setMes(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+  const mover = (n: number) => { setMes(m => new Date(m.getFullYear(), m.getMonth() + n, 1)); setDiaAbierto(null); };
+  const irHoy = () => { setMes(new Date(hoy.getFullYear(), hoy.getMonth(), 1)); setDiaAbierto(null); };
   const esHoy = (d: Date) => iso(d) === iso(hoy);
 
   return (
@@ -88,6 +95,7 @@ export function DocCalendario({ filas, onElegir }: { filas: FilaExpediente[]; on
           <select className="doc-cal__select" value={tipo} onChange={e => setTipo(e.target.value)} aria-label="Tipo de documento">
             <option value="todos">Todos los documentos</option>
             {DOCS.map(d => <option key={d.clave} value={d.clave}>{d.corto}</option>)}
+            <option value={OTROS}>Otros (personalizados)</option>
           </select>
           <input className="doc-cal__buscar" type="search" value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Filtrar placa…" aria-label="Filtrar por placa" />
           <span className="doc-cal__contador">{delMes.length} vencimientos</span>
@@ -99,18 +107,26 @@ export function DocCalendario({ filas, onElegir }: { filas: FilaExpediente[]; on
           <div className="doc-cal__dias-sem">{DIAS.map(d => <span key={d}>{d}</span>)}</div>
           <div className="doc-cal__grilla">
             {celdas.map(({ fecha, dentro }) => {
-              const eventos = porDia.get(iso(fecha)) ?? [];
+              const clave = iso(fecha);
+              const eventos = porDia.get(clave) ?? [];
+              const expandido = diaAbierto === clave;
+              const visibles = expandido ? eventos : eventos.slice(0, 3);
               return (
-                <div key={iso(fecha)} className={`doc-cal__dia${dentro ? '' : ' doc-cal__dia--fuera'}${esHoy(fecha) ? ' doc-cal__dia--hoy' : ''}`}>
+                <div key={clave} className={`doc-cal__dia${dentro ? '' : ' doc-cal__dia--fuera'}${esHoy(fecha) ? ' doc-cal__dia--hoy' : ''}`}>
                   <span className="doc-cal__numero">{fecha.getDate()}</span>
-                  {eventos.slice(0, 3).map(e => (
-                    <button key={`${e.placa}-${e.doc.clave}`} type="button" className="doc-cal__evento" title={`${e.placa} · ${e.doc.titulo} · ${e.estado.texto}`}
-                      style={{ background: `${colorDoc(e.doc.num)}1f`, color: colorDoc(e.doc.num), borderColor: e.estado.color }}
+                  {visibles.map(e => (
+                    <button key={`${e.placa}-${e.clave}-${e.titulo}`} type="button" className="doc-cal__evento" title={`${e.placa} · ${e.titulo} · ${e.estado.texto}`}
+                      style={{ background: `${e.color}1f`, color: e.color, borderColor: e.estado.color }}
                       onClick={() => onElegir(e.placa)}>
-                      {e.placa} · {e.doc.corto}
+                      {e.placa} · {e.corto}
                     </button>
                   ))}
-                  {eventos.length > 3 && <span className="doc-cal__mas">+{eventos.length - 3} más</span>}
+                  {eventos.length > 3 && (
+                    <button type="button" className="doc-cal__mas" aria-expanded={expandido}
+                      onClick={() => setDiaAbierto(expandido ? null : clave)}>
+                      {expandido ? 'Ver menos' : `+${eventos.length - 3} más`}
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -135,11 +151,11 @@ export function DocCalendario({ filas, onElegir }: { filas: FilaExpediente[]; on
             {delMes.length === 0 && <p className="doc-cal__vacio">No hay vencimientos en este mes.</p>}
             <ul className="doc-cal__agenda">
               {delMes.map(e => (
-                <li key={`${e.placa}-${e.doc.clave}-${e.fecha}`}>
+                <li key={`${e.placa}-${e.clave}-${e.titulo}-${e.fecha}`}>
                   <button type="button" onClick={() => onElegir(e.placa)}>
-                    <span className="doc-cal__agenda-icono" style={{ color: colorDoc(e.doc.num) }}>●</span>
+                    <span className="doc-cal__agenda-icono" style={{ color: e.color }}>●</span>
                     <span className="doc-cal__agenda-texto">
-                      <strong>{e.placa} · {e.doc.corto}</strong>
+                      <strong>{e.placa} · {e.corto}</strong>
                       <span>Vence: {e.fecha.split('-').reverse().join('/')}</span>
                     </span>
                     <span className="doc-cal__chip" style={{ color: e.estado.color, borderColor: e.estado.color }}>{e.estado.texto}</span>
