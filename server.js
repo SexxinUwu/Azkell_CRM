@@ -119,6 +119,7 @@ app.use(express.json({ limit: '50mb' }));
 
 // ── Multi-Tenant SaaS Middleware ─────────────────────────────────
 const { resolveTenantMiddleware } = require('./services/tenant_master');
+const { crearResolutorPlacas } = require('./services/wialon_placas');
 app.use((req, res, next) => {
     resolveTenantMiddleware(req, res, () => {
         tenantStorage.run(req.db, next);
@@ -1092,20 +1093,19 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
                         }
 
                         // Placas mapping
-                        const [pRows] = await activeDb.promise().query("SELECT placa, cliente, tipo, marca, modelo_uts FROM placas").catch(() => [[]]);
+                        const [pRows] = await activeDb.promise().query("SELECT placa, wialon_name, cliente, tipo, marca, modelo_uts FROM placas").catch(() => [[]]);
                         let placasMap = {};
                         (pRows || []).forEach(p => {
                             const cp = String(p.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
                             if (cp) placasMap[cp] = p;
                         });
 
+                        const resolverPlaca = crearResolutorPlacas(pRows);
                         let vehiculos = [];
                         if (searchData && Array.isArray(searchData.items)) {
                             searchData.items.forEach(item => {
                                 const rawName = item.nm ? item.nm.toUpperCase().trim() : "";
-                                let placaLimpia = rawName.replace(/[^A-Z0-9]/g, '');
-                                const matchPlaca = placaLimpia.match(/[A-Z0-9]{6}/);
-                                if (matchPlaca) placaLimpia = matchPlaca[0];
+                                let placaLimpia = resolverPlaca(rawName).placa;
 
                                 const lat = item.pos ? Number(item.pos.y) : 0;
                                 const lng = item.pos ? Number(item.pos.x) : 0;
