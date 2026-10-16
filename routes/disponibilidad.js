@@ -111,6 +111,28 @@ module.exports = function (db, logAudit) {
             // 6. Disponibilidad manual
             const dispRows = await safeQuery(`SELECT * FROM flota_disponibilidad`);
 
+            // 7. Último conductor por placa, según sus órdenes de viaje (sin anuladas, la más reciente primero)
+            const viajesConductor = await safeQuery(`
+                SELECT placa_tracto, placa_remolque, conductor FROM operaciones_ordenes_viaje
+                WHERE estado <> 'ANULADO' AND TRIM(COALESCE(conductor, '')) <> ''
+                ORDER BY fecha_viaje DESC, id DESC
+            `);
+            const ultimoConductorTracto = {};
+            const ultimoConductorRemolque = {};
+            // Viaje abierto (sin retorno) que tiene bloqueada la unidad: se explica en vez de mostrar el estado sin motivo
+            const avisoViaje = r => `Bloqueado por viaje ${r.id} en ruta (salida ${r.salida_fecha || ''} ${r.salida_hora || ''}${r.destino ? ' ' + r.destino : ''}). Requiere registrar retorno en Garita/Seguridad.`;
+            const rutaCarretaMap = {};
+            (enRutaRows || []).forEach(r => {
+                const pc = clean(r.placa_carreta);
+                if (pc && !rutaCarretaMap[pc]) rutaCarretaMap[pc] = r;
+            });
+            viajesConductor.forEach(v => {
+                const pt = clean(v.placa_tracto);
+                const pr = clean(v.placa_remolque);
+                if (pt && !ultimoConductorTracto[pt]) ultimoConductorTracto[pt] = String(v.conductor).trim();
+                if (pr && !ultimoConductorRemolque[pr]) ultimoConductorRemolque[pr] = String(v.conductor).trim();
+            });
+
             const otSet = new Set();
             (otRows || []).forEach(ot => {
                 const p = clean(ot.placa);
@@ -216,7 +238,7 @@ module.exports = function (db, logAudit) {
                                     let hasCarretaOT = cCandidata ? otSet.has(cCandidata) : false;
 
                                     let carreta = '';
-                                    let conductor = (disp ? disp.conductor_asignado : '') || (enRuta ? enRuta.conductor : (enBase ? enBase.conductor : '')) || '';
+                                    let conductor = (disp ? disp.conductor_asignado : '') || ultimoConductorTracto[cPlaca] || '';
                                     let estado = 'En Base';
                                     let observaciones = '';
 
@@ -289,6 +311,7 @@ module.exports = function (db, logAudit) {
                                         placa_camion: p.placa,
                                         placa_carreta: carreta,
                                         conductor_asignado: conductor,
+                                        aviso_viaje: enRuta ? avisoViaje(enRuta) : '',
                                         estado: estado,
                                         empresa: (p.cliente || (disp ? disp.flota : '') || '').trim(),
                                         cliente: (p.cliente || (disp ? disp.flota : '') || '').trim(),
@@ -341,7 +364,8 @@ module.exports = function (db, logAudit) {
                                         id: disp ? disp.id : null,
                                         placa_camion: '',
                                         placa_carreta: p.placa,
-                                        conductor_asignado: disp ? disp.conductor_asignado : '',
+                                        conductor_asignado: (disp ? disp.conductor_asignado : '') || ultimoConductorRemolque[cPlaca] || '',
+                                        aviso_viaje: rutaCarretaMap[cPlaca] ? avisoViaje(rutaCarretaMap[cPlaca]) : '',
                                         estado: estado,
                                         empresa: empCarreta,
                                         cliente: empCarreta,
@@ -403,6 +427,22 @@ module.exports = function (db, logAudit) {
         }
     });
 
+    // Conductor de la última orden de viaje de una placa (columna: placa_tracto o placa_remolque).
+    // Es la fuente del conductor sugerido: no se toma del checklist de seguridad.
+    async function conductorDeUltimoViaje(pDb, placa, columna) {
+        const p = String(placa || '').trim().toUpperCase();
+        if (!p) return '';
+        try {
+            const [rows] = await pDb.query(
+                `SELECT conductor FROM operaciones_ordenes_viaje
+                 WHERE UPPER(TRIM(${columna})) = ? AND estado <> 'ANULADO' AND TRIM(COALESCE(conductor, '')) <> ''
+                 ORDER BY fecha_viaje DESC, id DESC LIMIT 1`, [p]);
+            return rows && rows[0] ? String(rows[0].conductor).trim() : '';
+        } catch (err) {
+            return '';
+        }
+    }
+
     // Helper unificado para guardar / actualizar disponibilidad de flota
     async function procesarGuardadoDisponibilidad(tdb, reqId, body) {
         const pDb = (tdb.promise ? tdb.promise() : tdb);
@@ -415,6 +455,10 @@ module.exports = function (db, logAudit) {
         }
 
         const conductor = (body.conductor_asignado || '').trim();
+        // El conductor de la última orden de viaje no se fija en la tabla: se toma en vivo.
+        // Solo se guarda si la persona eligió otro (así un cambio de viaje se refleja solo).
+        const sugerido = (await conductorDeUltimoViaje(pDb, cam, 'placa_tracto')) || (await conductorDeUltimoViaje(pDb, car, 'placa_remolque'));
+        const conductorAGuardar = conductor && conductor.toUpperCase() !== sugerido.toUpperCase() ? conductor : '';
         const marca = (body.marca || '').trim().toUpperCase();
         const capacidad = (body.capacidad_tanque || '').trim();
         const tipoUnidad = (body.tipo_unidad || '').trim();
@@ -461,7 +505,7 @@ module.exports = function (db, logAudit) {
                     actualizado_por = ?,
                     fecha_actualizacion = CURRENT_TIMESTAMP
                 WHERE id = ?
-            `, [conductor, cam, car, capacidad, marca, tipoUnidad, estadoUnidad, observaciones, usuario, targetId]);
+            `, [conductorAGuardar, cam, car, capacidad, marca, tipoUnidad, estadoUnidad, observaciones, usuario, targetId]);
         } else {
             const [insRes] = await pDb.query(`
                 INSERT INTO flota_disponibilidad (
@@ -469,7 +513,7 @@ module.exports = function (db, logAudit) {
                     capacidad_tanque, marca, tipo_unidad,
                     estado_unidad, observaciones, creado_por, actualizado_por
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [conductor, cam, car, capacidad, marca, tipoUnidad, estadoUnidad, observaciones, usuario, usuario]);
+            `, [conductorAGuardar, cam, car, capacidad, marca, tipoUnidad, estadoUnidad, observaciones, usuario, usuario]);
             targetId = insRes.insertId;
         }
 
@@ -485,13 +529,46 @@ module.exports = function (db, logAudit) {
         return targetId;
     }
 
+    // ── GET /api/disponibilidad-flota/conductor-sugerido?placa=&tipo=camion|carreta ──
+    router.get('/conductor-sugerido', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const pDb = (tdb.promise ? tdb.promise() : tdb);
+            const esCarreta = String(req.query.tipo || '') === 'carreta';
+            const conductor = await conductorDeUltimoViaje(pDb, req.query.placa, esCarreta ? 'placa_remolque' : 'placa_tracto');
+            res.json({ conductor });
+        } catch (err) {
+            res.status(500).json({ error: 'No se pudo consultar el conductor sugerido' });
+        }
+    });
+
+    // Si la unidad tiene un viaje abierto y se guarda otro estado, la respuesta lo indica
+    async function advertenciaViaje(tdb, body) {
+        const pDb = (tdb.promise ? tdb.promise() : tdb);
+        const estado = String(body.estado || body.estado_unidad || '').trim().toLowerCase();
+        if (!estado || estado === 'en ruta' || estado.includes('mant')) return '';
+        const cam = String(body.placa_camion || '').trim().toUpperCase() || '\u0000';
+        const car = String(body.placa_carreta || '').trim().toUpperCase() || '\u0000';
+        try {
+            const [rows] = await pDb.query(
+                "SELECT id, salida_fecha, salida_hora, destino FROM seg_unidades_registros WHERE estado = 'en_ruta' AND (placa_tracto = ? OR placa_carreta = ?) ORDER BY id DESC LIMIT 1",
+                [cam, car]);
+            if (!rows || !rows[0]) return '';
+            const r = rows[0];
+            return `Guardado, pero la unidad sigue EN RUTA: bloqueado por viaje ${r.id} (salida ${r.salida_fecha || ''} ${r.salida_hora || ''}${r.destino ? ' ' + r.destino : ''}). Requiere registrar retorno en Garita/Seguridad.`;
+        } catch (err) {
+            return '';
+        }
+    }
+
     // ── POST /api/disponibilidad-flota (Crear / Guardar registro) ───────────────
     router.post('/', async (req, res) => {
         try {
             const tdb = getDb(req);
             const targetId = await procesarGuardadoDisponibilidad(tdb, null, req.body);
             auditar(req, 'CREAR/GUARDAR', `Registro disponibilidad guardado: ${req.body.placa_camion || req.body.placa_carreta} (ID: ${targetId})`);
-            res.json({ success: true, message: 'Registro guardado correctamente', id: targetId });
+            const advertencia = await advertenciaViaje(tdb, req.body);
+            res.json({ success: true, message: 'Registro guardado correctamente', id: targetId, advertencia });
         } catch (err) {
             console.error('Error en POST /api/disponibilidad-flota:', err);
             res.status(400).json({ error: err.message || 'Error al guardar disponibilidad' });
@@ -504,7 +581,8 @@ module.exports = function (db, logAudit) {
             const tdb = getDb(req);
             const targetId = await procesarGuardadoDisponibilidad(tdb, req.params.id, req.body);
             auditar(req, 'ACTUALIZAR', `Registro disponibilidad actualizado: ${req.body.placa_camion || req.body.placa_carreta} (ID: ${targetId})`);
-            res.json({ success: true, message: 'Disponibilidad actualizada exitosamente', id: targetId });
+            const advertencia = await advertenciaViaje(tdb, req.body);
+            res.json({ success: true, message: 'Disponibilidad actualizada exitosamente', id: targetId, advertencia });
         } catch (err) {
             console.error('Error en PUT /api/disponibilidad-flota:', err);
             res.status(400).json({ error: err.message || 'Error al actualizar disponibilidad' });

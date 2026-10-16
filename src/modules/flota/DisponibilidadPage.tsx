@@ -283,7 +283,10 @@ export function DisponibilidadPage() {
                           <td>{v.placa_camion ? <span className="disp-placa">{v.placa_camion}</span> : <span className="disp-sin">—</span>}</td>
                           <td>{v.placa_carreta ? <span className="disp-placa">{v.placa_carreta}</span> : <span className="disp-sin">—</span>}</td>
                           <td className="disp-conductor">{v.conductor_asignado || <span className="disp-sin">—</span>}</td>
-                          <td><span className={`disp-estado disp-estado--${COLOR_ESTADO[cat]}`}>{v.estado || cat}</span></td>
+                          <td>
+                            <span className={`disp-estado disp-estado--${COLOR_ESTADO[cat]}`}>{v.estado || cat}</span>
+                            {v.aviso_viaje && <span className="t-caption c-secondary" style={{ display: 'block', maxWidth: 280, marginTop: 4 }}>{v.aviso_viaje}</span>}
+                          </td>
                           <td>{v.marca || <span className="disp-sin">—</span>}</td>
                           <td>{v.capacidad_tanque || <span className="disp-sin">—</span>}</td>
                           <td>{v.tipo_unidad || <span className="disp-sin">—</span>}</td>
@@ -316,6 +319,7 @@ export function DisponibilidadPage() {
                         <span className="disp-placa disp-placa--camion"><Truck size={13} strokeWidth={1.9} />{v.placa_camion || '—'}</span>
                         {v.placa_carreta && <span className="disp-placa">+ {v.placa_carreta}</span>}
                         <span className={`disp-estado disp-estado--${COLOR_ESTADO[cat]}`}>{v.estado || cat}</span>
+                        {v.aviso_viaje && <span className="t-caption c-secondary">{v.aviso_viaje}</span>}
                       </div>
                       <strong className="disp-mcard__titulo">{v.conductor_asignado || 'Sin conductor asignado'}</strong>
                       <span className="disp-mcard__sub">{[v.marca, v.tipo_unidad, v.capacidad_tanque && `Tanque: ${v.capacidad_tanque}`].filter(Boolean).join(' • ')}</span>
