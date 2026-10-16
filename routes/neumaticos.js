@@ -186,6 +186,13 @@ module.exports = function (db, broadcast, logAudit) {
 
             // Migrar columnas adicionales de forma segura
             const migCols = [
+                "ALTER TABLE neumaticos_inspecciones ADD COLUMN km_vehiculo INT DEFAULT 0",
+                "ALTER TABLE neumaticos_inspecciones ADD COLUMN observaciones TEXT NULL",
+                "ALTER TABLE neumaticos_inspecciones ADD COLUMN dias_propuestos INT DEFAULT 30",
+                "ALTER TABLE neumaticos_inspecciones ADD COLUMN fecha_proxima DATE NULL",
+                "ALTER TABLE neumaticos_inspecciones ADD COLUMN inspector VARCHAR(100) DEFAULT ''",
+                "ALTER TABLE neumaticos_inspecciones ADD COLUMN total_llantas INT DEFAULT 0",
+                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN tipo_eje VARCHAR(50) DEFAULT NULL",
                 "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN r4 INT DEFAULT 0",
                 "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN rot VARCHAR(50) DEFAULT 'NO'",
                 "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto1 LONGTEXT NULL",
@@ -363,7 +370,12 @@ module.exports = function (db, broadcast, logAudit) {
             params.push(parseInt(limit, 10));
 
             const [rows] = await tdb.query(sql, params);
-            res.json({ ok: true, data: rows });
+            const data = rows.map(r => ({
+                ...r,
+                odometro_km: r.km_vehiculo,
+                observaciones_generales: r.observaciones
+            }));
+            res.json({ ok: true, data });
         } catch (err) {
             console.error("Error obteniendo listado de inspecciones:", err);
             res.status(500).json({ ok: false, error: err.message });
@@ -410,7 +422,10 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             }
 
-            res.json({ ok: true, data: { ...cabecera[0], detalles } });
+            const cab = { ...cabecera[0] };
+            cab.odometro_km = cab.km_vehiculo;
+            cab.observaciones_generales = cab.observaciones;
+            res.json({ ok: true, data: { ...cab, detalles } });
         } catch (err) {
             console.error("Error obteniendo detalle de inspección de neumáticos:", err);
             res.status(500).json({ ok: false, error: err.message });
@@ -420,16 +435,38 @@ module.exports = function (db, broadcast, logAudit) {
     router.post('/inspecciones', async (req, res) => {
         try {
             const tdb = getDb(req);
-            const {
-                id_ot,
-                placa,
-                fecha_inspeccion,
-                km_vehiculo = 0,
-                dias_propuestos = 30,
-                observaciones = '',
-                inspector = '',
-                items = []
-            } = req.body;
+            
+            // Compatibilidad defensiva y bidireccional (soporta nombres del clásico y de React)
+            const placaRaw = req.body.placa || req.body.vehiculo_placa || '';
+            const placa = String(placaRaw).trim().toUpperCase();
+
+            const fecha_inspeccion = req.body.fecha_inspeccion || new Date().toISOString().split('T')[0];
+
+            // Kilometraje: lee km_vehiculo, odometro_km, o kilometraje
+            const kmRaw = (req.body.km_vehiculo !== undefined && req.body.km_vehiculo !== null && req.body.km_vehiculo !== '')
+                ? req.body.km_vehiculo
+                : (req.body.odometro_km !== undefined && req.body.odometro_km !== null && req.body.odometro_km !== ''
+                    ? req.body.odometro_km
+                    : (req.body.kilometraje !== undefined && req.body.kilometraje !== null ? req.body.kilometraje : 0));
+            const km_vehiculo = parseInt(kmRaw, 10) || 0;
+
+            const dias_propuestos = parseInt(req.body.dias_propuestos || 30, 10) || 30;
+
+            // Observaciones: lee observaciones, observaciones_generales, o obs
+            const obsRaw = (req.body.observaciones !== undefined && req.body.observaciones !== null)
+                ? req.body.observaciones
+                : (req.body.observaciones_generales !== undefined && req.body.observaciones_generales !== null
+                    ? req.body.observaciones_generales
+                    : (req.body.obs || ''));
+            const observaciones = String(obsRaw).trim();
+
+            const inspector = String(req.body.inspector || req.body.tecnico || req.body.usuario || '').trim();
+            const id_ot = req.body.id_ot || null;
+
+            // Items / Llantas: lee items o llantas_inspeccionadas
+            const items = (Array.isArray(req.body.items) && req.body.items.length > 0)
+                ? req.body.items
+                : (Array.isArray(req.body.llantas_inspeccionadas) ? req.body.llantas_inspeccionadas : []);
 
             if (!placa || !fecha_inspeccion) {
                 return res.status(400).json({ ok: false, error: 'Placa y fecha de inspección son requeridas' });
@@ -437,18 +474,6 @@ module.exports = function (db, broadcast, logAudit) {
 
             if (!items || items.length === 0) {
                 return res.status(400).json({ ok: false, error: 'Debes agregar al menos una llanta a la inspección' });
-            }
-
-            // Asegurar que las columnas existen antes de cualquier inserción
-            const migCols = [
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN r4 INT DEFAULT 0",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN rot VARCHAR(50) DEFAULT 'NO'",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto1 LONGTEXT NULL",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto2 LONGTEXT NULL",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto3 LONGTEXT NULL"
-            ];
-            for (const q of migCols) {
-                try { await tdb.query(q); } catch(e) {}
             }
 
             // Generar ID Correlativo Limpio (Ej: NEU-2026-0001)
@@ -558,12 +583,12 @@ module.exports = function (db, broadcast, logAudit) {
                         r2,
                         r3,
                         r4,
-                        parseInt(it.presion_ant || 0, 10),
-                        parseInt(it.presion_actual || 0, 10),
-                        (it.estado || 'NUEVA').toUpperCase(),
-                        (it.accion || 'Inspección'),
-                        (it.rot || 'NO').toUpperCase(),
-                        it.observaciones || it.obs || '',
+                        parseInt(it.presion_ant || it.presion_anterior || it.psiAnt || 0, 10),
+                        parseInt(it.presion_actual || it.presion || it.psiActual || 0, 10),
+                        (it.estado || it.state || 'NUEVA').toUpperCase(),
+                        (it.accion || it.action || 'Inspección'),
+                        String(it.rot || it.rotacion || 'NO').toUpperCase() === 'SI' ? 'SI' : 'NO',
+                        String(it.observaciones || it.observacion || it.obs || '').trim(),
                         foto1Url,
                         foto2Url,
                         foto3Url,
@@ -1005,7 +1030,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             // Obtener metadatos de la última inspección realizada a esta placa
             const [lastInspRows] = await tdb.query(`
-                SELECT id_inspeccion, DATE_FORMAT(fecha_inspeccion, '%Y-%m-%d') as fecha_inspeccion, km_vehiculo, inspector, dias_propuestos, DATE_FORMAT(fecha_proxima, '%Y-%m-%d') as fecha_proxima
+                SELECT id_inspeccion, DATE_FORMAT(fecha_inspeccion, '%Y-%m-%d') as fecha_inspeccion, km_vehiculo, observaciones, inspector, dias_propuestos, DATE_FORMAT(fecha_proxima, '%Y-%m-%d') as fecha_proxima
                 FROM neumaticos_inspecciones
                 WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?))
                 ORDER BY fecha_inspeccion DESC, created_at DESC
@@ -1022,6 +1047,9 @@ module.exports = function (db, broadcast, logAudit) {
                 id_inspeccion: lastInsp ? lastInsp.id_inspeccion : null,
                 fecha_inspeccion: lastInsp ? lastInsp.fecha_inspeccion : null,
                 km_vehiculo: lastInsp ? lastInsp.km_vehiculo : null,
+                odometro_km: lastInsp ? lastInsp.km_vehiculo : null,
+                observaciones: lastInsp ? (lastInsp.observaciones || '') : '',
+                observaciones_generales: lastInsp ? (lastInsp.observaciones || '') : '',
                 inspector: lastInsp ? lastInsp.inspector : null,
                 dias_propuestos: lastInsp ? lastInsp.dias_propuestos : null,
                 fecha_proxima: lastInsp ? lastInsp.fecha_proxima : null,
@@ -1242,19 +1270,6 @@ module.exports = function (db, broadcast, logAudit) {
         }
 
         try {
-            // Asegurar que las columnas existen
-            const migCols = [
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN r4 INT DEFAULT 0",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN tipo_eje VARCHAR(50) DEFAULT NULL",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN rot VARCHAR(50) DEFAULT 'NO'",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto1 LONGTEXT NULL",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto2 LONGTEXT NULL",
-                "ALTER TABLE neumaticos_inspecciones_det ADD COLUMN foto3 LONGTEXT NULL"
-            ];
-            for (const q of migCols) {
-                try { await tdb.query(q); } catch(e) {}
-            }
-
             await tdb.query('START TRANSACTION');
 
             let totalImportadas = 0;
@@ -1275,8 +1290,8 @@ module.exports = function (db, broadcast, logAudit) {
                     }
                 }
 
-                const km_vehiculo = parseInt(insp.km_vehiculo || 0, 10);
-                const items = insp.items || [];
+                const km_vehiculo = parseInt(insp.km_vehiculo || insp.odometro_km || insp.kilometraje || 0, 10);
+                const items = insp.items || insp.llantas_inspeccionadas || [];
 
                 if (!placa || items.length === 0) continue;
 
@@ -1306,7 +1321,7 @@ module.exports = function (db, broadcast, logAudit) {
                     km_vehiculo,
                     30,
                     fechaProxima,
-                    insp.observaciones || 'Importación Masiva Excel',
+                    insp.observaciones || insp.observaciones_generales || 'Importación Masiva Excel',
                     'Importador Excel',
                     items.length
                 ]);
