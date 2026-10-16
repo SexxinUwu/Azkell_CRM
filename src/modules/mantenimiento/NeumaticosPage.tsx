@@ -1,5 +1,6 @@
 import './mant.css';
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, Disc3, Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
@@ -12,6 +13,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
 import { useNeumaticos, type NeuRequerimiento, type NeuVehiculo } from './api';
+import { NeumaticosAnalisis } from './NeumaticosAnalisis';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -61,7 +63,10 @@ function usePlacasLista() {
   });
 }
 
-const TABS = ['Últimas inspecciones', 'Requerimientos'] as const;
+const TABS = ['Últimas inspecciones', 'Requerimientos', 'Análisis de flota'] as const;
+type TabNeu = typeof TABS[number];
+// Clave de la URL (?tab=) para cada pestaña; la pestaña por defecto no lleva parámetro
+const CLAVE_TAB: Record<TabNeu, string> = { 'Últimas inspecciones': '', 'Requerimientos': 'requerimientos', 'Análisis de flota': 'analisis' };
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
@@ -73,7 +78,10 @@ export function NeumaticosPage() {
   const { data: cats }   = useCatalogos();
   const { data: placas } = usePlacasLista();
 
-  const [tab, setTab]       = useState<typeof TABS[number]>('Últimas inspecciones');
+  // La pestaña activa vive en la URL (?tab=analisis), para que el menú pueda abrirla directamente
+  const [params, setParams] = useSearchParams();
+  const tab: TabNeu = TABS.find(t => CLAVE_TAB[t] === (params.get('tab') ?? '')) ?? 'Últimas inspecciones';
+  const setTab = (t: TabNeu) => setParams(CLAVE_TAB[t] ? { tab: CLAVE_TAB[t] } : {}, { replace: true });
   const [busqueda, setBusqueda] = useState('');
 
   // Modal nueva inspección
@@ -272,9 +280,11 @@ export function NeumaticosPage() {
             ))}
           </div>
 
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, empresa, tipo…" />
+          {tab !== 'Análisis de flota' && <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, empresa, tipo…" />}
 
-          {tab === 'Últimas inspecciones' ? (
+          {tab === 'Análisis de flota' ? (
+            <NeumaticosAnalisis />
+          ) : tab === 'Últimas inspecciones' ? (
             visiblesUlt.length === 0 ? (
               <EmptyState icon={busqueda ? <SearchX size={22} /> : <Disc3 size={22} />}
                 title={busqueda ? 'Sin coincidencias' : 'Sin inspecciones registradas'}>

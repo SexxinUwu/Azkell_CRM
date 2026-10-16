@@ -116,12 +116,12 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [ ] mantenimiento/configuracion-mp *(Frecuencias MP sigue en la versión clásica: no hay pantalla de React para ella)*
 - [x] mantenimiento/backlog-taller *(en /app como pestaña Backlog de Órdenes de trabajo; el menú abre esa pestaña directamente)*
 - [x] mantenimiento/status-rampa *(en /app, verificado en navegador 2026-10-16: tablero, ingresar, editar, liberar y reactivar, evidencia, OT desde la visita, eliminar rampa, configurador, PDF y WhatsApp del tablero, columna de inspección con semáforo y resumen, y PDF de la rampa con OT, trabajos, materiales y evidencia. Pendiente: una sola foto de evidencia por rampa; liberar actualiza Disponibilidad al consultarla, verificado por código)*
-- [ ] mantenimiento/neumaticos-ultimas · mantenimiento/neumaticos-analisis
+- [x] mantenimiento/neumaticos-ultimas · mantenimiento/neumaticos-analisis *(en /app: pestañas Últimas inspecciones, Requerimientos y Análisis de flota con ?tab=analisis; KPI de vigencia y llantas críticas, marcas y medidas, semáforo por unidad; la fórmula del remanente promedio no cambia)*
 - [x] mantenimiento/fleetrun *(en /app: km restante (próximo km − km GPS o del cambio), prioridades Vencido, Por vencer, Vigente y Sin datos, umbrales de la empresa, búsqueda y filtros)*
 - [ ] administracion/fleetrun-config *(no hay pantalla de React ni entrada de menú para esta configuración)*
 - [ ] mantenimiento/config-metrica
 - [ ] mantenimiento/productividad · mantenimiento/kpis-taller · mantenimiento/finanzas-taller *(mantenimiento/personal ya en /app)*
-- [ ] mantenimiento/incidencias-ruta
+- [x] mantenimiento/incidencias-ruta *(en /app: registro con placa del catálogo de unidades activas, búsqueda con paginación de 50, detalle con costos en soles; sin notificaciones externas; en la base de la empresa)*
 - [ ] mantenimiento/otros
 - [ ] mantenimiento/combustible · mantenimiento/combustible-vales · mantenimiento/combustible-analisis ⚠️ (¿duplican operaciones/combustible-*?)
 

@@ -120,11 +120,11 @@ const SECCIONES_BASE: NavSection[] = [
       {
         key: 'neumaticos-grupo', label: 'Neumáticos', icon: Disc3, permissions: [],
         children: [
-          { key: 'neumaticos-analisis', label: 'Análisis de neumáticos', clasico: 'mantenimiento/neumaticos-analisis', icon: Disc3, permissions: ver('neumaticos') },
-          { key: 'neumaticos', label: 'Últimas inspecciones', clasico: 'mantenimiento/neumaticos-ultimas', icon: Clock, permissions: ver('neumaticos') },
+          { key: 'neumaticos-analisis', label: 'Análisis de neumáticos', to: '/mantenimiento/neumaticos?tab=analisis', icon: Disc3, permissions: ver('neumaticos') },
+          { key: 'neumaticos', label: 'Últimas inspecciones', to: '/mantenimiento/neumaticos', icon: Clock, permissions: ver('neumaticos') },
         ],
       },
-      { key: 'incidencias', label: 'Incidencias en ruta', clasico: 'mantenimiento/incidencias-ruta', icon: ShieldCheck, permissions: ver('incidencias_ruta') },
+      { key: 'incidencias', label: 'Incidencias en ruta', to: '/mantenimiento/incidencias', icon: ShieldCheck, permissions: ver('incidencias_ruta') },
       {
         key: 'mant-otros-grupo', label: 'Otros (hub de mantenimiento avanzado)', icon: Layers, permissions: [],
         children: [

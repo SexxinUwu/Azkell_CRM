@@ -860,7 +860,8 @@ module.exports = function (db, broadcast, logAudit) {
             ]);
 
             const totalUso = unidadesUsoRows[0]?.total_unidades_en_uso || 0;
-            const totalFlotaLlantas = unidadesUsoRows[0]?.total_llantas_flota || 1424;
+            // Sin unidades en uso no hay total de llantas que informar (null, no un valor de respaldo)
+            const totalFlotaLlantas = unidadesUsoRows[0]?.total_llantas_flota ?? null;
             const vig = vigenciasRows[0]?.vigentes || 0;
             const noVig = vigenciasRows[0]?.no_vigentes || 0;
             const sinInsp = Math.max(0, totalUso - (vig + noVig));
