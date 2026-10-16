@@ -1148,3 +1148,15 @@ label.row__main { cursor: pointer; }
 .btn--icono-pdf { color: #e5484d; }
 .btn--icono-excel { color: #1f9d55; }
 .btn--icono-acento:disabled, .btn--icono-whatsapp:disabled, .btn--icono-pdf:disabled, .btn--icono-excel:disabled { opacity: 0.35; }
+
+/* Hoja que sube desde abajo también en escritorio (anclaAbajo): ancho de lectura y altura máxima */
+@media (min-width: 640px) {
+  .sheet.sheet--abajo {
+    top: auto;
+    bottom: var(--s-3);
+    translate: -50% 0;
+    width: min(56rem, calc(100vw - 2rem));
+    max-height: min(88dvh, 60rem);
+    border-radius: var(--r-2xl);
+  }
+}

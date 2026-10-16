@@ -284,3 +284,70 @@
 .insp-listo { display: flex; flex-direction: column; align-items: center; gap: var(--s-3); padding: var(--s-8) 0; text-align: center; }
 .insp-listo__id { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; padding: 0.3rem 0.9rem; border-radius: 999px; background: var(--accent-tint); color: var(--accent-ink); }
 .insp-listo__acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-2); margin-top: var(--s-3); }
+
+/* ── Tarjetas: el estado baja a su propia línea cuando no cabe junto a la placa (sin salirse de la tarjeta) ── */
+.insp-unidad__top { flex-wrap: wrap; row-gap: var(--s-2); min-width: 0; }
+.insp-unidad__top .insp-estado { max-width: 100%; white-space: normal; text-align: center; }
+/* La tarjeta ya no es un botón: el área de ficha es un botón y debajo va Inspeccionar */
+.insp-unidad__cuerpo { display: flex; flex-direction: column; gap: var(--s-2); flex: 1; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.insp-unidad__cuerpo:disabled { cursor: default; }
+.insp-unidad__acciones { display: flex; justify-content: flex-end; }
+
+/* ── Selector de tipo de inspección ── */
+.insp-tipos { display: flex; flex-direction: column; gap: var(--s-4); }
+.insp-tipos__lista { display: grid; grid-template-columns: 1fr; gap: var(--s-3); }
+@media (min-width: 640px) { .insp-tipos__lista { grid-template-columns: 1fr 1fr; } }
+.insp-tipo {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-2); padding: var(--s-4);
+  border: 0; border-radius: var(--r-xl); background: var(--surface); box-shadow: 0 0 0 1px var(--separator);
+  color: var(--label); font: inherit; text-align: left; cursor: pointer;
+}
+.insp-tipo__icono { width: 44px; height: 44px; border-radius: var(--r-lg); display: grid; place-items: center; }
+.insp-tipo__icono--neumaticos { background: var(--blue-tint); color: var(--blue-ink); }
+.insp-tipo__icono--mecanica { background: var(--amber-tint); color: var(--amber-ink); }
+.insp-tipo__titulo { font-size: 1rem; font-weight: 700; }
+.insp-tipo__texto { font-size: 0.8125rem; color: var(--label-2); line-height: 1.4; }
+
+/* ── Formulario de neumáticos ── */
+.insp-neu { display: flex; flex-direction: column; gap: var(--s-4); }
+.insp-neu__llantas { display: flex; flex-direction: column; gap: var(--s-3); }
+.insp-neu__llanta { padding: var(--s-3); border-radius: var(--r-lg); background: var(--fill); display: flex; flex-direction: column; gap: var(--s-2); }
+.insp-neu__llanta-cab { display: flex; align-items: center; justify-content: space-between; }
+.insp-neu__pos { font-size: 0.8125rem; font-weight: 700; }
+.insp-neu__quitar { border: 0; background: none; color: var(--red-ink); padding: 4px; cursor: pointer; }
+.insp-neu__medidas { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: var(--s-2); }
+.insp-neu__agregar { display: flex; gap: var(--s-2); align-items: center; margin-top: var(--s-3); }
+.insp-neu__agregar > input { max-width: 16rem; }
+
+/* ── Tabla del estado de la flota (formato clásico, diseño actual) ── */
+.insp-tabla { overflow-x: auto; border-radius: var(--r-xl); box-shadow: 0 0 0 1px var(--separator); background: var(--surface); }
+.insp-tabla table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.insp-tabla th { text-align: left; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: var(--label-2); padding: var(--s-3); border-bottom: 1px solid var(--separator); white-space: nowrap; }
+.insp-tabla td { padding: var(--s-3); border-bottom: 1px solid var(--separator); vertical-align: middle; white-space: nowrap; }
+.insp-tabla tbody tr:last-child td { border-bottom: 0; }
+.insp-tabla tbody tr:hover td { background: var(--fill); }
+.insp-tabla__placa { display: block; font-family: var(--font-mono); font-weight: 700; }
+.insp-tabla__cliente { display: block; font-size: 0.6875rem; color: var(--label-2); }
+.insp-tabla__acciones { display: flex; gap: var(--s-2); justify-content: flex-end; align-items: center; }
+.insp-ev { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+.insp-ev--ok { background: var(--green-tint); color: var(--green-ink); }
+.insp-ev--amber { background: var(--amber-tint); color: var(--amber-ink); }
+.insp-ev--mal { background: var(--red-tint); color: var(--red-ink); }
+.insp-ev--neutral { background: var(--fill); color: var(--label-2); }
+.insp-ubic { font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
+.insp-ubic--ruta { color: var(--green-ink); }
+
+/* ── Tabla de fallas en la ficha (sistema · ítem · estado · observación) ── */
+.insp-fallas-tabla__titulo { color: var(--red-ink); display: flex; align-items: center; gap: var(--s-2); }
+.insp-tabla-fallas { border-radius: var(--r-lg); overflow: hidden; box-shadow: 0 0 0 1px var(--separator); background: var(--surface); }
+.insp-tabla-fallas__fila { display: grid; grid-template-columns: minmax(6rem, 1fr) minmax(8rem, 1.4fr) minmax(6rem, 0.8fr) minmax(10rem, 2fr); gap: var(--s-3); align-items: center; padding: var(--s-3); border-bottom: 1px solid var(--separator); font-size: 0.8125rem; }
+.insp-tabla-fallas__fila:last-child { border-bottom: 0; }
+.insp-tabla-fallas__fila--cab { background: var(--fill); font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--label-2); }
+.insp-tabla-fallas__item { font-weight: 600; }
+.insp-tabla-fallas__obs { color: var(--red-ink); font-weight: 500; overflow-wrap: anywhere; }
+.insp-tag { display: inline-block; padding: 2px 8px; border-radius: var(--r-md); box-shadow: 0 0 0 1px var(--separator); font-size: 0.6875rem; font-weight: 700; }
+.insp-pill-falla { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: var(--red-tint); color: var(--red-ink); font-size: 0.6875rem; font-weight: 700; }
+@media (max-width: 639px) {
+  .insp-tabla-fallas__fila { grid-template-columns: 1fr; gap: var(--s-1); }
+  .insp-tabla-fallas__fila--cab { display: none; }
+}

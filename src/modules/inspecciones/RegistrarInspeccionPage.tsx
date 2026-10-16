@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Camera, Check, CheckCheck, ChevronRight, ClipboardCheck, RotateCcw, Trash2, X } from 'lucide-react';
@@ -37,10 +37,13 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
   const esquema = useEsquema();
   const placas = usePlacas();
   const firma = useRef<FirmaHandle>(null);
+  // Desde "Inspeccionar" en Análisis de inspecciones llega ?placa=… y la unidad ya viene elegida
+  const [params] = useSearchParams();
+  const placaInicial = editar ? '' : (params.get('placa') ?? '').trim().toUpperCase();
 
   const borradorInicial = useRef(leerBorrador());
-  const [ofrecerBorrador, setOfrecerBorrador] = useState(!!borradorInicial.current && !editar);
-  const [cab, setCab] = useState<Cabecera>(cabeceraInicial);
+  const [ofrecerBorrador, setOfrecerBorrador] = useState(!!borradorInicial.current && !editar && !placaInicial);
+  const [cab, setCab] = useState<Cabecera>(() => ({ ...cabeceraInicial(), placa: placaInicial }));
   const [resp, setResp] = useState<Record<string, Respuesta>>({});
   const [paso, setPaso] = useState(0);
   const [direccion, setDireccion] = useState(1);

@@ -16,6 +16,8 @@ interface SheetProps {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** Sube desde abajo también en escritorio, hasta una altura máxima (detalles largos) */
+  anclaAbajo?: boolean;
 }
 
 /**
@@ -25,7 +27,7 @@ interface SheetProps {
  *   el impulso del dedo (skill apple-design §6) para decidir si cierra o vuelve.
  * Entra y sale por el mismo camino (§7). Escape cierra. El foco vuelve al disparador.
  */
-export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
+export function Sheet({ open, onClose, title, children, footer, anclaAbajo = false }: SheetProps) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
   const titleId = useId();
   const dragControls = useDragControls();
@@ -75,7 +77,8 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
     if (projected > height * 0.5) onClose();
   }
 
-  const panelMotion = isMobile
+  const abajo = anclaAbajo || isMobile;
+  const panelMotion = abajo
     ? { initial: { y: '112%' }, animate: { y: 0 }, exit: { y: '112%' }, transition: spring } // 112 %: la hoja flota separada del borde
     : {
         initial: { opacity: 0, scale: 0.96, filter: 'blur(6px)' },
@@ -100,13 +103,13 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
           <motion.div
             key="sheet"
             ref={panelRef}
-            className="sheet"
+            className={`sheet${anclaAbajo ? ' sheet--abajo' : ''}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
             tabIndex={-1}
             {...panelMotion}
-            drag={isMobile ? 'y' : false}
+            drag={abajo ? 'y' : false}
             dragListener={false}
             dragControls={dragControls}
             dragConstraints={{ top: 0, bottom: 0 }}
@@ -115,7 +118,7 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
             onDragEnd={handleDragEnd}
           >
             <div className="sheet__grabber" onPointerDown={e => dragControls.start(e)} />
-            <div className="sheet__header" onPointerDown={e => isMobile && dragControls.start(e)}>
+            <div className="sheet__header" onPointerDown={e => abajo && dragControls.start(e)}>
               <h2 id={titleId} className="sheet__title">{title}</h2>
               <button type="button" className="sheet__close pressable" onClick={onClose} aria-label="Cerrar">
                 <X size={16} strokeWidth={2.5} />
