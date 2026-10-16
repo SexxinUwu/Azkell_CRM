@@ -87,6 +87,10 @@ function FarewellOverlay({ name, done, onEnd }: Farewell & { onEnd: () => void }
   const switched = useRef(false);
   const K = useMemo(() => escalaCubre(), []);
   useEffect(() => { fxLigero(true); return () => fxLigero(false); }, []);
+  useEffect(() => {
+    document.documentElement.classList.add('despidiendo');
+    return () => document.documentElement.classList.remove('despidiendo');
+  }, []);
 
   async function switchToLogin() {
     if (switched.current) return;

@@ -349,7 +349,8 @@ export function useGPS() {
         return obj.gps ?? { kpis: { total: 0, con_senal: 0, en_movimiento: 0, sin_senal: 0 }, unidades: [], grupos: [] };
       }),
     staleTime: 3_000,
-    refetchInterval: 4_000,
+    // Mientras dura la despedida al cerrar sesión, no se refresca (la animación tiene prioridad)
+    refetchInterval: () => (document.documentElement.classList.contains('despidiendo') ? false : 4_000),
   });
 }
 
