@@ -2,7 +2,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
 const { recalcularLiquidacionViaje } = require('../services/liquidacion_viaje');
-const { documentosVencidosPara, mensajeBloqueo } = require('../services/documentos_flota');
+const { documentosVencidosPara, mensajeAdvertencia } = require('../services/documentos_flota');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
@@ -606,7 +606,7 @@ module.exports = function (db, broadcast, logAudit) {
                 return res.status(400).json({ ok: false, error: 'Conductor y Vehículo (Tracto) son obligatorios.' });
             }
             const vencidosViaje = await documentosVencidosPara(tdb, [placa_tracto, placa_remolque]);
-            if (vencidosViaje.length) return res.status(400).json({ ok: false, error: mensajeBloqueo(vencidosViaje) });
+            // Solo advertencia: el despacho sigue permitido mientras se renueva el documento
 
             const fechaFinal = fecha_viaje || new Date().toISOString().slice(0, 19).replace('T', ' ');
             const userCreador = usuario_creacion || (req.user && req.user.nombre) || 'ADMINISTRADOR DEL SISTEMA';
@@ -720,7 +720,7 @@ module.exports = function (db, broadcast, logAudit) {
                 });
             }
 
-            res.json({ ok: true, message: `Orden de Viaje ${codeViaje} registrada exitosamente.`, viaje: codeViaje });
+            res.json({ ok: true, message: `Orden de Viaje ${codeViaje} registrada exitosamente.`, viaje: codeViaje, advertencias: vencidosViaje.map(mensajeAdvertencia) });
         } catch (err) {
             console.error('Error al registrar orden de viaje:', err);
             res.status(500).json({ ok: false, error: err.message });
