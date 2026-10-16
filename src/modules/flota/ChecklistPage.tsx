@@ -1,8 +1,9 @@
 import './flota.css';
 import '../mantenimiento/mant.css';
+import './fman.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, ClipboardCheck, FileSpreadsheet, Plus, SearchX, Trash2, Wrench } from 'lucide-react';
+import { ArrowUpRight, ClipboardCheck, FileSpreadsheet, FileText, MessageCircle, Pencil, Plus, SearchX, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -11,39 +12,47 @@ import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
+import { compartirPDF, descargarArchivo } from '../../core/lib/pdf';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { fallaEstadoColor, useChecklist, type ReporteFalla } from './api';
+import { fallaEstadoColor, useChecklist, useConfigSistemas, type ReporteFalla } from './api';
 import { ReporteFallaNuevo } from './ReporteFallaNuevo';
 import { GenerarOTsSheet } from './GenerarOTsSheet';
+import { leerFallas, pdfFman, textoFman, type FallaGuardada } from './fman';
 
 const TODOS = 'Todos';
 
 export function ChecklistPage() {
   const { data, isLoading, isError, error } = useChecklist();
+  const cfg = useConfigSistemas();
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState(TODOS);
-  const [seleccionado, setSeleccionado] = useState<ReporteFalla | null>(null);
+  const [filtroEmpresa, setFiltroEmpresa] = useState(TODOS);
+  const [seleccionadoId, setSeleccionadoId] = useState<string | number | null>(null);
   const [porEliminar, setPorEliminar] = useState<ReporteFalla | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const [nuevo, setNuevo] = useState(false);
+  const [editando, setEditando] = useState<ReporteFalla | null>(null);
   const [generando, setGenerando] = useState<ReporteFalla | null>(null);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
   const puedeEliminar = can('checklist.eliminar');
   const puedeCrear = can('checklist.crear');
+  const puedeEditar = can('checklist.editar', 'checklist.crear');
 
   const items = data ?? [];
+  // El detalle siempre muestra la versión más reciente del reporte (tras editar o generar OTs)
+  const seleccionado = items.find(f => String(f.id) === String(seleccionadoId)) ?? null;
 
-  const estados = useMemo(() => {
-    const set = new Set(items.map(f => f.estado));
-    return [TODOS, ...Array.from(set)];
-  }, [items]);
+  const estados = useMemo(() => [TODOS, ...Array.from(new Set(items.map(f => f.estado)))], [items]);
+  const empresas = useMemo(() => [TODOS, ...Array.from(new Set(items.map(f => f.empresa ?? '').filter(Boolean))).sort()], [items]);
 
   const visibles = useMemo(() => {
     let lista = filtroEstado === TODOS ? items : items.filter(f => f.estado === filtroEstado);
+    if (filtroEmpresa !== TODOS) lista = lista.filter(f => f.empresa === filtroEmpresa);
     if (busqueda) {
       const q = busqueda.toUpperCase();
       lista = lista.filter(f =>
@@ -55,7 +64,7 @@ export function ChecklistPage() {
       );
     }
     return lista;
-  }, [items, filtroEstado, busqueda]);
+  }, [items, filtroEstado, filtroEmpresa, busqueda]);
 
   async function eliminar() {
     if (!porEliminar) return;
@@ -63,7 +72,7 @@ export function ChecklistPage() {
     try {
       await api(`/mantenimiento/checklist/${porEliminar.id}`, { method: 'DELETE' });
       haptic('success'); toast(`Reporte ${porEliminar.folio} eliminado`);
-      setPorEliminar(null); setSeleccionado(null);
+      setPorEliminar(null); setSeleccionadoId(null);
       await qc.invalidateQueries({ queryKey: ['flota', 'checklist'] });
     } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
     finally { setEliminando(false); }
@@ -79,16 +88,45 @@ export function ChecklistPage() {
     } catch (err) { toast(errorMessage(err), 'error'); }
   }
 
+  // PDF oficial F-MAN-001 del reporte: se descarga o se comparte por WhatsApp
+  async function pdf(f: ReporteFalla, modo: 'descargar' | 'whatsapp') {
+    if (!cfg.data) { toast('Cargando la configuración de sistemas…', 'error'); return; }
+    setGenerandoPdf(true);
+    try {
+      const blob = await pdfFman(f, cfg.data);
+      const nombre = `F-MAN-001 ${f.folio}.pdf`;
+      if (modo === 'descargar') {
+        descargarArchivo(blob, nombre);
+      } else {
+        const r = await compartirPDF(blob, nombre, textoFman(f));
+        if (r === 'descargado') toast('PDF descargado. Adjúntalo en la conversación de WhatsApp.');
+      }
+      haptic('success');
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+    finally { setGenerandoPdf(false); }
+  }
+
+  const formulario = (
+    <ReporteFallaNuevo open={nuevo || !!editando} reporte={editando} onClose={() => { setNuevo(false); setEditando(null); }}
+      onHecho={() => qc.invalidateQueries({ queryKey: ['flota', 'checklist'] })} />
+  );
+
   if (seleccionado) {
+    const estadoFinal = /final|anula/i.test(seleccionado.estado);
     return (
       <Page push>
         <FallaDetalle
           falla={seleccionado}
-          onVolver={() => setSeleccionado(null)}
+          pdfListo={!!cfg.data && !generandoPdf}
+          onVolver={() => setSeleccionadoId(null)}
+          onEditar={puedeEditar && !estadoFinal ? () => setEditando(seleccionado) : undefined}
           onEliminar={puedeEliminar ? () => setPorEliminar(seleccionado) : undefined}
-          onGenerarOTs={puedeCrear && !/final|anula/i.test(seleccionado.estado) ? () => setGenerando(seleccionado) : undefined}
+          onGenerarOTs={puedeCrear && !estadoFinal ? () => setGenerando(seleccionado) : undefined}
+          onPdf={() => pdf(seleccionado, 'descargar')}
+          onWhatsApp={() => pdf(seleccionado, 'whatsapp')}
         />
         {generando && <GenerarOTsSheet falla={generando} open onClose={() => setGenerando(null)} />}
+        {formulario}
         <ConfirmSheet open={!!porEliminar} onClose={() => !eliminando && setPorEliminar(null)} onConfirm={eliminar} loading={eliminando}
           title={`¿Eliminar ${porEliminar?.folio ?? 'el reporte'}?`} message="Esta acción no se puede deshacer." confirmLabel="Eliminar" />
       </Page>
@@ -130,6 +168,18 @@ export function ChecklistPage() {
             </div>
           )}
 
+          {empresas.length > 2 && (
+            <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }} aria-label="Empresa">
+              {empresas.map(e => (
+                <button key={e} type="button"
+                  className={`chip${filtroEmpresa === e ? ' chip--active' : ''}`}
+                  onClick={() => { setFiltroEmpresa(e); haptic('selection'); }}>
+                  {e === TODOS ? 'Todas las empresas' : e}
+                </button>
+              ))}
+            </div>
+          )}
+
           {visibles.length === 0 ? (
             <EmptyState icon={busqueda ? <SearchX size={22} /> : <ClipboardCheck size={22} />}
               title={busqueda ? 'Sin coincidencias' : 'Sin reportes'}>
@@ -142,10 +192,14 @@ export function ChecklistPage() {
               {visibles.map((f, i) => {
                 const color = fallaEstadoColor(f);
                 const placa = f.placa_tracto || f.placa_remolque || '—';
+                const fallas = [...leerFallas(f.fallas_tracto_json), ...leerFallas(f.fallas_remolque_json)];
+                const resumen = fallas.length
+                  ? fallas.map(x => x.item).filter(Boolean).slice(0, 2).join(' · ')
+                  : (f.fallas_libres_text ?? '');
                 return (
                   <button key={String(f.id ?? i)} type="button"
                     className="ot-fila"
-                    onClick={() => { haptic('selection'); setSeleccionado(f); }}>
+                    onClick={() => { haptic('selection'); setSeleccionadoId(f.id); }}>
                     <div className="ot-fila__icono" style={{ background: `var(--${color}-tint)`, color: `var(--${color}-ink)` }}>
                       <ClipboardCheck size={16} />
                     </div>
@@ -157,10 +211,10 @@ export function ChecklistPage() {
                         )}
                       </span>
                       {f.conductor && <span className="ot-fila__sub">{f.conductor}</span>}
-                      {f.fallas_libres_text && (
+                      {resumen && (
                         <span className="ot-fila__sub" style={{ color: 'var(--label-2)', fontSize: '0.8125rem' }}
-                          title={f.fallas_libres_text}>
-                          {String(f.fallas_libres_text).slice(0, 60)}{String(f.fallas_libres_text).length > 60 ? '…' : ''}
+                          title={resumen}>
+                          {resumen.slice(0, 60)}{resumen.length > 60 ? '…' : ''}
                         </span>
                       )}
                     </div>
@@ -176,31 +230,25 @@ export function ChecklistPage() {
           )}
         </div>
       )}
-      <ReporteFallaNuevo open={nuevo} onClose={() => setNuevo(false)} onHecho={() => qc.invalidateQueries({ queryKey: ['flota', 'checklist'] })} />
+      {formulario}
     </Page>
   );
 }
 
-function FallaDetalle({ falla, onVolver, onEliminar, onGenerarOTs }: {
-  falla: ReporteFalla; onVolver: () => void; onEliminar?: () => void; onGenerarOTs?: () => void;
+function FallaDetalle({ falla, pdfListo, onVolver, onEditar, onEliminar, onGenerarOTs, onPdf, onWhatsApp }: {
+  falla: ReporteFalla; pdfListo: boolean; onVolver: () => void;
+  onEditar?: () => void; onEliminar?: () => void; onGenerarOTs?: () => void; onPdf: () => void; onWhatsApp: () => void;
 }) {
   const color = fallaEstadoColor(falla);
   const placa = falla.placa_tracto || falla.placa_remolque || '—';
-
-  let fallasTracto: string[] = [];
-  let fallasRemolque: string[] = [];
-  try {
-    const ft = typeof falla.fallas_tracto_json === 'string' ? JSON.parse(falla.fallas_tracto_json as string) : falla.fallas_tracto_json;
-    if (Array.isArray(ft)) fallasTracto = ft.flatMap((s: Record<string, unknown>) =>
-      Array.isArray(s.items) ? (s.items as Array<{ nombre?: string; ok?: boolean }>).filter(i => !i.ok).map(i => `${s.titulo ?? ''}: ${i.nombre ?? ''}`) : []
-    );
-  } catch {}
-  try {
-    const fr = typeof falla.fallas_remolque_json === 'string' ? JSON.parse(falla.fallas_remolque_json as string) : falla.fallas_remolque_json;
-    if (Array.isArray(fr)) fallasRemolque = fr.flatMap((s: Record<string, unknown>) =>
-      Array.isArray(s.items) ? (s.items as Array<{ nombre?: string; ok?: boolean }>).filter(i => !i.ok).map(i => `${s.titulo ?? ''}: ${i.nombre ?? ''}`) : []
-    );
-  } catch {}
+  const tracto = leerFallas(falla.fallas_tracto_json);
+  const remolque = leerFallas(falla.fallas_remolque_json);
+  const linea = (f: FallaGuardada, i: number, color: string) => (
+    <div key={i} className="dato" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+      <span className="dato__valor" style={{ color: `var(--${color}-ink)` }}>⚠ {f.sistema ? `${f.sistema}: ` : ''}{f.item}</span>
+      {f.obs && f.obs !== f.item && <span className="t-footnote c-secondary">{f.obs}</span>}
+    </div>
+  );
 
   return (
     <div className="ot-ficha">
@@ -208,12 +256,12 @@ function FallaDetalle({ falla, onVolver, onEliminar, onGenerarOTs }: {
         <button type="button" className="tarjeta__volver" onClick={onVolver}>
           <span style={{ fontSize: '1.2rem' }}>‹</span> Reporte de fallas
         </button>
-        <div className="tarjeta__barra-acciones">
+        <div className="tarjeta__barra-acciones" style={{ flexWrap: 'wrap' }}>
+          <Button variant="secondary" icon={<FileText size={16} />} onClick={onPdf} disabled={!pdfListo}>PDF F-MAN-001</Button>
+          <Button variant="secondary" icon={<MessageCircle size={16} />} onClick={onWhatsApp} disabled={!pdfListo}>WhatsApp</Button>
+          {onEditar && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar</Button>}
           {onGenerarOTs && <Button variant="primary" icon={<Wrench size={16} />} onClick={onGenerarOTs}>Generar OTs</Button>}
           {onEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>}
-          <MenuOtros opciones={[
-            { label: 'Imprimir F-MAN-001 y WhatsApp', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/checklist') },
-          ]} />
         </div>
       </div>
       <div className="ot-ficha__hero">
@@ -236,16 +284,12 @@ function FallaDetalle({ falla, onVolver, onEliminar, onGenerarOTs }: {
         </div>
       </div>
 
-      {(fallasTracto.length > 0 || falla.fallas_libres_text) && (
+      {(tracto.length > 0 || remolque.length > 0 || falla.fallas_libres_text) && (
         <div>
           <p className="tarjeta__grupo-titulo">Fallas reportadas</p>
           <div className="tarjeta__lista">
-            {fallasTracto.map((f, i) => (
-              <div key={i} className="dato"><span className="dato__valor" style={{ color: 'var(--red-ink)' }}>⚠ {f}</span></div>
-            ))}
-            {fallasRemolque.map((f, i) => (
-              <div key={`r${i}`} className="dato"><span className="dato__valor" style={{ color: 'var(--amber-ink)' }}>⚠ {f}</span></div>
-            ))}
+            {tracto.map((f, i) => linea(f, i, 'red'))}
+            {remolque.map((f, i) => linea(f, 1000 + i, 'amber'))}
             {falla.fallas_libres_text && (
               <div className="dato"><span className="dato__label">Observaciones</span><span className="dato__valor">{falla.fallas_libres_text}</span></div>
             )}
