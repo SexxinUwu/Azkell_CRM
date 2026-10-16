@@ -17,6 +17,7 @@ import { RUTAS_MODULOS } from './core/layout/navigation';
 const PlacasPage = lazy(() => import('./modules/placas/PlacasPage').then(m => ({ default: m.PlacasPage })));
 const InspeccionesPage = lazy(() => import('./modules/inspecciones/InspeccionesPage').then(m => ({ default: m.InspeccionesPage })));
 const RegistrarInspeccionPage = lazy(() => import('./modules/inspecciones/RegistrarInspeccionPage').then(m => ({ default: m.RegistrarInspeccionPage })));
+const EditarInspeccionPage = lazy(() => import('./modules/inspecciones/RegistrarInspeccionPage').then(m => ({ default: m.EditarInspeccionPage })));
 const CatalogoRuta = lazy(() => import('./modules/catalogos/CatalogoRuta').then(m => ({ default: m.CatalogoRuta })));
 const ConductoresPage = lazy(() => import('./modules/conductores/ConductoresPage').then(m => ({ default: m.ConductoresPage })));
 const PersonalPage = lazy(() => import('./modules/personal/PersonalPage').then(m => ({ default: m.PersonalPage })));
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="placas" element={<RequirePermission any={['placas.ver']}><PlacasPage /></RequirePermission>} />
           <Route path="inspecciones" element={<RequirePermission any={['insp.ver']}><InspeccionesPage /></RequirePermission>} />
           <Route path="inspecciones/nueva" element={<RequirePermission any={['insp.crear']}><RegistrarInspeccionPage /></RequirePermission>} />
+          <Route path="inspecciones/:id/editar" element={<RequirePermission any={['insp.editar', 'insp.crear']}><EditarInspeccionPage /></RequirePermission>} />
           <Route path="almacen/familias" element={<CatalogoRuta clave="familias" />} />
           <Route path="almacen/marcas" element={<CatalogoRuta clave="marcas" />} />
           <Route path="almacen/unidades" element={<CatalogoRuta clave="unidades" />} />

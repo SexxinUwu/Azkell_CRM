@@ -6,7 +6,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
 import { ESQUEMA_POR_DEFECTO } from './esquemaPorDefecto';
-import type { PuntoRevisado } from './api';
+import type { Inspeccion, PuntoRevisado } from './api';
 
 export type TipoPunto = 'okfalla' | 'percent' | 'text';
 export interface Seccion { titulo: string; items: Array<{ label: string; tipo: TipoPunto }> }
@@ -100,7 +100,9 @@ export async function armarDetalles(esquema: Seccion[], respuestas: Record<strin
         if (r.estado === 'FALLA') {
           estado = 'FALLA';
           observacion = r.observacion.trim();
-          if (r.foto) { foto = await subirFoto(r.foto, idTemporal); alSubir?.(++subidas, conFoto); }
+          // Una foto ya guardada (URL de S3) se conserva tal cual; solo las nuevas (data URL) se suben
+          if (r.foto.startsWith('http')) foto = r.foto;
+          else if (r.foto) { foto = await subirFoto(r.foto, idTemporal); alSubir?.(++subidas, conFoto); }
         }
       } else if (it.tipo === 'percent') {
         if (r.porcentaje !== '') estado = `${r.porcentaje}%`;
@@ -115,20 +117,20 @@ export async function armarDetalles(esquema: Seccion[], respuestas: Record<strin
 
 export const claveRespuesta = (seccion: number, item: number) => `${seccion}_${item}`;
 
-export async function guardarInspeccion(cab: Cabecera, detalles: PuntoRevisado[], firma: string) {
+export async function guardarInspeccion(cab: Cabecera, detalles: PuntoRevisado[], firma: string, id = '') {
   const usuario = localStorage.getItem('fleet_user') || cab.tecnico;
   const r = await api<{ data?: string; id?: string }>('/script/guardarInspeccion', {
     method: 'POST',
     body: {
       usuario,
       form: {
-        id: '', id_ot: '', fecha_ingreso: cab.fecha, placa: cab.placa.toUpperCase(), km_tablero: cab.km, cliente: cab.cliente,
+        id, id_ot: '', fecha_ingreso: cab.fecha, placa: cab.placa.toUpperCase(), km_tablero: cab.km, cliente: cab.cliente,
         tecnico: cab.tecnico, dias_propuestos: cab.dias || '30', detalles_json: JSON.stringify(detalles), firma_base64: firma, usuarioAutor: usuario,
       },
     },
   });
-  if (r.data !== 'Éxito' || !r.id) throw new Error(r.data || 'No se pudo guardar la inspección');
-  return r.id;
+  if (r.data !== 'Éxito' || (!r.id && !id)) throw new Error(r.data || 'No se pudo guardar la inspección');
+  return r.id || id;
 }
 
 // ─── Borrador en el dispositivo (sin las fotos, que pesan) ───────────────────
@@ -147,3 +149,34 @@ export function guardarBorrador(b: Omit<Borrador, 'guardado'>) {
 export function borrarBorrador() { try { localStorage.removeItem(BORRADOR); } catch { /* nada */ } }
 
 export const hoyISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+/** Cabecera del formulario a partir de una inspección guardada */
+export function cabeceraDesde(i: Inspeccion): Cabecera {
+  const f = i.fecha;
+  const fecha = f ? `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}` : hoyISO();
+  return { placa: i.placa, fecha, km: i.km != null ? String(i.km) : '', cliente: i.cliente, tecnico: i.tecnico, dias: String(i.diasPropuestos || 30) };
+}
+
+/**
+ * Respuestas del formulario a partir de los puntos guardados: cada punto se busca por sistema y por nombre del ítem.
+ * Las fotos ya guardadas quedan como URL de S3 (se conservan al guardar).
+ */
+export function respuestasDesde(i: Inspeccion, esquema: Seccion[]): Record<string, Respuesta> {
+  const out: Record<string, Respuesta> = {};
+  esquema.forEach((s, si) => s.items.forEach((it, ii) => {
+    const p = i.puntos.find(x => x.categoria === s.titulo && x.item === it.label);
+    if (!p) return;
+    const r = respuestaVacia();
+    if (it.tipo === 'okfalla') {
+      if (p.estado === 'OK') r.estado = 'OK';
+      if (p.estado === 'FALLA') { r.estado = 'FALLA'; r.observacion = p.observacion ?? ''; r.foto = p.foto ?? ''; }
+    } else if (it.tipo === 'percent') {
+      const m = /^(d+)%$/.exec(p.estado ?? '');
+      if (m) r.porcentaje = m[1];
+    } else if (p.estado === 'REGISTRADO') {
+      r.texto = p.observacion ?? '';
+    }
+    out[claveRespuesta(si, ii)] = r;
+  }));
+  return out;
+}
