@@ -40,7 +40,7 @@ const hora = (v: string | null | undefined) => (String(v ?? '').match(/(\d{2}:\d
 const soles = (n: number) => `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** Placa con la estética de LicensePlate: fondo blanco, borde oscuro, dígitos monoespaciados */
-const placa = (p: string | null | undefined) => `<span style="display:inline-block;padding:3px 12px;border:2px solid #0f172a;border-radius:6px;background:#ffffff;font-family:'Courier New',monospace;font-weight:700;font-size:20px;letter-spacing:2px;color:#0f172a">${esc(p || '—')}</span>`;
+const placa = (p: string | null | undefined) => `<span style="display:inline-block;padding:3px 12px;border:1.5px solid #1d1d1f;border-radius:10px;background:#ffffff;font-family:'SF Mono','Cascadia Mono',Menlo,monospace;font-weight:700;font-size:20px;letter-spacing:2px;color:#1d1d1f">${esc(p || '—')}</span>`;
 
 function detalle(ot: OrdenTrabajo): Record<string, unknown> {
   const d = ot.detalles_json;
@@ -58,11 +58,11 @@ function tiempo(e: RampaEntrada): string {
   return h >= 24 ? `${Math.floor(h / 24)} d ${Math.round(h % 24)} h` : `${h.toFixed(1)} h`;
 }
 
-const celda = (t: unknown, extra = '') => `<td style="padding:5px 8px;border-bottom:1px solid #e2e8f0;vertical-align:top;${extra}">${esc(t ?? '—')}</td>`;
-const encabezados = (cols: string[]) => `<tr>${cols.map(c => `<th style="padding:6px 8px;text-align:left;background:#eef4fb;color:#0056b3;font-size:11px;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #0056b3">${esc(c)}</th>`).join('')}</tr>`;
+const celda = (t: unknown, extra = '') => `<td style="padding:5px 8px;border-bottom:1px solid #f0f0f3;vertical-align:top;${extra}">${esc(t ?? '—')}</td>`;
+const encabezados = (cols: string[]) => `<tr>${cols.map(c => `<th style="padding:6px 8px;text-align:left;background:#f5f5f7;color:#6e6e73;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e5e5ea">${esc(c)}</th>`).join('')}</tr>`;
 const seccion = (titulo: string, cuerpo: string) => `
   <div style="margin-top:16px">
-    <div style="font-size:12px;font-weight:700;color:#0056b3;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #93c5fd;padding-bottom:3px;margin-bottom:6px">${esc(titulo)}</div>
+    <div style="font-size:11px;font-weight:600;color:#6e6e73;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">${esc(titulo)}</div>
     ${cuerpo}
   </div>`;
 
@@ -86,39 +86,39 @@ export function htmlRampaPdf(d: DatosRampaPdf): string {
     ['Situación', e.situacion ?? '—'],
     ['Técnico responsable', tecnico],
   ];
-  const grilla = datos.map(([k, v]) => `<div style="padding:6px 0;border-bottom:1px dotted #cbd5e1"><div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.4px">${esc(k)}</div><div style="font-size:13px;font-weight:600">${esc(v)}</div></div>`).join('');
+  const grilla = datos.map(([k, v]) => `<div style="padding:6px 0;border-bottom:1px dotted #d2d2d7"><div style="font-size:10px;color:#6e6e73;text-transform:uppercase;letter-spacing:.4px">${esc(k)}</div><div style="font-size:13px;font-weight:600">${esc(v)}</div></div>`).join('');
 
   const tablaOts = otsVisita.length
     ? `<table style="width:100%;border-collapse:collapse;font-size:12px">${encabezados(['N° OT', 'Tipo', 'Sub tipo', 'Estado', 'Técnico'])}${otsVisita.map(o => {
       const det = detalle(o);
       return `<tr>${celda(o.id_ot)}${celda(det.tipo_ot ?? '—')}${celda(det.sub_tipo ?? '—')}${celda(o.estado)}${celda(o.tecnico ?? o.supervisor ?? '—')}</tr>`;
     }).join('')}</table>`
-    : '<p style="font-size:12px;color:#64748b;margin:0">Sin órdenes de trabajo en esta visita.</p>';
+    : '<p style="font-size:12px;color:#6e6e73;margin:0">Sin órdenes de trabajo en esta visita.</p>';
 
   const tablaTrab = trabajos.length
     ? `<table style="width:100%;border-collapse:collapse;font-size:12px">${encabezados(['OT', 'Trabajo realizado', 'Técnico', 'Estado'])}${trabajos.map(t => `<tr>${celda(t.id_ot)}${celda(t.trabajo_realizado)}${celda(t.tecnico)}${celda(t.estado)}</tr>`).join('')}</table>`
-    : '<p style="font-size:12px;color:#64748b;margin:0">Sin trabajos registrados.</p>';
+    : '<p style="font-size:12px;color:#6e6e73;margin:0">Sin trabajos registrados.</p>';
 
   const filasMat = materiales.flatMap(m => m.solicitud.items.map(it => `<tr>${celda(m.id_ot)}${celda(it.descripcion)}${celda(it.cantidad, 'text-align:right')}${celda(soles(it.costo_unitario), 'text-align:right')}${celda(soles(it.importe), 'text-align:right')}</tr>`));
   const tablaMat = filasMat.length
     ? `<table style="width:100%;border-collapse:collapse;font-size:12px">${encabezados(['OT', 'Repuesto / material', 'Cant.', 'Costo U.', 'Importe'])}${filasMat.join('')}
         <tr><td colspan="4" style="padding:6px 8px;text-align:right;font-weight:700">Total materiales</td><td style="padding:6px 8px;text-align:right;font-weight:700">${soles(totalMat)}</td></tr></table>`
-    : '<p style="font-size:12px;color:#64748b;margin:0">Sin repuestos ni materiales solicitados.</p>';
+    : '<p style="font-size:12px;color:#6e6e73;margin:0">Sin repuestos ni materiales solicitados.</p>';
 
   const evidencia = d.evidenciaFirmada
-    ? `<img src="${esc(d.evidenciaFirmada)}" alt="Evidencia de la rampa" style="max-width:100%;max-height:260px;border-radius:8px;border:1px solid #e2e8f0">`
-    : '<p style="font-size:12px;color:#64748b;margin:0">Sin evidencia fotográfica.</p>';
+    ? `<img src="${esc(d.evidenciaFirmada)}" alt="Evidencia de la rampa" style="max-width:100%;max-height:260px;border-radius:8px;border:1px solid #e5e5ea">`
+    : '<p style="font-size:12px;color:#6e6e73;margin:0">Sin evidencia fotográfica.</p>';
 
   const emitido = new Date().toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
   return `
-  <div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;width:190mm;padding:6mm 6mm 4mm;background:#ffffff">
-    <div style="display:flex;align-items:center;gap:12px;padding-bottom:8px;border-bottom:3px solid #0056b3">
+  <div style="font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Segoe UI',Roboto,sans-serif;color:#1d1d1f;width:190mm;padding:6mm 6mm 4mm;background:#ffffff">
+    <div style="display:flex;align-items:center;gap:12px;padding-bottom:10px;border-bottom:1px solid #e5e5ea">
       <img src="${esc(d.logo ?? LOGO_RAMPA)}" alt="Logo" style="height:46px;max-width:120px;object-fit:contain">
       <div style="flex:1">
-        <div style="font-size:18px;font-weight:700;color:#0056b3;letter-spacing:.4px">PARTE DE RAMPA · TALLER</div>
-        <div style="font-size:11px;color:#64748b">Ticket ${esc(e.ticket_entrada ?? '—')} · ${esc(e.rampa)}</div>
+        <div style="font-size:18px;font-weight:700;color:#1d1d1f;letter-spacing:-.2px">PARTE DE RAMPA · TALLER</div>
+        <div style="font-size:11px;color:#6e6e73">Ticket ${esc(e.ticket_entrada ?? '—')} · ${esc(e.rampa)}</div>
       </div>
-      <div style="text-align:right;font-size:11px;color:#64748b">Emitido ${esc(emitido)}</div>
+      <div style="text-align:right;font-size:11px;color:#6e6e73">Emitido ${esc(emitido)}</div>
     </div>
 
     <div style="display:flex;align-items:center;gap:14px;margin-top:12px">
@@ -134,7 +134,7 @@ export function htmlRampaPdf(d: DatosRampaPdf): string {
     ${seccion('Observaciones', `<p style="font-size:12px;margin:0;white-space:pre-wrap">${esc(e.observaciones ?? '—')}</p>`)}
     ${seccion('Evidencia', evidencia)}
 
-    <div style="margin-top:22px;padding-top:6px;border-top:1px solid #cbd5e1;font-size:10px;color:#64748b;display:flex;justify-content:space-between">
+    <div style="margin-top:22px;padding-top:6px;border-top:1px solid #d2d2d7;font-size:10px;color:#6e6e73;display:flex;justify-content:space-between">
       <span>Generado en Azkell Fleet por ${esc(d.usuario || 'sistema')}</span>
       <span>Documento de control de taller</span>
     </div>

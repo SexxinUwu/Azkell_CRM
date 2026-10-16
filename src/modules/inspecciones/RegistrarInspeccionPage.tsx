@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Camera, Check, CheckCheck, ChevronRight, ClipboardCheck, RotateCcw, Trash2, X } from 'lucide-react';
@@ -15,10 +15,11 @@ import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { usePlacas } from '../placas/api';
 import {
-  armarDetalles, borrarBorrador, claveRespuesta, guardarBorrador, guardarInspeccion, hoyISO, leerBorrador, reducirFoto,
+  armarDetalles, borrarBorrador, cabeceraDesde, claveRespuesta, guardarBorrador, guardarInspeccion, hoyISO, leerBorrador, reducirFoto, respuestasDesde,
   respuestaVacia, useEsquema, type Cabecera, type Respuesta,
 } from './registro';
 import { Firma, type FirmaHandle } from './Firma';
+import { useFotosFirmadas, useInspecciones, type Inspeccion } from './api';
 import './inspecciones.css';
 
 const cabeceraInicial = (): Cabecera => ({
@@ -28,7 +29,7 @@ const cabeceraInicial = (): Cabecera => ({
 type Guardado = { fase: 'subiendo' | 'guardando'; hechas: number; total: number } | { fase: 'listo'; id: string } | null;
 
 // Registrar una inspección: unidad → un paso por sistema → resumen y firma.
-export function RegistrarInspeccionPage() {
+export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion | null } = {}) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const toast = useToast();
@@ -38,7 +39,7 @@ export function RegistrarInspeccionPage() {
   const firma = useRef<FirmaHandle>(null);
 
   const borradorInicial = useRef(leerBorrador());
-  const [ofrecerBorrador, setOfrecerBorrador] = useState(!!borradorInicial.current);
+  const [ofrecerBorrador, setOfrecerBorrador] = useState(!!borradorInicial.current && !editar);
   const [cab, setCab] = useState<Cabecera>(cabeceraInicial);
   const [resp, setResp] = useState<Record<string, Respuesta>>({});
   const [paso, setPaso] = useState(0);
@@ -47,13 +48,26 @@ export function RegistrarInspeccionPage() {
   const [firmada, setFirmada] = useState(false);
   const [guardado, setGuardado] = useState<Guardado>(null);
 
+  // Edición: se precarga la inspección guardada una sola vez (las fotos de S3 se conservan)
+  const cargadoEdicion = useRef<string | null>(null);
+  useEffect(() => {
+    if (!editar || !esquema.data || cargadoEdicion.current === editar.id) return;
+    cargadoEdicion.current = editar.id;
+    setCab(cabeceraDesde(editar));
+    setResp(respuestasDesde(editar, esquema.data));
+  }, [editar, esquema.data]);
+  // Fotos guardadas en S3: se firman para verlas; al guardar se conserva la URL original
+  const urlsFotos = Object.values(resp).map(r => r.foto).filter(f => f.startsWith('https://') && f.includes('.s3.'));
+  const firmadas = useFotosFirmadas(urlsFotos).data ?? {};
+  const fotoSrc = (f: string) => firmadas[f] ?? f;
+
   const secciones = esquema.data ?? [];
   const totalPasos = secciones.length + 2; // unidad + sistemas + firma
   const enFirma = paso === totalPasos - 1;
 
   // Borrador automático (sin fotos)
   useEffect(() => {
-    if (ofrecerBorrador || guardado) return;
+    if (ofrecerBorrador || guardado || editar) return;
     if (!cab.placa && !Object.keys(resp).length) return;
     const t = setTimeout(() => guardarBorrador({ cabecera: cab, respuestas: resp, paso }), 600);
     return () => clearTimeout(t);
@@ -107,7 +121,8 @@ export function RegistrarInspeccionPage() {
     try {
       const detalles = await armarDetalles(secciones, resp, (hechas, total) => setGuardado({ fase: 'subiendo', hechas, total }));
       setGuardado({ fase: 'guardando', hechas: conFoto, total: conFoto });
-      const id = await guardarInspeccion(cab, detalles, firma.current?.obtener() ?? '');
+      const firmaFinal = firma.current?.obtener() || editar?.firma || '';
+      const id = await guardarInspeccion(cab, detalles, firmaFinal, editar?.id ?? '');
       borrarBorrador();
       haptic('success');
       await qc.invalidateQueries({ queryKey: ['inspecciones'] });
@@ -134,7 +149,7 @@ export function RegistrarInspeccionPage() {
             <motion.circle cx="32" cy="32" r="29" fill="none" stroke="var(--green)" strokeWidth="4" initial={{ pathLength: reduce ? 1 : 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduce ? 0 : 0.45 }} />
             <motion.path d="M20 33 l8 8 l16 -18" fill="none" stroke="var(--green)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" initial={{ pathLength: reduce ? 1 : 0 }} animate={{ pathLength: 1 }} transition={{ delay: reduce ? 0 : 0.35, duration: reduce ? 0 : 0.3 }} />
           </svg>
-          <h1 className="t-title1">Inspección registrada</h1>
+          <h1 className="t-title1">{editar ? 'Inspección actualizada' : 'Inspección registrada'}</h1>
           <motion.div className="insp-listo__id" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: reduce ? 0 : 0.5 }}>{guardado.id}</motion.div>
           <LicensePlate plate={cab.placa} size="lg" />
           <p className="c-secondary">
@@ -157,7 +172,7 @@ export function RegistrarInspeccionPage() {
           <ArrowLeft size={16} /> {paso ? 'Atrás' : 'Inspecciones'}
         </button>
         <div className="wiz-titulo">
-          <span className="t-eyebrow">Nueva inspección · paso {paso + 1} de {totalPasos}</span>
+          <span className="t-eyebrow">{editar ? 'Editar inspección' : 'Nueva inspección'} · paso {paso + 1} de {totalPasos}</span>
           <h1 className="t-title2">{paso === 0 ? 'Unidad' : enFirma ? 'Resumen y firma' : secciones[paso - 1]?.titulo.toLowerCase()}</h1>
         </div>
         <div className="wiz-progreso" aria-hidden>
@@ -281,7 +296,7 @@ export function RegistrarInspeccionPage() {
                               <div className="wiz-foto">
                                 {r.foto ? (
                                   <>
-                                    <img src={r.foto} alt="Foto de la falla" />
+                                    <img src={fotoSrc(r.foto)} alt="Foto de la falla" />
                                     <button type="button" className="placas-limpiar" onClick={() => set(k, { foto: '' })}><Trash2 size={13} style={{ verticalAlign: '-2px' }} /> Quitar foto</button>
                                   </>
                                 ) : (
@@ -323,7 +338,7 @@ export function RegistrarInspeccionPage() {
                           <div className="row__title">{it.label}</div>
                           <div className="row__subtitle row__subtitle--wrap">{[s.titulo, r?.observacion].filter(Boolean).join(' · ') || s.titulo}</div>
                         </div>
-                        {r?.foto && <span className="insp-foto"><img src={r.foto} alt="" /></span>}
+                        {r?.foto && <span className="insp-foto"><img src={fotoSrc(r.foto)} alt="" /></span>}
                       </div>
                     ))}
                   </div>
@@ -331,6 +346,7 @@ export function RegistrarInspeccionPage() {
               )}
               <section className="form-section">
                 <h3 className="form-section__title">Firma del técnico</h3>
+                {editar?.firma && !firmada && <p className="t-footnote c-secondary">Se conserva la firma actual. Firma de nuevo para reemplazarla.</p>}
                 <Firma ref={firma} onCambio={setFirmada} />
               </section>
             </div>
@@ -353,4 +369,14 @@ export function RegistrarInspeccionPage() {
       </div>
     </Page>
   );
+}
+
+/** Edición de una inspección guardada: se busca por su código en la ruta /inspecciones/:id/editar */
+export function EditarInspeccionPage() {
+  const { id } = useParams();
+  const insp = useInspecciones();
+  if (insp.isLoading) return <PageLoader />;
+  const editar = (insp.data ?? []).find(i => i.id === id) ?? null;
+  if (!editar) return <Page narrow><Notice tone="error">No encontramos la inspección {id}.</Notice></Page>;
+  return <RegistrarInspeccionPage editar={editar} />;
 }

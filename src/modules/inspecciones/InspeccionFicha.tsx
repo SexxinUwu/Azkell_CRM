@@ -1,16 +1,28 @@
 import { useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight, Check, Minus, X } from 'lucide-react';
+import { Check, Download, Minus, Pencil, Share2, Wrench, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { spring } from '../../core/lib/motion';
-import { abrirClasico } from '../../core/layout/navigation';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { Notice } from '../../core/ui/Display';
+import { compartirPDF, descargarArchivo } from '../../core/lib/pdf';
+import { fallaEstadoColor, useChecklist, type ReporteFalla } from '../flota/api';
+import { GenerarOTsSheet } from '../flota/GenerarOTsSheet';
 import { useFotosFirmadas, type Inspeccion, type PuntoRevisado } from './api';
+import { pdfInspeccion } from './inspeccionPdf';
 
 const fechaLarga = (d: Date | null) => (d ? d.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : 'Sin fecha');
+
+/** Reporte de fallas que nació de esta inspección (legacy.js lo marca en el texto y en cada falla) */
+function reporteDeInspeccion(r: ReporteFalla, id: string): boolean {
+  if ((r.fallas_libres_text ?? '').includes(`Inspección ${id}`)) return true;
+  return [r.fallas_tracto_json, r.fallas_remolque_json].some(j => (j ?? '').includes(`"origen_inspeccion":"${id}"`));
+}
 
 // Ficha de una inspección: resumen, puntos revisados por categoría (fallas primero), fotos y firma.
 export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccion | null; onClose: () => void }) {
@@ -18,11 +30,22 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
   if (inspeccion) ultima.current = inspeccion;
   const i = inspeccion ?? ultima.current;
   const reduce = useReducedMotion();
+  const navigate = useNavigate();
+  const { can, user } = useAuth();
+  const checklist = useChecklist();
   const [ampliada, setAmpliada] = useState<string | null>(null);
+  const [otAbierta, setOtAbierta] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
+  const [aviso, setAviso] = useState<{ tono: 'error' | 'neutral'; texto: string } | null>(null);
 
   const fotos = useMemo(() => [...(i?.puntos.map(p => p.foto).filter(Boolean) ?? []), i?.firma ?? ''].filter(Boolean), [i]);
   const firmadas = useFotosFirmadas(fotos);
   const ver = (url: string) => firmadas.data?.[url] ?? url;
+  // El PDF necesita las fotos ya firmadas: si todavía se están firmando, los botones esperan
+  const fotosListas = fotos.length === 0 || !firmadas.isPending;
+
+  const reporte = useMemo(() => (i && checklist.data ? checklist.data.find(r => reporteDeInspeccion(r, i.id)) ?? null : null), [i, checklist.data]);
+  const reporteActivo = !!reporte && fallaEstadoColor(reporte) === 'amber';
 
   const conteo = useMemo(() => {
     const c = { OK: 0, FALLA: 0, otros: 0 };
@@ -38,6 +61,38 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
       .sort((a, b) => b[1].filter(p => p.estado === 'FALLA').length - a[1].filter(p => p.estado === 'FALLA').length);
   }, [i]);
 
+  // Acciones: PDF oficial, WhatsApp y, si hay fallas, generar las OT desde su reporte de fallas
+  const generarPdf = () => pdfInspeccion({ inspeccion: i!, fotos: firmadas.data ?? {}, usuario: user?.name ?? '' });
+  const nombreArchivo = i ? `Inspeccion-${i.placa}-${i.id}.pdf` : 'Inspeccion.pdf';
+  const descargar = async () => {
+    if (!i) return;
+    setOcupado(true); setAviso(null);
+    try {
+      descargarArchivo(await generarPdf(), nombreArchivo);
+    } catch (err) {
+      console.error('PDF de inspección:', err);
+      setAviso({ tono: 'error', texto: 'No se pudo generar el PDF. Intenta de nuevo.' });
+    } finally { setOcupado(false); }
+  };
+  const whatsapp = async () => {
+    if (!i) return;
+    setOcupado(true); setAviso(null);
+    try {
+      await compartirPDF(await generarPdf(), nombreArchivo, `Informe técnico de la inspección ${i.id} · placa ${i.placa}`);
+    } catch (err) {
+      console.error('WhatsApp de inspección:', err);
+      setAviso({ tono: 'error', texto: 'No se pudo preparar el PDF para WhatsApp.' });
+    } finally { setOcupado(false); }
+  };
+  const generarOt = () => {
+    if (!reporte) {
+      setAviso({ tono: 'neutral', texto: 'Esta inspección no tiene un reporte de fallas enlazado. Si la unidad ya tenía una OT activa, sus fallas se añadieron a esa OT.' });
+      return;
+    }
+    setAviso(null);
+    setOtAbierta(true);
+  };
+
   return (
     <>
       <Sheet
@@ -47,7 +102,9 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
         footer={
           <>
             <Button variant="secondary" onClick={onClose}>Cerrar</Button>
-            <Button variant="primary" icon={<ArrowUpRight size={16} />} onClick={() => abrirClasico('mantenimiento/inspecciones')}>PDF y edición</Button>
+            {i && (can('insp.editar') || can('insp.crear')) && (
+              <Button variant="primary" icon={<Pencil size={16} />} onClick={() => { onClose(); navigate(`/inspecciones/${i.id}/editar`); }}>Editar</Button>
+            )}
           </>
         }
       >
@@ -63,6 +120,15 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
                 {i.idOt && <span className="chip chip--static">OT {i.idOt}</span>}
               </div>
             </motion.div>
+
+            <div className="insp-acciones">
+              <Button variant="secondary" icon={<Download size={16} />} onClick={descargar} disabled={ocupado || !fotosListas}>PDF</Button>
+              <Button variant="secondary" icon={<Share2 size={16} />} onClick={whatsapp} disabled={ocupado || !fotosListas}>WhatsApp</Button>
+              {conteo.FALLA > 0 && (
+                <Button variant="secondary" icon={<Wrench size={16} />} onClick={generarOt} disabled={!!reporte && !reporteActivo}>Generar OT desde inspección</Button>
+              )}
+            </div>
+            {aviso && <Notice tone={aviso.tono}>{aviso.texto}</Notice>}
 
             <div className="insp-resumen">
               <div className="insp-resumen__item insp-resumen__item--ok"><AnimatedNumber value={conteo.OK} className="t-numeric" /><span>en buen estado</span></div>
@@ -107,6 +173,8 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
           </div>
         )}
       </Sheet>
+
+      {reporte && <GenerarOTsSheet falla={reporte} open={otAbierta} onClose={() => setOtAbierta(false)} />}
 
       {/* Foto ampliada */}
       {createPortal(

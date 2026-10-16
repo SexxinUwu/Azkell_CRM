@@ -127,6 +127,7 @@
 /* ─── Ficha ─── */
 .insp-ficha__fecha { text-transform: capitalize; font-size: 1.0625rem; }
 .insp-resumen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); }
+.insp-acciones { display: flex; flex-wrap: wrap; gap: var(--s-2); justify-content: center; }
 .insp-resumen__item {
   display: flex;
   flex-direction: column;
