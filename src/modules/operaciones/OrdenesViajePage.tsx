@@ -56,6 +56,7 @@ const n = (v: unknown) => Number(v) || 0;
 const tono = (e: string) => ({ ACTIVO: 'amber', INICIADO: 'blue', FINALIZADO: 'green', LIQUIDADO: 'green', ANULADO: 'neutral' }[e] ?? 'neutral') as 'amber' | 'blue' | 'green' | 'neutral';
 const css = (t: string) => (t === 'blue' ? 'accent' : t === 'neutral' ? 'gray' : t);
 const fmtFecha = (s?: string | null) => (s ? String(s).replace('T', ' ').slice(0, 16) : '—');
+const esMarsisa = typeof window !== 'undefined' && window.location.hostname.split('.')[0].toLowerCase().includes('marsisa');
 
 // Placas con SOAT o Revisión Técnica vencidos (las calcula el servidor)
 interface DocVencido { placa: string; tipo: string; vence: string }
@@ -142,7 +143,8 @@ export function OrdenesViajePage() {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} viajes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              ...(puedeCrear ? [{ label: 'Sincronizar con MarsisaSoft', icon: <RefreshCw size={17} />, separado: true, onSelect: () => setSincronizar(true) }] : []),
+              // Solo la empresa Marsisa tiene base externa; el servidor responde syncSkipped en las demás (mismo criterio que la navegación)
+              ...(puedeCrear && esMarsisa ? [{ label: 'Sincronizar con MarsisaSoft', icon: <RefreshCw size={17} />, separado: true, onSelect: () => setSincronizar(true) }] : []),
               { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: !puedeCrear, onSelect: () => abrirClasico('operaciones/ordenes-viaje') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ viaje: null })}>Nuevo viaje</Button>}
