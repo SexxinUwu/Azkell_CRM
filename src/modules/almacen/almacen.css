@@ -203,3 +203,20 @@
   .inv-metricas { grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
   .inv-metrica__num { font-size: 1.375rem; }
 }
+
+/* Kardex: encabezado fijo al desplazarse; columnas numéricas a la derecha con fuente monoespaciada */
+.kardex-tabla-caja { overflow: auto; max-height: 60vh; }
+.kardex-tabla thead th { position: sticky; top: 0; z-index: 1; background: var(--surface); }
+.kardex-tabla th:nth-child(n+5), .kardex-tabla td:nth-child(n+5) { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* Kardex en móvil: cada movimiento como tarjeta; en escritorio la tabla */
+.kardex-tarjetas { display: none; list-style: none; margin: 0; padding: 0; }
+@media (max-width: 767px) {
+  .kardex-tabla-caja { max-height: none; overflow: visible; }
+  .kardex-tabla-caja .kardex-tabla { display: none; }
+  .kardex-tarjetas { display: flex; flex-direction: column; gap: var(--s-2); }
+  .kardex-tarjeta { padding: var(--s-3); border-radius: var(--r-lg); background: var(--surface); box-shadow: 0 0 0 1px var(--separator); display: flex; flex-direction: column; gap: 6px; }
+  .kardex-tarjeta__cab { display: flex; justify-content: space-between; align-items: center; gap: var(--s-2); }
+  .kardex-tarjeta__fecha { font-size: 0.75rem; color: var(--label-2); font-family: var(--font-mono); }
+  .kardex-tarjeta__detalle { font-size: 0.875rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kardex-tarjeta__cifras { display: flex; justify-content: space-between; gap: var(--s-2); font-family: var(--font-mono); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+}

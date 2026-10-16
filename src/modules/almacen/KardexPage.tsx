@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import './almacen.css';
 import { ArrowUpRight, FileSpreadsheet, History, Package, SearchX } from 'lucide-react';
 import { PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -219,8 +220,8 @@ export function KardexPage() {
                       ) : 'Este artículo no tiene movimientos registrados.'}
                     </EmptyState>
                   ) : (
-                    <div className="tarjeta__lista" style={{ overflow: 'auto' }}>
-                      <table className="inv-kardex" style={{ minWidth: '42rem' }}>
+                    <div className="tarjeta__lista kardex-tabla-caja">
+                      <table className="inv-kardex kardex-tabla" style={{ minWidth: '42rem' }}>
                         <thead>
                           <tr>
                             <th>Fecha</th>
@@ -274,6 +275,26 @@ export function KardexPage() {
                           ))}
                         </tbody>
                       </table>
+                      <ul className="kardex-tarjetas" aria-label="Movimientos del kardex">
+                        {movimientosFiltrados.map((k, i) => (
+                          <li key={i} className="kardex-tarjeta">
+                            <div className="kardex-tarjeta__cab">
+                              <span className={
+                                k.tipo === 'ENTRADA' ? 'inv-kardex__entrada'
+                                : k.tipo === 'SALIDA' ? 'inv-kardex__salida'
+                                : 'inv-kardex__reg'
+                              }>{k.tipo === 'REGULARIZACION' ? 'REGUL.' : k.tipo}</span>
+                              <span className="kardex-tarjeta__fecha">{k.fecha?.split('T')[0] ?? '—'}</span>
+                            </div>
+                            <div className="kardex-tarjeta__detalle">{k.proveedor_destino ?? k.observaciones ?? k.documento ?? '—'}</div>
+                            <div className="kardex-tarjeta__cifras">
+                              <span>{k.tipo !== 'SALIDA' ? `+${fmtQty(k.cantidad)}` : k.tipo === 'SALIDA' ? `-${fmtQty(k.cantidad)}` : ''}</span>
+                              <span>Saldo <b>{fmtQty(k.saldo)}</b></span>
+                              <span>{k.valor_saldo != null ? `S/ ${k.valor_saldo.toFixed(2)}` : '—'}</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </>
