@@ -50,7 +50,8 @@ const num = (v: unknown) => Number(v) || 0;
 const fmtSoles = (v: unknown) => 'S/\u00a0' + num(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const tonoBalance = (e: string) => (e === 'CUADRADO' ? 'green' : e === 'SALDO_EMPRESA' ? 'amber' : e === 'SALDO_CONDUCTOR' ? 'red' : 'neutral');
 const etiquetaBalance = (e: string) => (e === 'CUADRADO' ? 'Cuadrado' : e === 'SALDO_EMPRESA' ? 'Sobrante' : e === 'SALDO_CONDUCTOR' ? 'Faltante' : e || '—');
-const dia = (s?: string | null) => (s ? String(s).split('T')[0] : '—');
+// Fecha peruana dd/mm/aaaa, sin cambio de zona horaria
+const dia = (s?: string | null) => { const m = String(s ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : '—'; };
 
 function useViajes(q: string, estado: string) {
   return useQuery<Viaje[]>({
@@ -134,7 +135,7 @@ export function LiquidacionesPage() {
             {lista.map(v => {
               const t = tonoBalance(v.estado_balance);
               return (
-                <button key={v.viaje} type="button" className="mov-fila" onClick={() => { haptic('selection'); setAbierto(v); }}>
+                <button key={v.viaje} type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setAbierto(v); }}>
                   <div className="mov-fila__icon" style={{ background: `var(--${t === 'neutral' ? 'gray' : t}-tint)`, color: `var(--${t === 'neutral' ? 'gray' : t}-ink)` }}>
                     <ScrollText size={16} />
                   </div>
@@ -246,10 +247,10 @@ function DetalleLiquidacion({ viaje, onClose }: { viaje: Viaje | null; onClose: 
 
           {tipo && can('tesoreria_liquidaciones.crear', 'tesoreria_caja.crear') && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-              <Notice tone="accent">
+              <Notice tone="neutral">
                 {tipo === 'DEVOLUCION_EMPRESA'
-                  ? <>Sobrante de viáticos: el conductor debe devolver <strong>S/ {saldo.toFixed(2)}</strong> a la empresa.</>
-                  : <>Gasto en exceso: la empresa debe reembolsar <strong>S/ {Math.abs(saldo).toFixed(2)}</strong> al conductor.</>}
+                  ? <>Sobrante de viáticos: el conductor debe devolver <strong>{fmtSoles(saldo)}</strong> a la empresa.</>
+                  : <>Gasto en exceso: la empresa debe reembolsar <strong>{fmtSoles(Math.abs(saldo))}</strong> al conductor.</>}
               </Notice>
               <Field label={tipo === 'DEVOLUCION_EMPRESA' ? 'Destino de la devolución' : 'Forma de reembolso'}>
                 {p => (

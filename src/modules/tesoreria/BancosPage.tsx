@@ -100,7 +100,7 @@ export function BancosPage() {
             <div className="tarjeta__lista">
               {visibles.map((b, i) => (
                 <div key={String(b.id ?? i)} className="dato" style={{ flexDirection: 'row', alignItems: 'center', gap: 'var(--s-3)' }}>
-                  <Landmark size={20} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                  <Landmark size={20} style={{ color: 'var(--ink)', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: '0.9375rem' }}>{b.banco ?? '—'}</div>
                     <div style={{ fontSize: '0.8125rem', color: 'var(--label-2)', marginTop: 2 }}>
@@ -152,17 +152,22 @@ function NuevaCuenta({ open, onClose }: { open: boolean; onClose: () => void }) 
   const [estado, setEstado] = useState('ACTIVO');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errs, setErrs] = useState<Record<string, string | undefined>>({});
 
   useEffect(() => {
     if (!open) return;
+    setErrs({});
     setEntidad(''); setOtra(''); setTitular(''); setMoneda('SOLES'); setTipo('CORRIENTE'); setNumero(''); setCci(''); setEstado('ACTIVO'); setError(null);
   }, [open]);
 
   async function guardar() {
     const banco = entidad === OTRO ? otra.trim().toUpperCase() : entidad;
-    if (!banco) { setError('Elige la entidad bancaria.'); return; }
-    if (!numero.trim()) { setError('Escribe el número de cuenta.'); return; }
-    if (cci.trim() && !/^\d{20}$/.test(cci.trim())) { setError('El CCI debe tener 20 dígitos.'); return; }
+    const e: Record<string, string> = {};
+    if (!banco) e.entidad = 'Elige la entidad bancaria.';
+    if (!numero.trim()) e.numero = 'Escribe el número de cuenta.';
+    if (cci.trim() && !/^\d{20}$/.test(cci.trim())) e.cci = 'El CCI debe tener 20 dígitos.';
+    setErrs(e);
+    if (Object.keys(e).length) { haptic('warning'); return; }
     setEnviando(true); setError(null);
     try {
       const r = await api<{ ok?: boolean; error?: string }>('/tesoreria/bancos', {
@@ -183,7 +188,7 @@ function NuevaCuenta({ open, onClose }: { open: boolean; onClose: () => void }) 
         <Button variant="primary" onClick={guardar} loading={enviando}>Guardar cuenta</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
-        <Field label="Entidad" wide>
+        <Field label="Entidad" wide error={errs.entidad}>
           {p => (
             <SelectInput {...p} value={entidad} onChange={e => setEntidad(e.target.value)}>
               <option value="">Elige un banco…</option>
@@ -204,8 +209,8 @@ function NuevaCuenta({ open, onClose }: { open: boolean; onClose: () => void }) 
             <option value="CORRIENTE">Corriente</option><option value="AHORROS">Ahorros</option><option value="DETRACCIONES">Detracciones</option><option value="BILLETERA">Billetera digital</option>
           </SelectInput>}
         </Field>
-        <Field label="N° de cuenta" wide>{p => <TextInput {...p} inputMode="numeric" value={numero} onChange={e => setNumero(e.target.value)} />}</Field>
-        <Field label="CCI (20 dígitos)" wide>{p => <TextInput {...p} inputMode="numeric" maxLength={20} value={cci} onChange={e => setCci(e.target.value.replace(/\D/g, ''))} />}</Field>
+        <Field label="N° de cuenta" wide error={errs.numero}>{p => <TextInput {...p} inputMode="numeric" value={numero} onChange={e => { setNumero(e.target.value); setErrs(x => ({ ...x, numero: undefined })); }} />}</Field>
+        <Field label="CCI (20 dígitos)" wide error={errs.cci}>{p => <TextInput {...p} inputMode="numeric" maxLength={20} value={cci} onChange={e => { setCci(e.target.value.replace(/\D/g, '')); setErrs(x => ({ ...x, cci: undefined })); }} />}</Field>
         <Field label="Estado">
           {p => <SelectInput {...p} value={estado} onChange={e => setEstado(e.target.value)}><option value="ACTIVO">Activo</option><option value="INACTIVO">Inactivo</option></SelectInput>}
         </Field>
