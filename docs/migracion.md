@@ -104,12 +104,13 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] flota/disponibilidad *(en /app, 2026-10-16: cifras por placa como la versión actual, estados (taller, viaje), búsqueda, Excel con ubicación GPS, observaciones manuales. Pendiente: los gráficos por sub tipo siguen como tabla, sin gráfico ni clic)*
 - [x] flota/ubicacion (GPS Wialon) *(en /app, 2026-10-16: mapa con rumbo y animación, lista agrupada por empresa con casilla y colapso por grupo, KPIs que filtran por estado, historial y playback, WhatsApp. Búsqueda solo por placa o nombre, por decisión previa. Agrupa por empresa; no usa los grupos de Wialon de la clásica)*
 - [x] flota/entrega-vehiculos · seguridad/entrega-vehiculos ⚠️ *(en /app, 2026-10-16: una sola pantalla; las dos rutas clásicas eran el mismo archivo. Acta, croquis por configuración y cabina, inventario de partes, firmas y PDF. Pendiente: editar la plantilla del inventario, que sigue en la versión actual)*
+- [x] flota/almacen-flota *(en /app, verificado en navegador 2026-10-16: ingreso, asignación a unidad, reingreso y kardex por artículo, con stock actualizado en cada operación)*
 
 ### C. Mantenimiento
 - [ ] mantenimiento/dashboard
 - [ ] mantenimiento/ordenes · mantenimiento/trabajos-ot · mantenimiento/reportes-ot
 - [ ] mantenimiento/inspecciones *(en /app: estado de la flota, historial, ficha y registrar; falta editar/PDF/importar)*
-- [~] mantenimiento/checklist *(en /app: Nuevo reporte de fallas con fotos, firma y falla crítica, optimizado para celular. Configurar sistemas de revisión sigue en la versión actual)*
+- [~] mantenimiento/checklist *(en /app desde 2026-10-16: listado con filtros, Excel, nuevo reporte móvil con foto, firma y falla crítica, y generación de OTs. Configurar sistemas de revisión abre la versión actual. Pendiente: PDF del formato F-MAN-001, envío por WhatsApp, editar reporte e importar backlogs pendientes; hoy están en la versión actual)*
 - [ ] mantenimiento/planificacion · mantenimiento/configuracion-mp · mantenimiento/kits-mp *(tipos-mp ya en /app)*
 - [ ] mantenimiento/backlog-taller
 - [~] mantenimiento/status-rampa *(en /app: tablero, ingresar, editar, liberar y reactivar, evidencia, OT desde la visita, eliminar rampa, configurador de rampas, PDF y WhatsApp del reporte. Falta: columna de inspección y PDF por rampa)*
