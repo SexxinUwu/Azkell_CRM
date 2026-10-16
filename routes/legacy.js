@@ -1,5 +1,6 @@
 const express = require('express');
 const { normalizarTipo } = require('../utils/tipo_unidad');
+const { crearResolutorPlacas } = require('../services/wialon_placas');
 const router = express.Router();
 
 
@@ -1415,12 +1416,14 @@ router.post('/:metodo', async (req, res) => {
 
                 // ── Obtener Información de Flota desde MySQL para Enriquecer Telemetría ──
                 let placasMap = {};
+                let resolverPlaca = crearResolutorPlacas([]);
                 try {
                     const [pRows] = await new Promise((resolve) => {
-                        db.query("SELECT placa, cliente, tipo, marca, modelo_uts FROM placas", (err, rows) => {
+                        db.query("SELECT placa, wialon_name, cliente, tipo, marca, modelo_uts FROM placas", (err, rows) => {
                             resolve([rows || []]);
                         });
                     });
+                    resolverPlaca = crearResolutorPlacas(pRows);
                     pRows.forEach(p => {
                         const cleanP = String(p.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
                         if (cleanP) placasMap[cleanP] = p;
@@ -1429,9 +1432,7 @@ router.post('/:metodo', async (req, res) => {
 
                 searchData.items.forEach(item => {
                     const rawName = item.nm ? item.nm.toUpperCase().trim() : "";
-                    let placaLimpia = rawName.replace(/[^A-Z0-9]/g, '');
-                    const matchPlaca = placaLimpia.match(/[A-Z0-9]{6}/);
-                    if (matchPlaca) placaLimpia = matchPlaca[0];
+                    let placaLimpia = resolverPlaca(rawName).placa;
 
                     if (rawName) {
                         const lat = item.pos ? Number(item.pos.y) : 0;
