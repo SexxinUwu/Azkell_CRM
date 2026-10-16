@@ -81,6 +81,7 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
 - [ ] **Fase 4 — Módulos por grupos** (abajo)
   - [x] Inspecciones, parte 1 (2026-10-12): consulta. Corregido: cachés de inspecciones/GPS/TV compartidas entre empresas (fuga de datos) y fallas sin foto guardadas como "https://empresa.azkell.com/"
   - [x] Conductores (2026-10-12). Corregido: la foto nunca se guardaba (columna TEXT) y rbac dejaba borrar/importar conductores y cambiar métricas sin permiso
+  - [~] Avance 2026-10-16: Status de rampa con herramientas (configurador de rampas, PDF y WhatsApp del reporte, OT desde la visita, eliminar rampa); Falla crítica en celular (objetivos ≥ 44 px, fotos reducidas en paralelo, firma con `touch-action: none`); Kardex con costo promedio y valor de saldo; recepción en dólares con TC SUNAT del día (respaldo 3.75); pago de requerimientos con vencimiento; rentabilidad y documentos vencidos en viajes. **Falta probar en teléfono real** la firma y las fotos.
 - [ ] **Fase 5 — Cierre:** borrar `Index.html`, `logica.js`, `Modulos/`, `routes/`; cookies HttpOnly; 2FA
 
 ## Catálogo de pantallas (93)
@@ -108,10 +109,10 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [ ] mantenimiento/dashboard
 - [ ] mantenimiento/ordenes · mantenimiento/trabajos-ot · mantenimiento/reportes-ot
 - [ ] mantenimiento/inspecciones *(en /app: estado de la flota, historial, ficha y registrar; falta editar/PDF/importar)*
-- [ ] mantenimiento/checklist
+- [~] mantenimiento/checklist *(en /app: Nuevo reporte de fallas con fotos, firma y falla crítica, optimizado para celular. Configurar sistemas de revisión sigue en la versión actual)*
 - [ ] mantenimiento/planificacion · mantenimiento/configuracion-mp · mantenimiento/kits-mp *(tipos-mp ya en /app)*
 - [ ] mantenimiento/backlog-taller
-- [ ] mantenimiento/status-rampa
+- [~] mantenimiento/status-rampa *(en /app: tablero, ingresar, editar, liberar y reactivar, evidencia, OT desde la visita, eliminar rampa, configurador de rampas, PDF y WhatsApp del reporte. Falta: columna de inspección y PDF por rampa)*
 - [ ] mantenimiento/neumaticos-ultimas · mantenimiento/neumaticos-analisis
 - [ ] mantenimiento/fleetrun · administracion/fleetrun-config
 - [ ] mantenimiento/config-metrica
@@ -123,12 +124,12 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 ### D. Almacén
 - [ ] almacen/inventario
 - [ ] almacen/entradas · almacen/salidas
-- [ ] almacen/kardex
-- [ ] almacen/recepcion-compras
+- [~] almacen/kardex *(en /app con costo unitario, costo promedio y valor de saldo. El servidor devuelve `{ movimientos }` y la app lo adapta; la versión actual sigue igual)*
+- [~] almacen/recepcion-compras *(en /app es la versión oficial, con recepción en dólares y TC SUNAT del día. La pantalla clásica no se modifica)*
 - [ ] almacen/costos · almacen/dashboard-financiero
 
 ### E. Operaciones
-- [ ] operaciones/ordenes-viaje · operaciones/marsisa-ordenes-viaje ⚠️ (variante por empresa)
+- [~] operaciones/ordenes-viaje · operaciones/marsisa-ordenes-viaje ⚠️ (variante por empresa) *(en /app: alerta de documentos vencidos por placa, resumen financiero en la ficha (flete, gastos de ruta, margen y rentabilidad), órdenes de servicio del viaje, sincronización con MarsisaSoft)*
 - [ ] operaciones/ordenes-servicio
 - [ ] operaciones/programacion · operaciones/asignacion · operaciones/rutas
 - [ ] operaciones/monitoreo · operaciones/reporte-viajes
@@ -142,7 +143,8 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [ ] tesoreria/caja · tesoreria/caja-chica · tesoreria/movimientos
 - [ ] tesoreria/bancos · tesoreria/cuentas
 - [ ] tesoreria/flujo-caja · tesoreria/centros-costos
-- [ ] tesoreria/liquidaciones · tesoreria/pago-requerimientos
+- [~] tesoreria/liquidaciones *(en /app; el cierre automático LIQUIDADO se probó en base local, falta confirmarlo en producción)*
+- [~] tesoreria/pago-requerimientos *(en /app con columna de vencimiento según la condición de pago de la O/C)*
 - [ ] gerencia/aprobaciones-oc · gerencia/aprobaciones-caja · gerencia/aprobaciones/caja ⚠️
 
 ### G. RRHH y Seguridad

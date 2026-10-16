@@ -19,17 +19,27 @@ interface Marca { obs: string }
 const MAX_FOTOS = 5;
 const nombre = (it: Sistema['items'][number]) => (typeof it === 'string' ? it : it.label || it.id || '');
 
-/** Reduce la foto a 1280 px de lado mayor, JPEG al 80 %: el reporte viaja como JSON */
+/** Reduce la foto a 1280 px de lado mayor, JPEG al 80 %: el reporte viaja como JSON.
+ *  createImageBitmap decodifica fuera del hilo principal, así una foto de 12 MP no congela la pantalla. */
 async function reducir(file: File): Promise<string> {
-  const url = URL.createObjectURL(file);
+  let fuente: ImageBitmap | HTMLImageElement;
+  let url: string | null = null;
+  if ('createImageBitmap' in window) {
+    fuente = await createImageBitmap(file);
+  } else {
+    url = URL.createObjectURL(file);
+    fuente = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url!; });
+  }
   try {
-    const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
-    const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+    const k = Math.min(1, 1280 / Math.max(fuente.width, fuente.height));
     const c = document.createElement('canvas');
-    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+    c.width = Math.round(fuente.width * k); c.height = Math.round(fuente.height * k);
+    c.getContext('2d')!.drawImage(fuente, 0, 0, c.width, c.height);
     return c.toDataURL('image/jpeg', 0.8);
-  } finally { URL.revokeObjectURL(url); }
+  } finally {
+    if (fuente instanceof ImageBitmap) fuente.close();
+    if (url) URL.revokeObjectURL(url);
+  }
 }
 
 // Registrar un reporte de fallas: unidad, sistemas con falla, fallas manuales, fotos y firma del conductor.
@@ -64,11 +74,10 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
 
   async function agregarFotos(files: FileList | null) {
     if (!files) return;
-    const nuevas: string[] = [];
-    for (const f of Array.from(files).slice(0, MAX_FOTOS - fotos.length)) {
-      try { nuevas.push(await reducir(f)); } catch { /* imagen no válida */ }
-    }
-    setFotos(a => [...a, ...nuevas].slice(0, MAX_FOTOS));
+    // Varias fotos a la vez: se reducen en paralelo; una imagen no válida se omite
+    const lote = Array.from(files).slice(0, MAX_FOTOS - fotos.length);
+    const nuevas = await Promise.all(lote.map(f => reducir(f).catch(() => null)));
+    setFotos(a => [...a, ...nuevas.filter((x): x is string => x !== null)].slice(0, MAX_FOTOS));
   }
 
   async function guardar() {
@@ -119,8 +128,8 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
                 const m = marcas[k];
                 return (
                   <div key={k} className="dato" style={{ gap: 'var(--s-1)' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', fontSize: '0.875rem' }}>
-                      <input type="checkbox" checked={!!m} onChange={e => setMarcas(a => { const n2 = { ...a }; if (e.target.checked) n2[k] = { obs: '' }; else delete n2[k]; return n2; })} />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', minHeight: 44, fontSize: '0.875rem', cursor: 'pointer' }}>
+                      <input type="checkbox" style={{ width: 22, height: 22, flexShrink: 0 }} checked={!!m} onChange={e => setMarcas(a => { const n2 = { ...a }; if (e.target.checked) n2[k] = { obs: '' }; else delete n2[k]; return n2; })} />
                       <span style={{ color: m ? 'var(--red-ink)' : undefined, fontWeight: m ? 600 : 400 }}>{nombre(it)}</span>
                     </label>
                     {m && <TextInput value={m.obs} placeholder="Describe la falla (opcional)" onChange={e => setMarcas(a => ({ ...a, [k]: { obs: e.target.value } }))} />}
@@ -168,7 +177,9 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
               <div key={i} style={{ position: 'relative' }}>
                 <img src={f} alt={`Foto ${i + 1}`} style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 10 }} />
                 <button type="button" aria-label="Quitar foto" onClick={() => setFotos(a => a.filter((_, j) => j !== i))}
-                  style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 0, background: 'var(--ink)', color: 'var(--label-inverse)', display: 'grid', placeItems: 'center', cursor: 'pointer' }}><X size={12} /></button>
+                  style={{ position: 'absolute', top: -12, right: -12, width: 44, height: 44, border: 0, padding: 0, background: 'transparent', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+                  <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--ink)', color: 'var(--label-inverse)', display: 'grid', placeItems: 'center' }}><X size={12} /></span>
+                </button>
               </div>
             ))}
             {fotos.length < MAX_FOTOS && (
@@ -184,8 +195,8 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
           <p className="tarjeta__grupo-titulo">Firma del conductor</p>
           <Firma ref={firma} />
         </div>
-        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--s-3)', padding: 'var(--s-3)', borderRadius: 'var(--r-lg)', cursor: 'pointer', background: critica ? 'var(--red-tint)' : 'var(--fill-subtle)' }}>
-          <input type="checkbox" checked={critica} onChange={e => setCritica(e.target.checked)} style={{ marginTop: 3 }} />
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--s-3)', minHeight: 44, padding: 'var(--s-3)', borderRadius: 'var(--r-lg)', cursor: 'pointer', background: critica ? 'var(--red-tint)' : 'var(--fill-subtle)' }}>
+          <input type="checkbox" checked={critica} onChange={e => setCritica(e.target.checked)} style={{ width: 22, height: 22, flexShrink: 0, marginTop: 2 }} />
           <span>
             <b style={{ color: critica ? 'var(--red-ink)' : 'var(--label)' }}>Falla crítica</b>
             <span style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--label-2)' }}>La unidad no puede salir. Pasa a mantenimiento y se abre un ítem en el backlog.</span>
