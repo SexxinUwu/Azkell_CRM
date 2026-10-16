@@ -1003,9 +1003,30 @@ module.exports = function (db, broadcast, logAudit) {
                 SELECT configuracion, tipo FROM placas WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?)) LIMIT 1
             `, [placa]);
 
+            // Obtener metadatos de la última inspección realizada a esta placa
+            const [lastInspRows] = await tdb.query(`
+                SELECT id_inspeccion, DATE_FORMAT(fecha_inspeccion, '%Y-%m-%d') as fecha_inspeccion, km_vehiculo, inspector, dias_propuestos, DATE_FORMAT(fecha_proxima, '%Y-%m-%d') as fecha_proxima
+                FROM neumaticos_inspecciones
+                WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?))
+                ORDER BY fecha_inspeccion DESC, created_at DESC
+                LIMIT 1
+            `, [placa]);
+            const lastInsp = (lastInspRows && lastInspRows.length > 0) ? lastInspRows[0] : null;
+
             const configPlaca = (pRows && pRows.length > 0) ? (pRows[0].configuracion || pRows[0].tipo || '') : '';
 
-            res.json({ ok: true, placa, configuracion: configPlaca, datosPosiciones });
+            res.json({
+                ok: true,
+                placa,
+                configuracion: configPlaca,
+                id_inspeccion: lastInsp ? lastInsp.id_inspeccion : null,
+                fecha_inspeccion: lastInsp ? lastInsp.fecha_inspeccion : null,
+                km_vehiculo: lastInsp ? lastInsp.km_vehiculo : null,
+                inspector: lastInsp ? lastInsp.inspector : null,
+                dias_propuestos: lastInsp ? lastInsp.dias_propuestos : null,
+                fecha_proxima: lastInsp ? lastInsp.fecha_proxima : null,
+                datosPosiciones
+            });
         } catch (err) {
             console.error("Error en placa-ultima:", err);
             res.status(500).json({ ok: false, error: err.message });

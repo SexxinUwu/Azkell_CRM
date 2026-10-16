@@ -405,6 +405,9 @@
                     
                     <!-- BENTO 1: Encabezado General -->
                     <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+                        <!-- Banner Dinámico de Última Inspección -->
+                        <div id="neu-aviso-ultima-insp" class="alert py-2 px-3 mb-2.5 rounded-3 small d-flex align-items-center justify-content-between" style="display:none !important; font-size: 0.8rem;"></div>
+
                         <div class="row g-2">
                             <div class="col-12 col-sm-4">
                                 <label class="form-label text-muted fw-bold small mb-1" style="font-size:0.72rem;">Fecha de Inspección *</label>
@@ -779,6 +782,27 @@
         
         if (cats) window._neuRellenarSelects(cats);
         if (resUlt && resUlt.ok) {
+            // Mostrar aviso de última inspección neumática
+            const avisoEl = document.getElementById('neu-aviso-ultima-insp');
+            if (avisoEl && resUlt.fecha_inspeccion) {
+                const fParts = String(resUlt.fecha_inspeccion).split('T')[0].split('-');
+                const fStr = (fParts.length === 3) ? `${fParts[2]}/${fParts[1]}/${fParts[0]}` : resUlt.fecha_inspeccion;
+                const dInsp = new Date(resUlt.fecha_inspeccion + 'T00:00:00');
+                const diffDias = Math.max(0, Math.round((new Date() - dInsp) / 86400000));
+                const esReciente = diffDias <= 7;
+                avisoEl.className = `alert ${esReciente ? 'alert-danger border-danger' : 'alert-info border-info'} py-2 px-3 mb-2.5 rounded-3 small d-flex align-items-center justify-content-between shadow-2xs`;
+                avisoEl.style.setProperty('display', 'flex', 'important');
+                avisoEl.innerHTML = `
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-clock-history ${esReciente ? 'text-danger' : 'text-primary'} fs-6"></i>
+                        <span>Última inspección neumática: <strong class="font-monospace">${fStr}</strong> (${diffDias === 0 ? 'Hoy' : `hace ${diffDias} día${diffDias === 1 ? '' : 's'}`}${resUlt.inspector ? ` · ${resUlt.inspector}` : ''})</span>
+                    </div>
+                    <span class="badge ${esReciente ? 'bg-danger text-white' : 'bg-primary text-white'} rounded-pill font-monospace" style="font-size:0.75rem;">
+                        ${esReciente ? '⚠️ Inspeccionada hace ≤ 7 días' : `${diffDias} días transcurridos`}
+                    </span>
+                `;
+            }
+
             if (resUlt.datosPosiciones) {
                 window._neuUltimaInspeccionMap = resUlt.datosPosiciones;
             }
