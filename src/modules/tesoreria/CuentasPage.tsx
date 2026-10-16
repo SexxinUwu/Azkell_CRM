@@ -20,7 +20,10 @@ import { NotaCreditoSheet } from './NotaCreditoSheet';
 const ESTADOS = ['PENDIENTE', 'PAGADO', 'ANULADO'];
 const MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SETIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 const n = (v: unknown) => Number(v) || 0;
-const dia = (s?: string | null) => (s ? String(s).split('T')[0] : '');
+// Fecha peruana dd/mm/aaaa, sin cambio de zona horaria
+const dia = (s?: string | null) => { const m = String(s ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+// Soles con S/ y espacio no divisible
+const soles = (v: unknown) => `S/\u00a0${fmtMonto(v as number)}`;
 
 function diasA(fecha?: string | null): number | null {
   if (!fecha) return null;
@@ -124,9 +127,9 @@ export function CuentasPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           <div className="inv-metricas">
-            <div className="inv-metrica"><span className="inv-metrica__num inv-metrica__num--warning">{fmtMonto(resumen.porCobrar)}</span><span className="inv-metrica__label">Por cobrar</span></div>
-            <div className="inv-metrica"><span className="inv-metrica__num inv-metrica__num--critical">{fmtMonto(resumen.vencido)}</span><span className="inv-metrica__label">Vencido</span></div>
-            <div className="inv-metrica"><span className="inv-metrica__num" style={{ color: 'var(--green-ink)' }}>{fmtMonto(resumen.cobrado)}</span><span className="inv-metrica__label">Cobrado</span></div>
+            <div className="inv-metrica"><span className="inv-metrica__num inv-metrica__num--warning">{soles(resumen.porCobrar)}</span><span className="inv-metrica__label">Por cobrar</span></div>
+            <div className="inv-metrica"><span className="inv-metrica__num inv-metrica__num--critical">{soles(resumen.vencido)}</span><span className="inv-metrica__label">Vencido</span></div>
+            <div className="inv-metrica"><span className="inv-metrica__num" style={{ color: 'var(--green-ink)' }}>{soles(resumen.cobrado)}</span><span className="inv-metrica__label">Cobrado</span></div>
           </div>
 
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Cliente, factura, liquidación, placa…" />
@@ -152,7 +155,7 @@ export function CuentasPage() {
                 const d = diasA(c.fecha_cobrar);
                 const pend = String(c.estado_servicio).toUpperCase() === 'PENDIENTE';
                 return (
-                  <button key={c.id} type="button" className="mov-fila" onClick={() => { haptic('selection'); setAbiertoId(c.id); }}>
+                  <button key={c.id} type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setAbiertoId(c.id); }}>
                     <div className="mov-fila__icon" style={{ background: `var(--${t === 'neutral' ? 'gray' : t}-tint)`, color: `var(--${t === 'neutral' ? 'gray' : t}-ink)` }}>
                       <FileText size={16} />
                     </div>
@@ -161,7 +164,7 @@ export function CuentasPage() {
                       <span className="mov-fila__sub">{[c.serie && c.factura ? `${c.serie}-${c.factura}` : c.codigo_liquidacion, c.placa_camion, dia(c.fecha_factura)].filter(Boolean).join(' · ')}</span>
                     </div>
                     <div className="mov-fila__derecha">
-                      <span className="mov-fila__monto">S/ {fmtMonto(pend ? c.neto_cobrar : c.neto_cobrado ?? c.neto_cobrar)}</span>
+                      <span className="mov-fila__monto">{soles(pend ? c.neto_cobrar : c.neto_cobrado ?? c.neto_cobrar)}</span>
                       <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${t === 'neutral' ? 'gray' : t}-ink)` }}>
                         {pend && d !== null ? (d < 0 ? `Vencida hace ${Math.abs(d)} d` : d === 0 ? 'Vence hoy' : `Vence en ${d} d`) : c.estado_servicio}
                       </span>
@@ -199,7 +202,7 @@ function DetalleCuenta({ cuenta: c, onClose, onEditar, onPagar, onEliminar, onNo
     <div className="dato"><span className="dato__label">{label}</span><span className={`dato__valor${mono ? ' dato__valor--mono' : ''}`}>{String(valor)}</span></div>
   ));
   const monto = (label: string, v: unknown, fuerte = false) => (v === null || v === undefined || v === '' ? null : (
-    <div className="dato"><span className="dato__label">{label}</span><span className="dato__valor" style={fuerte ? { fontWeight: 700 } : undefined}>S/ {fmtMonto(v as number)}</span></div>
+    <div className="dato"><span className="dato__label">{label}</span><span className="dato__valor" style={fuerte ? { fontWeight: 700 } : undefined}>{soles(v as number)}</span></div>
   ));
   return (
     <Sheet open={!!c} onClose={onClose} title={c ? `${c.serie ?? ''}${c.serie && c.factura ? '-' : ''}${c.factura ?? c.codigo_liquidacion ?? 'Registro'}` : ''}
@@ -259,12 +262,13 @@ function PagoCuenta({ cuenta, usuario, onClose }: { cuenta: CuentaPorCobrar | nu
     setMonto(String(cuenta.neto_cobrado ?? cuenta.neto_cobrar ?? '')); setFecha(new Date().toISOString().slice(0, 10)); setArchivo(null); setError(null);
   }, [cuenta]);
 
+  const [errMonto, setErrMonto] = useState<string | undefined>();
   const diferencia = cuenta ? (parseFloat(monto.replace(',', '.')) || 0) - n(cuenta.neto_cobrar) : 0;
 
   async function guardar() {
     if (!cuenta) return;
     const v = parseFloat(monto.replace(',', '.'));
-    if (!Number.isFinite(v) || v <= 0) { setError('Indica el monto cobrado.'); return; }
+    if (!Number.isFinite(v) || v <= 0) { setErrMonto('Indica el monto cobrado.'); haptic('warning'); return; }
     setEnviando(true); setError(null);
     try {
       const f = new FormData();
@@ -285,9 +289,9 @@ function PagoCuenta({ cuenta, usuario, onClose }: { cuenta: CuentaPorCobrar | nu
         <Button variant="primary" onClick={guardar} loading={enviando}>Marcar como pagado</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
-        <Field label="Neto por cobrar">{p => <TextInput {...p} value={`S/ ${fmtMonto(cuenta?.neto_cobrar)}`} disabled readOnly />}</Field>
-        <Field label="Neto cobrado" hint={diferencia !== 0 ? `Diferencia: S/ ${diferencia.toFixed(2)}` : undefined}>
-          {p => <TextInput {...p} inputMode="decimal" value={monto} onChange={e => setMonto(e.target.value)} autoFocus />}
+        <Field label="Neto por cobrar">{p => <TextInput {...p} value={soles(cuenta?.neto_cobrar)} disabled readOnly />}</Field>
+        <Field label="Neto cobrado" hint={diferencia !== 0 ? `Diferencia: ${soles(diferencia)}` : undefined} error={errMonto}>
+          {p => <TextInput {...p} inputMode="decimal" value={monto} onChange={e => { setMonto(e.target.value); setErrMonto(undefined); }} autoFocus />}
         </Field>
         <Field label="Fecha de depósito">{p => <TextInput {...p} type="date" value={fecha} onChange={e => setFecha(e.target.value)} />}</Field>
         <Field label="Sustento (voucher)" hint={archivo?.name}>{p => <TextInput {...p} type="file" accept="image/*,application/pdf" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />}</Field>

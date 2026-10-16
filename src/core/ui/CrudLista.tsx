@@ -127,8 +127,8 @@ export function CrudLista<T>(p: CrudListaProps<T>) {
               {visibles.map(t => {
                 const d = p.derecha?.(t);
                 return (
-                  <div key={String(p.idDe(t))} className="mov-fila" style={{ cursor: p.editar ? 'pointer' : undefined }}
-                    onClick={p.editar ? () => setEditando({ item: t }) : undefined}>
+                  <div key={String(p.idDe(t))} className={`mov-fila${p.editar ? ' pressable' : ''}`} style={{ cursor: p.editar ? 'pointer' : undefined }}
+                    onClick={p.editar ? () => { haptic('selection'); setEditando({ item: t }); } : undefined}>
                     <div className="mov-fila__icon" style={{ background: 'var(--fill)', color: 'var(--label-2)' }}>{p.icono}</div>
                     <div className="mov-fila__cuerpo">
                       <span className="mov-fila__titulo">{p.principal(t)}</span>
@@ -184,6 +184,7 @@ function FormularioCrud<T>({ abierto, singular, campos, onClose, onGuardar }: {
   const [v, setV] = useState<Valores>({});
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errs, setErrs] = useState<Record<string, string | undefined>>({});
   const item = abierto?.item as Record<string, unknown> | null | undefined;
   const editando = !!item;
 
@@ -195,13 +196,16 @@ function FormularioCrud<T>({ abierto, singular, campos, onClose, onGuardar }: {
       if (c.tipo === 'bool') ini[c.clave] = raw === true || raw === 1 || raw === '1';
       else ini[c.clave] = raw == null ? '' : c.tipo === 'date' ? String(raw).split('T')[0] : (raw as string | number);
     }
-    setV(ini); setError(null);
+    setV(ini); setError(null); setErrs({});
   }, [abierto]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function guardar() {
+    const faltan: Record<string, string> = {};
     for (const c of campos) {
-      if (c.requerido && !String(v[c.clave] ?? '').trim()) { setError(`${c.label} es obligatorio.`); return; }
+      if (c.requerido && !String(v[c.clave] ?? '').trim()) faltan[c.clave] = `${c.label} es obligatorio.`;
     }
+    setErrs(faltan);
+    if (Object.keys(faltan).length) { haptic('warning'); return; }
     const salida: Valores = {};
     for (const c of campos) {
       const x = v[c.clave];
@@ -223,10 +227,10 @@ function FormularioCrud<T>({ abierto, singular, campos, onClose, onGuardar }: {
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
         {campos.map(c => (
-          <Field key={c.clave} label={c.label + (c.requerido ? ' *' : '')} wide={c.wide || c.tipo === 'textarea'} hint={c.ayuda}>
+          <Field key={c.clave} label={c.label + (c.requerido ? ' *' : '')} wide={c.wide || c.tipo === 'textarea'} hint={c.ayuda} error={errs[c.clave]}>
             {pp => {
               const val = v[c.clave];
-              const set = (x: string | number | boolean) => setV(a => ({ ...a, [c.clave]: x }));
+              const set = (x: string | number | boolean) => { setV(a => ({ ...a, [c.clave]: x })); setErrs(e => ({ ...e, [c.clave]: undefined })); };
               const bloqueado = editando && c.soloCrear;
               if (c.tipo === 'select') {
                 return (

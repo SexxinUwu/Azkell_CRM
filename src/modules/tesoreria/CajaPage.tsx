@@ -26,7 +26,11 @@ const MODALIDADES = ['TRANSFERENCIA BANCARIA', 'EFECTIVO', 'YAPE / PLIN', 'DEPOS
 const COMPROBANTES = ['FACTURA', 'BOLETA DE VENTA', 'RECIBO POR HONORARIOS', 'VALE PROVISIONAL DE CAJA', 'TICKET DE PEAJE', 'SIN COMPROBANTE'];
 const PERSONAS = ['ADMINISTRATIVO', 'CONDUCTOR', 'PROVEEDOR', 'BANCO'];
 const n = (v: unknown) => Number(v) || 0;
-const dia = (s?: string | null) => (s ? String(s).split('T')[0] : '');
+// Fecha peruana dd/mm/aaaa, sin cambio de zona horaria
+const dia = (s?: string | null) => { const m = String(s ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+// Soles con S/ y espacio no divisible; US$ para dólares
+const sol = (v: unknown) => `S/\u00a0${fmtMonto(v as number)}`;
+const monto = (v: unknown, moneda?: string | null) => `${moneda === 'DOLARES' ? 'US$' : 'S/'}\u00a0${fmtMonto(v as number)}`;
 const tonoEstado = (e: string) => ({ APROBADO: 'blue', PROCESADO: 'green', PAGADO: 'green', ANULADO: 'neutral', REGISTRADO: 'amber', PENDIENTE: 'amber' }[e] ?? 'neutral');
 
 export function CajaPage() {
@@ -84,9 +88,9 @@ export function CajaPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div className="inv-metricas">
-          <div className="inv-metrica"><span className="inv-metrica__num" style={{ color: 'var(--green-ink)' }}>{fmtMonto(resumen.ingresos)}</span><span className="inv-metrica__label">Ingresos</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num inv-metrica__num--critical">{fmtMonto(resumen.egresos)}</span><span className="inv-metrica__label">Egresos</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num">{fmtMonto(resumen.saldo)}</span><span className="inv-metrica__label">Saldo</span></div>
+          <div className="inv-metrica"><span className="inv-metrica__num" style={{ color: 'var(--green-ink)' }}>{sol(resumen.ingresos)}</span><span className="inv-metrica__label">Ingresos</span></div>
+          <div className="inv-metrica"><span className="inv-metrica__num inv-metrica__num--critical">{sol(resumen.egresos)}</span><span className="inv-metrica__label">Egresos</span></div>
+          <div className="inv-metrica"><span className="inv-metrica__num">{sol(resumen.saldo)}</span><span className="inv-metrica__label">Saldo</span></div>
         </div>
 
         <SearchField value={busqueda} placeholder="Persona, motivo, N°, placa, orden de viaje…"
@@ -111,7 +115,7 @@ export function CajaPage() {
             {lista.map(m => {
               const ingreso = m.tipo_movimiento === 'INGRESO';
               return (
-                <button key={m.id} type="button" className="mov-fila" onClick={() => { haptic('selection'); setAbiertoId(m.id); }}>
+                <button key={m.id} type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setAbiertoId(m.id); }}>
                   <div className="mov-fila__icon" style={{ background: ingreso ? 'var(--green-tint)' : 'var(--red-tint)', color: ingreso ? 'var(--green-ink)' : 'var(--red-ink)' }}>
                     {ingreso ? <IconoIngreso size={16} /> : <ArrowDownLeft size={16} />}
                   </div>
@@ -120,7 +124,7 @@ export function CajaPage() {
                     <span className="mov-fila__sub">{[`${m.serie ?? ''}-${m.numero ?? ''}`, m.motivo, m.orden_viaje, dia(m.fecha)].filter(Boolean).join(' · ')}</span>
                   </div>
                   <div className="mov-fila__derecha">
-                    <span className="mov-fila__monto" style={{ color: ingreso ? 'var(--green-ink)' : undefined }}>{ingreso ? '+' : '-'}{m.moneda === 'DOLARES' ? 'US$' : 'S/'} {fmtMonto(m.importe_total)}</span>
+                    <span className="mov-fila__monto" style={{ color: ingreso ? 'var(--green-ink)' : undefined }}>{ingreso ? '+' : '-'}{monto(m.importe_total, m.moneda)}</span>
                     <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${tonoEstado(m.estado) === 'blue' ? 'accent' : tonoEstado(m.estado)}-ink)` }}>{m.estado}</span>
                   </div>
                 </button>
@@ -144,6 +148,7 @@ function DetalleCaja({ mov: m, onClose, onEditar, onCambio }: {
   const [ocupado, setOcupado] = useState(false);
   const [anulando, setAnulando] = useState(false);
   const [motivo, setMotivo] = useState('');
+  const [errMotivo, setErrMotivo] = useState<string | undefined>();
   const [borrando, setBorrando] = useState(false);
   const [docs, setDocs] = useState(false);
   const [voucher, setVoucher] = useState<File | null>(null);
@@ -185,7 +190,7 @@ function DetalleCaja({ mov: m, onClose, onEditar, onCambio }: {
         }>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
           <div className="inv-metricas">
-            <div className="inv-metrica"><span className="inv-metrica__num">{m.moneda === 'DOLARES' ? 'US$' : 'S/'} {fmtMonto(m.importe_total)}</span><span className="inv-metrica__label">Importe</span></div>
+            <div className="inv-metrica"><span className="inv-metrica__num">{monto(m.importe_total, m.moneda)}</span><span className="inv-metrica__label">Importe</span></div>
             <div className="inv-metrica"><span className="inv-metrica__num">{m.tipo_movimiento}</span><span className="inv-metrica__label">Movimiento</span></div>
             <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1rem' }}>{m.estado}</span><span className="inv-metrica__label">Estado</span></div>
           </div>
@@ -195,7 +200,7 @@ function DetalleCaja({ mov: m, onClose, onEditar, onCambio }: {
             {fila('Autoriza', m.autoriza)}{fila('Orden de viaje', m.orden_viaje, true)}{fila('Conductor', m.conductor)}{fila('Ruta', m.ruta_viaje)}{fila('Placa', m.placa, true)}
             {fila('Modalidad de pago', m.modalidad_pago)}{fila('Comprobante', [m.tipo_comprobante, m.numero_factura].filter(Boolean).join(' '))}
             {fila('Constancia de depósito', m.numero_constancia_deposito, true)}{fila('Cuenta de la persona', m.cuenta_bancaria_persona, true)}{fila('Cuenta de la empresa', m.cuenta_bancaria_empresa, true)}
-            {fila('Retención / detracción', n(m.retencion_detraccion) ? fmtMonto(m.retencion_detraccion) : '')}{fila('Descripción', m.descripcion)}{fila('Observación', m.observacion)}
+            {fila('Retención / detracción', n(m.retencion_detraccion) ? sol(m.retencion_detraccion) : '')}{fila('Descripción', m.descripcion)}{fila('Observación', m.observacion)}
             {fila('Registrado por', m.usuario_creacion)}{fila('Aprobado por', m.usuario_aprobacion ? `${m.usuario_aprobacion} ${m.fecha_aprobacion ?? ''}` : '')}
           </div>
           {(m.voucher_url || m.sustento_url) && (
@@ -210,11 +215,11 @@ function DetalleCaja({ mov: m, onClose, onEditar, onCambio }: {
       <Sheet open={anulando} onClose={() => setAnulando(false)} title="Anular caja"
         footer={<><Button variant="secondary" onClick={() => setAnulando(false)}>Volver</Button>
           <Button variant="destructive" loading={ocupado} onClick={async () => {
-            if (!motivo.trim()) { toast('Escribe el motivo de la anulación', 'error'); return; }
+            if (!motivo.trim()) { setErrMotivo('Escribe el motivo de la anulación.'); haptic('warning'); return; }
             await ejecutar(async () => comprobar(await api('/tesoreria/caja/' + m.id + '/anular', { method: 'POST', body: { motivo: motivo.trim(), usuario_anulacion: user?.name } })), 'Caja anulada');
             setAnulando(false);
           }}>Anular</Button></>}>
-        <div className="form-grid"><Field label="Motivo" wide>{p => <TextInput {...p} value={motivo} onChange={e => setMotivo(e.target.value)} autoFocus />}</Field></div>
+        <div className="form-grid"><Field label="Motivo" wide error={errMotivo}>{p => <TextInput {...p} value={motivo} onChange={e => { setMotivo(e.target.value); setErrMotivo(undefined); }} autoFocus />}</Field></div>
       </Sheet>
 
       <Sheet open={docs} onClose={() => setDocs(false)} title="Subir documentos"
@@ -255,6 +260,7 @@ function FormularioCaja({ open, mov, onClose, onGuardado }: { open: boolean; mov
   const [sustento, setSustento] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errCampos, setErrCampos] = useState<Record<string, string | undefined>>({});
   const [qViaje, setQViaje] = useState('');
   const editando = !!mov;
 
@@ -270,7 +276,7 @@ function FormularioCaja({ open, mov, onClose, onGuardado }: { open: boolean; mov
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setVoucher(null); setSustento(null); setQViaje('');
+    setError(null); setErrCampos({}); setVoucher(null); setSustento(null); setQViaje('');
     const base: Record<string, string> = {
       fecha: hoy(), hora: ahora(), tipo_movimiento: 'EGRESO', serie: String(new Date().getFullYear()), numero: '', moneda: 'SOLES',
       tipo_cambio: '1', modalidad_pago: 'TRANSFERENCIA BANCARIA', tipo_persona: 'ADMINISTRATIVO',
@@ -293,8 +299,11 @@ function FormularioCaja({ open, mov, onClose, onGuardado }: { open: boolean; mov
   }
 
   async function guardar() {
-    if (!n(v.importe_total)) { setError('Indica el importe.'); return; }
-    if (!v.motivo) { setError('Elige el motivo.'); return; }
+    const e: Record<string, string> = {};
+    if (!n(v.importe_total)) e.importe_total = 'Indica el importe.';
+    if (!v.motivo) e.motivo = 'Elige el motivo.';
+    setErrCampos(e);
+    if (Object.keys(e).length) { haptic('warning'); return; }
     setEnviando(true); setError(null);
     try {
       const f = new FormData();
@@ -316,14 +325,14 @@ function FormularioCaja({ open, mov, onClose, onGuardado }: { open: boolean; mov
   }
 
   const txt = (k: string, label: string, o?: { type?: string; wide?: boolean; mode?: 'decimal' | 'numeric'; list?: string }) => (
-    <Field label={label} wide={o?.wide}>
-      {p => <TextInput {...p} type={o?.type ?? 'text'} inputMode={o?.mode} list={o?.list} value={v[k] ?? ''} onChange={e => set(k, e.target.value)} />}
+    <Field label={label} wide={o?.wide} error={errCampos[k]}>
+      {p => <TextInput {...p} type={o?.type ?? 'text'} inputMode={o?.mode} list={o?.list} value={v[k] ?? ''} onChange={e => { set(k, e.target.value); setErrCampos(x => ({ ...x, [k]: undefined })); }} />}
     </Field>
   );
   const sel = (k: string, label: string, opciones: string[], vacio = true, wide = false) => (
-    <Field label={label} wide={wide}>
+    <Field label={label} wide={wide} error={errCampos[k]}>
       {p => (
-        <SelectInput {...p} value={v[k] ?? ''} onChange={e => set(k, e.target.value)}>
+        <SelectInput {...p} value={v[k] ?? ''} onChange={e => { set(k, e.target.value); setErrCampos(x => ({ ...x, [k]: undefined })); }}>
           {vacio && <option value="">—</option>}
           {[...new Set([...opciones, ...(v[k] ? [v[k]] : [])])].map(o => <option key={o} value={o}>{o}</option>)}
         </SelectInput>
