@@ -755,7 +755,7 @@ module.exports = (db, logAudit) => {
             FROM placas 
             ORDER BY placa ASC
         `;
-        db.query(sqlPlacas, (err, rows) => {
+        getDb(req).query(sqlPlacas, (err, rows) => {
             const tractos = [];
             const carretas = [];
             const todas = [];
@@ -789,7 +789,7 @@ module.exports = (db, logAudit) => {
             }
 
             // Consultar Conductores del sistema
-            db.query('SELECT DISTINCT nombre FROM conductores WHERE estado != "INACTIVO" OR estado IS NULL ORDER BY nombre ASC', (errC, rowsC) => {
+            getDb(req).query('SELECT DISTINCT nombre FROM conductores WHERE estado != "INACTIVO" OR estado IS NULL ORDER BY nombre ASC', (errC, rowsC) => {
                 const conductores = (!errC && rowsC) ? rowsC.map(c => c.nombre).filter(Boolean) : [];
                 res.json({ tractos, carretas, todas, conductores });
             });
