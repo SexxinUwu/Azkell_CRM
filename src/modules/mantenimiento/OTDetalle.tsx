@@ -19,6 +19,7 @@ import {
   type AccionOT, type OrdenTrabajo, type PausaOT,
 } from './api';
 import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
+import { SalidaFormulario } from '../almacen/SalidaFormulario';
 import { pdfOt } from './otPdf';
 
 export const ETIQUETA_ACCION: Record<AccionOT, string> = {
@@ -104,6 +105,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   const [exportando, setExportando] = useState(false);
   const [inspeccionAbierta, setInspeccionAbierta] = useState<string | null>(null);
   const [marcando, setMarcando] = useState<string | null>(null);
+  const [solicitando, setSolicitando] = useState(false);
 
   const ahora = useAhora(enCurso);
   const { data: materiales, isLoading: loadMat } = useMateriales(idOt);
@@ -396,7 +398,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
             <Package size={14} /> Repuestos despachados desde almacén
             {costos.repuestos > 0 && <span style={{ marginLeft: 'auto', fontWeight: 700, color: 'var(--accent)' }}>{soles(costos.repuestos)}</span>}
           </p>
-          <Button variant="accent" block icon={<Package size={15} />} onClick={() => abrirClasico('almacen/salidas')} disabled={!puedeEditar}>
+          <Button variant="accent" block icon={<Package size={15} />} onClick={() => setSolicitando(true)} disabled={!puedeEditar}>
             Solicitar repuesto a almacén
           </Button>
           {loadMat ? <PageLoader /> : mats.length === 0 ? (
@@ -466,6 +468,19 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
 
       <PausarOTSheet ot={ot} open={pausando} onClose={() => setPausando(false)} usuario={usuario} />
       <CerrarOTSheet ot={ot} open={cerrando} onClose={() => setCerrando(false)} usuario={usuario} />
+      <SalidaFormulario
+        open={solicitando}
+        salida={null}
+        onClose={() => setSolicitando(false)}
+        onGuardado={() => {
+          // El repuesto ya descontó stock: se refrescan los materiales de la OT, su costo y el almacén
+          setSolicitando(false);
+          qc.invalidateQueries({ queryKey: ['mant', 'ot-materiales', idOt] });
+          qc.invalidateQueries({ queryKey: ['mant', 'ots'] });
+          qc.invalidateQueries({ queryKey: ['almacen'] });
+        }}
+        preset={{ placa: ot.placa, ticket_ot: idOt, responsable: ot.tecnico ?? '', tipo_destino: 'Vehiculo' }}
+      />
       {inspeccion && <InspeccionFicha inspeccion={inspeccion} onClose={() => setInspeccionAbierta(null)} />}
     </div>
   );

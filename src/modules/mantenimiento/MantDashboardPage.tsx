@@ -29,6 +29,8 @@ import { clavePlaca, useInspecciones, useInspeccionesNeumaticos, type Inspeccion
 import { evaluarCiclo } from '../inspecciones/vigencia';
 import { usePlacas } from '../placas/api';
 import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
+import { useDisponibilidad } from '../flota/api';
+import { cifrasDisponibilidad, porcentajeOperativa } from '../flota/disponibilidadCifras';
 
 // ─── Tipos y Helpers ──────────────────────────────────────────────────────────
 
@@ -313,6 +315,7 @@ export function MantDashboardPage() {
   const inspQ   = useInspecciones();
   const neuQ    = useInspeccionesNeumaticos();
   const placasQ = usePlacas();
+  const dispQ   = useDisponibilidad();
 
   const fallasQ = useQuery<FallasStats>({
     queryKey: ['mant-dashboard', 'fallas-stats'],
@@ -516,7 +519,9 @@ export function MantDashboardPage() {
   const inspVencidas   = ciclos.filter(c => c.ciclo.estado === 'vencido').length;
   const inspProximas   = ciclos.filter(c => c.ciclo.estado === 'proximo').length;
   const inspConformes  = Math.max(0, totalFlota - inspVencidas - inspProximas);
-  const pctOperativas  = totalFlota > 0 ? Math.round(((totalFlota - rampasOcupadas.length) / totalFlota) * 100) : null;
+  // % flota operativa = (En Ruta + En Base) / flota activa, con el estado consolidado de Disponibilidad
+  const cifrasFlota   = useMemo(() => cifrasDisponibilidad(dispQ.data ?? []), [dispQ.data]);
+  const pctOperativas = porcentajeOperativa(cifrasFlota);
   const pctConformes   = totalFlota > 0 ? Math.round((inspConformes / totalFlota) * 100) : null;
 
   const unidadesUrgentes = useMemo(() => {
@@ -582,7 +587,11 @@ export function MantDashboardPage() {
                   <span>·</span>
                   <span>{rampasOcupadas.length} {rampasOcupadas.length === 1 ? 'unidad' : 'unidades'} en bahía</span>
                   <span>·</span>
-                  <span style={{ color: 'var(--green-ink)', fontWeight: 700 }}>{pctOperativas != null ? `${pctOperativas}% flota operativa` : 'Sin datos de flota'}</span>
+                  <span style={{ color: 'var(--green-ink)', fontWeight: 700 }}>
+                    {pctOperativas != null
+                      ? `${pctOperativas}% flota operativa (${cifrasFlota.ruta + cifrasFlota.base} de ${cifrasFlota.total})`
+                      : 'Sin datos de flota'}
+                  </span>
                 </div>
               </div>
             </div>
