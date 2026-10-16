@@ -25,6 +25,8 @@ interface Respuesta { ok: boolean; data: Vale[]; total: number; totalPages: numb
 interface Catalogos { placas: string[]; conductores: string[]; combustibles: string[]; proveedores: { proveedor_razon_social: string; proveedor_ruc: string | null; estaciones_nombres: string | null }[]; siguienteCorrelativo: string }
 
 const n = (v: unknown) => Number(v) || 0;
+// Solo la empresa Marsisa tiene base externa; el servidor rechaza la sincronización en las demás (mismo criterio que la navegación)
+const esMarsisa = typeof window !== 'undefined' && window.location.hostname.split('.')[0].toLowerCase().includes('marsisa');
 const money = (v: unknown) => n(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dia = (s?: string | null) => (s ? String(s).slice(0, 10) : '');
 const ESTADOS = ['VÁLIDO', 'ANULADO'];
@@ -121,7 +123,7 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${lista.length} de esta página`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
               { label: 'Importar desde Excel', icon: <Upload size={17} />, separado: true, onSelect: () => setImportando(true) },
-              { label: 'Sincronizar con MarsisaSoft', icon: <RefreshCw size={17} />, onSelect: () => setSincronizar(true) },
+              ...(esMarsisa ? [{ label: 'Sincronizar con MarsisaSoft', icon: <RefreshCw size={17} />, onSelect: () => setSincronizar(true) }] : []),
               ...(puedeEliminar ? [{ label: seleccionando ? 'Terminar selección' : 'Seleccionar varios', icon: <ListChecks size={17} />, separado: true, onSelect: () => { setSeleccionando(v => !v); setSeleccion(new Set()); } }] : []),
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ vale: null })}>Nuevo vale</Button>}
@@ -136,7 +138,7 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
           <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>S/ {money(k?.costoPromedioGalon)}</span><span className="inv-metrica__label">Costo por galón</span></div>
         </div>
 
-        <SearchField value={busqueda} placeholder="Correlativo, placa, viaje, conductor, estación…"
+        <SearchField value={busqueda} placeholder="Correlativo, placa, viaje, conductor, proveedor o estación…"
           onChange={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _vT?: number })._vT); (window as unknown as { _vT?: number })._vT = window.setTimeout(() => setSearch(v.trim()), 350); }} />
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
           <SelectInput value={estado} onChange={e => setEstado(e.target.value)} aria-label="Estado" style={{ width: 'auto' }}>

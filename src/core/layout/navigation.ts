@@ -72,10 +72,10 @@ const SECCIONES_BASE: NavSection[] = [
       {
         key: 'combustible-grupo', label: 'Combustible', icon: Fuel, permissions: [],
         children: [
-          { key: 'vales', label: 'Vales de combustible', clasico: 'operaciones/combustible-vales', icon: Fuel, permissions: ver('combustible_vales', 'combustible') },
-          { key: 'matriz-combustible', label: 'Matriz de combustible (D2)', clasico: 'operaciones/combustible-matriz', icon: Target, permissions: ver('combustible_analisis', 'combustible') },
-          { key: 'analisis-combustible', label: 'Análisis de combustible (D2)', clasico: 'operaciones/combustible-analisis', icon: Gauge, permissions: ver('combustible_analisis', 'combustible') },
-          { key: 'urea', label: 'Análisis de urea', clasico: 'operaciones/urea-analisis', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis', 'combustible') },
+          { key: 'vales', label: 'Vales de combustible', to: '/operaciones/vales', icon: Fuel, permissions: ver('combustible_vales', 'combustible') },
+          { key: 'matriz-combustible', label: 'Matriz de combustible (D2)', to: '/operaciones/analisis-combustible?matriz=1', icon: Target, permissions: ver('combustible_analisis', 'combustible') },
+          { key: 'analisis-combustible', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis', 'combustible') },
+          { key: 'urea', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis', 'combustible') },
           { key: 'estaciones', label: 'Estaciones de proveedores', clasico: 'operaciones/combustible-estaciones', icon: MapPin, permissions: ver('combustible_vales', 'combustible') },
         ],
       },
@@ -88,10 +88,10 @@ const SECCIONES_BASE: NavSection[] = [
       {
         key: 'marsisa-combustible-grupo', label: 'Combustible Marsisa', icon: Fuel, permissions: [], soloEmpresa: 'marsisa',
         children: [
-          { key: 'marsisa-vales', label: 'Vales de combustible', clasico: 'operaciones/marsisa-combustible-vales', icon: Fuel, permissions: ver('combustible_vales', 'combustible'), soloEmpresa: 'marsisa' },
-          { key: 'marsisa-matriz', label: 'Matriz de combustible (D2)', clasico: 'operaciones/combustible-matriz', icon: Target, permissions: ver('combustible_analisis', 'combustible'), soloEmpresa: 'marsisa' },
-          { key: 'marsisa-analisis', label: 'Análisis de combustible (D2)', clasico: 'operaciones/combustible-analisis', icon: Gauge, permissions: ver('combustible_analisis', 'combustible'), soloEmpresa: 'marsisa' },
-          { key: 'marsisa-urea', label: 'Análisis de urea', clasico: 'operaciones/urea-analisis', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis', 'combustible'), soloEmpresa: 'marsisa' },
+          { key: 'marsisa-vales', label: 'Vales de combustible', to: '/operaciones/marsisa-vales', icon: Fuel, permissions: ver('combustible_vales', 'combustible'), soloEmpresa: 'marsisa' },
+          { key: 'marsisa-matriz', label: 'Matriz de combustible (D2)', to: '/operaciones/analisis-combustible?matriz=1', icon: Target, permissions: ver('combustible_analisis', 'combustible'), soloEmpresa: 'marsisa' },
+          { key: 'marsisa-analisis', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis', 'combustible'), soloEmpresa: 'marsisa' },
+          { key: 'marsisa-urea', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis', 'combustible'), soloEmpresa: 'marsisa' },
         ],
       },
     ],

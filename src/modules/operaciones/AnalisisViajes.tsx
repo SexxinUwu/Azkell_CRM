@@ -1,5 +1,6 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowUpRight, Droplets, FileSpreadsheet, Fuel, RefreshCw, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
@@ -131,7 +132,9 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
 
   const t = trips.find(x => x.viaje === abierto) ?? null;
   const Icono = urea ? Droplets : Fuel;
-  const [matriz, setMatriz] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const [matriz, setMatriz] = useState(params.get('matriz') === '1');
+  useEffect(() => { if (params.get('matriz')) setParams({}, { replace: true }); }, [params, setParams]);
   const puedeAuditar = can('combustible_analisis.editar', 'combustible.editar', 'urea_analisis.editar', 'combustible_analisis.crear');
 
   async function exportar() {

@@ -138,9 +138,10 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] operaciones/ordenes-servicio *(en /app: consulta por estado (Todas, Pendientes, Iniciadas, Finalizadas, Anuladas), búsqueda, exportación a Excel, alta y edición con rutas, flete e impuesto, cambio de estado y guías disponibles. Todas las rutas del servidor usan la base del tenant. Verificado en navegador 2026-10-16 con datos simulados)*
 - [~] operaciones/programacion *(en /app: agenda por día (Hoy, Mañana, fecha), búsqueda, mostrar u ocultar finalizados, enlace a la ficha del viaje y alta de viaje. Verificado en navegador 2026-10-16. Pendiente: operaciones/asignacion y operaciones/rutas, que siguen en el clásico)*
 - [ ] operaciones/monitoreo · operaciones/reporte-viajes
-- [ ] operaciones/combustible-vales · operaciones/marsisa-combustible-vales ⚠️
-- [ ] operaciones/combustible-analisis · operaciones/urea-analisis
-- [ ] operaciones/combustible-estaciones · operaciones/combustible-matriz
+- [x] operaciones/combustible-vales · operaciones/marsisa-combustible-vales *(en /app: lista con filtros por estado, combustible, fechas y búsqueda que llega al servidor (placa, proveedor, estación, viaje, conductor); importación desde Excel; sincronización con MarsisaSoft solo en el dominio Marsisa. Verificado en navegador 2026-10-16 con datos simulados)*
+- [x] operaciones/combustible-analisis · operaciones/urea-analisis *(en /app: análisis de viajes por producto (combustible y urea) con tabla de viajes y auditoría. Verificado en navegador con datos simulados; los KPI de galones no quedaron confirmados en la prueba)*
+- [x] operaciones/combustible-matriz *(en /app: se abre desde Análisis de combustible o directamente con ?matriz=1; el menú lleva ahí. Verificado en navegador)*
+- [ ] operaciones/combustible-estaciones *(sigue en el clásico)*
 - [ ] operaciones/guias-remision · operaciones/guia-remitente · operaciones/guia-transportista (SUNAT)
 - [ ] operaciones/conductor-portal · operaciones/conductor/portal ⚠️ (candidato a trabajo sin conexión)
 
