@@ -206,3 +206,269 @@
 .ot-check { display: flex; align-items: flex-start; gap: 8px; font-size: 0.875rem; cursor: pointer; }
 .ot-check input { margin-top: 3px; accent-color: var(--accent); width: 16px; height: 16px; }
 .ot-check small { color: var(--label-2); }
+
+/* ─── Dashboard Mantenimiento (Torre de Control) ─────────────────────────── */
+.mant-dash {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding-bottom: var(--s-8);
+}
+
+.mant-dash-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  background: var(--surface);
+  border-radius: var(--r-2xl);
+  border: 1px solid var(--separator);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+}
+
+.mant-dash-hero__base {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.mant-dash-hero__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--accent-tint);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.mant-dash-hero__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mant-dash-hero__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mant-dash-hero__sub {
+  font-size: 0.8125rem;
+  color: var(--label-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mant-pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--r-full);
+  background: var(--green-tint);
+  color: var(--green-ink);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mant-pulse__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green-ink);
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  animation: mant-pulse-anim 1.8s infinite;
+}
+
+@keyframes mant-pulse-anim {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.mant-clima-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: var(--r-full);
+  background: var(--fill-2);
+  border: 1px solid var(--separator);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.mant-clima-pill__temp {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: var(--label);
+}
+
+.mant-clima-pill__rango {
+  font-size: 0.75rem;
+  color: var(--label-2);
+  font-family: var(--font-mono);
+}
+
+/* Bento Grid */
+.mant-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--s-3);
+}
+
+.mant-col-12 { grid-column: span 12; }
+.mant-col-8  { grid-column: span 8; }
+.mant-col-7  { grid-column: span 7; }
+.mant-col-6  { grid-column: span 6; }
+.mant-col-5  { grid-column: span 5; }
+.mant-col-4  { grid-column: span 4; }
+.mant-col-3  { grid-column: span 3; }
+
+@media (max-width: 1024px) {
+  .mant-col-8, .mant-col-7, .mant-col-6, .mant-col-5, .mant-col-4, .mant-col-3 {
+    grid-column: span 12;
+  }
+}
+
+.mant-card {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  border: 1px solid var(--separator);
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  position: relative;
+  overflow: hidden;
+}
+
+.mant-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--separator);
+}
+
+.mant-card__title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--label-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mant-card__badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+}
+
+/* Tarjetas de Bahía / Rampa en vivo */
+.mant-bays {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  gap: var(--s-3);
+}
+
+.mant-bay {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--s-3) var(--s-4);
+  background: var(--fill-subtle);
+  border: 1px solid var(--separator);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+}
+.mant-bay:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.mant-bay--ocupada {
+  background: var(--surface);
+  border-left: 4px solid var(--bay-color, var(--accent));
+}
+.mant-bay--libre {
+  opacity: 0.75;
+  border-style: dashed;
+}
+.mant-bay--libre:hover {
+  opacity: 1;
+}
+
+.mant-bay__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.mant-bay__nombre {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--label-2);
+}
+.mant-bay__timer {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--label);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.mant-bay__chofer {
+  font-size: 0.75rem;
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mant-bay__situacion {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--label);
+  line-height: 1.25;
+}
+
+/* Keycap atajo */
+.mant-keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--fill-2);
+  border: 1px solid var(--separator);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--label-2);
+  margin-left: 4px;
+}
