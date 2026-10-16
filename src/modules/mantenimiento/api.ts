@@ -1,6 +1,7 @@
 // Mantenimiento: Órdenes de Trabajo, Trabajos OT, Status Rampa
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
+import type { VehiculoDisponibilidad } from '../flota/api';
 
 // ─── Órdenes de Trabajo ──────────────────────────────────────────────────────
 
@@ -34,6 +35,72 @@ export interface OrdenTrabajo {
   aprobacion: string | null;
   id_rampa: string | null;
   observaciones: string | null;
+  comentario_cierre?: string | null;
+  cerrado_por?: string | null;
+  rampa_origen?: string | null;
+  iniciado_por?: string | null;
+  costo_total_pen?: number | null;
+  // Hasta 3 pausas por OT (ordenes_trabajo.fecha_pausaN / fecha_fin_pausaN / motivo_pausaN / pausado_por N)
+  fecha_pausa1?: string | null; fecha_fin_pausa1?: string | null; motivo_pausa1?: string | null; pausado_por1?: string | null;
+  fecha_pausa2?: string | null; fecha_fin_pausa2?: string | null; motivo_pausa2?: string | null; pausado_por2?: string | null;
+  fecha_pausa3?: string | null; fecha_fin_pausa3?: string | null; motivo_pausa3?: string | null; pausado_por3?: string | null;
+}
+
+/** Motivos de pausa que se usan en el taller (el servidor acepta cualquier texto) */
+export const MOTIVOS_PAUSA = ['Falta de repuesto', 'Almuerzo', 'Esperando autorización', 'Fin de turno', 'Otro'] as const;
+
+/** Etiquetas del tablero: la OT recién ingresada (estado "Pendiente") se muestra como "Recepción" */
+export const FILTROS_OT = [
+  { clave: 'Todas', etiqueta: 'Todas', estados: null },
+  { clave: 'Recepción', etiqueta: 'Recepción', estados: ['Pendiente'] },
+  { clave: 'En Proceso', etiqueta: 'En proceso', estados: ['En Proceso'] },
+  { clave: 'Pausada', etiqueta: 'Pausada', estados: ['Pausada'] },
+  { clave: 'Finalizada', etiqueta: 'Finalizada', estados: ['Finalizado', 'Cerrada'] },
+  { clave: 'Anulada', etiqueta: 'Anulada', estados: ['Anulado'] },
+] as const;
+
+export function etiquetaEstado(estado: string): string {
+  if (estado === 'Pendiente') return 'Recepción';
+  if (estado === 'Cerrada') return 'Finalizada';
+  return estado;
+}
+
+export interface PausaOT {
+  n: number;
+  inicio: string;
+  fin: string | null;
+  motivo: string;
+  por: string | null;
+}
+
+/** Pausas registradas de la OT, en orden (la pausa en curso no tiene fin) */
+export function pausasDe(o: OrdenTrabajo): PausaOT[] {
+  const slots: Array<[number, string | null | undefined, string | null | undefined, string | null | undefined, string | null | undefined]> = [
+    [1, o.fecha_pausa1, o.fecha_fin_pausa1, o.motivo_pausa1, o.pausado_por1],
+    [2, o.fecha_pausa2, o.fecha_fin_pausa2, o.motivo_pausa2, o.pausado_por2],
+    [3, o.fecha_pausa3, o.fecha_fin_pausa3, o.motivo_pausa3, o.pausado_por3],
+  ];
+  return slots
+    .filter(([, inicio]) => !!inicio)
+    .map(([n, inicio, fin, motivo, por]) => ({
+      n, inicio: inicio as string, fin: fin ?? null, motivo: motivo || 'Sin motivo', por: por ?? null,
+    }));
+}
+
+/** 1 h 05 min 09 s → "01:05:09" (las horas pueden pasar de 24) */
+export function formatoDuracion(ms: number): string {
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+}
+
+/** Milisegundos de una pausa; si sigue en curso, cuenta hasta `ahora` */
+export function duracionPausa(p: PausaOT, ahora = Date.now()): number {
+  const ini = new Date(p.inicio.replace(' ', 'T')).getTime();
+  const fin = p.fin ? new Date(p.fin.replace(' ', 'T')).getTime() : ahora;
+  return Number.isNaN(ini) || Number.isNaN(fin) ? 0 : Math.max(0, fin - ini);
 }
 
 export function otId(o: OrdenTrabajo): string {
@@ -89,8 +156,112 @@ export function useOrdenesTrabajoData() {
   });
 }
 
-export async function ejecutarAccionOT(idOT: string, accion: AccionOT) {
-  return api(`/ordenes-trabajo/${encodeURIComponent(idOT)}`, { method: 'PUT', body: { accion } });
+/** `editar` no cambia el estado: actualiza datos de la OT (p. ej. el kilometraje) */
+export async function ejecutarAccionOT(idOT: string, accion: AccionOT | 'editar', extra: Record<string, unknown> = {}) {
+  return api(`/ordenes-trabajo/${encodeURIComponent(idOT)}`, { method: 'PUT', body: { accion, ...extra } });
+}
+
+/** Pausa la OT con su motivo (el servidor lo exige) y quien la pausa */
+export function pausarOT(idOT: string, motivo: string, pausadoPor: string) {
+  return ejecutarAccionOT(idOT, 'pausar', { motivo, pausado_por: pausadoPor });
+}
+
+// ─── Materiales despachados a la OT (salidas de almacén, valorizadas) ───────
+
+export interface MaterialSalida {
+  id: string;
+  fecha: string;
+  placa: string | null;
+  responsable: string | null;
+  moneda: string;
+  total_pen: number;
+  estado: string;
+  items: { descripcion: string; cantidad: number; costo_unitario: number; importe: number }[];
+}
+
+export function useMateriales(ticketOt?: string) {
+  return useQuery<MaterialSalida[]>({
+    queryKey: ['mant', 'ot-materiales', ticketOt],
+    queryFn: () => api<MaterialSalida[]>(`/taller/ot-materiales?ticket_ot=${encodeURIComponent(ticketOt ?? '')}`),
+    enabled: !!ticketOt,
+    staleTime: 30_000,
+  });
+}
+
+/** Trabajos (mano de obra) de una OT: se enlazan por su ticket de entrada o su id */
+export function trabajosDeOT(ot: OrdenTrabajo, trabajos: TrabajoOT[]): TrabajoOT[] {
+  const claves = new Set([ot.ticket_entrada, ot.id_ot].filter(Boolean) as string[]);
+  return trabajos.filter(t => !!t.ticket_visita && claves.has(t.ticket_visita));
+}
+
+/** Tiempos de la OT: bruto (inicio → salida, o hasta `ahora`), pausado y neto (bruto − pausas) */
+export function tiempoNetoOT(ot: OrdenTrabajo, ahora = Date.now()) {
+  if (!ot.fecha_inicio_ot) return { bruto: 0, pausado: 0, neto: 0, iniciado: false };
+  const inicio = new Date(ot.fecha_inicio_ot.replace(' ', 'T')).getTime();
+  const fin = ot.fecha_hora_salida ? new Date(ot.fecha_hora_salida.replace(' ', 'T')).getTime() : ahora;
+  const bruto = Number.isNaN(inicio) || Number.isNaN(fin) ? 0 : Math.max(0, fin - inicio);
+  const pausado = Math.min(bruto, pausasDe(ot).reduce((s, p) => s + duracionPausa(p, ahora), 0));
+  return { bruto, pausado, neto: bruto - pausado, iniciado: true };
+}
+
+/** Fecha y hora en el formato que acepta MySQL (YYYY-MM-DD HH:MM:SS) */
+const fechaMysql = (s: string | null | undefined) => (s ? s.replace('T', ' ').slice(0, 19) : null);
+
+/** Marca un trabajo de la OT como realizado o pendiente (checklist de avance) sin tocar sus demás datos */
+export function marcarTrabajo(t: TrabajoOT, realizado: boolean) {
+  return editarTrabajo(trabajoId(t), {
+    trabajo_realizado: t.trabajo_realizado ?? '',
+    fecha_trabajo: fechaMysql(t.fecha_trabajo),
+    fecha_salida: fechaMysql(t.fecha_salida),
+    personal: t.tecnico ?? '',
+    costo: trabajoCosto(t),
+    estado: realizado ? 'Realizado' : 'Pendiente',
+  });
+}
+
+/** Inspecciones enlazadas a la OT (ids) */
+export function useInspeccionesDeOT(idOt: string) {
+  return useQuery<string[]>({
+    queryKey: ['mant', 'inspecciones-ot', idOt],
+    enabled: !!idOt,
+    staleTime: 60_000,
+    queryFn: () => api<Array<{ id?: unknown }>>(`/inspecciones-por-ot?id_ot=${encodeURIComponent(idOt)}`)
+      .then(rows => (Array.isArray(rows) ? rows : []).map(r => String(r.id ?? '')).filter(Boolean)),
+  });
+}
+
+/**
+ * Pone la unidad "En Base" si tiene un registro guardado en Disponibilidad. El guardado reemplaza
+ * todos los campos, así que se reenvía el registro completo. Sin registro guardado, el estado se
+ * deriva solo de las rampas y OT (devuelve 'derivada').
+ */
+export async function marcarDisponibilidadEnBase(placa: string, usuario: string): Promise<'actualizada' | 'derivada'> {
+  const r = await api<unknown>('/disponibilidad-flota');
+  const lista = Array.isArray(r) ? r as VehiculoDisponibilidad[] : ((r as { data?: VehiculoDisponibilidad[] }).data ?? []);
+  const clave = placa.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const reg = lista.find(v => v.id != null && [v.placa_camion, v.placa_carreta].some(p => (p ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '') === clave));
+  if (!reg) return 'derivada';
+  await api('/disponibilidad-flota', {
+    method: 'POST',
+    body: {
+      id: reg.id, placa_camion: reg.placa_camion, placa_carreta: reg.placa_carreta,
+      conductor_asignado: reg.conductor_asignado, marca: reg.marca, capacidad_tanque: reg.capacidad_tanque,
+      tipo_unidad: reg.tipo_unidad, observaciones: reg.observaciones, estado: 'En Base', actualizado_por: usuario,
+    },
+  });
+  return 'actualizada';
+}
+
+/**
+ * Costos de la OT. El total lo calcula el servidor (lista de OT); mano de obra y repuestos
+ * se suman aquí a partir de los trabajos y las salidas de almacén. "Otros" es lo que queda
+ * del total (servicios externos, materiales directos).
+ */
+export function costosOT(ot: OrdenTrabajo, trabajos: TrabajoOT[], materiales: MaterialSalida[]) {
+  const manoObra = trabajosDeOT(ot, trabajos).reduce((s, t) => s + trabajoCosto(t), 0);
+  const repuestos = materiales.filter(m => m.estado !== 'Anulado').reduce((s, m) => s + Number(m.total_pen || 0), 0);
+  const total = Number(ot.costo_total ?? 0);
+  return { manoObra, repuestos, otros: Math.max(0, total - manoObra - repuestos), total };
 }
 
 export async function eliminarOT(idOT: string) {

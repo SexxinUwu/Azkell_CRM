@@ -2,10 +2,11 @@ import './mant.css';
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ArrowUpRight, BookOpen, Package, Plus, ScrollText, SearchX, Wrench } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, BookOpen, Plus, ScrollText, SearchX, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { ChoiceChips } from '../../core/ui/Chips';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { MenuOtros } from '../../core/ui/MenuOtros';
@@ -16,11 +17,13 @@ import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import {
-  accionesDisponibles, ejecutarAccionOT, eliminarOT,
+  ejecutarAccionOT, eliminarOT, etiquetaEstado, FILTROS_OT,
   estadoColor, otDetalles, otFecha, otId, otTipo,
   useOrdenesTrabajoData,
   type AccionOT, type OrdenTrabajo,
 } from './api';
+import { ETIQUETA_ACCION, OTDetalle } from './OTDetalle';
+import { useInspecciones, clavePlaca } from '../inspecciones/api';
 
 // ─── Tipos adicionales ────────────────────────────────────────────────────────
 
@@ -35,17 +38,6 @@ interface BacklogItem {
   fecha_reporte: string | null;
   estado: string;
   ticket_ot: string | null;
-}
-
-interface MaterialSalida {
-  id: string;
-  fecha: string;
-  placa: string | null;
-  responsable: string | null;
-  moneda: string;
-  total_pen: number;
-  estado: string;
-  items: { descripcion: string; cantidad: number; costo_unitario: number; importe: number }[];
 }
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
@@ -77,29 +69,9 @@ function useBacklog(placa?: string) {
   });
 }
 
-function useMateriales(ticketOt?: string) {
-  return useQuery<MaterialSalida[]>({
-    queryKey: ['mant', 'ot-materiales', ticketOt],
-    queryFn: () => api<MaterialSalida[]>(`/taller/ot-materiales?ticket_ot=${encodeURIComponent(ticketOt ?? '')}`),
-    enabled: !!ticketOt,
-    staleTime: 30_000,
-  });
-}
-
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const ETIQUETA_ACCION: Record<AccionOT, string> = {
-  iniciar:   'Iniciar OT',
-  pausar:    'Pausar',
-  reanudar:  'Reanudar',
-  cerrar:    'Cerrar',
-  anular:    'Anular',
-  reactivar: 'Reactivar',
-};
-
-const FILTROS_ESTADO = ['Todas', 'Pendiente', 'En Proceso', 'Pausada', 'Finalizado', 'Cerrada', 'Anulado'] as const;
-
-const TIPOS_OT  = ['Correctivo', 'Preventivo', 'Predictivo', 'Emergencia', 'Inspección', 'Otro'];
+const TIPOS_OT  = ['Correctivo', 'Preventivo', 'Predictivo', 'Auxilio Ruta', 'Emergencia', 'Inspección', 'Otro'];
 const TABS_MAIN = ['OTs', 'Backlog'] as const;
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -135,6 +107,8 @@ export function OrdenesTrabajoPage() {
   const [nSituacion, setNSituacion]   = useState('');
   const [nFecha, setNFecha]     = useState(() => new Date().toISOString().split('T')[0]);
   const [nObs, setNObs]         = useState('');
+  const [nRampa, setNRampa]     = useState('');
+  const [nBacklog, setNBacklog] = useState<number[]>([]);
 
   // Modal crear backlog
   const [modalBK, setModalBK]   = useState(false);
@@ -147,8 +121,45 @@ export function OrdenesTrabajoPage() {
 
   const ots = data ?? [];
 
+  // Datos para el formulario de Nueva OT: inspecciones, averías pendientes de la placa elegida
+  const { data: inspecciones } = useInspecciones();
+  const { data: backlogPlaca = [] } = useBacklog(nPlaca || undefined);
+  const pendientesPlaca = backlogPlaca.filter(b => b.estado === 'Pendiente' && !b.ticket_ot);
+
+  /** Último kilometraje conocido de la placa: la inspección o la OT más reciente */
+  function kmSugerido(placa: string): { km: number; fuente: string } | null {
+    const clave = clavePlaca(placa);
+    if (!clave) return null;
+    const candidatos: Array<{ km: number; fecha: number; fuente: string }> = [];
+    (inspecciones ?? []).forEach(i => {
+      if (clavePlaca(i.placa) === clave && i.km && i.fecha) candidatos.push({ km: i.km, fecha: i.fecha.getTime(), fuente: `inspección ${i.id}` });
+    });
+    ots.forEach(o => {
+      const km = Number(otDetalles(o).km) || 0;
+      const fecha = Date.parse(otFecha(o));
+      if (clavePlaca(o.placa) === clave && km > 0 && !Number.isNaN(fecha)) candidatos.push({ km, fecha, fuente: `OT ${otId(o)}` });
+    });
+    // Más reciente primero; a igual fecha, el kilometraje mayor (el odómetro no baja)
+    candidatos.sort((a, b) => b.fecha - a.fecha || b.km - a.km);
+    return candidatos[0] ? { km: candidatos[0].km, fuente: candidatos[0].fuente } : null;
+  }
+  const sugerenciaKm = nPlaca ? kmSugerido(nPlaca) : null;
+
+  function elegirPlaca(placa: string) {
+    setNPlaca(placa);
+    setNBacklog([]);
+    const sug = kmSugerido(placa);
+    if (sug && !nKm) setNKm(String(sug.km));
+  }
+
+  const estadosFiltro: readonly string[] | null = FILTROS_OT.find(f => f.clave === filtroEstado)?.estados ?? null;
+  const conteoFiltro = (clave: string) => {
+    const f = FILTROS_OT.find(x => x.clave === clave);
+    return f?.estados ? ots.filter(o => (f.estados as readonly string[]).includes(o.estado)).length : ots.length;
+  };
+
   const visibles = useMemo(() => ots.filter(o => {
-    const passEstado = filtroEstado === 'Todas' || o.estado === filtroEstado;
+    const passEstado = !estadosFiltro || estadosFiltro.includes(o.estado);
     if (!passEstado) return false;
     if (!busqueda) return true;
     const q = busqueda.toUpperCase();
@@ -216,13 +227,26 @@ export function OrdenesTrabajoPage() {
           tecnico:       nTecnico || undefined,
           supervisor:    nSupervisor || undefined,
           observaciones: nObs || undefined,
+          id_rampa:      nRampa ? Number(nRampa) : undefined,
         },
       });
       if (res?.ok) {
-        toast(`OT ${res.id_ot} creada`);
+        // Averías importadas del backlog: quedan enlazadas a la nueva OT y en curso
+        const importados = pendientesPlaca.filter(b => nBacklog.includes(b.id));
+        const resultados = await Promise.allSettled(importados.map(b =>
+          api(`/ot-backlog/${b.id}`, {
+            method: 'PUT',
+            body: { placa: b.placa, tarea: b.tarea, tema: b.tema ?? '', km: b.km ?? 0, reportado_por: b.reportado_por ?? '', ticket_ot: res.id_ot, estado: 'En Progreso' },
+          })));
+        const fallidos = resultados.filter(r => r.status === 'rejected').length;
+        const ok = importados.length - fallidos;
+        toast(`OT ${res.id_ot} creada${ok ? ` · ${ok} avería${ok === 1 ? '' : 's'} importada${ok === 1 ? '' : 's'}` : ''}${fallidos ? ` · ${fallidos} sin importar` : ''}`, fallidos ? 'error' : undefined);
         haptic('success');
         setModalOT(false);
+        setNBacklog([]);
+        setNRampa('');
         qc.invalidateQueries({ queryKey: ['mant', 'ots'] });
+        qc.invalidateQueries({ queryKey: ['mant', 'ot-backlog'] });
       }
     } catch (e) {
       toast(errorMessage(e), 'error');
@@ -260,7 +284,9 @@ export function OrdenesTrabajoPage() {
   const puedeEditar  = can('ot.e') || can('reportes_ot.e');
   const puedeEliminar = can('ot.d') || can('reportes_ot.d');
   const puedeCrear   = can('ot.c') || can('reportes_ot.c') || can('admin');
-  const soloDetalle  = !!seleccionada;
+  // Se busca la OT en los datos actuales: el detalle refleja pausas y cierres tras cada acción
+  const otActual = seleccionada ? (ots.find(o => otId(o) === otId(seleccionada)) ?? seleccionada) : null;
+  const soloDetalle  = !!otActual;
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -294,14 +320,14 @@ export function OrdenesTrabajoPage() {
 
       {isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
-      ) : soloDetalle ? (
+      ) : otActual ? (
         <OTDetalle
-          ot={seleccionada}
+          ot={otActual}
           onVolver={() => setSeleccionada(null)}
           puedeEditar={puedeEditar}
           puedeEliminar={puedeEliminar}
-          onAccion={(accion) => setConfirmando({ accion, ot: seleccionada })}
-          onEliminar={() => setEliminando(seleccionada)}
+          onAccion={(accion) => setConfirmando({ accion, ot: otActual })}
+          onEliminar={() => setEliminando(otActual)}
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
@@ -324,19 +350,12 @@ export function OrdenesTrabajoPage() {
             <>
               <SearchField value={busqueda} onChange={setBusqueda} placeholder="OT, placa, técnico…" />
 
-              <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
-                {FILTROS_ESTADO.map(e => (
-                  <button key={e} type="button" onClick={() => setFiltroEstado(e)}
-                    style={{
-                      padding: '0.25rem 0.75rem', borderRadius: 'var(--r-full)', fontSize: '0.8125rem',
-                      fontWeight: 600, border: 'none', cursor: 'pointer',
-                      background: filtroEstado === e ? 'var(--ink)' : 'var(--fill)',
-                      color: filtroEstado === e ? 'var(--label-inverse)' : 'var(--label-2)',
-                    }}>
-                    {e}
-                  </button>
-                ))}
-              </div>
+              <ChoiceChips<string>
+                label="Estado de la OT"
+                value={filtroEstado}
+                onChange={setFiltroEstado}
+                options={FILTROS_OT.map(f => ({ value: f.clave, label: `${f.etiqueta} · ${conteoFiltro(f.clave)}` }))}
+              />
 
               {visibles.length === 0 ? (
                 <EmptyState icon={busqueda || filtroEstado !== 'Todas' ? <SearchX size={22} /> : <ScrollText size={22} />}
@@ -363,7 +382,7 @@ export function OrdenesTrabajoPage() {
                               </span>
                             </div>
                             <div className="ot-fila__derecha">
-                              <span className={`ot-estado ot-estado--${col}`}>{o.estado}</span>
+                              <span className={`ot-estado ot-estado--${col}`}>{etiquetaEstado(o.estado)}</span>
                               <span className="ot-fila__fecha">{otFecha(o)}</span>
                               {o.costo_total != null && (
                                 <span className="ot-fila__costo">S/ {Number(o.costo_total).toFixed(2)}</span>
@@ -398,15 +417,14 @@ export function OrdenesTrabajoPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Placa */}
           <SimpleLabel label="Placa *">
-            <PlacaPicker value={nPlaca} onChange={setNPlaca} opciones={(placas ?? []).map(p => ({ placa: p }))} />
+            <PlacaPicker value={nPlaca} onChange={elegirPlaca} opciones={(placas ?? []).map(p => ({ placa: p }))} />
           </SimpleLabel>
 
           {/* Tipo y subtipo */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <SimpleLabel label="Tipo de OT">
-              <SelectInput value={nTipoOT} onChange={e => setNTipoOT(e.target.value)}>
-                {TIPOS_OT.map(t => <option key={t} value={t}>{t}</option>)}
-              </SelectInput>
+              <ChoiceChips<string> label="Tipo de OT" value={nTipoOT} onChange={setNTipoOT}
+                options={TIPOS_OT.map(t => ({ value: t, label: t }))} />
             </SimpleLabel>
             <SimpleLabel label="Sub-tipo">
               <TextInput value={nSubTipo} onChange={e => setNSubTipo(e.target.value)} placeholder="Ej. Cambio de aceite" />
@@ -422,6 +440,12 @@ export function OrdenesTrabajoPage() {
               <TextInput type="number" value={nHoras} onChange={e => setNHoras(e.target.value)} placeholder="0" min="0" />
             </SimpleLabel>
           </div>
+
+          {sugerenciaKm && (
+            <p className="t-footnote c-secondary" style={{ marginTop: -6 }}>
+              Último registro de la unidad: {sugerenciaKm.km.toLocaleString('es-PE')} km ({sugerenciaKm.fuente}). Puedes cambiarlo.
+            </p>
+          )}
 
           {/* Técnico / Supervisor */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -447,6 +471,32 @@ export function OrdenesTrabajoPage() {
               <TextInput type="date" value={nFecha} onChange={e => setNFecha(e.target.value)} />
             </SimpleLabel>
           </div>
+
+          {/* Asignación de rampa */}
+          <SimpleLabel label="Rampa asignada">
+            <SelectInput value={nRampa} onChange={e => setNRampa(e.target.value)}>
+              <option value="">Sin rampa por ahora</option>
+              {(catsTaller?.rampas ?? []).map(r => (
+                <option key={r.id} value={String(r.id)}>{r.rampa}</option>
+              ))}
+            </SelectInput>
+          </SimpleLabel>
+
+          {/* Averías pendientes del backlog de la unidad: se importan a la OT con un clic */}
+          {nPlaca && pendientesPlaca.length > 0 && (
+            <div className="ot-form__bloque">
+              <span className="ot-form__etiqueta">Averías pendientes de esta unidad · {nBacklog.length} de {pendientesPlaca.length} importadas</span>
+              <div className="ot-form__lista">
+                {pendientesPlaca.map(b => (
+                  <label key={b.id} className="ot-check">
+                    <input type="checkbox" checked={nBacklog.includes(b.id)}
+                      onChange={e => setNBacklog(prev => (e.target.checked ? [...prev, b.id] : prev.filter(x => x !== b.id)))} />
+                    <span>{b.tarea}{b.tema ? <small> · {b.tema}</small> : null}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Observaciones */}
           <SimpleLabel label="Observaciones">
@@ -618,166 +668,6 @@ function BacklogTab({ onCrear, qc, toast }: { onCrear: () => void; qc: ReturnTyp
           })}
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── Detalle de OT ───────────────────────────────────────────────────────────
-
-interface DetalleProps {
-  ot: OrdenTrabajo;
-  onVolver: () => void;
-  puedeEditar: boolean;
-  puedeEliminar: boolean;
-  onAccion: (a: AccionOT) => void;
-  onEliminar: () => void;
-}
-
-function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, onEliminar }: DetalleProps) {
-  const acciones  = accionesDisponibles(ot.estado);
-  const col       = estadoColor(ot.estado);
-  const det       = otDetalles(ot);
-  const idOt      = otId(ot);
-
-  const { data: materiales, isLoading: loadMat } = useMateriales(idOt);
-
-  const opcionesOtros = [
-    ...acciones
-      .filter(a => a !== 'iniciar')
-      .map(a => ({
-        label: ETIQUETA_ACCION[a],
-        destructiva: a === 'anular',
-        separado: a === 'anular',
-        onSelect: () => onAccion(a),
-      })),
-    puedeEliminar && ot.estado === 'Anulado' && {
-      label: 'Eliminar',
-      destructiva: true,
-      separado: true,
-      onSelect: onEliminar,
-    },
-    {
-      label: 'Abrir en versión actual',
-      icon: <ArrowUpRight size={15} />,
-      onSelect: () => abrirClasico('mantenimiento/reportes-ot'),
-    },
-  ].filter(Boolean) as Parameters<typeof MenuOtros>[0]['opciones'];
-
-  const totalMat = (materiales ?? []).reduce((s, m) => s + Number(m.total_pen || 0), 0);
-
-  return (
-    <div className="ot-ficha">
-      <div className="tarjeta__barra">
-        <button type="button" className="tarjeta__volver" onClick={onVolver}>
-          <span style={{ fontSize: '1.2rem' }}>‹</span> Órdenes
-        </button>
-        <div className="tarjeta__barra-acciones">
-          {puedeEditar && acciones.includes('iniciar') && (
-            <Button variant="primary" size="sm" onClick={() => onAccion('iniciar')}>
-              Iniciar OT
-            </Button>
-          )}
-          {opcionesOtros.length > 0 && <MenuOtros opciones={opcionesOtros} />}
-        </div>
-      </div>
-
-      <div className="ot-ficha__hero">
-        <span className={`ot-estado ot-estado--${col}`} style={{ fontSize: '0.75rem' }}>{ot.estado}</span>
-        <h2 className="ot-ficha__placa">{ot.placa}</h2>
-        <span className="ot-ficha__id">{idOt}</span>
-      </div>
-
-      <div>
-        <p className="tarjeta__grupo-titulo">General</p>
-        <div className="tarjeta__lista">
-          {det.tipo_ot && <div className="dato"><span className="dato__label">Tipo</span><span className="dato__valor">{det.tipo_ot}</span></div>}
-          {det.sub_tipo && <div className="dato"><span className="dato__label">Sub-tipo</span><span className="dato__valor">{det.sub_tipo}</span></div>}
-          {ot.tecnico && <div className="dato"><span className="dato__label">Técnico</span><span className="dato__valor">{ot.tecnico}</span></div>}
-          {ot.supervisor && <div className="dato"><span className="dato__label">Supervisor</span><span className="dato__valor">{ot.supervisor}</span></div>}
-          {ot.situacion && <div className="dato"><span className="dato__label">Situación</span><span className="dato__valor">{ot.situacion}</span></div>}
-          {ot.aprobacion && <div className="dato"><span className="dato__label">Aprobación</span><span className="dato__valor">{ot.aprobacion}</span></div>}
-        </div>
-      </div>
-
-      <div>
-        <p className="tarjeta__grupo-titulo">Datos técnicos</p>
-        <div className="tarjeta__lista">
-          {(det.km || det.horas_motor) && (
-            det.horas_motor
-              ? <div className="dato"><span className="dato__label">Horas motor</span><span className="dato__valor dato__valor--mono">{String(det.horas_motor)}</span></div>
-              : <div className="dato"><span className="dato__label">Kilómetros</span><span className="dato__valor dato__valor--mono">{String(det.km)}</span></div>
-          )}
-          {ot.id_rampa && <div className="dato"><span className="dato__label">Rampa</span><span className="dato__valor dato__valor--mono">{ot.id_rampa}</span></div>}
-          {ot.costo_total != null && (
-            <div className="dato"><span className="dato__label">Costo total</span><span className="dato__valor" style={{ fontWeight: 700 }}>S/ {Number(ot.costo_total).toFixed(2)}</span></div>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <p className="tarjeta__grupo-titulo">Fechas</p>
-        <div className="tarjeta__lista">
-          {otFecha(ot) !== '—' && <div className="dato"><span className="dato__label">Ingreso</span><span className="dato__valor dato__valor--mono">{otFecha(ot)}</span></div>}
-          {ot.fecha_inicio_ot && <div className="dato"><span className="dato__label">Inicio</span><span className="dato__valor dato__valor--mono">{ot.fecha_inicio_ot.split('T')[0]}</span></div>}
-          {ot.fecha_hora_salida && <div className="dato"><span className="dato__label">Salida</span><span className="dato__valor dato__valor--mono">{ot.fecha_hora_salida.split('T')[0]}</span></div>}
-        </div>
-      </div>
-
-      {ot.observaciones && (
-        <div>
-          <p className="tarjeta__grupo-titulo">Observaciones</p>
-          <div className="tarjeta__lista">
-            <div className="dato"><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{ot.observaciones}</span></div>
-          </div>
-        </div>
-      )}
-
-      {/* Materiales despachados */}
-      <div>
-        <p className="tarjeta__grupo-titulo" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Package size={14} /> Materiales despachados
-          {totalMat > 0 && <span style={{ marginLeft: 'auto', fontWeight: 700, color: 'var(--accent)' }}>S/ {totalMat.toFixed(2)}</span>}
-        </p>
-        {loadMat ? (
-          <div style={{ padding: '8px 0', color: 'var(--label-3)', fontSize: '0.85rem' }}>Cargando…</div>
-        ) : !materiales || materiales.length === 0 ? (
-          <div style={{ padding: '8px 0', color: 'var(--label-3)', fontSize: '0.85rem' }}>Sin materiales registrados en esta OT</div>
-        ) : (
-          <div className="tarjeta__lista" style={{ overflowX: 'auto' }}>
-            {materiales.map(sal => (
-              <div key={sal.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--separator)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--accent)' }}>{sal.id}</span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--label-2)' }}>{sal.fecha} · {sal.estado}</span>
-                  <span style={{ fontWeight: 700, fontSize: '0.875rem' }}>S/ {Number(sal.total_pen).toFixed(2)}</span>
-                </div>
-                {sal.items.length > 0 && (
-                  <table style={{ width: '100%', fontSize: '0.78rem', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ color: 'var(--label-3)' }}>
-                        <th style={{ textAlign: 'left', paddingBottom: 4 }}>Repuesto / Insumo</th>
-                        <th style={{ textAlign: 'right', paddingBottom: 4 }}>Cant.</th>
-                        <th style={{ textAlign: 'right', paddingBottom: 4 }}>C.Unit.</th>
-                        <th style={{ textAlign: 'right', paddingBottom: 4 }}>Importe</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sal.items.map((it, idx) => (
-                        <tr key={idx}>
-                          <td style={{ padding: '2px 0' }}>{it.descripcion || '—'}</td>
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{it.cantidad}</td>
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--label-2)' }}>S/ {Number(it.costo_unitario).toFixed(2)}</td>
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>S/ {Number(it.importe).toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

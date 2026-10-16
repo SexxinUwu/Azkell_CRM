@@ -128,3 +128,81 @@
 @media (max-width: 639px) {
   .sr-grid { grid-template-columns: 1fr; }
 }
+
+/* ─── Detalle de OT: total, pausa en curso, cronómetro y filas de mano de obra / pausas ─── */
+.ot-ficha__total { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; color: var(--label); font-variant-numeric: tabular-nums; }
+.ot-pausa-activa {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4); border-radius: 14px;
+  background: var(--amber-tint); color: var(--amber-ink);
+}
+.ot-pausa-activa__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 0.875rem; }
+.ot-pausa-activa__texto span { font-size: 0.75rem; opacity: 0.85; }
+.ot-cronometro { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ot-linea { display: flex; align-items: center; gap: var(--s-3); padding: 10px 0; border-bottom: 1px solid var(--separator); }
+.ot-linea:last-child { border-bottom: none; }
+.ot-linea__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ot-linea__titulo { font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere; }
+.ot-linea__sub { font-size: 0.75rem; color: var(--label-2); }
+.ot-linea__importe { font-size: 0.875rem; font-weight: 700; font-family: var(--font-mono); white-space: nowrap; }
+
+/* ─── Ficha de OT: acciones rápidas, checklist, tiempos, costos (bento) ─── */
+.ot-acciones { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
+.ot-enlace {
+  display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border: none; border-radius: var(--r-full);
+  background: var(--accent-tint); color: var(--accent); font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+}
+.ot-progreso { margin-left: auto; font-weight: 700; color: var(--accent); font-size: 0.8125rem; }
+.ot-check-tarea {
+  flex-shrink: 0; width: 24px; height: 24px; border-radius: 8px; border: 1.5px solid var(--label-3);
+  background: var(--surface); color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  font-weight: 700; font-size: 0.8125rem;
+}
+.ot-check-tarea--ok { background: var(--green-ink); border-color: var(--green-ink); }
+.ot-check-tarea:disabled { opacity: 0.5; cursor: default; }
+.ot-linea__titulo--hecho { text-decoration: line-through; color: var(--label-2); }
+
+.ot-bento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); }
+.ot-bento__card {
+  display: flex; flex-direction: column; gap: 4px; padding: var(--s-3) var(--s-4);
+  background: var(--surface); border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+.ot-bento__card--grande { grid-column: 1 / -1; }
+.ot-bento__card--total { grid-column: 1 / -1; background: var(--ink); color: var(--label-inverse); }
+.ot-bento__card--total .ot-bento__etiqueta, .ot-bento__card--total .ot-bento__pie { color: inherit; opacity: 0.75; }
+.ot-bento__etiqueta { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--label-2); }
+.ot-bento__valor { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+.ot-bento__card--grande .ot-bento__valor { font-size: 2rem; }
+.ot-bento__valor--total { font-size: 1.75rem; }
+.ot-bento__pie { font-size: 0.75rem; color: var(--label-2); }
+
+.ot-timeline { list-style: none; margin: 0; padding: 0 0 0 6px; border-left: 2px solid var(--separator); display: flex; flex-direction: column; gap: var(--s-3); }
+.ot-timeline__item { position: relative; display: flex; align-items: center; gap: var(--s-3); padding-left: 14px; }
+.ot-timeline__punto {
+  position: absolute; left: -7px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--surface); border: 2px solid var(--label-3);
+}
+.ot-timeline__item--inicio .ot-timeline__punto { border-color: var(--green-ink); }
+.ot-timeline__item--activa .ot-timeline__punto { border-color: var(--amber-ink); background: var(--amber-tint); }
+.ot-timeline__item--fin .ot-timeline__punto { border-color: var(--accent); background: var(--accent); }
+.ot-timeline__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ot-timeline__titulo { font-size: 0.875rem; font-weight: 600; }
+.ot-timeline__sub { font-size: 0.75rem; color: var(--label-2); }
+
+.ot-tabla-mat { width: 100%; font-size: 0.78rem; border-collapse: collapse; }
+.ot-tabla-mat th { text-align: left; padding-bottom: 4px; color: var(--label-3); font-weight: 600; }
+.ot-tabla-mat td { padding: 2px 0; }
+.ot-tabla-mat .num { text-align: right; font-family: var(--font-mono); }
+.ot-tabla-mat .strong { font-weight: 600; }
+.ot-tabla-mat .c-secondary { color: var(--label-2); }
+
+.ot-form { display: flex; flex-direction: column; gap: var(--s-3); }
+.ot-form__campo { display: flex; flex-direction: column; gap: 4px; }
+.ot-form__etiqueta { font-size: 0.8rem; font-weight: 600; color: var(--label-2); }
+.ot-form__bloque { display: flex; flex-direction: column; gap: 6px; }
+.ot-form__lista { display: flex; flex-direction: column; gap: 6px; padding: var(--s-2) var(--s-3); background: var(--fill-subtle); border-radius: 12px; }
+.ot-form__opciones { display: flex; flex-direction: column; gap: var(--s-2); }
+.ot-form__avisos { margin: 6px 0 0; padding-left: 18px; }
+.ot-check { display: flex; align-items: flex-start; gap: 8px; font-size: 0.875rem; cursor: pointer; }
+.ot-check input { margin-top: 3px; accent-color: var(--accent); width: 16px; height: 16px; }
+.ot-check small { color: var(--label-2); }
