@@ -1485,7 +1485,7 @@ module.exports = (db, logAudit) => {
             ORDER BY total_flota DESC
         `;
 
-        db.query(sqlEmpresas, (errEmp, empRows) => {
+        getDb(req).query(sqlEmpresas, (errEmp, empRows) => {
             if (errEmp) {
                 console.warn('Advertencia stats empresas:', errEmp.message);
                 return res.json({ global: { total_flota: 0, total_actas: 0, hoy: 0 }, empresas: [] });
@@ -1501,7 +1501,7 @@ module.exports = (db, logAudit) => {
                 GROUP BY COALESCE(empresa, 'MARSISA')
             `;
 
-            db.query(sqlEntregas, (errEnt, entRows) => {
+            getDb(req).query(sqlEntregas, (errEnt, entRows) => {
                 const entMap = {};
                 if (!errEnt && entRows) {
                     entRows.forEach(r => {
@@ -1552,7 +1552,7 @@ module.exports = (db, logAudit) => {
     router.get('/seguridad/entrega-vehiculos/next-folio', (req, res) => {
         const year = new Date().getFullYear();
         const prefix = `ENT-${year}-`;
-        db.query(
+        getDb(req).query(
             `SELECT id, numero_inventario FROM seg_entrega_vehiculos WHERE id LIKE ? OR numero_inventario LIKE ? ORDER BY id DESC LIMIT 1`,
             [prefix + '%', prefix + '%'],
             (err, rows) => {
@@ -1582,7 +1582,7 @@ module.exports = (db, logAudit) => {
             WHERE p.placa = ? OR REPLACE(p.placa, '-', '') = ? LIMIT 1
         `;
         const cleanP = p.replace(/[^A-Z0-9]/g, '');
-        db.query(sql, [p, cleanP], (err, rows) => {
+        getDb(req).query(sql, [p, cleanP], (err, rows) => {
             if (err) {
                 console.error('Error placa-detalle:', err.message);
                 return res.status(500).json({ error: err.message });
@@ -1599,7 +1599,7 @@ module.exports = (db, logAudit) => {
                 ORDER BY fecha DESC, id DESC 
                 LIMIT 1
             `;
-            db.query(sqlGps, [cleanP, p, wName], (errGps, gpsRows) => {
+            getDb(req).query(sqlGps, [cleanP, p, wName], (errGps, gpsRows) => {
                 let km = 0;
                 if (!errGps && gpsRows && gpsRows.length && gpsRows[0].km_gps > 0) {
                     km = Math.round(gpsRows[0].km_gps);
@@ -1607,7 +1607,7 @@ module.exports = (db, logAudit) => {
 
                 // 2. Si no hay snapshot GPS, buscar en seg_unidades_registros o entregas previas
                 if (!km) {
-                    db.query(
+                    getDb(req).query(
                         `SELECT retorno_km, km_inicial FROM seg_unidades_registros WHERE placa_camion = ? ORDER BY id DESC LIMIT 1`,
                         [p],
                         (errKm, kmRows) => {
@@ -1615,7 +1615,7 @@ module.exports = (db, logAudit) => {
                                 km = kmRows[0].retorno_km || kmRows[0].km_inicial || 0;
                             }
                             if (!km) {
-                                db.query(
+                                getDb(req).query(
                                     `SELECT kilometraje FROM seg_entrega_vehiculos WHERE placa = ? AND kilometraje > 0 ORDER BY id DESC LIMIT 1`,
                                     [p],
                                     (errEnt, entRows) => {
@@ -1711,7 +1711,7 @@ module.exports = (db, logAudit) => {
         }
         sql += ' ORDER BY e.fecha DESC, e.creado_en DESC LIMIT 300';
 
-        db.query(sql, params, (err, rows) => {
+        getDb(req).query(sql, params, (err, rows) => {
             if (err) {
                 console.warn('Advertencia GET /seguridad/entrega-vehiculos:', err.message);
                 return res.json({ ok: true, data: [] });
@@ -1734,7 +1734,7 @@ module.exports = (db, logAudit) => {
             LEFT JOIN placas p ON p.placa = e.placa OR REPLACE(p.placa, '-', '') = REPLACE(e.placa, '-', '')
             WHERE e.id = ? LIMIT 1
         `;
-        db.query(sql, [req.params.id], (err, rows) => {
+        getDb(req).query(sql, [req.params.id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
             const r = rows[0];
@@ -1763,7 +1763,7 @@ module.exports = (db, logAudit) => {
 
         const year = new Date().getFullYear();
         const prefix = `ENT-${year}-`;
-        db.query(
+        getDb(req).query(
             `SELECT id FROM seg_entrega_vehiculos WHERE id LIKE ? ORDER BY id DESC LIMIT 1`,
             [prefix + '%'],
             (errSeq, seqRows) => {
@@ -1829,7 +1829,7 @@ module.exports = (db, logAudit) => {
                     usuarioCreacion
                 ];
 
-                db.query(sqlInsert, values, (errInsert) => {
+                getDb(req).query(sqlInsert, values, (errInsert) => {
                     if (errInsert) return res.status(500).json({ error: errInsert.message });
                     if (typeof logAudit === 'function') logAudit(usuarioCreacion, 'seguridad', 'CREÓ', 'Checklist Entrega de Vehículo ' + regId);
                     res.json({ ok: true, id: regId, message: 'Checklist de Entrega guardado exitosamente.' });
@@ -1892,7 +1892,7 @@ module.exports = (db, logAudit) => {
             id
         ];
 
-        db.query(sqlUpdate, values, (err, result) => {
+        getDb(req).query(sqlUpdate, values, (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!result.affectedRows) return res.status(404).json({ error: 'Registro no encontrado' });
             if (typeof logAudit === 'function') logAudit(usuarioEdicion, 'seguridad', 'MODIFICÓ', 'Checklist Entrega ' + id);
@@ -1903,7 +1903,7 @@ module.exports = (db, logAudit) => {
     // ── DELETE /seguridad/entrega-vehiculos/:id ───────────────────
     router.delete('/seguridad/entrega-vehiculos/:id', (req, res) => {
         const id = req.params.id;
-        db.query('DELETE FROM seg_entrega_vehiculos WHERE id = ?', [id], (err) => {
+        getDb(req).query('DELETE FROM seg_entrega_vehiculos WHERE id = ?', [id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true, message: 'Registro eliminado exitosamente.' });
         });
