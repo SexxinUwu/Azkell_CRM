@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Check, Download, Minus, Pencil, Share2, Wrench, X } from 'lucide-react';
+import { AlertTriangle, Check, Download, Minus, Pencil, Share2, Wrench, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -53,6 +53,9 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
     return c;
   }, [i]);
 
+  // Fallas en formato tabla (sistema, ítem, estado y observación), como en la versión actual
+  const fallasLista = useMemo(() => i?.puntos.filter(p => p.estado === 'FALLA') ?? [], [i]);
+
   const categorias = useMemo(() => {
     const g = new Map<string, PuntoRevisado[]>();
     i?.puntos.forEach(p => g.set(p.categoria, [...(g.get(p.categoria) ?? []), p]));
@@ -96,6 +99,7 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
   return (
     <>
       <Sheet
+        anclaAbajo
         open={!!inspeccion}
         onClose={onClose}
         title={i ? `Inspección ${i.id}` : 'Inspección'}
@@ -135,6 +139,25 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
               <div className="insp-resumen__item insp-resumen__item--falla"><AnimatedNumber value={conteo.FALLA} className="t-numeric" /><span>con falla</span></div>
               <div className="insp-resumen__item"><AnimatedNumber value={conteo.otros} className="t-numeric" /><span>sin datos</span></div>
             </div>
+
+            {fallasLista.length > 0 && (
+              <section className="ficha__grupo insp-fallas-tabla">
+                <div className="list__header insp-fallas-tabla__titulo"><AlertTriangle size={15} /> Detalle de fallas detectadas ({fallasLista.length})</div>
+                <div className="insp-tabla-fallas" role="table" aria-label="Fallas detectadas">
+                  <div className="insp-tabla-fallas__fila insp-tabla-fallas__fila--cab" role="row">
+                    <span role="columnheader">Sistema</span><span role="columnheader">Ítem / componente</span><span role="columnheader">Estado</span><span role="columnheader">Observación del técnico</span>
+                  </div>
+                  {fallasLista.map((p, n) => (
+                    <div key={n} className="insp-tabla-fallas__fila" role="row">
+                      <span role="cell"><span className="insp-tag">{p.categoria}</span></span>
+                      <span role="cell" className="insp-tabla-fallas__item">{p.item}</span>
+                      <span role="cell"><span className="insp-pill-falla"><X size={12} strokeWidth={3} /> FALLA</span></span>
+                      <span role="cell" className="insp-tabla-fallas__obs">{p.observacion || '—'}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {categorias.map(([cat, ps], k) => (
               <motion.section key={cat} className="ficha__grupo" initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: reduce ? 0 : 0.04 * k }}>
