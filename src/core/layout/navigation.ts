@@ -59,9 +59,9 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Operaciones',
     items: [
-      { key: 'programacion', label: 'Programación', clasico: 'operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision', 'guias_remision') },
+      { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision', 'guias_remision') },
       { key: 'ordenes-viaje', label: 'Órdenes de viaje', clasico: 'operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'guias_remision', 'op_guias_remision') },
-      { key: 'ordenes-servicio', label: 'Órdenes de servicio', clasico: 'operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'guias_remision') },
+      { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'guias_remision') },
       {
         key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [],
         children: [

@@ -1,5 +1,6 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowUpRight, CheckCircle2, CircleAlert, FileSpreadsheet, MapPin, Pencil, Play, Plus, RefreshCw, SearchX, Trash2, Truck,
@@ -85,7 +86,10 @@ export function OrdenesViajePage() {
   const [busqueda, setBusqueda] = useState('');
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState('');
-  const [abiertoId, setAbiertoId] = useState<string | null>(null);
+  // ?viaje=V-0001 abre la ficha de ese viaje (lo usa Programación); el parámetro se quita al abrirla
+  const [params, setParams] = useSearchParams();
+  const [abiertoId, setAbiertoId] = useState<string | null>(params.get('viaje'));
+  useEffect(() => { if (params.get('viaje')) setParams({}, { replace: true }); }, [params, setParams]);
   const [formulario, setFormulario] = useState<{ viaje: Viaje | null } | null>(null);
   const [accion, setAccion] = useState<{ tipo: 'iniciar' | 'finalizar'; viaje: Viaje } | null>(null);
   const [porEliminar, setPorEliminar] = useState<Viaje | null>(null);

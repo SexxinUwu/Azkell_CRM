@@ -1,13 +1,13 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowUpRight, CalendarDays, Truck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { CalendarDays, Plus, Truck } from 'lucide-react';
 import { PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { api, errorMessage } from '../../core/api/client';
-import { abrirClasico } from '../../core/layout/navigation';
 
 interface Viaje {
   viaje: string; fecha_viaje: string | null; conductor: string | null; placa_tracto: string | null; placa_remolque: string | null;
@@ -33,6 +33,7 @@ function etiquetaDia(k: string) {
 export function ProgramacionPage() {
   const [busqueda, setBusqueda] = useState('');
   const [verFinalizados, setVerFinalizados] = useState(false);
+  const navigate = useNavigate();
 
   const q = useQuery<Viaje[]>({
     queryKey: ['operaciones', 'programacion'],
@@ -61,7 +62,7 @@ export function ProgramacionPage() {
         actions={
           <MenuOtros opciones={[
             { label: verFinalizados ? 'Ocultar finalizados' : 'Mostrar finalizados', icon: <CalendarDays size={17} />, onSelect: () => setVerFinalizados(v => !v) },
-            { label: 'Crear o editar viajes', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('operaciones/ordenes-viaje') },
+            { label: 'Nuevo viaje', icon: <Plus size={17} />, separado: true, onSelect: () => navigate('/operaciones/ordenes-viaje') },
           ]} />
         }
       />
@@ -76,7 +77,7 @@ export function ProgramacionPage() {
             <h2 style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--label-2)', margin: '0 var(--s-3) var(--s-2)' }}>{etiquetaDia(k)} · {viajes.length}</h2>
             <div className="tarjeta__lista">
               {viajes.map(v => (
-                <div key={v.viaje} className="mov-fila">
+                <button key={v.viaje} type="button" className="mov-fila" onClick={() => navigate(`/operaciones/ordenes-viaje?viaje=${encodeURIComponent(v.viaje)}`)}>
                   <div className="mov-fila__icon" style={{ background: `var(--${color(v.estado)}-tint)`, color: `var(--${color(v.estado)}-ink)` }}><Truck size={16} /></div>
                   <div className="mov-fila__cuerpo">
                     <span className="mov-fila__titulo">{v.conductor || 'Sin conductor'} · {v.placa_tracto || '—'}{v.placa_remolque ? ` + ${v.placa_remolque}` : ''}</span>
@@ -85,7 +86,7 @@ export function ProgramacionPage() {
                   <div className="mov-fila__derecha">
                     <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${color(v.estado)}-ink)` }}>{v.estado}</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </section>
