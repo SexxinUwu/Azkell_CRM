@@ -4,7 +4,7 @@ import './disponibilidad.css';
 import './ubicacion.css';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowUpRight, Briefcase, ChevronLeft, MapPin, MessageCircle, Navigation, RefreshCw, Route, Truck, Wrench, X } from 'lucide-react';
+import { ArrowUpRight, Briefcase, ChevronDown, ChevronLeft, MapPin, MessageCircle, Navigation, RefreshCw, Route, Truck, Wrench, X } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -26,6 +26,15 @@ const CAPAS: Array<{ value: CapaMapa; label: string }> = [{ value: 'calle', labe
 const VISTAS: Array<{ value: 'lista' | 'mapa'; label: string }> = [{ value: 'lista', label: 'Lista' }, { value: 'mapa', label: 'Mapa' }];
 const CARDINALES = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
 
+// Segmento de la lista: los mismos filtros de estado que la versión actual
+type Segmento = 'todos' | 'senal' | 'movimiento' | 'ralenti' | 'detenido' | 'sin_senal';
+const SEGMENTOS: Array<{ value: Segmento; label: string }> = [
+  { value: 'todos', label: 'Todas' }, { value: 'senal', label: 'Con señal' }, { value: 'movimiento', label: 'En movimiento' },
+  { value: 'ralenti', label: 'Ralentí' }, { value: 'detenido', label: 'Detenido' }, { value: 'sin_senal', label: 'Sin señal' },
+];
+const coincideSegmento = (u: UnidadMapa, s: Segmento) =>
+  s === 'todos' || (s === 'senal' ? estadoUnidad(u) !== 'sin_senal' : estadoUnidad(u) === s);
+
 const rumboTexto = (grados: number) => CARDINALES[Math.round(((grados % 360) + 360) % 360 / 45) % 8];
 const corta = (empresa: string) => claveEmpresa(empresa).split(' ')[0] || '—';
 const placaLimpia = (s: string) => s.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
@@ -39,13 +48,15 @@ function etiquetaCorta(u: UnidadMapa, estado: EstadoUnidad) {
 }
 const COLOR_BADGE: Record<EstadoUnidad, string> = { movimiento: 'blue', ralenti: 'orange', detenido: 'green', sin_senal: 'gray' };
 
-// Ubicación GPS de la flota: lista, mapa, ficha de cada unidad e historial con reproducción.
+// Ubicación GPS de la flota: lista agrupada por empresa, mapa, ficha de cada unidad e historial con reproducción.
 // Misma fuente que la versión actual.
 export function UbicacionPage() {
   const { data, isLoading, isError, error, dataUpdatedAt, isFetching, refetch } = useUnidadesGps();
   const disp = useDisponibilidad();
   const unidades = data ?? [];
   const [empresa, setEmpresa] = useState('TODAS');
+  const [segmento, setSegmento] = useState<Segmento>('todos');
+  const [colapsados, setColapsados] = useState<Set<string>>(() => new Set());
   const [filtrando, setFiltrando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [ocultas, setOcultas] = useState<Set<string>>(() => new Set());
@@ -70,10 +81,21 @@ export function UbicacionPage() {
   const delEmpresa = useMemo(() => unidades.filter(u => empresa === 'TODAS' || claveEmpresa(u.empresa) === empresa), [unidades, empresa]);
   const lista = useMemo(() => {
     const q = busqueda.trim().toUpperCase();
-    if (!q) return delEmpresa;
     // Solo por identificador de la unidad: placa, y el nombre en Wialon (ahí aparece la placa cuando el servidor no la extrae)
-    return delEmpresa.filter(u => [u.placa, u.nombre].some(t => t.toUpperCase().includes(q)));
-  }, [delEmpresa, busqueda]);
+    return delEmpresa.filter(u => (!q || [u.placa, u.nombre].some(t => t.toUpperCase().includes(q))) && coincideSegmento(u, segmento));
+  }, [delEmpresa, busqueda, segmento]);
+
+  // La lista se agrupa por empresa, como los grupos de la versión actual
+  const grupos = useMemo(() => {
+    const m = new Map<string, { clave: string; nombre: string; units: UnidadMapa[] }>();
+    for (const u of lista) {
+      const clave = claveEmpresa(u.empresa) || 'OTRAS';
+      const g = m.get(clave) ?? { clave, nombre: empresas.find(e => e.clave === clave)?.nombre ?? 'Otras unidades', units: [] };
+      g.units.push(u);
+      m.set(clave, g);
+    }
+    return [...m.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  }, [lista, empresas]);
 
   const cifras = useMemo(() => {
     let conSenal = 0;
@@ -140,6 +162,24 @@ export function UbicacionPage() {
       return n;
     });
   };
+  // Mostrar u ocultar todo un grupo: si todas están visibles se ocultan; si no, se muestran
+  const alternarGrupo = (units: UnidadMapa[]) => {
+    haptic('selection');
+    setOcultas(prev => {
+      const n = new Set(prev);
+      const todasVis = units.every(u => !n.has(u.placa));
+      for (const u of units) { if (todasVis) n.add(u.placa); else n.delete(u.placa); }
+      return n;
+    });
+  };
+  const alternarColapso = (clave: string) => {
+    haptic('selection');
+    setColapsados(prev => {
+      const n = new Set(prev);
+      if (n.has(clave)) n.delete(clave); else n.add(clave);
+      return n;
+    });
+  };
   const elegir = (placa: string) => {
     haptic('selection');
     setSeleccionada(placa);
@@ -152,6 +192,35 @@ export function UbicacionPage() {
     setSeleccionada(null);
     setPanel('ficha');
     setReproduciendo(false);
+  };
+
+  const filaUnidad = (u: UnidadMapa) => {
+    const estado = estadoUnidad(u);
+    const color = COLOR_ESTADO[estado];
+    const marcada = seleccionada === u.placa;
+    return (
+      <li key={u.placa} className={`gps-tarjeta${marcada ? ' gps-tarjeta--sel' : ''}`}>
+        <input type="checkbox" className="gps-tarjeta__check" checked={!ocultas.has(u.placa)} onChange={() => alternarUnidad(u.placa)}
+          aria-label={`Mostrar ${u.placa} en el mapa`} />
+        <button type="button" className="gps-tarjeta__cuerpo" onClick={() => elegir(u.placa)}>
+          <span className="gps-punto" style={{ background: color, boxShadow: `0 0 6px ${color}` }} aria-hidden />
+          <span className="gps-tarjeta__texto">
+            <span className="gps-tarjeta__linea">
+              <span className="gps-placa">{u.placa}</span>
+              <span className="gps-chip">{corta(u.empresa)}</span>
+              <span className={`gps-estado gps-estado--${COLOR_BADGE[estado]}`}>{etiquetaCorta(u, estado)}</span>
+            </span>
+            <span className="gps-tarjeta__dir">
+              {u.ubicacion ? <><MapPin size={11} aria-hidden />{u.ubicacion}</> : (u.nombre || 'Sin dirección')}
+            </span>
+          </span>
+        </button>
+        <span className="gps-tarjeta__stats">
+          <b>{u.km.toLocaleString('es-PE')} km</b>
+          <span>{u.horas.toLocaleString('es-PE')} hrs</span>
+        </span>
+      </li>
+    );
   };
 
   return (
@@ -181,31 +250,35 @@ export function UbicacionPage() {
         <div className="gps-cuerpo" data-vista={vistaMovil}>
           <div className="disp-kpis gps-kpis">
             {([
-              { label: 'Flota monitoreada', valor: cifras.total, tono: 'blue', icono: <Briefcase size={16} strokeWidth={1.9} /> },
-              { label: 'Con señal GPS', valor: cifras.conSenal, tono: 'green', icono: <MapPin size={16} strokeWidth={1.9} /> },
-              { label: 'En movimiento', valor: cifras.enMovimiento, tono: 'blue', icono: <Navigation size={16} strokeWidth={1.9} /> },
-              { label: 'Sin señal', valor: cifras.sinSenal, tono: 'ink', icono: <Wrench size={16} strokeWidth={1.9} /> },
+              { clave: 'todos', label: 'Flota monitoreada', valor: cifras.total, tono: 'blue', icono: <Briefcase size={16} strokeWidth={1.9} /> },
+              { clave: 'senal', label: 'Con señal GPS', valor: cifras.conSenal, tono: 'green', icono: <MapPin size={16} strokeWidth={1.9} /> },
+              { clave: 'movimiento', label: 'En movimiento', valor: cifras.enMovimiento, tono: 'blue', icono: <Navigation size={16} strokeWidth={1.9} /> },
+              { clave: 'sin_senal', label: 'Sin señal', valor: cifras.sinSenal, tono: 'ink', icono: <Wrench size={16} strokeWidth={1.9} /> },
             ] as const).map(k => (
-              <div key={k.label} className={`disp-kpi disp-kpi--${k.tono}`}>
+              <button key={k.clave} type="button" className={`disp-kpi disp-kpi--${k.tono}`} aria-pressed={segmento === k.clave}
+                onClick={() => { haptic('selection'); setSegmento(s => (s === k.clave && k.clave !== 'todos' ? 'todos' : k.clave)); }}>
                 <span>
                   <span className="disp-kpi__label">{k.label}</span>
                   <AnimatedNumber value={k.valor} className="disp-kpi__valor t-numeric" />
                 </span>
                 <span className="disp-kpi__icono" aria-hidden>{k.icono}</span>
-              </div>
+              </button>
             ))}
           </div>
 
           <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar por placa o nombre…"
-            activos={empresa !== 'TODAS' ? 1 : 0} onAbrirFiltros={() => setFiltrando(true)}>
+            activos={(empresa !== 'TODAS' ? 1 : 0) + (segmento !== 'todos' ? 1 : 0)} onAbrirFiltros={() => setFiltrando(true)}>
             <div className="gps-vistas">
               <SegmentedControl label="Vista" value={vistaMovil} onChange={setVistaMovil} options={VISTAS} />
             </div>
           </BarraFiltros>
-          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={empresa !== 'TODAS' ? 1 : 0}
-            onLimpiar={() => setEmpresa('TODAS')} resultado={lista.length} unidad="unidad">
+          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={(empresa !== 'TODAS' ? 1 : 0) + (segmento !== 'todos' ? 1 : 0)}
+            onLimpiar={() => { setEmpresa('TODAS'); setSegmento('todos'); }} resultado={lista.length} unidad="unidad">
             <GrupoFiltro titulo="Empresa">
               <ChoiceChips label="Empresa" value={empresa} onChange={setEmpresa} options={[{ value: 'TODAS', label: 'Todas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre }))]} />
+            </GrupoFiltro>
+            <GrupoFiltro titulo="Estado">
+              <ChoiceChips label="Estado" value={segmento} onChange={v => setSegmento(v as Segmento)} options={SEGMENTOS} />
             </GrupoFiltro>
           </HojaFiltros>
 
@@ -218,31 +291,24 @@ export function UbicacionPage() {
                 </label>
               </div>
               <ul className="gps-lista__items">
-                {lista.map(u => {
-                  const estado = estadoUnidad(u);
-                  const color = COLOR_ESTADO[estado];
-                  const marcada = seleccionada === u.placa;
+                {grupos.map(g => {
+                  const visiblesGrupo = g.units.filter(u => !ocultas.has(u.placa)).length;
+                  const todasGrupo = visiblesGrupo === g.units.length;
+                  const ningunaGrupo = visiblesGrupo === 0;
+                  const abierto = !colapsados.has(g.clave);
                   return (
-                    <li key={u.placa} className={`gps-tarjeta${marcada ? ' gps-tarjeta--sel' : ''}`}>
-                      <input type="checkbox" className="gps-tarjeta__check" checked={!ocultas.has(u.placa)} onChange={() => alternarUnidad(u.placa)}
-                        aria-label={`Mostrar ${u.placa} en el mapa`} />
-                      <button type="button" className="gps-tarjeta__cuerpo" onClick={() => elegir(u.placa)}>
-                        <span className="gps-punto" style={{ background: color, boxShadow: `0 0 6px ${color}` }} aria-hidden />
-                        <span className="gps-tarjeta__texto">
-                          <span className="gps-tarjeta__linea">
-                            <span className="gps-placa">{u.placa}</span>
-                            <span className="gps-chip">{corta(u.empresa)}</span>
-                            <span className={`gps-estado gps-estado--${COLOR_BADGE[estado]}`}>{etiquetaCorta(u, estado)}</span>
-                          </span>
-                          <span className="gps-tarjeta__dir">
-                            {u.ubicacion ? <><MapPin size={11} aria-hidden />{u.ubicacion}</> : (u.nombre || 'Sin dirección')}
-                          </span>
-                        </span>
-                      </button>
-                      <span className="gps-tarjeta__stats">
-                        <b>{u.km.toLocaleString('es-PE')} km</b>
-                        <span>{u.horas.toLocaleString('es-PE')} hrs</span>
-                      </span>
+                    <li key={g.clave} className="gps-grupo">
+                      <div className="gps-grupo__cab">
+                        <input type="checkbox" className="gps-tarjeta__check" checked={todasGrupo}
+                          ref={el => { if (el) el.indeterminate = !todasGrupo && !ningunaGrupo; }}
+                          onChange={() => alternarGrupo(g.units)} aria-label={`Mostrar el grupo ${g.nombre} en el mapa`} />
+                        <button type="button" className="gps-grupo__titulo" aria-expanded={abierto} onClick={() => alternarColapso(g.clave)}>
+                          <ChevronDown size={15} aria-hidden />
+                          <span>{g.nombre}</span>
+                          <span className="gps-grupo__conteo">{visiblesGrupo}/{g.units.length}</span>
+                        </button>
+                      </div>
+                      {abierto && <ul className="gps-grupo__unidades">{g.units.map(filaUnidad)}</ul>}
                     </li>
                   );
                 })}
