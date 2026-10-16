@@ -118,7 +118,7 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 
 // ── Multi-Tenant SaaS Middleware ─────────────────────────────────
-const { resolveTenantMiddleware } = require('./services/tenant_master');
+const { resolveTenantMiddleware, getMasterPool, getTenantPool } = require('./services/tenant_master');
 const { crearResolutorPlacas } = require('./services/wialon_placas');
 app.use((req, res, next) => {
     resolveTenantMiddleware(req, res, () => {
@@ -4924,6 +4924,25 @@ app.use(require('./routes/ordenes_compra')(db, broadcast, logAudit));
 const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
 app.use('/api/script', legacyRoutes);
 app.use('/api', legacyRoutes);
+
+// ── GPS por empresa: snapshot diario de km (00:05 Lima = 05:05 UTC) y precarga de Wialon al arrancar ──
+async function gpsDeTodasLasEmpresas() {
+    const [empresas] = await getMasterPool().promise().query("SELECT slug, db_name FROM empresas WHERE estado = 'activo'").catch(() => [[]]);
+    for (const e of empresas || []) {
+        await tenantStorage.run(getTenantPool(e.db_name), () => legacyRoutes.snapshotGpsEmpresa(e.slug));
+    }
+}
+function programarGpsNocturno() {
+    const ahora = new Date();
+    const prox = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate(), 5, 5));
+    if (prox <= ahora) prox.setUTCDate(prox.getUTCDate() + 1);
+    setTimeout(() => {
+        gpsDeTodasLasEmpresas().catch(e => console.warn('Snapshot GPS nocturno:', e.message));
+        setInterval(() => gpsDeTodasLasEmpresas().catch(e => console.warn('Snapshot GPS nocturno:', e.message)), 24 * 60 * 60 * 1000);
+    }, prox - ahora);
+}
+programarGpsNocturno();
+setTimeout(() => gpsDeTodasLasEmpresas().catch(e => console.warn('Precarga GPS:', e.message)), 15000);
 
 // 4. Encender Servidor
 app.listen(process.env.PORT || 3000, () => {
