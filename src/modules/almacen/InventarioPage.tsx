@@ -58,12 +58,6 @@ export function InventarioPage() {
 
   const familiasDisp = useMemo(() => familiasUnicas(items), [items]);
 
-  const metricas = useMemo(() => ({
-    total: items.filter(i => i.activo).length,
-    bajo: items.filter(i => i.activo && stockTono(i) === 'warning').length,
-    sinStock: items.filter(i => i.activo && stockTono(i) === 'critical').length,
-  }), [items]);
-
   const visibles = useMemo(() => items.filter(i =>
     i.activo &&
     (filtro === 'todos' || stockTono(i) === filtro) &&
@@ -73,6 +67,17 @@ export function InventarioPage() {
   ), [items, filtro, familias, tipos, busqueda]);
 
   const hayFiltros = !!busqueda || filtro !== 'todos' || familias.length > 0 || tipos.length > 0;
+
+  // Con búsqueda o filtros, los contadores son de lo filtrado; sin ellos, los totales de siempre
+  const totalActivos = useMemo(() => items.filter(i => i.activo).length, [items]);
+  const metricas = useMemo(() => {
+    const base = hayFiltros ? visibles : items.filter(i => i.activo);
+    return {
+      total: base.length,
+      bajo: base.filter(i => stockTono(i) === 'warning').length,
+      sinStock: base.filter(i => stockTono(i) === 'critical').length,
+    };
+  }, [items, visibles, hayFiltros]);
 
   // En pantalla ancha, abre el primero automáticamente
   const efectivoSeleccionado = seleccionado ?? (dividido && visibles.length ? visibles[0] : null);
@@ -138,7 +143,7 @@ export function InventarioPage() {
         <PageHeader
           eyebrow="Almacén"
           title="Inventario"
-          subtitle={isLoading ? 'Cargando…' : `${metricas.total} artículos${metricas.sinStock ? ` · ${metricas.sinStock} sin stock` : ''}${metricas.bajo ? ` · ${metricas.bajo} stock bajo` : ''}`}
+          subtitle={isLoading ? 'Cargando…' : `${hayFiltros ? `${metricas.total} de ${totalActivos}` : metricas.total} artículos${metricas.sinStock ? ` · ${metricas.sinStock} sin stock` : ''}${metricas.bajo ? ` · ${metricas.bajo} stock bajo` : ''}`}
           actions={
             <>
               {otros}
