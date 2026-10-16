@@ -1254,6 +1254,16 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    // Datos de la empresa emisora para los documentos (PDF de la O/C): se leen de la base de esta empresa
+    router.get('/empresa-documentos', (req, res) => {
+        getDb(req).query("SELECT clave, valor FROM configuracion_erp WHERE clave IN ('empresa_nombre', 'empresa_ruc', 'empresa_direccion', 'empresa_telefono')", (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            const cfg = {};
+            (rows || []).forEach(r => { cfg[r.clave] = r.valor; });
+            res.json({ nombre: cfg.empresa_nombre || null, ruc: cfg.empresa_ruc || null, direccion: cfg.empresa_direccion || null, telefono: cfg.empresa_telefono || null });
+        });
+    });
+
     router.get('/entradas', (req, res) => {
         const tdb = getDb(req);
         let where = '';
@@ -1750,6 +1760,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     router.put('/entradas/:id/estado', (req, res) => {
         const tdb = getDb(req);
+        _ensureColumnasOC(tdb);
         const { id } = req.params;
         const { estado, comentario, usuario } = req.body;
         if (!estado) return res.status(400).json({ error: 'Estado requerido' });
