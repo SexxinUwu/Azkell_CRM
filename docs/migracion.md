@@ -86,16 +86,19 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
 
 ## Catálogo de pantallas (93)
 
+> **Estado real (2026-10-16), según el menú:** una entrada sigue en el clásico solo si no tiene pantalla en React. Quedan **13 entradas en el clásico**: Dashboard financiero de almacén, Movimientos de tesorería, Métricas y KPIs, Productividad personal, Reporte financiero de taller, Config. métrica, Frecuencias MP, Estaciones de proveedores, Unidades en Base (seguridad), Notificaciones y SMTP, Empresa, API y desarrolladores, Empresas SaaS (SuperAdmin).
+> Pendientes de funcionalidad, no de pantalla: guías SUNAT (a propósito, hasta la fase formal), monitoreo GPS de viajes, asignación y rutas, Entradas al contado (depende de Tesorería), importación de inspecciones.
+
 Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplicado a revisar antes de migrar.
 
 ### A. Catálogos
 - [x] directorio/conductores *(en /app: consulta, crear/editar con RENIEC y foto, importar, eliminar)*
 
 > Regla de pantallas nuevas: solo la acción principal en el encabezado; todo lo demás (importar, exportar, imprimir, versión actual…) va en la casilla **Otros** (`src/core/ui/MenuOtros.tsx`).
-- [ ] directorio/clientes
+- [x] directorio/clientes *(en /app)*
 - [x] preferencias/situaciones *(en /app)*
 - [x] almacen/familias · almacen/marcas · almacen/sistemas · almacen/unidades *(en /app; pantalla común `src/modules/catalogos`)*
-- [ ] almacen/proveedores
+- [x] almacen/proveedores *(en /app)*
 - [x] almacen/almacenes *(en /app)*
 
 ### B. Flota
@@ -122,8 +125,8 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [ ] mantenimiento/config-metrica
 - [ ] mantenimiento/productividad · mantenimiento/kpis-taller · mantenimiento/finanzas-taller *(mantenimiento/personal ya en /app)*
 - [x] mantenimiento/incidencias-ruta *(en /app: registro con placa del catálogo de unidades activas, búsqueda con paginación de 50, detalle con costos en soles; sin notificaciones externas; en la base de la empresa)*
-- [ ] mantenimiento/otros
-- [ ] mantenimiento/combustible · mantenimiento/combustible-vales · mantenimiento/combustible-analisis ⚠️ (¿duplican operaciones/combustible-*?)
+- [x] mantenimiento/otros *(en /app)*
+- [x] mantenimiento/combustible · mantenimiento/combustible-vales · mantenimiento/combustible-analisis *(resueltas en operaciones/combustible-*, que es lo que usa el menú)*
 
 ### D. Almacén
 - [x] almacen/inventario *(en /app, verificado en navegador 2026-10-16: búsqueda y filtros, exportar Excel solo con lo filtrado, plantilla e importación. Pendiente de decisión: que los contadores del encabezado sigan la búsqueda; hoy son totales)*
@@ -131,7 +134,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] almacen/salidas *(en /app, desde la OT: validado de extremo a extremo con datos reales del tenant azkell_fleet: entrada de prueba de 1 bushing a S/ 5,50, salida de 1 hacia una OT de prueba desde el formulario React, stock 0 → 1 → 0, repuesto y costo de S/ 5,50 en la pestaña Repuestos y Costos de la OT, salida en el kardex al costo promedio; luego anuladas la salida, la entrada y la OT de prueba, con stock final 0)*
 - [x] almacen/kardex *(en /app, verificado en navegador 2026-10-16: cuatro KPIs (entradas, salidas, stock de apertura y saldo valorizado al costo promedio), encabezado fijo, números a la derecha en fuente monoespaciada y tarjetas en móvil)*
 - [x] almacen/recepcion-compras *(en /app, verificado 2026-10-16: tipo de cambio SUNAT del día con equivalente en soles en vivo, y registro atómico en una sola transacción: costo promedio, O/C y cabecera + detalle con rollback si falla. La pantalla clásica no se modifica)*
-- [ ] almacen/costos · almacen/dashboard-financiero
+- [ ] almacen/costos · almacen/dashboard-financiero *(el dashboard financiero sigue en el clásico)*
 
 ### E. Operaciones
 - [~] operaciones/ordenes-viaje · operaciones/marsisa-ordenes-viaje ⚠️ (variante por empresa) *(en /app: alerta de documentos vencidos por placa, resumen financiero en la ficha (flete, gastos de ruta, margen y rentabilidad), órdenes de servicio del viaje, sincronización con MarsisaSoft solo en el dominio Marsisa; verificado en navegador 2026-10-16 con datos simulados: listado, filtro, ficha, validaciones de finalizar y alta sin conductor. Pendiente: monitoreo GPS y vales desde la ficha, que siguen en el clásico)*
@@ -143,28 +146,31 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] operaciones/combustible-matriz *(en /app: se abre desde Análisis de combustible o directamente con ?matriz=1; el menú lleva ahí. Verificado en navegador)*
 - [ ] operaciones/combustible-estaciones *(sigue en el clásico)*
 - [ ] operaciones/guias-remision · operaciones/guia-remitente · operaciones/guia-transportista (SUNAT)
-- [ ] operaciones/conductor-portal · operaciones/conductor/portal ⚠️ (candidato a trabajo sin conexión)
+- [~] operaciones/conductor-portal · operaciones/conductor/portal *(gastos del conductor en /app; trabajo sin conexión pendiente)*
 
 ### F. Tesorería y Gerencia
-- [ ] tesoreria/caja · tesoreria/caja-chica · tesoreria/movimientos
-- [ ] tesoreria/bancos · tesoreria/cuentas
-- [ ] tesoreria/flujo-caja · tesoreria/centros-costos
-- [~] tesoreria/liquidaciones *(en /app; el cierre automático LIQUIDADO se probó en base local, falta confirmarlo en producción)*
-- [~] tesoreria/pago-requerimientos *(en /app con columna de vencimiento según la condición de pago de la O/C)*
-- [ ] gerencia/aprobaciones-oc · gerencia/aprobaciones-caja · gerencia/aprobaciones/caja ⚠️
+- [~] tesoreria/caja · tesoreria/caja-chica *(caja en /app; caja chica por confirmar)* · tesoreria/movimientos *(sigue en el clásico)*
+- [x] tesoreria/bancos · tesoreria/cuentas *(en /app)*
+- [~] tesoreria/flujo-caja · tesoreria/centros-costos *(centros de costos en /app; flujo de caja sigue en el clásico)*
+- [x] tesoreria/liquidaciones *(en /app: resumen por viaje con viáticos entregados, comprobantes rendidos, gastos por tipo y saldo a favor de la empresa o del conductor; el estado del viaje se muestra y LIQUIDADO se marca solo cuando el saldo cuadra. Verificado en navegador con datos simulados. El cierre automático en producción sigue pendiente de confirmar; la regla de cajas pendientes queda por decidir)*
+- [x] tesoreria/pago-requerimientos *(en /app: vencimiento según la condición de pago (crédito con sus días; contado sin fecha); si la O/C aún no tiene recepción, el vencimiento se estima con la fecha de la orden. Pago con constancia, cuenta origen y monto en S/ o US$. Verificado en navegador con datos simulados)*
+- [x] gerencia/aprobaciones-oc · gerencia/aprobaciones-caja *(en /app)*
 
 ### G. RRHH y Seguridad
 - [x] rrhh/personal *(en /app como Directorio › Personal, estilo Contactos: lista A–Z, tarjeta, RENIEC, foto, fotocheck, ficha, vCard, Excel). Corregido: rbac no mapeaba /rrhh y solo entraban administradores*
-- [ ] rrhh/asistencia · rrhh/nomina
-- [ ] seguridad/unidades · seguridad/unidades-base
+- [x] rrhh/asistencia · rrhh/nomina *(en /app)*
+- [x] seguridad/unidades *(en /app)*
+- [ ] seguridad/unidades-base *(Unidades en Base sigue en el clásico)*
 
 ### H. Sistema
-- [ ] login → Fase 2B
-- [ ] dashboard → Centro de Control
-- [ ] sistema/usuarios · sistema/perfil
-- [ ] sistema/auditoria
-- [ ] sistema/configuracion · sistema/ajustes · sistema/integraciones
-- [ ] sistema/api-gateway · sistema/superadmin
+- [x] login → Fase 2B *(en /app)*
+- [x] dashboard → Centro de Control *(en /app)*
+- [x] sistema/usuarios *(en /app)*
+- [~] sistema/perfil *(Mi cuenta en /app; sesiones activas por confirmar)*
+- [x] sistema/auditoria *(en /app)*
+- [x] sistema/ajustes · sistema/integraciones *(en /app)*
+- [ ] sistema/configuracion *(Empresa y notificaciones siguen en el clásico)*
+- [ ] sistema/api-gateway · sistema/superadmin *(siguen en el clásico)*
 - [ ] administracion (raíz)
 
 ## Endpoints actuales por archivo (499)
