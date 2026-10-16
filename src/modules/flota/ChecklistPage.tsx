@@ -208,12 +208,13 @@ function FallaDetalle({ falla, onVolver, onEliminar, onGenerarOTs }: {
         <button type="button" className="tarjeta__volver" onClick={onVolver}>
           <span style={{ fontSize: '1.2rem' }}>‹</span> Reporte de fallas
         </button>
-        {(onGenerarOTs || onEliminar) && (
-          <div className="tarjeta__barra-acciones">
-            {onGenerarOTs && <Button variant="primary" icon={<Wrench size={16} />} onClick={onGenerarOTs}>Generar OTs</Button>}
-            {onEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>}
-          </div>
-        )}
+        <div className="tarjeta__barra-acciones">
+          {onGenerarOTs && <Button variant="primary" icon={<Wrench size={16} />} onClick={onGenerarOTs}>Generar OTs</Button>}
+          {onEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>}
+          <MenuOtros opciones={[
+            { label: 'Imprimir F-MAN-001 y WhatsApp', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/checklist') },
+          ]} />
+        </div>
       </div>
       <div className="ot-ficha__hero">
         <span className={`ot-estado ot-estado--${color}`}>{falla.estado}</span>
