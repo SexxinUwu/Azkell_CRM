@@ -8,7 +8,7 @@ import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
-import { registrarRecepcion, useAlmacenesLista, type RecepcionOC } from './api';
+import { registrarRecepcion, useAlmacenesLista, useTipoCambioSunat, type RecepcionOC } from './api';
 
 const ahoraLocal = () => {
   const d = new Date();
@@ -34,6 +34,15 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const esUSDOc = !!oc && String(oc.moneda).toUpperCase() === 'USD';
+  const tcSunat = useTipoCambioSunat(open && esUSDOc);
+
+  // TC de SUNAT del día por defecto (editable); si SUNAT no responde, referencia de 3.75
+  useEffect(() => {
+    if (!open || !esUSDOc) return;
+    if (tcSunat.data) setTc(v => v || String(tcSunat.data.venta));
+    else if (tcSunat.isError) setTc(v => v || '3.75');
+  }, [open, esUSDOc, tcSunat.data, tcSunat.isError]);
 
   useEffect(() => {
     if (!open) return;
@@ -139,7 +148,7 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
               {p => <TextInput {...p} type="file" accept="image/*,application/pdf" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />}
             </Field>
             {String(oc.moneda).toUpperCase() === 'USD' && (
-              <Field label="Tipo de cambio del día (S/ por USD)" hint="Se usa para valorizar el inventario en soles">
+              <Field label="Tipo de cambio del día (S/ por USD)" hint={tcSunat.data ? `SUNAT ${tcSunat.data.fecha} · puede cambiarlo` : tcSunat.isError ? 'SUNAT no disponible: referencia 3.75' : 'Consultando SUNAT…'}>
                 {p => <TextInput {...p} inputMode="decimal" placeholder="3.75" value={tc} onChange={e => setTc(e.target.value)} />}
               </Field>
             )}

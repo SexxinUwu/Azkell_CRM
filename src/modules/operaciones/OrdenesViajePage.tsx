@@ -57,6 +57,17 @@ const tono = (e: string) => ({ ACTIVO: 'amber', INICIADO: 'blue', FINALIZADO: 'g
 const css = (t: string) => (t === 'blue' ? 'accent' : t === 'neutral' ? 'gray' : t);
 const fmtFecha = (s?: string | null) => (s ? String(s).replace('T', ' ').slice(0, 16) : '—');
 
+// Placas con SOAT o Revisión Técnica vencidos (las calcula el servidor)
+interface DocVencido { placa: string; tipo: string; vence: string }
+const placaNorm = (p: string | null | undefined) => String(p ?? '').trim().toUpperCase();
+function useDocumentosVencidos() {
+  return useQuery<DocVencido[]>({
+    queryKey: ['operaciones', 'documentos-vencidos'],
+    queryFn: () => api<{ ok?: boolean; vencidos?: DocVencido[] }>('/operaciones/documentos-vencidos').then(r => r.vencidos ?? []),
+    staleTime: 5 * 60_000,
+  });
+}
+
 function useViajes(q: string) {
   return useQuery<Viaje[]>({
     queryKey: ['operaciones', 'ordenes-viaje', q],
@@ -83,6 +94,12 @@ export function OrdenesViajePage() {
   const [sincronizando, setSincronizando] = useState(false);
 
   const { data, isLoading, isError, error } = useViajes(q);
+  const docsVencidos = useDocumentosVencidos();
+  const vencidosPorPlaca = useMemo(() => {
+    const m = new Map<string, string[]>();
+    (docsVencidos.data ?? []).forEach(d => m.set(placaNorm(d.placa), [...(m.get(placaNorm(d.placa)) ?? []), d.tipo === 'SOAT' ? 'SOAT' : 'Revisión Técnica']));
+    return m;
+  }, [docsVencidos.data]);
   const lista = data ?? [];
   const abierto = lista.find(v => v.viaje === abiertoId) ?? null;
   const visibles = useMemo(() => lista.filter(v => !estado || v.estado === estado), [lista, estado]);
@@ -161,6 +178,13 @@ export function OrdenesViajePage() {
                 <div className="mov-fila__cuerpo">
                   <span className="mov-fila__titulo">{v.viaje} · {v.conductor || 'Sin conductor'}</span>
                   <span className="mov-fila__sub">{[v.placa_tracto, v.placa_remolque, v.ruta || v.rutas_list].filter(Boolean).join(' · ') || fmtFecha(v.fecha_viaje)}</span>
+                  {[v.placa_tracto, v.placa_remolque].some(p => p && vencidosPorPlaca.has(placaNorm(p))) && (
+                    <span title={[v.placa_tracto, v.placa_remolque].filter(p => p && vencidosPorPlaca.has(placaNorm(p))).map(p => `${p}: ${vencidosPorPlaca.get(placaNorm(p))?.join(', ')} vencido`).join(' · ')}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 2, padding: '2px 8px', borderRadius: 999, background: 'var(--red-tint)', color: 'var(--red-ink)', fontSize: '0.6875rem', fontWeight: 700 }}>
+                        <CircleAlert size={12} aria-hidden /> Documento vencido
+                      </span>
+                    </span>
+                  )}
                 </div>
                 <div className="mov-fila__derecha">
                   <span className="mov-fila__monto">{n(v.peso_ida) + n(v.peso_retorno) ? `${(n(v.peso_ida) + n(v.peso_retorno)).toLocaleString('es-PE')} kg` : ''}</span>
@@ -216,16 +240,16 @@ function ResumenFinanciero({ viaje }: { viaje: Viaje }) {
   const fila = q.data?.viajes?.find(x => String(x.viaje).trim().toUpperCase() === codigo);
   const soles = (n: number) => `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   return (
-    <div className="tarjeta" aria-label="Resumen financiero">
+    <div aria-label="Resumen financiero">
       <p className="tarjeta__grupo-titulo">Resumen financiero</p>
       {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : !fila ? (
         <p className="t-callout c-secondary">Sin datos financieros para este viaje.</p>
       ) : (
-        <div className="disp-kpis">
-          <div className="disp-kpi disp-kpi--blue"><span><span className="disp-kpi__label">Flete</span><span className="disp-kpi__valor t-numeric">{soles(fila.flete)}</span></span></div>
-          <div className="disp-kpi disp-kpi--ink"><span><span className="disp-kpi__label">Gastos de ruta</span><span className="disp-kpi__valor t-numeric">{soles(fila.gastos_ruta)}</span><span className="t-caption c-secondary">Combustible {soles(fila.combustible)} · Viáticos {soles(fila.viaticos)}</span></span></div>
-          <div className="disp-kpi disp-kpi--green"><span><span className="disp-kpi__label">Margen bruto</span><span className="disp-kpi__valor t-numeric">{soles(fila.margen)}</span></span></div>
-          <div className="disp-kpi disp-kpi--blue"><span><span className="disp-kpi__label">Rentabilidad</span><span className="disp-kpi__valor t-numeric">{fila.rentabilidad_pct == null ? '—' : `${fila.rentabilidad_pct} %`}</span></span></div>
+        <div className="tarjeta__lista">
+          <div className="dato"><span className="dato__label">Flete pactado</span><span className="dato__valor">{soles(fila.flete)}</span></div>
+          <div className="dato"><span className="dato__label">Gastos de ruta</span><span className="dato__valor">{soles(fila.gastos_ruta)}</span><span className="t-caption c-secondary">Combustible {soles(fila.combustible)} · Viáticos {soles(fila.viaticos)}</span></div>
+          <div className="dato"><span className="dato__label">Margen bruto</span><span className="dato__valor dato__valor--mono" style={{ color: fila.margen < 0 ? 'var(--red-ink)' : 'var(--green-ink)' }}>{soles(fila.margen)}</span></div>
+          <div className="dato"><span className="dato__label">Rentabilidad</span><span className="dato__valor dato__valor--mono">{fila.rentabilidad_pct == null ? '—' : `${fila.rentabilidad_pct} %`}</span></div>
         </div>
       )}
     </div>

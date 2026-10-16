@@ -568,6 +568,19 @@ module.exports = function (db, broadcast, logAudit) {
 
     // ── POST /api/operaciones/ordenes-viaje ────────────────────────
     // Registra una nueva Orden de Viaje generada desde el módulo de Operaciones propio
+    // ── GET /api/operaciones/documentos-vencidos — placas con SOAT o Revisión Técnica vencidos ──
+    router.get('/documentos-vencidos', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ ok: false, error: 'Base de datos no disponible' });
+            const [filas] = await tdb.query("SELECT DISTINCT UPPER(TRIM(placa)) AS placa FROM documentos_flota WHERE UPPER(TRIM(tipo_documento)) IN ('SOAT', 'REV_TECNICA')");
+            const vencidos = await documentosVencidosPara(tdb, filas.map(r => r.placa));
+            res.json({ ok: true, vencidos });
+        } catch (err) {
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     // ── GET /api/operaciones/rentabilidad?mes=AAAA-MM — costo por placa y margen por viaje (solo lectura) ──
     router.get('/rentabilidad', async (req, res) => {
         try {

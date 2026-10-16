@@ -4776,6 +4776,16 @@ app.use('/api/operaciones', require('./routes/operaciones')(db, broadcast, logAu
 app.use('/api/guias-remision', require('./routes/guias_remision')(db, broadcast, logAudit));
 app.use('/api/guia-transportista', require('./routes/guia_transportista')(db, broadcast, logAudit));
 app.use('/api/guia-remitente', require('./routes/guia_remitente')(db, broadcast, logAudit));
+
+// Tipo de cambio oficial de SUNAT del día (caché diaria); la recepción en dólares lo precarga
+const { tipoCambioSunat } = require('./services/tipo_cambio');
+app.get('/api/tipo-cambio/sunat', async (req, res) => {
+    try {
+        res.json({ ok: true, ...(await tipoCambioSunat()) });
+    } catch (err) {
+        res.status(503).json({ ok: false, error: 'No se pudo consultar el tipo de cambio de SUNAT: ' + err.message });
+    }
+});
 app.use('/api/tesoreria', require('./routes/tesoreria')(db, broadcast, logAudit));
 app.use('/api/rrhh', require('./routes/rrhh')(db, broadcast, logAudit));
 app.use('/api/telemetria', require('./routes/telemetria')(db));
