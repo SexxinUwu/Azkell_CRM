@@ -212,15 +212,7 @@ function getTenantPool(dbName) {
     return pool;
 }
 
-async function resolveTenantMiddleware(req, res, next) {
-    let tenantSlug = req.headers['x-tenant-id'] || req.headers['x-tenant-slug'] || req.query.tenant_slug;
-
-    const host = (req.headers.host || '').toLowerCase().split(':')[0];
-    const isRootDomain = host === 'azkell.com' || host === 'www.azkell.com';
-
-    if (isRootDomain && !tenantSlug && !req.path.startsWith('/api') && !req.path.startsWith('/libs')) {
-        if ((req.headers.accept && req.headers.accept.includes('text/html')) || req.path === '/' || req.path === '/Index.html') {
-            return res.status(200).send(`
+const PORTAL_CORPORATIVO_HTML = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -342,9 +334,12 @@ async function resolveTenantMiddleware(req, res, next) {
     </div>
 </body>
 </html>
-            `);
-        }
-    }
+            `;
+
+async function resolveTenantMiddleware(req, res, next) {
+    let tenantSlug = req.headers['x-tenant-id'] || req.headers['x-tenant-slug'] || req.query.tenant_slug;
+
+    const host = (req.headers.host || '').toLowerCase().split(':')[0];
 
     if (!tenantSlug && req.headers.host) {
         const parts = host.split('.');
@@ -369,6 +364,19 @@ async function resolveTenantMiddleware(req, res, next) {
         };
         req.db = getTenantPool(process.env.DB_NAME || 'azkell_tenant_marsisa');
         return next();
+    }
+
+    // Sin empresa identificada (azkell.com, www, app.azkell.com): ninguna petición cae en una base por defecto.
+    // localhost/IP (desarrollo y healthcheck de Coolify) y admin.* siguen su camino de siempre.
+    const esLocal = /localhost|^\d+\.\d+\.\d+\.\d+$/.test(host);
+    if (!tenantSlug && !esLocal) {
+        if (req.path.startsWith('/api')) {
+            return res.status(400).json({ error: 'Subdominio de empresa requerido. Ingrese con la dirección de su empresa (tu-empresa.azkell.com).' });
+        }
+        if (req.path === '/' || req.path === '/Index.html' || (req.headers.accept || '').includes('text/html')) {
+            return res.status(200).send(PORTAL_CORPORATIVO_HTML);
+        }
+        return res.status(404).end();
     }
 
     // Si se accede desde admin.azkell.com o no se especifica tenant, usar la Base de Datos por defecto para autenticación/configuración y masterPool para gestión de empresas
