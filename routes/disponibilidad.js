@@ -260,9 +260,8 @@ module.exports = function (db, logAudit) {
                                         observaciones = (disp && disp.observaciones) ? disp.observaciones : '';
                                     }
 
-                                    if (!hasDirectOT && falla && !observaciones) {
-                                        observaciones = `Falla reportada / Folio ${falla.folio || ''}`;
-                                    }
+                                    // La columna Observaciones es solo lo que escribe la persona; el estado ya muestra lo demás
+                                    observaciones = disp && disp.observaciones ? String(disp.observaciones).trim() : '';
 
                                     let capTanque = p.capacidad_tanque || (disp ? disp.capacidad_tanque : '') || '0';
                                     if (capTanque && !String(capTanque).toUpperCase().includes('GLN') && !String(capTanque).toUpperCase().includes('M³') && capTanque !== '0') {
@@ -331,6 +330,9 @@ module.exports = function (db, logAudit) {
                                         estado = 'En Base';
                                         obs = (disp && disp.observaciones) ? disp.observaciones : '';
                                     }
+
+                                    // Solo lo escrito a mano en Observaciones
+                                    obs = disp && disp.observaciones ? String(disp.observaciones).trim() : '';
 
                                     const stCarreta = p.sub_tipo || p.tipo || 'Carreta';
                                     const empCarreta = (p.cliente || (disp ? disp.flota : '') || '').trim();

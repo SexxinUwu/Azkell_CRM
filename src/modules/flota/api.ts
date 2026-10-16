@@ -31,8 +31,9 @@ export const ESTADOS_DISP = ['En Base', 'En Ruta', 'En Mantenimiento'] as const;
 
 export function estadoDispColor(estado: string): string {
   const e = (estado || '').toLowerCase();
-  if (e.includes('ruta'))         return 'blue';
-  if (e.includes('mantenimiento') || e.includes('taller')) return 'amber';
+  // Misma regla que la versión actual: mantenimiento o taller primero; ruta o viaje después
+  if (e.includes('mant') || e.includes('taller')) return 'amber';
+  if (e.includes('ruta') || e.includes('viaje'))  return 'blue';
   if (e.includes('base'))         return 'green';
   return 'neutral';
 }
@@ -396,7 +397,7 @@ export function useChecklist() {
 // ─── Ubicación GPS de cada unidad (Wialon) ────────────────────────────────────
 // Misma fuente que la versión actual (POST /api/script/obtenerDatosWialon), cruzada por placa sin guiones.
 
-export interface UbicacionGps { ubicacion: string; lat: number; lng: number }
+export interface UbicacionGps { ubicacion: string; lat: number; lng: number; velocidad: number }
 
 export function useUbicacionesGps() {
   return useQuery({
@@ -411,7 +412,8 @@ export function useUbicacionesGps() {
         const placa = String(g.placa ?? '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
         const lat = Number(g.lat);
         const lng = Number(g.lng);
-        if (placa && lat && lng) mapa.set(placa, { ubicacion: String(g.ubicacion ?? ''), lat, lng });
+        const velocidad = Number(g.velocidad ?? (g.pos as { s?: unknown } | undefined)?.s ?? 0) || 0;
+        if (placa && lat && lng) mapa.set(placa, { ubicacion: String(g.ubicacion ?? ''), lat, lng, velocidad });
       }
       return mapa;
     },

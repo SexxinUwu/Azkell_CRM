@@ -30,11 +30,33 @@ type Estado = 'En Base' | 'En Ruta' | 'En Mantenimiento';
 type Filtro = 'Todos' | Estado;
 const COLOR_ESTADO: Record<Estado, string> = { 'En Base': 'green', 'En Ruta': 'blue', 'En Mantenimiento': 'red' };
 
-const categoria = (v: VehiculoDisponibilidad): Estado => {
-  const e = (v.estado || '').toLowerCase();
-  if (e.includes('ruta')) return 'En Ruta';
-  if (e.includes('mantenimiento') || e.includes('taller')) return 'En Mantenimiento';
+// Mantenimiento o taller primero; ruta o viaje después; el resto es base (igual que la versión actual)
+const estadoDeTexto = (texto: string | null | undefined): Estado => {
+  const e = (texto || '').trim().toLowerCase();
+  if (e.includes('mant') || e.includes('taller')) return 'En Mantenimiento';
+  if (e.includes('ruta') || e.includes('viaje')) return 'En Ruta';
   return 'En Base';
+};
+
+const categoria = (v: VehiculoDisponibilidad): Estado => estadoDeTexto(v.estado);
+
+/** Cada placa cuenta como una unidad, como en la versión actual: el tracto con su estado y la carreta con el suyo */
+interface Unidad { placa: string; estado: Estado; sub: string }
+const unidadesDe = (v: VehiculoDisponibilidad): Unidad[] => [
+  ...(v.placa_camion ? [{ placa: v.placa_camion, estado: estadoDeTexto(v.estado), sub: v.sub_tipo || v.tipo_unidad || '—' }] : []),
+  ...(v.placa_carreta ? [{ placa: v.placa_carreta, estado: estadoDeTexto(v.estado_carreta || v.estado), sub: v.sub_tipo_carreta || v.sub_tipo || '—' }] : []),
+];
+
+// Búsqueda sobre los mismos campos que la versión actual
+const CAMPOS_BUSQUEDA = ['placa_camion', 'placa_carreta', 'conductor_asignado', 'marca', 'tipo_unidad', 'sub_tipo', 'estado', 'empresa', 'cliente', 'observaciones', 'capacidad_tanque'] as const;
+const coincideBusqueda = (v: VehiculoDisponibilidad, q: string) =>
+  !q || CAMPOS_BUSQUEDA.some(c => String(v[c] ?? '').toUpperCase().includes(q));
+
+// Texto de la ubicación GPS, como en el Excel de la versión actual
+const textoGps = (g: UbicacionGps | undefined) => {
+  if (!g) return 'Sin Señal';
+  const vel = g.velocidad;
+  return `${vel > 3 ? `En Ruta (${Math.round(vel)} km/h)` : 'Detenido'} [${g.lat.toFixed(4)}, ${g.lng.toFixed(4)}]`;
 };
 
 const nombreEmpresa = (s: string | null | undefined) => {
@@ -76,48 +98,40 @@ export function DisponibilidadPage() {
   const empresas = useMemo(() => agruparEmpresas(vehiculos.flatMap(v => [nombreEmpresa(v.empresa || v.cliente), nombreEmpresa(v.empresa_carreta)])), [vehiculos]);
   const nombreDeEmpresa = empresas.find(e => e.clave === empresa)?.nombre ?? '';
 
-  // Cifras y tabla se calculan sobre la empresa elegida
+  // Cifras y tabla se calculan sobre la empresa elegida. Cada placa cuenta como una unidad (igual que la versión actual)
   const delEmpresa = useMemo(() => vehiculos.filter(v => empresa === 'TODAS' || coincideEmpresa(v, empresa)), [vehiculos, empresa]);
+  const q = busqueda.trim().toUpperCase();
+  const delBusqueda = useMemo(() => delEmpresa.filter(v => coincideBusqueda(v, q)), [delEmpresa, q]);
   const cifras = useMemo(() => {
-    const c = { total: delEmpresa.length, base: 0, ruta: 0, mantenimiento: 0 };
-    for (const v of delEmpresa) {
-      const k = categoria(v);
-      if (k === 'En Base') c.base++;
-      else if (k === 'En Ruta') c.ruta++;
+    const c = { total: 0, base: 0, ruta: 0, mantenimiento: 0 };
+    for (const v of delBusqueda) for (const u of unidadesDe(v)) {
+      c.total++;
+      if (u.estado === 'En Base') c.base++;
+      else if (u.estado === 'En Ruta') c.ruta++;
       else c.mantenimiento++;
     }
     return c;
-  }, [delEmpresa]);
+  }, [delBusqueda]);
 
-  const visibles = useMemo(() => {
-    let lista = delEmpresa;
-    if (filtro !== 'Todos') lista = lista.filter(v => categoria(v) === filtro);
-    if (busqueda) {
-      const q = busqueda.toUpperCase();
-      lista = lista.filter(v =>
-        v.placa_camion.toUpperCase().includes(q) ||
-        v.placa_carreta.toUpperCase().includes(q) ||
-        (v.conductor_asignado || '').toUpperCase().includes(q) ||
-        (v.empresa || '').toUpperCase().includes(q)
-      );
-    }
-    return lista;
-  }, [delEmpresa, filtro, busqueda]);
+  // La tabla muestra la fila si alguna de sus placas está en el estado elegido
+  const visibles = useMemo(
+    () => delBusqueda.filter(v => filtro === 'Todos' || unidadesDe(v).some(u => u.estado === filtro)),
+    [delBusqueda, filtro],
+  );
 
   const matriz = useMemo(() => {
     const m = new Map<string, { total: number; base: number; ruta: number; mantenimiento: number }>();
-    for (const v of visibles) {
-      const k = v.sub_tipo || v.tipo_unidad || '—';
-      const f = m.get(k) ?? { total: 0, base: 0, ruta: 0, mantenimiento: 0 };
+    for (const v of visibles) for (const u of unidadesDe(v)) {
+      if (filtro !== 'Todos' && u.estado !== filtro) continue;
+      const f = m.get(u.sub) ?? { total: 0, base: 0, ruta: 0, mantenimiento: 0 };
       f.total++;
-      const c = categoria(v);
-      if (c === 'En Base') f.base++;
-      else if (c === 'En Ruta') f.ruta++;
+      if (u.estado === 'En Base') f.base++;
+      else if (u.estado === 'En Ruta') f.ruta++;
       else f.mantenimiento++;
-      m.set(k, f);
+      m.set(u.sub, f);
     }
     return [...m.entries()].sort((a, b) => b[1].total - a[1].total);
-  }, [visibles]);
+  }, [visibles, filtro]);
 
   const criterios = [
     filtro !== 'Todos' && `Estado: ${filtro}`,
@@ -142,9 +156,13 @@ export function DisponibilidadPage() {
 
   const excel = async () => {
     try {
-      await exportarExcel('Disponibilidad-flota', 'Disponibilidad',
-        ['Placa camión', 'Placa carreta', 'Estado', 'Conductor', 'Empresa', 'Marca', 'Tipo', 'Capacidad', 'Observaciones'],
-        visibles.map(v => [v.placa_camion, v.placa_carreta, v.estado, v.conductor_asignado, v.empresa, v.marca, v.tipo_unidad, v.capacidad_tanque, v.observaciones]));
+      const filas = visibles.map((v, i) => [
+        i + 1, v.placa_camion || '—', v.placa_carreta || '—', v.conductor_asignado || '—', categoria(v),
+        v.empresa || v.cliente || '—', v.marca || '—', v.capacidad_tanque || '—', v.tipo_unidad || '—', v.observaciones || '—',
+        textoGps(mapaGps.get(placaLimpia(v.placa_camion || v.placa_carreta || ''))),
+      ]);
+      await exportarExcel('Disponibilidad-flota', 'Disponibilidad Flota',
+        ['#', 'CAMIÓN', 'CARRETA', 'CONDUCTOR', 'ESTADO', 'EMPRESA', 'MARCA', 'CAPACIDAD DE TANQUE', 'TIPO UNIDAD', 'OBSERVACIONES', 'UBICACIÓN GPS'], filas);
       haptic('success');
     } catch (err) { aviso(err); }
   };
