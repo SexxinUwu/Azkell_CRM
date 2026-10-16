@@ -769,50 +769,73 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.post('/ot-materiales', (req, res) => {
         const { ticket_ot, tipo_destino, placa, responsable, responsable_id, moneda, tipo_cambio, observaciones, creado_por, items } = req.body;
         if (!ticket_ot) return res.status(400).json({ error: 'ticket_ot es requerido' });
+        // Todo se escribe en la base de esta empresa (req.db), nunca en una base fija
+        const targetDb = req.db || db;
         const fecha = new Date().toISOString().split('T')[0];
         const anio = new Date().getFullYear();
         const tc = parseFloat(tipo_cambio) || 1;
-        _generarCodigoAlmacen('SA', anio, (err, id) => {
-            if (err) return res.status(500).json({ error: String(err) });
-            const total_pen = _calcularTotalPen(items || [], tc);
-            const solicitanteVal = creado_por || req.body.usuario || req.body.solicitante || (req.user && req.user.nombre) || null;
-            (req.db || db).query(
-                'INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por,ticket_ot,estado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                [id, fecha, tipo_destino || 'Vehiculo', placa || null, responsable || null, responsable_id || null,
-                    moneda || 'PEN', tc, total_pen, observaciones || null, solicitanteVal, ticket_ot, 'Pendiente'],
-                (err2) => {
-                    if (err2) return res.status(500).json({ error: err2.message });
-                    if (!items || !items.length) { if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
-                    // Resolver inventario_id por descripción para items que no lo traen
-                    const descsParaResolver = items
-                        .filter(d => !d.inventario_id && d.descripcion)
-                        .map(d => d.descripcion);
-                    const resolver = (cb) => {
-                        if (!descsParaResolver.length) return cb({});
-                        (req.db || db).query(
-                            'SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1',
-                            [descsParaResolver],
-                            (e, rows) => {
-                                const mapa = {};
-                                if (!e && rows) rows.forEach(r => { mapa[r.descripcion] = r.id; });
-                                cb(mapa);
-                            }
-                        );
-                    };
-                    resolver((mapaInv) => {
-                        const dVals = items.map(d => {
-                            const invId = d.inventario_id || mapaInv[d.descripcion] || null;
-                            return [id, invId, d.descripcion || null,
-                                parseFloat(d.cantidad) || 0, parseFloat(d.costo_unitario) || 0,
-                                d.moneda || moneda || 'PEN',
-                                parseFloat(d.importe) || ((parseFloat(d.cantidad) || 0) * (parseFloat(d.costo_unitario) || 0))];
-                        });
-                        (req.db || db).query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => { });
-                        if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
-                    });
-                }
-            );
+
+        // La OT debe existir en la base de esta empresa (por su id o por su ticket de entrada)
+        targetDb.query('SELECT estado FROM ordenes_trabajo WHERE id_ot = ? OR ticket_entrada = ? LIMIT 1', [ticket_ot, ticket_ot], (errOT, rowsOT) => {
+            if (errOT) return res.status(500).json({ error: errOT.message });
+            if (!rowsOT || !rowsOT.length) return res.status(400).json({ error: 'La OT ' + ticket_ot + ' no existe' });
+            crearSolicitud();
         });
+
+        function crearSolicitud() {
+            _generarCodigoAlmacen('SA', anio, (err, id) => {
+                if (err) return res.status(500).json({ error: String(err) });
+                const total_pen = _calcularTotalPen(items || [], tc);
+                const solicitanteVal = creado_por || req.body.usuario || req.body.solicitante || (req.user && req.user.nombre) || null;
+                targetDb.query(
+                    'INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por,ticket_ot,estado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                    [id, fecha, tipo_destino || 'Vehiculo', placa || null, responsable || null, responsable_id || null,
+                        moneda || 'PEN', tc, total_pen, observaciones || null, solicitanteVal, ticket_ot, 'Pendiente'],
+                    (err2) => {
+                        if (err2) return res.status(500).json({ error: err2.message });
+                        const registrar = () => {
+                            if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                            res.json({ ok: true, id });
+                        };
+                        if (!items || !items.length) return registrar();
+                        // Resolver inventario_id por descripción para items que no lo traen
+                        const descsParaResolver = items
+                            .filter(d => !d.inventario_id && d.descripcion)
+                            .map(d => d.descripcion);
+                        const resolver = (cb) => {
+                            if (!descsParaResolver.length) return cb({});
+                            targetDb.query(
+                                'SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1',
+                                [descsParaResolver],
+                                (e, rows) => {
+                                    const mapa = {};
+                                    if (!e && rows) rows.forEach(r => { mapa[r.descripcion] = r.id; });
+                                    cb(mapa);
+                                }
+                            );
+                        };
+                        resolver((mapaInv) => {
+                            const dVals = items.map(d => {
+                                const invId = d.inventario_id || mapaInv[d.descripcion] || null;
+                                return [id, invId, d.descripcion || null,
+                                    parseFloat(d.cantidad) || 0, parseFloat(d.costo_unitario) || 0,
+                                    d.moneda || moneda || 'PEN',
+                                    parseFloat(d.importe) || ((parseFloat(d.cantidad) || 0) * (parseFloat(d.costo_unitario) || 0))];
+                            });
+                            targetDb.query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], (errDet) => {
+                                // Sin líneas la solicitud no tiene repuestos, pero su total sí se sumaría al costo de la OT:
+                                // si el detalle falla, se deshace la cabecera y no queda una solicitud a medias
+                                if (errDet) {
+                                    return targetDb.query('DELETE FROM salidas_inv WHERE id = ?', [id], () =>
+                                        res.status(500).json({ error: 'No se pudo guardar el detalle de la solicitud: ' + errDet.message }));
+                                }
+                                registrar();
+                            });
+                        });
+                    }
+                );
+            }, targetDb);
+        }
     });
 
     router.put('/ot-materiales/:id', (req, res) => {

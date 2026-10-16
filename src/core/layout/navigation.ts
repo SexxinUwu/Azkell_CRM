@@ -148,7 +148,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'inventario', label: 'Inventario', clasico: 'almacen/inventario', icon: Boxes, permissions: ver('inv') },
       { key: 'entradas', label: 'Órdenes de compra', clasico: 'almacen/entradas', icon: PackagePlus, permissions: ver('ent_inv') },
       { key: 'recepcion', label: 'Recepción de compras', clasico: 'almacen/recepcion-compras', icon: PackagePlus, permissions: ver('rec_compras', 'ent_inv', 'inv') },
-      { key: 'salidas', label: 'Órdenes de salida', clasico: 'almacen/salidas', icon: PackageMinus, permissions: ver('sal_inv') },
+      { key: 'salidas', label: 'Órdenes de salida', to: '/almacen/salidas', icon: PackageMinus, permissions: ver('sal_inv') },
       { key: 'kardex', label: 'Kardex', clasico: 'almacen/kardex', icon: History, permissions: ver('kardex') },
       { key: 'proveedores', label: 'Proveedores', clasico: 'almacen/proveedores', icon: Warehouse, permissions: ver('prov_inv') },
       {

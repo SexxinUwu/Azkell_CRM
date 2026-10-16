@@ -12,13 +12,15 @@ interface Props {
   salida: SalidaInv | null;
   onClose: () => void;
   onGuardado: () => void;
+  /** Valores iniciales de una salida nueva (p. ej. desde una OT); no se aplican al editar */
+  preset?: Partial<Pick<SalidaInv, 'placa' | 'ticket_ot' | 'responsable' | 'tipo_destino'>>;
 }
 
 const itemVacio = (): ItemSalida => ({
   inventario_id: null, descripcion: '', cantidad: 1, costo_unitario: 0, moneda: 'PEN', importe: 0,
 });
 
-export function SalidaFormulario({ open, salida: s, onClose, onGuardado }: Props) {
+export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset }: Props) {
   const toast = useToast();
   const { data: inventario } = useInventario();
   const [guardando, setGuardando] = useState(false);
@@ -35,6 +37,28 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado }: Props
 
   const almacenes = [...new Set((inventario ?? []).map(i => i.almacen).filter(Boolean) as string[])].sort();
 
+  /** Disponible del artículo: stock actual; al editar, lo que ya descontó esta salida vuelve a contar */
+  function disponibleDe(it: ItemSalida): number | null {
+    if (!it.inventario_id) return null;
+    const art = (inventario ?? []).find(a => a.id === it.inventario_id);
+    if (!art) return null;
+    const yaDescontado = (s?.items ?? [])
+      .filter(x => x.inventario_id === it.inventario_id)
+      .reduce((acc, x) => acc + (Number(x.cantidad) || 0), 0);
+    return art.stock_actual + yaDescontado;
+  }
+
+  /** Error de una fila con datos; null si la fila está bien o vacía. Sin artículo del inventario no hay rebaja ni kardex. */
+  function errorDeFila(it: ItemSalida): string | null {
+    if (!it.descripcion.trim() && !it.inventario_id) return null;
+    if (!it.inventario_id) return 'Elige un artículo de la lista del inventario';
+    if (!(Number(it.cantidad) > 0)) return 'La cantidad debe ser mayor que cero';
+    const disp = disponibleDe(it);
+    if (disp !== null && Number(it.cantidad) > disp) return `Stock insuficiente: disponible ${disp}`;
+    return null;
+  }
+  const hayErrores = items.some(it => errorDeFila(it) !== null);
+
   useEffect(() => {
     if (!open) return;
     if (s) {
@@ -49,10 +73,12 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado }: Props
       setItems(s.items?.length ? s.items.map(i => ({ ...i })) : [itemVacio()]);
     } else {
       const hoy = new Date().toISOString().split('T')[0];
-      setFecha(hoy); setTipoDestino('Vehiculo'); setPlaca(''); setResponsable('');
-      setNroDoc(''); setAlmacen(''); setTicketOt(''); setObservaciones('');
+      setFecha(hoy); setTipoDestino(preset?.tipo_destino ?? 'Vehiculo'); setPlaca(preset?.placa ?? '');
+      setResponsable(preset?.responsable ?? ''); setNroDoc(''); setAlmacen(''); setTicketOt(preset?.ticket_ot ?? '');
+      setObservaciones('');
       setItems([itemVacio()]);
     }
+    // `preset` no está en las dependencias: si el padre lo recrea en cada render, se reiniciaría lo que se escribe
   }, [open, s]);
 
   function actualizarItem(idx: number, campo: keyof ItemSalida, valor: string | number | null) {
@@ -88,6 +114,8 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado }: Props
     if (!fecha) { toast('Selecciona la fecha', 'error'); return; }
     const itemsValidos = items.filter(i => i.descripcion.trim() || i.inventario_id);
     if (!itemsValidos.length) { toast('Agrega al menos un artículo', 'error'); return; }
+    const primerError = items.map(errorDeFila).find(e => e !== null);
+    if (primerError) { toast(primerError, 'error'); return; }
 
     setGuardando(true);
     try {
@@ -198,6 +226,16 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado }: Props
                           <option key={a.id} value={a.articulo || a.descripcion}>{a.id} — Stock: {a.stock_actual}</option>
                         ))}
                       </datalist>
+                      {it.inventario_id && disponibleDe(it) !== null && (
+                        <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--label-2)', marginTop: 2 }}>
+                          Disponible: {disponibleDe(it)}
+                        </span>
+                      )}
+                      {errorDeFila(it) && (
+                        <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--red-ink)', marginTop: 2 }}>
+                          {errorDeFila(it)}
+                        </span>
+                      )}
                     </td>
                     <td>
                       <input className="input" type="number" min={0} step="0.01"
@@ -242,7 +280,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado }: Props
           {p => <TextInput {...p} value={observaciones} placeholder="Notas adicionales" onChange={ev => setObservaciones(ev.target.value)} />}
         </Field>
 
-        <Button variant="primary" loading={guardando} onClick={guardar} style={{ width: '100%' }}>
+        <Button variant="primary" loading={guardando} disabled={hayErrores} onClick={guardar} style={{ width: '100%' }}>
           {s ? 'Guardar cambios' : 'Registrar salida'}
         </Button>
       </div>

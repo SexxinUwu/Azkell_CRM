@@ -2225,13 +2225,14 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     });
     router.post('/salidas', (req, res) => {
         const { fecha, tipo_destino, placa, responsable, responsable_id, moneda, tipo_cambio, observaciones, creado_por, items, ticket_ot } = req.body;
+        // Todo se escribe en la base de esta empresa (req.db), no en la base por defecto
+        const targetDb = getDb(req);
 
-        // Validar estado de la OT antes de permitir salida
+        // La OT debe existir en la base de esta empresa
         if (ticket_ot) {
-            db.query('SELECT estado FROM ordenes_trabajo WHERE id_ot = ?', [ticket_ot], (errOT, rowsOT) => {
+            targetDb.query('SELECT estado FROM ordenes_trabajo WHERE id_ot = ?', [ticket_ot], (errOT, rowsOT) => {
                 if (errOT) return res.status(500).json({ error: errOT.message });
                 if (!rowsOT.length) return res.status(400).json({ error: 'La OT ' + ticket_ot + ' no existe' });
-                const estadoOT = rowsOT[0].estado;
                 // Bloqueo removido: Permitir salidas a OT cerradas para regularizaciones de almacén
                 crearSalida();
             });
@@ -2243,7 +2244,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         function costearItemsSalida(lista, cb) {
             const ids = [...new Set((lista || []).map(d => d.inventario_id).filter(Boolean))];
             if (!ids.length) return cb();
-            db.query('SELECT id, costo_soles, costo_referencial FROM inventario WHERE id IN (?)', [ids], (err, rows) => {
+            targetDb.query('SELECT id, costo_soles, costo_referencial FROM inventario WHERE id IN (?)', [ids], (err, rows) => {
                 if (!err && rows) {
                     const mapa = new Map(rows.map(r => [String(r.id), r]));
                     lista.forEach(d => {
@@ -2266,17 +2267,21 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             _generarCodigoAlmacen('SAL', anio, (err, id) => {
                 if (err) return res.status(500).json({ error: err.message });
                 const total_pen = _calcularTotalPen(items || [], tc, moneda);
-                db.query('INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por,ticket_ot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+                targetDb.query('INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por,ticket_ot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
                     [id, fecha || new Date().toISOString().split('T')[0], tipo_destino, placa || null, responsable || null,
                         responsable_id || null, moneda || 'PEN', tc || null, total_pen, observaciones || null, solUser, ticket_ot || null],
                     (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });
-                        if (!items || !items.length) { if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
+                        const registrar = () => {
+                            if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                            res.json({ ok: true, id });
+                        };
+                        if (!items || !items.length) return registrar();
                         // Resolver inventario_id por descripción para items sin código
                         const descsSalida = items.filter(d => !d.inventario_id && d.descripcion).map(d => d.descripcion);
                         const resolverSalida = (cb) => {
                             if (!descsSalida.length) return cb({});
-                            db.query('SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1', [descsSalida], (e, rows) => {
+                            targetDb.query('SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1', [descsSalida], (e, rows) => {
                                 const mapa = {};
                                 if (!e && rows) rows.forEach(r => { mapa[r.descripcion] = r.id; });
                                 cb(mapa);
@@ -2289,11 +2294,18 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                     parseFloat(d.cantidad) || 0, parseFloat(d.costo_unitario) || 0, d.moneda || moneda || 'PEN',
                                     parseFloat(d.importe) || ((parseFloat(d.cantidad) || 0) * (parseFloat(d.costo_unitario) || 0))];
                             });
-                            db.query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => { });
-                            if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
+                            targetDb.query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], (errDet) => {
+                                // Sin líneas la salida no rebaja stock, pero su total sí suma al costo de la OT:
+                                // si el detalle falla, se deshace la cabecera y no queda una salida a medias
+                                if (errDet) {
+                                    return targetDb.query('DELETE FROM salidas_inv WHERE id = ?', [id], () =>
+                                        res.status(500).json({ error: 'No se pudo guardar el detalle de la salida: ' + errDet.message }));
+                                }
+                                registrar();
+                            });
                         });
                     });
-            });
+            }, targetDb);
         } // fin crearSalida
     });
     router.put('/salidas/:id', (req, res) => {

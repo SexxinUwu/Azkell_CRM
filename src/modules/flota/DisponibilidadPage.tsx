@@ -24,28 +24,13 @@ import { abrirClasico } from '../../core/layout/navigation';
 import { estadoDispColor, useDisponibilidad, useUbicacionesGps, type UbicacionGps, type VehiculoDisponibilidad } from './api';
 import { DisponibilidadFormulario } from './DisponibilidadFormulario';
 import { compartirDisponibilidadPDF, descargarDisponibilidadPDF } from './disponibilidadReporte';
+import { cifrasDisponibilidad, estadoDeTexto, unidadesDe, type Estado } from './disponibilidadCifras';
 
-// Un vehículo está "En Base", "En Ruta" o "En Mantenimiento" según el texto de su estado (igual que la versión actual)
-type Estado = 'En Base' | 'En Ruta' | 'En Mantenimiento';
 type Filtro = 'Todos' | Estado;
 const COLOR_ESTADO: Record<Estado, string> = { 'En Base': 'green', 'En Ruta': 'blue', 'En Mantenimiento': 'red' };
 
-// Mantenimiento o taller primero; ruta o viaje después; el resto es base (igual que la versión actual)
-const estadoDeTexto = (texto: string | null | undefined): Estado => {
-  const e = (texto || '').trim().toLowerCase();
-  if (e.includes('mant') || e.includes('taller')) return 'En Mantenimiento';
-  if (e.includes('ruta') || e.includes('viaje')) return 'En Ruta';
-  return 'En Base';
-};
-
 const categoria = (v: VehiculoDisponibilidad): Estado => estadoDeTexto(v.estado);
 
-/** Cada placa cuenta como una unidad, como en la versión actual: el tracto con su estado y la carreta con el suyo */
-interface Unidad { placa: string; estado: Estado; sub: string }
-const unidadesDe = (v: VehiculoDisponibilidad): Unidad[] => [
-  ...(v.placa_camion ? [{ placa: v.placa_camion, estado: estadoDeTexto(v.estado), sub: v.sub_tipo || v.tipo_unidad || '—' }] : []),
-  ...(v.placa_carreta ? [{ placa: v.placa_carreta, estado: estadoDeTexto(v.estado_carreta || v.estado), sub: v.sub_tipo_carreta || v.sub_tipo || '—' }] : []),
-];
 
 // Búsqueda sobre los mismos campos que la versión actual
 const CAMPOS_BUSQUEDA = ['placa_camion', 'placa_carreta', 'conductor_asignado', 'marca', 'tipo_unidad', 'sub_tipo', 'estado', 'empresa', 'cliente', 'observaciones', 'capacidad_tanque'] as const;
@@ -102,16 +87,7 @@ export function DisponibilidadPage() {
   const delEmpresa = useMemo(() => vehiculos.filter(v => empresa === 'TODAS' || coincideEmpresa(v, empresa)), [vehiculos, empresa]);
   const q = busqueda.trim().toUpperCase();
   const delBusqueda = useMemo(() => delEmpresa.filter(v => coincideBusqueda(v, q)), [delEmpresa, q]);
-  const cifras = useMemo(() => {
-    const c = { total: 0, base: 0, ruta: 0, mantenimiento: 0 };
-    for (const v of delBusqueda) for (const u of unidadesDe(v)) {
-      c.total++;
-      if (u.estado === 'En Base') c.base++;
-      else if (u.estado === 'En Ruta') c.ruta++;
-      else c.mantenimiento++;
-    }
-    return c;
-  }, [delBusqueda]);
+  const cifras = useMemo(() => cifrasDisponibilidad(delBusqueda), [delBusqueda]);
 
   // La tabla muestra la fila si alguna de sus placas está en el estado elegido
   const visibles = useMemo(

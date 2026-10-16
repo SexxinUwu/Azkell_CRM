@@ -4692,11 +4692,11 @@ db.query(
 );
 
 // ── Helper: generar código secuencial para Almacén ───────────────────────
-function _generarCodigoAlmacen(tipo, anio, cb) {
+function _generarCodigoAlmacen(tipo, anio, cb, tdb = db) {
     const tablas = { INV: 'inventario', SERV: 'inventario', ENT: 'entradas_inv', SAL: 'salidas_inv', SA: 'salidas_inv', PROV: 'proveedores_inv' };
     const tabla = tablas[tipo];
     const prefix = anio ? `${tipo}-${anio}-` : `${tipo}-`;
-    db.query(
+    tdb.query(
         `SELECT id FROM \`${tabla}\` WHERE id LIKE ? ORDER BY CAST(SUBSTRING_INDEX(id, '-', -1) AS UNSIGNED) DESC LIMIT 1`,
         [prefix + '%'],
         (err, rows) => {
