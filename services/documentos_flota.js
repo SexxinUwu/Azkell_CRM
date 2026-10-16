@@ -33,4 +33,9 @@ function mensajeBloqueo(vencidos) {
     return `No se puede continuar: documento vencido. ${detalle}. Regularice el documento para despachar.`;
 }
 
-module.exports = { documentosVencidosPara, mensajeBloqueo, TIPOS_BLOQUEANTES };
+// Aviso (no bloquea): se muestra mientras el documento se renueva
+function mensajeAdvertencia(v) {
+    return `Advertencia: ${NOMBRES[v.tipo] || v.tipo} de ${v.placa} vencido desde ${fechaCorta(v.vence)}. Renueve el documento.`;
+}
+
+module.exports = { documentosVencidosPara, mensajeBloqueo, mensajeAdvertencia, TIPOS_BLOQUEANTES };
