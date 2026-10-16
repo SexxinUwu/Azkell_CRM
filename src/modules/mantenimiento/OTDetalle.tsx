@@ -14,7 +14,7 @@ import { compartirPDF, descargarArchivo } from '../../core/lib/pdf';
 import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
 import { useInspecciones, type Inspeccion } from '../inspecciones/api';
 import {
-  accionesDisponibles, costosOT, duracionPausa, etiquetaEstado, formatoDuracion, marcarTrabajo, otDetalles, otId,
+  accionesDisponibles, costosOT, duracionPausa, estadoTrabajo, etiquetaEstado, formatoDuracion, marcarTrabajo, otDetalles, otId,
   pausasDe, tiempoNetoOT, trabajoCosto, trabajosDeOT, useInspeccionesDeOT, useMateriales, useTrabajosOT,
   type AccionOT, type OrdenTrabajo, type PausaOT,
 } from './api';
@@ -126,7 +126,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     [inspeccionAbierta, inspecciones],
   );
 
-  const hechos = trabajos.filter(t => (t.estado ?? '').toLowerCase() === 'realizado').length
+  // Hecho = realizado por el técnico o aprobado por el supervisor
+  const hechos = trabajos.filter(t => ['Realizado', 'Aprobado'].includes(estadoTrabajo(t.estado))).length
     + backlog.filter(b => b.estado === 'Completado').length;
   const totalTareas = trabajos.length + backlog.length;
 
@@ -261,7 +262,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
             ) : (
               <div className="tarjeta__lista">
                 {trabajos.map((t, i) => {
-                  const realizado = (t.estado ?? '').toLowerCase() === 'realizado';
+                  const realizado = ['Realizado', 'Aprobado'].includes(estadoTrabajo(t.estado));
                   const clave = `t-${t.id_ot}-${i}`;
                   return (
                     <div key={clave} className="ot-linea">
