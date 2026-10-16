@@ -487,6 +487,43 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
   WHERE i.activo=1
   ORDER BY i.id`;
 
+    // Quiebre de stock: cuando un despacho deja un artículo en su stock mínimo o debajo, se abre una O/C en BORRADOR.
+    // No notifica ni aprueba nada, y no abre otra si ya hay una O/C abierta para el mismo artículo.
+    function abrirOcPorQuiebre(inventarioIds) {
+        const ids = [...new Set((inventarioIds || []).filter(Boolean))];
+        if (!ids.length) return;
+        // Mismo cálculo de stock que el inventario; se filtra por id dentro de la consulta (envolverla daría columnas repetidas)
+        const sqlStockIds = _stockSQL.replace(/WHERE i\.activo=1\s*ORDER BY i\.id\s*$/, 'WHERE i.activo=1 AND i.id IN (?) ORDER BY i.id');
+        db.query(sqlStockIds, [ids], (err, todos) => {
+            const rows = (todos || []).filter(x => Number(x.stock_min) > 0 && Number(x.stock_actual) <= Number(x.stock_min));
+            if (err || !rows.length) return;
+            rows.forEach(it => {
+                db.query(`SELECT 1 FROM ordenes_compra_items oi JOIN ordenes_compra oc ON oc.id = oi.orden_compra_id
+                           WHERE oi.descripcion = ? AND oc.estado IN ('BORRADOR','PENDIENTE_APROBACION','APROBADA') LIMIT 1`, [it.descripcion], (e2, abiertas) => {
+                    if (e2 || (abiertas && abiertas.length)) return;
+                    const meta = Number(it.stock_max) > 0 ? Number(it.stock_max) : Number(it.stock_min);
+                    const cantidad = Math.max(meta - Number(it.stock_actual), 1);
+                    const costo = Number(it.costo_referencial) || 0;
+                    const total = +(cantidad * costo).toFixed(2);
+                    const codigo = `OCQ-${it.id}-${Date.now()}`;
+                    db.query(`INSERT INTO ordenes_compra (codigo, proveedor_nombre, proveedor_ruc, monto_total, moneda, motivo_solicitud, solicitado_por, estado)
+                               VALUES (?, 'Por definir', NULL, ?, ?, ?, 'Sistema (stock mínimo)', 'BORRADOR')`,
+                        [codigo, total, it.moneda || 'PEN', `Quiebre de stock: ${it.descripcion} (stock ${it.stock_actual}, mínimo ${it.stock_min})`], (e3, r) => {
+                            if (e3 || !r) return;
+                            db.query(`INSERT INTO ordenes_compra_items (orden_compra_id, descripcion, cantidad, unidad_medida, precio_unitario, subtotal)
+                                       VALUES (?, ?, ?, ?, ?, ?)`, [r.insertId, it.descripcion, cantidad, it.unidad || 'UND', costo, total]);
+                        });
+                });
+            });
+        });
+    }
+    function abrirOcPorQuiebreSalida(salidaId) {
+        db.query('SELECT inventario_id FROM detalle_salidas_inv WHERE salida_id = ?', [salidaId], (err, rows) => {
+            if (err || !rows) return;
+            abrirOcPorQuiebre(rows.map(r => r.inventario_id));
+        });
+    }
+
     router.get('/notificaciones/resumen', (req, res) => {
         const targetDb = getDb(req);
         const qInspVencidas = `
@@ -2375,6 +2412,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
                                                 logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); 
                                             }
+                                            abrirOcPorQuiebreSalida(id);
                                             res.json({ ok: true, parcial: true, nuevo_pendiente_id: nuevoId, despachado_id: id });
                                         });
                                     });
@@ -2400,6 +2438,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
                             logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); 
                         }
+                        abrirOcPorQuiebreSalida(id);
                         res.json({ ok: true, parcial: false });
                     });
                 }

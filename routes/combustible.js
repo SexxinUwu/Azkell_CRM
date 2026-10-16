@@ -1603,7 +1603,7 @@ module.exports = function (db, broadcast, logAudit) {
                     // 3. Caso contrario, al estar en ruta o tener recargas -> INICIADO
                     const tieneFinDeServicio = (t.vouchers || []).some(v => (v.tipo || '').toUpperCase().includes('FIN'));
                     let estadoViaje = 'INICIADO';
-                    if (tieneFinDeServicio || (ovInfo && String(ovInfo.estado).toUpperCase() === 'FINALIZADO')) {
+                    if (tieneFinDeServicio || (ovInfo && ['FINALIZADO', 'LIQUIDADO'].includes(String(ovInfo.estado).toUpperCase()))) {
                         estadoViaje = 'FINALIZADO';
                     } else if (ovInfo && String(ovInfo.estado).toUpperCase() === 'ANULADO') {
                         estadoViaje = 'ANULADO';

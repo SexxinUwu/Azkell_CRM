@@ -1,6 +1,7 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
 const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+const { recalcularLiquidacionViaje } = require('../services/liquidacion_viaje');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
@@ -811,6 +812,7 @@ module.exports = function (db, broadcast, logAudit) {
                 });
             }
 
+            await recalcularLiquidacionViaje(tdb, codeViaje).catch(() => {});
             res.json({ ok: true, message: `El viaje ${codeViaje} ha sido finalizado exitosamente.` });
         } catch (err) {
             console.error('Error al finalizar viaje:', err);
@@ -1346,7 +1348,7 @@ module.exports = function (db, broadcast, logAudit) {
                         ov.placa_tracto,
                         ov.placa_remolque,
                         CASE 
-                            WHEN ov.estado = 'FINALIZADO' THEN 'FINALIZADO'
+                            WHEN ov.estado IN ('FINALIZADO', 'LIQUIDADO') THEN 'FINALIZADO'
                             WHEN v_stat.tiene_fin > 0 THEN 'FINALIZADO'
                             ELSE 'INICIADO'
                         END AS estado
@@ -1397,7 +1399,7 @@ module.exports = function (db, broadcast, logAudit) {
                     ov.origen,
                     ov.destino,
                     CASE 
-                        WHEN ov.estado = 'FINALIZADO' THEN 'FINALIZADO'
+                        WHEN ov.estado IN ('FINALIZADO', 'LIQUIDADO') THEN 'FINALIZADO'
                         WHEN v_stat.tiene_fin > 0 THEN 'FINALIZADO'
                         WHEN v_stat.total_vales > 0 THEN 'INICIADO'
                         ELSE 'INICIADO'
@@ -2354,6 +2356,7 @@ module.exports = function (db, broadcast, logAudit) {
                                     usuario_finalizacion = COALESCE(usuario_finalizacion, ?)
                                 WHERE viaje = ?
                             `, [nowStr, userFinaliza, viajeCode]);
+                            await recalcularLiquidacionViaje(tdb, viajeCode).catch(() => {});
                         }
                     }
                 } catch (eSyncOv) {

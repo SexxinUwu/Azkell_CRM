@@ -37,7 +37,7 @@ interface Viaje {
   direccion_llegada: string | null;
   escolta: string | null;
   observaciones: string | null;
-  estado: string;                       // ACTIVO | INICIADO | FINALIZADO | ANULADO
+  estado: string;                       // ACTIVO | INICIADO | FINALIZADO | LIQUIDADO | ANULADO
   fecha_inicio: string | null;
   fecha_fin: string | null;
   kilometraje_inicial: number | null;
@@ -51,9 +51,9 @@ interface Viaje {
   rutas_list: string | null;
 }
 
-const ESTADOS = ['ACTIVO', 'INICIADO', 'FINALIZADO', 'ANULADO'];
+const ESTADOS = ['ACTIVO', 'INICIADO', 'FINALIZADO', 'LIQUIDADO', 'ANULADO'];
 const n = (v: unknown) => Number(v) || 0;
-const tono = (e: string) => ({ ACTIVO: 'amber', INICIADO: 'blue', FINALIZADO: 'green', ANULADO: 'neutral' }[e] ?? 'neutral') as 'amber' | 'blue' | 'green' | 'neutral';
+const tono = (e: string) => ({ ACTIVO: 'amber', INICIADO: 'blue', FINALIZADO: 'green', LIQUIDADO: 'green', ANULADO: 'neutral' }[e] ?? 'neutral') as 'amber' | 'blue' | 'green' | 'neutral';
 const css = (t: string) => (t === 'blue' ? 'accent' : t === 'neutral' ? 'gray' : t);
 const fmtFecha = (s?: string | null) => (s ? String(s).replace('T', ' ').slice(0, 16) : '—');
 
@@ -175,7 +175,7 @@ export function OrdenesViajePage() {
       <DetalleViaje
         viaje={abierto}
         onClose={() => setAbiertoId(null)}
-        onEditar={puedeEditar && abierto && abierto.estado !== 'FINALIZADO' ? () => setFormulario({ viaje: abierto }) : undefined}
+        onEditar={puedeEditar && abierto && abierto.estado !== 'FINALIZADO' && abierto.estado !== 'LIQUIDADO' ? () => setFormulario({ viaje: abierto }) : undefined}
         onIniciar={puedeEditar && abierto?.estado === 'ACTIVO' ? () => setAccion({ tipo: 'iniciar', viaje: abierto }) : undefined}
         onFinalizar={puedeEditar && abierto?.estado === 'INICIADO' ? () => setAccion({ tipo: 'finalizar', viaje: abierto }) : undefined}
         onEliminar={puedeEliminar && abierto ? () => setPorEliminar(abierto) : undefined}

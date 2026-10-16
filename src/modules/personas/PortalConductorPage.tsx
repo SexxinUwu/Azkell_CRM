@@ -27,7 +27,7 @@ interface Portal {
 const MOTIVOS = ['Balanza y pesaje', 'Cochera / Parqueo de ruta', 'Estibadores / Carga y descarga menor', 'Lavado y engrase de unidad en viaje',
   'Peajes (físico / telepeaje)', 'Pernocte / Hospedaje en ruta', 'Viáticos / Alimentación choferes'];
 const s = (v: unknown) => 'S/ ' + (Number(v) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const colorEstado = (e: string) => ({ ACTIVO: 'amber', INICIADO: 'accent', FINALIZADO: 'green' }[String(e).toUpperCase()] ?? 'gray');
+const colorEstado = (e: string) => ({ ACTIVO: 'amber', INICIADO: 'accent', FINALIZADO: 'green', LIQUIDADO: 'green' }[String(e).toUpperCase()] ?? 'gray');
 
 // Personas y seguridad › Portal del conductor: viaje asignado, saldo de viáticos y rendición de gastos.
 export function PortalConductorPage() {

@@ -29,6 +29,7 @@ module.exports = function (db, broadcast, logAudit) {
             fallas_libres_text TEXT,
             fotos_json LONGTEXT,
             firma_conductor LONGTEXT,
+            critica TINYINT(1) NOT NULL DEFAULT 0,
             estado VARCHAR(30) DEFAULT 'Pendiente',
             id_rampa VARCHAR(50) DEFAULT NULL,
             ots_generadas_json LONGTEXT,
@@ -58,10 +59,17 @@ module.exports = function (db, broadcast, logAudit) {
             tdb.query(createConfigTableSql, () => {
                 // Asegurar columnas adicionales en bases de datos existentes
                 tdb.query("SHOW COLUMNS FROM reportes_fallas LIKE 'orden_viaje'", (errCol, rowsCol) => {
+                    const agregarCritica = () => tdb.query("SHOW COLUMNS FROM reportes_fallas LIKE 'critica'", (errC, rowsC) => {
+                        if (!errC && (!rowsC || rowsC.length === 0)) {
+                            tdb.query("ALTER TABLE reportes_fallas ADD COLUMN critica TINYINT(1) NOT NULL DEFAULT 0", () => next());
+                        } else {
+                            next();
+                        }
+                    });
                     if (!errCol && (!rowsCol || rowsCol.length === 0)) {
-                        tdb.query("ALTER TABLE reportes_fallas ADD COLUMN orden_viaje VARCHAR(60) DEFAULT NULL AFTER folio", () => next());
+                        tdb.query("ALTER TABLE reportes_fallas ADD COLUMN orden_viaje VARCHAR(60) DEFAULT NULL AFTER folio", () => agregarCritica());
                     } else {
-                        next();
+                        agregarCritica();
                     }
                 });
             });
@@ -669,12 +677,13 @@ module.exports = function (db, broadcast, logAudit) {
             conductor, procedencia, ubicacion_gps,
             fallas_tracto, fallas_remolque, fallas_libres_text,
             fotos_base64, firma_conductor, creado_por,
-            anexar_si_existe
+            anexar_si_existe, falla_critica
         } = req.body;
 
         const ordenViajeClean = (orden_viaje || '').trim();
         let kmInicialNum = parseInt(km_inicial, 10) || 0;
         let kmFinalNum = parseInt(km_final, 10) || 0;
+        const critica = [true, 1, '1', 'true'].includes(falla_critica) ? 1 : 0;
 
         // Si km no fue ingresado, consultar el kilometraje actual del tracto automáticamente
         if (!kmInicialNum && placa_tracto) {
@@ -763,7 +772,8 @@ module.exports = function (db, broadcast, logAudit) {
                                 fotos_json = ?,
                                 km_inicial = CASE WHEN COALESCE(km_inicial, 0) = 0 THEN ? ELSE km_inicial END,
                                 km_final = GREATEST(COALESCE(km_final, 0), ?),
-                                firma_conductor = COALESCE(?, firma_conductor)
+                                firma_conductor = COALESCE(?, firma_conductor),
+                                critica = GREATEST(COALESCE(critica, 0), ?)
                             WHERE id = ?
                         `;
 
@@ -776,6 +786,7 @@ module.exports = function (db, broadcast, logAudit) {
                                 kmInicialNum,
                                 kmFinalNum || kmInicialNum,
                                 firma_conductor || null,
+                                critica,
                                 repExistente.id
                             ],
                             async (errUpd) => {
@@ -791,6 +802,13 @@ module.exports = function (db, broadcast, logAudit) {
                                     broadcast
                                 );
 
+                                if (critica) {
+                                    await abrirBacklogFallaCritica(tdb, {
+                                        folio, placa: repExistente.placa_tracto, km: kmFinalNum || kmInicialNum,
+                                        descripcion: textoFallasCriticas([mergedFallasT, mergedFallasR], fallas_libres_text || repExistente.fallas_libres_text),
+                                        reportadoPor: creado_por,
+                                    }).catch(e => console.error('Backlog falla crítica:', e.message));
+                                }
                                 return res.json({ ok: true, id: repExistente.id, folio, anexado: true, fotos: fotosUrls });
                             }
                         );
@@ -851,8 +869,8 @@ module.exports = function (db, broadcast, logAudit) {
                     folio, orden_viaje, placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
                     conductor, procedencia, ubicacion_gps,
                     fallas_tracto_json, fallas_remolque_json, fallas_libres_text,
-                    fotos_json, firma_conductor, estado, creado_por
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?);
+                    fotos_json, firma_conductor, critica, estado, creado_por
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?);
                 `;
 
                 const values = [
@@ -871,6 +889,7 @@ module.exports = function (db, broadcast, logAudit) {
                     (fallas_libres_text || '').trim(),
                     JSON.stringify(fotosUrls),
                     firma_conductor || null,
+                    critica,
                     creado_por || 'Sistema'
                 ];
 
@@ -885,6 +904,13 @@ module.exports = function (db, broadcast, logAudit) {
                         broadcast
                     );
 
+                    if (critica) {
+                        await abrirBacklogFallaCritica(tdb, {
+                            folio, placa: (placa_tracto || '').trim().toUpperCase(), km: kmFinalNum || kmInicialNum,
+                            descripcion: textoFallasCriticas([fallas_tracto || [], fallas_remolque || []], fallas_libres_text),
+                            reportadoPor: creado_por,
+                        }).catch(e => console.error('Backlog falla crítica:', e.message));
+                    }
                     if (typeof broadcast === 'function') broadcast('checklist', 'crear');
                     if (typeof logAudit === 'function') {
                         logAudit(req, 'MANTENIMIENTO', 'Checklist', 'CREÓ', `Creó Reporte de Fallas ${folio} para ${placa_tracto || ''} ${placa_remolque ? '/ ' + placa_remolque : ''}`);
@@ -1234,6 +1260,27 @@ module.exports = function (db, broadcast, logAudit) {
 
     router.post('/:id/generar-ots', handleGenerarOTs);
     router.post('/generar-ots', handleGenerarOTs);
+
+    // Falla crítica: la unidad no puede salir. Se abre un ítem en el backlog de mantenimiento (BK-AAAA-NNNN).
+    async function abrirBacklogFallaCritica(tdb, { folio, placa, km, descripcion, reportadoPor }) {
+        const anio = new Date().getFullYear();
+        const [ultimo] = await tdb.promise().query(
+            'SELECT MAX(backlog_id) AS ultimo FROM ot_backlog WHERE backlog_id REGEXP ?',
+            [`^BK-${anio}-[0-9]{4}$`]
+        );
+        const num = ultimo[0] && ultimo[0].ultimo ? parseInt(String(ultimo[0].ultimo).split('-').pop(), 10) || 0 : 0;
+        const backlogId = `BK-${anio}-${String(num + 1).padStart(4, '0')}`;
+        await tdb.promise().query(
+            `INSERT INTO ot_backlog (backlog_id, placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por, ticket_ot)
+             VALUES (?, ?, ?, 'Falla crítica', ?, ?, CURDATE(), 'Pendiente', ?, ?)`,
+            [backlogId, placa || '', km || 0, descripcion, reportadoPor || 'Sistema', 'Sistema', folio]
+        );
+    }
+    function textoFallasCriticas(listas, libres) {
+        const items = listas.flat().map(f => f && (f.obs || f.item || f.motivo || f.descripcion)).filter(Boolean);
+        if (libres && String(libres).trim()) items.push(String(libres).trim());
+        return items.length ? items.join('; ') : 'Falla crítica reportada (ver reporte de fallas)';
+    }
 
     async function syncReporteConOTsYRampas(tdb, repId, folio, placaT, placaR, fallasT, fallasR, fallasLibres, broadcast) {
         try {

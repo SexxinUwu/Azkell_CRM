@@ -73,7 +73,7 @@ module.exports = function (db, logAudit) {
 
             // 2. Reportes de fallas activos
             const fallasRows = await safeQuery(`
-                SELECT id, folio, fecha_reporte, placa_tracto, placa_remolque, conductor, estado, ots_generadas_json
+                SELECT id, folio, fecha_reporte, placa_tracto, placa_remolque, conductor, estado, ots_generadas_json, critica
                 FROM reportes_fallas
                 WHERE estado NOT IN ('Finalizado', 'Finalizada', 'Anulado', 'Anulada')
                 ORDER BY id DESC
@@ -129,7 +129,7 @@ module.exports = function (db, logAudit) {
                                 (fallasRows || []).forEach(f => {
                                     const pt = clean(f.placa_tracto);
                                     const pr = clean(f.placa_remolque);
-                                    if (pt && !fallasTractoMap[pt]) {
+                                    if (pt && (!fallasTractoMap[pt] || (Number(f.critica) === 1 && Number(fallasTractoMap[pt].critica) !== 1))) {
                                         fallasTractoMap[pt] = f;
                                         if (pr) fallasRemolqueSet.add(pr);
                                     }
@@ -243,6 +243,9 @@ module.exports = function (db, logAudit) {
                                     if (hasDirectOT) {
                                         estado = 'En Mantenimiento';
                                         observaciones = (disp && disp.observaciones) ? disp.observaciones : 'En Taller / OT Activa';
+                                    } else if (falla && Number(falla.critica) === 1) {
+                                        estado = 'En Mantenimiento';
+                                        observaciones = `Falla crítica / Folio ${falla.folio || ''}`;
                                     } else if (enRuta) {
                                         estado = 'En Ruta';
                                         observaciones = enRuta.destino ? `Destino: ${enRuta.destino}` : (enRuta.salida_observaciones || (disp ? disp.observaciones : ''));

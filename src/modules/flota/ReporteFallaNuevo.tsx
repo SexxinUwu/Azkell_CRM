@@ -43,6 +43,7 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
   const [fallasR, setFallasR] = useState<Record<string, Marca>>({});
   const [abierto, setAbierto] = useState<string | null>(null);
   const [manual, setManual] = useState('');
+  const [critica, setCritica] = useState(false);
   const [fotos, setFotos] = useState<string[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setFallasT({}); setFallasR({}); setAbierto(null); setManual(''); setFotos([]);
+    setError(null); setFallasT({}); setFallasR({}); setAbierto(null); setManual(''); setFotos([]); setCritica(false);
     setV({ placa_tracto: '', placa_remolque: '', orden_viaje: '', conductor: '', km_inicial: '', procedencia: '', ubicacion_gps: '' });
     firma.current?.limpiar();
   }, [open]);
@@ -88,7 +89,7 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
         body: {
           orden_viaje: v.orden_viaje.trim(), fecha_reporte: ahora, placa_tracto: v.placa_tracto.trim().toUpperCase(), placa_remolque: v.placa_remolque.trim().toUpperCase(),
           km_inicial: v.km_inicial, km_final: v.km_inicial, conductor: v.conductor.trim(), procedencia: v.procedencia, ubicacion_gps: v.ubicacion_gps,
-          fallas_tracto: fT, fallas_remolque: armar(fallasR), fallas_libres_text: '', fotos_base64: fotos,
+          fallas_tracto: fT, fallas_remolque: armar(fallasR), fallas_libres_text: '', fotos_base64: fotos, falla_critica: critica,
           firma_conductor: firma.current && !firma.current.vacia() ? firma.current.obtener() : null, creado_por: user?.name ?? 'Sistema',
         },
       });
@@ -183,6 +184,13 @@ export function ReporteFallaNuevo({ open, onClose, onHecho }: { open: boolean; o
           <p className="tarjeta__grupo-titulo">Firma del conductor</p>
           <Firma ref={firma} />
         </div>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--s-3)', padding: 'var(--s-3)', borderRadius: 'var(--r-lg)', cursor: 'pointer', background: critica ? 'var(--red-tint)' : 'var(--fill-subtle)' }}>
+          <input type="checkbox" checked={critica} onChange={e => setCritica(e.target.checked)} style={{ marginTop: 3 }} />
+          <span>
+            <b style={{ color: critica ? 'var(--red-ink)' : 'var(--label)' }}>Falla crítica</b>
+            <span style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--label-2)' }}>La unidad no puede salir. Pasa a mantenimiento y se abre un ítem en el backlog.</span>
+          </span>
+        </label>
         <Field label="Estado inicial">{p => <SelectInput {...p} disabled value="Pendiente"><option>Pendiente</option></SelectInput>}</Field>
       </div>
     </Sheet>
