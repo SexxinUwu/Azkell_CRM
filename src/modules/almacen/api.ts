@@ -104,27 +104,90 @@ export interface ItemEntrada {
   item_codigo_articulo?: string;
 }
 
+/** Entrada tal como la devuelve el servidor (columnas de entradas_inv). El código es texto: ENT-2026-00120 */
 export interface EntradaInv {
-  id: number;
-  tipo_entrada: string | null;
-  proveedor_nombre: string | null;
-  proveedor_ruc: string | null;
-  nro_documento: string | null;
-  almacen: string | null;
+  id: string;
   fecha: string | null;
-  total_pen: number;
+  tipo_orden: string | null;        // 'Orden de compra' | 'Entrada directa' | 'Ajuste' | …
+  proveedor_id: string | null;
+  proveedor_nombre: string | null;
+  documento_referencia: string | null;
   moneda: string;
-  estado: string | null;          // 'Pendiente' | 'Aprobado' | 'Anulado'
+  tipo_cambio: number | null;
+  total_pen: number;
+  condicion_pago: string | null;    // 'Al contado' | 'A crédito'
+  dias_credito: number | null;
+  estado: string | null;            // 'Registrado' (inicial) → 'Aprobado' | 'Anulado' | 'Rechazado'
   motivo_entrada: string | null;
-  observaciones: string | null;
+  motivo_anulacion: string | null;
   solicitante: string | null;
+  placa: string | null;
+  observaciones: string | null;
   creado_por: string | null;
   created_at: string;
   items: ItemEntrada[];
+  tipo_igv: string | null;          // 'sin_igv' | 'mas_igv'
+  autoriza: string | null;          // quien aprobó (V°B° de gerencia)
+  aprobado_por: string | null;
+  fecha_aprobacion: string | null;
+  total_recibido?: number;
+  cant_recepciones?: number;
+}
+
+/** Aprueba (V°B°) una orden de compra. El servidor también avisa a Tesorería por WhatsApp (comportamiento de producción). */
+export function aprobarEntrada(id: string | number, comentario: string | null, usuario: string) {
+  return api(`/almacen/entradas/${encodeURIComponent(String(id))}/estado`, {
+    method: 'PUT',
+    body: { estado: 'Aprobado', comentario: comentario?.trim() || undefined, usuario },
+  });
+}
+
+/** Datos de la empresa emisora (de la base de esta empresa) para el membrete del PDF */
+export interface EmpresaDocumentos { nombre: string | null; ruc: string | null; direccion: string | null; telefono: string | null }
+export function useEmpresaDocumentos() {
+  return useQuery<EmpresaDocumentos>({
+    queryKey: ['almacen', 'empresa-documentos'],
+    queryFn: () => api('/almacen/empresa-documentos'),
+    staleTime: 600_000,
+  });
 }
 
 export const TIPOS_ENTRADA = ['Compra', 'Transferencia', 'Devolución', 'Donación', 'Ajuste', 'Otro'];
-export const ESTADOS_ENTRADA = ['Pendiente', 'Aprobado', 'Anulado'];
+export const CONDICIONES_PAGO = ['Al contado', 'A crédito'];
+
+/** Tipo de la interfaz → tipo_orden del servidor (el clásico guarda "Orden de compra" para las compras) */
+export const tipoOrdenDe = (tipo: string): string => (tipo === 'Compra' ? 'Orden de compra' : tipo);
+
+/** tipo_orden del servidor → tipo de la interfaz */
+export function tipoDeOrden(tipoOrden: string | null | undefined): string {
+  const t = (tipoOrden ?? '').trim().toLowerCase();
+  if (t.startsWith('orden de compra')) return 'Compra';
+  const hallado = TIPOS_ENTRADA.find(x => x.toLowerCase() === t);
+  return hallado ?? 'Otro';
+}
+
+/**
+ * Grupo de un estado de entrada para la pantalla. 'Registrado' y 'Pendiente' son sinónimos:
+ * ambos esperan aprobación. La etiqueta muestra 'Registrada' para el estado inicial del servidor.
+ */
+export type GrupoEntrada = 'pendientes' | 'aprobadas' | 'anuladas' | 'otras';
+export function grupoEntrada(estado: string | null | undefined): GrupoEntrada {
+  const e = (estado ?? 'Registrado').trim().toLowerCase();
+  if (e === 'registrado' || e === 'registrada' || e === 'pendiente') return 'pendientes';
+  if (e.startsWith('aprob') || e.startsWith('autoriz') || e === 'procesado' || e === 'procesada' || e === 'pagado' || e === 'pagada') return 'aprobadas';
+  if (e.startsWith('anul')) return 'anuladas';
+  return 'otras';
+}
+export function etiquetaEstadoEntrada(estado: string | null | undefined): string {
+  const e = (estado ?? 'Registrado').trim();
+  const l = e.toLowerCase();
+  if (l === 'registrado' || l === 'registrada') return 'Registrada';
+  if (l === 'pendiente') return 'Pendiente';
+  if (l.startsWith('aprob')) return 'Aprobada';
+  if (l.startsWith('anul')) return 'Anulada';
+  if (l.startsWith('rechaz')) return 'Rechazada';
+  return e;
+}
 
 export function useEntradas() {
   return useQuery<EntradaInv[]>({
@@ -134,17 +197,17 @@ export function useEntradas() {
   });
 }
 
-export async function guardarEntrada(data: Partial<EntradaInv> & { items: ItemEntrada[] }, id?: number) {
+export async function guardarEntrada(data: Partial<EntradaInv> & { items: ItemEntrada[] }, id?: string | number) {
   if (id) return api(`/almacen/entradas/${id}`, { method: 'PUT', body: data });
   return api('/almacen/entradas', { method: 'POST', body: data });
 }
 
-export async function eliminarEntrada(id: number) {
+export async function eliminarEntrada(id: string | number) {
   return api(`/almacen/entradas/${id}`, { method: 'DELETE' });
 }
 
-export async function anularEntrada(id: number) {
-  return api(`/almacen/entradas/${id}/anular`, { method: 'PUT' });
+export async function anularEntrada(id: string | number, motivo = 'Anulada desde Almacén') {
+  return api(`/almacen/entradas/${id}/anular`, { method: 'PUT', body: { motivo } });
 }
 
 // ─── Salidas ────────────────────────────────────────────────────────────────
@@ -247,9 +310,15 @@ export function useKardex(inventario_id: string | null) {
 
 // ─── Proveedores ─────────────────────────────────────────────────────────────
 
+/**
+ * Proveedor como lo usa la interfaz. El servidor guarda numero_documento (RUC), email y razon_social,
+ * y las cuentas bancarias en su propia tabla: esos campos se mapean aquí (useProveedores / guardarProveedor).
+ * El "contacto" no tiene columna en el servidor: al guardar se anota al final de las observaciones.
+ */
 export interface ProveedorInv {
-  id: number;
+  id: string;
   nombre: string;
+  razon_social: string | null;
   ruc: string | null;
   contacto: string | null;
   telefono: string | null;
@@ -260,22 +329,78 @@ export interface ProveedorInv {
   cci: string | null;
   moneda_pago: string | null;
   observaciones: string | null;
+  estado: string | null;
+}
+
+interface ProveedorServidor {
+  id: string;
+  nombre: string;
+  razon_social: string | null;
+  numero_documento: string | null;
+  email: string | null;
+  telefono: string | null;
+  direccion: string | null;
+  estado: string | null;
+  observaciones: string | null;
+  cuentas?: Array<{ banco: string | null; moneda: string | null; numero_cuenta: string | null }>;
+}
+
+const MARCA_CONTACTO = 'Contacto: ';
+
+function proveedorDesdeServidor(p: ProveedorServidor): ProveedorInv {
+  const obs = p.observaciones ?? '';
+  const linea = obs.split('\n').find(l => l.startsWith(MARCA_CONTACTO));
+  const cuenta = p.cuentas?.[0];
+  return {
+    id: String(p.id),
+    nombre: p.nombre,
+    razon_social: p.razon_social,
+    ruc: p.numero_documento,
+    contacto: linea ? linea.slice(MARCA_CONTACTO.length) : null,
+    telefono: p.telefono,
+    correo: p.email,
+    direccion: p.direccion,
+    banco: cuenta?.banco ?? null,
+    cuenta: cuenta?.numero_cuenta ?? null,
+    cci: null,
+    moneda_pago: cuenta?.moneda ?? null,
+    observaciones: obs.split('\n').filter(l => !l.startsWith(MARCA_CONTACTO)).join('\n') || null,
+    estado: p.estado,
+  };
+}
+
+function proveedorAServidor(d: Partial<ProveedorInv>): Record<string, unknown> {
+  const obs = [d.observaciones?.trim(), d.contacto?.trim() ? `${MARCA_CONTACTO}${d.contacto.trim()}` : ''].filter(Boolean).join('\n');
+  return {
+    nombre: d.nombre,
+    razon_social: d.razon_social ?? null,
+    tipo_documento: 'RUC',
+    numero_documento: d.ruc ?? null,
+    telefono: d.telefono ?? null,
+    email: d.correo ?? null,
+    direccion: d.direccion ?? null,
+    estado: d.estado ?? 'Activo',
+    observaciones: obs || null,
+  };
 }
 
 export function useProveedores() {
   return useQuery<ProveedorInv[]>({
     queryKey: ['almacen', 'proveedores'],
-    queryFn: () => api('/almacen/proveedores'),
+    queryFn: async () => ((await api<ProveedorServidor[]>('/almacen/proveedores')) ?? []).map(proveedorDesdeServidor),
     staleTime: 120_000,
   });
 }
 
-export async function guardarProveedor(data: Partial<ProveedorInv>, id?: number) {
-  if (id) return api(`/almacen/proveedores/${id}`, { method: 'PUT', body: data });
-  return api('/almacen/proveedores', { method: 'POST', body: data });
+export async function guardarProveedor(data: Partial<ProveedorInv>, id?: string | number) {
+  // Las cuentas bancarias solo se envían al crear: al editar, el servidor reemplazaría todas las cuentas guardadas
+  const cuerpo = proveedorAServidor(data);
+  if (id) return api(`/almacen/proveedores/${id}`, { method: 'PUT', body: cuerpo });
+  const cuentas = data.banco || data.cuenta ? [{ banco: data.banco ?? null, numero_cuenta: data.cuenta ?? null, moneda: data.moneda_pago ?? 'PEN' }] : undefined;
+  return api('/almacen/proveedores', { method: 'POST', body: { ...cuerpo, cuentas } });
 }
 
-export async function eliminarProveedor(id: number) {
+export async function eliminarProveedor(id: string | number) {
   return api(`/almacen/proveedores/${id}`, { method: 'DELETE' });
 }
 

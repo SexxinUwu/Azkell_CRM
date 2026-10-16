@@ -5,7 +5,10 @@ import { Button } from '../../core/ui/Button';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
-import { guardarEntrada, TIPOS_ENTRADA, useInventario, type EntradaInv, type ItemEntrada } from './api';
+import {
+  CONDICIONES_PAGO, guardarEntrada, tipoDeOrden, tipoOrdenDe, TIPOS_ENTRADA, useInventario, useProveedores,
+  useTipoCambioSunat, type EntradaInv, type ItemEntrada,
+} from './api';
 
 interface Props {
   open: boolean;
@@ -18,39 +21,62 @@ const itemVacio = (): ItemEntrada => ({
   inventario_id: null, descripcion: '', cantidad: 1, costo_unitario: 0, moneda: 'PEN', importe: 0,
 });
 
+/** Error de una línea con datos; null si la línea está bien o vacía. Sin artículo del inventario no hay stock ni kardex. */
+function errorDeLinea(it: ItemEntrada): string | null {
+  if (!it.descripcion.trim() && !it.inventario_id) return null;
+  if (!it.inventario_id) return 'Elige un artículo de la lista del inventario';
+  if (!(Number(it.cantidad) > 0)) return 'La cantidad debe ser mayor que cero';
+  if (!(Number(it.costo_unitario) >= 0)) return 'El costo no puede ser negativo';
+  return null;
+}
+
 export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Props) {
   const toast = useToast();
   const { data: inventario } = useInventario();
+  const { data: proveedores } = useProveedores();
   const [guardando, setGuardando] = useState(false);
 
   const [fecha, setFecha] = useState('');
   const [tipoEntrada, setTipoEntrada] = useState('Compra');
-  const [proveedorNombre, setProveedorNombre] = useState('');
-  const [proveedorRuc, setProveedorRuc] = useState('');
+  const [proveedorId, setProveedorId] = useState('');
   const [nroDoc, setNroDoc] = useState('');
-  const [almacen, setAlmacen] = useState('');
   const [motivo, setMotivo] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  const [moneda, setMoneda] = useState<'PEN' | 'USD'>('PEN');
+  const [tipoCambio, setTipoCambio] = useState('');
+  const [condicion, setCondicion] = useState('Al contado');
+  const [diasCredito, setDiasCredito] = useState('30');
+  const [tipoIgv, setTipoIgv] = useState('sin_igv');
   const [items, setItems] = useState<ItemEntrada[]>([itemVacio()]);
 
-  const almacenes = [...new Set((inventario ?? []).map(i => i.almacen).filter(Boolean) as string[])].sort();
+  // Tipo de cambio SUNAT del día: se trae solo cuando la entrada es en dólares
+  const sunat = useTipoCambioSunat(open && moneda === 'USD');
+  useEffect(() => {
+    if (moneda === 'USD' && !tipoCambio && sunat.data?.venta) setTipoCambio(String(sunat.data.venta));
+  }, [moneda, sunat.data, tipoCambio]);
+
+  const proveedor = (proveedores ?? []).find(p => p.id === proveedorId) ?? null;
+  const tc = Number(tipoCambio);
 
   useEffect(() => {
     if (!open) return;
     if (e) {
       setFecha(e.fecha?.split('T')[0] ?? '');
-      setTipoEntrada(e.tipo_entrada ?? 'Compra');
-      setProveedorNombre(e.proveedor_nombre ?? '');
-      setProveedorRuc(e.proveedor_ruc ?? '');
-      setNroDoc(e.nro_documento ?? '');
-      setAlmacen(e.almacen ?? '');
+      setTipoEntrada(tipoDeOrden(e.tipo_orden));
+      setProveedorId(e.proveedor_id ?? '');
+      setNroDoc(e.documento_referencia ?? '');
       setMotivo(e.motivo_entrada ?? '');
       setObservaciones(e.observaciones ?? '');
+      setMoneda(e.moneda === 'USD' ? 'USD' : 'PEN');
+      setTipoCambio(e.tipo_cambio ? String(e.tipo_cambio) : '');
+      setCondicion(e.condicion_pago ?? 'Al contado');
+      setDiasCredito(String(e.dias_credito ?? 30));
+      setTipoIgv(e.tipo_igv === 'mas_igv' ? 'mas_igv' : 'sin_igv');
       setItems(e.items?.length ? e.items.map(i => ({ ...i })) : [itemVacio()]);
     } else {
       const hoy = new Date().toISOString().split('T')[0];
-      setFecha(hoy); setTipoEntrada('Compra'); setProveedorNombre(''); setProveedorRuc('');
-      setNroDoc(''); setAlmacen(''); setMotivo(''); setObservaciones('');
+      setFecha(hoy); setTipoEntrada('Compra'); setProveedorId(''); setNroDoc(''); setMotivo(''); setObservaciones('');
+      setMoneda('PEN'); setTipoCambio(''); setCondicion('Al contado'); setDiasCredito('30'); setTipoIgv('sin_igv');
       setItems([itemVacio()]);
     }
   }, [open, e]);
@@ -59,7 +85,6 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
     setItems(prev => {
       const nuevo = [...prev];
       const it = { ...nuevo[idx], [campo]: valor };
-      // Si cambia cantidad o costo, recalcular importe
       if (campo === 'cantidad' || campo === 'costo_unitario') {
         it.importe = (parseFloat(String(it.cantidad)) || 0) * (parseFloat(String(it.costo_unitario)) || 0);
       }
@@ -68,46 +93,69 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
     });
   }
 
-  function seleccionarArticulo(idx: number, inventario_id: string) {
-    const art = (inventario ?? []).find(a => a.id === inventario_id);
+  /** Elige el artículo del inventario y trae su costo (en soles, o en dólares si la entrada es en USD) */
+  function seleccionarArticulo(idx: number, inventarioId: string) {
+    const art = (inventario ?? []).find(a => a.id === inventarioId);
     if (!art) return;
+    const soles = Number(art.costo_soles) || 0;
+    const costo = moneda === 'USD' && tc > 0 ? +(soles / tc).toFixed(4) : soles;
     setItems(prev => {
       const nuevo = [...prev];
       nuevo[idx] = {
         ...nuevo[idx],
-        inventario_id,
+        inventario_id: art.id,
         descripcion: art.articulo || art.descripcion,
-        costo_unitario: art.costo_soles || 0,
-        moneda: 'PEN',
+        costo_unitario: costo,
+        moneda,
         item_unidad: art.unidad ?? undefined,
-        importe: (nuevo[idx].cantidad || 1) * (art.costo_soles || 0),
+        importe: (Number(nuevo[idx].cantidad) || 1) * costo,
       };
       return nuevo;
     });
   }
 
+  /** Error de cabecera o de alguna línea; null si todo está bien */
+  function primerError(): string | null {
+    if (!fecha) return 'Selecciona la fecha';
+    if (tipoEntrada === 'Compra' && !proveedorId) return 'Elige el proveedor de la lista';
+    if (moneda === 'USD' && !(tc > 0)) return 'Ingresa el tipo de cambio del día';
+    if (condicion === 'A crédito' && !(Number(diasCredito) > 0)) return 'Indica los días de crédito';
+    const conDatos = items.filter(i => i.descripcion.trim() || i.inventario_id);
+    if (!conDatos.length) return 'Agrega al menos un artículo';
+    return items.map(errorDeLinea).find(x => x !== null) ?? null;
+  }
+  const errorActual = primerError();
+
   async function guardar() {
-    if (!fecha) { toast('Selecciona la fecha', 'error'); return; }
+    if (errorActual) { toast(errorActual, 'error'); return; }
     const itemsValidos = items.filter(i => i.descripcion.trim() || i.inventario_id);
-    if (!itemsValidos.length) { toast('Agrega al menos un artículo', 'error'); return; }
 
     setGuardando(true);
     try {
-      const total_pen = itemsValidos.reduce((s, i) => s + (i.importe || 0), 0);
       await guardarEntrada({
         fecha,
-        tipo_entrada: tipoEntrada,
-        proveedor_nombre: proveedorNombre || null,
-        proveedor_ruc: proveedorRuc || null,
-        nro_documento: nroDoc || null,
-        almacen: almacen || null,
+        tipo_orden: tipoOrdenDe(tipoEntrada),
+        proveedor_id: proveedorId || null,
+        proveedor_nombre: proveedor ? (proveedor.razon_social || proveedor.nombre) : null,
+        documento_referencia: nroDoc || null,
         motivo_entrada: motivo || null,
         observaciones: observaciones || null,
-        moneda: 'PEN',
-        total_pen,
-        items: itemsValidos,
+        moneda,
+        tipo_cambio: moneda === 'USD' ? tc : null,
+        condicion_pago: condicion,
+        dias_credito: condicion === 'A crédito' ? Number(diasCredito) : 0,
+        tipo_igv: tipoIgv,
+        // El total en soles lo calcula el servidor (en USD con el tipo de cambio de la cabecera)
+        items: itemsValidos.map(i => ({
+          inventario_id: i.inventario_id,
+          descripcion: i.descripcion,
+          cantidad: Number(i.cantidad),
+          costo_unitario: Number(i.costo_unitario),
+          moneda,
+          importe: (Number(i.cantidad) || 0) * (Number(i.costo_unitario) || 0),
+        })),
       }, e?.id);
-      toast(e ? 'Entrada actualizada' : 'Entrada registrada');
+      toast(e ? 'Entrada actualizada' : 'Orden registrada');
       onGuardado();
     } catch (err) {
       toast(errorMessage(err), 'error');
@@ -116,10 +164,11 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
     }
   }
 
-  const totalCalculado = items.reduce((s, i) => s + (i.importe || 0), 0);
+  const totalCalculado = items.reduce((s, i) => s + (Number(i.cantidad) || 0) * (Number(i.costo_unitario) || 0), 0);
+  const simbolo = moneda === 'USD' ? '$' : 'S/';
 
   return (
-    <Sheet open={open} onClose={onClose} title={e ? 'Editar entrada' : 'Nueva entrada'}>
+    <Sheet open={open} onClose={onClose} title={e ? 'Editar orden de compra' : 'Nueva orden de compra'}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
 
         {/* Cabecera */}
@@ -127,7 +176,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           <Field label="Fecha *">
             {p => <TextInput {...p} type="date" value={fecha} onChange={ev => setFecha(ev.target.value)} />}
           </Field>
-          <Field label="Tipo de entrada">
+          <Field label="Tipo">
             {p => (
               <SelectInput {...p} value={tipoEntrada} onChange={ev => setTipoEntrada(ev.target.value)}>
                 {TIPOS_ENTRADA.map(t => <option key={t} value={t}>{t}</option>)}
@@ -136,25 +185,66 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           </Field>
         </div>
 
-        <Field label="Proveedor">
-          {p => <TextInput {...p} value={proveedorNombre} placeholder="Nombre del proveedor" onChange={ev => setProveedorNombre(ev.target.value)} />}
+        <Field label={tipoEntrada === 'Compra' ? 'Proveedor *' : 'Proveedor'}>
+          {p => (
+            <SelectInput {...p} value={proveedorId} onChange={ev => setProveedorId(ev.target.value)}>
+              <option value="">Elige un proveedor…</option>
+              {(proveedores ?? []).filter(x => x.estado !== 'Inactivo' || x.id === proveedorId).map(x => (
+                <option key={x.id} value={x.id}>{x.razon_social || x.nombre}</option>
+              ))}
+            </SelectInput>
+          )}
         </Field>
+        {proveedor && (
+          <p className="t-footnote c-secondary" style={{ marginTop: -8 }}>
+            {proveedor.ruc ? `RUC ${proveedor.ruc}` : 'Este proveedor no tiene RUC registrado'}
+          </p>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
-          <Field label="RUC proveedor">
-            {p => <TextInput {...p} value={proveedorRuc} placeholder="20XXXXXXXXX" onChange={ev => setProveedorRuc(ev.target.value)} />}
-          </Field>
           <Field label="N° documento">
             {p => <TextInput {...p} value={nroDoc} placeholder="Ej: F001-001234" onChange={ev => setNroDoc(ev.target.value)} />}
           </Field>
+          <Field label="Moneda">
+            {p => (
+              <SelectInput {...p} value={moneda} onChange={ev => setMoneda(ev.target.value as 'PEN' | 'USD')}>
+                <option value="PEN">Soles (PEN)</option>
+                <option value="USD">Dólares (USD)</option>
+              </SelectInput>
+            )}
+          </Field>
         </div>
 
-        <Field label="Almacén destino">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
+          <Field label="Condición de pago">
+            {p => (
+              <SelectInput {...p} value={condicion} onChange={ev => setCondicion(ev.target.value)}>
+                {CONDICIONES_PAGO.map(c => <option key={c} value={c}>{c}</option>)}
+              </SelectInput>
+            )}
+          </Field>
+          {condicion === 'A crédito' ? (
+            <Field label="Días de crédito *">
+              {p => <TextInput {...p} type="number" min={1} value={diasCredito} onChange={ev => setDiasCredito(ev.target.value)} />}
+            </Field>
+          ) : moneda === 'USD' ? (
+            <Field label="Tipo de cambio *">
+              {p => <TextInput {...p} type="number" min={0} step="0.0001" value={tipoCambio} placeholder="SUNAT del día" onChange={ev => setTipoCambio(ev.target.value)} />}
+            </Field>
+          ) : <div />}
+        </div>
+        {moneda === 'USD' && (
+          <p className="t-footnote c-secondary" style={{ marginTop: -8 }}>
+            {sunat.data?.venta ? `SUNAT venta del ${sunat.data.fecha}: ${sunat.data.venta}` : 'Consultando el tipo de cambio SUNAT…'}
+          </p>
+        )}
+
+        <Field label="IGV">
           {p => (
-            <>
-              <TextInput {...p} value={almacen} list="ent-almacenes" placeholder="Almacén principal" onChange={ev => setAlmacen(ev.target.value)} />
-              <datalist id="ent-almacenes">{almacenes.map(a => <option key={a} value={a} />)}</datalist>
-            </>
+            <SelectInput {...p} value={tipoIgv} onChange={ev => setTipoIgv(ev.target.value)}>
+              <option value="sin_igv">Sin IGV (el precio es el total)</option>
+              <option value="mas_igv">Más IGV (18 %)</option>
+            </SelectInput>
           )}
         </Field>
 
@@ -162,10 +252,10 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           {p => <TextInput {...p} value={motivo} placeholder="Ej: Compra de repuestos para mantenimiento" onChange={ev => setMotivo(ev.target.value)} />}
         </Field>
 
-        {/* Tabla de ítems */}
+        {/* Líneas */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--s-2)' }}>
-            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--label-2)' }}>Artículos</span>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--label-2)' }}>Artículos ({moneda === 'USD' ? 'en dólares' : 'en soles'})</span>
             <Button size="sm" variant="secondary" icon={<Plus size={14} />}
               onClick={() => setItems(prev => [...prev, itemVacio()])}>
               Agregar
@@ -183,59 +273,67 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
                 </tr>
               </thead>
               <tbody>
-                {items.map((it, idx) => (
-                  <tr key={idx}>
-                    <td>
-                      <input className="input" style={{ fontSize: '0.875rem', minHeight: '2.25rem' }}
-                        value={it.descripcion}
-                        list={`inv-arts-${idx}`}
-                        placeholder="Nombre o código"
-                        onChange={ev => {
-                          const val = ev.target.value;
-                          actualizarItem(idx, 'descripcion', val);
-                          // Si coincide con un ID exacto, autocompletar
-                          const art = (inventario ?? []).find(a => a.id === val || a.articulo === val);
-                          if (art) seleccionarArticulo(idx, art.id);
-                        }}
-                      />
-                      <datalist id={`inv-arts-${idx}`}>
-                        {(inventario ?? []).slice(0, 100).map(a => (
-                          <option key={a.id} value={a.articulo || a.descripcion}>{a.id}</option>
-                        ))}
-                      </datalist>
-                    </td>
-                    <td>
-                      <input className="input" type="number" min={0} step="0.01"
-                        style={{ fontSize: '0.875rem', minHeight: '2.25rem', width: '100%' }}
-                        value={it.cantidad}
-                        onChange={ev => actualizarItem(idx, 'cantidad', parseFloat(ev.target.value) || 0)}
-                      />
-                    </td>
-                    <td>
-                      <input className="input" type="number" min={0} step="0.01"
-                        style={{ fontSize: '0.875rem', minHeight: '2.25rem', width: '100%' }}
-                        value={it.costo_unitario}
-                        onChange={ev => actualizarItem(idx, 'costo_unitario', parseFloat(ev.target.value) || 0)}
-                      />
-                    </td>
-                    <td style={{ fontWeight: 700, textAlign: 'right' }}>
-                      S/ {(it.importe || 0).toFixed(2)}
-                    </td>
-                    <td>
-                      {items.length > 1 && (
-                        <button type="button" style={{ color: 'var(--red-ink)', padding: '0.25rem' }}
-                          onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))}>
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {items.map((it, idx) => {
+                  const error = errorDeLinea(it);
+                  return (
+                    <tr key={idx}>
+                      <td>
+                        <input className="input" style={{ fontSize: '0.875rem', minHeight: '2.25rem' }}
+                          value={it.descripcion}
+                          list={`inv-arts-${idx}`}
+                          placeholder="Nombre o código"
+                          onChange={ev => {
+                            const val = ev.target.value;
+                            const art = (inventario ?? []).find(a => a.id === val || a.articulo === val || a.descripcion === val);
+                            if (art) {
+                              seleccionarArticulo(idx, art.id);
+                            } else {
+                              // Texto que no corresponde a un artículo: la línea deja de estar vinculada al inventario
+                              actualizarItem(idx, 'descripcion', val);
+                              actualizarItem(idx, 'inventario_id', null);
+                            }
+                          }}
+                        />
+                        <datalist id={`inv-arts-${idx}`}>
+                          {(inventario ?? []).slice(0, 100).map(a => (
+                            <option key={a.id} value={a.articulo || a.descripcion}>{a.id}</option>
+                          ))}
+                        </datalist>
+                        {error && <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--red-ink)', marginTop: 2 }}>{error}</span>}
+                      </td>
+                      <td>
+                        <input className="input" type="number" min={0} step="0.01"
+                          style={{ fontSize: '0.875rem', minHeight: '2.25rem', width: '100%' }}
+                          value={it.cantidad}
+                          onChange={ev => actualizarItem(idx, 'cantidad', parseFloat(ev.target.value) || 0)}
+                        />
+                      </td>
+                      <td>
+                        <input className="input" type="number" min={0} step="0.0001"
+                          style={{ fontSize: '0.875rem', minHeight: '2.25rem', width: '100%' }}
+                          value={it.costo_unitario}
+                          onChange={ev => actualizarItem(idx, 'costo_unitario', parseFloat(ev.target.value) || 0)}
+                        />
+                      </td>
+                      <td style={{ fontWeight: 700, textAlign: 'right' }}>
+                        {simbolo} {(it.importe || 0).toFixed(2)}
+                      </td>
+                      <td>
+                        {items.length > 1 && (
+                          <button type="button" style={{ color: 'var(--red-ink)', padding: '0.25rem' }}
+                            onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))}>
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr>
                   <td colSpan={3} style={{ textAlign: 'right', fontWeight: 700, padding: 'var(--s-2)' }}>Total</td>
-                  <td style={{ textAlign: 'right', fontWeight: 800, padding: 'var(--s-2)' }}>S/ {totalCalculado.toFixed(2)}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 800, padding: 'var(--s-2)' }}>{simbolo} {totalCalculado.toFixed(2)}</td>
                   <td />
                 </tr>
               </tfoot>
@@ -247,8 +345,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           {p => <TextInput {...p} value={observaciones} placeholder="Notas adicionales" onChange={ev => setObservaciones(ev.target.value)} />}
         </Field>
 
-        <Button variant="primary" loading={guardando} onClick={guardar} style={{ width: '100%' }}>
-          {e ? 'Guardar cambios' : 'Registrar entrada'}
+        {errorActual && <p className="t-footnote" style={{ color: 'var(--red-ink)', margin: 0 }}>{errorActual}</p>}
+        <Button variant="primary" loading={guardando} disabled={Boolean(errorActual)} onClick={guardar} style={{ width: '100%' }}>
+          {e ? 'Guardar cambios' : 'Registrar orden'}
         </Button>
       </div>
     </Sheet>
