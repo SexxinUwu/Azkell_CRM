@@ -4,6 +4,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl } = require('../utils/s3');
 const { sendWarehousePaymentVoucherWhatsapp } = require('../services/whatsappService');
 const { recalcularLiquidacionViaje } = require('../services/liquidacion_viaje');
+const { fechaVencimiento } = require('../services/condicion_oc');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
@@ -1864,7 +1865,7 @@ module.exports = function (db, broadcast, logAudit) {
                     const [cajas] = await tdb.query(`
                         SELECT tipo_movimiento, SUM(importe_total) AS total
                         FROM tesoreria_caja
-                        WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(estado) != 'ANULADO'
+                        WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(TRIM(estado)) IN ('PROCESADO', 'REGISTRADO')
                         GROUP BY tipo_movimiento
                     `, [v.viaje]);
 
@@ -1875,6 +1876,12 @@ module.exports = function (db, broadcast, logAudit) {
                         else dep += t;
                     });
                     const netoDep = dep - dev;
+
+                    const [pendRows] = await tdb.query(`
+                        SELECT COALESCE(SUM(importe_total), 0) AS total FROM tesoreria_caja
+                        WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(TRIM(estado)) NOT IN ('PROCESADO', 'REGISTRADO', 'ANULADO')
+                    `, [v.viaje]);
+                    const fondosPendientes = parseFloat((pendRows && pendRows[0] && pendRows[0].total) || 0);
 
                     const [gastos] = await tdb.query(`
                         SELECT SUM(importe) AS total_gastos, COUNT(id) AS cant_gastos
@@ -1893,6 +1900,8 @@ module.exports = function (db, broadcast, logAudit) {
                     // Filtrar por estado de balance si fue solicitado
                     if (estado_balance === 'PENDIENTE' && estadoBal === 'CUADRADO') continue;
                     if (estado_balance === 'CUADRADO' && estadoBal !== 'CUADRADO') continue;
+                    if (estado_balance === 'SALDO_EMPRESA' && estadoBal !== 'SALDO_EMPRESA') continue;
+                    if (estado_balance === 'SALDO_CONDUCTOR' && estadoBal !== 'SALDO_CONDUCTOR') continue;
 
                     resultado.push({
                         ...v,
@@ -1900,6 +1909,7 @@ module.exports = function (db, broadcast, logAudit) {
                         total_rendido: ren,
                         saldo_diferencia: diff,
                         cant_gastos: cantGastos,
+                        fondos_pendientes: fondosPendientes,
                         estado_balance: estadoBal
                     });
                 }
@@ -1975,9 +1985,11 @@ module.exports = function (db, broadcast, logAudit) {
             const netoEntregado = totalDepositado - totalDevoluciones;
             const saldoDiferencia = netoEntregado - totalGastos;
 
+            const [ovRows] = await tdb.query('SELECT estado FROM operaciones_ordenes_viaje WHERE UPPER(TRIM(viaje)) = UPPER(?) LIMIT 1', [ovTrim]);
             res.json({
                 ok: true,
                 orden_viaje: ovTrim,
+                estado_viaje: ovRows && ovRows[0] ? ovRows[0].estado : null,
                 gastos: gastos || [],
                 total_depositado: netoEntregado,
                 total_pendiente_pago: totalPendientePago,
@@ -2506,7 +2518,10 @@ module.exports = function (db, broadcast, logAudit) {
                     id: oc.id,
                     folio: oc.id,
                     fecha: oc.fecha,
-                    fecha_vencimiento: oc.fecha_vencimiento || null,
+                    // La recepción fija el vencimiento real; antes se estima con la fecha de la orden y sus días de crédito
+                    fecha_vencimiento: oc.fecha_vencimiento || (/cr[eé]dito/i.test(String(oc.condicion_pago || '')) ? fechaVencimiento(
+                        oc.fecha instanceof Date ? [oc.fecha.getFullYear(), String(oc.fecha.getMonth() + 1).padStart(2, '0'), String(oc.fecha.getDate()).padStart(2, '0')].join('-') : String(oc.fecha || ''),
+                        'Crédito', oc.dias_credito) : null),
                     created_at: oc.created_at,
                     solicitante: oc.solicitante || oc.autoriza || '—',
                     centro_costo: oc.centro_costo || 'CC-100',

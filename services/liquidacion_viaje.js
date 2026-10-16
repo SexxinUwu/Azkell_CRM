@@ -19,10 +19,17 @@ async function recalcularLiquidacionViaje(pdb, orden) {
     const [cajas] = await pdb.query(
         `SELECT tipo_movimiento, SUM(importe_total) AS total
          FROM tesoreria_caja
-         WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(estado) != 'ANULADO'
+         WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(TRIM(estado)) IN ('PROCESADO', 'REGISTRADO')
          GROUP BY tipo_movimiento`,
         [viaje]
     );
+    // Fondos solicitados que tesorería aún no procesó: no se liquida el viaje hasta que se procesen o anulen
+    const [pend] = await pdb.query(
+        `SELECT COALESCE(SUM(importe_total), 0) AS total FROM tesoreria_caja
+         WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(TRIM(estado)) NOT IN ('PROCESADO', 'REGISTRADO', 'ANULADO')`,
+        [viaje]
+    );
+    const pendientes = parseFloat((pend && pend[0] && pend[0].total) || 0);
     let depositado = 0;
     let devuelto = 0;
     cajas.forEach(c => {
@@ -42,7 +49,7 @@ async function recalcularLiquidacionViaje(pdb, orden) {
     if (depositado === 0 && devuelto === 0 && rendido === 0) return estado;
 
     const diferencia = (depositado - devuelto) - rendido;
-    const cuadrado = Math.abs(diferencia) <= TOLERANCIA;
+    const cuadrado = pendientes <= TOLERANCIA && Math.abs(diferencia) <= TOLERANCIA;
 
     if (cuadrado && estado === 'FINALIZADO') {
         await pdb.query("UPDATE operaciones_ordenes_viaje SET estado = 'LIQUIDADO' WHERE UPPER(TRIM(viaje)) = UPPER(?) AND estado = 'FINALIZADO'", [viaje]);
