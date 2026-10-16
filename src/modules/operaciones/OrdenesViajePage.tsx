@@ -203,6 +203,35 @@ export function OrdenesViajePage() {
   );
 }
 
+// Resumen financiero del viaje: flete pactado, gastos de ruta (combustible + viáticos), margen y % de rentabilidad
+interface FilaRentabilidad { viaje: string; flete: number; combustible: number; viaticos: number; gastos_ruta: number; margen: number; rentabilidad_pct: number | null }
+function ResumenFinanciero({ viaje }: { viaje: Viaje }) {
+  const mes = String(viaje.fecha_viaje ?? '').slice(0, 7);
+  const q = useQuery({
+    queryKey: ['operaciones', 'rentabilidad', mes],
+    enabled: /^\d{4}-\d{2}$/.test(mes),
+    queryFn: () => api<{ viajes?: FilaRentabilidad[] }>(`/operaciones/rentabilidad?mes=${mes}`),
+  });
+  const codigo = String(viaje.viaje).trim().toUpperCase();
+  const fila = q.data?.viajes?.find(x => String(x.viaje).trim().toUpperCase() === codigo);
+  const soles = (n: number) => `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return (
+    <div className="tarjeta" aria-label="Resumen financiero">
+      <p className="tarjeta__grupo-titulo">Resumen financiero</p>
+      {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : !fila ? (
+        <p className="t-callout c-secondary">Sin datos financieros para este viaje.</p>
+      ) : (
+        <div className="disp-kpis">
+          <div className="disp-kpi disp-kpi--blue"><span><span className="disp-kpi__label">Flete</span><span className="disp-kpi__valor t-numeric">{soles(fila.flete)}</span></span></div>
+          <div className="disp-kpi disp-kpi--ink"><span><span className="disp-kpi__label">Gastos de ruta</span><span className="disp-kpi__valor t-numeric">{soles(fila.gastos_ruta)}</span><span className="t-caption c-secondary">Combustible {soles(fila.combustible)} · Viáticos {soles(fila.viaticos)}</span></span></div>
+          <div className="disp-kpi disp-kpi--green"><span><span className="disp-kpi__label">Margen bruto</span><span className="disp-kpi__valor t-numeric">{soles(fila.margen)}</span></span></div>
+          <div className="disp-kpi disp-kpi--blue"><span><span className="disp-kpi__label">Rentabilidad</span><span className="disp-kpi__valor t-numeric">{fila.rentabilidad_pct == null ? '—' : `${fila.rentabilidad_pct} %`}</span></span></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onEliminar, onNuevaOS }: {
   viaje: Viaje | null; onClose: () => void; onEditar?: () => void; onIniciar?: () => void; onFinalizar?: () => void; onEliminar?: () => void; onNuevaOS?: () => void;
 }) {
@@ -238,6 +267,7 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
             {fila('Horas motor remolque', v.horas_motor_remolque, true)}{fila('Observaciones', v.observaciones)}{fila('Creado por', v.usuario_creacion)}
           </div>
           <SeccionOrdenesServicioViaje codigo={v.viaje} onNueva={onNuevaOS ?? (() => undefined)} puedeCrear={!!onNuevaOS} />
+          <ResumenFinanciero viaje={v} />
           <SeccionGastosViaje codigo={v.viaje} />
         </div>
       )}
@@ -315,6 +345,7 @@ function FormularioViaje({ open, viaje, usuario, onClose, onGuardado }: {
   const [v, setV] = useState<Record<string, string>>({});
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [avisos, setAvisos] = useState<string[]>([]);
   const editando = !!viaje;
 
   useEffect(() => {
@@ -341,11 +372,14 @@ function FormularioViaje({ open, viaje, usuario, onClose, onGuardado }: {
       const cond = (conductores.data ?? []).find(c => c.nombre === v.conductor);
       const body = { ...v, id_conductor: cond?.id ?? (v.id_conductor || null), fecha_viaje: v.fecha_viaje ? v.fecha_viaje.replace('T', ' ') + ':00' : undefined, usuario_creacion: usuario };
       const r = editando
-        ? await api<{ ok?: boolean; error?: string }>(`/operaciones/ordenes-viaje/${encodeURIComponent(viaje!.viaje)}`, { method: 'PUT', body })
-        : await api<{ ok?: boolean; error?: string }>('/operaciones/ordenes-viaje', { method: 'POST', body });
+        ? await api<{ ok?: boolean; error?: string; advertencias?: string[] }>(`/operaciones/ordenes-viaje/${encodeURIComponent(viaje!.viaje)}`, { method: 'PUT', body })
+        : await api<{ ok?: boolean; error?: string; advertencias?: string[] }>('/operaciones/ordenes-viaje', { method: 'POST', body });
       if (r.ok === false) throw new Error(r.error || 'No se pudo guardar');
       haptic('success'); toast(editando ? 'Viaje actualizado' : 'Viaje creado');
-      await onGuardado(); onClose();
+      await onGuardado();
+      // Documentos vencidos: se guarda igual, pero el aviso queda visible hasta que el usuario cierre
+      if (r.advertencias && r.advertencias.length) { setAvisos(r.advertencias); return; }
+      onClose();
     } catch (err) { setError(errorMessage(err)); haptic('warning'); }
     finally { setEnviando(false); }
   }
@@ -362,6 +396,7 @@ function FormularioViaje({ open, viaje, usuario, onClose, onGuardado }: {
         <Button variant="primary" icon={<MapPin size={16} />} onClick={guardar} loading={enviando}>Guardar</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
+        {avisos.length > 0 && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{avisos.map(a => <div key={a}>{a}</div>)}</Notice></div>}
         {txt('viaje', 'N° de viaje', { disabled: true })}
         {txt('fecha_viaje', 'Fecha y hora', { type: 'datetime-local' })}
         <Field label="Conductor" wide>

@@ -3,6 +3,7 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } }); // 25MB max
 const { uploadToS3, getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
 const { createApprovalToken } = require('../services/ocApprovalService');
+const { normalizarCondicion } = require('../services/condicion_oc');
 const { sendApprovalWhatsapp, sendDecisionConfirmationWhatsapp, sendTreasuryNotificationWhatsapp } = require('../services/whatsappService');
 
 module.exports = function (db, broadcast, logAudit) {
@@ -80,13 +81,15 @@ module.exports = function (db, broadcast, logAudit) {
                 finalCode = `OC-${year}-${String(seq).padStart(4, '0')}`;
             }
 
+            const condicion = normalizarCondicion(body);
+
             // Iniciar transacción en MySQL
             await tdb.query('START TRANSACTION');
 
             const [ocResult] = await tdb.query(
-                `INSERT INTO ordenes_compra (codigo, proveedor_nombre, proveedor_ruc, monto_total, moneda, motivo_solicitud, sustento_cotizacion_url, solicitado_por, estado)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE_APROBACION')`,
-                [finalCode, proveedor_nombre, proveedor_ruc || null, monto_total || 0, moneda, motivo_solicitud || null, sustentoUrl, solicitado_por || req.usuario?.nombre || 'Sistema']
+                `INSERT INTO ordenes_compra (codigo, proveedor_nombre, proveedor_ruc, monto_total, moneda, motivo_solicitud, sustento_cotizacion_url, solicitado_por, estado, condicion_pago, dias_credito)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE_APROBACION', ?, ?)`,
+                [finalCode, proveedor_nombre, proveedor_ruc || null, monto_total || 0, moneda, motivo_solicitud || null, sustentoUrl, solicitado_por || req.usuario?.nombre || 'Sistema', condicion.condicion_pago, condicion.dias_credito]
             );
             const ocId = ocResult.insertId;
 
