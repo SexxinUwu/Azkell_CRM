@@ -1,89 +1,172 @@
-// Módulo: Reporte de Fallas por Conductor
-// Flujo: conductor reporta falla → si requiere repuesto → alerta a almacenero
-//        almacenero: con stock → reserva; sin stock → genera requerimiento de compra
+// Módulo: reporte de fallas por conductor (Mantenimiento > Fallas).
+// Se guarda en la tabla oficial reportes_fallas, la misma que lee Disponibilidad, y cada falla abre un ítem en ot_backlog.
+// Estados de la pantalla: REPORTADA, EN_REVISION, CON_REPUESTO, SIN_STOCK, ATENDIDA, CERRADA, ANULADA.
+// Los datos propios de la falla (tipo, repuesto, atendido por, observaciones) van en el primer ítem de fallas_tracto_json.
 
 const express = require('express');
 
-module.exports = function(db) {
+const SEVERIDADES = ['baja', 'media', 'alta', 'critica'];
+const TERMINADOS = ['ATENDIDA', 'CERRADA', 'ANULADA'];
+// Estados terminados de reportes_fallas: los de la pantalla y los del checklist
+const TERMINADOS_SQL = "('ATENDIDA','CERRADA','ANULADA','Finalizado','Anulado')";
+
+module.exports = function (db) {
     const router = express.Router();
+    const getDb = req => req.db || db;
 
-    function getDb(req) { return req.db || db; }
-
-    async function ensureTable(req) {
-        const tdb = getDb(req);
+    async function ensureTables(tdb) {
         await tdb.promise().query(`
-            CREATE TABLE IF NOT EXISTS fallas_conductor (
-                id                  INT AUTO_INCREMENT PRIMARY KEY,
-                folio               VARCHAR(30)  DEFAULT NULL,
-                placa               VARCHAR(20)  NOT NULL,
-                conductor           VARCHAR(120) DEFAULT NULL,
-                tipo_falla          VARCHAR(80)  NOT NULL COMMENT 'mecanica,electrica,neumaticos,carroceria,otro',
-                descripcion         TEXT         NOT NULL,
-                severidad           ENUM('baja','media','alta','critica') DEFAULT 'media',
-                requiere_repuesto   TINYINT(1)   DEFAULT 0,
-                repuesto_descripcion TEXT        DEFAULT NULL,
-                orden_viaje         VARCHAR(50)  DEFAULT NULL,
-                estado              VARCHAR(40)  DEFAULT 'REPORTADA'
-                    COMMENT 'REPORTADA,EN_REVISION,CON_REPUESTO,SIN_STOCK,ATENDIDA,CERRADA',
-                atendido_por        VARCHAR(120) DEFAULT NULL,
-                alerta_enviada      TINYINT(1)   DEFAULT 0,
-                requerimiento_oc_id INT          DEFAULT NULL,
-                observaciones       TEXT         DEFAULT NULL,
-                reportado_por       VARCHAR(120) DEFAULT NULL,
-                created_at          DATETIME     DEFAULT CURRENT_TIMESTAMP,
-                updated_at          DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_placa  (placa),
-                INDEX idx_estado (estado),
-                INDEX idx_fecha  (created_at)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            CREATE TABLE IF NOT EXISTS reportes_fallas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                folio VARCHAR(50) NOT NULL UNIQUE,
+                orden_viaje VARCHAR(60) DEFAULT NULL,
+                fecha_reporte DATETIME DEFAULT CURRENT_TIMESTAMP,
+                placa_tracto VARCHAR(20),
+                placa_remolque VARCHAR(20),
+                km_inicial INT DEFAULT 0,
+                km_final INT DEFAULT 0,
+                horas_motor VARCHAR(50) DEFAULT NULL,
+                conductor VARCHAR(150),
+                procedencia VARCHAR(150),
+                ubicacion_gps VARCHAR(255),
+                fallas_tracto_json LONGTEXT,
+                fallas_remolque_json LONGTEXT,
+                fallas_libres_text TEXT,
+                fotos_json LONGTEXT,
+                firma_conductor LONGTEXT,
+                critica TINYINT(1) NOT NULL DEFAULT 0,
+                estado VARCHAR(30) DEFAULT 'Pendiente',
+                id_rampa VARCHAR(50) DEFAULT NULL,
+                ots_generadas_json LONGTEXT,
+                creado_por VARCHAR(100),
+                creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_orden_viaje (orden_viaje),
+                INDEX idx_placa_tracto (placa_tracto)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+        await tdb.promise().query(`
+            CREATE TABLE IF NOT EXISTS ot_backlog (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                backlog_id VARCHAR(30) NOT NULL,
+                placa VARCHAR(100),
+                km INT NOT NULL DEFAULT 0,
+                tema VARCHAR(100) NOT NULL,
+                tarea TEXT NOT NULL,
+                reportado_por VARCHAR(100) NOT NULL,
+                fecha_reporte DATE,
+                estado VARCHAR(20) NOT NULL,
+                creado_por VARCHAR(100) NOT NULL,
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ticket_ot VARCHAR(50)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
     }
 
-    // Genera folio: FAL-AAAA-NNNN
-    async function generarFolio(tdb) {
+    // FAL-AAAA-NNNN (el siguiente después del último del año)
+    async function siguienteFolio(tdb) {
         const anio = new Date().getFullYear();
         const [rows] = await tdb.promise().query(
-            `SELECT COUNT(*) AS c FROM fallas_conductor WHERE YEAR(created_at) = ?`, [anio]
+            'SELECT folio FROM reportes_fallas WHERE folio LIKE ? ORDER BY folio DESC LIMIT 1',
+            [`FAL-${anio}-%`]
         );
-        const n = ((rows[0]?.c ?? 0) + 1);
-        return `FAL-${anio}-${String(n).padStart(4, '0')}`;
+        const ultimo = rows[0] ? parseInt(String(rows[0].folio).split('-').pop(), 10) || 0 : 0;
+        return `FAL-${anio}-${String(ultimo + 1).padStart(4, '0')}`;
     }
 
-    // ── GET /api/fallas — listar fallas ─────────────────────────────────────────
+    // BK-AAAA-NNNN, mismo formato que el backlog del taller
+    async function siguienteBacklog(tdb) {
+        const anio = new Date().getFullYear();
+        const [rows] = await tdb.promise().query(
+            'SELECT MAX(backlog_id) AS ultimo FROM ot_backlog WHERE backlog_id REGEXP ?',
+            [`^BK-${anio}-[0-9]{4}$`]
+        );
+        const ultimo = rows[0] && rows[0].ultimo ? parseInt(String(rows[0].ultimo).split('-').pop(), 10) || 0 : 0;
+        return `BK-${anio}-${String(ultimo + 1).padStart(4, '0')}`;
+    }
+
+    function leerLista(row) {
+        try {
+            const v = typeof row.fallas_tracto_json === 'string' ? JSON.parse(row.fallas_tracto_json || '[]') : (row.fallas_tracto_json || []);
+            return Array.isArray(v) ? v : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    // Forma que usa la pantalla de fallas
+    function aFalla(row) {
+        const it = leerLista(row)[0] || {};
+        const critica = Number(row.critica) === 1;
+        return {
+            id: row.id,
+            folio: row.folio,
+            placa: row.placa_tracto,
+            conductor: row.conductor,
+            tipo_falla: it.tipo_falla || it.sistema || '',
+            descripcion: it.obs || row.fallas_libres_text || '',
+            severidad: critica ? 'critica' : (it.severidad || 'media'),
+            requiere_repuesto: it.requiere_repuesto ? 1 : 0,
+            repuesto_descripcion: it.repuesto_descripcion || null,
+            orden_viaje: row.orden_viaje,
+            estado: row.estado || 'REPORTADA',
+            atendido_por: it.atendido_por || null,
+            observaciones: it.observaciones || null,
+            requerimiento_oc_id: it.requerimiento_oc_id || null,
+            created_at: row.fecha_reporte,
+        };
+    }
+
+    async function avisarAlmacen(tdb, datos) {
+        try {
+            const [destRows] = await tdb.promise().query(
+                "SELECT email FROM configuracion_email_destinatarios WHERE activo=1 AND roles LIKE '%almacen%' LIMIT 5"
+            ).catch(() => [[]]);
+            const destinos = (destRows || []).map(r => r.email).filter(Boolean);
+            if (!destinos.length) return;
+            const { obtenerTransportadorEmail } = require('../utils/email_utils');
+            const transporter = await obtenerTransportadorEmail(tdb).catch(() => null);
+            if (!transporter) return;
+            await transporter.sendMail({
+                to: destinos.join(','),
+                subject: `[Falla ${datos.severidad.toUpperCase()}] ${datos.placa} — ${datos.tipo}`,
+                html: `<b>Folio:</b> ${datos.folio}<br><b>Placa:</b> ${datos.placa}<br><b>Tipo:</b> ${datos.tipo}<br><b>Descripción:</b> ${datos.descripcion}<br><b>Repuesto:</b> ${datos.repuesto || '—'}`,
+            }).catch(() => {});
+        } catch (_) { /* el aviso es best-effort */ }
+    }
+
+    // ── GET /api/fallas — listar ─────────────────────────────────────────────
     router.get('/', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
+            await ensureTables(tdb);
             const { placa, estado, desde, hasta, limit } = req.query;
-            let sql = 'SELECT * FROM fallas_conductor WHERE 1=1';
+            let sql = 'SELECT * FROM reportes_fallas WHERE 1=1';
             const params = [];
-            if (placa)  { sql += ' AND placa = ?';                   params.push(placa.toUpperCase()); }
-            if (estado) { sql += ' AND estado = ?';                  params.push(estado.toUpperCase()); }
-            if (desde)  { sql += ' AND DATE(created_at) >= ?';       params.push(desde); }
-            if (hasta)  { sql += ' AND DATE(created_at) <= ?';       params.push(hasta); }
-            sql += ' ORDER BY created_at DESC';
-            sql += ` LIMIT ${Math.min(parseInt(limit || '200', 10), 500)}`;
-
+            if (placa) { sql += ' AND placa_tracto = ?'; params.push(String(placa).toUpperCase()); }
+            if (estado) { sql += ' AND estado = ?'; params.push(String(estado).toUpperCase()); }
+            if (desde) { sql += ' AND DATE(fecha_reporte) >= ?'; params.push(desde); }
+            if (hasta) { sql += ' AND DATE(fecha_reporte) <= ?'; params.push(hasta); }
+            sql += ` ORDER BY fecha_reporte DESC, id DESC LIMIT ${Math.min(parseInt(limit || '200', 10) || 200, 500)}`;
             const [rows] = await tdb.promise().query(sql, params);
-            res.json(rows || []);
+            res.json((rows || []).map(aFalla));
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
     });
 
-    // ── GET /api/fallas/stats — estadísticas resumen ──────────────────────────
+    // ── GET /api/fallas/stats — resumen ──────────────────────────────────────
     router.get('/stats', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
+            await ensureTables(tdb);
             const [rows] = await tdb.promise().query(`
                 SELECT
                     COUNT(*) AS total,
-                    SUM(CASE WHEN estado NOT IN ('ATENDIDA','CERRADA') THEN 1 ELSE 0 END) AS abiertas,
-                    SUM(CASE WHEN severidad = 'critica' AND estado NOT IN ('ATENDIDA','CERRADA') THEN 1 ELSE 0 END) AS criticas,
-                    SUM(CASE WHEN requiere_repuesto=1 AND estado='SIN_STOCK' THEN 1 ELSE 0 END) AS sin_stock,
-                    SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) AS hoy
-                FROM fallas_conductor
+                    SUM(CASE WHEN estado NOT IN ${TERMINADOS_SQL} OR estado IS NULL THEN 1 ELSE 0 END) AS abiertas,
+                    SUM(CASE WHEN critica = 1 AND (estado NOT IN ${TERMINADOS_SQL} OR estado IS NULL) THEN 1 ELSE 0 END) AS criticas,
+                    SUM(CASE WHEN estado = 'SIN_STOCK' THEN 1 ELSE 0 END) AS sin_stock,
+                    SUM(CASE WHEN DATE(fecha_reporte) = CURDATE() THEN 1 ELSE 0 END) AS hoy
+                FROM reportes_fallas
             `);
             res.json(rows[0] || {});
         } catch (err) {
@@ -91,101 +174,97 @@ module.exports = function(db) {
         }
     });
 
-    // ── POST /api/fallas — registrar nueva falla ──────────────────────────────
+    // ── POST /api/fallas — registrar falla (abre ítem en ot_backlog) ─────────
     router.post('/', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
+            await ensureTables(tdb);
             const b = req.body || {};
             const placa = String(b.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-            if (!placa)        return res.status(400).json({ error: 'placa requerida' });
+            if (!placa) return res.status(400).json({ error: 'placa requerida' });
             if (!b.tipo_falla) return res.status(400).json({ error: 'tipo_falla requerido' });
             if (!b.descripcion) return res.status(400).json({ error: 'descripcion requerida' });
 
-            const folio = await generarFolio(tdb);
+            const severidad = SEVERIDADES.includes(b.severidad) ? b.severidad : 'media';
             const requiereRep = b.requiere_repuesto ? 1 : 0;
+            const km = parseInt(b.km, 10) || 0;
+            const usuario = b.reportado_por || (req.user && req.user.nombre) || 'Sistema';
+            const folio = await siguienteFolio(tdb);
 
-            const [result] = await tdb.promise().query(`
-                INSERT INTO fallas_conductor
-                    (folio, placa, conductor, tipo_falla, descripcion, severidad,
-                     requiere_repuesto, repuesto_descripcion, orden_viaje, reportado_por)
-                VALUES (?,?,?,?,?,?,?,?,?,?)
-            `, [
-                folio, placa,
-                b.conductor || null,
-                b.tipo_falla,
-                b.descripcion,
-                b.severidad || 'media',
-                requiereRep,
-                b.repuesto_descripcion || null,
-                b.orden_viaje || null,
-                b.reportado_por || req.user?.nombre || null
-            ]);
+            const item = {
+                sistema: b.tipo_falla, item: b.tipo_falla, tipo_falla: b.tipo_falla, obs: b.descripcion,
+                estado: 'FALLA', severidad, requiere_repuesto: requiereRep,
+                repuesto_descripcion: b.repuesto_descripcion || null,
+                atendido_por: null, observaciones: null, requerimiento_oc_id: null,
+            };
+            const [result] = await tdb.promise().query(
+                `INSERT INTO reportes_fallas
+                    (folio, orden_viaje, placa_tracto, km_inicial, km_final, conductor,
+                     fallas_tracto_json, fallas_libres_text, critica, estado, creado_por)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+                [folio, b.orden_viaje || null, placa, km, km, b.conductor || null,
+                 JSON.stringify([item]), b.descripcion, severidad === 'critica' ? 1 : 0, 'REPORTADA', usuario]
+            );
 
-            // Si requiere repuesto, intentar notificar por email al almacenero
+            const backlogId = await siguienteBacklog(tdb);
+            await tdb.promise().query(
+                `INSERT INTO ot_backlog (backlog_id, placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por, ticket_ot)
+                 VALUES (?, ?, ?, ?, ?, ?, CURDATE(), 'Pendiente', ?, ?)`,
+                [backlogId, placa, km, String(b.tipo_falla).slice(0, 100), b.descripcion, usuario, 'Sistema', folio]
+            );
+
             if (requiereRep) {
-                try {
-                    const [destRows] = await tdb.promise().query(
-                        `SELECT email FROM configuracion_email_destinatarios WHERE activo=1 AND roles LIKE '%almacen%' LIMIT 5`
-                    ).catch(() => [[]]);
-                    const destinos = (destRows || []).map(r => r.email).filter(Boolean);
-
-                    if (destinos.length > 0) {
-                        const { obtenerTransportadorEmail } = require('../utils/email_utils').catch ? { obtenerTransportadorEmail: null } : require('../utils/email_utils');
-                        if (obtenerTransportadorEmail) {
-                            const transporter = await obtenerTransportadorEmail(tdb).catch(() => null);
-                            if (transporter) {
-                                await transporter.sendMail({
-                                    to: destinos.join(','),
-                                    subject: `[Falla ${(b.severidad || 'media').toUpperCase()}] ${placa} — ${b.tipo_falla}`,
-                                    html: `<b>Folio:</b> ${folio}<br><b>Placa:</b> ${placa}<br><b>Tipo:</b> ${b.tipo_falla}<br><b>Descripción:</b> ${b.descripcion}<br><b>Conductor:</b> ${b.conductor || '—'}<br><b>Repuesto requerido:</b> ${b.repuesto_descripcion || 'Ver detalles'}`
-                                }).catch(() => {});
-                                await tdb.promise().query('UPDATE fallas_conductor SET alerta_enviada=1 WHERE id=?', [result.insertId]);
-                            }
-                        }
-                    }
-                } catch (_) { /* notificación es best-effort */ }
+                avisarAlmacen(tdb, { folio, placa, severidad, tipo: b.tipo_falla, descripcion: b.descripcion, repuesto: b.repuesto_descripcion });
             }
-
-            res.json({ ok: true, id: result.insertId, folio });
+            res.json({ ok: true, id: result.insertId, folio, backlog_id: backlogId });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
     });
 
-    // ── PUT /api/fallas/:id/estado — actualizar estado ───────────────────────
+    // ── PUT /api/fallas/:id/estado — cambia estado y lo refleja en ot_backlog ─
     router.put('/:id/estado', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
+            await ensureTables(tdb);
             const { id } = req.params;
             const { estado, atendido_por, observaciones, requerimiento_oc_id } = req.body || {};
             if (!estado) return res.status(400).json({ error: 'estado requerido' });
 
-            const sets = ['estado=?', 'updated_at=NOW()'];
-            const params = [estado.toUpperCase()];
+            const [rows] = await tdb.promise().query('SELECT * FROM reportes_fallas WHERE id = ?', [id]);
+            if (!rows.length) return res.status(404).json({ error: 'Falla no encontrada' });
+            const row = rows[0];
+            const nuevo = String(estado).toUpperCase();
 
-            if (atendido_por)       { sets.push('atendido_por=?');       params.push(atendido_por); }
-            if (observaciones)      { sets.push('observaciones=?');      params.push(observaciones); }
-            if (requerimiento_oc_id){ sets.push('requerimiento_oc_id=?');params.push(requerimiento_oc_id); }
+            const lista = leerLista(row);
+            if (!lista.length) lista.push({});
+            if (atendido_por) lista[0].atendido_por = atendido_por;
+            if (observaciones) lista[0].observaciones = observaciones;
+            if (requerimiento_oc_id) lista[0].requerimiento_oc_id = requerimiento_oc_id;
 
-            params.push(id);
-            await tdb.promise().query(`UPDATE fallas_conductor SET ${sets.join(', ')} WHERE id=?`, params);
+            await tdb.promise().query(
+                'UPDATE reportes_fallas SET estado = ?, fallas_tracto_json = ? WHERE id = ?',
+                [nuevo, JSON.stringify(lista), id]
+            );
+            await tdb.promise().query(
+                'UPDATE ot_backlog SET estado = ? WHERE ticket_ot = ?',
+                [TERMINADOS.includes(nuevo) ? 'Realizado' : 'Pendiente', row.folio]
+            );
             res.json({ ok: true });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
     });
 
-    // ── DELETE /api/fallas/:id — eliminar (soft delete via estado ANULADA) ──
+    // ── DELETE /api/fallas/:id — anula (no borra) ────────────────────────────
     router.delete('/:id', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
-            await tdb.promise().query(
-                'UPDATE fallas_conductor SET estado=? WHERE id=?',
-                ['ANULADA', req.params.id]
-            );
+            await ensureTables(tdb);
+            const [rows] = await tdb.promise().query('SELECT folio FROM reportes_fallas WHERE id = ?', [req.params.id]);
+            if (!rows.length) return res.status(404).json({ error: 'Falla no encontrada' });
+            await tdb.promise().query('UPDATE reportes_fallas SET estado = ? WHERE id = ?', ['ANULADA', req.params.id]);
+            await tdb.promise().query('UPDATE ot_backlog SET estado = ? WHERE ticket_ot = ?', ['Anulado', rows[0].folio]);
             res.json({ ok: true });
         } catch (err) {
             res.status(500).json({ error: err.message });

@@ -75,7 +75,7 @@ module.exports = function (db, logAudit) {
             const fallasRows = await safeQuery(`
                 SELECT id, folio, fecha_reporte, placa_tracto, placa_remolque, conductor, estado, ots_generadas_json, critica
                 FROM reportes_fallas
-                WHERE estado NOT IN ('Finalizado', 'Finalizada', 'Anulado', 'Anulada')
+                WHERE estado NOT IN ('Finalizado', 'Finalizada', 'Anulado', 'Anulada', 'ATENDIDA', 'CERRADA', 'ANULADA')
                 ORDER BY id DESC
             `);
 
