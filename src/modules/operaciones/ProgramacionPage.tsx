@@ -14,7 +14,7 @@ interface Viaje {
   ruta: string | null; estado: string; ordenes_list: string | null; peso_ida?: number | string; peso_retorno?: number | string;
 }
 
-const color = (e: string) => ({ ACTIVO: 'amber', INICIADO: 'accent', FINALIZADO: 'green' }[e] ?? 'gray');
+const color = (e: string) => ({ ACTIVO: 'amber', INICIADO: 'accent', FINALIZADO: 'green', LIQUIDADO: 'green' }[e] ?? 'gray');
 const clave = (s: string | null) => (s ? String(s).slice(0, 10) : 'SIN FECHA');
 
 function etiquetaDia(k: string) {
@@ -44,7 +44,7 @@ export function ProgramacionPage() {
     const t = busqueda.trim().toUpperCase();
     const m = new Map<string, Viaje[]>();
     for (const v of q.data ?? []) {
-      if (v.estado === 'ANULADO' || (!verFinalizados && v.estado === 'FINALIZADO')) continue;
+      if (v.estado === 'ANULADO' || (!verFinalizados && (v.estado === 'FINALIZADO' || v.estado === 'LIQUIDADO'))) continue;
       if (t && ![v.viaje, v.conductor, v.placa_tracto, v.placa_remolque, v.ruta].some(x => String(x ?? '').toUpperCase().includes(t))) continue;
       const k = clave(v.fecha_viaje);
       m.set(k, [...(m.get(k) ?? []), v]);

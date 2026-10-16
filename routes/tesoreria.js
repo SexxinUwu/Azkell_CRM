@@ -3,6 +3,7 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } }); // 25MB max
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl } = require('../utils/s3');
 const { sendWarehousePaymentVoucherWhatsapp } = require('../services/whatsappService');
+const { recalcularLiquidacionViaje } = require('../services/liquidacion_viaje');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
@@ -1268,6 +1269,7 @@ module.exports = function (db, broadcast, logAudit) {
                 logAudit(req, 'TESORERIA', 'CAJA', 'CREO', `Creó registro de caja Nº ${b.serie}-${b.numero} por S/ ${impTotal}`);
             }
 
+            await recalcularLiquidacionViaje(tdb, b.orden_viaje).catch(() => {});
             res.json({ ok: true, id: result.insertId, message: 'Registro de caja guardado con éxito' });
         } catch (err) {
             console.error('Error al guardar registro de caja:', err);
@@ -1283,7 +1285,7 @@ module.exports = function (db, broadcast, logAudit) {
             const { id } = req.params;
             const b = req.body || {};
 
-            const [rows] = await tdb.query('SELECT estado, voucher_url, sustento_url FROM tesoreria_caja WHERE id = ?', [id]);
+            const [rows] = await tdb.query('SELECT estado, voucher_url, sustento_url, orden_viaje FROM tesoreria_caja WHERE id = ?', [id]);
             if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
 
             const estadoActual = (rows[0].estado || 'REGISTRADO').toUpperCase();
@@ -1370,6 +1372,8 @@ module.exports = function (db, broadcast, logAudit) {
                 id
             ]);
 
+            await recalcularLiquidacionViaje(tdb, rows[0].orden_viaje).catch(() => {});
+            await recalcularLiquidacionViaje(tdb, b.orden_viaje).catch(() => {});
             res.json({ ok: true, message: 'Registro de caja actualizado' });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -1426,6 +1430,8 @@ module.exports = function (db, broadcast, logAudit) {
                 WHERE id = ?
             `, [userName, nuevaObs, id]);
 
+            const [anulada] = await tdb.query('SELECT orden_viaje FROM tesoreria_caja WHERE id = ?', [id]);
+            if (anulada.length) await recalcularLiquidacionViaje(tdb, anulada[0].orden_viaje).catch(() => {});
             res.json({ ok: true, message: 'Caja anulada correctamente' });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -1534,12 +1540,13 @@ module.exports = function (db, broadcast, logAudit) {
             await ensureTableCaja(req);
             const tdb = getDb(req);
             const { id } = req.params;
-            const [rows] = await tdb.query('SELECT voucher_url, sustento_url FROM tesoreria_caja WHERE id = ?', [id]);
+            const [rows] = await tdb.query('SELECT voucher_url, sustento_url, orden_viaje FROM tesoreria_caja WHERE id = ?', [id]);
             await tdb.query('DELETE FROM tesoreria_caja WHERE id = ?', [id]);
             if (rows.length) {
                 if (rows[0].voucher_url) deleteFromS3(s3KeyFromUrl(rows[0].voucher_url)).catch(() => {});
                 if (rows[0].sustento_url) deleteFromS3(s3KeyFromUrl(rows[0].sustento_url)).catch(() => {});
             }
+            if (rows.length) await recalcularLiquidacionViaje(tdb, rows[0].orden_viaje).catch(() => {});
             res.json({ ok: true, message: 'Registro eliminado' });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -2030,6 +2037,7 @@ module.exports = function (db, broadcast, logAudit) {
                 (req.user && req.user.nombre) ? req.user.nombre : (b.usuario_creacion || 'SISTEMA')
             ]);
 
+            await recalcularLiquidacionViaje(tdb, b.orden_viaje).catch(() => {});
             res.json({ ok: true, id: result.insertId, message: 'Gasto registrado con éxito' });
         } catch (err) {
             console.error('Error al registrar gasto de liquidación:', err);
@@ -2045,6 +2053,7 @@ module.exports = function (db, broadcast, logAudit) {
             const { id } = req.params;
             const b = req.body || {};
 
+            const [prevLiq] = await tdb.query('SELECT orden_viaje FROM tesoreria_liquidaciones_gastos WHERE id = ?', [id]);
             let sustentoUrl = undefined;
             if (req.file) {
                 const f = req.file;
@@ -2087,6 +2096,8 @@ module.exports = function (db, broadcast, logAudit) {
             params.push(id);
             await tdb.query(`UPDATE tesoreria_liquidaciones_gastos SET ${sets.join(', ')} WHERE id = ?`, params);
 
+            if (prevLiq.length) await recalcularLiquidacionViaje(tdb, prevLiq[0].orden_viaje).catch(() => {});
+            await recalcularLiquidacionViaje(tdb, b.orden_viaje).catch(() => {});
             res.json({ ok: true, message: 'Gasto actualizado con éxito' });
         } catch (err) {
             console.error('Error al actualizar gasto de liquidación:', err);
@@ -2100,7 +2111,9 @@ module.exports = function (db, broadcast, logAudit) {
             await ensureTableLiquidacionesGastos(req);
             const tdb = getDb(req);
             const { id } = req.params;
+            const [prevDel] = await tdb.query('SELECT orden_viaje FROM tesoreria_liquidaciones_gastos WHERE id = ?', [id]);
             await tdb.query('DELETE FROM tesoreria_liquidaciones_gastos WHERE id = ?', [id]);
+            if (prevDel.length) await recalcularLiquidacionViaje(tdb, prevDel[0].orden_viaje).catch(() => {});
             res.json({ ok: true, message: 'Gasto de liquidación eliminado' });
         } catch (err) {
             res.status(500).json({ error: err.message });
