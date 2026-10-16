@@ -343,6 +343,19 @@ export interface RecepcionItemEnvio {
   almacen: string;
 }
 
+/** Tipo de cambio oficial de SUNAT del día (venta). Lo sirve el servidor con caché diaria. */
+export interface TipoCambioSunat { ok: boolean; venta: number; compra: number | null; fecha: string; origen: string }
+
+export function useTipoCambioSunat(enabled: boolean) {
+  return useQuery<TipoCambioSunat>({
+    queryKey: ['almacen', 'tipo-cambio-sunat'],
+    queryFn: () => api<TipoCambioSunat>('/tipo-cambio/sunat'),
+    enabled,
+    staleTime: 60 * 60_000,
+    retry: false,
+  });
+}
+
 /** Registra una entrega (parcial o total) de una OC. Multipart: lleva la foto de sustento. */
 export async function registrarRecepcion(d: {
   oc_id: string | number; fecha_recepcion: string; usuario: string; observacion: string;

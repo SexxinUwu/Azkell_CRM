@@ -166,25 +166,6 @@
 .prov-fila__ruc { font-size: 0.8125rem; color: var(--label-2); flex-shrink: 0; }
 
 /* ─── Filas de movimiento (entradas / salidas) ──────────────────────────── */
-.mov-fila {
-  display: flex; align-items: center; gap: var(--s-3);
-  padding: var(--s-3) var(--s-4); min-height: 4rem; width: 100%;
-  text-align: left; cursor: pointer;
-  border-bottom: 0.5px solid var(--separator);
-  transition: background-color 120ms ease;
-}
-.mov-fila:last-child { border-bottom: none; }
-.mov-fila:hover { background: var(--fill-subtle); }
-.mov-fila:active { background: var(--fill); }
-
-.mov-fila__icon {
-  width: 2.25rem; height: 2.25rem; border-radius: var(--r-md); flex-shrink: 0;
-  display: grid; place-items: center;
-}
-.mov-fila__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
-.mov-fila__titulo { font-size: 0.9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mov-fila__sub { font-size: 0.75rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mov-fila__derecha { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
 .mov-fila__monto { font-size: 0.9375rem; font-weight: 700; }
 
 /* ─── Tabla de ítems en formulario ──────────────────────────────────────── */
