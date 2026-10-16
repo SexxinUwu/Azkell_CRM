@@ -2494,32 +2494,46 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const id = req.params.inventario_id;
         const targetDb = getDb(req);
 
-        targetDb.query("SELECT stock_regularizado, DATE_FORMAT(fecha_regularizacion, '%Y-%m-%d %H:%i:%s') AS fecha_regularizacion FROM inventario WHERE id=?", [id], (e2, inv) => {
+        targetDb.query("SELECT stock_regularizado, costo_referencial, moneda, DATE_FORMAT(fecha_regularizacion, '%Y-%m-%d %H:%i:%s') AS fecha_regularizacion FROM inventario WHERE id=?", [id], (e2, inv) => {
             if (e2) return res.status(500).json({ error: e2.message });
             const base = parseFloat(inv[0]?.stock_regularizado || 0);
             const regDate = inv[0]?.fecha_regularizacion || null;
 
             targetDb.query(`
-            SELECT 'Entrada' AS tipo, e.fecha, e.created_at, e.id AS doc_id, e.proveedor_nombre AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
+            SELECT 'Entrada' AS tipo, e.fecha, e.created_at, e.id AS doc_id, e.proveedor_nombre AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe, e.tipo_cambio
             FROM detalle_entradas_inv d JOIN entradas_inv e ON e.id=d.entrada_id
             WHERE d.inventario_id=? AND (e.estado IS NULL OR e.estado != 'Anulado') AND (e.tipo_orden = 'Entrada directa' OR e.tipo_orden = 'Ajuste')
             UNION ALL
-            SELECT 'Recepción OC' AS tipo, DATE(r.fecha_recepcion) AS fecha, r.fecha_recepcion AS created_at, r.oc_id AS doc_id, CONCAT('Recepción OC / ', COALESCE(r.almacen,'ALM CENTRAL'), ' - ', COALESCE(r.usuario,'')) AS contraparte, dr.cantidad_recibida AS cantidad, dr.costo_unitario, dr.moneda, (dr.cantidad_recibida * dr.costo_unitario) AS importe
+            SELECT 'Recepción OC' AS tipo, DATE(r.fecha_recepcion) AS fecha, r.fecha_recepcion AS created_at, r.oc_id AS doc_id, CONCAT('Recepción OC / ', COALESCE(r.almacen,'ALM CENTRAL'), ' - ', COALESCE(r.usuario,'')) AS contraparte, dr.cantidad_recibida AS cantidad, dr.costo_unitario, dr.moneda, (dr.cantidad_recibida * dr.costo_unitario) AS importe, e.tipo_cambio
             FROM detalle_recepciones_oc dr 
             JOIN recepciones_oc r ON r.id=dr.recepcion_id
             JOIN entradas_inv e ON e.id=r.oc_id
             WHERE dr.inventario_id=? AND (e.estado IS NULL OR (e.estado != 'Anulado' AND LOWER(e.estado) NOT LIKE '%anul%' AND LOWER(e.estado) NOT LIKE '%rechaz%'))
             UNION ALL
-            SELECT 'Salida' AS tipo, s.fecha, s.created_at, s.id AS doc_id, CONCAT(s.tipo_destino,' / ',COALESCE(s.placa,s.responsable,'—')) AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
+            SELECT 'Salida' AS tipo, s.fecha, s.created_at, s.id AS doc_id, CONCAT(s.tipo_destino,' / ',COALESCE(s.placa,s.responsable,'—')) AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe, s.tipo_cambio
             FROM detalle_salidas_inv d JOIN salidas_inv s ON s.id=d.salida_id
             WHERE d.inventario_id=? AND (s.estado IS NULL OR s.estado = 'Despachado')
             ORDER BY fecha ASC, created_at ASC, doc_id ASC
         `, [id, id, id], (err, rows) => {
                 if (err) return res.status(500).json({ error: err.message });
+                // Costo promedio ponderado en soles: cada entrada recalcula el promedio; las salidas salen al promedio vigente
                 let saldo = base;
+                let promedio = inv[0] && inv[0].moneda !== 'USD' ? (parseFloat(inv[0].costo_referencial) || 0) : 0;
                 rows.forEach(r => {
-                    if (r.tipo === 'Entrada' || r.tipo === 'Recepción OC') saldo += parseFloat(r.cantidad || 0);
-                    else saldo -= parseFloat(r.cantidad || 0);
+                    const cant = parseFloat(r.cantidad || 0);
+                    const tc = String(r.moneda || '').toUpperCase() === 'USD' ? (parseFloat(r.tipo_cambio) || 1) : 1;
+                    if (r.tipo === 'Entrada' || r.tipo === 'Recepción OC') {
+                        const unitSoles = (parseFloat(r.costo_unitario) || 0) * tc;
+                        const nuevoSaldo = saldo + cant;
+                        promedio = saldo > 0 ? (saldo * promedio + cant * unitSoles) / nuevoSaldo : unitSoles;
+                        saldo = nuevoSaldo;
+                        r.costo_unitario_soles = +unitSoles.toFixed(4);
+                    } else {
+                        saldo -= cant;
+                        r.costo_unitario_soles = +promedio.toFixed(4);
+                    }
+                    r.costo_promedio = +promedio.toFixed(4);
+                    r.valor_saldo = +(Math.max(saldo, 0) * promedio).toFixed(2);
                     r.saldo = parseFloat(saldo.toFixed(4));
                 });
                 res.json({ stock_base: base, fecha_regularizacion: regDate, movimientos: rows });
@@ -2746,9 +2760,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             const [ocRows] = await pdbRec.query('SELECT id, moneda, condicion_pago, dias_credito, estado FROM ordenes_compra WHERE codigo = ? LIMIT 1', [oc_id]);
             const oc = ocRows[0] || null;
             const esUSD = oc ? oc.moneda === 'USD' : items.some(it => String(it.moneda || '').toUpperCase() === 'USD');
-            const tipoCambio = parseFloat(req.body.tipo_cambio) || 0;
+            let tipoCambio = parseFloat(req.body.tipo_cambio) || 0;
             if (esUSD && !(tipoCambio > 0)) {
-                return res.status(400).json({ error: 'Indique el tipo de cambio del día de recepción (orden en dólares).' });
+                // Sin tipo de cambio en el envío: último TC guardado en el inventario, o 3.75 si no hay ninguno
+                const [ultimo] = await pdbRec.query('SELECT tipo_cambio FROM inventario WHERE tipo_cambio > 0 ORDER BY updated_at DESC LIMIT 1');
+                tipoCambio = Number(ultimo && ultimo[0] && ultimo[0].tipo_cambio) || 3.75;
             }
             const fechaDia = fechaHoraSQL.slice(0, 10);
             const idsInv = [...new Set(items.map(it => it.inventario_id).filter(Boolean))];

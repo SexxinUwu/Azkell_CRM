@@ -206,13 +206,39 @@ export interface KardexItem {
   cantidad: number;
   saldo: number;
   costo_unitario: number | null;
+  /** Costo promedio ponderado del artículo después del movimiento (S/) */
+  costo_promedio: number | null;
+  /** Saldo × costo promedio (S/) */
+  valor_saldo: number | null;
   observaciones: string | null;
+}
+
+/** El servidor responde { movimientos, stock_base }; la pantalla trabaja con una lista plana. */
+function aKardexItem(m: Record<string, unknown>): KardexItem {
+  const tipoRaw = String(m.tipo ?? '');
+  const tipo: KardexItem['tipo'] = tipoRaw === 'Salida' ? 'SALIDA' : (tipoRaw === 'Entrada' || tipoRaw === 'Recepción OC') ? 'ENTRADA' : 'REGULARIZACION';
+  const num = (v: unknown) => (v == null || v === '' ? null : Number(v));
+  return {
+    fecha: String(m.fecha ?? ''),
+    tipo,
+    documento: m.doc_id == null ? null : String(m.doc_id),
+    proveedor_destino: m.contraparte == null ? null : String(m.contraparte),
+    cantidad: Number(m.cantidad) || 0,
+    saldo: Number(m.saldo) || 0,
+    costo_unitario: num(m.costo_unitario_soles ?? m.costo_unitario),
+    costo_promedio: num(m.costo_promedio),
+    valor_saldo: num(m.valor_saldo),
+    observaciones: null,
+  };
 }
 
 export function useKardex(inventario_id: string | null) {
   return useQuery<KardexItem[]>({
     queryKey: ['almacen', 'kardex', inventario_id],
-    queryFn: () => api(`/almacen/kardex/${inventario_id}`),
+    queryFn: async () => {
+      const r = await api<{ movimientos?: Record<string, unknown>[] }>(`/almacen/kardex/${inventario_id}`);
+      return (r.movimientos ?? []).map(aKardexItem);
+    },
     enabled: !!inventario_id,
     staleTime: 30_000,
   });
@@ -321,6 +347,8 @@ export interface RecepcionItemEnvio {
 export async function registrarRecepcion(d: {
   oc_id: string | number; fecha_recepcion: string; usuario: string; observacion: string;
   almacen: string; tipo_recepcion: 'TOTAL' | 'PARCIAL'; items: RecepcionItemEnvio[]; sustento?: File | null;
+  /** Solo O/C en dólares: S/ por USD del día de recepción */
+  tipo_cambio?: number;
 }) {
   const f = new FormData();
   f.append('oc_id', String(d.oc_id));
@@ -331,6 +359,7 @@ export async function registrarRecepcion(d: {
   f.append('tipo_recepcion', d.tipo_recepcion);
   f.append('items_json', JSON.stringify(d.items));
   if (d.sustento) f.append('sustento', d.sustento);
+  if (d.tipo_cambio) f.append('tipo_cambio', String(d.tipo_cambio));
   return api<{ ok?: boolean }>('/almacen/recepciones-oc/registrar', { method: 'POST', body: f });
 }
 
