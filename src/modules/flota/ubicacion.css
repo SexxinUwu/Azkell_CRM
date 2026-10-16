@@ -71,6 +71,8 @@
 }
 .gps-controles > * { pointer-events: auto; }
 .gps-controles .btn { background: var(--surface); box-shadow: var(--shadow-pop); }
+/* Zoom a la izquierda del botón del asistente (que queda fijo abajo a la derecha) */
+.gps-mapa-wrap .leaflet-bottom.leaflet-right { right: 76px; }
 /* Atribución del mapa: legible pero discreta, en una esquina */
 .leaflet-control-attribution {
   background: transparent !important; box-shadow: none !important; color: rgba(60, 60, 67, 0.55) !important;
