@@ -2295,6 +2295,10 @@ function verifyToken(req, res, next) {
     if (!token) return res.status(401).json({ error: 'No autorizado' });
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        // La sesión solo vale en la empresa donde se emitió (un token de otra empresa no abre este subdominio)
+        if (String(decoded.tenant_slug || '') !== String(req.tenantSlug || '')) {
+            return res.status(401).json({ error: 'Sesión no válida para esta empresa. Inicie sesión de nuevo.' });
+        }
         req.user = decoded;
 
         const dbConn = req.db || db;
@@ -2597,7 +2601,7 @@ app.post('/api/login', (req, res) => {
                 );
 
                 const token = jwt.sign(
-                    { id: usuario.idUsuario, correo: usuario.correo, nombre: usuario.nombre, rol: rolFinal, permisos: permisosFinales },
+                    { id: usuario.idUsuario, correo: usuario.correo, nombre: usuario.nombre, rol: rolFinal, permisos: permisosFinales, tenant_slug: String(req.tenantSlug || '') },
                     process.env.JWT_SECRET,
                     { expiresIn: '12h' }
                 );
@@ -2693,7 +2697,7 @@ app.post('/api/login', (req, res) => {
                             );
 
                             const token = jwt.sign(
-                                { id: usuario.idUsuario, correo: usuario.correo, nombre: usuario.nombre, rol: rolFinal, permisos: permisosFinales, tenant_slug: t.slug },
+                                { id: usuario.idUsuario, correo: usuario.correo, nombre: usuario.nombre, rol: rolFinal, permisos: permisosFinales, tenant_slug: String(req.tenantSlug || '') },
                                 process.env.JWT_SECRET,
                                 { expiresIn: '12h' }
                             );
