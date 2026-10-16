@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { createApprovalToken } = require('../services/ocApprovalService');
+const { fechaVencimiento, normalizarCondicion } = require('../services/condicion_oc');
 const { sendApprovalWhatsapp, sendTreasuryNotificationWhatsapp } = require('../services/whatsappService');
 
 async function despacharAprobacionWhatsAppAlmacen(req, tdb, entradaId, bodyData) {
@@ -71,16 +72,18 @@ async function despacharAprobacionWhatsAppAlmacen(req, tdb, entradaId, bodyData)
         const solicitante = bodyData.solicitante || bodyData.creado_por || req.usuario?.nombre || 'Almacén / Taller';
 
         await promiseDb.query(
-            `INSERT INTO ordenes_compra (codigo, proveedor_nombre, proveedor_ruc, monto_total, moneda, motivo_solicitud, sustento_cotizacion_url, solicitado_por, estado)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE_APROBACION')
+            `INSERT INTO ordenes_compra (codigo, proveedor_nombre, proveedor_ruc, monto_total, moneda, motivo_solicitud, sustento_cotizacion_url, solicitado_por, estado, condicion_pago, dias_credito)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE_APROBACION', ?, ?)
              ON DUPLICATE KEY UPDATE 
+                condicion_pago = VALUES(condicion_pago),
+                dias_credito = VALUES(dias_credito),
                 proveedor_nombre = VALUES(proveedor_nombre),
                 monto_total = VALUES(monto_total),
                 moneda = VALUES(moneda),
                 motivo_solicitud = VALUES(motivo_solicitud),
                 sustento_cotizacion_url = VALUES(sustento_cotizacion_url),
                 solicitado_por = VALUES(solicitado_por)`,
-            [entradaId, proveedor, ruc, total, moneda, motivo, sustentoUrl, solicitante]
+            [entradaId, proveedor, ruc, total, moneda, motivo, sustentoUrl, solicitante, normalizarCondicion(bodyData).condicion_pago, normalizarCondicion(bodyData).dias_credito]
         );
 
         // Obtener ID numérico de ordenes_compra
@@ -2737,6 +2740,49 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             // Determinar si esta entrega completa la orden o es parcial
             const totalRecepcionadoAhora = items.reduce((sum, it) => sum + (parseFloat(it.cantidad_recibida) || 0), 0);
             const tipoRecepcion = req.body.tipo_recepcion || 'TOTAL';
+
+            // Valorización: costo promedio ponderado en soles, tipo de cambio del día y vencimiento de la cuenta por pagar
+            const pdbRec = targetDb.promise();
+            const [ocRows] = await pdbRec.query('SELECT id, moneda, condicion_pago, dias_credito, estado FROM ordenes_compra WHERE codigo = ? LIMIT 1', [oc_id]);
+            const oc = ocRows[0] || null;
+            const esUSD = oc ? oc.moneda === 'USD' : items.some(it => String(it.moneda || '').toUpperCase() === 'USD');
+            const tipoCambio = parseFloat(req.body.tipo_cambio) || 0;
+            if (esUSD && !(tipoCambio > 0)) {
+                return res.status(400).json({ error: 'Indique el tipo de cambio del día de recepción (orden en dólares).' });
+            }
+            const fechaDia = fechaHoraSQL.slice(0, 10);
+            const idsInv = [...new Set(items.map(it => it.inventario_id).filter(Boolean))];
+            const stockPrevio = new Map();
+            if (idsInv.length) {
+                // Stock antes de esta recepción (mismo cálculo del inventario; se filtra por id dentro de la consulta)
+                const sqlIds = _stockSQL.replace(/WHERE i\.activo=1\s*ORDER BY i\.id\s*$/, 'WHERE i.activo=1 AND i.id IN (?) ORDER BY i.id');
+                const [filas] = await pdbRec.query(sqlIds, [idsInv]);
+                (filas || []).forEach(fr => stockPrevio.set(String(fr.id), {
+                    stock: Math.max(0, Number(fr.stock_actual) || 0),
+                    costo: Number(fr.costo_soles) || Number(fr.costo_referencial) || 0,
+                }));
+            }
+            for (const it of items) {
+                const cant = parseFloat(it.cantidad_recibida) || 0;
+                if (!it.inventario_id || !(cant > 0)) continue;
+                const moneda = String(it.moneda || (oc && oc.moneda) || 'PEN').toUpperCase();
+                const unitarioSoles = (parseFloat(it.costo_unitario) || 0) * (moneda === 'USD' ? tipoCambio : 1);
+                const prev = stockPrevio.get(String(it.inventario_id)) || { stock: 0, costo: 0 };
+                const total = prev.stock + cant;
+                const promedio = total > 0 ? (prev.stock * prev.costo + cant * unitarioSoles) / total : unitarioSoles;
+                await pdbRec.query(
+                    'UPDATE inventario SET costo_soles = ?, tipo_cambio = COALESCE(?, tipo_cambio) WHERE id = ?',
+                    [Math.round(promedio * 10000) / 10000, moneda === 'USD' ? tipoCambio : null, it.inventario_id]
+                );
+            }
+            if (oc) {
+                const vence = fechaVencimiento(fechaDia, oc.condicion_pago, oc.dias_credito);
+                const nuevoEstado = tipoRecepcion === 'TOTAL' ? 'RECIBIDA' : oc.estado;
+                await pdbRec.query(
+                    'UPDATE ordenes_compra SET fecha_vencimiento = COALESCE(fecha_vencimiento, ?), estado = ? WHERE id = ?',
+                    [vence, nuevoEstado, oc.id]
+                );
+            }
 
             // 1. Insertar Cabecera de Recepción
             targetDb.query(
