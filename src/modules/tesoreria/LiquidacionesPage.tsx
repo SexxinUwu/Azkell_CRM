@@ -13,7 +13,7 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { escribirTesoreria, fmtMonto } from './api';
+import { escribirTesoreria } from './api';
 
 interface Viaje {
   viaje: string;
@@ -46,6 +46,8 @@ interface DetalleViaje {
 }
 
 const num = (v: unknown) => Number(v) || 0;
+// Soles con S/ y espacio no divisible: S/ 1,250.00 (importes de liquidación, todos en soles)
+const fmtSoles = (v: unknown) => 'S/\u00a0' + num(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const tonoBalance = (e: string) => (e === 'CUADRADO' ? 'green' : e === 'SALDO_EMPRESA' ? 'amber' : e === 'SALDO_CONDUCTOR' ? 'red' : 'neutral');
 const etiquetaBalance = (e: string) => (e === 'CUADRADO' ? 'Cuadrado' : e === 'SALDO_EMPRESA' ? 'Sobrante' : e === 'SALDO_CONDUCTOR' ? 'Faltante' : e || '—');
 const dia = (s?: string | null) => (s ? String(s).split('T')[0] : '—');
@@ -106,8 +108,8 @@ export function LiquidacionesPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div className="inv-metricas">
-          <div className="inv-metrica"><span className="inv-metrica__num">{fmtMonto(resumen.deposit)}</span><span className="inv-metrica__label">Depositado</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num">{fmtMonto(resumen.rendido)}</span><span className="inv-metrica__label">Rendido</span></div>
+          <div className="inv-metrica"><span className="inv-metrica__num">{fmtSoles(resumen.deposit)}</span><span className="inv-metrica__label">Depositado</span></div>
+          <div className="inv-metrica"><span className="inv-metrica__num">{fmtSoles(resumen.rendido)}</span><span className="inv-metrica__label">Rendido</span></div>
           <div className="inv-metrica"><span className="inv-metrica__num inv-metrica__num--warning">{resumen.pendientes}</span><span className="inv-metrica__label">Por regularizar</span></div>
         </div>
 
@@ -141,8 +143,8 @@ export function LiquidacionesPage() {
                     <span className="mov-fila__sub">{[v.placa_tracto, v.placa_remolque, v.ruta, v.estado].filter(Boolean).join(' · ') || dia(v.fecha)}</span>
                   </div>
                   <div className="mov-fila__derecha">
-                    <span className="mov-fila__monto">{fmtMonto(num(v.saldo_diferencia))}</span>
-                    {num(v.fondos_pendientes) > 0 && <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--amber-ink)' }}>Pendiente {fmtMonto(num(v.fondos_pendientes))}</span>}
+                    <span className="mov-fila__monto">{fmtSoles(num(v.saldo_diferencia))}</span>
+                    {num(v.fondos_pendientes) > 0 && <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--amber-ink)' }}>Pendiente {fmtSoles(num(v.fondos_pendientes))}</span>}
                     <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${t === 'neutral' ? 'gray' : t}-ink)` }}>{etiquetaBalance(v.estado_balance)}</span>
                   </div>
                 </button>
@@ -224,9 +226,9 @@ function DetalleLiquidacion({ viaje, onClose }: { viaje: Viaje | null; onClose: 
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
           <div className="inv-metricas">
-            <div className="inv-metrica"><span className="inv-metrica__num">{fmtMonto(d.total_depositado)}</span><span className="inv-metrica__label">Depositado</span></div>
-            <div className="inv-metrica"><span className="inv-metrica__num">{fmtMonto(d.total_rendido)}</span><span className="inv-metrica__label">Rendido</span></div>
-            <div className="inv-metrica"><span className={`inv-metrica__num inv-metrica__num--${saldo < 0 ? 'critical' : saldo > 0 ? 'warning' : ''}`}>{fmtMonto(saldo)}</span><span className="inv-metrica__label">Diferencia</span></div>
+            <div className="inv-metrica"><span className="inv-metrica__num">{fmtSoles(d.total_depositado)}</span><span className="inv-metrica__label">Depositado</span></div>
+            <div className="inv-metrica"><span className="inv-metrica__num">{fmtSoles(d.total_rendido)}</span><span className="inv-metrica__label">Rendido</span></div>
+            <div className="inv-metrica"><span className={`inv-metrica__num inv-metrica__num--${saldo < 0 ? 'critical' : saldo > 0 ? 'warning' : ''}`}>{fmtSoles(saldo)}</span><span className="inv-metrica__label">Diferencia</span></div>
           </div>
 
           <Notice tone={d.estado_viaje === 'LIQUIDADO' ? 'success' : 'neutral'}>
@@ -237,7 +239,7 @@ function DetalleLiquidacion({ viaje, onClose }: { viaje: Viaje | null; onClose: 
           {num(d.total_pendiente_pago) > 0 && (
             <div role="alert" style={{ display: 'flex', gap: 'var(--s-3)', alignItems: 'flex-start', padding: 'var(--s-3) var(--s-4)', borderRadius: 'var(--r-lg)', background: 'var(--amber-tint)', color: 'var(--amber-ink)', fontSize: '0.875rem', fontWeight: 500 }}>
               <CircleAlert size={16} style={{ flexShrink: 0, marginTop: 2 }} />
-              <span>Fondos pendientes de entrega o pago: <strong>{fmtMonto(num(d.total_pendiente_pago))}</strong>. El viaje no pasa a LIQUIDADO hasta que tesorería procese o anule esas solicitudes.</span>
+              <span>Fondos pendientes de entrega o pago: <strong>{fmtSoles(num(d.total_pendiente_pago))}</strong>. El viaje no pasa a LIQUIDADO hasta que tesorería procese o anule esas solicitudes.</span>
             </div>
           )}
           {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
@@ -269,7 +271,7 @@ function DetalleLiquidacion({ viaje, onClose }: { viaje: Viaje | null; onClose: 
               {(cajas.data ?? []).map((c, i) => (
                 <div key={i} className="dato">
                   <span className="dato__label" style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{c.serie}-{c.numero} · {dia(c.fecha)}</span>
-                  <span className="dato__valor">{[c.motivo, c.sub_motivo].filter(Boolean).join(' › ')} — <strong>{fmtMonto(num(c.importe_total))}</strong> · {c.estado ?? 'PENDIENTE'}</span>
+                  <span className="dato__valor">{[c.motivo, c.sub_motivo].filter(Boolean).join(' › ')} — <strong>{fmtSoles(num(c.importe_total))}</strong> · {c.estado ?? 'PENDIENTE'}</span>
                   {url(c) && <a className="dato__valor dato__valor--enlace" href={url(c)} target="_blank" rel="noreferrer"><Paperclip size={13} style={{ verticalAlign: '-2px' }} /> Voucher</a>}
                 </div>
               ))}
@@ -280,11 +282,11 @@ function DetalleLiquidacion({ viaje, onClose }: { viaje: Viaje | null; onClose: 
             <p className="tarjeta__grupo-titulo">Resumen</p>
             <div className="tarjeta__lista">
               {Object.entries(porTipo).map(([tipoG, total]) => (
-                <div key={tipoG} className="dato"><span className="dato__label">{tipoG}</span><span className="dato__valor"><strong>{fmtMonto(total)}</strong></span></div>
+                <div key={tipoG} className="dato"><span className="dato__label">{tipoG}</span><span className="dato__valor"><strong>{fmtSoles(total)}</strong></span></div>
               ))}
-              <div className="dato"><span className="dato__label">Viáticos entregados</span><span className="dato__valor"><strong>{fmtMonto(d.total_depositado)}</strong></span></div>
-              <div className="dato"><span className="dato__label">Comprobantes rendidos</span><span className="dato__valor">{d.gastos?.length ?? 0} · <strong>{fmtMonto(d.total_rendido)}</strong></span></div>
-              <div className="dato"><span className="dato__label">Saldo {saldo < 0 ? 'a favor del conductor' : saldo > 0 ? 'a favor de la empresa' : ''}</span><span className="dato__valor"><strong>{fmtMonto(saldo)}</strong></span></div>
+              <div className="dato"><span className="dato__label">Viáticos entregados</span><span className="dato__valor"><strong>{fmtSoles(d.total_depositado)}</strong></span></div>
+              <div className="dato"><span className="dato__label">Comprobantes rendidos</span><span className="dato__valor">{d.gastos?.length ?? 0} · <strong>{fmtSoles(d.total_rendido)}</strong></span></div>
+              <div className="dato"><span className="dato__label">Saldo {saldo < 0 ? 'a favor del conductor' : saldo > 0 ? 'a favor de la empresa' : ''}</span><span className="dato__valor"><strong>{fmtSoles(saldo)}</strong></span></div>
             </div>
           </div>
 
@@ -295,7 +297,7 @@ function DetalleLiquidacion({ viaje, onClose }: { viaje: Viaje | null; onClose: 
               {(d.gastos ?? []).map((g, i) => (
                 <div key={i} className="dato">
                   <span className="dato__label">{dia(g.fecha)} · {[g.tipo_gasto, g.sub_motivo].filter(Boolean).join(' › ')}</span>
-                  <span className="dato__valor">{g.detalle || g.proveedor_nombre || '—'} — <strong>{fmtMonto(num(g.importe))}</strong></span>
+                  <span className="dato__valor">{g.detalle || g.proveedor_nombre || '—'} — <strong>{fmtSoles(num(g.importe))}</strong></span>
                   <span className="dato__valor" style={{ fontSize: '0.75rem', color: 'var(--label-3)' }}>{[g.tipo_comprobante, g.numero].filter(Boolean).join(' ')}</span>
                   {url(g) && <a className="dato__valor dato__valor--enlace" href={url(g)} target="_blank" rel="noreferrer"><Paperclip size={13} style={{ verticalAlign: '-2px' }} /> Sustento</a>}
                 </div>
