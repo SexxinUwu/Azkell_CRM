@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, Cloud, Minus, Plus, Trash2 } from 'lucide-react';
+import { Camera, CircleAlert, Cloud, Minus, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
@@ -8,25 +8,19 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { clavePlaca, useInspeccionesNeumaticos } from './api';
+import { ChasisEsquemaVisual, CONFIGURACIONES, posicionesDeConfig } from './components/ChasisEsquemaVisual';
 import './inspecciones.css';
 
 // Inspección de neumáticos (React). Mismo esquema que el clásico (modal_inspeccion.js):
 //   GET  /neumaticos/placa-ultima/:placa  → configuración, posiciones y última inspección
 //   GET  /neumaticos/catalogos            → marcas, medidas y modelos sugeridos
-//   POST /neumaticos/inspecciones         → guarda con km_vehiculo, observaciones, inspector e items
-// Pendiente frente al clásico: rotaciones entre posiciones, diagrama de la configuración y fotos.
+//   POST /neumaticos/inspecciones         → items con medidas, ROT, estado, acción y fotos (base64; el servidor las sube a S3)
+// Diferencia con el clásico: el esquema del chasis es un SVG (ChasisEsquemaVisual) con perspectivas
+// 2D, isométrica, lateral y rayos X; las rotaciones son entre dos posiciones con un botón.
 
+const CONFIG_ORDEN = ['R2', 'S2', 'S3', '4X2', '6X4', '6X2', 'T3S3'];
 const ESTADOS = ['NUEVA', 'BUENA', 'RECAPADA', 'REGULAR', 'MALA', 'CRÍTICA'] as const;
 const ACCIONES = ['Inspección', 'Rotación', 'Instalación', 'Cambio', 'Reparación', 'Reencauche', 'Baja'] as const;
-const CONFIGURACIONES: { codigo: string; nombre: string; llantas: number }[] = [
-  { codigo: 'R2', nombre: 'Carreta / Burrita', llantas: 8 },
-  { codigo: 'S2', nombre: 'Semirremolque', llantas: 8 },
-  { codigo: 'S3', nombre: 'Semirremolque', llantas: 12 },
-  { codigo: '4X2', nombre: 'Tracto / Camión C2', llantas: 6 },
-  { codigo: '6X4', nombre: 'Tracto C3 / T3', llantas: 10 },
-  { codigo: '6X2', nombre: 'Tracto', llantas: 8 },
-  { codigo: 'T3S3', nombre: 'Combinación completa', llantas: 22 },
-];
 
 interface PosicionUltima {
   marca?: string; medida?: string; modelo?: string;
@@ -41,6 +35,7 @@ interface Llanta {
   posicion: string; marca: string; medida: string; modelo: string;
   r1: string; r2: string; r3: string; r4: string;
   presion_ant: string; presion_actual: string; estado: string; accion: string; observacion: string;
+  rot: 'NO' | 'SI'; foto1: string; foto2: string; foto3: string;
 }
 interface Errores { fecha?: string; km?: string; inspector?: string; llantas?: string }
 
@@ -51,7 +46,10 @@ const hoyISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.get
 /** Fecha dd/mm/aaaa (America/Lima, como en la versión actual) */
 export const fechaDMY = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 const aFecha = (iso: string) => { const [y, m, dd] = iso.slice(0, 10).split('-').map(Number); return new Date(y, m - 1, dd); };
-const vacia = (posicion: string): Llanta => ({ posicion, marca: '', medida: '', modelo: '', r1: '', r2: '', r3: '', r4: '', presion_ant: '', presion_actual: '', estado: 'BUENA', accion: 'Inspección', observacion: '' });
+const vacia = (posicion: string): Llanta => ({
+  posicion, marca: '', medida: '', modelo: '', r1: '', r2: '', r3: '', r4: '', presion_ant: '', presion_actual: '',
+  estado: 'BUENA', accion: 'Inspección', observacion: '', rot: 'NO', foto1: '', foto2: '', foto3: '',
+});
 
 /** Promedio del remanente (R1 + R2 + R3) / 3, como en el clásico */
 function promedio(l: Llanta): number | null {
@@ -66,6 +64,25 @@ function tonoRemanente(p: number | null): string {
   return 'var(--red-ink)';
 }
 
+/** Foto de la cámara o del archivo, reducida en el cliente (máx. 1200 px, JPEG 0.8) antes de enviarla */
+async function comprimirImagen(file: File, maxLado = 1200, calidad = 0.8): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error('imagen no válida'));
+      im.src = url;
+    });
+    const escala = Math.min(1, maxLado / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.naturalWidth * escala);
+    canvas.height = Math.round(img.naturalHeight * escala);
+    canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', calidad);
+  } finally { URL.revokeObjectURL(url); }
+}
+
 /** Campo numérico con botones − y + de 1 mm */
 function Milimetros({ etiqueta, valor, onChange }: { etiqueta: string; valor: string; onChange: (v: string) => void }) {
   const ajustar = (delta: number) => onChange(String(Math.min(24, Math.max(0, numero(valor) + delta))));
@@ -78,6 +95,41 @@ function Milimetros({ etiqueta, valor, onChange }: { etiqueta: string; valor: st
           onChange={e => onChange(e.target.value.replace(/[^0-9.,]/g, ''))} aria-label={`${etiqueta} en milímetros`} />
         <button type="button" className="insp-neu__paso pressable" onClick={() => ajustar(1)} aria-label={`Sumar 1 mm a ${etiqueta}`}><Plus size={14} /></button>
       </div>
+    </div>
+  );
+}
+
+/** Una foto de la llanta: cámara en el celular, archivo en el escritorio, con vista previa */
+function FotoSlot({ etiqueta, valor, onChange }: { etiqueta: string; valor: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [procesando, setProcesando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function elegir(file?: File) {
+    if (!file) return;
+    setProcesando(true); setError(null);
+    try { onChange(await comprimirImagen(file)); }
+    catch { setError('No se pudo leer la foto.'); }
+    finally { setProcesando(false); }
+  }
+  return (
+    <div className="insp-neu__foto">
+      <span className="insp-neu__foto-etiqueta">{etiqueta}</span>
+      {valor ? (
+        <img src={valor} alt={`${etiqueta} de la llanta`} className="insp-neu__foto-img" />
+      ) : (
+        <button type="button" className="insp-neu__foto-vacio pressable" onClick={() => ref.current?.click()} disabled={procesando}>
+          <Camera size={18} aria-hidden /> {procesando ? 'Procesando…' : 'Tomar foto'}
+        </button>
+      )}
+      <input ref={ref} type="file" accept="image/*" capture="environment" className="insp-neu__oculto"
+        onChange={e => { void elegir(e.target.files?.[0]); e.target.value = ''; }} />
+      {valor && (
+        <div className="insp-neu__foto-acciones">
+          <button type="button" onClick={() => ref.current?.click()}>Cambiar</button>
+          <button type="button" onClick={() => onChange('')} aria-label={`Quitar ${etiqueta}`}><X size={14} /></button>
+        </div>
+      )}
+      {error && <p className="insp-neu__error" role="alert">{error}</p>}
     </div>
   );
 }
@@ -107,6 +159,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
   const [llantas, setLlantas] = useState<Llanta[]>([]);
   const [activa, setActiva] = useState('1');
   const [nuevaPos, setNuevaPos] = useState('');
+  const [destinoRot, setDestinoRot] = useState('');
   const [errores, setErrores] = useState<Errores>({});
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +168,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
   useEffect(() => {
     if (!placa) return;
     setFecha(hoyISO()); setKm(''); setDias(30); setObs(''); setConfig(''); setLlantas([]);
-    setActiva('1'); setNuevaPos(''); setErrores({}); setError(null);
+    setActiva('1'); setNuevaPos(''); setDestinoRot(''); setErrores({}); setError(null);
   }, [placa]);
 
   // Con la última inspección: configuración, kilometraje y posiciones precargadas (se pueden corregir)
@@ -133,6 +186,20 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
     setLlantas(lista);
     setActiva(lista[0]?.posicion ?? '1');
   }, [ultima.data]);
+
+  // Al elegir una configuración, aparecen sus posiciones (el chasis y el conteo de llantas se actualizan)
+  useEffect(() => {
+    if (!config || !CONFIGURACIONES[config]) return;
+    const esperadas = posicionesDeConfig(config);
+    setLlantas(ls => {
+      const existentes = new Set(ls.map(l => l.posicion));
+      const faltan = esperadas.filter(pos => !existentes.has(pos)).map(vacia);
+      if (!faltan.length) return ls;
+      // Orden de la configuración: ejes y luego repuestos; las posiciones ajenas al esquema van al final
+      const orden = new Map(esperadas.map((pos, i) => [pos, i]));
+      return [...ls, ...faltan].sort((a, b) => (orden.get(a.posicion) ?? 1e6) - (orden.get(b.posicion) ?? 1e6));
+    });
+  }, [config]);
 
   // Última inspección de neumáticos: aviso según los días transcurridos
   const ultimaFecha = ultima.data?.fecha_inspeccion ? aFecha(ultima.data.fecha_inspeccion) : null;
@@ -156,11 +223,28 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
     setLlantas(ls => [...ls, vacia(pos)]);
     setActiva(pos); setNuevaPos(''); setErrores(e => ({ ...e, llantas: undefined }));
   };
-  const limpiar = () => { if (actual) set(actual.posicion, { marca: '', medida: '', modelo: '', r1: '', r2: '', r3: '', r4: '', presion_actual: '', estado: 'BUENA', accion: 'Inspección', observacion: '' }); };
+  const limpiar = () => { if (actual) set(actual.posicion, { marca: '', medida: '', modelo: '', r1: '', r2: '', r3: '', r4: '', presion_actual: '', estado: 'BUENA', accion: 'Inspección', observacion: '', rot: 'NO', foto1: '', foto2: '', foto3: '' }); };
   const siguiente = () => {
     const i = llantas.findIndex(l => l.posicion === activa);
     if (i >= 0 && i < llantas.length - 1) setActiva(llantas[i + 1].posicion);
     else haptic('selection');
+  };
+
+  // Rotación: intercambia los datos de dos posiciones; ambas quedan con ROT = SI y acción Rotación
+  const rotar = () => {
+    if (!actual || !destinoRot || destinoRot === actual.posicion) return;
+    const otra = llantas.find(l => l.posicion === destinoRot);
+    if (!otra) return;
+    const datos = (l: Llanta) => ({ marca: l.marca, medida: l.medida, modelo: l.modelo, r1: l.r1, r2: l.r2, r3: l.r3, r4: l.r4, presion_ant: l.presion_ant, presion_actual: l.presion_actual, estado: l.estado, foto1: l.foto1, foto2: l.foto2, foto3: l.foto3 });
+    const origen = actual.posicion, destino = otra.posicion;
+    setLlantas(ls => ls.map(l => {
+      if (l.posicion === origen) return { ...l, ...datos(otra), rot: 'SI', accion: 'Rotación', observacion: `De Posición #${destino} a Posición #${origen}` };
+      if (l.posicion === destino) return { ...l, ...datos(actual), rot: 'SI', accion: 'Rotación', observacion: `De Posición #${origen} a Posición #${destino}` };
+      return l;
+    }));
+    setDestinoRot('');
+    haptic('success');
+    toast(`Rotación: posición ${origen} ⇄ ${destino}`);
   };
 
   const medidas = (l: Llanta) => [l.r1, l.r2, l.r3, l.r4].some(v => numero(v) > 0);
@@ -187,7 +271,8 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
       posicion: l.posicion.toUpperCase(), marca: l.marca.trim().toUpperCase(), medida: l.medida.trim().toUpperCase(), modelo: l.modelo.trim().toUpperCase(),
       r1: numero(l.r1), r2: numero(l.r2), r3: numero(l.r3), r4: numero(l.r4),
       presion_ant: numero(l.presion_ant), presion_actual: numero(l.presion_actual),
-      estado: l.estado, accion: l.accion, rot: 'NO', observaciones: l.observacion.trim(),
+      estado: l.estado, accion: l.accion, rot: l.rot, observaciones: l.observacion.trim(),
+      ...(l.foto1 ? { foto1: l.foto1 } : {}), ...(l.foto2 ? { foto2: l.foto2 } : {}), ...(l.foto3 ? { foto3: l.foto3 } : {}),
     }));
     setEnviando(true); setError(null);
     try {
@@ -212,6 +297,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
       ? { tono: 'reciente', titulo: 'Inspección reciente', texto: <>Esta unidad fue inspeccionada el <strong>{fechaDMY(ultimaFecha)}</strong> {hace === 0 ? '(hoy)' : hace === 1 ? '(hace 1 día)' : `(hace ${hace} días)`}{inspectorUltimo ? <> por <strong>{inspectorUltimo}</strong></> : null}.</> }
       : { tono: 'info', titulo: 'Última inspección de neumáticos', texto: <>Fue el <strong>{fechaDMY(ultimaFecha)}</strong> (hace {hace} días){inspectorUltimo ? <> por <strong>{inspectorUltimo}</strong></> : null}.</> }
     : { tono: 'neutral', titulo: 'Sin inspecciones previas', texto: <>Esta unidad no tiene inspecciones de neumáticos registradas.</> };
+  const otrasPosiciones = llantas.filter(l => l.posicion !== activa);
 
   return (
     <Sheet open={!!placa} onClose={() => !enviando && onClose()} anclaAbajo title={`Neumáticos · ${placa ?? ''}`}
@@ -229,7 +315,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
 
           {error && <div className="insp-neu__error-general" role="alert">{error}</div>}
 
-          {/* Datos generales */}
+          {/* Bento 1: datos generales */}
           <section className="insp-neu__bloque">
             <div className="form-grid">
               <Field label="Fecha de inspección" error={errores.fecha}>
@@ -254,15 +340,21 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
             <div>
               <p className="insp-neu__titulo">Configuración del vehículo</p>
               <div className="insp-neu__pills" role="radiogroup" aria-label="Configuración del vehículo">
-                {CONFIGURACIONES.map(c => (
-                  <button key={c.codigo} type="button" role="radio" aria-checked={config === c.codigo}
-                    className={`insp-neu__pill pressable${config === c.codigo ? ' insp-neu__pill--activa' : ''}`} onClick={() => setConfig(c.codigo)}>
-                    <strong>{c.codigo}</strong> <span>{c.nombre} · {c.llantas} llantas</span>
-                  </button>
-                ))}
+                {CONFIG_ORDEN.map(codigo => {
+                  const c = CONFIGURACIONES[codigo];
+                  return (
+                    <button key={codigo} type="button" role="radio" aria-checked={config === codigo}
+                      className={`insp-neu__pill pressable${config === codigo ? ' insp-neu__pill--activa' : ''}`} onClick={() => setConfig(codigo)}>
+                      <strong>{codigo}</strong> <span>{c.nombre} · {c.llantas} llantas</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </section>
+
+          {/* Bento 2: esquema del chasis, debajo de los datos generales y encima del editor */}
+          <ChasisEsquemaVisual configuracion={config} llantas={llantas} activa={activa} onSelect={setActiva} />
 
           {/* Posiciones: chips y editor de la llanta activa */}
           <section className="insp-neu__bloque">
@@ -316,7 +408,30 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
                   <Field label="Presión actual (PSI)">{p => <TextInput {...p} inputMode="numeric" value={actual.presion_actual} onChange={e => set(actual.posicion, { presion_actual: e.target.value.replace(/\D/g, '') })} />}</Field>
                   <Field label="Estado">{p => <SelectInput {...p} value={actual.estado} onChange={e => set(actual.posicion, { estado: e.target.value })}>{ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}</SelectInput>}</Field>
                   <Field label="Acción">{p => <SelectInput {...p} value={actual.accion} onChange={e => set(actual.posicion, { accion: e.target.value })}>{ACCIONES.map(s => <option key={s} value={s}>{s}</option>)}</SelectInput>}</Field>
+                  <Field label="ROT (rotada)">{p => <SelectInput {...p} value={actual.rot} onChange={e => set(actual.posicion, { rot: e.target.value as 'NO' | 'SI' })}><option value="NO">NO</option><option value="SI">SI</option></SelectInput>}</Field>
                   <Field label="Observación de la llanta" wide>{p => <TextInput {...p} value={actual.observacion} onChange={e => set(actual.posicion, { observacion: e.target.value })} />}</Field>
+                </div>
+
+                {/* Rotación con otra posición */}
+                <div className="insp-neu__rotar">
+                  <span className="insp-neu__titulo">Rotar con otra posición</span>
+                  <div className="insp-neu__rotar-control">
+                    <SelectInput value={destinoRot} onChange={e => setDestinoRot(e.target.value)} aria-label="Posición destino de la rotación" disabled={otrasPosiciones.length === 0}>
+                      <option value="">Elige la posición…</option>
+                      {otrasPosiciones.map(l => <option key={l.posicion} value={l.posicion}>Posición {l.posicion}</option>)}
+                    </SelectInput>
+                    <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={rotar} disabled={!destinoRot}>Rotar</Button>
+                  </div>
+                </div>
+
+                {/* Evidencia fotográfica: tres fotos por llanta */}
+                <div>
+                  <p className="insp-neu__titulo">Evidencia fotográfica</p>
+                  <div className="insp-neu__fotos">
+                    <FotoSlot etiqueta="Foto 1" valor={actual.foto1} onChange={v => set(actual.posicion, { foto1: v })} />
+                    <FotoSlot etiqueta="Foto 2" valor={actual.foto2} onChange={v => set(actual.posicion, { foto2: v })} />
+                    <FotoSlot etiqueta="Foto 3" valor={actual.foto3} onChange={v => set(actual.posicion, { foto3: v })} />
+                  </div>
                 </div>
 
                 <div className="insp-neu__acciones-llanta">
@@ -334,17 +449,19 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
             <div className="insp-neu__tabla-caja">
               <table className="insp-neu__tabla">
                 <thead>
-                  <tr><th>Pos</th><th>Marca</th><th>Medida</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Prom.</th><th>PSI</th><th>Estado</th><th>Acción</th></tr>
+                  <tr><th>Pos</th><th>Marca</th><th>Medida</th><th>Modelo</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Prom.</th><th>PSI</th><th>Estado</th><th>Acción</th><th>ROT</th><th>Fotos</th></tr>
                 </thead>
                 <tbody>
                   {llantas.map(l => {
                     const p = promedio(l);
+                    const fotos = [l.foto1, l.foto2, l.foto3].filter(Boolean).length;
                     return (
                       <tr key={l.posicion} className={`insp-neu__fila pressable${activa === l.posicion ? ' insp-neu__fila--activa' : ''}`} onClick={() => setActiva(l.posicion)} tabIndex={0}
                         onKeyDown={e => { if (e.key === 'Enter') setActiva(l.posicion); }}>
                         <td className="t-numeric">{l.posicion}</td>
                         <td>{l.marca || '—'}</td>
                         <td>{l.medida || '—'}</td>
+                        <td>{l.modelo || '—'}</td>
                         <td className="t-numeric">{l.r1 || '—'}</td>
                         <td className="t-numeric">{l.r2 || '—'}</td>
                         <td className="t-numeric">{l.r3 || '—'}</td>
@@ -353,6 +470,8 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
                         <td className="t-numeric">{l.presion_actual || '—'}</td>
                         <td>{l.estado}</td>
                         <td>{l.accion}</td>
+                        <td>{l.rot}</td>
+                        <td className="t-numeric">{fotos}/3</td>
                       </tr>
                     );
                   })}
