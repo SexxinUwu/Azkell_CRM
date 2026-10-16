@@ -122,7 +122,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [ ] mantenimiento/combustible · mantenimiento/combustible-vales · mantenimiento/combustible-analisis ⚠️ (¿duplican operaciones/combustible-*?)
 
 ### D. Almacén
-- [ ] almacen/inventario
+- [x] almacen/inventario *(en /app, verificado en navegador 2026-10-16: búsqueda y filtros, exportar Excel solo con lo filtrado, plantilla e importación. Pendiente de decisión: que los contadores del encabezado sigan la búsqueda; hoy son totales)*
 - [ ] almacen/entradas · almacen/salidas
 - [~] almacen/kardex *(en /app con costo unitario, costo promedio y valor de saldo. El servidor devuelve `{ movimientos }` y la app lo adapta; la versión actual sigue igual)*
 - [~] almacen/recepcion-compras *(en /app es la versión oficial, con recepción en dólares y TC SUNAT del día. La pantalla clásica no se modifica)*
