@@ -55,8 +55,9 @@ interface Viaje {
 const ESTADOS = ['ACTIVO', 'INICIADO', 'FINALIZADO', 'LIQUIDADO', 'ANULADO'];
 const n = (v: unknown) => Number(v) || 0;
 const tono = (e: string) => ({ ACTIVO: 'amber', INICIADO: 'blue', FINALIZADO: 'green', LIQUIDADO: 'green', ANULADO: 'neutral' }[e] ?? 'neutral') as 'amber' | 'blue' | 'green' | 'neutral';
-const css = (t: string) => (t === 'blue' ? 'accent' : t === 'neutral' ? 'gray' : t);
-const fmtFecha = (s?: string | null) => (s ? String(s).replace('T', ' ').slice(0, 16) : '—');
+const css = (t: string) => (t === 'neutral' ? 'gray' : t);
+// Fecha peruana dd/mm/aaaa HH:mm, sin cambio de zona horaria
+const fmtFecha = (s?: string | null) => { const m = String(s ?? '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}` : '—'; };
 const esMarsisa = typeof window !== 'undefined' && window.location.hostname.split('.')[0].toLowerCase().includes('marsisa');
 
 // Placas con SOAT o Revisión Técnica vencidos (las calcula el servidor)
@@ -159,7 +160,7 @@ export function OrdenesViajePage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
           {[['', 'Todos', lista.length], ...ESTADOS.map(e => [e, e.charAt(0) + e.slice(1).toLowerCase(), conteo[e] ?? 0])].map(([val, label, c]) => (
-            <button key={String(val)} type="button" onClick={() => setEstado(String(val))}
+            <button key={String(val)} type="button" className="pressable" onClick={() => { haptic('selection'); setEstado(String(val)); }}
               style={{
                 padding: '0.375rem 0.875rem', borderRadius: 'var(--r-full)', fontSize: '0.875rem', fontWeight: 600, border: 'none', cursor: 'pointer',
                 background: estado === val ? 'var(--ink)' : 'var(--fill)', color: estado === val ? 'var(--label-inverse)' : 'var(--label-2)',
@@ -179,7 +180,7 @@ export function OrdenesViajePage() {
         ) : (
           <div className="tarjeta__lista">
             {visibles.map(v => (
-              <button key={v.viaje} type="button" className="mov-fila" onClick={() => { haptic('selection'); setAbiertoId(v.viaje); }}>
+              <button key={v.viaje} type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setAbiertoId(v.viaje); }}>
                 <div className="mov-fila__icon" style={{ background: `var(--${css(tono(v.estado))}-tint)`, color: `var(--${css(tono(v.estado))}-ink)` }}><Truck size={16} /></div>
                 <div className="mov-fila__cuerpo">
                   <span className="mov-fila__titulo">{v.viaje} · {v.conductor || 'Sin conductor'}</span>
@@ -244,7 +245,7 @@ function ResumenFinanciero({ viaje }: { viaje: Viaje }) {
   });
   const codigo = String(viaje.viaje).trim().toUpperCase();
   const fila = q.data?.viajes?.find(x => String(x.viaje).trim().toUpperCase() === codigo);
-  const soles = (n: number) => `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const soles = (n: number) => `S/\u00a0${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   return (
     <div aria-label="Resumen financiero">
       <p className="tarjeta__grupo-titulo">Resumen financiero</p>
@@ -311,6 +312,7 @@ function AccionViaje({ accion, usuario, onClose, onHecho }: {
   const toast = useToast();
   const [km, setKm] = useState('');
   const [horas, setHoras] = useState('');
+  const [errKm, setErrKm] = useState<string | undefined>();
   const [fecha, setFecha] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -328,9 +330,9 @@ function AccionViaje({ accion, usuario, onClose, onHecho }: {
 
   async function confirmar() {
     if (!accion) return;
-    if (!km) { setError(iniciar ? 'Indica el kilometraje inicial.' : 'Indica el kilometraje final.'); return; }
+    if (!km) { setErrKm(iniciar ? 'Indica el kilometraje inicial.' : 'Indica el kilometraje final.'); haptic('warning'); return; }
     if (!iniciar && accion.viaje.kilometraje_inicial != null && Number(km) < accion.viaje.kilometraje_inicial) {
-      setError('El kilometraje final no puede ser menor al inicial.'); return;
+      setErrKm('El kilometraje final no puede ser menor al inicial.'); haptic('warning'); return;
     }
     setEnviando(true); setError(null);
     try {
@@ -355,7 +357,7 @@ function AccionViaje({ accion, usuario, onClose, onHecho }: {
         <Field label={iniciar ? 'Fecha y hora de salida' : 'Fecha y hora de llegada'} wide>
           {p => <TextInput {...p} type="datetime-local" value={fecha} onChange={e => setFecha(e.target.value)} />}
         </Field>
-        <Field label={iniciar ? 'Kilometraje inicial' : 'Kilometraje final'}>{p => <TextInput {...p} inputMode="numeric" value={km} onChange={e => setKm(e.target.value.replace(/\D/g, ''))} autoFocus />}</Field>
+        <Field label={iniciar ? 'Kilometraje inicial' : 'Kilometraje final'} error={errKm}>{p => <TextInput {...p} inputMode="numeric" value={km} onChange={e => { setKm(e.target.value.replace(/\D/g, '')); setErrKm(undefined); }} autoFocus />}</Field>
         {iniciar && <Field label="Horas motor del remolque">{p => <TextInput {...p} inputMode="numeric" value={horas} onChange={e => setHoras(e.target.value.replace(/\D/g, ''))} />}</Field>}
       </div>
     </Sheet>
@@ -376,6 +378,7 @@ function FormularioViaje({ open, viaje, usuario, onClose, onGuardado }: {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [avisos, setAvisos] = useState<string[]>([]);
+  const [errCampos, setErrCampos] = useState<Record<string, string | undefined>>({});
   const editando = !!viaje;
 
   useEffect(() => {
@@ -396,7 +399,11 @@ function FormularioViaje({ open, viaje, usuario, onClose, onGuardado }: {
   const remolques = (placas.data ?? []).filter(p => !p.motora).map(p => p.placa);
 
   async function guardar() {
-    if (!v.conductor.trim() || !v.placa_tracto) { setError('El conductor y el tracto son obligatorios.'); return; }
+    const e: Record<string, string> = {};
+    if (!v.conductor.trim()) e.conductor = 'El conductor es obligatorio.';
+    if (!v.placa_tracto) e.placa_tracto = 'El tracto es obligatorio.';
+    setErrCampos(e);
+    if (Object.keys(e).length) { haptic('warning'); return; }
     setEnviando(true); setError(null);
     try {
       const cond = (conductores.data ?? []).find(c => c.nombre === v.conductor);
@@ -429,13 +436,13 @@ function FormularioViaje({ open, viaje, usuario, onClose, onGuardado }: {
         {avisos.length > 0 && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{avisos.map(a => <div key={a}>{a}</div>)}</Notice></div>}
         {txt('viaje', 'N° de viaje', { disabled: true })}
         {txt('fecha_viaje', 'Fecha y hora', { type: 'datetime-local' })}
-        <Field label="Conductor" wide>
+        <Field label="Conductor" wide error={errCampos.conductor}>
           {p => (<>
             <TextInput {...p} list="ov-conductores" value={v.conductor ?? ''} onChange={e => set('conductor', e.target.value)} />
             <datalist id="ov-conductores">{(conductores.data ?? []).map(c => <option key={c.id} value={c.nombre} />)}</datalist>
           </>)}
         </Field>
-        <Field label="Tracto">
+        <Field label="Tracto" error={errCampos.placa_tracto}>
           {p => (<>
             <TextInput {...p} list="ov-tractos" value={v.placa_tracto ?? ''} onChange={e => set('placa_tracto', e.target.value.toUpperCase())} />
             <datalist id="ov-tractos">{tractos.map(t => <option key={t} value={t} />)}</datalist>

@@ -77,6 +77,8 @@ function TelemetriaViaje({ trip }: { trip: Trip }) {
 }
 
 const fmt = (v: unknown, d = 1) => n(v).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d });
+// Soles con S/ y espacio no divisible, dos decimales
+const soles = (v: unknown) => 'S/\u00a0' + n(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const AUDIT = ['PENDIENTE', 'CONFORME', 'OBSERVADO'];
 const colorAudit = (e: string) => ({ CONFORME: 'green', OBSERVADO: 'amber', PENDIENTE: 'gray' }[e] ?? 'gray');
 const esUrea = (k: string) => /UREA|ADBLUE|DEF/.test(k.toUpperCase());
@@ -164,7 +166,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div className="inv-metricas">
           <div className="inv-metrica"><span className="inv-metrica__num">{fmt(resumen.gal, 0)}</span><span className="inv-metrica__label">{urea ? 'Urea (gl)' : 'Galones'}</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>S/ {fmt(resumen.gasto, 0)}</span><span className="inv-metrica__label">Gasto</span></div>
+          <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>{soles(resumen.gasto)}</span><span className="inv-metrica__label">Gasto</span></div>
           <div className="inv-metrica"><span className="inv-metrica__num">{fmt(resumen.kmGal, 2)}</span><span className="inv-metrica__label">km por galón</span></div>
         </div>
 
@@ -187,7 +189,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
             {visibles.map(x => {
               const c = cifras(x);
               return (
-                <button key={x.viaje} type="button" className="mov-fila" onClick={() => { haptic('selection'); setAbierto(x.viaje); }}>
+                <button key={x.viaje} type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setAbierto(x.viaje); }}>
                   <div className="mov-fila__icon" style={{ background: `var(--${colorAudit(x.estadoAuditoria)}-tint)`, color: `var(--${colorAudit(x.estadoAuditoria)}-ink)` }}>
                     {x.odometroInconsistente ? <AlertTriangle size={16} /> : <Icono size={16} />}
                   </div>
@@ -249,7 +251,7 @@ function DetalleViaje({ trip: t, urea, puedeAuditar, modulo, usuario, onClose, c
         {t.odometroInconsistente && <Notice tone="error" icon={<AlertTriangle size={16} />}>El odómetro final es menor que el inicial: revisa los vales de este viaje.</Notice>}
         <div className="inv-metricas">
           <div className="inv-metrica"><span className="inv-metrica__num">{fmt(c.galones, 1)}</span><span className="inv-metrica__label">Galones</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.0625rem' }}>S/ {fmt(c.gasto, 2)}</span><span className="inv-metrica__label">Gasto</span></div>
+          <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.0625rem' }}>{soles(c.gasto)}</span><span className="inv-metrica__label">Gasto</span></div>
           <div className="inv-metrica"><span className="inv-metrica__num">{fmt(c.rendimiento, 2)}</span><span className="inv-metrica__label">km/gl</span></div>
         </div>
         <div className="tarjeta__lista">
@@ -268,7 +270,7 @@ function DetalleViaje({ trip: t, urea, puedeAuditar, modulo, usuario, onClose, c
               {vales.map(v => (
                 <div key={String(v.id)} className="dato">
                   <span className="dato__label">{String(v.fecha ?? '').slice(0, 16)} · {v.estacion || 'Sin estación'}</span>
-                  <span className="dato__valor">{fmt(v.galones, 2)} gl · S/ {fmt(v.importe, 2)}{v.odometro ? ` · ${fmt(v.odometro, 0)} km` : ''}</span>
+                  <span className="dato__valor">{fmt(v.galones, 2)} gl · {soles(v.importe)}{v.odometro ? ` · ${fmt(v.odometro, 0)} km` : ''}</span>
                 </div>
               ))}
             </div>

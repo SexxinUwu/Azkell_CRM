@@ -28,7 +28,9 @@ const n = (v: unknown) => Number(v) || 0;
 // Solo la empresa Marsisa tiene base externa; el servidor rechaza la sincronización en las demás (mismo criterio que la navegación)
 const esMarsisa = typeof window !== 'undefined' && window.location.hostname.split('.')[0].toLowerCase().includes('marsisa');
 const money = (v: unknown) => n(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const dia = (s?: string | null) => (s ? String(s).slice(0, 10) : '');
+// Soles con S/ y espacio no divisible; fecha peruana dd/mm/aaaa
+const soles = (v: unknown) => 'S/\u00a0' + money(v);
+const dia = (s?: string | null) => { const m = String(s ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
 const ESTADOS = ['VÁLIDO', 'ANULADO'];
 const PAGOS = ['NO PAGADO', 'PAGADO'];
 const TIPOS_PAGO = ['ANTICIPO', 'CONTADO', 'CREDITO'];
@@ -134,8 +136,8 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div className="inv-metricas">
           <div className="inv-metrica"><span className="inv-metrica__num">{n(k?.totalGalones).toLocaleString('es-PE', { maximumFractionDigits: 1 })}</span><span className="inv-metrica__label">Galones</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>S/ {money(k?.totalGasto)}</span><span className="inv-metrica__label">Gasto</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>S/ {money(k?.costoPromedioGalon)}</span><span className="inv-metrica__label">Costo por galón</span></div>
+          <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>{soles(k?.totalGasto)}</span><span className="inv-metrica__label">Gasto</span></div>
+          <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>{soles(k?.costoPromedioGalon)}</span><span className="inv-metrica__label">Costo por galón</span></div>
         </div>
 
         <SearchField value={busqueda} placeholder="Correlativo, placa, viaje, conductor, proveedor o estación…"
@@ -162,20 +164,20 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
                 const anulado = v.estado === 'ANULADO';
                 const marcado = seleccion.has(Number(v.id));
                 return (
-                  <button key={v.id} type="button" className="mov-fila" style={{ opacity: anulado ? 0.6 : 1, outline: marcado ? '2px solid var(--accent)' : undefined }}
+                  <button key={v.id} type="button" className="mov-fila pressable" style={{ opacity: anulado ? 0.6 : 1, outline: marcado ? '2px solid var(--accent)' : undefined }}
                     onClick={() => {
                       haptic('selection');
                       if (!seleccionando) { setAbierto(v); return; }
                       setSeleccion(prev => { const nx = new Set(prev); nx.has(Number(v.id)) ? nx.delete(Number(v.id)) : nx.add(Number(v.id)); return nx; });
                     }}>
                     {seleccionando && <span aria-hidden style={{ width: 20, height: 20, borderRadius: 6, border: '2px solid var(--accent)', background: marcado ? 'var(--accent)' : 'transparent', flexShrink: 0 }} />}
-                    <div className="mov-fila__icon" style={{ background: anulado ? 'var(--gray-tint)' : 'var(--accent-tint)', color: anulado ? 'var(--gray-ink)' : 'var(--accent-ink)' }}><Fuel size={16} /></div>
+                    <div className="mov-fila__icon" style={{ background: anulado ? 'var(--gray-tint)' : 'var(--blue-tint)', color: anulado ? 'var(--gray-ink)' : 'var(--blue-ink)' }}><Fuel size={16} /></div>
                     <div className="mov-fila__cuerpo">
                       <span className="mov-fila__titulo">{v.vehiculo || 'Sin placa'} · {n(v.galones).toLocaleString('es-PE', { maximumFractionDigits: 2 })} gl {v.tipo_combustible ?? ''}</span>
                       <span className="mov-fila__sub">{[v.correlativo, dia(v.fecha), v.conductor, v.estacion || v.proveedor].filter(Boolean).join(' · ')}</span>
                     </div>
                     <div className="mov-fila__derecha">
-                      <span className="mov-fila__monto">{v.moneda === 'DOLARES' ? 'US$' : 'S/'} {money(v.importe)}</span>
+                      <span className="mov-fila__monto">{v.moneda === 'DOLARES' ? 'US$\u00a0' : 'S/\u00a0'}{money(v.importe)}</span>
                       <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: anulado ? 'var(--gray-ink)' : v.estado_pago === 'PAGADO' ? 'var(--green-ink)' : 'var(--amber-ink)' }}>{anulado ? 'ANULADO' : v.estado_pago}</span>
                     </div>
                   </button>
@@ -206,7 +208,7 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
             <div className="inv-metricas">
               <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>{n(abierto.galones).toLocaleString('es-PE')}</span><span className="inv-metrica__label">Galones</span></div>
               <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>{money(abierto.costo_gl)}</span><span className="inv-metrica__label">Costo/gl</span></div>
-              <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>{money(abierto.importe)}</span><span className="inv-metrica__label">Importe {abierto.moneda === 'DOLARES' ? 'US$' : 'S/'}</span></div>
+              <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>{abierto.moneda === 'DOLARES' ? 'US$\u00a0' : 'S/\u00a0'}{money(abierto.importe)}</span><span className="inv-metrica__label">Importe {abierto.moneda === 'DOLARES' ? 'US$' : 'S/'}</span></div>
             </div>
             <div className="tarjeta__lista">
               {fila('Estado', abierto.estado)}{fila('Pago', [abierto.estado_pago, abierto.tipo_pago, abierto.dias_credito ? `${abierto.dias_credito} días` : ''].filter(Boolean).join(' · '))}
@@ -267,6 +269,7 @@ function FormularioVale({ open, vale, cat, modulo, onClose, onGuardado }: {
   const [v, setV] = useState<Record<string, string>>({});
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errCampos, setErrCampos] = useState<Record<string, string | undefined>>({});
   const editando = !!vale;
 
   useEffect(() => {
@@ -294,8 +297,11 @@ function FormularioVale({ open, vale, cat, modulo, onClose, onGuardado }: {
   }
 
   async function guardar() {
-    if (!v.vehiculo.trim()) { setError('La placa del vehículo es obligatoria.'); return; }
-    if (!(parseFloat(v.galones) > 0)) { setError('Indica los galones.'); return; }
+    const e: Record<string, string> = {};
+    if (!v.vehiculo.trim()) e.vehiculo = 'La placa del vehículo es obligatoria.';
+    if (!(parseFloat(v.galones) > 0)) e.galones = 'Indica los galones.';
+    setErrCampos(e);
+    if (Object.keys(e).length) { haptic('warning'); return; }
     setEnviando(true); setError(null);
     try {
       const body = { ...v, vehiculo: v.vehiculo.toUpperCase().trim(), fecha: v.fecha.replace('T', ' ') + ':00', modulo };
@@ -309,8 +315,8 @@ function FormularioVale({ open, vale, cat, modulo, onClose, onGuardado }: {
     finally { setEnviando(false); }
   }
 
-  const txt = (k: string, label: string, o?: { type?: string; wide?: boolean; mode?: 'decimal' | 'numeric'; list?: string; calc?: boolean }) => (
-    <Field label={label} wide={o?.wide}>
+  const txt = (k: string, label: string, o?: { type?: string; wide?: boolean; mode?: 'decimal' | 'numeric'; list?: string; calc?: boolean; error?: string }) => (
+    <Field label={label} wide={o?.wide} error={o?.error}>
       {p => <TextInput {...p} type={o?.type ?? 'text'} inputMode={o?.mode} list={o?.list} value={v[k] ?? ''}
         onChange={e => (o?.calc ? cambiarCalculo(k as 'galones' | 'costo_gl', e.target.value) : set(k, e.target.value))} />}
     </Field>
@@ -329,7 +335,7 @@ function FormularioVale({ open, vale, cat, modulo, onClose, onGuardado }: {
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
         {txt('correlativo', 'Correlativo')}
         {txt('fecha', 'Fecha y hora', { type: 'datetime-local' })}
-        <Field label="Vehículo (placa)">
+        <Field label="Vehículo (placa)" error={errCampos.vehiculo}>
           {p => (<>
             <TextInput {...p} list="vale-placas" value={v.vehiculo ?? ''} onChange={e => set('vehiculo', e.target.value.toUpperCase())} />
             <datalist id="vale-placas">{(cat?.placas ?? []).map(x => <option key={x} value={x} />)}</datalist>
@@ -354,7 +360,7 @@ function FormularioVale({ open, vale, cat, modulo, onClose, onGuardado }: {
         {txt('ruc', 'RUC')}
         {sel('tipo_combustible', 'Combustible', cat?.combustibles ?? ['D2'])}
         {txt('kilometraje', 'Kilometraje', { mode: 'numeric' })}
-        {txt('galones', 'Galones', { mode: 'decimal', calc: true })}
+        {txt('galones', 'Galones', { mode: 'decimal', calc: true, error: errCampos.galones })}
         {txt('costo_gl', 'Costo por galón', { mode: 'decimal', calc: true })}
         {txt('importe', 'Importe', { mode: 'decimal' })}
         {sel('moneda', 'Moneda', ['SOLES', 'DOLARES'])}
