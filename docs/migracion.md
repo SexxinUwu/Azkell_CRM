@@ -135,8 +135,8 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 
 ### E. Operaciones
 - [~] operaciones/ordenes-viaje · operaciones/marsisa-ordenes-viaje ⚠️ (variante por empresa) *(en /app: alerta de documentos vencidos por placa, resumen financiero en la ficha (flete, gastos de ruta, margen y rentabilidad), órdenes de servicio del viaje, sincronización con MarsisaSoft solo en el dominio Marsisa; verificado en navegador 2026-10-16 con datos simulados: listado, filtro, ficha, validaciones de finalizar y alta sin conductor. Pendiente: monitoreo GPS y vales desde la ficha, que siguen en el clásico)*
-- [ ] operaciones/ordenes-servicio
-- [ ] operaciones/programacion · operaciones/asignacion · operaciones/rutas
+- [x] operaciones/ordenes-servicio *(en /app: consulta por estado (Todas, Pendientes, Iniciadas, Finalizadas, Anuladas), búsqueda, exportación a Excel, alta y edición con rutas, flete e impuesto, cambio de estado y guías disponibles. Todas las rutas del servidor usan la base del tenant. Verificado en navegador 2026-10-16 con datos simulados)*
+- [~] operaciones/programacion *(en /app: agenda por día (Hoy, Mañana, fecha), búsqueda, mostrar u ocultar finalizados, enlace a la ficha del viaje y alta de viaje. Verificado en navegador 2026-10-16. Pendiente: operaciones/asignacion y operaciones/rutas, que siguen en el clásico)*
 - [ ] operaciones/monitoreo · operaciones/reporte-viajes
 - [ ] operaciones/combustible-vales · operaciones/marsisa-combustible-vales ⚠️
 - [ ] operaciones/combustible-analisis · operaciones/urea-analisis
