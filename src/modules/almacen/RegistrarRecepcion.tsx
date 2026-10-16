@@ -152,6 +152,14 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
                 {p => <TextInput {...p} inputMode="decimal" placeholder="3.75" value={tc} onChange={e => setTc(e.target.value)} />}
               </Field>
             )}
+            {String(oc.moneda).toUpperCase() === 'USD' && (
+              <div className="field field--wide" aria-live="polite" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-3)', padding: 'var(--s-3) var(--s-4)', borderRadius: 'var(--r-lg)', background: 'var(--accent-tint)', color: 'var(--accent-ink)' }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>Equivale a</span>
+                <strong className="t-numeric" style={{ fontSize: '1.125rem' }}>
+                  S/ {(pendientes.reduce((s2, { i, it }) => s2 + num(cant[i] ?? '') * (Number(it.costo_unitario) || 0), 0) * num(tc)).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </strong>
+              </div>
+            )}
             <Field label="Observaciones" wide>
               {p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} placeholder="Opcional" />}
             </Field>

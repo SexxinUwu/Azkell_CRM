@@ -23,7 +23,9 @@ export function KardexPage() {
   const [hasta, setHasta] = useState('');
   const toast = useToast();
 
-  const { data: kardex, isLoading: loadingKardex } = useKardex(seleccionado?.id ?? null);
+  const { data: kardexData, isLoading: loadingKardex } = useKardex(seleccionado?.id ?? null);
+  const kardex = kardexData?.items;
+  const stockBase = kardexData?.stockBase ?? null;
 
   const resultados = useMemo(() => {
     if (!busqueda.trim() || !inventario || seleccionado) return [];
@@ -67,8 +69,10 @@ export function KardexPage() {
     if (!kardex) return null;
     const totalEntradas = kardex.filter(k => k.tipo === 'ENTRADA').reduce((s, k) => s + k.cantidad, 0);
     const totalSalidas = kardex.filter(k => k.tipo === 'SALIDA').reduce((s, k) => s + k.cantidad, 0);
-    const saldo = kardex.length > 0 ? kardex[kardex.length - 1].saldo : (seleccionado?.stock_actual ?? 0);
-    return { totalEntradas, totalSalidas, saldo };
+    const ultimo = kardex.length > 0 ? kardex[kardex.length - 1] : null;
+    const saldo = ultimo ? ultimo.saldo : (seleccionado?.stock_actual ?? 0);
+    const valor = ultimo?.valor_saldo ?? null;
+    return { totalEntradas, totalSalidas, saldo, valor };
   }, [kardex, seleccionado]);
 
   function seleccionar(a: ArticuloInv) {
@@ -180,8 +184,12 @@ export function KardexPage() {
                     <span className="inv-metrica__label">Total salidas</span>
                   </div>
                   <div className="inv-metrica">
-                    <span className="inv-metrica__num" style={{ fontSize: '1.375rem' }}>{fmtQty(kpis.saldo)}</span>
-                    <span className="inv-metrica__label">Saldo actual</span>
+                    <span className="inv-metrica__num" style={{ fontSize: '1.375rem' }}>{stockBase === null ? '—' : fmtQty(stockBase)}</span>
+                    <span className="inv-metrica__label">Stock de apertura</span>
+                  </div>
+                  <div className="inv-metrica">
+                    <span className="inv-metrica__num" style={{ fontSize: '1.375rem' }}>{kpis.valor === null ? '—' : `S/ ${kpis.valor.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
+                    <span className="inv-metrica__label">Saldo valorizado · {fmtQty(kpis.saldo)} u. al costo promedio</span>
                   </div>
                 </div>
               )}

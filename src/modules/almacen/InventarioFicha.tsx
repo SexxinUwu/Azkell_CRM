@@ -27,7 +27,8 @@ export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, o
   const [regularizando, setRegularizando] = useState(false);
   const tono = stockTono(a);
 
-  const { data: kardex } = useKardex(a.id);
+  const { data: kardexData } = useKardex(a.id);
+  const kardex = kardexData?.items;
 
   let marcasArr: string[] = [];
   try { marcasArr = JSON.parse(a.marca_unidad ?? '[]'); } catch { /* */ }

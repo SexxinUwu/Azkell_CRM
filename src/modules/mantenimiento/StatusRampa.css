@@ -65,3 +65,7 @@
 .rm-chip--out { background: var(--red-tint); color: var(--red-ink); }
 .rm-pie { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; font-size: 0.8125rem; color: var(--label-2); }
 .rm-km { font-family: var(--font-mono); }
+
+/* Inspección de la unidad: código con semáforo y días restantes; toda la celda es el botón */
+.rt__insp { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
+.rt__insp-dias { font-size: 0.8125rem; font-weight: 700; font-variant-numeric: tabular-nums; }
