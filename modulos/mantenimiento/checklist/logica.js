@@ -283,6 +283,40 @@ window.ckCargarOrdenesViaje = async function(forceSync) {
     }
 };
 
+// Conductor de la orden de viaje y el del último ingreso de seguridad. La OV manda por defecto.
+window._ckConductorViaje = '';
+window._ckConductorSeguridad = '';
+
+// Muestra el aviso solo si ambos nombres son distintos; la persona elige cuál usar
+window.ckRevisarConductores = function() {
+    const aviso = document.getElementById('ck-aviso-conductor');
+    if (!aviso) return;
+    const ov = (window._ckConductorViaje || '').trim();
+    const sv = (window._ckConductorSeguridad || '').trim();
+    if (!ov || !sv || ov.toUpperCase() === sv.toUpperCase()) {
+        aviso.classList.add('d-none');
+        aviso.innerHTML = '';
+        return;
+    }
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    aviso.innerHTML =
+        '<div class="fw-bold">Conductores distintos</div>' +
+        '<div>La orden de viaje indica <b>' + esc(ov) + '</b> y seguridad registra <b>' + esc(sv) + '</b> como último ingreso. Por defecto se usa el de la orden de viaje.</div>' +
+        '<div class="d-flex flex-wrap gap-2 mt-2">' +
+        '<button type="button" class="btn btn-sm btn-outline-warning fw-semibold" onclick="window.ckElegirConductor(\'viaje\')">Usar el de la OV</button>' +
+        '<button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" onclick="window.ckElegirConductor(\'seguridad\')">Usar el de seguridad</button>' +
+        '</div>';
+    aviso.classList.remove('d-none');
+};
+
+window.ckElegirConductor = function(origen) {
+    const nombre = origen === 'viaje' ? window._ckConductorViaje : window._ckConductorSeguridad;
+    if (!nombre) return;
+    window.ckAsignarConductor(nombre, origen);
+    const aviso = document.getElementById('ck-aviso-conductor');
+    if (aviso) aviso.classList.add('d-none');
+};
+
 // Único punto que escribe el conductor. origen: 'seguridad' | 'viaje' | 'manual'
 window.ckAsignarConductor = function(nombre, origen) {
     const h = document.getElementById('ck_conductor');
@@ -302,7 +336,8 @@ window.ckConsultarUltimoIngresoSeguridad = async function(placa) {
         if (!res.ok) return;
         const json = await res.json();
         const data = json && json.data;
-        if (!data) return;
+        window._ckConductorSeguridad = (data && data.conductor) || '';
+        if (!data) { window.ckRevisarConductores(); return; }
 
         // 1. Mantener Orden de Viaje VACÍA por defecto al ingresar placa (a menos que el usuario la seleccione manualmente)
         const inputHidden = document.getElementById('ck_orden_viaje');
@@ -335,6 +370,7 @@ window.ckConsultarUltimoIngresoSeguridad = async function(placa) {
         if (data.conductor && (!condActual || !condActual.value || condActual.dataset.origen === 'seguridad')) {
             window.ckAsignarConductor(data.conductor, 'seguridad');
         }
+        window.ckRevisarConductores();
 
         // 4. Autocompletar Procedencia / Origen / Zona si el campo está vacío
         if (data.procedencia || data.destino || data.zona) {
@@ -382,8 +418,10 @@ window.ckConsultarViajeActualPorPlaca = async function(placa) {
                 }
             }
 
-            // 3. Autocompletar Conductor (la orden de viaje es una acción explícita)
+            // 3. Autocompletar Conductor (la orden de viaje manda por defecto)
+            window._ckConductorViaje = viajeActual.conductor || '';
             if (viajeActual.conductor) window.ckAsignarConductor(viajeActual.conductor, 'viaje');
+            window.ckRevisarConductores();
 
             // 4. Autocompletar Procedencia / Ruta
             if (viajeActual.ruta || viajeActual.origen) {
@@ -569,7 +607,9 @@ window.ckSeleccionarViaje = function(v) {
     }
 
     // Autocompletar Conductor
+    window._ckConductorViaje = v.conductor || '';
     if (v.conductor) window.ckAsignarConductor(v.conductor, 'viaje');
+    window.ckRevisarConductores();
 
     // Autocompletar Procedencia / Ruta
     if (v.ruta) {
@@ -613,6 +653,9 @@ window.ckLimpiarViajeVinculado = function(showToast, limpiarVehiculo = false) {
     const dd = document.getElementById('ck_orden_viaje-dd');
     if (dd) dd.style.display = 'none';
 
+    window._ckConductorViaje = '';
+    window.ckRevisarConductores();
+
     if (limpiarVehiculo) {
         // Vaciar Placa Tracto
         const ptHidden = document.getElementById('ck_placa_tracto');
@@ -631,6 +674,9 @@ window.ckLimpiarViajeVinculado = function(showToast, limpiarVehiculo = false) {
         const condTxt = document.getElementById('ck_conductor-txt');
         if (condHidden) condHidden.value = '';
         if (condTxt) condTxt.value = '';
+
+        window._ckConductorSeguridad = '';
+        window.ckRevisarConductores();
 
         // Vaciar Procedencia
         const procInput = document.getElementById('ck_procedencia');
@@ -693,6 +739,8 @@ window.poblarPlacasChecklist = function() {
         window._cbOnSelect('ck_conductor', function() {
             const h = document.getElementById('ck_conductor');
             if (h) h.dataset.origen = 'manual';
+            const aviso = document.getElementById('ck-aviso-conductor');
+            if (aviso) aviso.classList.add('d-none');
         });
     }
     const txtCond = document.getElementById('ck_conductor-txt');
@@ -701,6 +749,8 @@ window.poblarPlacasChecklist = function() {
         txtCond.addEventListener('input', function() {
             const h = document.getElementById('ck_conductor');
             if (h) h.dataset.origen = 'manual';
+            const aviso = document.getElementById('ck-aviso-conductor');
+            if (aviso) aviso.classList.add('d-none');
         });
     }
 };
