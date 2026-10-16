@@ -113,7 +113,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] mantenimiento/checklist *(en /app, verificado en navegador 2026-10-16: listado con filtros por estado y empresa, Excel, nuevo y editar reporte con foto, firma y falla crítica, backlog pendiente de la unidad, generación de OTs, PDF oficial F-MAN-001 con cuadrícula ✓/✕ y envío por WhatsApp. Configurar sistemas de revisión abre la versión actual)*
 - [ ] mantenimiento/planificacion · mantenimiento/configuracion-mp · mantenimiento/kits-mp *(tipos-mp ya en /app)*
 - [ ] mantenimiento/backlog-taller
-- [~] mantenimiento/status-rampa *(en /app: tablero, ingresar, editar, liberar y reactivar, evidencia, OT desde la visita, eliminar rampa, configurador de rampas, PDF y WhatsApp del reporte. Falta: columna de inspección y PDF por rampa)*
+- [x] mantenimiento/status-rampa *(en /app, verificado en navegador 2026-10-16: tablero, ingresar, editar, liberar y reactivar, evidencia, OT desde la visita, eliminar rampa, configurador, PDF y WhatsApp del tablero, columna de inspección con semáforo y resumen, y PDF de la rampa con OT, trabajos, materiales y evidencia. Pendiente: una sola foto de evidencia por rampa; liberar actualiza Disponibilidad al consultarla, verificado por código)*
 - [ ] mantenimiento/neumaticos-ultimas · mantenimiento/neumaticos-analisis
 - [ ] mantenimiento/fleetrun · administracion/fleetrun-config
 - [ ] mantenimiento/config-metrica
@@ -125,8 +125,8 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 ### D. Almacén
 - [x] almacen/inventario *(en /app, verificado en navegador 2026-10-16: búsqueda y filtros, exportar Excel solo con lo filtrado, plantilla e importación. Pendiente de decisión: que los contadores del encabezado sigan la búsqueda; hoy son totales)*
 - [ ] almacen/entradas · almacen/salidas
-- [~] almacen/kardex *(en /app con costo unitario, costo promedio y valor de saldo. El servidor devuelve `{ movimientos }` y la app lo adapta; la versión actual sigue igual)*
-- [~] almacen/recepcion-compras *(en /app es la versión oficial, con recepción en dólares y TC SUNAT del día. La pantalla clásica no se modifica)*
+- [x] almacen/kardex *(en /app, verificado en navegador 2026-10-16: cuatro KPIs (entradas, salidas, stock de apertura y saldo valorizado al costo promedio), encabezado fijo, números a la derecha en fuente monoespaciada y tarjetas en móvil)*
+- [x] almacen/recepcion-compras *(en /app, verificado 2026-10-16: tipo de cambio SUNAT del día con equivalente en soles en vivo, y registro atómico en una sola transacción: costo promedio, O/C y cabecera + detalle con rollback si falla. La pantalla clásica no se modifica)*
 - [ ] almacen/costos · almacen/dashboard-financiero
 
 ### E. Operaciones
