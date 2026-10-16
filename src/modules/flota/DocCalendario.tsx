@@ -110,10 +110,18 @@ export function DocCalendario({ filas, onElegir }: { filas: FilaExpediente[]; on
               const clave = iso(fecha);
               const eventos = porDia.get(clave) ?? [];
               const expandido = diaAbierto === clave;
-              const visibles = expandido ? eventos : eventos.slice(0, 3);
+              const visibles = expandido ? eventos : eventos.slice(0, 2);
               return (
-                <div key={clave} className={`doc-cal__dia${dentro ? '' : ' doc-cal__dia--fuera'}${esHoy(fecha) ? ' doc-cal__dia--hoy' : ''}`}>
-                  <span className="doc-cal__numero">{fecha.getDate()}</span>
+                <div key={clave} className={`doc-cal__dia${dentro ? '' : ' doc-cal__dia--fuera'}${esHoy(fecha) ? ' doc-cal__dia--hoy' : ''}${expandido ? ' doc-cal__dia--expandido' : ''}`}>
+                  <div className="doc-cal__cab">
+                    {eventos.length > 2 && (
+                      <button type="button" className="doc-cal__mas" aria-expanded={expandido}
+                        onClick={() => setDiaAbierto(expandido ? null : clave)}>
+                        {expandido ? 'Ver menos' : `+${eventos.length - 2} más`}
+                      </button>
+                    )}
+                    <span className="doc-cal__numero">{fecha.getDate()}</span>
+                  </div>
                   {visibles.map(e => (
                     <button key={`${e.placa}-${e.clave}-${e.titulo}`} type="button" className="doc-cal__evento" title={`${e.placa} · ${e.titulo} · ${e.estado.texto}`}
                       style={{ background: `${e.color}1f`, color: e.color, borderColor: e.estado.color }}
@@ -121,12 +129,6 @@ export function DocCalendario({ filas, onElegir }: { filas: FilaExpediente[]; on
                       {e.placa} · {e.corto}
                     </button>
                   ))}
-                  {eventos.length > 3 && (
-                    <button type="button" className="doc-cal__mas" aria-expanded={expandido}
-                      onClick={() => setDiaAbierto(expandido ? null : clave)}>
-                      {expandido ? 'Ver menos' : `+${eventos.length - 3} más`}
-                    </button>
-                  )}
                 </div>
               );
             })}

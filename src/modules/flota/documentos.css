@@ -138,7 +138,8 @@
 }
 .doc-cal__dia:nth-child(7n) { border-right: 0; }
 .doc-cal__dia--fuera { background: var(--fill-subtle); color: var(--label-3); }
-.doc-cal__numero { font-size: 0.8rem; font-weight: 600; align-self: flex-end; }
+.doc-cal__cab { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 22px; }
+.doc-cal__numero { font-size: 0.8rem; font-weight: 600; margin-left: auto; }
 .doc-cal__dia--hoy .doc-cal__numero { background: var(--accent); color: #fff; border-radius: 50%; width: 24px; height: 24px; display: grid; place-items: center; }
 .doc-cal__evento {
   width: 100%; padding: 2px 5px; border: 1px solid; border-left-width: 3px; border-radius: 6px; font: inherit; font-size: 0.66rem; font-weight: 600;
@@ -201,4 +202,19 @@
 @media (max-width: 640px) {
   /* Objetivos táctiles de 44 px en celular */
   .doc-card__acciones .btn, .doc-card--vacia .btn, .doc-hist .btn { min-height: 2.75rem; }
+}
+
+/* Escritorio: el calendario ocupa el alto que queda y su cuadrícula y agenda se reparten dentro, sin desbordar la pantalla */
+@media (min-width: 1024px) {
+  .page--fill .doc-cal { flex: 1 1 auto; min-height: 0; }
+  .page--fill .doc-cal__cuerpo { flex: 1 1 auto; min-height: 0; align-items: stretch; }
+  .page--fill .doc-cal__grilla-caja { display: flex; flex-direction: column; min-height: 0; }
+  .page--fill .doc-cal__dias-sem { flex: 0 0 auto; }
+  .page--fill .doc-cal__grilla { flex: 1 1 auto; min-height: 0; grid-template-rows: repeat(6, minmax(0, 1fr)); }
+  .page--fill .doc-cal__dia { min-height: 0; overflow: hidden; }
+  .page--fill .doc-cal__dia--expandido { overflow-y: auto; }
+  .page--fill .doc-cal__evento { flex: 0 0 auto; }
+  .page--fill .doc-cal__lateral { min-height: 0; }
+  .page--fill .doc-cal__bloque--agenda { flex: 1 1 auto; min-height: 0; max-height: none; }
+  .page--fill .doc-cal__agenda { flex: 1 1 auto; min-height: 0; }
 }
