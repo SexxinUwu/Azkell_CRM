@@ -287,6 +287,22 @@ export interface TrabajoOT {
   ot_detalles_json: string | null;
 }
 
+/** Estados oficiales del trabajo de OT (vocabulario único de la pantalla y de la ficha) */
+export const ESTADOS_TRABAJO = ['Pendiente', 'En Proceso', 'Realizado', 'Aprobado'] as const;
+export type EstadoTrabajo = typeof ESTADOS_TRABAJO[number];
+
+/**
+ * Estado oficial de un trabajo, sin distinguir mayúsculas. 'Finalizado' (datos históricos) cuenta como 'Realizado'.
+ * Lo que no se reconoce se muestra como 'Pendiente', para que ningún trabajo quede oculto por un filtro.
+ */
+export function estadoTrabajo(e: string | null | undefined): EstadoTrabajo {
+  const l = (e ?? '').trim().toLowerCase();
+  if (l.startsWith('aprob')) return 'Aprobado';
+  if (l.startsWith('realiz') || l.startsWith('final')) return 'Realizado';
+  if (l.includes('proceso')) return 'En Proceso';
+  return 'Pendiente';
+}
+
 /** Costo declarado en los detalles del trabajo */
 export function trabajoCosto(t: TrabajoOT): number {
   try { const d = JSON.parse(t.detalles_json ?? '{}'); return Number(d.costo) || 0; } catch { return 0; }

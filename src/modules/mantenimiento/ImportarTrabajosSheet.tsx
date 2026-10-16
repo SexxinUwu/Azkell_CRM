@@ -9,6 +9,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
+import { exportarExcel } from '../../core/lib/excel';
 
 // Importación masiva de trabajos de OT (POST /api/ot-trabajos/bulk-import). Encabezados como en la
 // plantilla del clásico: N° OT, Placa, F/H inicio, Trabajo realizado, Personal, F/H salida, Costo.
@@ -18,6 +19,10 @@ interface ItemTrabajo {
 }
 
 type Celda = string | number | boolean | Date | null;
+
+// Encabezados que lee la importación (la misma plantilla del clásico) y una fila de ejemplo
+const ENCABEZADOS_PLANTILLA = ['N° OT', 'Placa', 'F/H inicio', 'Trabajo realizado', 'Personal', 'F/H salida', 'Costo'];
+const FILA_EJEMPLO: (string | number)[] = ['OT-2026-0001', 'ABC123', '16/10/2026 08:00', 'Cambio de aceite y filtros', 'JUAN, PEDRO', '16/10/2026 10:00', 150];
 
 const plegar = (k: string) => k.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -82,6 +87,12 @@ export function ImportarTrabajosSheet({ open, onClose }: { open: boolean; onClos
     setArchivo(null); setItems([]); setError(null);
   }, [open]);
 
+  async function descargarPlantilla() {
+    try {
+      await exportarExcel('Plantilla-Trabajos-OT', 'Trabajos', ENCABEZADOS_PLANTILLA, [FILA_EJEMPLO]);
+    } catch (err) { toast(errorMessage(err), 'error'); }
+  }
+
   async function elegir(f: File | undefined) {
     if (!f) return;
     setArchivo(f); setItems([]); setError(null); setLeyendo(true);
@@ -109,7 +120,8 @@ export function ImportarTrabajosSheet({ open, onClose }: { open: boolean; onClos
 
   return (
     <Sheet open={open} onClose={() => !enviando && onClose()} title="Importar trabajos de OT"
-      footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
+      footer={<><Button variant="secondary" onClick={descargarPlantilla} disabled={enviando}>Descargar plantilla</Button>
+        <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
         <Button variant="primary" onClick={importar} loading={enviando} disabled={!items.length || leyendo}>
           {items.length ? `Importar ${items.length} trabajos` : 'Importar'}
         </Button></>}>

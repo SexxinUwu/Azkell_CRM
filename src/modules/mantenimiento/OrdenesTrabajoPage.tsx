@@ -88,7 +88,9 @@ export function OrdenesTrabajoPage() {
   const { data: placas }    = usePlacasLista();
   const { data: catsTaller } = useCatalogosTaller();
 
-  const [tab, setTab]           = useState<typeof TABS_MAIN[number]>('OTs');
+  // ?tab=backlog abre directamente la pestaña de Backlog (enlace desde el menú)
+  const [tab, setTab]           = useState<typeof TABS_MAIN[number]>(() => (location.search.includes('tab=backlog') ? 'Backlog' : 'OTs'));
+  useEffect(() => { if (location.search.includes('tab=backlog')) setTab('Backlog'); }, [location.search]);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('Todas');
   const [seleccionada, setSeleccionada] = useState<OrdenTrabajo | null>(null);

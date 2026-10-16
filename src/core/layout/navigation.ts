@@ -116,7 +116,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'inspecciones', label: 'Análisis de inspecciones', to: '/inspecciones', icon: ClipboardList, permissions: ver('insp') },
       { key: 'fleetrun', label: 'Mantenimiento preventivo (Fleetrun)', clasico: 'mantenimiento/fleetrun', icon: Gauge, permissions: ver('fleetrun', 'fleet') },
       { key: 'reportes-ot', label: 'Reportes OT', clasico: 'mantenimiento/reportes-ot', icon: ScrollText, permissions: ver('reportes_ot', 'ot') },
-      { key: 'trabajos-ot', label: 'Historial de trabajos', clasico: 'mantenimiento/trabajos-ot', icon: History, permissions: ver('trabajos_ot') },
+      { key: 'trabajos-ot', label: 'Historial de trabajos', to: '/mantenimiento/trabajos-ot', icon: History, permissions: ver('trabajos_ot') },
       {
         key: 'neumaticos-grupo', label: 'Neumáticos', icon: Disc3, permissions: [],
         children: [
@@ -129,7 +129,7 @@ const SECCIONES_BASE: NavSection[] = [
         key: 'mant-otros-grupo', label: 'Otros (hub de mantenimiento avanzado)', icon: Layers, permissions: [],
         children: [
           { key: 'planificacion', label: 'Planificación de mantenimientos', clasico: 'mantenimiento/planificacion', icon: CalendarDays, permissions: ver('plan') },
-          { key: 'backlog', label: 'Backlog pendientes', clasico: 'mantenimiento/backlog-taller', icon: Hourglass, permissions: ver('mant_dashboard', 'trabajos_ot') },
+          { key: 'backlog', label: 'Backlog pendientes', to: '/mantenimiento/reportes-ot?tab=backlog', icon: Hourglass, permissions: ver('mant_dashboard', 'trabajos_ot') },
           { key: 'kpis', label: 'Métricas y KPIs', clasico: 'mantenimiento/kpis-taller', icon: Activity, permissions: ver('mant_dashboard') },
           { key: 'productividad', label: 'Productividad personal', clasico: 'mantenimiento/productividad', icon: HardHat, permissions: ver('pers_mant', 'mant_dashboard') },
           { key: 'finanzas-taller', label: 'Reporte financiero', clasico: 'mantenimiento/finanzas-taller', icon: Wallet, permissions: ver('mant_dashboard') },

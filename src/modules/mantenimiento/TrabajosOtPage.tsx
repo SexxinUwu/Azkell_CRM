@@ -15,16 +15,17 @@ import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { ImportarTrabajosSheet } from './ImportarTrabajosSheet';
 import {
-  aprobarTrabajo, editarTrabajo, eliminarTrabajo, trabajoCosto, trabajoId, trabajoKmHoras, useTrabajosOT, type TrabajoOT,
+  aprobarTrabajo, editarTrabajo, eliminarTrabajo, ESTADOS_TRABAJO, estadoTrabajo, trabajoCosto, trabajoId, trabajoKmHoras,
+  useTrabajosOT, type TrabajoOT,
 } from './api';
 
-const ESTADOS = ['Pendiente', 'En proceso', 'Aprobado', 'Finalizado'];
 const dia = (s: string | null | undefined) => (s ? String(s).split('T')[0] : '—');
 const aLocal = (s: string | null | undefined) => (s ? String(s).replace('Z', '').replace(' ', 'T').slice(0, 16) : '');
-const tonoEstado = (e: string | null) => {
-  const l = (e ?? '').toLowerCase();
-  if (l.includes('aprob') || l.includes('final')) return 'green';
-  if (l.includes('proceso')) return 'blue';
+const tonoEstado = (e: string | null | undefined) => {
+  const est = estadoTrabajo(e);
+  if (est === 'Aprobado') return 'green';
+  if (est === 'Realizado') return 'accent';
+  if (est === 'En Proceso') return 'blue';
   return 'amber';
 };
 
@@ -49,9 +50,9 @@ export function TrabajosOtPage() {
   const visibles = useMemo(() => {
     const q = busqueda.trim().toUpperCase();
     return trabajos.filter(t =>
-      (!estado || (t.estado ?? '') === estado) &&
+      (!estado || estadoTrabajo(t.estado) === estado) &&
       (!q || trabajoId(t).toUpperCase().includes(q) || (t.placa ?? '').toUpperCase().includes(q) ||
-        (t.tecnico ?? '').toUpperCase().includes(q) || (t.trabajo_realizado ?? '').toUpperCase().includes(q) ||
+        personalDe(t).join(' ').toUpperCase().includes(q) || (t.trabajo_realizado ?? '').toUpperCase().includes(q) ||
         (t.ticket_visita ?? '').toUpperCase().includes(q)));
   }, [trabajos, busqueda, estado]);
 
@@ -59,7 +60,7 @@ export function TrabajosOtPage() {
     try {
       await exportarExcel('Trabajos-OT', 'Trabajos',
         ['Trabajo', 'OT', 'Placa', 'Estado', 'Trabajo realizado', 'Personal', 'Inicio', 'Salida', 'Costo', 'Creado por'],
-        visibles.map(t => [trabajoId(t), t.ticket_visita, t.placa, t.estado, t.trabajo_realizado, personalDe(t).join(', '),
+        visibles.map(t => [trabajoId(t), t.ticket_visita, t.placa, estadoTrabajo(t.estado), t.trabajo_realizado, personalDe(t).join(', '),
           dia(t.fecha_trabajo), dia(t.fecha_salida), trabajoCosto(t), t.creado_por]));
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
@@ -98,10 +99,10 @@ export function TrabajosOtPage() {
         </EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Trabajo, OT, placa, personal…" />
+          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, técnico, trabajo, OT o ticket…" />
           <SelectInput value={estado} onChange={e => setEstado(e.target.value)} aria-label="Estado">
             <option value="">Todos los estados</option>
-            {[...new Set([...ESTADOS, ...trabajos.map(t => t.estado ?? '').filter(Boolean)])].map(e => <option key={e} value={e}>{e}</option>)}
+            {ESTADOS_TRABAJO.map(e => <option key={e} value={e}>{e} · {trabajos.filter(t => estadoTrabajo(t.estado) === e).length}</option>)}
           </SelectInput>
 
           {visibles.length === 0 ? (
@@ -125,7 +126,7 @@ export function TrabajosOtPage() {
                       </span>
                     </div>
                     <div className="ot-fila__derecha">
-                      {t.estado && <span className={`ot-estado ot-estado--${tonoEstado(t.estado)}`} style={{ fontSize: '0.6875rem' }}>{t.estado}</span>}
+                      <span className={`ot-estado ot-estado--${tonoEstado(t.estado)}`} style={{ fontSize: '0.6875rem' }}>{estadoTrabajo(t.estado)}</span>
                       <span className="ot-fila__fecha">{dia(t.fecha_trabajo)}</span>
                       {costo > 0 && <span className="ot-fila__costo">S/ {costo.toFixed(2)}</span>}
                     </div>
@@ -151,7 +152,7 @@ function TrabajoDetalle({ trabajo: t, puedeEditar, puedeEliminar, usuario, onVol
   const id = trabajoId(t);
   const kmh = trabajoKmHoras(t);
   const costo = trabajoCosto(t);
-  const aprobado = (t.estado ?? '').toLowerCase().includes('aprob');
+  const aprobado = estadoTrabajo(t.estado) === 'Aprobado';
 
   const refrescar = () => qc.invalidateQueries({ queryKey: ['mant', 'trabajos-ot'] });
 
@@ -193,7 +194,7 @@ function TrabajoDetalle({ trabajo: t, puedeEditar, puedeEliminar, usuario, onVol
       </div>
 
       <div className="ot-ficha__hero">
-        {t.estado && <span className={`ot-estado ot-estado--${tonoEstado(t.estado)}`}>{t.estado}</span>}
+        <span className={`ot-estado ot-estado--${tonoEstado(t.estado)}`}>{estadoTrabajo(t.estado)}</span>
         <h2 className="ot-ficha__placa">{t.placa || '—'}</h2>
         <span className="ot-ficha__id">{id}{t.ticket_visita ? ` · OT ${t.ticket_visita}` : ''}</span>
       </div>
@@ -261,7 +262,7 @@ function EditarTrabajoSheet({ trabajo: t, open, onClose }: { trabajo: TrabajoOT;
     if (!open) return;
     setDesc(t.trabajo_realizado ?? ''); setPersonal(personalDe(t));
     setIni(aLocal(t.fecha_trabajo)); setFin(aLocal(t.fecha_salida));
-    setCosto(trabajoCosto(t) ? String(trabajoCosto(t)) : ''); setEstado(t.estado || 'Pendiente'); setError(null);
+    setCosto(trabajoCosto(t) ? String(trabajoCosto(t)) : ''); setEstado(estadoTrabajo(t.estado)); setError(null);
   }, [open, t]);
 
   const opcionesPersonal = useMemo(() => [...new Set([...(personalQ.data ?? []), ...personal])].sort((a, b) => a.localeCompare(b, 'es')), [personalQ.data, personal]);
@@ -298,7 +299,7 @@ function EditarTrabajoSheet({ trabajo: t, open, onClose }: { trabajo: TrabajoOT;
         <Field label="Estado">
           {p => (
             <SelectInput {...p} value={estado} onChange={e => setEstado(e.target.value)}>
-              {[...new Set([...ESTADOS, estado])].map(e => <option key={e} value={e}>{e}</option>)}
+              {ESTADOS_TRABAJO.map(e => <option key={e} value={e}>{e}</option>)}
             </SelectInput>
           )}
         </Field>
