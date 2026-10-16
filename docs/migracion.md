@@ -112,11 +112,13 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] mantenimiento/trabajos-ot *(en /app: estados oficiales Pendiente, En Proceso, Realizado y Aprobado, sin distinguir mayúsculas; búsqueda por placa, técnico, trabajo, OT y ticket; hoja de edición con aprobación del supervisor; exportación a Excel y plantilla de importación)*
 - [x] mantenimiento/inspecciones *(estado de la flota, historial, ficha, registrar, editar, PDF oficial, WhatsApp y OT desde la inspección; importación de inspecciones pendiente de confirmar)*
 - [x] mantenimiento/checklist *(en /app, verificado en navegador 2026-10-16: listado con filtros por estado y empresa, Excel, nuevo y editar reporte con foto, firma y falla crítica, backlog pendiente de la unidad, generación de OTs, PDF oficial F-MAN-001 con cuadrícula ✓/✕ y envío por WhatsApp. Configurar sistemas de revisión abre la versión actual)*
-- [ ] mantenimiento/planificacion · mantenimiento/configuracion-mp · mantenimiento/kits-mp *(tipos-mp ya en /app)*
+- [x] mantenimiento/planificacion · mantenimiento/kits-mp *(en /app: planificación con selector de mes y año, estados Programada, Vigente, Atrasada y Completada, formulario e importación desde Excel; Kits MP agrupados por vehículo; tipos-mp ya en /app)*
+- [ ] mantenimiento/configuracion-mp *(Frecuencias MP sigue en la versión clásica: no hay pantalla de React para ella)*
 - [x] mantenimiento/backlog-taller *(en /app como pestaña Backlog de Órdenes de trabajo; el menú abre esa pestaña directamente)*
 - [x] mantenimiento/status-rampa *(en /app, verificado en navegador 2026-10-16: tablero, ingresar, editar, liberar y reactivar, evidencia, OT desde la visita, eliminar rampa, configurador, PDF y WhatsApp del tablero, columna de inspección con semáforo y resumen, y PDF de la rampa con OT, trabajos, materiales y evidencia. Pendiente: una sola foto de evidencia por rampa; liberar actualiza Disponibilidad al consultarla, verificado por código)*
 - [ ] mantenimiento/neumaticos-ultimas · mantenimiento/neumaticos-analisis
-- [ ] mantenimiento/fleetrun · administracion/fleetrun-config
+- [x] mantenimiento/fleetrun *(en /app: km restante (próximo km − km GPS o del cambio), prioridades Vencido, Por vencer, Vigente y Sin datos, umbrales de la empresa, búsqueda y filtros)*
+- [ ] administracion/fleetrun-config *(no hay pantalla de React ni entrada de menú para esta configuración)*
 - [ ] mantenimiento/config-metrica
 - [ ] mantenimiento/productividad · mantenimiento/kpis-taller · mantenimiento/finanzas-taller *(mantenimiento/personal ya en /app)*
 - [ ] mantenimiento/incidencias-ruta

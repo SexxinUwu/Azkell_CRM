@@ -146,6 +146,17 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     }
 
     // ── ORDENES DE TRABAJO ────────────────────────────────────────────
+    // Lectura de claves de configuración de mantenimiento desde la base de la empresa (solo claves permitidas)
+    const CLAVES_CONFIG_MANT = ['fleetrun_uts_umbrales'];
+    router.get('/configuracion-clave/:clave', (req, res) => {
+        const clave = req.params.clave;
+        if (!CLAVES_CONFIG_MANT.includes(clave)) return res.status(404).json({ error: 'Clave no disponible' });
+        (req.db || db).query('SELECT valor FROM configuracion_erp WHERE clave = ? LIMIT 1', [clave], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ clave, valor: rows && rows[0] ? rows[0].valor : null });
+        });
+    });
+
     router.get('/ordenes-trabajo', (req, res) => {
         const targetDb = req.db || db;
         const sql = `

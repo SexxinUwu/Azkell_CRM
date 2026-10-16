@@ -16,8 +16,8 @@ import { usePlacas, useMetricas } from '../placas/api';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
-type EstadoFR = 'vencido' | 'por_vencer' | 'vigente';
-const PRIORIDAD: Record<EstadoFR, number> = { vigente: 0, por_vencer: 1, vencido: 2 };
+type EstadoFR = 'vencido' | 'por_vencer' | 'vigente' | 'sin_datos';
+const PRIORIDAD: Record<EstadoFR, number> = { sin_datos: -1, vigente: 0, por_vencer: 1, vencido: 2 };
 
 // ─── Hook: umbrales configurables desde /api/configuracion ───────────────────
 
@@ -26,8 +26,9 @@ function useFleetrunUmbrales() {
     queryKey: ['conf', 'fleetrun-umbrales'],
     queryFn: async () => {
       try {
-        const conf = await api<Record<string, string>>('/configuracion');
-        const raw = conf['fleetrun_uts_umbrales'] || '{}';
+        // Lectura de la base de esta empresa (no de la base global de /configuracion)
+        const conf = await api<{ valor: string | null }>('/configuracion-clave/fleetrun_uts_umbrales');
+        const raw = conf.valor || '{}';
         return JSON.parse(raw) as Record<string, number>;
       } catch { return {}; }
     },
@@ -51,7 +52,8 @@ function calcularEstado(
   const frec = frFrecuencia(f);
 
   if ((!kmP || kmP === 0) && frec > 0 && kmC > 0) kmP = kmC + frec;
-  if (!kmP) return 'vigente';
+  // Sin próximo km no hay cálculo: no se presenta como vigente
+  if (!kmP) return 'sin_datos';
 
   const kmRestante = kmG > 0 ? kmP - kmG : kmP - kmC;
   if (kmRestante <= 0) return 'vencido';
@@ -72,6 +74,7 @@ function calcularEstado(
 function estadoLabel(e: EstadoFR) {
   if (e === 'vencido')    return 'Vencido';
   if (e === 'por_vencer') return 'Por vencer';
+  if (e === 'sin_datos') return 'Sin datos';
   return 'Vigente';
 }
 
@@ -117,7 +120,7 @@ function DonutChart({ vencidos, porVencer, vigentes }: { vencidos: number; porVe
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 
-const FILTROS = ['Todos', 'Vencido', 'Por vencer', 'Vigente'] as const;
+const FILTROS = ['Todos', 'Vencido', 'Por vencer', 'Vigente', 'Sin datos'] as const;
 const POR_PAGINA = 20;
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -185,19 +188,20 @@ export function FleetrunPage() {
       const prev  = placaEstado.get(placa);
       if (!prev || PRIORIDAD[est] > PRIORIDAD[prev]) placaEstado.set(placa, est);
     }
-    let vencidos = 0, porVencer = 0, vigentes = 0;
+    let vencidos = 0, porVencer = 0, vigentes = 0, sinDatos = 0;
     placaEstado.forEach(e => {
       if (e === 'vencido') vencidos++;
       else if (e === 'por_vencer') porVencer++;
+      else if (e === 'sin_datos') sinDatos++;
       else vigentes++;
     });
-    return { vencidos, porVencer, vigentes, total: placaEstado.size };
+    return { vencidos, porVencer, vigentes, sinDatos, total: placaEstado.size };
   }, [datosVista, placasActivas, umbrales, metricas]);
 
   // Filtrado + búsqueda
   const filtrados = useMemo(() => {
     const LABEL_A_ESTADO: Record<string, EstadoFR> = {
-      'Vencido': 'vencido', 'Por vencer': 'por_vencer', 'Vigente': 'vigente',
+      'Vencido': 'vencido', 'Por vencer': 'por_vencer', 'Vigente': 'vigente', 'Sin datos': 'sin_datos',
     };
     let lista = datosVista;
     if (filtro !== 'Todos') {
@@ -315,11 +319,12 @@ export function FleetrunPage() {
           {/* Filtros + búsqueda */}
           <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
             {!historial && FILTROS.map(f => {
-              const colorMap: Record<string, string> = { 'Vencido': 'red', 'Por vencer': 'amber', 'Vigente': 'green' };
+              const colorMap: Record<string, string> = { 'Vencido': 'red', 'Por vencer': 'amber', 'Vigente': 'green', 'Sin datos': '' };
               const color = colorMap[f] || '';
               const cnt = f === 'Todos' ? stats.total
                 : f === 'Vencido' ? stats.vencidos
                 : f === 'Por vencer' ? stats.porVencer
+                : f === 'Sin datos' ? stats.sinDatos
                 : stats.vigentes;
               return (
                 <button key={f} type="button"

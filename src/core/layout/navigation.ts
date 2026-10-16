@@ -114,7 +114,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'mant-dashboard', label: 'Dashboard mantenimiento', clasico: 'mantenimiento/dashboard', icon: LayoutDashboard, permissions: ver('mant_dashboard', 'dashboard', 'status_rampa', 'checklist') },
       { key: 'status-rampa', label: 'Status de rampa', clasico: 'mantenimiento/status-rampa', icon: Wrench, permissions: ver('status_rampa') },
       { key: 'inspecciones', label: 'Análisis de inspecciones', to: '/inspecciones', icon: ClipboardList, permissions: ver('insp') },
-      { key: 'fleetrun', label: 'Mantenimiento preventivo (Fleetrun)', clasico: 'mantenimiento/fleetrun', icon: Gauge, permissions: ver('fleetrun', 'fleet') },
+      { key: 'fleetrun', label: 'Mantenimiento preventivo (Fleetrun)', to: '/mantenimiento/fleetrun', icon: Gauge, permissions: ver('fleetrun', 'fleet') },
       { key: 'reportes-ot', label: 'Reportes OT', clasico: 'mantenimiento/reportes-ot', icon: ScrollText, permissions: ver('reportes_ot', 'ot') },
       { key: 'trabajos-ot', label: 'Historial de trabajos', to: '/mantenimiento/trabajos-ot', icon: History, permissions: ver('trabajos_ot') },
       {
@@ -128,13 +128,13 @@ const SECCIONES_BASE: NavSection[] = [
       {
         key: 'mant-otros-grupo', label: 'Otros (hub de mantenimiento avanzado)', icon: Layers, permissions: [],
         children: [
-          { key: 'planificacion', label: 'Planificación de mantenimientos', clasico: 'mantenimiento/planificacion', icon: CalendarDays, permissions: ver('plan') },
+          { key: 'planificacion', label: 'Planificación de mantenimientos', to: '/mantenimiento/planificacion', icon: CalendarDays, permissions: ver('plan') },
           { key: 'backlog', label: 'Backlog pendientes', to: '/mantenimiento/reportes-ot?tab=backlog', icon: Hourglass, permissions: ver('mant_dashboard', 'trabajos_ot') },
           { key: 'kpis', label: 'Métricas y KPIs', clasico: 'mantenimiento/kpis-taller', icon: Activity, permissions: ver('mant_dashboard') },
           { key: 'productividad', label: 'Productividad personal', clasico: 'mantenimiento/productividad', icon: HardHat, permissions: ver('pers_mant', 'mant_dashboard') },
           { key: 'finanzas-taller', label: 'Reporte financiero', clasico: 'mantenimiento/finanzas-taller', icon: Wallet, permissions: ver('mant_dashboard') },
           { key: 'frecuencias-mp', label: 'Frecuencias MP', clasico: 'mantenimiento/configuracion-mp', icon: Settings, permissions: ver('cfg_mant') },
-          { key: 'kits-mp', label: 'Kits MP', clasico: 'mantenimiento/kits-mp', icon: Package, permissions: ver('cfg_mant') },
+          { key: 'kits-mp', label: 'Kits MP', to: '/mantenimiento/kits-mp', icon: Package, permissions: ver('cfg_mant') },
           { key: 'tipos-mp', label: 'Tipos MP', to: '/mantenimiento/tipos-mp', icon: Wrench, permissions: ver('cfg_mant') },
           { key: 'config-metrica', label: 'Config. métrica', clasico: 'mantenimiento/config-metrica', icon: Target, permissions: ver('cfg_mant') },
         ],
@@ -159,7 +159,7 @@ const SECCIONES_BASE: NavSection[] = [
           { key: 'unidades', label: 'Unidades de medida', to: '/almacen/unidades', icon: Ruler, permissions: ver('cfg_unidades') },
           { key: 'sistemas', label: 'Sistemas de vehículos', to: '/almacen/sistemas', icon: Cog, permissions: ver('cfg_sistemas') },
           { key: 'marcas', label: 'Marcas', to: '/almacen/marcas', icon: Tag, permissions: ver('cfg_marcas') },
-          { key: 'almacen-kits-mp', label: 'Kits MP', clasico: 'mantenimiento/kits-mp', icon: Package, permissions: ver('cfg_mant', 'inv') },
+          { key: 'almacen-kits-mp', label: 'Kits MP', to: '/mantenimiento/kits-mp', icon: Package, permissions: ver('cfg_mant', 'inv') },
         ],
       },
     ],
