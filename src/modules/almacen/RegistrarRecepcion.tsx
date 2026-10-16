@@ -30,13 +30,14 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
   const [alm, setAlm] = useState<Record<number, string>>({});
   const [fecha, setFecha] = useState(ahoraLocal);
   const [obs, setObs] = useState('');
+  const [tc, setTc] = useState('');
   const [archivo, setArchivo] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    setCant({}); setAlm({}); setFecha(ahoraLocal()); setObs(''); setArchivo(null); setError(null);
+    setCant({}); setAlm({}); setFecha(ahoraLocal()); setObs(''); setTc(''); setArchivo(null); setError(null);
   }, [open, oc?.id]);
 
   const items = oc?.items ?? [];
@@ -62,12 +63,15 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
       });
     }
     if (!envio.length) { setError('Escribe una cantidad mayor a 0 en al menos un ítem.'); return; }
+    const esUSD = String(oc.moneda).toUpperCase() === 'USD';
+    if (esUSD && !(Number(tc) > 0)) { setError('Indique el tipo de cambio del día (S/ por USD).'); return; }
     const pendienteTotal = items.reduce((s, it) => s + it.pendiente, 0);
     setEnviando(true); setError(null);
     try {
       await registrarRecepcion({
         oc_id: oc.id, fecha_recepcion: fecha, usuario, observacion: obs.trim(), almacen: envio[0].almacen,
         tipo_recepcion: total >= pendienteTotal - 1e-9 ? 'TOTAL' : 'PARCIAL', items: envio, sustento: archivo,
+        tipo_cambio: esUSD ? Number(tc) : undefined,
       });
       haptic('success');
       toast('Recepción registrada. Inventario y kardex actualizados.');
@@ -134,6 +138,11 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
             <Field label="Foto o documento de sustento" hint={archivo ? archivo.name : 'Guía, factura o foto (opcional)'}>
               {p => <TextInput {...p} type="file" accept="image/*,application/pdf" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />}
             </Field>
+            {String(oc.moneda).toUpperCase() === 'USD' && (
+              <Field label="Tipo de cambio del día (S/ por USD)" hint="Se usa para valorizar el inventario en soles">
+                {p => <TextInput {...p} inputMode="decimal" placeholder="3.75" value={tc} onChange={e => setTc(e.target.value)} />}
+              </Field>
+            )}
             <Field label="Observaciones" wide>
               {p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} placeholder="Opcional" />}
             </Field>

@@ -15,6 +15,7 @@ import { abrirClasico } from '../../core/layout/navigation';
 
 interface OrdenCompra {
   id: string | number;
+  fecha_vencimiento?: string | null;
   codigo_oc?: string;
   estado?: string;
   moneda?: string;
@@ -59,6 +60,20 @@ function ocEstadoColor(estado?: string): string {
   if (e === 'aprobado' || e === 'autorizado') return 'blue';
   if (e === 'rechazado' || e === 'anulado') return 'red';
   return 'neutral';
+}
+
+// Días que faltan para el vencimiento (negativo = ya venció). La fecha viene como AAAA-MM-DD.
+function vencimiento(fecha?: string | null): { tono: string; texto: string } | null {
+  if (!fecha) return null;
+  const m = String(fecha).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const vence = new Date(+m[1], +m[2] - 1, +m[3]);
+  const dias = Math.round((vence.getTime() - hoy.getTime()) / 86400000);
+  if (dias < 0) return { tono: 'red', texto: `Vencida hace ${-dias} ${-dias === 1 ? 'día' : 'días'}` };
+  if (dias === 0) return { tono: 'red', texto: 'Vence hoy' };
+  if (dias <= 7) return { tono: 'amber', texto: `Vence en ${dias} ${dias === 1 ? 'día' : 'días'}` };
+  return { tono: 'green', texto: `${m[3]}/${m[2]}/${m[1]}` };
 }
 
 function fmtMonto(valor: number, usd: boolean): string {
@@ -255,6 +270,7 @@ export function PagoRequerimientosPage() {
                 <th>Moneda</th>
                 <th>Solicitante</th>
                 <th>Fecha</th>
+                <th>Vence</th>
                 <th>Estado</th>
                 {filtroEstado !== 'procesados' && <th style={{ width: 100 }} />}
               </tr>
@@ -295,6 +311,12 @@ export function PagoRequerimientosPage() {
                     </td>
                     <td style={{ fontSize: '0.8125rem', fontFamily: 'var(--font-mono)', color: 'var(--label-2)' }}>
                       {oc.fecha ? String(oc.fecha).split('T')[0] : '—'}
+                    </td>
+                    <td>
+                      {(() => {
+                        const v = vencimiento(oc.fecha_vencimiento);
+                        return v ? <span className={`ot-estado ot-estado--${v.tono}`} style={{ fontSize: '0.75rem' }}>{v.texto}</span> : <span style={{ color: 'var(--label-2)', fontSize: '0.8125rem' }}>—</span>;
+                      })()}
                     </td>
                     <td>
                       <span className={`ot-estado ot-estado--${color}`} style={{ fontSize: '0.75rem' }}>

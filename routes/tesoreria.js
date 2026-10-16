@@ -2352,7 +2352,8 @@ module.exports = function (db, broadcast, logAudit) {
             // 1. Obtener Órdenes de Compra
             const sqlOC = `
                 SELECT e.*,
-                       COALESCE(e.total_pen, 0) AS total_oc
+                       COALESCE(e.total_pen, 0) AS total_oc,
+                       (SELECT DATE_FORMAT(oc2.fecha_vencimiento, '%Y-%m-%d') FROM ordenes_compra oc2 WHERE oc2.codigo = e.id LIMIT 1) AS fecha_vencimiento
                 FROM entradas_inv e
                 ${whereClause}
                 ORDER BY e.fecha DESC, e.id DESC
@@ -2503,6 +2504,7 @@ module.exports = function (db, broadcast, logAudit) {
                     id: oc.id,
                     folio: oc.id,
                     fecha: oc.fecha,
+                    fecha_vencimiento: oc.fecha_vencimiento || null,
                     created_at: oc.created_at,
                     solicitante: oc.solicitante || oc.autoriza || '—',
                     centro_costo: oc.centro_costo || 'CC-100',

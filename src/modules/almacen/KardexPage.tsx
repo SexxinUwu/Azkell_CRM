@@ -55,10 +55,10 @@ export function KardexPage() {
     if (!seleccionado) return;
     try {
       await exportarExcel(`Kardex-${seleccionado.id}`, 'Kardex',
-        ['Fecha', 'Tipo', 'Documento', 'Contraparte / Motivo', 'Entrada', 'Salida', 'Costo unitario', 'Saldo'],
+        ['Fecha', 'Tipo', 'Documento', 'Contraparte / Motivo', 'Entrada', 'Salida', 'Costo unitario', 'Costo promedio', 'Saldo', 'Valor saldo'],
         movimientosFiltrados.map(k => [
           (k.fecha ?? '').split('T')[0], k.tipo, k.documento ?? '', k.proveedor_destino ?? k.observaciones ?? '',
-          k.tipo !== 'SALIDA' ? k.cantidad : '', k.tipo === 'SALIDA' ? k.cantidad : '', k.costo_unitario ?? '', k.saldo,
+          k.tipo !== 'SALIDA' ? k.cantidad : '', k.tipo === 'SALIDA' ? k.cantidad : '', k.costo_unitario ?? '', k.costo_promedio ?? '', k.saldo, k.valor_saldo ?? '',
         ]));
     } catch (err) { toast(errorMessage(err), 'error'); }
   }
@@ -222,7 +222,9 @@ export function KardexPage() {
                             <th style={{ textAlign: 'right' }}>Entrada</th>
                             <th style={{ textAlign: 'right' }}>Salida</th>
                             <th style={{ textAlign: 'right' }}>Costo U.</th>
+                            <th style={{ textAlign: 'right' }}>Costo prom.</th>
                             <th style={{ textAlign: 'right' }}>Saldo</th>
+                            <th style={{ textAlign: 'right' }}>Valor saldo</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -253,7 +255,13 @@ export function KardexPage() {
                               <td style={{ textAlign: 'right', color: 'var(--label-2)' }}>
                                 {k.costo_unitario != null ? `S/ ${k.costo_unitario.toFixed(2)}` : '—'}
                               </td>
+                              <td style={{ textAlign: 'right', color: 'var(--label-2)' }}>
+                                {k.costo_promedio != null ? `S/ ${k.costo_promedio.toFixed(2)}` : '—'}
+                              </td>
                               <td style={{ textAlign: 'right', fontWeight: 700 }}>{fmtQty(k.saldo)}</td>
+                              <td style={{ textAlign: 'right' }}>
+                                {k.valor_saldo != null ? `S/ ${k.valor_saldo.toFixed(2)}` : '—'}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
