@@ -103,7 +103,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'disponibilidad', label: 'Disponibilidad', to: '/flota/disponibilidad', icon: Gauge, permissions: ver('disponibilidad') },
       { key: 'ubicacion', label: 'GPS', to: '/flota/ubicacion', icon: MapPin, permissions: ver('gps') },
       { key: 'documentos', label: 'Documentos', to: '/flota/documentos', icon: FileText, permissions: ver('docs_flota') },
-      { key: 'entrega', label: 'Entrega de vehículos', clasico: 'flota/entrega-vehiculos', icon: ClipboardList, permissions: ver('entrega_vehiculos', 'seguridad_unidades', 'seg_unidades', 'placas') },
+      { key: 'entrega', label: 'Entrega de vehículos', to: '/flota/entrega-vehiculos', icon: ClipboardList, permissions: ver('entrega_vehiculos', 'seguridad_unidades', 'seg_unidades', 'placas') },
       { key: 'almacen-flota', label: 'Almacén de flota', clasico: 'flota/almacen-flota', icon: Warehouse, permissions: ver('inv', 'sal_inv', 'ent_inv') },
       { key: 'checklist', label: 'Reporte de fallas', clasico: 'mantenimiento/checklist', icon: ClipboardCheck, permissions: ver('checklist') },
     ],

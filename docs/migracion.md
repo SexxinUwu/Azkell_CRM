@@ -103,7 +103,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] flota/documentos *(en /app desde 2026-10-16: expediente por placa, matriz con datos generales y Excel, calendario, historial por documento, eliminar, WhatsApp, TIVE y otros tipos personalizados. Eliminar e importar vehículos están en Flota › Placas. Pendiente: quitar archivo en el formulario)*
 - [x] flota/disponibilidad *(en /app, 2026-10-16: cifras por placa como la versión actual, estados (taller, viaje), búsqueda, Excel con ubicación GPS, observaciones manuales. Pendiente: los gráficos por sub tipo siguen como tabla, sin gráfico ni clic)*
 - [x] flota/ubicacion (GPS Wialon) *(en /app, 2026-10-16: mapa con rumbo y animación, lista agrupada por empresa con casilla y colapso por grupo, KPIs que filtran por estado, historial y playback, WhatsApp. Búsqueda solo por placa o nombre, por decisión previa. Agrupa por empresa; no usa los grupos de Wialon de la clásica)*
-- [ ] flota/entrega-vehiculos · seguridad/entrega-vehiculos ⚠️
+- [x] flota/entrega-vehiculos · seguridad/entrega-vehiculos ⚠️ *(en /app, 2026-10-16: una sola pantalla; las dos rutas clásicas eran el mismo archivo. Acta, croquis por configuración y cabina, inventario de partes, firmas y PDF. Pendiente: editar la plantilla del inventario, que sigue en la versión actual)*
 
 ### C. Mantenimiento
 - [ ] mantenimiento/dashboard
