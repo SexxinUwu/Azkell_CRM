@@ -13,6 +13,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
+import { formatFechaHoraPe } from '../../core/lib/format';
 
 type Item = Record<string, unknown>;
 interface Seccion { id?: string; titulo?: string; items?: Item[] }
@@ -31,7 +32,7 @@ const evaluado = (i: Item) => i.valor !== undefined || i.estado !== undefined ||
 const esOk = (i: Item) => i.ok === true || i.valor === true || ['ok', 'bueno', 'b', 'si', 'sí', 'conforme'].includes(String(i.valor ?? i.estado ?? i.resultado ?? '').toLowerCase());
 const pct = (items: Item[]) => (items.length ? Math.round((items.filter(esOk).length / items.length) * 100) : 0);
 const nombreItem = (i: Item) => String(i.label ?? i.nombre ?? i.texto ?? i.id ?? 'Ítem');
-const dia = (s?: string | null) => (s ? String(s).slice(0, 10) : '—');
+const dia = (s?: string | null) => formatFechaHoraPe(s);
 const tonoPct = (p: number) => (p >= 80 ? 'green' : p >= 50 ? 'amber' : 'red');
 
 // Flota › Checklist de entrega: revisión de cada unidad al salir y al volver (se captura en Garita).
@@ -113,7 +114,7 @@ export function ChecklistEntregaPage() {
               const ps = pct(itemsDe(r.salida_checklist_json)), pr = pct(itemsDe(r.retorno_checklist_json));
               const alerta = !!(r.salida_has_alert || r.retorno_has_alert);
               return (
-                <button key={r.id} type="button" className="mov-fila" onClick={() => { haptic('selection'); setAbiertoId(r.id); }}>
+                <button key={r.id} type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setAbiertoId(r.id); }}>
                   <div className="mov-fila__icon" style={{ background: alerta ? 'var(--red-tint)' : 'var(--green-tint)', color: alerta ? 'var(--red-ink)' : 'var(--green-ink)' }}>
                     {alerta ? <AlertTriangle size={16} /> : <ClipboardCheck size={16} />}
                   </div>
