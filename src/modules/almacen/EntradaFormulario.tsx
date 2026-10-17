@@ -9,6 +9,8 @@ import {
   CONDICIONES_PAGO, guardarEntrada, tipoDeOrden, tipoOrdenDe, TIPOS_ENTRADA, useInventario, useProveedores,
   useTipoCambioSunat, type EntradaInv, type ItemEntrada,
 } from './api';
+import { haptic } from '../../core/lib/haptics';
+import { formatMoneda } from '../../core/lib/format';
 
 interface Props {
   open: boolean;
@@ -48,6 +50,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
   const [diasCredito, setDiasCredito] = useState('30');
   const [tipoIgv, setTipoIgv] = useState('sin_igv');
   const [items, setItems] = useState<ItemEntrada[]>([itemVacio()]);
+  const [intento, setIntento] = useState(false);
 
   // Tipo de cambio SUNAT del día: se trae solo cuando la entrada es en dólares
   const sunat = useTipoCambioSunat(open && moneda === 'USD');
@@ -60,6 +63,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
 
   useEffect(() => {
     if (!open) return;
+    setIntento(false);
     if (e) {
       setFecha(e.fecha?.split('T')[0] ?? '');
       setTipoEntrada(tipoDeOrden(e.tipo_orden));
@@ -114,20 +118,20 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
     });
   }
 
-  /** Error de cabecera o de alguna línea; null si todo está bien */
-  function primerError(): string | null {
-    if (!fecha) return 'Selecciona la fecha';
-    if (tipoEntrada === 'Compra' && !proveedorId) return 'Elige el proveedor de la lista';
-    if (moneda === 'USD' && !(tc > 0)) return 'Ingresa el tipo de cambio del día';
-    if (condicion === 'A crédito' && !(Number(diasCredito) > 0)) return 'Indica los días de crédito';
-    const conDatos = items.filter(i => i.descripcion.trim() || i.inventario_id);
-    if (!conDatos.length) return 'Agrega al menos un artículo';
-    return items.map(errorDeLinea).find(x => x !== null) ?? null;
-  }
-  const errorActual = primerError();
+  /** Errores de cabecera: se muestran solo después del primer intento de guardar */
+  const errorCab = {
+    fecha: !fecha ? 'Selecciona la fecha.' : undefined,
+    proveedor: tipoEntrada === 'Compra' && !proveedorId ? 'Elige el proveedor de la lista.' : undefined,
+    tc: moneda === 'USD' && !(tc > 0) ? 'Indica el tipo de cambio del día.' : undefined,
+    dias: condicion === 'A crédito' && !(Number(diasCredito) > 0) ? 'Indica los días de crédito.' : undefined,
+  };
+  const sinArticulos = !items.some(i => i.descripcion.trim() || i.inventario_id);
+  const hayErrores = Object.values(errorCab).some(Boolean) || sinArticulos || items.some(i => errorDeLinea(i) !== null);
+  const mostrar = (msg: string | undefined) => (intento ? msg : undefined);
 
   async function guardar() {
-    if (errorActual) { toast(errorActual, 'error'); return; }
+    setIntento(true);
+    if (hayErrores) { haptic('warning'); return; }
     const itemsValidos = items.filter(i => i.descripcion.trim() || i.inventario_id);
 
     setGuardando(true);
@@ -165,7 +169,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
   }
 
   const totalCalculado = items.reduce((s, i) => s + (Number(i.cantidad) || 0) * (Number(i.costo_unitario) || 0), 0);
-  const simbolo = moneda === 'USD' ? '$' : 'S/';
+  const dinero = (n: number) => formatMoneda(n, moneda);
 
   return (
     <Sheet open={open} onClose={onClose} title={e ? 'Editar orden de compra' : 'Nueva orden de compra'}>
@@ -173,7 +177,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
 
         {/* Cabecera */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
-          <Field label="Fecha *">
+          <Field label="Fecha *" error={mostrar(errorCab.fecha)}>
             {p => <TextInput {...p} type="date" value={fecha} onChange={ev => setFecha(ev.target.value)} />}
           </Field>
           <Field label="Tipo">
@@ -185,7 +189,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           </Field>
         </div>
 
-        <Field label={tipoEntrada === 'Compra' ? 'Proveedor *' : 'Proveedor'}>
+        <Field label={tipoEntrada === 'Compra' ? 'Proveedor *' : 'Proveedor'} error={mostrar(errorCab.proveedor)}>
           {p => (
             <SelectInput {...p} value={proveedorId} onChange={ev => setProveedorId(ev.target.value)}>
               <option value="">Elige un proveedor…</option>
@@ -224,11 +228,11 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
             )}
           </Field>
           {condicion === 'A crédito' ? (
-            <Field label="Días de crédito *">
+            <Field label="Días de crédito *" error={mostrar(errorCab.dias)}>
               {p => <TextInput {...p} type="number" min={1} value={diasCredito} onChange={ev => setDiasCredito(ev.target.value)} />}
             </Field>
           ) : moneda === 'USD' ? (
-            <Field label="Tipo de cambio *">
+            <Field label="Tipo de cambio *" error={mostrar(errorCab.tc)}>
               {p => <TextInput {...p} type="number" min={0} step="0.0001" value={tipoCambio} placeholder="SUNAT del día" onChange={ev => setTipoCambio(ev.target.value)} />}
             </Field>
           ) : <div />}
@@ -316,7 +320,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
                         />
                       </td>
                       <td style={{ fontWeight: 700, textAlign: 'right' }}>
-                        {simbolo} {(it.importe || 0).toFixed(2)}
+                        {dinero(it.importe || 0)}
                       </td>
                       <td>
                         {items.length > 1 && (
@@ -333,7 +337,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
               <tfoot>
                 <tr>
                   <td colSpan={3} style={{ textAlign: 'right', fontWeight: 700, padding: 'var(--s-2)' }}>Total</td>
-                  <td style={{ textAlign: 'right', fontWeight: 800, padding: 'var(--s-2)' }}>{simbolo} {totalCalculado.toFixed(2)}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 800, padding: 'var(--s-2)' }}>{dinero(totalCalculado)}</td>
                   <td />
                 </tr>
               </tfoot>
@@ -341,12 +345,12 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           </div>
         </div>
 
+        {intento && sinArticulos && <p role="alert" className="t-footnote" style={{ color: 'var(--red-ink)', margin: 0 }}>Agrega al menos un artículo.</p>}
         <Field label="Observaciones">
           {p => <TextInput {...p} value={observaciones} placeholder="Notas adicionales" onChange={ev => setObservaciones(ev.target.value)} />}
         </Field>
 
-        {errorActual && <p className="t-footnote" style={{ color: 'var(--red-ink)', margin: 0 }}>{errorActual}</p>}
-        <Button variant="primary" loading={guardando} disabled={Boolean(errorActual)} onClick={guardar} style={{ width: '100%' }}>
+        <Button variant="primary" loading={guardando} onClick={guardar} style={{ width: '100%' }}>
           {e ? 'Guardar cambios' : 'Registrar orden'}
         </Button>
       </div>

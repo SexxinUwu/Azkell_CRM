@@ -15,6 +15,7 @@ import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { eliminarRecepcion, useRecepcionesOC, type HistorialRecepcion, type RecepcionOC } from './api';
 import { RegistrarRecepcion } from './RegistrarRecepcion';
+import { formatFechaHoraPe, formatFechaPe, formatMoneda } from '../../core/lib/format';
 
 type FiltroEstado = 'TODOS' | 'PENDIENTE' | 'PARCIAL' | 'COMPLETO';
 
@@ -24,7 +25,6 @@ const LABEL_FILTRO: Record<FiltroEstado, string> = {
 };
 const TONO_ESTADO: Record<string, string> = { PENDIENTE: 'amber', PARCIAL: 'blue', COMPLETO: 'green' };
 const fmt = (n: number) => (n % 1 === 0 ? String(n) : n.toFixed(2));
-const dia = (s: string | null | undefined) => (s ? String(s).split('T')[0] : '—');
 
 export function RecepcionComprasPage() {
   const { data, isLoading, isError, error } = useRecepcionesOC();
@@ -57,7 +57,7 @@ export function RecepcionComprasPage() {
     try {
       await exportarExcel('Recepciones-compras', 'Recepciones',
         ['Orden', 'Fecha', 'Proveedor', 'Solicitante', 'Condición pago', 'Importe', 'Moneda', 'Estado OC', 'Estado recepción', 'Total pedido', 'Total recibido', 'Pendiente'],
-        visibles.map(o => [o.id, o.fecha, o.proveedor, o.solicitante, o.condicion_pago ?? 'Al contado', o.importe, o.moneda, o.estado_oc, o.estado_recepcion,
+        visibles.map(o => [o.id, formatFechaPe(o.fecha), o.proveedor, o.solicitante, o.condicion_pago ?? 'Al contado', o.importe, o.moneda, o.estado_oc, o.estado_recepcion,
           o.total_pedido, o.total_recibido, Math.max(0, o.total_pedido - o.total_recibido)]));
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
@@ -92,7 +92,7 @@ export function RecepcionComprasPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
             {FILTROS.map(f => (
-              <button key={f} type="button" onClick={() => setFiltro(f)}
+              <button key={f} type="button" className="pressable" onClick={() => { haptic('selection'); setFiltro(f); }}
                 style={{
                   padding: '0.375rem 0.875rem', borderRadius: 'var(--r-full)', fontSize: '0.875rem',
                   fontWeight: 600, border: 'none', cursor: 'pointer',
@@ -121,18 +121,18 @@ export function RecepcionComprasPage() {
               {visibles.map(oc => {
                 const tono = TONO_ESTADO[oc.estado_recepcion] ?? 'amber';
                 return (
-                  <button key={String(oc.id)} type="button" className="mov-fila"
+                  <button key={String(oc.id)} type="button" className="mov-fila pressable"
                     onClick={() => { haptic('selection'); setSeleccionadaId(oc.id); }}>
-                    <div className="mov-fila__icon" style={{ background: `var(--${tono === 'blue' ? 'accent' : tono}-tint)`, color: `var(--${tono === 'blue' ? 'accent' : tono}-ink)` }}>
+                    <div className="mov-fila__icon" style={{ background: `var(--${tono}-tint)`, color: `var(--${tono}-ink)` }}>
                       <PackagePlus size={16} />
                     </div>
                     <div className="mov-fila__cuerpo">
                       <span className="mov-fila__titulo">{String(oc.id)} · {oc.proveedor}</span>
-                      <span className="mov-fila__sub">{oc.solicitante} · {oc.condicion_pago ?? 'Al contado'} · {oc.fecha ?? ''}</span>
+                      <span className="mov-fila__sub">{oc.solicitante} · {oc.condicion_pago ?? 'Al contado'} · {formatFechaPe(oc.fecha)}</span>
                     </div>
                     <div className="mov-fila__derecha">
                       <span className="mov-fila__monto">{fmt(oc.total_recibido)} / {fmt(oc.total_pedido)}</span>
-                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${tono === 'blue' ? 'accent' : tono}-ink)` }}>{oc.estado_recepcion}</span>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${tono}-ink)` }}>{oc.estado_recepcion}</span>
                     </div>
                   </button>
                 );
@@ -156,7 +156,7 @@ function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onVolver }: {
   const [revirtiendo, setRevirtiendo] = useState(false);
 
   const tono = TONO_ESTADO[oc.estado_recepcion] ?? 'amber';
-  const color = tono === 'blue' ? 'accent' : tono;
+  const color = tono;
   const pendiente = Math.max(0, oc.total_pedido - oc.total_recibido);
   const pct = oc.total_pedido > 0 ? Math.min(100, Math.round((oc.total_recibido / oc.total_pedido) * 100)) : 0;
 
@@ -225,8 +225,8 @@ function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onVolver }: {
           <div className="dato"><span className="dato__label">Solicitante</span><span className="dato__valor">{oc.solicitante}</span></div>
           <div className="dato"><span className="dato__label">Autoriza</span><span className="dato__valor">{oc.autoriza}</span></div>
           <div className="dato"><span className="dato__label">Almacén</span><span className="dato__valor">{oc.almacen}</span></div>
-          <div className="dato"><span className="dato__label">Fecha OC</span><span className="dato__valor dato__valor--mono">{oc.fecha ?? '—'}</span></div>
-          <div className="dato"><span className="dato__label">Importe</span><span className="dato__valor" style={{ fontWeight: 700 }}>{oc.moneda} {oc.importe.toFixed(2)}</span></div>
+          <div className="dato"><span className="dato__label">Fecha OC</span><span className="dato__valor dato__valor--mono">{formatFechaPe(oc.fecha)}</span></div>
+          <div className="dato"><span className="dato__label">Importe</span><span className="dato__valor" style={{ fontWeight: 700 }}>{formatMoneda(oc.importe, oc.moneda)}</span></div>
         </div>
       </div>
 
@@ -261,7 +261,7 @@ function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onVolver }: {
               <div key={cab.recepcion_id} className="dato" style={{ gap: 'var(--s-1)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
                   <span className="dato__label" style={{ fontWeight: 700, flex: 1 }}>
-                    {dia(cab.fecha_recepcion)} · {cab.tipo_recepcion ?? 'ENTREGA'}
+                    {formatFechaHoraPe(cab.fecha_recepcion)} · {cab.tipo_recepcion ?? 'ENTREGA'}
                   </span>
                   {cab.sustento_url_presigned && (
                     <a href={cab.sustento_url_presigned} target="_blank" rel="noreferrer" aria-label="Ver sustento" className="placas-limpiar">

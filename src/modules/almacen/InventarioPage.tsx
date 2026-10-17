@@ -216,7 +216,7 @@ export function InventarioPage() {
                     const activo = efectivoSeleccionado?.id === a.id;
                     return (
                       <motion.div key={a.id} layout={!reduce} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring}>
-                        <button type="button" className={`inv-card${activo ? ' inv-card--activo' : ''}`} onClick={() => abrir(a)}>
+                        <button type="button" className={`inv-card pressable${activo ? ' inv-card--activo' : ''}`} onClick={() => abrir(a)}>
                           <div className="inv-card__icono">
                             <Package size={18} strokeWidth={1.8} />
                           </div>

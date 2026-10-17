@@ -85,7 +85,7 @@
   background: var(--fill); display: grid; place-items: center; color: var(--label-3);
   box-shadow: var(--shadow-card);
 }
-.inv-ficha__id { font-size: 0.8125rem; font-weight: 700; color: var(--accent); font-family: var(--font-mono); }
+.inv-ficha__id { font-size: 0.8125rem; font-weight: 700; color: var(--label-2); font-family: var(--font-mono); }
 .inv-ficha__nombre { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.02em; text-align: center; }
 .inv-ficha__sub { font-size: 0.875rem; color: var(--label-2); text-align: center; }
 
@@ -186,7 +186,7 @@
   display: grid; place-items: center; background: var(--fill); color: var(--label-2);
 }
 .kardex-header__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
-.kardex-header__id { font-size: 0.8125rem; font-weight: 700; color: var(--accent); font-family: var(--font-mono); }
+.kardex-header__id { font-size: 0.8125rem; font-weight: 700; color: var(--label-2); font-family: var(--font-mono); }
 .kardex-header__nombre { font-size: 0.9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kardex-header__sub { font-size: 0.75rem; color: var(--label-2); }
 .kardex-header__limpiar {

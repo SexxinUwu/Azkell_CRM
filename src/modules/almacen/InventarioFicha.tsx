@@ -4,6 +4,7 @@ import { Button } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { stockLabel, stockTono, useKardex, type ArticuloInv } from './api';
 import { RegularizarSheet } from './RegularizarSheet';
+import { formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
 
 interface Props {
   articulo: ArticuloInv;
@@ -105,9 +106,9 @@ export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, o
       <div>
         <p className="tarjeta__grupo-titulo">Costos</p>
         <div className="tarjeta__lista">
-          <Dato label="Costo referencial" valor={`${a.moneda === 'USD' ? 'US$ ' : 'S/ '}${Number(a.costo_referencial ?? 0).toFixed(2)}`} />
-          {a.moneda === 'USD' && a.tipo_cambio != null && <Dato label="Tipo de cambio" valor={`S/ ${Number(a.tipo_cambio).toFixed(3)}`} />}
-          {a.moneda === 'USD' && <Dato label="Costo en soles" valor={`S/ ${Number(a.costo_soles ?? 0).toFixed(2)}`} />}
+          <Dato label="Costo referencial" valor={formatMoneda(Number(a.costo_referencial ?? 0), a.moneda)} />
+          {a.moneda === 'USD' && a.tipo_cambio != null && <Dato label="Tipo de cambio" valor={`S/\u00A0${Number(a.tipo_cambio).toFixed(3)}`} />}
+          {a.moneda === 'USD' && <Dato label="Costo en soles" valor={formatSoles(Number(a.costo_soles ?? 0))} />}
           <Dato label="Último proveedor" valor={a.ultimo_proveedor} />
         </div>
       </div>
@@ -139,7 +140,7 @@ export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, o
               <tbody>
                 {kardex.slice(0, 15).map((k, i) => (
                   <tr key={i}>
-                    <td>{k.fecha?.split('T')[0] ?? '—'}</td>
+                    <td>{formatFechaPe(k.fecha)}</td>
                     <td><span className={k.tipo === 'ENTRADA' ? 'inv-kardex__entrada' : 'inv-kardex__salida'}>{k.tipo}</span></td>
                     <td style={{ color: 'var(--label-2)' }}>{k.documento ?? '—'}</td>
                     <td style={{ textAlign: 'right' }} className={k.tipo === 'ENTRADA' ? 'inv-kardex__entrada' : 'inv-kardex__salida'}>

@@ -6,6 +6,8 @@ import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { guardarSalida, TIPOS_DESTINO, useInventario, type ItemSalida, type SalidaInv } from './api';
+import { haptic } from '../../core/lib/haptics';
+import { formatSoles } from '../../core/lib/format';
 
 interface Props {
   open: boolean;
@@ -34,6 +36,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
   const [ticketOt, setTicketOt] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [items, setItems] = useState<ItemSalida[]>([itemVacio()]);
+  const [intento, setIntento] = useState(false);
 
   const almacenes = [...new Set((inventario ?? []).map(i => i.almacen).filter(Boolean) as string[])].sort();
 
@@ -58,9 +61,12 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
     return null;
   }
   const hayErrores = items.some(it => errorDeFila(it) !== null);
+  const sinArticulos = !items.some(i => i.descripcion.trim() || i.inventario_id);
+  const mostrar = (msg: string | undefined) => (intento ? msg : undefined);
 
   useEffect(() => {
     if (!open) return;
+    setIntento(false);
     if (s) {
       setFecha(s.fecha?.split('T')[0] ?? '');
       setTipoDestino(s.tipo_destino ?? 'Vehiculo');
@@ -111,11 +117,9 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
   }
 
   async function guardar() {
-    if (!fecha) { toast('Selecciona la fecha', 'error'); return; }
+    setIntento(true);
     const itemsValidos = items.filter(i => i.descripcion.trim() || i.inventario_id);
-    if (!itemsValidos.length) { toast('Agrega al menos un artículo', 'error'); return; }
-    const primerError = items.map(errorDeFila).find(e => e !== null);
-    if (primerError) { toast(primerError, 'error'); return; }
+    if (!fecha || sinArticulos || hayErrores) { haptic('warning'); return; }
 
     setGuardando(true);
     try {
@@ -148,7 +152,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
     <Sheet open={open} onClose={onClose} title={s ? 'Editar salida' : 'Nueva salida'}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
-          <Field label="Fecha *">
+          <Field label="Fecha *" error={mostrar(!fecha ? 'Selecciona la fecha.' : undefined)}>
             {p => <TextInput {...p} type="date" value={fecha} onChange={ev => setFecha(ev.target.value)} />}
           </Field>
           <Field label="Destino">
@@ -252,7 +256,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
                       />
                     </td>
                     <td style={{ fontWeight: 700, textAlign: 'right' }}>
-                      S/ {(it.importe || 0).toFixed(2)}
+                      {formatSoles(it.importe || 0)}
                     </td>
                     <td>
                       {items.length > 1 && (
@@ -268,7 +272,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
               <tfoot>
                 <tr>
                   <td colSpan={3} style={{ textAlign: 'right', fontWeight: 700, padding: 'var(--s-2)' }}>Total</td>
-                  <td style={{ textAlign: 'right', fontWeight: 800, padding: 'var(--s-2)' }}>S/ {totalCalculado.toFixed(2)}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 800, padding: 'var(--s-2)' }}>{formatSoles(totalCalculado)}</td>
                   <td />
                 </tr>
               </tfoot>
@@ -276,11 +280,12 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
           </div>
         </div>
 
+        {intento && sinArticulos && <p role="alert" className="t-footnote" style={{ color: 'var(--red-ink)', margin: 0 }}>Agrega al menos un artículo.</p>}
         <Field label="Observaciones">
           {p => <TextInput {...p} value={observaciones} placeholder="Notas adicionales" onChange={ev => setObservaciones(ev.target.value)} />}
         </Field>
 
-        <Button variant="primary" loading={guardando} disabled={hayErrores} onClick={guardar} style={{ width: '100%' }}>
+        <Button variant="primary" loading={guardando} onClick={guardar} style={{ width: '100%' }}>
           {s ? 'Guardar cambios' : 'Registrar salida'}
         </Button>
       </div>

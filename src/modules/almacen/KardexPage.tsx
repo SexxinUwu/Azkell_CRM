@@ -10,6 +10,8 @@ import { abrirClasico } from '../../core/layout/navigation';
 import { exportarExcel } from '../../core/lib/excel';
 import { useToast } from '../../core/ui/Toast';
 import { stockLabel, stockTono, useInventario, useKardex, type ArticuloInv } from './api';
+import { formatFechaPe, formatSoles } from '../../core/lib/format';
+import { haptic } from '../../core/lib/haptics';
 
 function fmtQty(n: number): string {
   return n % 1 === 0 ? String(n) : n.toFixed(3);
@@ -60,7 +62,7 @@ export function KardexPage() {
       await exportarExcel(`Kardex-${seleccionado.id}`, 'Kardex',
         ['Fecha', 'Tipo', 'Documento', 'Contraparte / Motivo', 'Entrada', 'Salida', 'Costo unitario', 'Costo promedio', 'Saldo', 'Valor saldo'],
         movimientosFiltrados.map(k => [
-          (k.fecha ?? '').split('T')[0], k.tipo, k.documento ?? '', k.proveedor_destino ?? k.observaciones ?? '',
+          formatFechaPe(k.fecha), k.tipo, k.documento ?? '', k.proveedor_destino ?? k.observaciones ?? '',
           k.tipo !== 'SALIDA' ? k.cantidad : '', k.tipo === 'SALIDA' ? k.cantidad : '', k.costo_unitario ?? '', k.costo_promedio ?? '', k.saldo, k.valor_saldo ?? '',
         ]));
     } catch (err) { toast(errorMessage(err), 'error'); }
@@ -152,7 +154,7 @@ export function KardexPage() {
                   const tono = stockTono(a);
                   const colorKey = tono === 'ok' ? 'green' : tono === 'warning' ? 'amber' : 'red';
                   return (
-                    <button key={a.id} type="button" className="mov-fila" onClick={() => seleccionar(a)}>
+                    <button key={a.id} type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); seleccionar(a); }}>
                       <div className="mov-fila__icon" style={{ background: `var(--${colorKey}-tint)`, color: `var(--${colorKey}-ink)` }}>
                         <Package size={16} />
                       </div>
@@ -189,7 +191,7 @@ export function KardexPage() {
                     <span className="inv-metrica__label">Stock de apertura</span>
                   </div>
                   <div className="inv-metrica">
-                    <span className="inv-metrica__num" style={{ fontSize: '1.375rem' }}>{kpis.valor === null ? '—' : `S/ ${kpis.valor.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
+                    <span className="inv-metrica__num" style={{ fontSize: '1.375rem' }}>{formatSoles(kpis.valor)}</span>
                     <span className="inv-metrica__label">Saldo valorizado · {fmtQty(kpis.saldo)} u. al costo promedio</span>
                   </div>
                 </div>
@@ -239,7 +241,7 @@ export function KardexPage() {
                         <tbody>
                           {movimientosFiltrados.map((k, i) => (
                             <tr key={i}>
-                              <td style={{ whiteSpace: 'nowrap' }}>{k.fecha?.split('T')[0] ?? '—'}</td>
+                              <td style={{ whiteSpace: 'nowrap' }}>{formatFechaPe(k.fecha)}</td>
                               <td>
                                 <span className={
                                   k.tipo === 'ENTRADA' ? 'inv-kardex__entrada'
@@ -262,14 +264,14 @@ export function KardexPage() {
                                 {k.tipo === 'SALIDA' ? `-${fmtQty(k.cantidad)}` : ''}
                               </td>
                               <td style={{ textAlign: 'right', color: 'var(--label-2)' }}>
-                                {k.costo_unitario != null ? `S/ ${k.costo_unitario.toFixed(2)}` : '—'}
+                                {formatSoles(k.costo_unitario)}
                               </td>
                               <td style={{ textAlign: 'right', color: 'var(--label-2)' }}>
-                                {k.costo_promedio != null ? `S/ ${k.costo_promedio.toFixed(2)}` : '—'}
+                                {formatSoles(k.costo_promedio)}
                               </td>
                               <td style={{ textAlign: 'right', fontWeight: 700 }}>{fmtQty(k.saldo)}</td>
                               <td style={{ textAlign: 'right' }}>
-                                {k.valor_saldo != null ? `S/ ${k.valor_saldo.toFixed(2)}` : '—'}
+                                {formatSoles(k.valor_saldo)}
                               </td>
                             </tr>
                           ))}
@@ -284,13 +286,13 @@ export function KardexPage() {
                                 : k.tipo === 'SALIDA' ? 'inv-kardex__salida'
                                 : 'inv-kardex__reg'
                               }>{k.tipo === 'REGULARIZACION' ? 'REGUL.' : k.tipo}</span>
-                              <span className="kardex-tarjeta__fecha">{k.fecha?.split('T')[0] ?? '—'}</span>
+                              <span className="kardex-tarjeta__fecha">{formatFechaPe(k.fecha)}</span>
                             </div>
                             <div className="kardex-tarjeta__detalle">{k.proveedor_destino ?? k.observaciones ?? k.documento ?? '—'}</div>
                             <div className="kardex-tarjeta__cifras">
                               <span>{k.tipo !== 'SALIDA' ? `+${fmtQty(k.cantidad)}` : k.tipo === 'SALIDA' ? `-${fmtQty(k.cantidad)}` : ''}</span>
                               <span>Saldo <b>{fmtQty(k.saldo)}</b></span>
-                              <span>{k.valor_saldo != null ? `S/ ${k.valor_saldo.toFixed(2)}` : '—'}</span>
+                              <span>{formatSoles(k.valor_saldo)}</span>
                             </div>
                           </li>
                         ))}
