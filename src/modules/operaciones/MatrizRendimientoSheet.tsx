@@ -30,6 +30,7 @@ function FormularioFila({ fila, onClose }: { fila: Vacio | null; onClose: () => 
   const [v, setV] = useState<Vacio>(VACIO);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errRuta, setErrRuta] = useState<string | undefined>();
   const editando = !!fila?.id;
 
   useEffect(() => {
@@ -40,7 +41,7 @@ function FormularioFila({ fila, onClose }: { fila: Vacio | null; onClose: () => 
 
   async function guardar() {
     setError(null);
-    if (!v.ruta.trim()) { setError('Escribe el nombre de la ruta.'); return; }
+    if (!v.ruta.trim()) { setErrRuta('Escribe el nombre de la ruta.'); haptic('warning'); return; }
     setEnviando(true);
     try {
       await api(editando ? `/combustible/matriz/${v.id}` : '/combustible/matriz', { method: editando ? 'PUT' : 'POST', body: v });
@@ -60,7 +61,7 @@ function FormularioFila({ fila, onClose }: { fila: Vacio | null; onClose: () => 
         <Button variant="primary" onClick={guardar} loading={enviando}>Guardar</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
-        <Field label="Ruta" wide>{p => <TextInput {...p} value={v.ruta} onChange={e => set('ruta', e.target.value.toUpperCase())} />}</Field>
+        <Field label="Ruta" wide error={errRuta}>{p => <TextInput {...p} value={v.ruta} onChange={e => { set('ruta', e.target.value.toUpperCase()); setErrRuta(undefined); }} />}</Field>
         <Field label="Sentido">
           {p => (
             <SelectInput {...p} value={v.sentido} onChange={e => set('sentido', e.target.value)}>
@@ -179,7 +180,7 @@ export function MatrizRendimientoSheet({ open, onClose, puedeEditar }: { open: b
           <SearchField value={q} onChange={setQ} placeholder="Ruta, motor o configuración…" />
           <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
             {['', 'IDA', 'RETORNO'].map(s => (
-              <button key={s || 'todos'} type="button" className={`chip${sentido === s ? ' chip--active' : ''}`} onClick={() => setSentido(s)}>{s || 'Todos'}</button>
+              <button key={s || 'todos'} type="button" className={`chip pressable${sentido === s ? ' chip--active' : ''}`} onClick={() => { haptic('selection'); setSentido(s); }}>{s || 'Todos'}</button>
             ))}
           </div>
 
@@ -215,7 +216,7 @@ export function MatrizRendimientoSheet({ open, onClose, puedeEditar }: { open: b
             {p => <TextInput {...p} type="file" accept=".xlsx,.xls,.csv" disabled={leyendo || enviando} onChange={e => elegirArchivo(e.target.files?.[0])} />}
           </Field>
           {leyendo && <div className="field field--wide"><Notice>Leyendo el archivo…</Notice></div>}
-          {filasImp.length > 0 && <div className="field field--wide"><Notice tone="accent">Las filas se agregan a la matriz actual. Usa "Vaciar" antes si quieres empezar de cero.</Notice></div>}
+          {filasImp.length > 0 && <div className="field field--wide"><Notice tone="neutral">Las filas se agregan a la matriz actual. Usa "Vaciar" antes si quieres empezar de cero.</Notice></div>}
         </div>
       </Sheet>
 

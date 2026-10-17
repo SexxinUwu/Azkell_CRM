@@ -1,3 +1,4 @@
+import { formatFechaPe } from '../../core/lib/format';
 import './mant.css';
 import './StatusRampa.css';
 import { useEffect, useMemo, useState } from 'react';
@@ -136,7 +137,7 @@ function PanelAnaliticas({ activas, historial }: { activas: RampaEntrada[]; hist
 
         {histMes > 0 && (
           <div className="tarjeta__lista" style={{ padding: 'var(--s-2) var(--s-3)', display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
-            <LayoutDashboard size={18} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+            <LayoutDashboard size={18} style={{ color: 'var(--ink)', flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: '1.25rem', fontWeight: 700, fontFamily: 'var(--font-mono)', lineHeight: 1.2 }}>{histMes}</div>
               <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--label-2)' }}>Este mes</div>
@@ -235,8 +236,8 @@ export function StatusRampaPage() {
                     try {
                       await exportarExcel('Status-rampa', 'Rampas',
                         ['Rampa', 'Placa', 'Conductor', 'Km', 'Ingreso', 'Salida real', 'Situación', 'Observaciones'],
-                        [...activas, ...historial].map(e => [e.rampa, e.placa, rampaConductor(e), e.km, e.fecha_ingreso?.split('T')[0],
-                          e.fecha_salida?.split('T')[0], e.situacion, e.observaciones]));
+                        [...activas, ...historial].map(e => [e.rampa, e.placa, rampaConductor(e), e.km, formatFechaPe(e.fecha_ingreso),
+                          formatFechaPe(e.fecha_salida), e.situacion, e.observaciones]));
                     } catch (err) { toast(errorMessage(err), 'error'); }
                   } },
                 { label: 'Configurar rampas', detalle: 'Orden, color y si sale en el reporte', icon: <Settings2 size={17} />, onSelect: () => setConfigurando(true) },
@@ -275,7 +276,7 @@ export function StatusRampaPage() {
               <button
                 key={t}
                 type="button"
-                onClick={() => { setTab(t); setBusqueda(''); }}
+                onClick={() => { haptic('selection'); setTab(t); setBusqueda(''); }}
                 style={{
                   padding: '0.375rem 1rem',
                   borderRadius: 'var(--r-full)',
@@ -347,7 +348,7 @@ export function StatusRampaPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                       <span className="sr-hist-fila__fecha">
-                        {e.fecha_ingreso?.split('T')[0] ?? '—'}
+                        {formatFechaPe(e.fecha_ingreso) ?? '—'}
                       </span>
                       {e.fecha_salida && e.fecha_ingreso && (
                         <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-mono)', color: 'var(--label-3)' }}>
@@ -376,9 +377,9 @@ export function StatusRampaPage() {
 
 // ─── Rampas activas: tabla en escritorio, tarjetas compactas en celular ───────
 
-const COLOR_RAMPA = (e: RampaEntrada) => (e.color && !['#ef4444', '#007aff', '#64748b'].includes(e.color) ? e.color : 'var(--accent)');
+const COLOR_RAMPA = (e: RampaEntrada) => (e.color && !['#ef4444', '#007aff', '#64748b'].includes(e.color) ? e.color : 'var(--ink)');
 const NUM_RAMPA = (nombre: string) => nombre.match(/\d+/)?.[0] ?? nombre.trim().charAt(0).toUpperCase();
-const soloFecha = (f: string | null | undefined) => (f ? f.split('T')[0] : '—');
+const soloFecha = (f: string | null | undefined) => formatFechaPe(f);
 const soloHora = (h: string | null | undefined) => (h ? h.slice(0, 5) : '—');
 function situacionTono(s: string | null) {
   const t = (s ?? '').toLowerCase();
@@ -411,7 +412,7 @@ function RampaTabla({ entradas, ots, ultimasInsp, onInspeccion, onAbrir }: { ent
           {entradas.map(e => {
             const horas = horasEnRampa(e.fecha_ingreso);
             return (
-              <tr key={rampaId(e)} className="rt__fila" tabIndex={0} onClick={() => onAbrir(e)}
+              <tr key={rampaId(e)} className="rt__fila pressable" tabIndex={0} onClick={() => { haptic('selection'); onAbrir(e); }}
                 onKeyDown={ev => { if (ev.key === 'Enter') onAbrir(e); }}>
                 <td>
                   <span className="rt__rampa">
@@ -462,7 +463,7 @@ function RampaMovil({ entradas, ultimasInsp, onInspeccion, onAbrir }: { entradas
       {entradas.map(e => {
         const horas = horasEnRampa(e.fecha_ingreso);
         return (
-          <button key={rampaId(e)} type="button" className="rm-card" onClick={() => onAbrir(e)}>
+          <button key={rampaId(e)} type="button" className="rm-card pressable" onClick={() => { haptic('selection'); onAbrir(e); }}>
             <span className="rm-num" style={{ background: COLOR_RAMPA(e) }}>{NUM_RAMPA(e.rampa)}</span>
             <span className="rm-cuerpo">
               <span className="rm-cab">
@@ -601,7 +602,7 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, onEditar, onVolver }: 
           <div className="dato"><span className="dato__label">Conductor</span><span className="dato__valor">{rampaConductor(e)}</span></div>
           {e.km && <div className="dato"><span className="dato__label">Km</span><span className="dato__valor dato__valor--mono">{String(e.km)}</span></div>}
           {e.ticket_entrada && <div className="dato"><span className="dato__label">Ticket</span><span className="dato__valor dato__valor--mono">{e.ticket_entrada}</span></div>}
-          {e.salida_programada && <div className="dato"><span className="dato__label">Salida estimada</span><span className="dato__valor dato__valor--mono">{e.salida_programada.split('T')[0]} {e.hora_salida_programada ?? ''}</span></div>}
+          {e.salida_programada && <div className="dato"><span className="dato__label">Salida estimada</span><span className="dato__valor dato__valor--mono">{formatFechaPe(e.salida_programada)} {e.hora_salida_programada ?? ''}</span></div>}
           {e.liberado_por && <div className="dato"><span className="dato__label">Liberada por</span><span className="dato__valor">{e.liberado_por}</span></div>}
           {e.evidencia_url && <div className="dato"><span className="dato__label">Evidencia</span><a className="dato__valor dato__valor--enlace" href={e.evidencia_url} target="_blank" rel="noreferrer">Ver archivo</a></div>}
         </div>
@@ -610,11 +611,11 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, onEditar, onVolver }: 
       <div>
         <p className="tarjeta__grupo-titulo">Fechas</p>
         <div className="tarjeta__lista">
-          {e.fecha_ingreso && <div className="dato"><span className="dato__label">Fecha ingreso</span><span className="dato__valor dato__valor--mono">{e.fecha_ingreso.split('T')[0]}</span></div>}
+          {e.fecha_ingreso && <div className="dato"><span className="dato__label">Fecha ingreso</span><span className="dato__valor dato__valor--mono">{formatFechaPe(e.fecha_ingreso)}</span></div>}
           {e.hora_ingreso && <div className="dato"><span className="dato__label">Hora ingreso</span><span className="dato__valor dato__valor--mono">{e.hora_ingreso}</span></div>}
           {e.fecha_salida && (
             <>
-              <div className="dato"><span className="dato__label">Fecha salida</span><span className="dato__valor dato__valor--mono">{e.fecha_salida.split('T')[0]}</span></div>
+              <div className="dato"><span className="dato__label">Fecha salida</span><span className="dato__valor dato__valor--mono">{formatFechaPe(e.fecha_salida)}</span></div>
               {e.fecha_ingreso && (
                 <div className="dato">
                   <span className="dato__label">Tiempo total</span>

@@ -1,3 +1,4 @@
+import { haptic } from '../../core/lib/haptics';
 import './mant.css';
 import { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowUpRight, CheckCircle, Plus, SearchX, Wrench } from 'lucide-react';
@@ -163,7 +164,7 @@ export function FallasPage() {
         ))}
         <button type="button"
           onClick={() => { setMostrarForm(true); setMsg(null); }} className="fallas-nueva"
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 8, background: 'var(--ink)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
           <Plus size={16} /> Reportar falla
         </button>
       </div>
@@ -177,7 +178,7 @@ export function FallasPage() {
             <div className="fallas-filtros">
               {['', 'REPORTADA', 'EN_REVISION', 'SIN_STOCK', 'ATENDIDA'].map(e => (
                 <button key={e} type="button" className="fallas-chip"
-                  onClick={() => setFiltroEstado(filtroEstado === e ? '' : e)}
+                  onClick={() => { haptic('selection'); setFiltroEstado(filtroEstado === e ? '' : e); }}
                   style={{ padding: '5px 10px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', background: filtroEstado === e ? 'var(--accent)' : 'var(--fill-2)', color: filtroEstado === e ? '#fff' : 'var(--label-2)', border: '1px solid var(--separator)', whiteSpace: 'nowrap' }}>
                   {e ? etiquetaEstado(e) : 'Todos'}
                 </button>
@@ -204,7 +205,7 @@ export function FallasPage() {
                     <AlertTriangle size={16} style={{ color: `var(--${sev}-ink)`, flexShrink: 0, marginTop: 2 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)', fontSize: '0.85rem' }}>{f.placa ?? '—'}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--label)', fontSize: '0.85rem' }}>{f.placa ?? '—'}</span>
                         {f.folio && <span style={{ fontSize: '0.72rem', color: 'var(--label-2)', fontFamily: 'var(--font-mono)' }}>{f.folio}</span>}
                         <span className={`ot-estado ot-estado--${sev}`}>{f.severidad?.toUpperCase()}</span>
                         <span className={`ot-estado ot-estado--${est}`}>{etiquetaEstado(String(f.estado ?? 'REPORTADA'))}</span>

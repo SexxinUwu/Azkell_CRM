@@ -1,3 +1,4 @@
+import { haptic } from '../../core/lib/haptics';
 import './mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -302,7 +303,7 @@ export function FleetrunPage() {
                   <div key={s.label} style={{ display: 'flex', flexDirection: 'column' }}>
                     <span style={{
                       fontSize: '1.375rem', fontWeight: 700, fontFamily: 'var(--font-mono)',
-                      color: s.color === 'accent' ? 'var(--accent)' : `var(--${s.color}-ink)`,
+                      color: s.color === 'accent' ? 'var(--label)' : `var(--${s.color}-ink)`,
                     }}>
                       {s.valor}
                       {'pct' in s && (s as { pct: number }).pct > 0 && (
@@ -329,7 +330,7 @@ export function FleetrunPage() {
               return (
                 <button key={f} type="button"
                   className={`chip${filtro === f ? ' chip--active' : ''}`}
-                  onClick={() => cambiarFiltro(f)}>
+                  onClick={() => { haptic('selection'); cambiarFiltro(f); }}>
                   {color && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
                     background: `var(--${color}-ink)`, marginRight: 4 }} />}
                   {f} <span className="chip__badge">{cnt}</span>
@@ -394,7 +395,7 @@ export function FleetrunPage() {
 
                       return (
                         <tr key={id || `${placa}-${frTipo(f)}`}>
-                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--label)' }}>
                             {placa}
                           </td>
                           <td style={{ fontWeight: 600 }}>{frTipo(f)}</td>

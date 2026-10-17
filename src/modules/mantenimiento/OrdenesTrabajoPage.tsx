@@ -1,3 +1,4 @@
+import { formatFechaPe, formatSoles } from '../../core/lib/format';
 import './mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -327,7 +328,7 @@ export function OrdenesTrabajoPage() {
                 </Button>
               )}
               {tab === 'Backlog' && (
-                <Button variant="accent" size="sm" icon={<Plus size={15} />} onClick={() => setModalBK(true)}>
+                <Button variant="primary" size="sm" icon={<Plus size={15} />} onClick={() => setModalBK(true)}>
                   Agregar tarea
                 </Button>
               )}
@@ -393,7 +394,7 @@ export function OrdenesTrabajoPage() {
                       const col = estadoColor(o.estado);
                       return (
                         <motion.div key={otId(o)} layout={!reduce} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring}>
-                          <button type="button" className="ot-fila" onClick={() => { haptic('selection'); setSeleccionada(o); }}>
+                          <button type="button" className="ot-fila pressable" onClick={() => { haptic('selection'); setSeleccionada(o); }}>
                             <div className="ot-fila__icono"><Wrench size={16} /></div>
                             <div className="ot-fila__cuerpo">
                               <span className="ot-fila__id">{otId(o)}</span>
@@ -407,7 +408,7 @@ export function OrdenesTrabajoPage() {
                               <span className={`ot-estado ot-estado--${col}`}>{etiquetaEstado(o.estado)}</span>
                               <span className="ot-fila__fecha">{otFecha(o)}</span>
                               {o.costo_total != null && (
-                                <span className="ot-fila__costo">S/ {Number(o.costo_total).toFixed(2)}</span>
+                                <span className="ot-fila__costo">{formatSoles(Number(o.costo_total))}</span>
                               )}
                             </div>
                           </button>
@@ -683,7 +684,7 @@ function BacklogTab({ onCrear, qc, toast }: { onCrear: () => void; qc: ReturnTyp
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </SelectInput>
-                  <span className="ot-fila__fecha">{it.fecha_reporte?.split('T')[0] ?? '—'}</span>
+                  <span className="ot-fila__fecha">{formatFechaPe(it.fecha_reporte)}</span>
                 </div>
               </div>
             );

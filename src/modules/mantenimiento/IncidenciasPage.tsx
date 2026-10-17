@@ -1,3 +1,4 @@
+import { formatFechaPe, formatSoles } from '../../core/lib/format';
 import './mant.css';
 import { useState, type FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Plus, ShieldCheck } from 'lucide-react';
@@ -144,9 +145,9 @@ export function IncidenciasPage() {
                       <div className="ot-fila__derecha">
                         <span className={`ot-estado ot-estado--${tono}`}>{atendido ? 'Atendido' : 'Pendiente'}</span>
                         {inc.total_costo != null && Number(inc.total_costo) > 0 && (
-                          <span className="ot-fila__costo">S/ {Number(inc.total_costo).toFixed(2)}</span>
+                          <span className="ot-fila__costo">{formatSoles(Number(inc.total_costo))}</span>
                         )}
-                        <span className="ot-fila__fecha">{String(inc.fecha_falla ?? '—').split('T')[0]}</span>
+                        <span className="ot-fila__fecha">{formatFechaPe(inc.fecha_falla)}</span>
                       </div>
                     </button>
                   );
@@ -267,7 +268,7 @@ function IncidenciaDetalle({ inc, onVolver }: { inc: IncidenciaRuta; onVolver: (
       <div className="ot-ficha__hero">
         <span className={`ot-estado ot-estado--${tono}`}>{atendido ? 'Atendido' : 'Pendiente'}</span>
         <h2 className="ot-ficha__placa">{inc.placa ?? '—'}</h2>
-        <span className="ot-ficha__id">{String(inc.fecha_falla ?? '').split('T')[0]}</span>
+        <span className="ot-ficha__id">{formatFechaPe(inc.fecha_falla)}</span>
       </div>
       <div>
         <p className="tarjeta__grupo-titulo">Incidencia</p>
@@ -278,7 +279,7 @@ function IncidenciaDetalle({ inc, onVolver }: { inc: IncidenciaRuta; onVolver: (
           {inc.falla && <div className="dato"><span className="dato__label">Falla</span><span className="dato__valor">{inc.falla}</span></div>}
           {inc.area_responsable && <div className="dato"><span className="dato__label">Área responsable</span><span className="dato__valor">{inc.area_responsable}</span></div>}
           {inc.total_costo != null && Number(inc.total_costo) > 0 && (
-            <div className="dato"><span className="dato__label">Costo total</span><span className="dato__valor" style={{ fontWeight: 700 }}>S/ {Number(inc.total_costo).toFixed(2)}</span></div>
+            <div className="dato"><span className="dato__label">Costo total</span><span className="dato__valor" style={{ fontWeight: 700 }}>{formatSoles(Number(inc.total_costo))}</span></div>
           )}
         </div>
       </div>
