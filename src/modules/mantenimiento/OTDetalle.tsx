@@ -1,3 +1,4 @@
+import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/format';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, Download, Package, Play, Share2, Timer } from 'lucide-react';
@@ -31,11 +32,11 @@ export const ETIQUETA_ACCION: Record<AccionOT, string> = {
   reactivar: 'Reactivar',
 };
 
-const soles = (n: number) => `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const soles = (n: number) => formatSoles(n);
 const fechaCorta = (s: string | null | undefined) => {
   if (!s) return '—';
   const d = new Date(s.replace(' ', 'T'));
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return Number.isNaN(d.getTime()) ? '—' : formatFechaHoraPe(d);
 };
 
 /** Reloj que avanza cada segundo mientras `activo`; un solo intervalo para toda la ficha */
@@ -60,7 +61,7 @@ function tonoEstado(estado: string): 'gray' | 'green' | 'amber' | 'accent' | 're
     case 'En Proceso': return 'green';
     case 'Pausada':    return 'amber';
     case 'Finalizado':
-    case 'Cerrada':    return 'accent';
+    case 'Cerrada':    return 'gray';
     case 'Anulado':    return 'red';
     default:           return 'gray';
   }
@@ -178,13 +179,13 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   const principal = (() => {
     if (!puedeEditar) return null;
     if (acciones.includes('iniciar')) return <Button variant="primary" icon={<Play size={15} />} onClick={() => onAccion('iniciar')}>Iniciar OT</Button>;
-    if (acciones.includes('reanudar')) return <Button variant="accent" icon={<Play size={15} />} onClick={() => onAccion('reanudar')}>Reanudar trabajo</Button>;
+    if (acciones.includes('reanudar')) return <Button variant="primary" icon={<Play size={15} />} onClick={() => onAccion('reanudar')}>Reanudar trabajo</Button>;
     return null;
   })();
   // En proceso: pausar o cerrar. Pausada: reanudar (cerrar queda en el menú).
   const botonesEstado = puedeEditar && acciones.includes('pausar') ? (
     <>
-      <Button variant="accent" icon={<Timer size={15} />} onClick={() => setPausando(true)} disabled={limitePausas}>Pausar</Button>
+      <Button variant="primary" icon={<Timer size={15} />} onClick={() => setPausando(true)} disabled={limitePausas}>Pausar</Button>
       <Button variant="primary" onClick={() => setCerrando(true)}>Cerrar OT</Button>
     </>
   ) : null;
@@ -272,7 +273,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                       </button>
                       <div className="ot-linea__cuerpo">
                         <span className={`ot-linea__titulo${realizado ? ' ot-linea__titulo--hecho' : ''}`}>{t.trabajo_realizado || 'Trabajo sin descripción'}</span>
-                        <span className="ot-linea__sub">{[t.tecnico, t.fecha_trabajo?.split('T')[0]].filter(Boolean).join(' · ') || '—'}</span>
+                        <span className="ot-linea__sub">{[t.tecnico, formatFechaPe(t.fecha_trabajo)].filter(Boolean).join(' · ') || '—'}</span>
                       </div>
                       <span className="ot-linea__importe t-numeric">{soles(trabajoCosto(t))}</span>
                     </div>
@@ -397,9 +398,9 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         <div>
           <p className="tarjeta__grupo-titulo" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Package size={14} /> Repuestos despachados desde almacén
-            {costos.repuestos > 0 && <span style={{ marginLeft: 'auto', fontWeight: 700, color: 'var(--accent)' }}>{soles(costos.repuestos)}</span>}
+            {costos.repuestos > 0 && <span style={{ marginLeft: 'auto', fontWeight: 700, color: 'var(--label)' }}>{soles(costos.repuestos)}</span>}
           </p>
-          <Button variant="accent" block icon={<Package size={15} />} onClick={() => setSolicitando(true)} disabled={!puedeEditar}>
+          <Button variant="primary" block icon={<Package size={15} />} onClick={() => setSolicitando(true)} disabled={!puedeEditar}>
             Solicitar repuesto a almacén
           </Button>
           {loadMat ? <PageLoader /> : mats.length === 0 ? (
@@ -409,7 +410,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
               {mats.map(sal => (
                 <div key={sal.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--separator)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--accent)' }}>{sal.id}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--label)' }}>{sal.id}</span>
                     <span style={{ fontSize: '0.8rem', color: 'var(--label-2)' }}>{sal.fecha} · {sal.estado}</span>
                     <span className="t-numeric" style={{ fontWeight: 700, fontSize: '0.875rem', fontFamily: 'var(--font-mono)' }}>{soles(Number(sal.total_pen))}</span>
                   </div>

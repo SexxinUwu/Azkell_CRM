@@ -13,9 +13,9 @@ const money = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximum
 const unitPrice = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 const quantity = new Intl.NumberFormat('es-PE', { maximumFractionDigits: 2 });
 
-/** "S/ 50,000.00" — importes */
+/** "S/ 50,000.00" — importes (con espacio no divisible entre S/ y el número) */
 export function formatSoles(n: number | null | undefined) {
-  return n == null ? '—' : `S/ ${money.format(n)}`;
+  return n == null ? '—' : `S/\u00A0${money.format(n)}`;
 }
 
 /** "S/ 15.40" o "S/ 15.395" — precio por galón (hasta 4 decimales, sin ceros de más) */
@@ -31,6 +31,35 @@ export function formatQuantity(n: number | null | undefined) {
 /** "Sábado, 10 de octubre" */
 export function formatLongDate(d: Date | string = new Date()) {
   return capitalize(dateLong.format(new Date(d)));
+}
+
+const fechaPeFmt = new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TZ });
+const fechaHoraPeFmt = new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: TZ });
+// Texto sin zona horaria ("2026-10-15" o "2026-10-15 07:30:00"): se toma tal cual, sin pasar por el navegador
+const NAIVE = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/;
+const CON_ZONA = /(?:[Zz]|[+-]\d{2}:?\d{2})$/;
+
+function partesSinZona(v: Date | string | null | undefined) {
+  if (typeof v !== 'string' || CON_ZONA.test(v)) return null;
+  return NAIVE.exec(v);
+}
+
+/** "16/10/2026" — fecha peruana dd/mm/aaaa */
+export function formatFechaPe(v: Date | string | null | undefined): string {
+  if (v == null || v === '') return '—';
+  const p = partesSinZona(v);
+  if (p) return `${p[3]}/${p[2]}/${p[1]}`;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? '—' : fechaPeFmt.format(d);
+}
+
+/** "16/10/2026 07:30" — fecha y hora peruanas dd/mm/aaaa HH:mm */
+export function formatFechaHoraPe(v: Date | string | null | undefined): string {
+  if (v == null || v === '') return '—';
+  const p = partesSinZona(v);
+  if (p) return p[4] ? `${p[3]}/${p[2]}/${p[1]} ${p[4]}:${p[5]}` : `${p[3]}/${p[2]}/${p[1]}`;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? '—' : fechaHoraPeFmt.format(d).replace(',', '');
 }
 
 /** "10 oct 2026" */

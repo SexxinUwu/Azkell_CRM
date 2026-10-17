@@ -1,3 +1,4 @@
+import { haptic } from '../../core/lib/haptics';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../core/ui/Button';
@@ -24,11 +25,12 @@ export function PausarOTSheet({ ot, open, onClose, usuario }: { ot: OrdenTrabajo
   const toast = useToast();
   const [motivo, setMotivo] = useState<string>(MOTIVOS_PAUSA[0]);
   const [detalle, setDetalle] = useState('');
+  const [errMotivo, setErrMotivo] = useState<string | undefined>();
   const [enviando, setEnviando] = useState(false);
 
   async function confirmar() {
     const texto = motivo === 'Otro' ? detalle.trim() : motivo;
-    if (!texto) { toast('Escribe el motivo de la pausa', 'error'); return; }
+    if (!texto) { setErrMotivo('Escribe el motivo de la pausa.'); haptic('warning'); return; }
     setEnviando(true);
     try {
       await pausarOT(otId(ot), texto, usuario);
@@ -52,7 +54,7 @@ export function PausarOTSheet({ ot, open, onClose, usuario }: { ot: OrdenTrabajo
       footer={
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
-          <Button variant="accent" onClick={confirmar} loading={enviando}>Pausar</Button>
+          <Button variant="primary" onClick={confirmar} loading={enviando}>Pausar</Button>
         </div>
       }
     >
@@ -69,9 +71,10 @@ export function PausarOTSheet({ ot, open, onClose, usuario }: { ot: OrdenTrabajo
         {motivo === 'Otro' && (
           <label className="ot-form__campo">
             <span className="ot-form__etiqueta">Describe el motivo *</span>
-            <TextInput value={detalle} onChange={e => setDetalle(e.target.value)} placeholder="Motivo de la pausa" />
+            <TextInput value={detalle} onChange={e => { setDetalle(e.target.value); setErrMotivo(undefined); }} placeholder="Motivo de la pausa" />
           </label>
         )}
+        {errMotivo && <p role="alert" style={{ margin: 0, fontSize: 12, color: 'var(--red-ink)' }}>{errMotivo}</p>}
       </div>
     </Sheet>
   );
@@ -84,6 +87,7 @@ export function CerrarOTSheet({ ot, open, onClose, usuario }: { ot: OrdenTrabajo
   const toast = useToast();
   const det = otDetalles(ot);
   const [km, setKm] = useState(det.km ? String(det.km) : '');
+  const [errKm, setErrKm] = useState<string | undefined>();
   const [comentario, setComentario] = useState('');
   const [liberar, setLiberar] = useState(true);
   const [enBase, setEnBase] = useState(true);
@@ -95,7 +99,7 @@ export function CerrarOTSheet({ ot, open, onClose, usuario }: { ot: OrdenTrabajo
   const kmValido = km.trim() === '' || (Number.isFinite(kmNum) && kmNum >= 0);
 
   async function confirmar() {
-    if (!kmValido) { toast('El kilometraje debe ser un número', 'error'); return; }
+    if (!kmValido) { setErrKm('El kilometraje debe ser un número.'); haptic('warning'); return; }
     setEnviando(true);
     setAvisos([]);
     try {
@@ -164,8 +168,9 @@ export function CerrarOTSheet({ ot, open, onClose, usuario }: { ot: OrdenTrabajo
       <div className="ot-form">
         <label className="ot-form__campo">
           <span className="ot-form__etiqueta">Kilometraje de salida</span>
-          <TextInput type="number" inputMode="numeric" min="0" value={km} onChange={e => setKm(e.target.value)} placeholder="0" />
+          <TextInput type="number" inputMode="numeric" min="0" value={km} onChange={e => { setKm(e.target.value); setErrKm(undefined); }} placeholder="0" />
         </label>
+        {errKm && <p role="alert" style={{ margin: 0, fontSize: 12, color: 'var(--red-ink)' }}>{errKm}</p>}
         <label className="ot-form__campo">
           <span className="ot-form__etiqueta">Observaciones finales de entrega</span>
           <TextInput value={comentario} onChange={e => setComentario(e.target.value)} placeholder="Trabajo entregado, pendientes, recomendaciones…" />
