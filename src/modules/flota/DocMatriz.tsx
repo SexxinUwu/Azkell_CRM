@@ -3,11 +3,9 @@ import { FileSpreadsheet } from 'lucide-react';
 import { exportarExcel } from '../../core/lib/excel';
 import { DOCS, colorDoc, textoDias } from './docsEstado';
 import type { FilaExpediente } from './DocExpediente';
+import { formatFechaPe } from '../../core/lib/format';
 
-const fechaCorta = (f: string | null | undefined) => {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(f ?? ''));
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : '—';
-};
+const fechaCorta = formatFechaPe;
 const celda = (v: unknown) => (v == null || String(v).trim() === '' || String(v).trim() === '---' ? '—' : String(v).trim());
 
 /** Datos generales de la unidad, en el mismo orden que la matriz de la versión actual */
@@ -84,7 +82,7 @@ export function DocMatriz({ filas }: { filas: FilaExpediente[] }) {
                     <td key={`${v.placa}-${d.clave}-venc`} className="doc-matriz__mono">{registrado ? fechaCorta(String(v[d.vencimiento] ?? '')) : '—'}</td>,
                     <td key={`${v.placa}-${d.clave}-dias`} title={doc ? textoDias(doc.estado) : ''}>
                       {registrado && doc && doc.estado.dias != null
-                        ? <span className="doc-dias" style={{ background: `${doc.estado.color}22`, color: doc.estado.color }}>{doc.estado.dias}</span>
+                        ? <span className="doc-dias" style={{ background: `color-mix(in srgb, ${doc.estado.color} 13%, transparent)`, color: doc.estado.color }}>{doc.estado.dias}</span>
                         : <span className="doc-dias doc-dias--vacio">—</span>}
                     </td>,
                   ];

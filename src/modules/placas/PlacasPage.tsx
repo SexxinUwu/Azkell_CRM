@@ -157,7 +157,7 @@ export function PlacasPage() {
           <div className="placas-resumen">
             {([
               { label: 'Activas', value: resumen.activas, tone: 'green', filtro: null },
-              { label: 'Motoras', value: resumen.motoras, tone: 'accent', filtro: 'motoras' },
+              { label: 'Motoras', value: resumen.motoras, tone: 'blue', filtro: 'motoras' },
               { label: 'No motoras', value: resumen.noMotoras, tone: 'ink', filtro: 'no-motoras' },
               { label: 'Inactivas', value: resumen.total - resumen.activas, tone: 'gray', filtro: null },
             ] as Array<{ label: string; value: number; tone: string; filtro: Clase | null }>).map((k, i) => {

@@ -9,9 +9,11 @@ import { useHistorialDocumentos, type RegistroHistorial, type VehiculoFlota } fr
 import {
   COLOR_PERSONALIZADO, colorDoc, textoDias, type DocPersonalizado, type EstadoDoc, type MetaVehiculo,
 } from './docsEstado';
+import { formatFechaPe } from '../../core/lib/format';
+import { haptic } from '../../core/lib/haptics';
 
 /** AAAA-MM-DD → DD/MM/AAAA; cualquier otro texto se muestra igual */
-const fechaLegible = (t: string) => (/^\d{4}-\d{2}-\d{2}/.test(t) ? t.slice(0, 10).split('-').reverse().join('/') : t);
+const fechaLegible = (t: string) => (/^\d{4}-\d{2}-\d{2}/.test(t) ? formatFechaPe(t) : t);
 const esUrl = (t: string | null | undefined): t is string => !!t && /^https?:\/\//.test(t);
 /** Texto para comparar tipos: sin acentos, espacios ni signos */
 const norma = (s: string) => s.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Z0-9]/g, '');
@@ -56,8 +58,8 @@ export function DocExpediente({ filas, placa, onElegir, puedeEditar, onCargar, o
           const activa = seleccion.v.placa === u.placa;
           return (
             <li key={u.placa}>
-              <button type="button" className={`doc-unidad${activa ? ' doc-unidad--activa' : ''}`} onClick={() => onElegir(u.placa)} aria-current={activa}>
-                <span className="doc-unidad__icono" style={{ background: `${m.peor.color}1f`, color: m.peor.color }} aria-hidden><FileText size={17} strokeWidth={1.9} /></span>
+              <button type="button" className={`doc-unidad pressable${activa ? ' doc-unidad--activa' : ''}`} onClick={() => { haptic('selection'); onElegir(u.placa); }} aria-current={activa}>
+                <span className="doc-unidad__icono" style={{ background: `color-mix(in srgb, ${m.peor.color} 12%, transparent)`, color: m.peor.color }} aria-hidden><FileText size={17} strokeWidth={1.9} /></span>
                 <LicensePlate plate={u.placa} size="sm" />
                 <span className="doc-punto" style={{ background: m.peor.color }} title={m.peor.texto} aria-hidden />
               </button>

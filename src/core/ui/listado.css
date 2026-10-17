@@ -29,6 +29,7 @@
 .placas-kpi__label { font-size: 0.8125rem; color: var(--label-2); }
 .placas-kpi--green .placas-kpi__valor { color: var(--green-ink); }
 .placas-kpi--accent .placas-kpi__valor { color: var(--accent-ink); }
+.placas-kpi--blue .placas-kpi__valor { color: var(--blue-ink); }
 .placas-kpi--gray .placas-kpi__valor { color: var(--label-3); }
 
 /* ─── Barra de filtros ─── */

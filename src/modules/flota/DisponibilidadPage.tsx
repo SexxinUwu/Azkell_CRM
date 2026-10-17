@@ -4,7 +4,7 @@ import './disponibilidad.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
-import { BarChart3, LayoutGrid, Truck } from 'lucide-react';
+import { BarChart3, LayoutGrid } from 'lucide-react';
 import { ArrowUpRight, Briefcase, FileSpreadsheet, FileText, Gauge, MapPin, MessageCircle, Navigation, Pencil, Plus, RefreshCw, SearchX, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -25,6 +25,7 @@ import { estadoDispColor, useDisponibilidad, useUbicacionesGps, type UbicacionGp
 import { DisponibilidadFormulario } from './DisponibilidadFormulario';
 import { compartirDisponibilidadPDF, descargarDisponibilidadPDF } from './disponibilidadReporte';
 import { cifrasDisponibilidad, estadoDeTexto, unidadesDe, type Estado } from './disponibilidadCifras';
+import { LicensePlate } from '../../core/ui/LicensePlate';
 
 type Filtro = 'Todos' | Estado;
 const COLOR_ESTADO: Record<Estado, string> = { 'En Base': 'green', 'En Ruta': 'blue', 'En Mantenimiento': 'red' };
@@ -210,7 +211,7 @@ export function DisponibilidadPage() {
         <div className="disp-pagina" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
           <div className="disp-kpis">
             {kpis.map((k, i) => (
-              <motion.button key={k.clave} type="button" className={`disp-kpi disp-kpi--${KPI_TONO[k.clave]}`}
+              <motion.button key={k.clave} type="button" className={`disp-kpi pressable disp-kpi--${KPI_TONO[k.clave]}`}
                 aria-pressed={filtro === k.clave}
                 onClick={() => { haptic('selection'); setFiltro(f => (f === k.clave ? 'Todos' : k.clave)); }}
                 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.05 * i }}>
@@ -278,10 +279,10 @@ export function DisponibilidadPage() {
                     {visibles.map((v, i) => {
                       const cat = categoria(v);
                       return (
-                        <tr key={`${v.id ?? i}-${v.placa_camion}`} className="disp-fila" onClick={() => { haptic('selection'); setSeleccionado(v); }}>
+                        <tr key={`${v.id ?? i}-${v.placa_camion}`} className="disp-fila pressable" onClick={() => { haptic('selection'); setSeleccionado(v); }}>
                           <td className="disp-num">{i + 1}</td>
-                          <td>{v.placa_camion ? <span className="disp-placa">{v.placa_camion}</span> : <span className="disp-sin">—</span>}</td>
-                          <td>{v.placa_carreta ? <span className="disp-placa">{v.placa_carreta}</span> : <span className="disp-sin">—</span>}</td>
+                          <td>{v.placa_camion ? <LicensePlate plate={v.placa_camion} size="sm" /> : <span className="disp-sin">—</span>}</td>
+                          <td>{v.placa_carreta ? <LicensePlate plate={v.placa_carreta} size="sm" /> : <span className="disp-sin">—</span>}</td>
                           <td className="disp-conductor">{v.conductor_asignado || <span className="disp-sin">—</span>}</td>
                           <td>
                             <span className={`disp-estado disp-estado--${COLOR_ESTADO[cat]}`}>{v.estado || cat}</span>
@@ -314,10 +315,10 @@ export function DisponibilidadPage() {
                 {visibles.map((v, i) => {
                   const cat = categoria(v);
                   return (
-                    <article key={`${v.id ?? i}-${v.placa_camion}`} className="disp-mcard" onClick={() => { haptic('selection'); setSeleccionado(v); }}>
+                    <article key={`${v.id ?? i}-${v.placa_camion}`} className="disp-mcard pressable" onClick={() => { haptic('selection'); setSeleccionado(v); }}>
                       <div className="disp-mcard__cab">
-                        <span className="disp-placa disp-placa--camion"><Truck size={13} strokeWidth={1.9} />{v.placa_camion || '—'}</span>
-                        {v.placa_carreta && <span className="disp-placa">+ {v.placa_carreta}</span>}
+                        {v.placa_camion ? <LicensePlate plate={v.placa_camion} size="sm" /> : <span className="disp-sin">—</span>}
+                        {v.placa_carreta && <LicensePlate plate={v.placa_carreta} size="sm" />}
                         <span className={`disp-estado disp-estado--${COLOR_ESTADO[cat]}`}>{v.estado || cat}</span>
                         {v.aviso_viaje && <span className="t-caption c-secondary">{v.aviso_viaje}</span>}
                       </div>

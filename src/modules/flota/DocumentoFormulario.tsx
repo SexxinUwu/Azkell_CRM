@@ -43,6 +43,7 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
   const [claveArchivo, setClaveArchivo] = useState(0);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errCampo, setErrCampo] = useState<Record<string, string | undefined>>({});
 
   const fijo = !!(placaInicial && (prefijoInicial || personalizado));
   const esCustom = esPersonalizado(seleccion);
@@ -87,13 +88,14 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
   const nombreTipo = seleccion === TIVE ? 'TIVE' : nombreOtro.trim();
 
   async function guardar() {
-    if (!placa) { setError('Elige la unidad.'); return; }
+    setErrCampo({});
+    if (!placa) { setErrCampo({ placa: 'Elige la unidad.' }); haptic('warning'); return; }
     setEnviando(true); setError(null);
     try {
       if (esCustom) {
-        if (!nombreTipo) { setError('Escribe el nombre del documento.'); return; }
+        if (!nombreTipo) { setErrCampo({ nombre: 'Escribe el nombre del documento.' }); haptic('warning'); return; }
         const { emision, vencimiento } = perso;
-        if (emision && vencimiento && vencimiento < emision) { setError('El vencimiento es anterior a la emisión.'); return; }
+        if (emision && vencimiento && vencimiento < emision) { setErrCampo({ vencimiento: 'El vencimiento es anterior a la emisión.' }); haptic('warning'); return; }
         const url = archivo ? await subirArchivoDocumento(archivo) : (personalizado?.url ?? null);
         await guardarDocumentoPersonalizado({
           placa, tipo: nombreTipo, constancia: perso.constancia, emision, vencimiento, costo: perso.costo, archivoUrl: url, usuario,
@@ -101,9 +103,9 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
         toast(`${nombreTipo} de ${placa} guardado`);
       } else {
         const venc = valores[`${seleccion}_vencimiento`];
-        if (!venc) { setError('Indica la fecha de vencimiento.'); return; }
+        if (!venc) { setErrCampo({ [`${seleccion}_vencimiento`]: 'Indica la fecha de vencimiento.' }); haptic('warning'); return; }
         const ems = valores[`${seleccion}_emision`];
-        if (ems && venc < ems) { setError('El vencimiento es anterior a la emisión.'); return; }
+        if (ems && venc < ems) { setErrCampo({ [`${seleccion}_vencimiento`]: 'El vencimiento es anterior a la emisión.' }); haptic('warning'); return; }
         const url = archivo ? await subirArchivoDocumento(archivo) : null;
         await guardarDocumentoVehiculo({ vehiculo: vehiculo ?? { placa }, prefijo: seleccion, valores, archivoUrl: url, costo, usuario });
         toast(`${cfg?.label ?? 'Documento'} de ${placa} actualizado`);
@@ -126,7 +128,7 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
         <Button variant="primary" onClick={guardar} loading={enviando}>Guardar</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
-        <Field label="Unidad">
+        <Field label="Unidad" error={errCampo.placa}>
           {p => (
             <PlacaPicker {...p} value={placa} onChange={setPlaca} disabled={fijo} opciones={opcionesPlaca.map(x => ({ placa: x }))} />
           )}
@@ -142,7 +144,7 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
         </Field>
 
         {seleccion === OTRO && (
-          <Field label="Nombre del documento" wide>
+          <Field label="Nombre del documento" wide error={errCampo.nombre}>
             {p => <TextInput {...p} value={nombreOtro} onChange={e => setNombreOtro(e.target.value)} disabled={fijo} />}
           </Field>
         )}
@@ -155,7 +157,7 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
             <Field label="Emisión">
               {p => <TextInput {...p} type="date" value={perso.emision} onChange={e => setPerso(x => ({ ...x, emision: e.target.value }))} />}
             </Field>
-            <Field label="Vencimiento" hint="Opcional: sin fecha, el documento queda permanente">
+            <Field label="Vencimiento" error={errCampo.vencimiento} hint="Opcional: sin fecha, el documento queda permanente">
               {p => <TextInput {...p} type="date" value={perso.vencimiento} onChange={e => setPerso(x => ({ ...x, vencimiento: e.target.value }))} />}
             </Field>
             <Field label="Costo / Pago (S/)">
@@ -165,7 +167,7 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
         )}
 
         {cfg?.campos.map(c => (
-          <Field key={c.campo} label={c.label} wide={c.tipo === 'text' && c.campo.endsWith('entidad')}>
+          <Field key={c.campo} label={c.label} wide={c.tipo === 'text' && c.campo.endsWith('entidad')} error={errCampo[c.campo]}>
             {p => (
               <TextInput {...p}
                 type={c.tipo === 'date' ? 'date' : c.tipo === 'number' ? 'number' : 'text'}

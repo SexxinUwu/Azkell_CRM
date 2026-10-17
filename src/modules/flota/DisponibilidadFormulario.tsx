@@ -47,6 +47,7 @@ export function DisponibilidadFormulario({ veh, usuario, open, onClose }: {
   const [obs, setObs] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errPlacas, setErrPlacas] = useState<string | undefined>();
   // Conductor de la última orden de viaje de la placa (null mientras consulta). Solo se aplica en registro nuevo y si la persona no lo cambió.
   const [sugerido, setSugerido] = useState<string | null>(null);
   const [conductorTocado, setConductorTocado] = useState(false);
@@ -84,8 +85,8 @@ export function DisponibilidadFormulario({ veh, usuario, open, onClose }: {
 
   async function guardar() {
     const cam = norm(camion), car = norm(carreta);
-    if (!cam && !car) { setError('Ingresa al menos la placa del camión o la de la carreta.'); return; }
-    setEnviando(true); setError(null);
+    if (!cam && !car) { setErrPlacas('Ingresa al menos la placa del camión o la de la carreta.'); haptic('warning'); return; }
+    setEnviando(true); setError(null); setErrPlacas(undefined);
     const body = {
       id: veh?.id ?? null, placa_camion: cam, placa_carreta: car,
       placa_camion_orig: norm(veh?.placa_camion ?? ''), placa_carreta_orig: norm(veh?.placa_carreta ?? ''),
@@ -114,11 +115,11 @@ export function DisponibilidadFormulario({ veh, usuario, open, onClose }: {
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
         {veh?.aviso_viaje && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{veh.aviso_viaje}</Notice></div>}
-        <Field label="Placa del camión">
-          {p => <PlacaPicker {...p} value={camion} onChange={setCamion} opciones={camiones} placeholder="Elige el camión" />}
+        <Field label="Placa del camión" error={errPlacas}>
+          {p => <PlacaPicker {...p} value={camion} onChange={v => { setCamion(v); setErrPlacas(undefined); }} opciones={camiones} placeholder="Elige el camión" />}
         </Field>
         <Field label="Placa de la carreta">
-          {p => <PlacaPicker {...p} value={carreta} onChange={setCarreta} opciones={carretas} placeholder="Elige la carreta" />}
+          {p => <PlacaPicker {...p} value={carreta} onChange={v => { setCarreta(v); setErrPlacas(undefined); }} opciones={carretas} placeholder="Elige la carreta" />}
         </Field>
         <Field label="Conductor asignado" wide hint={
           sugerido === null ? undefined

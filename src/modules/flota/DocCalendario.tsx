@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { COLOR_PERSONALIZADO, DOCS, colorDoc, estadoDeFecha, type EstadoDoc } from './docsEstado';
 import type { FilaExpediente } from './DocExpediente';
+import { formatFechaPe } from '../../core/lib/format';
 
 const OTROS = 'otros';
 interface Evento { placa: string; clave: string; corto: string; titulo: string; color: string; fecha: string; estado: EstadoDoc }
@@ -158,7 +159,7 @@ export function DocCalendario({ filas, onElegir }: { filas: FilaExpediente[]; on
                     <span className="doc-cal__agenda-icono" style={{ color: e.color }}>●</span>
                     <span className="doc-cal__agenda-texto">
                       <strong>{e.placa} · {e.corto}</strong>
-                      <span>Vence: {e.fecha.split('-').reverse().join('/')}</span>
+                      <span>Vence: {formatFechaPe(e.fecha)}</span>
                     </span>
                     <span className="doc-cal__chip" style={{ color: e.estado.color, borderColor: e.estado.color }}>{e.estado.texto}</span>
                   </button>

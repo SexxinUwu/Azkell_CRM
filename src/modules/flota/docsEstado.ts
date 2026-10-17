@@ -14,7 +14,7 @@ export interface EstadoDoc {
 }
 
 export const COLOR_CLAVE: Record<Clave, string> = {
-  vigente: '#10b981', alerta: '#f59e0b', critico: '#ea580c', vencido: '#ef4444', sin: '#94a3b8',
+  vigente: 'var(--green-ink)', alerta: 'var(--amber-ink)', critico: 'var(--amber-ink)', vencido: 'var(--red-ink)', sin: 'var(--label-3)',
 };
 
 const SIN_INFO: EstadoDoc = { clave: 'sin', texto: 'Sin información', score: -1, color: COLOR_CLAVE.sin, dias: null };
@@ -155,7 +155,7 @@ export function textoDias(e: EstadoDoc) {
 }
 
 /** Color de cada tipo de documento (el mismo en el expediente, la matriz y el calendario) */
-const PALETA_DOC = ['#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#0ea5e9', '#84cc16', '#f97316'];
+const PALETA_DOC = ['#3b82f6', '#8b5cf6', '#ec4899', '#0ea5e9', '#14b8a6', '#6366f1', '#a855f7', '#06b6d4', '#d946ef'];
 export const colorDoc = (num: number) => PALETA_DOC[(num - 1) % PALETA_DOC.length];
 /** Documentos personalizados: gris neutro, para distinguirlos de los estándar */
 export const COLOR_PERSONALIZADO = '#64748b';

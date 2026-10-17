@@ -131,7 +131,7 @@ export function DocumentosPage() {
         <div className="doc-pagina">
           <div className="disp-kpis">
             {kpis.map(k => (
-              <button key={k.clave} type="button" className={`disp-kpi disp-kpi--${k.tono === 'amber' ? 'amber' : k.tono}`}
+              <button key={k.clave} type="button" className={`disp-kpi pressable disp-kpi--${k.tono === 'amber' ? 'amber' : k.tono}`}
                 aria-pressed={grupo === k.clave}
                 onClick={() => { haptic('selection'); setGrupo(g => (g === k.clave && k.clave !== 'todos' ? 'todos' : k.clave)); }}>
                 <span>

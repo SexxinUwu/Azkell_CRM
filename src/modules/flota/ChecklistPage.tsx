@@ -20,6 +20,7 @@ import { fallaEstadoColor, useChecklist, useConfigSistemas, type ReporteFalla } 
 import { ReporteFallaNuevo } from './ReporteFallaNuevo';
 import { GenerarOTsSheet } from './GenerarOTsSheet';
 import { leerFallas, pdfFman, textoFman, type FallaGuardada } from './fman';
+import { formatFechaHoraPe } from '../../core/lib/format';
 
 const TODOS = 'Todos';
 
@@ -82,7 +83,7 @@ export function ChecklistPage() {
     try {
       await exportarExcel('Reporte-de-fallas', 'Reportes',
         ['Folio', 'Fecha', 'Estado', 'Tracto', 'Remolque', 'Conductor', 'Procedencia', 'Km inicial', 'Km final', 'Orden de viaje', 'Fallas / observaciones'],
-        visibles.map(f => [f.folio, String(f.fecha_reporte ?? '').split('T')[0], f.estado, f.placa_tracto, f.placa_remolque,
+        visibles.map(f => [f.folio, formatFechaHoraPe(f.fecha_reporte), f.estado, f.placa_tracto, f.placa_remolque,
           f.conductor, f.procedencia, f.km_inicial, f.km_final, f.orden_viaje, f.fallas_libres_text]));
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
@@ -160,7 +161,7 @@ export function ChecklistPage() {
             <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
               {estados.map(e => (
                 <button key={e} type="button"
-                  className={`chip${filtroEstado === e ? ' chip--active' : ''}`}
+                  className={`chip pressable${filtroEstado === e ? ' chip--active' : ''}`}
                   onClick={() => { setFiltroEstado(e); haptic('selection'); }}>
                   {e}
                 </button>
@@ -172,7 +173,7 @@ export function ChecklistPage() {
             <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }} aria-label="Empresa">
               {empresas.map(e => (
                 <button key={e} type="button"
-                  className={`chip${filtroEmpresa === e ? ' chip--active' : ''}`}
+                  className={`chip pressable${filtroEmpresa === e ? ' chip--active' : ''}`}
                   onClick={() => { setFiltroEmpresa(e); haptic('selection'); }}>
                   {e === TODOS ? 'Todas las empresas' : e}
                 </button>
@@ -198,7 +199,7 @@ export function ChecklistPage() {
                   : (f.fallas_libres_text ?? '');
                 return (
                   <button key={String(f.id ?? i)} type="button"
-                    className="ot-fila"
+                    className="ot-fila pressable"
                     onClick={() => { haptic('selection'); setSeleccionadoId(f.id); }}>
                     <div className="ot-fila__icono" style={{ background: `var(--${color}-tint)`, color: `var(--${color}-ink)` }}>
                       <ClipboardCheck size={16} />
@@ -221,7 +222,7 @@ export function ChecklistPage() {
                     <div className="ot-fila__derecha">
                       <span className={`ot-estado ot-estado--${color}`}>{f.estado}</span>
                       <span className="ot-fila__sub" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--label-2)' }}>{f.folio}</span>
-                      {f.fecha_reporte && <span className="ot-fila__fecha">{String(f.fecha_reporte).split('T')[0]}</span>}
+                      {f.fecha_reporte && <span className="ot-fila__fecha">{formatFechaHoraPe(f.fecha_reporte)}</span>}
                     </div>
                   </button>
                 );
@@ -267,7 +268,7 @@ function FallaDetalle({ falla, pdfListo, onVolver, onEditar, onEliminar, onGener
       <div className="ot-ficha__hero">
         <span className={`ot-estado ot-estado--${color}`}>{falla.estado}</span>
         <h2 className="ot-ficha__placa">{placa}</h2>
-        <span className="ot-ficha__id">{falla.folio}{falla.fecha_reporte ? ` · ${String(falla.fecha_reporte).split('T')[0]}` : ''}</span>
+        <span className="ot-ficha__id">{falla.folio}{falla.fecha_reporte ? ` · ${formatFechaHoraPe(falla.fecha_reporte)}` : ''}</span>
       </div>
 
       <div>
