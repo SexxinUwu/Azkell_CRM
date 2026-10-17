@@ -106,7 +106,7 @@ export function ConductoresPage() {
             {[
               { label: 'Activos', value: resumen.activos, tone: 'green' },
               { label: 'Inactivos', value: resumen.inactivos, tone: 'gray' },
-              { label: 'Con licencia', value: resumen.conLicencia, tone: 'accent' },
+              { label: 'Con licencia', value: resumen.conLicencia, tone: 'blue' },
               { label: 'Sin DNI', value: resumen.sinDni, tone: resumen.sinDni ? 'amber' : 'gray' },
             ].map((k, i) => (
               <motion.div key={k.label} className={`placas-kpi placas-kpi--${k.tone}`}

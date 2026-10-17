@@ -9,9 +9,17 @@ import { spring } from '../../core/lib/motion';
 import { alertasDe, antiguedad, ASIGNACION_FAMILIAR, edad, etiqueta, nombreCompleto, OPCIONES, whatsapp, type Persona } from './api';
 import { descargarVCard, imprimirFicha, imprimirFotocheck } from './documentos';
 import { FotoPersona } from './FotoPersona';
+import { formatFechaPe, formatSoles } from '../../core/lib/format';
+import { estadoDeFecha } from '../flota/docsEstado';
 
-const fechaPe = (iso: string) => (iso ? new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`)).replace('.', '') : '');
-const soles = (v: string | number) => `S/ ${Number(v || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fechaPe = (iso: string) => (iso ? formatFechaPe(iso) : '');
+const soles = (v: string | number) => formatSoles(Number(v || 0));
+
+/** Fecha de vencimiento con su estado: verde vigente, ámbar por vencer, rojo vencido */
+const vigencia = (iso: string) => {
+  const e = estadoDeFecha(iso);
+  return <span style={{ color: e.color, fontWeight: 600 }}>{fechaPe(iso)} · {e.texto}</span>;
+};
 
 /** Fila al estilo Contactos: etiqueta pequeña arriba, valor debajo (enlace si se puede tocar) */
 const vacio = (v: ReactNode) => v == null || v === '' || v === false;
@@ -175,9 +183,9 @@ export function PersonaTarjeta({ persona: p, onEditar, onEliminar, onVolver, ver
 
         <Grupo titulo="Salud y seguridad">
           <Dato label="grupo sanguíneo">{p.grupo_sanguineo && etiqueta(OPCIONES.grupoSanguineo, p.grupo_sanguineo)}</Dato>
-          <Dato label="examen médico">{[etiqueta(OPCIONES.emo, p.emo_condicion), p.emo_fecha_vencimiento && `vence ${fechaPe(p.emo_fecha_vencimiento)}`].filter(Boolean).join(' · ')}</Dato>
+          <Dato label="examen médico">{etiqueta(OPCIONES.emo, p.emo_condicion) || p.emo_fecha_vencimiento ? <>{etiqueta(OPCIONES.emo, p.emo_condicion)}{etiqueta(OPCIONES.emo, p.emo_condicion) && p.emo_fecha_vencimiento ? ' · ' : ''}{p.emo_fecha_vencimiento ? <>vence {vigencia(p.emo_fecha_vencimiento)}</> : null}</> : null}</Dato>
           <Dato label="SCTR">{`Salud ${p.sctr_salud_vigente ? 'cubierto' : 'sin cobertura'} · Pensión ${p.sctr_pension_vigente ? 'cubierto' : 'sin cobertura'}`}</Dato>
-          <Dato label="brevete" mono>{[p.licencia_conducir, p.licencia_categoria, p.licencia_vencimiento && `vence ${fechaPe(p.licencia_vencimiento)}`].filter(Boolean).join(' · ')}</Dato>
+          <Dato label="brevete" mono>{[p.licencia_conducir, p.licencia_categoria].filter(Boolean).join(' · ') || p.licencia_vencimiento ? <>{[p.licencia_conducir, p.licencia_categoria].filter(Boolean).join(' · ')}{[p.licencia_conducir, p.licencia_categoria].some(Boolean) && p.licencia_vencimiento ? ' · ' : ''}{p.licencia_vencimiento ? <>vence {vigencia(p.licencia_vencimiento)}</> : null}</> : null}</Dato>
           <Dato label="tallas de EPP">{[p.talla_polo && `Polo ${p.talla_polo}`, p.talla_pantalon && `Pantalón ${p.talla_pantalon}`, p.talla_calzado && `Calzado ${p.talla_calzado}`, p.talla_chaleco && `Chaleco ${etiqueta(OPCIONES.tallaChaleco, p.talla_chaleco)}`].filter(Boolean).join(' · ')}</Dato>
         </Grupo>
 

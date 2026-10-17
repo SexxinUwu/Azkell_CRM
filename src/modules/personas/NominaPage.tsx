@@ -14,6 +14,7 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
+import { formatFechaPe, formatSoles } from '../../core/lib/format';
 
 interface Fila {
   id: number; nombre_completo: string; documento: string; cargo: string; rol: string;
@@ -30,8 +31,8 @@ interface Sst {
 }
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-const s = (v: unknown) => 'S/ ' + (Number(v) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const dia = (x: string | null) => (x ? String(x).slice(0, 10) : '—');
+const s = (v: unknown) => formatSoles(Number(v) || 0);
+const dia = (x: string | null) => formatFechaPe(x);
 
 type Vista = 'planilla' | 'sst';
 
@@ -137,7 +138,7 @@ export function NominaPage() {
           ) : (
             <div className="tarjeta__lista">
               {filas.map(f => (
-                <button key={f.id} type="button" className="mov-fila" onClick={() => { haptic('selection'); setBoleta(f); }}>
+                <button key={f.id} type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setBoleta(f); }}>
                   <div className="mov-fila__icon" style={{ background: 'var(--fill)', color: 'var(--label-2)' }}><Receipt size={16} /></div>
                   <div className="mov-fila__cuerpo">
                     <span className="mov-fila__titulo">{f.nombre_completo}</span>
@@ -222,6 +223,7 @@ function SstSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errCampo, setErrCampo] = useState<Record<string, string | undefined>>({});
 
   useEffect(() => {
     if (!open) return;
@@ -229,8 +231,9 @@ function SstSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   }, [open]);
 
   async function guardar() {
-    if (!pid) { setError('Elige al colaborador.'); return; }
-    if (!desc.trim()) { setError('Describe la constancia.'); return; }
+    setErrCampo({});
+    if (!pid) { setErrCampo({ pid: 'Elige al colaborador.' }); haptic('warning'); return; }
+    if (!desc.trim()) { setErrCampo({ desc: 'Describe la constancia.' }); haptic('warning'); return; }
     setEnviando(true); setError(null);
     try {
       const f = new FormData();
@@ -252,16 +255,16 @@ function SstSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
         <Button variant="primary" onClick={guardar} loading={enviando}>Guardar</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
-        <Field label="Colaborador" wide>
+        <Field label="Colaborador" wide error={errCampo.pid}>
           {p => (
-            <SelectInput {...p} value={pid} onChange={e => setPid(e.target.value)}>
+            <SelectInput {...p} value={pid} onChange={e => { setPid(e.target.value); setErrCampo({}); }}>
               <option value="">Elige…</option>
               {(personal.data ?? []).map(x => <option key={x.id} value={x.id}>{x.apellidos}, {x.nombres} ({x.categoria_rol})</option>)}
             </SelectInput>
           )}
         </Field>
         <Field label="Tipo" wide>{p => <SelectInput {...p} value={tipo} onChange={e => setTipo(e.target.value)}>{TIPOS_SST.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</SelectInput>}</Field>
-        <Field label="Descripción" wide>{p => <TextInput {...p} value={desc} onChange={e => setDesc(e.target.value)} />}</Field>
+        <Field label="Descripción" wide error={errCampo.desc}>{p => <TextInput {...p} value={desc} onChange={e => { setDesc(e.target.value); setErrCampo({}); }} />}</Field>
         <Field label="Fecha">{p => <TextInput {...p} type="date" value={fecha} onChange={e => setFecha(e.target.value)} />}</Field>
         <Field label="Vencimiento">{p => <TextInput {...p} type="date" value={venc} min={fecha} onChange={e => setVenc(e.target.value)} />}</Field>
         <Field label="Cargo firmado (PDF o foto)" wide hint={archivo?.name}>{p => <TextInput {...p} type="file" accept="image/*,application/pdf" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />}</Field>
