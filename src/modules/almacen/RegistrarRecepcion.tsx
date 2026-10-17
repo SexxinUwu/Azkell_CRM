@@ -9,6 +9,7 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { registrarRecepcion, useAlmacenesLista, useTipoCambioSunat, type RecepcionOC } from './api';
+import { formatSoles } from '../../core/lib/format';
 
 const ahoraLocal = () => {
   const d = new Date();
@@ -34,6 +35,8 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errLinea, setErrLinea] = useState<Record<number, string | undefined>>({});
+  const [errTc, setErrTc] = useState<string | undefined>();
   const esUSDOc = !!oc && String(oc.moneda).toUpperCase() === 'USD';
   const tcSunat = useTipoCambioSunat(open && esUSDOc);
 
@@ -62,10 +65,15 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
   async function enviar() {
     if (!oc) return;
     const envio = [];
+    const lineasMal: Record<number, string | undefined> = {};
+    for (const { it, i } of pendientes) {
+      if (num(cant[i] ?? '') > it.pendiente + 1e-9) lineasMal[i] = `No puedes recibir más del saldo pendiente (${fmt(it.pendiente)}).`;
+    }
+    setErrLinea(lineasMal);
+    if (Object.values(lineasMal).some(Boolean)) { haptic('warning'); return; }
     for (const { it, i } of pendientes) {
       const c = num(cant[i] ?? '');
       if (c <= 0) continue;
-      if (c > it.pendiente + 1e-9) { setError(`"${it.descripcion}": no puedes recibir más del saldo pendiente (${fmt(it.pendiente)}).`); return; }
       envio.push({
         inventario_id: it.inventario_id, descripcion: it.descripcion, cantidad_recibida: c,
         costo_unitario: it.costo_unitario, moneda: it.moneda, almacen: alm[i] || oc.almacen || 'ALM CENTRAL',
@@ -73,9 +81,9 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
     }
     if (!envio.length) { setError('Escribe una cantidad mayor a 0 en al menos un ítem.'); return; }
     const esUSD = String(oc.moneda).toUpperCase() === 'USD';
-    if (esUSD && !(Number(tc) > 0)) { setError('Indique el tipo de cambio del día (S/ por USD).'); return; }
+    if (esUSD && !(Number(tc) > 0)) { setErrTc('Indica el tipo de cambio del día.'); haptic('warning'); return; }
     const pendienteTotal = items.reduce((s, it) => s + it.pendiente, 0);
-    setEnviando(true); setError(null);
+    setEnviando(true); setError(null); setErrTc(undefined);
     try {
       await registrarRecepcion({
         oc_id: oc.id, fecha_recepcion: fecha, usuario, observacion: obs.trim(), almacen: envio[0].almacen,
@@ -117,7 +125,7 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
                 </span>
                 <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center', flexWrap: 'wrap' }}>
                   <TextInput inputMode="decimal" placeholder="0" aria-label={`Cantidad recibida de ${it.descripcion}`}
-                    value={cant[i] ?? ''} onChange={e => setCant(c => ({ ...c, [i]: e.target.value }))}
+                    value={cant[i] ?? ''} onChange={e => { setCant(c => ({ ...c, [i]: e.target.value })); setErrLinea(l => ({ ...l, [i]: undefined })); }}
                     style={{ width: '6rem', textAlign: 'right' }} />
                   <button type="button" className="placas-limpiar" onClick={() => setCant(c => ({ ...c, [i]: String(it.pendiente) }))}>
                     Todo ({fmt(it.pendiente)})
@@ -129,6 +137,7 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
                     </SelectInput>
                   )}
                 </div>
+                {errLinea[i] && <p role="alert" style={{ margin: 0, fontSize: 12, color: 'var(--red-ink)' }}>{errLinea[i]}</p>}
               </div>
             ))}
           </div>
@@ -148,15 +157,15 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
               {p => <TextInput {...p} type="file" accept="image/*,application/pdf" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />}
             </Field>
             {String(oc.moneda).toUpperCase() === 'USD' && (
-              <Field label="Tipo de cambio del día (S/ por USD)" hint={tcSunat.data ? `SUNAT ${tcSunat.data.fecha} · puede cambiarlo` : tcSunat.isError ? 'SUNAT no disponible: referencia 3.75' : 'Consultando SUNAT…'}>
-                {p => <TextInput {...p} inputMode="decimal" placeholder="3.75" value={tc} onChange={e => setTc(e.target.value)} />}
+              <Field label="Tipo de cambio del día (S/ por USD)" error={errTc} hint={tcSunat.data ? `SUNAT ${tcSunat.data.fecha} · puede cambiarlo` : tcSunat.isError ? 'SUNAT no disponible: referencia 3.75' : 'Consultando SUNAT…'}>
+                {p => <TextInput {...p} inputMode="decimal" placeholder="3.75" value={tc} onChange={e => { setTc(e.target.value); setErrTc(undefined); }} />}
               </Field>
             )}
             {String(oc.moneda).toUpperCase() === 'USD' && (
-              <div className="field field--wide" aria-live="polite" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-3)', padding: 'var(--s-3) var(--s-4)', borderRadius: 'var(--r-lg)', background: 'var(--accent-tint)', color: 'var(--accent-ink)' }}>
+              <div className="field field--wide" aria-live="polite" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-3)', padding: 'var(--s-3) var(--s-4)', borderRadius: 'var(--r-lg)', background: 'var(--fill)', color: 'var(--ink)' }}>
                 <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>Equivale a</span>
                 <strong className="t-numeric" style={{ fontSize: '1.125rem' }}>
-                  S/ {(pendientes.reduce((s2, { i, it }) => s2 + num(cant[i] ?? '') * (Number(it.costo_unitario) || 0), 0) * num(tc)).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatSoles(pendientes.reduce((s2, { i, it }) => s2 + num(cant[i] ?? '') * (Number(it.costo_unitario) || 0), 0) * num(tc))}
                 </strong>
               </div>
             )}

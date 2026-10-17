@@ -21,6 +21,7 @@ import {
 } from './api';
 import { EntradaFormulario } from './EntradaFormulario';
 import { pdfEntrada } from './entradaPdf';
+import { formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
 
 /** Permisos para aprobar (V°B°): el mismo acceso que el menú de Aprobación de O/C (gerencia) o su módulo de aprobación */
 const PERMISOS_APROBAR = ['gerencia.ver', 'aprob_oc.crear', 'aprob_oc.editar'];
@@ -37,12 +38,11 @@ const estadoTono = (estado: string | null) => {
 
 function FechaCorta({ fecha }: { fecha: string | null }) {
   if (!fecha) return <>—</>;
-  return <>{fecha.split('T')[0]}</>;
+  return <>{formatFechaPe(fecha)}</>;
 }
 
 function MontoFmt({ monto, moneda }: { monto: number; moneda: string }) {
-  const fmt = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return <>{moneda === 'USD' ? 'US$ ' : 'S/ '}{fmt.format(monto)}</>;
+  return <>{formatMoneda(monto, moneda)}</>;
 }
 
 export function EntradasPage() {
@@ -184,7 +184,7 @@ export function EntradasPage() {
             </div>
             <div className="inv-metrica">
               <span className="inv-metrica__num" style={{ fontSize: '1.25rem' }}>
-                S/ {new Intl.NumberFormat('es-PE', { maximumFractionDigits: 0 }).format(resumen.monto)}
+                {formatSoles(resumen.monto)}
               </span>
               <span className="inv-metrica__label">Monto total</span>
             </div>
@@ -211,7 +211,7 @@ export function EntradasPage() {
               <AnimatePresence initial={false}>
                 {visibles.map(e => (
                   <motion.div key={e.id} layout={!reduce} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring}>
-                    <button type="button" className="mov-fila" onClick={() => { haptic('selection'); setSeleccionada(e); }}>
+                    <button type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setSeleccionada(e); }}>
                       <div className="mov-fila__icon" style={{ background: `var(--${estadoTono(e.estado)}-tint)`, color: `var(--${estadoTono(e.estado)}-ink)` }}>
                         <PackagePlus size={16} />
                       </div>
@@ -297,7 +297,7 @@ function EntradaDetalle({ entrada: e, onVolver, onEditar, onEliminar, onAprobar,
   const total = e.items?.reduce((s, i) => s + (i.importe || 0), 0) ?? e.total_pen;
   const { data: proveedores } = useProveedores();
   const proveedor = (proveedores ?? []).find(p => p.id === e.proveedor_id) ?? null;
-  const simbolo = e.moneda === 'USD' ? 'US$ ' : 'S/ ';
+  const dinero = (n: number) => formatMoneda(n, e.moneda);
   const { user } = useAuth();
   const toast = useToast();
   const empresa = useEmpresaDocumentos().data ?? null;
@@ -350,7 +350,7 @@ function EntradaDetalle({ entrada: e, onVolver, onEditar, onEliminar, onAprobar,
         <p className="tarjeta__grupo-titulo">Datos generales</p>
         <div className="tarjeta__lista">
           <div className="dato"><span className="dato__label">Tipo</span><span className="dato__valor">{tipoDeOrden(e.tipo_orden)}</span></div>
-          {e.fecha && <div className="dato"><span className="dato__label">Fecha</span><span className="dato__valor">{e.fecha.split('T')[0]}</span></div>}
+          {e.fecha && <div className="dato"><span className="dato__label">Fecha</span><span className="dato__valor">{formatFechaPe(e.fecha)}</span></div>}
           {e.documento_referencia && <div className="dato"><span className="dato__label">N° documento</span><span className="dato__valor dato__valor--mono">{e.documento_referencia}</span></div>}
           <div className="dato"><span className="dato__label">Condición de pago</span><span className="dato__valor">{e.condicion_pago || 'Al contado'}{e.condicion_pago?.startsWith('A cr') && e.dias_credito ? ` · ${e.dias_credito} días` : ''}</span></div>
           <div className="dato"><span className="dato__label">Moneda</span><span className="dato__valor">{e.moneda === 'USD' ? `Dólares · TC ${e.tipo_cambio ?? '—'}` : 'Soles'}</span></div>
@@ -383,10 +383,10 @@ function EntradaDetalle({ entrada: e, onVolver, onEditar, onEliminar, onAprobar,
                     </td>
                     <td style={{ textAlign: 'right' }}>{it.cantidad} {it.item_unidad ?? ''}</td>
                     <td style={{ textAlign: 'right', color: 'var(--label-2)' }}>
-                      {it.moneda === 'USD' ? 'US$ ' : 'S/ '}{(it.costo_unitario ?? 0).toFixed(2)}
+                      {formatMoneda(it.costo_unitario ?? 0, it.moneda)}
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                      {simbolo}{(it.importe ?? 0).toFixed(2)}
+                      {dinero(it.importe ?? 0)}
                     </td>
                   </tr>
                 ))}
@@ -395,7 +395,7 @@ function EntradaDetalle({ entrada: e, onVolver, onEditar, onEliminar, onAprobar,
                 <tr>
                   <td colSpan={3} style={{ textAlign: 'right', fontWeight: 700, padding: 'var(--s-2) var(--s-3)' }}>Total</td>
                   <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '1rem', padding: 'var(--s-2) var(--s-3)' }}>
-                    {simbolo}{total.toFixed(2)}
+                    {dinero(total)}
                   </td>
                 </tr>
               </tfoot>

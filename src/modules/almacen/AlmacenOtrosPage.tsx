@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Page, PageHeader } from '../../core/ui/Display';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { abrirClasico } from '../../core/layout/navigation';
+import { haptic } from '../../core/lib/haptics';
 
 interface Tarjeta {
   titulo: string;
@@ -14,11 +15,12 @@ interface Tarjeta {
   esBadge?: string;
 }
 
-function CardModulo({ titulo, descripcion, icon, accion, color = 'var(--accent)', esBadge }: Tarjeta): ReactNode {
+function CardModulo({ titulo, descripcion, icon, accion, color = 'var(--ink)', esBadge }: Tarjeta): ReactNode {
   return (
     <button
       type="button"
-      onClick={accion}
+      className="pressable"
+      onClick={() => { haptic('selection'); accion(); }}
       style={{
         background: 'var(--fill-1)',
         border: '1px solid var(--separator)',
@@ -55,7 +57,7 @@ function CardModulo({ titulo, descripcion, icon, accion, color = 'var(--accent)'
         <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--label-1)', marginBottom: 3 }}>
           {titulo}
           {esBadge && (
-            <span style={{ marginLeft: 6, fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: 20, background: 'var(--accent)', color: '#fff', verticalAlign: 'middle' }}>
+            <span style={{ marginLeft: 6, fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: 20, background: 'var(--ink)', color: '#fff', verticalAlign: 'middle' }}>
               {esBadge}
             </span>
           )}
@@ -74,7 +76,7 @@ export function AlmacenOtrosPage() {
       titulo: 'Proveedores',
       descripcion: 'Directorio de proveedores para las órdenes de compra.',
       icon: <Warehouse size={20} />,
-      color: 'var(--accent)',
+      color: 'var(--ink)',
       accion: () => nav('/almacen/proveedores'),
     },
     {
@@ -97,37 +99,37 @@ export function AlmacenOtrosPage() {
       titulo: 'Familias de productos',
       descripcion: 'Categorías para clasificar el inventario.',
       icon: <Layers size={20} />,
-      color: 'var(--accent)',
+      color: 'var(--ink)',
       accion: () => nav('/almacen/familias'),    },
     {
       titulo: 'Marcas',
       descripcion: 'Marcas registradas en el catálogo de almacén.',
       icon: <Tag size={20} />,
-      color: 'var(--accent)',
+      color: 'var(--ink)',
       accion: () => nav('/almacen/marcas'),    },
     {
       titulo: 'Unidades de medida',
       descripcion: 'Unidades para el manejo de stock (kg, und, lt, etc.).',
       icon: <Ruler size={20} />,
-      color: 'var(--accent)',
+      color: 'var(--ink)',
       accion: () => nav('/almacen/unidades'),    },
     {
       titulo: 'Sistemas del vehículo',
       descripcion: 'Clasificación de sistemas para repuestos y mantenimiento.',
       icon: <Cog size={20} />,
-      color: 'var(--accent)',
+      color: 'var(--ink)',
       accion: () => nav('/almacen/sistemas'),    },
     {
       titulo: 'Almacenes',
       descripcion: 'Configuración de bodegas y ubicaciones físicas.',
       icon: <Warehouse size={20} />,
-      color: 'var(--accent)',
+      color: 'var(--ink)',
       accion: () => nav('/almacen/almacenes'),    },
     {
       titulo: 'Inventario completo',
       descripcion: 'Vista general con todos los artículos y stock actual.',
       icon: <Boxes size={20} />,
-      color: 'var(--accent)',
+      color: 'var(--ink)',
       accion: () => nav('/almacen/inventario'),    },
     {
       titulo: 'Kardex de movimientos',

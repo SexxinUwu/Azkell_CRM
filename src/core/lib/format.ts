@@ -18,6 +18,16 @@ export function formatSoles(n: number | null | undefined) {
   return n == null ? '—' : `S/\u00A0${money.format(n)}`;
 }
 
+/** "US$ 1,250.00" — importes en dólares (con espacio no divisible) */
+export function formatDolares(n: number | null | undefined) {
+  return n == null ? '—' : `US$\u00A0${money.format(n)}`;
+}
+
+/** Importe en la moneda del documento: "US$ …" si es USD, "S/ …" en otro caso */
+export function formatMoneda(n: number | null | undefined, moneda: string | null | undefined) {
+  return String(moneda ?? '').toUpperCase() === 'USD' ? formatDolares(n) : formatSoles(n);
+}
+
 /** "S/ 15.40" o "S/ 15.395" — precio por galón (hasta 4 decimales, sin ceros de más) */
 export function formatPrice(n: number | null | undefined) {
   return n == null ? '—' : `S/ ${unitPrice.format(n)}`;

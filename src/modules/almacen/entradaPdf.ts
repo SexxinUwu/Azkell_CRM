@@ -86,11 +86,11 @@ export function htmlEntradaPdf(d: DatosEntradaPdf): string {
     : '<p style="font-size:12px;color:#6e6e73;margin:0">Sin artículos.</p>';
 
   const resumen = [
-    ['Subtotal', `${sym} ${num(subtotal)}`],
-    [conIgv ? 'IGV (18 %)' : 'IGV', conIgv ? `${sym} ${num(igv)}` : 'No aplica'],
+    ['Subtotal', `${sym}\u00A0${num(subtotal)}`],
+    [conIgv ? 'IGV (18 %)' : 'IGV', conIgv ? `${sym}\u00A0${num(igv)}` : 'No aplica'],
   ].map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span style="color:#6e6e73">${esc(k)}</span><span style="font-family:'SF Mono',Menlo,monospace">${esc(v)}</span></div>`).join('')
-    + `<div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:15px;font-weight:700;border-top:1px solid #d2d2d7;margin-top:4px"><span>TOTAL</span><span style="font-family:'SF Mono',Menlo,monospace">${esc(sym)} ${num(total)}</span></div>`
-    + (equivalenteSoles != null ? `<div style="font-size:11px;color:#6e6e73;text-align:right;margin-top:4px">Equivalente S/ ${num(equivalenteSoles)} (TC ${esc(e.tipo_cambio)})</div>` : '');
+    + `<div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:15px;font-weight:700;border-top:1px solid #d2d2d7;margin-top:4px"><span>TOTAL</span><span style="font-family:'SF Mono',Menlo,monospace">${esc(sym)}\u00A0${num(total)}</span></div>`
+    + (equivalenteSoles != null ? `<div style="font-size:11px;color:#6e6e73;text-align:right;margin-top:4px">Equivalente S/\u00A0${num(equivalenteSoles)} (TC ${esc(e.tipo_cambio)})</div>` : '');
 
   const firmaSolicitante = e.solicitante || e.creado_por || '';
   const firmaGerencia = aprobado ? (e.autoriza || e.aprobado_por || '') : '';

@@ -15,6 +15,7 @@ import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { eliminarSalida, useSalidas, type SalidaInv } from './api';
 import { SalidaFormulario } from './SalidaFormulario';
+import { formatFechaPe, formatSoles } from '../../core/lib/format';
 
 export function SalidasPage() {
   const { data, isLoading, isError, error } = useSalidas();
@@ -117,7 +118,7 @@ export function SalidasPage() {
             </div>
             <div className="inv-metrica" style={{ gridColumn: 'span 2' }}>
               <span className="inv-metrica__num" style={{ fontSize: '1.25rem' }}>
-                S/ {new Intl.NumberFormat('es-PE', { maximumFractionDigits: 0 }).format(resumen.monto)}
+                {formatSoles(resumen.monto)}
               </span>
               <span className="inv-metrica__label">Monto total</span>
             </div>
@@ -136,7 +137,7 @@ export function SalidasPage() {
               <AnimatePresence initial={false}>
                 {visibles.map(s => (
                   <motion.div key={s.id} layout={!reduce} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring}>
-                    <button type="button" className="mov-fila" onClick={() => { haptic('selection'); setSeleccionada(s); }}>
+                    <button type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setSeleccionada(s); }}>
                       <div className="mov-fila__icon" style={{ background: 'var(--red-tint)', color: 'var(--red-ink)' }}>
                         <PackageMinus size={16} />
                       </div>
@@ -146,14 +147,14 @@ export function SalidasPage() {
                           {s.ticket_ot ? ` · OT: ${s.ticket_ot}` : ''}
                         </span>
                         <span className="mov-fila__sub">
-                          {s.fecha?.split('T')[0] ?? '—'}
+                          {formatFechaPe(s.fecha)}
                           {s.responsable || s.creado_por ? ` · ${s.responsable || s.creado_por}` : ''}
                           {s.almacen ? ` · ${s.almacen}` : ''}
                           {` · ${s.items?.length ?? 0} ítem${(s.items?.length ?? 0) !== 1 ? 's' : ''}`}
                         </span>
                       </div>
                       <div className="mov-fila__derecha">
-                        <span className="mov-fila__monto">S/ {(s.total_pen ?? 0).toFixed(2)}</span>
+                        <span className="mov-fila__monto">{formatSoles(s.total_pen ?? 0)}</span>
                       </div>
                     </button>
                   </motion.div>
@@ -223,7 +224,7 @@ function SalidaDetalle({ salida: s, onVolver, onEditar, onEliminar }: DetallePro
       <div>
         <p className="tarjeta__grupo-titulo">Datos de la salida</p>
         <div className="tarjeta__lista">
-          {s.fecha && <div className="dato"><span className="dato__label">Fecha</span><span className="dato__valor">{s.fecha.split('T')[0]}</span></div>}
+          {s.fecha && <div className="dato"><span className="dato__label">Fecha</span><span className="dato__valor">{formatFechaPe(s.fecha)}</span></div>}
           {s.tipo_destino && <div className="dato"><span className="dato__label">Destino</span><span className="dato__valor">{s.tipo_destino}</span></div>}
           {s.placa && <div className="dato"><span className="dato__label">Placa</span><span className="dato__valor dato__valor--mono">{s.placa}</span></div>}
           {s.ticket_ot && <div className="dato"><span className="dato__label">OT</span><span className="dato__valor dato__valor--mono">{s.ticket_ot}</span></div>}
@@ -252,15 +253,15 @@ function SalidaDetalle({ salida: s, onVolver, onEditar, onEliminar }: DetallePro
                   <tr key={i}>
                     <td style={{ fontWeight: 600, fontSize: '0.875rem' }}>{it.descripcion || it.inventario_id || '—'}</td>
                     <td style={{ textAlign: 'right' }}>{it.cantidad}</td>
-                    <td style={{ textAlign: 'right', color: 'var(--label-2)' }}>S/ {(it.costo_unitario ?? 0).toFixed(2)}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 700 }}>S/ {(it.importe ?? 0).toFixed(2)}</td>
+                    <td style={{ textAlign: 'right', color: 'var(--label-2)' }}>{formatSoles(it.costo_unitario ?? 0)}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatSoles(it.importe ?? 0)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
                   <td colSpan={3} style={{ textAlign: 'right', fontWeight: 700, padding: 'var(--s-2) var(--s-3)' }}>Total</td>
-                  <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '1rem', padding: 'var(--s-2) var(--s-3)' }}>S/ {total.toFixed(2)}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '1rem', padding: 'var(--s-2) var(--s-3)' }}>{formatSoles(total)}</td>
                 </tr>
               </tfoot>
             </table>
