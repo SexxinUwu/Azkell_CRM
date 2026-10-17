@@ -15,6 +15,7 @@ import {
   ASIGNACION_FAMILIAR, CENTRO_POR_AREA, comprimirFoto, datosPorDni, finDeContrato, guardarPersona, nombreCompleto, nuevaPersona, OPCIONES, type Persona,
 } from './api';
 import { FotoPersona } from './FotoPersona';
+import { formatSoles } from '../../core/lib/format';
 
 type Pestana = 'persona' | 'puesto' | 'contrato' | 'salud';
 type Clave = keyof Persona;
@@ -79,6 +80,7 @@ export function PersonaFormulario({ open, persona, existentes, onClose, onGuarda
     if (tel && !/^(51)?\d{9}$/.test(tel)) e.telefono = 'Escribe un celular de 9 dígitos.';
     if (p.email.trim() && !parseEmail(p.email)) e.email = 'Revisa el correo.';
     if (p.sueldo_basico && !/^\d+([.,]\d{1,2})?$/.test(p.sueldo_basico)) e.sueldo_basico = 'Escribe un monto válido.';
+    if (p.licencia_conducir && !/^[A-Z0-9]{8,12}$/.test(p.licencia_conducir)) e.licencia_conducir = 'El brevete tiene entre 8 y 12 letras o números, como Q12345678.';
     if (p.fecha_fin_contrato && p.fecha_inicio_contrato && p.fecha_fin_contrato < p.fecha_inicio_contrato) e.fecha_fin_contrato = 'El fin no puede ser antes del inicio.';
     return e;
   }, [p, existentes]);
@@ -326,7 +328,7 @@ export function PersonaFormulario({ open, persona, existentes, onClose, onGuarda
                     </Field>
                   </div>
                   <div className="list persona-form__switches">
-                    <SwitchRow title="Asignación familiar" subtitle={`Suma S/ ${ASIGNACION_FAMILIAR.toFixed(2)} (10 % de la remuneración mínima)`}
+                    <SwitchRow title="Asignación familiar" subtitle={`Suma ${formatSoles(ASIGNACION_FAMILIAR)} (10 % de la remuneración mínima)`}
                       checked={p.tiene_asignacion_familiar} onChange={v => set('tiene_asignacion_familiar', v)} />
                   </div>
                 </section>

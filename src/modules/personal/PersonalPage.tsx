@@ -183,7 +183,7 @@ export function PersonalPage() {
               {(rolesPresentes.length > 1 || conAlertas > 0) && (
                 <div className="contactos__chips">
                   {conAlertas > 0 && (
-                    <button type="button" className="chip" aria-pressed={porVencer} onClick={() => setPorVencer(v => !v)}>
+                    <button type="button" className="chip pressable" aria-pressed={porVencer} onClick={() => { haptic('selection'); setPorVencer(v => !v); }}>
                       <TriangleAlert size={14} /> Por vencer
                     </button>
                   )}
@@ -209,7 +209,7 @@ export function PersonalPage() {
                             const alerta = alertasDe(p)[0];
                             return (
                               <motion.li key={p.id} layout={!reduce} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring}>
-                                <button type="button" className={`contacto${activa ? ' contacto--activo' : ''}`} aria-current={activa ? 'true' : undefined} onClick={() => abrir(p)}>
+                                <button type="button" className={`contacto pressable${activa ? ' contacto--activo' : ''}`} aria-current={activa ? 'true' : undefined} onClick={() => abrir(p)}>
                                   <FotoPersona persona={p} size={36} />
                                   <span className="contacto__texto">
                                     <span className="contacto__nombre">{p.nombres} <strong>{p.apellidos}</strong></span>

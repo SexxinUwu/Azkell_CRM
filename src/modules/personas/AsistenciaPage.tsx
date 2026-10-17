@@ -151,7 +151,7 @@ export function AsistenciaPage() {
         <SearchField value={busqueda} onChange={setBusqueda} placeholder="Nombre, documento o cargo…" />
 
         <div className="asis-leyenda">
-          {CICLO.map(e => <span key={e} className={`asis-celda asis-celda--${e}`} title={LEYENDA[e]}>{e}<small>{LEYENDA[e]}</small></span>)}
+          {CICLO.map(e => <span key={e} className={`asis-celda pressable asis-celda--${e}`} title={LEYENDA[e]}>{e}<small>{LEYENDA[e]}</small></span>)}
         </div>
 
         {q.isLoading ? <PageLoader /> : q.isError ? (
@@ -186,7 +186,7 @@ export function AsistenciaPage() {
                         const fecha = clave(anio, mes, d);
                         return (
                           <td key={d} className={fecha === hoyClave ? 'asis-hoy' : ''}>
-                            <button type="button" disabled={!puedeEditar} className={`asis-celda asis-celda--${est[i] || 'VACIO'}`}
+                            <button type="button" disabled={!puedeEditar} className={`asis-celda pressable asis-celda--${est[i] || 'VACIO'}`}
                               title={`${fecha}: ${LEYENDA[est[i]] ?? 'Sin marcar'}`} onClick={() => rotar(p, d)}>
                               {est[i] || '·'}
                             </button>
@@ -230,6 +230,7 @@ function LicenciaSheet({ open, personal, onClose }: { open: boolean; personal: P
   const [motivo, setMotivo] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errCampo, setErrCampo] = useState<Record<string, string | undefined>>({});
 
   useEffect(() => {
     if (!open) return;
@@ -238,8 +239,9 @@ function LicenciaSheet({ open, personal, onClose }: { open: boolean; personal: P
   }, [open]);
 
   async function guardar() {
-    if (!pid) { setError('Elige al colaborador.'); return; }
-    if (fin < ini) { setError('La fecha fin es anterior al inicio.'); return; }
+    setErrCampo({});
+    if (!pid) { setErrCampo({ pid: 'Elige al colaborador.' }); haptic('warning'); return; }
+    if (fin < ini) { setErrCampo({ fin: 'La fecha fin es anterior al inicio.' }); haptic('warning'); return; }
     setEnviando(true); setError(null);
     try {
       const r = await api<{ ok?: boolean; error?: string }>('/rrhh/licencias', { method: 'POST', body: { personal_id: pid, tipo, fecha_inicio: ini, fecha_fin: fin, motivo } });
@@ -257,7 +259,7 @@ function LicenciaSheet({ open, personal, onClose }: { open: boolean; personal: P
         <Button variant="primary" icon={<CalendarCheck size={16} />} onClick={guardar} loading={enviando}>Guardar y aplicar al tareo</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
-        <Field label="Colaborador" wide>
+        <Field label="Colaborador" wide error={errCampo.pid}>
           {p => (
             <SelectInput {...p} value={pid} onChange={e => setPid(e.target.value)}>
               <option value="">Elige…</option>
@@ -269,7 +271,7 @@ function LicenciaSheet({ open, personal, onClose }: { open: boolean; personal: P
           {p => <SelectInput {...p} value={tipo} onChange={e => setTipo(e.target.value)}>{TIPOS_LICENCIA.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</SelectInput>}
         </Field>
         <Field label="Desde">{p => <TextInput {...p} type="date" value={ini} onChange={e => setIni(e.target.value)} />}</Field>
-        <Field label="Hasta">{p => <TextInput {...p} type="date" value={fin} min={ini} onChange={e => setFin(e.target.value)} />}</Field>
+        <Field label="Hasta" error={errCampo.fin}>{p => <TextInput {...p} type="date" value={fin} min={ini} onChange={e => { setFin(e.target.value); setErrCampo({}); }} />}</Field>
         <Field label="Motivo" wide>{p => <TextInput {...p} value={motivo} onChange={e => setMotivo(e.target.value)} />}</Field>
       </div>
     </Sheet>

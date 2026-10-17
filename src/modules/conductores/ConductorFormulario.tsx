@@ -58,6 +58,7 @@ export function ConductorFormulario({ conductor, existentes, open, onClose, onGu
     }
     const tel = c.telefono.replace(/[\s+-]/g, '');
     if (tel && !/^(51)?\d{9}$/.test(tel)) e.telefono = 'Escribe un celular de 9 dígitos.';
+    if (c.licencia && !/^[A-Z0-9]{8,12}$/.test(c.licencia)) e.licencia = 'El brevete tiene entre 8 y 12 letras o números, como Q12345678.';
     return e;
   }, [c, existentes]);
   const error = (k: Campo) => ((intento || tocados.has(k)) ? errores[k] : undefined) ?? null;
@@ -163,7 +164,7 @@ export function ConductorFormulario({ conductor, existentes, open, onClose, onGu
             <Field label="Nombre completo" error={error('nombre')} wide
               hint={deReniec ? <span className="conductor-form__reniec"><Sparkles size={12} /> Obtenido de RENIEC</span> : undefined}>
               {props => (
-                <motion.div key={deReniec ? c.nombre : 'manual'} initial={deReniec && !reduce ? { backgroundColor: 'var(--accent-tint)' } : false}
+                <motion.div key={deReniec ? c.nombre : 'manual'} initial={deReniec && !reduce ? { backgroundColor: 'var(--green-tint)' } : false}
                   animate={{ backgroundColor: 'rgba(0,0,0,0)' }} transition={{ duration: 1.2 }} style={{ borderRadius: 'var(--r-md)' }}>
                   <TextInput {...props} value={c.nombre} onBlur={tocar('nombre')}
                     onChange={e => { setDeReniec(false); setC(x => ({ ...x, nombre: e.target.value.toUpperCase() })); }} />
