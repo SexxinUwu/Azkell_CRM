@@ -27,14 +27,14 @@ export function ClientesPage() {
       secundaria={c => [c.ruc_dni ? `RUC/DNI ${c.ruc_dni}` : 'Sin RUC', c.telefono, c.email].filter(Boolean).join(' · ')}
       derecha={c => ({
         texto: `${Number(c.total_flota) || 0} unid.${String(c.estado ?? 'Activo').toLowerCase() === 'activo' ? '' : ' · Inactivo'}`,
-        tono: String(c.estado ?? 'Activo').toLowerCase() === 'activo' ? 'neutral' : 'amber',
+        tono: String(c.estado ?? 'Activo').toLowerCase() === 'activo' ? 'green' : 'neutral',
       })}
       buscarEn={c => `${c.razon_social ?? ''} ${c.nombre ?? ''} ${c.ruc_dni ?? ''} ${c.email ?? ''} ${c.telefono ?? ''}`}
       campos={[
         { clave: 'razon_social', label: 'Razón social', requerido: true, wide: true, normalizar: v => v.toUpperCase() },
-        { clave: 'ruc_dni', label: 'RUC / DNI' },
-        { clave: 'telefono', label: 'Teléfono' },
-        { clave: 'email', label: 'Correo' },
+        { clave: 'ruc_dni', label: 'RUC / DNI', validar: v => (/^(\d{8}|\d{11})$/.test(v) ? undefined : 'El RUC tiene 11 dígitos y el DNI 8.') },
+        { clave: 'telefono', label: 'Teléfono', validar: v => (/^\+?[\d\s-]{7,15}$/.test(v) ? undefined : 'Escribe un teléfono válido, solo números.') },
+        { clave: 'email', label: 'Correo', validar: v => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? undefined : 'Revisa el correo: debe tener la forma usuario@empresa.com.') },
         { clave: 'estado', label: 'Estado', tipo: 'select', opciones: ['Activo', 'Inactivo'], requerido: true, inicial: 'Activo' },
         { clave: 'direccion', label: 'Dirección', wide: true },
         { clave: 'notas', label: 'Notas', wide: true },

@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { Switch } from '../../core/ui/Switch';
+import { haptic } from '../../core/lib/haptics';
 
 // Sin colores de fondo por persona: la fila muestra iniciales neutras, el nombre, el cargo y el correo.
 // El rol lleva solo un punto del color del rol. Tocar la fila abre la edición; el interruptor pide confirmación.
@@ -26,7 +27,7 @@ export function UsuarioFila({ nombre, correo, cargo, rol, rolColor, activo, ocup
   const subtitulo = [cargo, correo].filter(Boolean).join(' · ');
   return (
     <div className={`row usr-fila${activo ? '' : ' usr-fila--inactivo'}`}>
-      <button type="button" className="usr-fila__main" onClick={onEditar} aria-label={`Editar a ${nombre}`}>
+      <button type="button" className="usr-fila__main pressable" onClick={() => { haptic('selection'); onEditar(); }} aria-label={`Editar a ${nombre}`}>
         <span className="usr-avatar" aria-hidden>{iniciales(nombre)}</span>
         <span className="usr-fila__texto">
           <span className="usr-fila__nombre">{nombre.toLowerCase()}</span>

@@ -11,13 +11,14 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
+import { formatFechaHoraPe } from '../../core/lib/format';
 
 interface Fila { clave: string; valor: string | null; actualizado_por: string | null; actualizado_en: string | null }
 
 const fecha = (s: string | null) => {
   if (!s) return '';
   const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return Number.isNaN(d.getTime()) ? s : formatFechaHoraPe(d);
 };
 
 type Resultado = { ok: boolean; texto: string } | null;
@@ -69,7 +70,7 @@ function Tarjeta({ icono, titulo, estado, meta, children }: {
   return (
     <section className="tarjeta__lista" style={{ padding: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}>
-        <span style={{ color: 'var(--accent)' }}>{icono}</span>
+        <span style={{ color: 'var(--label-1)' }}>{icono}</span>
         <div style={{ flex: 1 }}>
           <h2 style={{ fontSize: '1.0625rem', fontWeight: 700 }}>{titulo}</h2>
           {meta && <div className="t-footnote c-secondary">{meta}</div>}
