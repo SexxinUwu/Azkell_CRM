@@ -4314,7 +4314,7 @@ window._rotInsertarKit = function() {
         }
 
         var itemDescVal = invItem ? (invItem.id + ' — ' + (invItem.descripcion || it.item_nombre)) : (it.item_nombre || '');
-        var costoUnit = invItem ? parseFloat(invItem.costo_referencial || invItem.costo || it.costo_unitario || 0) : parseFloat(it.costo_unitario || 0);
+        var costoUnit = invItem ? parseFloat(invItem.costo_soles != null ? invItem.costo_soles : (invItem.costo_referencial || invItem.costo || it.costo_unitario || 0)) : parseFloat(it.costo_unitario || 0);
 
         var tr = document.createElement('tr');
         tr.id = 'rot-mat-item-' + idx;
@@ -4742,7 +4742,7 @@ window._rotInsertarOC = function () {
         }
 
         var itemDescVal = invItem ? (invItem.id + ' — ' + (invItem.descripcion || itDesc)) : itDesc;
-        var costoUnit = invItem ? parseFloat(invItem.costo_referencial || invItem.costo || it.precio_unitario || 0) : parseFloat(it.precio_unitario || 0);
+        var costoUnit = invItem ? parseFloat(invItem.costo_soles != null ? invItem.costo_soles : (invItem.costo_referencial || invItem.costo || it.precio_unitario || 0)) : parseFloat(it.precio_unitario || 0);
 
         var tr = document.createElement('tr');
         tr.id = 'rot-mat-item-' + idx;
@@ -4951,7 +4951,7 @@ window._rotFiltrarDropdownArt = function(idx) {
     var slice = results.slice(0, limit);
     var html = slice.map(function(item) {
         var stock = parseFloat(item.stock_actual != null ? item.stock_actual : (item.stock != null ? item.stock : 0));
-        var costo = parseFloat(item.costo_referencial || item.costo || item.costo_soles || 0);
+        var costo = parseFloat(item.costo_soles != null ? item.costo_soles : (item.costo_referencial || item.costo || 0));
         var stockBadge = stock > 0
             ? '<span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;font-size:0.75rem;font-weight:800;padding:3px 8px;border-radius:6px;"><i class="bi bi-check2 me-1"></i>' + stock + ' ' + (item.unidad || 'UND') + '</span>'
             : '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:0.75rem;font-weight:800;padding:3px 8px;border-radius:6px;"><i class="bi bi-slash-circle me-1"></i>Sin stock</span>';
@@ -5024,7 +5024,7 @@ window._rotSeleccionarArticuloMat = function(idx, invId) {
     if (descEl) descEl.value = item.id + ' — ' + (item.descripcion || item.articulo || '');
     if (hidEl) hidEl.value = item.id;
     
-    var costo = parseFloat(item.costo_referencial || item.costo || item.costo_soles || 0);
+    var costo = parseFloat(item.costo_soles != null ? item.costo_soles : (item.costo_referencial || item.costo || 0));
     if (cuEl) {
         cuEl.value = costo.toFixed(2);
     }
