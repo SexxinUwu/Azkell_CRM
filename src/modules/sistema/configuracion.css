@@ -1,0 +1,46 @@
+/* Configuración: tarjetas tipo cristal líquido (mismo lenguaje que API y desarrolladores). */
+
+.cfg-grid { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
+
+.cfg-tarjeta {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
+  backdrop-filter: blur(22px) saturate(170%);
+  border: 1px solid color-mix(in srgb, var(--surface) 60%, white);
+  border-radius: 18px;
+  box-shadow: 0 8px 28px -12px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  padding: var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-3);
+}
+
+.cfg-titulo { display: flex; align-items: center; gap: var(--s-2); font-size: 1rem; font-weight: 700; margin: 0; }
+.cfg-ayuda { font-size: 0.75rem; color: var(--label-2); margin: 0; }
+
+.cfg-logo { align-items: center; text-align: center; }
+.cfg-logo__vista {
+  width: 128px; height: 128px; border-radius: 22px; display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--bg) 70%, transparent); border: 1px solid var(--separator); overflow: hidden;
+}
+.cfg-logo__vista img { width: 100%; height: 100%; object-fit: contain; }
+
+.cfg-boton-secundario {
+  display: inline-flex; align-items: center; gap: var(--s-2); cursor: pointer;
+  padding: var(--s-2) var(--s-3); border-radius: 12px; font-size: 0.8125rem; font-weight: 700;
+  background: var(--fill); color: var(--label-1); border: 1px solid var(--separator);
+}
+.cfg-boton-secundario:active { transform: scale(0.97); }
+
+.cfg-filas { display: flex; flex-direction: column; }
+.cfg-fila { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) 0; border-bottom: 0.5px solid var(--separator); }
+.cfg-fila:last-child { border-bottom: none; }
+.cfg-fila__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cfg-fila__texto strong { font-size: 0.875rem; }
+.cfg-fila__texto span { font-size: 0.75rem; color: var(--label-2); }
+
+.cfg-prueba { display: flex; align-items: flex-end; gap: var(--s-3); flex-wrap: wrap; }
+.cfg-prueba > :first-child { flex: 1; min-width: 220px; }
+
+/* Sin transparencia para quien reduce la transparencia del sistema */
+@media (prefers-reduced-transparency: reduce) {
+  .cfg-tarjeta { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

@@ -549,6 +549,9 @@ app.get('/api/configuracion', async (req, res) => {
 app.post('/api/configuracion', verifyToken, async (req, res) => {
     try {
         const payload = req.body;
+        const [previos] = await tdbDe(req).query("SELECT clave, valor FROM configuracion_erp");
+        const antesCfg = {};
+        for (const r of previos) antesCfg[r.clave] = r.valor;
         for (const clave in payload) {
             let valor = payload[clave] || '';
             
@@ -587,6 +590,24 @@ app.post('/api/configuracion', verifyToken, async (req, res) => {
             }
         }
 
+        // Auditoría: solo las claves que cambiaron. El logo se registra como cambio, sin la imagen.
+        const cambiosCfg = {};
+        for (const clave of Object.keys(payload)) {
+            if (clave === 'empresa_logo') {
+                if (payload[clave]) cambiosCfg.empresa_logo = { from: null, to: 'imagen actualizada' };
+                continue;
+            }
+            const nuevo = payload[clave] == null ? '' : String(payload[clave]).trim();
+            const viejo = antesCfg[clave] == null ? '' : String(antesCfg[clave]).trim();
+            if (nuevo !== viejo) cambiosCfg[clave] = { from: viejo || null, to: nuevo || null };
+        }
+        if (Object.keys(cambiosCfg).length) {
+            auditar(tdbDe(req), actorDe(req), {
+                action: 'UPDATE', entity: 'company', entityId: 'configuracion_erp',
+                summary: `Editó los datos de la empresa${cambiosCfg.empresa_nombre ? ` (${cambiosCfg.empresa_nombre.to})` : ''}`,
+                changes: cambiosCfg,
+            });
+        }
         res.json({ success: true, message: "Configuración guardada", empresa_logo: logoFinal });
     } catch (error) {
         console.error("Error guardando configuracion:", error);
