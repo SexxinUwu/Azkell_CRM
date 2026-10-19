@@ -2125,6 +2125,7 @@ setTimeout(verificarAlertasRetraso, 30000);
 // 🚨 MIDDLEWARE RBAC (Control de Acceso Basado en Roles)
 // ============================================================
 const globalRBAC = require('./rbac');
+const { audit: auditar, actorFrom: actorDe } = require('./services/auditoria');
 
 function requirePerm(modulo, accion) {
     // Retenemos requirePerm como stub vacío en caso de que alguna ruta antigua lo llame
@@ -2497,6 +2498,13 @@ app.post('/api/logout', (req, res) => {
             if (auth && auth.startsWith('Bearer ')) tok = auth.slice(7);
         }
         if (tok) db.query('DELETE FROM sesiones_activas WHERE token=?', [tok], () => {});
+        if (tok) {
+            try {
+                const quien = jwt.verify(tok, process.env.JWT_SECRET);
+                const actor = { ...actorDe({ headers: req.headers, ip: req.ip }), userId: quien.id ?? null, userName: quien.nombre || quien.correo || 'Sistema' };
+                auditar(req.db || db, actor, { action: 'LOGOUT', entity: 'session', entityId: quien.id ?? null, summary: `${actor.userName} cerró sesión` });
+            } catch (_) { /* token vencido: no hay quién registrar */ }
+        }
     } catch (_) { /* sin estado activo */ }
     res.json({ ok: true });
 });
@@ -2623,6 +2631,8 @@ app.post('/api/login', (req, res) => {
                     path: '/'
                 });
 
+                auditar(req.db || db, { ...actorDe(req), userId: usuario.id ?? null, userName: usuario.nombre || usuario.correo || 'Sistema' },
+                    { action: 'LOGIN', entity: 'session', entityId: usuario.id ?? null, summary: `${usuario.nombre || usuario.correo} ingresó al sistema` });
                 return res.json({
                     exito: true,
                     token: token,
@@ -2703,6 +2713,8 @@ app.post('/api/login', (req, res) => {
                                 { expiresIn: '12h' }
                             );
 
+                            auditar(req.db || db, { ...actorDe(req), userId: usuario.id ?? null, userName: usuario.nombre || usuario.correo || 'Sistema' },
+                                { action: 'LOGIN', entity: 'session', entityId: usuario.id ?? null, summary: `${usuario.nombre || usuario.correo} ingresó al sistema` });
                             return res.json({
                                 exito: true,
                                 token: token,
@@ -2731,6 +2743,8 @@ app.post('/api/login', (req, res) => {
 
 const perfilRoutes = require('./routes/perfil')(db, logAudit);
 app.use('/api', perfilRoutes);
+const auditoriaRoutes = require('./routes/audit')(db);
+app.use('/api', auditoriaRoutes);
 
 // ============================================================
 // 📬 RUTAS DE CONFIGURACIÓN DE CORREO (SMTP) Y ENVÍO DE REPORTES (MULTI-TENANT)

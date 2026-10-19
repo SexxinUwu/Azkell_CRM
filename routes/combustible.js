@@ -1,4 +1,5 @@
 const express = require('express');
+const { audit: auditar, actorFrom, diff } = require('../services/auditoria');
 const mysql = require('mysql2/promise');
 
 module.exports = function (db, broadcast, logAudit) {
@@ -694,6 +695,12 @@ module.exports = function (db, broadcast, logAudit) {
             );
 
             if (logAudit) logAudit(req, 'COMBUSTIBLE', 'CREAR_VALE', `Registrado vale ID ${result.insertId} para ${vehiculo}`);
+            const camposVale = ['fecha', 'estado', 'correlativo', 'estado_pago', 'vehiculo', 'conductor', 'ruta', 'estacion', 'tipo_combustible', 'galones', 'costo_gl', 'importe'];
+            await auditar(tdb, actorFrom(req), {
+                action: 'CREATE', entity: 'fueling', entityId: result.insertId,
+                summary: `Registró el vale de ${vehiculo}${galones ? ` (${galones} gal)` : ''}${estacion ? ` en ${estacion}` : ''}`,
+                changes: diff({}, { fecha, estado, correlativo, estado_pago, vehiculo, conductor, ruta, estacion, tipo_combustible, galones, costo_gl, importe }, camposVale),
+            });
             if (broadcast) broadcast({ type: 'COMBUSTIBLE_VALE_CREADO', id: result.insertId, vehiculo });
 
             res.json({ ok: true, id: result.insertId, mensaje: 'Vale de combustible registrado exitosamente.' });

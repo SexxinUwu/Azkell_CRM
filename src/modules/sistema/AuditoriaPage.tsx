@@ -2,233 +2,184 @@ import '../mantenimiento/mant.css';
 import './auditoria.css';
 import { useMemo, useState } from 'react';
 import {
-  ArrowUpRight, Eye, LogIn, LogOut, Pencil, Plus, SearchX, ShieldCheck, Trash2, type LucideIcon,
+  ArrowUpRight, Eye, KeyRound, LogIn, LogOut, Pencil, Plus, SearchX, ShieldCheck, Trash2, type LucideIcon,
 } from 'lucide-react';
-import { PageLoader } from '../../core/ui/Button';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
-import { useAuditoria, useLogFirmado, type AuditoriaEntrada, type LogFirmado } from './api';
-import { formatFechaHoraPe, formatFechaPe } from '../../core/lib/format';
+import { formatFechaHoraPe } from '../../core/lib/format';
+import { useLogFirmado, type LogFirmado } from './api';
+import {
+  etiquetaAccion, etiquetaCampo, useActividadAudit, usePersonasAudit,
+  ENTIDAD_LABELS, ACCION_LABELS, type EventoAudit, type FiltrosAudit,
+} from './auditoriaActividad';
 
-type Tipo = 'todos' | 'crear' | 'editar' | 'eliminar' | 'acceso';
 type Vista = 'actividad' | 'firmado';
 
-const TIPOS: { value: Tipo; label: string }[] = [
-  { value: 'todos', label: 'Todo' },
-  { value: 'crear', label: 'Creaciones' },
-  { value: 'editar', label: 'Cambios' },
-  { value: 'eliminar', label: 'Eliminaciones' },
-  { value: 'acceso', label: 'Accesos' },
-];
+const FILTROS_VACIOS: FiltrosAudit = { q: '', entity: '', action: '', userId: '', from: '', to: '' };
 
-/** Clasifica una acción libre ("CREÓ", "Ingreso", "MODIFICÓ"…) en un tipo con ícono y color */
-function clasificar(accion: string | null | undefined, detalle?: string | null): Exclude<Tipo, 'todos'> | 'otro' {
-  const t = `${accion ?? ''} ${detalle ?? ''}`.toLowerCase();
-  if (/cerr[óo] sesi|cierre de sesi|logout/.test(t)) return 'acceso';
-  if (/ingres[óo]|inicio de sesi|login|inici[óo] sesi/.test(t)) return 'acceso';
-  if (/elimin|delet|borr|remov|anul/.test(t)) return 'eliminar';
-  if (/cre[óo]|crear|creat|registr|insert|agreg|import/.test(t)) return 'crear';
-  if (/edit|modific|actualiz|updat|cambi/.test(t)) return 'editar';
-  return 'otro';
+/** Ícono y color según la acción: verde ingresos, rojo borrados y fallos, azul creaciones, ámbar cambios */
+function iconoDe(e: EventoAudit): { Icono: LucideIcon; tono: string } {
+  const a = e.action;
+  if (a === 'LOGIN') return { Icono: LogIn, tono: 'verde' };
+  if (a === 'LOGOUT') return { Icono: LogOut, tono: 'gris' };
+  if (a === 'LOGIN_FAILED' || a === 'DELETE' || a === 'ANNUL') return { Icono: Trash2, tono: 'rojo' };
+  if (a.startsWith('PASSWORD')) return { Icono: KeyRound, tono: 'ambar' };
+  if (a === 'CREATE' || a === 'IMPORT') return { Icono: Plus, tono: 'azul' };
+  if (a === 'UPDATE' || a === 'CORRECT' || a === 'REOPEN' || a === 'QR_REGENERATE') return { Icono: Pencil, tono: 'ambar' };
+  if (a === 'VALIDATE') return { Icono: ShieldCheck, tono: 'verde' };
+  return { Icono: Eye, tono: 'gris' };
 }
 
-const ICONO: Record<string, { Icono: LucideIcon; tono: string }> = {
-  crear: { Icono: Plus, tono: 'verde' },
-  editar: { Icono: Pencil, tono: 'ambar' },
-  eliminar: { Icono: Trash2, tono: 'rojo' },
-  acceso: { Icono: LogIn, tono: 'azul' },
-  otro: { Icono: Eye, tono: 'gris' },
-};
+const TZ = 'America/Lima';
+const claveDia = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
 
-const clave = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-function etiquetaDia(d: Date): string {
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-  const dia = new Date(d); dia.setHours(0, 0, 0, 0);
-  const diff = Math.round((hoy.getTime() - dia.getTime()) / 86_400_000);
-  if (diff === 0) return 'Hoy';
-  if (diff === 1) return 'Ayer';
-  return formatFechaPe(d);
+/** "Hoy", "Ayer" o "Viernes, 16 de octubre" — según el día de Lima */
+function etiquetaDia(iso: string): string {
+  const clave = claveDia(iso);
+  const hoy = claveDia(new Date().toISOString());
+  const ayer = claveDia(new Date(Date.now() - 86_400_000).toISOString());
+  if (clave === hoy) return 'Hoy';
+  if (clave === ayer) return 'Ayer';
+  const texto = new Intl.DateTimeFormat('es-PE', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(iso));
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
-
-interface Evento {
-  id: string | number;
-  fecha: Date;
-  usuario: string;
-  tipo: ReturnType<typeof clasificar>;
-  accion: string;
-  modulo: string;
-  texto: string;
-  ip: string;
+/** Valor legible para la tabla de cambios */
+function valorLegible(v: unknown): string {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'boolean') return v ? 'Sí' : 'No';
+  if (Array.isArray(v)) return v.length ? v.join(', ') : '—';
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) return formatFechaHoraPe(v);
+  return String(v);
 }
 
-/** Frase en lenguaje natural: "Administrador ingresó al sistema", "Ana creó …" */
-function frase(usuario: string, tipo: ReturnType<typeof clasificar>, accion: string, detalle: string, modulo: unknown): string {
-  const d = detalle.trim();
-  if (d && d.toLowerCase().startsWith(usuario.toLowerCase())) return d;
-  const bajo = `${accion} ${d}`.toLowerCase();
-  if (tipo === 'acceso') {
-    const salio = /cerr|cierre|logout/.test(bajo);
-    return `${usuario} ${salio ? 'cerró sesión' : 'ingresó al sistema'}${d && !/^(ingreso|cierre)/i.test(d) ? ` (${d})` : ''}`;
-  }
-  const verbo = { crear: 'creó', editar: 'modificó', eliminar: 'eliminó', otro: 'realizó una acción' }[tipo];
-  const donde = modulo ? ` en ${String(modulo)}` : '';
-  return d ? `${usuario} ${verbo}${donde}: ${d}` : `${usuario} ${verbo}${donde}`;
-}
-
-function aEvento(e: AuditoriaEntrada, i: number): Evento | null {
-  const fecha = e.created_at ? new Date(e.created_at) : null;
-  if (!fecha || Number.isNaN(fecha.getTime())) return null;
-  const usuario = String(e.usuario ?? '').trim() || 'Sistema';
-  const detalle = String(e.detalle ?? '').trim();
-  const accion = String(e.accion ?? '').trim();
-  const tipo = clasificar(accion, detalle);
-  return {
-    id: e.id ?? i, fecha, usuario, tipo, accion,
-    modulo: [e.modulo, e.submodulo].filter(Boolean).join(' / '),
-    texto: frase(usuario, tipo, accion, detalle, e.modulo),
-    ip: String(e.ip ?? ''),
-  };
-}
-
-// Sistema › Auditoría: línea de tiempo por día — quién hizo qué y cuándo.
-export function AuditoriaPage() {
-  const [vista, setVista] = useState<Vista>('actividad');
-  const [busqueda, setBusqueda] = useState('');
-  const [tipo, setTipo] = useState<Tipo>('todos');
-  const [persona, setPersona] = useState('');
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
-
-  const act = useAuditoria({ q: busqueda || undefined });
-  const log = useLogFirmado(busqueda || undefined, vista === 'firmado');
-  const firmado = vista === 'firmado';
-  const { isLoading, isError, error } = firmado ? log : act;
-
-  const eventos = useMemo(() => (act.data ?? []).map(aEvento).filter((e): e is Evento => !!e), [act.data]);
-  const personas = useMemo(() => [...new Set(eventos.map(e => e.usuario))].sort((a, b) => a.localeCompare(b, 'es')), [eventos]);
-
-  const visibles = useMemo(() => eventos.filter(e => {
-    if (tipo !== 'todos' && e.tipo !== tipo) return false;
-    if (persona && e.usuario !== persona) return false;
-    const k = clave(e.fecha);
-    if (desde && k < desde) return false;
-    if (hasta && k > hasta) return false;
-    return true;
-  }), [eventos, tipo, persona, desde, hasta]);
-
-  const dias = useMemo(() => {
-    const m = new Map<string, { fecha: Date; items: Evento[] }>();
-    for (const e of visibles) {
-      const k = clave(e.fecha);
-      if (!m.has(k)) m.set(k, { fecha: e.fecha, items: [] });
-      m.get(k)!.items.push(e);
-    }
-    return [...m.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1)).map(([k, v]) => ({ k, ...v }));
-  }, [visibles]);
-
-  const filas: LogFirmado[] = log.data ?? [];
-  const hayFiltros = tipo !== 'todos' || !!persona || !!desde || !!hasta || !!busqueda;
-  const limpiar = () => { setTipo('todos'); setPersona(''); setDesde(''); setHasta(''); setBusqueda(''); };
-  const total = firmado ? filas.length : visibles.length;
-
+function FilaActividad({ e }: { e: EventoAudit }) {
+  const { Icono, tono } = iconoDe(e);
+  const cambios = e.changes ? Object.entries(e.changes) : [];
+  const creacion = cambios.length > 0 && cambios.every(([, c]) => c.from === null || c.from === undefined);
   return (
-    <Page>
-      <PageHeader
-        eyebrow="Sistema"
-        title="Auditoría"
-        subtitle={isLoading ? 'Cargando…' : 'Quién hizo qué y cuándo. Los registros no se pueden editar ni borrar.'}
-        actions={
-          <MenuOtros opciones={[
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('sistema/auditoria') },
-          ]} />
-        }
-      />
-
-      <div className="aud-filtros">
-        <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar en la actividad" />
-        <SegmentedControl<Vista> label="Vista" value={vista} onChange={setVista}
-          options={[{ value: 'actividad', label: 'Actividad' }, { value: 'firmado', label: 'Registro firmado' }]} />
-        {!firmado && (
-          <div className="aud-filtros__fila">
-            <SelectInput value={tipo} onChange={e => setTipo(e.target.value as Tipo)} aria-label="Tipo de actividad">
-              {TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </SelectInput>
-            <SelectInput value={persona} onChange={e => setPersona(e.target.value)} aria-label="Persona">
-              <option value="">Todas las personas</option>
-              {personas.map(p => <option key={p} value={p}>{p}</option>)}
-            </SelectInput>
-            <label className="aud-fecha"><span>Desde</span>
-              <input type="date" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} />
-            </label>
-            <label className="aud-fecha"><span>Hasta</span>
-              <input type="date" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} />
-            </label>
-          </div>
+    <article className="aud-evento">
+      <span className={`aud-evento__icono aud-evento__icono--${tono}`}><Icono size={17} strokeWidth={2} /></span>
+      <div className="aud-evento__cuerpo">
+        <div className="aud-evento__texto">{e.summary}</div>
+        <div className="aud-evento__meta">
+          {[etiquetaAccion(e.action), formatFechaHoraPe(e.created_at), e.user_name, e.ip].filter(Boolean).join(' · ')}
+        </div>
+        {cambios.length > 0 && (
+          <details className="aud-evento__detalle">
+            <summary>{creacion ? 'Datos del registro' : `Cambios (${cambios.length})`}</summary>
+            <table className="aud-cambios">
+              <thead>
+                <tr><th>Campo</th>{!creacion && <th>Antes</th>}<th>{creacion ? 'Valor' : 'Después'}</th></tr>
+              </thead>
+              <tbody>
+                {cambios.map(([campo, c]) => (
+                  <tr key={campo}>
+                    <td>{etiquetaCampo(campo)}</td>
+                    {!creacion && <td>{valorLegible(c.from)}</td>}
+                    <td>{valorLegible(c.to)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </details>
         )}
       </div>
+    </article>
+  );
+}
 
-      {isLoading ? <PageLoader /> : isError ? (
-        <Notice tone="error">{errorMessage(error)}</Notice>
+function ActividadAuditoria() {
+  const [filtros, setFiltros] = useState<FiltrosAudit>(FILTROS_VACIOS);
+  const actividad = useActividadAudit(filtros);
+  const personas = usePersonasAudit();
+  const eventos = useMemo(() => (actividad.data?.pages ?? []).flatMap(p => p.items), [actividad.data]);
+  const total = actividad.data?.pages[0]?.total ?? 0;
+  const set = (k: keyof FiltrosAudit) => (v: string) => setFiltros(f => ({ ...f, [k]: v }));
+  const hayFiltros = Object.values(filtros).some(Boolean);
+
+  // Agrupa por día de Lima, en el orden que llega (del más reciente al más antiguo)
+  const dias = useMemo(() => {
+    const grupos: { clave: string; iso: string; items: EventoAudit[] }[] = [];
+    for (const e of eventos) {
+      const clave = claveDia(e.created_at);
+      const ultimo = grupos[grupos.length - 1];
+      if (ultimo && ultimo.clave === clave) ultimo.items.push(e);
+      else grupos.push({ clave, iso: e.created_at, items: [e] });
+    }
+    return grupos;
+  }, [eventos]);
+
+  return (
+    <>
+      <div className="aud-filtros">
+        <SearchField value={filtros.q} onChange={set('q')} placeholder="Buscar en la actividad" />
+        <div className="aud-filtros__fila">
+          <SelectInput value={filtros.entity} onChange={e => set('entity')(e.target.value)} aria-label="Tipo de registro">
+            <option value="">Todos los registros</option>
+            {Object.keys(ENTIDAD_LABELS).map(k => <option key={k} value={k}>{ENTIDAD_LABELS[k]}</option>)}
+          </SelectInput>
+          <SelectInput value={filtros.action} onChange={e => set('action')(e.target.value)} aria-label="Acción">
+            <option value="">Todas las acciones</option>
+            {Object.keys(ACCION_LABELS).map(k => <option key={k} value={k}>{ACCION_LABELS[k]}</option>)}
+          </SelectInput>
+          {(personas.data?.length ?? 0) > 0 && (
+            <SelectInput value={filtros.userId} onChange={e => set('userId')(e.target.value)} aria-label="Persona">
+              <option value="">Todas las personas</option>
+              {personas.data!.map(p => <option key={p.user_id} value={String(p.user_id)}>{p.user_name}</option>)}
+            </SelectInput>
+          )}
+          <label className="aud-fecha"><span>Desde</span>
+            <input type="date" value={filtros.from} max={filtros.to || undefined} onChange={e => set('from')(e.target.value)} />
+          </label>
+          <label className="aud-fecha"><span>Hasta</span>
+            <input type="date" value={filtros.to} min={filtros.from || undefined} onChange={e => set('to')(e.target.value)} />
+          </label>
+        </div>
+      </div>
+
+      {actividad.isLoading ? <PageLoader /> : actividad.isError ? (
+        <Notice tone="error">{errorMessage(actividad.error)}</Notice>
       ) : (
         <>
-          <p className="aud-conteo">{total} registro{total !== 1 ? 's' : ''}{hayFiltros && !firmado ? ' con estos filtros' : ''}</p>
-
-          {firmado ? (
-            filas.length === 0 ? (
-              <EmptyState icon={<ShieldCheck size={22} />} title="Sin registros">No hay mutaciones registradas.</EmptyState>
-            ) : (
-              <div className="aud-dia">
-                <div className="aud-lista">
-                  {filas.map(f => <FilaFirmada key={f.id} f={f} />)}
-                </div>
-              </div>
-            )
-          ) : dias.length === 0 ? (
+          <p className="aud-conteo">{total} registro{total !== 1 ? 's' : ''}{hayFiltros ? ' con estos filtros' : ''}</p>
+          {dias.length === 0 ? (
             <EmptyState icon={hayFiltros ? <SearchX size={22} /> : <ShieldCheck size={22} />}
               title={hayFiltros ? 'Sin coincidencias' : 'Sin registros'}>
               {hayFiltros
-                ? <button type="button" className="placas-limpiar" onClick={limpiar}>Quitar filtros</button>
+                ? <button type="button" className="placas-limpiar" onClick={() => setFiltros(FILTROS_VACIOS)}>Quitar filtros</button>
                 : 'Aún no hay actividad registrada.'}
             </EmptyState>
           ) : (
             dias.map(d => (
-              <section key={d.k} className="aud-dia">
-                <h2 className="aud-dia__titulo">{etiquetaDia(d.fecha)}</h2>
+              <section key={d.clave} className="aud-dia">
+                <h2 className="aud-dia__titulo">{etiquetaDia(d.iso)}</h2>
                 <div className="aud-lista">
-                  {d.items.map(e => {
-                    const { Icono, tono } = e.tipo === 'acceso' && /cerr|cierre|logout/i.test(`${e.accion} ${e.texto}`)
-                      ? { Icono: LogOut, tono: 'gris' } : ICONO[e.tipo];
-                    return (
-                      <article key={e.id} className="aud-evento">
-                        <span className={`aud-evento__icono aud-evento__icono--${tono}`}><Icono size={17} strokeWidth={2} /></span>
-                        <div className="aud-evento__cuerpo">
-                          <div className="aud-evento__texto">{e.texto}</div>
-                          <div className="aud-evento__meta">
-                            {[e.accion, formatFechaHoraPe(e.fecha), e.usuario, e.modulo, e.ip].filter(Boolean).join(' · ')}
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
+                  {d.items.map(e => <FilaActividad key={e.id} e={e} />)}
                 </div>
               </section>
             ))
           )}
+          {actividad.hasNextPage && (
+            <div className="aud-mas">
+              <Button variant="secondary" onClick={() => actividad.fetchNextPage()} loading={actividad.isFetchingNextPage}>
+                Cargar más
+              </Button>
+            </div>
+          )}
         </>
       )}
-    </Page>
+    </>
   );
 }
 
 function FilaFirmada({ f }: { f: LogFirmado }) {
-  const tipo = clasificar(f.accion, f.ruta);
-  const { Icono, tono } = ICONO[tipo];
+  const { Icono, tono } = f.accion?.toUpperCase().includes('LOGIN') ? { Icono: LogIn, tono: 'verde' } : { Icono: Eye, tono: 'gris' };
   const fecha = new Date(f.created_at);
   return (
     <article className="aud-evento">
@@ -248,5 +199,47 @@ function FilaFirmada({ f }: { f: LogFirmado }) {
         )}
       </div>
     </article>
+  );
+}
+
+function RegistroFirmado({ q }: { q: string }) {
+  const log = useLogFirmado(q || undefined, true);
+  if (log.isLoading) return <PageLoader />;
+  if (log.isError) return <Notice tone="error">{errorMessage(log.error)}</Notice>;
+  const filas: LogFirmado[] = log.data ?? [];
+  return filas.length === 0 ? (
+    <EmptyState icon={<ShieldCheck size={22} />} title="Sin registros">No hay mutaciones registradas.</EmptyState>
+  ) : (
+    <div className="aud-dia"><div className="aud-lista">{filas.map(f => <FilaFirmada key={f.id} f={f} />)}</div></div>
+  );
+}
+
+// Sistema › Auditoría: quién hizo qué y cuándo. Solo lectura.
+export function AuditoriaPage() {
+  const [vista, setVista] = useState<Vista>('actividad');
+  const [busqueda, setBusqueda] = useState('');
+  return (
+    <Page>
+      <PageHeader
+        eyebrow="Sistema"
+        title="Auditoría"
+        subtitle="Quién hizo qué y cuándo. Los registros no se pueden editar ni borrar."
+        actions={
+          <MenuOtros opciones={[
+            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('sistema/auditoria') },
+          ]} />
+        }
+      />
+      <div className="aud-filtros">
+        <SegmentedControl<Vista> label="Vista" value={vista} onChange={setVista}
+          options={[{ value: 'actividad', label: 'Actividad' }, { value: 'firmado', label: 'Registro firmado' }]} />
+      </div>
+      {vista === 'actividad' ? <ActividadAuditoria /> : (
+        <>
+          <div className="aud-filtros"><SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar en el registro firmado" /></div>
+          <RegistroFirmado q={busqueda} />
+        </>
+      )}
+    </Page>
   );
 }
