@@ -25,6 +25,8 @@ export interface CampoCrud {
   soloCrear?: boolean;
   /** Transforma el texto antes de guardar (p. ej. mayúsculas) */
   normalizar?: (v: string) => string;
+  /** Regla de formato: devuelve el mensaje de error o undefined si el valor es correcto */
+  validar?: (v: string) => string | undefined;
 }
 
 type Valores = Record<string, string | number | boolean>;
@@ -203,6 +205,7 @@ function FormularioCrud<T>({ abierto, singular, campos, onClose, onGuardar }: {
     const faltan: Record<string, string> = {};
     for (const c of campos) {
       if (c.requerido && !String(v[c.clave] ?? '').trim()) faltan[c.clave] = `${c.label} es obligatorio.`;
+      else if (c.validar && String(v[c.clave] ?? '').trim()) { const msg = c.validar(String(v[c.clave]).trim()); if (msg) faltan[c.clave] = msg; }
     }
     setErrs(faltan);
     if (Object.keys(faltan).length) { haptic('warning'); return; }

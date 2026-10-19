@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Page, PageHeader, Notice, EmptyState } from '../../core/ui/Display';
 import { PageLoader } from '../../core/ui/Button';
 import { api, errorMessage } from '../../core/api/client';
+import { haptic } from '../../core/lib/haptics';
+import { formatFechaPe } from '../../core/lib/format';
 
 interface TwoFAStatus {
   totp_activo: boolean;
@@ -51,7 +53,7 @@ function TOTPSetup({ onDone }: { onDone: () => void }) {
           type="button"
           disabled={loading}
           onClick={iniciarSetup}
-          style={{ alignSelf: 'flex-start', padding: '8px 18px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem' }}
+          style={{ alignSelf: 'flex-start', padding: '8px 18px', borderRadius: 8, background: 'var(--ink)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem' }}
         >
           {loading ? 'Generando…' : 'Configurar autenticador'}
         </button>
@@ -84,7 +86,7 @@ function TOTPSetup({ onDone }: { onDone: () => void }) {
             type="button"
             disabled={loading || codigo.length < 6}
             onClick={confirmar}
-            style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem', alignSelf: 'flex-start', opacity: codigo.length < 6 ? 0.5 : 1 }}
+            style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--ink)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem', alignSelf: 'flex-start', opacity: codigo.length < 6 ? 0.5 : 1 }}
           >
             {loading ? 'Verificando…' : 'Activar 2FA'}
           </button>
@@ -225,7 +227,7 @@ function WebAuthnRegister({ onDone }: { onDone: () => void }) {
         type="button"
         disabled={loading}
         onClick={registrar}
-        style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 6 }}
+        style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--ink)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 6 }}
       >
         <Fingerprint size={16} />
         {loading ? 'Activando…' : 'Registrar Passkey'}
@@ -312,13 +314,13 @@ export function Seguridad2FAPage() {
               {s.totp_activo ? 'Activo' : 'Inactivo'}
             </span>
             {s.totp_activo ? (
-              <button type="button" onClick={() => setSeccionTOTP(seccionTOTP === 'disable' ? 'idle' : 'disable')}
+              <button type="button" className="pressable" onClick={() => { haptic('selection'); setSeccionTOTP(seccionTOTP === 'disable' ? 'idle' : 'disable'); }}
                 style={{ padding: '5px 12px', borderRadius: 7, background: 'var(--fill-2)', border: '1px solid var(--separator)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, color: 'var(--red-ink)' }}>
                 {seccionTOTP === 'disable' ? 'Cancelar' : 'Desactivar'}
               </button>
             ) : (
-              <button type="button" onClick={() => setSeccionTOTP(seccionTOTP === 'setup' ? 'idle' : 'setup')}
-                style={{ padding: '5px 12px', borderRadius: 7, background: 'var(--accent)', border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
+              <button type="button" className="pressable" onClick={() => { haptic('selection'); setSeccionTOTP(seccionTOTP === 'setup' ? 'idle' : 'setup'); }}
+                style={{ padding: '5px 12px', borderRadius: 7, background: 'var(--ink)', border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
                 {seccionTOTP === 'setup' ? 'Cancelar' : 'Activar'}
               </button>
             )}
@@ -337,7 +339,7 @@ export function Seguridad2FAPage() {
       <div className="tarjeta__lista" style={{ padding: 'var(--s-3)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--s-3)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Fingerprint size={20} style={{ color: s.webauthn_count > 0 ? 'var(--accent)' : 'var(--label-2)' }} />
+            <Fingerprint size={20} style={{ color: s.webauthn_count > 0 ? 'var(--label-1)' : 'var(--label-2)' }} />
             <div>
               <div style={{ fontWeight: 700 }}>Passkeys (WebAuthn / FIDO2)</div>
               <div style={{ fontSize: '0.78rem', color: 'var(--label-2)', marginTop: 2 }}>
@@ -345,8 +347,8 @@ export function Seguridad2FAPage() {
               </div>
             </div>
           </div>
-          <button type="button" onClick={() => setSeccionWA(!seccionWA)}
-            style={{ padding: '5px 12px', borderRadius: 7, background: seccionWA ? 'var(--fill-2)' : 'var(--accent)', border: seccionWA ? '1px solid var(--separator)' : 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: seccionWA ? 'var(--label-1)' : '#fff', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button type="button" className="pressable" onClick={() => { haptic('selection'); setSeccionWA(!seccionWA); }}
+            style={{ padding: '5px 12px', borderRadius: 7, background: seccionWA ? 'var(--fill-2)' : 'var(--ink)', border: seccionWA ? '1px solid var(--separator)' : 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: seccionWA ? 'var(--label-1)' : '#fff', display: 'flex', alignItems: 'center', gap: 5 }}>
             <Plus size={14} />
             {seccionWA ? 'Cancelar' : 'Añadir Passkey'}
           </button>
@@ -367,11 +369,11 @@ export function Seguridad2FAPage() {
             {s.webauthn_credentials.map(c => (
               <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 8, background: 'var(--fill-1)', border: '1px solid var(--separator)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Fingerprint size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                  <Fingerprint size={16} style={{ color: 'var(--label-1)', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{c.nombre}</div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--label-2)' }}>
-                      {c.device_type} · {c.backed_up ? 'Con respaldo en nube' : 'Solo dispositivo'} · {String(c.created_at).split('T')[0]}
+                      {c.device_type} · {c.backed_up ? 'Con respaldo en nube' : 'Solo dispositivo'} · {formatFechaPe(c.created_at)}
                     </div>
                   </div>
                 </div>

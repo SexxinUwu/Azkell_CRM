@@ -12,6 +12,7 @@ import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
 import { useAuditoria, useLogFirmado, type AuditoriaEntrada, type LogFirmado } from './api';
+import { formatFechaHoraPe, formatFechaPe } from '../../core/lib/format';
 
 type Tipo = 'todos' | 'crear' | 'editar' | 'eliminar' | 'acceso';
 type Vista = 'actividad' | 'firmado';
@@ -51,11 +52,9 @@ function etiquetaDia(d: Date): string {
   const diff = Math.round((hoy.getTime() - dia.getTime()) / 86_400_000);
   if (diff === 0) return 'Hoy';
   if (diff === 1) return 'Ayer';
-  const txt = d.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', ...(d.getFullYear() !== hoy.getFullYear() ? { year: 'numeric' } : {}) });
-  return txt.charAt(0).toUpperCase() + txt.slice(1);
+  return formatFechaPe(d);
 }
 
-const hora = (d: Date) => d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
 
 interface Evento {
   id: string | number;
@@ -211,7 +210,7 @@ export function AuditoriaPage() {
                         <div className="aud-evento__cuerpo">
                           <div className="aud-evento__texto">{e.texto}</div>
                           <div className="aud-evento__meta">
-                            {[e.accion, hora(e.fecha), e.usuario, e.modulo, e.ip].filter(Boolean).join(' · ')}
+                            {[e.accion, formatFechaHoraPe(e.fecha), e.usuario, e.modulo, e.ip].filter(Boolean).join(' · ')}
                           </div>
                         </div>
                       </article>
@@ -237,7 +236,7 @@ function FilaFirmada({ f }: { f: LogFirmado }) {
       <div className="aud-evento__cuerpo">
         <div className="aud-evento__texto">{f.usuario || 'Sistema'} · {f.metodo} {f.ruta}</div>
         <div className="aud-evento__meta">
-          {[f.accion, `${etiquetaDia(fecha)} ${hora(fecha)}`, f.ip, f.status_codigo ? `HTTP ${f.status_codigo}` : ''].filter(Boolean).join(' · ')}
+          {[f.accion, formatFechaHoraPe(fecha), f.ip, f.status_codigo ? `HTTP ${f.status_codigo}` : ''].filter(Boolean).join(' · ')}
         </div>
         {(f.antes || f.despues || f.detalle) && (
           <details className="aud-evento__detalle">

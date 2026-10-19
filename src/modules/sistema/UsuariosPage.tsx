@@ -4,6 +4,7 @@ import { Plus, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, PasswordInput, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { haptic } from '../../core/lib/haptics';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -143,6 +144,7 @@ export function UsuariosPage() {
 
   // ─── Abrir modal crear ──────────────────────────────────────────────────────
   function abrirCrear() {
+    setErrs({});
     setEditando(null);
     setForm(FORM_VACIO);
     setModal(true);
@@ -150,6 +152,7 @@ export function UsuariosPage() {
 
   // ─── Abrir modal editar ─────────────────────────────────────────────────────
   function abrirEditar(u: Usuario) {
+    setErrs({});
     setEditando(u);
     setForm({
       nombre:   String(u.nombre ?? u.nombre_completo ?? ''),
@@ -164,9 +167,17 @@ export function UsuariosPage() {
   }
 
   // ─── Guardar (crear o editar) ───────────────────────────────────────────────
+  const [errs, setErrs] = useState<Record<string, string>>({});
+
   async function guardar() {
-    if (!form.correo.trim()) { toast('El correo es obligatorio', 'error'); return; }
-    if (!editando && !form.password.trim()) { toast('La contraseña es obligatoria al crear', 'error'); return; }
+    const nuevos: Record<string, string> = {};
+    if (!form.nombre.trim()) nuevos.nombre = 'Escribe el nombre completo.';
+    if (!form.correo.trim()) nuevos.correo = 'Escribe el correo.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo.trim())) nuevos.correo = 'Revisa el correo: debe tener la forma usuario@empresa.com.';
+    if (!editando && !form.password.trim()) nuevos.password = 'Escribe una contraseña para el primer acceso.';
+    if (!form.rol_id) nuevos.rol = 'Elige el rol del usuario.';
+    setErrs(nuevos);
+    if (Object.keys(nuevos).length) { haptic('warning'); return; }
     setGuardando(true);
     try {
       const payload = {
@@ -328,14 +339,14 @@ export function UsuariosPage() {
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          <Field label="Nombre completo">
+          <Field label="Nombre completo" error={errs.nombre}>
             {props => (
               <TextInput {...props} value={form.nombre}
                 onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
                 placeholder="Ej. Juan Pérez" />
             )}
           </Field>
-          <Field label="Correo electrónico" hint={editando ? 'Si lo cambias, el usuario entra con el nuevo correo.' : undefined}>
+          <Field label="Correo electrónico" error={errs.correo} hint={editando ? 'Si lo cambias, el usuario entra con el nuevo correo.' : undefined}>
             {props => (
               <TextInput {...props} type="email" value={form.correo}
                 onChange={e => setForm(f => ({ ...f, correo: e.target.value }))}
@@ -358,7 +369,7 @@ export function UsuariosPage() {
               )}
             </Field>
           </div>
-          <Field label={editando ? 'Nueva contraseña (dejar en blanco para no cambiar)' : 'Contraseña'}>
+          <Field label={editando ? 'Nueva contraseña (dejar en blanco para no cambiar)' : 'Contraseña'} error={errs.password}>
             {props => (
               <PasswordInput {...props} value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
@@ -366,11 +377,11 @@ export function UsuariosPage() {
             )}
           </Field>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-2)' }}>
-            <Field label="Rol">
+            <Field label="Rol" error={errs.rol}>
               {props => (
                 <SelectInput {...props} value={form.rol_id}
                   onChange={e => setForm(f => ({ ...f, rol_id: e.target.value }))}>
-                  <option value="">Sin rol asignado</option>
+                  <option value="">Elige un rol…</option>
                   {roles.map(r => (
                     <option key={r.id} value={r.id}>{r.nombre}</option>
                   ))}
