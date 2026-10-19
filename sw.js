@@ -1,4 +1,4 @@
-const CACHE_NAME = 'azkell-fleet-v52';
+const CACHE_NAME = 'azkell-fleet-v53';
 const STATIC_CACHE = 'azkell-libs-v2';
 
 // Archivos de la app

@@ -1,22 +1,25 @@
 import './mant.css';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, CircleAlert, FileSpreadsheet, Pencil, SearchX, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
+import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { HorasEficienciaGrafico } from '../../core/ui/Graficos';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { MultiSelect } from '../../core/ui/MultiSelect';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { exportarExcel } from '../../core/lib/excel';
+import { exportarExcel, exportarExcelHojas } from '../../core/lib/excel';
+import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 import { ImportarTrabajosSheet } from './ImportarTrabajosSheet';
 import {
   aprobarTrabajo, editarTrabajo, eliminarTrabajo, ESTADOS_TRABAJO, estadoTrabajo, trabajoCosto, trabajoId, trabajoKmHoras,
-  useTrabajosOT, type TrabajoOT,
+  useHorasTecnicos, useTrabajosOT, type HorasTecnicosRespuesta, type TrabajoOT,
 } from './api';
 
 const dia = (s: string | null | undefined) => (s ? String(s).split('T')[0] : '—');
@@ -35,6 +38,25 @@ function personalDe(t: TrabajoOT): string[] {
   return p.split(',').map(x => x.trim()).filter(Boolean);
 }
 
+/** Horas de un trabajo para la lista (mismo criterio que services/horas_tecnicos.js); null si está en curso */
+function horasTrabajo(t: TrabajoOT): number | null {
+  const ini = aLocal(t.fecha_trabajo), fin = aLocal(t.fecha_salida);
+  if (!ini || !fin) return null;
+  const h = (new Date(fin).getTime() - new Date(ini).getTime()) / 3_600_000;
+  return h >= 0 ? Math.round(h * 100) / 100 : null;
+}
+
+/** Mes en curso como rango "AAAA-MM-DD" (del día 1 al último) */
+function rangoMesActual() {
+  const hoy = new Date();
+  const y = hoy.getFullYear(), m = hoy.getMonth();
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  return { desde: `${y}-${p2(m + 1)}-01`, hasta: `${y}-${p2(m + 1)}-${p2(new Date(y, m + 1, 0).getDate())}` };
+}
+
+/** "06/10" — día y mes para las columnas de la matriz */
+const diaCorto = (fecha: string) => formatFechaPe(fecha).slice(0, 5);
+
 export function TrabajosOtPage() {
   const { data, isLoading, isError, error } = useTrabajosOT();
   const { can, user } = useAuth();
@@ -43,6 +65,9 @@ export function TrabajosOtPage() {
   const [estado, setEstado] = useState('');
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
   const [importando, setImportando] = useState(false);
+  const [vista, setVista] = useState<'trabajos' | 'horas'>('trabajos');
+  const [rango, setRango] = useState(rangoMesActual);
+  const horas = useHorasTecnicos(rango.desde, rango.hasta, vista === 'horas');
 
   const trabajos = data ?? [];
   const seleccionado = trabajos.find(t => trabajoId(t) === seleccionadoId) ?? null;
@@ -66,6 +91,28 @@ export function TrabajosOtPage() {
     } catch (err) { toast(errorMessage(err), 'error'); }
   }
 
+  // Mismos datos que la versión clásica: el servidor calcula horas y eficiencia
+  async function exportarHoras() {
+    const h = horas.data;
+    if (!h) return;
+    try {
+      await exportarExcelHojas('Horas-tecnicos-OT', [
+        {
+          hoja: 'Historial',
+          encabezados: ['Trabajo', 'OT', 'Placa', 'Técnico', 'Inicio', 'Salida', 'Horas', 'Estado', 'Trabajo realizado'],
+          filas: h.trabajos.map(t => [trabajoId(t), t.ticket_visita, t.placa, t.tecnico || 'Sin técnico',
+            formatFechaHoraPe(t.fecha_trabajo), formatFechaHoraPe(t.fecha_salida), t.horas ?? 'En curso', estadoTrabajo(t.estado), t.trabajo_realizado]),
+        },
+        {
+          hoja: 'Horas por técnico',
+          encabezados: ['Técnico', ...h.dias.map(d => diaCorto(d.fecha)), 'Horas reales', 'Horas proyectadas', 'Eficiencia %', 'En curso'],
+          filas: h.tecnicos.map(t => [t.nombre, ...h.dias.map(d => t.porDia[d.fecha] ?? ''), t.reales, t.proyectadas, t.eficiencia, t.enCurso]),
+        },
+      ]);
+      haptic('success');
+    } catch (err) { toast(errorMessage(err), 'error'); }
+  }
+
   return (
     <Page>
       {!seleccionado && (
@@ -75,7 +122,9 @@ export function TrabajosOtPage() {
           subtitle={isLoading ? 'Cargando…' : `${trabajos.length} trabajos registrados`}
           actions={
             <MenuOtros opciones={[
-              { label: 'Exportar Excel', detalle: `${visibles.length} trabajos`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+              vista === 'trabajos'
+                ? { label: 'Exportar Excel', detalle: `${visibles.length} trabajos`, icon: <FileSpreadsheet size={17} />, onSelect: exportar }
+                : { label: 'Exportar Excel', detalle: 'Historial y horas por técnico', icon: <FileSpreadsheet size={17} />, onSelect: exportarHoras },
               { label: 'Importar desde Excel', icon: <FileSpreadsheet size={17} />, separado: true, onSelect: () => setImportando(true) },
             ]} />
           }
@@ -99,6 +148,13 @@ export function TrabajosOtPage() {
         </EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+          <SegmentedControl block label="Vista" value={vista} onChange={setVista} options={[
+            { value: 'trabajos', label: 'Trabajos' },
+            { value: 'horas', label: 'Horas por técnico' },
+          ]} />
+          {vista === 'horas' ? (
+            <HorasTecnicosVista rango={rango} onRango={setRango} datos={horas.data} cargando={horas.isLoading} error={horas.error} />
+          ) : (<>
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, técnico, trabajo, OT o ticket…" />
           <SelectInput value={estado} onChange={e => setEstado(e.target.value)} aria-label="Estado">
             <option value="">Todos los estados</option>
@@ -110,34 +166,143 @@ export function TrabajosOtPage() {
               <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setEstado(''); }}>Quitar filtros</button>
             </EmptyState>
           ) : (
-            <div className="tarjeta__lista">
-              {visibles.map(t => {
-                const id = trabajoId(t);
-                const costo = trabajoCosto(t);
-                return (
-                  <button key={id || String(t.id)} type="button" className="ot-fila"
-                    onClick={() => { haptic('selection'); setSeleccionadoId(id); }}>
-                    <div className="ot-fila__icono"><Wrench size={16} /></div>
-                    <div className="ot-fila__cuerpo">
-                      <span className="ot-fila__id">{id}</span>
-                      <span className="ot-fila__sub">
-                        <span className="ot-fila__placa">{t.placa || '—'}</span>
-                        {t.trabajo_realizado ? ` · ${t.trabajo_realizado}` : ''}
-                      </span>
-                    </div>
-                    <div className="ot-fila__derecha">
-                      <span className={`ot-estado ot-estado--${tonoEstado(t.estado)}`} style={{ fontSize: '0.6875rem' }}>{estadoTrabajo(t.estado)}</span>
-                      <span className="ot-fila__fecha">{dia(t.fecha_trabajo)}</span>
-                      {costo > 0 && <span className="ot-fila__costo">S/ {costo.toFixed(2)}</span>}
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="ot-tabla-caja">
+              <table className="ot-tabla">
+                <thead>
+                  <tr>
+                    <th>ID trabajo</th><th>N° OT</th><th>Placa</th><th>Km / Horas</th><th>F/H inicio</th>
+                    <th>Trabajo realizado</th><th>Personal</th><th>F/H salida</th><th>Costo</th><th>Tiempo</th><th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibles.map(t => {
+                    const id = trabajoId(t);
+                    const costo = trabajoCosto(t);
+                    const horas = horasTrabajo(t);
+                    return (
+                      <tr key={id || String(t.id)} tabIndex={0} className="pressable"
+                        onClick={() => { haptic('selection'); setSeleccionadoId(id); }}
+                        onKeyDown={e => { if (e.key === 'Enter') setSeleccionadoId(id); }}>
+                        <td className="ot-tabla__id">{id}</td>
+                        <td>{t.ot_id || t.ticket_visita || '—'}</td>
+                        <td><span className="ot-fila__placa">{t.placa || '—'}</span></td>
+                        <td>{trabajoKmHoras(t)}</td>
+                        <td>{formatFechaHoraPe(aLocal(t.fecha_trabajo))}</td>
+                        <td className="ot-tabla__trabajo">{t.trabajo_realizado || '—'}</td>
+                        <td>{personalDe(t).join(', ') || '—'}</td>
+                        <td>{formatFechaHoraPe(aLocal(t.fecha_salida))}</td>
+                        <td>{costo > 0 ? formatSoles(costo) : '—'}</td>
+                        <td>{horas == null ? '—' : `${horas.toFixed(1)} h`}</td>
+                        <td><span className={`ot-estado ot-estado--${tonoEstado(t.estado)}`} style={{ fontSize: '0.6875rem' }}>{estadoTrabajo(t.estado)}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
+          </>)}
         </div>
       )}
     </Page>
+  );
+}
+
+function HorasTecnicosVista({ rango, onRango, datos, cargando, error }: {
+  rango: { desde: string; hasta: string }; onRango: (r: { desde: string; hasta: string }) => void;
+  datos: HorasTecnicosRespuesta | undefined; cargando: boolean; error: unknown;
+}) {
+  const rangoInvalido = rango.hasta < rango.desde;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 'var(--s-3)' }}>
+        <Field label="Desde">{p => <TextInput {...p} type="date" value={rango.desde} max={rango.hasta} onChange={e => onRango({ ...rango, desde: e.target.value })} />}</Field>
+        <Field label="Hasta">{p => <TextInput {...p} type="date" value={rango.hasta} min={rango.desde} onChange={e => onRango({ ...rango, hasta: e.target.value })} />}</Field>
+      </div>
+      {rangoInvalido ? (
+        <Notice tone="error">La fecha final es anterior a la inicial.</Notice>
+      ) : cargando ? <PageLoader /> : error ? (
+        <Notice tone="error">{errorMessage(error)}</Notice>
+      ) : datos && (
+        <>
+          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+            <Badge tone="amber">{datos.resumen.enCurso} trabajos en curso / sin cierre</Badge>
+            {datos.resumen.sinTecnico > 0 && <Badge>{datos.resumen.sinTecnico} sin técnico asignado</Badge>}
+            <Badge>{datos.diasLaborables} días laborables · {datos.proyectadasPorTecnico} h proyectadas por técnico</Badge>
+          </div>
+          {datos.tecnicos.length === 0 ? (
+            <EmptyState icon={<Wrench size={22} />} title="Sin horas en el rango">
+              No hay trabajos con técnico y fecha de inicio entre estas fechas.
+            </EmptyState>
+          ) : (
+            <>
+              <div>
+                <p className="tarjeta__grupo-titulo">Horas reales y eficiencia por técnico</p>
+                <HorasEficienciaGrafico tecnicos={datos.tecnicos} />
+              </div>
+              <div>
+                <p className="tarjeta__grupo-titulo">Horas por día</p>
+                <HorasMatriz datos={datos} />
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function HorasMatriz({ datos }: { datos: HorasTecnicosRespuesta }) {
+  const celda: CSSProperties = { padding: '8px 10px', textAlign: 'right', whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', borderBottom: '1px solid var(--separator)' };
+  const cabecera: CSSProperties = { ...celda, fontFamily: 'inherit', fontWeight: 600, fontSize: '0.6875rem', color: 'var(--label-2)' };
+  const totalReales = datos.tecnicos.reduce((s, t) => s + t.reales, 0);
+  const totalProyectadas = datos.tecnicos.length * datos.proyectadasPorTecnico;
+  const totalEnCurso = datos.tecnicos.reduce((s, t) => s + t.enCurso, 0);
+  const totalDia = (fecha: string) => datos.tecnicos.reduce((s, t) => s + (t.porDia[fecha] ?? 0), 0);
+  return (
+    <div style={{ overflowX: 'auto', background: 'var(--surface)' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <thead>
+          <tr>
+            <th style={{ ...cabecera, textAlign: 'left' }}>Técnico</th>
+            {datos.dias.map(d => (
+              <th key={d.fecha} title={formatFechaPe(d.fecha)} style={{ ...cabecera, opacity: d.laborable ? 1 : 0.45 }}>{diaCorto(d.fecha)}</th>
+            ))}
+            <th style={cabecera}>Reales</th>
+            <th style={cabecera}>Proyectadas</th>
+            <th style={cabecera}>Eficiencia</th>
+            <th style={cabecera}>En curso</th>
+          </tr>
+        </thead>
+        <tbody>
+          {datos.tecnicos.map(t => (
+            <tr key={t.nombre}>
+              <td style={{ ...celda, textAlign: 'left', fontFamily: 'inherit', fontWeight: 600 }}>{t.nombre}</td>
+              {datos.dias.map(d => (
+                <td key={d.fecha} style={{ ...celda, opacity: d.laborable ? 1 : 0.45 }}>{t.porDia[d.fecha] ? t.porDia[d.fecha].toFixed(1) : ''}</td>
+              ))}
+              <td style={{ ...celda, fontWeight: 700 }}>{t.reales.toFixed(1)}</td>
+              <td style={celda}>{t.proyectadas}</td>
+              <td style={celda}>{t.eficiencia.toFixed(1)} %</td>
+              <td style={celda}>{t.enCurso || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th style={{ ...cabecera, textAlign: 'left' }}>Total</th>
+            {datos.dias.map(d => {
+              const s = totalDia(d.fecha);
+              return <td key={d.fecha} style={{ ...celda, fontWeight: 700, opacity: d.laborable ? 1 : 0.45 }}>{s ? s.toFixed(1) : ''}</td>;
+            })}
+            <td style={{ ...celda, fontWeight: 700 }}>{totalReales.toFixed(1)}</td>
+            <td style={celda}>{totalProyectadas}</td>
+            <td style={{ ...celda, fontWeight: 700 }}>{totalProyectadas ? ((totalReales / totalProyectadas) * 100).toFixed(1) : '0.0'} %</td>
+            <td style={celda}>{totalEnCurso || '—'}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   );
 }
 

@@ -472,3 +472,14 @@
   color: var(--label-2);
   margin-left: 4px;
 }
+
+/* Lista de trabajos en tabla (como el historial del clásico) */
+.ot-tabla-caja { overflow-x: auto; background: var(--surface); border-radius: 14px; }
+.ot-tabla { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.ot-tabla th { font-size: 0.6875rem; font-weight: 600; color: var(--label-2); text-align: left; padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--separator); white-space: nowrap; }
+.ot-tabla td { padding: var(--s-2) var(--s-3); border-bottom: 0.5px solid var(--separator); white-space: nowrap; }
+.ot-tabla tbody tr { cursor: pointer; }
+.ot-tabla tbody tr:hover { background: var(--bg); }
+.ot-tabla tbody tr:last-child td { border-bottom: none; }
+.ot-tabla__id { font-family: var(--font-mono); font-weight: 700; }
+.ot-tabla__trabajo { white-space: normal; min-width: 16rem; }

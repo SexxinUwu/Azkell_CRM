@@ -119,14 +119,15 @@ window.init_status_rampa = function() {
         window.initColPicker('col-picker-sr', 'sr-tabla', [
             {label: 'Fecha Ingreso',  idx: 1, visible: true},
             {label: 'Hora',           idx: 2, visible: true},
-            {label: 'Inspección?',    idx: 4, visible: true},
-            {label: 'Situación',      idx: 5, visible: true},
-            {label: 'Observaciones',  idx: 6, visible: true},
-            {label: 'Fecha Salida',   idx: 7, visible: true},
-            {label: 'Hora Salida',    idx: 8, visible: true},
-            {label: 'H. Taller',      idx: 9, visible: true},
-            {label: 'OT Relacionadas',idx: 10, visible: true}
-        ], 'fleet_cols_status_rampa');
+            {label: 'Situación',      idx: 4, visible: true},
+            {label: 'Observaciones',  idx: 5, visible: true},
+            {label: 'Fecha Salida',   idx: 6, visible: true},
+            {label: 'Hora Salida',    idx: 7, visible: true},
+            {label: 'H. Taller',      idx: 8, visible: true},
+            {label: 'OT Relacionadas',idx: 9, visible: true},
+            {label: 'Técnicos',       idx: 10, visible: true},
+            {label: 'Inspección?',    idx: 11, visible: true}
+        ], 'fleet_cols_status_rampa_v2');
     }
 };
 
@@ -410,6 +411,31 @@ function srCargarOTs() {
             if (window.srDetalleId !== null) window.srAbrirDetalle(window.srDetalleId);
         })
         .catch(function() { window.srOtData = []; srRenderTabla(); });
+    // Trabajos de OT (técnicos por rampa). Si falla, la columna Técnicos queda en "—".
+    fetch('/api/ot-trabajos')
+        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function(data) { window.srTrabajosData = Array.isArray(data) ? data : []; srRenderTabla(); })
+        .catch(function() { window.srTrabajosData = []; });
+}
+
+// Técnicos únicos de las OT abiertas de una rampa (trabajos_ot.tecnico, separados por coma)
+function srTecnicosDe(ots) {
+    var abiertas = ots.filter(function(o) { return !/cerrad|finaliz|anulad/i.test(String(o.estado || '')); });
+    var ids = Object.create(null), tickets = Object.create(null), nombres = Object.create(null);
+    abiertas.forEach(function(o) {
+        if (o.id_ot) ids[o.id_ot] = true;
+        if (o.ticket_entrada) tickets[o.ticket_entrada] = true;
+    });
+    (window.srTrabajosData || []).forEach(function(t) {
+        var enOT = !!t.ot_id && ids[t.ot_id] === true;
+        var enTicket = !!t.ticket_visita && tickets[t.ticket_visita] === true;
+        if (!enOT && !enTicket) return;
+        String(t.tecnico || '').split(',').forEach(function(n) {
+            var x = n.trim();
+            if (x) nombres[x] = true;
+        });
+    });
+    return Object.keys(nombres).sort(function(a, b) { return a.localeCompare(b, 'es'); });
 }
 
 // ── Calcular horas en taller ─────────────────────────────────────
@@ -656,7 +682,7 @@ function srRenderTabla() {
     setEl('kpi-sr-espera', espera);
 
     if (!rampas.length) {
-        var emptyHtml = '<tr><td colspan="12" class="text-center py-5 text-muted" style="background:var(--card-bg);"><i class="bi bi-gear fs-1 d-block mb-2 text-primary"></i><span class="fw-bold">No hay rampas configuradas aún.</span><br><span class="small">Haz clic en <strong>⚙️ Configurar</strong> (arriba a la derecha) para agregar tus rampas o espacios de trabajo.</span></td></tr>';
+        var emptyHtml = '<tr><td colspan="13" class="text-center py-5 text-muted" style="background:var(--card-bg);"><i class="bi bi-gear fs-1 d-block mb-2 text-primary"></i><span class="fw-bold">No hay rampas configuradas aún.</span><br><span class="small">Haz clic en <strong>⚙️ Configurar</strong> (arriba a la derecha) para agregar tus rampas o espacios de trabajo.</span></td></tr>';
         if (tbody) tbody.innerHTML = emptyHtml;
         if (gridMobile) gridMobile.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-gear fs-1 d-block mb-2 text-primary"></i><span class="fw-bold">No hay rampas configuradas aún.</span><br><span class="small">Haz clic en <strong>⚙️ Configurar</strong> para agregar rampas.</span></div>';
         return;
@@ -744,6 +770,7 @@ function srRenderTabla() {
                     horasTallerNum: hrsNum,
                     horasTallerStr: hrsStr,
                     otsTxt: otsTxt,
+                    tecnicosTxt: srTecnicosDe(otsPlaca),
                     e: e
                 });
             });
@@ -816,9 +843,10 @@ function srRenderTabla() {
         if (row.esVacia) {
             html += '<tr class="sr-row-vacia">';
             html += '<td style="white-space:nowrap;"><div style="display:flex;align-items:center;gap:5px;"><span class="sr-badge-rampa" style="background:' + row.color + ';flex-shrink:0;" title="' + _srEsc(row.rampaNom) + '">' + row.rampaIdx + '</span><span style="font-size:0.74rem;font-weight:700;color:var(--text);">' + _srEsc(row.rampaNom) + '</span></div></td>';
-            html += '<td></td><td></td><td></td><td><span class="text-muted" style="font-size:0.75rem;">—</span></td>';
+            html += '<td></td><td></td><td></td>';
             html += '<td><span class="sr-semaforo sr-sem-vacio"><span class="sr-sem-dot"></span>Libre</span></td>';
-            html += '<td></td><td></td><td></td><td></td><td></td>';
+            html += '<td></td><td></td><td></td><td></td><td></td><td></td>';
+            html += '<td><span class="text-muted" style="font-size:0.75rem;">—</span></td>';
             if (window.checkPerm('status_rampa', 'c')) {
                 html += '<td><button class="btn-sr-reg" onclick="event.stopPropagation();window.srRegistrar(' + row.rampaId + ')"><i class="bi bi-plus-lg me-1"></i>Ingresar</button></td>';
             } else {
@@ -848,13 +876,14 @@ function srRenderTabla() {
             html += '<td>' + (e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '') + '</td>';
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
-            html += '<td style="text-align:center; white-space:nowrap;">' + row.inspInfo.badgeHtml + '</td>';
             html += '<td>' + badgeSit + '</td>';
             html += '<td><div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + _srEsc(row.obs || '—').replace(/"/g,'&quot;') + '">' + _srEsc(row.obs || '—') + '</div></td>';
             html += '<td>' + (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '') + '</td>';
             html += '<td>' + (e.horaSalida || '') + '</td>';
             html += '<td style="font-weight:700;font-size:0.8rem;color:var(--primary,#5865F2);">' + row.horasTallerStr + '</td>';
             html += '<td>' + row.otsTxt + '</td>';
+            html += '<td style="font-size:0.78rem;">' + (row.tecnicosTxt.length ? _srEsc(row.tecnicosTxt.join(', ')) : '—') + '</td>';
+            html += '<td style="text-align:center; white-space:nowrap;">' + row.inspInfo.badgeHtml + '</td>';
             html += '<td>';
             if (window.checkPerm('ot', 'e')) {
                 html += '<button class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;padding:2px 8px;" onclick="event.stopPropagation();window.srEditarRampa(' + e._id + ')" title="Editar"><i class="bi bi-pencil"></i></button> ';
@@ -908,6 +937,7 @@ function srRenderTabla() {
                               '</div>' +
                               '<div class="d-flex justify-content-between align-items-center pt-1" style="font-size:0.75rem;color:#64748b;">' +
                                   '<span class="fw-semibold">KM: ' + (e.km ? Number(e.km).toLocaleString('es-PE') : '—') + '</span>' +
+                                  (row.tecnicosTxt.length ? '<span class="fw-semibold text-truncate" style="max-width:55%;">Técnicos: ' + _srEsc(row.tecnicosTxt.join(', ')) + '</span>' : '') +
                                   '<span class="badge rounded-pill d-inline-flex align-items-center gap-1" style="background:rgba(37,99,235,0.08);color:#2563eb;font-weight:700;font-size:0.74rem;padding:4px 10px;">' +
                                       '<i class="bi bi-clock"></i> ' + row.horasTallerStr +
                                   '</span>' +
@@ -916,7 +946,7 @@ function srRenderTabla() {
         }
     });
 
-    if (tbody) tbody.innerHTML = html || '<tr><td colspan="12" class="text-center py-4 text-muted">No se encontraron registros</td></tr>';
+    if (tbody) tbody.innerHTML = html || '<tr><td colspan="13" class="text-center py-4 text-muted">No se encontraron registros</td></tr>';
     if (gridMobile) gridMobile.innerHTML = htmlMobile || '<div class="text-center py-4 text-muted">No se encontraron registros</div>';
 }
 
@@ -4831,8 +4861,9 @@ window._srConstruirPdfVectorial = async function () {
     doc.setTextColor(0);
 
     // Tabla
-    var head = [['RAMPA', 'F. INGRESO', 'HORA', 'PLACA', 'INSPECCIÓN?', 'SITUACIÓN', 'OBSERVACIONES / TRABAJOS A REALIZAR', 'SALIDA (EST.)', 'HORA', 'H. TALLER']];
-    var body = d.filas.map(function (f) { return [f.rampa, f.fIn, f.hIn, f.placa, f.insp, f.sit, f.obs, f.fOut, f.hOut, f.hTaller]; });
+    // Inspección va al final de la tabla (F-MAN-005)
+    var head = [['RAMPA', 'F. INGRESO', 'HORA', 'PLACA', 'SITUACIÓN', 'OBSERVACIONES / TRABAJOS A REALIZAR', 'SALIDA (EST.)', 'HORA', 'H. TALLER', 'INSPECCIÓN?']];
+    var body = d.filas.map(function (f) { return [f.rampa, f.fIn, f.hIn, f.placa, f.sit, f.obs, f.fOut, f.hOut, f.hTaller, f.insp]; });
 
     doc.autoTable({
         head: head, body: body, startY: ky + kh + 4, margin: { left: M, right: M, bottom: 14 },
@@ -4841,17 +4872,18 @@ window._srConstruirPdfVectorial = async function () {
         headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 7.4 },
         columnStyles: {
             0: { fontStyle: 'bold', cellWidth: 28 }, 1: { halign: 'center', cellWidth: 20 }, 2: { halign: 'center', cellWidth: 13 },
-            3: { halign: 'center', fontStyle: 'bold', fontSize: 9, cellWidth: 22 }, 4: { halign: 'center', fontStyle: 'bold', cellWidth: 21 },
-            5: { halign: 'center', fontStyle: 'bold', cellWidth: 26 }, 6: { halign: 'left' },
-            7: { halign: 'center', cellWidth: 20 }, 8: { halign: 'center', cellWidth: 13 }, 9: { halign: 'center', fontStyle: 'bold', cellWidth: 18 }
+            3: { halign: 'center', fontStyle: 'bold', fontSize: 9, cellWidth: 22 }, 4: { halign: 'center', fontStyle: 'bold', cellWidth: 26 },
+            5: { halign: 'left' },
+            6: { halign: 'center', cellWidth: 20 }, 7: { halign: 'center', cellWidth: 13 }, 8: { halign: 'center', fontStyle: 'bold', cellWidth: 18 },
+            9: { halign: 'center', fontStyle: 'bold', cellWidth: 21 }
         },
         didParseCell: function (data) {
             if (data.section !== 'body') return;
             var f = d.filas[data.row.index];
             if (!f) return;
-            if (data.column.index === 4) data.cell.styles.textColor = rgb(f.inspColor);
-            if (data.column.index === 5) data.cell.styles.textColor = rgb(f.sitColor);
-            if (f.libre && data.column.index !== 0 && data.column.index !== 5) data.cell.styles.fontStyle = 'normal';
+            if (data.column.index === 9) data.cell.styles.textColor = rgb(f.inspColor);
+            if (data.column.index === 4) data.cell.styles.textColor = rgb(f.sitColor);
+            if (f.libre && data.column.index !== 0 && data.column.index !== 4) data.cell.styles.fontStyle = 'normal';
         }
     });
 

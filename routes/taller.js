@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { getPresignedUploadUrl, getPresignedUrl } = require('../utils/s3');
+const { calcularHorasTecnicos, horasDeTrabajo, fechaNaive } = require('../services/horas_tecnicos');
 const router = express.Router();
 
 module.exports = (db, logAudit, _generarCodigoAlmacen) => {
@@ -594,6 +595,32 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         tdb.query(sql, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
+        });
+    });
+
+    // Horas por técnico y eficiencia (cálculo compartido en services/horas_tecnicos.js)
+    router.get('/ot-horas-tecnicos', (req, res) => {
+        const tdb = req.db || db;
+        const desde = String(req.query.desde || '');
+        const hasta = String(req.query.hasta || '');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta) || hasta < desde) {
+            return res.status(400).json({ error: 'Rango de fechas inválido (AAAA-MM-DD).' });
+        }
+        const sql = `SELECT t.id_ot, t.ticket_visita, t.tecnico, t.placa, t.tipo_ot, t.sub_tipo, t.estado,
+                            t.fecha_trabajo, t.fecha_salida, t.trabajo_realizado
+                     FROM trabajos_ot t
+                     WHERE t.fecha_trabajo IS NOT NULL
+                       AND DATE(t.fecha_trabajo) BETWEEN ? AND ?
+                     ORDER BY t.fecha_trabajo ASC, t.id_ot ASC`;
+        tdb.query(sql, [desde, hasta], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            const trabajos = rows.map(t => ({
+                ...t,
+                fecha_trabajo: fechaNaive(t.fecha_trabajo),
+                fecha_salida: fechaNaive(t.fecha_salida),
+                horas: horasDeTrabajo(t),
+            }));
+            res.json({ ...calcularHorasTecnicos(rows, desde, hasta), trabajos });
         });
     });
 

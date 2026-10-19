@@ -7,6 +7,7 @@ import { ArrowUpRight, ChevronRight, Clock, FileSpreadsheet, FileText, LayoutDas
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput } from '../../core/ui/Field';
+import { Switch } from '../../core/ui/Switch';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
@@ -17,7 +18,7 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { crearOTHija, eliminarRampaRegistro, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, type OrdenTrabajo, type RampaEntrada } from './api';
+import { crearOTHija, eliminarRampaRegistro, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
 import { ConfigurarRampasSheet, enviarWhatsApp, exportarRampasPDF, textoReporteRampas, type CatRampa } from './RampasHerramientas';
 import { LiberarRampa, RampaFormulario } from './RampaFormulario';
 import { SUBTIPOS_OT, TIPOS_OT } from './tipos-ot';
@@ -28,6 +29,48 @@ import { Badge } from '../../core/ui/Display';
 import { clavePlaca } from '../inspecciones/api';
 
 const TABS = ['Activas', 'Historial'] as const;
+
+// Preferencia de pantalla: mostrar u ocultar la columna de inspección (por dispositivo)
+const CLAVE_VER_INSPECCION = 'fleet_rampa_ver_inspeccion';
+function leerVerInspeccion(): boolean {
+  try { return localStorage.getItem(CLAVE_VER_INSPECCION) !== '0'; } catch { return true; }
+}
+
+const placaNorm = (s: string | null | undefined) => String(s ?? '').trim().toUpperCase();
+
+// OT abiertas de una rampa: enlazadas a esa rampa, o de la misma placa cuando su rampa ya no está activa
+// (p. ej. la unidad se liberó y volvió a ingresar: la OT en curso no debe quedar huérfana)
+function otsDeRampa(e: RampaEntrada, ots: OrdenTrabajo[], entradas: RampaEntrada[]): OrdenTrabajo[] {
+  const rampasActivas = new Set(entradas.map(x => String(x.id ?? '')));
+  return ots.filter(o => {
+    if (/cerrad|finaliz|anulad/i.test(String(o.estado ?? ''))) return false;
+    const rampaOT = String(o.id_rampa ?? '');
+    if (rampaOT === String(e.id ?? '')) return true;
+    return placaNorm(o.placa) !== '' && placaNorm(o.placa) === placaNorm(e.placa) && !rampasActivas.has(rampaOT);
+  });
+}
+
+// Técnicos únicos de las OT abiertas de cada rampa (trabajos_ot.tecnico, separados por coma)
+function tecnicosDeRampas(entradas: RampaEntrada[], ots: OrdenTrabajo[], trabajos: TrabajoOT[]): Map<string, string[]> {
+  const mapa = new Map<string, string[]>();
+  for (const e of entradas) {
+    const abiertas = otsDeRampa(e, ots, entradas);
+    const ids = new Set(abiertas.map(o => o.id_ot).filter(Boolean));
+    const tickets = new Set(abiertas.map(o => o.ticket_entrada).filter((x): x is string => !!x));
+    const nombres = new Set<string>();
+    for (const t of trabajos) {
+      const enOT = (t.ot_id ?? '') !== '' && ids.has(t.ot_id ?? '');
+      const enTicket = !!t.ticket_visita && tickets.has(t.ticket_visita);
+      if (!enOT && !enTicket) continue;
+      for (const n of String(t.tecnico ?? '').split(',')) {
+        const nombre = n.trim();
+        if (nombre) nombres.add(nombre);
+      }
+    }
+    mapa.set(rampaId(e), [...nombres].sort((a, b) => a.localeCompare(b, 'es')));
+  }
+  return mapa;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -203,6 +246,13 @@ export function StatusRampaPage() {
 
   const activas = useMemo(() => entradas.filter(e => e.estado !== 'Liberado'), [entradas]);
   const historial = useMemo(() => entradas.filter(e => e.estado === 'Liberado'), [entradas]);
+  const trabajosOT = useTrabajosOT();
+  const tecnicosPorRampa = useMemo(() => tecnicosDeRampas(activas, ordenes.data ?? [], trabajosOT.data ?? []), [activas, ordenes.data, trabajosOT.data]);
+  const [verInspeccion, setVerInspeccion] = useState(leerVerInspeccion);
+  function cambiarVerInspeccion(v: boolean) {
+    setVerInspeccion(v);
+    try { localStorage.setItem(CLAVE_VER_INSPECCION, v ? '1' : '0'); } catch { /* sin almacenamiento: dura solo la sesión */ }
+  }
 
   const lista = tab === 'Activas' ? activas : historial;
 
@@ -271,7 +321,7 @@ export function StatusRampaPage() {
           <PanelAnaliticas activas={activas} historial={historial} />
 
           {/* Tabs */}
-          <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+          <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center', flexWrap: 'wrap' }}>
             {TABS.map(t => (
               <button
                 key={t}
@@ -300,6 +350,12 @@ export function StatusRampaPage() {
                 </span>
               </button>
             ))}
+            {tab === 'Activas' && (
+              <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 'var(--s-2)', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--label-2)' }}>
+                Ver inspección
+                <Switch id="sr-ver-inspeccion" checked={verInspeccion} onChange={cambiarVerInspeccion} label="Ver inspección" />
+              </span>
+            )}
           </div>
 
           {tab === 'Historial' && (
@@ -314,10 +370,10 @@ export function StatusRampaPage() {
             ) : (
               <>
                 <div className="rt-solo-web">
-                  <RampaTabla entradas={activas} ots={ordenes.data ?? []} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
+                  <RampaTabla entradas={activas} ots={ordenes.data ?? []} tecnicosPorRampa={tecnicosPorRampa} verInspeccion={verInspeccion} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
                 </div>
                 <div className="rm-solo-movil">
-                  <RampaMovil entradas={activas} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
+                  <RampaMovil entradas={activas} tecnicosPorRampa={tecnicosPorRampa} verInspeccion={verInspeccion} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
                 </div>
               </>
             )
@@ -388,24 +444,14 @@ function situacionTono(s: string | null) {
   return 'gray';
 }
 
-function RampaTabla({ entradas, ots, ultimasInsp, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; ots: OrdenTrabajo[]; ultimasInsp: Map<string, Inspeccion>; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
-  // OT de una rampa: abierta y enlazada a esa rampa, o de la misma placa cuando su rampa ya no está activa
-  // (p. ej. la unidad se liberó y volvió a ingresar: la OT en curso no debe quedar huérfana)
-  const rampasActivas = new Set(entradas.map(x => String(x.id ?? '')));
-  const placa = (s: string | null | undefined) => String(s ?? '').trim().toUpperCase();
-  const otsDe = (e: RampaEntrada) => ots.filter(o => {
-    if (/cerrad|finaliz|anulad/i.test(String(o.estado ?? ''))) return false;
-    const rampaOT = String(o.id_rampa ?? '');
-    if (rampaOT === String(e.id ?? '')) return true;
-    return placa(o.placa) !== '' && placa(o.placa) === placa(e.placa) && !rampasActivas.has(rampaOT);
-  });
+function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasInsp, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; ots: OrdenTrabajo[]; tecnicosPorRampa: Map<string, string[]>; verInspeccion: boolean; ultimasInsp: Map<string, Inspeccion>; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
   return (
     <div className="rt-caja">
       <table className="rt">
         <thead>
           <tr>
-            <th>Rampa</th><th>Ingreso</th><th>Hora</th><th>Placa</th><th>Inspección</th><th>Situación</th><th>Observaciones</th>
-            <th>Salida est.</th><th>Hora</th><th>H. taller</th><th>OT</th><th aria-label="Abrir" />
+            <th>Rampa</th><th>Ingreso</th><th>Hora</th><th>Placa</th><th>Situación</th><th>Observaciones</th>
+            <th>Salida est.</th><th>Hora</th><th>H. taller</th><th>OT</th><th>Técnicos</th>{verInspeccion && <th>Inspección</th>}<th aria-label="Abrir" />
           </tr>
         </thead>
         <tbody>
@@ -423,16 +469,17 @@ function RampaTabla({ entradas, ots, ultimasInsp, onInspeccion, onAbrir }: { ent
                 <td>{soloFecha(e.fecha_ingreso)}</td>
                 <td>{soloHora(e.hora_ingreso)}</td>
                 <td><span className="rt__placa">{e.placa ?? '—'}</span></td>
-                <td><BadgeInspeccion placa={e.placa} ultimas={ultimasInsp} onAbrir={onInspeccion} /></td>
                 <td><span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{e.situacion ?? '—'}</span></td>
                 <td className="rt__obs">{e.observaciones ?? '—'}</td>
                 <td>{soloFecha(e.salida_programada)}</td>
                 <td>{soloHora(e.hora_salida_programada)}</td>
                 <td><span className="rt__tiempo" style={{ color: tiempoColor(horas) }}>{horas > 0 ? formatTiempo(horas) : '—'}</span></td>
                 <td>{(() => {
-                  const de = otsDe(e);
+                  const de = otsDeRampa(e, ots, entradas);
                   return de.length ? <span className="rt__ot" title={de.map(o => o.id_ot).join(', ')}>{de.length} OT · {de[0].id_ot}</span> : '—';
                 })()}</td>
+                <td>{tecnicosPorRampa.get(rampaId(e))?.join(', ') || '—'}</td>
+                {verInspeccion && <td><BadgeInspeccion placa={e.placa} ultimas={ultimasInsp} onAbrir={onInspeccion} /></td>}
                 <td><ChevronRight size={16} className="rt__flecha" aria-hidden /></td>
               </tr>
             );
@@ -457,7 +504,7 @@ function BadgeInspeccion({ placa, ultimas, onAbrir }: { placa: string | null; ul
   );
 }
 
-function RampaMovil({ entradas, ultimasInsp, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; ultimasInsp: Map<string, Inspeccion>; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
+function RampaMovil({ entradas, tecnicosPorRampa, verInspeccion, ultimasInsp, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; tecnicosPorRampa: Map<string, string[]>; verInspeccion: boolean; ultimasInsp: Map<string, Inspeccion>; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
   return (
     <div className="rm-lista">
       {entradas.map(e => {
@@ -471,13 +518,14 @@ function RampaMovil({ entradas, ultimasInsp, onInspeccion, onAbrir }: { entradas
                 <span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{e.situacion ?? '—'}</span>
               </span>
               <strong className="rm-placa">{e.placa ?? '—'}</strong>
+              {(tecnicosPorRampa.get(rampaId(e)) ?? []).length > 0 && <span className="rm-km">Técnicos: {tecnicosPorRampa.get(rampaId(e))?.join(', ')}</span>}
               <span className="rm-fechas">
                 <span className="rm-chip rm-chip--in">Entrada {soloFecha(e.fecha_ingreso)} · {soloHora(e.hora_ingreso)}</span>
                 <span className="rm-chip rm-chip--out">Salida est. {soloFecha(e.salida_programada)} · {soloHora(e.hora_salida_programada)}</span>
               </span>
               <span className="rm-pie">
                 <span className="rm-km">KM: {e.km ? String(e.km) : '—'}</span>
-                <span className="rm-km"><BadgeInspeccion placa={e.placa} ultimas={ultimasInsp} onAbrir={onInspeccion} /></span>
+                {verInspeccion && <span className="rm-km"><BadgeInspeccion placa={e.placa} ultimas={ultimasInsp} onAbrir={onInspeccion} /></span>}
                 {horas > 0 && (
                   <span className="rt__tiempo" style={{ color: tiempoColor(horas) }}><Clock size={11} /> {formatTiempo(horas)}</span>
                 )}
