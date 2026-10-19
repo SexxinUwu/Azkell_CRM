@@ -12,42 +12,11 @@ module.exports = function (db, logAudit) {
         }
     }
 
-    async function ensureTableDisponibilidad(tdb) {
-        const sqlCreateTable = `
-            CREATE TABLE IF NOT EXISTS flota_disponibilidad (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                flota VARCHAR(100) NULL DEFAULT '',
-                conductor_eventual VARCHAR(150) NULL DEFAULT '',
-                conductor_asignado VARCHAR(150) NULL DEFAULT '',
-                placa_camion VARCHAR(50) NULL DEFAULT '',
-                placa_carreta VARCHAR(50) NULL DEFAULT '',
-                capacidad_tanque VARCHAR(50) NULL DEFAULT '',
-                marca VARCHAR(50) NULL DEFAULT '',
-                categoria_conductor VARCHAR(50) NULL DEFAULT '',
-                tipo_unidad VARCHAR(100) NULL DEFAULT '',
-                estado_conductor VARCHAR(50) NOT NULL DEFAULT 'Disponible',
-                estado_unidad VARCHAR(50) NOT NULL DEFAULT 'Disponible',
-                ubicacion_manual TEXT NULL,
-                observaciones TEXT NULL,
-                creado_por VARCHAR(100) NULL DEFAULT '',
-                actualizado_por VARCHAR(100) NULL DEFAULT '',
-                fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_estado_con (estado_conductor),
-                INDEX idx_estado_uni (estado_unidad)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        `;
-        try {
-            await (tdb.promise ? tdb.promise() : tdb).query(sqlCreateTable);
-        } catch (e) {}
-    }
-
     // ── GET /api/disponibilidad-flota (Listado general consolidado en vivo) ───────
     router.get('/', async (req, res) => {
         try {
             const tdb = getDb(req);
             const pDb = (tdb.promise ? tdb.promise() : tdb);
-            await ensureTableDisponibilidad(tdb);
 
             const clean = str => (str || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
             const norm = str => (str || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();

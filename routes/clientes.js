@@ -28,31 +28,6 @@ module.exports = function (db, logAudit) {
         next();
     });
 
-    // ── Middleware: asegurar tabla clientes existe y uniformizar collation ──
-    router.use((req, res, next) => {
-        const tdb = getDb(req);
-        const createTableQuery = `
-        CREATE TABLE IF NOT EXISTS clientes (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            ruc_dni VARCHAR(50),
-            razon_social VARCHAR(255) NOT NULL,
-            direccion TEXT,
-            telefono VARCHAR(50),
-            email VARCHAR(100),
-            estado VARCHAR(20) DEFAULT 'Activo',
-            notas TEXT,
-            fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_razon (razon_social)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        `;
-        tdb.query(createTableQuery, (err) => {
-            if (err) console.warn('Error inicializando tabla clientes:', err.message);
-            tdb.query("ALTER TABLE clientes CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", () => {});
-            tdb.query("ALTER TABLE placas CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", () => {});
-            next();
-        });
-    });
-
     // ── GET /api/clientes (lista general con conteo de vehículos inteligente) ─────────
     router.get('/', (req, res) => {
         const tdb = getDb(req);

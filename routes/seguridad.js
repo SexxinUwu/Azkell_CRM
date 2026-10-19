@@ -1679,9 +1679,6 @@ module.exports = (db, logAudit) => {
         });
     });
 
-    // Asegurar columnas configuracion y estilo_cabina en seg_entrega_vehiculos
-    db.query("ALTER TABLE seg_entrega_vehiculos ADD COLUMN configuracion VARCHAR(50) NULL", () => {});
-    db.query("ALTER TABLE seg_entrega_vehiculos ADD COLUMN estilo_cabina VARCHAR(50) NULL", () => {});
 
     // ── GET /seguridad/entrega-vehiculos ──────────────────────────
     router.get('/seguridad/entrega-vehiculos', (req, res) => {

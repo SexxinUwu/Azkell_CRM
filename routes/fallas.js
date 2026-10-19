@@ -14,54 +14,6 @@ module.exports = function (db) {
     const router = express.Router();
     const getDb = req => req.db || db;
 
-    async function ensureTables(tdb) {
-        await tdb.promise().query(`
-            CREATE TABLE IF NOT EXISTS reportes_fallas (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                folio VARCHAR(50) NOT NULL UNIQUE,
-                orden_viaje VARCHAR(60) DEFAULT NULL,
-                fecha_reporte DATETIME DEFAULT CURRENT_TIMESTAMP,
-                placa_tracto VARCHAR(20),
-                placa_remolque VARCHAR(20),
-                km_inicial INT DEFAULT 0,
-                km_final INT DEFAULT 0,
-                horas_motor VARCHAR(50) DEFAULT NULL,
-                conductor VARCHAR(150),
-                procedencia VARCHAR(150),
-                ubicacion_gps VARCHAR(255),
-                fallas_tracto_json LONGTEXT,
-                fallas_remolque_json LONGTEXT,
-                fallas_libres_text TEXT,
-                fotos_json LONGTEXT,
-                firma_conductor LONGTEXT,
-                critica TINYINT(1) NOT NULL DEFAULT 0,
-                estado VARCHAR(30) DEFAULT 'Pendiente',
-                id_rampa VARCHAR(50) DEFAULT NULL,
-                ots_generadas_json LONGTEXT,
-                creado_por VARCHAR(100),
-                creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_orden_viaje (orden_viaje),
-                INDEX idx_placa_tracto (placa_tracto)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        `);
-        await tdb.promise().query(`
-            CREATE TABLE IF NOT EXISTS ot_backlog (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                backlog_id VARCHAR(30) NOT NULL,
-                placa VARCHAR(100),
-                km INT NOT NULL DEFAULT 0,
-                tema VARCHAR(100) NOT NULL,
-                tarea TEXT NOT NULL,
-                reportado_por VARCHAR(100) NOT NULL,
-                fecha_reporte DATE,
-                estado VARCHAR(20) NOT NULL,
-                creado_por VARCHAR(100) NOT NULL,
-                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                ticket_ot VARCHAR(50)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        `);
-    }
-
     // FAL-AAAA-NNNN (el siguiente después del último del año)
     async function siguienteFolio(tdb) {
         const anio = new Date().getFullYear();
@@ -138,7 +90,6 @@ module.exports = function (db) {
     router.get('/', async (req, res) => {
         try {
             const tdb = getDb(req);
-            await ensureTables(tdb);
             const { placa, estado, desde, hasta, limit } = req.query;
             let sql = 'SELECT * FROM reportes_fallas WHERE 1=1';
             const params = [];
@@ -158,7 +109,6 @@ module.exports = function (db) {
     router.get('/stats', async (req, res) => {
         try {
             const tdb = getDb(req);
-            await ensureTables(tdb);
             const [rows] = await tdb.promise().query(`
                 SELECT
                     COUNT(*) AS total,
@@ -178,7 +128,6 @@ module.exports = function (db) {
     router.post('/', async (req, res) => {
         try {
             const tdb = getDb(req);
-            await ensureTables(tdb);
             const b = req.body || {};
             const placa = String(b.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
             if (!placa) return res.status(400).json({ error: 'placa requerida' });
@@ -226,7 +175,6 @@ module.exports = function (db) {
     router.put('/:id/estado', async (req, res) => {
         try {
             const tdb = getDb(req);
-            await ensureTables(tdb);
             const { id } = req.params;
             const { estado, atendido_por, observaciones, requerimiento_oc_id } = req.body || {};
             if (!estado) return res.status(400).json({ error: 'estado requerido' });
@@ -260,7 +208,6 @@ module.exports = function (db) {
     router.delete('/:id', async (req, res) => {
         try {
             const tdb = getDb(req);
-            await ensureTables(tdb);
             const [rows] = await tdb.promise().query('SELECT folio FROM reportes_fallas WHERE id = ?', [req.params.id]);
             if (!rows.length) return res.status(404).json({ error: 'Falla no encontrada' });
             await tdb.promise().query('UPDATE reportes_fallas SET estado = ? WHERE id = ?', ['ANULADA', req.params.id]);
