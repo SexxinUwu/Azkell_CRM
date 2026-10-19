@@ -1,4 +1,5 @@
 const express = require('express');
+const { audit: auditar, actorFrom, diff } = require('../services/auditoria');
 
 module.exports = function (db, logAudit) {
     const router = express.Router();
@@ -189,6 +190,14 @@ module.exports = function (db, logAudit) {
             `;
             tdb.query(syncPlacasSql, [cleanRazon, cleanRuc, cleanRuc, cleanRuc, cleanRazon], () => {});
 
+            // Con ON DUPLICATE KEY UPDATE, affectedRows = 2 significa que se actualizó un cliente existente
+            const actualizado = result.affectedRows === 2;
+            auditar(tdb, actorFrom(req), {
+                action: actualizado ? 'UPDATE' : 'CREATE', entity: 'client', entityId: result.insertId || result.id,
+                summary: actualizado ? `Actualizó al cliente ${cleanRazon}` : `Registró al cliente ${cleanRazon}`,
+                changes: actualizado ? undefined : diff({}, { ruc_dni: cleanRuc, razon_social: cleanRazon, estado: estado || 'Activo', email: (email || '').trim().toLowerCase() },
+                    ['ruc_dni', 'razon_social', 'estado', 'email']),
+            });
             res.json({ ok: true, id: result.insertId || result.id });
         });
     });
@@ -284,7 +293,8 @@ module.exports = function (db, logAudit) {
         const newRazon = razon_social.trim().toUpperCase();
 
         // 1. Obtener la Razón Social y RUC anteriores del cliente
-        tdb.query('SELECT ruc_dni, razon_social FROM clientes WHERE id = ?', [id], (errOld, oldRows) => {
+        tdb.query('SELECT ruc_dni, razon_social, direccion, telefono, email, estado, notas FROM clientes WHERE id = ?', [id], (errOld, oldRows) => {
+            const antesC = (oldRows && oldRows.length) ? oldRows[0] : {};
             const oldRuc = oldRows && oldRows.length ? oldRows[0].ruc_dni : '';
             const oldRazon = oldRows && oldRows.length ? oldRows[0].razon_social : '';
 
@@ -298,6 +308,12 @@ module.exports = function (db, logAudit) {
 
             tdb.query(sqlUpdateClient, values, (errUp) => {
                 if (errUp) return res.status(500).json({ error: errUp.message });
+
+                const despuesC = { ruc_dni: newRuc, razon_social: newRazon, direccion: (direccion || '').trim(), telefono: (telefono || '').trim(), email: (email || '').trim().toLowerCase(), estado: estado || 'Activo', notas: (notas || '').trim() };
+                const cambiosC = diff(antesC, despuesC, ['ruc_dni', 'razon_social', 'direccion', 'telefono', 'email', 'estado', 'notas']);
+                if (Object.keys(cambiosC).length) {
+                    auditar(tdb, actorFrom(req), { action: 'UPDATE', entity: 'client', entityId: id, summary: `Editó al cliente ${newRazon}`, changes: cambiosC });
+                }
 
                 // 3. Cascadear actualización a TODAS las placas vinculadas por RUC o Razón Social previa o limpia
                 const sqlCascadePlacas = `
@@ -325,9 +341,13 @@ module.exports = function (db, logAudit) {
     router.delete('/:id', (req, res) => {
         const tdb = getDb(req);
         const id = req.params.id;
-        tdb.query('DELETE FROM clientes WHERE id = ?', [id], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true });
+        tdb.query('SELECT razon_social FROM clientes WHERE id = ?', [id], (errN, filasN) => {
+            const nombreCliente = (!errN && filasN && filasN.length) ? filasN[0].razon_social : `ID ${id}`;
+            tdb.query('DELETE FROM clientes WHERE id = ?', [id], (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                auditar(tdb, actorFrom(req), { action: 'DELETE', entity: 'client', entityId: id, summary: `Eliminó al cliente ${nombreCliente}` });
+                res.json({ ok: true });
+            });
         });
     });
 
