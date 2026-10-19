@@ -8,6 +8,7 @@ import { ThemeSelector } from '../../core/ui/ThemeToggle';
 import { CambiarPasswordSheet } from './CambiarPasswordSheet';
 import { SesionesSheet } from './SesionesSheet';
 import { useImagenPerfil, useMiPerfil } from './perfilApi';
+import { haptic } from '../../core/lib/haptics';
 
 // Mi cuenta: datos de la sesión, apariencia, contraseña y sesiones activas. Foto y firma siguen en la versión actual.
 export function PerfilPage() {
@@ -46,19 +47,19 @@ export function PerfilPage() {
       <div className="list"><AccentPicker /></div>
 
       <div className="list" style={{ marginTop: 'var(--s-6)' }}>
-        <button type="button" className="row" onClick={() => setClaveAbierta(true)}>
+        <button type="button" className="row pressable" onClick={() => { haptic('selection'); setClaveAbierta(true); }}>
           <KeyRound size={20} strokeWidth={1.8} />
           <span className="row__main row__title">Cambiar contraseña</span>
         </button>
-        <button type="button" className="row" onClick={() => setSesionesAbiertas(true)}>
+        <button type="button" className="row pressable" onClick={() => { haptic('selection'); setSesionesAbiertas(true); }}>
           <Monitor size={20} strokeWidth={1.8} />
           <span className="row__main row__title">Sesiones activas</span>
         </button>
-        <button type="button" className="row" onClick={() => navigate('/perfil/editar')}>
+        <button type="button" className="row pressable" onClick={() => { haptic('selection'); navigate('/perfil/editar'); }}>
           <UserRound size={20} strokeWidth={1.8} />
           <span className="row__main row__title">Editar perfil y foto</span>
         </button>
-        <button type="button" className="row" onClick={logout} style={{ color: 'var(--red-ink)' }}>
+        <button type="button" className="row pressable" onClick={() => { haptic('warning'); logout(); }} style={{ color: 'var(--red-ink)' }}>
           <LogOut size={20} strokeWidth={1.8} />
           <span className="row__main row__title">Cerrar sesión</span>
         </button>
