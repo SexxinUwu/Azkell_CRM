@@ -21,15 +21,39 @@ window.init_trabajos_ot = function() {
         if (wrap) window.showNoPermMsg(wrap);
         return;
     }
+    // Al entrar, la lista muestra solo el día de hoy
+    var d = document.getElementById('tot-fil-desde');
+    var h = document.getElementById('tot-fil-hasta');
+    if (d && h && !d.value && !h.value) { d.value = totHoyIso(); h.value = totHoyIso(); }
     totCargar();
 };
 
 // ── Carga de datos ────────────────────────────────────────────────
+// Rango de la lista: por defecto el día de hoy (la base es grande); vacío = todos los trabajos
+function totHoyIso() {
+    var h = new Date();
+    return h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0') + '-' + String(h.getDate()).padStart(2, '0');
+}
+
+function totSetRango(desde, hasta) {
+    var d = document.getElementById('tot-fil-desde');
+    var h = document.getElementById('tot-fil-hasta');
+    if (d) d.value = desde;
+    if (h) h.value = hasta;
+    window.totCargar();
+}
+
+window.totRangoHoy = function() { var h = totHoyIso(); totSetRango(h, h); };
+window.totRangoTodas = function() { totSetRango('', ''); };
+
 window.totCargar = function() {
     var tbody = document.getElementById('tot-tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
 
-    fetch('/api/ot-trabajos')
+    var rango = totGetFiltros();
+    var url = '/api/ot-trabajos';
+    if (rango.desde && rango.hasta) url += '?desde=' + encodeURIComponent(rango.desde) + '&hasta=' + encodeURIComponent(rango.hasta);
+    fetch(url)
         .then(function(r) {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json();
@@ -44,7 +68,7 @@ window.totCargar = function() {
                 window.mostrarAlerta('Error al cargar trabajos de OT', 'danger');
             }
             var tb = document.getElementById('tot-tbody');
-            if (tb) tb.innerHTML = '<tr><td colspan="9" class="td-placeholder">Error al cargar datos</td></tr>';
+            if (tb) tb.innerHTML = '<tr><td colspan="11" class="td-placeholder">Error al cargar datos</td></tr>';
         });
 };
 
@@ -241,7 +265,7 @@ function totRenderTablaRows() {
     var nextBtn = document.getElementById('tot-pag-next');
 
     if (total === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="td-placeholder"><i class="bi bi-tools" style="font-size:1.5rem; opacity:0.3"></i><br>Sin trabajos encontrados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="td-placeholder"><i class="bi bi-tools" style="font-size:1.5rem; opacity:0.3"></i><br>Sin trabajos encontrados</td></tr>';
         if (infoEl)  infoEl.textContent = 'Mostrando 0 - 0 de 0 trabajos';
         if (indEl)   indEl.textContent = 'Página 1 de 1';
         if (prevBtn) prevBtn.disabled = true;
@@ -287,6 +311,7 @@ function totRenderTablaRows() {
             + '<td style="font-size:0.80rem; white-space:nowrap;">' + totFmtDateTime(t.fecha_trabajo) + '</td>'
             + '<td style="max-width:280px; font-size:0.82rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + totEsc(t.trabajo_realizado || '—') + '">' + totEsc(t.trabajo_realizado || '—') + '</td>'
             + '<td style="white-space:nowrap; font-size:0.82rem;">' + totEsc(det.personal || t.tecnico || '—') + '</td>'
+            + '<td style="white-space:nowrap; font-size:0.82rem;">' + totEsc(t.creado_por || '—') + '</td>'
             + '<td style="font-size:0.80rem; white-space:nowrap;">' + totFmtDateTime(t.fecha_salida) + '</td>'
             + '<td style="text-align:right; white-space:nowrap;"><strong style="color:#16a34a;">' + totFmtMoney(det.costo) + '</strong></td>'
             + '<td style="font-size:0.82rem; text-align:center; white-space:nowrap;">' + totEsc(tiempoHrs) + '</td>';
@@ -738,6 +763,10 @@ function totRenderHoras() {
         var html = '<span class="badge rounded-pill" style="background:rgba(217,119,6,.14);color:#b45309;font-weight:700;">' + h.resumen.enCurso + ' trabajos en curso / sin cierre</span>';
         if (h.resumen.sinTecnico > 0) html += '<span class="badge rounded-pill bg-secondary-subtle text-secondary fw-semibold">' + h.resumen.sinTecnico + ' sin técnico asignado</span>';
         html += '<span class="badge rounded-pill bg-secondary-subtle text-secondary fw-semibold">' + h.diasLaborables + ' días laborables · ' + h.proyectadasPorTecnico + ' h proyectadas por técnico</span>';
+        var sinTec = (h.trabajos || []).filter(function(t) { return !totPersonas(t.tecnico).length; });
+        if (sinTec.length) {
+            html += '<button type="button" class="btn btn-sm btn-outline-dark rounded-pill fw-semibold" onclick="window.totRegAbrir()"><i class="bi bi-people me-1"></i>Regularizar técnicos (' + sinTec.length + ')</button>';
+        }
         badges.innerHTML = html;
     }
     totPintarGraficoHoras(h);
@@ -826,6 +855,80 @@ function totPintarMatrizHoras(h) {
     cont.innerHTML = html;
 }
 
+// Nombres de técnicos de un trabajo (vienen separados por coma)
+function totPersonas(valor) {
+    return String(valor || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean);
+}
+
+// Regularizar técnicos: marca trabajos sin técnico del rango y registra quién los hizo (no edita nada más)
+window.totRegAbrir = function() {
+    var h = window.totHoras;
+    if (!h) return;
+    var sinTec = (h.trabajos || []).filter(function(t) { return !totPersonas(t.tecnico).length; });
+    document.getElementById('tot-reg-lista').innerHTML = sinTec.map(function(t) {
+        var id = totGetId(t);
+        return '<label style="display:flex; gap:8px; align-items:baseline; font-size:0.82rem;">'
+            + '<input type="checkbox" class="tot-reg-check" value="' + totEsc(id) + '">'
+            + '<strong style="font-family:monospace;">' + totEsc(id) + '</strong>'
+            + '<span>' + totEsc(t.placa || '—') + ' · ' + totEsc(t.trabajo_realizado || '—') + '</span></label>';
+    }).join('') || '<span class="text-secondary small">No hay trabajos sin técnico en este rango.</span>';
+    document.getElementById('tot-reg-resumen').textContent = 'Trabajos sin técnico del ' + h.desde + ' al ' + h.hasta + '. Solo se registra el técnico; el resto del trabajo no cambia.';
+    document.getElementById('tot-reg-personal').innerHTML = '<span class="text-secondary small">Cargando personal…</span>';
+    fetch('/api/taller-personal')
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function(d) {
+            var arr = Array.isArray(d) ? d : ((d && d.data) || []);
+            var nombres = arr.map(function(p) { return String(p.nombre || p.nombres || p.nombre_completo || '').trim(); })
+                .filter(function(v, i, a) { return v && a.indexOf(v) === i; })
+                .sort(function(a, b) { return a.localeCompare(b, 'es'); });
+            document.getElementById('tot-reg-personal').innerHTML = nombres.map(function(n) {
+                return '<label class="small" style="display:flex; gap:6px; align-items:center;"><input type="checkbox" class="tot-reg-persona" value="' + totEsc(n) + '"> ' + totEsc(n) + '</label>';
+            }).join('') || '<span class="text-secondary small">Sin personal registrado.</span>';
+        })
+        .catch(function() {
+            document.getElementById('tot-reg-personal').innerHTML = '<span class="text-danger small">No se pudo cargar el personal.</span>';
+        });
+    document.getElementById('tot-reg-overlay').style.display = 'block';
+    document.getElementById('tot-reg-panel').style.display = 'flex';
+};
+
+window.totRegCerrar = function() {
+    document.getElementById('tot-reg-overlay').style.display = 'none';
+    document.getElementById('tot-reg-panel').style.display = 'none';
+};
+
+window.totRegTodos = function(marcar) {
+    document.querySelectorAll('.tot-reg-check').forEach(function(c) { c.checked = marcar; });
+};
+
+window.totRegGuardar = function() {
+    var ids = Array.prototype.map.call(document.querySelectorAll('.tot-reg-check:checked'), function(c) { return c.value; });
+    var tecnicos = Array.prototype.map.call(document.querySelectorAll('.tot-reg-persona:checked'), function(c) { return c.value; });
+    if (!ids.length) { alert('Marca al menos un trabajo.'); return; }
+    if (!tecnicos.length) { alert('Elige al menos un técnico.'); return; }
+    var btn = document.getElementById('tot-reg-guardar');
+    btn.disabled = true;
+    fetch('/api/ot-trabajos/regularizar-tecnicos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids, tecnicos: tecnicos })
+    })
+        .then(function(r) {
+            return r.json().then(function(j) {
+                if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+                return j;
+            });
+        })
+        .then(function(j) {
+            window.totRegCerrar();
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Técnicos registrados en ' + j.actualizados + ' trabajo(s)', 'success');
+            window.totCargarHoras();
+            window.totCargar();
+        })
+        .catch(function(err) { alert(err.message); })
+        .then(function() { btn.disabled = false; });
+};
+
 // Exporta la vista de horas: hoja "Historial" (trabajos del rango) y hoja "Horas por técnico" (matriz)
 function totExportarHoras() {
     var h = window.totHoras;
@@ -837,10 +940,10 @@ function totExportarHoras() {
         alert('La librería XLSX no está disponible.');
         return;
     }
-    var hist = [['Trabajo', 'OT', 'Placa', 'Técnico', 'Inicio', 'Salida', 'Horas', 'Estado', 'Trabajo realizado']];
+    var hist = [['Trabajo', 'OT', 'Placa', 'Técnico', 'Creado por', 'Inicio', 'Salida', 'Horas', 'Estado', 'Trabajo realizado']];
     h.trabajos.forEach(function(t) {
         hist.push([
-            totGetId(t), t.ticket_visita || '', t.placa || '', t.tecnico || 'Sin técnico',
+            totGetId(t), t.ticket_visita || '', t.placa || '', t.tecnico || 'Sin técnico', t.creado_por || '',
             totFmtDateTime(t.fecha_trabajo), t.fecha_salida ? totFmtDateTime(t.fecha_salida) : 'Sin salida',
             t.horas != null ? t.horas : 'En curso', t.estado || '', t.trabajo_realizado || ''
         ]);
@@ -873,7 +976,7 @@ window.totExportar = function() {
         return;
     }
 
-    var headers = ['ID Trabajo', 'N° OT', 'Placa', 'Kilometraje', 'Trabajador(es)', 'Descripción', 'F/H Inicio', 'F/H Fin', 'Horas', 'Costo', 'Estado'];
+    var headers = ['ID Trabajo', 'N° OT', 'Placa', 'Kilometraje', 'Trabajador(es)', 'Creado por', 'Descripción', 'F/H Inicio', 'F/H Fin', 'Horas', 'Costo', 'Estado'];
     var rows = [headers];
 
     datos.forEach(function(t) {
@@ -902,6 +1005,7 @@ window.totExportar = function() {
             placaVal,
             kmNum > 0 ? kmNum : (totFmtKm(t) || ''),
             det.personal || t.tecnico || '',
+            t.creado_por || '',
             t.trabajo_realizado || '',
             totFmtDateTimeExcel(t.fecha_trabajo),
             totFmtDateTimeExcel(t.fecha_salida),

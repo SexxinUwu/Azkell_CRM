@@ -1,7 +1,7 @@
 import './mant.css';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, CircleAlert, FileSpreadsheet, Pencil, SearchX, Trash2, Wrench } from 'lucide-react';
+import { CheckCircle2, CircleAlert, FileSpreadsheet, Pencil, SearchX, Trash2, Users, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -18,7 +18,7 @@ import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/fo
 import { haptic } from '../../core/lib/haptics';
 import { ImportarTrabajosSheet } from './ImportarTrabajosSheet';
 import {
-  aprobarTrabajo, editarTrabajo, eliminarTrabajo, ESTADOS_TRABAJO, estadoTrabajo, trabajoCosto, trabajoId, trabajoKmHoras,
+  aprobarTrabajo, editarTrabajo, eliminarTrabajo, ESTADOS_TRABAJO, estadoTrabajo, regularizarTecnicos, trabajoCosto, trabajoId, trabajoKmHoras,
   useHorasTecnicos, useTrabajosOT, type HorasTecnicosRespuesta, type TrabajoOT,
 } from './api';
 
@@ -46,6 +46,17 @@ function horasTrabajo(t: TrabajoOT): number | null {
   return h >= 0 ? Math.round(h * 100) / 100 : null;
 }
 
+/** Hoy como "AAAA-MM-DD" (hora local) */
+function hoyIso() {
+  const h = new Date();
+  return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-${String(h.getDate()).padStart(2, '0')}`;
+}
+
+/** Personas de un trabajo: `tecnico` viene separado por coma */
+function personasDe(valor: string | null | undefined): string[] {
+  return String(valor ?? '').split(',').map(x => x.trim()).filter(Boolean);
+}
+
 /** Mes en curso como rango "AAAA-MM-DD" (del día 1 al último) */
 function rangoMesActual() {
   const hoy = new Date();
@@ -58,7 +69,10 @@ function rangoMesActual() {
 const diaCorto = (fecha: string) => formatFechaPe(fecha).slice(0, 5);
 
 export function TrabajosOtPage() {
-  const { data, isLoading, isError, error } = useTrabajosOT();
+  // La lista trae solo el día de hoy por defecto: toda la tabla de trabajos satura la base y la pantalla
+  const [rangoLista, setRangoLista] = useState(() => ({ desde: hoyIso(), hasta: hoyIso() }));
+  const { data, isLoading, isError, error } = useTrabajosOT(rangoLista.desde, rangoLista.hasta);
+  const [regularizando, setRegularizando] = useState<TrabajoOT[] | null>(null);
   const { can, user } = useAuth();
   const toast = useToast();
   const [busqueda, setBusqueda] = useState('');
@@ -99,8 +113,8 @@ export function TrabajosOtPage() {
       await exportarExcelHojas('Horas-tecnicos-OT', [
         {
           hoja: 'Historial',
-          encabezados: ['Trabajo', 'OT', 'Placa', 'Técnico', 'Inicio', 'Salida', 'Horas', 'Estado', 'Trabajo realizado'],
-          filas: h.trabajos.map(t => [trabajoId(t), t.ticket_visita, t.placa, t.tecnico || 'Sin técnico',
+          encabezados: ['Trabajo', 'OT', 'Placa', 'Técnico', 'Creado por', 'Inicio', 'Salida', 'Horas', 'Estado', 'Trabajo realizado'],
+          filas: h.trabajos.map(t => [trabajoId(t), t.ticket_visita, t.placa, t.tecnico || 'Sin técnico', t.creado_por || '',
             formatFechaHoraPe(t.fecha_trabajo), formatFechaHoraPe(t.fecha_salida), t.horas ?? 'En curso', estadoTrabajo(t.estado), t.trabajo_realizado]),
         },
         {
@@ -131,6 +145,8 @@ export function TrabajosOtPage() {
         />
       )}
       <ImportarTrabajosSheet open={importando} onClose={() => setImportando(false)} />
+      <RegularizarTecnicosSheet open={regularizando !== null} onClose={() => setRegularizando(null)}
+        trabajos={regularizando ?? []} desde={rango.desde} hasta={rango.hasta} />
 
       {isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
@@ -142,10 +158,6 @@ export function TrabajosOtPage() {
           usuario={user?.name ?? ''}
           onVolver={() => setSeleccionadoId(null)}
         />
-      ) : trabajos.length === 0 ? (
-        <EmptyState icon={<Wrench size={22} />} title="Sin trabajos registrados">
-          Los trabajos aparecen aquí cuando se registran desde una orden de trabajo.
-        </EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           <SegmentedControl block label="Vista" value={vista} onChange={setVista} options={[
@@ -153,8 +165,14 @@ export function TrabajosOtPage() {
             { value: 'horas', label: 'Horas por técnico' },
           ]} />
           {vista === 'horas' ? (
-            <HorasTecnicosVista rango={rango} onRango={setRango} datos={horas.data} cargando={horas.isLoading} error={horas.error} />
+            <HorasTecnicosVista rango={rango} onRango={setRango} datos={horas.data} cargando={horas.isLoading} error={horas.error} onRegularizar={setRegularizando} />
           ) : (<>
+          <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <Field label="Desde">{p => <TextInput {...p} type="date" value={rangoLista.desde} max={rangoLista.hasta || undefined} onChange={e => setRangoLista(r => ({ ...r, desde: e.target.value }))} />}</Field>
+            <Field label="Hasta">{p => <TextInput {...p} type="date" value={rangoLista.hasta} min={rangoLista.desde || undefined} onChange={e => setRangoLista(r => ({ ...r, hasta: e.target.value }))} />}</Field>
+            <Button variant="plain" onClick={() => setRangoLista({ desde: hoyIso(), hasta: hoyIso() })}>Hoy</Button>
+            <Button variant="plain" onClick={() => setRangoLista({ desde: '', hasta: '' })}>Todas las fechas</Button>
+          </div>
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, técnico, trabajo, OT o ticket…" />
           <SelectInput value={estado} onChange={e => setEstado(e.target.value)} aria-label="Estado">
             <option value="">Todos los estados</option>
@@ -162,7 +180,7 @@ export function TrabajosOtPage() {
           </SelectInput>
 
           {visibles.length === 0 ? (
-            <EmptyState icon={<SearchX size={22} />} title="Sin coincidencias">
+            <EmptyState icon={<SearchX size={22} />} title={trabajos.length === 0 ? 'Sin trabajos en este rango' : 'Sin coincidencias'}>
               <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setEstado(''); }}>Quitar filtros</button>
             </EmptyState>
           ) : (
@@ -171,7 +189,7 @@ export function TrabajosOtPage() {
                 <thead>
                   <tr>
                     <th>ID trabajo</th><th>N° OT</th><th>Placa</th><th>Km / Horas</th><th>F/H inicio</th>
-                    <th>Trabajo realizado</th><th>Personal</th><th>F/H salida</th><th>Costo</th><th>Tiempo</th><th>Estado</th>
+                    <th>Trabajo realizado</th><th>Personal</th><th>Creado por</th><th>F/H salida</th><th>Costo</th><th>Tiempo (hrs)</th><th>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -190,6 +208,7 @@ export function TrabajosOtPage() {
                         <td>{formatFechaHoraPe(aLocal(t.fecha_trabajo))}</td>
                         <td className="ot-tabla__trabajo">{t.trabajo_realizado || '—'}</td>
                         <td>{personalDe(t).join(', ') || '—'}</td>
+                        <td>{t.creado_por || '—'}</td>
                         <td>{formatFechaHoraPe(aLocal(t.fecha_salida))}</td>
                         <td>{costo > 0 ? formatSoles(costo) : '—'}</td>
                         <td>{horas == null ? '—' : `${horas.toFixed(1)} h`}</td>
@@ -208,11 +227,85 @@ export function TrabajosOtPage() {
   );
 }
 
-function HorasTecnicosVista({ rango, onRango, datos, cargando, error }: {
+/** Registra técnicos en trabajos del rango que no los tienen. Solo guarda el técnico; el trabajo no cambia. */
+function RegularizarTecnicosSheet({ open, onClose, trabajos, desde, hasta }: {
+  open: boolean; onClose: () => void; trabajos: TrabajoOT[]; desde: string; hasta: string;
+}) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const personalQ = usePersonalTaller();
+  const [marcados, setMarcados] = useState<string[]>([]);
+  const [tecnicos, setTecnicos] = useState<string[]>([]);
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setMarcados([]); setTecnicos([]); setError(null);
+  }, [open]);
+
+  const ids = trabajos.map(trabajoId);
+  const todos = ids.length > 0 && marcados.length === ids.length;
+  const opciones = useMemo(() => [...new Set(personalQ.data ?? [])].sort((a, b) => a.localeCompare(b, 'es')), [personalQ.data]);
+
+  async function guardar() {
+    if (!marcados.length) { setError('Marca al menos un trabajo.'); return; }
+    if (!tecnicos.length) { setError('Elige al menos un técnico.'); return; }
+    setEnviando(true); setError(null);
+    try {
+      const r = await regularizarTecnicos(marcados, tecnicos);
+      haptic('success'); toast(`Técnicos registrados en ${r.actualizados} trabajo(s)`);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['mant', 'horas-tecnicos'] }),
+        qc.invalidateQueries({ queryKey: ['mant', 'trabajos-ot'] }),
+      ]);
+      onClose();
+    } catch (err) { setError(errorMessage(err)); haptic('warning'); }
+    finally { setEnviando(false); }
+  }
+
+  return (
+    <Sheet open={open} onClose={() => !enviando && onClose()} title="Regularizar técnicos"
+      footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
+        <Button variant="primary" onClick={guardar} loading={enviando} disabled={!marcados.length || !tecnicos.length}>
+          Registrar en {marcados.length} trabajo(s)
+        </Button></>}>
+      <div className="form-grid">
+        {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
+        <p className="field field--wide" style={{ margin: 0, color: 'var(--label-2)', fontSize: '0.8125rem' }}>
+          Trabajos sin técnico del {formatFechaPe(desde)} al {formatFechaPe(hasta)}. Solo se registra el técnico; el resto del trabajo no cambia.
+        </p>
+        <div className="field field--wide">
+          <MultiSelect label="Técnicos que hicieron el trabajo" options={opciones} value={tecnicos} onChange={setTecnicos} placeholder="Elige técnicos" />
+        </div>
+        <div className="field field--wide" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+          <label style={{ display: 'flex', gap: 'var(--s-2)', fontWeight: 700 }}>
+            <input type="checkbox" checked={todos} onChange={() => setMarcados(todos ? [] : ids)} /> Seleccionar todos ({ids.length})
+          </label>
+          {trabajos.map(t => {
+            const id = trabajoId(t);
+            return (
+              <label key={id} style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'baseline', fontSize: '0.8125rem' }}>
+                <input type="checkbox" checked={marcados.includes(id)}
+                  onChange={() => setMarcados(m => m.includes(id) ? m.filter(x => x !== id) : [...m, id])} />
+                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{id}</span>
+                <span>{t.placa || '—'} · {t.trabajo_realizado || '—'} · {formatFechaHoraPe(aLocal(t.fecha_trabajo))}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+function HorasTecnicosVista({ rango, onRango, datos, cargando, error, onRegularizar }: {
   rango: { desde: string; hasta: string }; onRango: (r: { desde: string; hasta: string }) => void;
   datos: HorasTecnicosRespuesta | undefined; cargando: boolean; error: unknown;
+  onRegularizar: (lista: TrabajoOT[]) => void;
 }) {
   const rangoInvalido = rango.hasta < rango.desde;
+  const sinTecnico = datos ? datos.trabajos.filter(t => personasDe(t.tecnico).length === 0) : [];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 'var(--s-3)' }}>
@@ -227,6 +320,11 @@ function HorasTecnicosVista({ rango, onRango, datos, cargando, error }: {
         <>
           <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
             <Badge tone="amber">{datos.resumen.enCurso} trabajos en curso / sin cierre</Badge>
+            {sinTecnico.length > 0 && (
+              <Button variant="secondary" icon={<Users size={16} />} onClick={() => onRegularizar(sinTecnico)}>
+                Regularizar técnicos ({sinTecnico.length})
+              </Button>
+            )}
             {datos.resumen.sinTecnico > 0 && <Badge>{datos.resumen.sinTecnico} sin técnico asignado</Badge>}
             <Badge>{datos.diasLaborables} días laborables · {datos.proyectadasPorTecnico} h proyectadas por técnico</Badge>
           </div>
@@ -238,7 +336,7 @@ function HorasTecnicosVista({ rango, onRango, datos, cargando, error }: {
             <>
               <div>
                 <p className="tarjeta__grupo-titulo">Horas reales y eficiencia por técnico</p>
-                <HorasEficienciaGrafico tecnicos={datos.tecnicos} />
+                <HorasEficienciaGrafico tecnicos={datos.tecnicos} proyectadas={datos.proyectadasPorTecnico} />
               </div>
               <div>
                 <p className="tarjeta__grupo-titulo">Horas por día</p>

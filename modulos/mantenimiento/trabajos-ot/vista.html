@@ -271,8 +271,10 @@
         <input type="text" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-ot" placeholder="N° OT" style="max-width:110px; height:38px;" oninput="window.totFiltrar()">
         <input type="text" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-placa" placeholder="PLACA" style="max-width:100px; height:38px; text-transform:uppercase" oninput="this.value=this.value.toUpperCase(); window.totFiltrar()">
         <input type="month" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-mes" style="max-width:140px; height:38px;" onchange="window.totFiltrar()">
-        <input type="date" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-desde" style="max-width:130px; height:38px;" title="Desde" onchange="window.totFiltrar()">
-        <input type="date" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-hasta" style="max-width:130px; height:38px;" title="Hasta" onchange="window.totFiltrar()">
+        <input type="date" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-desde" style="max-width:130px; height:38px;" title="Desde" onchange="window.totCargar()">
+        <input type="date" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-hasta" style="max-width:130px; height:38px;" title="Hasta" onchange="window.totCargar()">
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3" style="height:38px;" onclick="window.totRangoHoy()">Hoy</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3" style="height:38px;" onclick="window.totRangoTodas()">Todas las fechas</button>
     </div>
 
     <!-- CONTENEDOR PRINCIPAL (tabla + detalle) -->
@@ -291,6 +293,7 @@
                             <th style="min-width: 155px; white-space: nowrap;">F/H INICIO</th>
                             <th style="min-width: 250px; white-space: nowrap;">TRABAJO REALIZADO</th>
                             <th style="min-width: 180px; white-space: nowrap;">PERSONAL</th>
+                            <th style="min-width: 140px; white-space: nowrap;">CREADO POR</th>
                             <th style="min-width: 155px; white-space: nowrap;">F/H SALIDA</th>
                             <th style="min-width: 100px; text-align: right; white-space: nowrap;">COSTO</th>
                             <th style="min-width: 110px; text-align: center; white-space: nowrap;">TIEMPO (HRS)</th>
@@ -358,6 +361,25 @@
         </div>
     </div>
 
+</div>
+
+<!-- ═══ PANEL: Regularizar técnicos (solo registra el técnico en trabajos sin técnico) ═══ -->
+<div id="tot-reg-overlay" onclick="window.totRegCerrar()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:1100;"></div>
+<div id="tot-reg-panel" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(640px,94vw); max-height:86vh; flex-direction:column; background:var(--surface); border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,0.25); z-index:1101;">
+    <div style="padding:14px 18px; border-bottom:1px solid var(--border); font-weight:800; color:var(--text);">Regularizar técnicos</div>
+    <div style="padding:14px 18px; overflow-y:auto; flex:1 1 auto;">
+        <p id="tot-reg-resumen" class="small text-secondary mb-3"></p>
+        <div class="mb-3">
+            <div class="fw-bold small mb-1">Técnicos que hicieron el trabajo</div>
+            <div id="tot-reg-personal" style="display:flex; flex-wrap:wrap; gap:6px 16px;"></div>
+        </div>
+        <label class="small fw-bold d-block mb-2"><input type="checkbox" onchange="window.totRegTodos(this.checked)"> Seleccionar todos los trabajos</label>
+        <div id="tot-reg-lista" style="display:flex; flex-direction:column; gap:6px;"></div>
+    </div>
+    <div style="padding:12px 18px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px;">
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.totRegCerrar()">Cancelar</button>
+        <button class="btn btn-sm btn-dark fw-bold" id="tot-reg-guardar" onclick="window.totRegGuardar()">Registrar técnicos</button>
+    </div>
 </div>
 
 <!-- ═══ DRAWER: Editar Trabajo ═══ -->

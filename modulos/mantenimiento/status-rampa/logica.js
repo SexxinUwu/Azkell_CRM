@@ -4721,7 +4721,7 @@ window._srPrepararDatosStatus = function() {
         });
 
         if (!entradas.length) {
-            _datosPdf.push({ rampa: rampaNom, fIn: '—', hIn: '—', placa: '—', insp: '—', inspColor: '#64748b', sit: 'LIBRE', sitColor: '#64748b', obs: 'Disponible para ingreso', fOut: '—', hOut: '—', hTaller: '—', libre: true });
+            _datosPdf.push({ rampa: rampaNom, fIn: '—', hIn: '—', placa: '—', insp: '—', inspColor: '#64748b', sit: 'LIBRE', sitColor: '#64748b', obs: 'Disponible para ingreso', fOut: '—', hOut: '—', hTaller: '—', tec: '—', libre: true });
         } else {
             entradas.forEach(function(e) {
                 var otsPlaca = (window.srOtData || []).filter(function(o) {
@@ -4759,7 +4759,7 @@ window._srPrepararDatosStatus = function() {
                 var sitColor = getSitColorPdf(e.situacion);
 
                 _datosPdf.push({ rampa: rampaNom, fIn: fIn, hIn: hIn, placa: e.placa || '—', insp: inspInfo.texto, inspColor: inspColor, sit: e.situacion || '—', sitColor: sitColor,
-                    obs: obsTextoCol || '—', fOut: fOut, hOut: hOut, hTaller: hTaller, libre: false });
+                    obs: obsTextoCol || '—', fOut: fOut, hOut: hOut, hTaller: hTaller, tec: srTecnicosDe(otsPlaca).join(', ') || '—', libre: false });
             });
         }
     });
@@ -4861,29 +4861,55 @@ window._srConstruirPdfVectorial = async function () {
     doc.setTextColor(0);
 
     // Tabla
-    // Inspección va al final de la tabla (F-MAN-005)
-    var head = [['RAMPA', 'F. INGRESO', 'HORA', 'PLACA', 'SITUACIÓN', 'OBSERVACIONES / TRABAJOS A REALIZAR', 'SALIDA (EST.)', 'HORA', 'H. TALLER', 'INSPECCIÓN?']];
-    var body = d.filas.map(function (f) { return [f.rampa, f.fIn, f.hIn, f.placa, f.sit, f.obs, f.fOut, f.hOut, f.hTaller, f.insp]; });
+    // Columnas del F-MAN-005: solo las que el usuario dejó visibles en la tabla (selector de columnas).
+    // Cada usuario decide qué oculta; lo oculto en pantalla no sale en el PDF.
+    var guardadas = {};
+    try { guardadas = JSON.parse(localStorage.getItem('fleet_cols_status_rampa_v2') || '{}') || {}; } catch (e) { guardadas = {}; }
+    var vis = {};
+    [1, 2, 4, 5, 6, 7, 8, 10, 11].forEach(function (i) { vis[i] = guardadas[i] !== false; });
+
+    var definicion = [
+        { k: 'rampa', h: 'RAMPA', w: 28, est: { fontStyle: 'bold' } },
+        { k: 'fIn', h: 'F. INGRESO', w: 20, est: { halign: 'center' }, idx: 1 },
+        { k: 'hIn', h: 'HORA', w: 13, est: { halign: 'center' }, idx: 2 },
+        { k: 'placa', h: 'PLACA', w: 22, est: { halign: 'center', fontStyle: 'bold', fontSize: 9 } },
+        { k: 'sit', h: 'SITUACIÓN', w: 26, est: { halign: 'center', fontStyle: 'bold' }, idx: 4 },
+        { k: 'obs', h: 'OBSERVACIONES / TRABAJOS A REALIZAR', est: { halign: 'left' }, idx: 5 },
+        { k: 'fOut', h: 'SALIDA (EST.)', w: 20, est: { halign: 'center' }, idx: 6 },
+        { k: 'hOut', h: 'HORA', w: 13, est: { halign: 'center' }, idx: 7 },
+        { k: 'hTaller', h: 'H. TALLER', w: 18, est: { halign: 'center', fontStyle: 'bold' }, idx: 8 },
+        { k: 'tec', h: 'TÉCNICOS', w: 30, est: { halign: 'left' }, idx: 10 },
+        { k: 'insp', h: 'INSPECCIÓN?', w: 21, est: { halign: 'center', fontStyle: 'bold' }, idx: 11 }
+    ].filter(function (c) { return c.idx === undefined || vis[c.idx]; });
+
+    var pos = {};
+    definicion.forEach(function (c, i) { pos[c.k] = i; });
+    var head = [definicion.map(function (c) { return c.h; })];
+    var body = d.filas.map(function (f) { return definicion.map(function (c) { return f[c.k]; }); });
+    var columnStyles = {};
+    // Anchos fijos repartidos para llenar la hoja; si hay una columna de observaciones (flexible), no se escala
+    var fijos = definicion.reduce(function (s, c) { return s + (c.w || 0); }, 0);
+    var hayFlexible = definicion.some(function (c) { return !c.w; });
+    var escala = hayFlexible ? 1 : (W - 2 * M) / fijos;
+    definicion.forEach(function (c, i) {
+        var est = Object.assign({}, c.est);
+        if (c.w) est.cellWidth = c.w * escala;
+        columnStyles[i] = est;
+    });
 
     doc.autoTable({
         head: head, body: body, startY: ky + kh + 4, margin: { left: M, right: M, bottom: 14 },
         theme: 'grid',
         styles: { font: 'helvetica', fontSize: 7.6, cellPadding: 1.6, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.25, valign: 'middle', overflow: 'linebreak' },
         headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 7.4 },
-        columnStyles: {
-            0: { fontStyle: 'bold', cellWidth: 28 }, 1: { halign: 'center', cellWidth: 20 }, 2: { halign: 'center', cellWidth: 13 },
-            3: { halign: 'center', fontStyle: 'bold', fontSize: 9, cellWidth: 22 }, 4: { halign: 'center', fontStyle: 'bold', cellWidth: 26 },
-            5: { halign: 'left' },
-            6: { halign: 'center', cellWidth: 20 }, 7: { halign: 'center', cellWidth: 13 }, 8: { halign: 'center', fontStyle: 'bold', cellWidth: 18 },
-            9: { halign: 'center', fontStyle: 'bold', cellWidth: 21 }
-        },
+        columnStyles: columnStyles,
         didParseCell: function (data) {
             if (data.section !== 'body') return;
             var f = d.filas[data.row.index];
             if (!f) return;
-            if (data.column.index === 9) data.cell.styles.textColor = rgb(f.inspColor);
-            if (data.column.index === 4) data.cell.styles.textColor = rgb(f.sitColor);
-            if (f.libre && data.column.index !== 0 && data.column.index !== 4) data.cell.styles.fontStyle = 'normal';
+            if (pos.insp !== undefined && data.column.index === pos.insp) data.cell.styles.textColor = rgb(f.inspColor);
+            if (pos.sit !== undefined && data.column.index === pos.sit) data.cell.styles.textColor = rgb(f.sitColor);
+            if (f.libre && data.column.index !== pos.rampa && data.column.index !== pos.sit) data.cell.styles.fontStyle = 'normal';
         }
     });
 

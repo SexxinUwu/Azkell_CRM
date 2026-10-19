@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bar, BarChart, Cell, LabelList, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, Cell, LabelList, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 export interface Porcion { nombre: string; valor: number; color: string }
 
@@ -73,19 +73,25 @@ export function DonaGrafico({ porciones, centro, altura = 180 }: {
 }
 
 /** Horas reales por técnico (barras) con la eficiencia escrita al final de cada una. */
-export function HorasEficienciaGrafico({ tecnicos }: { tecnicos: Array<{ nombre: string; reales: number; eficiencia: number }> }) {
+export function HorasEficienciaGrafico({ tecnicos, proyectadas }: {
+  tecnicos: Array<{ nombre: string; reales: number; eficiencia: number }>; proyectadas: number;
+}) {
   const [color, texto, secundario, fondo] = useColores(['var(--blue)', 'var(--label-1)', 'var(--label-2)', 'var(--fill-2)']);
   const datos = tecnicos.map(t => ({ nombre: t.nombre, reales: t.reales, etiqueta: `${t.reales.toFixed(1)} h · ${t.eficiencia.toFixed(1)} %` }));
-  const alto = Math.max(120, datos.length * 40);
+  // La escala llega hasta la proyección o hasta el técnico con más horas, lo que sea mayor
+  const maximo = Math.max(proyectadas, ...datos.map(d => d.reales), 1);
+  const alto = Math.max(160, datos.length * 52 + 36);
   return (
     <div style={{ width: '100%', height: alto }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={datos} layout="vertical" margin={{ top: 0, right: 120, bottom: 0, left: 0 }}>
-          <XAxis type="number" hide allowDecimals />
-          <YAxis type="category" dataKey="nombre" width={130} tickLine={false} axisLine={false}
+        <BarChart data={datos} layout="vertical" margin={{ top: 24, right: 130, bottom: 0, left: 0 }}>
+          <XAxis type="number" hide domain={[0, maximo]} />
+          <YAxis type="category" dataKey="nombre" width={230} tickLine={false} axisLine={false} interval={0}
             tick={{ fill: secundario, fontSize: 12, fontWeight: 600 }} />
+          <ReferenceLine x={proyectadas} stroke={secundario} strokeDasharray="5 4"
+            label={{ value: `Proyectado ${proyectadas} h`, position: 'top', fill: secundario, fontSize: 11 }} />
           <Tooltip formatter={(v) => `${v} h`} cursor={{ fill: fondo }} />
-          <Bar dataKey="reales" name="Horas reales" fill={color} radius={6} isAnimationActive={false} barSize={14}>
+          <Bar dataKey="reales" name="Horas reales" fill={color} radius={6} isAnimationActive={false} barSize={18}>
             <LabelList dataKey="etiqueta" position="right" fill={texto} style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12 }} />
           </Bar>
         </BarChart>
