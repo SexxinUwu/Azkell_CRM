@@ -57,262 +57,9 @@ module.exports = function (db, broadcast, logAudit) {
         return _remotePool;
     }
 
-    const _tenantsInitSet = new Set();
-
-    const TABLE_SQL = `CREATE TABLE IF NOT EXISTS operaciones_ordenes_viaje (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        id_remoto BIGINT NULL,
-        viaje VARCHAR(60) NOT NULL,
-        fecha_viaje DATETIME NULL,
-        id_conductor INT NULL,
-        conductor VARCHAR(150) NOT NULL DEFAULT '',
-        placa_tracto VARCHAR(20) NOT NULL DEFAULT '',
-        placa_remolque VARCHAR(20) NULL,
-        peso DECIMAL(12,2) NULL DEFAULT 0.00,
-        ruta VARCHAR(255) NULL,
-        origen VARCHAR(100) NULL,
-        destino VARCHAR(100) NULL,
-        ubigeo_partida VARCHAR(10) NULL,
-        direccion_partida VARCHAR(255) NULL,
-        ubigeo_llegada VARCHAR(10) NULL,
-        direccion_llegada VARCHAR(255) NULL,
-        escolta VARCHAR(150) NULL,
-        observaciones TEXT NULL,
-        configuracion_tracto VARCHAR(50) NULL,
-        configuracion_remolque VARCHAR(50) NULL,
-        estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
-        fecha_inicio DATETIME NULL,
-        fecha_fin DATETIME NULL,
-        usuario_creacion VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR DEL SISTEMA',
-        usuario_finalizacion VARCHAR(150) NULL,
-        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_viaje (viaje),
-        INDEX idx_placa_tracto (placa_tracto),
-        INDEX idx_placa_remolque (placa_remolque),
-        INDEX idx_fecha_viaje (fecha_viaje),
-        INDEX idx_id_remoto (id_remoto)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
-
-    const TABLE_RUTAS_SQL = `CREATE TABLE IF NOT EXISTS operaciones_ordenes_viaje_rutas (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        viaje VARCHAR(60) NOT NULL,
-        orden VARCHAR(60) NOT NULL,
-        ruta VARCHAR(255) NULL,
-        tipo_servicio VARCHAR(100) NULL,
-        es_retorno TINYINT(1) NOT NULL DEFAULT 0,
-        peso_total DECIMAL(12,2) NULL DEFAULT 0.00,
-        cantidad_total DECIMAL(12,2) NULL DEFAULT 0.00,
-        volumen_total DECIMAL(12,3) NULL DEFAULT 0.000,
-        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_viaje_orden (viaje, orden),
-        INDEX idx_viaje (viaje),
-        INDEX idx_orden (orden),
-        INDEX idx_es_retorno (es_retorno)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
-
-    // Tablas exclusivas para Operaciones Marsisa (Sincronización remota externa)
-    const TABLE_MARSISA_SQL = `CREATE TABLE IF NOT EXISTS marsisa_ordenes_viaje (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        id_remoto BIGINT NULL,
-        viaje VARCHAR(60) NOT NULL,
-        fecha_viaje DATETIME NULL,
-        id_conductor INT NULL,
-        conductor VARCHAR(150) NOT NULL DEFAULT '',
-        placa_tracto VARCHAR(20) NOT NULL DEFAULT '',
-        placa_remolque VARCHAR(20) NULL,
-        peso DECIMAL(12,2) NULL DEFAULT 0.00,
-        ruta VARCHAR(255) NULL,
-        origen VARCHAR(100) NULL,
-        destino VARCHAR(100) NULL,
-        estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
-        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_viaje (viaje),
-        INDEX idx_placa_tracto (placa_tracto),
-        INDEX idx_placa_remolque (placa_remolque),
-        INDEX idx_fecha_viaje (fecha_viaje),
-        INDEX idx_id_remoto (id_remoto)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
-
-    const TABLE_MARSISA_RUTAS_SQL = `CREATE TABLE IF NOT EXISTS marsisa_ordenes_viaje_rutas (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        viaje VARCHAR(60) NOT NULL,
-        orden VARCHAR(60) NOT NULL,
-        ruta VARCHAR(255) NULL,
-        tipo_servicio VARCHAR(100) NULL,
-        es_retorno TINYINT(1) NOT NULL DEFAULT 0,
-        peso_total DECIMAL(12,2) NULL DEFAULT 0.00,
-        cantidad_total DECIMAL(12,2) NULL DEFAULT 0.00,
-        volumen_total DECIMAL(12,3) NULL DEFAULT 0.000,
-        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_viaje_orden (viaje, orden),
-        INDEX idx_viaje (viaje),
-        INDEX idx_orden (orden),
-        INDEX idx_es_retorno (es_retorno)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
-
-    // Tabla principal de Órdenes de Servicio
-    const TABLE_ORDENES_SERVICIO_SQL = `CREATE TABLE IF NOT EXISTS operaciones_ordenes_servicio (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        serie VARCHAR(10) NOT NULL DEFAULT '2026',
-        numero VARCHAR(20) NOT NULL,
-        codigo_orden VARCHAR(40) NOT NULL,
-        fecha DATE NOT NULL,
-        fecha_fin DATE NULL,
-        moneda VARCHAR(20) DEFAULT 'SOLES',
-        tipo_cambio DECIMAL(8,3) DEFAULT 3.750,
-        tipo_contratacion VARCHAR(50) DEFAULT 'CLIENTE DIRECTO',
-        modalidad_ejecucion VARCHAR(50) DEFAULT 'PROPIO',
-        cliente_id INT NULL,
-        cliente_nombre VARCHAR(255) NOT NULL,
-        tipo_servicio VARCHAR(100) DEFAULT 'CARGA GENERAL',
-        tipo_costo VARCHAR(50) DEFAULT 'POR VIAJE',
-        impuesto VARCHAR(50) DEFAULT 'IGV 18%',
-        costo_flete DECIMAL(12,2) DEFAULT 0.00,
-        puntos_carga INT DEFAULT 1,
-        puntos_destino INT DEFAULT 1,
-        destinatario VARCHAR(255) NULL,
-        sustento_url VARCHAR(255) NULL,
-        observaciones TEXT NULL,
-        viaje_asignado VARCHAR(60) NULL,
-        estado_viaje VARCHAR(30) DEFAULT 'Sin asignar',
-        estado_servicio VARCHAR(30) DEFAULT 'INICIADO',
-        estado_descarga VARCHAR(30) DEFAULT 'PENDIENTE',
-        conductor VARCHAR(150) NULL,
-        placa_tracto VARCHAR(20) NULL,
-        placa_carreta VARCHAR(20) NULL,
-        ruta_sistema VARCHAR(255) NULL,
-        tipo_medida VARCHAR(50) DEFAULT 'VIAJE',
-        costo_medida DECIMAL(12,2) DEFAULT 0.00,
-        cargos_adicionales DECIMAL(12,2) DEFAULT 0.00,
-        descuentos DECIMAL(12,2) DEFAULT 0.00,
-        subtotal DECIMAL(12,2) DEFAULT 0.00,
-        igv DECIMAL(12,2) DEFAULT 0.00,
-        kilometraje_fin INT NULL,
-        usuario_creacion VARCHAR(100) DEFAULT 'ADMINISTRADOR',
-        factura VARCHAR(60) NULL,
-        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_codigo_orden (codigo_orden),
-        INDEX idx_fecha (fecha),
-        INDEX idx_cliente (cliente_nombre),
-        INDEX idx_viaje (viaje_asignado)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
-
-    // Tabla de Documentos / Guías asociadas a la Orden de Servicio
-    const TABLE_ORDENES_SERVICIO_DOCS_SQL = `CREATE TABLE IF NOT EXISTS operaciones_ordenes_servicio_docs (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        orden_servicio_id INT NOT NULL,
-        codigo_orden VARCHAR(40) NOT NULL,
-        guia_remision_id INT NULL,
-        numero_documento VARCHAR(50) NOT NULL,
-        tipo_documento VARCHAR(50) DEFAULT 'GRE',
-        gr_remitente VARCHAR(50) NULL,
-        numero_transporte VARCHAR(50) NULL,
-        placa_referencia VARCHAR(20) NULL,
-        volumen DECIMAL(12,3) DEFAULT 0.000,
-        cantidad DECIMAL(12,2) DEFAULT 0.00,
-        peso DECIMAL(12,2) DEFAULT 0.00,
-        remitente VARCHAR(255) NULL,
-        destinatario VARCHAR(255) NULL,
-        fecha_carga DATE NULL,
-        fecha_entrega DATE NULL,
-        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_os_id (orden_servicio_id),
-        INDEX idx_os_codigo (codigo_orden),
-        INDEX idx_guia_id (guia_remision_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
-
-    async function ensureTables(req) {
-        const tenantId = (req && req.tenantId) ? req.tenantId : 'default';
-        if (_tenantsInitSet.has(tenantId)) return;
-        try {
-            const tdb = getDb(req);
-            if (!tdb) return;
-            await tdb.query(TABLE_SQL);
-            await tdb.query(TABLE_RUTAS_SQL);
-            await tdb.query(TABLE_MARSISA_SQL);
-            await tdb.query(TABLE_MARSISA_RUTAS_SQL);
-            await tdb.query(TABLE_ORDENES_SERVICIO_SQL);
-            await tdb.query(TABLE_ORDENES_SERVICIO_DOCS_SQL);
-            await tdb.query(`CREATE TABLE IF NOT EXISTS operaciones_ordenes_servicio_rutas (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                orden_servicio_id INT NOT NULL,
-                codigo_orden VARCHAR(40) NOT NULL,
-                ruta VARCHAR(255) NULL,
-                distancia_km DECIMAL(10,2) DEFAULT 0.00,
-                galones DECIMAL(10,2) DEFAULT 0.00,
-                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_os_rutas_id (orden_servicio_id),
-                INDEX idx_os_rutas_cod (codigo_orden)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
-            const ovCols = [
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN peso DECIMAL(12,2) NULL DEFAULT 0.00",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN origen VARCHAR(100) NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN destino VARCHAR(100) NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN ubigeo_partida VARCHAR(10) NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN direccion_partida VARCHAR(255) NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN ubigeo_llegada VARCHAR(10) NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN direccion_llegada VARCHAR(255) NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN escolta VARCHAR(150) NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN observaciones TEXT NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN configuracion_tracto VARCHAR(50) NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN configuracion_remolque VARCHAR(50) NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO'",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN fecha_inicio DATETIME NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN fecha_fin DATETIME NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN kilometraje_inicial INT NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN kilometraje_final INT NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN horas_motor_remolque INT NULL",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN usuario_creacion VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR DEL SISTEMA'",
-                "ALTER TABLE operaciones_ordenes_viaje ADD COLUMN usuario_finalizacion VARCHAR(150) NULL"
-            ];
-            for (const sql of ovCols) {
-                try { await tdb.query(sql); } catch (_) {}
-            }
-
-            const osCols = [
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN ruta_sistema VARCHAR(255) NULL",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN tipo_medida VARCHAR(50) DEFAULT 'VIAJE'",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN costo_medida DECIMAL(12,2) DEFAULT 0.00",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN cargos_adicionales DECIMAL(12,2) DEFAULT 0.00",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN descuentos DECIMAL(12,2) DEFAULT 0.00",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN subtotal DECIMAL(12,2) DEFAULT 0.00",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN igv DECIMAL(12,2) DEFAULT 0.00",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN kilometraje_fin INT NULL",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN usuario_creacion VARCHAR(100) DEFAULT 'ADMINISTRADOR'",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN factura VARCHAR(60) NULL",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN es_retorno TINYINT(1) DEFAULT 0",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN estado_liquidacion VARCHAR(30) DEFAULT 'PENDIENTE'",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN proveedor_tercero_nombre VARCHAR(200) NULL",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN proveedor_tercero_ruc VARCHAR(20) NULL",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN costo_tercero DECIMAL(12,2) DEFAULT 0.00",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN doc_tercero VARCHAR(100) NULL",
-                "ALTER TABLE operaciones_ordenes_servicio ADD COLUMN remitente_generador VARCHAR(255) NULL"
-            ];
-            for (const sql of osCols) {
-                try { await tdb.query(sql); } catch (_) {}
-            }
-
-            try {
-                await tdb.query("ALTER TABLE operaciones_ordenes_viaje_rutas ADD COLUMN distancia_km DECIMAL(10,2) NULL, ADD COLUMN galones DECIMAL(10,2) NULL");
-            } catch (_) {}
-            try {
-                await tdb.query("ALTER TABLE placas ADD COLUMN configuracion VARCHAR(50) NULL");
-            } catch (_) {}
-            _tenantsInitSet.add(tenantId);
-        } catch (err) {
-            console.error('Error asegurando tablas de operaciones:', err);
-        }
-    }
-
     // ── GET /api/operaciones/ordenes-viaje ────────────────────────
     router.get('/ordenes-viaje', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -532,7 +279,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Devuelve el año serie actual y el siguiente número correlativo formateado (ej. 00000992)
     router.get('/ordenes-viaje/correlativo', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -599,7 +345,6 @@ module.exports = function (db, broadcast, logAudit) {
 
     router.post('/ordenes-viaje', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -760,7 +505,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── PUT /api/operaciones/ordenes-viaje/:viaje/iniciar ───────────
     router.put('/ordenes-viaje/:viaje/iniciar', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -809,7 +553,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── PUT /api/operaciones/ordenes-viaje/:viaje/finalizar ─────────
     router.put('/ordenes-viaje/:viaje/finalizar', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -856,7 +599,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── PUT /api/operaciones/ordenes-viaje/:viaje (Editar Orden de Viaje) ───
     router.put('/ordenes-viaje/:viaje', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -989,7 +731,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── DELETE /api/operaciones/ordenes-viaje/:viaje (Eliminar Orden de Viaje) ───
     router.delete('/ordenes-viaje/:viaje', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -1030,7 +771,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Reporte consolidado: N° Viaje, Fecha (solo fecha), Placas, Motor, Ruta, Peso Ida/Retorno y Galones Teóricos Matriz D2
     router.get('/reporte-viajes', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -1358,7 +1098,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Vista exclusiva para Operaciones Marsisa (datos sincronizados)
     router.get('/marsisa-ordenes-viaje', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -1508,7 +1247,6 @@ module.exports = function (db, broadcast, logAudit) {
                 });
             }
 
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos local no disponible' });
 
@@ -1680,7 +1418,6 @@ module.exports = function (db, broadcast, logAudit) {
     // 0. Rutas disponibles de la Matriz de Combustible D2 para listas desplegables y autocompletado de recorrido (KM)
     router.get('/rutas-matriz', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -1705,7 +1442,6 @@ module.exports = function (db, broadcast, logAudit) {
     // 1. Correlativo para nueva Orden de Servicio
     router.get('/ordenes-servicio/correlativo', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -1737,7 +1473,6 @@ module.exports = function (db, broadcast, logAudit) {
     // 2. Listar Órdenes de Servicio
     router.get('/ordenes-servicio', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -1806,7 +1541,6 @@ module.exports = function (db, broadcast, logAudit) {
     // 3. Obtener detalle de una Orden de Servicio (con sus documentos y rutas adjuntas)
     router.get('/ordenes-servicio/:id', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -1847,7 +1581,6 @@ module.exports = function (db, broadcast, logAudit) {
     // 4. Crear nueva Orden de Servicio
     router.post('/ordenes-servicio', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -2112,7 +1845,6 @@ module.exports = function (db, broadcast, logAudit) {
     // 5. Editar Orden de Servicio existente
     router.put('/ordenes-servicio/:id', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -2321,7 +2053,6 @@ module.exports = function (db, broadcast, logAudit) {
     // 6. Cambiar estado de servicio (ej: INICIADO / FINALIZADO / ANULADO) y sincronizar con Orden de Viaje
     router.put('/ordenes-servicio/:id/estado', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -2547,7 +2278,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ════════════════════════════════════════════════════════════════
     router.get('/conductor-portal/viaje-activo', async (req, res) => {
         try {
-            await ensureTables(req);
             const tdb = getDb(req);
             const qDni = (req.query.dni || '').trim();
             const qNombre = (req.query.nombre || '').trim();
