@@ -44,3 +44,5 @@
 @media (prefers-reduced-transparency: reduce) {
   .cfg-tarjeta { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+
+.cfg-boton--on { background: color-mix(in srgb, var(--accent) 18%, transparent); border-color: var(--accent); color: var(--accent-ink); }

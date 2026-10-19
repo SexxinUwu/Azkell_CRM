@@ -2767,6 +2767,8 @@ const perfilRoutes = require('./routes/perfil')(db, logAudit);
 app.use('/api', perfilRoutes);
 const auditoriaRoutes = require('./routes/audit')(db);
 app.use('/api', auditoriaRoutes);
+const notificacionesRoutes = require('./routes/notificaciones')(db);
+app.use('/api', notificacionesRoutes);
 
 // ============================================================
 // 📬 RUTAS DE CONFIGURACIÓN DE CORREO (SMTP) Y ENVÍO DE REPORTES (MULTI-TENANT)
