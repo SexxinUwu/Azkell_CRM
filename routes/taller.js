@@ -614,7 +614,11 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta) || hasta < desde) {
             return res.status(400).json({ error: 'Rango de fechas inválido (AAAA-MM-DD).' });
         }
-        const sql = `SELECT t.*
+        // La placa real está en la OT o en los detalles cuando la fila de trabajo no la trae (misma regla que /ot-trabajos)
+        const sql = `SELECT t.*,
+                            COALESCE(NULLIF(t.placa, ''),
+                                     (SELECT ot.placa FROM ordenes_trabajo ot WHERE ot.ticket_entrada = t.ticket_visita OR ot.id_ot = t.ticket_visita LIMIT 1),
+                                     JSON_UNQUOTE(JSON_EXTRACT(t.detalles_json, '$.placa')), '') AS placa_resuelta
                      FROM trabajos_ot t
                      WHERE t.fecha_trabajo IS NOT NULL
                        AND DATE(t.fecha_trabajo) BETWEEN ? AND ?
@@ -623,6 +627,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             if (err) return res.status(500).json({ error: err.message });
             const trabajos = rows.map(t => ({
                 ...t,
+                placa: t.placa_resuelta || t.placa || '',
                 fecha_trabajo: fechaNaive(t.fecha_trabajo),
                 fecha_salida: fechaNaive(t.fecha_salida),
                 horas: horasDeTrabajo(t),
