@@ -12,7 +12,7 @@
 //
 // Permisos: 'clave.ver' según la matriz de permisos actual (ver core/auth/permisos.ts). Los administradores ven todo.
 import {
-  Accessibility, Activity, ArrowLeftRight, Banknote, BarChart3, Bell, Boxes, Building2, Cog, Code, Contact, Disc3,
+  Accessibility, Activity, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3,
   Droplet, FileText, Fuel, Gauge, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, MapPin,
   Package, PackageMinus, PackagePlus, Palette, Route, Ruler, ScrollText, Settings, ShieldCheck, Tag, Target, Truck,
   UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock,
@@ -218,8 +218,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', clasico: 'sistema/superadmin', icon: Building2, permissions: ver('administracion') },
       { key: 'auditoria', label: 'Auditoría', clasico: 'sistema/auditoria', icon: History, permissions: ver('mod_auditoria') },
       { key: 'api-gateway', label: 'API y desarrolladores', to: '/sistema/api', icon: Code, permissions: ver('administracion') },
-      { key: 'empresa', label: 'Empresa', clasico: 'sistema/configuracion', icon: Building2, permissions: ver('administracion', 'cfg_empresa') },
-      { key: 'notificaciones', label: 'Notificaciones y SMTP', clasico: 'sistema/configuracion', icon: Bell, permissions: ver('administracion') },
+      { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: Building2, permissions: ver('administracion', 'cfg_empresa') },
       { key: 'apariencia', label: 'Apariencia', to: '/perfil', icon: Palette, permissions: [] },
       pronto('accesibilidad', 'Accesibilidad e idioma', Accessibility),
       { key: 'integraciones', label: 'Integraciones', clasico: 'sistema/integraciones', icon: Cog, permissions: ver('integraciones', 'administracion') },

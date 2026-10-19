@@ -21,6 +21,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'integraciones', label: 'Integraciones', to: '/sistema/integraciones', icon: 'Cog', permisos: ['integraciones.ver', 'administracion.ver', 'admin'] },
   },
   {
+    path: 'sistema/empresa/*',
+    permisos: ['administracion.ver', 'cfg_empresa.ver', 'admin'],
+    Page: lazy(() => import('./ConfiguracionEmpresaPage').then(m => ({ default: m.ConfiguracionEmpresaPage }))),
+    nav: { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: 'Building2', permisos: ['administracion.ver', 'cfg_empresa.ver', 'admin'] },
+  },
+  {
     path: 'sistema/api/*',
     permisos: ['administracion.ver', 'admin'],
     Page: lazy(() => import('./ApiDesarrolladoresPage').then(m => ({ default: m.ApiDesarrolladoresPage }))),
