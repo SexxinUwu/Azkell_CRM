@@ -2125,7 +2125,7 @@ setTimeout(verificarAlertasRetraso, 30000);
 // 🚨 MIDDLEWARE RBAC (Control de Acceso Basado en Roles)
 // ============================================================
 const globalRBAC = require('./rbac');
-const { audit: auditar, actorFrom: actorDe, configurarDifusion } = require('./services/auditoria');
+const { audit: auditar, actorFrom: actorDe, configurarDifusion, diff } = require('./services/auditoria');
 configurarDifusion(broadcast);
 
 function requirePerm(modulo, accion) {
@@ -3671,6 +3671,12 @@ app.post('/api/roles', (req, res) => {
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             broadcast('usuarios', 'crear_rol');
+            auditar(targetDb, actorDe(req), {
+                action: 'CREATE', entity: 'role', entityId: result.insertId,
+                summary: `Creó el rol ${nombre}`,
+                changes: diff({}, { nombre, color: color || '#5865F2', es_admin: es_admin ? 1 : 0, orden: orden || 0, permisos_json: permisos_json || '{}' },
+                    ['nombre', 'color', 'es_admin', 'orden', 'permisos_json']),
+            });
             const actor = req.user ? req.user.correo : (req.body.creado_por || 'admin');
             if (typeof logAudit === 'function') logAudit(actor, 'roles', 'CREÓ ROL', `${nombre}`);
             res.json({ data: 'Éxito', id: result.insertId });
@@ -3682,39 +3688,56 @@ app.put('/api/roles/:id', (req, res) => {
     const { nombre, color, permisos_json, es_admin, orden } = req.body;
     const { id } = req.params;
     const targetDb = req.db || db;
-    targetDb.query(
-        'UPDATE roles SET nombre=?, color=?, permisos_json=?, es_admin=?, orden=? WHERE id=?',
-        [nombre, color || '#5865F2', permisos_json || '{}', es_admin ? 1 : 0, orden || 0, id],
-        (err) => {
-            if (err) return res.status(500).json({ error: err.message });
+    targetDb.query('SELECT nombre, color, permisos_json, es_admin, orden FROM roles WHERE id=?', [id], (errA, filasA) => {
+        const antes = (!errA && filasA && filasA[0]) ? filasA[0] : {};
+        targetDb.query(
+            'UPDATE roles SET nombre=?, color=?, permisos_json=?, es_admin=?, orden=? WHERE id=?',
+            [nombre, color || '#5865F2', permisos_json || '{}', es_admin ? 1 : 0, orden || 0, id],
+            (err) => {
+                if (err) return res.status(500).json({ error: err.message });
 
-            // Sincronizar permisos_json en todos los usuarios asignados a este rol
-            targetDb.query(
-                'UPDATE usuarios SET permisos_json=? WHERE rol_id=?',
-                [permisos_json || '{}', id],
-                () => {}
-            );
+                // Sincronizar permisos_json en todos los usuarios asignados a este rol
+                targetDb.query(
+                    'UPDATE usuarios SET permisos_json=? WHERE rol_id=?',
+                    [permisos_json || '{}', id],
+                    () => {}
+                );
 
-            broadcast('usuarios', 'actualizar_rol');
-            const actor = req.user ? req.user.correo : (req.body.editado_por || 'admin');
-            if (typeof logAudit === 'function') logAudit(actor, 'roles', 'MODIFICÓ ROL', `${nombre} (ID: ${id})`);
-            res.json({ data: 'Éxito' });
-        }
-    );
+                broadcast('usuarios', 'actualizar_rol');
+                const cambios = diff(antes, { nombre, color: color || '#5865F2', permisos_json: permisos_json || '{}', es_admin: es_admin ? 1 : 0, orden: orden || 0 },
+                    ['nombre', 'color', 'permisos_json', 'es_admin', 'orden']);
+                if (Object.keys(cambios).length) {
+                    const soloPermisos = Object.keys(cambios).length === 1 && cambios.permisos_json;
+                    auditar(targetDb, actorDe(req), {
+                        action: 'UPDATE', entity: 'role', entityId: id,
+                        summary: soloPermisos ? `Cambió los permisos del rol ${nombre}` : `Editó el rol ${nombre}`,
+                        changes: cambios,
+                    });
+                }
+                const actor = req.user ? req.user.correo : (req.body.editado_por || 'admin');
+                if (typeof logAudit === 'function') logAudit(actor, 'roles', 'MODIFICÓ ROL', `${nombre} (ID: ${id})`);
+                res.json({ data: 'Éxito' });
+            }
+        );
+    });
 });
 
 app.delete('/api/roles/:id', (req, res) => {
     const { id } = req.params;
     const targetDb = req.db || db;
-    targetDb.query('SELECT COUNT(*) AS cnt FROM usuarios WHERE rol_id = ?', [id], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (results[0].cnt > 0) return res.status(400).json({ error: `Este rol tiene ${results[0].cnt} usuario(s) asignado(s). Reasígnalos antes de eliminar.` });
-        targetDb.query('DELETE FROM roles WHERE id=?', [id], (err2) => {
-            if (err2) return res.status(500).json({ error: err2.message });
-            broadcast('usuarios', 'eliminar_rol');
-            const actor = req.user ? req.user.correo : 'admin';
-            if (typeof logAudit === 'function') logAudit(actor, 'roles', 'ELIMINÓ ROL', `ID Rol: ${id}`);
-            res.json({ data: 'Éxito' });
+    targetDb.query('SELECT nombre FROM roles WHERE id = ?', [id], (errN, filasN) => {
+        const nombreRol = (!errN && filasN && filasN[0]) ? filasN[0].nombre : `ID ${id}`;
+        targetDb.query('SELECT COUNT(*) AS cnt FROM usuarios WHERE rol_id = ?', [id], (err, results) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (results[0].cnt > 0) return res.status(400).json({ error: `Este rol tiene ${results[0].cnt} usuario(s) asignado(s). Reasígnalos antes de eliminar.` });
+            targetDb.query('DELETE FROM roles WHERE id=?', [id], (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                broadcast('usuarios', 'eliminar_rol');
+                auditar(targetDb, actorDe(req), { action: 'DELETE', entity: 'role', entityId: id, summary: `Eliminó el rol ${nombreRol}` });
+                const actor = req.user ? req.user.correo : 'admin';
+                if (typeof logAudit === 'function') logAudit(actor, 'roles', 'ELIMINÓ ROL', `ID Rol: ${id}`);
+                res.json({ data: 'Éxito' });
+            });
         });
     });
 });
@@ -3748,6 +3771,12 @@ app.post('/api/usuarios-v2', async (req, res) => {
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 broadcast('usuarios', 'crear');
+                auditar(targetDb, actorDe(req), {
+                    action: 'CREATE', entity: 'user', entityId: newId,
+                    summary: `Creó al usuario ${nombre || correo}`,
+                    changes: diff({}, { nombre: nombre || '', correo, cargo: cargo || '', estado: estado || 'Activo', rol, rol_id: rolId },
+                        ['nombre', 'correo', 'cargo', 'estado', 'rol', 'rol_id']),
+                });
                 const usuario = req.body.creado_por || 'admin';
                 logAudit(usuario, 'usuarios', 'CREÓ', `${nombre || correo}`);
                 res.json({ data: 'Éxito', id: newId });
@@ -3777,6 +3806,16 @@ app.put('/api/usuarios-v2/:id', async (req, res) => {
         targetDb.query(`UPDATE usuarios SET ${fields.join(',')} WHERE idUsuario=?`, values, (err) => {
             if (err) return res.status(500).json({ error: err.message });
             broadcast('usuarios', 'actualizar');
+            const antesU = (!errA && filasA && filasA[0]) ? filasA[0] : {};
+            const despuesU = { nombre: nombre || '', dni: (dni || '').trim(), cargo: cargo || '', correo: correo || '', estado: estado || 'Activo', rol, rol_id: rolId };
+            const cambiosU = diff(antesU, despuesU, ['nombre', 'dni', 'cargo', 'correo', 'estado', 'rol', 'rol_id']);
+            if (Object.keys(cambiosU).length) {
+                auditar(targetDb, actorDe(req), { action: 'UPDATE', entity: 'user', entityId: id, summary: `Editó al usuario ${nombre || correo}`, changes: cambiosU });
+            }
+            if (password && password.trim() !== '') {
+                // Solo se registra que cambió la clave; nunca el valor
+                auditar(targetDb, actorDe(req), { action: 'PASSWORD_CHANGE', entity: 'user', entityId: id, summary: `Cambió la contraseña de ${nombre || correo || 'un usuario'}` });
+            }
             const editor = req.body.editado_por || 'admin';
             logAudit(editor, 'usuarios', 'MODIFICÓ', `${nombre || correo}`);
             res.json({ data: 'Éxito' });
@@ -3856,10 +3895,15 @@ app.get('/api/conductores-lista', (req, res) => {
 app.delete('/api/conductores/:id', (req, res) => {
     const targetDb = req.db || db;
     const id = req.params.id;
-    targetDb.query("DELETE FROM conductores WHERE idConductor = ?", [id], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (typeof broadcast === 'function') broadcast('conductores', 'eliminar');
-        res.json({ ok: true, mensaje: 'Personal eliminado correctamente' });
+    targetDb.query("SELECT * FROM conductores WHERE idConductor = ?", [id], (errN, filasN) => {
+        const f = (!errN && filasN && filasN[0]) || {};
+        const nombreCond = f.nombre || f.nombres || f.nombre_completo || `ID ${id}`;
+        targetDb.query("DELETE FROM conductores WHERE idConductor = ?", [id], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (typeof broadcast === 'function') broadcast('conductores', 'eliminar');
+            auditar(targetDb, actorDe(req), { action: 'DELETE', entity: 'driver', entityId: id, summary: `Eliminó al conductor ${nombreCond}` });
+            res.json({ ok: true, mensaje: 'Personal eliminado correctamente' });
+        });
     });
 });
 
@@ -4433,6 +4477,9 @@ app.put('/api/placas/:placa', (req, res) => {
                     [diffs], () => {}
                 );
                 logAudit(usuario, 'placas', 'editar', `Placa ${placa}: ${diffs.map(d => d[1]).join(', ')}`);
+                const cambiosPlaca = {};
+                diffs.forEach(d => { cambiosPlaca[d[1]] = { from: d[2] || null, to: d[3] || null }; });
+                auditar(targetDb, actorDe(req), { action: 'UPDATE', entity: 'vehicle', entityId: placa, summary: `Editó la unidad ${placa}`, changes: cambiosPlaca });
             }
             res.json({ ok: true, cambios: diffs.length });
         });
