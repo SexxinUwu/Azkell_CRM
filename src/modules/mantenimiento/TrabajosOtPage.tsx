@@ -14,7 +14,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel, exportarExcelHojas } from '../../core/lib/excel';
-import { formatFechaHoraPe, formatFechaPe } from '../../core/lib/format';
+import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 import { ImportarTrabajosSheet } from './ImportarTrabajosSheet';
 import {
@@ -36,6 +36,14 @@ function personalDe(t: TrabajoOT): string[] {
   let p = t.tecnico ?? '';
   try { const d = JSON.parse(t.detalles_json ?? '{}'); if (d.personal) p = String(d.personal); } catch { /* sin detalles */ }
   return p.split(',').map(x => x.trim()).filter(Boolean);
+}
+
+/** Horas de un trabajo para la lista (mismo criterio que services/horas_tecnicos.js); null si está en curso */
+function horasTrabajo(t: TrabajoOT): number | null {
+  const ini = aLocal(t.fecha_trabajo), fin = aLocal(t.fecha_salida);
+  if (!ini || !fin) return null;
+  const h = (new Date(fin).getTime() - new Date(ini).getTime()) / 3_600_000;
+  return h >= 0 ? Math.round(h * 100) / 100 : null;
 }
 
 /** Mes en curso como rango "AAAA-MM-DD" (del día 1 al último) */
@@ -158,29 +166,39 @@ export function TrabajosOtPage() {
               <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setEstado(''); }}>Quitar filtros</button>
             </EmptyState>
           ) : (
-            <div className="tarjeta__lista">
-              {visibles.map(t => {
-                const id = trabajoId(t);
-                const costo = trabajoCosto(t);
-                return (
-                  <button key={id || String(t.id)} type="button" className="ot-fila"
-                    onClick={() => { haptic('selection'); setSeleccionadoId(id); }}>
-                    <div className="ot-fila__icono"><Wrench size={16} /></div>
-                    <div className="ot-fila__cuerpo">
-                      <span className="ot-fila__id">{id}</span>
-                      <span className="ot-fila__sub">
-                        <span className="ot-fila__placa">{t.placa || '—'}</span>
-                        {t.trabajo_realizado ? ` · ${t.trabajo_realizado}` : ''}
-                      </span>
-                    </div>
-                    <div className="ot-fila__derecha">
-                      <span className={`ot-estado ot-estado--${tonoEstado(t.estado)}`} style={{ fontSize: '0.6875rem' }}>{estadoTrabajo(t.estado)}</span>
-                      <span className="ot-fila__fecha">{dia(t.fecha_trabajo)}</span>
-                      {costo > 0 && <span className="ot-fila__costo">S/ {costo.toFixed(2)}</span>}
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="ot-tabla-caja">
+              <table className="ot-tabla">
+                <thead>
+                  <tr>
+                    <th>ID trabajo</th><th>N° OT</th><th>Placa</th><th>Km / Horas</th><th>F/H inicio</th>
+                    <th>Trabajo realizado</th><th>Personal</th><th>F/H salida</th><th>Costo</th><th>Tiempo</th><th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibles.map(t => {
+                    const id = trabajoId(t);
+                    const costo = trabajoCosto(t);
+                    const horas = horasTrabajo(t);
+                    return (
+                      <tr key={id || String(t.id)} tabIndex={0} className="pressable"
+                        onClick={() => { haptic('selection'); setSeleccionadoId(id); }}
+                        onKeyDown={e => { if (e.key === 'Enter') setSeleccionadoId(id); }}>
+                        <td className="ot-tabla__id">{id}</td>
+                        <td>{t.ot_id || t.ticket_visita || '—'}</td>
+                        <td><span className="ot-fila__placa">{t.placa || '—'}</span></td>
+                        <td>{trabajoKmHoras(t)}</td>
+                        <td>{formatFechaHoraPe(aLocal(t.fecha_trabajo))}</td>
+                        <td className="ot-tabla__trabajo">{t.trabajo_realizado || '—'}</td>
+                        <td>{personalDe(t).join(', ') || '—'}</td>
+                        <td>{formatFechaHoraPe(aLocal(t.fecha_salida))}</td>
+                        <td>{costo > 0 ? formatSoles(costo) : '—'}</td>
+                        <td>{horas == null ? '—' : `${horas.toFixed(1)} h`}</td>
+                        <td><span className={`ot-estado ot-estado--${tonoEstado(t.estado)}`} style={{ fontSize: '0.6875rem' }}>{estadoTrabajo(t.estado)}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
           </>)}
