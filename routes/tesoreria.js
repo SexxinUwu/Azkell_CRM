@@ -15,115 +15,6 @@ module.exports = function (db, broadcast, logAudit) {
         return (typeof d.promise === 'function') ? d.promise() : d;
     }
 
-    const _tenantsInitSet = new Set();
-
-    async function ensureTable(req) {
-        const tenantSlug = req.tenantSlug || 'default';
-        if (_tenantsInitSet.has(tenantSlug)) return;
-
-        const tdb = getDb(req);
-        if (!tdb) return;
-
-        const createSql = `
-            CREATE TABLE IF NOT EXISTS tesoreria_cuentas (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                codigo_liquidacion VARCHAR(60) NOT NULL DEFAULT '',
-                fecha_liquidacion DATE NULL,
-                numero_viaje VARCHAR(60) NOT NULL DEFAULT '',
-                orden_servicio VARCHAR(60) NOT NULL DEFAULT '',
-                fecha_servicio DATE NULL,
-                razon_social VARCHAR(150) NOT NULL DEFAULT '',
-                placa_camion VARCHAR(50) NOT NULL DEFAULT '',
-                placa_carreta VARCHAR(50) NOT NULL DEFAULT '',
-                conductor VARCHAR(150) NOT NULL DEFAULT '',
-                cliente VARCHAR(150) NOT NULL DEFAULT '',
-                lugar VARCHAR(150) NOT NULL DEFAULT '',
-                flete DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                comision_porcentaje DECIMAL(5,2) NOT NULL DEFAULT 0.00,
-                tarifa DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                gastos_operativos DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                base_imponible DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                igv DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                total DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                adelanto DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                detraccion DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                neto_cobrar DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                mes_facturacion VARCHAR(50) NOT NULL DEFAULT '',
-                fecha_factura DATE NULL,
-                serie VARCHAR(30) NOT NULL DEFAULT '',
-                factura VARCHAR(50) NOT NULL DEFAULT '',
-                factura_documento_url TEXT NULL,
-                nota_credito VARCHAR(60) NOT NULL DEFAULT '',
-                nota_credito_url TEXT NULL,
-                credito_dias INT NOT NULL DEFAULT 0,
-                fecha_cobrar DATE NULL,
-                fecha_deposito DATE NULL,
-                estado_servicio VARCHAR(50) NOT NULL DEFAULT 'PENDIENTE',
-                diferencia DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                observacion TEXT NULL,
-                documento_url TEXT NULL,
-                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_cod_liq (codigo_liquidacion),
-                INDEX idx_os (orden_servicio),
-                INDEX idx_fecha_liq (fecha_liquidacion),
-                INDEX idx_num_viaje (numero_viaje),
-                INDEX idx_factura (serie, factura),
-                INDEX idx_placa_cam (placa_camion),
-                INDEX idx_placa_car (placa_carreta),
-                INDEX idx_cliente (cliente),
-                INDEX idx_estado (estado_servicio)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        `;
-
-        try {
-            await tdb.query(createSql);
-            // Migraciones de columnas en tablas existentes si faltan
-            const migraciones = [
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN codigo_liquidacion VARCHAR(60) NOT NULL DEFAULT '' AFTER id",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN orden_servicio VARCHAR(60) NOT NULL DEFAULT '' AFTER id",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN numero_viaje VARCHAR(60) NOT NULL DEFAULT '' AFTER fecha_liquidacion",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN placa_camion VARCHAR(50) NOT NULL DEFAULT '' AFTER razon_social",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN placa_carreta VARCHAR(50) NOT NULL DEFAULT '' AFTER placa_camion",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN flete DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER lugar",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN comision_porcentaje DECIMAL(5,2) NOT NULL DEFAULT 0.00 AFTER flete",
-                "ALTER TABLE tesoreria_cuentas ALTER COLUMN comision_porcentaje SET DEFAULT 0.00",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN documento_url TEXT NULL AFTER observacion",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN neto_cobrado DECIMAL(12,2) NULL DEFAULT NULL AFTER neto_cobrar",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN sustento_pago_url TEXT NULL AFTER documento_url",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN factura_documento_url TEXT NULL AFTER factura",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN nota_credito VARCHAR(60) NOT NULL DEFAULT '' AFTER factura_documento_url",
-                "ALTER TABLE tesoreria_cuentas ADD COLUMN nota_credito_url TEXT NULL AFTER nota_credito"
-            ];
-            for (const mig of migraciones) {
-                try { await tdb.query(mig); } catch(e){}
-            }
-
-            // Crear tabla de historial de notas de crédito y reemplazo de facturas
-            await tdb.query(`CREATE TABLE IF NOT EXISTS tesoreria_cuentas_historial_facturas (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                cuenta_id INT NOT NULL,
-                factura_anterior_serie VARCHAR(30) NOT NULL DEFAULT '',
-                factura_anterior_numero VARCHAR(50) NOT NULL DEFAULT '',
-                factura_anterior_url TEXT NULL,
-                nota_credito_serie VARCHAR(30) NOT NULL DEFAULT '',
-                nota_credito_numero VARCHAR(50) NOT NULL DEFAULT '',
-                nota_credito_url TEXT NULL,
-                motivo_anulacion VARCHAR(255) NOT NULL DEFAULT '',
-                factura_nueva_serie VARCHAR(30) NOT NULL DEFAULT '',
-                factura_nueva_numero VARCHAR(50) NOT NULL DEFAULT '',
-                factura_nueva_url TEXT NULL,
-                usuario_registro VARCHAR(150) NULL DEFAULT 'ADMINISTRADOR',
-                fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_cuenta_id (cuenta_id),
-                INDEX idx_nc (nota_credito_serie, nota_credito_numero)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
-
-            _tenantsInitSet.add(tenantSlug);
-        } catch (e) {
-            console.warn(`[Tesorería] Error verificando tabla tesoreria_cuentas (${tenantSlug}):`, e.message);
-        }
-    }
 
     function safeDate(val) {
         if (!val) return null;
@@ -226,7 +117,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── GET /api/tesoreria/cuentas (Listar registros con presigned URLs para PDFs/Imágenes) ──
     router.get('/cuentas', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -377,7 +267,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── POST /api/tesoreria/cuentas (Crear registro individual con archivo opcional) ──
     router.post('/cuentas', upload.fields([{ name: 'archivo_adjunto', maxCount: 1 }, { name: 'archivo_factura', maxCount: 1 }]), async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -466,7 +355,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── PUT /api/tesoreria/cuentas/:id (Editar registro con archivo opcional) ──
     router.put('/cuentas/:id', upload.fields([{ name: 'archivo_adjunto', maxCount: 1 }, { name: 'archivo_factura', maxCount: 1 }]), async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -587,7 +475,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── PATCH /api/tesoreria/cuentas/:id/toggle-estado (Cambio rápido de estado) ──
     router.patch('/cuentas/:id/toggle-estado', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -610,7 +497,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── DELETE /api/tesoreria/cuentas/:id (Eliminar registro) ───────────
     router.delete('/cuentas/:id', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -648,7 +534,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── POST /api/tesoreria/cuentas/:id/registrar-pago (Registrar Neto Cobrado, Fecha y Sustento) ──
     router.post('/cuentas/:id/registrar-pago', upload.single('archivo_sustento'), async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -709,7 +594,6 @@ module.exports = function (db, broadcast, logAudit) {
         { name: 'archivo_factura_anterior', maxCount: 1 }
     ]), async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -821,7 +705,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── GET /api/tesoreria/cuentas/:id/historial-facturas (Listar historial de NC y Facturas) ──
     router.get('/cuentas/:id/historial-facturas', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -871,7 +754,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ── POST /api/tesoreria/cuentas/importar-masivo ──────────────────────
     router.post('/cuentas/importar-masivo', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -946,74 +828,9 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ── GESTIÓN DE CAJA (TESORERÍA) ──────────────────────────────────
-    async function ensureTableCaja(req) {
-        const tenantSlug = req.tenantSlug || 'default';
-        const tdb = getDb(req);
-        if (!tdb) return;
-
-        const createSql = `
-            CREATE TABLE IF NOT EXISTS tesoreria_caja (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                fecha DATE NOT NULL,
-                hora VARCHAR(10) NOT NULL DEFAULT '00:00:00',
-                fecha_valuta DATE NULL,
-                hora_valuta VARCHAR(10) NULL,
-                numero_constancia_deposito VARCHAR(100) NULL,
-                numero_factura VARCHAR(100) NULL,
-                serie VARCHAR(50) NOT NULL DEFAULT '2026',
-                numero VARCHAR(50) NOT NULL DEFAULT '',
-                orden_viaje VARCHAR(100) NULL,
-                conductor VARCHAR(150) NULL,
-                ruta_viaje VARCHAR(255) NULL,
-                placa VARCHAR(50) NULL,
-                autoriza VARCHAR(150) NOT NULL,
-                motivo VARCHAR(150) NOT NULL,
-                centro_costo VARCHAR(150) NULL,
-                sub_motivo VARCHAR(150) NULL,
-                modalidad_pago VARCHAR(100) NOT NULL,
-                moneda VARCHAR(20) NOT NULL DEFAULT 'SOLES',
-                tipo_persona VARCHAR(50) NOT NULL,
-                persona VARCHAR(200) NOT NULL,
-                tipo_movimiento VARCHAR(20) NOT NULL DEFAULT 'EGRESO',
-                subtotal DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                retencion_detraccion DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                importe_total DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                tipo_cambio DECIMAL(8,4) NOT NULL DEFAULT 1.0000,
-                descripcion TEXT NOT NULL,
-                tipo_comprobante VARCHAR(100) NULL,
-                cuenta_bancaria_persona VARCHAR(200) NULL,
-                cuenta_bancaria_empresa VARCHAR(200) NULL,
-                voucher_url TEXT NULL,
-                sustento_url TEXT NULL,
-                observacion TEXT NULL,
-                no_aplica_liquidacion TINYINT(1) NOT NULL DEFAULT 0,
-                estado VARCHAR(50) NOT NULL DEFAULT 'PENDIENTE',
-                comentario TEXT NULL,
-                usuario_creacion VARCHAR(150) NULL,
-                usuario_aprobacion VARCHAR(150) NULL,
-                fecha_aprobacion DATETIME NULL,
-                motivo_anulacion TEXT NULL,
-                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_caja_fecha (fecha),
-                INDEX idx_caja_estado (estado),
-                INDEX idx_caja_numero (serie, numero),
-                INDEX idx_caja_orden (orden_viaje),
-                INDEX idx_caja_placa (placa)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        `;
-
-        try {
-            await tdb.query(createSql);
-        } catch (e) {
-            console.warn(`[Tesorería Caja] Error verificando tabla tesoreria_caja (${tenantSlug}):`, e.message);
-        }
-    }
-
     // Correlativo automático para Caja
     router.get('/caja/siguiente-numero', async (req, res) => {
         try {
-            await ensureTableCaja(req);
             const tdb = getDb(req);
             const serie = req.query.serie || String(new Date().getFullYear());
             const [rows] = await tdb.query(
@@ -1065,7 +882,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Listar movimientos de Caja con presigned URLs
     router.get('/caja', async (req, res) => {
         try {
-            await ensureTableCaja(req);
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
 
@@ -1188,7 +1004,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Guardar nuevo registro de Caja con archivos adjuntos
     router.post('/caja', upload.fields([{ name: 'voucher', maxCount: 1 }, { name: 'sustento', maxCount: 1 }]), async (req, res) => {
         try {
-            await ensureTableCaja(req);
             const tdb = getDb(req);
             const b = req.body || {};
 
@@ -1281,7 +1096,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Editar registro de caja (Solo si estado es REGISTRADO o PENDIENTE)
     router.put('/caja/:id', upload.fields([{ name: 'voucher', maxCount: 1 }, { name: 'sustento', maxCount: 1 }]), async (req, res) => {
         try {
-            await ensureTableCaja(req);
             const tdb = getDb(req);
             const { id } = req.params;
             const b = req.body || {};
@@ -1384,7 +1198,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Cambiar estado a APROBADO (Desde módulo Gerencia / Aprobación de Caja)
     router.post('/caja/:id/aprobar', async (req, res) => {
         try {
-            await ensureTableCaja(req);
             const tdb = getDb(req);
             const { id } = req.params;
             const b = req.body || {};
@@ -1410,7 +1223,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Cambiar estado a ANULADO (Desde módulo Gerencia / Aprobación de Caja)
     router.post('/caja/:id/anular', async (req, res) => {
         try {
-            await ensureTableCaja(req);
             const tdb = getDb(req);
             const { id } = req.params;
             const b = req.body || {};
@@ -1442,7 +1254,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Subir documentos posteriores (Pasa estado a PROCESADO si ya estaba aprobado)
     router.post('/caja/:id/subir-documentos', upload.fields([{ name: 'voucher', maxCount: 1 }, { name: 'sustento', maxCount: 1 }]), async (req, res) => {
         try {
-            await ensureTableCaja(req);
             const tdb = getDb(req);
             const { id } = req.params;
             const b = req.body;
@@ -1538,7 +1349,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Eliminar registro de caja
     router.delete('/caja/:id', async (req, res) => {
         try {
-            await ensureTableCaja(req);
             const tdb = getDb(req);
             const { id } = req.params;
             const [rows] = await tdb.query('SELECT voucher_url, sustento_url, orden_viaje FROM tesoreria_caja WHERE id = ?', [id]);
@@ -1557,29 +1367,9 @@ module.exports = function (db, broadcast, logAudit) {
     // ══════════════════════════════════════════════════════════════════════
     // ── MÓDULO CENTROS DE COSTOS (TESORERÍA) ──────────────────────────────
     // ══════════════════════════════════════════════════════════════════════
-    async function ensureTableCentrosCostos(req) {
-        const tdb = getDb(req);
-        if (!tdb) return;
-        await tdb.query(`
-            CREATE TABLE IF NOT EXISTS tesoreria_centros_costos (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                codigo VARCHAR(50) NOT NULL UNIQUE,
-                nombre VARCHAR(150) NOT NULL,
-                nivel VARCHAR(50) NOT NULL DEFAULT 'Principal',
-                cuenta_contable VARCHAR(100) NULL,
-                requiere_placa TINYINT(1) NOT NULL DEFAULT 0,
-                descripcion TEXT NULL,
-                estado VARCHAR(20) NOT NULL DEFAULT 'ACTIVO',
-                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        `).catch(() => {});
-    }
-
     // Listar Centros de Costos
     router.get('/centros-costos', async (req, res) => {
         try {
-            await ensureTableCentrosCostos(req);
             const tdb = getDb(req);
             const [rows] = await tdb.query('SELECT * FROM tesoreria_centros_costos ORDER BY codigo ASC');
             res.json({ ok: true, data: rows || [] });
@@ -1591,7 +1381,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Crear Centro de Costos
     router.post('/centros-costos', async (req, res) => {
         try {
-            await ensureTableCentrosCostos(req);
             const tdb = getDb(req);
             const b = req.body || {};
             const codigo = (b.codigo || '').trim().toUpperCase();
@@ -1626,7 +1415,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Actualizar Centro de Costos
     router.put('/centros-costos/:id', async (req, res) => {
         try {
-            await ensureTableCentrosCostos(req);
             const tdb = getDb(req);
             const { id } = req.params;
             const b = req.body || {};
@@ -1667,7 +1455,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Eliminar Centro de Costos
     router.delete('/centros-costos/:id', async (req, res) => {
         try {
-            await ensureTableCentrosCostos(req);
             const tdb = getDb(req);
             const { id } = req.params;
             await tdb.query('DELETE FROM tesoreria_centros_costos WHERE id = ?', [id]);
@@ -1678,32 +1465,9 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ── GESTIÓN DE MOTIVOS Y SUBMOTIVOS DE GASTO ───────────────────
-    async function ensureTableMotivosGastos(req) {
-        const tdb = getDb(req);
-        try {
-            await tdb.query(`
-                CREATE TABLE IF NOT EXISTS tesoreria_motivos_gastos (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    motivo VARCHAR(150) NOT NULL,
-                    sub_motivo VARCHAR(150) NOT NULL,
-                    centro_costo_codigo VARCHAR(50) NULL,
-                    estado ENUM('ACTIVO', 'INACTIVO') DEFAULT 'ACTIVO',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    INDEX idx_motivo (motivo),
-                    INDEX idx_submotivo (sub_motivo),
-                    INDEX idx_cc_codigo (centro_costo_codigo)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-            `).catch(() => {});
-        } catch (e) {
-            console.warn('[Tesorería Motivos] Error verificando tabla tesoreria_motivos_gastos:', e.message);
-        }
-    }
-
     // Listar Motivos y Submotivos (con opción de filtrar solo activos)
     router.get('/motivos-gastos', async (req, res) => {
         try {
-            await ensureTableMotivosGastos(req);
             const tdb = getDb(req);
             const soloActivos = req.query.solo_activos === '1' || req.query.solo_activos === 'true';
             let sql = 'SELECT * FROM tesoreria_motivos_gastos';
@@ -1724,7 +1488,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Crear Motivo / Submotivo
     router.post('/motivos-gastos', async (req, res) => {
         try {
-            await ensureTableMotivosGastos(req);
             const tdb = getDb(req);
             const b = req.body || {};
             const motivo = (b.motivo || '').trim();
@@ -1754,7 +1517,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Actualizar Motivo / Submotivo
     router.put('/motivos-gastos/:id', async (req, res) => {
         try {
-            await ensureTableMotivosGastos(req);
             const tdb = getDb(req);
             const { id } = req.params;
             const b = req.body || {};
@@ -1789,51 +1551,9 @@ module.exports = function (db, broadcast, logAudit) {
 
     // Eliminar Motivo / Submotivo
     // ── GESTIÓN DE LIQUIDACIÓN DE GASTOS OPERATIVOS DE VIAJE ─────────
-    async function ensureTableLiquidacionesGastos(req) {
-        const tenantSlug = req.tenantSlug || 'default';
-        const key = `liq_gastos_${tenantSlug}`;
-        if (_tenantsInitSet.has(key)) return;
-
-        const tdb = getDb(req);
-        if (!tdb) return;
-
-        const createSql = `
-            CREATE TABLE IF NOT EXISTS tesoreria_liquidaciones_gastos (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                orden_viaje VARCHAR(100) NOT NULL,
-                fecha DATE NOT NULL,
-                conductor VARCHAR(150) NULL,
-                tipo_gasto VARCHAR(100) NOT NULL,
-                sub_motivo VARCHAR(150) NULL,
-                tipo_comprobante VARCHAR(50) NOT NULL DEFAULT 'BOLETA',
-                serie VARCHAR(30) NULL,
-                numero VARCHAR(50) NULL,
-                proveedor_ruc VARCHAR(20) NULL,
-                proveedor_nombre VARCHAR(200) NULL,
-                detalle TEXT NULL,
-                importe DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                sustento_url TEXT NULL,
-                estado VARCHAR(50) NOT NULL DEFAULT 'APROBADO',
-                usuario_registro VARCHAR(150) NULL,
-                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_liq_viaje (orden_viaje),
-                INDEX idx_liq_fecha (fecha)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        `;
-
-        try {
-            await tdb.query(createSql);
-            _tenantsInitSet.add(key);
-        } catch(e) {
-            console.warn('[Liquidaciones Gastos] Error verificando tabla:', e.message);
-        }
-    }
-
     // Listar gastos de liquidación de un viaje + Balance consolidado contra depósitos de caja
     router.get('/liquidaciones-gastos', async (req, res) => {
         try {
-            await ensureTableLiquidacionesGastos(req);
-            await ensureTableCaja(req);
             const tdb = getDb(req);
             const { orden_viaje } = req.query;
 
@@ -2006,7 +1726,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Registrar nuevo gasto de liquidación con comprobante adjunto
     router.post('/liquidaciones-gastos', upload.single('sustento'), async (req, res) => {
         try {
-            await ensureTableLiquidacionesGastos(req);
             const tdb = getDb(req);
             const b = req.body || {};
 
@@ -2060,7 +1779,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Actualizar / Editar gasto de liquidación
     router.put('/liquidaciones-gastos/:id', upload.single('sustento'), async (req, res) => {
         try {
-            await ensureTableLiquidacionesGastos(req);
             const tdb = getDb(req);
             const { id } = req.params;
             const b = req.body || {};
@@ -2120,7 +1838,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Eliminar gasto de liquidación
     router.delete('/liquidaciones-gastos/:id', async (req, res) => {
         try {
-            await ensureTableLiquidacionesGastos(req);
             const tdb = getDb(req);
             const { id } = req.params;
             const [prevDel] = await tdb.query('SELECT orden_viaje FROM tesoreria_liquidaciones_gastos WHERE id = ?', [id]);
@@ -2135,9 +1852,6 @@ module.exports = function (db, broadcast, logAudit) {
     // Generar Caja de Compensación (Devolución por saldo a favor o Reembolso agrupado por conceptos)
     router.post('/liquidaciones-gastos/generar-caja-compensacion', async (req, res) => {
         try {
-            await ensureTableCaja(req);
-            await ensureTableLiquidacionesGastos(req);
-            await ensureTableMotivosGastos(req);
             const tdb = getDb(req);
             const b = req.body || {};
 
@@ -2328,32 +2042,11 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
 
     // ── Helper: Asegurar columnas necesarias en entradas_inv ─────
-    async function _ensureColumnasPagoRequerimientos(tdb) {
-        const cols = [
-            { col: 'numero_operacion', def: 'VARCHAR(100) NULL' },
-            { col: 'fecha_pago', def: 'DATETIME NULL' },
-            { col: 'pagado_por', def: 'VARCHAR(150) NULL' },
-            { col: 'fecha_aprobacion', def: 'DATETIME NULL' },
-            { col: 'cuenta_bancaria_empresa', def: 'VARCHAR(150) NULL' }
-        ];
-        for (const c of cols) {
-            try {
-                const [r] = await tdb.query(
-                    `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='${c.col}'`
-                );
-                if (r && r[0] && r[0].cnt === 0) {
-                    await tdb.query(`ALTER TABLE entradas_inv ADD COLUMN ${c.col} ${c.def}`);
-                }
-            } catch(e) {}
-        }
-    }
-
     // ── GET /api/tesoreria/pago-requerimientos ───────────────────
     router.get('/pago-requerimientos', async (req, res) => {
         try {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'DB no disponible' });
-            await _ensureColumnasPagoRequerimientos(tdb);
 
             const estadoFiltro = (req.query.estado || 'aprobado').toLowerCase();
             let whereClause = "WHERE LOWER(e.estado) IN ('aprobado', 'autorizado')";
@@ -2581,8 +2274,6 @@ module.exports = function (db, broadcast, logAudit) {
         try {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'DB no disponible' });
-            await _ensureColumnasPagoRequerimientos(tdb);
-            await ensureTableCaja(req);
 
             const { id } = req.params;
             const b = req.body || {};
@@ -2780,7 +2471,6 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
     router.delete('/movimientos/:id', async (req, res) => {
         try {
-            await ensureTableCaja(req);
             const tdb = getDb(req);
             const { id } = req.params;
             const [rows] = await tdb.query('SELECT voucher_url, sustento_url FROM tesoreria_caja WHERE id = ?', [id]);
@@ -2799,9 +2489,6 @@ module.exports = function (db, broadcast, logAudit) {
         try {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'DB no disponible' });
-            await ensureTableCaja(req);
-            await ensureTableCentrosCostos(req);
-            await _ensureColumnasPagoRequerimientos(tdb);
 
             // Limpieza preventiva de movimientos huérfanos de OCs que ya fueron eliminadas del sistema
             try {
