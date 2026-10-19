@@ -22,6 +22,49 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
 | Despliegue | Coolify (como KINTSUGI) |
 | IA del asistente | Gemini con modelos en cadena, clave propia de este proyecto (`GEMINI_API_KEY`) |
 
+## Auditoría de diseño (cerrada 2026-10-19)
+
+Pasada de diseño sobre las pantallas ya migradas a React, bloque por bloque, cada uno verificado en navegador con datos simulados y con `npm run typecheck` en 0 antes de subirlo a `main`.
+
+| Bloque | Merge a `main` |
+| --- | --- |
+| Tesorería (caja, bancos, cuentas, centros, liquidaciones, pago de requerimientos) | `f8509d79` |
+| Operaciones y combustible (vales, análisis D2, urea, órdenes de viaje) | `6df155c6` |
+| Mantenimiento y taller (OT, status de rampa, fallas, incidencias, Fleetrun) y matriz de rendimiento | `0d3b2a57` |
+| Almacén (inventario, kardex, recepción de compras, entradas, salidas) | `d8ef690e` |
+| Flota y unidades (placas, documentos, checklists, disponibilidad) | `ebb3f032` |
+| Personal y conductores (conductores, personal, nómina, asistencia) | `0e772042` |
+| Inicio, gerencia y aprobaciones | `82aabdc5` |
+| Directorios, catálogos y sistema (clientes, usuarios, auditoría, integraciones, 2FA) | `34f0bc0f` |
+
+**Criterios aplicados en todos los bloques**
+
+1. **Moneda:** `formatSoles` (S/ con espacio no divisible) y `formatDolares` / `formatMoneda` (US$) en `src/core/lib/format.ts`.
+2. **Fechas:** `formatFechaPe` (dd/mm/aaaa) y `formatFechaHoraPe` (dd/mm/aaaa HH:mm). El texto sin zona horaria se lee tal cual; las fechas con hora se convierten a Lima.
+3. **Jerarquía de color:** botón primario en tinta (`--ink`). El naranja solo marca foco y selección. Verde, ámbar y rojo se usan solo para estados (vigencias, aprobado, vencido). Códigos de producto, OC, placas y números de vale sin naranja.
+4. **Interacción:** `.pressable` y `haptic('selection')` en filas, tarjetas, filtros y KPI que tienen acción al tocarlos. Éxito y advertencia en confirmaciones.
+5. **Validación en línea:** errores debajo del campo con `<Field error={...}>`. Ningún `alert()` ni toast para errores de validación.
+
+**Reglas de negocio que cambiaron con esta pasada** (acordadas con el usuario)
+
+- Rechazar una OC y anular un movimiento de caja exigen motivo escrito. Antes el rechazo era opcional y la anulación tenía un motivo por defecto.
+- RUC/DNI en clientes: 8 u 11 dígitos (persona natural o empresa).
+- Brevete: entre 8 y 12 letras o números, para incluir conductores con Carnet de Extranjería o PTP.
+
+**Pendiente, fuera del alcance de la auditoría o sin verificar** (Perfil ya está cerrado)
+
+- **Perfil** (`src/modules/perfil/PerfilPage.tsx`, `CambiarPasswordSheet.tsx`): revisado el 2026-10-19 y verificado en navegador. Filas tocables con háptica, cerrar sesión con advertencia, validación en línea de la contraseña y botón primario en tinta.
+- **Catálogos:** las filas no tienen acción al tocarlas; solo sus botones de editar y eliminar son tocables.
+- **Integraciones:** las tarjetas son formularios sin acción de toque, por eso no llevan `.pressable`.
+- **Fechas de creación** de clientes y usuarios: no se muestran en ninguna lista ni ficha. No se agregaron columnas nuevas.
+- **Persona (formulario) y Asistencia:** el brevete de persona y la licencia de asistencia pasan typecheck y comparten la lógica validada en conductores, pero no se probaron en navegador.
+
+## Siguiente paso técnico
+
+**Retirar el auto-sync y los `ALTER` de arranque** (Fase 1, último punto abierto). Hoy `services/tenant_master.js`, `init_db.js` y las rutas copian tablas y columnas desde `DB_NAME` a todas las empresas fuera de las migraciones de Prisma. Mientras eso siga activo, el esquema de cada empresa puede cambiar sin pasar por `npm run db:deploy`. Es el requisito para que `server/core` (Fase 2) use Prisma sin divergencias entre empresas.
+
+En paralelo, un punto de seguridad que no depende del código: **crear un usuario MySQL propio para la app** (hoy usa `root` y el puerto está abierto a internet). La rotación de contraseñas la hace el usuario.
+
 ## Fases
 
 - [ ] **Fase 0 — Inventario y limpieza**
@@ -52,6 +95,8 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
   - [x] `0_baseline` marcada como aplicada en producción (maestra + 4 empresas): `npm run db:estado` → todas al día
   - [x] Fórmula del promedio de neumáticos: se queda `(r1+r2+r3)/3` (decisión 2026-10-12), igual en las bases, `init_db.js`, `routes/neumaticos.js` y `0_baseline`
   - [ ] Apagar el "auto-sync" de `services/tenant_master.js` y los `ALTER` de arranque (`server.js`, `init_db.js`, rutas) cuando el servidor nuevo use Prisma: hoy siguen copiando tablas y columnas desde `DB_NAME` a todas las empresas por fuera de las migraciones
+    - Revisión de solo lectura del 2026-10-19 (referencia `azkell_tenant_marsisa`): **las empresas no tienen el mismo esquema.** Rosymar, Yoguitransport y Trahesa no tienen `flota_articulos`, `flota_documentos`, `flota_devoluciones`, `flota_movimientos` ni `fallas_conductor`, y les faltan columnas en `auditoria` (`ip`) y `cat_rampas`. Esas tablas las crea el código en tiempo de ejecución (`routes/almacen-flota.js`, `asegurarTablas`), solo donde se usan. `azkell_fleet` (base por defecto, `DB_NAME`) es la más atrasada: 15 tablas menos y decenas de columnas.
+    - Orden propuesto: (1) migración de conciliación **solo aditiva** (tablas y columnas faltantes) creada contra una copia y revisada, (2) respaldo y `npm run db:deploy` en cada empresa, (3) quitar el auto-sync de `services/tenant_master.js`, (4) quitar los `asegurarTablas` y DDL de las rutas, (5) que `tenant_provisioner.js` cree empresas con `prisma migrate deploy` en lugar de `initDB()`. No se toca `guias_remision` (SUNAT) sin instrucción.
 
 ### Cómo se cambia el esquema desde ahora
 
