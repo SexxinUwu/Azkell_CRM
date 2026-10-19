@@ -53,167 +53,6 @@ module.exports = function (db, broadcast, logAudit) {
         next();
     });
 
-// Auto-creación de tablas del módulo RRHH
-async function ensureTablesRRHH(req) {
-    const tdb = getDb(req);
-    try {
-        await tdb.query(`
-            CREATE TABLE IF NOT EXISTS rrhh_personal (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                tipo_documento VARCHAR(20) DEFAULT 'DNI',
-                numero_documento VARCHAR(20) NOT NULL UNIQUE,
-                nombres VARCHAR(100) NOT NULL,
-                apellidos VARCHAR(100) NOT NULL,
-                sexo ENUM('M', 'F') DEFAULT 'M',
-                fecha_nacimiento DATE NULL,
-                nacionalidad VARCHAR(50) DEFAULT 'PERUANA',
-                estado_civil VARCHAR(30) DEFAULT 'SOLTERO(A)',
-                direccion TEXT NULL,
-                distrito VARCHAR(100) NULL,
-                provincia VARCHAR(100) NULL,
-                departamento VARCHAR(100) NULL,
-                telefono VARCHAR(30) NULL,
-                email VARCHAR(100) NULL,
-                contacto_emergencia_nombre VARCHAR(100) NULL,
-                contacto_emergencia_parentesco VARCHAR(50) NULL,
-                contacto_emergencia_telefono VARCHAR(30) NULL,
-                categoria_rol ENUM('CONDUCTOR', 'MECANICO_TALLER', 'ADMINISTRATIVO', 'LIMPIEZA_SERVICIOS', 'SEGURIDAD_CONTROL', 'OTRO') DEFAULT 'ADMINISTRATIVO',
-                cargo VARCHAR(100) NOT NULL,
-                area VARCHAR(100) DEFAULT 'OPERACIONES',
-                sede VARCHAR(100) DEFAULT 'BASE PRINCIPAL',
-                centro_costo_codigo VARCHAR(20) DEFAULT 'CC-100',
-                jefe_inmediato VARCHAR(100) NULL,
-                fecha_ingreso DATE NOT NULL,
-                fecha_cese DATE NULL,
-                motivo_cese VARCHAR(255) NULL,
-                estado ENUM('ACTIVO', 'VACACIONES', 'SUSPENDIDO', 'CESADO') DEFAULT 'ACTIVO',
-                tipo_contrato ENUM('INDETERMINADO', 'PLAZO_FIJO', 'PERIODO_PRUEBA', 'LOCACION_SERVICIOS', 'PRACTICANTE') DEFAULT 'PLAZO_FIJO',
-                fecha_inicio_contrato DATE NULL,
-                fecha_fin_contrato DATE NULL,
-                regimen_pensionario ENUM('ONP', 'AFP_HABITAT', 'AFP_INTEGRA', 'AFP_PRIMA', 'AFP_PROFUTURO', 'SIN_REGIMEN') DEFAULT 'ONP',
-                tipo_comision_afp ENUM('FLUJO', 'MIXTA') DEFAULT 'FLUJO',
-                cuspp VARCHAR(30) NULL,
-                tiene_asignacion_familiar TINYINT(1) DEFAULT 0,
-                sueldo_basico DECIMAL(12,2) DEFAULT 0.00,
-                bono_fijo DECIMAL(12,2) DEFAULT 0.00,
-                banco_haberes VARCHAR(100) NULL,
-                cuenta_haberes VARCHAR(50) NULL,
-                cci_haberes VARCHAR(50) NULL,
-                banco_cts VARCHAR(100) NULL,
-                cuenta_cts VARCHAR(50) NULL,
-                licencia_conducir VARCHAR(30) NULL,
-                licencia_categoria VARCHAR(20) NULL,
-                licencia_vencimiento DATE NULL,
-                sctr_salud_vigente TINYINT(1) DEFAULT 1,
-                sctr_pension_vigente TINYINT(1) DEFAULT 1,
-                emo_fecha_vencimiento DATE NULL,
-                emo_condicion ENUM('APTO', 'APTO_RESTRICCIONES', 'NO_APTO', 'PENDIENTE') DEFAULT 'APTO',
-                grupo_sanguineo VARCHAR(10) NULL,
-                talla_polo VARCHAR(10) NULL,
-                talla_pantalon VARCHAR(10) NULL,
-                talla_calzado VARCHAR(10) NULL,
-                talla_chaleco VARCHAR(10) NULL,
-                foto_url LONGTEXT NULL,
-                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        `).catch(() => {});
-
-        // Migración segura de columnas adicionales en rrhh_personal si la tabla ya existía
-        const colsToAdd = [
-            `ALTER TABLE rrhh_personal ADD COLUMN grupo_sanguineo VARCHAR(10) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN talla_polo VARCHAR(10) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN talla_pantalon VARCHAR(10) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN talla_calzado VARCHAR(10) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN talla_chaleco VARCHAR(10) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN foto_url LONGTEXT NULL`,
-            `ALTER TABLE rrhh_personal MODIFY COLUMN foto_url LONGTEXT NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN contacto_emergencia_nombre VARCHAR(100) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN contacto_emergencia_parentesco VARCHAR(50) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN contacto_emergencia_telefono VARCHAR(30) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN centro_costo_codigo VARCHAR(20) DEFAULT 'CC-100'`,
-            `ALTER TABLE rrhh_personal ADD COLUMN sede VARCHAR(100) DEFAULT 'BASE PRINCIPAL'`,
-            `ALTER TABLE rrhh_personal ADD COLUMN jefe_inmediato VARCHAR(100) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN fecha_inicio_contrato DATE NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN fecha_fin_contrato DATE NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN motivo_cese VARCHAR(255) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN fecha_cese DATE NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN cuspp VARCHAR(30) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN tiene_asignacion_familiar TINYINT(1) DEFAULT 0`,
-            `ALTER TABLE rrhh_personal ADD COLUMN sueldo_basico DECIMAL(12,2) DEFAULT 0.00`,
-            `ALTER TABLE rrhh_personal ADD COLUMN bono_fijo DECIMAL(12,2) DEFAULT 0.00`,
-            `ALTER TABLE rrhh_personal ADD COLUMN banco_haberes VARCHAR(100) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN cuenta_haberes VARCHAR(50) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN cci_haberes VARCHAR(50) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN banco_cts VARCHAR(100) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN cuenta_cts VARCHAR(50) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN licencia_conducir VARCHAR(30) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN licencia_categoria VARCHAR(20) NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN licencia_vencimiento DATE NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN sctr_salud_vigente TINYINT(1) DEFAULT 1`,
-            `ALTER TABLE rrhh_personal ADD COLUMN sctr_pension_vigente TINYINT(1) DEFAULT 1`,
-            `ALTER TABLE rrhh_personal ADD COLUMN emo_fecha_vencimiento DATE NULL`,
-            `ALTER TABLE rrhh_personal ADD COLUMN emo_condicion VARCHAR(30) DEFAULT 'APTO'`
-        ];
-        for (const sqlCol of colsToAdd) {
-            await tdb.query(sqlCol).catch(() => {});
-        }
-
-        await tdb.query(`
-            CREATE TABLE IF NOT EXISTS rrhh_tareo (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                personal_id INT NOT NULL,
-                fecha DATE NOT NULL,
-                estado ENUM('A', 'T', 'F', 'R', 'DM', 'V', 'P', 'D', 'FER') DEFAULT 'A',
-                hora_entrada TIME NULL,
-                hora_salida TIME NULL,
-                minutos_tardanza INT DEFAULT 0,
-                horas_extras DECIMAL(4,2) DEFAULT 0.00,
-                observacion VARCHAR(255) NULL,
-                orden_viaje_codigo VARCHAR(50) NULL,
-                usuario_registro VARCHAR(100) NULL,
-                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE KEY uq_personal_fecha (personal_id, fecha),
-                FOREIGN KEY (personal_id) REFERENCES rrhh_personal(id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        `).catch(() => {});
-
-        await tdb.query(`
-            CREATE TABLE IF NOT EXISTS rrhh_licencias (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                personal_id INT NOT NULL,
-                tipo ENUM('VACACIONES', 'DESCANSO_MEDICO', 'PERMISO_CON_GOCE', 'PERMISO_SIN_GOCE', 'LICENCIA_PATERNIDAD', 'LICENCIA_MATERNIDAD', 'SUSPENSION') NOT NULL,
-                fecha_inicio DATE NOT NULL,
-                fecha_fin DATE NOT NULL,
-                dias_totales INT NOT NULL,
-                motivo TEXT NULL,
-                sustento_url TEXT NULL,
-                estado ENUM('PENDIENTE', 'APROBADO', 'RECHAZADO') DEFAULT 'APROBADO',
-                aprobado_por VARCHAR(100) NULL,
-                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (personal_id) REFERENCES rrhh_personal(id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        `).catch(() => {});
-
-        await tdb.query(`
-            CREATE TABLE IF NOT EXISTS rrhh_sst_registros (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                personal_id INT NOT NULL,
-                tipo_registro ENUM('ENTREGA_EPP', 'CAPACITACION_SST', 'EXAMEN_MEDICO_EMO', 'INDUCCION', 'ENTREGA_RIT_RISST') NOT NULL,
-                fecha_registro DATE NOT NULL,
-                descripcion TEXT NOT NULL,
-                fecha_vencimiento DATE NULL,
-                documento_url TEXT NULL,
-                firmado TINYINT(1) DEFAULT 0,
-                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (personal_id) REFERENCES rrhh_personal(id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        `).catch(() => {});
-    } catch(e) {
-        console.warn('[RRHH] Error asegurando tablas:', e.message);
-    }
-}
-
 // ═════════════════════════════════════════════════════════════════════
 // 1. GESTIÓN DE PERSONAL / LEGAJOS DIGITALES
 // ═════════════════════════════════════════════════════════════════════
@@ -221,7 +60,6 @@ async function ensureTablesRRHH(req) {
 // Listar Personal con filtros y semáforos de vencimiento
 router.get('/personal', async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         const { busqueda, rol, area, estado, orden } = req.query;
 
@@ -259,7 +97,6 @@ router.get('/personal', async (req, res) => {
 // KPIs y Resumen Ejecutivo de RRHH
 router.get('/kpis', async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
 
         const [cntRows] = await tdb.query(`
@@ -299,7 +136,6 @@ router.get('/kpis', async (req, res) => {
 // Obtener detalle 360° de un colaborador
 router.get('/personal/:id', async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         const [rows] = await tdb.query('SELECT * FROM rrhh_personal WHERE id = ?', [req.params.id]);
         if (!rows.length) return res.status(404).json({ error: 'Colaborador no encontrado' });
@@ -316,7 +152,6 @@ router.get('/personal/:id', async (req, res) => {
 // Guardar nuevo colaborador
 router.post('/personal', upload.single('foto'), async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         const b = req.body || {};
 
@@ -414,7 +249,6 @@ router.post('/personal', upload.single('foto'), async (req, res) => {
 // Actualizar colaborador
 router.put('/personal/:id', upload.single('foto'), async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         const b = req.body || {};
         const id = req.params.id;
@@ -513,7 +347,6 @@ router.put('/personal/:id', upload.single('foto'), async (req, res) => {
 // Eliminar colaborador
 router.delete('/personal/:id', async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         await tdb.query('DELETE FROM rrhh_personal WHERE id = ?', [req.params.id]);
         res.json({ ok: true, message: 'Colaborador eliminado' });
@@ -529,7 +362,6 @@ router.delete('/personal/:id', async (req, res) => {
 // Obtener matriz de asistencia para un mes y año determinado
 router.get('/tareo', async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         const anio = parseInt(req.query.anio) || new Date().getFullYear();
         const mes = parseInt(req.query.mes) || (new Date().getMonth() + 1);
@@ -580,7 +412,6 @@ router.get('/tareo', async (req, res) => {
 // Guardar / Actualizar celda o lote de tareo
 router.post('/tareo/guardar', async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         const b = req.body || {};
         const items = Array.isArray(b.items) ? b.items : [b];
@@ -621,7 +452,6 @@ router.post('/tareo/guardar', async (req, res) => {
 // Sincronizar automáticamente con Órdenes de Viaje (Asignar 'R' a conductores en ruta)
 router.post('/tareo/sincronizar-viajes', async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         const fecha = req.body.fecha || new Date().toISOString().slice(0, 10);
 
@@ -667,7 +497,6 @@ router.post('/tareo/sincronizar-viajes', async (req, res) => {
 
 router.get('/licencias', async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         const [rows] = await tdb.query(`
             SELECT l.*, p.nombres, p.apellidos, p.numero_documento, p.cargo, p.categoria_rol
@@ -683,7 +512,6 @@ router.get('/licencias', async (req, res) => {
 
 router.post('/licencias', async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         const b = req.body || {};
 
@@ -732,7 +560,6 @@ router.post('/licencias', async (req, res) => {
 
 router.delete('/licencias/:id', async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         await tdb.query('DELETE FROM rrhh_licencias WHERE id = ?', [req.params.id]);
         res.json({ ok: true, message: 'Registro de licencia eliminado' });
@@ -747,7 +574,6 @@ router.delete('/licencias/:id', async (req, res) => {
 
 router.get('/sst', async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         const [rows] = await tdb.query(`
             SELECT s.*, p.nombres, p.apellidos, p.numero_documento, p.cargo, p.categoria_rol
@@ -763,7 +589,6 @@ router.get('/sst', async (req, res) => {
 
 router.post('/sst', upload.single('documento'), async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         const b = req.body || {};
 
@@ -801,7 +626,6 @@ router.post('/sst', upload.single('documento'), async (req, res) => {
 
 router.get('/nomina/resumen', async (req, res) => {
     try {
-        await ensureTablesRRHH(req);
         const tdb = getDb(req);
         const anio = parseInt(req.query.anio) || new Date().getFullYear();
         const mes = parseInt(req.query.mes) || (new Date().getMonth() + 1);
