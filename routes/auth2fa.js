@@ -51,35 +51,6 @@ module.exports = function (db) {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    async function ensureTables(pool) {
-        const conn = pool.promise ? pool.promise() : pool;
-        await conn.query(`
-            CREATE TABLE IF NOT EXISTS usuarios_2fa (
-                id          INT AUTO_INCREMENT PRIMARY KEY,
-                usuario_id  INT NOT NULL,
-                totp_secret VARCHAR(255) DEFAULT NULL,
-                totp_activo TINYINT(1) NOT NULL DEFAULT 0,
-                created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                UNIQUE KEY uq_usuario (usuario_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
-
-        await conn.query(`
-            CREATE TABLE IF NOT EXISTS webauthn_credentials (
-                id              VARCHAR(255) PRIMARY KEY,
-                usuario_id      INT NOT NULL,
-                nombre          VARCHAR(100) DEFAULT 'Passkey',
-                public_key      TEXT NOT NULL,
-                counter         BIGINT NOT NULL DEFAULT 0,
-                device_type     VARCHAR(50) DEFAULT NULL,
-                backed_up       TINYINT(1) DEFAULT 0,
-                transports      VARCHAR(255) DEFAULT NULL,
-                created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_usuario (usuario_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
-    }
-
-    const _init = ensureTables(db).catch(e => console.warn('[2fa] ensureTables:', e.message));
 
     function dbq(sql, params) {
         return new Promise((resolve, reject) => {
@@ -89,7 +60,6 @@ module.exports = function (db) {
 
     // ── GET /status ───────────────────────────────────────────────────────────
     router.get('/status', async (req, res) => {
-        await _init;
         try {
             const uid = req.user?.id;
             if (!uid) return res.status(401).json({ error: 'No autenticado' });
@@ -106,7 +76,6 @@ module.exports = function (db) {
 
     // ── POST /totp/setup ──────────────────────────────────────────────────────
     router.post('/totp/setup', async (req, res) => {
-        await _init;
         try {
             const uid = req.user?.id;
             const correo = req.user?.correo;
@@ -127,7 +96,6 @@ module.exports = function (db) {
 
     // ── POST /totp/verify (activa 2FA tras confirmar con código) ──────────────
     router.post('/totp/verify', async (req, res) => {
-        await _init;
         try {
             const uid = req.user?.id;
             if (!uid) return res.status(401).json({ error: 'No autenticado' });
@@ -151,7 +119,6 @@ module.exports = function (db) {
 
     // ── POST /totp/disable ───────────────────────────────────────────────────
     router.post('/totp/disable', async (req, res) => {
-        await _init;
         try {
             const uid = req.user?.id;
             if (!uid) return res.status(401).json({ error: 'No autenticado' });
@@ -177,7 +144,6 @@ module.exports = function (db) {
     // El cliente envía { correo, totp_code } tras login exitoso con contraseña.
     // El backend responde { valido: true/false }.
     router.post('/totp/validate', async (req, res) => {
-        await _init;
         try {
             const { correo, totp_code } = req.body;
             if (!correo || !totp_code) return res.status(400).json({ error: 'Faltan campos' });
@@ -201,7 +167,6 @@ module.exports = function (db) {
 
     // ── GET /webauthn/register-options ───────────────────────────────────────
     router.get('/webauthn/register-options', async (req, res) => {
-        await _init;
         try {
             const uid = req.user?.id;
             const correo = req.user?.correo;
@@ -235,7 +200,6 @@ module.exports = function (db) {
 
     // ── POST /webauthn/register-verify ───────────────────────────────────────
     router.post('/webauthn/register-verify', async (req, res) => {
-        await _init;
         try {
             const uid = req.user?.id;
             if (!uid) return res.status(401).json({ error: 'No autenticado' });
@@ -282,7 +246,6 @@ module.exports = function (db) {
     // ── GET /webauthn/auth-options ────────────────────────────────────────────
     // Durante login (aún sin JWT), el cliente envía ?correo=...
     router.get('/webauthn/auth-options', async (req, res) => {
-        await _init;
         try {
             const correo = req.query.correo || req.user?.correo;
             if (!correo) return res.status(400).json({ error: 'Falta correo' });
@@ -310,7 +273,6 @@ module.exports = function (db) {
 
     // ── POST /webauthn/auth-verify ────────────────────────────────────────────
     router.post('/webauthn/auth-verify', async (req, res) => {
-        await _init;
         try {
             const { credential, uid } = req.body;
             if (!uid) return res.status(400).json({ error: 'Falta uid' });
@@ -349,7 +311,6 @@ module.exports = function (db) {
 
     // ── GET /webauthn/credentials ─────────────────────────────────────────────
     router.get('/webauthn/credentials', async (req, res) => {
-        await _init;
         try {
             const uid = req.user?.id;
             if (!uid) return res.status(401).json({ error: 'No autenticado' });
@@ -360,7 +321,6 @@ module.exports = function (db) {
 
     // ── DELETE /webauthn/credentials/:id ─────────────────────────────────────
     router.delete('/webauthn/credentials/:id', async (req, res) => {
-        await _init;
         try {
             const uid = req.user?.id;
             if (!uid) return res.status(401).json({ error: 'No autenticado' });

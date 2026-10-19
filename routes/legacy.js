@@ -582,10 +582,6 @@ router.post('/eliminarMasivo', (req, res) => {
 // ============================================================
 
 // ── CRUD cat_rampas ──────────────────────────────────────────────
-// Migración: agregar columna orden si no existe
-db.query(`ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0`, (e) => {
-    if (!e) db.query(`UPDATE cat_rampas SET orden=id WHERE orden=0`);
-});
 
 
 
