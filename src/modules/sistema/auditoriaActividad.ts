@@ -1,5 +1,6 @@
 // Actividad de auditoría (GET /api/audit): registro estructurado, filtrado y paginado en el servidor.
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
 
 export interface EventoAudit {
@@ -115,4 +116,21 @@ export function useActividadAudit(f: FiltrosAudit) {
     },
     getNextPageParam: last => (last.hasMore ? last.page + 1 : undefined),
   });
+}
+
+/** Actualización en vivo: al llegar un evento de auditoría, la lista se refresca sola. Sin avisos. */
+export function useAuditoriaEnVivo() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (typeof EventSource === 'undefined') return;
+    const sse = new EventSource('/api/eventos');
+    const alLlegar = (ev: MessageEvent) => {
+      try {
+        const d = JSON.parse(ev.data) as { modulo?: string };
+        if (d.modulo === 'auditoria') qc.invalidateQueries({ queryKey: ['sistema', 'audit'] });
+      } catch { /* mensaje que no es nuestro */ }
+    };
+    sse.addEventListener('datos-actualizados', alLlegar);
+    return () => { sse.removeEventListener('datos-actualizados', alLlegar); sse.close(); };
+  }, [qc]);
 }

@@ -21,6 +21,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'integraciones', label: 'Integraciones', to: '/sistema/integraciones', icon: 'Cog', permisos: ['integraciones.ver', 'administracion.ver', 'admin'] },
   },
   {
+    path: 'sistema/api/*',
+    permisos: ['administracion.ver', 'admin'],
+    Page: lazy(() => import('./ApiDesarrolladoresPage').then(m => ({ default: m.ApiDesarrolladoresPage }))),
+    nav: { key: 'api-gateway', label: 'API y desarrolladores', to: '/sistema/api', icon: 'Code', permisos: ['administracion.ver', 'admin'] },
+  },
+  {
     path: 'sistema/2fa/*',
     permisos: [],
     Page: lazy(() => import('./Seguridad2FAPage').then(m => ({ default: m.Seguridad2FAPage }))),
