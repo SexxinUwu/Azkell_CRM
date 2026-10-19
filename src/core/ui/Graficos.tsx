@@ -72,6 +72,28 @@ export function DonaGrafico({ porciones, centro, altura = 180 }: {
   );
 }
 
+/** Horas reales por técnico (barras) con la eficiencia escrita al final de cada una. */
+export function HorasEficienciaGrafico({ tecnicos }: { tecnicos: Array<{ nombre: string; reales: number; eficiencia: number }> }) {
+  const [color, texto, secundario, fondo] = useColores(['var(--blue)', 'var(--label-1)', 'var(--label-2)', 'var(--fill-2)']);
+  const datos = tecnicos.map(t => ({ nombre: t.nombre, reales: t.reales, etiqueta: `${t.reales.toFixed(1)} h · ${t.eficiencia.toFixed(1)} %` }));
+  const alto = Math.max(120, datos.length * 40);
+  return (
+    <div style={{ width: '100%', height: alto }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={datos} layout="vertical" margin={{ top: 0, right: 120, bottom: 0, left: 0 }}>
+          <XAxis type="number" hide allowDecimals />
+          <YAxis type="category" dataKey="nombre" width={130} tickLine={false} axisLine={false}
+            tick={{ fill: secundario, fontSize: 12, fontWeight: 600 }} />
+          <Tooltip formatter={(v) => `${v} h`} cursor={{ fill: fondo }} />
+          <Bar dataKey="reales" name="Horas reales" fill={color} radius={6} isAnimationActive={false} barSize={14}>
+            <LabelList dataKey="etiqueta" position="right" fill={texto} style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12 }} />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 /** Barras horizontales (una por categoría) con su valor al final. Para estados y conteos. */
 export function BarrasGrafico({ porciones, altura }: { porciones: Porcion[]; altura?: number }) {
   const colores = useColores(porciones.map(p => p.color));

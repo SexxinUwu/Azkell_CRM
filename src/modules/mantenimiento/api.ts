@@ -374,6 +374,37 @@ export function useTrabajosOT() {
   });
 }
 
+/** Horas por técnico y día, calculadas en el servidor (services/horas_tecnicos.js) */
+export interface HorasTecnico {
+  nombre: string;
+  porDia: Record<string, number>;   // "AAAA-MM-DD" → horas reales ese día
+  reales: number;
+  proyectadas: number;
+  eficiencia: number;              // porcentaje, un decimal
+  enCurso: number;
+}
+
+export interface HorasTecnicosRespuesta {
+  desde: string;
+  hasta: string;
+  dias: Array<{ fecha: string; laborable: boolean }>;
+  diasLaborables: number;
+  horasPorDiaLaborable: number;
+  proyectadasPorTecnico: number;
+  tecnicos: HorasTecnico[];
+  resumen: { trabajos: number; enCurso: number; sinTecnico: number };
+  trabajos: Array<TrabajoOT & { horas: number | null }>;
+}
+
+export function useHorasTecnicos(desde: string, hasta: string, activo = true) {
+  return useQuery<HorasTecnicosRespuesta>({
+    queryKey: ['mant', 'horas-tecnicos', desde, hasta],
+    queryFn: () => api(`/ot-horas-tecnicos?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`),
+    enabled: activo && !!desde && !!hasta && hasta >= desde,
+    staleTime: 30_000,
+  });
+}
+
 // ─── Status Rampa ────────────────────────────────────────────────────────────
 
 export interface RampaEntrada {

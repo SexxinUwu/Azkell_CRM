@@ -667,7 +667,204 @@ function totFmtDateTimeExcel(v) {
 }
 
 // ── Exportar a Excel ──────────────────────────────────────────────
+// ── Vista Horas por técnico (mismo cálculo que React: servicios/horas_tecnicos.js) ──
+window.totVistaActual = window.totVistaActual || 'trabajos';
+window.totHoras = window.totHoras || null;
+
+window.totCambiarVista = function(vista) {
+    window.totVistaActual = vista === 'horas' ? 'horas' : 'trabajos';
+    var lista = document.getElementById('tot-vista-lista');
+    var horas = document.getElementById('tot-vista-horas');
+    var esHoras = window.totVistaActual === 'horas';
+    if (lista) lista.style.display = esHoras ? 'none' : 'flex';
+    if (horas) horas.style.display = esHoras ? 'block' : 'none';
+    totPintarBotonesVista();
+    if (esHoras) {
+        totAsegurarRangoHoras();
+        window.totCargarHoras();
+    }
+};
+
+function totPintarBotonesVista() {
+    var esHoras = window.totVistaActual === 'horas';
+    var bt = document.getElementById('tot-vista-btn-trabajos');
+    var bh = document.getElementById('tot-vista-btn-horas');
+    if (bt) bt.className = 'btn btn-sm rounded-pill px-3 fw-semibold ' + (esHoras ? 'btn-outline-secondary' : 'btn-dark');
+    if (bh) bh.className = 'btn btn-sm rounded-pill px-3 fw-semibold ' + (esHoras ? 'btn-dark' : 'btn-outline-secondary');
+}
+
+// Mes en curso por defecto (del día 1 al último), solo si el usuario aún no eligió fechas
+function totAsegurarRangoHoras() {
+    var d = document.getElementById('tot-hr-desde');
+    var h = document.getElementById('tot-hr-hasta');
+    if (!d || !h || d.value || h.value) return;
+    var hoy = new Date();
+    var y = hoy.getFullYear();
+    var m = hoy.getMonth();
+    var p2 = function(n) { return String(n).padStart(2, '0'); };
+    d.value = y + '-' + p2(m + 1) + '-01';
+    h.value = y + '-' + p2(m + 1) + '-' + p2(new Date(y, m + 1, 0).getDate());
+}
+
+window.totCargarHoras = function() {
+    var d = document.getElementById('tot-hr-desde');
+    var h = document.getElementById('tot-hr-hasta');
+    var badges = document.getElementById('tot-hr-badges');
+    if (!d || !h || !d.value || !h.value) return;
+    if (h.value < d.value) {
+        if (badges) badges.innerHTML = '<span class="text-danger small fw-semibold">La fecha final es anterior a la inicial.</span>';
+        return;
+    }
+    fetch('/api/ot-horas-tecnicos?desde=' + encodeURIComponent(d.value) + '&hasta=' + encodeURIComponent(h.value))
+        .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            window.totHoras = data;
+            totRenderHoras();
+        })
+        .catch(function(err) {
+            console.error('Error cargando horas por técnico:', err);
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al cargar horas por técnico', 'danger');
+        });
+};
+
+function totRenderHoras() {
+    var h = window.totHoras;
+    if (!h) return;
+    var badges = document.getElementById('tot-hr-badges');
+    if (badges) {
+        var html = '<span class="badge rounded-pill" style="background:rgba(217,119,6,.14);color:#b45309;font-weight:700;">' + h.resumen.enCurso + ' trabajos en curso / sin cierre</span>';
+        if (h.resumen.sinTecnico > 0) html += '<span class="badge rounded-pill bg-secondary-subtle text-secondary fw-semibold">' + h.resumen.sinTecnico + ' sin técnico asignado</span>';
+        html += '<span class="badge rounded-pill bg-secondary-subtle text-secondary fw-semibold">' + h.diasLaborables + ' días laborables · ' + h.proyectadasPorTecnico + ' h proyectadas por técnico</span>';
+        badges.innerHTML = html;
+    }
+    totPintarGraficoHoras(h);
+    totPintarMatrizHoras(h);
+}
+
+function totPintarGraficoHoras(h) {
+    var canvas = document.getElementById('tot-hr-chart');
+    if (!canvas || typeof Chart === 'undefined') return;
+    if (canvas.parentElement) canvas.parentElement.style.height = Math.max(200, h.tecnicos.length * 40 + 40) + 'px';
+    if (window.totChartHoras && !document.contains(window.totChartHoras.canvas)) {
+        window.totChartHoras.destroy();
+        window.totChartHoras = null;
+    }
+    if (window.totChartHoras) window.totChartHoras.destroy();
+    window.totChartHoras = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: h.tecnicos.map(function(t) { return t.nombre + ' · ' + t.eficiencia.toFixed(1) + ' %'; }),
+            datasets: [{
+                label: 'Horas reales',
+                data: h.tecnicos.map(function(t) { return t.reales; }),
+                backgroundColor: '#0a84ff',
+                borderRadius: 6,
+                barThickness: 14
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { afterLabel: function(c) {
+                    var t = h.tecnicos[c.dataIndex];
+                    return 'Proyectadas: ' + t.proyectadas + ' h · En curso: ' + t.enCurso;
+                } } }
+            },
+            scales: { x: { beginAtZero: true, title: { display: true, text: 'Horas' } } }
+        }
+    });
+}
+
+function totPintarMatrizHoras(h) {
+    var cont = document.getElementById('tot-hr-matriz');
+    if (!cont) return;
+    if (!h.tecnicos.length) {
+        cont.innerHTML = '<div class="text-secondary small py-3">Sin horas en el rango: no hay trabajos con técnico y fecha de inicio entre estas fechas.</div>';
+        return;
+    }
+    var celda = 'padding:6px 9px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border);font-family:monospace;font-size:0.78rem;';
+    var cab = 'padding:6px 9px;text-align:right;white-space:nowrap;background:var(--surface);color:var(--subtext);font-size:0.68rem;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);';
+    var num = function(n) { return n ? n.toFixed(1) : ''; };
+    var corto = function(f) { return f.slice(8, 10) + '/' + f.slice(5, 7); };
+
+    var totReales = 0, totProy = h.tecnicos.length * h.proyectadasPorTecnico, totCurso = 0;
+    h.tecnicos.forEach(function(t) { totReales += t.reales; totCurso += t.enCurso; });
+
+    var html = '<table style="border-collapse:collapse;width:100%;"><thead><tr><th style="' + cab + 'text-align:left;">Técnico</th>';
+    h.dias.forEach(function(d) {
+        html += '<th style="' + cab + (d.laborable ? '' : 'opacity:.45;') + '" title="' + totEsc(d.fecha) + '">' + corto(d.fecha) + '</th>';
+    });
+    html += '<th style="' + cab + '">Reales</th><th style="' + cab + '">Proyectadas</th><th style="' + cab + '">Eficiencia</th><th style="' + cab + '">En curso</th></tr></thead><tbody>';
+
+    h.tecnicos.forEach(function(t) {
+        html += '<tr><td style="' + celda + 'text-align:left;font-family:inherit;font-weight:600;">' + totEsc(t.nombre) + '</td>';
+        h.dias.forEach(function(d) {
+            html += '<td style="' + celda + (d.laborable ? '' : 'opacity:.45;') + '">' + num(t.porDia[d.fecha]) + '</td>';
+        });
+        html += '<td style="' + celda + 'font-weight:700;">' + t.reales.toFixed(1) + '</td>'
+            + '<td style="' + celda + '">' + t.proyectadas + '</td>'
+            + '<td style="' + celda + '">' + t.eficiencia.toFixed(1) + ' %</td>'
+            + '<td style="' + celda + '">' + (t.enCurso || '—') + '</td></tr>';
+    });
+    html += '</tbody><tfoot><tr><th style="' + cab + 'text-align:left;">Total</th>';
+    h.dias.forEach(function(d) {
+        var s = 0;
+        h.tecnicos.forEach(function(t) { s += t.porDia[d.fecha] || 0; });
+        html += '<td style="' + celda + 'font-weight:700;' + (d.laborable ? '' : 'opacity:.45;') + '">' + num(s) + '</td>';
+    });
+    html += '<td style="' + celda + 'font-weight:700;">' + totReales.toFixed(1) + '</td>'
+        + '<td style="' + celda + '">' + totProy + '</td>'
+        + '<td style="' + celda + 'font-weight:700;">' + (totProy ? ((totReales / totProy) * 100).toFixed(1) : '0.0') + ' %</td>'
+        + '<td style="' + celda + '">' + (totCurso || '—') + '</td></tr></tfoot></table>';
+    cont.innerHTML = html;
+}
+
+// Exporta la vista de horas: hoja "Historial" (trabajos del rango) y hoja "Horas por técnico" (matriz)
+function totExportarHoras() {
+    var h = window.totHoras;
+    if (!h) {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Primero elige un rango de fechas', 'warning');
+        return;
+    }
+    if (typeof XLSX === 'undefined') {
+        alert('La librería XLSX no está disponible.');
+        return;
+    }
+    var hist = [['Trabajo', 'OT', 'Placa', 'Técnico', 'Inicio', 'Salida', 'Horas', 'Estado', 'Trabajo realizado']];
+    h.trabajos.forEach(function(t) {
+        hist.push([
+            totGetId(t), t.ticket_visita || '', t.placa || '', t.tecnico || 'Sin técnico',
+            totFmtDateTime(t.fecha_trabajo), t.fecha_salida ? totFmtDateTime(t.fecha_salida) : 'Sin salida',
+            t.horas != null ? t.horas : 'En curso', t.estado || '', t.trabajo_realizado || ''
+        ]);
+    });
+
+    var cabMat = ['Técnico'];
+    h.dias.forEach(function(d) { cabMat.push(d.fecha.slice(8, 10) + '/' + d.fecha.slice(5, 7)); });
+    cabMat.push('Horas reales', 'Horas proyectadas', 'Eficiencia %', 'En curso');
+    var mat = [cabMat];
+    h.tecnicos.forEach(function(t) {
+        var fila = [t.nombre];
+        h.dias.forEach(function(d) { fila.push(t.porDia[d.fecha] != null ? t.porDia[d.fecha] : ''); });
+        fila.push(t.reales, t.proyectadas, t.eficiencia, t.enCurso);
+        mat.push(fila);
+    });
+
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(hist), 'Historial');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mat), 'Horas por técnico');
+    XLSX.writeFile(wb, 'Horas_tecnicos_OT_' + h.desde + '_' + h.hasta + '.xlsx');
+}
+
 window.totExportar = function() {
+    if (window.totVistaActual === 'horas') return totExportarHoras();
     var datos = window.totDatosFil.length > 0 ? window.totDatosFil : window.totData;
     if (!datos || datos.length === 0) {
         if (typeof window.mostrarAlerta === 'function') {

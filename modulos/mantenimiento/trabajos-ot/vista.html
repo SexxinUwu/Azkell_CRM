@@ -254,6 +254,14 @@
         </div>
     </div>
 
+    <!-- ── SELECTOR DE VISTA: trabajos o horas por técnico ───────────── -->
+    <div class="d-flex align-items-center gap-2 mb-3" role="group" aria-label="Vista">
+        <button type="button" class="btn btn-sm rounded-pill px-3 fw-semibold btn-dark" id="tot-vista-btn-trabajos" onclick="window.totCambiarVista('trabajos')">Trabajos</button>
+        <button type="button" class="btn btn-sm rounded-pill px-3 fw-semibold btn-outline-secondary" id="tot-vista-btn-horas" onclick="window.totCambiarVista('horas')">Horas por técnico</button>
+    </div>
+
+    <div id="tot-vista-lista" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0;">
+
     <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS RÁPIDOS ────────────────────── -->
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
         <div class="position-relative flex-grow-1" style="min-width: 240px; max-width: 380px;">
@@ -321,6 +329,33 @@
             <div class="tot-detail-footer" id="tot-detalle-footer" style="display:none;"></div>
         </div>
 
+    </div>
+
+    </div>
+
+    <!-- ── VISTA HORAS POR TÉCNICO (mismo cálculo que React: services/horas_tecnicos.js) ── -->
+    <div id="tot-vista-horas" style="display:none; flex:1 1 0; min-height:0; overflow-y:auto; padding-bottom:1rem;">
+        <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+            <div>
+                <label class="form-label fw-bold mb-1" style="font-size:0.72rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Desde</label>
+                <input type="date" class="form-control form-control-sm rounded-3 bg-white border" id="tot-hr-desde" style="height:38px;" onchange="window.totCargarHoras()">
+            </div>
+            <div>
+                <label class="form-label fw-bold mb-1" style="font-size:0.72rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Hasta</label>
+                <input type="date" class="form-control form-control-sm rounded-3 bg-white border" id="tot-hr-hasta" style="height:38px;" onchange="window.totCargarHoras()">
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center" id="tot-hr-badges"></div>
+        </div>
+
+        <div class="rounded-3 border p-3 mb-3" style="background:var(--surface);">
+            <div class="fw-bold text-uppercase mb-2" style="font-size:0.72rem;letter-spacing:0.05em;color:var(--subtext);">Horas reales y eficiencia por técnico</div>
+            <div style="position:relative; height:200px;"><canvas id="tot-hr-chart"></canvas></div>
+        </div>
+
+        <div class="rounded-3 border p-3" style="background:var(--surface);">
+            <div class="fw-bold text-uppercase mb-2" style="font-size:0.72rem;letter-spacing:0.05em;color:var(--subtext);">Horas por día</div>
+            <div id="tot-hr-matriz" style="overflow-x:auto;"></div>
+        </div>
     </div>
 
 </div>
