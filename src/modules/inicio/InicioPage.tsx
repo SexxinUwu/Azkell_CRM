@@ -35,7 +35,7 @@ export function InicioPage() {
       </motion.header>
 
       <motion.div {...tile(1)} className="inicio-aviso">
-        <Notice tone="accent" icon={<Sparkles size={16} />}>
+        <Notice tone="neutral" icon={<Sparkles size={16} />}>
           Estás en la nueva versión de Azkell. Las pantallas marcadas con <ArrowUpRight size={14} style={{ verticalAlign: '-2px' }} /> se
           abren en la versión actual, con tu misma sesión, mientras las migramos.
         </Notice>

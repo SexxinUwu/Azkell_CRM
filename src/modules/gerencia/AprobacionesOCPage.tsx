@@ -4,11 +4,13 @@ import { ArrowUpRight, CheckCircle, ClipboardCheck, SearchX, XCircle } from 'luc
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
+import { Field, SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Sheet } from '../../core/ui/Sheet';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { formatFechaPe, formatMoneda } from '../../core/lib/format';
+import { haptic } from '../../core/lib/haptics';
 
 interface OC {
   id: string | number;
@@ -40,9 +42,7 @@ function estadoColor(estado: string): string {
 
 function fmtMonto(v: unknown, moneda = 'PEN'): string {
   const n = Number(v);
-  if (!v || isNaN(n)) return '—';
-  const sym = moneda === 'USD' ? '$' : 'S/';
-  return `${sym} ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return !v || isNaN(n) ? '—' : formatMoneda(n, moneda);
 }
 
 function esPendiente(o: OC): boolean {
@@ -57,6 +57,8 @@ export function AprobacionesOCPage() {
   const [comentario, setComentario] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
+  const [filtro, setFiltro] = useState<'pendientes' | 'aprobadas' | 'todas'>('pendientes');
+  const [errMotivo, setErrMotivo] = useState<string | undefined>();
 
   const { data, isLoading, isError, error } = useQuery<OC[]>({
     queryKey: ['gerencia', 'aprobaciones-oc'],
@@ -73,7 +75,9 @@ export function AprobacionesOCPage() {
   const procesadas = lista.filter(o => !esPendiente(o));
 
   const visibles = useMemo(() => {
-    const fuente = busqueda ? lista : pendientes;
+    const aprobadas = procesadas.filter(o => (o.estado ?? '').toLowerCase().includes('aprobad'));
+    const base = filtro === 'pendientes' ? pendientes : filtro === 'aprobadas' ? aprobadas : lista;
+    const fuente = busqueda ? lista : base;
     if (!busqueda) return fuente;
     const q = busqueda.toUpperCase();
     return lista.filter(o =>
@@ -81,10 +85,11 @@ export function AprobacionesOCPage() {
       String(o.proveedor ?? '').toUpperCase().includes(q) ||
       String(o.estado ?? '').toUpperCase().includes(q)
     );
-  }, [lista, pendientes, busqueda]);
+  }, [lista, pendientes, procesadas, busqueda, filtro]);
 
   async function ejecutarAccion() {
     if (!accion) return;
+    if (accion.tipo === 'rechazar' && !comentario.trim()) { setErrMotivo('Escribe el motivo del rechazo.'); haptic('warning'); return; }
     setProcesando(true);
     try {
       const nuevoEstado = accion.tipo === 'aprobar' ? 'Aprobado' : 'Rechazado';
@@ -93,11 +98,13 @@ export function AprobacionesOCPage() {
         body: { estado: nuevoEstado, comentario, usuario: localStorage.getItem('fleet_user') ?? 'Gerencia' },
       });
       setMsg({ tipo: 'ok', texto: `OC ${nuevoEstado.toLowerCase()} correctamente.` });
+      haptic(accion.tipo === 'aprobar' ? 'success' : 'warning');
       qc.invalidateQueries({ queryKey: ['gerencia', 'aprobaciones-oc'] });
       setAccion(null);
       setComentario('');
     } catch (e) {
       setMsg({ tipo: 'error', texto: errorMessage(e) });
+      haptic('warning');
     } finally {
       setProcesando(false);
     }
@@ -129,18 +136,26 @@ export function AprobacionesOCPage() {
         </EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          {/* KPIs */}
+                    {/* KPIs: tocarlos filtra la lista */}
           <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
-            {[
-              { label: 'Pendientes', valor: pendientes.length, color: pendientes.length > 0 ? 'var(--amber-ink)' : 'var(--green-ink)' },
-              { label: 'Aprobadas', valor: procesadas.filter(o => (o.estado ?? '').toLowerCase().includes('aprobad')).length, color: 'var(--green-ink)' },
-              { label: 'Total', valor: lista.length, color: 'var(--label-1)' },
-            ].map(k => (
-              <div key={k.label} style={{ background: 'var(--fill-1)', borderRadius: 8, padding: '10px 14px', flex: 1, textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1.25rem', color: k.color }}>{k.valor}</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--label-2)', fontWeight: 600 }}>{k.label}</div>
-              </div>
-            ))}
+              <button key="pendientes" type="button" className="pressable" aria-pressed={filtro === 'pendientes'}
+                onClick={() => { haptic('selection'); setFiltro('pendientes'); }}
+                style={{ background: 'var(--fill-1)', borderRadius: 8, padding: '10px 14px', flex: 1, textAlign: 'center', cursor: 'pointer', border: filtro === 'pendientes' ? '2px solid var(--ink)' : '2px solid transparent' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--amber-ink)' }}>{pendientes.length}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--label-2)', fontWeight: 600 }}>Pendientes</div>
+              </button>
+              <button key="aprobadas" type="button" className="pressable" aria-pressed={filtro === 'aprobadas'}
+                onClick={() => { haptic('selection'); setFiltro('aprobadas'); }}
+                style={{ background: 'var(--fill-1)', borderRadius: 8, padding: '10px 14px', flex: 1, textAlign: 'center', cursor: 'pointer', border: filtro === 'aprobadas' ? '2px solid var(--ink)' : '2px solid transparent' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--green-ink)' }}>{procesadas.filter(o => (o.estado ?? '').toLowerCase().includes('aprobad')).length}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--label-2)', fontWeight: 600 }}>Aprobadas</div>
+              </button>
+              <button key="todas" type="button" className="pressable" aria-pressed={filtro === 'todas'}
+                onClick={() => { haptic('selection'); setFiltro('todas'); }}
+                style={{ background: 'var(--fill-1)', borderRadius: 8, padding: '10px 14px', flex: 1, textAlign: 'center', cursor: 'pointer', border: filtro === 'todas' ? '2px solid var(--ink)' : '2px solid transparent' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--label-1)' }}>{lista.length}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--label-2)', fontWeight: 600 }}>Total</div>
+              </button>
           </div>
 
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por código, proveedor o estado…" />
@@ -166,12 +181,12 @@ export function AprobacionesOCPage() {
                     const isPend = esPendiente(o);
                     return (
                       <tr key={String(o.id || i)} style={{ borderBottom: '1px solid var(--separator)' }}>
-                        <td style={{ padding: '8px 12px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '8px 12px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--label-1)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
                           {o.codigo_oc ?? `#${o.id}`}
                         </td>
                         <td style={{ padding: '8px 12px', fontSize: '0.85rem' }}>{o.proveedor ?? '—'}</td>
                         <td style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--label-2)', whiteSpace: 'nowrap' }}>
-                          {String(o.fecha ?? '').split('T')[0] || '—'}
+                          {formatFechaPe(o.fecha)}
                         </td>
                         <td style={{ padding: '8px 12px', fontFamily: 'var(--font-mono)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
                           {fmtMonto(monto, String(o.moneda ?? 'PEN'))}
@@ -183,13 +198,15 @@ export function AprobacionesOCPage() {
                           {isPend && (
                             <div style={{ display: 'flex', gap: 4 }}>
                               <button type="button"
-                                onClick={() => { setAccion({ id: o.id, tipo: 'aprobar' }); setMsg(null); }}
+                                className="pressable"
+                                onClick={() => { haptic('selection'); setAccion({ id: o.id, tipo: 'aprobar' }); setMsg(null); setErrMotivo(undefined); }}
                                 style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 6, background: 'var(--green-tint)', color: 'var(--green-ink)', border: '1px solid var(--green-ink)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
                                 <CheckCircle size={13} /> Aprobar
                               </button>
                               <button type="button"
-                                onClick={() => { setAccion({ id: o.id, tipo: 'rechazar' }); setMsg(null); }}
-                                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 6, background: 'var(--fill-2)', color: 'var(--label-2)', border: '1px solid var(--separator)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
+                                className="pressable"
+                                onClick={() => { haptic('selection'); setAccion({ id: o.id, tipo: 'rechazar' }); setMsg(null); setErrMotivo(undefined); }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 6, background: 'var(--red-tint)', color: 'var(--red-ink)', border: '1px solid var(--red-ink)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
                                 <XCircle size={13} /> Rechazar
                               </button>
                             </div>
@@ -220,16 +237,12 @@ export function AprobacionesOCPage() {
         }
       >
         <div>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--label-2)', display: 'block', marginBottom: 6 }}>
-            Comentario (opcional)
-          </label>
-          <textarea
-            value={comentario}
-            onChange={e => setComentario(e.target.value)}
-            placeholder="Observación o motivo…"
-            rows={3}
-            style={{ width: '100%', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', padding: '8px 10px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
-          />
+          <Field label={accion?.tipo === 'rechazar' ? 'Motivo del rechazo' : 'Comentario (opcional)'} error={errMotivo}>
+            {p => (
+              <textarea {...p} value={comentario} onChange={e => { setComentario(e.target.value); setErrMotivo(undefined); }}
+                placeholder="Observación o motivo…" rows={3} style={{ width: '100%', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', padding: '8px 10px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }} />
+            )}
+          </Field>
         </div>
       </Sheet>
     </Page>

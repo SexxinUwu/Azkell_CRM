@@ -12,24 +12,32 @@ import { usePlacas } from '../placas/api';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { api } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { haptic } from '../../core/lib/haptics';
 
 function arr<T>(r: unknown): T[] {
   if (Array.isArray(r)) return r as T[];
   return ((r as { data?: T[] })?.data) ?? [];
 }
 
-function KpiCard({ icon, label, valor, sub, color }: {
-  icon: React.ReactNode; label: string; valor: number | string; sub?: string; color?: string;
+function KpiCard({ icon, label, valor, sub, color, to }: {
+  icon: React.ReactNode; label: string; valor: number | string; sub?: string; color?: string; to?: string;
 }) {
-  return (
-    <div className="tarjeta__lista" style={{ padding: 'var(--s-3)', display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
-      <div style={{ color: color ?? 'var(--accent)', flexShrink: 0 }}>{icon}</div>
-      <div style={{ minWidth: 0 }}>
+  const navigate = useNavigate();
+  const estilo = { padding: 'var(--s-3)', display: 'flex', gap: 'var(--s-2)', alignItems: 'center', width: '100%' };
+  const contenido = (
+    <>
+      <div style={{ color: color ?? 'var(--label-1)', flexShrink: 0 }}>{icon}</div>
+      <div style={{ minWidth: 0, textAlign: 'left' }}>
         <div style={{ fontSize: '1.375rem', fontWeight: 700, fontFamily: 'var(--font-mono)', lineHeight: 1.2 }}>{valor}</div>
         <div style={{ fontSize: '0.8125rem', fontWeight: 600, marginTop: 2 }}>{label}</div>
         {sub && <div style={{ fontSize: '0.75rem', color: 'var(--label-2)', marginTop: 1 }}>{sub}</div>}
       </div>
-    </div>
+    </>
+  );
+  return to ? (
+    <button type="button" className="tarjeta__lista pressable" style={{ ...estilo, cursor: 'pointer' }} onClick={() => { haptic('selection'); navigate(to); }}>{contenido}</button>
+  ) : (
+    <div className="tarjeta__lista" style={estilo}>{contenido}</div>
   );
 }
 
@@ -173,9 +181,9 @@ export function DashboardPage() {
               <Truck size={13} /> Flota
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(10rem, 1fr))', gap: 'var(--s-2)', marginBottom: 'var(--s-3)' }}>
-              <KpiCard icon={<Truck size={20} />} label="Total flota" valor={flotaTotal} />
+              <KpiCard icon={<Truck size={20} />} label="Total flota" valor={flotaTotal} to="/placas" />
               <KpiCard icon={<Truck size={20} />} label="Operativas" valor={flotaOperativa} color="var(--green-ink)" sub={`${pctOperativa}%`} />
-              <KpiCard icon={<Wrench size={20} />} label="En taller" valor={flotaEnTaller} color={flotaEnTaller > 0 ? 'var(--amber-ink)' : 'var(--green-ink)'} sub={`${pctTaller}%`} />
+              <KpiCard icon={<Wrench size={20} />} label="En taller" valor={flotaEnTaller} color={flotaEnTaller > 0 ? 'var(--amber-ink)' : 'var(--green-ink)'} sub={`${pctTaller}%`} to="/mantenimiento/status-rampa" />
             </div>
 
             {/* Dona de disponibilidad */}
@@ -249,10 +257,10 @@ export function DashboardPage() {
               <Wrench size={13} /> Mantenimiento
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(10rem, 1fr))', gap: 'var(--s-2)' }}>
-              <KpiCard icon={<Clock size={20} />} label="OTs pendientes" valor={otsPendientes} color={otsPendientes > 0 ? 'var(--amber-ink)' : 'var(--green-ink)'} />
-              <KpiCard icon={<Wrench size={20} />} label="Total OTs" valor={otsData.length} />
+              <KpiCard icon={<Clock size={20} />} label="OTs pendientes" valor={otsPendientes} color={otsPendientes > 0 ? 'var(--amber-ink)' : 'var(--green-ink)'} to="/mantenimiento/reportes-ot" />
+              <KpiCard icon={<Wrench size={20} />} label="Total OTs" valor={otsData.length} to="/mantenimiento/reportes-ot" />
               {otsHoy > 0 && <KpiCard icon={<Wrench size={20} />} label="Cerradas hoy" valor={otsHoy} color="var(--green-ink)" />}
-              {reqsPendientes > 0 && <KpiCard icon={<Package size={20} />} label="Reqs. compra" valor={reqsPendientes} color="var(--red-ink)" sub="pendientes" />}
+              {reqsPendientes > 0 && <KpiCard icon={<Package size={20} />} label="Reqs. compra" valor={reqsPendientes} color="var(--red-ink)" sub="pendientes" to="/almacen/recepcion-compras" />}
             </div>
             {otsData.length > 0 && (
               <div style={{ background: 'var(--fill-1)', borderRadius: 'var(--radius-2)', padding: 'var(--s-3)', marginTop: 'var(--s-2)' }}>
@@ -271,9 +279,9 @@ export function DashboardPage() {
               <Boxes size={13} /> Almacén
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(10rem, 1fr))', gap: 'var(--s-2)' }}>
-              <KpiCard icon={<Package size={20} />} label="Ítems inventario" valor={inventarioData.length} />
+              <KpiCard icon={<Package size={20} />} label="Ítems inventario" valor={inventarioData.length} to="/almacen/inventario" />
               {invBajoStock > 0 && (
-                <KpiCard icon={<Package size={20} />} label="Bajo stock mínimo" valor={invBajoStock} color="var(--red-ink)" sub="Requiere reposición" />
+                <KpiCard icon={<Package size={20} />} label="Bajo stock mínimo" valor={invBajoStock} color="var(--red-ink)" sub="Requiere reposición" to="/almacen/inventario" />
               )}
             </div>
           </div>
@@ -285,7 +293,7 @@ export function DashboardPage() {
                 <Fuel size={13} /> Combustible
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(10rem, 1fr))', gap: 'var(--s-2)' }}>
-                <KpiCard icon={<Fuel size={20} />} label="Vales registrados" valor={valesData.length} />
+                <KpiCard icon={<Fuel size={20} />} label="Vales registrados" valor={valesData.length} to="/operaciones/vales" />
                 {valesPendientes > 0 && <KpiCard icon={<Fuel size={20} />} label="Vales pendientes" valor={valesPendientes} color="var(--amber-ink)" />}
               </div>
             </div>
