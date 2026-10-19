@@ -25,7 +25,7 @@ export function enviarWhatsApp(texto: string) {
 }
 
 /** PDF horizontal con las rampas activas que salen en el reporte */
-export async function exportarRampasPDF(activas: RampaEntrada[], catalogo: CatRampa[], ahora: Date = new Date()) {
+export async function exportarRampasPDF(activas: RampaEntrada[], catalogo: CatRampa[], tecnicosPorRampa: Map<string, string[]>, ahora: Date = new Date()) {
   const filas = rampasDelReporte(activas, catalogo);
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;left:-10000px;top:0;background:#fff;color:#111;padding:18px;font-family:Arial,sans-serif;width:1000px';
@@ -33,7 +33,7 @@ export async function exportarRampasPDF(activas: RampaEntrada[], catalogo: CatRa
     <h2 style="margin:0 0 4px;font-size:18px">Status de rampa · ${fechaCorta(ahora)}</h2>
     <p style="margin:0 0 12px;font-size:11px;color:#555">${filas.length} unidades en rampa</p>
     <table style="width:100%;border-collapse:collapse;font-size:11px">
-      <thead><tr style="background:#f1f1f1">${['Rampa', 'Placa', 'Conductor', 'Ingreso', 'Hora', 'Situación', 'Observaciones'].map(h => `<th style="text-align:left;padding:6px;border-bottom:1px solid #ccc">${h}</th>`).join('')}</tr></thead>
+      <thead><tr style="background:#f1f1f1">${['Rampa', 'Placa', 'Conductor', 'Ingreso', 'Hora', 'Situación', 'Observaciones', 'Técnicos'].map(h => `<th style="text-align:left;padding:6px;border-bottom:1px solid #ccc">${h}</th>`).join('')}</tr></thead>
       <tbody>${filas.map(r => `<tr>
         <td style="padding:6px;border-bottom:1px solid #eee">${escHtml(r.rampa)}</td>
         <td style="padding:6px;border-bottom:1px solid #eee;font-family:monospace">${escHtml(r.placa)}</td>
@@ -42,7 +42,8 @@ export async function exportarRampasPDF(activas: RampaEntrada[], catalogo: CatRa
         <td style="padding:6px;border-bottom:1px solid #eee">${escHtml(horaCorta(r.hora_ingreso))}</td>
         <td style="padding:6px;border-bottom:1px solid #eee">${escHtml(r.situacion)}</td>
         <td style="padding:6px;border-bottom:1px solid #eee">${escHtml(r.observaciones)}</td>
-      </tr>`).join('') || '<tr><td colspan="7" style="padding:10px;color:#555">Sin unidades en rampa.</td></tr>'}</tbody>
+        <td style="padding:6px;border-bottom:1px solid #eee">${escHtml((tecnicosPorRampa.get(String(r.id)) ?? []).join(', ') || '—')}</td>
+      </tr>`).join('') || '<tr><td colspan="8" style="padding:10px;color:#555">Sin unidades en rampa.</td></tr>'}</tbody>
     </table>`;
   document.body.appendChild(el);
   try {

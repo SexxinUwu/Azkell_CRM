@@ -293,7 +293,7 @@ export function StatusRampaPage() {
                 { label: 'Configurar rampas', detalle: 'Orden, color y si sale en el reporte', icon: <Settings2 size={17} />, onSelect: () => setConfigurando(true) },
                 { label: 'Exportar reporte a PDF', detalle: `${activas.length} rampas activas`, icon: <FileText size={17} />,
                   onSelect: async () => {
-                    try { await exportarRampasPDF(activas, (catalogo.data?.rampas ?? []) as CatRampa[]); } catch (err) { toast(errorMessage(err), 'error'); }
+                    try { await exportarRampasPDF(activas, (catalogo.data?.rampas ?? []) as CatRampa[], tecnicosPorRampa); } catch (err) { toast(errorMessage(err), 'error'); }
                   } },
                 { label: 'Enviar reporte por WhatsApp', detalle: 'Rampas marcadas en el reporte', icon: <MessageCircle size={17} />,
                   onSelect: () => enviarWhatsApp(textoReporteRampas(activas, (catalogo.data?.rampas ?? []) as CatRampa[])) },

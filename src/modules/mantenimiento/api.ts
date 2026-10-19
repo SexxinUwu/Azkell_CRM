@@ -322,20 +322,24 @@ export function trabajoId(t: TrabajoOT): string {
   return String(t.id_ot || '').trim() || String(t.ticket_visita || '').trim() || '';
 }
 
+/** Mismo orden de campos que el clásico (totFmtKm): primero horas de motor, luego kilómetros */
 export function trabajoKmHoras(t: TrabajoOT): string {
-  let det: Record<string, unknown> = {};
-  try {
-    if (t.ot_detalles_json) det = JSON.parse(t.ot_detalles_json as string);
-  } catch {}
-  let det2: Record<string, unknown> = {};
-  try {
-    if (t.detalles_json) det2 = JSON.parse(t.detalles_json as string);
-  } catch {}
-  const horas = det.horas_motor ?? det2.horas_motor ?? t.detalles_json;
-  if (horas && !isNaN(Number(horas))) return `${Number(horas).toLocaleString('es-PE')} hrs`;
-  const km = det.km ?? det.kilometraje ?? det2.km;
-  if (km && !isNaN(Number(km))) return `${Number(km).toLocaleString('es-PE')} km`;
-  return '—';
+  const leer = (s: string | null | undefined): Record<string, unknown> => {
+    try { return s ? (JSON.parse(s) as Record<string, unknown>) : {}; } catch { return {}; }
+  };
+  const otDet = leer(t.ot_detalles_json);
+  const trDet = leer(t.detalles_json);
+  const extra = t as unknown as Record<string, unknown>;
+  const horasMotor = otDet.horas_motor || trDet.horas_motor || extra.horas_motor;
+  if (horasMotor) {
+    const n = Number(horasMotor);
+    return `${isNaN(n) ? String(horasMotor) : n.toLocaleString('es-PE')} hrs`;
+  }
+  const candidatos = [otDet.km, otDet.kilometraje, otDet.km_tablero, trDet.km, trDet.kilometraje, extra.kilometraje, extra.km];
+  const km = candidatos.find(v => v !== undefined && v !== null && v !== '');
+  if (km === undefined) return '—';
+  const n = Number(km);
+  return isNaN(n) ? String(km) : `${n.toLocaleString('es-PE')} km`;
 }
 
 // ─── OTs hijas de una visita (rampa) ────────────────────────────────────────
@@ -366,13 +370,19 @@ export const crearOTHija = (ticket: string, tipo_ot: string, sub_tipo: string, u
 export const eliminarRampaRegistro = (id: string, usuario: string) =>
   api<{ ok: boolean }>(`/taller-rampas/${encodeURIComponent(id)}`, { method: 'DELETE', body: { usuario } });
 
-export function useTrabajosOT() {
+/** Trabajos de OT. Con `desde`/`hasta` (AAAA-MM-DD) el servidor filtra por día; sin fechas trae todos. */
+export function useTrabajosOT(desde = '', hasta = '') {
+  const rango = desde && hasta ? `?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}` : '';
   return useQuery<TrabajoOT[]>({
-    queryKey: ['mant', 'trabajos-ot'],
-    queryFn: () => api('/ot-trabajos'),
+    queryKey: ['mant', 'trabajos-ot', desde, hasta],
+    queryFn: () => api(`/ot-trabajos${rango}`),
     staleTime: 30_000,
   });
 }
+
+/** Registra técnicos en trabajos sin técnico (no cambia otros datos del trabajo) */
+export const regularizarTecnicos = (ids: string[], tecnicos: string[]) =>
+  api<{ ok: boolean; actualizados: number }>('/ot-trabajos/regularizar-tecnicos', { method: 'POST', body: { ids, tecnicos } });
 
 /** Horas por técnico y día, calculadas en el servidor (services/horas_tecnicos.js) */
 export interface HorasTecnico {

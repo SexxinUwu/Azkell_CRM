@@ -578,7 +578,8 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
     router.get('/ot-trabajos', (req, res) => {
         const tdb = req.db || db;
-        const { id_ot } = req.query;
+        const { id_ot, desde, hasta } = req.query;
+        const esFecha = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
         let sql = `SELECT t.*, 
                       COALESCE(NULLIF(t.placa, ''), ot.placa, JSON_UNQUOTE(JSON_EXTRACT(t.detalles_json, '$.placa')), '') as placa, 
                       COALESCE(ot.id_ot, t.ticket_visita) as ot_id,
@@ -587,10 +588,17 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                LEFT JOIN ordenes_trabajo ot 
                  ON (ot.ticket_entrada = t.ticket_visita OR ot.id_ot = t.ticket_visita)`;
         const params = [];
+        const filtros = [];
         if (id_ot) {
-            sql += ' WHERE (t.ticket_visita = ? OR t.id_ot = ?)';
+            filtros.push('(t.ticket_visita = ? OR t.id_ot = ?)');
             params.push(id_ot, id_ot);
         }
+        // Rango por día (la pantalla lo usa para no cargar toda la tabla)
+        if (esFecha(desde) && esFecha(hasta)) {
+            filtros.push('DATE(COALESCE(t.fecha_trabajo, t.fecha_creacion)) BETWEEN ? AND ?');
+            params.push(desde, hasta);
+        }
+        if (filtros.length) sql += ' WHERE ' + filtros.join(' AND ');
         sql += ' ORDER BY COALESCE(t.fecha_trabajo, t.fecha_creacion) DESC, t.id_ot DESC';
         tdb.query(sql, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
@@ -606,8 +614,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta) || hasta < desde) {
             return res.status(400).json({ error: 'Rango de fechas inválido (AAAA-MM-DD).' });
         }
-        const sql = `SELECT t.id_ot, t.ticket_visita, t.tecnico, t.placa, t.tipo_ot, t.sub_tipo, t.estado,
-                            t.fecha_trabajo, t.fecha_salida, t.trabajo_realizado
+        const sql = `SELECT t.*
                      FROM trabajos_ot t
                      WHERE t.fecha_trabajo IS NOT NULL
                        AND DATE(t.fecha_trabajo) BETWEEN ? AND ?
@@ -621,6 +628,23 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 horas: horasDeTrabajo(t),
             }));
             res.json({ ...calcularHorasTecnicos(rows, desde, hasta), trabajos });
+        });
+    });
+
+    // Registra técnicos en trabajos que no los tienen. No cambia ningún otro dato del trabajo.
+    router.post('/ot-trabajos/regularizar-tecnicos', (req, res) => {
+        const tdb = req.db || db;
+        const ids = Array.isArray(req.body?.ids) ? [...new Set(req.body.ids.map(x => String(x).trim()).filter(Boolean))] : [];
+        const tecnicos = Array.isArray(req.body?.tecnicos)
+            ? [...new Set(req.body.tecnicos.map(x => String(x).trim().replace(/\s+/g, ' ')).filter(Boolean))] : [];
+        if (!ids.length) return res.status(400).json({ error: 'Selecciona al menos un trabajo.' });
+        if (ids.length > 500) return res.status(400).json({ error: 'Máximo 500 trabajos por vez.' });
+        if (!tecnicos.length) return res.status(400).json({ error: 'Elige al menos un técnico.' });
+        const texto = tecnicos.join(', ');
+        tdb.query("UPDATE trabajos_ot SET tecnico = ? WHERE id_ot IN (?) AND (tecnico IS NULL OR TRIM(tecnico) = '')", [texto, ids], (err, r) => {
+            if (err) return res.status(500).json({ error: err.message });
+            logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'MODIFICÓ', `Registró técnicos (${texto}) en ${r.affectedRows} trabajo(s) sin técnico`);
+            res.json({ ok: true, actualizados: r.affectedRows });
         });
     });
 
