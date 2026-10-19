@@ -271,8 +271,10 @@
         <input type="text" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-ot" placeholder="N° OT" style="max-width:110px; height:38px;" oninput="window.totFiltrar()">
         <input type="text" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-placa" placeholder="PLACA" style="max-width:100px; height:38px; text-transform:uppercase" oninput="this.value=this.value.toUpperCase(); window.totFiltrar()">
         <input type="month" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-mes" style="max-width:140px; height:38px;" onchange="window.totFiltrar()">
-        <input type="date" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-desde" style="max-width:130px; height:38px;" title="Desde" onchange="window.totFiltrar()">
-        <input type="date" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-hasta" style="max-width:130px; height:38px;" title="Hasta" onchange="window.totFiltrar()">
+        <input type="date" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-desde" style="max-width:130px; height:38px;" title="Desde" onchange="window.totCargar()">
+        <input type="date" class="form-control form-control-sm rounded-3 bg-white border" id="tot-fil-hasta" style="max-width:130px; height:38px;" title="Hasta" onchange="window.totCargar()">
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3" style="height:38px;" onclick="window.totRangoHoy()">Hoy</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3" style="height:38px;" onclick="window.totRangoTodas()">Todas las fechas</button>
     </div>
 
     <!-- CONTENEDOR PRINCIPAL (tabla + detalle) -->

@@ -21,15 +21,39 @@ window.init_trabajos_ot = function() {
         if (wrap) window.showNoPermMsg(wrap);
         return;
     }
+    // Al entrar, la lista muestra solo el día de hoy
+    var d = document.getElementById('tot-fil-desde');
+    var h = document.getElementById('tot-fil-hasta');
+    if (d && h && !d.value && !h.value) { d.value = totHoyIso(); h.value = totHoyIso(); }
     totCargar();
 };
 
 // ── Carga de datos ────────────────────────────────────────────────
+// Rango de la lista: por defecto el día de hoy (la base es grande); vacío = todos los trabajos
+function totHoyIso() {
+    var h = new Date();
+    return h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0') + '-' + String(h.getDate()).padStart(2, '0');
+}
+
+function totSetRango(desde, hasta) {
+    var d = document.getElementById('tot-fil-desde');
+    var h = document.getElementById('tot-fil-hasta');
+    if (d) d.value = desde;
+    if (h) h.value = hasta;
+    window.totCargar();
+}
+
+window.totRangoHoy = function() { var h = totHoyIso(); totSetRango(h, h); };
+window.totRangoTodas = function() { totSetRango('', ''); };
+
 window.totCargar = function() {
     var tbody = document.getElementById('tot-tbody');
     if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
 
-    fetch('/api/ot-trabajos')
+    var rango = totGetFiltros();
+    var url = '/api/ot-trabajos';
+    if (rango.desde && rango.hasta) url += '?desde=' + encodeURIComponent(rango.desde) + '&hasta=' + encodeURIComponent(rango.hasta);
+    fetch(url)
         .then(function(r) {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json();

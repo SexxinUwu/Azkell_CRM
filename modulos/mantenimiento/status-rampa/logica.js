@@ -4887,9 +4887,13 @@ window._srConstruirPdfVectorial = async function () {
     var head = [definicion.map(function (c) { return c.h; })];
     var body = d.filas.map(function (f) { return definicion.map(function (c) { return f[c.k]; }); });
     var columnStyles = {};
+    // Anchos fijos repartidos para llenar la hoja; si hay una columna de observaciones (flexible), no se escala
+    var fijos = definicion.reduce(function (s, c) { return s + (c.w || 0); }, 0);
+    var hayFlexible = definicion.some(function (c) { return !c.w; });
+    var escala = hayFlexible ? 1 : (W - 2 * M) / fijos;
     definicion.forEach(function (c, i) {
         var est = Object.assign({}, c.est);
-        if (c.w) est.cellWidth = c.w;
+        if (c.w) est.cellWidth = c.w * escala;
         columnStyles[i] = est;
     });
 
