@@ -14,7 +14,7 @@ import { abrirClasico } from '../../core/layout/navigation';
 import { formatFechaHoraPe } from '../../core/lib/format';
 import { useLogFirmado, type LogFirmado } from './api';
 import {
-  etiquetaAccion, etiquetaCampo, useActividadAudit, usePersonasAudit,
+  etiquetaAccion, etiquetaCampo, useActividadAudit, useAuditoriaEnVivo, usePersonasAudit,
   ENTIDAD_LABELS, ACCION_LABELS, type EventoAudit, type FiltrosAudit,
 } from './auditoriaActividad';
 
@@ -96,6 +96,7 @@ function FilaActividad({ e }: { e: EventoAudit }) {
 
 function ActividadAuditoria() {
   const [filtros, setFiltros] = useState<FiltrosAudit>(FILTROS_VACIOS);
+  useAuditoriaEnVivo();
   const actividad = useActividadAudit(filtros);
   const personas = usePersonasAudit();
   const eventos = useMemo(() => (actividad.data?.pages ?? []).flatMap(p => p.items), [actividad.data]);

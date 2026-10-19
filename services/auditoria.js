@@ -10,6 +10,11 @@
  */
 
 const OFFSET_LIMA_H = 5;
+
+// Difusión en vivo (SSE del servidor). Se configura al arrancar; sin ella, la auditoría sigue guardando.
+let difundir = null;
+function configurarDifusion(fn) { difundir = typeof fn === 'function' ? fn : null; }
+
 const LIMITE_RESUMEN = 300;
 // Nunca se guardan secretos en los cambios, aunque un módulo los pase por error
 const CAMPO_SECRETO = /pass|clave|token|secret|totp|hash|firma/i;
@@ -80,6 +85,7 @@ function audit(db, actor, entrada) {
     const ahoraUtc = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const fin = err => {
       if (err) console.error('⚠️ Auditoría no guardada:', err.message);
+      else if (difundir) { try { difundir('auditoria', 'NUEVO_EVENTO', { entidad: entrada.entity }); } catch (_) { /* sin efecto en la operación */ } }
       resolve(!err);
     };
     const sql = `INSERT INTO audit_logs (user_id, user_name, action, entity, entity_id, summary, changes, ip, created_at)
@@ -101,4 +107,4 @@ function audit(db, actor, entrada) {
   });
 }
 
-module.exports = { audit, diff, actorFrom, rangoLima, sinSecretos, LIMITE_RESUMEN };
+module.exports = { audit, diff, actorFrom, rangoLima, sinSecretos, configurarDifusion, LIMITE_RESUMEN };

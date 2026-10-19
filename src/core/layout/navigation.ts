@@ -217,7 +217,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'usuarios', label: 'Usuarios', clasico: 'sistema/usuarios', icon: UserCog, permissions: ver('usuarios') },
       { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', clasico: 'sistema/superadmin', icon: Building2, permissions: ver('administracion') },
       { key: 'auditoria', label: 'Auditoría', clasico: 'sistema/auditoria', icon: History, permissions: ver('mod_auditoria') },
-      { key: 'api-gateway', label: 'API y desarrolladores', clasico: 'sistema/api-gateway', icon: Code, permissions: ver('administracion') },
+      { key: 'api-gateway', label: 'API y desarrolladores', to: '/sistema/api', icon: Code, permissions: ver('administracion') },
       { key: 'empresa', label: 'Empresa', clasico: 'sistema/configuracion', icon: Building2, permissions: ver('administracion', 'cfg_empresa') },
       { key: 'notificaciones', label: 'Notificaciones y SMTP', clasico: 'sistema/configuracion', icon: Bell, permissions: ver('administracion') },
       { key: 'apariencia', label: 'Apariencia', to: '/perfil', icon: Palette, permissions: [] },

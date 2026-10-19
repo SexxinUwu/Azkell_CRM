@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { audit: auditar, actorFrom: actorDe } = require('../services/auditoria');
 const crypto = require('crypto');
 
 // ── En-memoria Rate Limiter por API Key ─────────────────────
@@ -261,6 +262,16 @@ router.post('/sistema/api-keys', (req, res) => {
         [nombre.trim(), newApiKey, (cliente_empresa || '').trim(), scopesJson, rpm, autor],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
+            auditar(targetDb, actorDe(req), {
+                action: 'CREATE', entity: 'api-key', entityId: result.insertId,
+                summary: `Creó la llave de API "${nombre.trim()}"${cliente_empresa ? ` para ${String(cliente_empresa).trim()}` : ''}`,
+                changes: {
+                    nombre: { from: null, to: nombre.trim() },
+                    cliente_empresa: { from: null, to: (cliente_empresa || '').trim() || null },
+                    scopes: { from: null, to: JSON.parse(scopesJson) },
+                    limite_rpm: { from: null, to: rpm },
+                },
+            });
             res.json({
                 ok: true,
                 id: result.insertId,
@@ -286,6 +297,12 @@ router.put('/sistema/api-keys/:id/estado', (req, res) => {
         [estado, id],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
+            const etiqueta = { activo: 'activa', inactivo: 'pausada', revocado: 'revocada' }[estado];
+            auditar(targetDb, actorDe(req), {
+                action: estado === 'revocado' ? 'DELETE' : 'UPDATE', entity: 'api-key', entityId: id,
+                summary: `Dejó la llave de API ${etiqueta}`,
+                changes: { estado: { from: null, to: estado } },
+            });
             res.json({ ok: true, mensaje: `API Key actualizada a estado "${estado}".` });
         }
     );
@@ -300,6 +317,7 @@ router.delete('/sistema/api-keys/:id', (req, res) => {
         [id],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
+            auditar(targetDb, actorDe(req), { action: 'DELETE', entity: 'api-key', entityId: id, summary: 'Eliminó una llave de API' });
             res.json({ ok: true, mensaje: 'API Key eliminada correctamente.' });
         }
     );

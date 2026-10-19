@@ -2125,7 +2125,8 @@ setTimeout(verificarAlertasRetraso, 30000);
 // 🚨 MIDDLEWARE RBAC (Control de Acceso Basado en Roles)
 // ============================================================
 const globalRBAC = require('./rbac');
-const { audit: auditar, actorFrom: actorDe } = require('./services/auditoria');
+const { audit: auditar, actorFrom: actorDe, configurarDifusion } = require('./services/auditoria');
+configurarDifusion(broadcast);
 
 function requirePerm(modulo, accion) {
     // Retenemos requirePerm como stub vacío en caso de que alguna ruta antigua lo llame
