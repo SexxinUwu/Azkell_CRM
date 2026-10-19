@@ -98,6 +98,8 @@ En paralelo, un punto de seguridad que no depende del código: **crear un usuari
     - Revisión de solo lectura del 2026-10-19 (referencia `azkell_tenant_marsisa`): **las empresas no tienen el mismo esquema.** Rosymar, Yoguitransport y Trahesa no tienen `flota_articulos`, `flota_documentos`, `flota_devoluciones`, `flota_movimientos` ni `fallas_conductor`, y les faltan columnas en `auditoria` (`ip`) y `cat_rampas`. Esas tablas las crea el código en tiempo de ejecución (`routes/almacen-flota.js`, `asegurarTablas`), solo donde se usan. `azkell_fleet` (base por defecto, `DB_NAME`) es la más atrasada: 15 tablas menos y decenas de columnas.
     - Orden propuesto: (1) migración de conciliación **solo aditiva** (tablas y columnas faltantes) creada contra una copia y revisada, (2) respaldo y `npm run db:deploy` en cada empresa, (3) quitar el auto-sync de `services/tenant_master.js`, (4) quitar los `asegurarTablas` y DDL de las rutas, (5) que `tenant_provisioner.js` cree empresas con `prisma migrate deploy` en lugar de `initDB()`. No se toca `guias_remision` (SUNAT) sin instrucción.
 
+  - [x] Conciliación aditiva aplicada el 2026-10-19: migración `1_conciliacion_aditiva` (3 tablas `flota_*` y las columnas `auditoria.ip` y `cat_rampas.en_reporte`) en la maestra y en las 4 empresas activas. Respaldo previo en `C:Users	effaRespaldos_Azkell6-10-19_0824_antes_conciliacion` (5 archivos, completos). `fallas_conductor` y `flota_devoluciones` quedan fuera a propósito: ningún código las usa.
+
 ### Cómo se cambia el esquema desde ahora
 
 1. Editar el módulo en `prisma/schema/<modulo>.prisma`.
