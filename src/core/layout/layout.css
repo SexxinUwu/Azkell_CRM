@@ -58,9 +58,7 @@
     grid-template-columns: calc(var(--rail-w) + var(--s-3) * 2) minmax(0, 1fr);
     transition: grid-template-columns 350ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-  .app:has(> .sidebar--fijo),
-  .app:has(> .sidebar:hover),
-  .app:has(> .sidebar:focus-within) {
+  .app.app--barra-fija {
     grid-template-columns: calc(var(--sidebar-w) + var(--s-3) * 2) minmax(0, 1fr);
   }
 
@@ -104,7 +102,7 @@
 
 /* Expandido: por puntero o por foco de teclado (no al hacer clic, para no dejarlo abierto) */
 .sidebar:hover .sidebar__panel,
-.sidebar:has(:focus-visible) .sidebar__panel,
+.sidebar.sidebar--teclado .sidebar__panel,
 .sidebar--fijo .sidebar__panel {
   width: var(--sidebar-w);
   box-shadow: var(--glass-shadow), 0 30px 60px -20px rgba(0, 0, 0, 0.25);
@@ -120,7 +118,7 @@
   transition: opacity 120ms ease;
 }
 .sidebar:hover .sidebar__texto,
-.sidebar:has(:focus-visible) .sidebar__texto,
+.sidebar.sidebar--teclado .sidebar__texto,
 .sidebar--fijo .sidebar__texto {
   opacity: 1;
   transition: opacity 220ms ease 120ms;
@@ -534,7 +532,7 @@
 /* Salida: "Cerrar sesión" y el botón de tema. En el riel van apilados; desplegado, uno al lado del otro. */
 .sidebar__salida { display: flex; flex-direction: column; gap: 2px; }
 .sidebar:hover .sidebar__salida,
-.sidebar:has(:focus-visible) .sidebar__salida,
+.sidebar.sidebar--teclado .sidebar__salida,
 .sidebar--fijo .sidebar__salida { flex-direction: row; align-items: center; }
 .sidebar__salir { flex: 1; min-width: 0; }
 .sidebar__tema {

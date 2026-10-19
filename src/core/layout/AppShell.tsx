@@ -52,6 +52,21 @@ export function AppShell() {
     return () => { window.removeEventListener('scroll', onScroll); main?.removeEventListener('scroll', onScroll); };
   }, [!!user]);
 
+  // Barra lateral (escritorio): el foco por teclado la muestra con su estilo de foco (sin :has()).
+  const barraRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const barra = barraRef.current;
+    if (!barra) return;
+    const alEnfocar = () => barra.classList.toggle('sidebar--teclado', !!barra.querySelector(':focus-visible'));
+    const alSoltar = () => barra.classList.remove('sidebar--teclado');
+    barra.addEventListener('focusin', alEnfocar);
+    barra.addEventListener('focusout', alSoltar);
+    return () => {
+      barra.removeEventListener('focusin', alEnfocar);
+      barra.removeEventListener('focusout', alSoltar);
+    };
+  }, [!!user]);
+
   // Cada pantalla empieza arriba; cierra "Más" al navegar.
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -82,8 +97,8 @@ export function AppShell() {
   const moduloSheet = modulos.find(m => m.title === moduloAbierto);
 
   return (
-    <div className="app">
-      <aside className={`sidebar${menuFijo ? ' sidebar--fijo' : ''}`} aria-label="Navegación principal">
+    <div className={`app${menuFijo ? ' app--barra-fija' : ''}`}>
+      <aside ref={barraRef} className={`sidebar${menuFijo ? ' sidebar--fijo' : ''}`} aria-label="Navegación principal">
       <div className="sidebar__panel">
         <Link to={homePath(can)} className="sidebar__brand">
           <BrandMark size={30} />

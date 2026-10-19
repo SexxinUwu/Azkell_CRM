@@ -11,43 +11,6 @@
 //
 // Se monta desde routes/almacen.js (así comparte getDb, logAudit y el prefijo /api/almacen).
 
-const TABLAS = [
-    `CREATE TABLE IF NOT EXISTS flota_articulos (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        descripcion VARCHAR(200) NOT NULL,
-        unidad VARCHAR(20) NULL,
-        familia VARCHAR(80) NULL,
-        costo_referencial DECIMAL(14,4) NOT NULL DEFAULT 0,
-        stock_minimo DECIMAL(14,4) NOT NULL DEFAULT 0,
-        activo TINYINT NOT NULL DEFAULT 1,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
-    `CREATE TABLE IF NOT EXISTS flota_documentos (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        tipo VARCHAR(12) NOT NULL,
-        fecha DATE NOT NULL,
-        placa VARCHAR(20) NULL,
-        referencia VARCHAR(120) NULL,
-        observaciones TEXT NULL,
-        usuario VARCHAR(120) NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_fdoc_placa (placa)
-    ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
-    `CREATE TABLE IF NOT EXISTS flota_movimientos (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        documento_id INT NOT NULL,
-        tipo VARCHAR(12) NOT NULL,
-        fecha DATE NOT NULL,
-        articulo_id INT NOT NULL,
-        placa VARCHAR(20) NULL,
-        cantidad DECIMAL(14,4) NOT NULL,
-        costo_unitario DECIMAL(14,4) NOT NULL DEFAULT 0,
-        INDEX idx_fmov_articulo (articulo_id),
-        INDEX idx_fmov_placa (placa, articulo_id),
-        INDEX idx_fmov_doc (documento_id)
-    ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
-];
-
 const TIPOS = ['INGRESO', 'ASIGNACION', 'REINGRESO'];
 
 // Efecto de cada línea: en el almacén (+ ingreso y reingreso, − asignación) y en la unidad (+ asignación, − reingreso)
@@ -69,10 +32,6 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     const { getDb, logAudit } = ctx;
 
     const promesa = (tdb) => (tdb.promise ? tdb.promise() : tdb);
-
-    async function asegurarTablas(p) {
-        for (const sql of TABLAS) await p.query(sql);
-    }
 
     // Líneas válidas { articulo_id, cantidad, costo_unitario? }, cantidades sumadas si el artículo se repite
     function lineasDe(items) {
@@ -154,7 +113,6 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     router.get('/flota/articulos', async (req, res) => {
         try {
             const p = promesa(getDb(req));
-            await asegurarTablas(p);
             const [arts] = await p.query('SELECT * FROM flota_articulos WHERE activo = 1 ORDER BY descripcion');
             const enAlmacen = await saldosAlmacen(p);
             const enUnidades = await saldosUnidad(p);
@@ -186,7 +144,6 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     router.get('/flota/articulos/:id', async (req, res) => {
         try {
             const p = promesa(getDb(req));
-            await asegurarTablas(p);
             const id = numero(req.params.id);
             const [arts] = await p.query('SELECT * FROM flota_articulos WHERE id = ?', [id]);
             if (!arts.length) return res.status(404).json({ ok: false, error: 'Artículo no encontrado.' });
@@ -240,7 +197,6 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     router.post('/flota/articulos', async (req, res) => {
         try {
             const p = promesa(getDb(req));
-            await asegurarTablas(p);
             const datos = datosArticulo(req.body || {});
             const [r] = await p.query('INSERT INTO flota_articulos SET ?', [datos]);
             if (typeof logAudit === 'function') logAudit(req.body?.usuario || 'sistema', 'almacen', 'CREÓ ARTÍCULO (FLOTA)', datos.descripcion);
@@ -255,7 +211,6 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     router.put('/flota/articulos/:id', async (req, res) => {
         try {
             const p = promesa(getDb(req));
-            await asegurarTablas(p);
             const datos = datosArticulo(req.body || {});
             const [r] = await p.query('UPDATE flota_articulos SET ? WHERE id = ?', [datos, numero(req.params.id)]);
             if (!r.affectedRows) return res.status(404).json({ ok: false, error: 'Artículo no encontrado.' });
@@ -274,7 +229,6 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     router.get('/flota/unidades', async (req, res) => {
         try {
             const p = promesa(getDb(req));
-            await asegurarTablas(p);
             const [arts] = await p.query('SELECT id, costo_referencial FROM flota_articulos');
             const costo = new Map(arts.map(a => [Number(a.id), num(a.costo_referencial)]));
             const saldos = await saldosUnidad(p);
@@ -304,7 +258,6 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     router.get('/flota/unidades/:placa', async (req, res) => {
         try {
             const p = promesa(getDb(req));
-            await asegurarTablas(p);
             const placa = placaLimpia(req.params.placa);
             const saldos = await saldosUnidad(p, { placa });
             const ids = saldos.map(s => s.articulo_id);
@@ -342,7 +295,6 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     router.get('/flota/historial', async (req, res) => {
         try {
             const p = promesa(getDb(req));
-            await asegurarTablas(p);
             const { desde, hasta, tipo, placa, q, limite } = req.query;
             const cond = [];
             const params = [];
@@ -374,7 +326,6 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     router.post('/flota/ingreso', async (req, res) => {
         try {
             const p = promesa(getDb(req));
-            await asegurarTablas(p);
             const { fecha, referencia, observaciones, usuario, items } = req.body || {};
             const lineas = lineasDe(items);
             if (!lineas.length) throw aviso('Elige al menos un artículo con cantidad.');
@@ -405,7 +356,6 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     router.post('/flota/asignar', async (req, res) => {
         try {
             const p = promesa(getDb(req));
-            await asegurarTablas(p);
             const { placa, fecha, observaciones, usuario, items } = req.body || {};
             const pl = placaLimpia(placa);
             if (!pl) throw aviso('Elige la unidad.');
@@ -442,7 +392,6 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
     router.post('/flota/reingresar', async (req, res) => {
         try {
             const p = promesa(getDb(req));
-            await asegurarTablas(p);
             const { placa, fecha, observaciones, usuario, items } = req.body || {};
             const pl = placaLimpia(placa);
             if (!pl) throw aviso('Elige la unidad.');
