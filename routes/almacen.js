@@ -1071,41 +1071,19 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     // ============================================================
     // ALMACÉN — Almacenes / Sucursales
     // ============================================================
-    const _asegurarAlmacenPrincipal = (tdb, cb) => {
-        tdb.query(`CREATE TABLE IF NOT EXISTS almacen_almacenes (
-        id          INT AUTO_INCREMENT PRIMARY KEY,
-        nombre      VARCHAR(100) NOT NULL UNIQUE,
-        descripcion VARCHAR(255) NULL,
-        es_sistema  TINYINT(1)   NOT NULL DEFAULT 0,
-        activo      TINYINT(1)   NOT NULL DEFAULT 1,
-        orden       INT          NOT NULL DEFAULT 0,
-        created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    )`, () => {
-            tdb.query(`INSERT IGNORE INTO almacen_almacenes (nombre, descripcion, es_sistema, activo, orden) 
-                  VALUES ('Principal', 'Almacén Principal Central del ERP', 1, 1, 1)`, () => {
-                if (typeof cb === 'function') cb();
-            });
-        });
-    };
-
     router.get('/almacenes-lista', (req, res) => {
         const tdb = getDb(req);
-        _asegurarAlmacenPrincipal(tdb, () => {
-            tdb.query(`SELECT * FROM almacen_almacenes WHERE activo=1 ORDER BY orden, id`, (err, rows) => {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json(rows);
-            });
+        tdb.query(`SELECT * FROM almacen_almacenes WHERE activo=1 ORDER BY orden, id`, (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
         });
     });
 
     router.get('/almacenes', (req, res) => {
         const tdb = getDb(req);
-        _asegurarAlmacenPrincipal(tdb, () => {
-            tdb.query(`SELECT * FROM almacen_almacenes ORDER BY orden, id`, (err, rows) => {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json(rows);
-            });
+        tdb.query(`SELECT * FROM almacen_almacenes ORDER BY orden, id`, (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
         });
     });
 
@@ -1511,33 +1489,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
-    let _columnasOCChecked = false;
-    async function _ensureColumnasOC(tdb) {
-        if (_columnasOCChecked) return;
-        _columnasOCChecked = true;
-        const cols = [
-            { col: 'centro_costo', def: 'VARCHAR(60) NULL' },
-            { col: 'sub_motivo', def: 'VARCHAR(150) NULL' },
-            { col: 'autoriza', def: 'VARCHAR(150) NULL' },
-            { col: 'url_cotizacion', def: 'TEXT NULL' }
-        ];
-        for (const c of cols) {
-            try {
-                tdb.query(
-                    `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='${c.col}'`,
-                    (err, r) => {
-                        if (!err && r && r[0] && r[0].cnt === 0) {
-                            tdb.query(`ALTER TABLE entradas_inv ADD COLUMN ${c.col} ${c.def}`, () => { });
-                        }
-                    }
-                );
-            } catch (e) { }
-        }
-    }
-
     router.post('/entradas', (req, res) => {
         const tdb = getDb(req);
-        _ensureColumnasOC(tdb);
         const {
             fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv,
             observaciones, creado_por, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id,
@@ -1639,7 +1592,6 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     router.put('/entradas/:id', (req, res) => {
         const tdb = getDb(req);
-        _ensureColumnasOC(tdb);
         const { id } = req.params;
         const {
             fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv,
@@ -1760,7 +1712,6 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     router.put('/entradas/:id/estado', (req, res) => {
         const tdb = getDb(req);
-        _ensureColumnasOC(tdb);
         const { id } = req.params;
         const { estado, comentario, usuario } = req.body;
         if (!estado) return res.status(400).json({ error: 'Estado requerido' });

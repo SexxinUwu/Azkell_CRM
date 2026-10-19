@@ -20,27 +20,6 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     // Tablas: ordenes_trabajo, trabajos_ot, ot_materiales, ot_backlog
     // ============================================================
 
-    // ── Migración: columnas de detalle de trabajo en trabajos_ot ──────────────
-    [
-        'trabajo_realizado TEXT NULL',
-        'tecnico VARCHAR(150) NULL DEFAULT \'\'',
-        'fecha_trabajo DATETIME NULL',
-        'fecha_salida DATETIME NULL',
-        'costo DECIMAL(10,2) NULL DEFAULT 0',
-        'placa VARCHAR(50) NULL'
-    ].forEach(function (colDef) {
-        var colName = colDef.split(' ')[0];
-        db.query('ALTER TABLE trabajos_ot ADD COLUMN ' + colDef, function (e) {
-            if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ trabajos_ot.' + colName + ' verificada');
-            else console.warn('ALTER trabajos_ot.' + colName + ':', e.message);
-        });
-    });
-
-    // ── Migración: agregar id_ot a inspecciones ──────────────
-    db.query('ALTER TABLE inspecciones ADD COLUMN id_ot VARCHAR(50) NULL', function (e) {
-        if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ inspecciones.id_ot verificada');
-        else console.warn('ALTER inspecciones.id_ot:', e.message);
-    });
     // ── Helper: sincronizar estado de reportes_fallas y liberar rampas según OTs vinculadas ─────
     function _sincronizarEstadoReportesFallas(targetDb) {
         if (!targetDb) return;
@@ -1077,78 +1056,20 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     // );
     // ============================================================
 
-    // Migración: agregar columna estado a taller_rampas
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'Activo'`, (e) => {
-        if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas estado:', e.message);
-        else console.log('✅ Columna estado verificada en taller_rampas');
-    });
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN fecha_liberado DATETIME NULL`, (e) => {
-        if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas fecha_liberado:', e.message);
-    });
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN liberado_por VARCHAR(100) NULL`, (e) => {
-        if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas liberado_por:', e.message);
-    });
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN fecha_salida_real DATE NULL`, (e) => {
-        if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas fecha_salida_real:', e.message);
-    });
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN hora_salida_real TIME NULL`, (e) => {
-        if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas hora_salida_real:', e.message);
-    });
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN creado_en TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP`, (e) => {
-        if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas creado_en:', e.message);
-    });
-    db.query(`ALTER TABLE taller_rampas ADD COLUMN evidencia_url VARCHAR(255) NULL`, (e) => {
-        if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas evidencia_url:', e.message);
-    });
-
-    // ── Migraciones ordenes_trabajo: flujo OT (iniciar / pausar / cerrar) ─────────
-    [
-        'sistema VARCHAR(100) NULL',
-        'sub_sistema VARCHAR(100) NULL',
-        'fecha_inicio_ot DATETIME NULL',
-        'iniciado_por VARCHAR(100) NULL',
-        'fecha_pausa1 DATETIME NULL',
-        'fecha_fin_pausa1 DATETIME NULL',
-        'motivo_pausa1 VARCHAR(255) NULL',
-        'pausado_por1 VARCHAR(100) NULL',
-        'fecha_pausa2 DATETIME NULL',
-        'fecha_fin_pausa2 DATETIME NULL',
-        'motivo_pausa2 VARCHAR(255) NULL',
-        'pausado_por2 VARCHAR(100) NULL',
-        'fecha_pausa3 DATETIME NULL',
-        'fecha_fin_pausa3 DATETIME NULL',
-        'motivo_pausa3 VARCHAR(255) NULL',
-        'pausado_por3 VARCHAR(100) NULL',
-        'comentario_cierre TEXT NULL',
-        'cerrado_por VARCHAR(100) NULL'
-    ].forEach(function (colDef) {
-        var colName = colDef.split(' ')[0];
-        db.query('ALTER TABLE ordenes_trabajo ADD COLUMN ' + colDef, function (e) {
-            if (e && !e.message.includes('Duplicate column')) console.warn('ALTER ordenes_trabajo ' + colName + ':', e.message);
-        });
-    });
-
     router.get(['/taller-rampas', '/rampas'], (req, res) => {
         const targetDb = req.db || db;
         const historial = req.query.historial === '1';
-        targetDb.query("ALTER TABLE taller_rampas ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'Activo'", () => {
-            targetDb.query("ALTER TABLE taller_rampas ADD COLUMN creado_en TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP", () => {
-                targetDb.query("ALTER TABLE taller_rampas ADD COLUMN conductor VARCHAR(255) NULL", () => {
-                    const sql = historial
-                        ? "SELECT * FROM taller_rampas WHERE estado = 'Liberado' ORDER BY id DESC"
-                        : "SELECT * FROM taller_rampas WHERE estado != 'Liberado' ORDER BY rampa ASC, id ASC";
-                    targetDb.query(sql, (err, rows) => {
-                        if (err) {
-                            targetDb.query("SELECT * FROM taller_rampas ORDER BY id ASC", (err2, rows2) => {
-                                if (err2) return res.json([]);
-                                return res.json(rows2 || []);
-                            });
-                            return;
-                        }
-                        res.json(rows || []);
-                    });
+        const sql = historial
+            ? "SELECT * FROM taller_rampas WHERE estado = 'Liberado' ORDER BY id DESC"
+            : "SELECT * FROM taller_rampas WHERE estado != 'Liberado' ORDER BY rampa ASC, id ASC";
+        targetDb.query(sql, (err, rows) => {
+            if (err) {
+                return targetDb.query('SELECT * FROM taller_rampas ORDER BY id ASC', (err2, rows2) => {
+                    if (err2) return res.json([]);
+                    return res.json(rows2 || []);
                 });
-            });
+            }
+            res.json(rows || []);
         });
     });
 
