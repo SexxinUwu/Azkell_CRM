@@ -17,6 +17,37 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         }, 0);
     }
 
+    // Costo en soles de cada repuesto del inventario. Lo decide el servidor, no el navegador: el navegador
+    // puede mandar el costo en dólares (costo_referencial). Se usa costo_soles, que el inventario ya valoriza
+    // en soles; si no lo tiene y el artículo es en dólares, se convierte con su tipo de cambio.
+    function costosSolesDeInventario(targetDb, items, tc, cb) {
+        const ids = [...new Set(items.map(d => d.inventario_id).filter(Boolean))];
+        const descs = [...new Set(items.filter(d => !d.inventario_id && d.descripcion).map(d => d.descripcion))];
+        if (!ids.length && !descs.length) return cb();
+        targetDb.query(
+            'SELECT id, descripcion, moneda, costo_referencial, costo_soles, tipo_cambio FROM inventario WHERE activo = 1 AND (id IN (?) OR descripcion IN (?))',
+            [ids.length ? ids : [''], descs.length ? descs : ['']],
+            (err, rows) => {
+                if (err) return cb(err);
+                const porId = new Map((rows || []).map(r => [String(r.id), r]));
+                const porDesc = new Map((rows || []).map(r => [r.descripcion, r]));
+                items.forEach(d => {
+                    const inv = d.inventario_id ? porId.get(String(d.inventario_id)) : porDesc.get(d.descripcion);
+                    if (!inv) return;
+                    let soles = parseFloat(inv.costo_soles);
+                    if (!(soles >= 0)) {
+                        const ref = parseFloat(inv.costo_referencial) || 0;
+                        soles = inv.moneda === 'USD' ? ref * (parseFloat(inv.tipo_cambio) || tc) : ref;
+                    }
+                    const cant = parseFloat(d.cantidad) || 0;
+                    d.costo_unitario = Math.round(soles * 10000) / 10000;
+                    d.moneda = 'PEN';
+                    d.importe = Math.round(cant * soles * 100) / 100;
+                });
+                cb();
+            });
+    }
+
 
     // ============================================================
     // MÓDULO: ÓRDENES DE MANTENIMIENTO (OT)
@@ -860,18 +891,22 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         targetDb.query('SELECT estado FROM ordenes_trabajo WHERE id_ot = ? OR ticket_entrada = ? LIMIT 1', [ticket_ot, ticket_ot], (errOT, rowsOT) => {
             if (errOT) return res.status(500).json({ error: errOT.message });
             if (!rowsOT || !rowsOT.length) return res.status(400).json({ error: 'La OT ' + ticket_ot + ' no existe' });
-            crearSolicitud();
+            costosSolesDeInventario(targetDb, items || [], tc, (errCosto) => {
+                if (errCosto) return res.status(500).json({ error: errCosto.message });
+                crearSolicitud();
+            });
         });
 
         function crearSolicitud() {
             _generarCodigoAlmacen('SA', anio, (err, id) => {
                 if (err) return res.status(500).json({ error: String(err) });
+                // Los importes ya están en soles (costosSolesDeInventario): la cabecera siempre es PEN
                 const total_pen = _calcularTotalPen(items || [], tc);
                 const solicitanteVal = creado_por || req.body.usuario || req.body.solicitante || (req.user && req.user.nombre) || null;
                 targetDb.query(
                     'INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por,ticket_ot,estado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
                     [id, fecha, tipo_destino || 'Vehiculo', placa || null, responsable || null, responsable_id || null,
-                        moneda || 'PEN', tc, total_pen, observaciones || null, solicitanteVal, ticket_ot, 'Pendiente'],
+                        'PEN', tc, total_pen, observaciones || null, solicitanteVal, ticket_ot, 'Pendiente'],
                     (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });
                         const registrar = () => {
@@ -1004,7 +1039,9 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 return res.status(400).json({ error: 'Se requiere al menos un artículo' });
             }
             const tc = parseFloat(tipo_cambio) || 1;
-            const total_pen = items.reduce((acc, it) => acc + ((parseFloat(it.importe) || (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)))), 0);
+            costosSolesDeInventario(targetDb, items, tc, (errCosto) => {
+            if (errCosto) return res.status(500).json({ error: errCosto.message });
+            const total_pen = _calcularTotalPen(items, tc);
 
             targetDb.query('UPDATE salidas_inv SET total_pen = ? WHERE id = ?', [total_pen, id], (errUpd) => {
                 if (errUpd) return res.status(500).json({ error: errUpd.message });
@@ -1035,6 +1072,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                         res.json({ ok: true, id, total_pen });
                     });
                 });
+            });
             });
         } else if (accion === 'anular') {
             if (!motivo || !String(motivo).trim()) return res.status(400).json({ error: 'Motivo requerido' });

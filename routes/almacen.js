@@ -2787,10 +2787,17 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 await conn.beginTransaction();
 
                 // Valorización: costo promedio ponderado en soles, tipo de cambio del día y vencimiento de la cuenta por pagar
-                const [ocRows] = await conn.query('SELECT id, moneda, condicion_pago, dias_credito, estado FROM ordenes_compra WHERE codigo = ? LIMIT 1 FOR UPDATE', [oc_id]);
+                const [ocRows] = await conn.query('SELECT id, codigo, moneda, condicion_pago, dias_credito, estado FROM ordenes_compra WHERE codigo = ? LIMIT 1 FOR UPDATE', [oc_id]);
                 const oc = ocRows[0] || null;
                 const esUSD = oc ? oc.moneda === 'USD' : items.some(it => String(it.moneda || '').toUpperCase() === 'USD');
                 let tipoCambio = parseFloat(req.body.tipo_cambio) || 0;
+                // Si la compra en dólares tiene su propio TC (el de la entrada que generó la OC), la recepción usa ese:
+                // así el costo del inventario y el total de la OC salen con el mismo tipo de cambio
+                if (esUSD && oc) {
+                    const [entOC] = await conn.query('SELECT tipo_cambio FROM entradas_inv WHERE id = ? LIMIT 1', [oc.codigo]);
+                    const tcOC = parseFloat(entOC && entOC[0] && entOC[0].tipo_cambio) || 0;
+                    if (tcOC > 0) tipoCambio = tcOC;
+                }
                 if (esUSD && !(tipoCambio > 0)) {
                     // Sin tipo de cambio en el envío: último TC guardado en el inventario, o 3.75 si no hay ninguno
                     const [ultimo] = await conn.query('SELECT tipo_cambio FROM inventario WHERE tipo_cambio > 0 ORDER BY updated_at DESC LIMIT 1');
