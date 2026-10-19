@@ -48,6 +48,9 @@ export const ENTIDAD_LABELS: Record<string, string> = {
   bank: 'Banco',
   'payment-request': 'Requerimiento de pago',
   receivable: 'Cuenta por cobrar/pagar',
+  'warehouse-entry': 'Entrada de almacén',
+  'warehouse-exit': 'Salida de almacén',
+  'stock-adjustment': 'Regularización de stock',
   general: 'General',
 };
 
