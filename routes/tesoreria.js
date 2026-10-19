@@ -1,4 +1,5 @@
 const express = require('express');
+const { envolverLogAudit } = require('../services/auditoria');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } }); // 25MB max
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl } = require('../utils/s3');
@@ -7,6 +8,7 @@ const { recalcularLiquidacionViaje } = require('../services/liquidacion_viaje');
 const { fechaVencimiento } = require('../services/condicion_oc');
 
 module.exports = function (db, broadcast, logAudit) {
+    logAudit = envolverLogAudit(logAudit, db);
     const router = express.Router();
 
     function getDb(req) {
@@ -2382,7 +2384,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             // 5. Auditoría y broadcast
             if (typeof logAudit === 'function') {
-                logAudit(usuarioPago, 'tesoreria/pago-requerimientos', 'PROCESÓ PAGO', `OC: ${id} - Constancia: ${numeroConstancia} - Monto: ${monedaPago} ${montoPagado}`);
+                logAudit(req, 'tesoreria/pago-requerimientos', 'PROCESÓ PAGO', `Pagó el requerimiento ${id} por ${monedaPago} ${montoPagado} (constancia ${numeroConstancia})`);
             }
             if (typeof broadcast === 'function') {
                 broadcast('almacen', 'actualizar_oc');

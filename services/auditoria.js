@@ -107,4 +107,47 @@ function audit(db, actor, entrada) {
   });
 }
 
-module.exports = { audit, diff, actorFrom, rangoLima, sinSecretos, configurarDifusion, LIMITE_RESUMEN };
+// ── Envoltorio del logAudit antiguo (taller, tesorería) ──
+// Cada llamada existente sigue igual y además queda en audit_logs con su mismo texto como resumen.
+const ACCIONES = [
+  [/ELIMIN|BORR|DELET/i, 'DELETE'],
+  [/ANUL/i, 'ANNUL'],
+  [/APROB|VALID/i, 'APPROVE'],
+  [/PAG|COBR/i, 'PAYMENT'],
+  [/CRE[ÓO]|CREAR|REGISTR|INSERT|IMPORT/i, 'CREATE'],
+];
+
+function accionDe(accion) {
+  const t = String(accion || '');
+  const par = ACCIONES.find(([re]) => re.test(t));
+  return par ? par[1] : 'UPDATE';
+}
+
+function entidadDe(modulo, sub, detalle) {
+  const t = `${modulo} ${sub} ${detalle}`.toLowerCase();
+  if (/rampa/.test(t)) return 'ramp';
+  if (/caja/.test(t)) return 'petty-cash';
+  if (/banco/.test(t)) return 'bank';
+  if (/requerimiento/.test(t)) return 'payment-request';
+  if (/cuentas|liquidaci/.test(t)) return 'receivable';
+  if (/ot|orden|ordenes/.test(t)) return 'work-order';
+  if (/trabajo/.test(t)) return 'work-job';
+  return 'general';
+}
+
+function envolverLogAudit(legacy, db) {
+  return function registrar(req, modulo, sub, accion, detalle) {
+    try { if (typeof legacy === 'function') legacy(req, modulo, sub, accion, detalle); } catch (_) { /* el registro antiguo no afecta */ }
+    try {
+      // Igual que logAudit: con 4 argumentos, el texto va en "accion" y la acción en "sub"
+      const conDetalle = detalle !== undefined;
+      const tokenAccion = conDetalle ? accion : sub;
+      const texto = String((conDetalle ? detalle : accion) || `${tokenAccion || 'Acción'} en ${modulo || 'sistema'}`).slice(0, LIMITE_RESUMEN);
+      const esSesion = !!(req && typeof req === 'object' && (req.user || req.headers));
+      const actor = esSesion ? actorFrom(req) : { userId: null, userName: String(req || 'Sistema').slice(0, 120), ip: null };
+      audit((req && req.db) || db, actor, { action: accionDe(tokenAccion), entity: entidadDe(modulo, sub, texto), summary: texto });
+    } catch (_) { /* la auditoría nunca interrumpe la respuesta HTTP */ }
+  };
+}
+
+module.exports = { audit, diff, actorFrom, rangoLima, sinSecretos, configurarDifusion, envolverLogAudit, LIMITE_RESUMEN };
