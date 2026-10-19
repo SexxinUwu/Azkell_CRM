@@ -1,5 +1,5 @@
 const express = require('express');
-const { envolverLogAudit } = require('../services/auditoria');
+const { envolverLogAudit, audit: auditar, actorFrom: actorDe, diff } = require('../services/auditoria');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } }); // 25MB max
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl } = require('../utils/s3');
@@ -1026,6 +1026,8 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             // Calcular importe total y subtotal
+            // El motivo es obligatorio en todo movimiento de caja chica
+            if (!String(b.motivo || '').trim()) return res.status(400).json({ error: 'El motivo del movimiento es obligatorio.' });
             const impTotal = safeNum(b.importe_total);
             const retDet = safeNum(b.retencion_detraccion);
             const subTot = safeNum(b.subtotal) || Math.max(0, impTotal - retDet);
@@ -1083,6 +1085,12 @@ module.exports = function (db, broadcast, logAudit) {
                 userCreator
             ]);
 
+            auditar(tdb, actorDe(req), {
+                action: 'CREATE', entity: 'petty-cash', entityId: result.insertId,
+                summary: `Registró un ${b.tipo_movimiento || 'movimiento'} de caja chica por ${b.moneda === 'USD' ? 'US$' : 'S/'} ${impTotal.toFixed(2)}: ${String(b.motivo).trim()}`,
+                changes: diff({}, { tipo: b.tipo_movimiento || null, monto: impTotal, moneda: b.moneda || 'PEN', centro_costo: b.centro_costo || null, motivo: String(b.motivo).trim(), persona: b.persona || null },
+                    ['tipo', 'monto', 'moneda', 'centro_costo', 'motivo', 'persona']),
+            });
             if (typeof logAudit === 'function') {
                 logAudit(req, 'TESORERIA', 'CAJA', 'CREO', `Creó registro de caja Nº ${b.serie}-${b.numero} por S/ ${impTotal}`);
             }

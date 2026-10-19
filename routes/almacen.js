@@ -137,6 +137,7 @@ async function despacharAprobacionWhatsAppAlmacen(req, tdb, entradaId, bodyData)
 }
 
 module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
+    const { audit: auditar, actorFrom: actorDe, diff } = require('../services/auditoria');
 
     function getDb(req) {
         return (req && req.db) ? req.db : db;
@@ -771,24 +772,35 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             return res.status(400).json({ error: 'Stock físico inválido' });
         }
 
-        targetDb.query(
-            'UPDATE inventario SET stock_regularizado = ?, fecha_regularizacion = ? WHERE id = ?',
-            [stockFisico, peruNow, id],
-            (err, result) => {
-                if (err) return res.status(500).json({ error: err.message });
-                if (result.affectedRows === 0) return res.status(404).json({ error: 'Artículo no encontrado' });
+        // Stock anterior y nombre del artículo, para registrar el cambio exacto
+        targetDb.query('SELECT stock_regularizado, descripcion FROM inventario WHERE id = ?', [id], (errA, filasA) => {
+            const antes = (!errA && filasA && filasA[0]) ? filasA[0] : {};
+            targetDb.query(
+                'UPDATE inventario SET stock_regularizado = ?, fecha_regularizacion = ? WHERE id = ?',
+                [stockFisico, peruNow, id],
+                (err, result) => {
+                    if (err) return res.status(500).json({ error: err.message });
+                    if (result.affectedRows === 0) return res.status(404).json({ error: 'Artículo no encontrado' });
 
-                if (typeof logAudit === 'function') {
-                    logAudit(usuario, 'almacen', 'REGULARIZÓ', `Stock ajustado a ${stockFisico} (Motivo: ${motivo || 'Regularización física'}) para ${id}`);
+                    const stockAnterior = antes.stock_regularizado == null ? null : Number(antes.stock_regularizado); // DECIMAL llega como texto
+                    const cambios = diff({ stock_regularizado: stockAnterior }, { stock_regularizado: stockFisico }, ['stock_regularizado']);
+                    auditar(targetDb, actorDe(req), {
+                        action: 'UPDATE', entity: 'stock-adjustment', entityId: id,
+                        summary: `Regularizó el stock de ${antes.descripcion || 'un artículo'} a ${stockFisico}${motivo ? ` (motivo: ${motivo})` : ''}`,
+                        changes: Object.keys(cambios).length ? { ...cambios, motivo: { from: null, to: motivo || 'Regularización física' } } : { motivo: { from: null, to: motivo || 'Regularización física' } },
+                    });
+                    if (typeof logAudit === 'function') {
+                        logAudit(usuario, 'almacen', 'REGULARIZÓ', `Stock ajustado a ${stockFisico} (Motivo: ${motivo || 'Regularización física'}) para ${id}`);
+                    }
+
+                    res.json({
+                        ok: true,
+                        stock_regularizado: stockFisico,
+                        fecha_regularizacion: peruNow
+                    });
                 }
-
-                res.json({
-                    ok: true,
-                    stock_regularizado: stockFisico,
-                    fecha_regularizacion: peruNow
-                });
-            }
-        );
+            );
+        });
     });
 
     // ── Regularización Masiva de Todo el Inventario a Cero ───────────
@@ -1520,6 +1532,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 ],
                 (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
+                    auditar(tdb, actorDe(req), {
+                        action: 'CREATE', entity: 'warehouse-entry', entityId: id,
+                        summary: `Registró la entrada ${id} de ${proveedor_nombre || 'proveedor sin nombre'} por ${moneda === 'USD' ? 'US$' : 'S/'} ${Number(total_pen || 0).toFixed(2)}`,
+                        changes: diff({}, { proveedor: proveedor_nombre || null, monto_pen: total_pen, moneda: moneda || 'PEN', documento: documento_referencia || null, estado: 'Registrado' },
+                            ['proveedor', 'monto_pen', 'moneda', 'documento', 'estado']),
+                    });
                     if (!items || !items.length) { if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
                     // Resolver inventario_id por descripción para items sin código
                     const descsEntrada = items.filter(d => !d.inventario_id && d.descripcion).map(d => d.descripcion);
@@ -1753,9 +1771,15 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 });
                 return;
             }
-            if (typeof logAudit === 'function' && usuario) {
-                logAudit(usuario, 'almacen/entradas', 'MODIFICÓ', `/api/almacen/entradas/${id}/estado (${estado})`);
-            }
+            tdb.query('SELECT proveedor_nombre, total_pen, moneda FROM entradas_inv WHERE id = ?', [id], (eE, filasE) => {
+                const e = (!eE && filasE && filasE[0]) ? filasE[0] : {};
+                const aprobada = /aprob/i.test(String(estado || ''));
+                auditar(tdb, actorDe(req), {
+                    action: aprobada ? 'APPROVE' : 'UPDATE', entity: 'warehouse-entry', entityId: id,
+                    summary: `${aprobada ? 'Aprobó' : 'Cambió el estado de'} la entrada ${id} de ${e.proveedor_nombre || 'proveedor'} por ${e.moneda === 'USD' ? 'US$' : 'S/'} ${Number(e.total_pen || 0).toFixed(2)} a ${estado}`,
+                    changes: { estado: { from: null, to: estado } },
+                });
+            });
 
             // Sincronizar en ordenes_compra y notificar a Tesorería si fue aprobado
             if (esAprob) {
@@ -2234,6 +2258,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         responsable_id || null, moneda || 'PEN', tc || null, total_pen, observaciones || null, solUser, ticket_ot || null],
                     (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });
+                        auditar(targetDb, actorDe(req), {
+                            action: 'CREATE', entity: 'warehouse-exit', entityId: id,
+                            summary: `Registró la salida ${id}${tipo_destino ? ` a ${tipo_destino}` : ''}${placa ? ` de la unidad ${placa}` : ''}${ticket_ot ? ` para la OT ${ticket_ot}` : ''}${(responsable || solUser) ? `, solicitada por ${responsable || solUser}` : ''}`,
+                            changes: diff({}, { destino: tipo_destino || null, placa: placa || null, ot: ticket_ot || null, solicitante: responsable || solUser || null, total_pen, moneda: moneda || 'PEN' },
+                                ['destino', 'placa', 'ot', 'solicitante', 'total_pen', 'moneda']),
+                        });
                         const registrar = () => {
                             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
                             res.json({ ok: true, id });
