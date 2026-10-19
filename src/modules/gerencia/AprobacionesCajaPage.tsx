@@ -4,11 +4,13 @@ import { ArrowUpRight, CheckCircle, Coins, SearchX, XCircle } from 'lucide-react
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
+import { Field, SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Sheet } from '../../core/ui/Sheet';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { formatFechaPe, formatMoneda } from '../../core/lib/format';
+import { haptic } from '../../core/lib/haptics';
 
 interface CajaMov {
   id: string | number;
@@ -45,9 +47,7 @@ function esPendiente(m: CajaMov): boolean {
 
 function fmtMonto(v: unknown, moneda = 'PEN'): string {
   const n = Number(v);
-  if (!v || isNaN(n)) return '—';
-  const sym = moneda === 'USD' ? '$' : 'S/';
-  return `${sym} ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return !v || isNaN(n) ? '—' : formatMoneda(n, moneda);
 }
 
 export function AprobacionesCajaPage() {
@@ -58,6 +58,8 @@ export function AprobacionesCajaPage() {
   const [motivoAnulacion, setMotivoAnulacion] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
+  const [filtro, setFiltro] = useState<'pendientes' | 'aprobados' | 'todos'>('pendientes');
+  const [errMotivo, setErrMotivo] = useState<string | undefined>();
 
   const { data, isLoading, isError, error } = useQuery<CajaMov[]>({
     queryKey: ['gerencia', 'aprobaciones-caja'],
@@ -73,7 +75,9 @@ export function AprobacionesCajaPage() {
   const pendientes = lista.filter(esPendiente);
 
   const visibles = useMemo(() => {
-    const fuente = soloBusqueda || busqueda ? lista : pendientes;
+    const aprobados = lista.filter(m => (m.estado ?? '').toUpperCase() === 'APROBADO');
+    const base = filtro === 'pendientes' ? pendientes : filtro === 'aprobados' ? aprobados : lista;
+    const fuente = soloBusqueda || busqueda ? lista : base;
     if (!busqueda) return fuente;
     const q = busqueda.toUpperCase();
     return lista.filter(m =>
@@ -83,10 +87,11 @@ export function AprobacionesCajaPage() {
       String(m.orden_viaje ?? '').toUpperCase().includes(q) ||
       String(m.persona ?? '').toUpperCase().includes(q)
     );
-  }, [lista, pendientes, busqueda, soloBusqueda]);
+  }, [lista, pendientes, busqueda, soloBusqueda, filtro]);
 
   async function ejecutarAccion() {
     if (!accion) return;
+    if (accion.tipo === 'anular' && !motivoAnulacion.trim()) { setErrMotivo('Escribe el motivo de la anulación.'); haptic('warning'); return; }
     setProcesando(true);
     try {
       const endpoint = accion.tipo === 'aprobar'
@@ -95,15 +100,17 @@ export function AprobacionesCajaPage() {
       await api(endpoint, {
         method: 'POST',
         body: accion.tipo === 'anular'
-          ? { motivo: motivoAnulacion || 'Anulado por Gerencia', usuario_anulacion: localStorage.getItem('fleet_user') ?? 'Gerencia' }
+          ? { motivo: motivoAnulacion.trim(), usuario_anulacion: localStorage.getItem('fleet_user') ?? 'Gerencia' }
           : { usuario_aprobacion: localStorage.getItem('fleet_user') ?? 'Gerencia' },
       });
       setMsg({ tipo: 'ok', texto: `Movimiento ${accion.tipo === 'aprobar' ? 'aprobado' : 'anulado'} correctamente.` });
+      haptic(accion.tipo === 'aprobar' ? 'success' : 'warning');
       qc.invalidateQueries({ queryKey: ['gerencia', 'aprobaciones-caja'] });
       setAccion(null);
       setMotivoAnulacion('');
     } catch (e) {
       setMsg({ tipo: 'error', texto: errorMessage(e) });
+      haptic('warning');
     } finally {
       setProcesando(false);
     }
@@ -136,18 +143,26 @@ export function AprobacionesCajaPage() {
         </EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          {/* KPIs */}
+                    {/* KPIs: tocarlos filtra la lista */}
           <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
-            {[
-              { label: 'Pendientes', valor: pendientes.length, color: pendientes.length > 0 ? 'var(--amber-ink)' : 'var(--green-ink)' },
-              { label: 'Aprobados', valor: lista.filter(m => (m.estado ?? '').toUpperCase() === 'APROBADO').length, color: 'var(--green-ink)' },
-              { label: 'Total', valor: lista.length, color: 'var(--label-1)' },
-            ].map(k => (
-              <div key={k.label} style={{ background: 'var(--fill-1)', borderRadius: 8, padding: '10px 14px', flex: 1, textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1.25rem', color: k.color }}>{k.valor}</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--label-2)', fontWeight: 600 }}>{k.label}</div>
-              </div>
-            ))}
+              <button key="pendientes" type="button" className="pressable" aria-pressed={filtro === 'pendientes'}
+                onClick={() => { haptic('selection'); setFiltro('pendientes'); }}
+                style={{ background: 'var(--fill-1)', borderRadius: 8, padding: '10px 14px', flex: 1, textAlign: 'center', cursor: 'pointer', border: filtro === 'pendientes' ? '2px solid var(--ink)' : '2px solid transparent' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--amber-ink)' }}>{pendientes.length}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--label-2)', fontWeight: 600 }}>Pendientes</div>
+              </button>
+              <button key="aprobados" type="button" className="pressable" aria-pressed={filtro === 'aprobados'}
+                onClick={() => { haptic('selection'); setFiltro('aprobados'); }}
+                style={{ background: 'var(--fill-1)', borderRadius: 8, padding: '10px 14px', flex: 1, textAlign: 'center', cursor: 'pointer', border: filtro === 'aprobados' ? '2px solid var(--ink)' : '2px solid transparent' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--green-ink)' }}>{lista.filter(m => (m.estado ?? '').toUpperCase() === 'APROBADO').length}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--label-2)', fontWeight: 600 }}>Aprobados</div>
+              </button>
+              <button key="todos" type="button" className="pressable" aria-pressed={filtro === 'todos'}
+                onClick={() => { haptic('selection'); setFiltro('todos'); }}
+                style={{ background: 'var(--fill-1)', borderRadius: 8, padding: '10px 14px', flex: 1, textAlign: 'center', cursor: 'pointer', border: filtro === 'todos' ? '2px solid var(--ink)' : '2px solid transparent' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--label-1)' }}>{lista.length}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--label-2)', fontWeight: 600 }}>Total</div>
+              </button>
           </div>
 
           {!busqueda && !soloBusqueda && pendientes.length === 0 && (
@@ -178,11 +193,11 @@ export function AprobacionesCajaPage() {
                     return (
                       <tr key={String(m.id || i)} style={{ borderBottom: '1px solid var(--separator)' }}>
                         <td style={{ padding: '8px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap', color: 'var(--label-2)' }}>
-                          {String(m.fecha ?? '').split('T')[0] || '—'}
+                          {formatFechaPe(m.fecha)}
                         </td>
                         <td style={{ padding: '8px 12px', fontSize: '0.85rem' }}>
                           <div style={{ fontWeight: 600 }}>{nombrePrimario}</div>
-                          {m.placa && <div style={{ fontSize: '0.75rem', color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{m.placa}</div>}
+                          {m.placa && <div style={{ fontSize: '0.75rem', color: 'var(--label-1)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{m.placa}</div>}
                         </td>
                         <td style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--label-2)', maxWidth: '12rem' }}>
                           <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -200,13 +215,15 @@ export function AprobacionesCajaPage() {
                           {isPend && (
                             <div style={{ display: 'flex', gap: 4 }}>
                               <button type="button"
-                                onClick={() => { setAccion({ id: m.id, tipo: 'aprobar' }); setMsg(null); }}
+                                className="pressable"
+                                onClick={() => { haptic('selection'); setAccion({ id: m.id, tipo: 'aprobar' }); setMsg(null); setErrMotivo(undefined); }}
                                 style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 6, background: 'var(--green-tint)', color: 'var(--green-ink)', border: '1px solid var(--green-ink)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
                                 <CheckCircle size={13} /> Aprobar
                               </button>
                               <button type="button"
-                                onClick={() => { setAccion({ id: m.id, tipo: 'anular' }); setMsg(null); }}
-                                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 6, background: 'var(--fill-2)', color: 'var(--label-2)', border: '1px solid var(--separator)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
+                                className="pressable"
+                                onClick={() => { haptic('selection'); setAccion({ id: m.id, tipo: 'anular' }); setMsg(null); setErrMotivo(undefined); }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 6, background: 'var(--red-tint)', color: 'var(--red-ink)', border: '1px solid var(--red-ink)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
                                 <XCircle size={13} /> Anular
                               </button>
                             </div>
@@ -238,16 +255,12 @@ export function AprobacionesCajaPage() {
       >
         {accion?.tipo === 'anular' ? (
           <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--label-2)', display: 'block', marginBottom: 6 }}>
-              Motivo de anulación
-            </label>
-            <textarea
-              value={motivoAnulacion}
-              onChange={e => setMotivoAnulacion(e.target.value)}
-              placeholder="Describe el motivo…"
-              rows={3}
-              style={{ width: '100%', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', padding: '8px 10px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
-            />
+            <Field label="Motivo de anulación" error={errMotivo}>
+              {p => (
+                <textarea {...p} value={motivoAnulacion} onChange={e => { setMotivoAnulacion(e.target.value); setErrMotivo(undefined); }}
+                  placeholder="Describe el motivo…" rows={3} style={{ width: '100%', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', padding: '8px 10px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }} />
+              )}
+            </Field>
           </div>
         ) : (
           <div style={{ padding: '12px 0', color: 'var(--label-2)', fontSize: '0.875rem' }}>
