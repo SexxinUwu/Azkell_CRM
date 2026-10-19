@@ -18,7 +18,7 @@ import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/fo
 import { haptic } from '../../core/lib/haptics';
 import { ImportarTrabajosSheet } from './ImportarTrabajosSheet';
 import {
-  aprobarTrabajo, editarTrabajo, eliminarTrabajo, ESTADOS_TRABAJO, estadoTrabajo, regularizarTecnicos, trabajoCosto, trabajoId, trabajoKmHoras,
+  aObjeto, aprobarTrabajo, editarTrabajo, eliminarTrabajo, ESTADOS_TRABAJO, estadoTrabajo, regularizarTecnicos, trabajoCosto, trabajoId, trabajoKmHoras,
   useHorasTecnicos, useTecnicosDisponibles, useTrabajosOT, useUltimoDiaTrabajos, type HorasTecnicosRespuesta, type TrabajoOT,
 } from './api';
 
@@ -34,7 +34,8 @@ const tonoEstado = (e: string | null | undefined) => {
 
 function personalDe(t: TrabajoOT): string[] {
   let p = t.tecnico ?? '';
-  try { const d = JSON.parse(t.detalles_json ?? '{}'); if (d.personal) p = String(d.personal); } catch { /* sin detalles */ }
+  const d = aObjeto(t.detalles_json);
+  if (d.personal) p = String(d.personal);
   return p.split(',').map(x => x.trim()).filter(Boolean);
 }
 

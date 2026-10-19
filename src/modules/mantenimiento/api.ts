@@ -110,7 +110,7 @@ export function otId(o: OrdenTrabajo): string {
 export function otDetalles(o: OrdenTrabajo): DetallesOT {
   if (!o.detalles_json) return {};
   if (typeof o.detalles_json === 'object') return o.detalles_json as DetallesOT;
-  try { return JSON.parse(o.detalles_json) as DetallesOT; } catch { return {}; }
+  return aObjeto(o.detalles_json) as DetallesOT;
 }
 
 export function otTipo(o: OrdenTrabajo): string {
@@ -304,8 +304,17 @@ export function estadoTrabajo(e: string | null | undefined): EstadoTrabajo {
 }
 
 /** Costo declarado en los detalles del trabajo */
+/** Los campos JSON llegan como objeto (columna JSON) o como texto: se leen los dos casos */
+export function aObjeto(v: unknown): Record<string, unknown> {
+  if (v && typeof v === 'object') return v as Record<string, unknown>;
+  if (typeof v === 'string' && v.trim()) {
+    try { const x = JSON.parse(v); return x && typeof x === 'object' ? x : {}; } catch { return {}; }
+  }
+  return {};
+}
+
 export function trabajoCosto(t: TrabajoOT): number {
-  try { const d = JSON.parse(t.detalles_json ?? '{}'); return Number(d.costo) || 0; } catch { return 0; }
+  return Number(aObjeto(t.detalles_json).costo) || 0;
 }
 
 export const editarTrabajo = (id: string, d: {
@@ -324,11 +333,8 @@ export function trabajoId(t: TrabajoOT): string {
 
 /** Mismo orden de campos que el clásico (totFmtKm): primero horas de motor, luego kilómetros */
 export function trabajoKmHoras(t: TrabajoOT): string {
-  const leer = (s: string | null | undefined): Record<string, unknown> => {
-    try { return s ? (JSON.parse(s) as Record<string, unknown>) : {}; } catch { return {}; }
-  };
-  const otDet = leer(t.ot_detalles_json);
-  const trDet = leer(t.detalles_json);
+  const otDet = aObjeto(t.ot_detalles_json);
+  const trDet = aObjeto(t.detalles_json);
   const extra = t as unknown as Record<string, unknown>;
   const horasMotor = otDet.horas_motor || trDet.horas_motor || extra.horas_motor;
   if (horasMotor) {
