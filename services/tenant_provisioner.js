@@ -5,7 +5,9 @@
 
 const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
-const { initDB } = require('../init_db');
+const { spawnSync } = require('child_process');
+const path = require('path');
+const { sembrarEmpresa } = require('./tenant_seeds');
 const { getMasterPool, getTenantPool } = require('./tenant_master');
 
 const DB_HOST = process.env.DB_HOST || 'localhost';
@@ -13,6 +15,31 @@ const DB_USER = process.env.DB_USER || 'root';
 const DB_PASSWORD = process.env.DB_PASSWORD || '';
 const DB_PORT = process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306;
 const DB_SSL = process.env.DB_HOST && (process.env.DB_HOST.includes('railway') || process.env.DB_HOST.includes('aiven') || process.env.DB_SSL === 'true') ? { rejectUnauthorized: false } : undefined;
+
+/** URL de una base de empresa para Prisma (la contraseña va en la URL y nunca se imprime) */
+function urlDeBase(dbName) {
+    const ssl = process.env.DB_SSL === 'true' ? '?sslaccept=accept_invalid_certs' : '';
+    return `mysql://${encodeURIComponent(DB_USER)}:${encodeURIComponent(DB_PASSWORD)}@${DB_HOST}:${DB_PORT}/${dbName}${ssl}`;
+}
+
+/**
+ * Crea la estructura de la base nueva con las migraciones de Prisma (mismo comando que npm run db:deploy).
+ * El esquema depende solo de prisma/schema/migrations: ya no se crean tablas al vuelo.
+ */
+function migrarEmpresa(dbName) {
+    const raiz = path.join(__dirname, '..');
+    const r = spawnSync('npx', ['prisma', 'migrate', 'deploy'], {
+        cwd: raiz,
+        env: { ...process.env, DATABASE_URL: urlDeBase(dbName) },
+        encoding: 'utf8',
+        shell: true,
+    });
+    if (r.status !== 0) {
+        const lineas = `${r.stdout || ''}${r.stderr || ''}`.split(/\r?\n/);
+        const detalle = lineas.filter(l => l.trim() && !/mysql:\/\//.test(l)).slice(-4).join(' | ');
+        throw new Error(`Migraciones de Prisma fallidas en ${dbName}: ${detalle}`);
+    }
+}
 
 /**
  * Autoprovisiona una nueva empresa cliente (Tenant) en el SaaS.
@@ -46,9 +73,10 @@ async function provisionNewTenant({ slug, nombre_empresa, ruc, admin_email, admi
 
     console.log(`✨ [Multi-Tenant] Base de datos creada: ${dbName}`);
 
-    // 2. Obtener pool de la nueva base de datos e inicializar todas las tablas del ERP
+    // 2. Estructura desde las migraciones de Prisma; datos iniciales con semillas idempotentes
+    migrarEmpresa(dbName);
     const tenantPool = getTenantPool(dbName);
-    await initDB(tenantPool, dbName);
+    await sembrarEmpresa(tenantPool);
     try {
         await tenantPool.promise().query(`USE \`${dbName}\``);
         await tenantPool.promise().query("INSERT INTO configuracion_erp (clave, valor) VALUES ('empresa_nombre', ?) ON DUPLICATE KEY UPDATE valor = ?", [nombre_empresa.trim(), nombre_empresa.trim()]);
@@ -99,5 +127,6 @@ async function provisionNewTenant({ slug, nombre_empresa, ruc, admin_email, admi
 }
 
 module.exports = {
+    migrarEmpresa,
     provisionNewTenant
 };

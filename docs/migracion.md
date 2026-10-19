@@ -100,6 +100,12 @@ En paralelo, un punto de seguridad que no depende del código: **crear un usuari
 
   - [x] Conciliación aditiva aplicada el 2026-10-19: migración `1_conciliacion_aditiva` (3 tablas `flota_*` y las columnas `auditoria.ip` y `cat_rampas.en_reporte`) en la maestra y en las 4 empresas activas. Respaldo previo en `C:Users	effaRespaldos_Azkell6-10-19_0824_antes_conciliacion` (5 archivos, completos). `fallas_conductor` y `flota_devoluciones` quedan fuera a propósito: ningún código las usa.
 
+  - [x] Paso 3 (2026-10-19): auto-sync retirado de `services/tenant_master.js`. Ya no copia tablas ni columnas entre bases.
+  - [x] Paso 5 (2026-10-19): `services/tenant_provisioner.js` crea empresas nuevas con `prisma migrate deploy` y carga las semillas con `services/tenant_seeds.js` (solo datos, `INSERT IGNORE`). `init_db.js` eliminado. `prisma` pasa a dependencias de producción (6.19.3 exacto), porque la imagen se construye con `npm ci --omit=dev`.
+  - [x] Arranque (2026-10-19): `server.js` ya no llama a `initDB()` al iniciar.
+  - [x] Migración `2_tablas_de_servidor` (desplegada el 2026-10-19; respaldo en `C:Users	effaRespaldos_Azkell6-10-19_0901_antes_migracion_2`; las cuatro empresas quedan iguales a Marsisa) (2026-10-19): `log_auditoria`, `usuarios_2fa`, `webauthn_credentials` y cuatro columnas que una empresa nueva no tenía. Probada en base vacía (queda idéntica a Marsisa, 1720 columnas) y sobre una copia de empresa existente.
+  - [ ] Paso 4: DDL dentro de las rutas Express. Quedan unas 250 sentencias en 14 archivos (`operaciones`, `rrhh`, `tesoreria`, `neumaticos`, `taller`, `combustible`, `checklist`, etc.). `guias_remision`, `guia_transportista` y `guia_remitente` quedan fuera (SUNAT).
+
 ### Cómo se cambia el esquema desde ahora
 
 1. Editar el módulo en `prisma/schema/<modulo>.prisma`.

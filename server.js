@@ -4,7 +4,6 @@ if (!process.env.JWT_SECRET) {
     console.error('[Arranque] Falta la variable de entorno JWT_SECRET. Configúrala en .env o en Coolify.');
     process.exit(1);
 }
-const { initDB } = require('./init_db');
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -1276,9 +1275,6 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
         return res.status(500).json({ ok: false, error: e.message });
     }
 });
-
-// ── Crear tablas faltantes al arrancar ───────────────────────────
-initDB(defaultDbPool);
 
 db.getConnection((err, connection) => {
     if (err) {
