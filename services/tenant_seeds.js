@@ -51,7 +51,10 @@ async function sembrarEmpresa(pool) {
         await promisePool.query("INSERT IGNORE INTO cat_situaciones (id, codigo, descripcion) VALUES (1, 'S01', 'En Espera'), (2, 'S02', 'En Diagnóstico'), (3, 'S03', 'En Reparación'), (4, 'S04', 'Finalizada')");
         await promisePool.query("INSERT IGNORE INTO tipos_mantenimiento (id, tipo_mp, marca, descripcion) VALUES (1, 'MP1', 'TODOS', 'Mantenimiento Preventivo 1'), (2, 'MP2', 'TODOS', 'Mantenimiento Preventivo 2'), (3, 'MP3', 'TODOS', 'Mantenimiento Preventivo 3')");
 
-        // Catálogos Neumáticos - Semillas
+        // Almacén principal del sistema (antes lo creaba routes/almacen.js en cada petición)
+    await promisePool.query("INSERT IGNORE INTO almacen_almacenes (nombre, descripcion, es_sistema, activo, orden) VALUES ('Principal', 'Almacén Principal Central del ERP', 1, 1, 1)");
+
+    // Catálogos Neumáticos - Semillas
         for (const m of marcasNeu) {
             await promisePool.query("INSERT IGNORE INTO cat_neumaticos_marcas (nombre) VALUES (?)", [m]);
         }
