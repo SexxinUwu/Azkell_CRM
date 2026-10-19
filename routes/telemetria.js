@@ -10,38 +10,9 @@ module.exports = function(db) {
 
     function getDb(req) { return req.db || db; }
 
-    // Crea la tabla si no existe
-    async function ensureTable(req) {
-        const tdb = getDb(req);
-        await tdb.promise().query(`
-            CREATE TABLE IF NOT EXISTS telemetria_can (
-                id              INT AUTO_INCREMENT PRIMARY KEY,
-                placa           VARCHAR(20) NOT NULL,
-                fecha           DATE NOT NULL,
-                recorrido_km    DECIMAL(10,1) DEFAULT 0,
-                horas_motor     DECIMAL(8,1)  DEFAULT 0,
-                velocidad_max   DECIMAL(5,1)  DEFAULT 0,
-                consumo_ralenti DECIMAL(8,2)  DEFAULT NULL COMMENT 'litros en ralentí',
-                combustible_con DECIMAL(8,2)  DEFAULT NULL COMMENT 'litros totales consumidos',
-                rendimiento     DECIMAL(8,3)  DEFAULT NULL COMMENT 'km/litro',
-                lat_ultimo      DECIMAL(10,7) DEFAULT NULL,
-                lng_ultimo      DECIMAL(10,7) DEFAULT NULL,
-                estado_motor    VARCHAR(30)   DEFAULT NULL,
-                raw_json        JSON          DEFAULT NULL COMMENT 'snapshot completo del objeto Wialon',
-                synced_at       DATETIME      DEFAULT NULL,
-                created_at      DATETIME      DEFAULT CURRENT_TIMESTAMP,
-                updated_at      DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                UNIQUE KEY uq_placa_fecha (placa, fecha),
-                INDEX idx_placa (placa),
-                INDEX idx_fecha (fecha)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        `);
-    }
-
     // ── GET /api/telemetria — resumen de todas las placas (última entrada por placa) ─
     router.get('/', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             const { placa } = req.query;
             let sql = `
@@ -68,7 +39,6 @@ module.exports = function(db) {
     // ── GET /api/telemetria/:placa — historial de una placa ──────────────────────
     router.get('/:placa', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             const placa = String(req.params.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
             const limit = Math.min(parseInt(req.query.limit || '30', 10), 90);
@@ -87,7 +57,6 @@ module.exports = function(db) {
     //         combustible_con, rendimiento, lat_ultimo, lng_ultimo, estado_motor, raw_json }
     router.post('/guardar', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             const b = req.body || {};
             const placa = String(b.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -137,7 +106,6 @@ module.exports = function(db) {
     // Body: { items: [{ placa, recorrido_km, horas_motor, ... }] }
     router.post('/guardar-lote', async (req, res) => {
         try {
-            await ensureTable(req);
             const tdb = getDb(req);
             const items = Array.isArray(req.body?.items) ? req.body.items : [];
             if (!items.length) return res.json({ ok: true, guardados: 0 });
