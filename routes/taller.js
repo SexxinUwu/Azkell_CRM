@@ -1,10 +1,12 @@
 const express = require('express');
+const { envolverLogAudit } = require('../services/auditoria');
 const path = require('path');
 const { getPresignedUploadUrl, getPresignedUrl } = require('../utils/s3');
 const { calcularHorasTecnicos, horasDeTrabajo, fechaNaive } = require('../services/horas_tecnicos');
 const router = express.Router();
 
 module.exports = (db, logAudit, _generarCodigoAlmacen) => {
+    logAudit = envolverLogAudit(logAudit, db);
     function _calcularTotalPen(items, tc) {
         return items.reduce((sum, item) => {
             const cant = parseFloat(item.cantidad) || 0;
@@ -700,7 +702,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 [nuevoId, ticketEntrada || '', trabajo_realizado || '', personal, fecha_trabajo || null, fecha_salida || null, creado_por || '', detJson],
                 (err, result) => {
                     if (err) return res.status(500).json({ error: err.message });
-                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                    if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
                     res.json({ ok: true, id: result.insertId, id_ot: nuevoId, ticket_visita: ticketEntrada });
                 }
             );
@@ -765,7 +767,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         if (accion === 'aprobar') {
             (req.db || db).query("UPDATE trabajos_ot SET estado = 'Aprobado' WHERE id_ot = ?", [idTrabajo], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
             return;
         }
@@ -779,7 +781,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 [trabajo_realizado || '', personal || '', fecha_trabajo || null, fecha_salida || null, detJson, estado || 'Pendiente', idTrabajo, idTrabajo],
                 (err) => {
                     if (err) return res.status(500).json({ error: err.message });
-                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                    if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 }
             );
             return;
@@ -805,7 +807,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             [id, id],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             }
         );
     });
@@ -873,7 +875,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                     (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });
                         const registrar = () => {
-                            if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                            if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
                             res.json({ ok: true, id });
                         };
                         if (!items || !items.length) return registrar();
@@ -993,7 +995,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                      WHERE d.salida_id = ? AND (d.inventario_id IS NULL OR d.inventario_id = '')`,
                         [id], () => { }
                     );
-                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                    if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 });
             });
         } else if (accion === 'editar') {
@@ -1040,7 +1042,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 ['Anulado', String(motivo).trim(), id], (err, result) => {
                     if (err) return res.status(500).json({ error: err.message });
                     if (!result.affectedRows) return res.status(404).json({ error: 'No encontrado' });
-                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                    if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 });
         } else {
             res.status(400).json({ error: 'Acción desconocida: ' + (accion || 'no especificada') });
@@ -1053,7 +1055,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         targetDb.query('DELETE FROM detalle_salidas_inv WHERE salida_id = ?', [id], () => {
             targetDb.query('DELETE FROM salidas_inv WHERE id = ?', [id], (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
-                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
         });
     });
@@ -1084,7 +1086,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 [nuevoId, placa.toUpperCase(), km || 0, tema || '', tarea, reportado_por || '', fecha_reporte || null, estado || 'Pendiente', creado_por || '', ticket_ot || null],
                 (err, result) => {
                     if (err) return res.status(500).json({ error: err.message });
-                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId, backlog_id: nuevoId });
+                    if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId, backlog_id: nuevoId });
                 }
             );
         });
@@ -1107,14 +1109,14 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             vals.push(req.params.id);
             (req.db || db).query('UPDATE ot_backlog SET ' + fields.join(', ') + ' WHERE id = ?', vals, (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
         } else {
             // Modo cambio de estado simple
             if (!estado) return res.status(400).json({ error: 'estado requerido' });
             (req.db || db).query('UPDATE ot_backlog SET estado = ? WHERE id = ?', [estado, req.params.id], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
         }
     });
@@ -1122,7 +1124,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.delete('/ot-backlog/:id', (req, res) => {
         (req.db || db).query('DELETE FROM ot_backlog WHERE id = ?', [req.params.id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+            if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
     });
 
@@ -1215,7 +1217,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                     );
                     return;
                 }
-                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId });
+                if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId });
             }
         );
     });
@@ -1235,7 +1237,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 situacion || null, req.params.id],
                 (err) => {
                     if (err) return res.status(500).json({ error: err.message });
-                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                    if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 }
             );
             return;
@@ -1246,7 +1248,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 [req.params.id],
                 (err) => {
                     if (err) return res.status(500).json({ error: err.message });
-                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                    if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 }
             );
             return;
@@ -1280,7 +1282,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                         }
                     });
                 }
-                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             }
         );
     });
@@ -1293,7 +1295,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             const finishDelete = () => {
                 (req.db || db).query('DELETE FROM taller_rampas WHERE id = ?', [idRampa], (errDel) => {
                     if (errDel) return res.status(500).json({ error: errDel.message });
-                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                    if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
                     res.json({ ok: true });
                 });
             };

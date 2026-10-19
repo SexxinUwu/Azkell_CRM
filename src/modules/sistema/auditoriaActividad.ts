@@ -41,6 +41,13 @@ export const ENTIDAD_LABELS: Record<string, string> = {
   'stock-movement': 'Movimiento de stock',
   'tank-measurement': 'Medición de cisterna',
   supplier: 'Proveedor',
+  'work-order': 'Orden de trabajo',
+  'work-job': 'Trabajo de OT',
+  ramp: 'Rampa de taller',
+  'petty-cash': 'Caja chica',
+  bank: 'Banco',
+  'payment-request': 'Requerimiento de pago',
+  receivable: 'Cuenta por cobrar/pagar',
   general: 'General',
 };
 
@@ -59,6 +66,8 @@ export const ACCION_LABELS: Record<string, string> = {
   VALIDATE: 'Validación',
   REOPEN: 'Reapertura',
   ANNUL: 'Anulación',
+  APPROVE: 'Aprobación',
+  PAYMENT: 'Pago',
 };
 
 /** Nombres de campo en español para la tabla de cambios */

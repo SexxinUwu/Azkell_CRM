@@ -31,7 +31,8 @@ function iconoDe(e: EventoAudit): { Icono: LucideIcon; tono: string } {
   if (a.startsWith('PASSWORD')) return { Icono: KeyRound, tono: 'ambar' };
   if (a === 'CREATE' || a === 'IMPORT') return { Icono: Plus, tono: 'azul' };
   if (a === 'UPDATE' || a === 'CORRECT' || a === 'REOPEN' || a === 'QR_REGENERATE') return { Icono: Pencil, tono: 'ambar' };
-  if (a === 'VALIDATE') return { Icono: ShieldCheck, tono: 'verde' };
+  if (a === 'VALIDATE' || a === 'APPROVE') return { Icono: ShieldCheck, tono: 'verde' };
+  if (a === 'PAYMENT') return { Icono: Plus, tono: 'azul' };
   return { Icono: Eye, tono: 'gris' };
 }
 
