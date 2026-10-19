@@ -632,18 +632,51 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     });
 
     // Registra técnicos en trabajos que no los tienen. No cambia ningún otro dato del trabajo.
+    // Personal disponible para elegir: catálogo taller_personal + nombres ya registrados en trabajos
+    router.get('/ot-tecnicos-disponibles', (req, res) => {
+        const tdb = req.db || db;
+        tdb.query("SELECT nombre FROM taller_personal WHERE nombre IS NOT NULL AND TRIM(nombre) <> ''", (err, catalogo) => {
+            if (err) return res.status(500).json({ error: err.message });
+            tdb.query("SELECT DISTINCT tecnico FROM trabajos_ot WHERE tecnico IS NOT NULL AND TRIM(tecnico) <> ''", (err2, usados) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                const nombres = new Set();
+                const agregar = v => String(v || '').split(',').map(x => x.trim().replace(/\s+/g, ' ')).filter(Boolean).forEach(n => nombres.add(n));
+                (catalogo || []).forEach(r => agregar(r.nombre));
+                (usados || []).forEach(r => agregar(r.tecnico));
+                res.json([...nombres].sort((a, b) => a.localeCompare(b, 'es')));
+            });
+        });
+    });
+
+    // Último día con trabajos registrados (para no mostrar una lista vacía cuando hoy no hay nada)
+    router.get('/ot-ultimo-dia', (req, res) => {
+        (req.db || db).query("SELECT DATE_FORMAT(MAX(COALESCE(fecha_trabajo, fecha_creacion)), '%Y-%m-%d') AS fecha FROM trabajos_ot", (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ fecha: rows[0]?.fecha ?? null });
+        });
+    });
+
+    // Registra técnicos por trabajo: items = [{ id, tecnicos: [...] }]. Solo llena trabajos sin técnico.
     router.post('/ot-trabajos/regularizar-tecnicos', (req, res) => {
         const tdb = req.db || db;
-        const ids = Array.isArray(req.body?.ids) ? [...new Set(req.body.ids.map(x => String(x).trim()).filter(Boolean))] : [];
-        const tecnicos = Array.isArray(req.body?.tecnicos)
-            ? [...new Set(req.body.tecnicos.map(x => String(x).trim().replace(/\s+/g, ' ')).filter(Boolean))] : [];
-        if (!ids.length) return res.status(400).json({ error: 'Selecciona al menos un trabajo.' });
-        if (ids.length > 500) return res.status(400).json({ error: 'Máximo 500 trabajos por vez.' });
-        if (!tecnicos.length) return res.status(400).json({ error: 'Elige al menos un técnico.' });
-        const texto = tecnicos.join(', ');
-        tdb.query("UPDATE trabajos_ot SET tecnico = ? WHERE id_ot IN (?) AND (tecnico IS NULL OR TRIM(tecnico) = '')", [texto, ids], (err, r) => {
+        const items = Array.isArray(req.body?.items) ? req.body.items : [];
+        const limpios = [];
+        const vistos = new Set();
+        for (const it of items) {
+            const id = String(it?.id ?? '').trim();
+            const tecnicos = [...new Set((Array.isArray(it?.tecnicos) ? it.tecnicos : [])
+                .map(x => String(x).trim().replace(/\s+/g, ' ')).filter(Boolean))];
+            if (!id || !tecnicos.length || vistos.has(id)) continue;
+            vistos.add(id);
+            limpios.push({ id, texto: tecnicos.join(', ') });
+        }
+        if (!limpios.length) return res.status(400).json({ error: 'Elige al menos un técnico en algún trabajo.' });
+        if (limpios.length > 500) return res.status(400).json({ error: 'Máximo 500 trabajos por vez.' });
+        const casos = limpios.map(() => 'WHEN ? THEN ?').join(' ');
+        const params = [...limpios.flatMap(i => [i.id, i.texto]), limpios.map(i => i.id)];
+        tdb.query(`UPDATE trabajos_ot SET tecnico = CASE id_ot ${casos} END WHERE id_ot IN (?) AND (tecnico IS NULL OR TRIM(tecnico) = '')`, params, (err, r) => {
             if (err) return res.status(500).json({ error: err.message });
-            logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'MODIFICÓ', `Registró técnicos (${texto}) en ${r.affectedRows} trabajo(s) sin técnico`);
+            logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'MODIFICÓ', `Registró técnicos en ${r.affectedRows} trabajo(s) sin técnico`);
             res.json({ ok: true, actualizados: r.affectedRows });
         });
     });

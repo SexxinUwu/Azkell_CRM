@@ -363,22 +363,21 @@
 
 </div>
 
-<!-- ═══ PANEL: Regularizar técnicos (solo registra el técnico en trabajos sin técnico) ═══ -->
+<!-- ═══ PANEL: Regularizar técnicos, fila por fila (solo registra el técnico en trabajos sin técnico) ═══ -->
 <div id="tot-reg-overlay" onclick="window.totRegCerrar()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:1100;"></div>
-<div id="tot-reg-panel" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(640px,94vw); max-height:86vh; flex-direction:column; background:var(--surface); border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,0.25); z-index:1101;">
+<div id="tot-reg-panel" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(680px,94vw); max-height:88vh; flex-direction:column; background:var(--surface); border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,0.25); z-index:1101;">
     <div style="padding:14px 18px; border-bottom:1px solid var(--border); font-weight:800; color:var(--text);">Regularizar técnicos</div>
-    <div style="padding:14px 18px; overflow-y:auto; flex:1 1 auto;">
-        <p id="tot-reg-resumen" class="small text-secondary mb-3"></p>
-        <div class="mb-3">
-            <div class="fw-bold small mb-1">Técnicos que hicieron el trabajo</div>
-            <div id="tot-reg-personal" style="display:flex; flex-wrap:wrap; gap:6px 16px;"></div>
-        </div>
-        <label class="small fw-bold d-block mb-2"><input type="checkbox" onchange="window.totRegTodos(this.checked)"> Seleccionar todos los trabajos</label>
-        <div id="tot-reg-lista" style="display:flex; flex-direction:column; gap:6px;"></div>
+    <div style="padding:12px 18px 0 18px;">
+        <p id="tot-reg-resumen" class="small text-secondary mb-2"></p>
+        <input type="text" id="tot-reg-buscar" class="form-control form-control-sm mb-2" placeholder="Buscar por placa, trabajo u OT…" oninput="window.totRegPintar()">
     </div>
-    <div style="padding:12px 18px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px;">
-        <button class="btn btn-sm btn-outline-secondary" onclick="window.totRegCerrar()">Cancelar</button>
-        <button class="btn btn-sm btn-dark fw-bold" id="tot-reg-guardar" onclick="window.totRegGuardar()">Registrar técnicos</button>
+    <div id="tot-reg-lista" style="padding:0 18px; overflow-y:auto; flex:1 1 auto;"></div>
+    <div style="padding:12px 18px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <span id="tot-reg-contador" class="small text-secondary"></span>
+        <div style="display:flex; gap:8px;">
+            <button class="btn btn-sm btn-outline-secondary" onclick="window.totRegCerrar()">Cancelar</button>
+            <button class="btn btn-sm btn-dark fw-bold" id="tot-reg-guardar" onclick="window.totRegGuardar()">Guardar técnicos</button>
+        </div>
     </div>
 </div>
 

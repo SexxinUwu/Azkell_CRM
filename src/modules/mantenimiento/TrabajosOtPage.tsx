@@ -19,7 +19,7 @@ import { haptic } from '../../core/lib/haptics';
 import { ImportarTrabajosSheet } from './ImportarTrabajosSheet';
 import {
   aprobarTrabajo, editarTrabajo, eliminarTrabajo, ESTADOS_TRABAJO, estadoTrabajo, regularizarTecnicos, trabajoCosto, trabajoId, trabajoKmHoras,
-  useHorasTecnicos, useTrabajosOT, type HorasTecnicosRespuesta, type TrabajoOT,
+  useHorasTecnicos, useTecnicosDisponibles, useTrabajosOT, useUltimoDiaTrabajos, type HorasTecnicosRespuesta, type TrabajoOT,
 } from './api';
 
 const dia = (s: string | null | undefined) => (s ? String(s).split('T')[0] : '—');
@@ -84,6 +84,7 @@ export function TrabajosOtPage() {
   const horas = useHorasTecnicos(rango.desde, rango.hasta, vista === 'horas');
 
   const trabajos = data ?? [];
+  const ultimoDia = useUltimoDiaTrabajos(trabajos.length === 0).data?.fecha ?? null;
   const seleccionado = trabajos.find(t => trabajoId(t) === seleccionadoId) ?? null;
 
   const visibles = useMemo(() => {
@@ -181,6 +182,11 @@ export function TrabajosOtPage() {
 
           {visibles.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title={trabajos.length === 0 ? 'Sin trabajos en este rango' : 'Sin coincidencias'}>
+              {trabajos.length === 0 && ultimoDia && (
+                <Button variant="secondary" onClick={() => setRangoLista({ desde: ultimoDia, hasta: ultimoDia })}>
+                  Ver el último día con trabajos ({formatFechaPe(ultimoDia)})
+                </Button>
+              )}
               <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setEstado(''); }}>Quitar filtros</button>
             </EmptyState>
           ) : (
@@ -227,33 +233,35 @@ export function TrabajosOtPage() {
   );
 }
 
-/** Registra técnicos en trabajos del rango que no los tienen. Solo guarda el técnico; el trabajo no cambia. */
+/** Registra técnicos fila por fila: cada trabajo sin técnico con su propio selector de personal. */
 function RegularizarTecnicosSheet({ open, onClose, trabajos, desde, hasta }: {
   open: boolean; onClose: () => void; trabajos: TrabajoOT[]; desde: string; hasta: string;
 }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const personalQ = usePersonalTaller();
-  const [marcados, setMarcados] = useState<string[]>([]);
-  const [tecnicos, setTecnicos] = useState<string[]>([]);
+  const personalQ = useTecnicosDisponibles();
+  const [asignados, setAsignados] = useState<Record<string, string[]>>({});
+  const [busqueda, setBusqueda] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    setMarcados([]); setTecnicos([]); setError(null);
+    setAsignados({}); setBusqueda(''); setError(null);
   }, [open]);
 
-  const ids = trabajos.map(trabajoId);
-  const todos = ids.length > 0 && marcados.length === ids.length;
-  const opciones = useMemo(() => [...new Set(personalQ.data ?? [])].sort((a, b) => a.localeCompare(b, 'es')), [personalQ.data]);
+  const opciones = personalQ.data ?? [];
+  const q = busqueda.trim().toUpperCase();
+  const visibles = trabajos.filter(t => !q || trabajoId(t).toUpperCase().includes(q) ||
+    (t.placa ?? '').toUpperCase().includes(q) || (t.trabajo_realizado ?? '').toUpperCase().includes(q));
+  const listos = trabajos.filter(t => (asignados[trabajoId(t)] ?? []).length > 0);
 
   async function guardar() {
-    if (!marcados.length) { setError('Marca al menos un trabajo.'); return; }
-    if (!tecnicos.length) { setError('Elige al menos un técnico.'); return; }
+    const items = listos.map(t => ({ id: trabajoId(t), tecnicos: asignados[trabajoId(t)] }));
+    if (!items.length) { setError('Elige al menos un técnico en algún trabajo.'); return; }
     setEnviando(true); setError(null);
     try {
-      const r = await regularizarTecnicos(marcados, tecnicos);
+      const r = await regularizarTecnicos(items);
       haptic('success'); toast(`Técnicos registrados en ${r.actualizados} trabajo(s)`);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['mant', 'horas-tecnicos'] }),
@@ -267,33 +275,42 @@ function RegularizarTecnicosSheet({ open, onClose, trabajos, desde, hasta }: {
   return (
     <Sheet open={open} onClose={() => !enviando && onClose()} title="Regularizar técnicos"
       footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
-        <Button variant="primary" onClick={guardar} loading={enviando} disabled={!marcados.length || !tecnicos.length}>
-          Registrar en {marcados.length} trabajo(s)
+        <Button variant="primary" onClick={guardar} loading={enviando} disabled={!listos.length}>
+          Guardar técnicos ({listos.length})
         </Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
         <p className="field field--wide" style={{ margin: 0, color: 'var(--label-2)', fontSize: '0.8125rem' }}>
-          Trabajos sin técnico del {formatFechaPe(desde)} al {formatFechaPe(hasta)}. Solo se registra el técnico; el resto del trabajo no cambia.
+          Trabajos sin técnico del {formatFechaPe(desde)} al {formatFechaPe(hasta)}. Elige quién hizo cada uno; los que dejes vacíos no cambian. Solo se registra el técnico.
         </p>
-        <div className="field field--wide">
-          <MultiSelect label="Técnicos que hicieron el trabajo" options={opciones} value={tecnicos} onChange={setTecnicos} placeholder="Elige técnicos" />
-        </div>
-        <div className="field field--wide" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-          <label style={{ display: 'flex', gap: 'var(--s-2)', fontWeight: 700 }}>
-            <input type="checkbox" checked={todos} onChange={() => setMarcados(todos ? [] : ids)} /> Seleccionar todos ({ids.length})
-          </label>
-          {trabajos.map(t => {
+        {trabajos.length > 6 && (
+          <div className="field field--wide">
+            <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por placa, trabajo u OT…" />
+          </div>
+        )}
+        <div className="field field--wide" style={{ display: 'flex', flexDirection: 'column' }}>
+          {visibles.map(t => {
             const id = trabajoId(t);
             return (
-              <label key={id} style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'baseline', fontSize: '0.8125rem' }}>
-                <input type="checkbox" checked={marcados.includes(id)}
-                  onChange={() => setMarcados(m => m.includes(id) ? m.filter(x => x !== id) : [...m, id])} />
-                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{id}</span>
-                <span>{t.placa || '—'} · {t.trabajo_realizado || '—'} · {formatFechaHoraPe(aLocal(t.fecha_trabajo))}</span>
-              </label>
+              <div key={id} style={{ padding: 'var(--s-3) 0', borderBottom: '1px solid var(--separator)', display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)', alignItems: 'baseline', fontSize: '0.8125rem' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{id}</span>
+                  <span style={{ fontWeight: 700 }}>{t.placa || '—'}</span>
+                  <span style={{ color: 'var(--label-2)' }}>{formatFechaHoraPe(aLocal(t.fecha_trabajo))}</span>
+                  <span style={{ flexBasis: '100%', color: 'var(--label-1)' }}>{t.trabajo_realizado || '—'}</span>
+                </div>
+                <MultiSelect label={`Técnicos · ${id}`} options={opciones} value={asignados[id] ?? []}
+                  onChange={v => setAsignados(a => ({ ...a, [id]: v }))} placeholder="Sin asignar" />
+              </div>
             );
           })}
+          {visibles.length === 0 && <span style={{ color: 'var(--label-2)', fontSize: '0.8125rem' }}>Ningún trabajo coincide con la búsqueda.</span>}
         </div>
+        {!opciones.length && personalQ.isSuccess && (
+          <p className="field field--wide" style={{ margin: 0, color: 'var(--label-2)', fontSize: '0.8125rem' }}>
+            Todavía no hay personal registrado en el taller.
+          </p>
+        )}
       </div>
     </Sheet>
   );

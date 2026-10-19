@@ -380,9 +380,28 @@ export function useTrabajosOT(desde = '', hasta = '') {
   });
 }
 
-/** Registra técnicos en trabajos sin técnico (no cambia otros datos del trabajo) */
-export const regularizarTecnicos = (ids: string[], tecnicos: string[]) =>
-  api<{ ok: boolean; actualizados: number }>('/ot-trabajos/regularizar-tecnicos', { method: 'POST', body: { ids, tecnicos } });
+/** Registra técnicos por trabajo (solo donde no hay técnico; no cambia otros datos del trabajo) */
+export const regularizarTecnicos = (items: Array<{ id: string; tecnicos: string[] }>) =>
+  api<{ ok: boolean; actualizados: number }>('/ot-trabajos/regularizar-tecnicos', { method: 'POST', body: { items } });
+
+/** Personal para elegir: catálogo + nombres ya registrados en trabajos */
+export function useTecnicosDisponibles() {
+  return useQuery<string[]>({
+    queryKey: ['mant', 'tecnicos-disponibles'],
+    queryFn: () => api('/ot-tecnicos-disponibles'),
+    staleTime: 60_000,
+  });
+}
+
+/** Último día con trabajos registrados (AAAA-MM-DD o null) */
+export function useUltimoDiaTrabajos(activo = true) {
+  return useQuery<{ fecha: string | null }>({
+    queryKey: ['mant', 'ultimo-dia-trabajos'],
+    queryFn: () => api('/ot-ultimo-dia'),
+    enabled: activo,
+    staleTime: 60_000,
+  });
+}
 
 /** Horas por técnico y día, calculadas en el servidor (services/horas_tecnicos.js) */
 export interface HorasTecnico {
