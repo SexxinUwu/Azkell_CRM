@@ -1,13 +1,14 @@
 import '../mantenimiento/mant.css';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowUpRight, Droplets, FileSpreadsheet, Fuel, RefreshCw, SearchX } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, ChevronDown, ChevronRight, Droplets, FileSpreadsheet, Fuel, RefreshCw, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Sheet } from '../../core/ui/Sheet';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -19,7 +20,8 @@ import { MatrizRendimientoSheet } from './MatrizRendimientoSheet';
 interface Stats { kmInicio: number; kmFin: number; recorridoKm: number; totalGalones: number; totalGasto: number; rendimiento: number }
 interface Voucher { id: number | string; fecha?: string; producto?: string; galones?: number; importe?: number; odometro?: number; estacion?: string; esPuntoPartida?: boolean }
 interface Trip {
-  viaje: string; placa: string; conductor: string; motor: string; marca: string; configuracion: string; ruta: string; rutaIda: string; rutaRetorno: string;
+  viaje: string; placa: string; carreta: string; conductor: string; motor: string; marca: string; configuracion: string; ruta: string; rutaIda: string; rutaRetorno: string;
+  ordenIda: string; ordenRetorno: string;
   estado: string; fechaInicio: string; fechaFin: string; kmInicio: number; kmFin: number; recorridoKm: number; odometroInconsistente: boolean;
   galonesIda: number; galonesRetorno: number; pesoIda: number; pesoRetorno: number; totalGalones: number; totalGasto: number; rendimiento: number;
   estadoAuditoria: string; observacionAuditoria: string; usuarioAuditoria?: string; vouchers: Voucher[]; fuelStats: Record<string, Stats>;
@@ -32,25 +34,35 @@ interface TelemetriaWialon {
   velocidadMaxGps: number | null; rpmMediaGps: number | null; rpmMaxGps: number | null; horasMotorGps: number | null; consumoRalentiGps: number | null;
 }
 
-// Telemetría CAN Bus de Wialon para el periodo del viaje (de la primera a la última carga). Solo se consulta al pedirla.
-function TelemetriaViaje({ trip }: { trip: Trip }) {
-  const [pedida, setPedida] = useState(false);
-  const rango = useMemo(() => {
+// Telemetría CAN Bus de Wialon para el periodo del viaje (de la primera a la última carga). Solo se consulta cuando se pide.
+function useTelemetriaViaje(trip: Trip | null, habilitada: boolean) {
+  const ini = useMemo(() => {
+    if (!trip) return '';
     const fechas = (trip.vouchers ?? []).map(v => String(v.fecha ?? '')).filter(Boolean).sort();
-    return { ini: fechas[0] || trip.fechaInicio, fin: fechas[fechas.length - 1] || trip.fechaFin };
+    return fechas[0] || trip.fechaInicio;
   }, [trip]);
-  const q = useQuery({
-    queryKey: ['operaciones', 'wialon', trip.viaje, trip.placa, rango.ini, rango.fin],
-    enabled: pedida && !!trip.placa,
+  const fin = useMemo(() => {
+    if (!trip) return '';
+    const fechas = (trip.vouchers ?? []).map(v => String(v.fecha ?? '')).filter(Boolean).sort();
+    return fechas[fechas.length - 1] || trip.fechaFin;
+  }, [trip]);
+  return useQuery({
+    queryKey: ['operaciones', 'wialon', trip?.viaje, trip?.placa, ini, fin],
+    enabled: habilitada && !!trip?.placa,
     retry: false,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const p = new URLSearchParams({ placa: trip.placa, fechaInicio: rango.ini, fechaFin: rango.fin });
+      const p = new URLSearchParams({ placa: trip!.placa, fechaInicio: ini, fechaFin: fin });
       const r = await api<{ ok?: boolean; data?: TelemetriaWialon; error?: string }>(`/combustible/wialon-telemetria?${p.toString()}`);
       if (!r.ok || !r.data) throw new Error(r.error || 'Sin telemetría para este viaje');
       return r.data;
     },
   });
+}
+
+function TelemetriaViaje({ trip }: { trip: Trip }) {
+  const [pedida, setPedida] = useState(false);
+  const q = useTelemetriaViaje(trip, pedida);
   const t = q.data;
   const dato = (label: string, valor: number | null | undefined, unidad: string) => (
     <div className="dato"><span className="dato__label">{label}</span><span className="dato__valor dato__valor--mono">{valor == null ? '—' : `${fmt(valor, 1)} ${unidad}`}</span></div>
@@ -76,12 +88,36 @@ function TelemetriaViaje({ trip }: { trip: Trip }) {
   );
 }
 
+// Dos celdas de telemetría GPS en la tabla. Solo consultan Wialon cuando el botón CAN está activo.
+function CeldasCan({ trip, activo }: { trip: Trip; activo: boolean }) {
+  const q = useTelemetriaViaje(trip, activo);
+  const cargando = activo && q.isFetching;
+  const valor = (x: number | null | undefined) => (cargando ? '…' : x == null ? '—' : fmt(x, 2));
+  if (!activo) return <><Celda alinear="right" mono>—</Celda><Celda alinear="right" mono>—</Celda></>;
+  return (
+    <>
+      <Celda alinear="right" mono>{valor(q.data?.recorridoKmGps)}</Celda>
+      <Celda alinear="right" mono>{valor(q.data?.rendimientoGps)}</Celda>
+    </>
+  );
+}
+
 const fmt = (v: unknown, d = 1) => n(v).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d });
 // Soles con S/ y espacio no divisible, dos decimales
-const soles = (v: unknown) => 'S/\u00a0' + n(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const soles = (v: unknown) => 'S/ ' + n(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const AUDIT = ['PENDIENTE', 'CONFORME', 'OBSERVADO'];
 const colorAudit = (e: string) => ({ CONFORME: 'green', OBSERVADO: 'amber', PENDIENTE: 'gray' }[e] ?? 'gray');
 const esUrea = (k: string) => /UREA|ADBLUE|DEF/.test(k.toUpperCase());
+const TAMANOS = [25, 50, 100];
+
+// Pastilla de color del tema (mismos tonos que el resto de la app)
+function Pastilla({ color, children }: { color: string; children: string }) {
+  return (
+    <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, background: `var(--${color}-tint)`, color: `var(--${color}-ink)`, fontSize: '0.6875rem', fontWeight: 700 }}>
+      {children}
+    </span>
+  );
+}
 
 // Operaciones › Análisis de combustible y de urea: rendimiento por viaje y auditoría.
 export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' }) {
@@ -94,7 +130,13 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const [hasta, setHasta] = useState('');
   const [auditoria, setAuditoria] = useState('');
   const [abierto, setAbierto] = useState<string | null>(null);
+  const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+  const [canActivo, setCanActivo] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const [tamano, setTamano] = useState(50);
   const toast = useToast();
+
+  useEffect(() => { setPagina(1); }, [q, desde, hasta, auditoria, tamano]);
 
   const datos = useQuery<Resp>({
     queryKey: ['operaciones', 'analisis', modulo, q, desde, hasta],
@@ -125,6 +167,9 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   };
 
   const visibles = useMemo(() => trips.filter(t => !auditoria || t.estadoAuditoria === auditoria), [trips, auditoria]);
+  const paginas = Math.max(1, Math.ceil(visibles.length / tamano));
+  const pagActual = Math.min(pagina, paginas);
+  const pagina_ = useMemo(() => visibles.slice((pagActual - 1) * tamano, pagActual * tamano), [visibles, pagActual, tamano]);
   const resumen = useMemo(() => {
     const gal = visibles.reduce((s, t) => s + cifras(t).galones, 0);
     const gasto = visibles.reduce((s, t) => s + cifras(t).gasto, 0);
@@ -138,6 +183,32 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const [matriz, setMatriz] = useState(params.get('matriz') === '1');
   useEffect(() => { if (params.get('matriz')) setParams({}, { replace: true }); }, [params, setParams]);
   const puedeAuditar = can('combustible_analisis.editar', 'combustible.editar', 'urea_analisis.editar', 'combustible_analisis.crear');
+
+  const columnas: ColumnaTabla[] = [
+    { id: 'auditoria', titulo: 'Auditoría', ancho: 130, minimo: 110 },
+    { id: 'viaje', titulo: 'N° viaje', ancho: 165, minimo: 130 },
+    { id: 'placa', titulo: 'Placa', ancho: 100 },
+    { id: 'carreta', titulo: 'Carreta', ancho: 100 },
+    { id: 'estado', titulo: 'Estado', ancho: 120 },
+    { id: 'motor', titulo: 'Motor', ancho: 100 },
+    { id: 'ruta', titulo: 'Ruta / trayecto', ancho: 260, minimo: 140 },
+    { id: 'conductor', titulo: 'Conductor', ancho: 220 },
+    { id: 'peso', titulo: 'Peso (t)', ancho: 90, alinear: 'right' },
+    { id: 'finicio', titulo: 'Fecha inicio', ancho: 150 },
+    { id: 'ffin', titulo: 'Fecha fin', ancho: 150 },
+    { id: 'kmini', titulo: 'Km inicio (vales)', ancho: 130, alinear: 'right' },
+    { id: 'kmfin', titulo: 'Km fin (vales)', ancho: 130, alinear: 'right' },
+    { id: 'recorrido', titulo: 'Recorrido (km)', ancho: 130, alinear: 'right' },
+    { id: 'galones', titulo: urea ? 'Urea (gl)' : 'Galones', ancho: 105, alinear: 'right' },
+    { id: 'gasto', titulo: 'Gasto (S/)', ancho: 120, alinear: 'right' },
+    { id: 'rendimiento', titulo: 'Km/gl', ancho: 90, alinear: 'right' },
+    { id: 'gps-recorrido', titulo: 'Recorrido GPS (km)', ancho: 140, alinear: 'right' },
+    { id: 'gps-rendimiento', titulo: 'Rend. GPS (km/gl)', ancho: 140, alinear: 'right' },
+  ];
+
+  function onAlternarFila(viaje: string) {
+    setExpandidos(prev => { const nx = new Set(prev); nx.has(viaje) ? nx.delete(viaje) : nx.add(viaje); return nx; });
+  }
 
   async function exportar() {
     try {
@@ -172,12 +243,18 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
 
         <SearchField value={busqueda} placeholder="Viaje, placa, ruta o conductor…"
           onChange={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _anT?: number })._anT); (window as unknown as { _anT?: number })._anT = window.setTimeout(() => setQ(v.trim()), 350); }} />
-        <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
           <SelectInput value={auditoria} onChange={e => setAuditoria(e.target.value)} aria-label="Auditoría" style={{ width: 'auto' }}>
             <option value="">Toda auditoría</option>{AUDIT.map(a => <option key={a} value={a}>{a}</option>)}
           </SelectInput>
           <label className="aud-fecha"><span>Desde</span><input type="date" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} /></label>
           <label className="aud-fecha"><span>Hasta</span><input type="date" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} /></label>
+          {!urea && (
+            <Button variant={canActivo ? 'primary' : 'secondary'} icon={<RefreshCw size={15} />} onClick={() => { haptic('selection'); setCanActivo(a => !a); }}
+              title="Consulta el recorrido y rendimiento que reporta el GPS (Wialon) para las filas de esta página">
+              {canActivo ? 'CAN (GPS) activo' : 'Consultar CAN (GPS)'}
+            </Button>
+          )}
         </div>
 
         {datos.isLoading ? <PageLoader /> : datos.isError ? <Notice tone="error">{errorMessage(datos.error)}</Notice> : visibles.length === 0 ? (
@@ -185,34 +262,100 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
             {urea ? 'Aparecen los viajes con vales de urea.' : 'Aparecen los viajes con vales de combustible.'}
           </EmptyState>
         ) : (
-          <div className="tarjeta__lista">
-            {visibles.map(x => {
-              const c = cifras(x);
-              return (
-                <button key={x.viaje} type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setAbierto(x.viaje); }}>
-                  <div className="mov-fila__icon" style={{ background: `var(--${colorAudit(x.estadoAuditoria)}-tint)`, color: `var(--${colorAudit(x.estadoAuditoria)}-ink)` }}>
-                    {x.odometroInconsistente ? <AlertTriangle size={16} /> : <Icono size={16} />}
-                  </div>
-                  <div className="mov-fila__cuerpo">
-                    <span className="mov-fila__titulo">{x.viaje} · {x.placa || 'Sin placa'}</span>
-                    <span className="mov-fila__sub">{[x.conductor, x.ruta, `${fmt(x.recorridoKm, 0)} km`].filter(Boolean).join(' · ')}</span>
-                  </div>
-                  <div className="mov-fila__derecha">
-                    <span className="mov-fila__monto">{fmt(c.galones, 1)} gl</span>
-                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${colorAudit(x.estadoAuditoria)}-ink)` }}>
-                      {c.rendimiento > 0 ? `${fmt(c.rendimiento, 2)} km/gl · ` : ''}{x.estadoAuditoria}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          <>
+            <TablaRedimensionable id={urea ? 'analisis-urea' : 'analisis-combustible'} columnas={columnas} ariaLabel={urea ? 'Análisis de urea por viaje' : 'Análisis de combustible por viaje'}>
+              {pagina_.map(x => {
+                const c = cifras(x);
+                const abiertoFila = expandidos.has(x.viaje);
+                const color = colorAudit(x.estadoAuditoria);
+                return (
+                  <FilaViaje key={x.viaje} abierta={abiertoFila} onAbrir={() => { haptic('selection'); setAbierto(x.viaje); }}
+                    seleccionada={abierto === x.viaje} rutaIda={x.rutaIda} rutaRetorno={x.rutaRetorno} galonesIda={x.galonesIda} galonesRetorno={x.galonesRetorno}
+                    pesoIda={x.pesoIda} pesoRetorno={x.pesoRetorno} ordenIda={x.ordenIda} ordenRetorno={x.ordenRetorno} ancho={columnas.length}
+                    celdas={
+                      <>
+                        <Celda><Pastilla color={color}>{x.estadoAuditoria}</Pastilla>{x.odometroInconsistente && <AlertTriangle size={14} style={{ marginLeft: 6, color: 'var(--red-ink)', verticalAlign: 'middle' }} />}</Celda>
+                        <Celda mono>
+                          <button type="button" aria-expanded={abiertoFila} aria-label={`Ver ida y retorno del viaje ${x.viaje}`}
+                            onClick={e => { e.stopPropagation(); onAlternarFila(x.viaje); }}
+                            style={{ background: 'none', border: 0, padding: 0, marginRight: 4, cursor: 'pointer', color: 'var(--label-2)', verticalAlign: 'middle' }}>
+                            {abiertoFila ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                          </button>
+                          {x.viaje}
+                        </Celda>
+                        <Celda mono>{x.placa || '—'}</Celda>
+                        <Celda mono>{x.carreta || '—'}</Celda>
+                        <Celda><Pastilla color={x.estado === 'FINALIZADO' ? 'blue' : 'gray'}>{x.estado || '—'}</Pastilla></Celda>
+                        <Celda mono>{x.motor || '—'}</Celda>
+                        <Celda>{x.rutaIda || x.ruta || '—'}</Celda>
+                        <Celda>{x.conductor || '—'}</Celda>
+                        <Celda alinear="right" mono>{fmt(x.pesoIda, 2)}</Celda>
+                        <Celda mono>{x.fechaInicio || '—'}</Celda>
+                        <Celda mono>{x.fechaFin || '—'}</Celda>
+                        <Celda alinear="right" mono>{fmt(x.kmInicio, 1)}</Celda>
+                        <Celda alinear="right" mono>{fmt(x.kmFin, 1)}</Celda>
+                        <Celda alinear="right" mono>{fmt(x.recorridoKm, 1)}</Celda>
+                        <Celda alinear="right" mono>{fmt(c.galones, 2)}</Celda>
+                        <Celda alinear="right" mono>{soles(c.gasto)}</Celda>
+                        <Celda alinear="right" mono>{c.rendimiento > 0 ? fmt(c.rendimiento, 2) : '—'}</Celda>
+                        <CeldasCan trip={x} activo={canActivo} />
+                      </>
+                    } />
+                );
+              })}
+            </TablaRedimensionable>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--s-3)', flexWrap: 'wrap' }}>
+              <span className="t-footnote c-secondary">Mostrando {(pagActual - 1) * tamano + 1} a {Math.min(pagActual * tamano, visibles.length)} de {visibles.length} viajes</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
+                <SelectInput value={String(tamano)} onChange={e => setTamano(Number(e.target.value))} aria-label="Viajes por página" style={{ width: 'auto' }}>
+                  {TAMANOS.map(s => <option key={s} value={s}>{s} por página</option>)}
+                </SelectInput>
+                <Button variant="secondary" disabled={pagActual <= 1} onClick={() => setPagina(p => Math.max(1, p - 1))}>Anterior</Button>
+                <span className="t-footnote c-secondary">{pagActual} / {paginas}</span>
+                <Button variant="secondary" disabled={pagActual >= paginas} onClick={() => setPagina(p => Math.min(paginas, p + 1))}>Siguiente</Button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
       <DetalleViaje trip={t} urea={urea} puedeAuditar={puedeAuditar} modulo={modulo} usuario={user?.name ?? ''} onClose={() => setAbierto(null)} cifras={cifras} />
       <MatrizRendimientoSheet open={matriz} onClose={() => setMatriz(false)} puedeEditar={puedeAuditar} />
     </Page>
+  );
+}
+
+// Fila del viaje + su desglose de ida y retorno (se despliega con la flecha)
+function FilaViaje({ abierta, onAbrir, seleccionada, rutaIda, rutaRetorno, galonesIda, galonesRetorno, pesoIda, pesoRetorno, ordenIda, ordenRetorno, ancho, celdas }: {
+  abierta: boolean; onAbrir: () => void; seleccionada: boolean; rutaIda: string; rutaRetorno: string; galonesIda: number; galonesRetorno: number;
+  pesoIda: number; pesoRetorno: number; ordenIda: string; ordenRetorno: string; ancho: number; celdas: ReactNode;
+}) {
+  return (
+    <>
+      <tr className={`tabla-redim__fila--click${seleccionada ? ' tabla-redim__fila--sel' : ''}`} onClick={onAbrir}>
+        {celdas}
+      </tr>
+      {abierta && (
+        <>
+          <tr className="tabla-redim__sub">
+            <td colSpan={ancho}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontWeight: 700, color: 'var(--label)' }}>Ida</span>
+                {rutaIda || '—'} · {fmt(pesoIda, 2)} t · {fmt(galonesIda, 2)} gl{ordenIda ? ` · OS ${ordenIda}` : ''}
+              </span>
+            </td>
+          </tr>
+          <tr className="tabla-redim__sub">
+            <td colSpan={ancho}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontWeight: 700, color: 'var(--label)' }}>Retorno</span>
+                {rutaRetorno || '—'} · {fmt(pesoRetorno, 2)} t · {fmt(galonesRetorno, 2)} gl{ordenRetorno ? ` · OS ${ordenRetorno}` : ''}
+              </span>
+            </td>
+          </tr>
+        </>
+      )}
+    </>
   );
 }
 
