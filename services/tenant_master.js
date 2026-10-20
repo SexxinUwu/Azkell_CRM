@@ -248,7 +248,7 @@ async function resolveTenantMiddleware(req, res, next) {
 
         if (parts.length >= 3 || (host.includes('localhost') && parts.length >= 2)) {
             const sub = parts[0];
-            if (sub !== 'www' && sub !== 'app' && sub !== 'azkell') {
+            if (sub !== 'www' && sub !== 'app' && sub !== 'azkell' && sub !== 'fleet') {
                 tenantSlug = sub;
             }
         }

@@ -51,6 +51,10 @@ async function provisionNewTenant({ slug, nombre_empresa, ruc, admin_email, admi
 
     const cleanSlug = slug.toLowerCase().trim().replace(/[^a-z0-9_-]/g, '');
     if (!cleanSlug) throw new Error('Subdominio (slug) no valido');
+    // Nombres que usan los sitios y servicios de Azkell: ninguna empresa puede tomarlos
+    if (['www', 'app', 'azkell', 'fleet', 'admin', 'master', 'seguridad', 'api'].includes(cleanSlug)) {
+        throw new Error(`El subdominio "${cleanSlug}" está reservado.`);
+    }
 
     const dbName = `azkell_tenant_${cleanSlug}`;
 
