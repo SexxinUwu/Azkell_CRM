@@ -39,12 +39,13 @@
   vertical-align: middle;
 }
 
-/* Borde derecho del encabezado: zona de arrastre */
+/* Borde derecho del encabezado: zona de arrastre. Queda dentro de la celda para que la columna siguiente no la tape.
+   La línea usa el color del texto del encabezado, así se ve en encabezados claros y oscuros. */
 .tabla-redim__asa {
   position: absolute;
   top: 0;
-  right: -4px;
-  width: 9px;
+  right: 0;
+  width: 10px;
   height: 100%;
   cursor: col-resize;
   touch-action: none;
@@ -54,18 +55,19 @@
 .tabla-redim__asa::after {
   content: '';
   position: absolute;
-  top: 22%;
-  bottom: 22%;
+  top: 24%;
+  bottom: 24%;
   left: 4px;
-  width: 1px;
-  background: var(--separator-strong);
+  width: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.35;
 }
 
 .tabla-redim__asa:hover::after,
 .tabla-redim__asa:active::after {
-  width: 2px;
-  left: 3.5px;
   background: var(--accent);
+  opacity: 1;
 }
 
 .tabla-redim thead th {
