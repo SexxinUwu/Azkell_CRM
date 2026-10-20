@@ -88,18 +88,21 @@ function TelemetriaViaje({ trip }: { trip: Trip }) {
   );
 }
 
-// Dos celdas de telemetría GPS en la tabla. Solo consultan Wialon cuando el botón CAN está activo.
-function CeldasCan({ trip, activo }: { trip: Trip; activo: boolean }) {
-  const q = useTelemetriaViaje(trip, activo);
-  const cargando = activo && q.isFetching;
-  const valor = (x: number | null | undefined) => (cargando ? '…' : x == null ? '—' : fmt(x, 2));
-  if (!activo) return <><Celda alinear="right" mono>—</Celda><Celda alinear="right" mono>—</Celda></>;
-  return (
-    <>
-      <Celda alinear="right" mono>{valor(q.data?.recorridoKmGps)}</Celda>
-      <Celda alinear="right" mono>{valor(q.data?.rendimientoGps)}</Celda>
-    </>
-  );
+// Periodo del viaje en Wialon: de la primera a la última carga de sus vales
+function rangoViaje(trip: Trip) {
+  const fechas = (trip.vouchers ?? []).map(v => String(v.fecha ?? '')).filter(Boolean).sort();
+  return { ini: fechas[0] || trip.fechaInicio, fin: fechas[fechas.length - 1] || trip.fechaFin };
+}
+
+// Telemetría de la página, por número de viaje (una sola consulta al servidor: ver `gps` en AnalisisViajes)
+type LoteGps = Record<string, { data: TelemetriaWialon | null; error?: string }>;
+
+// Valor de una celda GPS: '—' si el CAN está apagado, '…' mientras consulta, o el dato si llegó
+function valorGps(activo: boolean, cargando: boolean, lote: LoteGps | undefined, viaje: string, campo: keyof TelemetriaWialon) {
+  if (!activo) return '—';
+  if (cargando) return '…';
+  const x = lote?.[viaje]?.data?.[campo];
+  return x == null ? '—' : fmt(x, 2);
 }
 
 const fmt = (v: unknown, d = 1) => n(v).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -170,6 +173,23 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const paginas = Math.max(1, Math.ceil(visibles.length / tamano));
   const pagActual = Math.min(pagina, paginas);
   const pagina_ = useMemo(() => visibles.slice((pagActual - 1) * tamano, pagActual * tamano), [visibles, pagActual, tamano]);
+
+  // CAN (GPS): los viajes de la página van en una sola petición; el servidor consulta Wialon en secuencia
+  const lote = useMemo(() => pagina_.filter(x => x.placa).map((x, index) => {
+    const r = rangoViaje(x);
+    return { id: x.viaje, index, viaje: x.viaje, placa: x.placa, fechaInicio: r.ini, fechaFin: r.fin };
+  }), [pagina_]);
+  const gps = useQuery<LoteGps>({
+    queryKey: ['operaciones', 'wialon-lote', lote],
+    enabled: canActivo && !urea && lote.length > 0,
+    retry: false,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const r = await api<{ ok: boolean; results?: { id: string; data: TelemetriaWialon | null; error?: string }[]; error?: string }>('/combustible/wialon-telemetria-batch', { method: 'POST', body: { trips: lote } });
+      if (!r.ok) throw new Error(r.error || 'No se pudo consultar Wialon');
+      return Object.fromEntries((r.results ?? []).map(x => [String(x.id), { data: x.data, error: x.error }]));
+    },
+  });
   const resumen = useMemo(() => {
     const gal = visibles.reduce((s, t) => s + cifras(t).galones, 0);
     const gasto = visibles.reduce((s, t) => s + cifras(t).gasto, 0);
@@ -263,6 +283,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
           </EmptyState>
         ) : (
           <>
+            {gps.isError && <Notice tone="error">{errorMessage(gps.error)}</Notice>}
             <TablaRedimensionable id={urea ? 'analisis-urea' : 'analisis-combustible'} columnas={columnas} ariaLabel={urea ? 'Análisis de urea por viaje' : 'Análisis de combustible por viaje'}>
               {pagina_.map(x => {
                 const c = cifras(x);
@@ -298,7 +319,8 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                         <Celda alinear="right" mono>{fmt(c.galones, 2)}</Celda>
                         <Celda alinear="right" mono>{soles(c.gasto)}</Celda>
                         <Celda alinear="right" mono>{c.rendimiento > 0 ? fmt(c.rendimiento, 2) : '—'}</Celda>
-                        <CeldasCan trip={x} activo={canActivo} />
+                        <Celda alinear="right" mono>{valorGps(canActivo, gps.isFetching, gps.data, x.viaje, 'recorridoKmGps')}</Celda>
+                        <Celda alinear="right" mono>{valorGps(canActivo, gps.isFetching, gps.data, x.viaje, 'rendimientoGps')}</Celda>
                       </>
                     } />
                 );

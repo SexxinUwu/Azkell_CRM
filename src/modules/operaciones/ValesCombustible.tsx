@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, CircleAlert, FileSpreadsheet, Fuel, ListChecks, Pencil, Plus, RefreshCw, SearchX, Trash2, Upload } from 'lucide-react';
+import { Ban, CircleAlert, FileSpreadsheet, Fuel, Pencil, Plus, RefreshCw, SearchX, Trash2, Upload, X } from 'lucide-react';
 import { ImportarValesSheet } from './ImportarValesSheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -13,6 +13,8 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
+import { LicensePlate } from '../../core/ui/LicensePlate';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 
 interface Vale {
   id: number; fecha: string | null; estado: string; correlativo: string | null; estado_pago: string | null; viaje: string | null;
@@ -35,6 +37,11 @@ const ESTADOS = ['VÁLIDO', 'ANULADO'];
 const PAGOS = ['NO PAGADO', 'PAGADO'];
 const TIPOS_PAGO = ['ANTICIPO', 'CONTADO', 'CREDITO'];
 
+// Pastilla de color del tema (mismos tonos que el resto de la app)
+function Pastilla({ color, children }: { color: string; children: string }) {
+  return <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, background: `var(--${color}-tint)`, color: `var(--${color}-ink)`, fontSize: '0.6875rem', fontWeight: 700 }}>{children}</span>;
+}
+
 // Operaciones › Vales de combustible. `marsisa` fija la tabla propia de Marsisa (?modulo=marsisa).
 export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
   const { can } = useAuth();
@@ -54,7 +61,7 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
   const [importando, setImportando] = useState(false);
   const [sincronizar, setSincronizar] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
-  const [seleccionando, setSeleccionando] = useState(false);
+  const [confirmarAnular, setConfirmarAnular] = useState(false);
   const [seleccion, setSeleccion] = useState<Set<number>>(new Set());
   const [borrandoMasivo, setBorrandoMasivo] = useState(false);
   const [confirmarMasivo, setConfirmarMasivo] = useState(false);
@@ -89,6 +96,51 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
   const puedeEliminar = can('combustible_vales.eliminar', 'combustible.eliminar');
   const refrescar = () => qc.invalidateQueries({ queryKey: ['operaciones'] });
 
+  // Selección múltiple: se marcan vales de la página; la selección se conserva al cambiar de página
+  const idsPagina = lista.map(v => Number(v.id));
+  const todosPagina = idsPagina.length > 0 && idsPagina.every(id => seleccion.has(id));
+  const alternarVale = (id: number) => setSeleccion(prev => { const nx = new Set(prev); if (nx.has(id)) nx.delete(id); else nx.add(id); return nx; });
+  const alternarPagina = () => setSeleccion(prev => { const nx = new Set(prev); idsPagina.forEach(id => { if (todosPagina) nx.delete(id); else nx.add(id); }); return nx; });
+
+  const columnas: ColumnaTabla[] = [
+    { id: 'sel', titulo: <input type="checkbox" aria-label="Seleccionar todos los vales de esta página" checked={todosPagina} onChange={alternarPagina} style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: 'pointer' }} />, ancho: 56, minimo: 56 },
+    { id: 'correlativo', titulo: 'Correlativo', ancho: 150 },
+    { id: 'fecha', titulo: 'Fecha', ancho: 120 },
+    { id: 'estado', titulo: 'Estado', ancho: 110 },
+    { id: 'vehiculo', titulo: 'Vehículo', ancho: 130 },
+    { id: 'conductor', titulo: 'Conductor', ancho: 220 },
+    { id: 'estacion', titulo: 'Estación / proveedor', ancho: 220 },
+    { id: 'producto', titulo: 'Producto', ancho: 110 },
+    { id: 'galones', titulo: 'Galones', ancho: 100, alinear: 'right' },
+    { id: 'costo', titulo: 'Costo/gl', ancho: 110, alinear: 'right' },
+    { id: 'importe', titulo: 'Importe', ancho: 130, alinear: 'right' },
+    { id: 'pago', titulo: 'Estado de pago', ancho: 130 },
+    { id: 'comprobante', titulo: 'N° comprobante', ancho: 150 },
+    { id: 'viaje', titulo: 'N° viaje', ancho: 130 },
+  ];
+
+  // Anulación en lote: un DELETE por vale (el servidor lo deja como ANULADO)
+  async function anularMasivo() {
+    setOcupado(true);
+    let anulados = 0;
+    let fallidos = 0;
+    for (const id of seleccion) {
+      try {
+        const r = await api<{ ok?: boolean; error?: string }>(`/combustible/vales/${id}?modulo=${modulo}`, { method: 'DELETE' });
+        if (r.ok === false) throw new Error(r.error || 'No se pudo anular');
+        anulados++;
+      } catch {
+        fallidos++;
+      }
+    }
+    setOcupado(false);
+    setConfirmarAnular(false);
+    setSeleccion(new Set());
+    haptic(fallidos ? 'warning' : 'success');
+    toast(fallidos ? `${anulados} anulados · ${fallidos} con error` : `${anulados} vales anulados`, fallidos ? 'error' : 'success');
+    await refrescar();
+  }
+
   async function anular() {
     if (!porAnular) return;
     setOcupado(true);
@@ -100,11 +152,11 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
     finally { setOcupado(false); }
   }
 
-  async function exportar() {
+  async function exportar(filas: Vale[] = lista) {
     try {
       await exportarExcel(marsisa ? 'Vales-combustible-Marsisa' : 'Vales-combustible', 'Vales',
         ['Fecha', 'Correlativo', 'Estado', 'Pago', 'Viaje', 'Vehículo', 'Conductor', 'Ruta', 'Estación', 'Combustible', 'Proveedor', 'Km', 'Galones', 'Costo/gl', 'Importe', 'Moneda', 'Comprobante'],
-        lista.map(v => [dia(v.fecha), v.correlativo, v.estado, v.estado_pago, v.viaje, v.vehiculo, v.conductor, v.ruta, v.estacion, v.tipo_combustible, v.proveedor,
+        filas.map(v => [dia(v.fecha), v.correlativo, v.estado, v.estado_pago, v.viaje, v.vehiculo, v.conductor, v.ruta, v.estacion, v.tipo_combustible, v.proveedor,
           v.kilometraje, n(v.galones), n(v.costo_gl), n(v.importe), v.moneda, v.numero_comprobante]));
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
@@ -123,10 +175,9 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
         actions={
           <>
             <MenuOtros opciones={[
-              { label: 'Exportar Excel', detalle: `${lista.length} de esta página`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+              { label: 'Exportar Excel', detalle: `${lista.length} de esta página`, icon: <FileSpreadsheet size={17} />, onSelect: () => exportar() },
               { label: 'Importar desde Excel', icon: <Upload size={17} />, separado: true, onSelect: () => setImportando(true) },
               ...(esMarsisa ? [{ label: 'Sincronizar con MarsisaSoft', icon: <RefreshCw size={17} />, onSelect: () => setSincronizar(true) }] : []),
-              ...(puedeEliminar ? [{ label: seleccionando ? 'Terminar selección' : 'Seleccionar varios', icon: <ListChecks size={17} />, separado: true, onSelect: () => { setSeleccionando(v => !v); setSeleccion(new Set()); } }] : []),
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ vale: null })}>Nuevo vale</Button>}
           </>
@@ -159,31 +210,36 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
           </EmptyState>
         ) : (
           <>
-            <div className="tarjeta__lista">
+            <TablaRedimensionable id={marsisa ? 'vales-marsisa' : 'vales'} columnas={columnas} ariaLabel="Vales de combustible" altoMax="none">
               {lista.map(v => {
                 const anulado = v.estado === 'ANULADO';
                 const marcado = seleccion.has(Number(v.id));
                 return (
-                  <button key={v.id} type="button" className="mov-fila pressable" style={{ opacity: anulado ? 0.6 : 1, outline: marcado ? '2px solid var(--accent)' : undefined }}
-                    onClick={() => {
-                      haptic('selection');
-                      if (!seleccionando) { setAbierto(v); return; }
-                      setSeleccion(prev => { const nx = new Set(prev); nx.has(Number(v.id)) ? nx.delete(Number(v.id)) : nx.add(Number(v.id)); return nx; });
-                    }}>
-                    {seleccionando && <span aria-hidden style={{ width: 20, height: 20, borderRadius: 6, border: '2px solid var(--accent)', background: marcado ? 'var(--accent)' : 'transparent', flexShrink: 0 }} />}
-                    <div className="mov-fila__icon" style={{ background: anulado ? 'var(--gray-tint)' : 'var(--blue-tint)', color: anulado ? 'var(--gray-ink)' : 'var(--blue-ink)' }}><Fuel size={16} /></div>
-                    <div className="mov-fila__cuerpo">
-                      <span className="mov-fila__titulo">{v.vehiculo || 'Sin placa'} · {n(v.galones).toLocaleString('es-PE', { maximumFractionDigits: 2 })} gl {v.tipo_combustible ?? ''}</span>
-                      <span className="mov-fila__sub">{[v.correlativo, dia(v.fecha), v.conductor, v.estacion || v.proveedor].filter(Boolean).join(' · ')}</span>
-                    </div>
-                    <div className="mov-fila__derecha">
-                      <span className="mov-fila__monto">{v.moneda === 'DOLARES' ? 'US$\u00a0' : 'S/\u00a0'}{money(v.importe)}</span>
-                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: anulado ? 'var(--gray-ink)' : v.estado_pago === 'PAGADO' ? 'var(--green-ink)' : 'var(--amber-ink)' }}>{anulado ? 'ANULADO' : v.estado_pago}</span>
-                    </div>
-                  </button>
+                  <tr key={v.id} className="tabla-redim__fila--click" style={{ opacity: anulado ? 0.6 : undefined }}
+                    onClick={() => { haptic('selection'); setAbierto(v); }}>
+                    <Celda>
+                      <label onClick={e => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44, margin: -10, cursor: 'pointer' }}>
+                        <input type="checkbox" aria-label={`Seleccionar vale ${v.correlativo ?? v.id}`} checked={marcado} onChange={() => alternarVale(Number(v.id))}
+                          style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: 'pointer' }} />
+                      </label>
+                    </Celda>
+                    <Celda mono>{v.correlativo || '—'}</Celda>
+                    <Celda mono>{dia(v.fecha)}</Celda>
+                    <Celda><Pastilla color={anulado ? 'gray' : 'green'}>{anulado ? 'ANULADO' : 'VÁLIDO'}</Pastilla></Celda>
+                    <Celda><LicensePlate plate={v.vehiculo ?? ''} size="sm" /></Celda>
+                    <Celda>{v.conductor || '—'}</Celda>
+                    <Celda>{v.estacion || v.proveedor || '—'}</Celda>
+                    <Celda>{v.tipo_combustible || '—'}</Celda>
+                    <Celda alinear="right" mono>{n(v.galones).toLocaleString('es-PE', { maximumFractionDigits: 2 })}</Celda>
+                    <Celda alinear="right" mono>{money(v.costo_gl)}</Celda>
+                    <Celda alinear="right" mono>{v.moneda === 'DOLARES' ? 'US$ ' : 'S/ '}{money(v.importe)}</Celda>
+                    <Celda><Pastilla color={anulado ? 'gray' : v.estado_pago === 'PAGADO' ? 'green' : 'amber'}>{anulado ? '—' : (v.estado_pago ?? '—')}</Pastilla></Celda>
+                    <Celda mono>{v.numero_comprobante || '—'}</Celda>
+                    <Celda mono>{v.viaje || '—'}</Celda>
+                  </tr>
                 );
               })}
-            </div>
+            </TablaRedimensionable>
             {(q.data?.totalPages ?? 1) > 1 && (
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--s-3)' }}>
                 <Button variant="secondary" disabled={pagina <= 1} onClick={() => setPagina(p => p - 1)}>Anterior</Button>
@@ -224,9 +280,20 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
       <FormularioVale open={!!formulario} vale={formulario?.vale ?? null} cat={cat.data} modulo={modulo} onClose={() => setFormulario(null)} onGuardado={refrescar} />
 
       <ImportarValesSheet open={importando} onClose={() => setImportando(false)} marsisa={marsisa} />
-      {seleccionando && seleccion.size > 0 && (
-        <div style={{ position: 'sticky', bottom: 'var(--s-3)', display: 'flex', justifyContent: 'center', marginTop: 'var(--s-3)' }}>
-          <Button variant="primary" icon={<Trash2 size={16} />} onClick={() => setConfirmarMasivo(true)}>Eliminar {seleccion.size} vales</Button>
+      {seleccion.size > 0 && (
+        <div role="toolbar" aria-label="Acciones de vales seleccionados"
+          style={{ position: 'sticky', bottom: 'var(--s-3)', zIndex: 5, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--s-2)', flexWrap: 'wrap',
+            marginTop: 'var(--s-3)', padding: 'var(--s-2) var(--s-3)', borderRadius: 999, background: 'color-mix(in srgb, var(--surface) 82%, transparent)',
+            backdropFilter: 'blur(18px) saturate(180%)', WebkitBackdropFilter: 'blur(18px) saturate(180%)', border: '1px solid var(--separator)', boxShadow: '0 8px 24px rgba(0,0,0,.12)' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.875rem', padding: '0 var(--s-2)' }}>{seleccion.size} seleccionados</span>
+          <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => {
+            const filas = lista.filter(v => seleccion.has(Number(v.id)));
+            if (filas.length) exportar(filas);
+            else toast('Esos vales están en otra página: cámbiala para exportarlos', 'error');
+          }}>Excel</Button>
+          {puedeEditar && <Button variant="secondary" icon={<Ban size={16} />} onClick={() => setConfirmarAnular(true)}>Anular</Button>}
+          {puedeEliminar && <Button variant="primary" icon={<Trash2 size={16} />} onClick={() => setConfirmarMasivo(true)}>Eliminar</Button>}
+          <Button variant="secondary" icon={<X size={16} />} onClick={() => setSeleccion(new Set())}>Limpiar</Button>
         </div>
       )}
       <ConfirmSheet open={confirmarMasivo} onClose={() => !borrandoMasivo && setConfirmarMasivo(false)} loading={borrandoMasivo}
@@ -238,7 +305,7 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
             const r = await api<{ ok?: boolean; mensaje?: string; error?: string }>('/combustible/vales/eliminar-masivo?hard=true', { method: 'POST', body: { ids: [...seleccion] } });
             if (r.ok === false) throw new Error(r.error || 'No se pudieron eliminar los vales');
             haptic('success'); toast(r.mensaje ?? 'Vales eliminados');
-            setConfirmarMasivo(false); setSeleccion(new Set()); setSeleccionando(false);
+            setConfirmarMasivo(false); setSeleccion(new Set());
             await refrescar();
           } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
           finally { setBorrandoMasivo(false); }
@@ -256,6 +323,9 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
           } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
           finally { setSincronizando(false); }
         }} />
+      <ConfirmSheet open={confirmarAnular} onClose={() => !ocupado && setConfirmarAnular(false)} loading={ocupado}
+        title={`¿Anular ${seleccion.size} vales?`} message="Quedan marcados como ANULADO y dejan de contar en los totales. Se puede revisar después en la tabla."
+        confirmLabel="Anular" onConfirm={anularMasivo} />
       <ConfirmSheet open={!!porAnular} onClose={() => !ocupado && setPorAnular(null)} onConfirm={anular} loading={ocupado}
         title="¿Anular este vale?" message="Queda marcado como ANULADO y deja de contar en los totales." confirmLabel="Anular" />
     </Page>
