@@ -1005,6 +1005,43 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // ── GET /api/neumaticos/historial-posicion/:placa/:posicion ───
+    // Solo lectura: lo medido en esa posición en cada inspección guardada (remanentes, PSI,
+    // marca de rotación) y las rotaciones registradas en neumaticos_rotaciones que la tocan.
+    router.get('/historial-posicion/:placa/:posicion', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const placa = (req.params.placa || '').trim().toUpperCase();
+            const posicion = (req.params.posicion || '').trim().toUpperCase();
+            if (!placa || !posicion) return res.status(400).json({ ok: false, error: 'Placa y posición requeridas' });
+
+            const [inspecciones] = await tdb.query(`
+                SELECT i.id_inspeccion, DATE_FORMAT(i.fecha_inspeccion, '%Y-%m-%d') AS fecha_inspeccion, i.km_vehiculo,
+                       d.marca, d.modelo, d.medida, d.r1, d.r2, d.r3, d.r4, d.remanente_promedio,
+                       d.presion_ant, d.presion_actual, d.estado, d.accion, d.rot, d.observaciones, d.alerta_cambio
+                FROM neumaticos_inspecciones_det d
+                INNER JOIN neumaticos_inspecciones i
+                    ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci
+                WHERE UPPER(TRIM(i.placa)) = ? AND UPPER(TRIM(d.posicion)) = ?
+                ORDER BY i.fecha_inspeccion DESC, i.created_at DESC
+                LIMIT 60
+            `, [placa, posicion]);
+
+            const [rotaciones] = await tdb.query(`
+                SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, km_actual, posicion_origen, posicion_destino, motivo, tecnico
+                FROM neumaticos_rotaciones
+                WHERE UPPER(TRIM(placa)) = ? AND (UPPER(TRIM(posicion_origen)) = ? OR UPPER(TRIM(posicion_destino)) = ?)
+                ORDER BY fecha DESC, id DESC
+                LIMIT 60
+            `, [placa, posicion, posicion]);
+
+            res.json({ ok: true, placa, posicion, inspecciones, rotaciones });
+        } catch (err) {
+            console.error('Error en historial-posicion de neumáticos:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     // ============================================================
     // 8. 🚚 ESTADO ACTUAL DE NEUMÁTICOS POR PLACA (Visor Interactivo)
     // ============================================================

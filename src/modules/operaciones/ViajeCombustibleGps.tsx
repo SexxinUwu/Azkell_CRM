@@ -4,6 +4,7 @@ import { RefreshCw } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { api, errorMessage } from '../../core/api/client';
+import { MapaRecorridoViaje } from './ViajeMapaGps';
 
 const num = (v: unknown) => Number(v) || 0;
 const fmt = (v: unknown, d = 2) => num(v).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -112,6 +113,7 @@ export function SeccionGpsViaje({ placa, inicio, fin }: { placa: string | null; 
           ) : <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>La unidad no figura en la disponibilidad de flota.</span></div>}
         </div>
       )}
+      {pedida && !!p && !!ini && <MapaRecorridoViaje placa={p} inicio={ini} fin={fi} />}
       {t && (
         <div className="tarjeta__lista" style={{ marginTop: 'var(--s-2)' }}>
           {dato('Recorrido GPS', t.recorridoKmGps, 'km')}{dato('Combustible consumido', t.combustibleConsumidoGps, 'gl')}

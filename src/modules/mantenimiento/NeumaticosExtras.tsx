@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, Disc3, FileSpreadsheet, Gauge } from 'lucide-react';
+import { CircleAlert, Disc3, FileSpreadsheet } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice } from '../../core/ui/Display';
@@ -10,6 +10,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { exportarExcel } from '../../core/lib/excel';
+import { EsquemaNeumaticos, HistorialLlantaSheet, LeyendaSemaforo, configReconocida, remanenteDe, tonoMm, type LlantaDato } from './NeumaticosEsquema';
 
 // Extras de neumáticos que el clásico tiene en "Análisis": esquema por placa
 // (GET /api/neumaticos/estado-actual/:placa), importación con validación previa
@@ -21,21 +22,11 @@ const num = (v: unknown) => (v == null || v === '' ? '—' : Number(v).toLocaleS
 
 // ─── Esquema de neumáticos por placa ─────────────────────────────────────────
 
-interface LlantaPos {
-  id?: number; posicion: string; tipo_eje?: string | null; marca?: string | null; modelo?: string | null;
-  medida?: string | null; r1?: number | null; r2?: number | null; r3?: number | null; r4?: number | null;
-  remanente_promedio?: number | string | null; presion_actual?: number | null; estado?: string | null; alerta_cambio?: number | null;
-}
 interface EstadoActual {
   ok?: boolean; error?: string; placa: string;
-  unidad: { marca?: string; modelo_uts?: string; tipo?: string };
+  unidad: { marca?: string; modelo_uts?: string; tipo?: string; configuracion?: string | null };
   ultima_inspeccion: { fecha_inspeccion?: string; km_vehiculo?: number } | null;
-  posiciones: LlantaPos[];
-}
-
-// Semáforo del clásico: más de 6 mm bien, de 4 a 6 mm alerta, 4 mm o menos crítica
-function tonoRemanente(prom: number): 'green' | 'amber' | 'red' {
-  return prom > 6 ? 'green' : prom > 4 ? 'amber' : 'red';
+  posiciones: LlantaDato[];
 }
 
 function usePlacas() {
@@ -46,32 +37,11 @@ function usePlacas() {
   });
 }
 
-function TarjetaLlanta({ l }: { l: LlantaPos }) {
-  const prom = Number(l.remanente_promedio ?? 0) || 0;
-  const tono = tonoRemanente(prom);
-  return (
-    <div style={{ padding: 'var(--s-2) var(--s-3)', borderRadius: 'var(--r-md, 10px)', background: 'var(--fill)',
-      borderLeft: `4px solid var(--${tono}-ink)`, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--label-2)' }}>Pos. {l.posicion}</span>
-        <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '1px 8px', borderRadius: 999,
-          background: `var(--${tono}-tint)`, color: `var(--${tono}-ink)` }}>{prom} mm</span>
-      </div>
-      <span style={{ fontSize: '0.85rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.marca || '—'}</span>
-      <span style={{ fontSize: '0.72rem', color: 'var(--label-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {l.modelo || '—'} · {l.medida || '—'}
-      </span>
-      <span style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--blue-ink)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-        <Gauge size={12} /> {l.presion_actual ?? 0} PSI
-      </span>
-    </div>
-  );
-}
-
 export function EsquemaPlacaSheet({ open, onClose, placaInicial = '' }: { open: boolean; onClose: () => void; placaInicial?: string }) {
   const { data: placas } = usePlacas();
   const [placa, setPlaca] = useState('');
-  useEffect(() => { if (open) setPlaca(placaInicial); }, [open, placaInicial]);
+  const [llanta, setLlanta] = useState<LlantaDato | null>(null);
+  useEffect(() => { if (open) { setPlaca(placaInicial); setLlanta(null); } }, [open, placaInicial]);
 
   const { data, isFetching, error } = useQuery<EstadoActual>({
     queryKey: ['mant', 'neumaticos-estado-actual', placa],
@@ -83,56 +53,43 @@ export function EsquemaPlacaSheet({ open, onClose, placaInicial = '' }: { open: 
     },
   });
 
-  // Agrupa por tipo de eje cuando la inspección lo trae (delantera / tracción); si no, un solo grupo
-  const grupos = useMemo(() => {
-    const m = new Map<string, LlantaPos[]>();
-    for (const l of data?.posiciones ?? []) {
-      const k = (l.tipo_eje ?? '').trim().toUpperCase();
-      m.set(k, [...(m.get(k) ?? []), l]);
-    }
-    return [...m.entries()];
-  }, [data]);
-
   const u = data?.unidad;
+  const configuracion = configReconocida(u?.configuracion, u?.tipo);
   return (
-    <Sheet open={open} onClose={onClose} title="Esquema de neumáticos por placa"
-      footer={<Button variant="secondary" onClick={onClose}>Cerrar</Button>}>
-      <div className="form-grid">
-        <div className="field field--wide">
-          <label className="field__label">Placa</label>
-          <PlacaPicker value={placa} onChange={setPlaca} opciones={(placas ?? []).map(p => ({ placa: p }))} />
-        </div>
-        {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{errorMessage(error)}</Notice></div>}
-        {isFetching && <div className="field field--wide"><PageLoader /></div>}
-        {!placa && !isFetching && (
-          <div className="field field--wide"><EmptyState icon={<Disc3 size={22} />} title="Elige una placa">Verás las llantas de su última inspección, posición por posición.</EmptyState></div>
-        )}
-        {data && !isFetching && (
-          data.posiciones.length === 0 ? (
-            <div className="field field--wide"><EmptyState icon={<Disc3 size={22} />} title="Sin inspecciones">No hay inspecciones de neumáticos registradas para {data.placa}.</EmptyState></div>
-          ) : (
-            <div className="field field--wide" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, fontSize: '0.8125rem' }}>
-                <span><b>{data.placa}</b> · {[u?.marca, u?.modelo_uts].filter(Boolean).join(' ')} ({u?.tipo || 'Unidad'})</span>
-                <span style={{ color: 'var(--label-2)' }}>
-                  Última inspección: <b>{dia(data.ultima_inspeccion?.fecha_inspeccion)}</b>
-                  {data.ultima_inspeccion?.km_vehiculo ? ` · ${num(data.ultima_inspeccion.km_vehiculo)} km` : ''}
-                </span>
-              </div>
-              {grupos.map(([eje, llantas]) => (
-                <div key={eje || 'sin-eje'}>
-                  {eje && <p className="tarjeta__grupo-titulo">{eje}</p>}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(9.5rem, 1fr))', gap: 'var(--s-2)' }}>
-                    {llantas.map((l, i) => <TarjetaLlanta key={l.id ?? `${l.posicion}-${i}`} l={l} />)}
-                  </div>
+    <>
+      <Sheet open={open} onClose={onClose} title="Esquema de neumáticos por placa"
+        footer={<Button variant="secondary" onClick={onClose}>Cerrar</Button>}>
+        <div className="form-grid">
+          <div className="field field--wide">
+            <label className="field__label">Placa</label>
+            <PlacaPicker value={placa} onChange={setPlaca} opciones={(placas ?? []).map(p => ({ placa: p }))} />
+          </div>
+          {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{errorMessage(error)}</Notice></div>}
+          {isFetching && <div className="field field--wide"><PageLoader /></div>}
+          {!placa && !isFetching && (
+            <div className="field field--wide"><EmptyState icon={<Disc3 size={22} />} title="Elige una placa">Verás el diagrama de ejes con las llantas de su última inspección.</EmptyState></div>
+          )}
+          {data && !isFetching && (
+            data.posiciones.length === 0 ? (
+              <div className="field field--wide"><EmptyState icon={<Disc3 size={22} />} title="Sin inspecciones">No hay inspecciones de neumáticos registradas para {data.placa}.</EmptyState></div>
+            ) : (
+              <div className="field field--wide" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, fontSize: '0.8125rem' }}>
+                  <span><b>{data.placa}</b> · {[u?.marca, u?.modelo_uts].filter(Boolean).join(' ')} ({u?.tipo || 'Unidad'})</span>
+                  <span style={{ color: 'var(--label-2)' }}>
+                    Última inspección: <b>{dia(data.ultima_inspeccion?.fecha_inspeccion)}</b>
+                    {data.ultima_inspeccion?.km_vehiculo ? ` · ${num(data.ultima_inspeccion.km_vehiculo)} km` : ''}
+                  </span>
                 </div>
-              ))}
-              <p className="t-footnote c-secondary">Verde: más de 6 mm · Ámbar: de 4 a 6 mm · Rojo: 4 mm o menos.</p>
-            </div>
-          )
-        )}
-      </div>
-    </Sheet>
+                <EsquemaNeumaticos llantas={data.posiciones} configuracion={configuracion} activa={llanta?.posicion ?? ''} onSelect={setLlanta} />
+                <p className="t-footnote c-secondary">Toca una llanta para ver su historial de rotaciones, presiones e inspecciones.</p>
+              </div>
+            )
+          )}
+        </div>
+      </Sheet>
+      <HistorialLlantaSheet placa={data?.placa ?? placa} llanta={llanta} onClose={() => setLlanta(null)} />
+    </>
   );
 }
 
@@ -146,8 +103,8 @@ interface LlantaMedida {
 }
 interface RespMedida { ok?: boolean; error?: string; total_llantas: number; total_unidades: number; llantas: LlantaMedida[] }
 
-function remanenteMedida(i: LlantaMedida): number {
-  return i.remanente_promedio !== null && i.remanente_promedio !== undefined ? Number(i.remanente_promedio) : Number(i.r1 || 0);
+function remanenteMedida(i: LlantaMedida): number | null {
+  return remanenteDe(i);
 }
 
 export function MedidaDetalleSheet({ medida, onClose }: { medida: string | null; onClose: () => void }) {
@@ -195,30 +152,33 @@ export function MedidaDetalleSheet({ medida, onClose }: { medida: string | null;
             <div style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>
               <b>{num(data.total_llantas)}</b> llantas · <b>{num(data.total_unidades)}</b> unidades (última inspección de cada unidad en uso)
             </div>
+            <LeyendaSemaforo />
             <SearchField value={q} onChange={setQ} placeholder="Placa, tipo, marca, posición, estado…" />
             {lista.length === 0 ? <EmptyState icon={<Disc3 size={22} />} title="Sin registros">No hay llantas para esta búsqueda.</EmptyState> : (
               <div style={{ overflowX: 'auto' }}>
-                <table className="inv-kardex" style={{ minWidth: '56rem', fontSize: '0.8rem' }}>
+                <table className="inv-kardex" style={{ minWidth: '64rem', fontSize: '0.8rem' }}>
                   <thead><tr>
-                    <th>Placa</th><th>Unidad</th><th>Pos.</th><th>Marca</th><th>Modelo</th>
-                    <th>Remanente</th><th>PSI</th><th>Estado</th><th>Inspección</th>
+                    <th>Placa</th><th>Tipo</th><th>Modelo unidad</th><th>Posición</th><th>Marca</th><th>Modelo</th>
+                    <th>Medida</th><th>Remanente</th><th>PSI</th><th>Estado</th><th>Inspección</th>
                   </tr></thead>
                   <tbody>
                     {lista.map((i, k) => {
-                      const rem = remanenteMedida(i);
-                      // Igual que el clásico: 4 mm o menos (o alerta de cambio) crítico, hasta 7 mm atención
-                      const critica = rem <= 4 || i.alerta_cambio === 1;
-                      const tono = critica ? 'red' : rem <= 7 ? 'amber' : 'green';
+                      const mm = remanenteMedida(i);
+                      const tono = tonoMm(mm);
+                      const est = String(i.estado || (i.alerta_cambio === 1 ? 'CRÍTICO' : 'BUENO')).toUpperCase();
+                      const estado = i.alerta_cambio === 1 || est.includes('CRIT') ? 'CRÍTICO' : est.includes('REG') || est.includes('OBS') ? 'REGULAR' : est;
                       return (
                         <tr key={i.placa + (i.posicion ?? '') + k}>
                           <td><b>{i.placa}</b></td>
-                          <td>{[i.tipo_unidad, i.marca_unidad, i.modelo_unidad].filter(Boolean).join(' · ') || '—'}</td>
+                          <td>{i.tipo_unidad || 'Unidad'}</td>
+                          <td>{[i.marca_unidad, i.modelo_unidad].filter(Boolean).join(' ') || '—'}</td>
                           <td>{i.posicion || '—'}</td>
                           <td>{i.marca_llanta || '—'}</td>
                           <td>{i.modelo_llanta || '—'}</td>
-                          <td style={{ color: `var(--${tono}-ink)`, fontWeight: 700 }}>{rem.toFixed(1)} mm</td>
-                          <td>{i.presion_actual ? `${i.presion_actual}` : '—'}</td>
-                          <td>{critica ? 'CRÍTICO' : (i.estado || 'BUENO')}</td>
+                          <td>{i.medida || '—'}</td>
+                          <td style={{ color: tono === 'gray' ? undefined : `var(--${tono}-ink)`, fontWeight: 700 }}>{mm === null ? '—' : `${mm.toFixed(1)} mm`}</td>
+                          <td>{i.presion_actual ? `${i.presion_actual} PSI` : '—'}</td>
+                          <td>{estado}</td>
                           <td>{dia(i.fecha_inspeccion)}</td>
                         </tr>
                       );

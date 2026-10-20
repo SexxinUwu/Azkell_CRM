@@ -15,7 +15,7 @@ import { useConfigSistemas, type ReporteFalla } from './api';
 import { leerFallas, textoItem, type FallaGuardada, type SistemaCfg } from './fman';
 
 interface Marca { obs: string }
-interface Viaje { viaje?: string | null; conductor?: string | null; placa_remolque?: string | null; ruta?: string | null; origen?: string | null }
+interface Viaje { id?: number | string; viaje?: string | null; conductor?: string | null; placa_remolque?: string | null; ruta?: string | null; origen?: string | null; destino?: string | null; fecha_viaje_fmt?: string | null }
 interface IngresoSeg { conductor?: string | null; placa_carreta?: string | null; procedencia?: string | null; destino?: string | null; zona?: string | null }
 interface Backlog { id: number | string; backlog_id?: string | null; tarea?: string | null; tema?: string | null; ticket_ot?: string | null }
 
@@ -82,6 +82,9 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   // Conductores que sugiere cada fuente; si difieren se avisa y la persona elige
   const [condViaje, setCondViaje] = useState('');
   const [condSeg, setCondSeg] = useState('');
+  // Últimos viajes de la unidad para vincular la falla al correcto
+  const [viajes, setViajes] = useState<Viaje[]>([]);
+  const [viajeSel, setViajeSel] = useState('');
 
   const cfg = useConfigSistemas(open);
   const placaT = (v.placa_tracto ?? '').trim().toUpperCase();
@@ -118,7 +121,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   // Al escribir la placa del tracto en un reporte nuevo: se completa con el último ingreso de seguridad y el último viaje
   // (como la versión actual). La orden de viaje manda sobre seguridad en el conductor; lo ya escrito no se pisa.
   useEffect(() => {
-    setCondViaje(''); setCondSeg('');
+    setCondViaje(''); setCondSeg(''); setViajes([]); setViajeSel('');
     if (!open || editando || !/^[A-Z0-9-]{5,8}$/.test(placaT)) return;
     let vigente = true;
     const t = setTimeout(async () => {
@@ -130,6 +133,8 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
       if (!vigente) return;
       const s = seg?.data ?? null;
       const viaje = via?.data?.[0] ?? null;
+      setViajes(via?.data ?? []);
+      if (viaje) setViajeSel(String(viaje.id ?? viaje.viaje ?? ''));
       const cs = (s?.conductor ?? '').trim();
       const cv = (viaje?.conductor ?? '').trim();
       setCondSeg(cs); setCondViaje(cv);
@@ -145,6 +150,43 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
     }, 500);
     return () => { vigente = false; clearTimeout(t); };
   }, [open, editando, placaT]);
+
+  // Último kilometraje GPS (Wialon, mismo origen que el checklist clásico): solo si el campo sigue vacío y la placa no cambió.
+  useEffect(() => {
+    if (!open || editando || !/^[A-Z0-9-]{5,8}$/.test(placaT)) return;
+    let vigente = true;
+    const t = setTimeout(async () => {
+      try {
+        const r = await api<unknown>('/script/obtenerDatosWialon', { method: 'POST', body: { args: [] } });
+        const obj = r as { data?: unknown } | null;
+        const anidado = (obj?.data as { data?: unknown } | undefined)?.data;
+        const lista = (Array.isArray(obj) ? obj : Array.isArray(obj?.data) ? obj?.data : Array.isArray(anidado) ? anidado : []) as Array<Record<string, unknown>>;
+        const limpia = placaT.replace(/[^A-Z0-9]/g, '');
+        const g = lista.find(x => String(x.placa ?? '').replace(/[^A-Za-z0-9]/g, '').toUpperCase() === limpia);
+        const km = Math.round(Number(g?.km));
+        if (!vigente || !g || !Number.isFinite(km) || km <= 0) return;
+        setV(a => (a.placa_tracto ?? '').trim().toUpperCase() !== placaT || a.km_inicial ? a
+          : { ...a, km_inicial: String(km), ubicacion_gps: a.ubicacion_gps || String(g.ubicacion ?? '') });
+      } catch { /* sin GPS: el kilometraje se escribe a mano */ }
+    }, 600);
+    return () => { vigente = false; clearTimeout(t); };
+  }, [open, editando, placaT]);
+
+  // Elegir explícitamente un viaje: sí reemplaza orden, conductor, remolque y procedencia
+  function vincular(id: string) {
+    setViajeSel(id);
+    const x = viajes.find(w => String(w.id ?? w.viaje ?? '') === id);
+    if (!x) return;
+    setCondViaje((x.conductor ?? '').trim());
+    setV(a => ({
+      ...a,
+      orden_viaje: x.viaje || a.orden_viaje,
+      conductor: x.conductor?.trim() || a.conductor,
+      placa_remolque: (x.placa_remolque || a.placa_remolque || '').toUpperCase(),
+      procedencia: x.ruta || x.origen || a.procedencia,
+    }));
+  }
+  const viajeActual = viajes.find(w => String(w.id ?? w.viaje ?? '') === viajeSel);
   const tractos = (placas.data ?? []).filter(p => p.motora).map(p => p.placa);
   const remolques = (placas.data ?? []).filter(p => !p.motora).map(p => p.placa);
   const seleccionados = (backlogs.data ?? []).filter(b => backlogSel[String(b.id)]);
@@ -259,6 +301,23 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
               <Button variant="secondary" onClick={() => set('conductor', condViaje)}>Usar el de la orden</Button>
               <Button variant="secondary" onClick={() => set('conductor', condSeg)}>Usar el de seguridad</Button>
             </span>
+          </Notice>
+        )}
+        {viajes.length > 0 && (
+          <Field label={`Viaje de la unidad (${viajes.length} más recientes)`} wide>
+            {p => (
+              <SelectInput {...p} value={viajeSel} onChange={e => vincular(e.target.value)}>
+                {viajes.map(w => {
+                  const id = String(w.id ?? w.viaje ?? '');
+                  return <option key={id} value={id}>{[w.viaje, w.ruta || [w.origen, w.destino].filter(Boolean).join(' - '), w.conductor, w.placa_remolque, w.fecha_viaje_fmt].filter(Boolean).join(' · ')}</option>;
+                })}
+              </SelectInput>
+            )}
+          </Field>
+        )}
+        {viajeActual && v.orden_viaje === viajeActual.viaje && (
+          <Notice tone="accent">
+            Vinculado al viaje <b>{viajeActual.viaje}</b>{viajeActual.ruta ? ` · ${viajeActual.ruta}` : ''}{viajeActual.conductor ? ` · ${viajeActual.conductor}` : ''}{viajeActual.fecha_viaje_fmt ? ` · ${viajeActual.fecha_viaje_fmt}` : ''}
           </Notice>
         )}
         <div className="form-grid">

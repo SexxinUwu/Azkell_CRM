@@ -109,6 +109,25 @@
 
     let _evEditingTemplate = [];
 
+    // La plantilla es corporativa: vive en el servidor (configuracion_erp) y la comparten esta pantalla y la app nueva.
+    // El navegador solo guarda una copia por si el servidor no responde.
+    window.evCargarPlantillaServidor = async function() {
+        try {
+            const res = await fetch('/api/flota/entrega-vehiculos/plantilla');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            if (!data || !Array.isArray(data.plantilla) || !data.plantilla.length) return;
+            _evGlobalTemplate = data.plantilla.map(function(g) {
+                const base = GRUPOS_SISTEMAS_DEFAULT.find(function(d) { return d.id === g.id; });
+                return { id: g.id, titulo: g.titulo, icon: (base && base.icon) || 'bi-card-checklist', items: g.items || [] };
+            });
+            try { localStorage.setItem('ev_global_template_flota', JSON.stringify(_evGlobalTemplate)); } catch(e) {}
+            window.evRenderizarSistemas();
+        } catch (e) {
+            console.warn('Plantilla de entrega: se usa la copia local.', e);
+        }
+    };
+
     // Variables de canvas
     let _canvasEntrega, _ctxEntrega, _dibujandoEntrega = false;
     let _canvasRecibe, _ctxRecibe, _dibujandoRecibe = false;
@@ -117,6 +136,7 @@
         window.evActualizarUsuarioActual();
         window.evIrAPortal();
         window.evRenderizarSistemas();
+        window.evCargarPlantillaServidor();
         window.evCargarRecursos();
         window.evCargarPortalStats();
         window.evInitCanvasFirmas();
@@ -291,14 +311,30 @@
         window.evRenderizarSettings();
     };
 
-    window.evGuardarSettings = function() {
-        _evGlobalTemplate = JSON.parse(JSON.stringify(_evEditingTemplate));
+    window.evGuardarSettings = async function() {
+        const nueva = JSON.parse(JSON.stringify(_evEditingTemplate));
+        const plantilla = nueva.map(function(g) {
+            return { id: g.id, titulo: g.titulo, items: (g.items || []).map(function(it) { return typeof it === 'string' ? it : (it.label || it.texto || ''); }) };
+        });
+        try {
+            const res = await fetch('/api/flota/entrega-vehiculos/plantilla', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plantilla: plantilla })
+            });
+            const data = await res.json().catch(function() { return {}; });
+            if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+        } catch (e) {
+            alert('No se pudo guardar la plantilla en el servidor: ' + e.message);
+            return;
+        }
+        _evGlobalTemplate = nueva;
         try {
             localStorage.setItem('ev_global_template_flota', JSON.stringify(_evGlobalTemplate));
         } catch(e) {}
         window.evRenderizarSistemas();
         window.evShowView('list');
-        alert('✅ Plantilla de Entrega de Vehículos guardada exitosamente.');
+        alert('✅ Plantilla de Entrega de Vehículos guardada para toda la empresa.');
     };
 
     // ── CARGAR RECURSOS Y STATS DEL PORTAL ─────────────────────────
