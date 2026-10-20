@@ -11,6 +11,10 @@ import { MenuOtros } from '../../core/ui/MenuOtros';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { exportarExcel } from '../../core/lib/excel';
+import { haptic } from '../../core/lib/haptics';
+import { useToast } from '../../core/ui/Toast';
+import { FileSpreadsheet } from 'lucide-react';
 import { formatFechaHoraPe } from '../../core/lib/format';
 import { useLogFirmado, type LogFirmado } from './api';
 import {
@@ -104,6 +108,18 @@ function ActividadAuditoria() {
   const total = actividad.data?.pages[0]?.total ?? 0;
   const set = (k: keyof FiltrosAudit) => (v: string) => setFiltros(f => ({ ...f, [k]: v }));
   const hayFiltros = Object.values(filtros).some(Boolean);
+  const toast = useToast();
+
+  // Exporta los eventos cargados (los filtros del servidor ya aplicados), con fecha y hora nativas de Lima
+  async function exportar() {
+    try {
+      const aLima = (iso: string) => new Date(iso).toLocaleString('sv-SE', { timeZone: 'America/Lima' });
+      await exportarExcel('Auditoria', 'Auditoría', ['ID Evento', 'Fecha y hora', 'Usuario', 'Registro', 'Acción', 'Resumen', 'IP'],
+        eventos.map(e => [e.id, aLima(e.created_at), e.user_name || '—', ENTIDAD_LABELS[e.entity] ?? e.entity,
+          ACCION_LABELS[e.action] ?? e.action, e.summary || '—', e.ip ?? '']));
+      haptic('success');
+    } catch (err) { toast(errorMessage(err), 'error'); }
+  }
 
   // Agrupa por día de Lima, en el orden que llega (del más reciente al más antiguo)
   const dias = useMemo(() => {
@@ -142,6 +158,7 @@ function ActividadAuditoria() {
           <label className="aud-fecha"><span>Hasta</span>
             <input type="date" value={filtros.to} min={filtros.from || undefined} onChange={e => set('to')(e.target.value)} />
           </label>
+          {eventos.length > 0 && <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={exportar}>Exportar Excel</Button>}
         </div>
       </div>
 

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, PackagePlus, Plus, SearchX } from 'lucide-react';
+import { ArrowUpRight, FileSpreadsheet, PackagePlus, Plus, SearchX } from 'lucide-react';
+import { exportarConsolidadoOC } from './exportarEntradas';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
@@ -136,6 +137,10 @@ export function EntradasPage() {
           actions={
             <>
               <MenuOtros opciones={[
+                { label: 'Exportar consolidado (Excel)', detalle: `${visibles.length} órdenes`, icon: <FileSpreadsheet size={17} />,
+                  onSelect: async () => {
+                    try { await exportarConsolidadoOC(visibles); haptic('success'); } catch (err) { toast(errorMessage(err), 'error'); }
+                  } },
                 { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('almacen/entradas') },
               ]} />
               {puedeCrear && (

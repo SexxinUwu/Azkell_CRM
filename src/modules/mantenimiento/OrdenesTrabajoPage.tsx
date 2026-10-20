@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ArrowUpRight, BookOpen, Plus, ScrollText, SearchX, Wrench } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, BookOpen, FileSpreadsheet, Plus, ScrollText, SearchX, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -25,6 +25,7 @@ import {
   type AccionOT, type OrdenTrabajo,
 } from './api';
 import { ETIQUETA_ACCION, OTDetalle } from './OTDetalle';
+import { exportarReportesOT } from './exportarOT';
 import { useInspecciones, clavePlaca } from '../inspecciones/api';
 
 // ─── Tipos adicionales ────────────────────────────────────────────────────────
@@ -333,6 +334,10 @@ export function OrdenesTrabajoPage() {
                 </Button>
               )}
               <MenuOtros opciones={[
+                { label: 'Exportar Excel', detalle: `${visibles.length} órdenes`, icon: <FileSpreadsheet size={17} />,
+                  onSelect: async () => {
+                    try { await exportarReportesOT(visibles); haptic('success'); } catch (err) { toast(errorMessage(err), 'error'); }
+                  } },
                 { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />,
                   onSelect: () => abrirClasico('mantenimiento/reportes-ot') },
               ]} />

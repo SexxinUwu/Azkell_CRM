@@ -1,7 +1,10 @@
 import '../mantenimiento/mant.css';
 import { useState } from 'react';
-import { HardHat, SearchX } from 'lucide-react';
-import { PageLoader } from '../../core/ui/Button';
+import { FileSpreadsheet, HardHat, SearchX } from 'lucide-react';
+import { Button, PageLoader } from '../../core/ui/Button';
+import { exportarExcel } from '../../core/lib/excel';
+import { haptic } from '../../core/lib/haptics';
+import { useToast } from '../../core/ui/Toast';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
@@ -24,12 +27,23 @@ export function ProductividadPage() {
   const [hasta, setHasta] = useState(hoyLima());
   const [q, setQ] = useState('');
   const datos = useHorasTecnicos(desde, hasta);
+  const toast = useToast();
   const tecnicos = (datos.data?.tecnicos ?? []).filter(t => !q.trim() || t.nombre.toUpperCase().includes(q.trim().toUpperCase()));
+
+  // Exporta lo que está en pantalla: horas reales, proyectadas, cumplimiento y horas en curso por técnico
+  async function exportar() {
+    try {
+      await exportarExcel('Productividad_Tecnicos', 'Productividad', ['Técnico', 'Horas reales', 'Horas proyectadas', 'Cumplimiento (%)', 'Horas en curso'],
+        tecnicos.map(t => [t.nombre, t.reales, t.proyectadas, t.eficiencia, t.enCurso]));
+      haptic('success');
+    } catch (err) { toast(errorMessage(err), 'error'); }
+  }
 
   return (
     <Page>
       <PageHeader eyebrow="Mantenimiento" title="Productividad personal"
-        subtitle={datos.isLoading ? 'Cargando…' : `${datos.data?.resumen.trabajos ?? 0} trabajos · ${datos.data?.diasLaborables ?? 0} días laborables`} />
+        subtitle={datos.isLoading ? 'Cargando…' : `${datos.data?.resumen.trabajos ?? 0} trabajos · ${datos.data?.diasLaborables ?? 0} días laborables`}
+        actions={tecnicos.length > 0 ? <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={exportar}>Exportar Excel</Button> : undefined} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
