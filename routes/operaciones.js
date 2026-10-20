@@ -1003,13 +1003,15 @@ module.exports = function (db, broadcast, logAudit) {
                 const pesoTotalTn = +(pesoTotalKg / 1000).toFixed(2);
 
                 // Rutas textos
-                const rutaIdaTexto = rutasIda.length > 0 
-                    ? rutasIda.map(r => r.ruta).join(' | ') 
-                    : (v.ruta_cabecera || 'LIMA - DESTINO');
+                // Callao forma parte de Lima (la matriz de rendimiento solo tiene LIMA)
+                const sinCallao = (s) => String(s == null ? '' : s).replace(/\bCALLAO\b/gi, 'LIMA');
+                const rutaIdaTexto = sinCallao(rutasIda.length > 0
+                    ? rutasIda.map(r => r.ruta).join(' | ')
+                    : (v.ruta_cabecera || 'LIMA - DESTINO'));
 
-                let rutaRetornoTexto = rutasRetorno.length > 0 
-                    ? rutasRetorno.map(r => r.ruta).join(' | ') 
-                    : '';
+                let rutaRetornoTexto = sinCallao(rutasRetorno.length > 0
+                    ? rutasRetorno.map(r => r.ruta).join(' | ')
+                    : '');
 
                 // Si no tiene retorno registrado, generar el retorno de la ruta de ida
                 if (!rutaRetornoTexto && rutaIdaTexto) {

@@ -1149,6 +1149,10 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             // Normalizador de ruta compuesta (ej: "LIMA - CHULUCANAS / SULLANA" -> "LIMA - CHULUCANAS")
+            // Callao forma parte de Lima: la matriz de rendimiento y los viajes se manejan como LIMA. Sin esto, un tramo
+            // "CALLAO - PIURA" se mostraba distinto al viaje ("LIMA - PIURA") y no encontraba su consumo teórico en la matriz.
+            const homologarLugar = (s) => String(s == null ? '' : s).replace(/\bCALLAO\b/gi, 'LIMA');
+
             const normalizarRutaTramo = (rStr) => {
                 if (!rStr) return '';
                 let r = String(rStr).trim();
@@ -1193,7 +1197,7 @@ module.exports = function (db, broadcast, logAudit) {
                         }
                         const info = ovTramosMap.get(k);
                         const esRet = parseInt(rt.es_retorno, 10) === 1;
-                        const rNorm = normalizarRutaTramo(rt.ruta);
+                        const rNorm = homologarLugar(normalizarRutaTramo(rt.ruta));
                         const pesoKg = parseFloat(rt.peso_total || 0);
                         const pesoTn = pesoKg > 50 ? +(pesoKg / 1000).toFixed(2) : +pesoKg.toFixed(2);
                         
@@ -1217,7 +1221,7 @@ module.exports = function (db, broadcast, logAudit) {
                     const ov = ovMap.get(vKey) || ovMap.get(cleanV);
                     if (ov) {
                         if (ov.ruta && (!v.ruta || v.ruta === 'Sin Ruta')) {
-                            v.ruta = ov.ruta;
+                            v.ruta = homologarLugar(ov.ruta);
                         }
                         if (ov.peso && parseFloat(ov.peso) > 0) {
                             const rawP = parseFloat(ov.peso);
@@ -1399,6 +1403,16 @@ module.exports = function (db, broadcast, logAudit) {
                     // Inversión inteligente de retorno si no vino tramo de retorno registrado o si viene igual a la ida
                     if (!rutaRetornoCalculada || rutaRetornoCalculada.toUpperCase().trim() === (rutaIdaCalculada || '').toUpperCase().trim()) {
                         rutaRetornoCalculada = invertirRutaRetorno(rutaIdaCalculada || t.ruta);
+                    }
+
+                    // La ruta manda desde el vale de combustible (el análisis es todo en base a los vales): la ida es la del vale
+                    // y el retorno su inversa. Los tramos de la orden de viaje solo se usan cuando el vale no trae ruta.
+                    if (t.ruta && t.ruta !== 'Sin Ruta') {
+                        const partesVale = String(t.ruta).split('|').map(p => normalizarRutaTramo(p.trim())).filter(Boolean);
+                        if (partesVale.length) {
+                            rutaIdaCalculada = partesVale[0];
+                            rutaRetornoCalculada = partesVale[1] || invertirRutaRetorno(partesVale[0]);
+                        }
                     }
 
                     // Si no hay retorno registrado con carga, el peso del retorno va en 0 Tn (vacío)
