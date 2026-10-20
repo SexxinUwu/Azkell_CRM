@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarPlus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useToast } from '../../core/ui/Toast';
+import { errorMessage } from '../../core/api/client';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { llevarAlCalendario, vencimientosParaCalendario } from './calendarioIcs';
 import { Button } from '../../core/ui/Button';
 import { COLOR_PERSONALIZADO, DOCS, colorDoc, estadoDeFecha, type EstadoDoc } from './docsEstado';
 import type { FilaExpediente } from './DocExpediente';
@@ -37,6 +41,15 @@ const grupoEstado = (e: EstadoDoc) => (e.score === 0 ? 'vencido' : e.score === 1
 // Calendario de vencimientos del mes, con el estado del mes y la agenda al lado
 export function DocCalendario({ filas, onElegir }: { filas: FilaExpediente[]; onElegir: (placa: string) => void }) {
   const hoy = new Date();
+  const toast = useToast();
+  const { user } = useAuth();
+  const porVencer = useMemo(() => vencimientosParaCalendario(filas), [filas]);
+  const alCalendario = async () => {
+    try {
+      const r = await llevarAlCalendario(porVencer, user?.companyName ?? '');
+      if (r === 'descargado') toast('Se descargó vencimientos-flota.ics: ábrelo en tu teléfono o calendario para agregarlos.');
+    } catch (err) { toast(errorMessage(err), 'error'); }
+  };
   const [mes, setMes] = useState(() => new Date(hoy.getFullYear(), hoy.getMonth(), 1));
   const [tipo, setTipo] = useState<string>('todos');
   const [tono, setTono] = useState<'todos' | 'vencido' | 'alerta' | 'vigente'>('todos');
@@ -100,6 +113,8 @@ export function DocCalendario({ filas, onElegir }: { filas: FilaExpediente[]; on
           </select>
           <input className="doc-cal__buscar" type="search" value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Filtrar placa…" aria-label="Filtrar por placa" />
           <span className="doc-cal__contador">{delMes.length} vencimientos</span>
+          <Button variant="secondary" size="sm" icon={<CalendarPlus size={15} />} disabled={!porVencer.length} onClick={alCalendario}
+            title="Agrega al calendario del teléfono todos los documentos vencidos y por vencer">Agregar al calendario ({porVencer.length})</Button>
         </div>
       </div>
 

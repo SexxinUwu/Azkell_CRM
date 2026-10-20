@@ -2772,6 +2772,8 @@ const auditoriaRoutes = require('./routes/audit')(db);
 app.use('/api', auditoriaRoutes);
 const notificacionesRoutes = require('./routes/notificaciones')(db);
 app.use('/api', notificacionesRoutes);
+const documentosFlotaImport = require('./routes/documentos_flota_import')(db);
+app.use('/api', documentosFlotaImport);
 
 // ============================================================
 // 📬 RUTAS DE CONFIGURACIÓN DE CORREO (SMTP) Y ENVÍO DE REPORTES (MULTI-TENANT)

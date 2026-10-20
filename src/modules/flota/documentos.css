@@ -218,3 +218,17 @@
   .page--fill .doc-cal__bloque--agenda { flex: 1 1 auto; min-height: 0; max-height: none; }
   .page--fill .doc-cal__agenda { flex: 1 1 auto; min-height: 0; }
 }
+
+/* Configurador de placas */
+.doc-conf { display: flex; flex-direction: column; gap: var(--s-3); }
+.doc-conf__buscar { width: 100%; padding: 0.6rem 0.9rem; border-radius: 12px; border: 1px solid var(--separator); background: var(--fill); color: var(--label); font: inherit; }
+.doc-conf__acciones { display: flex; align-items: center; gap: var(--s-3); font-size: 0.8125rem; }
+.doc-conf__acciones button { background: none; border: 0; padding: 0; color: var(--accent-ink); font: inherit; font-weight: 600; cursor: pointer; }
+.doc-conf__acciones span { margin-left: auto; color: var(--label-2); }
+.doc-conf__lista { display: flex; flex-direction: column; max-height: 50vh; overflow: auto; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-card); }
+.doc-conf__fila { display: flex; align-items: center; gap: var(--s-3); padding: 0.6rem 0.9rem; border-top: 1px solid var(--separator); cursor: pointer; min-height: 44px; }
+.doc-conf__fila:first-child { border-top: 0; }
+.doc-conf__fila b { font-family: ui-monospace, monospace; }
+.doc-conf__fila span { color: var(--label-2); font-size: 0.8125rem; margin-left: auto; text-align: right; }
+.doc-conf__fila input { width: 1.1rem; height: 1.1rem; accent-color: var(--accent); }
+.doc-conf__insignia { font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 999px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent-ink); align-self: center; }
