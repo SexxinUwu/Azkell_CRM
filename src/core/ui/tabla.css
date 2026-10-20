@@ -1,0 +1,117 @@
+/* Tabla de escritorio con columnas redimensionables (TablaRedimensionable.tsx) */
+.tabla-redim {
+  overflow: auto;
+  border: 1px solid var(--separator);
+  border-radius: 14px;
+  background: var(--surface);
+  overscroll-behavior: contain;
+}
+
+.tabla-redim__tabla {
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8125rem;
+  color: var(--label);
+}
+
+.tabla-redim thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-sunken);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--label-2);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--separator-strong);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.tabla-redim__titulo {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+/* Borde derecho del encabezado: zona de arrastre */
+.tabla-redim__asa {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 9px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 2;
+}
+
+.tabla-redim__asa::after {
+  content: '';
+  position: absolute;
+  top: 22%;
+  bottom: 22%;
+  left: 4px;
+  width: 1px;
+  background: var(--separator-strong);
+}
+
+.tabla-redim__asa:hover::after,
+.tabla-redim__asa:active::after {
+  width: 2px;
+  left: 3.5px;
+  background: var(--accent);
+}
+
+.tabla-redim thead th {
+  position: sticky;
+}
+
+.tabla-redim thead th:not(:last-child) {
+  border-right: 0.5px solid var(--separator);
+}
+
+.tabla-redim tbody td {
+  padding: 9px 12px;
+  border-bottom: 0.5px solid var(--separator);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.tabla-redim tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabla-redim__celda--mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla-redim tbody tr.tabla-redim__fila--click {
+  cursor: pointer;
+}
+
+.tabla-redim tbody tr.tabla-redim__fila--click:hover td {
+  background: var(--fill-subtle);
+}
+
+.tabla-redim tbody tr.tabla-redim__fila--sel td {
+  background: var(--fill-2);
+}
+
+.tabla-redim tbody tr.tabla-redim__sub td {
+  background: var(--surface-sunken);
+  color: var(--label-2);
+  font-size: 0.75rem;
+}
+
+.tabla-redim tbody tr.tabla-redim__sub td:first-child {
+  padding-left: 36px;
+}
