@@ -2277,7 +2277,7 @@ const sseClients = new Set();
 // ============================================================
 // 🔑 MIDDLEWARE DE AUTENTICACIÓN JWT
 // ============================================================
-function verifyToken(req, res, next) {
+function verifyTokenBase(req, res, next) {
     const PUBLIC_PATHS = [
         '/login', '/ping', '/eventos',
         '/whatsapp/qr', '/approvals/oc', '/approvals/oc/action'
@@ -2366,6 +2366,50 @@ function verifyToken(req, res, next) {
         return res.status(401).json({ error: 'Token inválido o expirado' });
     }
 }
+
+// ── Sesión vigente: un token firmado solo sirve mientras su fila siga en sesiones_activas de la empresa ──
+// Cerrar sesión, 'Cerrar otras sesiones' y revocar una sesión borran esa fila; desde ahí el token se rechaza.
+// Se recuerda el acierto 15 s por token para no consultar la base en cada petición (la revocación tarda como mucho eso).
+// Si la consulta falla (base caída) no se bloquea a nadie: la firma del token ya se validó.
+const _sesionesVigentes = new Map();
+const SESION_CACHE_MS = 15000;
+
+function tokenDeLaPeticion(req) {
+    let token = null;
+    String(req.headers['cookie'] || '').split(';').forEach(c => {
+        const idx = c.indexOf('=');
+        if (idx < 0 || c.slice(0, idx).trim() !== 'azkell_session') return;
+        const v = c.slice(idx + 1).trim();
+        try { token = decodeURIComponent(v); } catch { token = v; }
+    });
+    if (!token) {
+        const auth = req.headers['authorization'];
+        if (auth && auth.startsWith('Bearer ')) token = auth.slice(7);
+    }
+    if (!token && req.query && req.query.token) token = String(req.query.token);
+    return token;
+}
+
+function verifyToken(req, res, next) {
+    verifyTokenBase(req, res, () => {
+        if (!req.user) return next(); // ruta pública: no hay sesión que comprobar
+        const token = tokenDeLaPeticion(req);
+        const clave = (req.tenantSlug || '') + '|' + token;
+        const hasta = _sesionesVigentes.get(clave);
+        if (hasta && hasta > Date.now()) return next();
+        (req.db || db).query('SELECT 1 FROM sesiones_activas WHERE token = ? LIMIT 1', [token], (err, filas) => {
+            if (err) { console.warn('verificar sesión:', err.message); return next(); }
+            if (!filas || !filas.length) {
+                _sesionesVigentes.delete(clave);
+                return res.status(401).json({ error: 'Sesión revocada o cerrada. Inicie sesión de nuevo.' });
+            }
+            if (_sesionesVigentes.size > 5000) _sesionesVigentes.clear();
+            _sesionesVigentes.set(clave, Date.now() + SESION_CACHE_MS);
+            next();
+        });
+    });
+}
+
 app.use('/api', verifyToken);
 // Panel SuperAdmin: después de la sesión (exige Fundador o clave maestra) y antes de los permisos por módulo
 app.use('/api/superadmin', require('./routes/superadmin')());
@@ -2523,6 +2567,7 @@ app.post('/api/logout', (req, res) => {
             if (auth && auth.startsWith('Bearer ')) tok = auth.slice(7);
         }
         if (tok) db.query('DELETE FROM sesiones_activas WHERE token=?', [tok], () => {});
+        if (tok) _sesionesVigentes.delete((req.tenantSlug || '') + '|' + tok);
         if (tok) {
             try {
                 const quien = jwt.verify(tok, process.env.JWT_SECRET);
@@ -2736,6 +2781,13 @@ app.post('/api/login', (req, res) => {
                                 { id: usuario.idUsuario, correo: usuario.correo, nombre: usuario.nombre, rol: rolFinal, permisos: permisosFinales, tenant_slug: String(req.tenantSlug || '') },
                                 process.env.JWT_SECRET,
                                 { expiresIn: '12h' }
+                            );
+
+                            // Sin esta fila, verifyToken rechazaría el token (la sesión vale solo mientras exista en sesiones_activas)
+                            t.pool.query(
+                                'INSERT INTO sesiones_activas (usuario_correo, token, ip, dispositivo, fecha_login, ultima_actividad) VALUES (?, ?, ?, ?, NOW(), NOW())',
+                                [usuario.correo, token, ip, dispositivo],
+                                (err) => { if (err) console.warn('INSERT sesiones_activas:', err.message); }
                             );
 
                             auditar(req.db || db, { ...actorDe(req), userId: usuario.id ?? null, userName: usuario.nombre || usuario.correo || 'Sistema' },
