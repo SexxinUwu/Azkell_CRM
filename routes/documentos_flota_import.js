@@ -1,7 +1,8 @@
 // Importación masiva de documentos de flota desde Excel (plantilla de Documentos de flota).
 //  - Placa que no está en `placas`: se crea solo la placa (después se completa su información).
-//  - Placa que ya existe: lo que trae el archivo se escribe encima del dato actual; lo que viene vacío no se toca.
-//  - Cada documento que cambia deja una fila nueva en el historial (documentos_flota); la unidad muestra el actual.
+//  - Placa que ya existe: la fila del archivo es su estado ACTUAL de documentos. Un documento que no viene en el archivo
+//    queda vacío en la unidad y lo anterior se conserva en el historial. Los datos generales vacíos no se tocan.
+//  - Cada documento nuevo o cambiado deja una fila nueva en el historial (documentos_flota); la unidad muestra solo el actual.
 // Todo en una transacción sobre la base de la empresa (req.db).
 const express = require('express');
 const { audit: auditar, actorFrom } = require('../services/auditoria');
@@ -47,6 +48,10 @@ function dia(v) {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v));
     return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
 }
+
+/** Campos de un documento que cuentan para decidir si cambió (sin el archivo adjunto) */
+const camposDe = d => [d.constancia, d.entidad, d.pago, d.asesor, d.emision, d.venc].filter(Boolean);
+const CAMPOS_DOC = new Set([...DOCS.flatMap(d => [...camposDe(d), d.url]), 'ext_cantidad']);
 
 /** Igualdad de un valor ya guardado con el del archivo: 150.50 y 150.5 son lo mismo */
 function igual(a, b) {
@@ -106,7 +111,7 @@ module.exports = function (db) {
         // 2) Escribir todo junto
         const conn = await tdb.promise().getConnection();
         const placasNuevas = [];
-        let actualizadas = 0, historial = 0;
+        let actualizadas = 0, historial = 0, archivados = 0, vaciados = 0;
         try {
             await conn.beginTransaction();
             for (const [placa, { datos }] of porPlaca) {
@@ -119,11 +124,58 @@ module.exports = function (db) {
 
                 const [vf] = await conn.query('SELECT * FROM vehiculos_flota WHERE placa = ? LIMIT 1 FOR UPDATE', [placa]);
                 const actual = vf[0] || null;
+                const valorActual = c => (FECHAS.has(c) ? dia(actual && actual[c]) : (actual ? actual[c] : null));
+
+                // Datos generales de la unidad: lo que trae el archivo se escribe encima; lo vacío no se toca
                 const siguiente = {};
                 for (const c of COLUMNAS) {
                     const previo = actual ? actual[c] : null;
-                    siguiente[c] = FECHAS.has(c) ? (dia(previo)) : (previo == null ? null : previo);
-                    if (datos[c] !== undefined) siguiente[c] = datos[c];
+                    siguiente[c] = FECHAS.has(c) ? dia(previo) : (previo == null ? null : previo);
+                    if (!CAMPOS_DOC.has(c) && datos[c] !== undefined) siguiente[c] = datos[c];
+                }
+
+                // Documentos: la fila del archivo es el estado ACTUAL. El que no venga queda vacío en la unidad;
+                // lo anterior se conserva en el historial (si aún no estaba) y lo nuevo se agrega como registro nuevo.
+                for (const d of DOCS) {
+                    const campos = camposDe(d);
+                    const trae = campos.some(c => datos[c] !== undefined);
+                    const tiene = campos.some(c => !vacio(valorActual(c)));
+                    const sinCambio = campos.every(c => igual(valorActual(c), datos[c] ?? null));
+                    if (sinCambio) continue; // mismo documento (o ambos vacíos): se deja tal cual, con su archivo
+
+                    if (tiene) { // archivar el actual antes de reemplazarlo o vaciarlo
+                        const [ya] = await conn.query(
+                            'SELECT 1 FROM documentos_flota WHERE placa = ? AND tipo_documento = ? AND fecha_vencimiento <=> ? AND nro_constancia <=> ? AND entidad <=> ? LIMIT 1',
+                            [placa, d.tipo, valorActual(d.venc) || null, d.constancia ? (valorActual(d.constancia) || null) : null, d.entidad ? (valorActual(d.entidad) || null) : null]);
+                        if (!ya.length) {
+                            await conn.query(
+                                `INSERT INTO documentos_flota (id, placa, tipo_documento, entidad, nro_constancia, fecha_emision, fecha_vencimiento, pago, asesor, observaciones, usuario)
+                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                [`DOC-${Date.now()}-${Math.floor(Math.random() * 1e6)}`, placa, d.tipo,
+                                    d.entidad ? (valorActual(d.entidad) || null) : null, d.constancia ? (valorActual(d.constancia) || null) : null,
+                                    d.emision ? (valorActual(d.emision) || null) : null, valorActual(d.venc) || null,
+                                    d.pago ? (valorActual(d.pago) || null) : null, d.asesor ? (valorActual(d.asesor) || null) : null,
+                                    (actual && actual[d.url]) || null, usuario]);
+                            archivados++;
+                        }
+                    }
+
+                    for (const c of campos) siguiente[c] = datos[c] ?? null; // lo que no trae el archivo queda vacío
+                    siguiente[d.url] = null; // el archivo adjunto era del documento anterior (queda en el historial)
+                    if (d.tipo === 'EXTINTOR') siguiente.ext_cantidad = datos.ext_cantidad ?? 1;
+
+                    if (trae) {
+                        await conn.query(
+                            `INSERT INTO documentos_flota (id, placa, tipo_documento, entidad, nro_constancia, fecha_emision, fecha_vencimiento, pago, asesor, observaciones, usuario)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            [`DOC-${Date.now()}-${Math.floor(Math.random() * 1e6)}`, placa, d.tipo,
+                                d.entidad ? siguiente[d.entidad] : null, d.constancia ? siguiente[d.constancia] : null,
+                                d.emision ? siguiente[d.emision] : null, siguiente[d.venc],
+                                d.pago ? siguiente[d.pago] : null, d.asesor ? siguiente[d.asesor] : null, null, usuario]);
+                        historial++;
+                    } else {
+                        vaciados++;
+                    }
                 }
                 if (!siguiente.propiedad) siguiente.propiedad = 'PROPIA';
                 if (siguiente.ext_cantidad == null || siguiente.ext_cantidad === '') siguiente.ext_cantidad = 1;
@@ -135,24 +187,6 @@ module.exports = function (db) {
                      ON DUPLICATE KEY UPDATE ${COLUMNAS.map(c => `${c} = VALUES(${c})`).join(', ')}`,
                     vals);
                 actualizadas++;
-
-                // Historial: un registro nuevo por cada documento que trae el archivo y cambia respecto al actual
-                for (const d of DOCS) {
-                    const campos = [d.constancia, d.entidad, d.pago, d.asesor, d.emision, d.venc].filter(Boolean);
-                    if (!campos.some(c => datos[c] !== undefined)) continue;
-                    const cambio = campos.some(c => datos[c] !== undefined
-                        && !igual(FECHAS.has(c) ? dia(actual && actual[c]) : (actual && actual[c]), datos[c]));
-                    if (!cambio && actual) continue;
-                    await conn.query(
-                        `INSERT INTO documentos_flota (id, placa, tipo_documento, entidad, nro_constancia, fecha_emision, fecha_vencimiento, pago, asesor, observaciones, usuario)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                        [`DOC-${Date.now()}-${Math.floor(Math.random() * 1e6)}`, placa, d.tipo,
-                            d.entidad ? siguiente[d.entidad] : null, d.constancia ? siguiente[d.constancia] : null,
-                            d.emision ? siguiente[d.emision] : null, siguiente[d.venc],
-                            d.pago ? siguiente[d.pago] : null, d.asesor ? siguiente[d.asesor] : null,
-                            siguiente[d.url] || null, usuario]);
-                    historial++;
-                }
             }
             await conn.commit();
         } catch (e) {
@@ -165,10 +199,10 @@ module.exports = function (db) {
 
         auditar(tdb, actorFrom(req), {
             action: 'IMPORT', entity: 'fleet-documents', entityId: 'importacion',
-            summary: `Importó documentos de flota: ${actualizadas} unidades (${placasNuevas.length} placas nuevas, ${historial} registros de historial)`,
+            summary: `Importó documentos de flota: ${actualizadas} unidades (${placasNuevas.length} placas nuevas, ${historial} registros nuevos y ${archivados} archivados en el historial, ${vaciados} documentos vaciados)`,
             changes: null,
         });
-        res.json({ ok: true, unidades: actualizadas, placasNuevas, historial, omitidas });
+        res.json({ ok: true, unidades: actualizadas, placasNuevas, historial, archivados, vaciados, omitidas });
     });
 
     return router;
