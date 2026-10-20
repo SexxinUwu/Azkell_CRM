@@ -981,6 +981,20 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
             LIMIT 60
         `).catch(() => [[]]);
 
+        // Técnicos asignados a cada OT: los de sus trabajos (trabajos_ot.tecnico, separados por coma; el trabajo se liga por ticket_visita)
+        const idsOt = (otsRaw || []).map(o => o.id_ot || o.ticket_entrada).filter(Boolean);
+        const tecnicosPorOt = new Map();
+        if (idsOt.length) {
+            const [trabs] = await activeDb.promise().query(
+                "SELECT ticket_visita, tecnico FROM trabajos_ot WHERE ticket_visita IN (?) AND tecnico IS NOT NULL AND TRIM(tecnico) <> ''", [idsOt]
+            ).catch(() => [[]]);
+            (trabs || []).forEach(t => {
+                const set = tecnicosPorOt.get(t.ticket_visita) || new Set();
+                String(t.tecnico).split(',').map(s => s.trim()).filter(Boolean).forEach(n => set.add(n));
+                tecnicosPorOt.set(t.ticket_visita, set);
+            });
+        }
+
         const otsList = (otsRaw || []).map(o => {
             let det = {};
             try { det = typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : (o.detalles_json || {}); } catch(e){}
@@ -994,6 +1008,7 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
                 supervisor: det.supervisor || o.iniciado_por || o.creado_por || 'Taller Central',
                 mecanico: det.mecanico || det.responsable || det.tecnico || 'Asignado',
                 motivo: det.motivo || det.descripcion_falla || 'Mantenimiento',
+                tecnicos: [...(tecnicosPorOt.get(o.id_ot || o.ticket_entrada) || [])],
                 rampa: det.rampa_origen || det.id_rampa || '-',
                 km: det.km ? `${Number(det.km).toLocaleString('es-PE')} km` : '-'
             };
@@ -1029,6 +1044,18 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
             else if (est.includes('realiz') || est.includes('listo')) backlogKPIs.realizado += r.c;
         });
 
+        // "Reportado por" a veces trae un DNI: se muestra el nombre (usuarios, personal o conductores)
+        const nombrePorDoc = new Map();
+        const docs = [...new Set((backlogRaw || []).map(b => String(b.reportado_por || b.creado_por || '').trim()).filter(v => /^\d{6,12}$/.test(v)))];
+        if (docs.length) {
+            const p = activeDb.promise();
+            const [u] = await p.query('SELECT dni, nombre FROM usuarios WHERE dni IN (?)', [docs]).catch(() => [[]]);
+            const [r] = await p.query("SELECT numero_documento AS dni, TRIM(CONCAT(COALESCE(nombres,''), ' ', COALESCE(apellidos,''))) AS nombre FROM rrhh_personal WHERE numero_documento IN (?)", [docs]).catch(() => [[]]);
+            const [c] = await p.query('SELECT dni, nombre FROM conductores WHERE dni IN (?)', [docs]).catch(() => [[]]);
+            [...(c || []), ...(r || []), ...(u || [])].forEach(x => { if (x.dni && x.nombre && String(x.nombre).trim()) nombrePorDoc.set(String(x.dni).trim(), String(x.nombre).trim()); });
+        }
+        const quienReporta = b => { const v = String(b.reportado_por || b.creado_por || 'Operaciones').trim(); return nombrePorDoc.get(v) || v; };
+
         const backlogList = (backlogRaw || []).map(b => ({
             id: b.id,
             backlog_id: b.backlog_id || `BK-${b.id}`,
@@ -1036,7 +1063,7 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
             km: b.km ? `${Number(b.km).toLocaleString('es-PE')} km` : '-',
             tema: b.tema || 'Mantenimiento',
             tarea: b.tarea || 'Revisión técnica pendiente',
-            reportado_por: b.reportado_por || b.creado_por || 'Operaciones',
+            reportado_por: quienReporta(b),
             fecha_reporte: b.fecha_reporte || b.creado_en,
             estado: b.estado || 'Pendiente',
             ticket_ot: b.ticket_ot || '-'
@@ -1220,9 +1247,18 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
             FROM taller_rampas tr
             LEFT JOIN cat_rampas cr ON (CAST(tr.rampa AS CHAR) = CAST(cr.id AS CHAR) OR LOWER(TRIM(tr.rampa)) = LOWER(TRIM(cr.nombre_rampa)))
             WHERE tr.estado != 'Liberado' AND (tr.fecha_liberado IS NULL OR tr.estado = 'Activo')
+              AND COALESCE(cr.en_reporte, 1) <> 0
             ORDER BY COALESCE(cr.orden, 99) ASC, tr.hora_salida ASC, tr.id DESC
             LIMIT 60
         `).catch(() => [[]]);
+
+        // Técnicos de la unidad en rampa: los de sus OT en proceso
+        const tecnicosPorPlaca = new Map();
+        otsList.forEach(o => {
+            const set = tecnicosPorPlaca.get(o.placa) || new Set();
+            (o.tecnicos || []).forEach(n => set.add(n));
+            tecnicosPorPlaca.set(o.placa, set);
+        });
 
         const rampasList = (rampasRaw || []).map(r => {
             let hIngreso = r.hora_ingreso ? String(r.hora_ingreso).substring(0, 5) : '-';
@@ -1251,6 +1287,7 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
                 hora_salida: hSalida,
                 fecha_salida: r.fecha_salida,
                 situacion: r.situacion || 'En atención',
+                tecnicos: [...(tecnicosPorPlaca.get(r.placa) || [])],
                 trabajo: obsClean || 'Revisión y mantenimiento'
             };
         });
