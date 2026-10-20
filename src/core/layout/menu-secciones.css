@@ -58,3 +58,12 @@
 .nav-seccion--abierta .nav-seccion__punto {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--seccion) 28%, transparent);
 }
+
+/* Cifra de la sección (solo con la sección abierta) */
+.nav-seccion__indicador {
+  margin: 0 10px 6px 26px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--seccion);
+  font-variant-numeric: tabular-nums;
+}

@@ -15,6 +15,30 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'finanzas-taller', label: 'Reporte financiero', to: '/mantenimiento/finanzas-taller', icon: 'Wallet', permisos: ['mant_dashboard.ver', 'admin'] },
   },
   {
+    path: 'mantenimiento/config-metrica/*',
+    permisos: ['cfg_mant.ver', 'admin'],
+    Page: lazy(() => import('./ConfigMetricaPage').then(m => ({ default: m.ConfigMetricaPage }))),
+    nav: { key: 'config-metrica', label: 'Config. métrica', to: '/mantenimiento/config-metrica', icon: 'Target', permisos: ['cfg_mant.ver', 'admin'] },
+  },
+  {
+    path: 'mantenimiento/configuracion-mp/*',
+    permisos: ['cfg_mant.ver', 'admin'],
+    Page: lazy(() => import('./FrecuenciasMpPage').then(m => ({ default: m.FrecuenciasMpPage }))),
+    nav: { key: 'frecuencias-mp', label: 'Frecuencias MP', to: '/mantenimiento/configuracion-mp', icon: 'Settings', permisos: ['cfg_mant.ver', 'admin'] },
+  },
+  {
+    path: 'mantenimiento/kpis-taller/*',
+    permisos: ['mant_dashboard.ver', 'admin'],
+    Page: lazy(() => import('./KpisTallerPage').then(m => ({ default: m.KpisTallerPage }))),
+    nav: { key: 'kpis', label: 'Métricas y KPIs', to: '/mantenimiento/kpis-taller', icon: 'Activity', permisos: ['mant_dashboard.ver', 'admin'] },
+  },
+  {
+    path: 'mantenimiento/productividad/*',
+    permisos: ['pers_mant.ver', 'mant_dashboard.ver', 'admin'],
+    Page: lazy(() => import('./ProductividadPage').then(m => ({ default: m.ProductividadPage }))),
+    nav: { key: 'productividad', label: 'Productividad personal', to: '/mantenimiento/productividad', icon: 'HardHat', permisos: ['pers_mant.ver', 'mant_dashboard.ver', 'admin'] },
+  },
+  {
     path: 'mantenimiento/reportes-ot/*',
     permisos: ['reportes_ot.ver', 'ot.ver'],
     Page: lazy(() => import('./OrdenesTrabajoPage').then(m => ({ default: m.OrdenesTrabajoPage }))),

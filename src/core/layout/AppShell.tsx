@@ -2,8 +2,11 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight, Banknote, Boxes, ChevronDown, ChevronRight, Contact, IdCard, House, LogOut, Palette, PanelLeftClose, PanelLeftOpen, Route, Settings, Share, ShieldCheck, Truck,
-  SquarePlus, Smartphone, Users, Wrench, type LucideIcon,
+  SquarePlus, Smartphone, Users, Wrench, Search, EyeOff, type LucideIcon,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../api/client';
+import { PaletaComandos, type OpcionPaleta } from './PaletaComandos';
 import { useInstallApp } from '../lib/useInstallApp';
 import { useAuth } from '../auth/AuthProvider';
 import { AvatarPropio } from '../../modules/perfil/AvatarPropio';
@@ -26,6 +29,13 @@ const COLOR_SECCION: Record<string, string> = {
   Operaciones: '#2563eb', 'Operaciones Marsisa': '#d97706', Flota: '#16a34a', Mantenimiento: '#ea580c', 'Almacén': '#7c3aed',
   Gerencia: '#0f766e', RRHH: '#db2777', 'Tesorería': '#059669', Conductor: '#0891b2', Seguridad: '#475569', Directorio: '#4f46e5',
 };
+
+// Todas las pantallas de una sección (los submenús se aplanan) para la paleta Ctrl+K
+function aplanarOpciones(items: NavItem[], seccion: string): OpcionPaleta[] {
+  return items.flatMap(i => (i.children
+    ? aplanarOpciones(i.children, seccion)
+    : (i.to || i.clasico) ? [{ key: i.key, label: i.label, seccion, to: i.to, clasico: i.clasico }] : []));
+}
 
 // Pendientes de una sección: los contadores de sus opciones (y de sus submenús)
 function contadorDe(item: NavItem, contador: Record<string, number>): number {
@@ -53,6 +63,47 @@ export function AppShell() {
     const activa = sections.find(s => s.items.some(i => (i.children ? i.children.some(c => isActive(c, location.pathname)) : isActive(i, location.pathname))));
     if (activa) setSeccionAbierta(activa.title);
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Ctrl+K: paleta de pantallas. Favoritos y modo foco se guardan por usuario en este navegador.
+  const [paletaAbierta, setPaletaAbierta] = useState(false);
+  const claveUsuario = user?.email ?? 'anonimo';
+  const [favoritos, setFavoritos] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(`fleet_favoritos_${claveUsuario}`) ?? '[]'); } catch { return []; } });
+  const [modoFoco, setModoFoco] = useState(() => { try { return localStorage.getItem('fleet_modo_foco') === '1'; } catch { return false; } });
+  const indicadores = useQuery<Record<string, string | null>>({
+    queryKey: ['nav', 'indicadores'],
+    queryFn: () => api<{ indicadores: Record<string, string | null> }>('/nav/indicadores').then(r => r.indicadores),
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
+  });
+  useEffect(() => {
+    const teclado = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPaletaAbierta(v => !v); } };
+    window.addEventListener('keydown', teclado);
+    return () => window.removeEventListener('keydown', teclado);
+  }, []);
+  // Modo foco: al cambiar de pantalla el menú vuelve a contraerse (se despliega al pasar el cursor)
+  useEffect(() => { if (modoFoco) setMenuFijo(false); }, [location.pathname, modoFoco]);
+  const opcionesPaleta: OpcionPaleta[] = sections.flatMap(s => aplanarOpciones(s.items, s.title));
+  const favoritosItems = favoritos.map(k => opcionesPaleta.find(o => o.key === k)).filter((o): o is OpcionPaleta => !!o && !!o.to);
+  function alternarFavorito(key: string) {
+    setFavoritos(prev => {
+      const nx = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key].slice(-5);
+      try { localStorage.setItem(`fleet_favoritos_${claveUsuario}`, JSON.stringify(nx)); } catch { /* sin almacenamiento: no se guarda */ }
+      return nx;
+    });
+  }
+  function alternarFoco() {
+    setModoFoco(v => {
+      const nv = !v;
+      try { localStorage.setItem('fleet_modo_foco', nv ? '1' : '0'); } catch { /* sin almacenamiento */ }
+      if (nv) setMenuFijo(false);
+      return nv;
+    });
+  }
+  function elegirOpcion(o: OpcionPaleta) {
+    setPaletaAbierta(false);
+    if (o.to) navigate(o.to);
+    else if (o.clasico) abrirClasico(o.clasico);
+  }
   const current = findNavItem(location.pathname);
   const pageTitle = location.pathname === '/perfil' ? 'Mi cuenta'
     : location.pathname.startsWith('/q/') ? 'Unidad'
@@ -127,6 +178,19 @@ export function AppShell() {
         </Link>
 
         <nav className="sidebar__nav">
+          {favoritosItems.length > 0 && (
+            <div className="nav-seccion" style={{ ['--seccion' as string]: '#d97706' }}>
+              <div className="nav-seccion__cab sidebar__texto" style={{ cursor: 'default' }}>
+                <span className="nav-seccion__punto" aria-hidden />
+                <span className="nav-seccion__titulo">Favoritos</span>
+              </div>
+              {favoritosItems.map(o => (
+                <NavLink key={o.key} to={o.to!} className="nav-item">
+                  <span className="sidebar__texto">{o.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
           {sections.map(section => {
             const abierta = seccionAbierta === section.title;
             const color = COLOR_SECCION[section.title] ?? 'var(--accent)';
@@ -140,6 +204,9 @@ export function AppShell() {
                   {!abierta && pendientes > 0 && <span className="nav-item__contador">{pendientes}</span>}
                   <ChevronDown size={14} aria-hidden className={`nav-grupo__flecha${abierta ? ' nav-grupo__flecha--abierta' : ''}`} />
                 </button>
+                {abierta && indicadores.data?.[section.title] && (
+                  <div className="nav-seccion__indicador">{indicadores.data[section.title]}</div>
+                )}
                 {abierta && section.items.map(item => (
                   <NavEscritorio key={item.key} item={item} pathname={location.pathname} contador={contador} />
                 ))}
@@ -157,6 +224,14 @@ export function AppShell() {
             </div>
           </NavLink>
           <div className="sidebar__acciones">
+            <button type="button" className="nav-item" onClick={() => setPaletaAbierta(true)}>
+              <Search size={18} strokeWidth={1.9} />
+              <span className="sidebar__texto">Buscar pantalla (Ctrl+K)</span>
+            </button>
+            <button type="button" className="nav-item" onClick={alternarFoco} aria-pressed={modoFoco}>
+              <EyeOff size={18} strokeWidth={1.9} />
+              <span className="sidebar__texto">{modoFoco ? 'Modo foco: activo' : 'Modo foco'}</span>
+            </button>
             <button type="button" className="nav-item" onClick={alternarMenuFijo} aria-pressed={menuFijo}>
               {menuFijo ? <PanelLeftClose size={18} strokeWidth={1.9} /> : <PanelLeftOpen size={18} strokeWidth={1.9} />}
               <span className="sidebar__texto">{menuFijo ? 'Contraer menú' : 'Fijar menú abierto'}</span>
@@ -197,6 +272,10 @@ export function AppShell() {
       <ModuleDock items={dock} />
 
       {/* Lista de pantallas del módulo elegido */}
+      {paletaAbierta && (
+        <PaletaComandos opciones={opcionesPaleta} favoritos={favoritos} onToggleFavorito={alternarFavorito}
+          onElegir={elegirOpcion} onCerrar={() => setPaletaAbierta(false)} />
+      )}
       <Sheet open={!!moduloSheet} onClose={() => setModuloAbierto(null)} title={moduloSheet?.title ?? ''}>
         {moduloSheet && (
           <div className="modulo-lista">
