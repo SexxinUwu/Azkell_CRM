@@ -72,6 +72,10 @@ Pasada de diseño sobre las pantallas ya migradas a React, bloque por bloque, ca
 
 Seguridad que no depende del código: **usuario MySQL propio para la app** (hoy usa `root` abierto a internet) y **rotar los secretos del historial de git**. La rotación la hace el usuario.
 
+## Deuda técnica
+
+- **`GET /api/tesoreria/movimientos` escribe en la base de datos.** Antes de devolver el libro, borra movimientos de caja de órdenes de compra que ya no existen en `entradas_inv` (`routes/tesoreria.js`, al inicio del handler). Un GET debe ser solo lectura: si React Query lanza dos peticiones en paralelo o dos usuarios cargan la pantalla a la vez, la limpieza puede pisarse o alterar auditorías. Mientras no se quite, el riesgo es bajo porque el borrado solo toca registros huérfanos, pero no debe crecer. **Plan:** mover la limpieza a `POST /api/tesoreria/conciliar-huerfanos` (ejecución explícita, con auditoría) o a un job nocturno, y dejar el GET sin escrituras.
+
 ## Fases
 
 - [ ] **Fase 0 — Inventario y limpieza**
