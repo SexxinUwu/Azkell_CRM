@@ -28,6 +28,8 @@ export interface NavItem {
   permissions: string[];
   /** Solo en el subdominio de esa empresa (pantallas propias de una empresa) */
   soloEmpresa?: string;
+  /** Oculto en esta empresa (su versión propia está en otra sección) */
+  noEmpresa?: string;
   /** Submenú: el elemento agrupa estas opciones */
   children?: NavItem[];
   /** Todavía no existe en la app: se muestra deshabilitado con "Pronto" */
@@ -56,7 +58,7 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Operaciones',
     items: [
       { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision', 'guias_remision') },
-      { key: 'ordenes-viaje', label: 'Órdenes de viaje', clasico: 'operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'guias_remision', 'op_guias_remision') },
+      { key: 'ordenes-viaje', noEmpresa: 'marsisa', label: 'Órdenes de viaje', clasico: 'operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'guias_remision', 'op_guias_remision') },
       { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'guias_remision') },
       {
         key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [],
@@ -68,10 +70,10 @@ const SECCIONES_BASE: NavSection[] = [
       {
         key: 'combustible-grupo', label: 'Combustible', icon: Fuel, permissions: [],
         children: [
-          { key: 'vales', label: 'Vales de combustible', to: '/operaciones/vales', icon: Fuel, permissions: ver('combustible_vales', 'combustible') },
-          { key: 'matriz-combustible', label: 'Matriz de combustible (D2)', to: '/operaciones/matriz-combustible', icon: Target, permissions: ver('combustible_analisis', 'combustible') },
-          { key: 'analisis-combustible', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis', 'combustible') },
-          { key: 'urea', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis', 'combustible') },
+          { key: 'vales', noEmpresa: 'marsisa', label: 'Vales de combustible', to: '/operaciones/vales', icon: Fuel, permissions: ver('combustible_vales', 'combustible') },
+          { key: 'matriz-combustible', noEmpresa: 'marsisa', label: 'Matriz de combustible (D2)', to: '/operaciones/matriz-combustible', icon: Target, permissions: ver('combustible_analisis', 'combustible') },
+          { key: 'analisis-combustible', noEmpresa: 'marsisa', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis', 'combustible') },
+          { key: 'urea', noEmpresa: 'marsisa', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis', 'combustible') },
           { key: 'estaciones', label: 'Estaciones de proveedores', clasico: 'operaciones/combustible-estaciones', icon: MapPin, permissions: ver('combustible_vales', 'combustible') },
         ],
       },
@@ -262,6 +264,7 @@ function filtrarItems(items: NavItem[], can: (...p: string[]) => boolean, empres
     .filter(i => {
       if (i.children && i.children.length === 0) return false;
       if (i.soloEmpresa && !empresa.includes(i.soloEmpresa)) return false;
+      if (i.noEmpresa && empresa.includes(i.noEmpresa)) return false;
       return can(...i.permissions);
     });
 }
