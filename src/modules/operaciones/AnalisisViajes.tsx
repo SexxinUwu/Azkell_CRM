@@ -113,6 +113,19 @@ const AUDIT = ['PENDIENTE', 'CONFORME', 'OBSERVADO'];
 const colorAudit = (e: string) => ({ CONFORME: 'green', OBSERVADO: 'amber', PENDIENTE: 'gray' }[e] ?? 'gray');
 const esUrea = (k: string) => /UREA|ADBLUE|DEF/.test(k.toUpperCase());
 const TAMANOS = [25, 50, 100];
+// Un viaje de más de este recorrido se considera odómetro mal digitado (ningún viaje real llega a eso)
+const LIMITE_KM_VIAJE = 3000;
+
+// Tarjeta de indicador de la cabecera
+function KpiCard({ titulo, valor, detalle, color }: { titulo: string; valor: string; detalle: string; color?: string }) {
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 16, padding: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+      <span style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--label-2)' }}>{titulo}</span>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', fontWeight: 800, color: color ?? 'var(--label)', fontVariantNumeric: 'tabular-nums' }}>{valor}</span>
+      <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{detalle}</span>
+    </div>
+  );
+}
 
 // Pastilla de color del tema (mismos tonos que el resto de la app)
 function Pastilla({ color, children }: { color: string; children: string }) {
@@ -242,8 +255,11 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const resumen = useMemo(() => {
     const gal = visibles.reduce((s, t) => s + cifras(t).galones, 0);
     const gasto = visibles.reduce((s, t) => s + cifras(t).gasto, 0);
-    const km = visibles.reduce((s, t) => s + n(t.recorridoKm), 0);
-    return { gal, gasto, kmGal: gal > 0 && km > 0 ? km / gal : 0, pendientes: visibles.filter(t => t.estadoAuditoria === 'PENDIENTE').length };
+    // Km por galón solo con viajes de odómetro válido: un odómetro mal digitado (p. ej. 7.444.183 km en un viaje) infla el promedio
+    const razonables = visibles.filter(t => !t.odometroInconsistente && n(t.recorridoKm) > 0 && n(t.recorridoKm) <= LIMITE_KM_VIAJE);
+    const kmRazonables = razonables.reduce((s, t) => s + n(t.recorridoKm), 0);
+    const galRazonables = razonables.reduce((s, t) => s + cifras(t).galones, 0);
+    return { viajes: visibles.length, gal, gasto, kmGal: galRazonables > 0 ? kmRazonables / galRazonables : 0, razonables: razonables.length, pendientes: visibles.filter(t => t.estadoAuditoria === 'PENDIENTE').length };
   }, [visibles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = trips.find(x => x.viaje === abierto) ?? null;
@@ -336,10 +352,16 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <div className="inv-metricas">
-          <div className="inv-metrica"><span className="inv-metrica__num">{fmt(resumen.gal, 0)}</span><span className="inv-metrica__label">{urea ? 'Urea (gl)' : 'Galones'}</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>{soles(resumen.gasto)}</span><span className="inv-metrica__label">Gasto</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num">{fmt(resumen.kmGal, 2)}</span><span className="inv-metrica__label">km por galón</span></div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 'var(--s-3)' }}>
+          <KpiCard titulo="Viajes" valor={fmt(resumen.viajes, 0)} detalle={`${resumen.pendientes} sin auditar`} />
+          <KpiCard titulo={urea ? 'Urea (gl)' : 'Galones'} valor={fmt(resumen.gal, 2)} color="var(--accent)"
+            detalle={resumen.viajes ? `${fmt(resumen.gal / resumen.viajes, 1)} gl por viaje en promedio` : 'Sin viajes'} />
+          <KpiCard titulo="Gasto" valor={soles(resumen.gasto)} color="var(--green-ink)"
+            detalle={resumen.gal > 0 ? `S/ ${fmt(resumen.gasto / resumen.gal, 2)} por galón en promedio` : 'Sin galones'} />
+          {!urea && (
+            <KpiCard titulo="Km por galón" valor={fmt(resumen.kmGal, 2)} color="var(--amber-ink)"
+              detalle={`Con ${resumen.razonables} de ${resumen.viajes} viajes de odómetro válido`} />
+          )}
         </div>
 
         <SearchField value={busqueda} placeholder="Viaje, placa, ruta o conductor…"
