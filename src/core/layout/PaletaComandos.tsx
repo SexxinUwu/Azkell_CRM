@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpRight, Search, Star } from 'lucide-react';
+import { ArrowUpRight, Search, Star, type LucideIcon } from 'lucide-react';
 
 // Ctrl+K: busca cualquier pantalla del menú y la abre sin recorrer las secciones.
-export interface OpcionPaleta { key: string; label: string; seccion: string; to?: string; clasico?: string }
+export interface OpcionPaleta { key: string; label: string; seccion: string; to?: string; clasico?: string; icon?: LucideIcon }
 
 interface Props {
   opciones: OpcionPaleta[];

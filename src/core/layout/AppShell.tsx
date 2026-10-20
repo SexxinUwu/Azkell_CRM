@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight, Banknote, Boxes, ChevronDown, ChevronRight, Contact, IdCard, House, LogOut, Palette, PanelLeftClose, PanelLeftOpen, Route, Settings, Share, ShieldCheck, Truck,
-  SquarePlus, Smartphone, Users, Wrench, Search, EyeOff, type LucideIcon,
+  SquarePlus, Smartphone, Users, Wrench, Search, EyeOff, Star, type LucideIcon,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
@@ -34,7 +34,7 @@ const COLOR_SECCION: Record<string, string> = {
 function aplanarOpciones(items: NavItem[], seccion: string): OpcionPaleta[] {
   return items.flatMap(i => (i.children
     ? aplanarOpciones(i.children, seccion)
-    : (i.to || i.clasico) ? [{ key: i.key, label: i.label, seccion, to: i.to, clasico: i.clasico }] : []));
+    : (i.to || i.clasico) ? [{ key: i.key, label: i.label, seccion, to: i.to, clasico: i.clasico, icon: i.icon }] : []));
 }
 
 // Pendientes de una sección: los contadores de sus opciones (y de sus submenús)
@@ -179,33 +179,39 @@ export function AppShell() {
 
         <nav className="sidebar__nav">
           {favoritosItems.length > 0 && (
-            <div className="nav-seccion" style={{ ['--seccion' as string]: '#d97706' }}>
-              <div className="nav-seccion__cab sidebar__texto" style={{ cursor: 'default' }}>
-                <span className="nav-seccion__punto" aria-hidden />
-                <span className="nav-seccion__titulo">Favoritos</span>
+            <div className="nav-seccion nav-seccion--favoritos" style={{ ['--seccion' as string]: '#d97706' }}>
+              <div className="nav-seccion__cab">
+                <span className="nav-seccion__icono" aria-hidden><Star size={16} strokeWidth={2} fill="currentColor" /></span>
+                <span className="nav-seccion__titulo sidebar__texto">Favoritos</span>
               </div>
-              {favoritosItems.map(o => (
-                <NavLink key={o.key} to={o.to!} className="nav-item">
-                  <span className="sidebar__texto">{o.label}</span>
-                </NavLink>
-              ))}
+              {favoritosItems.map(o => {
+                const Ico = o.icon ?? Boxes;
+                return (
+                  <NavLink key={o.key} to={o.to!} className="nav-item" title={o.label}>
+                    <Ico size={18} strokeWidth={1.9} />
+                    <span className="sidebar__texto">{o.label}</span>
+                  </NavLink>
+                );
+              })}
             </div>
           )}
           {sections.map(section => {
             const abierta = seccionAbierta === section.title;
             const color = COLOR_SECCION[section.title] ?? 'var(--accent)';
+            const Icono = iconoModulo(section.title);
             const pendientes = section.items.reduce((s, i) => s + contadorDe(i, contador), 0);
             return (
               <div key={section.title} className={`nav-seccion${abierta ? ' nav-seccion--abierta' : ''}`} style={{ ['--seccion' as string]: color }}>
-                <button type="button" className="nav-seccion__cab sidebar__texto" aria-expanded={abierta}
+                <button type="button" className="nav-seccion__cab" aria-expanded={abierta} title={section.title}
                   onClick={() => setSeccionAbierta(abierta ? null : section.title)}>
-                  <span className="nav-seccion__punto" aria-hidden />
-                  <span className="nav-seccion__titulo">{section.title}</span>
-                  {!abierta && pendientes > 0 && <span className="nav-item__contador">{pendientes}</span>}
-                  <ChevronDown size={14} aria-hidden className={`nav-grupo__flecha${abierta ? ' nav-grupo__flecha--abierta' : ''}`} />
+                  <span className="nav-seccion__icono" aria-hidden><Icono size={17} strokeWidth={2} /></span>
+                  <span className="nav-seccion__titulo sidebar__texto">{section.title}</span>
+                  {!abierta && pendientes > 0 && <span className="nav-seccion__pendientes sidebar__texto">{pendientes}</span>}
+                  {!abierta && pendientes > 0 && <span className="nav-seccion__aviso" aria-hidden />}
+                  <ChevronDown size={14} aria-hidden className="nav-seccion__flecha sidebar__texto" />
                 </button>
                 {abierta && indicadores.data?.[section.title] && (
-                  <div className="nav-seccion__indicador">{indicadores.data[section.title]}</div>
+                  <div className="nav-seccion__indicador sidebar__texto">{indicadores.data[section.title]}</div>
                 )}
                 {abierta && section.items.map(item => (
                   <NavEscritorio key={item.key} item={item} pathname={location.pathname} contador={contador} />
@@ -347,7 +353,7 @@ const SECCION_INICIO = 'Dashboard';
 
 const ICONOS_MODULO: Record<string, LucideIcon> = {
   Operaciones: Route, 'Operaciones Marsisa': Route, Flota: Truck, Mantenimiento: Wrench, 'Almacén': Boxes,
-  Gerencia: ShieldCheck, RRHH: Users, 'Tesorería': Banknote, Conductor: IdCard, Seguridad: ShieldCheck, Directorio: Contact,
+  Gerencia: ShieldCheck, RRHH: Users, 'Tesorería': Banknote, Conductor: IdCard, Seguridad: ShieldCheck, Directorio: Contact, Dashboard: House,
 };
 const iconoModulo = (titulo: string): LucideIcon => ICONOS_MODULO[titulo] ?? Boxes;
 // El nombre del módulo va completo, tal cual aparece en el menú
