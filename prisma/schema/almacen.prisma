@@ -122,6 +122,7 @@ model EntradaInv {
   condicion_pago            String?           @default("Al contado") @db.VarChar(50)
   dias_credito              Int?              @default(30)
   ot_id                     String?           @db.VarChar(50)
+  ot_servicio_agregado      Boolean           @default(false) @db.TinyInt
   numero_correlativo        String?           @db.VarChar(50)
   serie                     String?           @db.VarChar(20)
   dias_pagar                Int?              @default(0)
