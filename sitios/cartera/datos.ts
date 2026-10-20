@@ -3,8 +3,8 @@
 
 /** Enlaces de contacto: los que queden vacíos no se muestran. */
 export const CONTACTO = {
-  correo: '',
-  linkedin: '',
+  correo: 'azkellfleet@gmail.com',
+  linkedin: 'https://www.linkedin.com/in/sthefano-avila-li-57b82532b',
   github: '',
 };
 
