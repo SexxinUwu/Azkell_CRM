@@ -1,8 +1,13 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, SearchX } from 'lucide-react';
-import { PageLoader } from '../../core/ui/Button';
+import { MapPin, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Button, PageLoader } from '../../core/ui/Button';
+import { ConfirmSheet } from '../../core/ui/Sheet';
+import { useToast } from '../../core/ui/Toast';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { RegistroBaseSheet, eliminarRegistroBase } from './UnidadBaseFormulario';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput } from '../../core/ui/Field';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -30,11 +35,19 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'km', titulo: 'Km salida', ancho: 120, alinear: 'right' },
   { id: 'orden', titulo: 'Orden de viaje', ancho: 160 },
   { id: 'alerta', titulo: 'Alerta', ancho: 110 },
+  { id: 'acciones', titulo: 'Acciones', ancho: 120, minimo: 110 },
 ];
 
 export function UnidadesBasePage() {
   const [q, setQ] = useState('');
   const [empresa, setEmpresa] = useState('');
+  const [forma, setForma] = useState<{ item: UnidadBase | null } | null>(null);
+  const [borrar, setBorrar] = useState<UnidadBase | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const qc = useQueryClient();
+  const toast = useToast();
+  const { can } = useAuth();
+  const puedeEditar = can('seguridad_unidades.editar', 'seg_unidades.editar', 'seguridad_unidades.crear');
   const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 
   const panorama = useQuery<Panorama>({
@@ -58,7 +71,7 @@ export function UnidadesBasePage() {
   return (
     <Page>
       <PageHeader eyebrow="Seguridad" title='Status "Unidades en Base"'
-        subtitle={panorama.isLoading ? 'Cargando…' : `${todas.length} unidades · ${enRuta} en ruta · ${conAlerta} con alerta · se actualiza cada 30 s`} />
+        subtitle={panorama.isLoading ? 'Cargando…' : `${todas.length} unidades · ${enRuta} en ruta · ${conAlerta} con alerta · se actualiza cada 30 s`} actions={puedeEditar ? <Button variant="primary" icon={<Plus size={16} />} onClick={() => setForma({ item: null })}>Registrar unidad</Button> : undefined} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -87,11 +100,34 @@ export function UnidadesBasePage() {
                 <Celda alinear="right" mono>{u.km_salida != null ? Number(u.km_salida).toLocaleString('es-PE') : '—'}</Celda>
                 <Celda mono>{u.orden_viaje || '—'}</Celda>
                 <Celda>{u.has_alert === true || u.has_alert === 1 ? <span style={{ color: 'var(--red-ink)', fontWeight: 700 }}>Con alerta</span> : '—'}</Celda>
+                <Celda>
+                  {puedeEditar && (
+                    <span style={{ display: 'inline-flex', gap: 'var(--s-1)' }}>
+                      <Button variant="secondary" icon={<Pencil size={14} />} aria-label={`Editar ${u.placa}`} onClick={() => setForma({ item: u })}>{''}</Button>
+                      <Button variant="secondary" icon={<Trash2 size={14} />} aria-label={`Eliminar ${u.placa}`} onClick={() => setBorrar(u)}>{''}</Button>
+                    </span>
+                  )}
+                </Celda>
               </tr>
             ))}
           </TablaRedimensionable>
         )}
       </div>
+      <RegistroBaseSheet abierto={!!forma} registro={forma?.item ?? null} onClose={() => setForma(null)}
+        onGuardado={() => qc.invalidateQueries({ queryKey: ['seguridad', 'unidades-base'] })} />
+      <ConfirmSheet open={!!borrar} onClose={() => !ocupado && setBorrar(null)} loading={ocupado}
+        title={`¿Eliminar el registro de ${borrar?.placa ?? ''}?`} message="Sale de la base. Esta acción no se puede deshacer." confirmLabel="Eliminar"
+        onConfirm={async () => {
+          if (!borrar) return;
+          setOcupado(true);
+          try {
+            await eliminarRegistroBase(borrar);
+            toast('Registro eliminado');
+            setBorrar(null);
+            await qc.invalidateQueries({ queryKey: ['seguridad', 'unidades-base'] });
+          } catch (err) { toast(errorMessage(err), 'error'); }
+          finally { setOcupado(false); }
+        }} />
     </Page>
   );
 }

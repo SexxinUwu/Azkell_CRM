@@ -215,8 +215,10 @@ export function AppShell() {
                 {abierta && indicadores.data?.[section.title] && (
                   <div className="nav-seccion__indicador sidebar__texto">{indicadores.data[section.title]}</div>
                 )}
-                {abierta && section.items.map(item => (
-                  <NavEscritorio key={item.key} item={item} pathname={location.pathname} contador={contador} />
+                {abierta && section.items.map((item, i) => (
+                  <div key={item.key} className="nav-seccion__item" style={{ ['--i' as string]: i }}>
+                    <NavEscritorio item={item} pathname={location.pathname} contador={contador} />
+                  </div>
                 ))}
               </div>
             );
@@ -269,7 +271,10 @@ export function AppShell() {
         <main className="main" ref={mainRef}>
           {/* Pantallas que se descargan aparte: el marco (barras) no se mueve mientras llegan */}
           <Suspense fallback={<PageLoader />}>
-            <Outlet />
+            {/* Cada módulo entra con su propia transición; la clave cambia con la ruta */}
+            <div key={location.pathname} className="vista-transicion">
+              <Outlet />
+            </div>
           </Suspense>
         </main>
       </div>
