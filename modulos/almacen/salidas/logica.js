@@ -120,9 +120,10 @@ function _salCargarSelectores() {
     fetch('/api/almacen/inventario')
         .then(function (r) { return r.json(); })
         .then(function (d) {
-            window._salInvData = d || [];
+            // Solo artículos (INV): los servicios (SERV) no se solicitan a almacén
+            window._salInvData = (d || []).filter(function (a) { return !/^SERV/i.test(String(a.id || '')); });
             var dl = document.getElementById('sal-inv-list');
-            if (dl) dl.innerHTML = (d || []).map(function (a) {
+            if (dl) dl.innerHTML = window._salInvData.map(function (a) {
                 return '<option value="' + salEsc(a.id + ' — ' + a.descripcion) + '">';
             }).join('');
         })
