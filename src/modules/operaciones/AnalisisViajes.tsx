@@ -409,8 +409,10 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                 const dif = a && a.galTeorico > 0 && c.galones > 0 ? c.galones - a.galTeorico : null;
                 const celdas: ReactNode[] = [
                   <Celda key="aud">
-                    <Pastilla color={color}>{x.estadoAuditoria}</Pastilla>
-                    {x.odometroInconsistente && <AlertTriangle size={14} style={{ marginLeft: 6, color: 'var(--red-ink)', verticalAlign: 'middle' }} />}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <Pastilla color={color}>{x.estadoAuditoria}</Pastilla>
+                      {x.odometroInconsistente && <AlertTriangle size={14} style={{ color: 'var(--red-ink)', flexShrink: 0 }} aria-label="Odómetro inconsistente" />}
+                    </span>
                   </Celda>,
                 ];
                 if (mostrarObs) celdas.push(<Celda key="obs">{x.observacionAuditoria || '—'}</Celda>);
