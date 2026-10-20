@@ -62,10 +62,9 @@ export const DOCS: DocConfig[] = [
   { clave: 'rt', num: 3, titulo: 'Revisión técnica (CITV)', corto: 'CITV', tipoKey: 'REV_TECNICA', vencimiento: 'rt_vencimiento', prefijo: 'rt', datos: [{ campo: 'rt_emision', etiqueta: 'Emisión' }] },
   { clave: 'matpel', num: 4, titulo: 'Autorización MATPEL', corto: 'MATPEL', tipoKey: 'MATPEL', vencimiento: 'matpel_vencimiento', prefijo: 'matpel', datos: [{ campo: 'matpel_constancia', etiqueta: 'N°' }] },
   { clave: 'boni', num: 5, titulo: 'Bonificación (MTC)', corto: 'Bonificación', tipoKey: 'BONIFICACION', vencimiento: 'boni_vencimiento', prefijo: 'boni', datos: [{ campo: 'boni_emision', etiqueta: 'Emisión' }] },
-  { clave: 'sv', num: 6, titulo: 'Póliza vehicular', corto: 'Póliza vehicular', tipoKey: 'SEG_VEHICULAR', vencimiento: 'sv_vencimiento', prefijo: 'sv', datos: [{ campo: 'sv_entidad', etiqueta: 'Entidad' }] },
-  { clave: 'sc', num: 7, titulo: 'Póliza carreta', corto: 'Póliza carreta', tipoKey: 'SEG_CARRETA', vencimiento: 'sc_vencimiento', prefijo: 'sc', datos: [{ campo: 'sc_entidad', etiqueta: 'Entidad' }] },
-  { clave: 'fum', num: 8, titulo: 'Cert. fumigación', corto: 'Fumigación', tipoKey: 'FUMIGACION', vencimiento: 'fum_vencimiento', prefijo: 'fum', datos: [{ campo: 'fum_emision', etiqueta: 'Emisión' }] },
-  { clave: 'ext', num: 9, titulo: 'Insp. extintores', corto: 'Extintores', tipoKey: 'EXTINTOR', vencimiento: 'ext_vencimiento', prefijo: 'ext', datos: [{ campo: 'ext_emision', etiqueta: 'Emisión' }] },
+  { clave: 'sv', num: 6, titulo: 'Seguro vehicular', corto: 'Seguro vehicular', tipoKey: 'SEG_VEHICULAR', vencimiento: 'sv_vencimiento', prefijo: 'sv', datos: [{ campo: 'sv_entidad', etiqueta: 'Entidad' }] },
+  { clave: 'fum', num: 7, titulo: 'Cert. fumigación', corto: 'Fumigación', tipoKey: 'FUMIGACION', vencimiento: 'fum_vencimiento', prefijo: 'fum', datos: [{ campo: 'fum_emision', etiqueta: 'Emisión' }] },
+  { clave: 'ext', num: 8, titulo: 'Insp. extintores', corto: 'Extintores', tipoKey: 'EXTINTOR', vencimiento: 'ext_vencimiento', prefijo: 'ext', datos: [{ campo: 'ext_emision', etiqueta: 'Emisión' }] },
 ];
 
 /** Documento personalizado (docs_personalizados): tipo libre, o TIVE, que no vence */

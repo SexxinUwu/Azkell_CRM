@@ -11,7 +11,6 @@ export const COLUMNAS: Array<[string, string]> = [
   ['RT F. EMISIÓN', 'rt_emision'], ['RT F. VENC.', 'rt_vencimiento'],
   ['BONI F. EMISIÓN', 'boni_emision'], ['BONI F. VENC.', 'boni_vencimiento'],
   ['SV ENTIDAD', 'sv_entidad'], ['SV ASESOR', 'sv_asesor'], ['SV F. VENC.', 'sv_vencimiento'],
-  ['SC ENTIDAD', 'sc_entidad'], ['SC ASESOR', 'sc_asesor'], ['SC F. VENC.', 'sc_vencimiento'],
   ['FUM F. EMISIÓN', 'fum_emision'], ['FUM F. VENC.', 'fum_vencimiento'],
   ['EXT CANTIDAD', 'ext_cantidad'], ['EXT F. EMISIÓN', 'ext_emision'], ['EXT F. VENC.', 'ext_vencimiento'],
 ];
@@ -19,7 +18,7 @@ export const COLUMNAS: Array<[string, string]> = [
 const EJEMPLO = [
   'ABC-123', 'PROPIA',
   '123456', '2027-01-15', 'PACIFICO', '120.50', '2027-01-15', 'MAT-987', '2027-01-15', '2026-01-15', '2027-01-15',
-  '2026-01-15', '2027-01-15', 'MAPFRE', 'JUAN PEREZ', '2027-01-15', 'RIMAC', 'MARIA GOMEZ', '2027-01-15',
+  '2026-01-15', '2027-01-15', 'MAPFRE', 'JUAN PEREZ', '2027-01-15',
   '2026-01-15', '2026-07-15', '1', '2026-01-15', '2027-01-15',
 ];
 
