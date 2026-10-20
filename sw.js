@@ -1,4 +1,5 @@
-const CACHE_NAME = 'azkell-fleet-v53';
+// v54: descarta las páginas /app guardadas antes de excluirlas de la caché (apuntaban a archivos de compilación que ya no existen)
+const CACHE_NAME = 'azkell-fleet-v54';
 const STATIC_CACHE = 'azkell-libs-v2';
 
 // Archivos de la app
