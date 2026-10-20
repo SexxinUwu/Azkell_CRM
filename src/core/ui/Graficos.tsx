@@ -14,7 +14,7 @@ function resolver(colores: string[]): string[] {
   });
 }
 
-function useColores(colores: string[]): string[] {
+export function useColores(colores: string[]): string[] {
   const clave = colores.join('|');
   const [valores, setValores] = useState(() => resolver(colores));
   useEffect(() => {
@@ -30,8 +30,8 @@ function useColores(colores: string[]): string[] {
  * Dona con leyenda propia (nombre, cantidad y porcentaje). El centro muestra el total o el texto que se pase.
  * Los colores se pasan como tokens CSS, p. ej. 'var(--green-ink)'.
  */
-export function DonaGrafico({ porciones, centro, altura = 180 }: {
-  porciones: Porcion[]; centro?: string; altura?: number;
+export function DonaGrafico({ porciones, centro, altura = 180, onElegir }: {
+  porciones: Porcion[]; centro?: string; altura?: number; onElegir?: (nombre: string) => void;
 }) {
   const colores = useColores(porciones.map(p => p.color));
   const total = porciones.reduce((s, p) => s + p.valor, 0);
@@ -44,7 +44,7 @@ export function DonaGrafico({ porciones, centro, altura = 180 }: {
           <PieChart>
             <Pie data={datos} dataKey="valor" nameKey="nombre" innerRadius="66%" outerRadius="100%"
               paddingAngle={total > 0 ? 2 : 0} stroke="none" isAnimationActive={false}>
-              {datos.map(d => <Cell key={d.nombre} fill={d.fill} />)}
+              {datos.map(d => <Cell key={d.nombre} fill={d.fill} style={onElegir ? { cursor: 'pointer' } : undefined} onClick={onElegir ? () => onElegir(d.nombre) : undefined} />)}
             </Pie>
             <Tooltip formatter={(v) => `${v}`} />
           </PieChart>
@@ -59,7 +59,7 @@ export function DonaGrafico({ porciones, centro, altura = 180 }: {
         {datos.map(d => {
           const pct = total > 0 ? Math.round((d.valor / total) * 100) : 0;
           return (
-            <li key={d.nombre} style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', fontSize: '0.8125rem' }}>
+            <li key={d.nombre} onClick={onElegir ? () => onElegir(d.nombre) : undefined} style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', fontSize: '0.8125rem', cursor: onElegir ? 'pointer' : undefined }}>
               <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: d.fill, flexShrink: 0 }} />
               <span style={{ flex: 1, minWidth: 0, color: 'var(--label-2)', fontWeight: 600 }}>{d.nombre}</span>
               <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.valor}</span>
@@ -101,7 +101,7 @@ export function HorasEficienciaGrafico({ tecnicos, proyectadas }: {
 }
 
 /** Barras horizontales (una por categoría) con su valor al final. Para estados y conteos. */
-export function BarrasGrafico({ porciones, altura }: { porciones: Porcion[]; altura?: number }) {
+export function BarrasGrafico({ porciones, altura, onElegir }: { porciones: Porcion[]; altura?: number; onElegir?: (nombre: string) => void }) {
   const colores = useColores(porciones.map(p => p.color));
   const [texto, secundario, fondo] = useColores(['var(--label-1)', 'var(--label-2)', 'var(--fill-2)']);
   const datos = porciones.map((p, i) => ({ ...p, fill: colores[i] }));
@@ -115,7 +115,7 @@ export function BarrasGrafico({ porciones, altura }: { porciones: Porcion[]; alt
             tick={{ fill: secundario, fontSize: 12, fontWeight: 600 }} />
           <Tooltip formatter={(v) => `${v}`} cursor={{ fill: fondo }} />
           <Bar dataKey="valor" radius={6} isAnimationActive={false} barSize={14}>
-            {datos.map(d => <Cell key={d.nombre} fill={d.fill} />)}
+            {datos.map(d => <Cell key={d.nombre} fill={d.fill} style={onElegir ? { cursor: 'pointer' } : undefined} onClick={onElegir ? () => onElegir(d.nombre) : undefined} />)}
             <LabelList dataKey="valor" position="right" fill={texto} style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12 }} />
           </Bar>
         </BarChart>
