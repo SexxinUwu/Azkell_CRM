@@ -40,6 +40,19 @@ window.addEventListener('vite:preloadError', (e) => {
   window.location.reload();
 });
 
+// Los imports diferidos (lazy) de cada pantalla no siempre pasan por vite:preloadError: si la pestaña
+// tiene una versión anterior, el error llega como "Failed to fetch dynamically imported module". Mismo criterio: recargar una vez.
+const FALLO_DE_MODULO = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i;
+function recargarSiFalloDeModulo(mensaje: string) {
+  if (!FALLO_DE_MODULO.test(mensaje)) return;
+  const ultima = Number(sessionStorage.getItem('fleet_recarga_modulo') || 0);
+  if (Date.now() - ultima < 30_000) return;
+  sessionStorage.setItem('fleet_recarga_modulo', String(Date.now()));
+  window.location.reload();
+}
+window.addEventListener('error', (e) => recargarSiFalloDeModulo(String(e.message || e.error?.message || '')));
+window.addEventListener('unhandledrejection', (e) => recargarSiFalloDeModulo(String((e.reason as Error | undefined)?.message ?? e.reason ?? '')));
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {/* reducedMotion="user": respeta "Reducir movimiento" del sistema (sin desplazamientos ni escalas) */}
