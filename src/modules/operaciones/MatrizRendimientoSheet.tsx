@@ -8,6 +8,7 @@ import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field'
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 
 // Matriz de rendimiento teórico (D2): consumo esperado por ruta según carga y motor.
 // Contrato del servidor: /api/combustible/matriz (GET, POST, PUT/:id, DELETE/:id, importar, vaciar-todo).
@@ -23,6 +24,16 @@ const num = (v: unknown) => Number(v) || 0;
 
 type Vacio = Omit<FilaMatriz, 'id'> & { id?: number };
 const VACIO: Vacio = { sentido: 'IDA', ruta: '', motor: 'MC11.44', confg: 'T3', km_0: '', km_5: '', km_10: '', km_15: '', km_20: '', km_25: '', km_30: '', km: '' };
+
+const COLUMNAS_MATRIZ: ColumnaTabla[] = [
+  { id: 'sentido', titulo: 'Sentido', ancho: 95 },
+  { id: 'ruta', titulo: 'Ruta', ancho: 260, minimo: 140 },
+  { id: 'motor', titulo: 'Motor', ancho: 110 },
+  { id: 'confg', titulo: 'Config.', ancho: 90 },
+  ...TRAMOS.map(t => ({ id: t, titulo: `${ETIQUETA_TRAMO[t]} km`, ancho: 80, alinear: 'right' as const })),
+  { id: 'km', titulo: 'Total km', ancho: 100, alinear: 'right' },
+  { id: 'acciones', titulo: '', ancho: 100, minimo: 90 },
+];
 
 function FormularioFila({ fila, onClose }: { fila: Vacio | null; onClose: () => void }) {
   const qc = useQueryClient();
@@ -186,20 +197,28 @@ export function MatrizRendimientoSheet({ open, onClose, puedeEditar }: { open: b
 
           {matriz.isLoading ? <PageLoader /> : matriz.isError ? <Notice tone="error">{errorMessage(matriz.error)}</Notice>
             : visibles.length === 0 ? <EmptyState title="Sin rutas" icon={<FileSpreadsheet size={22} />}>Agrega rutas o importa el Excel de la matriz.</EmptyState> : (
-            <div className="tarjeta__lista">
+            <TablaRedimensionable id="matriz-rendimiento" ariaLabel="Matriz de rendimiento teórico" columnas={COLUMNAS_MATRIZ} altoMax="60vh">
               {visibles.map(f => (
-                <div key={f.id} className="dato" style={{ alignItems: 'center' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>{f.ruta}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{f.sentido} · {f.motor} · {f.confg} · {num(f.km).toLocaleString('es-PE')} km</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 'var(--s-1)' }}>
-                    {puedeEditar && <Button variant="secondary" icon={<Pencil size={15} />} onClick={() => setEditar({ ...f })}>{''}</Button>}
-                    {puedeEditar && <Button variant="secondary" icon={<Trash2 size={15} />} onClick={() => setBorrar(f)}>{''}</Button>}
-                  </div>
-                </div>
+                <tr key={f.id}>
+                  <Celda>{f.sentido}</Celda>
+                  <Celda>{f.ruta}</Celda>
+                  <Celda mono>{f.motor}</Celda>
+                  <Celda mono>{f.confg}</Celda>
+                  {TRAMOS.map(t => (
+                    <Celda key={t} alinear="right" mono>{f[t] === '' || f[t] == null ? '—' : num(f[t]).toLocaleString('es-PE', { maximumFractionDigits: 2 })}</Celda>
+                  ))}
+                  <Celda alinear="right" mono>{num(f.km).toLocaleString('es-PE', { maximumFractionDigits: 2 })}</Celda>
+                  <Celda>
+                    {puedeEditar && (
+                      <span style={{ display: 'inline-flex', gap: 'var(--s-1)' }}>
+                        <Button variant="secondary" icon={<Pencil size={15} />} onClick={() => setEditar({ ...f })} aria-label={`Editar ruta ${f.ruta}`}>{''}</Button>
+                        <Button variant="secondary" icon={<Trash2 size={15} />} onClick={() => setBorrar(f)} aria-label={`Eliminar ruta ${f.ruta}`}>{''}</Button>
+                      </span>
+                    )}
+                  </Celda>
+                </tr>
               ))}
-            </div>
+            </TablaRedimensionable>
           )}
         </div>
       </Sheet>
