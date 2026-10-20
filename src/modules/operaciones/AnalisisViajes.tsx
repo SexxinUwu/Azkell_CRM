@@ -218,7 +218,15 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     return { galones: u.reduce((s, v) => s + n(v.totalGalones), 0), gasto: u.reduce((s, v) => s + n(v.totalGasto), 0), rendimiento: u.length ? n(u[0].rendimiento) : 0 };
   };
 
-  const visibles = useMemo(() => trips.filter(t => !auditoria || t.estadoAuditoria === auditoria), [trips, auditoria]);
+  // Orden de viaje: del más reciente al más antiguo; los "SIN-VIAJE" (vales sueltos) van al final
+  const visibles = useMemo(() => trips
+    .filter(t => !auditoria || t.estadoAuditoria === auditoria)
+    .sort((a, b) => {
+      const sinA = a.viaje.startsWith('SIN-VIAJE') ? 1 : 0;
+      const sinB = b.viaje.startsWith('SIN-VIAJE') ? 1 : 0;
+      if (sinA !== sinB) return sinA - sinB;
+      return b.viaje.localeCompare(a.viaje, undefined, { numeric: true });
+    }), [trips, auditoria]);
   const paginas = Math.max(1, Math.ceil(visibles.length / tamano));
   const pagActual = Math.min(pagina, paginas);
   const pagina_ = useMemo(() => visibles.slice((pagActual - 1) * tamano, pagActual * tamano), [visibles, pagActual, tamano]);

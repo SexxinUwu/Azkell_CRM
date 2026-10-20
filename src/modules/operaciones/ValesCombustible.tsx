@@ -37,6 +37,17 @@ const ESTADOS = ['VÁLIDO', 'ANULADO'];
 const PAGOS = ['NO PAGADO', 'PAGADO'];
 const TIPOS_PAGO = ['ANTICIPO', 'CONTADO', 'CREDITO'];
 
+// Tarjeta de indicador de la cabecera (mismo estilo que en Análisis de combustible)
+function KpiCard({ titulo, valor, detalle, color }: { titulo: string; valor: string; detalle: string; color?: string }) {
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 16, padding: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+      <span style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--label-2)' }}>{titulo}</span>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', fontWeight: 800, color: color ?? 'var(--label)', fontVariantNumeric: 'tabular-nums' }}>{valor}</span>
+      <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{detalle}</span>
+    </div>
+  );
+}
+
 // Pastilla de color del tema (mismos tonos que el resto de la app)
 function Pastilla({ color, children }: { color: string; children: string }) {
   return <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, background: `var(--${color}-tint)`, color: `var(--${color}-ink)`, fontSize: '0.6875rem', fontWeight: 700 }}>{children}</span>;
@@ -52,14 +63,17 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
   const [search, setSearch] = useState('');
   const [estado, setEstado] = useState('');
   const [combustible, setCombustible] = useState('');
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
+  // Por defecto, los vales del día de hoy (hora de Lima); para otro periodo se cambian las fechas
+  const hoyLima = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+  const [desde, setDesde] = useState(hoyLima);
+  const [hasta, setHasta] = useState(hoyLima);
   const [pagina, setPagina] = useState(1);
   const [abierto, setAbierto] = useState<Vale | null>(null);
   const [formulario, setFormulario] = useState<{ vale: Vale | null } | null>(null);
   const [porAnular, setPorAnular] = useState<Vale | null>(null);
   const [importando, setImportando] = useState(false);
   const [sincronizar, setSincronizar] = useState(false);
+  const [resetear, setResetear] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
   const [confirmarAnular, setConfirmarAnular] = useState(false);
   const [seleccion, setSeleccion] = useState<Set<number>>(new Set());
@@ -190,7 +204,10 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${lista.length} de esta página`, icon: <FileSpreadsheet size={17} />, onSelect: () => exportar() },
               { label: 'Importar desde Excel', icon: <Upload size={17} />, separado: true, onSelect: () => setImportando(true) },
-              ...(esMarsisa ? [{ label: 'Sincronizar con MarsisaSoft', icon: <RefreshCw size={17} />, onSelect: () => setSincronizar(true) }] : []),
+              ...(esMarsisa ? [
+                { label: 'Sincronizar nuevos vales', detalle: 'Trae de MarsisaSoft solo los que faltan', icon: <RefreshCw size={17} />, onSelect: () => setSincronizar(true) },
+                { label: 'Forzar resincronización completa', detalle: 'Borra los vales de Marsisa y los vuelve a traer', icon: <RefreshCw size={17} />, separado: true, onSelect: () => setResetear(true) },
+              ] : []),
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ vale: null })}>Nuevo vale</Button>}
           </>
@@ -198,10 +215,10 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <div className="inv-metricas">
-          <div className="inv-metrica"><span className="inv-metrica__num">{n(k?.totalGalones).toLocaleString('es-PE', { maximumFractionDigits: 1 })}</span><span className="inv-metrica__label">Galones</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>{soles(k?.totalGasto)}</span><span className="inv-metrica__label">Gasto</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.125rem' }}>{soles(k?.costoPromedioGalon)}</span><span className="inv-metrica__label">Costo por galón</span></div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 'var(--s-3)' }}>
+          <KpiCard titulo="Galones" valor={n(k?.totalGalones).toLocaleString('es-PE', { maximumFractionDigits: 1 })} color="var(--accent)" detalle={`${q.data?.total ?? 0} vales en el periodo`} />
+          <KpiCard titulo="Gasto" valor={soles(k?.totalGasto)} color="var(--green-ink)" detalle="Importe de los vales del periodo" />
+          <KpiCard titulo="Costo por galón" valor={soles(k?.costoPromedioGalon)} color="var(--amber-ink)" detalle="Promedio ponderado por galón" />
         </div>
 
         <SearchField value={busqueda} placeholder="Correlativo, placa, viaje, conductor, proveedor o estación…"
@@ -324,6 +341,21 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
             await refrescar();
           } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
           finally { setBorrandoMasivo(false); }
+        }} />
+      <ConfirmSheet open={resetear} onClose={() => !sincronizando && setResetear(false)} loading={sincronizando}
+        title="¿Forzar la resincronización completa?"
+        message="Se BORRAN todos los vales de Marsisa en esta base y se vuelven a traer desde MarsisaSoft. Los cambios hechos aquí (anulaciones, pagos marcados, vales cargados a mano) se pierden. Haz un respaldo antes."
+        confirmLabel="Borrar y resincronizar"
+        onConfirm={async () => {
+          setSincronizando(true);
+          try {
+            const r = await api<{ mensaje?: string; error?: string; ok?: boolean }>('/combustible/sincronizar-remoto?reset=true', { method: 'POST' });
+            if (r.ok === false) throw new Error(r.error || 'No se pudo resincronizar');
+            haptic('success'); toast(r.mensaje ?? 'Resincronización completa');
+            setResetear(false);
+            await refrescar();
+          } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+          finally { setSincronizando(false); }
         }} />
       <ConfirmSheet open={sincronizar} onClose={() => !sincronizando && setSincronizar(false)} loading={sincronizando}
         title="¿Sincronizar vales con MarsisaSoft?" message="Trae los vales nuevos desde la base externa. Los que ya existen no se duplican."
