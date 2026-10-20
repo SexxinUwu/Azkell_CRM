@@ -813,7 +813,8 @@ window.rotAbrirDetalle = function(idOT) {
                     </h6>
                     <span class="badge bg-info bg-opacity-10 text-info fw-bold rounded-pill px-2 py-1" id="rot-srv-count" style="font-size: 0.7rem;">0</span>
                 </div>
-                ${esAprobada ? `<button class="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 py-1" style="font-size: 0.72rem;" onclick="event.stopPropagation();window.rotAbrirNuevaOrdenServicio('${rotEscHtml(idOT)}','${rotEscHtml(ot.placa||'')}')"><i class="bi bi-plus-lg me-1"></i>Agregar</button>` : ''}
+                ${esAprobada ? `<button class="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 py-1" style="font-size: 0.72rem;" onclick="event.stopPropagation();window.rotAbrirNuevaOrdenServicio('${rotEscHtml(idOT)}','${rotEscHtml(ot.placa||'')}')"><i class="bi bi-plus-lg me-1"></i>Nueva OS</button>` : ''}
+                ${esAprobada ? `<button class="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 py-1" style="font-size: 0.72rem;" onclick="event.stopPropagation();window.rotAbrirAgregarServicios('${rotEscHtml(idOT)}')"><i class="bi bi-link-45deg me-1"></i>Agregar OC</button>` : ''}
             </div>
             <div id="rot-srv-body"><div class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>
         </div>
@@ -1023,14 +1024,12 @@ window.rotAbrirDetalle = function(idOT) {
 
         window.rotOtMaterialesActivos = pureMateriales;
 
-        // Filtrar y estructurar Órdenes de Servicio de entradas_inv
+        // Solo cuentan las OC de servicio agregadas a la OT en "Servicios de terceros" (igual que el costo del servidor)
         var ordenesServicios = rawEntradas.filter(function(s) {
             var tipo = (s.tipo_orden || '').toLowerCase();
             var est = (s.estado || '').toLowerCase();
             if (est === 'anulado' || est === 'anulada' || est === 'rechazado' || est === 'rechazada') return false;
-            if (tipo === 'orden de servicio') return true;
-            if (Array.isArray(s.items) && s.items.some(rotEsItemServicio)) return true;
-            return false;
+            return tipo === 'orden de servicio' && Number(s.ot_servicio_agregado) === 1;
         });
 
         // Combinar todas las fuentes de servicios de terceros
@@ -3588,6 +3587,7 @@ function rotRenderSecServicios(idOt, esAprobada) {
               + '<div style="color:var(--text);margin-top:4px;font-weight:600;">' + rotEscHtml(srvDesc) + '</div>'
               + (prov ? '<div style="font-size:0.75rem;color:var(--subtext);margin-top:2px;"><i class="bi bi-building me-1"></i>' + rotEscHtml(prov) + '</div>' : '')
               + (srv.fecha_creacion || srv.fecha ? '<div style="font-size:0.72rem;color:var(--subtext);margin-top:1px;"><i class="bi bi-calendar3 me-1"></i>' + String(srv.fecha_creacion || srv.fecha).slice(0,10) + '</div>' : '')
+              + (esAprobada && String(srv.tipo_orden || '').toLowerCase() === 'orden de servicio' ? '<div style="margin-top:6px;"><button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1" style="font-size:0.72rem;" onclick="event.stopPropagation();window.rotQuitarServicioOT(\'' + rotEscHtml(srv.id) + '\',\'' + rotEscHtml(idOt) + '\')"><i class="bi bi-x-lg me-1"></i>Quitar de la OT</button></div>' : '')
               + '</div>';
     });
 
@@ -3597,6 +3597,86 @@ function rotRenderSecServicios(idOt, esAprobada) {
 
     body.innerHTML = html;
 }
+
+// ── Servicios de terceros: agregar OC de servicio procesadas o aprobadas, y quitarlas de la OT ──
+window.rotAbrirAgregarServicios = function(idOt) {
+    fetch('/api/taller/ot-servicios-disponibles?ot=' + encodeURIComponent(idOt))
+        .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+        .then(function(res) {
+            var lista = (res && res.data) || [];
+            if (!lista.length) {
+                if (typeof window.rotToast === 'function') window.rotToast('No hay OC de servicio procesadas o aprobadas disponibles', 'bg-warning');
+                return;
+            }
+            var filas = lista.map(function(oc) {
+                var moneda = oc.moneda === 'USD' ? '$' : 'S/';
+                var monto = parseFloat(oc.total_pen || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;">'
+                    + '<input type="checkbox" class="rot-srv-disp" value="' + rotEscHtml(oc.id) + '" style="margin-top:3px;">'
+                    + '<span style="flex:1;"><span style="font-weight:700;">' + rotEscHtml(oc.id) + '</span>'
+                    + '<span style="display:block;font-size:0.75rem;color:var(--subtext);">' + rotEscHtml(oc.proveedor_nombre || 'Sin proveedor') + ' · ' + String(oc.fecha || '').slice(0, 10) + '</span></span>'
+                    + '<span style="font-weight:800;color:#16a34a;white-space:nowrap;">' + moneda + ' ' + monto + '</span>'
+                    + '</label>';
+            }).join('');
+
+            var overlay = document.createElement('div');
+            overlay.id = 'rot-srv-agregar-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+            overlay.innerHTML = '<div style="background:var(--surface,#fff);border-radius:16px;width:520px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.2);">'
+                + '<div style="padding:16px 20px;border-bottom:1px solid var(--border);font-weight:800;">Agregar OC de servicio a la OT</div>'
+                + '<div style="overflow:auto;flex:1;">' + filas + '</div>'
+                + '<div style="padding:12px 20px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);">'
+                + '<button type="button" class="btn btn-light rounded-pill px-3" id="rot-srv-cancelar">Cancelar</button>'
+                + '<button type="button" class="btn btn-primary rounded-pill px-4" id="rot-srv-confirmar">Agregar seleccionadas</button>'
+                + '</div></div>';
+            document.body.appendChild(overlay);
+
+            function cerrar() { overlay.remove(); }
+            overlay.addEventListener('click', function(e) { if (e.target === overlay) cerrar(); });
+            document.getElementById('rot-srv-cancelar').onclick = cerrar;
+            document.getElementById('rot-srv-confirmar').onclick = function() {
+                var boton = this;
+                var ids = Array.prototype.map.call(overlay.querySelectorAll('.rot-srv-disp:checked'), function(c) { return c.value; });
+                if (!ids.length) {
+                    if (typeof window.rotToast === 'function') window.rotToast('Marca al menos una OC', 'bg-warning');
+                    return;
+                }
+                boton.disabled = true;
+                fetch('/api/taller/ot-servicios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ot: idOt, ids: ids })
+                })
+                    .then(function(r) { return r.json().then(function(j) { if (!r.ok || j.ok === false) throw new Error(j.error || 'HTTP ' + r.status); return j; }); })
+                    .then(function() {
+                        cerrar();
+                        if (typeof window.rotToast === 'function') window.rotToast('OC agregadas a la OT', 'bg-success');
+                        window.rotAbrirDetalle(idOt);
+                    })
+                    .catch(function(err) {
+                        boton.disabled = false;
+                        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('No se pudo agregar: ' + err.message, 'danger');
+                    });
+            };
+        })
+        .catch(function() {
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al cargar las OC disponibles', 'danger');
+        });
+};
+
+window.rotQuitarServicioOT = function(idEntrada, idOt) {
+    rotConfirmModerno('¿Quitar de la OT?', 'La OC ' + idEntrada + ' deja de sumar al costo de la OT. Sigue disponible para agregarla de nuevo.', function() {
+        fetch('/api/taller/ot-servicios/' + encodeURIComponent(idEntrada) + '?ot=' + encodeURIComponent(idOt), { method: 'DELETE' })
+            .then(function(r) { return r.json().then(function(j) { if (!r.ok || j.ok === false) throw new Error(j.error || 'HTTP ' + r.status); return j; }); })
+            .then(function() {
+                if (typeof window.rotToast === 'function') window.rotToast('OC quitada de la OT', 'bg-success');
+                window.rotAbrirDetalle(idOt);
+            })
+            .catch(function(err) {
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('No se pudo quitar: ' + err.message, 'danger');
+            });
+    }, 'info');
+};
 
 window.rotAbrirNuevaOrdenServicio = function(idOt, placa) {
     if (typeof window.abrirModalNuevaEntrada === 'function') {
