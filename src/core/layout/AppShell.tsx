@@ -204,10 +204,12 @@ export function AppShell() {
               <div key={section.title} className={`nav-seccion${abierta ? ' nav-seccion--abierta' : ''}`} style={{ ['--seccion' as string]: color }}>
                 <button type="button" className="nav-seccion__cab" aria-expanded={abierta} title={section.title}
                   onClick={() => setSeccionAbierta(abierta ? null : section.title)}>
-                  <span className="nav-seccion__icono" aria-hidden><Icono size={17} strokeWidth={2} /></span>
+                  <span className="nav-seccion__icono" aria-hidden>
+                    <Icono size={17} strokeWidth={2} />
+                    {!abierta && pendientes > 0 && <span className="nav-seccion__aviso" />}
+                  </span>
                   <span className="nav-seccion__titulo sidebar__texto">{section.title}</span>
                   {!abierta && pendientes > 0 && <span className="nav-seccion__pendientes sidebar__texto">{pendientes}</span>}
-                  {!abierta && pendientes > 0 && <span className="nav-seccion__aviso" aria-hidden />}
                   <ChevronDown size={14} aria-hidden className="nav-seccion__flecha sidebar__texto" />
                 </button>
                 {abierta && indicadores.data?.[section.title] && (
