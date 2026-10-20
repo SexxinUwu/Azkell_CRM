@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowUpRight, Boxes, ClipboardCheck, Layers, PackagePlus, Tag, Ruler, Cog, Warehouse, History, PackageCheck } from 'lucide-react';
+import { ArrowUpRight, Boxes, ClipboardCheck, Layers, PackagePlus, Tag, Ruler, Cog, Warehouse, History, PackageCheck, Settings2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Page, PageHeader } from '../../core/ui/Display';
 import { MenuOtros } from '../../core/ui/MenuOtros';
@@ -137,6 +137,13 @@ export function AlmacenOtrosPage() {
       icon: <History size={20} />,
       color: 'var(--label-2)',
       accion: () => nav('/almacen/kardex'),    },
+    {
+      titulo: 'Configuración de almacén',
+      descripcion: 'Tipo de cambio, marcas de las unidades y cuentas de la empresa.',
+      icon: <Settings2 size={20} />,
+      color: 'var(--ink)',
+      accion: () => nav('/almacen/configuracion'),
+    },
     {
       titulo: 'Kits MP',
       descripcion: 'Kits de materiales y repuestos por tipo de servicio.',

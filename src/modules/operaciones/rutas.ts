@@ -27,6 +27,11 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: 'ClipboardList', permisos: ['operaciones.ver', 'admin'] },
   },
   {
+    path: 'operaciones/reporte-viajes/*',
+    permisos: ['operaciones.ver', 'admin'],
+    Page: lazy(() => import('./ReporteViajesPage').then(m => ({ default: m.ReporteViajesPage }))),
+  },
+  {
     path: 'operaciones/vales/*',
     permisos: ['operaciones.ver', 'admin'],
     Page: lazy(() => import('./ValesPage').then(m => ({ default: m.ValesPage }))),

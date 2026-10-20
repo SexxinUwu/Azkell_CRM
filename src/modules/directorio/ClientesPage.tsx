@@ -1,10 +1,12 @@
 import '../mantenimiento/mant.css';
-import { Building2 } from 'lucide-react';
+import { useState } from 'react';
+import { Building2, Download, Upload } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CrudLista } from '../../core/ui/CrudLista';
 import { api } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { useClientes, type Cliente } from './api';
+import { ImportarClientesSheet, descargarPlantillaClientes } from './ImportarClientesSheet';
 
 async function guardar(id: number | string | null, v: Record<string, unknown>) {
   const r = await api<{ ok?: boolean; error?: string }>(id ? `/clientes/${id}` : '/clientes', { method: id ? 'PUT' : 'POST', body: v });
@@ -16,10 +18,12 @@ export function ClientesPage() {
   const { data, isLoading, isError, error } = useClientes();
   const { can } = useAuth();
   const qc = useQueryClient();
+  const [importando, setImportando] = useState(false);
   const refrescar = () => qc.invalidateQueries({ queryKey: ['directorio', 'clientes'] });
   const lista: Cliente[] = data ?? [];
 
   return (
+    <>
     <CrudLista<Cliente>
       eyebrow="Directorio" titulo="Clientes" singular="Cliente" icono={<Building2 size={16} />}
       datos={lista} cargando={isLoading} error={isError ? error : undefined} idDe={c => c.id}
@@ -51,7 +55,13 @@ export function ClientesPage() {
         encabezados: ['Razón social', 'RUC / DNI', 'Teléfono', 'Correo', 'Dirección', 'Estado', 'Unidades'],
         fila: c => [c.razon_social, c.ruc_dni, c.telefono, c.email, c.direccion, c.estado, Number(c.total_flota) || 0],
       }}
+      extras={can('clientes.crear') ? [
+        { label: 'Importar Excel', icon: <Upload size={17} />, onSelect: () => setImportando(true) },
+        { label: 'Descargar plantilla', icon: <Download size={17} />, onSelect: () => { descargarPlantillaClientes().catch(() => undefined); } },
+      ] : undefined}
       clasico="directorio/clientes"
     />
+    <ImportarClientesSheet open={importando} onClose={() => setImportando(false)} existentes={lista} />
+    </>
   );
 }

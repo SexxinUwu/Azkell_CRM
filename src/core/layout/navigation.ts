@@ -60,6 +60,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision', 'guias_remision') },
       { key: 'ordenes-viaje', noEmpresa: 'marsisa', label: 'Órdenes de viaje', clasico: 'operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'guias_remision', 'op_guias_remision') },
       { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'guias_remision') },
+      { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes') },
       {
         key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [],
         children: [
@@ -134,6 +135,7 @@ const SECCIONES_BASE: NavSection[] = [
           { key: 'frecuencias-mp', label: 'Frecuencias MP', clasico: 'mantenimiento/configuracion-mp', icon: Settings, permissions: ver('cfg_mant') },
           { key: 'kits-mp', label: 'Kits MP', to: '/mantenimiento/kits-mp', icon: Package, permissions: ver('cfg_mant') },
           { key: 'tipos-mp', label: 'Tipos MP', to: '/mantenimiento/tipos-mp', icon: Wrench, permissions: ver('cfg_mant') },
+          { key: 'fleetrun-config', label: 'Umbrales Fleetrun', to: '/mantenimiento/fleetrun-config', icon: Gauge, permissions: ver('cfg_fleetrun') },
           { key: 'config-metrica', label: 'Config. métrica', clasico: 'mantenimiento/config-metrica', icon: Target, permissions: ver('cfg_mant') },
         ],
       },

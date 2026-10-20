@@ -128,6 +128,13 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '' }: 
     queryFn: () => api<unknown>('/clientes').then(r => (Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? [])) as { nombre?: string; razon_social?: string }[]),
     staleTime: 60_000,
   });
+  // Rutas de la matriz de combustible D2: lista para elegir y autocompletar el recorrido (km), como en el clásico
+  const matriz = useQuery({
+    queryKey: ['operaciones', 'rutas-matriz'],
+    enabled: open,
+    queryFn: () => api<{ data?: { ruta?: string; km?: number | string }[] }>('/operaciones/rutas-matriz').then(r => r.data ?? []),
+    staleTime: 5 * 60_000,
+  });
   const gres = useQuery({
     queryKey: ['operaciones', 'gre-disponibles'],
     enabled: open && buscarGre,
@@ -148,6 +155,15 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '' }: 
     setF(prev => (prev && !prev.numero ? { ...prev, serie: correlativo.data.serie, numero: correlativo.data.numero } : prev));
   }, [correlativo.data, open, editando]);
 
+  // Una sola entrada por ruta (con el mayor km), igual que el clásico
+  const rutasMatriz = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of matriz.data ?? []) {
+      const k = String(r.ruta ?? '').trim().toUpperCase();
+      if (k && (!m.has(k) || num(r.km) > (m.get(k) ?? 0))) m.set(k, num(r.km));
+    }
+    return m;
+  }, [matriz.data]);
   const adjuntas = useMemo(() => new Set((f?.docs ?? []).map(d => d.numero_documento)), [f?.docs]);
   const disponibles = useMemo(() => (gres.data ?? [])
     .filter(g => !adjuntas.has(g.numero_guia))
@@ -172,6 +188,12 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '' }: 
       tracto: f!.tracto || (g.placa_tracto ?? '').trim().toUpperCase(),
       carreta: f!.carreta || (g.placa_carreta ?? '').trim().toUpperCase(),
     });
+  }
+
+  // Al escribir o elegir una ruta de la matriz se completa el km si existe (no pisa si no hay coincidencia)
+  function cambiarRuta(i: number, ruta: string) {
+    const km = rutasMatriz.get(ruta.trim().toUpperCase());
+    set({ rutas: f!.rutas.map((x, j) => (j === i ? { ...x, ruta, ...(km ? { distancia_km: String(km) } : {}) } : x)) });
   }
 
   async function guardar() {
@@ -291,10 +313,15 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '' }: 
             <strong style={{ fontSize: '0.875rem' }}>Rutas</strong>
             <Button variant="secondary" icon={<Plus size={15} />} onClick={() => set({ rutas: [...f.rutas, { ruta: '', distancia_km: '', galones: '' }] })}>Ruta</Button>
           </div>
+          <datalist id="os-rutas-matriz">
+            {[...rutasMatriz.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([ruta, km]) => (
+              <option key={ruta} value={ruta} label={km > 0 ? ruta + ' (' + km.toLocaleString('es-PE') + ' Km)' : ruta} />
+            ))}
+          </datalist>
           {f.rutas.length === 0 && <div style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>Sin rutas. Agrega la ruta, km y galones estimados.</div>}
           {f.rutas.map((r, i) => (
             <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px auto', gap: 'var(--s-2)', alignItems: 'center' }}>
-              <TextInput value={r.ruta} placeholder="Ruta" onChange={e => set({ rutas: f.rutas.map((x, j) => (j === i ? { ...x, ruta: e.target.value } : x)) })} />
+              <TextInput list="os-rutas-matriz" value={r.ruta} placeholder="Ruta (elige de la matriz o escribe)" onChange={e => cambiarRuta(i, e.target.value)} />
               <TextInput inputMode="decimal" placeholder="Km" value={r.distancia_km} onChange={e => set({ rutas: f.rutas.map((x, j) => (j === i ? { ...x, distancia_km: e.target.value } : x)) })} />
               <TextInput inputMode="decimal" placeholder="Galones" value={r.galones} onChange={e => set({ rutas: f.rutas.map((x, j) => (j === i ? { ...x, galones: e.target.value } : x)) })} />
               <Button variant="secondary" icon={<Trash2 size={15} />} onClick={() => set({ rutas: f.rutas.filter((_, j) => j !== i) })}>{''}</Button>

@@ -63,6 +63,11 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'fleetrun', label: 'Fleetrun', to: '/mantenimiento/fleetrun', icon: 'Gauge', permisos: ['fleetrun.ver', 'fleet.ver'] },
   },
   {
+    path: 'mantenimiento/fleetrun-config/*',
+    permisos: ['cfg_fleetrun.ver', 'admin'],
+    Page: lazy(() => import('./FleetrunConfigPage').then(m => ({ default: m.FleetrunConfigPage }))),
+  },
+  {
     path: 'mantenimiento/neumaticos/*',
     permisos: ['neumaticos.ver'],
     Page: lazy(() => import('./NeumaticosPage').then(m => ({ default: m.NeumaticosPage }))),

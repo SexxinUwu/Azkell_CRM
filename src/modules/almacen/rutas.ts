@@ -51,6 +51,11 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'almacen-otros', label: 'Otros', to: '/almacen/otros', icon: 'Layers', permisos: ['almacen_otros.ver', 'inv.ver', 'admin'] },
   },
   {
+    path: 'almacen/configuracion/*',
+    permisos: ['cfg_almacen.ver', 'inv.ver'],
+    Page: lazy(() => import('./AlmacenConfiguracionPage').then(m => ({ default: m.AlmacenConfiguracionPage }))),
+  },
+  {
     path: 'almacen/costos/*',
     permisos: ['dash_alm.ver', 'inv.ver'],
     Page: lazy(() => import('./CostosPage').then(m => ({ default: m.CostosPage }))),

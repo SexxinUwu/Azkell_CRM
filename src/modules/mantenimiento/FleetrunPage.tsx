@@ -2,18 +2,22 @@ import { haptic } from '../../core/lib/haptics';
 import './mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, BookOpen, Gauge, SearchX, Trash2 } from 'lucide-react';
-import { PageLoader } from '../../core/ui/Button';
+import { ArrowUpRight, BookOpen, FileSpreadsheet, Gauge, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { useAuth } from '../../core/auth/AuthProvider';
 import {
   frFecha, frId, frKmCambio, frKmGps, frKmProx, frFrecuencia,
   frObs, frPlaca, frTipo, frUts, useFleetrun, type FleetrunFila,
 } from './api';
 import { usePlacas, useMetricas } from '../placas/api';
+import { useKmHistorico } from './fleetrunApi';
+import { FleetrunFormulario } from './FleetrunFormulario';
+import { ImportarFleetrunSheet, descargarPlantillaFleetrun } from './ImportarFleetrunSheet';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -97,6 +101,12 @@ function parseFechaMs(str: string | number | null): number {
   return new Date(s).getTime() || 0;
 }
 
+// Km (u horas) por día de los últimos 30 días, según los snapshots del GPS
+function kmDiaTexto(k: { km_dia: number | null; horas_dia: number | null } | undefined, horas: boolean): string {
+  const v = k ? (horas ? k.horas_dia : k.km_dia) : null;
+  return v != null && v > 0 ? `${Number(v).toLocaleString('es-PE')} ${horas ? 'h' : 'km'}/día` : '';
+}
+
 // ─── Donut SVG ───────────────────────────────────────────────────────────────
 
 function DonutChart({ vencidos, porVencer, vigentes }: { vencidos: number; porVencer: number; vigentes: number }) {
@@ -128,10 +138,17 @@ const POR_PAGINA = 20;
 
 export function FleetrunPage() {
   const qc = useQueryClient();
+  const { can, user } = useAuth();
+  const puedeCrear = can('fleet.crear', 'fleetrun.crear');
+  const puedeEditar = can('fleet.editar', 'fleetrun.editar');
+  const puedeEliminar = can('fleet.eliminar', 'fleetrun.eliminar');
   const { data, isLoading, isError, error } = useFleetrun();
   const { data: placasData } = usePlacas();
   const { data: metricas = new Map<string, string>() } = useMetricas();
   const { data: umbrales = {} } = useFleetrunUmbrales();
+  const { data: kmDia } = useKmHistorico();
+  const [formulario, setFormulario] = useState<{ registro: FleetrunFila | null } | null>(null);
+  const [importando, setImportando] = useState(false);
 
   const [busqueda, setBusqueda]   = useState('');
   const [filtro, setFiltro]       = useState<string>('Todos');
@@ -264,23 +281,24 @@ export function FleetrunPage() {
               : `${stats.total} unidades activas`
         }
         actions={
+          <>
           <MenuOtros opciones={[
             {
               label: historial ? 'Ver solo activos' : 'Ver historial completo',
               icon: <BookOpen size={17} />,
               onSelect: () => { setHistorial(h => !h); setPagina(1); setBusqueda(''); setFiltro('Todos'); },
             },
+            puedeCrear && { label: 'Importar desde Excel', icon: <FileSpreadsheet size={17} />, separado: true, onSelect: () => setImportando(true) },
+            { label: 'Descargar plantilla de importación', icon: <FileSpreadsheet size={17} />, onSelect: () => descargarPlantillaFleetrun() },
             {
-              label: 'Registrar mantenimiento',
-              icon: <ArrowUpRight size={17} />,
-              onSelect: () => abrirClasico('mantenimiento/fleetrun'),
-            },
-            {
+              separado: true,
               label: 'Abrir versión completa',
               icon: <ArrowUpRight size={17} />,
               onSelect: () => abrirClasico('mantenimiento/fleetrun'),
             },
           ]} />
+          {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ registro: null })}>Registrar</Button>}
+          </>
         }
       />
 
@@ -369,7 +387,7 @@ export function FleetrunPage() {
                       <th style={{ textAlign: 'right' }}>Frecuencia</th>
                       <th>Estado</th>
                       <th>Obs.</th>
-                      <th style={{ width: 36 }} />
+                      <th style={{ width: 64 }} />
                     </tr>
                   </thead>
                   <tbody>
@@ -397,6 +415,9 @@ export function FleetrunPage() {
                         <tr key={id || `${placa}-${frTipo(f)}`}>
                           <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--label)' }}>
                             {placa}
+                            {kmDiaTexto(kmDia?.get(placa), esHoras) && (
+                              <span style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 500, color: 'var(--label-2)' }}>{kmDiaTexto(kmDia?.get(placa), esHoras)}</span>
+                            )}
                           </td>
                           <td style={{ fontWeight: 600 }}>{frTipo(f)}</td>
                           <td style={{ color: 'var(--label-2)', fontSize: '0.8125rem' }}>
@@ -435,8 +456,14 @@ export function FleetrunPage() {
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {frObs(f) || '—'}
                           </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <button
+                          <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            {puedeEditar && (
+                              <button type="button" title="Editar registro" aria-label={`Editar ${placa}`} onClick={() => setFormulario({ registro: f })}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--label-3)', padding: '2px 4px', lineHeight: 1 }}>
+                                <Pencil size={15} />
+                              </button>
+                            )}
+                            {puedeEliminar && <button
                               type="button"
                               title="Eliminar registro"
                               disabled={eliminando === id}
@@ -447,7 +474,7 @@ export function FleetrunPage() {
                               onMouseLeave={e => (e.currentTarget.style.color = 'var(--label-3)')}
                             >
                               <Trash2 size={15} />
-                            </button>
+                            </button>}
                           </td>
                         </tr>
                       );
@@ -472,6 +499,9 @@ export function FleetrunPage() {
           )}
         </div>
       )}
+
+      <FleetrunFormulario open={!!formulario} registro={formulario?.registro ?? null} usuario={user?.email ?? ''} onClose={() => setFormulario(null)} />
+      <ImportarFleetrunSheet open={importando} onClose={() => setImportando(false)} />
     </Page>
   );
 }

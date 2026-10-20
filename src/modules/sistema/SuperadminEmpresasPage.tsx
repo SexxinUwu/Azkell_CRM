@@ -14,6 +14,7 @@ import { haptic } from '../../core/lib/haptics';
 // Empresas SaaS (SuperAdmin): una fila por empresa del registro maestro (azkell_master, tabla empresas).
 // Usa GET/POST /api/superadmin/empresas, PUT /api/superadmin/empresas/:id y PUT /api/superadmin/empresas/:id/estado.
 // El alta crea la base de la empresa (azkell_tenant_<slug>) en el servidor.
+interface ConsultaDocumento { razon_social?: string; nombre?: string; error?: string }
 interface Empresa {
   id: number; slug: string; nombre_empresa: string; ruc: string | null; db_name: string;
   estado: 'activo' | 'suspendido' | 'demo' | null; plan: string | null; max_unidades: number | null; admin_email: string | null;
@@ -101,6 +102,22 @@ function EmpresaSheet({ abierto, empresa, onClose, onGuardado }: {
   const [v, setV] = useState({ slug: '', nombre_empresa: '', ruc: '', admin_email: '', admin_password: '', plan: 'Profesional', max_unidades: '100', estado: 'activo' as 'activo' | 'suspendido' | 'demo' });
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [consultando, setConsultando] = useState(false);
+
+  // Autocompleta la razón social con SUNAT (GET /api/proxy/sunat?doc=RUC, el mismo que usa la versión actual)
+  async function consultarRuc() {
+    const ruc = v.ruc.trim();
+    if (!/^d{11}$/.test(ruc)) { setError('Ingresa un RUC de 11 números para consultar.'); haptic('warning'); return; }
+    setConsultando(true); setError(null);
+    try {
+      const d = await api<ConsultaDocumento>(`/proxy/sunat?doc=${ruc}`);
+      const nombre = (d.razon_social || d.nombre || '').trim();
+      if (!nombre) throw new Error('No se encontraron datos de ese RUC.');
+      setV(prev => ({ ...prev, nombre_empresa: nombre.toUpperCase() }));
+      haptic('success');
+    } catch (err) { setError(errorMessage(err)); haptic('warning'); }
+    finally { setConsultando(false); }
+  }
 
   // Se carga al abrir: alta vacía o los datos de la empresa seleccionada
   const [ultimoAbierto, setUltimoAbierto] = useState<string | null>(null);
@@ -183,7 +200,15 @@ function EmpresaSheet({ abierto, empresa, onClose, onGuardado }: {
         {alta ? txt('slug', 'Subdominio (sin .azkell.com)', { wide: true }) : (
           <Field label="Subdominio" wide>{p => <TextInput {...p} value={v.slug} disabled />}</Field>
         )}
-        {txt('ruc', 'RUC')}
+        <Field label="RUC">
+          {p => (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <TextInput {...p} value={v.ruc} inputMode="numeric" disabled={guardando}
+                onChange={e => setV({ ...v, ruc: e.target.value.replace(/D/g, '').slice(0, 11) })} />
+              <Button variant="secondary" onClick={consultarRuc} loading={consultando} disabled={guardando || v.ruc.length !== 11}>Consultar RUC</Button>
+            </div>
+          )}
+        </Field>
         {txt('max_unidades', 'Límite de unidades', { type: 'number' })}
         <Field label="Plan">
           {p => (

@@ -20,6 +20,7 @@ import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/Ta
 import type { ReactNode } from 'react';
 import { OrdenServicioSheet } from './OrdenServicioSheet';
 import { SeccionGastosViaje, SeccionOrdenesServicioViaje } from './ViajeExtras';
+import { SeccionGpsViaje, SeccionValesViaje } from './ViajeCombustibleGps';
 import { abrirClasico } from '../../core/layout/navigation';
 import { usePlacas } from '../placas/api';
 
@@ -352,6 +353,8 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
           <SeccionOrdenesServicioViaje codigo={v.viaje} onNueva={onNuevaOS ?? (() => undefined)} puedeCrear={!!onNuevaOS} />
           <ResumenFinanciero viaje={v} />
           <SeccionGastosViaje codigo={v.viaje} />
+          <SeccionValesViaje codigo={v.viaje} />
+          <SeccionGpsViaje placa={v.placa_tracto} inicio={v.fecha_inicio ?? v.fecha_viaje} fin={v.fecha_fin} />
         </div>
       )}
     </Sheet>

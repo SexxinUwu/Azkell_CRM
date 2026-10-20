@@ -3,7 +3,7 @@ import '../mantenimiento/mant.css';
 import './fman.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, ClipboardCheck, FileSpreadsheet, FileText, MessageCircle, Pencil, Plus, SearchX, Trash2, Wrench } from 'lucide-react';
+import { ClipboardCheck, ListChecks, FileSpreadsheet, FileText, MessageCircle, Pencil, Plus, SearchX, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -15,10 +15,10 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { compartirPDF, descargarArchivo } from '../../core/lib/pdf';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { fallaEstadoColor, useChecklist, useConfigSistemas, type ReporteFalla } from './api';
 import { ReporteFallaNuevo } from './ReporteFallaNuevo';
 import { GenerarOTsSheet } from './GenerarOTsSheet';
+import { ConfigSistemasSheet } from './ConfigSistemasSheet';
 import { leerFallas, pdfFman, textoFman, type FallaGuardada } from './fman';
 import { formatFechaHoraPe } from '../../core/lib/format';
 
@@ -40,6 +40,7 @@ export function ChecklistPage() {
   const [nuevo, setNuevo] = useState(false);
   const [editando, setEditando] = useState<ReporteFalla | null>(null);
   const [generando, setGenerando] = useState<ReporteFalla | null>(null);
+  const [configurando, setConfigurando] = useState(false);
   const [generandoPdf, setGenerandoPdf] = useState(false);
   const { can } = useAuth();
   const qc = useQueryClient();
@@ -148,7 +149,7 @@ export function ChecklistPage() {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} reportes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Configurar sistemas de revisión', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/checklist') },
+              ...(puedeEditar ? [{ label: 'Configurar sistemas de revisión', detalle: 'Tracto y remolque', icon: <ListChecks size={17} />, separado: true, onSelect: () => setConfigurando(true) }] : []),
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNuevo(true)}>Nuevo reporte</Button>}
           </>
@@ -241,6 +242,7 @@ export function ChecklistPage() {
         </div>
       )}
       {formulario}
+      <ConfigSistemasSheet open={configurando} onClose={() => setConfigurando(false)} />
     </Page>
   );
 }

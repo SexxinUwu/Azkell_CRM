@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight, ClipboardCheck, Disc3, Plus, SearchX, Wrench } from 'lucide-react';
+import { ArrowUpRight, ClipboardCheck, Disc3, Download, Plus, SearchX, Upload, Wrench } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
+import { useToast } from '../../core/ui/Toast';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -21,6 +22,8 @@ import { ETIQUETA_ESTADO, evaluarCiclo, urgencia, type Ciclo, type Estado } from
 import { InspeccionFicha } from './InspeccionFicha';
 import { TipoInspeccionSheet } from './TipoInspeccionSheet';
 import { NeumaticosInspeccionSheet } from './NeumaticosInspeccionSheet';
+import { ImportarInspeccionesSheet, descargarPlantillaInspecciones } from './ImportarInspeccionesSheet';
+import { useEsquema } from './registro';
 import './inspecciones.css';
 
 type Vista = 'flota' | 'historial';
@@ -50,6 +53,9 @@ export function InspeccionesPage() {
   const insp = useInspecciones();
   const neu = useInspeccionesNeumaticos();
   const placasQ = usePlacas();
+  const esquema = useEsquema();
+  const toast = useToast();
+  const [importando, setImportando] = useState(false);
   const dispQ = useDisponibilidad();
   const reduce = useReducedMotion();
   const navigate = useNavigate();
@@ -134,7 +140,9 @@ export function InspeccionesPage() {
         actions={
           <>
             <MenuOtros opciones={[
-              { label: 'Abrir en la versión actual', detalle: 'Editar, PDF e importar', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/inspecciones') },
+              can('insp.crear') && { label: 'Importar Excel', detalle: 'Con revisión antes de guardar', icon: <Upload size={17} />, onSelect: () => setImportando(true) },
+              can('insp.crear') && { label: 'Descargar plantilla', icon: <Download size={17} />, onSelect: () => { descargarPlantillaInspecciones(esquema.data ?? []).catch(err => toast(errorMessage(err), 'error')); } },
+              { label: 'Abrir en la versión actual', detalle: 'Editar y PDF', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/inspecciones') },
             ]} />
             {can('insp.crear') && <Button variant="primary" icon={<Plus size={16} />} onClick={() => navigate('/inspecciones/nueva')}>Nueva inspección</Button>}
           </>
@@ -320,6 +328,8 @@ export function InspeccionesPage() {
       />
       <NeumaticosInspeccionSheet placa={neuPlaca} usuario={user?.name ?? ''} onClose={() => setNeuPlaca(null)} />
       <InspeccionFicha inspeccion={abierta} onClose={() => setAbierta(null)} />
+      <ImportarInspeccionesSheet open={importando} onClose={() => setImportando(false)}
+        existentes={insp.data ?? []} placasRegistradas={(placasQ.data ?? []).map(p => p.placa)} />
     </Page>
   );
 }

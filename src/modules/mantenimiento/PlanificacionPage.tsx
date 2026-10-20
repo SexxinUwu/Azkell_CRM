@@ -1,7 +1,7 @@
 import './mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CalendarClock, CheckCircle2, CircleAlert, FileSpreadsheet, History, Pencil, Plus, SearchX, Wrench, XCircle } from 'lucide-react';
+import { CalendarClock, CheckCircle2, CheckCircle, CircleAlert, FileSpreadsheet, History, Pencil, Plus, SearchX, Wrench, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -18,6 +18,8 @@ import {
   type EstadoPlan, type PlanificacionItem,
 } from './api';
 import { PlanificacionFormulario } from './PlanificacionFormulario';
+import { ProyeccionTab, RequerimientosTab } from './PlanificacionProyeccion';
+import { buscarFleetrunPorCodigo } from './fleetrunApi';
 import { ImportarPlanificacionSheet } from './ImportarPlanificacionSheet';
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -38,6 +40,7 @@ export function PlanificacionPage() {
   const [seleccionadoId, setSeleccionadoId] = useState<string | number | null>(null);
   const [formulario, setFormulario] = useState<{ plan: PlanificacionItem | null } | null>(null);
   const [importando, setImportando] = useState(false);
+  const [pestana, setPestana] = useState<'planes' | 'proyeccion' | 'requerimientos'>('planes');
   const toast = useToast();
 
   const { data, isLoading, isError, error } = usePlanificacion(mes, anio);
@@ -92,7 +95,29 @@ export function PlanificacionPage() {
         />
       )}
 
-      {isLoading ? <PageLoader /> : isError ? (
+      {!seleccionado && (
+        <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', marginBottom: 'var(--s-3)' }}>
+          {([['planes', 'Planes'], ['proyeccion', 'Proyección'], ['requerimientos', 'Repuestos del mes']] as const).map(([k, t]) => (
+            <button key={k} type="button" className={`chip${pestana === k ? ' chip--active' : ''}`} onClick={() => { haptic('selection'); setPestana(k); }}>{t}</button>
+          ))}
+        </div>
+      )}
+
+      {!seleccionado && pestana === 'proyeccion' ? (
+        <ProyeccionTab usuario={user?.email ?? ''} puedeCrear={puedeCrear} />
+      ) : !seleccionado && pestana === 'requerimientos' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+          <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+            <SelectInput value={mes} onChange={e => setMes(Number(e.target.value))} aria-label="Mes" style={{ width: 'auto' }}>
+              {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+            </SelectInput>
+            <SelectInput value={anio} onChange={e => setAnio(Number(e.target.value))} aria-label="Año" style={{ width: 'auto' }}>
+              {anios.map(a => <option key={a} value={a}>{a}</option>)}
+            </SelectInput>
+          </div>
+          <RequerimientosTab mes={mes} anio={anio} />
+        </div>
+      ) : isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : seleccionado ? (
         <PlanDetalle
@@ -245,11 +270,30 @@ function CompletarSheet({ plan, usuario, open, onClose }: { plan: PlanificacionI
   const [km, setKm] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [busqueda, setBusqueda] = useState<'idle' | 'buscando' | 'ok' | 'no'>('idle');
 
   useEffect(() => {
     if (!open) return;
+    setBusqueda('idle');
     setFleetrun(''); setFecha(new Date().toISOString().slice(0, 10)); setKm(''); setError(null);
   }, [open]);
+
+  // Al escribir el código completo del Fleetrun se completan la fecha y el km reales (como el clásico, desde 8 caracteres)
+  useEffect(() => {
+    const codigo = fleetrun.trim();
+    if (codigo.length < 8) { setBusqueda('idle'); return; }
+    setBusqueda('buscando');
+    let vigente = true;
+    const t = setTimeout(async () => {
+      const fr = await buscarFleetrunPorCodigo(codigo);
+      if (!vigente) return;
+      if (!fr) { setBusqueda('no'); return; }
+      if (fr.fecha) setFecha(String(fr.fecha).split('T')[0]);
+      if (fr.km_actual) setKm(String(fr.km_actual));
+      setBusqueda('ok');
+    }, 400);
+    return () => { vigente = false; clearTimeout(t); };
+  }, [fleetrun]);
 
   async function enviar() {
     if (!fleetrun.trim()) { setError('Indica el código del registro Fleetrun con el que se ejecutó.'); return; }
@@ -273,7 +317,7 @@ function CompletarSheet({ plan, usuario, open, onClose }: { plan: PlanificacionI
         <Button variant="primary" onClick={enviar} loading={enviando}>Marcar completado</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
-        <Field label="Código del registro Fleetrun" wide hint="El mantenimiento ejecutado, tal como está en Fleetrun">
+        <Field label="Código del registro Fleetrun" wide hint={busqueda === 'ok' ? <span style={{ color: 'var(--green-ink)' }}><CheckCircle size={13} style={{ verticalAlign: '-2px' }} /> Encontrado: se completaron la fecha y el km reales</span> : busqueda === 'no' ? <span style={{ color: 'var(--red-ink)' }}>No se encontró ese código en Fleetrun</span> : busqueda === 'buscando' ? 'Buscando…' : 'El mantenimiento ejecutado, tal como está en Fleetrun'}>
           {p => <TextInput {...p} value={fleetrun} onChange={e => setFleetrun(e.target.value)} autoFocus />}
         </Field>
         <Field label="Fecha real">{p => <TextInput {...p} type="date" value={fecha} onChange={e => setFecha(e.target.value)} />}</Field>

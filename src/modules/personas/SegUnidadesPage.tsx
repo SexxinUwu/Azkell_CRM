@@ -1,9 +1,10 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowUpRight, CircleAlert, FileSpreadsheet, LogIn, LogOut, Plus, SearchX, ShieldCheck, Trash2 } from 'lucide-react';
+import { AlertTriangle, CircleAlert, FileSpreadsheet, FileText, LogIn, LogOut, MessageCircle, Plus, SearchX, ShieldCheck, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
+import { ChoiceChips } from '../../core/ui/Chips';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
@@ -12,9 +13,10 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
+import { compartirPDF } from '../../core/lib/pdf';
 import { usePlacas } from '../placas/api';
 import type { FirmaHandle } from '../inspecciones/Firma';
+import { abrirActaParaImprimir, cargarFlotaDocs, docsDeVehiculos, fotosParaActa, htmlActaGarita, nombreArchivoActa, pdfBlobDeActa, type FaseActa, type RegistroActa } from './garitaActa';
 import { ChecklistGarita, FirmaPar, FotosGarita, hayObservado, subirFotosGarita, useTemplateGarita, type ValoresChk } from './garitaComponentes';
 
 interface Registro {
@@ -33,7 +35,7 @@ const ahora = () => new Date().toTimeString().slice(0, 5);
 const TIPOS = ['RUTA', 'LOCAL', 'TALLER', 'TRASLADO', 'OTRO'];
 
 // Personas y seguridad › Garita: control de salida y retorno de unidades.
-// Con checklist, firmas y fotos. El PDF del registro sigue en la versión actual.
+// Con checklist, firmas y fotos. Con PDF del acta y envío por WhatsApp.
 export function SegUnidadesPage() {
   const { can } = useAuth();
   const qc = useQueryClient();
@@ -45,6 +47,9 @@ export function SegUnidadesPage() {
   const [abiertoId, setAbiertoId] = useState<string | null>(null);
   const [porEliminar, setPorEliminar] = useState<Registro | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [faseActa, setFaseActa] = useState<FaseActa | null>(null);
+  const [generando, setGenerando] = useState<'pdf' | 'wa' | null>(null);
+  const plantillaGlobal = useTemplateGarita();
 
   const lista = useQuery<Registro[]>({
     queryKey: ['personas', 'garita', estado],
@@ -73,6 +78,44 @@ export function SegUnidadesPage() {
     finally { setOcupado(false); }
   }
 
+  // Acta del registro (F-SEG-002): sin elegir fase, la salida si sigue en ruta o el expediente completo
+  async function armarActa(r: Registro, fase: FaseActa) {
+    const rec = r as unknown as RegistroActa;
+    const flota = await cargarFlotaDocs();
+    const [docT, docC, fotos] = await Promise.all([
+      docsDeVehiculos(flota, rec.placa_tracto),
+      docsDeVehiculos(flota, rec.retorno_placa_carreta || rec.placa_carreta),
+      fotosParaActa(rec.id, rec.fotos),
+    ]);
+    return { rec, html: htmlActaGarita(rec, fase, { docT, docC, fotos, plantillaGlobal: plantillaGlobal.data }) };
+  }
+  const faseDe = (r: Registro): FaseActa => faseActa ?? (r.estado === 'en_ruta' ? 'salida' : 'completo');
+
+  async function verPdf(r: Registro) {
+    const fase = faseDe(r);
+    setGenerando('pdf');
+    try {
+      const { rec, html } = await armarActa(r, fase);
+      const placas = rec.placa_tracto + (rec.placa_carreta ? ` / ${rec.placa_carreta}` : '');
+      if (!abrirActaParaImprimir(html, `Checklist ${rec.placa_tracto} (${fase.toUpperCase()})`, placas, rec.id, true)) toast('El navegador bloqueó la ventana. Permite las ventanas emergentes.', 'error');
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+    finally { setGenerando(null); }
+  }
+
+  async function porWhatsApp(r: Registro) {
+    const fase = faseDe(r);
+    setGenerando('wa');
+    try {
+      const { rec, html } = await armarActa(r, fase);
+      const nombre = nombreArchivoActa(rec, fase);
+      const blob = await pdfBlobDeActa(html, nombre);
+      const res = await compartirPDF(blob, nombre, `Checklist de inspección ${rec.placa_tracto} (${fase}) · ${rec.id}`);
+      if (res === 'descargado') toast('PDF descargado. Adjúntalo en WhatsApp.');
+      if (res !== 'cancelado') haptic('success');
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+    finally { setGenerando(null); }
+  }
+
   async function exportar() {
     try {
       await exportarExcel('Garita-unidades', 'Garita',
@@ -98,7 +141,6 @@ export function SegUnidadesPage() {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} registros`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'PDF del registro', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('seguridad/unidades') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<LogOut size={16} />} onClick={() => setSalida(true)}>Registrar salida</Button>}
           </>
@@ -146,10 +188,12 @@ export function SegUnidadesPage() {
         )}
       </div>
 
-      <Sheet open={!!abierto} onClose={() => setAbiertoId(null)} title={abierto ? `Registro ${abierto.id}` : ''}
+      <Sheet open={!!abierto} onClose={() => { setAbiertoId(null); setFaseActa(null); }} title={abierto ? `Registro ${abierto.id}` : ''}
         footer={
           abierto && (
             <>
+              <Button variant="secondary" icon={<FileText size={16} />} loading={generando === 'pdf'} disabled={!!generando} onClick={() => verPdf(abierto)}>PDF</Button>
+              <Button variant="secondary" icon={<MessageCircle size={16} />} loading={generando === 'wa'} disabled={!!generando} onClick={() => porWhatsApp(abierto)}>WhatsApp</Button>
               {puedeEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setPorEliminar(abierto)}>Eliminar</Button>}
               {abierto.estado === 'en_ruta' && puedeCrear && (
                 <Button variant="primary" icon={<LogIn size={16} />} onClick={() => { setRetorno(abierto); setAbiertoId(null); }}>Registrar retorno</Button>
@@ -159,6 +203,10 @@ export function SegUnidadesPage() {
         }>
         {abierto && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
+            {abierto.estado !== 'en_ruta' && (
+              <ChoiceChips label="Documento del PDF" value={faseActa ?? 'completo'} onChange={setFaseActa}
+                options={[{ value: 'completo', label: 'Expediente completo' }, { value: 'salida', label: 'Salida' }, { value: 'retorno', label: 'Retorno' }]} />
+            )}
             {(abierto.salida_has_alert || abierto.retorno_has_alert) && <Notice tone="error" icon={<AlertTriangle size={16} />}>Este registro tiene observaciones marcadas en el checklist.</Notice>}
             <div className="tarjeta__lista">
               {fila('Empresa', abierto.empresa_nombre)}{fila('Tracto', abierto.placa_tracto, true)}{fila('Carreta', abierto.placa_carreta, true)}{fila('Conductor', abierto.conductor)}

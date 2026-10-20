@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Building2, FileSpreadsheet, MessageCircle, Phone, Plus, SearchX } from 'lucide-react';
+import { ArrowUpRight, Building2, Download, FileSpreadsheet, MessageCircle, Phone, Plus, SearchX, Upload } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -20,6 +20,7 @@ import '../conductores/conductores.css';
 import './almacen.css';
 import { eliminarProveedor, useProveedores, type ProveedorInv } from './api';
 import { ProveedorFormulario } from './ProveedorFormulario';
+import { ImportarProveedoresSheet, descargarPlantillaProveedores } from './ImportarProveedoresSheet';
 
 // Tonos para las iniciales: el mismo proveedor siempre tiene el mismo color
 const TONOS = ['#f56300', '#0a84ff', '#30a46c', '#bf5af2', '#ff375f', '#5e5ce6', '#ac8e68', '#0fa3b1'];
@@ -37,6 +38,7 @@ export function ProveedoresPage() {
   const [formulario, setFormulario] = useState<{ proveedor: ProveedorInv | null } | null>(null);
   const [porEliminar, setPorEliminar] = useState<ProveedorInv | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  const [importando, setImportando] = useState(false);
 
   const puedeCrear = can('prov_inv.crear');
   const puedeEditar = can('prov_inv.editar');
@@ -90,6 +92,8 @@ export function ProveedoresPage() {
                     ['Proveedor', 'RUC', 'Contacto', 'Teléfono', 'Correo', 'Dirección', 'Banco', 'Cuenta', 'CCI', 'Moneda'],
                     visibles.map(p => [p.nombre, p.ruc, p.contacto, p.telefono, p.correo, p.direccion, p.banco, p.cuenta, p.cci, p.moneda_pago]))
                     .catch(err => toast(errorMessage(err), 'error')) },
+                puedeCrear && { label: 'Importar Excel', detalle: 'Con revisión antes de guardar', icon: <Upload size={17} />, separado: true, onSelect: () => setImportando(true) },
+                puedeCrear && { label: 'Descargar plantilla', icon: <Download size={17} />, onSelect: () => descargarPlantillaProveedores().catch(err => toast(errorMessage(err), 'error')) },
                 { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('almacen/proveedores') },
               ]} />
               {puedeCrear && (
@@ -176,6 +180,8 @@ export function ProveedoresPage() {
           qc.invalidateQueries({ queryKey: ['almacen', 'proveedores'] });
         }}
       />
+
+      <ImportarProveedoresSheet open={importando} onClose={() => setImportando(false)} existentes={proveedores} />
 
       <ConfirmSheet
         open={!!porEliminar}

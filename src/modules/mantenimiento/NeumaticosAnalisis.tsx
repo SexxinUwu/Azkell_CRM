@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, CalendarClock, Disc3 } from 'lucide-react';
 import { api, errorMessage } from '../../core/api/client';
 import { EmptyState, Notice } from '../../core/ui/Display';
 import { PageLoader } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
+import { MedidaDetalleSheet } from './NeumaticosExtras';
 
 // Análisis de la flota de neumáticos (GET /api/neumaticos/analisis). Todo se lee de la base de la empresa.
 interface Resumen {
@@ -61,6 +63,7 @@ function semaforo(dias: number | null): { color: string; texto: string } {
 
 export function NeumaticosAnalisis() {
   const { data, isLoading, isError, error } = useAnalisisNeumaticos();
+  const [medidaSel, setMedidaSel] = useState<string | null>(null);
 
   if (isLoading) return <PageLoader />;
   if (isError) return <Notice tone="error">{errorMessage(error)}</Notice>;
@@ -104,7 +107,10 @@ export function NeumaticosAnalisis() {
         <div className="tarjeta__lista" style={{ padding: 'var(--s-3) var(--s-4)' }}>
           <p className="tarjeta__grupo-titulo">Medidas en uso</p>
           {data.medidas.length === 0 ? <p className="t-footnote c-secondary">Sin medidas registradas.</p> : data.medidas.map(m => (
-            <div key={m.medida} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 4, padding: '6px 0' }}>
+            <div key={m.medida} role="button" tabIndex={0} title="Ver llantas de esta medida"
+              onClick={() => setMedidaSel(m.medida)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMedidaSel(m.medida); } }}
+              style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 4, padding: '6px 0', cursor: 'pointer' }}>
               <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{m.medida}</span>
               <span className="t-numeric" style={{ fontSize: '0.8125rem' }}>{num(m.cantidad)}</span>
               <div style={{ gridColumn: '1 / -1', height: 4, borderRadius: 2, background: 'var(--fill)' }}>
@@ -147,6 +153,7 @@ export function NeumaticosAnalisis() {
           Crítica: remanente de 4 mm o menos, o alerta de cambio marcada en la inspección.
         </p>
       </div>
+      <MedidaDetalleSheet medida={medidaSel} onClose={() => setMedidaSel(null)} />
     </div>
   );
 }

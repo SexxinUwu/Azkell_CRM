@@ -2,7 +2,7 @@ import './flota.css';
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CircleAlert, ClipboardList, FileSpreadsheet, FileText, Plus, SearchX, Trash2 } from 'lucide-react';
+import { CircleAlert, ClipboardList, FileSpreadsheet, FileText, ListChecks, Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -15,9 +15,10 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { exportarPDF, montarParaPDF } from '../../core/lib/pdf';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { usePlacas } from '../placas/api';
 import { Firma, type FirmaHandle } from '../inspecciones/Firma';
+import { PlantillaEntregaSheet } from './PlantillaEntregaSheet';
+import { leerPlantillaEntrega } from './plantillaEntrega';
 import { CONFIG_CROQUIS, normalizarConfig, svgCroquis, type ConfigCroquis, type EstiloCabina } from './croquisEntrega';
 
 interface Acta {
@@ -28,17 +29,6 @@ interface Acta {
 }
 interface Grupo { id: string; titulo: string; items: Array<string | { id?: string; label?: string; texto?: string }> }
 
-const GRUPOS_BASE: Grupo[] = [
-  { id: 'frente_exterior', titulo: 'Frente exterior', items: ['Emblemas', 'Persianas', 'Defensa delantera', 'Luz chica', 'Direccionales'] },
-  { id: 'interior_motor', titulo: 'Interior del motor', items: ['Batería', 'Tapa radiador', 'Tapa aceite', 'Varilla de aceite', 'Correas', 'Corneta'] },
-  { id: 'frente_superior', titulo: 'Frente superior', items: ['Vidrio panorámico', 'Brazos limpiabrisas', 'Cuchillas limpiabrisas', 'Antena'] },
-  { id: 'costados', titulo: 'Costados', items: ['Vidrios laterales', 'Manijas', 'Cerraduras', 'Copas de ruedas', 'Estribos'] },
-  { id: 'trasero', titulo: 'Parte trasera', items: ['Defensa trasera', 'Luces de parqueo', 'Reversos', 'Tapa de combustible'] },
-  { id: 'interior', titulo: 'Interior de cabina', items: ['Consola', 'Autoradio', 'Guantera', 'Cojinería', 'Tapetes', 'Espejo retrovisor'] },
-  { id: 'tablero', titulo: 'Tablero', items: ['Switch de ignición', 'Luces', 'Claxon', 'Tacómetro', 'Velocímetro', 'Medidor de combustible'] },
-  { id: 'herramientas', titulo: 'Herramientas', items: ['Gata', 'Llave de ruedas', 'Palancas', 'Kit de herramientas', 'Linterna'] },
-  { id: 'seguridad', titulo: 'Seguridad', items: ['Triángulos', 'Extintor', 'Conos', 'Tacos', 'Botiquín'] },
-];
 const ESTADOS: Array<{ k: 'B' | 'R' | 'M'; label: string }> = [{ k: 'B', label: 'Bueno' }, { k: 'R', label: 'Regular' }, { k: 'M', label: 'Malo' }];
 const OPCIONES_CONFIG: Array<{ value: ConfigCroquis; label: string }> = (Object.keys(CONFIG_CROQUIS) as ConfigCroquis[])
   .map(k => ({ value: k, label: CONFIG_CROQUIS[k].nombre }));
@@ -107,6 +97,7 @@ export function EntregaPage() {
   const [nueva, setNueva] = useState(false);
   const [porEliminar, setPorEliminar] = useState<Acta | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [plantillaAbierta, setPlantillaAbierta] = useState(false);
 
   const q = useQuery<Acta[]>({
     queryKey: ['flota', 'entrega-vehiculos'],
@@ -170,7 +161,7 @@ export function EntregaPage() {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} actas`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Plantilla de inventario (editar)', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('flota/entrega-vehiculos') },
+              { label: 'Plantilla de inventario', detalle: 'Categorías e ítems que se califican', icon: <ListChecks size={17} />, separado: true, onSelect: () => setPlantillaAbierta(true) },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNueva(true)}>Nueva acta</Button>}
           </>
@@ -249,6 +240,7 @@ export function EntregaPage() {
         )}
       </Sheet>
 
+      <PlantillaEntregaSheet open={plantillaAbierta} onClose={() => setPlantillaAbierta(false)} />
       <NuevaActa open={nueva} onClose={() => setNueva(false)} onHecho={refrescar} />
       <ConfirmSheet open={!!porEliminar} onClose={() => !ocupado && setPorEliminar(null)} onConfirm={eliminar} loading={ocupado}
         title="¿Eliminar esta acta?" message={porEliminar ? `${porEliminar.numero_inventario || porEliminar.id} · ${porEliminar.placa}` : ''} confirmLabel="Eliminar" />
@@ -272,10 +264,10 @@ function NuevaActa({ open, onClose, onHecho }: { open: boolean; onClose: () => v
 
   const plantilla = useQuery<Grupo[]>({
     queryKey: ['flota', 'entrega-plantilla'], enabled: open,
-    queryFn: () => api<Grupo[]>('/seguridad/template').then(r => (Array.isArray(r) && r.length ? r : GRUPOS_BASE)).catch(() => GRUPOS_BASE),
-    staleTime: 10 * 60_000,
+    queryFn: () => Promise.resolve<Grupo[]>(leerPlantillaEntrega()),
+    staleTime: 0,
   });
-  const grupos = plantilla.data ?? GRUPOS_BASE;
+  const grupos = plantilla.data ?? [];
 
   useEffect(() => {
     if (!open) return;

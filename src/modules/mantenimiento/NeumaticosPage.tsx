@@ -2,7 +2,7 @@ import './mant.css';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Disc3, Plus, SearchX, Trash2 } from 'lucide-react';
+import { ArrowUpRight, Disc3, Download, Plus, ScanSearch, SearchX, Trash2, Upload } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
@@ -14,6 +14,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
 import { useNeumaticos, type NeuRequerimiento, type NeuVehiculo } from './api';
 import { NeumaticosAnalisis } from './NeumaticosAnalisis';
+import { EsquemaPlacaSheet, ImportarNeumaticosSheet, descargarPlantillaNeumaticos, exportarNeumaticos } from './NeumaticosExtras';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -87,6 +88,9 @@ export function NeumaticosPage() {
   // Modal nueva inspección
   const [modalAbierto, setModalAbierto] = useState(false);
   const [guardando, setGuardando]       = useState(false);
+  const [esquemaAbierto, setEsquemaAbierto]   = useState(false);
+  const [placaEsquema, setPlacaEsquema]       = useState('');
+  const [importarAbierto, setImportarAbierto] = useState(false);
 
   // Cabecera del formulario
   const [placa, setPlaca]           = useState('');
@@ -258,7 +262,14 @@ export function NeumaticosPage() {
               Nueva inspección
             </Button>
             <MenuOtros opciones={[
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />,
+              { label: 'Esquema por placa', icon: <ScanSearch size={17} />, detalle: 'Llantas de la última inspección',
+                onSelect: () => { setPlacaEsquema(''); setEsquemaAbierto(true); } },
+              { label: 'Importar desde Excel', icon: <Upload size={17} />, onSelect: () => setImportarAbierto(true), separado: true },
+              { label: 'Descargar plantilla', icon: <Download size={17} />,
+                onSelect: () => descargarPlantillaNeumaticos().catch(e => toast(errorMessage(e), 'error')) },
+              { label: 'Exportar inspecciones', icon: <Download size={17} />, detalle: '27 columnas oficiales',
+                onSelect: () => exportarNeumaticos().catch(e => toast(errorMessage(e), 'error')) },
+              { label: 'Abrir en la versión actual', separado: true, icon: <ArrowUpRight size={17} />,
                 onSelect: () => abrirClasico('mantenimiento/neumaticos-ultimas') },
             ]} />
           </div>
@@ -297,7 +308,7 @@ export function NeumaticosPage() {
               </EmptyState>
             ) : (
               <div className="tarjeta__lista">
-                {visiblesUlt.map((v, i) => <VehiculoFila key={v.placa ?? i} v={v} />)}
+                {visiblesUlt.map((v, i) => <VehiculoFila key={v.placa ?? i} v={v} onAbrir={() => { setPlacaEsquema(v.placa ?? ''); setEsquemaAbierto(true); }} />)}
               </div>
             )
           ) : (
@@ -314,6 +325,9 @@ export function NeumaticosPage() {
           )}
         </div>
       )}
+
+      <EsquemaPlacaSheet open={esquemaAbierto} placaInicial={placaEsquema} onClose={() => { setEsquemaAbierto(false); setPlacaEsquema(''); }} />
+      <ImportarNeumaticosSheet open={importarAbierto} onClose={() => setImportarAbierto(false)} />
 
       {/* ── Modal Nueva Inspección ── */}
       <Sheet
@@ -483,11 +497,12 @@ const inputNumStyle: React.CSSProperties = {
 
 // ─── Componentes de fila ─────────────────────────────────────────────────────
 
-function VehiculoFila({ v }: { v: NeuVehiculo }) {
+function VehiculoFila({ v, onAbrir }: { v: NeuVehiculo; onAbrir: () => void }) {
   const malas = (v.llantas_reparar ?? 0) + (v.llantas_cambiar ?? 0);
   const tono = malas > 0 ? 'red' : 'green';
   return (
-    <div className="ot-fila" style={{ cursor: 'default' }}>
+    <div className="ot-fila" style={{ cursor: 'pointer' }} role="button" tabIndex={0} title="Ver esquema de neumáticos"
+      onClick={onAbrir} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAbrir(); } }}>
       <div className="ot-fila__icono" style={{ background: `var(--${tono}-tint)`, color: `var(--${tono}-ink)` }}>
         <Disc3 size={16} />
       </div>

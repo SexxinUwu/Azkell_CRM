@@ -15,6 +15,8 @@ import { useConfigSistemas, type ReporteFalla } from './api';
 import { leerFallas, textoItem, type FallaGuardada, type SistemaCfg } from './fman';
 
 interface Marca { obs: string }
+interface Viaje { viaje?: string | null; conductor?: string | null; placa_remolque?: string | null; ruta?: string | null; origen?: string | null }
+interface IngresoSeg { conductor?: string | null; placa_carreta?: string | null; procedencia?: string | null; destino?: string | null; zona?: string | null }
 interface Backlog { id: number | string; backlog_id?: string | null; tarea?: string | null; tema?: string | null; ticket_ot?: string | null }
 
 const MAX_FOTOS = 5;
@@ -77,6 +79,9 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   const [backlogSel, setBacklogSel] = useState<Record<string, true>>({});
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Conductores que sugiere cada fuente; si difieren se avisa y la persona elige
+  const [condViaje, setCondViaje] = useState('');
+  const [condSeg, setCondSeg] = useState('');
 
   const cfg = useConfigSistemas(open);
   const placaT = (v.placa_tracto ?? '').trim().toUpperCase();
@@ -109,6 +114,37 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   }, [open, reporte]);
 
   const set = (k: string, val: string) => setV(a => ({ ...a, [k]: val }));
+
+  // Al escribir la placa del tracto en un reporte nuevo: se completa con el último ingreso de seguridad y el último viaje
+  // (como la versión actual). La orden de viaje manda sobre seguridad en el conductor; lo ya escrito no se pisa.
+  useEffect(() => {
+    setCondViaje(''); setCondSeg('');
+    if (!open || editando || !/^[A-Z0-9-]{5,8}$/.test(placaT)) return;
+    let vigente = true;
+    const t = setTimeout(async () => {
+      const q = encodeURIComponent(placaT);
+      const [seg, via] = await Promise.all([
+        api<{ data?: IngresoSeg | null }>(`/checklist/ultimo-ingreso-seguridad?placa=${q}`).catch(() => null),
+        api<{ data?: Viaje[] }>(`/checklist/buscar-viajes?placa=${q}&limit=3`).catch(() => null),
+      ]);
+      if (!vigente) return;
+      const s = seg?.data ?? null;
+      const viaje = via?.data?.[0] ?? null;
+      const cs = (s?.conductor ?? '').trim();
+      const cv = (viaje?.conductor ?? '').trim();
+      setCondSeg(cs); setCondViaje(cv);
+      setV(a => {
+        const n = { ...a };
+        const remolque = (viaje?.placa_remolque || s?.placa_carreta || '').toUpperCase();
+        if (!n.placa_remolque && remolque) n.placa_remolque = remolque;
+        if (!n.conductor && (cv || cs)) n.conductor = cv || cs;
+        if (!n.procedencia) n.procedencia = viaje?.ruta || viaje?.origen || s?.procedencia || s?.destino || s?.zona || '';
+        if (!n.orden_viaje && viaje?.viaje) n.orden_viaje = viaje.viaje;
+        return n;
+      });
+    }, 500);
+    return () => { vigente = false; clearTimeout(t); };
+  }, [open, editando, placaT]);
   const tractos = (placas.data ?? []).filter(p => p.motora).map(p => p.placa);
   const remolques = (placas.data ?? []).filter(p => !p.motora).map(p => p.placa);
   const seleccionados = (backlogs.data ?? []).filter(b => backlogSel[String(b.id)]);
@@ -216,6 +252,15 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
         {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
         <datalist id="rf-tractos">{tractos.map(x => <option key={x} value={x} />)}</datalist>
         <datalist id="rf-remolques">{remolques.map(x => <option key={x} value={x} />)}</datalist>
+        {condViaje && condSeg && condViaje.toUpperCase() !== condSeg.toUpperCase() && (
+          <Notice tone="accent">
+            La orden de viaje indica <b>{condViaje}</b> y seguridad registra <b>{condSeg}</b> como último ingreso.
+            <span style={{ display: 'flex', gap: 'var(--s-2)', marginTop: 'var(--s-2)', flexWrap: 'wrap' }}>
+              <Button variant="secondary" onClick={() => set('conductor', condViaje)}>Usar el de la orden</Button>
+              <Button variant="secondary" onClick={() => set('conductor', condSeg)}>Usar el de seguridad</Button>
+            </span>
+          </Notice>
+        )}
         <div className="form-grid">
           <Field label="Tracto">{p => <TextInput {...p} list="rf-tractos" value={v.placa_tracto ?? ''} onChange={e => set('placa_tracto', e.target.value.toUpperCase())} />}</Field>
           <Field label="Remolque">{p => <TextInput {...p} list="rf-remolques" value={v.placa_remolque ?? ''} onChange={e => set('placa_remolque', e.target.value.toUpperCase())} />}</Field>
