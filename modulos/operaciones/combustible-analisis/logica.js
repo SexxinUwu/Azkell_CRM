@@ -1080,6 +1080,18 @@
     }
 
     // Helper: Invertir ruta para tramo retorno (ej: "LIMA - AREQUIPA" -> "AREQUIPA - LIMA")
+    // Retorno de un viaje con varios tramos ("LIMA - MOYOBAMBA | CHICLAYO - TRUJILLO"): siempre termina en LIMA y sale
+    // desde el destino del último tramo ("TRUJILLO - LIMA"). Si el último tramo ya llega a Lima, se usa su origen.
+    function caRetornoALima(ruta) {
+        var tramos = String(ruta || '').split('|').map(function (t) { return t.trim(); }).filter(Boolean);
+        var ultimo = tramos[tramos.length - 1];
+        if (!ultimo) return '';
+        var lugares = caNormalizar(ultimo).replace(/^(IDA|RETORNO)\s*:\s*/i, '').split('-').map(function (p) { return p.trim(); }).filter(Boolean);
+        if (lugares.length < 2) return '';
+        var base = lugares[lugares.length - 1] === 'LIMA' ? lugares[0] : lugares[lugares.length - 1];
+        return base === 'LIMA' ? '' : base + ' - LIMA';
+    }
+
     function caInvertirRutaRetorno(rStr) {
         if (!rStr) return '';
         let norm = caNormalizar(rStr).replace(/^(IDA|RETORNO)\s*:\s*/i, '');
@@ -1265,7 +1277,7 @@
 
             // Rutas diferenciadas por tramo con inversión inteligente de retorno
             let rutaTramoIda = t.rutaIda || t.ruta;
-            let rutaTramoRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : '');
+            let rutaTramoRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? (caRetornoALima(t.ruta) || t.ruta.split('|')[1].trim()) : '');
             if (t.ruta && !t.ruta.includes('|')) {
                 rutaTramoIda = t.ruta;
                 if (!rutaTramoRet || caNormalizar(rutaTramoRet) === caNormalizar(rutaTramoIda)) {
@@ -1592,7 +1604,7 @@
                 totalSumKmReal += (fs ? fs.recorridoKm : (t.recorridoKm || 0));
 
                 const rIda = t.rutaIda || t.ruta;
-                let rRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : '');
+                let rRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? (caRetornoALima(t.ruta) || t.ruta.split('|')[1].trim()) : '');
                 if (!rRet || caNormalizar(rRet) === caNormalizar(rIda)) {
                     rRet = caInvertirRutaRetorno(rIda);
                 }
@@ -2074,7 +2086,7 @@
             const valesCount = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
 
             const rIda = t.rutaIda || t.ruta;
-            let rRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : '');
+            let rRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? (caRetornoALima(t.ruta) || t.ruta.split('|')[1].trim()) : '');
             if (!rRet || caNormalizar(rRet) === caNormalizar(rIda)) {
                 rRet = caInvertirRutaRetorno(rIda);
             }

@@ -45,6 +45,18 @@ export function invertirRuta(r?: string | null): string {
   return norm;
 }
 
+// Retorno de un viaje con varios tramos ("LIMA - MOYOBAMBA | CHICLAYO - TRUJILLO"): siempre termina en LIMA y sale
+// desde el destino del último tramo ("TRUJILLO - LIMA"). Si el último tramo ya llega a Lima, se usa su origen.
+export function retornoALima(ruta?: string | null): string {
+  const tramos = String(ruta ?? '').split('|').map(t => t.trim()).filter(Boolean);
+  const ultimo = tramos[tramos.length - 1];
+  if (!ultimo) return '';
+  const lugares = lugar(ultimo).replace(/^(IDA|RETORNO)\s*:\s*/i, '').split('-').map(p => p.trim()).filter(Boolean);
+  if (lugares.length < 2) return '';
+  const base = lugares[lugares.length - 1] === 'LIMA' ? lugares[0] : lugares[lugares.length - 1];
+  return base === 'LIMA' ? '' : `${base} - LIMA`;
+}
+
 // Busca la fila de la matriz: primero con configuración exacta, luego sin restringir configuración
 function buscarEnMatriz(matriz: MatrizCalc[], ruta: string, sentido: string, motor: string, confg: string): MatrizCalc | null {
   let r = lugar(ruta).replace(/^(IDA|RETORNO)\s*:\s*/i, '');
@@ -109,7 +121,7 @@ export function analizarViaje(viaje: ViajeCalc, matriz: MatrizCalc[]): AnalisisV
 
   // Ruta de ida y de retorno (el retorno sale invertido si no viene o es igual a la ida)
   let rutaIda = viaje.rutaIda || viaje.ruta;
-  let rutaRet = viaje.rutaRetorno || (viaje.ruta && viaje.ruta.includes('|') ? viaje.ruta.split('|')[1].trim() : '');
+  let rutaRet = viaje.rutaRetorno || (viaje.ruta && viaje.ruta.includes('|') ? retornoALima(viaje.ruta) || viaje.ruta.split('|')[1].trim() : '');
   if (viaje.ruta && !viaje.ruta.includes('|')) rutaIda = viaje.ruta;
   if (!rutaRet || lugar(rutaRet) === lugar(rutaIda)) rutaRet = invertirRuta(rutaIda || viaje.ruta);
   rutaIda = rutaIda.replace(/\bCALLAO\b/gi, 'LIMA');

@@ -1204,6 +1204,18 @@ module.exports = function (db, broadcast, logAudit) {
                 return norm;
             };
 
+            // Retorno de un viaje con varios tramos ("LIMA - MOYOBAMBA | CHICLAYO - TRUJILLO"): siempre termina en LIMA y sale
+            // desde el destino del último tramo ("TRUJILLO - LIMA"). Si el último tramo ya llega a Lima, se usa su origen.
+            const retornoALima = (partes) => {
+                const quitarTildes = (x) => String(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+                const ultimo = (partes || []).filter(Boolean).slice(-1)[0];
+                if (!ultimo) return '';
+                const lugares = String(ultimo).split('-').map(p => p.trim()).filter(Boolean);
+                if (lugares.length < 2) return '';
+                const base = quitarTildes(lugares[lugares.length - 1]) === 'LIMA' ? lugares[0] : lugares[lugares.length - 1];
+                return quitarTildes(base) === 'LIMA' ? '' : base + ' - LIMA';
+            };
+
             const ovMap = new Map();
             ovRows.forEach(o => {
                 if (o.viaje) {
@@ -1428,7 +1440,7 @@ module.exports = function (db, broadcast, logAudit) {
                         const parts = t.ruta.split('|').map(p => normalizarRutaTramo(p.trim())).filter(Boolean);
                         if (parts.length >= 2) {
                             rutaIdaCalculada = parts[0];
-                            rutaRetornoCalculada = parts[1];
+                            rutaRetornoCalculada = retornoALima(parts) || parts[1];
                         } else if (parts.length === 1 && parts[0]) {
                             rutaIdaCalculada = parts[0];
                             // Si la orden de viaje tiene un retorno registrado con tramo específico
@@ -1459,7 +1471,7 @@ module.exports = function (db, broadcast, logAudit) {
                         const partesVale = String(t.ruta).split('|').map(p => normalizarRutaTramo(p.trim())).filter(Boolean);
                         if (partesVale.length) {
                             rutaIdaCalculada = partesVale[0];
-                            rutaRetornoCalculada = partesVale[1] || invertirRutaRetorno(partesVale[0]);
+                            rutaRetornoCalculada = retornoALima(partesVale) || partesVale[1] || invertirRutaRetorno(partesVale[0]);
                         }
                     }
 
