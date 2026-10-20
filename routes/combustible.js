@@ -1149,14 +1149,18 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             // Normalizador de ruta compuesta (ej: "LIMA - CHULUCANAS / SULLANA" -> "LIMA - CHULUCANAS")
+            // Callao forma parte de Lima: la matriz de rendimiento y los viajes se manejan como LIMA. Sin esto, un tramo
+            // "CALLAO - PIURA" se mostraba distinto al viaje ("LIMA - PIURA") y no encontraba su consumo teórico en la matriz.
+            const homologarLugar = (s) => String(s == null ? '' : s).replace(/\bCALLAO\b/gi, 'LIMA');
+
             const normalizarRutaTramo = (rStr) => {
                 if (!rStr) return '';
                 let r = String(rStr).trim();
                 if (r.includes('/')) {
                     const p1 = r.split('/')[0].trim();
-                    if (p1) return p1;
+                    if (p1) return homologarLugar(p1);
                 }
-                return r;
+                return homologarLugar(r);
             };
 
             // Invertir ruta para retornos sin tramo explícito (ej: "LIMA - AREQUIPA" -> "AREQUIPA - LIMA")
@@ -1528,8 +1532,8 @@ module.exports = function (db, broadcast, logAudit) {
                         motor: placaMotorMap.get(t.placa) || '',
                         marca: placaMarcaMap.get(t.placa) || '',
                         configuracion: placaConfigMap.get(t.placa) || '',
-                        ruta: t.ruta,
-                        rutaIda: rutaIdaCalculada || t.ruta,
+                        ruta: homologarLugar(t.ruta),
+                        rutaIda: rutaIdaCalculada || homologarLugar(t.ruta),
                         rutaRetorno: rutaRetornoCalculada || '',
                         ordenIda,
                         ordenRetorno,
