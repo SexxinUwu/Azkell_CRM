@@ -225,6 +225,11 @@ module.exports = function (db, broadcast, logAudit) {
     // ── GET /api/checklist — Listar reportes de fallas ──────────────────
     router.get('/', (req, res) => {
         const tdb = getDb(req);
+        // Rango de fechas (día de Lima). Sin fechas, solo el día de hoy: la historia completa no se carga de entrada.
+        const hoy = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+        const fechaValida = f => /^\d{4}-\d{2}-\d{2}$/.test(f || '');
+        const desde = fechaValida(req.query.desde) ? req.query.desde : hoy;
+        const hasta = fechaValida(req.query.hasta) ? req.query.hasta : hoy;
         const sql = `
             SELECT rf.id, rf.folio, rf.orden_viaje, rf.fecha_reporte, rf.placa_tracto, rf.placa_remolque, rf.km_inicial, rf.km_final, rf.horas_motor,
                    rf.conductor, rf.procedencia, rf.ubicacion_gps, rf.fallas_tracto_json, rf.fallas_remolque_json, rf.fallas_libres_text,
@@ -235,9 +240,10 @@ module.exports = function (db, broadcast, logAudit) {
             FROM reportes_fallas rf
             LEFT JOIN placas p1 ON REPLACE(REPLACE(rf.placa_tracto, '-', ''), ' ', '') = REPLACE(REPLACE(p1.placa, '-', ''), ' ', '')
             LEFT JOIN placas p2 ON REPLACE(REPLACE(rf.placa_remolque, '-', ''), ' ', '') = REPLACE(REPLACE(p2.placa, '-', ''), ' ', '')
+            WHERE DATE(rf.fecha_reporte) BETWEEN ? AND ?
             ORDER BY rf.id DESC;
         `;
-        tdb.query(sql, async (err, rows) => {
+        tdb.query(sql, [desde, hasta], async (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!rows || !rows.length) return res.json([]);
 
@@ -262,7 +268,6 @@ module.exports = function (db, broadcast, logAudit) {
                     if (otsActivasEnBd.length === 0) {
                         if (r.estado !== 'Pendiente') {
                             r.estado = 'Pendiente';
-                            tdb.query("UPDATE reportes_fallas SET estado = 'Pendiente' WHERE id = ?", [r.id]);
                         }
                     } else {
                         const FINISHED_STATUSES = ['finalizado', 'finalizada', 'cerrada', 'cerrado', 'completada', 'completado', 'terminada', 'terminado', 'anulado', 'anulada'];
@@ -274,7 +279,6 @@ module.exports = function (db, broadcast, logAudit) {
                         const nuevoEstado = todasFinalizadas ? 'Finalizado' : 'En Proceso';
                         if (r.estado !== nuevoEstado) {
                             r.estado = nuevoEstado;
-                            tdb.query("UPDATE reportes_fallas SET estado = ? WHERE id = ?", [nuevoEstado, r.id]);
                         }
                     }
                 });

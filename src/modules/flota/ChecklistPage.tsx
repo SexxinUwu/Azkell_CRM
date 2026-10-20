@@ -25,7 +25,11 @@ import { formatFechaHoraPe } from '../../core/lib/format';
 const TODOS = 'Todos';
 
 export function ChecklistPage() {
-  const { data, isLoading, isError, error } = useChecklist();
+  // Por defecto, los reportes del día de hoy (hora de Lima); para otro periodo se cambian las fechas
+  const hoyLima = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+  const [desde, setDesde] = useState(hoyLima);
+  const [hasta, setHasta] = useState(hoyLima);
+  const { data, isLoading, isError, error } = useChecklist(desde, hasta);
   const cfg = useConfigSistemas();
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState(TODOS);
@@ -155,6 +159,11 @@ export function ChecklistPage() {
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
+            <label className="aud-fecha"><span>Desde</span><input type="date" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} /></label>
+            <label className="aud-fecha"><span>Hasta</span><input type="date" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} /></label>
+            <Button variant="secondary" onClick={() => { setDesde(hoyLima); setHasta(hoyLima); }}>Hoy</Button>
+          </div>
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, conductor, folio, falla…" />
 
           {estados.length > 2 && (

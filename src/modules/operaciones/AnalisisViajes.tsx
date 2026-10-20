@@ -212,7 +212,9 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const cifras = (t: Trip) => {
     if (!urea) {
       const gal = Object.entries(t.fuelStats ?? {}).filter(([k]) => !esUrea(k)).reduce((s, [, v]) => s + n(v.totalGalones), 0) || t.totalGalones;
-      return { galones: gal, gasto: t.totalGasto, rendimiento: t.rendimiento };
+      // Gasto solo de diésel (D2), igual que los galones: el de urea se ve en su propia pantalla
+      const gasto = Object.entries(t.fuelStats ?? {}).filter(([k]) => !esUrea(k)).reduce((s, [, v]) => s + n(v.totalGasto), 0) || t.totalGasto;
+      return { galones: gal, gasto, rendimiento: t.rendimiento };
     }
     const u = Object.entries(t.fuelStats ?? {}).filter(([k]) => esUrea(k)).map(([, v]) => v);
     return { galones: u.reduce((s, v) => s + n(v.totalGalones), 0), gasto: u.reduce((s, v) => s + n(v.totalGasto), 0), rendimiento: u.length ? n(u[0].rendimiento) : 0 };
@@ -419,7 +421,11 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                   <Celda key="aud">
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <Pastilla color={color}>{x.estadoAuditoria}</Pastilla>
-                      {x.odometroInconsistente && <AlertTriangle size={14} style={{ color: 'var(--red-ink)', flexShrink: 0 }} aria-label="Odómetro inconsistente" />}
+                      {(x.odometroInconsistente || n(x.recorridoKm) > LIMITE_KM_VIAJE) && (
+                        <span title="Odómetro inconsistente: km final menor al inicial o salto anómalo (más de 3.000 km)" style={{ display: 'inline-flex', flexShrink: 0 }}>
+                          <AlertTriangle size={14} style={{ color: 'var(--red-ink)' }} aria-label="Odómetro inconsistente" />
+                        </span>
+                      )}
                     </span>
                   </Celda>,
                 ];
