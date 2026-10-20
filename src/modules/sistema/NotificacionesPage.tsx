@@ -7,6 +7,7 @@ import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Displ
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Switch } from '../../core/ui/Switch';
+import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { formatFechaHoraPe } from '../../core/lib/format';
@@ -211,11 +212,77 @@ function TarjetaEvento({ regla }: { regla: Regla }) {
   );
 }
 
+interface ResumenVencimientos { vencidos?: number; porVencer?: number; texto?: string }
+interface EnvioVencimientos { enviados?: number; fallidos?: number; motivo?: string }
+
+// Resumen diario de documentos de flota por vencer: se puede ver lo que saldría o enviarlo ahora (envío real)
+function TarjetaVencimientos() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [resumen, setResumen] = useState<ResumenVencimientos | null>(null);
+  const [confirmar, setConfirmar] = useState(false);
+
+  const ver = useMutation({
+    mutationFn: () => api<ResumenVencimientos>('/notificaciones/vista-previa/flota_vencimiento'),
+    onSuccess: r => setResumen(r),
+    onError: err => toast(errorMessage(err), 'error'),
+  });
+  const enviar = useMutation({
+    mutationFn: () => api<EnvioVencimientos>('/notificaciones/ejecutar/flota_vencimiento', { method: 'POST' }),
+    onSuccess: r => {
+      haptic(r.motivo ? 'warning' : 'success');
+      toast(r.motivo ? `No se envió: ${r.motivo}` : `Resumen enviado (${r.enviados ?? 0} enviados${r.fallidos ? `, ${r.fallidos} fallidos` : ''})`, r.motivo ? 'error' : 'success');
+      qc.invalidateQueries({ queryKey: ['sistema', 'notif-historial'] });
+    },
+    onError: err => { toast(errorMessage(err), 'error'); haptic('warning'); },
+  });
+
+  return (
+    <>
+      <section className="cfg-tarjeta">
+        <div className="cfg-fila">
+          <div className="cfg-fila__texto">
+            <strong>Vencimientos de documentos de flota</strong>
+            <span>SOAT, revisión técnica y demás documentos. Sale una vez al día a las 7:00 (hora de Lima) si la regla está activa.</span>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+            <Button variant="secondary" loading={ver.isPending} onClick={() => ver.mutate()}>Ver resumen de hoy</Button>
+            <Button variant="primary" icon={<Send size={16} />} loading={enviar.isPending} onClick={() => setConfirmar(true)}>Enviar ahora</Button>
+          </div>
+        </div>
+      </section>
+
+      <Sheet open={!!resumen} onClose={() => setResumen(null)} title="Resumen de vencimientos"
+        footer={<Button variant="secondary" onClick={() => setResumen(null)}>Cerrar</Button>}>
+        {resumen && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+            <p className="t-footnote c-secondary">{resumen.vencidos ?? 0} vencidos · {resumen.porVencer ?? 0} por vencer en 30 días. Esto solo se muestra: no se envió nada.</p>
+            {resumen.texto
+              ? <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', margin: 0 }}>{resumen.texto}</pre>
+              : <EmptyState icon={<Send size={22} />} title="Nada que avisar">No hay documentos vencidos ni por vencer en 30 días.</EmptyState>}
+          </div>
+        )}
+      </Sheet>
+
+      <ConfirmSheet open={confirmar} onClose={() => !enviar.isPending && setConfirmar(false)} loading={enviar.isPending}
+        title="¿Enviar el resumen ahora?"
+        message="Se envía de verdad a los destinatarios de la regla de vencimientos, por los canales activos (WhatsApp y correo)."
+        confirmLabel="Enviar"
+        onConfirm={async () => { await enviar.mutateAsync(); setConfirmar(false); }} />
+    </>
+  );
+}
+
 function TabEventos() {
   const q = useQuery<Regla[]>({ queryKey: ['sistema', 'notif-reglas'], queryFn: () => api('/notificaciones/reglas') });
   if (q.isLoading) return <PageLoader />;
   if (q.isError) return <Notice tone="error">{errorMessage(q.error)}</Notice>;
-  return <div className="cfg-grid">{(q.data ?? []).map(r => <TarjetaEvento key={r.evento} regla={r} />)}</div>;
+  return (
+    <>
+      <TarjetaVencimientos />
+      <div className="cfg-grid">{(q.data ?? []).map(r => <TarjetaEvento key={r.evento} regla={r} />)}</div>
+    </>
+  );
 }
 
 function TabHistorial() {
