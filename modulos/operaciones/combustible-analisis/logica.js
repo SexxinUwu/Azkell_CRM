@@ -2180,6 +2180,29 @@
 
         const ws = XLSX.utils.json_to_sheet(exportData);
 
+        // FECHA INICIO / FECHA FIN como fecha y hora reales de Excel (no texto), para tablas dinámicas y filtros por fecha.
+        // El texto "AAAA-MM-DD HH:mm:ss" ya está en hora local: se convierte a número de serie sin cambiar de zona.
+        (function () {
+            const rango = XLSX.utils.decode_range(ws['!ref']);
+            const columnas = [];
+            for (let c = rango.s.c; c <= rango.e.c; c++) {
+                const h = ws[XLSX.utils.encode_cell({ r: 0, c })];
+                if (h && (h.v === 'FECHA INICIO' || h.v === 'FECHA FIN')) columnas.push(c);
+            }
+            columnas.forEach(c => {
+                for (let r = 1; r <= rango.e.r; r++) {
+                    const celda = ws[XLSX.utils.encode_cell({ r, c })];
+                    if (!celda || typeof celda.v !== 'string') continue;
+                    const m = celda.v.trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+                    if (!m) continue;
+                    celda.t = 'n';
+                    celda.v = Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0)) / 86400000 + 25569;
+                    celda.z = 'yyyy-mm-dd hh:mm:ss';
+                    delete celda.w;
+                }
+            });
+        })();
+
         // Auto-ajuste de ancho de columnas
         const colWidths = [
             { wch: 18 }, // N° VIAJE
