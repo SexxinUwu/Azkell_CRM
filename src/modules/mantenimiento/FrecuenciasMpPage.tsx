@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarClock, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
+import { CalendarClock, Download, FileSpreadsheet, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -11,6 +11,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
+import { ImportarFrecuenciasSheet, descargarPlantillaFrecuencias } from './ImportarFrecuenciasSheet';
 
 // Mantenimiento › Frecuencias MP: cada tipo de mantenimiento preventivo con su frecuencia por marca y modelo
 interface TipoMp {
@@ -41,6 +42,7 @@ export function FrecuenciasMpPage() {
   const [borrador, setBorrador] = useState<Borrador | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [porEliminar, setPorEliminar] = useState<TipoMp | null>(null);
+  const [importando, setImportando] = useState(false);
   const puedeEditar = can('cfg_mant.editar', 'cfg_mant.crear');
 
   const lista = useQuery<TipoMp[]>({
@@ -109,7 +111,11 @@ export function FrecuenciasMpPage() {
     <Page>
       <PageHeader eyebrow="Mantenimiento" title="Frecuencias de mantenimiento preventivo"
         subtitle={lista.isLoading ? 'Cargando…' : `${(lista.data ?? []).length} frecuencias por marca y modelo`}
-        actions={puedeEditar ? <Button variant="primary" icon={<Plus size={16} />} onClick={abrirNuevo}>Nueva frecuencia</Button> : undefined} />
+        actions={<>
+          <Button variant="secondary" icon={<Download size={16} />} onClick={() => descargarPlantillaFrecuencias()}>Plantilla</Button>
+          {puedeEditar && <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => setImportando(true)}>Importar Excel</Button>}
+          {puedeEditar && <Button variant="primary" icon={<Plus size={16} />} onClick={abrirNuevo}>Nueva frecuencia</Button>}
+        </>} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -158,6 +164,8 @@ export function FrecuenciasMpPage() {
           </div>
         )}
       </Sheet>
+
+      <ImportarFrecuenciasSheet open={importando} onClose={() => setImportando(false)} />
 
       <ConfirmSheet open={!!porEliminar} onClose={() => !guardando && setPorEliminar(null)} loading={guardando} onConfirm={eliminar}
         title={`¿Eliminar "${porEliminar?.tipo_mp ?? ''}"?`} message={`Se quita la frecuencia de ${porEliminar?.marca ?? ''} ${porEliminar?.modelo ?? ''}. Los mantenimientos ya hechos no cambian.`} confirmLabel="Eliminar" />
