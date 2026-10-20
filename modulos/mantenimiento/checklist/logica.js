@@ -2250,6 +2250,33 @@ window.poblarEmpresasChecklist = function(datos) {
     group.innerHTML = html;
 };
 
+// Rango de fechas del reporte de fallas (día de Lima). Vacío = hoy.
+window.ckHoyLima = function() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+};
+window.ckRangoQuery = function() {
+    const d = document.getElementById('ckFiltroDesde');
+    const h = document.getElementById('ckFiltroHasta');
+    if (d && !d.value) d.value = window.ckHoyLima();
+    if (h && !h.value) h.value = window.ckHoyLima();
+    if (!d || !h) return '';
+    return '?desde=' + encodeURIComponent(d.value) + '&hasta=' + encodeURIComponent(h.value);
+};
+window.ckCambiarRango = function() {
+    const d = document.getElementById('ckFiltroDesde');
+    const h = document.getElementById('ckFiltroHasta');
+    if (d && h && d.value && h.value && h.value < d.value) { h.value = d.value; }
+    window.cargarTablaChecklist(true);
+};
+window.ckHoy = function() {
+    const hoy = window.ckHoyLima();
+    const d = document.getElementById('ckFiltroDesde');
+    const h = document.getElementById('ckFiltroHasta');
+    if (d) d.value = hoy;
+    if (h) h.value = hoy;
+    window.cargarTablaChecklist(true);
+};
+
 window.cargarTablaChecklist = function(forzarRefresh = false) {
     const c = document.getElementById('contenedorChecklistDinamico');
     if (c) c.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2 text-primary"></span> Cargando reportes...</td></tr>';
@@ -2258,7 +2285,7 @@ window.cargarTablaChecklist = function(forzarRefresh = false) {
         ? fetch('/api/placas').then(r => r.ok ? r.json() : []).catch(() => [])
         : Promise.resolve(window.dataGlobalPlacas);
 
-    const fetchChecklist = fetch('/api/checklist').then(r => {
+    const fetchChecklist = fetch('/api/checklist' + window.ckRangoQuery()).then(r => {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
     });
