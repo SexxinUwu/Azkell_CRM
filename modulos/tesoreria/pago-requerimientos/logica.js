@@ -452,7 +452,7 @@
             } else if (diffDias <= 3) {
                 return `<span class="badge bg-warning bg-opacity-25 text-dark border border-warning px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.72rem;">Faltan ${diffDias} días</span>`;
             } else {
-                return `<span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.72rem;">Faltan ${diffDias} días</span>`;
+                return `<span class="badge px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.72rem; background:#dcfce7; color:#166534; border:1px solid #86efac;">Faltan ${diffDias} días</span>`;
             }
         } catch (e) {
             return `<span class="text-muted small">-</span>`;
