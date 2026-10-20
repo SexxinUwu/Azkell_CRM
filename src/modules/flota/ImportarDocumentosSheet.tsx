@@ -11,7 +11,7 @@ import { haptic } from '../../core/lib/haptics';
 import { descargarPlantilla, leerArchivoDocumentos, type RegistroImportar } from './documentosExcel';
 
 interface Resultado {
-  ok: boolean; unidades: number; placasNuevas: string[]; historial: number;
+  ok: boolean; unidades: number; placasNuevas: string[]; historial: number; archivados: number; vaciados: number;
   omitidas: Array<{ fila: number; placa: string; motivo: string }>;
 }
 
@@ -70,8 +70,8 @@ export function ImportarDocumentosSheet({ open, onClose, placasConocidas }: { op
 
         <div className="field field--wide">
           <Notice>
-            Usa la plantilla. Una placa que no exista se crea solo con su placa (completas sus datos después). Si la placa ya existe, lo que trae el archivo
-            reemplaza al dato actual y el anterior queda en el historial del documento. Las celdas vacías no borran nada.
+            Usa la plantilla. Cada fila es el estado <strong>actual</strong> de documentos de esa placa: un documento que no venga en la fila queda vacío en la unidad,
+            y todo lo anterior se conserva en su historial. Una placa que no exista se crea solo con su placa. Los datos generales vacíos (tipo, marca, color…) no se borran.
           </Notice>
           <div style={{ marginTop: 'var(--s-2)' }}>
             <Button variant="secondary" size="sm" icon={<Download size={15} />} onClick={() => descargarPlantilla().catch(e => toast(errorMessage(e), 'error'))}>Descargar plantilla</Button>
@@ -87,7 +87,7 @@ export function ImportarDocumentosSheet({ open, onClose, placasConocidas }: { op
         {!resultado && registros.length > 0 && (
           <div className="field field--wide tarjeta__lista" style={{ padding: 'var(--s-3)', fontSize: '0.8125rem' }}>
             <div style={{ fontWeight: 700, marginBottom: 'var(--s-2)' }}>Qué va a pasar</div>
-            <div>{resumen.placas - resumen.nuevas.length} placas existentes se actualizan.</div>
+            <div>{resumen.placas - resumen.nuevas.length} placas existentes se actualizan: sus documentos pasan a ser los del archivo (los que no vengan quedan vacíos; el historial se conserva).</div>
             <div>{resumen.nuevas.length} placas nuevas se crean{resumen.nuevas.length ? `: ${resumen.nuevas.slice(0, 8).join(', ')}${resumen.nuevas.length > 8 ? '…' : ''}` : '.'}</div>
           </div>
         )}
@@ -95,7 +95,7 @@ export function ImportarDocumentosSheet({ open, onClose, placasConocidas }: { op
         {resultado && (
           <div className="field field--wide">
             <Notice tone={resultado.omitidas.length ? 'accent' : 'success'}>
-              {resultado.unidades} unidades importadas · {resultado.placasNuevas.length} placas nuevas · {resultado.historial} registros nuevos en el historial
+              {resultado.unidades} unidades importadas · {resultado.placasNuevas.length} placas nuevas · {resultado.historial} documentos nuevos · {resultado.vaciados} documentos que quedaron vacíos · {resultado.archivados} anteriores guardados en el historial
               {resultado.omitidas.length ? ` · ${resultado.omitidas.length} filas omitidas` : ''}.
             </Notice>
             {resultado.omitidas.length > 0 && (

@@ -136,7 +136,7 @@ export function DocumentosPage() {
             {seleccion && <span className="doc-conf__insignia" title="Hay un filtro de placas activo">{seleccion.size}/{todas.length}</span>}
             <MenuOtros opciones={[
               { label: 'Descargar plantilla', detalle: 'Excel con las columnas de importación', icon: <Download size={17} />, onSelect: () => descargarPlantilla().catch(aviso) },
-              puedeEditar && { label: 'Importar desde Excel', detalle: 'Crea placas nuevas y actualiza documentos', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
+              puedeEditar && { label: 'Importar desde Excel', detalle: 'La fila del archivo pasa a ser el estado actual', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
             ]} />
             {puedeEditar && (
               <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ placa: null, prefijo: null, personalizado: null })}>Nuevo documento</Button>
