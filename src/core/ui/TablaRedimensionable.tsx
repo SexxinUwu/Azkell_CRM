@@ -19,6 +19,9 @@ interface Props {
   // Altura máxima del área con scroll (la cabecera queda fija)
   altoMax?: string;
   ariaLabel: string;
+  // Color de la cabecera de toda la tabla (las columnas con `fondo` lo sobreescriben)
+  colorEncabezado?: string;
+  colorTextoEncabezado?: string;
 }
 
 const CLAVE = (id: string) => `fleet_tabla_${id}`;
@@ -42,7 +45,7 @@ function guardarMapa(id: string, mapa: Record<string, number>) {
 
 // Tabla con columnas redimensionables como en Excel: arrastra el borde derecho del encabezado,
 // o haz doble clic para ajustar la columna al contenido más ancho.
-export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh', ariaLabel }: Props) {
+export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh', ariaLabel, colorEncabezado, colorTextoEncabezado }: Props) {
   const [mapa, setMapa] = useState<Record<string, number>>(() => leerMapa(id));
   const tablaRef = useRef<HTMLTableElement>(null);
   const anchos = columnas.map(c => Math.max(c.minimo ?? 56, mapa[c.id] ?? c.ancho));
@@ -98,12 +101,13 @@ export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh',
 
   return (
     <div className="tabla-redim" style={{ maxHeight: altoMax }}>
-      <table ref={tablaRef} aria-label={ariaLabel} className="tabla-redim__tabla" style={{ width: total }}>
+      {/* Ocupa todo el ancho disponible: si sobra espacio, las columnas se reparten el excedente */}
+      <table ref={tablaRef} aria-label={ariaLabel} className="tabla-redim__tabla" style={{ width: '100%', minWidth: total }}>
         <colgroup>{anchos.map((a, i) => <col key={columnas[i].id} style={{ width: a }} />)}</colgroup>
         <thead>
           <tr>
             {columnas.map((c, i) => (
-              <th key={c.id} style={{ textAlign: c.alinear ?? 'left', ...(c.fondo ? { background: c.fondo, color: '#ffffff' } : {}) }}>
+              <th key={c.id} style={{ textAlign: c.alinear ?? 'left', ...(c.fondo ? { background: c.fondo, color: '#ffffff' } : colorEncabezado ? { background: colorEncabezado, color: colorTextoEncabezado } : {}) }}>
                 <span className="tabla-redim__titulo">{c.titulo}</span>
                 <span
                   className="tabla-redim__asa"

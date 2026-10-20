@@ -8,6 +8,7 @@ import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field'
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
+import { exportarExcel } from '../../core/lib/excel';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 
 // Matriz de rendimiento teórico (D2): consumo esperado por ruta según carga y motor.
@@ -106,6 +107,18 @@ async function leerMatriz(archivo: File): Promise<Record<string, string | number
   });
 }
 
+// Plantilla de importación: mismas columnas que la del clásico (SENTIDO, RUTA, MOTOR, CONFG, tramos 0-30 y KM)
+async function descargarPlantilla() {
+  await exportarExcel('Plantilla_Matriz_Combustible_D2', 'Matriz_Combustible_D2',
+    ['SENTIDO', 'RUTA', 'MOTOR', 'CONFG', '0', '5', '10', '15', '20', '25', '30', 'KM'],
+    [
+      ['IDA', 'LIMA - ICA', 'MC11.44', 'T3', 23.13, 24.5, 26.24, 28.28, 30.71, 33.93, 37.24, 330],
+      ['IDA', 'LIMA - NASCA', 'MC11.44', 'T3', 32.5, 34.5, 37.03, 40, 43.53, 48.21, 53.03, 480],
+      ['IDA', 'LIMA - AREQUIPA', 'MC11.44', 'T3', 74.91, 77.5, 83.27, 106.15, 115.65, 125.02, 133.75, 1050],
+    ]);
+  haptic('success');
+}
+
 export function MatrizRendimientoPanel({ puedeEditar }: { puedeEditar: boolean }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -180,13 +193,16 @@ export function MatrizRendimientoPanel({ puedeEditar }: { puedeEditar: boolean }
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        {puedeEditar && (
-          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setVaciar(true)} disabled={!(matriz.data ?? []).length}>Vaciar</Button>
-            <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => setImportando(true)}>Importar Excel</Button>
-            <Button variant="primary" icon={<Plus size={16} />} onClick={() => setEditar(VACIO)}>Nueva ruta</Button>
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={descargarPlantilla}>Plantilla Excel</Button>
+          {puedeEditar && (
+            <>
+              <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setVaciar(true)} disabled={!(matriz.data ?? []).length}>Vaciar</Button>
+              <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => setImportando(true)}>Importar Excel</Button>
+              <Button variant="primary" icon={<Plus size={16} />} onClick={() => setEditar(VACIO)}>Nueva ruta</Button>
+            </>
+          )}
+        </div>
         <SearchField value={q} onChange={setQ} placeholder="Ruta, motor o configuración…" />
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
           {['', 'IDA', 'RETORNO'].map(s => (
@@ -196,7 +212,7 @@ export function MatrizRendimientoPanel({ puedeEditar }: { puedeEditar: boolean }
 
         {matriz.isLoading ? <PageLoader /> : matriz.isError ? <Notice tone="error">{errorMessage(matriz.error)}</Notice>
           : visibles.length === 0 ? <EmptyState title="Sin rutas" icon={<FileSpreadsheet size={22} />}>Agrega rutas o importa el Excel de la matriz.</EmptyState> : (
-          <TablaRedimensionable id="matriz-rendimiento" ariaLabel="Matriz de rendimiento teórico" columnas={COLUMNAS_MATRIZ} altoMax="70vh">
+          <TablaRedimensionable id="matriz-rendimiento" ariaLabel="Matriz de rendimiento teórico" columnas={COLUMNAS_MATRIZ} altoMax="70vh" colorEncabezado="#dbeafe" colorTextoEncabezado="#1e3a8a">
             {visibles.map(f => (
               <tr key={f.id}>
                 <Celda>{f.sentido}</Celda>
@@ -224,7 +240,8 @@ export function MatrizRendimientoPanel({ puedeEditar }: { puedeEditar: boolean }
       <FormularioFila fila={editar} onClose={() => setEditar(null)} />
 
       <Sheet open={importando} onClose={() => !enviando && setImportando(false)} title="Importar matriz desde Excel"
-        footer={<><Button variant="secondary" onClick={() => setImportando(false)} disabled={enviando}>Cancelar</Button>
+        footer={<><Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={descargarPlantilla}>Descargar plantilla</Button>
+          <Button variant="secondary" onClick={() => setImportando(false)} disabled={enviando}>Cancelar</Button>
           <Button variant="primary" onClick={importar} loading={enviando} disabled={!filasImp.length || leyendo}>
             {filasImp.length ? `Importar ${filasImp.length} filas` : 'Importar'}</Button></>}>
         <div className="form-grid">
