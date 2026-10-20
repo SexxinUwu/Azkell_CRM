@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight, Boxes, FileSpreadsheet, Package, PackageMinus, PackagePlus,
   Plus, RefreshCw, SearchX,
@@ -34,6 +35,7 @@ const DIVIDIDO = '(min-width: 900px)';
 
 export function InventarioPage() {
   const { data, isLoading, isError, error } = useInventario();
+  const nav = useNavigate();
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
@@ -109,10 +111,10 @@ export function InventarioPage() {
 
   const otros = (
     <MenuOtros opciones={[
-      { label: 'Entradas', icon: <PackagePlus size={17} />, onSelect: () => abrirClasico('almacen/entradas') },
-      { label: 'Salidas', icon: <PackageMinus size={17} />, onSelect: () => abrirClasico('almacen/salidas') },
-      { label: 'Kardex', icon: <RefreshCw size={17} />, onSelect: () => abrirClasico('almacen/kardex') },
-      { label: 'Recepción de compras', icon: <Package size={17} />, onSelect: () => abrirClasico('almacen/recepcion-compras') },
+      { label: 'Entradas', icon: <PackagePlus size={17} />, onSelect: () => nav('/almacen/entradas') },
+      { label: 'Salidas', icon: <PackageMinus size={17} />, onSelect: () => nav('/almacen/salidas') },
+      { label: 'Kardex', icon: <RefreshCw size={17} />, onSelect: () => nav('/almacen/kardex') },
+      { label: 'Recepción de compras', icon: <Package size={17} />, onSelect: () => nav('/almacen/recepcion-compras') },
       { label: 'Exportar Excel', detalle: hayFiltros ? `Solo los ${visibles.length} filtrados` : `${visibles.length} artículos`,
         icon: <FileSpreadsheet size={17} />, separado: true,
         onSelect: async () => {

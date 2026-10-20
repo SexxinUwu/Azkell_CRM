@@ -84,7 +84,7 @@ export function AlmacenOtrosPage() {
       descripcion: 'Aprueba o rechaza las órdenes de compra pendientes.',
       icon: <ClipboardCheck size={20} />,
       color: 'var(--green-ink)',
-      accion: () => abrirClasico('gerencia/aprobaciones-oc'),
+      accion: () => nav('/gerencia/aprobaciones-oc'),
     },
     {
       titulo: 'Recepción de compras',

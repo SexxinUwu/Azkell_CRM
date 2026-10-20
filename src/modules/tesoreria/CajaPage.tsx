@@ -15,7 +15,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
+import { useNavigate } from 'react-router-dom';
 import {
   buscarOrdenesViaje, fmtMonto, siguienteNumeroCaja, useBancos, useCaja, useCentrosCostos, useMotivosGastos,
   type CajaMovimiento,
@@ -34,6 +34,7 @@ const monto = (v: unknown, moneda?: string | null) => `${moneda === 'DOLARES' ? 
 const tonoEstado = (e: string) => ({ APROBADO: 'blue', PROCESADO: 'green', PAGADO: 'green', ANULADO: 'neutral', REGISTRADO: 'amber', PENDIENTE: 'amber' }[e] ?? 'neutral');
 
 export function CajaPage() {
+  const nav = useNavigate();
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
@@ -79,7 +80,8 @@ export function CajaPage() {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${lista.length} movimientos`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Bancos y motivos de gasto', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('tesoreria/caja') },
+              { label: 'Bancos', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => nav('/tesoreria/bancos') },
+              { label: 'Centros de costos', icon: <ArrowUpRight size={17} />, onSelect: () => nav('/tesoreria/centros-costos') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ mov: null })}>Nuevo</Button>}
           </>

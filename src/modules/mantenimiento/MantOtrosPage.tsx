@@ -135,7 +135,7 @@ export function MantOtrosPage() {
       descripcion: 'Revisión histórica y estadísticas de inspecciones vehiculares.',
       icon: <ShieldCheck size={20} />,
       color: 'var(--accent)',
-      accion: () => abrirClasico('mantenimiento/inspecciones'),
+      accion: () => nav('/inspecciones'),
     },
   ];
 
