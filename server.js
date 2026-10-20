@@ -69,6 +69,9 @@ app.post('/csp-report', express.json({ type: ['application/csp-report', 'applica
 // ── Compresión gzip (reduce 60-70% el tamaño de respuestas) ───────
 app.use(compression());
 
+// ── Sitios públicos (azkell.com y fleet.azkell.com): antes de la resolución de empresa ──
+app.use(require('./services/sitios_publicos').sitiosPublicos());
+
 // ── Rate Limiting (protección contra bots y abuso de API) ─────────
 const limiterGeneral = rateLimit({
     windowMs: 60 * 1000,       // ventana: 1 minuto

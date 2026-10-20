@@ -13,6 +13,8 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 RUN npm run build:app
+# Sitios públicos: azkell.com (cartera) y fleet.azkell.com (producto). Salen en dist/sitios.
+RUN npm run build:sitios
 
 # ─── 2. Imagen final ─────────────────────────────────────────
 FROM base AS run
