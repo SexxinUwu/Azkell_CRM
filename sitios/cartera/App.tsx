@@ -1,7 +1,7 @@
 import { ArrowRight, ArrowUpRight, Briefcase, Code, Mail } from 'lucide-react';
 import { Boton, Cabecera, Fondo, Pie } from '../compartido/Estructura';
 import { Contador, Inclinar, Marquesina, Palabras, Revelar, Rotar } from '../compartido/Movimiento';
-import { PanelDemo } from '../compartido/PanelDemo';
+import { VistaSistema } from '../compartido/VistaSistema';
 import { icono } from '../compartido/iconos';
 import {
   CAPACIDADES, CIFRAS, CONTACTO, HITOS, MODULOS, PALABRAS_HEROE, PRINCIPIOS, PRODUCTO_URL, TECNOLOGIAS,
@@ -33,7 +33,7 @@ export function App() {
           <div className="contenedor heroe__cuadricula">
             <div>
               <Revelar y={14}>
-                <span className="aviso"><span className="panel__punto panel__punto--verde" />Creador de Azkell Fleet · ERP en producción</span>
+                <span className="aviso"><span className="punto-vivo" />Creador de Azkell Fleet · ERP en producción</span>
               </Revelar>
               <h1>
                 <Palabras alCargar retraso={0.15} texto="Construyo el software que mi propia operación necesitaba." />
@@ -48,7 +48,7 @@ export function App() {
                 <Boton href="#proyecto" variante="vidrio">Ver el proyecto</Boton>
               </Revelar>
             </div>
-            <PanelDemo />
+            <Revelar y={24} retraso={0.2}><VistaSistema compacta /><p className="sis-nota">Vista del sistema con datos de demostración</p></Revelar>
           </div>
           <div className="desplazar" aria-hidden>Desliza<i /></div>
         </section>

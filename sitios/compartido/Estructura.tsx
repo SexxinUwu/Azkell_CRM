@@ -1,33 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { motion, useScroll, useTransform } from 'motion/react';
+import { motion } from 'motion/react';
 import { ArrowUpRight } from 'lucide-react';
-import { Iman, ProgresoScroll, suave } from './Movimiento';
+import { Iman, ProgresoScroll, resorte, resorteRapido } from './Movimiento';
 
-/** Fondo vivo: manchas de luz con parallax, rejilla, grano y un foco que sigue al puntero */
+/** Fondo fijo y estático (sin animaciones ni desenfoques): una luz de acento y una rejilla tenue */
 export function Fondo() {
-  const { scrollY } = useScroll();
-  const y1 = useTransform(scrollY, [0, 2400], [0, -240]);
-  const y2 = useTransform(scrollY, [0, 2400], [0, 200]);
-  useEffect(() => {
-    let raf = 0;
-    const alMover = (e: PointerEvent) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        document.documentElement.style.setProperty('--mx', `${e.clientX}px`);
-        document.documentElement.style.setProperty('--my', `${e.clientY}px`);
-      });
-    };
-    window.addEventListener('pointermove', alMover, { passive: true });
-    return () => { window.removeEventListener('pointermove', alMover); cancelAnimationFrame(raf); };
-  }, []);
   return (
     <div className="fondo" aria-hidden>
-      <motion.div style={{ y: y1, position: 'absolute', inset: 0 }}><div className="fondo__mancha fondo__mancha--1" /></motion.div>
-      <motion.div style={{ y: y2, position: 'absolute', inset: 0 }}><div className="fondo__mancha fondo__mancha--2" /></motion.div>
-      <div className="fondo__mancha fondo__mancha--3" />
+      <div className="fondo__luz" />
       <div className="fondo__rejilla" />
-      <div className="fondo__foco" />
-      <div className="fondo__grano" />
     </div>
   );
 }
@@ -50,12 +31,12 @@ export function Cabecera({ marca, logo, enlaces, cta }: {
   return (
     <>
       <ProgresoScroll />
-      <motion.header className="cabecera" initial={{ y: -80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.9, ease: suave, delay: 0.2 }}>
+      <motion.header className="cabecera" initial={{ y: -24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={resorte}>
         <nav className="cabecera__barra" aria-label="Principal">
           <a className="cabecera__marca" href="#inicio"><img src={logo} alt="" />{marca}</a>
           {enlaces.map(l => (
             <a key={l.id} className="cabecera__enlace" href={`#${l.id}`} data-activo={activo === l.id}>
-              {activo === l.id && <motion.span layoutId="pastilla-nav" className="cabecera__pastilla" transition={{ type: 'spring', bounce: 0, duration: 0.4 }} />}
+              {activo === l.id && <motion.span layoutId="pastilla-nav" className="cabecera__pastilla" transition={resorteRapido} />}
               {l.etiqueta}
             </a>
           ))}
