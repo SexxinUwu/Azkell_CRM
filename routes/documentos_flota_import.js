@@ -8,10 +8,10 @@ const express = require('express');
 const { audit: auditar, actorFrom } = require('../services/auditoria');
 
 const MAX_FILAS = 2000;
-// Campos que acepta el archivo: SOLO documentos. Tipo, marca, modelo, color, año, serie y empresa salen de Placas (no se importan).
+// Campos que acepta el archivo: PROPIEDAD (propia o tercera) y documentos. Tipo, marca, modelo, color, año, serie y empresa salen de Placas.
 const FECHAS = new Set(['fecha_entrega', 'tc_vencimiento', 'soat_vencimiento', 'matpel_vencimiento', 'rt_emision', 'rt_vencimiento',
     'boni_emision', 'boni_vencimiento', 'sv_vencimiento', 'sc_vencimiento', 'fum_emision', 'fum_vencimiento', 'ext_emision', 'ext_vencimiento']);
-const TEXTOS = ['tc_constancia', 'soat_entidad', 'soat_pago',
+const TEXTOS = ['propiedad', 'tc_constancia', 'soat_entidad', 'soat_pago',
     'matpel_constancia', 'sv_entidad', 'sv_asesor', 'sc_entidad', 'sc_asesor', 'ext_cantidad'];
 const CAMPOS = [...FECHAS, ...TEXTOS].filter(c => c !== 'fecha_entrega');
 
@@ -98,6 +98,12 @@ module.exports = function (db) {
                 } else {
                     datos[c] = String(v).trim().slice(0, 200);
                 }
+            }
+            if (datos.propiedad !== undefined) { // PROPIA o TERCERA (acepta Tercero, minúsculas…)
+                const p = datos.propiedad.toUpperCase();
+                if (/^PROPI/.test(p)) datos.propiedad = 'PROPIA';
+                else if (/^TERCER/.test(p)) datos.propiedad = 'TERCERA';
+                else { omitidas.push({ fila, placa, motivo: 'Propiedad debe ser PROPIA o TERCERA: ' + datos.propiedad }); return; }
             }
             if (datos.ext_cantidad !== undefined && !Number.isFinite(Number(datos.ext_cantidad))) {
                 omitidas.push({ fila, placa, motivo: 'Cantidad de extintores no válida' }); return;
