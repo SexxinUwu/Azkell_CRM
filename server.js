@@ -5012,6 +5012,8 @@ app.use('/api/tesoreria', require('./routes/tesoreria')(db, broadcast, logAudit)
 app.use('/api/rrhh', require('./routes/rrhh')(db, broadcast, logAudit));
 app.use('/api/telemetria', require('./routes/telemetria')(db));
 app.use('/api/fallas', require('./routes/fallas')(db));
+// Indicadores del menú (un número por sección, solo lectura)
+app.use('/api/nav', require('./routes/nav-indicadores')(db));
 app.use('/api/2fa', require('./routes/auth2fa')(db));
 app.use('/api/asistente', require('./routes/asistente')(db));
 
