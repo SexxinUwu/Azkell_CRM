@@ -20,6 +20,7 @@ import {
   type AccionOT, type OrdenTrabajo, type PausaOT,
 } from './api';
 import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
+import { OTServiciosTerceros } from './OTServiciosTerceros';
 import { SalidaFormulario } from '../almacen/SalidaFormulario';
 import { pdfOt } from './otPdf';
 
@@ -79,7 +80,7 @@ function useBacklogDeOT(ticket: string) {
   });
 }
 
-type Seccion = 'tareas' | 'tiempos' | 'repuestos' | 'costos';
+type Seccion = 'tareas' | 'tiempos' | 'repuestos' | 'terceros' | 'costos';
 
 interface OTDetalleProps {
   ot: OrdenTrabajo;
@@ -248,6 +249,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         { value: 'tareas', label: 'Tareas' },
         { value: 'tiempos', label: 'Tiempos' },
         { value: 'repuestos', label: 'Repuestos' },
+        { value: 'terceros', label: 'Terceros' },
         { value: 'costos', label: 'Costos' },
       ]} />
 
@@ -442,6 +444,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
           )}
         </div>
       )}
+
+      {seccion === 'terceros' && <OTServiciosTerceros ot={ot.ticket_entrada || ot.id_ot} puedeEditar={puedeEditar} />}
 
       {seccion === 'costos' && (
         <div className="ot-bento">

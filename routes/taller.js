@@ -171,6 +171,54 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    // ── Servicios de terceros de una OT: las OC de servicio solo suman cuando el usuario las agrega ──
+    const ESTADOS_PROCESADO = ['procesado', 'pagado', 'aprobado', 'aprobada'];
+    router.get('/ot-servicios', async (req, res) => {
+        try {
+            const [rows] = await (req.db || db).promise().query(
+                `SELECT id, fecha, proveedor_nombre, moneda, total_pen, estado, numero_operacion
+                 FROM entradas_inv
+                 WHERE ot_id = ? AND ot_servicio_agregado = 1 AND LOWER(tipo_orden) = 'orden de servicio' AND estado NOT IN ('Anulado', 'Anulada')
+                 ORDER BY fecha DESC`, [req.query.ot || '']);
+            res.json({ ok: true, data: rows });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+    router.get('/ot-servicios-disponibles', async (req, res) => {
+        try {
+            const [rows] = await (req.db || db).promise().query(
+                `SELECT id, fecha, proveedor_nombre, moneda, total_pen, estado, ot_id
+                 FROM entradas_inv
+                 WHERE LOWER(tipo_orden) = 'orden de servicio' AND ot_servicio_agregado = 0 AND LOWER(estado) IN (?)
+                   AND (ot_id IS NULL OR ot_id = ?)
+                 ORDER BY fecha DESC LIMIT 200`, [ESTADOS_PROCESADO, req.query.ot || '']);
+            res.json({ ok: true, data: rows });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+    router.post('/ot-servicios', async (req, res) => {
+        const ot = String(req.body?.ot || '').trim();
+        const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String).filter(Boolean) : [];
+        if (!ot || !ids.length) return res.status(400).json({ ok: false, error: 'Indica la OT y las OC a agregar' });
+        try {
+            const [r] = await (req.db || db).promise().query(
+                `UPDATE entradas_inv SET ot_id = ?, ot_servicio_agregado = 1
+                 WHERE id IN (?) AND LOWER(tipo_orden) = 'orden de servicio' AND ot_servicio_agregado = 0
+                   AND LOWER(estado) IN (?) AND (ot_id IS NULL OR ot_id = ?)`, [ot, ids, ESTADOS_PROCESADO, ot]);
+            if (logAudit) logAudit(req, 'TALLER', 'AGREGAR_SERVICIO_OT', `Agregó ${r.affectedRows} OC de servicio a la OT ${ot}`);
+            res.json({ ok: true, agregados: r.affectedRows });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+    router.delete('/ot-servicios/:id', async (req, res) => {
+        const ot = String(req.query.ot || '').trim();
+        if (!ot) return res.status(400).json({ ok: false, error: 'Indica la OT' });
+        try {
+            const [r] = await (req.db || db).promise().query(
+                `UPDATE entradas_inv SET ot_servicio_agregado = 0
+                 WHERE id = ? AND ot_id = ? AND LOWER(tipo_orden) = 'orden de servicio'`, [req.params.id, ot]);
+            if (logAudit) logAudit(req, 'TALLER', 'QUITAR_SERVICIO_OT', `Quitó la OC ${req.params.id} de la OT ${ot}`);
+            res.json({ ok: true, quitados: r.affectedRows });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+
     router.get('/ordenes-trabajo', (req, res) => {
         const targetDb = req.db || db;
         const sql = `
@@ -193,6 +241,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                     FROM entradas_inv e
                     WHERE (e.ot_id = o.ticket_entrada OR e.ot_id = o.id_ot)
                       AND LOWER(e.tipo_orden) = 'orden de servicio'
+                      AND e.ot_servicio_agregado = 1
                       AND e.estado NOT IN ('Anulado', 'Anulada')
                 ), 0) +
                 COALESCE((
