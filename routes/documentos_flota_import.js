@@ -1,20 +1,19 @@
 // Importación masiva de documentos de flota desde Excel (plantilla de Documentos de flota).
 //  - Placa que no está en `placas`: se crea solo la placa (después se completa su información).
 //  - Placa que ya existe: la fila del archivo es su estado ACTUAL de documentos. Un documento que no viene en el archivo
-//    queda vacío en la unidad y lo anterior se conserva en el historial. Los datos generales vacíos no se tocan.
+//    queda vacío en la unidad y lo anterior se conserva en el historial. Datos generales (tipo, marca, color…): no se importan, salen de Placas.
 //  - Cada documento nuevo o cambiado deja una fila nueva en el historial (documentos_flota); la unidad muestra solo el actual.
 // Todo en una transacción sobre la base de la empresa (req.db).
 const express = require('express');
 const { audit: auditar, actorFrom } = require('../services/auditoria');
 
 const MAX_FILAS = 2000;
-
-// Campos de la unidad que acepta el archivo (clave = columna de vehiculos_flota)
+// Campos que acepta el archivo: SOLO documentos. Tipo, marca, modelo, color, año, serie y empresa salen de Placas (no se importan).
 const FECHAS = new Set(['fecha_entrega', 'tc_vencimiento', 'soat_vencimiento', 'matpel_vencimiento', 'rt_emision', 'rt_vencimiento',
     'boni_emision', 'boni_vencimiento', 'sv_vencimiento', 'sc_vencimiento', 'fum_emision', 'fum_vencimiento', 'ext_emision', 'ext_vencimiento']);
-const TEXTOS = ['tipo', 'propiedad', 'empresa', 'anio', 'modelo', 'color', 'marca', 'chasis', 'tc_constancia', 'soat_entidad', 'soat_pago',
+const TEXTOS = ['tc_constancia', 'soat_entidad', 'soat_pago',
     'matpel_constancia', 'sv_entidad', 'sv_asesor', 'sc_entidad', 'sc_asesor', 'ext_cantidad'];
-const CAMPOS = [...FECHAS, ...TEXTOS];
+const CAMPOS = [...FECHAS, ...TEXTOS].filter(c => c !== 'fecha_entrega');
 
 // Columnas de vehiculos_flota que se reescriben con el registro completo (mismas que POST /api/vehiculos-flota)
 const COLUMNAS = ['tipo', 'propiedad', 'empresa', 'fecha_entrega', 'anio', 'marca', 'modelo', 'color', 'chasis',
@@ -118,7 +117,7 @@ module.exports = function (db) {
                 const [pl] = await conn.query('SELECT placa FROM placas WHERE placa = ? LIMIT 1', [placa]);
                 if (!pl.length) {
                     // Solo la placa: el resto de su información se completa después en Flota › Placas
-                    await conn.query('INSERT INTO placas (placa, tipo, estado) VALUES (?, ?, ?)', [placa, datos.tipo || '', 'Activa']);
+                    await conn.query('INSERT INTO placas (placa, tipo, estado) VALUES (?, ?, ?)', [placa, '', 'Activa']);
                     placasNuevas.push(placa);
                 }
 
@@ -126,7 +125,7 @@ module.exports = function (db) {
                 const actual = vf[0] || null;
                 const valorActual = c => (FECHAS.has(c) ? dia(actual && actual[c]) : (actual ? actual[c] : null));
 
-                // Datos generales de la unidad: lo que trae el archivo se escribe encima; lo vacío no se toca
+                // Datos generales de la unidad (propiedad, fecha de entrega…): se conservan tal cual; el archivo ya no los trae
                 const siguiente = {};
                 for (const c of COLUMNAS) {
                     const previo = actual ? actual[c] : null;
