@@ -3,6 +3,7 @@ const { envolverLogAudit } = require('../services/auditoria');
 const path = require('path');
 const { getPresignedUploadUrl, getPresignedUrl } = require('../utils/s3');
 const { calcularHorasTecnicos, horasDeTrabajo, fechaNaive } = require('../services/horas_tecnicos');
+const eventosNotif = require('../services/notificaciones_eventos');
 const router = express.Router();
 
 module.exports = (db, logAudit, _generarCodigoAlmacen) => {
@@ -464,6 +465,11 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                             logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'FINALIZÓ', `Finalizó y cerró OT ${ticketId} para unidad ${placaOT}`);
                         }
                         _sincronizarEstadoReportesFallas(targetDb);
+                        // Aviso de fin de OT (regla "Fin de OT o salida de rampa"); un solo aviso por unidad en 15 minutos
+                        eventosNotif.notificar(targetDb, 'ot_fin_rampa', eventosNotif.avisoSalidaTaller({
+                            placa: placaOT, ot: ticketId, rampa: det.rampa || det.id_rampa || '',
+                            tecnicos: [].concat(det.tecnicos || []).filter(Boolean), por: cerrado_por || '',
+                        }), { dedupeMin: 15 });
                         res.json({ ok: true });
                     }
                 );
@@ -1275,7 +1281,14 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 situacion || null, req.params.id],
                 (err) => {
                     if (err) return res.status(500).json({ error: err.message });
-                    if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                    if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                    // Aviso de salida de rampa (misma regla que el fin de OT; el mismo aviso no se repite en 15 minutos)
+                    (req.db || db).query('SELECT r.placa, COALESCE(cr.nombre_rampa, r.rampa) AS rampa FROM taller_rampas r LEFT JOIN cat_rampas cr ON (CAST(r.rampa AS CHAR) = CAST(cr.id AS CHAR) OR LOWER(TRIM(r.rampa)) = LOWER(TRIM(cr.nombre_rampa))) WHERE r.id = ? LIMIT 1',
+                        [req.params.id], (e2, filas) => {
+                            const f = !e2 && filas && filas[0];
+                            if (f && f.placa) eventosNotif.notificar(req.db || db, 'ot_fin_rampa', eventosNotif.avisoSalidaTaller({ placa: f.placa, rampa: f.rampa, por: liberado_por || '' }), { dedupeMin: 15 });
+                        });
+                    res.json({ ok: true });
                 }
             );
             return;

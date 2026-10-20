@@ -3,6 +3,7 @@ const router = express.Router();
 const { createApprovalToken } = require('../services/ocApprovalService');
 const { fechaVencimiento, normalizarCondicion } = require('../services/condicion_oc');
 const { sendApprovalWhatsapp, sendTreasuryNotificationWhatsapp } = require('../services/whatsappService');
+const eventosNotif = require('../services/notificaciones_eventos');
 
 async function despacharAprobacionWhatsAppAlmacen(req, tdb, entradaId, bodyData) {
     try {
@@ -32,6 +33,19 @@ async function despacharAprobacionWhatsAppAlmacen(req, tdb, entradaId, bodyData)
         if (!targetPhone) {
             targetPhone = process.env.GERENCIA_WHATSAPP || process.env.OWNER_WHATSAPP;
         }
+
+        // Aviso por la regla "Aprobación de orden de compra" (correo y otros destinatarios de la pantalla de Notificaciones).
+        // Al número del aprobador no se le repite: ese ya recibe abajo el WhatsApp con el enlace para aprobar.
+        try {
+            const [ocs] = await promiseDb.query('SELECT id, proveedor_nombre, moneda, total_pen, tipo_cambio, motivo_entrada, creado_por FROM entradas_inv WHERE id = ? LIMIT 1', [entradaId]);
+            const o = ocs && ocs[0];
+            if (o) {
+                eventosNotif.notificar(tdb, 'oc_aprobacion', {
+                    ...eventosNotif.avisoOrdenCompra({ id: o.id, proveedor: o.proveedor_nombre, moneda: o.moneda, totalPen: o.total_pen, tipoCambio: o.tipo_cambio, motivo: o.motivo_entrada, solicitante: o.creado_por, empresa: empresaNombre }),
+                    excluir: [targetPhone],
+                }, { dedupeMin: 30 });
+            }
+        } catch (e) { console.warn('[Notificaciones] oc_aprobacion:', e.message); }
 
         if (!targetPhone) {
             console.warn(`[WhatsApp OC] No hay teléfono de gerencia configurado para el tenant: ${tenantSlug || 'default'}`);

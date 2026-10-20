@@ -16,7 +16,7 @@ const CANALES = ['whatsapp', 'email', 'sms'];
 
 /** Eventos del ERP que pueden disparar una notificación, con su canal por defecto */
 const EVENTOS = [
-  { evento: 'oc_aprobacion', titulo: 'Aprobación de orden de compra', detalle: 'Avisa a gerencia cuando hay una OC por aprobar.', canales: ['whatsapp'], destinatarios: process.env.GERENCIA_WHATSAPP || '' },
+  { evento: 'oc_aprobacion', titulo: 'Aprobación de orden de compra', detalle: 'Aviso adicional cuando hay una OC por aprobar (correo u otros números). Al aprobador ya le llega el WhatsApp con el enlace para aprobar, y no se le repite.', canales: ['whatsapp'], destinatarios: process.env.GERENCIA_WHATSAPP || '' },
   { evento: 'flota_vencimiento', titulo: 'Vencimiento de documentos de flota', detalle: 'Avisa a operaciones de documentos por vencer.', canales: ['email', 'whatsapp'], destinatarios: '' },
   { evento: 'ot_fin_rampa', titulo: 'Fin de OT o salida de rampa', detalle: 'Avisa a operaciones cuando una unidad sale de taller.', canales: ['whatsapp'], destinatarios: '' },
   { evento: 'checklist_critico', titulo: 'Alerta crítica de checklist', detalle: 'Avisa de fallas críticas detectadas por un conductor.', canales: ['sms', 'whatsapp'], destinatarios: '' },
@@ -194,16 +194,33 @@ function reglasDe(db) {
 }
 
 /** Dispara un evento según su regla. Cada destinatario recibe por los canales que le corresponden. */
-async function disparar(db, evento, { asunto, texto }) {
+/** ¿El SMS está listo? Activado en la pantalla y con credenciales del proveedor elegido en el .env */
+async function smsConfigurado(db) {
+  const { proveedor, activo } = await proveedorSms(db);
+  if (!activo) return false;
+  if (proveedor === 'twilio') return !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
+  if (proveedor === 'infobip') return !!(process.env.INFOBIP_API_KEY && process.env.INFOBIP_BASE_URL && process.env.INFOBIP_SENDER);
+  return false;
+}
+
+/**
+ * Dispara un evento según su regla (canales y destinatarios de la pantalla).
+ * `excluir`: destinatarios que ya recibieron este aviso por otra vía (evita mensajes dobles).
+ * El SMS es secundario: si no está configurado, se omite sin ensuciar el historial.
+ */
+async function disparar(db, evento, { asunto, texto, excluir = [] }) {
   const regla = (await reglasDe(db)).find(r => r.evento === evento);
   if (!regla || !regla.activo) return { enviados: 0, motivo: 'regla inactiva' };
-  const destinos = regla.destinatarios.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
+  const fuera = new Set(excluir.filter(Boolean).map(x => (esEmail(String(x)) ? String(x).toLowerCase() : aPeru(x))));
+  const destinos = regla.destinatarios.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean)
+    .filter(d => !fuera.has(esEmail(d) ? d.toLowerCase() : aPeru(d)));
   const resultados = [];
   for (const canal of regla.canales) {
+    if (canal === 'sms' && !(await smsConfigurado(db))) continue;
     const para = destinos.filter(d => (canal === 'email' ? esEmail(d) : !esEmail(d)));
     for (const destino of para) resultados.push(await enviar(db, { canal, destino, asunto, texto, evento }));
   }
   return { enviados: resultados.filter(r => r.ok).length, fallidos: resultados.filter(r => !r.ok).length };
 }
 
-module.exports = { CANALES, EVENTOS, estadoWhatsapp, enviar, disparar, reglasDe, proveedorSms, proveedorCorreo, aPeru };
+module.exports = { CANALES, EVENTOS, estadoWhatsapp, enviar, disparar, reglasDe, proveedorSms, proveedorCorreo, smsConfigurado, aPeru };
