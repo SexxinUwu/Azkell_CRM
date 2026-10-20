@@ -165,8 +165,10 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const modulo = typeof window !== 'undefined' && window.location.hostname.toLowerCase().includes('marsisa') ? 'marsisa' : 'operaciones';
   const [busqueda, setBusqueda] = useState('');
   const [q, setQ] = useState('');
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
+  // Por defecto el análisis muestra solo el día de hoy (hora de Lima); para otro periodo se cambian las fechas
+  const hoyLima = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+  const [desde, setDesde] = useState(hoyLima);
+  const [hasta, setHasta] = useState(hoyLima);
   const [auditoria, setAuditoria] = useState('');
   const [abierto, setAbierto] = useState<string | null>(null);
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
