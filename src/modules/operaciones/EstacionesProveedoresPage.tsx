@@ -17,9 +17,9 @@ import { haptic } from '../../core/lib/haptics';
 // Proveedor de combustible y las estaciones (sedes) donde carga. Las estaciones se guardan como texto separado por comas.
 interface Estacion { id: number; proveedor_razon_social: string; proveedor_ruc: string | null; estaciones_nombres: string | null }
 interface Respuesta { ok?: boolean; data: Estacion[]; total: number; totalPages: number }
-interface Borrador { id: number | null; razon: string; ruc: string; estaciones: string }
+interface Borrador { id: number | null; razon: string; ruc: string; estaciones: string[] }
 
-const VACIO: Borrador = { id: null, razon: '', ruc: '', estaciones: '' };
+const VACIO: Borrador = { id: null, razon: '', ruc: '', estaciones: [''] };
 const listaEstaciones = (texto: string | null) => String(texto ?? '').split(/[,;\n]+/).map(x => x.trim()).filter(Boolean);
 
 const COLUMNAS: ColumnaTabla[] = [
@@ -59,7 +59,8 @@ export function EstacionesProveedoresPage() {
   function abrirNuevo() { setErrores({}); setBorrador({ ...VACIO }); }
   function abrirEditar(e: Estacion) {
     setErrores({});
-    setBorrador({ id: e.id, razon: e.proveedor_razon_social, ruc: e.proveedor_ruc ?? '', estaciones: e.estaciones_nombres ?? '' });
+    const estaciones = listaEstaciones(e.estaciones_nombres);
+    setBorrador({ id: e.id, razon: e.proveedor_razon_social, ruc: e.proveedor_ruc ?? '', estaciones: estaciones.length ? estaciones : [''] });
   }
 
   async function guardar() {
@@ -70,7 +71,7 @@ export function EstacionesProveedoresPage() {
     setErrores(e);
     if (Object.keys(e).length) { haptic('warning'); return; }
     setGuardando(true);
-    const cuerpo = { proveedor_razon_social: borrador.razon.trim(), proveedor_ruc: borrador.ruc.trim(), estaciones_nombres: listaEstaciones(borrador.estaciones).join(', ') };
+    const cuerpo = { proveedor_razon_social: borrador.razon.trim(), proveedor_ruc: borrador.ruc.trim(), estaciones_nombres: borrador.estaciones.map(x => x.trim()).filter(Boolean).join(', ') };
     try {
       const r = borrador.id
         ? await api<{ ok?: boolean; error?: string }>(`/combustible/estaciones-proveedores/${borrador.id}`, { method: 'PUT', body: cuerpo })
@@ -172,9 +173,20 @@ export function EstacionesProveedoresPage() {
             <Field label="RUC" error={errores.ruc} hint="11 dígitos (opcional)">
               {p => <TextInput {...p} inputMode="numeric" value={borrador.ruc} onChange={e => setBorrador({ ...borrador, ruc: e.target.value.replace(/\D/g, '').slice(0, 11) })} />}
             </Field>
-            <Field label="Estaciones / sedes" wide hint="Separa cada estación con una coma">
-              {p => <TextInput {...p} value={borrador.estaciones} onChange={e => setBorrador({ ...borrador, estaciones: e.target.value })} />}
-            </Field>
+            <div className="field field--wide" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+              <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--label-2)' }}>Nombre de las estaciones</span>
+              {borrador.estaciones.map((est, i) => (
+                <div key={i} style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
+                  <TextInput value={est} placeholder="NOMBRE DE ESTACIÓN (EJ: BASE, NAZCA, CHALHUANCA)"
+                    onChange={e => setBorrador({ ...borrador, estaciones: borrador.estaciones.map((x, k) => (k === i ? e.target.value.toUpperCase() : x)) })} />
+                  <Button variant="secondary" icon={<Trash2 size={15} />} aria-label="Quitar esta estación"
+                    onClick={() => setBorrador({ ...borrador, estaciones: borrador.estaciones.filter((_, k) => k !== i).concat(borrador.estaciones.length === 1 ? [''] : []) })}>{''}</Button>
+                </div>
+              ))}
+              <div>
+                <Button variant="secondary" icon={<Plus size={15} />} onClick={() => setBorrador({ ...borrador, estaciones: [...borrador.estaciones, ''] })}>Agregar estación</Button>
+              </div>
+            </div>
             {Object.keys(errores).length > 0 && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>Revisa los campos marcados.</Notice></div>}
           </div>
         )}
