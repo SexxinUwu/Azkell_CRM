@@ -383,11 +383,13 @@ export function fallaEstadoColor(f: ReporteFalla): string {
   return 'amber';
 }
 
-export function useChecklist() {
+// Por rango de fechas (día de Lima). Sin fechas, el servidor devuelve solo el día de hoy.
+export function useChecklist(desde?: string, hasta?: string) {
+  const rango = desde && hasta ? `?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}` : '';
   return useQuery<ReporteFalla[]>({
-    queryKey: ['flota', 'checklist'],
+    queryKey: ['flota', 'checklist', desde ?? '', hasta ?? ''],
     queryFn: () =>
-      api('/mantenimiento/checklist').then((r: unknown) => {
+      api(`/mantenimiento/checklist${rango}`).then((r: unknown) => {
         if (Array.isArray(r)) return r as ReporteFalla[];
         return (r as { data?: ReporteFalla[] }).data ?? [];
       }),
