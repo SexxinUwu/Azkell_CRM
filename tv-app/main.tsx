@@ -1,0 +1,11 @@
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './tv.css';
+import { TvApp } from './TvApp';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <TvApp />
+  </StrictMode>,
+);
+(window as unknown as { __tvListo?: boolean }).__tvListo = true;

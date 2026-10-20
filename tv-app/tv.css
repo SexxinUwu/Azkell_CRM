@@ -1,0 +1,118 @@
+/* Centro de Control para TV. Diseño de la aplicación (claro/oscuro, acento naranja, tarjetas limpias) sobre un escenario fijo de 1920×1080.
+   CSS conservador para navegadores de Smart TV: sin color-mix, inset, :has ni gap en flex. */
+html, body, #root { margin: 0; height: 100%; overflow: hidden; }
+.tv-raiz {
+  --bg: #f5f5f7; --sup: #ffffff; --sup2: #fbfbfd; --txt: #1d1d1f; --txt2: #6e6e73; --txt3: #86868b; --linea: rgba(0, 0, 0, 0.09);
+  --relleno: rgba(118, 118, 128, 0.12); --acento: #f56300; --acento-suave: rgba(245, 99, 0, 0.12); --sombra: 0 1px 2px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(0, 0, 0, 0.07);
+  --verde: #17803d; --verde-f: #e3f6ea; --ambar: #a15c00; --ambar-f: #fff1d6; --rojo: #c0291d; --rojo-f: #fde4e2;
+  --azul: #1f5fd1; --azul-f: #e2edff; --morado: #6d3fd1; --morado-f: #efe8ff; --gris: #636366; --gris-f: #ececf0;
+  position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: var(--bg); color: var(--txt); overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; letter-spacing: -0.01em;
+}
+.tv-raiz[data-tema='oscuro'] {
+  --bg: #000000; --sup: #1c1c1e; --sup2: #161618; --txt: #f5f5f7; --txt2: #a1a1a6; --txt3: #8e8e93; --linea: rgba(255, 255, 255, 0.12);
+  --relleno: rgba(235, 235, 245, 0.14); --acento-suave: rgba(245, 99, 0, 0.22); --sombra: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.5);
+  --verde: #4ade80; --verde-f: rgba(48, 209, 88, 0.18); --ambar: #ffb340; --ambar-f: rgba(255, 159, 10, 0.2); --rojo: #ff6961; --rojo-f: rgba(255, 69, 58, 0.2);
+  --azul: #64b5ff; --azul-f: rgba(10, 132, 255, 0.22); --morado: #b794ff; --morado-f: rgba(139, 92, 246, 0.24); --gris: #aeaeb2; --gris-f: rgba(235, 235, 245, 0.14);
+}
+.tv-escenario { position: absolute; width: 1920px; height: 1080px; transform-origin: 0 0; padding: 26px 40px 20px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Cabecera */
+.tv-cabecera { display: flex; align-items: center; height: 88px; flex: none; }
+.tv-marca { display: flex; align-items: center; width: 540px; flex: none; }
+.tv-marca__logo { width: 64px; height: 64px; border-radius: 17px; background: #fff; object-fit: contain; box-shadow: var(--sombra); margin-right: 18px; }
+.tv-marca__nombre { white-space: nowrap; font-size: 32px; font-weight: 700; display: flex; align-items: center; }
+.tv-marca__sub { font-size: 20px; color: var(--txt2); margin-top: 2px; }
+.tv-vivo { white-space: nowrap; display: inline-flex; align-items: center; margin-left: 16px; padding: 4px 14px; border-radius: 999px; font-size: 16px; font-weight: 700; letter-spacing: 0.06em; background: var(--verde-f); color: var(--verde); }
+.tv-vivo i { width: 10px; height: 10px; border-radius: 50%; background: currentColor; margin-right: 8px; animation: tv-latido 1.6s ease-in-out infinite; }
+.tv-vivo--caido { background: var(--rojo-f); color: var(--rojo); }
+@keyframes tv-latido { 50% { opacity: 0.3; } }
+.tv-pestanas { flex: 1; min-width: 0; display: flex; justify-content: center; }
+.tv-pestana { white-space: nowrap; display: flex; align-items: center; height: 56px; padding: 0 12px; margin: 0 1px; border-radius: 18px; color: var(--txt2); font-size: 20px; font-weight: 600; }
+.tv-pestana b { display: inline-block; min-width: 30px; height: 30px; line-height: 30px; text-align: center; border-radius: 9px; background: var(--relleno); font-size: 18px; margin-right: 10px; color: var(--txt2); }
+.tv-pestana em { font-style: normal; margin-left: 10px; min-width: 34px; padding: 0 9px; height: 30px; line-height: 30px; text-align: center; border-radius: 999px; background: var(--relleno); font-size: 18px; font-variant-numeric: tabular-nums; }
+.tv-pestana--on { background: var(--sup); color: var(--txt); box-shadow: var(--sombra); }
+.tv-pestana--on b { background: var(--acento); color: #fff; }
+.tv-pestana--on em { background: var(--acento-suave); color: var(--acento); }
+.tv-reloj { width: 250px; flex: none; text-align: right; }
+.tv-reloj b { display: block; font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tv-reloj span { font-size: 18px; color: var(--txt2); letter-spacing: 0.08em; }
+.tv-carrusel-barra { position: absolute; left: 0; top: 0; height: 5px; width: 100%; background: var(--acento); transform-origin: 0 50%; animation-name: tv-carrusel; animation-timing-function: linear; animation-fill-mode: forwards; z-index: 5; }
+@keyframes tv-carrusel { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Cuerpo */
+.tv-principal { flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 12px; }
+.tv-cifras { display: flex; flex: none; height: 118px; margin: 0 -8px 16px; }
+.tv-cifra { flex: 1; margin: 0 8px; padding: 18px 26px; border-radius: 24px; background: var(--sup); box-shadow: var(--sombra); display: flex; flex-direction: column; justify-content: center; border-left: 8px solid var(--gris); }
+.tv-cifra__valor { font-size: 52px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.tv-cifra__etiqueta { font-size: 20px; color: var(--txt2); margin-top: 6px; }
+.tv-cifra--azul { border-left-color: var(--azul); } .tv-cifra--verde { border-left-color: var(--verde); } .tv-cifra--naranja { border-left-color: var(--acento); }
+.tv-cifra--ambar { border-left-color: var(--ambar); } .tv-cifra--rojo { border-left-color: var(--rojo); } .tv-cifra--gris { border-left-color: var(--gris); }
+.tv-tarjeta { background: var(--sup); border-radius: 26px; box-shadow: var(--sombra); overflow: hidden; }
+
+/* Tablas */
+.tv-tabla { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 18px 28px 12px; }
+.tv-tabla__cab { display: flex; align-items: center; height: 54px; flex: none; }
+.tv-tabla__icono { font-size: 28px; margin-right: 14px; }
+.tv-tabla__cab h2 { margin: 0; font-size: 30px; font-weight: 700; flex: 1; }
+.tv-tabla__pagina { font-size: 20px; color: var(--txt2); font-variant-numeric: tabular-nums; }
+.tv-fila { display: flex; align-items: center; height: 64px; flex: none; padding: 0 20px; border-radius: 16px; font-size: 24px; border-bottom: 1px solid var(--linea); }
+.tv-fila > span { padding-right: 18px; min-width: 0; }
+.tv-fila--cab { height: 46px; font-size: 17px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--txt3); border-bottom: 2px solid var(--linea); border-radius: 0; margin-top: 4px; }
+.tv-tabla__cuerpo { flex: 1; min-height: 0; }
+.tv-fila--sel { background: var(--acento-suave); border-bottom-color: transparent; box-shadow: inset 6px 0 0 var(--acento); }
+.tv-mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-weight: 700; font-size: 23px; }
+.tv-corto { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv-azul { color: var(--azul); } .tv-rojo { color: var(--rojo); } .tv-morado { color: var(--morado); } .tv-fuerte { font-weight: 800; }
+.tv-vacio { text-align: center; padding: 70px 20px; font-size: 28px; color: var(--txt3); }
+.tv-puntos { display: flex; justify-content: center; height: 22px; flex: none; align-items: center; }
+.tv-punto { width: 10px; height: 10px; border-radius: 50%; background: var(--relleno); margin: 0 5px; }
+.tv-punto--on { background: var(--acento); width: 28px; border-radius: 6px; }
+
+.tv-etiqueta { display: inline-block; padding: 5px 16px; border-radius: 999px; font-size: 20px; font-weight: 700; white-space: nowrap; }
+.tv-etiqueta--verde { background: var(--verde-f); color: var(--verde); } .tv-etiqueta--ambar { background: var(--ambar-f); color: var(--ambar); }
+.tv-etiqueta--rojo { background: var(--rojo-f); color: var(--rojo); } .tv-etiqueta--azul { background: var(--azul-f); color: var(--azul); }
+.tv-etiqueta--morado { background: var(--morado-f); color: var(--morado); } .tv-etiqueta--gris { background: var(--gris-f); color: var(--gris); }
+
+/* GPS */
+.tv-gps { flex: 1; display: flex; min-height: 0; }
+.tv-gps__mapa { flex: 1; position: relative; margin-right: 18px; }
+.tv-mapa { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: #e5e5ea; }
+.tv-gps__lista { width: 560px; flex: none; padding: 20px 22px; display: flex; flex-direction: column; }
+.tv-chips { display: flex; flex-wrap: wrap; margin: 0 -4px 6px; }
+.tv-chip { margin: 4px; padding: 7px 16px; border-radius: 999px; font-size: 19px; font-weight: 600; background: var(--relleno); color: var(--txt2); }
+.tv-chip--on { background: var(--acento); color: #fff; }
+.tv-gps__titulo { font-size: 19px; color: var(--txt2); margin: 8px 4px 10px; }
+.tv-unidad { padding: 14px 16px; border-radius: 18px; border: 2px solid transparent; margin-bottom: 4px; }
+.tv-unidad--sel { background: var(--acento-suave); border-color: var(--acento); }
+.tv-unidad__fila { display: flex; justify-content: space-between; align-items: center; font-size: 26px; }
+.tv-unidad__fila b { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 28px; }
+.tv-unidad__sub { font-size: 19px; color: var(--txt2); margin-top: 4px; }
+.tv-telemetria { position: absolute; left: 22px; bottom: 22px; width: 520px; padding: 22px 26px; border-radius: 24px; background: var(--sup); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25); z-index: 600; }
+.tv-telemetria__placa { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 40px; font-weight: 800; }
+.tv-telemetria__modelo { font-size: 20px; color: var(--txt2); margin: 2px 0 14px; }
+.tv-telemetria dl { display: flex; flex-wrap: wrap; margin: 0; }
+.tv-telemetria dl div { width: 50%; margin-bottom: 10px; }
+.tv-telemetria dt { font-size: 16px; color: var(--txt3); text-transform: uppercase; letter-spacing: 0.06em; }
+.tv-telemetria dd { margin: 0; font-size: 26px; font-weight: 700; }
+
+/* Marcadores del mapa */
+.tv-pin-caja { background: transparent; border: 0; }
+.tv-pin { display: flex; flex-direction: column; align-items: center; }
+.tv-pin__placa { background: #fff; color: #1d1d1f; font: 800 19px/1 ui-monospace, Menlo, Consolas, monospace; padding: 6px 12px; border-radius: 10px; box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35); border: 2px solid #1f5fd1; }
+.tv-pin__flecha { margin-top: 4px; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #1f5fd1; color: #fff; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4); }
+.tv-pin--ral .tv-pin__placa { border-color: #ea580c; } .tv-pin--ral .tv-pin__flecha { background: #ea580c; }
+.tv-pin--det .tv-pin__placa { border-color: #10b981; } .tv-pin--det .tv-pin__flecha { background: #10b981; }
+.tv-pin--activo .tv-pin__placa { background: #f56300; color: #fff; border-color: #fff; transform: scale(1.25); }
+
+/* Pie y aviso */
+.tv-pie { flex: none; height: 44px; display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 19px; color: var(--txt2); }
+.tv-pie__texto { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 880px; }
+.tv-teclas span { margin-left: 22px; white-space: nowrap; }
+.tv-teclas b { display: inline-block; min-width: 26px; padding: 0 7px; margin-right: 7px; text-align: center; border-radius: 8px; background: var(--relleno); color: var(--txt); font-size: 16px; line-height: 26px; }
+.tv-aviso { position: absolute; left: 50%; bottom: 84px; margin-left: -230px; width: 460px; display: flex; align-items: center; padding: 16px 26px; border-radius: 22px; background: rgba(29, 29, 31, 0.92); color: #fff; font-size: 26px; font-weight: 600; box-shadow: 0 16px 50px rgba(0, 0, 0, 0.35); z-index: 900; animation: tv-aviso 0.25s ease-out; }
+.tv-aviso b { min-width: 44px; height: 44px; line-height: 44px; text-align: center; border-radius: 12px; background: var(--acento); margin-right: 18px; font-size: 22px; }
+@keyframes tv-aviso { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) { .tv-vivo i, .tv-aviso { animation: none; } }

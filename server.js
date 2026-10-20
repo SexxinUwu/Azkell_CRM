@@ -858,13 +858,19 @@ app.get('/', async (req, res) => {
 });
 
 // ── RUTA DEDICADA PARA SMART TV (CENTRO DE CONTROL / WAR ROOM) ─────
-app.get(['/tv', '/tv/gps'], (req, res) => {
+// La pantalla nueva (React, escenario 1920×1080 escalable) sale de dist/tv-app (`npm run build:tv`).
+// Si no está compilada, o el televisor no la puede cargar, se usa la versión anterior (/tv-clasico).
+const _tvNuevo = path.join(__dirname, 'dist', 'tv-app');
+app.use('/tv-app/assets', express.static(path.join(_tvNuevo, 'assets'), { maxAge: '1y', immutable: true, index: false }));
+app.get(['/tv', '/tv/gps', '/tv-clasico'], (req, res) => {
     try {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');
         res.setHeader('Surrogate-Control', 'no-store');
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        const nuevo = path.join(_tvNuevo, 'index.html');
+        if (req.path !== '/tv-clasico' && fs.existsSync(nuevo)) return res.sendFile(nuevo);
         return res.sendFile(path.join(__dirname, 'tv.html'));
     } catch (e) {
         return res.status(500).send('Error cargando interfaz TV: ' + e.message);
@@ -886,11 +892,11 @@ app.get(['/tv.apk', '/AzkellFleetTV.apk', '/download/tv.apk', '/marsisa.apk'], (
 app.get('/api/tv/version', (req, res) => {
     return res.json({
         appName: 'Marsisa Fleet',
-        versionCode: 2026101001,
-        versionName: '2.2',
+        versionCode: 2026102001,
+        versionName: '3.0',
         apkUrl: 'https://marsisa.azkell.com/tv.apk',
         forceUpdate: false,
-        changeLog: 'Mapeo total de control remoto numérico (0 al 9), notificaciones HUD flotantes y calibración de márgenes anti-recorte para 4K'
+        changeLog: 'Rediseño completo: escenario 1920×1080 que se ajusta a cualquier TV sin cortes, tablas con paso automático de páginas, tema claro/oscuro y mapa mejorado'
     });
 });
 

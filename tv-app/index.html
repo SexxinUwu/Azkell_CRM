@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#f5f5f7" />
+    <title>Centro de Control · Azkell Fleet</title>
+    <style>html,body,#root{margin:0;height:100%;background:#f5f5f7;overflow:hidden}</style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- Respaldo: si en 12 s la pantalla nueva no arrancó (televisor muy antiguo), se abre la versión anterior -->
+    <script>
+      setTimeout(function () {
+        if (!window.__tvListo && !/fallo=1/.test(location.search)) location.replace('/tv-clasico?fallo=1');
+      }, 12000);
+    </script>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>
