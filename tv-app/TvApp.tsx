@@ -6,7 +6,7 @@ import type { BacklogTv, FallaTv, Feed, OtTv, RampaTv, Unidad } from './tipos';
 // (1080p, 4K, ultra ancha): nada se corta. Las tablas se paginan solas, así que siempre se ve todo.
 const BUILD = 2026102001;
 const ANCHO = 1920, ALTO = 1080;
-const FILAS = 9;          // filas por página en tablas
+const FILAS = 10;         // filas por página en tablas
 const UNIDADES = 6;       // unidades por página en la lista del mapa
 const CARRUSEL_MS = 30000, PAGINA_MS = 10000, INACTIVO_MS = 20000;
 
@@ -32,6 +32,26 @@ function fechaPe(v?: string | null): string {
   if (Number.isNaN(d.getTime())) return '—';
   try { return d.toLocaleDateString('es-PE', { timeZone: 'America/Lima' }); } catch { return d.toLocaleDateString('es-PE'); }
 }
+// Texto legible: lo que viene TODO en mayúsculas pasa a minúsculas con la inicial de cada frase en mayúscula (siglas conocidas se respetan)
+const SIGLAS = new Set(['ECM', 'ABS', 'GPS', 'OT', 'DNI', 'RUC', 'KM', 'SAC', 'SA', 'EGR', 'DPF', 'SCR', 'DAP', 'RPM', 'USB', 'LED', 'GLP', 'GNV', 'SOAT', 'TIVE', 'MTC', 'CAN', 'PTO', 'AC', 'ATF', 'BDA', 'GPS']);
+export function legible(v: unknown): string {
+  const t = String(v ?? '').trim();
+  const letras = t.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g, '');
+  if (!letras) return t;
+  const mayus = letras.replace(/[^A-ZÁÉÍÓÚÑ]/g, '').length;
+  if (mayus / letras.length < 0.6) return t; // ya viene en mayúsculas y minúsculas
+  return t.toLowerCase()
+    .replace(/(^|[.:;•\n]\s*|\d+\.\s*)([a-záéíóúñ])/g, (_m, a: string, b: string) => a + b.toUpperCase())
+    .replace(/[a-záéíóúñ0-9]+/g, w => (SIGLAS.has(w.toUpperCase()) ? w.toUpperCase() : w));
+}
+// Nombres de personas: "AARON TORRE PALOMINO" → "Aaron Torre Palomino"
+const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'van', 'von']);
+export function nombre(v: unknown): string {
+  const t = String(v ?? '').trim();
+  if (!t || /^\d+$/.test(t)) return t;
+  return t.toLowerCase().split(/\s+/).map((p, i) => (i > 0 && PARTICULAS.has(p) ? p : p.charAt(0).toUpperCase() + p.slice(1))).join(' ');
+}
+const listaNombres = (v?: string[]) => (v && v.length ? v.map(nombre).join(', ') : '—');
 const txt = (v: unknown, d = '—') => (v == null || String(v).trim() === '' || String(v).trim() === '-' ? d : String(v).trim());
 const num = (v?: number) => (v ?? 0).toLocaleString('es-PE');
 
@@ -92,7 +112,7 @@ function Tabla<T>({ titulo, icono, columnas, filas, sel, vacio }: { titulo: stri
       <div className="tv-tabla__cuerpo">
         {visibles.map((f, i) => (
           <div key={pagina * FILAS + i} className={`tv-fila${pagina * FILAS + i === sel ? ' tv-fila--sel' : ''}`}>
-            {columnas.map(c => <span key={c.titulo} className={c.clase} style={{ flex: `${c.ancho} 1 0` }}>{c.celda(f)}</span>)}
+            {columnas.map(c => <span key={c.titulo} className={(c.clase ?? '').replace('tv-dos', '').trim() || undefined} style={{ flex: `${c.ancho} 1 0` }}><span className={c.clase && c.clase.includes('tv-dos') ? 'tv-dos' : undefined}>{c.celda(f)}</span></span>)}
           </div>
         ))}
         {!filas.length && <div className="tv-vacio">{vacio}</div>}
@@ -200,8 +220,18 @@ export function TvApp() {
   useEffect(() => { guardar('tv_tema', tema); }, [tema]);
 
   // ── Control remoto (teclas 0-9, flechas, OK, Volver) ──
-  const acciones = useRef({ irA, mover, vista, enfoque, unidades, sel });
-  acciones.current = { irA, mover, vista, enfoque, unidades, sel };
+  const irPagina = useCallback((dir: number): boolean => {
+    const n = largo[vista], p = tam[vista];
+    const paginas = Math.max(1, Math.ceil(n / p));
+    const actual = Math.min(paginas - 1, Math.floor(sel[vista] / p));
+    const destino = actual + dir;
+    if (destino < 0 || destino >= paginas) return false; // no hay más páginas hacia ese lado
+    setSel(s => ({ ...s, [vista]: destino * p }));
+    mostrar(`Página ${destino + 1} de ${paginas}`, dir > 0 ? '►' : '◄');
+    return true;
+  }, [vista, largo, sel, mostrar]); // eslint-disable-line react-hooks/exhaustive-deps
+  const acciones = useRef({ irA, mover, vista, enfoque, unidades, sel, irPagina });
+  acciones.current = { irA, mover, vista, enfoque, unidades, sel, irPagina };
   useEffect(() => {
     const alTecla = (e: KeyboardEvent) => {
       ultimaTecla.current = Date.now();
@@ -235,8 +265,8 @@ export function TvApp() {
       }
       if (dig(0) || es('r', 'R')) { consumir(); mostrar('Recargando…', '0'); setTimeout(() => window.location.replace('/tv?_v=' + Date.now()), 300); return; }
       const pos = VISTAS.findIndex(v => v.id === a.vista);
-      if (es('ArrowRight') || code === 39) { consumir(); const v = VISTAS[(pos + 1) % VISTAS.length]; a.irA(v.id); mostrar(v.nombre, '►'); return; }
-      if (es('ArrowLeft') || code === 37) { consumir(); const v = VISTAS[(pos + VISTAS.length - 1) % VISTAS.length]; a.irA(v.id); mostrar(v.nombre, '◄'); return; }
+      if (es('ArrowRight') || code === 39) { consumir(); if (a.irPagina(1)) return; const v = VISTAS[(pos + 1) % VISTAS.length]; a.irA(v.id); mostrar(v.nombre, '►'); return; }
+      if (es('ArrowLeft') || code === 37) { consumir(); if (a.irPagina(-1)) return; const v = VISTAS[(pos + VISTAS.length - 1) % VISTAS.length]; a.irA(v.id); mostrar(v.nombre, '◄'); return; }
       if (es('ArrowDown') || code === 40) { consumir(); a.mover(1); return; }
       if (es('ArrowUp') || code === 38) { consumir(); a.mover(-1); return; }
       if (es('PageDown') || code === 34) { consumir(); a.mover(5); return; }
@@ -344,13 +374,13 @@ export function TvApp() {
                 { etiqueta: 'Abiertas', valor: num(feed?.ots.kpis.abierto), tono: 'gris' }, { etiqueta: 'Finalizadas', valor: num(feed?.ots.kpis.finalizado), tono: 'verde' },
               ]} />
               <Tabla<OtTv> titulo="Órdenes de trabajo en proceso" icono="🛠" sel={sel.ot} filas={ots} vacio="No hay órdenes en proceso" columnas={[
-                { titulo: 'OT', ancho: 1.1, clase: 'tv-mono tv-azul', celda: o => txt(o.id_ot) },
-                { titulo: 'Placa', ancho: 1, clase: 'tv-mono', celda: o => txt(o.placa) },
-                { titulo: 'Tipo', ancho: 1.7, clase: 'tv-corto', celda: o => `${txt(o.tipo_ot, 'Correctivo')}${o.sub_tipo ? ` · ${o.sub_tipo}` : ''}` },
-                { titulo: 'Motivo', ancho: 2.6, clase: 'tv-corto', celda: o => txt(o.motivo, 'Mantenimiento en taller') },
-                { titulo: 'Supervisor', ancho: 1.4, celda: o => txt(o.supervisor, 'Taller central') },
-                { titulo: 'Mecánico', ancho: 1.4, celda: o => txt(o.mecanico, 'Asignado') },
-                { titulo: 'Rampa', ancho: 0.9, celda: o => txt(o.rampa) },
+                { titulo: 'OT', ancho: 1.05, clase: 'tv-mono tv-azul', celda: o => txt(o.id_ot) },
+                { titulo: 'Placa', ancho: 0.95, clase: 'tv-mono', celda: o => txt(o.placa) },
+                { titulo: 'Tipo', ancho: 1.35, clase: 'tv-dos', celda: o => `${legible(txt(o.tipo_ot, 'Correctivo'))}${o.sub_tipo ? ` · ${legible(o.sub_tipo)}` : ''}` },
+                { titulo: 'Motivo', ancho: 3.1, clase: 'tv-dos', celda: o => legible(txt(o.motivo, 'Mantenimiento en taller')) },
+                { titulo: 'Supervisor', ancho: 1.7, clase: 'tv-dos', celda: o => nombre(txt(o.supervisor, 'Taller central')) },
+                { titulo: 'Técnicos', ancho: 1.7, clase: 'tv-dos', celda: o => listaNombres(o.tecnicos) },
+                { titulo: 'Rampa', ancho: 1, clase: 'tv-dos', celda: o => legible(txt(o.rampa)) },
                 { titulo: 'Ingreso', ancho: 1, celda: o => fechaPe(o.fecha_ingreso) },
               ]} />
             </>
@@ -364,11 +394,11 @@ export function TvApp() {
               ]} />
               <Tabla<BacklogTv> titulo="Backlog pendiente" icono="📋" sel={sel.backlog} filas={backlog} vacio="¡Excelente! No hay pendientes" columnas={[
                 { titulo: 'Código', ancho: 1.1, clase: 'tv-mono tv-morado', celda: b => txt(b.backlog_id) },
-                { titulo: 'Placa', ancho: 1, clase: 'tv-mono', celda: b => txt(b.placa) },
-                { titulo: 'Tema', ancho: 1.3, celda: b => <Etiqueta tono="morado">{txt(b.tema, 'Mantenimiento')}</Etiqueta> },
-                { titulo: 'Tarea', ancho: 2.8, clase: 'tv-corto', celda: b => txt(b.tarea) },
-                { titulo: 'Km', ancho: 0.9, clase: 'tv-mono', celda: b => txt(b.km) },
-                { titulo: 'Reportado por', ancho: 1.4, celda: b => txt(b.reportado_por, 'Operaciones') },
+                { titulo: 'Placa', ancho: 0.95, clase: 'tv-mono', celda: b => txt(b.placa) },
+                { titulo: 'Tema', ancho: 1.5, celda: b => <Etiqueta tono="morado">{legible(txt(b.tema, 'Mantenimiento'))}</Etiqueta> },
+                { titulo: 'Tarea', ancho: 3.3, clase: 'tv-dos', celda: b => legible(txt(b.tarea)) },
+                { titulo: 'Km', ancho: 1, clase: 'tv-mono', celda: b => txt(b.km) },
+                { titulo: 'Reportado por', ancho: 1.9, clase: 'tv-dos', celda: b => nombre(txt(b.reportado_por, 'Operaciones')) },
                 { titulo: 'Ticket OT', ancho: 1.1, clase: 'tv-mono tv-azul', celda: b => txt(b.ticket_ot) },
                 { titulo: 'Fecha', ancho: 1, celda: b => fechaPe(b.fecha_reporte) },
               ]} />
@@ -382,12 +412,11 @@ export function TvApp() {
                 { etiqueta: 'En proceso', valor: num(feed?.fallas.kpis.proceso), tono: 'azul' }, { etiqueta: 'Histórico', valor: num(feed?.fallas.kpis.total_historico), tono: 'gris' },
               ]} />
               <Tabla<FallaTv> titulo="Reporte de fallas" icono="⚠" sel={sel.fallas} filas={fallas} vacio="¡Excelente! No hay fallas pendientes" columnas={[
-                { titulo: 'Folio', ancho: 1.1, clase: 'tv-mono tv-rojo', celda: f => txt(f.folio) },
+                { titulo: 'Folio', ancho: 1.3, clase: 'tv-mono tv-rojo', celda: f => txt(f.folio) },
                 { titulo: 'Placa', ancho: 1, clase: 'tv-mono', celda: f => txt(f.placa) },
-                { titulo: 'Conductor', ancho: 1.6, celda: f => txt(f.conductor, 'No asignado') },
-                { titulo: 'Procedencia', ancho: 1.2, celda: f => txt(f.procedencia, 'En ruta') },
-                { titulo: 'Descripción', ancho: 3, clase: 'tv-corto', celda: f => txt(f.descripcion) },
-                { titulo: 'Fecha', ancho: 1, celda: f => fechaPe(f.fecha) },
+                { titulo: 'Conductor', ancho: 1.9, clase: 'tv-dos', celda: f => nombre(txt(f.conductor, 'No asignado')) },
+                { titulo: 'Descripción de la falla', ancho: 5.2, clase: 'tv-dos', celda: f => legible(txt(f.descripcion)) },
+                { titulo: 'Fecha', ancho: 1.1, celda: f => fechaPe(f.fecha) },
                 { titulo: 'Estado', ancho: 1.1, celda: f => { const e = String(f.estado ?? 'Pendiente'); const l = e.toLowerCase(); return <Etiqueta tono={l.includes('pend') ? 'rojo' : l.includes('proc') ? 'ambar' : 'gris'}>{e}</Etiqueta>; } },
               ]} />
             </>
@@ -400,13 +429,14 @@ export function TvApp() {
                 { etiqueta: 'Lavado y espera', valor: num(feed?.rampas.kpis.en_lavado_espera), tono: 'gris' }, { etiqueta: 'Rampas totales', valor: num(feed?.rampas.kpis.total_rampas ?? 8), tono: 'verde' },
               ]} />
               <Tabla<RampaTv> titulo="Status de rampa y zonas" icono="🔧" sel={sel.rampas} filas={rampas} vacio="No hay unidades en rampa" columnas={[
-                { titulo: 'Zona / rampa', ancho: 1.5, celda: r => <Etiqueta tono={r.tipo_zona === 'lavado' ? 'azul' : r.tipo_zona === 'espera' ? 'ambar' : r.tipo_zona === 'taller' ? 'morado' : r.tipo_zona === 'auxilio' ? 'rojo' : 'verde'}>{txt(r.rampa, 'Rampa general')}</Etiqueta> },
-                { titulo: 'Placa', ancho: 1, clase: 'tv-mono', celda: r => txt(r.placa) },
-                { titulo: 'Ingreso', ancho: 1, clase: 'tv-mono', celda: r => (r.hora_ingreso && r.hora_ingreso !== '-' ? `${r.hora_ingreso} h` : '—') },
-                { titulo: 'Salida estimada', ancho: 1.3, clase: 'tv-mono tv-azul tv-fuerte', celda: r => (r.hora_salida && r.hora_salida !== '-' ? `${r.hora_salida} h` : 'Por definir') },
-                { titulo: 'Trabajos en ejecución', ancho: 2.8, clase: 'tv-corto', celda: r => txt(r.trabajo) },
-                { titulo: 'Km', ancho: 0.9, clase: 'tv-mono', celda: r => txt(r.km) },
-                { titulo: 'Situación', ancho: 1.4, celda: r => <Etiqueta tono="verde">{txt(r.situacion, 'En atención')}</Etiqueta> },
+                { titulo: 'Zona / rampa', ancho: 1.55, celda: r => <Etiqueta tono={r.tipo_zona === 'lavado' ? 'azul' : r.tipo_zona === 'espera' ? 'ambar' : r.tipo_zona === 'taller' ? 'morado' : r.tipo_zona === 'auxilio' ? 'rojo' : 'verde'}>{legible(txt(r.rampa, 'Rampa general'))}</Etiqueta> },
+                { titulo: 'Placa', ancho: 0.95, clase: 'tv-mono', celda: r => txt(r.placa) },
+                { titulo: 'Ingreso', ancho: 0.9, clase: 'tv-mono', celda: r => (r.hora_ingreso && r.hora_ingreso !== '-' ? `${r.hora_ingreso} h` : '—') },
+                { titulo: 'Salida estimada', ancho: 1.1, clase: 'tv-mono tv-azul tv-fuerte', celda: r => (r.hora_salida && r.hora_salida !== '-' ? `${r.hora_salida} h` : 'Por definir') },
+                { titulo: 'Trabajos en ejecución', ancho: 3.6, clase: 'tv-dos', celda: r => legible(txt(r.trabajo)) },
+                { titulo: 'Técnicos', ancho: 1.7, clase: 'tv-dos', celda: r => listaNombres(r.tecnicos) },
+                { titulo: 'Km', ancho: 1, clase: 'tv-mono', celda: r => txt(r.km) },
+                { titulo: 'Situación', ancho: 1.5, celda: r => <Etiqueta tono="verde">{legible(txt(r.situacion, 'En atención'))}</Etiqueta> },
               ]} />
             </>
           )}
@@ -415,7 +445,7 @@ export function TvApp() {
         <footer className="tv-pie">
           <div className="tv-pie__texto">{ticker}{ultima ? <span> · actualizado {ultima.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span> : null}</div>
           <div className="tv-teclas">
-            <span><b>1-5</b> Vistas</span><span><b>6</b> {carrusel ? 'Carrusel ON' : 'Carrusel'}</span><span><b>7</b> Tamaño</span>
+            <span><b>1-5</b> Vistas</span><span><b>◄ ►</b> Páginas</span><span><b>6</b> {carrusel ? 'Carrusel ON' : 'Carrusel'}</span><span><b>7</b> Tamaño</span>
             <span><b>8</b> Mapa</span><span><b>T</b> Tema</span><span><b>9</b> Pantalla completa</span><span><b>0</b> Recargar</span>
           </div>
         </footer>
