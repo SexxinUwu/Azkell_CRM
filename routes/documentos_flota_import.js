@@ -10,9 +10,9 @@ const { audit: auditar, actorFrom } = require('../services/auditoria');
 const MAX_FILAS = 2000;
 // Campos que acepta el archivo: PROPIEDAD (propia o tercera) y documentos. Tipo, marca, modelo, color, año, serie y empresa salen de Placas.
 const FECHAS = new Set(['fecha_entrega', 'tc_vencimiento', 'soat_vencimiento', 'matpel_vencimiento', 'rt_emision', 'rt_vencimiento',
-    'boni_emision', 'boni_vencimiento', 'sv_vencimiento', 'sc_vencimiento', 'fum_emision', 'fum_vencimiento', 'ext_emision', 'ext_vencimiento']);
+    'boni_emision', 'boni_vencimiento', 'sv_vencimiento', 'fum_emision', 'fum_vencimiento', 'ext_emision', 'ext_vencimiento']);
 const TEXTOS = ['propiedad', 'tc_constancia', 'soat_entidad', 'soat_pago',
-    'matpel_constancia', 'sv_entidad', 'sv_asesor', 'sc_entidad', 'sc_asesor', 'ext_cantidad'];
+    'matpel_constancia', 'sv_entidad', 'sv_asesor', 'ext_cantidad'];
 const CAMPOS = [...FECHAS, ...TEXTOS].filter(c => c !== 'fecha_entrega');
 
 // Columnas de vehiculos_flota que se reescriben con el registro completo (mismas que POST /api/vehiculos-flota)
@@ -30,7 +30,6 @@ const DOCS = [
     { tipo: 'REV_TECNICA', emision: 'rt_emision', venc: 'rt_vencimiento', url: 'rt_url' },
     { tipo: 'BONIFICACION', emision: 'boni_emision', venc: 'boni_vencimiento', url: 'boni_url' },
     { tipo: 'SEG_VEHICULAR', entidad: 'sv_entidad', asesor: 'sv_asesor', venc: 'sv_vencimiento', url: 'sv_url' },
-    { tipo: 'SEG_CARRETA', entidad: 'sc_entidad', asesor: 'sc_asesor', venc: 'sc_vencimiento', url: 'sc_url' },
     { tipo: 'FUMIGACION', emision: 'fum_emision', venc: 'fum_vencimiento', url: 'fum_url' },
     { tipo: 'EXTINTOR', emision: 'ext_emision', venc: 'ext_vencimiento', url: 'ext_url' },
 ];

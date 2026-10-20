@@ -74,7 +74,6 @@ export interface VehiculoFlota {
   rt_vencimiento: string | null;
   boni_vencimiento: string | null;
   sv_vencimiento: string | null;
-  sc_vencimiento: string | null;
   fum_vencimiento: string | null;
   ext_vencimiento: string | null;
   soat_entidad: string | null;
@@ -98,7 +97,6 @@ const TIPOS_DOC: Array<{ key: keyof VehiculoFlota; label: string; urlKey?: keyof
   { key: 'rt_vencimiento',     label: 'Revisión técnica',          urlKey: 'rt_url' },
   { key: 'boni_vencimiento',   label: 'Bonificación',              urlKey: 'boni_url' },
   { key: 'sv_vencimiento',     label: 'Seguro vehicular',          urlKey: 'sv_url',     entidadKey: 'sv_entidad' },
-  { key: 'sc_vencimiento',     label: 'SCTR',                      urlKey: 'sc_url',     entidadKey: 'sc_entidad' },
   { key: 'fum_vencimiento',    label: 'FUM / Fumigación',          urlKey: 'fum_url' },
   { key: 'ext_vencimiento',    label: 'Extintor',                  urlKey: 'ext_url' },
 ];
@@ -170,7 +168,6 @@ export const CAMPOS_DOC: Record<string, { label: string; campos: CampoDoc[] }> =
   rt:     { label: 'Revisión técnica', campos: [{ campo: 'rt_emision', label: 'Emisión', tipo: 'date' }, { campo: 'rt_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
   boni:   { label: 'Bonificación', campos: [{ campo: 'boni_emision', label: 'Emisión', tipo: 'date' }, { campo: 'boni_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
   sv:     { label: 'Seguro vehicular', campos: [{ campo: 'sv_entidad', label: 'Aseguradora', tipo: 'text' }, { campo: 'sv_asesor', label: 'Asesor', tipo: 'text' }, { campo: 'sv_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
-  sc:     { label: 'SCTR', campos: [{ campo: 'sc_entidad', label: 'Aseguradora', tipo: 'text' }, { campo: 'sc_asesor', label: 'Asesor', tipo: 'text' }, { campo: 'sc_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
   fum:    { label: 'FUM / Fumigación', campos: [{ campo: 'fum_emision', label: 'Emisión', tipo: 'date' }, { campo: 'fum_vencimiento', label: 'Vencimiento', tipo: 'date' }] },
   ext:    { label: 'Extintor', campos: [{ campo: 'ext_emision', label: 'Emisión', tipo: 'date' }, { campo: 'ext_vencimiento', label: 'Vencimiento', tipo: 'date' }, { campo: 'ext_cantidad', label: 'Cantidad', tipo: 'number' }] },
 };
