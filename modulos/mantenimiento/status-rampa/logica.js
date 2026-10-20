@@ -2925,9 +2925,10 @@ window.srAgregarSalida = function(idOt) {
         fetch('/api/almacen/inventario')
             .then(function(r) { return r.json(); })
             .then(function(d) {
-                window._srInvData = d || [];
+                // Solo artículos (INV): los servicios (SERV) no se solicitan a almacén
+                window._srInvData = (d || []).filter(function(a) { return !String(a.id || '').toUpperCase().startsWith('SERV'); });
                 var dl = document.getElementById('sr-mat-inv-list');
-                if (dl) dl.innerHTML = (d || []).map(function(a) {
+                if (dl) dl.innerHTML = window._srInvData.map(function(a) {
                     return '<option value="' + _srEsc(a.id + ' — ' + a.descripcion) + '">';
                 }).join('');
             })

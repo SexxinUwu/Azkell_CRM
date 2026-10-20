@@ -936,6 +936,9 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.post('/ot-materiales', (req, res) => {
         const { ticket_ot, tipo_destino, placa, responsable, responsable_id, moneda, tipo_cambio, observaciones, creado_por, items } = req.body;
         if (!ticket_ot) return res.status(400).json({ error: 'ticket_ot es requerido' });
+        // Solo se solicitan artículos (INV): los servicios (SERV) no salen del almacén
+        const servicios = (Array.isArray(items) ? items : []).filter(d => /^SERV/i.test(String(d.inventario_id || '')));
+        if (servicios.length) return res.status(400).json({ error: 'Solo se pueden solicitar artículos (INV). Quita los servicios: ' + servicios.map(d => d.inventario_id).join(', ') });
         // Todo se escribe en la base de esta empresa (req.db), nunca en una base fija
         const targetDb = req.db || db;
         const fecha = new Date().toISOString().split('T')[0];
@@ -976,7 +979,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                         const resolver = (cb) => {
                             if (!descsParaResolver.length) return cb({});
                             targetDb.query(
-                                'SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1',
+                                'SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1 AND id NOT LIKE \'SERV%\'',
                                 [descsParaResolver],
                                 (e, rows) => {
                                     const mapa = {};
