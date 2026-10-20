@@ -264,7 +264,7 @@ function NuevaActa({ open, onClose, onHecho }: { open: boolean; onClose: () => v
 
   const plantilla = useQuery<Grupo[]>({
     queryKey: ['flota', 'entrega-plantilla'], enabled: open,
-    queryFn: () => Promise.resolve<Grupo[]>(leerPlantillaEntrega()),
+    queryFn: () => leerPlantillaEntrega() as Promise<Grupo[]>,
     staleTime: 0,
   });
   const grupos = plantilla.data ?? [];

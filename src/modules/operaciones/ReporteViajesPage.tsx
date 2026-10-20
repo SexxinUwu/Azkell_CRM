@@ -187,7 +187,7 @@ export function ReporteViajesPage() {
                       <Celda mono>{v.viaje}</Celda>
                       <Celda mono>{fechaCorta(v.fecha)}</Celda>
                       <Celda mono>{v.placa_tracto || '—'}</Celda>
-                      <Celda mono>{v.placa_remolque?.trim() ? v.placa_remolque : 'SOLO TRACTO (-10%)'}</Celda>
+                      <Celda mono>{v.placa_remolque?.trim() ? v.placa_remolque : 'SOLO TRACTO (-25%)'}</Celda>
                       <Celda>{v.configuracion || 'T3'}</Celda>
                       <Celda mono>{v.modelo_motor || '—'}</Celda>
                       <Celda>{v.ruta_principal || '—'}</Celda>

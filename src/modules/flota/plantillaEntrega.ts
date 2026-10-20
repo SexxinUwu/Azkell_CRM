@@ -1,7 +1,10 @@
 // Plantilla del inventario de entrega de vehículos.
-// Igual que el clásico (modulos/flota/entrega-vehiculos/logica.js), se guarda en el navegador con la misma
-// clave (`ev_global_template_flota`); el servidor no tiene endpoint para esta plantilla
+// Plantilla corporativa: se guarda en el servidor (configuracion_erp › plantilla_inventario_entrega) para que
+// todas las PC y tablets de la empresa vean la misma. Mientras el servidor no tenga una, se toma la que el clásico
+// dejó en este navegador (`ev_global_template_flota`) y, si no hay, la de fábrica.
 // (/seguridad/template es la del checklist de Garita, otro formato).
+
+import { api } from '../../core/api/client';
 
 export interface GrupoInventario { id: string; titulo: string; items: string[] }
 
@@ -26,24 +29,32 @@ export const GRUPOS_INVENTARIO: GrupoInventario[] = [
 
 const copia = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 
-/** Plantilla guardada en este navegador, o la de fábrica. Acepta ítems como texto o como { label | texto } */
-export function leerPlantillaEntrega(): GrupoInventario[] {
+type GrupoCrudo = { id?: string; titulo?: string; title?: string; items?: Array<string | { label?: string; texto?: string }> };
+
+const normalizar = (datos: unknown): GrupoInventario[] | null => {
+  if (!Array.isArray(datos) || !datos.length) return null;
+  return (datos as GrupoCrudo[]).map((g, i) => ({
+    id: g.id || `cat_${i}`,
+    titulo: g.titulo || g.title || '',
+    items: (g.items ?? []).map(it => (typeof it === 'string' ? it : it.label || it.texto || '')),
+  }));
+};
+
+/** Plantilla de la empresa (servidor); si no hay, la que dejó el clásico en este navegador, o la de fábrica */
+export async function leerPlantillaEntrega(): Promise<GrupoInventario[]> {
+  try {
+    const r = await api<{ plantilla: unknown }>('/flota/entrega-vehiculos/plantilla');
+    const delServidor = normalizar(r.plantilla);
+    if (delServidor) return delServidor;
+  } catch { /* sin conexión: se usa la copia local o la de fábrica */ }
   try {
     const guardada = localStorage.getItem(CLAVE) || localStorage.getItem(CLAVE_ANTIGUA);
-    if (guardada) {
-      const datos = JSON.parse(guardada) as Array<{ id?: string; titulo?: string; title?: string; items?: Array<string | { label?: string; texto?: string }> }>;
-      if (Array.isArray(datos) && datos.length) {
-        return datos.map((g, i) => ({
-          id: g.id || `cat_${i}`,
-          titulo: g.titulo || g.title || '',
-          items: (g.items ?? []).map(it => (typeof it === 'string' ? it : it.label || it.texto || '')),
-        }));
-      }
-    }
+    const local = guardada ? normalizar(JSON.parse(guardada)) : null;
+    if (local) return local;
   } catch { /* se usa la de fábrica */ }
   return copia(GRUPOS_INVENTARIO);
 }
 
-export function guardarPlantillaEntrega(grupos: GrupoInventario[]) {
-  localStorage.setItem(CLAVE, JSON.stringify(grupos));
+export async function guardarPlantillaEntrega(grupos: GrupoInventario[]) {
+  await api('/flota/entrega-vehiculos/plantilla', { method: 'PUT', body: { plantilla: grupos } });
 }

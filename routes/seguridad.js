@@ -1473,6 +1473,40 @@ module.exports = (db, logAudit) => {
     // ENTREGA DE VEHÍCULOS (FORMATO INVENTARIO FÍSICO ESTADO DE VEHÍCULO)
     // ════════════════════════════════════════════════════════════════
 
+    // ── Plantilla corporativa del inventario de entrega (compartida por empresa) ──
+    // Se guarda en configuracion_erp (clave plantilla_inventario_entrega) como JSON [{ id, titulo, items: [texto] }]
+    const CLAVE_PLANTILLA_ENTREGA = 'plantilla_inventario_entrega';
+    router.get('/flota/entrega-vehiculos/plantilla', (req, res) => {
+        getDb(req).query('SELECT valor FROM configuracion_erp WHERE clave = ?', [CLAVE_PLANTILLA_ENTREGA], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            let plantilla = null;
+            try { plantilla = rows && rows[0] && rows[0].valor ? JSON.parse(rows[0].valor) : null; } catch (e) { plantilla = null; }
+            res.json({ plantilla: Array.isArray(plantilla) && plantilla.length ? plantilla : null });
+        });
+    });
+    router.put('/flota/entrega-vehiculos/plantilla', (req, res) => {
+        const lista = req.body && req.body.plantilla;
+        // null o vacía = volver a la de fábrica
+        if (lista === null || (Array.isArray(lista) && !lista.length)) {
+            return getDb(req).query('DELETE FROM configuracion_erp WHERE clave = ?', [CLAVE_PLANTILLA_ENTREGA], (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ ok: true, plantilla: null });
+            });
+        }
+        if (!Array.isArray(lista) || lista.length > 60) return res.status(400).json({ error: 'Plantilla inválida' });
+        const limpia = lista.map((g, i) => ({
+            id: String((g && g.id) || 'cat_' + i).slice(0, 60),
+            titulo: String((g && g.titulo) || '').trim().slice(0, 120),
+            items: (Array.isArray(g && g.items) ? g.items : []).map(t => String(t || '').trim().slice(0, 160)).filter(Boolean).slice(0, 200),
+        })).filter(g => g.titulo);
+        if (!limpia.length) return res.status(400).json({ error: 'La plantilla no tiene categorías' });
+        getDb(req).query('INSERT INTO configuracion_erp (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = VALUES(valor)', [CLAVE_PLANTILLA_ENTREGA, JSON.stringify(limpia)], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (typeof logAudit === 'function') logAudit((req.user && (req.user.email || req.user.correo)) || (req.body && req.body.usuario) || 'sistema', 'entrega-vehiculos', 'MODIFICÓ', 'plantilla de inventario de entrega');
+            res.json({ ok: true, plantilla: limpia });
+        });
+    });
+
     // ── GET /seguridad/entrega-vehiculos/stats ────────────────────
     router.get('/seguridad/entrega-vehiculos/stats', (req, res) => {
         const sqlEmpresas = `

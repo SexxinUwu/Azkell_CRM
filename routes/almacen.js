@@ -199,9 +199,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     // ── Reset de Recepciones de Prueba (Iniciar de 0) ───
     router.post('/reset-recepciones', (req, res) => {
-        db.query('DELETE FROM detalle_recepciones_oc', () => {
-            db.query('DELETE FROM recepciones_oc', () => {
-                db.query("UPDATE entradas_inv SET estado = 'Registrado' WHERE estado IS NULL OR estado != 'Anulado'", () => {
+        getDb(req).query('DELETE FROM detalle_recepciones_oc', () => {
+            getDb(req).query('DELETE FROM recepciones_oc', () => {
+                getDb(req).query("UPDATE entradas_inv SET estado = 'Registrado' WHERE estado IS NULL OR estado != 'Anulado'", () => {
                     res.json({ ok: true, message: 'Recepciones reiniciadas a 0 y OCs en estado Registrado' });
                 });
             });
@@ -212,7 +212,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     // ALMACÉN — Configuración
     // ============================================================
     router.get('/configuracion', (req, res) => {
-        db.query('SELECT clave, valor FROM configuracion_almacen', (err, rows) => {
+        getDb(req).query('SELECT clave, valor FROM configuracion_almacen', (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             const obj = {};
             rows.forEach(r => { obj[r.clave] = r.valor; });
@@ -223,7 +223,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const entries = Object.entries(req.body);
         if (!entries.length) { if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true }); }
         const vals = entries.map(([k, v]) => [k, String(v)]);
-        db.query('INSERT INTO configuracion_almacen (clave,valor) VALUES ? ON DUPLICATE KEY UPDATE valor=VALUES(valor)',
+        getDb(req).query('INSERT INTO configuracion_almacen (clave,valor) VALUES ? ON DUPLICATE KEY UPDATE valor=VALUES(valor)',
             [vals], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
@@ -257,7 +257,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         GROUP BY p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at
         ORDER BY p.nombre
     `;
-        db.query(q, (err, rows) => {
+        getDb(req).query(q, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             const procesados = rows.map(r => {
                 let cuentas = [];
@@ -273,7 +273,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     });
 
     router.get('/proveedores/:id/cuentas', (req, res) => {
-        db.query('SELECT * FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? ORDER BY id ASC', [req.params.id], (err, rows) => {
+        getDb(req).query('SELECT * FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? ORDER BY id ASC', [req.params.id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows || []);
         });
@@ -283,13 +283,13 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas, cuentas } = req.body;
         _generarCodigoAlmacen('PROV', null, (err, id) => {
             if (err) return res.status(500).json({ error: err.message });
-            db.query('INSERT INTO proveedores_inv (id,nombre,razon_social,tipo_documento,numero_documento,telefono,email,direccion,estado,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?)',
+            getDb(req).query('INSERT INTO proveedores_inv (id,nombre,razon_social,tipo_documento,numero_documento,telefono,email,direccion,estado,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?)',
                 [id, nombre, razon_social || null, tipo_documento || 'RUC', numero_documento || null, telefono || null, email || null, direccion || null, estado || 'Activo', observaciones || null],
                 (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
                     if (marcas && marcas.length) {
                         const mVals = marcas.map(m => [id, m]);
-                        db.query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => { });
+                        getDb(req).query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => { });
                     }
                     if (cuentas && cuentas.length) {
                         const cVals = cuentas.map(c => [
@@ -302,7 +302,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                             c.estado !== false && c.estado !== 0 ? 1 : 0
                         ]).filter(c => c[1] && c[4]);
                         if (cVals.length) {
-                            db.query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,moneda,tipo_cuenta,numero_cuenta,detraccion,estado) VALUES ?', [cVals], () => { });
+                            getDb(req).query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,moneda,tipo_cuenta,numero_cuenta,detraccion,estado) VALUES ?', [cVals], () => { });
                         }
                     }
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
@@ -314,17 +314,17 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     router.put('/proveedores/:id', (req, res) => {
         const { id } = req.params;
         const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas, cuentas } = req.body;
-        db.query('UPDATE proveedores_inv SET nombre=?,razon_social=?,tipo_documento=?,numero_documento=?,telefono=?,email=?,direccion=?,estado=?,observaciones=? WHERE id=?',
+        getDb(req).query('UPDATE proveedores_inv SET nombre=?,razon_social=?,tipo_documento=?,numero_documento=?,telefono=?,email=?,direccion=?,estado=?,observaciones=? WHERE id=?',
             [nombre, razon_social || null, tipo_documento || 'RUC', numero_documento || null, telefono || null, email || null, direccion || null, estado || 'Activo', observaciones || null, id],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                db.query('DELETE FROM proveedor_marcas_inv WHERE proveedor_id=?', [id], () => {
+                getDb(req).query('DELETE FROM proveedor_marcas_inv WHERE proveedor_id=?', [id], () => {
                     if (marcas && marcas.length) {
                         const mVals = marcas.map(m => [id, m]);
-                        db.query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => { });
+                        getDb(req).query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => { });
                     }
                 });
-                db.query('DELETE FROM proveedor_cuentas_bancarias WHERE proveedor_id=?', [id], () => {
+                getDb(req).query('DELETE FROM proveedor_cuentas_bancarias WHERE proveedor_id=?', [id], () => {
                     if (cuentas && cuentas.length) {
                         const cVals = cuentas.map(c => [
                             id,
@@ -336,7 +336,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                             c.estado !== false && c.estado !== 0 ? 1 : 0
                         ]).filter(c => c[1] && c[4]);
                         if (cVals.length) {
-                            db.query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,moneda,tipo_cuenta,numero_cuenta,detraccion,estado) VALUES ?', [cVals], () => { });
+                            getDb(req).query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,moneda,tipo_cuenta,numero_cuenta,detraccion,estado) VALUES ?', [cVals], () => { });
                         }
                     }
                 });
@@ -346,9 +346,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     });
 
     router.delete('/proveedores/:id', (req, res) => {
-        db.query('DELETE FROM proveedor_cuentas_bancarias WHERE proveedor_id=?', [req.params.id], () => {
-            db.query('DELETE FROM proveedor_marcas_inv WHERE proveedor_id=?', [req.params.id], () => {
-                db.query('DELETE FROM proveedores_inv WHERE id=?', [req.params.id], (err) => {
+        getDb(req).query('DELETE FROM proveedor_cuentas_bancarias WHERE proveedor_id=?', [req.params.id], () => {
+            getDb(req).query('DELETE FROM proveedor_marcas_inv WHERE proveedor_id=?', [req.params.id], () => {
+                getDb(req).query('DELETE FROM proveedores_inv WHERE id=?', [req.params.id], (err) => {
                     if (err) return res.status(500).json({ error: err.message });
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 });
@@ -363,7 +363,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
         // Helper promisificado
         const dbq = (sql, params) => new Promise((resolve, reject) =>
-            db.query(sql, params || [], (err, rows) => err ? reject(err) : resolve(rows))
+            getDb(req).query(sql, params || [], (err, rows) => err ? reject(err) : resolve(rows))
         );
 
         try {
@@ -436,7 +436,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const { ids } = req.body;
         if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'Sin IDs' });
         const placeholders = ids.map(() => '?').join(',');
-        db.query('DELETE FROM proveedores_inv WHERE id IN (' + placeholders + ')', ids, (err, result) => {
+        getDb(req).query('DELETE FROM proveedores_inv WHERE id IN (' + placeholders + ')', ids, (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, eliminados: result.affectedRows });
         });
@@ -507,16 +507,16 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     // Quiebre de stock: cuando un despacho deja un artículo en su stock mínimo o debajo, se abre una O/C en BORRADOR.
     // No notifica ni aprueba nada, y no abre otra si ya hay una O/C abierta para el mismo artículo.
-    function abrirOcPorQuiebre(inventarioIds) {
+    function abrirOcPorQuiebre(tdbQ, inventarioIds) {
         const ids = [...new Set((inventarioIds || []).filter(Boolean))];
         if (!ids.length) return;
         // Mismo cálculo de stock que el inventario; se filtra por id dentro de la consulta (envolverla daría columnas repetidas)
         const sqlStockIds = _stockSQL.replace(/WHERE i\.activo=1\s*ORDER BY i\.id\s*$/, 'WHERE i.activo=1 AND i.id IN (?) ORDER BY i.id');
-        db.query(sqlStockIds, [ids], (err, todos) => {
+        tdbQ.query(sqlStockIds, [ids], (err, todos) => {
             const rows = (todos || []).filter(x => Number(x.stock_min) > 0 && Number(x.stock_actual) <= Number(x.stock_min));
             if (err || !rows.length) return;
             rows.forEach(it => {
-                db.query(`SELECT 1 FROM ordenes_compra_items oi JOIN ordenes_compra oc ON oc.id = oi.orden_compra_id
+                tdbQ.query(`SELECT 1 FROM ordenes_compra_items oi JOIN ordenes_compra oc ON oc.id = oi.orden_compra_id
                            WHERE oi.descripcion = ? AND oc.estado IN ('BORRADOR','PENDIENTE_APROBACION','APROBADA') LIMIT 1`, [it.descripcion], (e2, abiertas) => {
                     if (e2 || (abiertas && abiertas.length)) return;
                     const meta = Number(it.stock_max) > 0 ? Number(it.stock_max) : Number(it.stock_min);
@@ -524,21 +524,21 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     const costo = Number(it.costo_referencial) || 0;
                     const total = +(cantidad * costo).toFixed(2);
                     const codigo = `OCQ-${it.id}-${Date.now()}`;
-                    db.query(`INSERT INTO ordenes_compra (codigo, proveedor_nombre, proveedor_ruc, monto_total, moneda, motivo_solicitud, solicitado_por, estado)
+                    tdbQ.query(`INSERT INTO ordenes_compra (codigo, proveedor_nombre, proveedor_ruc, monto_total, moneda, motivo_solicitud, solicitado_por, estado)
                                VALUES (?, 'Por definir', NULL, ?, ?, ?, 'Sistema (stock mínimo)', 'BORRADOR')`,
                         [codigo, total, it.moneda || 'PEN', `Quiebre de stock: ${it.descripcion} (stock ${it.stock_actual}, mínimo ${it.stock_min})`], (e3, r) => {
                             if (e3 || !r) return;
-                            db.query(`INSERT INTO ordenes_compra_items (orden_compra_id, descripcion, cantidad, unidad_medida, precio_unitario, subtotal)
+                            tdbQ.query(`INSERT INTO ordenes_compra_items (orden_compra_id, descripcion, cantidad, unidad_medida, precio_unitario, subtotal)
                                        VALUES (?, ?, ?, ?, ?, ?)`, [r.insertId, it.descripcion, cantidad, it.unidad || 'UND', costo, total]);
                         });
                 });
             });
         });
     }
-    function abrirOcPorQuiebreSalida(salidaId) {
-        db.query('SELECT inventario_id FROM detalle_salidas_inv WHERE salida_id = ?', [salidaId], (err, rows) => {
+    function abrirOcPorQuiebreSalida(tdbQ, salidaId) {
+        tdbQ.query('SELECT inventario_id FROM detalle_salidas_inv WHERE salida_id = ?', [salidaId], (err, rows) => {
             if (err || !rows) return;
-            abrirOcPorQuiebre(rows.map(r => r.inventario_id));
+            abrirOcPorQuiebre(tdbQ, rows.map(r => r.inventario_id));
         });
     }
 
@@ -833,7 +833,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
         _generarCodigoAlmacen(prefix, null, (err, id) => {
             if (err) return res.status(500).json({ error: err.message });
-            db.query(`INSERT INTO inventario
+            getDb(req).query(`INSERT INTO inventario
             (id,descripcion,articulo,codigo_articulo,familia,almacen,unidad,moneda,costo_referencial,costo_soles,tipo_cambio,
              proveedor_id,marca,observaciones,
              codigo_item,marca_unidad,sistema,sub_sistema,tipo,sub_tipo,
@@ -885,7 +885,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const targetUnidad = wantsServ ? (unidad || 'Servicio') : (unidad || null);
 
         const doUpdate = (newId) => {
-            db.query(`UPDATE inventario SET
+            getDb(req).query(`UPDATE inventario SET
             id=?,descripcion=?,articulo=?,codigo_articulo=?,familia=?,almacen=?,unidad=?,moneda=?,costo_referencial=?,costo_soles=?,tipo_cambio=?,
             proveedor_id=?,marca=?,observaciones=?,activo=?,
             codigo_item=?,marca_unidad=?,sistema=?,sub_sistema=?,tipo=?,sub_tipo=?,ubicacion=?,
@@ -902,9 +902,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 (err) => {
                     if (err) { console.error('[PUT inventario]', err.message); return res.status(500).json({ error: err.message }); }
                     if (newId !== oldId) {
-                        db.query('UPDATE detalle_entradas_inv SET inventario_id = ? WHERE inventario_id = ?', [newId, oldId]);
-                        db.query('UPDATE detalle_salidas_inv SET inventario_id = ? WHERE inventario_id = ?', [newId, oldId]);
-                        db.query('UPDATE detalle_recepciones_oc SET inventario_id = ? WHERE inventario_id = ?', [newId, oldId], () => {});
+                        getDb(req).query('UPDATE detalle_entradas_inv SET inventario_id = ? WHERE inventario_id = ?', [newId, oldId]);
+                        getDb(req).query('UPDATE detalle_salidas_inv SET inventario_id = ? WHERE inventario_id = ?', [newId, oldId]);
+                        getDb(req).query('UPDATE detalle_recepciones_oc SET inventario_id = ? WHERE inventario_id = ?', [newId, oldId], () => {});
                     }
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
                     res.json({ ok: true, id: newId, old_id: oldId, migrado: newId !== oldId });
@@ -921,7 +921,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         }
     });
     router.delete('/inventario/:id', (req, res) => {
-        db.query('UPDATE inventario SET activo=0 WHERE id=?', [req.params.id], (err) => {
+        getDb(req).query('UPDATE inventario SET activo=0 WHERE id=?', [req.params.id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
@@ -1065,12 +1065,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     router.delete('/inventario/:id/imagen', (req, res) => {
         try {
             const { deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
-            db.query('SELECT imagen_url FROM inventario WHERE id=?', [req.params.id], async (err, rows) => {
+            getDb(req).query('SELECT imagen_url FROM inventario WHERE id=?', [req.params.id], async (err, rows) => {
                 if (!err && rows && rows.length > 0 && rows[0].imagen_url) {
                     const oldKey = s3KeyFromUrl(rows[0].imagen_url);
                     if (oldKey) await deleteFromS3(oldKey).catch(() => { });
                 }
-                db.query('UPDATE inventario SET imagen_url=NULL WHERE id=?', [req.params.id], (err) => {
+                getDb(req).query('UPDATE inventario SET imagen_url=NULL WHERE id=?', [req.params.id], (err) => {
                     if (err) return res.status(500).json({ error: err.message });
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'ELIMINÓ', req.path); }
                     res.json({ ok: true });
@@ -1092,7 +1092,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const fechaHoy = new Date().toISOString().split('T')[0];
 
         // Obtener stock virtual actual para registrar en observaciones
-        db.query(`SELECT
+        getDb(req).query(`SELECT
         COALESCE(i.stock_regularizado,0)
         + COALESCE((SELECT SUM(d.cantidad) FROM detalle_entradas_inv d
                     JOIN entradas_inv e ON e.id=d.entrada_id
@@ -1114,11 +1114,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 (motivo ? ` | Motivo: ${motivo}` : '') +
                 ` | Usuario: ${usuario || 'sistema'} | Fecha: ${fechaHoy}`;
 
-            db.query(`UPDATE inventario SET stock_regularizado=?, fecha_regularizacion=? WHERE id=?`,
+            getDb(req).query(`UPDATE inventario SET stock_regularizado=?, fecha_regularizacion=? WHERE id=?`,
                 [stockVal, fechaHoy, id], (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
                     // Registrar en observaciones de auditoría (append)
-                    db.query(`UPDATE inventario SET observaciones = CONCAT(COALESCE(observaciones,''), ?)
+                    getDb(req).query(`UPDATE inventario SET observaciones = CONCAT(COALESCE(observaciones,''), ?)
                       WHERE id=?`,
                         ['\n[REG ' + fechaHoy + '] ' + obsAudit, id], () => { });
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, fecha_regularizacion: fechaHoy, stock_anterior: stockAnt, stock_nuevo: stockVal });
@@ -1153,7 +1153,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         const cantInicial = parseFloat(f.cantidad_inicial) || 0;
                         const stockReg = cantInicial > 0 ? cantInicial : 0;
                         const fechaReg = cantInicial > 0 ? new Date().toISOString().split('T')[0] : null;
-                        db.query(`INSERT INTO inventario
+                        getDb(req).query(`INSERT INTO inventario
                         (id,descripcion,articulo,codigo_articulo,familia,almacen,unidad,moneda,costo_referencial,
                          marca,observaciones,marca_unidad,sistema,sub_sistema,tipo,sub_tipo,
                          ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras,
@@ -1197,7 +1197,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     // ALMACÉN — Unidades de Medida
     // ============================================================
     router.get('/unidades', (req, res) => {
-        db.query(`SELECT * FROM almacen_unidades ORDER BY orden, nombre`, (err, rows) => {
+        getDb(req).query(`SELECT * FROM almacen_unidades ORDER BY orden, nombre`, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -1206,7 +1206,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     router.post('/unidades', (req, res) => {
         const { nombre, descripcion, activo } = req.body;
         if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
-        db.query('INSERT INTO almacen_unidades (nombre, descripcion, activo) VALUES (?,?,?)',
+        getDb(req).query('INSERT INTO almacen_unidades (nombre, descripcion, activo) VALUES (?,?,?)',
             [nombre.toUpperCase().trim(), descripcion || null, activo != null ? activo : 1],
             (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
@@ -1216,7 +1216,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     router.put('/unidades/:id', (req, res) => {
         const { nombre, descripcion, activo } = req.body;
-        db.query('UPDATE almacen_unidades SET nombre=?, descripcion=?, activo=? WHERE id=?',
+        getDb(req).query('UPDATE almacen_unidades SET nombre=?, descripcion=?, activo=? WHERE id=?',
             [nombre.toUpperCase().trim(), descripcion || null, activo != null ? activo : 1, req.params.id],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
@@ -1225,7 +1225,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     });
 
     router.delete('/unidades/:id', (req, res) => {
-        db.query('DELETE FROM almacen_unidades WHERE id=?', [req.params.id], (err) => {
+        getDb(req).query('DELETE FROM almacen_unidades WHERE id=?', [req.params.id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
@@ -1235,7 +1235,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     // ALMACÉN — Sistemas y Sub-Sistemas
     // ============================================================
     router.get('/sistemas', (req, res) => {
-        db.query(`SELECT * FROM almacen_sistemas ORDER BY orden, nombre`, (err, rows) => {
+        getDb(req).query(`SELECT * FROM almacen_sistemas ORDER BY orden, nombre`, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             // sub_sistemas es columna JSON: el driver ya la entrega como lista
             rows.forEach(r => {
@@ -1251,7 +1251,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     router.post('/sistemas', (req, res) => {
         const { nombre, sub_sistemas, activo, orden } = req.body;
         if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
-        db.query('INSERT INTO almacen_sistemas (nombre, sub_sistemas, activo, orden) VALUES (?,?,?,?)',
+        getDb(req).query('INSERT INTO almacen_sistemas (nombre, sub_sistemas, activo, orden) VALUES (?,?,?,?)',
             [nombre.toUpperCase().trim(), JSON.stringify(sub_sistemas || []), activo != null ? activo : 1, orden || 0],
             (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
@@ -1261,7 +1261,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     router.put('/sistemas/:id', (req, res) => {
         const { nombre, sub_sistemas, activo, orden } = req.body;
-        db.query('UPDATE almacen_sistemas SET nombre=?, sub_sistemas=?, activo=?, orden=? WHERE id=?',
+        getDb(req).query('UPDATE almacen_sistemas SET nombre=?, sub_sistemas=?, activo=?, orden=? WHERE id=?',
             [nombre.toUpperCase().trim(), JSON.stringify(sub_sistemas || []), activo != null ? activo : 1, orden || 0, req.params.id],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
@@ -1270,7 +1270,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     });
 
     router.delete('/sistemas/:id', (req, res) => {
-        db.query('DELETE FROM almacen_sistemas WHERE id=?', [req.params.id], (err) => {
+        getDb(req).query('DELETE FROM almacen_sistemas WHERE id=?', [req.params.id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
@@ -1348,7 +1348,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     // ALMACÉN — Familias
     // ============================================================
     router.get('/familias', (req, res) => {
-        db.query(`SELECT * FROM almacen_familias ORDER BY orden, nombre`, (err, rows) => {
+        getDb(req).query(`SELECT * FROM almacen_familias ORDER BY orden, nombre`, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -1357,7 +1357,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     router.post('/familias', (req, res) => {
         const { nombre, descripcion, activo } = req.body;
         if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
-        db.query('INSERT INTO almacen_familias (nombre, descripcion, activo) VALUES (?,?,?)',
+        getDb(req).query('INSERT INTO almacen_familias (nombre, descripcion, activo) VALUES (?,?,?)',
             [nombre.toUpperCase().trim(), descripcion || null, activo != null ? activo : 1],
             (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
@@ -1367,7 +1367,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     router.put('/familias/:id', (req, res) => {
         const { nombre, descripcion, activo } = req.body;
-        db.query('UPDATE almacen_familias SET nombre=?, descripcion=?, activo=? WHERE id=?',
+        getDb(req).query('UPDATE almacen_familias SET nombre=?, descripcion=?, activo=? WHERE id=?',
             [nombre.toUpperCase().trim(), descripcion || null, activo != null ? activo : 1, req.params.id],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
@@ -1376,7 +1376,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     });
 
     router.delete('/familias/:id', (req, res) => {
-        db.query('DELETE FROM almacen_familias WHERE id=?', [req.params.id], (err) => {
+        getDb(req).query('DELETE FROM almacen_familias WHERE id=?', [req.params.id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
@@ -1386,7 +1386,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     // ALMACÉN — Marcas de Fabricante
     // ============================================================
     router.get('/marcas', (req, res) => {
-        db.query(`SELECT * FROM almacen_marcas ORDER BY orden, nombre`, (err, rows) => {
+        getDb(req).query(`SELECT * FROM almacen_marcas ORDER BY orden, nombre`, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -1394,7 +1394,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     router.post('/marcas', (req, res) => {
         const { nombre, descripcion, activo } = req.body;
         if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
-        db.query('INSERT INTO almacen_marcas (nombre, descripcion, activo) VALUES (?,?,?)',
+        getDb(req).query('INSERT INTO almacen_marcas (nombre, descripcion, activo) VALUES (?,?,?)',
             [nombre.toUpperCase(), descripcion || null, activo ?? 1], (err, r) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: r.insertId });
@@ -1402,14 +1402,14 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     });
     router.put('/marcas/:id', (req, res) => {
         const { nombre, descripcion, activo } = req.body;
-        db.query('UPDATE almacen_marcas SET nombre=?, descripcion=?, activo=? WHERE id=?',
+        getDb(req).query('UPDATE almacen_marcas SET nombre=?, descripcion=?, activo=? WHERE id=?',
             [nombre.toUpperCase(), descripcion || null, activo ?? 1, req.params.id], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
     });
     router.delete('/marcas/:id', (req, res) => {
-        db.query('DELETE FROM almacen_marcas WHERE id=?', [req.params.id], (err) => {
+        getDb(req).query('DELETE FROM almacen_marcas WHERE id=?', [req.params.id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
@@ -2641,7 +2641,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
                                                 logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); 
                                             }
-                                            abrirOcPorQuiebreSalida(id);
+                                            abrirOcPorQuiebreSalida(getDb(req), id);
                                             res.json({ ok: true, parcial: true, nuevo_pendiente_id: nuevoId, despachado_id: id });
                                         });
                                     });
@@ -2667,7 +2667,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
                             logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); 
                         }
-                        abrirOcPorQuiebreSalida(id);
+                        abrirOcPorQuiebreSalida(getDb(req), id);
                         res.json({ ok: true, parcial: false });
                     });
                 }
@@ -2676,11 +2676,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             const { fecha, tipo_destino, placa, responsable, ticket_ot, observaciones, items, moneda, tipo_cambio } = req.body;
             const tc = parseFloat(tipo_cambio) || 1;
             const total_pen = _calcularTotalPen(items || [], tc, moneda);
-            db.query(`UPDATE salidas_inv SET fecha=?, tipo_destino=?, placa=?, responsable=?, ticket_ot=?, observaciones=?, moneda=?, tipo_cambio=?, total_pen=? WHERE id=?`,
+            getDb(req).query(`UPDATE salidas_inv SET fecha=?, tipo_destino=?, placa=?, responsable=?, ticket_ot=?, observaciones=?, moneda=?, tipo_cambio=?, total_pen=? WHERE id=?`,
                 [fecha || null, tipo_destino || null, placa || null, responsable || null, ticket_ot || null, observaciones || null, moneda || 'PEN', tc, total_pen, id],
                 (err) => {
                     if (err) return res.status(500).json({ error: err.message });
-                    db.query('DELETE FROM detalle_salidas_inv WHERE salida_id=?', [id], (err2) => {
+                    getDb(req).query('DELETE FROM detalle_salidas_inv WHERE salida_id=?', [id], (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });
                         if (!items || !items.length) {
                             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); }
@@ -2691,7 +2691,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                 parseFloat(d.cantidad) || 0, parseFloat(d.costo_unitario) || 0, d.moneda || moneda || 'PEN',
                                 parseFloat(d.importe) || ((parseFloat(d.cantidad) || 0) * (parseFloat(d.costo_unitario) || 0))];
                         });
-                        db.query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], (err3) => {
+                        getDb(req).query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], (err3) => {
                             if (err3) return res.status(500).json({ error: err3.message });
                             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); }
                             res.json({ ok: true, id });
@@ -2704,9 +2704,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     });
     router.delete('/salidas/:id', (req, res) => {
         const { id } = req.params;
-        db.query('DELETE FROM detalle_salidas_inv WHERE salida_id=?', [id], (err) => {
+        getDb(req).query('DELETE FROM detalle_salidas_inv WHERE salida_id=?', [id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            db.query('DELETE FROM salidas_inv WHERE id=?', [id], (err2) => {
+            getDb(req).query('DELETE FROM salidas_inv WHERE id=?', [id], (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
@@ -3148,7 +3148,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         Promise.all([
             // Por familia
             new Promise((resolve, reject) => {
-                db.query(`SELECT COALESCE(i.familia,'Sin familia') AS familia, SUM(d.importe) AS total, COUNT(*) AS movimientos
+                getDb(req).query(`SELECT COALESCE(i.familia,'Sin familia') AS familia, SUM(d.importe) AS total, COUNT(*) AS movimientos
                       FROM detalle_salidas_inv d
                       JOIN salidas_inv s ON s.id=d.salida_id
                       JOIN inventario i ON i.id=d.inventario_id
@@ -3157,7 +3157,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             }),
             // Por almacen
             new Promise((resolve, reject) => {
-                db.query(`SELECT COALESCE(i.almacen,'Sin almacén') AS almacen, SUM(d.importe) AS total, COUNT(*) AS movimientos
+                getDb(req).query(`SELECT COALESCE(i.almacen,'Sin almacén') AS almacen, SUM(d.importe) AS total, COUNT(*) AS movimientos
                       FROM detalle_salidas_inv d
                       JOIN salidas_inv s ON s.id=d.salida_id
                       JOIN inventario i ON i.id=d.inventario_id
@@ -3167,14 +3167,14 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             // Totales (entradas vs salidas)
             new Promise((resolve, reject) => {
                 const p2 = [...params, ...params];
-                db.query(`SELECT
+                getDb(req).query(`SELECT
                         (SELECT SUM(total_pen) FROM entradas_inv e ${conds.length ? 'WHERE e.fecha >= ? AND e.fecha <= ?' : ''}) AS total_entradas,
                         (SELECT SUM(total_pen) FROM salidas_inv s ${conds.length ? 'WHERE s.fecha >= ? AND s.fecha <= ?' : ''}) AS total_salidas`,
                     conds.length ? [desde, hasta, desde, hasta] : [], (e, r) => e ? reject(e) : resolve(r[0]));
             }),
             // Top 10 artículos más consumidos
             new Promise((resolve, reject) => {
-                db.query(`SELECT i.id, i.descripcion, i.familia, SUM(d.cantidad) AS cantidad_total, SUM(d.importe) AS costo_total, i.unidad
+                getDb(req).query(`SELECT i.id, i.descripcion, i.familia, SUM(d.cantidad) AS cantidad_total, SUM(d.importe) AS costo_total, i.unidad
                       FROM detalle_salidas_inv d
                       JOIN salidas_inv s ON s.id=d.salida_id
                       JOIN inventario i ON i.id=d.inventario_id
@@ -3183,7 +3183,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             }),
             // Por cliente (salidas tipo Vehiculo → placa → cliente en tabla placas)
             new Promise((resolve, reject) => {
-                db.query(`SELECT COALESCE(p.cliente,'Sin cliente') AS cliente, s.placa, SUM(d.importe) AS total, COUNT(*) AS movimientos
+                getDb(req).query(`SELECT COALESCE(p.cliente,'Sin cliente') AS cliente, s.placa, SUM(d.importe) AS total, COUNT(*) AS movimientos
                       FROM detalle_salidas_inv d
                       JOIN salidas_inv s ON s.id=d.salida_id
                       LEFT JOIN placas p ON p.placa=s.placa
@@ -3223,7 +3223,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         WHERE i.activo = 1
         ORDER BY i.familia, i.descripcion
     `;
-        db.query(sql, (err, rows) => {
+        getDb(req).query(sql, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             // Calcular valor = stock_actual * costo_referencial por moneda
             let totalPEN = 0, totalUSD = 0;

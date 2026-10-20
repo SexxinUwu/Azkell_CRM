@@ -13,7 +13,7 @@ import { GRUPOS_INVENTARIO, guardarPlantillaEntrega, leerPlantillaEntrega, type 
 const copia = (g: GrupoInventario[]): GrupoInventario[] => JSON.parse(JSON.stringify(g));
 
 // Entrega de vehículos › plantilla del inventario de partes: categorías e ítems que se califican en cada acta.
-// Se guarda en este navegador (igual que la versión actual); las actas ya hechas no cambian.
+// Se guarda en el servidor y es la misma para toda la empresa; las actas ya hechas no cambian.
 export function PlantillaEntregaSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast();
   const qc = useQueryClient();
@@ -21,18 +21,18 @@ export function PlantillaEntregaSheet({ open, onClose }: { open: boolean; onClos
   const [restaurar, setRestaurar] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { if (open) { setB(leerPlantillaEntrega()); setError(null); } }, [open]);
+  useEffect(() => { if (open) { setError(null); leerPlantillaEntrega().then(setB); } }, [open]);
 
   const setGrupo = (i: number, f: (g: GrupoInventario) => GrupoInventario) => setB(l => l.map((g, j) => (j === i ? f(g) : g)));
 
-  function guardar() {
+  async function guardar() {
     const limpia = b
       .map(g => ({ ...g, titulo: g.titulo.trim(), items: g.items.map(x => x.trim()).filter(Boolean) }))
       .filter(g => g.titulo || g.items.length);
     if (limpia.some(g => !g.titulo)) { setError('Cada categoría necesita un nombre.'); return; }
     if (!limpia.length) { setError('Deja al menos una categoría con ítems.'); return; }
     try {
-      guardarPlantillaEntrega(limpia);
+      await guardarPlantillaEntrega(limpia);
       qc.invalidateQueries({ queryKey: ['flota', 'entrega-plantilla'] });
       haptic('success'); toast('Plantilla de entrega guardada');
       onClose();

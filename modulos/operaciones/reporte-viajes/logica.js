@@ -241,7 +241,7 @@
             const isExpanded = _rvExpandedRows.has(v.viaje);
             const carretaHtml = v.placa_remolque && v.placa_remolque.trim()
                 ? `<span class="rv-badge-placa rv-badge-carreta"><i class="bi bi-truck-flatbed me-1"></i>${v.placa_remolque}</span>`
-                : `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-1.5 py-0.5" style="font-size:0.68rem;">SOLO TRACTO (-10%)</span>`;
+                : `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-1.5 py-0.5" style="font-size:0.68rem;">SOLO TRACTO (-25%)</span>`;
 
             // Formatear Fecha DD/MM/YYYY
             let fechaFmt = v.fecha || '---';
