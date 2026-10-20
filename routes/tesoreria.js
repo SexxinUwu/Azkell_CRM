@@ -2291,13 +2291,23 @@ module.exports = function (db, broadcast, logAudit) {
             const cuentaOrigen = (b.cuenta_origen || '').trim();
             const usuarioPago = (req.user && req.user.nombre) ? req.user.nombre : (b.usuario || 'Tesorería');
             const descripcionPago = (b.descripcion || `ORDEN DE COMPRA: ${id}`).trim();
-            const montoPagado = parseFloat(b.monto || b.importe) || 0;
-            const monedaPago = (b.moneda || 'PEN').toUpperCase();
-
             // 1. Obtener la Orden de Compra actual
             const [ocRows] = await tdb.query("SELECT * FROM entradas_inv WHERE id = ?", [id]);
             if (!ocRows.length) return res.status(404).json({ error: 'Orden de Compra no encontrada' });
             const oc = ocRows[0];
+
+            // Moneda y monto del pago: los de la orden (el formulario no los envía). En dólares es el importe original
+            // en US$ (total en soles ÷ tipo de cambio, igual que la pantalla); en soles, el total en soles.
+            // Moneda: la que envía el formulario; si no, la de la cuenta de origen elegida (dice DÓLARES/USD o SOLES); si no, la de la orden.
+            const aMoneda = t => { const x = String(t || '').toUpperCase(); return (x === 'USD' || /D[OÓ]LAR|US\$|\bUSD\b/.test(x)) ? 'USD' : (/SOLES|\bPEN\b|S\/|NUEVOS SOLES/.test(x) ? 'PEN' : null); };
+            const monedaOc = b.moneda ? (aMoneda(b.moneda) || String(b.moneda).toUpperCase()) : (aMoneda(cuentaOrigen) || aMoneda(oc.moneda) || 'PEN');
+            const esUSD = monedaOc === 'USD';
+            const monedaPago = esUSD ? 'USD' : 'PEN';
+            const tcOc = parseFloat(oc.tipo_cambio) || 0;
+            const totalOc = parseFloat(oc.total_pen) || 0;
+            const importeOrigen = esUSD && tcOc > 0 ? Math.round((totalOc / tcOc) * 100) / 100 : totalOc;
+            const montoEnviado = parseFloat(b.monto || b.importe) || 0;
+            const montoPagado = montoEnviado > 0 ? montoEnviado : importeOrigen;
 
             // 2. Subir voucher a S3 si se adjuntó
             let voucherUrl = oc.url_voucher || null;
@@ -2358,8 +2368,8 @@ module.exports = function (db, broadcast, logAudit) {
                     )
                 `;
 
-                const monStr = (oc.moneda || monedaPago || 'SOLES').toUpperCase().includes('DOL') ? 'DOLARES' : 'SOLES';
-                const totalFinal = montoPagado || parseFloat(oc.total_pen) || 0;
+                const monStr = esUSD ? 'DOLARES' : 'SOLES';
+                const totalFinal = montoPagado;
 
                 await tdb.query(insertCajaSql, [
                     numeroConstancia || '',
@@ -2437,7 +2447,7 @@ module.exports = function (db, broadcast, logAudit) {
                             }
                         }
 
-                        const totalFinal = montoPagado || parseFloat(oc.total_pen) || 0;
+                        const totalFinal = montoPagado;
 
                         await sendWarehousePaymentVoucherWhatsapp({
                             phone: almacenPhone,
@@ -2445,7 +2455,7 @@ module.exports = function (db, broadcast, logAudit) {
                             supplier: provNombre,
                             ruc: ruc,
                             total: totalFinal,
-                            currency: monedaPago || oc.moneda || 'PEN',
+                            currency: monedaPago,
                             paidBy: usuarioPago,
                             reason: oc.motivo_entrada || descripcionPago,
                             bankAccount: oc.cuenta_bancaria_proveedor || cuentaOrigen,
