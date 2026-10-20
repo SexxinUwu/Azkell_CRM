@@ -254,6 +254,13 @@
                     const totPed = parseFloat(oc.total_pedido || 0);
                     const pct = totPed > 0 ? Math.min(100, Math.round((totRec / totPed) * 100)) : 0;
 
+                    // Condición de pago (misma regla que la tabla)
+                    const condPagoCard = (oc.condicion_pago || 'Al contado').trim();
+                    const esCreditoCard = condPagoCard.toLowerCase().includes('crédito') || condPagoCard.toLowerCase().includes('credito');
+                    const badgeCond = esCreditoCard
+                        ? '<span class="badge" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;font-size:0.72rem;font-weight:700;border-radius:6px;padding:3px 8px;"><i class="bi bi-clock-history me-1"></i>Crédito' + (oc.dias_credito ? ' (' + oc.dias_credito + 'd)' : '') + '</span>'
+                        : '<span class="badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;font-size:0.72rem;font-weight:700;border-radius:6px;padding:3px 8px;"><i class="bi bi-cash-stack me-1"></i>Contado</span>';
+
                     let badgeProgreso = '';
                     if (esCompleto) {
                         badgeProgreso = `<span class="rec-badge rec-badge-completo"><i class="bi bi-check-circle-fill"></i> Completo</span>`;
