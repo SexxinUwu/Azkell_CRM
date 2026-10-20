@@ -54,12 +54,10 @@ export const RUTAS: RutaModulo[] = [
     path: 'operaciones/guias-remitente/*',
     permisos: ['operaciones.ver', 'admin'],
     Page: lazy(() => import('./GuiasRemitentePage').then(m => ({ default: m.GuiasRemitentePage }))),
-    nav: { key: 'guias-remitente', label: 'Guías de remitente', to: '/operaciones/guias-remitente', icon: 'FileText', permisos: ['operaciones.ver', 'admin'] },
   },
   {
     path: 'operaciones/guias-transportista/*',
     permisos: ['operaciones.ver', 'admin'],
     Page: lazy(() => import('./GuiasTransportistaPage').then(m => ({ default: m.GuiasTransportistaPage }))),
-    nav: { key: 'guias-transportista', label: 'Guías de transportista', to: '/operaciones/guias-transportista', icon: 'FileText', permisos: ['operaciones.ver', 'admin'] },
   },
 ];
