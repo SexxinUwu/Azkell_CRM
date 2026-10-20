@@ -6,7 +6,12 @@ import type { FilaExpediente } from './DocExpediente';
 import { formatFechaPe } from '../../core/lib/format';
 
 const fechaCorta = formatFechaPe;
-const celda = (v: unknown) => (v == null || String(v).trim() === '' || String(v).trim() === '---' ? '—' : String(v).trim());
+// Una fecha que llega como 2026-12-04T00:00:00.000Z se muestra solo como 2026-12-04
+const celda = (v: unknown) => {
+  const t = v == null ? '' : String(v).trim();
+  if (t === '' || t === '---') return '—';
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(t) ? t.slice(0, 10) : t;
+};
 
 /** Datos generales de la unidad, en el mismo orden que la matriz de la versión actual */
 const GENERALES = ['Placa', 'Tipo', 'Propiedad', 'Empresa', 'F. entrega', 'Año', 'Modelo', 'Color', 'Marca', 'Serie/chasis'];

@@ -4,7 +4,8 @@ import './disponibilidad.css';
 import './documentos.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Briefcase, CircleAlert, Clock, FileText, Plus, RefreshCw, Wrench } from 'lucide-react';
+import { Briefcase, CircleAlert, Clock, Download, FileSpreadsheet, FileText, Plus, RefreshCw, SlidersHorizontal, Wrench } from 'lucide-react';
+import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -22,6 +23,9 @@ import { DocumentoFormulario } from './DocumentoFormulario';
 import { DocExpediente, type EliminarDocumento, type FilaExpediente } from './DocExpediente';
 import { DocMatriz } from './DocMatriz';
 import { DocCalendario } from './DocCalendario';
+import { ConfigurarPlacasSheet, guardarSeleccion, leerSeleccion } from './ConfigurarPlacasSheet';
+import { ImportarDocumentosSheet } from './ImportarDocumentosSheet';
+import { descargarPlantilla } from './documentosExcel';
 import { grupoDe, metaDeVehiculo, type DocPersonalizado } from './docsEstado';
 
 type Vista = 'expediente' | 'matriz' | 'calendario';
@@ -45,6 +49,10 @@ export function DocumentosPage() {
   const [busqueda, setBusqueda] = useState('');
   const [placa, setPlaca] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<Formulario | null>(null);
+  // Placas que se ven (null = todas). Se elige en el configurador y queda en este dispositivo.
+  const [seleccion, setSeleccion] = useState<Set<string> | null>(leerSeleccion);
+  const [configurando, setConfigurando] = useState(false);
+  const [importando, setImportando] = useState(false);
   const [aEliminar, setAEliminar] = useState<EliminarDocumento | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const puedeEditar = can('docs_flota.crear', 'docs_flota.editar');
@@ -55,7 +63,12 @@ export function DocumentosPage() {
     () => vehiculos.map(v => ({ v, m: metaDeVehiculo(v) })).sort((a, b) => a.v.placa.localeCompare(b.v.placa)),
     [vehiculos],
   );
-  const delEmpresa = useMemo(() => todas.filter(f => empresa === 'TODAS' || claveEmpresa(f.v.empresa) === empresa), [todas, empresa]);
+  const delEmpresa = useMemo(
+    () => todas.filter(f => (!seleccion || seleccion.has(f.v.placa)) && (empresa === 'TODAS' || claveEmpresa(f.v.empresa) === empresa)),
+    [todas, empresa, seleccion],
+  );
+  const opcionesPlacas = useMemo(() => todas.map(f => ({ placa: f.v.placa, detalle: [f.v.tipo, f.v.empresa].filter(Boolean).join(' · ') })), [todas]);
+  const aplicarSeleccion = (s: Set<string> | null) => { setSeleccion(s); guardarSeleccion(s); };
 
   const cifras = useMemo(() => {
     const c = { total: delEmpresa.length, vigente: 0, alerta: 0, vencido: 0, sin: 0 };
@@ -118,6 +131,13 @@ export function DocumentosPage() {
           <>
             <Button variant="plain" className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
               disabled={isFetching} onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] })} />
+            <Button variant="plain" className="btn--icono btn--icono-acento" icon={<SlidersHorizontal size={18} />} aria-label="Configurar placas"
+              title={seleccion ? `Placas a mostrar: ${seleccion.size} de ${todas.length}` : 'Configurar placas a mostrar'} onClick={() => setConfigurando(true)} />
+            {seleccion && <span className="doc-conf__insignia" title="Hay un filtro de placas activo">{seleccion.size}/{todas.length}</span>}
+            <MenuOtros opciones={[
+              { label: 'Descargar plantilla', detalle: 'Excel con las columnas de importación', icon: <Download size={17} />, onSelect: () => descargarPlantilla().catch(aviso) },
+              puedeEditar && { label: 'Importar desde Excel', detalle: 'Crea placas nuevas y actualiza documentos', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
+            ]} />
             {puedeEditar && (
               <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ placa: null, prefijo: null, personalizado: null })}>Nuevo documento</Button>
             )}
@@ -174,6 +194,9 @@ export function DocumentosPage() {
 
       <DocumentoFormulario open={!!formulario} placa={formulario?.placa ?? null} prefijo={formulario?.prefijo ?? null}
         personalizado={formulario?.personalizado ?? null} usuario={user?.name ?? ''} onClose={cerrarFormulario} />
+
+      <ConfigurarPlacasSheet open={configurando} onClose={() => setConfigurando(false)} opciones={opcionesPlacas} seleccion={seleccion} onAplicar={aplicarSeleccion} />
+      <ImportarDocumentosSheet open={importando} onClose={() => { setImportando(false); refrescar(); }} placasConocidas={todas.map(f => f.v.placa)} />
 
       <ConfirmSheet open={!!aEliminar} onClose={() => !eliminando && setAEliminar(null)} onConfirm={confirmarEliminar}
         title={`Eliminar ${aEliminar?.titulo ?? 'documento'}`} loading={eliminando} confirmLabel="Eliminar"
