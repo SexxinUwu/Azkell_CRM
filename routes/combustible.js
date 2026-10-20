@@ -1158,9 +1158,9 @@ module.exports = function (db, broadcast, logAudit) {
                 let r = String(rStr).trim();
                 if (r.includes('/')) {
                     const p1 = r.split('/')[0].trim();
-                    if (p1) return homologarLugar(p1);
+                    if (p1) return p1;
                 }
-                return homologarLugar(r);
+                return r;
             };
 
             // Invertir ruta para retornos sin tramo explícito (ej: "LIMA - AREQUIPA" -> "AREQUIPA - LIMA")
@@ -1197,7 +1197,7 @@ module.exports = function (db, broadcast, logAudit) {
                         }
                         const info = ovTramosMap.get(k);
                         const esRet = parseInt(rt.es_retorno, 10) === 1;
-                        const rNorm = normalizarRutaTramo(rt.ruta);
+                        const rNorm = homologarLugar(normalizarRutaTramo(rt.ruta));
                         const pesoKg = parseFloat(rt.peso_total || 0);
                         const pesoTn = pesoKg > 50 ? +(pesoKg / 1000).toFixed(2) : +pesoKg.toFixed(2);
                         
@@ -1221,7 +1221,7 @@ module.exports = function (db, broadcast, logAudit) {
                     const ov = ovMap.get(vKey) || ovMap.get(cleanV);
                     if (ov) {
                         if (ov.ruta && (!v.ruta || v.ruta === 'Sin Ruta')) {
-                            v.ruta = ov.ruta;
+                            v.ruta = homologarLugar(ov.ruta);
                         }
                         if (ov.peso && parseFloat(ov.peso) > 0) {
                             const rawP = parseFloat(ov.peso);
@@ -1405,6 +1405,16 @@ module.exports = function (db, broadcast, logAudit) {
                         rutaRetornoCalculada = invertirRutaRetorno(rutaIdaCalculada || t.ruta);
                     }
 
+                    // La ruta manda desde el vale de combustible (el análisis es todo en base a los vales): la ida es la del vale
+                    // y el retorno su inversa. Los tramos de la orden de viaje solo se usan cuando el vale no trae ruta.
+                    if (t.ruta && t.ruta !== 'Sin Ruta') {
+                        const partesVale = String(t.ruta).split('|').map(p => normalizarRutaTramo(p.trim())).filter(Boolean);
+                        if (partesVale.length) {
+                            rutaIdaCalculada = partesVale[0];
+                            rutaRetornoCalculada = partesVale[1] || invertirRutaRetorno(partesVale[0]);
+                        }
+                    }
+
                     // Si no hay retorno registrado con carga, el peso del retorno va en 0 Tn (vacío)
                     if (tramosInfo.retorno.length === 0) {
                         pesoRetornoCalculado = 0;
@@ -1532,8 +1542,8 @@ module.exports = function (db, broadcast, logAudit) {
                         motor: placaMotorMap.get(t.placa) || '',
                         marca: placaMarcaMap.get(t.placa) || '',
                         configuracion: placaConfigMap.get(t.placa) || '',
-                        ruta: homologarLugar(t.ruta),
-                        rutaIda: rutaIdaCalculada || homologarLugar(t.ruta),
+                        ruta: t.ruta,
+                        rutaIda: rutaIdaCalculada || t.ruta,
                         rutaRetorno: rutaRetornoCalculada || '',
                         ordenIda,
                         ordenRetorno,
