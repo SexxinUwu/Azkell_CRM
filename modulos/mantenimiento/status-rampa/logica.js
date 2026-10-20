@@ -426,6 +426,18 @@ function srTecnicosDe(ots) {
         if (o.id_ot) ids[o.id_ot] = true;
         if (o.ticket_entrada) tickets[o.ticket_entrada] = true;
     });
+    // Técnicos de la propia OT (los que se eligen al crearla): no dependen de que esté iniciada ni de que tenga trabajos
+    abiertas.forEach(function(o) {
+        var det = o.detalles_json;
+        if (typeof det === 'string') { try { det = JSON.parse(det); } catch (e) { det = null; } }
+        if (!det || typeof det !== 'object') return;
+        var sumar = function(v) {
+            if (Array.isArray(v)) { v.forEach(sumar); return; }
+            if (typeof v === 'string') v.split(',').forEach(function(n) { var x = n.trim(); if (x) nombres[x] = true; });
+        };
+        sumar(det.tecnicos); sumar(det.tecnicos_str);
+        (Array.isArray(det.motivos_array) ? det.motivos_array : []).forEach(function(m) { sumar(m && m.tecnico); sumar(m && m.tecnico_nombre); });
+    });
     (window.srTrabajosData || []).forEach(function(t) {
         var enOT = !!t.ot_id && ids[t.ot_id] === true;
         var enTicket = !!t.ticket_visita && tickets[t.ticket_visita] === true;

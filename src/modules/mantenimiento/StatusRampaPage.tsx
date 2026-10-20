@@ -18,7 +18,7 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { crearOTHija, eliminarRampaRegistro, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
+import { crearOTHija, eliminarRampaRegistro, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, tecnicosDeOT, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
 import { ConfigurarRampasSheet, enviarWhatsApp, exportarRampasPDF, textoReporteRampas, type CatRampa } from './RampasHerramientas';
 import { LiberarRampa, RampaFormulario } from './RampaFormulario';
 import { SUBTIPOS_OT, TIPOS_OT } from './tipos-ot';
@@ -50,14 +50,15 @@ function otsDeRampa(e: RampaEntrada, ots: OrdenTrabajo[], entradas: RampaEntrada
   });
 }
 
-// Técnicos únicos de las OT abiertas de cada rampa (trabajos_ot.tecnico, separados por coma)
+// Técnicos únicos de las OT abiertas de cada rampa: los de la OT (detalles) y los de sus trabajos (trabajos_ot.tecnico, separados por coma)
 function tecnicosDeRampas(entradas: RampaEntrada[], ots: OrdenTrabajo[], trabajos: TrabajoOT[]): Map<string, string[]> {
   const mapa = new Map<string, string[]>();
   for (const e of entradas) {
     const abiertas = otsDeRampa(e, ots, entradas);
     const ids = new Set(abiertas.map(o => o.id_ot).filter(Boolean));
     const tickets = new Set(abiertas.map(o => o.ticket_entrada).filter((x): x is string => !!x));
-    const nombres = new Set<string>();
+    // Los técnicos de la OT (los que se eligen al crearla) y los de sus trabajos: la OT cuenta aunque no esté iniciada
+    const nombres = new Set<string>(abiertas.flatMap(o => tecnicosDeOT(o)));
     for (const t of trabajos) {
       const enOT = (t.ot_id ?? '') !== '' && ids.has(t.ot_id ?? '');
       const enTicket = !!t.ticket_visita && tickets.has(t.ticket_visita);

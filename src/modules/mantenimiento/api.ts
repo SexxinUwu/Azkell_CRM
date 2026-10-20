@@ -313,6 +313,20 @@ export function aObjeto(v: unknown): Record<string, unknown> {
   return {};
 }
 
+/** Técnicos asignados a una OT al crearla o editarla (detalles_json.tecnicos, tecnicos_str o el técnico de cada motivo).
+ *  Es lo que muestra la ficha de la OT; no depende de que esté iniciada ni de que ya tenga trabajos. */
+export function tecnicosDeOT(o: { detalles_json?: unknown }): string[] {
+  const d = aObjeto(o.detalles_json);
+  const nombres = new Set<string>();
+  const sumar = (v: unknown): void => {
+    if (Array.isArray(v)) v.forEach(sumar);
+    else if (typeof v === 'string') v.split(',').forEach(n => { const x = n.trim(); if (x) nombres.add(x); });
+  };
+  sumar(d.tecnicos); sumar(d.tecnicos_str);
+  if (Array.isArray(d.motivos_array)) d.motivos_array.forEach(m => { const mm = aObjeto(m); sumar(mm.tecnico); sumar(mm.tecnico_nombre); });
+  return [...nombres];
+}
+
 export function trabajoCosto(t: TrabajoOT): number {
   return Number(aObjeto(t.detalles_json).costo) || 0;
 }

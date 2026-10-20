@@ -1071,7 +1071,7 @@
     // Helper: Buscar consumo teórico en Galones según Sentido (IDA / RETORNO), Ruta, Peso (Regla de Techo) y Motor (BÚSQUEDA ESTRICTA)
     // Helper: Normalizar texto para comparaciones robustas
     function caNormalizar(str) {
-        return (str || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+        return (str || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\bCALLAO\b/g, 'LIMA').replace(/\s+/g, " ").trim();
     }
 
     // Helper: Normalizar código de motor (ej: "DC13 450" -> "DC13450")
@@ -1264,11 +1264,16 @@
             let pesoRetVal = (t.pesoRetorno !== undefined) ? (parseFloat(t.pesoRetorno) || 0) : (rawPesoRet > 0 ? (rawPesoRet > 50 ? +(rawPesoRet / 1000).toFixed(2) : +rawPesoRet.toFixed(2)) : 0);
 
             // Rutas diferenciadas por tramo con inversión inteligente de retorno
-            const rutaTramoIda = t.rutaIda || t.ruta;
+            let rutaTramoIda = t.rutaIda || t.ruta;
             let rutaTramoRet = t.rutaRetorno || (t.ruta && t.ruta.includes('|') ? t.ruta.split('|')[1].trim() : '');
-            if (!rutaTramoRet || caNormalizar(rutaTramoRet) === caNormalizar(rutaTramoIda)) {
-                rutaTramoRet = caInvertirRutaRetorno(rutaTramoIda);
+            if (t.ruta && !t.ruta.includes('|')) {
+                rutaTramoIda = t.ruta;
+                if (!rutaTramoRet || caNormalizar(rutaTramoRet) === caNormalizar(rutaTramoIda)) {
+                    rutaTramoRet = caInvertirRutaRetorno(t.ruta);
+                }
             }
+            if (rutaTramoIda) rutaTramoIda = rutaTramoIda.replace(/\bCALLAO\b/gi, 'LIMA');
+            if (rutaTramoRet) rutaTramoRet = rutaTramoRet.replace(/\bCALLAO\b/gi, 'LIMA');
 
             // Odómetros por tramo
             const minOdoIda = kInicio > 0 ? kInicio : (vIda.length > 0 ? Math.min(...vIda.map(x => x.odometro || 0).filter(Boolean)) : 0);

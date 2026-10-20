@@ -995,6 +995,21 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
             });
         }
 
+        // Técnicos que trae la propia OT (los que se eligen al crearla): detalles_json.tecnicos, tecnicos_str o el técnico de cada motivo
+        const tecnicosDeDetalle = (detRaw) => {
+            let d = detRaw;
+            if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { d = null; } }
+            const nombres = new Set();
+            if (!d || typeof d !== 'object') return nombres;
+            const sumar = (v) => {
+                if (Array.isArray(v)) v.forEach(sumar);
+                else if (typeof v === 'string') v.split(',').map(s => s.trim()).filter(Boolean).forEach(n => nombres.add(n));
+            };
+            sumar(d.tecnicos); sumar(d.tecnicos_str);
+            (Array.isArray(d.motivos_array) ? d.motivos_array : []).forEach(m => { if (m) { sumar(m.tecnico); sumar(m.tecnico_nombre); } });
+            return nombres;
+        };
+
         const otsList = (otsRaw || []).map(o => {
             let det = {};
             try { det = typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : (o.detalles_json || {}); } catch(e){}
@@ -1008,7 +1023,7 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
                 supervisor: det.supervisor || o.iniciado_por || o.creado_por || 'Taller Central',
                 mecanico: det.mecanico || det.responsable || det.tecnico || 'Asignado',
                 motivo: det.motivo || det.descripcion_falla || 'Mantenimiento',
-                tecnicos: [...(tecnicosPorOt.get(o.id_ot || o.ticket_entrada) || [])],
+                tecnicos: [...new Set([...tecnicosDeDetalle(o.detalles_json), ...(tecnicosPorOt.get(o.id_ot || o.ticket_entrada) || [])])],
                 rampa: det.rampa_origen || det.id_rampa || '-',
                 km: det.km ? `${Number(det.km).toLocaleString('es-PE')} km` : '-'
             };
@@ -1252,13 +1267,32 @@ app.get(['/api/tv/feed', '/api/tv/data', '/api/tv/gps-feed'], async (req, res) =
             LIMIT 60
         `).catch(() => [[]]);
 
-        // Técnicos de la unidad en rampa: los de sus OT en proceso
+        // Técnicos de la unidad en rampa: los de TODAS sus OT que no estén finalizadas, cerradas ni anuladas (abiertas, en proceso…),
+        // tomados de la propia OT y de sus trabajos. No depende de que la OT esté iniciada.
         const tecnicosPorPlaca = new Map();
-        otsList.forEach(o => {
-            const set = tecnicosPorPlaca.get(o.placa) || new Set();
-            (o.tecnicos || []).forEach(n => set.add(n));
-            tecnicosPorPlaca.set(o.placa, set);
-        });
+        const placasRampa = [...new Set((rampasRaw || []).map(r => r.placa).filter(Boolean))];
+        if (placasRampa.length) {
+            const p = activeDb.promise();
+            const [otsAct] = await p.query(
+                "SELECT id_ot, ticket_entrada, placa, detalles_json FROM ordenes_trabajo WHERE placa IN (?) AND LOWER(estado) NOT REGEXP 'cerrad|finaliz|anulad'", [placasRampa]
+            ).catch(() => [[]]);
+            const idsAct = (otsAct || []).flatMap(o => [o.id_ot, o.ticket_entrada]).filter(Boolean);
+            const porTicket = new Map();
+            if (idsAct.length) {
+                const [tr] = await p.query("SELECT ticket_visita, tecnico FROM trabajos_ot WHERE ticket_visita IN (?) AND tecnico IS NOT NULL AND TRIM(tecnico) <> ''", [idsAct]).catch(() => [[]]);
+                (tr || []).forEach(t => {
+                    const s = porTicket.get(t.ticket_visita) || new Set();
+                    String(t.tecnico).split(',').map(x => x.trim()).filter(Boolean).forEach(n => s.add(n));
+                    porTicket.set(t.ticket_visita, s);
+                });
+            }
+            (otsAct || []).forEach(o => {
+                const set = tecnicosPorPlaca.get(o.placa) || new Set();
+                tecnicosDeDetalle(o.detalles_json).forEach(n => set.add(n));
+                [o.id_ot, o.ticket_entrada].forEach(k => (porTicket.get(k) || new Set()).forEach(n => set.add(n)));
+                tecnicosPorPlaca.set(o.placa, set);
+            });
+        }
 
         const rampasList = (rampasRaw || []).map(r => {
             let hIngreso = r.hora_ingreso ? String(r.hora_ingreso).substring(0, 5) : '-';

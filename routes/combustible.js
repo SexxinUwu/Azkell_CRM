@@ -1158,8 +1158,10 @@ module.exports = function (db, broadcast, logAudit) {
                 let r = String(rStr).trim();
                 if (r.includes('/')) {
                     const p1 = r.split('/')[0].trim();
-                    if (p1) return p1;
+                    if (p1) r = p1;
                 }
+                // En operaciones y combustible la base Callao se homologa a Lima (consistencia con matriz y viajes)
+                r = r.replace(/\bCALLAO\b/gi, 'LIMA');
                 return r;
             };
 
@@ -1302,8 +1304,13 @@ module.exports = function (db, broadcast, logAudit) {
                         ruta: v.ruta || 'Sin Ruta',
                         vouchers: []
                     };
-                } else if (!vehiculoMap[vehKey][tripKey].carreta && v.carreta) {
-                    vehiculoMap[vehKey][tripKey].carreta = v.carreta;
+                } else {
+                    if (!vehiculoMap[vehKey][tripKey].carreta && v.carreta) {
+                        vehiculoMap[vehKey][tripKey].carreta = v.carreta;
+                    }
+                    if ((!vehiculoMap[vehKey][tripKey].ruta || vehiculoMap[vehKey][tripKey].ruta === 'Sin Ruta') && v.ruta && v.ruta !== 'Sin Ruta') {
+                        vehiculoMap[vehKey][tripKey].ruta = v.ruta;
+                    }
                 }
 
                 vehiculoMap[vehKey][tripKey].vouchers.push({
@@ -1375,32 +1382,45 @@ module.exports = function (db, broadcast, logAudit) {
                     let ordenIda = '';
                     let ordenRetorno = '';
 
+                    // 1. Obtener órdenes de servicio y pesos desagregados desde los tramos de la orden
                     if (tramosInfo.ida.length > 0) {
-                        rutaIdaCalculada = tramosInfo.ida[0].ruta;
                         ordenIda = tramosInfo.ida.map(x => x.orden).join(', ');
                         const sumaPesoIda = tramosInfo.ida.reduce((s, x) => s + x.pesoTn, 0);
                         if (sumaPesoIda > 0) pesoIdaCalculado = parseFloat(sumaPesoIda.toFixed(2));
                     }
 
                     if (tramosInfo.retorno.length > 0) {
-                        rutaRetornoCalculada = tramosInfo.retorno[0].ruta;
                         ordenRetorno = tramosInfo.retorno.map(x => x.orden).join(', ');
                         const sumaPesoRet = tramosInfo.retorno.reduce((s, x) => s + x.pesoTn, 0);
                         if (sumaPesoRet > 0) pesoRetornoCalculado = parseFloat(sumaPesoRet.toFixed(2));
                     }
 
-                    // Si no hubo tramos desagregados en BD, separar por pipe '|' de la ruta principal si existiera
-                    if (!rutaIdaCalculada && t.ruta) {
+                    // 2. Definir Ida y Retorno: coincidir siempre con la ruta del viaje (t.ruta)
+                    if (t.ruta && t.ruta !== 'Sin Ruta') {
                         const parts = t.ruta.split('|').map(p => normalizarRutaTramo(p.trim())).filter(Boolean);
                         if (parts.length >= 2) {
                             rutaIdaCalculada = parts[0];
                             rutaRetornoCalculada = parts[1];
-                        } else {
-                            rutaIdaCalculada = normalizarRutaTramo(t.ruta);
+                        } else if (parts.length === 1 && parts[0]) {
+                            rutaIdaCalculada = parts[0];
+                            // Si la orden de viaje tiene un retorno registrado con tramo específico
+                            if (tramosInfo.retorno.length > 0 && tramosInfo.retorno[0].ruta) {
+                                rutaRetornoCalculada = normalizarRutaTramo(tramosInfo.retorno[0].ruta);
+                            } else {
+                                rutaRetornoCalculada = invertirRutaRetorno(rutaIdaCalculada);
+                            }
                         }
                     }
 
-                    // Inversión inteligente de retorno si no vino tramo de retorno registrado o si viene igual a la ida
+                    // 3. Fallback: Si el viaje no tenía ruta, tomar de los tramos de la orden
+                    if (!rutaIdaCalculada && tramosInfo.ida.length > 0) {
+                        rutaIdaCalculada = normalizarRutaTramo(tramosInfo.ida[0].ruta);
+                    }
+                    if (!rutaRetornoCalculada && tramosInfo.retorno.length > 0) {
+                        rutaRetornoCalculada = normalizarRutaTramo(tramosInfo.retorno[0].ruta);
+                    }
+
+                    // 4. Inversión inteligente de retorno si no vino o si quedó idéntica a la ida
                     if (!rutaRetornoCalculada || rutaRetornoCalculada.toUpperCase().trim() === (rutaIdaCalculada || '').toUpperCase().trim()) {
                         rutaRetornoCalculada = invertirRutaRetorno(rutaIdaCalculada || t.ruta);
                     }
