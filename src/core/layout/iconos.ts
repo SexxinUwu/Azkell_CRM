@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  ArrowLeftRight,
   Banknote,
   BarChart2,
   Boxes,
@@ -34,6 +35,7 @@ import {
 
 const ICONOS: Record<string, LucideIcon> = {
   AlertTriangle,
+  ArrowLeftRight,
   Banknote,
   BarChart2,
   Boxes,
