@@ -17,7 +17,7 @@ import { api, errorMessage } from '../../core/api/client';
 // Seguridad › Status "Unidades en Base": qué unidades están dentro de la base o patio, en vivo.
 // Lectura del panorama del servidor (GET /seguridad/unidades-base/panorama-en-vivo), refresca cada 30 segundos.
 interface UnidadBase {
-  id: string; placa: string; placa_carreta: string | null; conductor: string | null; empresa: string | null; marca: string | null;
+  id: string | null; base_id: string | number | null; placa: string; placa_camion: string | null; placa_carreta: string | null; conductor: string | null; empresa: string | null; marca: string | null;
   tipo: string | null; status_operativo: string | null; ubicacion: string | null; zona: string | null; estado: string | null;
   estado_carga: string | null; observacion: string | null; corte: string | null; esRuta: boolean; fecha_salida: string | null;
   hora_salida: string | null; km_salida: number | null; orden_viaje: string | null; has_alert: boolean | number | null;
@@ -89,7 +89,7 @@ export function UnidadesBasePage() {
         ) : (
           <TablaRedimensionable id="unidades-base" columnas={COLUMNAS} ariaLabel="Unidades en base" altoMax="70vh">
             {datos.map(u => (
-              <tr key={u.id}>
+              <tr key={`${u.base_id ?? 'sin-base'}-${u.placa}-${u.placa_carreta ?? ''}`}>
                 <Celda><LicensePlate plate={u.placa} size="sm" /></Celda>
                 <Celda>{u.empresa || '—'}</Celda>
                 <Celda>{u.conductor || '—'}</Celda>
@@ -101,7 +101,8 @@ export function UnidadesBasePage() {
                 <Celda mono>{u.orden_viaje || '—'}</Celda>
                 <Celda>{u.has_alert === true || u.has_alert === 1 ? <span style={{ color: 'var(--red-ink)', fontWeight: 700 }}>Con alerta</span> : '—'}</Celda>
                 <Celda>
-                  {puedeEditar && (
+                  {/* Solo las filas con registro en la base se editan o eliminan; las que vienen de ruta o sin registro no */}
+                  {puedeEditar && u.base_id != null && (
                     <span style={{ display: 'inline-flex', gap: 'var(--s-1)' }}>
                       <Button variant="secondary" icon={<Pencil size={14} />} aria-label={`Editar ${u.placa}`} onClick={() => setForma({ item: u })}>{''}</Button>
                       <Button variant="secondary" icon={<Trash2 size={14} />} aria-label={`Eliminar ${u.placa}`} onClick={() => setBorrar(u)}>{''}</Button>

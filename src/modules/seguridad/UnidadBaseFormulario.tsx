@@ -8,9 +8,10 @@ import { haptic } from '../../core/lib/haptics';
 
 // Registro de una unidad en la base (garita): alta, edición y baja, con los mismos campos del clásico.
 export interface RegistroBase {
-  base_id?: string | number;
-  id?: string | number;
+  base_id?: string | number | null;
+  id?: string | number | null;
   placa: string;
+  placa_camion?: string | null;
   placa_carreta: string | null;
   conductor: string | null;
   corte: string | null;
@@ -23,6 +24,10 @@ const CORTES = ['Corte 1', 'Corte 2'];
 const ZONAS = ['Base', 'Mantenimiento', 'Lavado'];
 const ESTADOS = ['Cargado', 'Con Devolución', 'Vacío'];
 const hoyLima = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+// El panorama muestra '—' cuando falta una de las dos placas: ese valor no es una placa
+const dato = (v?: string | null) => (v && v !== '—' ? v : '');
+// Si la base guarda un valor fuera de la lista, se muestra igual para no cambiarlo sin querer al guardar
+const opciones = (lista: string[], actual: string) => (!actual || lista.includes(actual) ? lista : [...lista, actual]);
 
 export function RegistroBaseSheet({ abierto, registro, onClose, onGuardado }: {
   abierto: boolean; registro: RegistroBase | null; onClose: () => void; onGuardado: () => void;
@@ -37,8 +42,8 @@ export function RegistroBaseSheet({ abierto, registro, onClose, onGuardado }: {
     if (!abierto) return;
     setError(null);
     setV({
-      placaCamion: registro?.placa ?? '',
-      placaCarreta: registro?.placa_carreta ?? '',
+      placaCamion: dato(registro?.placa_camion),
+      placaCarreta: dato(registro?.placa_carreta),
       conductor: registro?.conductor ?? '',
       corte: registro?.corte ?? 'Corte 1',
       zona: registro?.zona ?? 'Base',
@@ -76,9 +81,9 @@ export function RegistroBaseSheet({ abierto, registro, onClose, onGuardado }: {
         <Field label="Placa del camión">{p => <TextInput {...p} value={v.placaCamion} onChange={e => setV({ ...v, placaCamion: e.target.value.toUpperCase() })} />}</Field>
         <Field label="Placa de la carreta">{p => <TextInput {...p} value={v.placaCarreta} onChange={e => setV({ ...v, placaCarreta: e.target.value.toUpperCase() })} />}</Field>
         <Field label="Conductor" wide>{p => <TextInput {...p} value={v.conductor} onChange={e => setV({ ...v, conductor: e.target.value.toUpperCase() })} />}</Field>
-        <Field label="Corte">{p => <SelectInput {...p} value={v.corte} onChange={e => setV({ ...v, corte: e.target.value })}>{CORTES.map(c => <option key={c} value={c}>{c}</option>)}</SelectInput>}</Field>
-        <Field label="Zona">{p => <SelectInput {...p} value={v.zona} onChange={e => setV({ ...v, zona: e.target.value })}>{ZONAS.map(z => <option key={z} value={z}>{z}</option>)}</SelectInput>}</Field>
-        <Field label="Estado de carga" wide>{p => <SelectInput {...p} value={v.estado} onChange={e => setV({ ...v, estado: e.target.value })}>{ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}</SelectInput>}</Field>
+        <Field label="Corte">{p => <SelectInput {...p} value={v.corte} onChange={e => setV({ ...v, corte: e.target.value })}>{opciones(CORTES, v.corte).map(c => <option key={c} value={c}>{c}</option>)}</SelectInput>}</Field>
+        <Field label="Zona">{p => <SelectInput {...p} value={v.zona} onChange={e => setV({ ...v, zona: e.target.value })}>{opciones(ZONAS, v.zona).map(z => <option key={z} value={z}>{z}</option>)}</SelectInput>}</Field>
+        <Field label="Estado de carga" wide>{p => <SelectInput {...p} value={v.estado} onChange={e => setV({ ...v, estado: e.target.value })}>{opciones(ESTADOS, v.estado).map(s => <option key={s} value={s}>{s}</option>)}</SelectInput>}</Field>
         <Field label="Observación" wide>{p => <TextInput {...p} value={v.observacion} onChange={e => setV({ ...v, observacion: e.target.value })} />}</Field>
       </div>
     </Sheet>
