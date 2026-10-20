@@ -813,7 +813,6 @@ window.rotAbrirDetalle = function(idOT) {
                     </h6>
                     <span class="badge bg-info bg-opacity-10 text-info fw-bold rounded-pill px-2 py-1" id="rot-srv-count" style="font-size: 0.7rem;">0</span>
                 </div>
-                ${esAprobada ? `<button class="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 py-1" style="font-size: 0.72rem;" onclick="event.stopPropagation();window.rotAbrirNuevaOrdenServicio('${rotEscHtml(idOT)}','${rotEscHtml(ot.placa||'')}')"><i class="bi bi-plus-lg me-1"></i>Nueva OS</button>` : ''}
                 ${esAprobada ? `<button class="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 py-1" style="font-size: 0.72rem;" onclick="event.stopPropagation();window.rotAbrirAgregarServicios('${rotEscHtml(idOT)}')"><i class="bi bi-link-45deg me-1"></i>Agregar OC</button>` : ''}
             </div>
             <div id="rot-srv-body"><div class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>

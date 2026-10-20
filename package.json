@@ -14,6 +14,7 @@
     "db:deploy": "node scripts/prisma_empresas.js deploy",
     "dev:app": "vite",
     "typecheck": "tsc --noEmit -p .",
+    "build": "npm run build:app",
     "build:app": "vite build",
     "dev:sitios": "vite --config vite.sitios.config.mts",
     "build:sitios": "vite build --config vite.sitios.config.mts",

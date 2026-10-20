@@ -2977,6 +2977,12 @@ window._srAgregarItemMat = function() {
     tbody.appendChild(tr);
 };
 
+// Mismos descriptores que el servidor (routes/taller.js, esTextoDeServicio): sin acentos, en mayúsculas
+window._srEsServicioTexto = function(texto) {
+    var t = String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+    return /^SERV-|\b(SERVICIOS?|MANO DE OBRA|MANTENIMIENTO EXTERNO|TORNO|RECTIFICAD\w*|ALINEAMIENTO|BALANCEO|LABORATORIO DIESEL|REPARACION DE TANQUE)\b/.test(t);
+};
+
 window._srBuscarArtMat = function(input, idx) {
     var val = input.value || '';
     var invId = val.split(' — ')[0].trim();
@@ -2999,6 +3005,9 @@ window._srBuscarArtMat = function(input, idx) {
             }
         }
     } else {
+        // El texto ya no corresponde a un artículo del inventario: se quita el ID elegido antes
+        var hidSinArt = document.querySelector('.sr-mat-item-inv-id[data-idx="' + idx + '"]');
+        if (hidSinArt) hidSinArt.value = '';
         if (stockEl) stockEl.value = '';
         if (lblEl) lblEl.style.display = 'none';
     }
@@ -3038,21 +3047,27 @@ window.srGuardarMaterial = function() {
     var cants = document.querySelectorAll('.sr-mat-item-cant');
     var cus   = document.querySelectorAll('.sr-mat-item-cu');
     var imps  = document.querySelectorAll('.sr-mat-item-imp');
+    var invIds = document.querySelectorAll('.sr-mat-item-inv-id');
     var items = [];
     for (var i = 0; i < cants.length; i++) {
         var desc = descs[i] ? descs[i].value.trim() : '';
         if (!desc) continue;
+        var invId = invIds[i] ? invIds[i].value : '';
+        // Texto libre que describe un servicio: no es un artículo de almacén (va en Servicios de terceros)
+        if (!invId && window._srEsServicioTexto(desc)) {
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('"' + desc + '" es un servicio, no un artículo. Agrégalo en Servicios de terceros de la OT.', 'danger');
+            return;
+        }
         var cant = parseFloat(cants[i].value) || 0;
         var cu   = parseFloat(cus[i].value)   || 0;
         var imp  = parseFloat(imps[i].value)  || cant * cu;
         if (cant <= 0) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Cantidad inválida en fila ' + (i+1), 'danger'); return; }
-        items.push({ descripcion: desc, cantidad: cant, costo_unitario: cu, importe: imp });
+        items.push({ inventario_id: invId || null, descripcion: desc, cantidad: cant, costo_unitario: cu, importe: imp });
     }
     if (!items.length) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Agrega al menos un artículo', 'danger'); return; }
 
     // Validar stock antes de guardar
     var sinStock = [];
-    var invIds = document.querySelectorAll('.sr-mat-item-inv-id');
     var descs2 = document.querySelectorAll('.sr-mat-item-desc');
     items.forEach(function(it, i) {
         var invId = invIds[i] ? invIds[i].value : '';

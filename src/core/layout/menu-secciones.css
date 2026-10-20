@@ -282,7 +282,7 @@
 
 /* Contraído: la línea de la sección abierta va pegada al borde izquierdo del riel (acabado de barra lateral) */
 .sidebar:not(:hover):not(.sidebar--teclado):not(.sidebar--fijo) .nav-seccion--abierta::before {
-  left: 0;
+  left: 5px;
   top: 10px;
   bottom: 10px;
   width: 3px;

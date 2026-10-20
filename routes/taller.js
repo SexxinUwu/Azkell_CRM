@@ -173,6 +173,10 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
     // ── Servicios de terceros de una OT: las OC de servicio solo suman cuando el usuario las agrega ──
     const ESTADOS_PROCESADO = ['procesado', 'pagado', 'aprobado', 'aprobada'];
+    // Descriptores de servicio en texto libre (sin acentos, mayúsculas). "SOLDADURA" y "VULCANIZADO" no van:
+    // hay artículos de almacén con esos nombres (p. ej. electrodos y cementos)
+    const DESCRIPTOR_SERVICIO = /^SERV-|\b(SERVICIOS?|MANO DE OBRA|MANTENIMIENTO EXTERNO|TORNO|RECTIFICAD\w*|ALINEAMIENTO|BALANCEO|LABORATORIO DIESEL|REPARACION DE TANQUE)\b/;
+    const esTextoDeServicio = (texto) => DESCRIPTOR_SERVICIO.test(String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase());
     router.get('/ot-servicios', async (req, res) => {
         try {
             const [rows] = await (req.db || db).promise().query(
@@ -188,8 +192,8 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             const [rows] = await (req.db || db).promise().query(
                 `SELECT id, fecha, proveedor_nombre, moneda, total_pen, estado, ot_id
                  FROM entradas_inv
-                 WHERE LOWER(tipo_orden) = 'orden de servicio' AND ot_servicio_agregado = 0 AND LOWER(estado) IN (?)
-                   AND (ot_id IS NULL OR ot_id = ?)
+                 WHERE LOWER(tipo_orden) = 'orden de servicio' AND LOWER(estado) IN (?)
+                   AND (ot_id IS NULL OR ot_id = '' OR (ot_id = ? AND ot_servicio_agregado = 0))
                  ORDER BY fecha DESC LIMIT 200`, [ESTADOS_PROCESADO, req.query.ot || '']);
             res.json({ ok: true, data: rows });
         } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
@@ -201,8 +205,8 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         try {
             const [r] = await (req.db || db).promise().query(
                 `UPDATE entradas_inv SET ot_id = ?, ot_servicio_agregado = 1
-                 WHERE id IN (?) AND LOWER(tipo_orden) = 'orden de servicio' AND ot_servicio_agregado = 0
-                   AND LOWER(estado) IN (?) AND (ot_id IS NULL OR ot_id = ?)`, [ot, ids, ESTADOS_PROCESADO, ot]);
+                 WHERE id IN (?) AND LOWER(tipo_orden) = 'orden de servicio'
+                   AND LOWER(estado) IN (?) AND (ot_id IS NULL OR ot_id = '' OR (ot_id = ? AND ot_servicio_agregado = 0))`, [ot, ids, ESTADOS_PROCESADO, ot]);
             if (logAudit) logAudit(req, 'TALLER', 'AGREGAR_SERVICIO_OT', `Agregó ${r.affectedRows} OC de servicio a la OT ${ot}`);
             res.json({ ok: true, agregados: r.affectedRows });
         } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
@@ -939,6 +943,9 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         // Solo se solicitan artículos (INV): los servicios (SERV) no salen del almacén
         const servicios = (Array.isArray(items) ? items : []).filter(d => /^SERV/i.test(String(d.inventario_id || '')));
         if (servicios.length) return res.status(400).json({ error: 'Solo se pueden solicitar artículos (INV). Quita los servicios: ' + servicios.map(d => d.inventario_id).join(', ') });
+        // Texto libre que describe un servicio o mano de obra: se rechaza; eso va en Servicios de terceros
+        const textoServicio = (Array.isArray(items) ? items : []).filter(d => !d.inventario_id && esTextoDeServicio(d.descripcion));
+        if (textoServicio.length) return res.status(400).json({ error: 'Eso es un servicio, no un artículo. Agrégalo en Servicios de terceros: ' + textoServicio.map(d => d.descripcion).join(', ') });
         // Todo se escribe en la base de esta empresa (req.db), nunca en una base fija
         const targetDb = req.db || db;
         const fecha = new Date().toISOString().split('T')[0];
