@@ -619,6 +619,12 @@
       <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
       <input type="text" id="buscadorChecklist" class="ck-apple-search" placeholder="Buscar folio, placa, conductor..." oninput="window.filtrarChecklist()">
     </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <input type="date" id="ckFiltroDesde" class="form-control form-control-sm" title="Desde" onchange="window.ckCambiarRango()">
+      <span class="text-muted small">a</span>
+      <input type="date" id="ckFiltroHasta" class="form-control form-control-sm" title="Hasta" onchange="window.ckCambiarRango()">
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.ckHoy()">Hoy</button>
+    </div>
     <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-empresas-checklist">
       <button type="button" class="ck-segment-item active" onclick="window.filtrarEmpresaChecklist('TODAS', this)">Todas</button>
     </div>
