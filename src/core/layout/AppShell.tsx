@@ -19,6 +19,18 @@ import { useLiveUpdates } from '../api/live';
 import { useNavBadges } from './useNavBadges';
 import { abrirClasico, findNavItem, homePath, visibleSections, type NavItem, type NavSection } from './navigation';
 import './layout.css';
+import './menu-secciones.css';
+
+// Color de cada sección del menú: identifica el módulo de un vistazo
+const COLOR_SECCION: Record<string, string> = {
+  Operaciones: '#2563eb', 'Operaciones Marsisa': '#d97706', Flota: '#16a34a', Mantenimiento: '#ea580c', 'Almacén': '#7c3aed',
+  Gerencia: '#0f766e', RRHH: '#db2777', 'Tesorería': '#059669', Conductor: '#0891b2', Seguridad: '#475569', Directorio: '#4f46e5',
+};
+
+// Pendientes de una sección: los contadores de sus opciones (y de sus submenús)
+function contadorDe(item: NavItem, contador: Record<string, number>): number {
+  return (item.badge ? contador[item.badge] ?? 0 : 0) + (item.children ?? []).reduce((s, c) => s + contadorDe(c, contador), 0);
+}
 
 export function AppShell() {
   const { user, can, logout } = useAuth();
@@ -35,6 +47,12 @@ export function AppShell() {
   const live = useLiveUpdates(); // cambios de otros dispositivos, al instante
   const sections = visibleSections(can);
   const contador = useNavBadges(can('gerencia.ver'));
+  // Menú en acordeón: solo una sección abierta a la vez. Al entrar a una pantalla, se abre la sección que la contiene.
+  const [seccionAbierta, setSeccionAbierta] = useState<string | null>(null);
+  useEffect(() => {
+    const activa = sections.find(s => s.items.some(i => (i.children ? i.children.some(c => isActive(c, location.pathname)) : isActive(i, location.pathname))));
+    if (activa) setSeccionAbierta(activa.title);
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
   const current = findNavItem(location.pathname);
   const pageTitle = location.pathname === '/perfil' ? 'Mi cuenta'
     : location.pathname.startsWith('/q/') ? 'Unidad'
@@ -109,14 +127,25 @@ export function AppShell() {
         </Link>
 
         <nav className="sidebar__nav">
-          {sections.map(section => (
-            <div key={section.title}>
-              <div className="nav-section__title sidebar__texto">{section.title}</div>
-              {section.items.map(item => (
-                <NavEscritorio key={item.key} item={item} pathname={location.pathname} contador={contador} />
-              ))}
-            </div>
-          ))}
+          {sections.map(section => {
+            const abierta = seccionAbierta === section.title;
+            const color = COLOR_SECCION[section.title] ?? 'var(--accent)';
+            const pendientes = section.items.reduce((s, i) => s + contadorDe(i, contador), 0);
+            return (
+              <div key={section.title} className={`nav-seccion${abierta ? ' nav-seccion--abierta' : ''}`} style={{ ['--seccion' as string]: color }}>
+                <button type="button" className="nav-seccion__cab sidebar__texto" aria-expanded={abierta}
+                  onClick={() => setSeccionAbierta(abierta ? null : section.title)}>
+                  <span className="nav-seccion__punto" aria-hidden />
+                  <span className="nav-seccion__titulo">{section.title}</span>
+                  {!abierta && pendientes > 0 && <span className="nav-item__contador">{pendientes}</span>}
+                  <ChevronDown size={14} aria-hidden className={`nav-grupo__flecha${abierta ? ' nav-grupo__flecha--abierta' : ''}`} />
+                </button>
+                {abierta && section.items.map(item => (
+                  <NavEscritorio key={item.key} item={item} pathname={location.pathname} contador={contador} />
+                ))}
+              </div>
+            );
+          })}
         </nav>
 
         <div className="sidebar__footer">

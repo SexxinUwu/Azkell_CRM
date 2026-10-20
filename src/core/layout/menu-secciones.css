@@ -1,0 +1,60 @@
+/* Menú de escritorio en acordeón: cada sección tiene su color; solo una está abierta a la vez.
+   La variable --seccion la pone el componente en cada sección. */
+
+.nav-seccion {
+  border-radius: 14px;
+  transition: background 0.25s ease;
+}
+
+.nav-seccion__cab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--label-2);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nav-seccion__cab:hover {
+  background: color-mix(in srgb, var(--seccion) 7%, transparent);
+}
+
+.nav-seccion__punto {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--seccion);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--seccion) 18%, transparent);
+}
+
+.nav-seccion__titulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sección abierta: su color tiñe el fondo y el título */
+.nav-seccion--abierta {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--seccion) 10%, transparent), transparent 85%);
+}
+
+.nav-seccion--abierta .nav-seccion__cab {
+  color: var(--seccion);
+}
+
+.nav-seccion--abierta .nav-seccion__punto {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--seccion) 28%, transparent);
+}
