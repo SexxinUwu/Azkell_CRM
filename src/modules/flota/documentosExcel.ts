@@ -1,11 +1,10 @@
-// Documentos de flota ↔ Excel. Mismos encabezados que la plantilla de la versión actual, así que los archivos
-// que ya tienes siguen funcionando. Se importa con POST /api/documentos-flota/importar.
+// Documentos de flota ↔ Excel. La plantilla trae solo la PLACA y los documentos: tipo, marca, modelo, color, año, serie y empresa
+// ya están en Placas y de ahí salen. Un archivo con la plantilla antigua también sirve: esas columnas se ignoran. Se importa con POST /api/documentos-flota/importar.
 import { exportarExcel } from '../../core/lib/excel';
 
 /** [encabezado de la plantilla, campo que recibe el servidor] */
 export const COLUMNAS: Array<[string, string]> = [
-  ['PLACA', 'placa'], ['TIPO', 'tipo'], ['PROPIEDAD', 'propiedad'], ['EMPRESA', 'empresa'], ['F. ENTREGA', 'fecha_entrega'],
-  ['AÑO', 'anio'], ['MODELO', 'modelo'], ['COLOR', 'color'], ['MARCA', 'marca'], ['SERIE/CHASIS', 'chasis'],
+  ['PLACA', 'placa'],
   ['TC N° CONST.', 'tc_constancia'], ['TC F. VENC.', 'tc_vencimiento'],
   ['SOAT ENTIDAD', 'soat_entidad'], ['SOAT PAGO', 'soat_pago'], ['SOAT F. VENC.', 'soat_vencimiento'],
   ['MATPEL N° CONST.', 'matpel_constancia'], ['MATPEL F. VENC.', 'matpel_vencimiento'],
@@ -18,7 +17,7 @@ export const COLUMNAS: Array<[string, string]> = [
 ];
 
 const EJEMPLO = [
-  'ABC-123', 'CAMION', 'PROPIA', 'MI EMPRESA', '2024-01-15', '2023', 'FMX', 'BLANCO', 'VOLVO', 'VIN1234567890',
+  'ABC-123',
   '123456', '2027-01-15', 'PACIFICO', '120.50', '2027-01-15', 'MAT-987', '2027-01-15', '2026-01-15', '2027-01-15',
   '2026-01-15', '2027-01-15', 'MAPFRE', 'JUAN PEREZ', '2027-01-15', 'RIMAC', 'MARIA GOMEZ', '2027-01-15',
   '2026-01-15', '2026-07-15', '1', '2026-01-15', '2027-01-15',

@@ -71,7 +71,7 @@ export function ImportarDocumentosSheet({ open, onClose, placasConocidas }: { op
         <div className="field field--wide">
           <Notice>
             Usa la plantilla. Cada fila es el estado <strong>actual</strong> de documentos de esa placa: un documento que no venga en la fila queda vacío en la unidad,
-            y todo lo anterior se conserva en su historial. Una placa que no exista se crea solo con su placa. Los datos generales vacíos (tipo, marca, color…) no se borran.
+            y todo lo anterior se conserva en su historial. Una placa que no exista se crea solo con su placa. Tipo, marca, modelo, color, año, serie y empresa no van en la plantilla: se toman siempre de Placas.
           </Notice>
           <div style={{ marginTop: 'var(--s-2)' }}>
             <Button variant="secondary" size="sm" icon={<Download size={15} />} onClick={() => descargarPlantilla().catch(e => toast(errorMessage(e), 'error'))}>Descargar plantilla</Button>
