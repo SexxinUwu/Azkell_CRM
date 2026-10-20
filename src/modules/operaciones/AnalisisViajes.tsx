@@ -375,7 +375,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         ) : (
           <>
             {gps.isError && <Notice tone="error">{errorMessage(gps.error)}</Notice>}
-            <TablaRedimensionable id={`${urea ? 'analisis-urea' : 'analisis-combustible'}${mostrarObs ? '-obs' : ''}`} columnas={columnas} ariaLabel={urea ? 'Análisis de urea por viaje' : 'Análisis de combustible por viaje'}>
+            <TablaRedimensionable id={urea ? 'analisis-urea' : 'analisis-combustible'} columnas={columnas} ariaLabel={urea ? 'Análisis de urea por viaje' : 'Análisis de combustible por viaje'}>
               {pagina_.map(x => {
                 const c = cifras(x);
                 const a = analisis.get(x.viaje);

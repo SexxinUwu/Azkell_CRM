@@ -15,6 +15,9 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
+import { LicensePlate } from '../../core/ui/LicensePlate';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import type { ReactNode } from 'react';
 import { OrdenServicioSheet } from './OrdenServicioSheet';
 import { SeccionGastosViaje, SeccionOrdenesServicioViaje } from './ViajeExtras';
 import { abrirClasico } from '../../core/layout/navigation';
@@ -50,6 +53,33 @@ interface Viaje {
   peso_retorno: number | string;
   ordenes_list: string | null;
   rutas_list: string | null;
+}
+
+// Columnas de la tabla de órdenes de viaje
+const COLUMNAS_VIAJE: ColumnaTabla[] = [
+  { id: 'estado', titulo: 'Estado', ancho: 130 },
+  { id: 'viaje', titulo: 'N° viaje', ancho: 140, minimo: 110 },
+  { id: 'fecha', titulo: 'Fecha', ancho: 150 },
+  { id: 'conductor', titulo: 'Conductor', ancho: 200 },
+  { id: 'tracto', titulo: 'Tracto', ancho: 140 },
+  { id: 'carreta', titulo: 'Carreta', ancho: 140 },
+  { id: 'ruta', titulo: 'Ruta / origen → destino', ancho: 260, minimo: 140 },
+  { id: 'peso-ida', titulo: 'Peso ida', ancho: 105, alinear: 'right' },
+  { id: 'peso-ret', titulo: 'Peso retorno', ancho: 120, alinear: 'right' },
+  { id: 'ordenes', titulo: 'Cant. órdenes', ancho: 120, alinear: 'right' },
+  { id: 'km-ini', titulo: 'Km inicio', ancho: 110, alinear: 'right' },
+  { id: 'km-fin', titulo: 'Km fin', ancho: 110, alinear: 'right' },
+  { id: 'recorrido', titulo: 'Recorrido', ancho: 110, alinear: 'right' },
+  { id: 'acciones', titulo: 'Acciones', ancho: 150, minimo: 120 },
+];
+
+// Pastilla de color del tema (mismos tonos que el resto de la app)
+function Pastilla({ tono: t, children }: { tono: string; children: ReactNode }) {
+  return (
+    <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, background: `var(--${t}-tint)`, color: `var(--${t}-ink)`, fontSize: '0.6875rem', fontWeight: 700 }}>
+      {children}
+    </span>
+  );
 }
 
 const ESTADOS = ['ACTIVO', 'INICIADO', 'FINALIZADO', 'LIQUIDADO', 'ANULADO'];
@@ -178,28 +208,50 @@ export function OrdenesViajePage() {
             {puedeCrear && !busqueda && !estado ? <>Crea el primero con <strong>Nuevo viaje</strong>.</> : 'Prueba con otro filtro.'}
           </EmptyState>
         ) : (
-          <div className="tarjeta__lista">
-            {visibles.map(v => (
-              <button key={v.viaje} type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setAbiertoId(v.viaje); }}>
-                <div className="mov-fila__icon" style={{ background: `var(--${css(tono(v.estado))}-tint)`, color: `var(--${css(tono(v.estado))}-ink)` }}><Truck size={16} /></div>
-                <div className="mov-fila__cuerpo">
-                  <span className="mov-fila__titulo">{v.viaje} · {v.conductor || 'Sin conductor'}</span>
-                  <span className="mov-fila__sub">{[v.placa_tracto, v.placa_remolque, v.ruta || v.rutas_list].filter(Boolean).join(' · ') || fmtFecha(v.fecha_viaje)}</span>
-                  {[v.placa_tracto, v.placa_remolque].some(p => p && vencidosPorPlaca.has(placaNorm(p))) && (
-                    <span title={[v.placa_tracto, v.placa_remolque].filter(p => p && vencidosPorPlaca.has(placaNorm(p))).map(p => `${p}: ${vencidosPorPlaca.get(placaNorm(p))?.join(', ')} vencido`).join(' · ')}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 2, padding: '2px 8px', borderRadius: 999, background: 'var(--red-tint)', color: 'var(--red-ink)', fontSize: '0.6875rem', fontWeight: 700 }}>
-                        <CircleAlert size={12} aria-hidden /> Documento vencido
-                      </span>
+          <TablaRedimensionable id="ordenes-viaje" columnas={COLUMNAS_VIAJE} ariaLabel="Órdenes de viaje">
+            {visibles.map(v => {
+              const t = css(tono(v.estado)) as string;
+              const vencidoTracto = vencidosPorPlaca.has(placaNorm(v.placa_tracto));
+              const vencidoCarreta = vencidosPorPlaca.has(placaNorm(v.placa_remolque));
+              const recorrido = v.kilometraje_inicial != null && v.kilometraje_final != null ? n(v.kilometraje_final) - n(v.kilometraje_inicial) : null;
+              return (
+                <tr key={v.viaje} className="tabla-redim__fila--click" onClick={() => { haptic('selection'); setAbiertoId(v.viaje); }}>
+                  <Celda><Pastilla tono={t}>{v.estado}</Pastilla></Celda>
+                  <Celda mono>{v.viaje}</Celda>
+                  <Celda mono>{fmtFecha(v.fecha_viaje)}</Celda>
+                  <Celda>{v.conductor || 'Sin conductor'}</Celda>
+                  <Celda>
+                    <LicensePlate plate={v.placa_tracto ?? ''} size="sm" />
+                    {vencidoTracto && <span title={`${v.placa_tracto}: documento vencido`} style={{ marginLeft: 6 }}><CircleAlert size={14} style={{ color: 'var(--red-ink)', verticalAlign: 'middle' }} aria-label="Documento vencido" /></span>}
+                  </Celda>
+                  <Celda>
+                    <LicensePlate plate={v.placa_remolque ?? ''} size="sm" />
+                    {vencidoCarreta && <span title={`${v.placa_remolque}: documento vencido`} style={{ marginLeft: 6 }}><CircleAlert size={14} style={{ color: 'var(--red-ink)', verticalAlign: 'middle' }} aria-label="Documento vencido" /></span>}
+                  </Celda>
+                  <Celda>{v.ruta || v.rutas_list || [v.origen, v.destino].filter(Boolean).join(' → ') || '—'}</Celda>
+                  <Celda alinear="right" mono>{n(v.peso_ida).toLocaleString('es-PE')}</Celda>
+                  <Celda alinear="right" mono>{n(v.peso_retorno).toLocaleString('es-PE')}</Celda>
+                  <Celda alinear="right" mono>{n(v.cant_ordenes)}</Celda>
+                  <Celda alinear="right" mono>{v.kilometraje_inicial != null ? n(v.kilometraje_inicial).toLocaleString('es-PE') : '—'}</Celda>
+                  <Celda alinear="right" mono>{v.kilometraje_final != null ? n(v.kilometraje_final).toLocaleString('es-PE') : '—'}</Celda>
+                  <Celda alinear="right" mono>{recorrido != null && recorrido >= 0 ? recorrido.toLocaleString('es-PE') : '—'}</Celda>
+                  <Celda>
+                    <span style={{ display: 'inline-flex', gap: 'var(--s-1)' }} onClick={ev => ev.stopPropagation()}>
+                      {puedeEditar && v.estado !== 'FINALIZADO' && v.estado !== 'LIQUIDADO' && v.estado !== 'ANULADO' && (
+                        <Button variant="secondary" icon={<Pencil size={15} />} aria-label={`Editar viaje ${v.viaje}`} onClick={() => setFormulario({ viaje: v })}>{''}</Button>
+                      )}
+                      {puedeEditar && v.estado === 'ACTIVO' && (
+                        <Button variant="secondary" icon={<Play size={15} />} aria-label={`Iniciar viaje ${v.viaje}`} onClick={() => setAccion({ tipo: 'iniciar', viaje: v })}>{''}</Button>
+                      )}
+                      {puedeEditar && v.estado === 'INICIADO' && (
+                        <Button variant="secondary" icon={<CheckCircle2 size={15} />} aria-label={`Finalizar viaje ${v.viaje}`} onClick={() => setAccion({ tipo: 'finalizar', viaje: v })}>{''}</Button>
+                      )}
                     </span>
-                  )}
-                </div>
-                <div className="mov-fila__derecha">
-                  <span className="mov-fila__monto">{n(v.peso_ida) + n(v.peso_retorno) ? `${(n(v.peso_ida) + n(v.peso_retorno)).toLocaleString('es-PE')} kg` : ''}</span>
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${css(tono(v.estado))}-ink)` }}>{v.estado}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+                  </Celda>
+                </tr>
+              );
+            })}
+          </TablaRedimensionable>
         )}
       </div>
 

@@ -119,6 +119,19 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
     { id: 'viaje', titulo: 'N° viaje', ancho: 130 },
   ];
 
+  // Estado de pago en lote: una sola petición con todos los vales seleccionados
+  async function cambiarPago(estado: 'PAGADO' | 'NO PAGADO') {
+    setOcupado(true);
+    try {
+      const r = await api<{ ok?: boolean; actualizados?: number; error?: string }>('/combustible/vales/estado-pago', { method: 'PATCH', body: { ids: [...seleccion], estado_pago: estado } });
+      if (r.ok === false) throw new Error(r.error || 'No se pudo actualizar el estado de pago');
+      haptic('success'); toast(`${r.actualizados ?? seleccion.size} vales marcados como ${estado === 'PAGADO' ? 'pagados' : 'no pagados'}`);
+      setSeleccion(new Set());
+      await refrescar();
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+    finally { setOcupado(false); }
+  }
+
   // Anulación en lote: un DELETE por vale (el servidor lo deja como ANULADO)
   async function anularMasivo() {
     setOcupado(true);
@@ -291,6 +304,8 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
             if (filas.length) exportar(filas);
             else toast('Esos vales están en otra página: cámbiala para exportarlos', 'error');
           }}>Excel</Button>
+          {puedeEditar && <Button variant="secondary" loading={ocupado} onClick={() => cambiarPago('PAGADO')}>Marcar pagado</Button>}
+          {puedeEditar && <Button variant="secondary" loading={ocupado} onClick={() => cambiarPago('NO PAGADO')}>Marcar no pagado</Button>}
           {puedeEditar && <Button variant="secondary" icon={<Ban size={16} />} onClick={() => setConfirmarAnular(true)}>Anular</Button>}
           {puedeEliminar && <Button variant="primary" icon={<Trash2 size={16} />} onClick={() => setConfirmarMasivo(true)}>Eliminar</Button>}
           <Button variant="secondary" icon={<X size={16} />} onClick={() => setSeleccion(new Set())}>Limpiar</Button>
