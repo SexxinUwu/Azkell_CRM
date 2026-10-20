@@ -542,6 +542,8 @@ app.get('/api/configuracion', async (req, res) => {
             }
         }
 
+        // El logo viaja en esta respuesta (cientos de KB): que el navegador la revalide (304) en vez de bajarla en cada carga
+        res.setHeader('Cache-Control', 'private, no-cache');
         res.json(config);
     } catch (error) {
         console.error("Error obteniendo configuracion:", error);
