@@ -24,29 +24,33 @@ interface Props {
 const CLAVE = (id: string) => `fleet_tabla_${id}`;
 const SIN_LIMITE = 720;
 
-function leerAnchos(id: string, columnas: ColumnaTabla[]): number[] {
-  const base = columnas.map(c => c.ancho);
+// Los anchos se guardan por id de columna (no por posición): si una columna aparece u oculta,
+// las demás conservan el ancho que el usuario les dio.
+function leerMapa(id: string): Record<string, number> {
   try {
     const guardado = JSON.parse(localStorage.getItem(CLAVE(id)) ?? 'null');
-    if (Array.isArray(guardado) && guardado.length === columnas.length && guardado.every(x => typeof x === 'number' && x > 0)) {
-      return guardado.map((x, i) => Math.max(columnas[i].minimo ?? 56, x));
+    if (guardado && typeof guardado === 'object' && !Array.isArray(guardado)) {
+      return Object.fromEntries(Object.entries(guardado as Record<string, unknown>).filter(([, v]) => typeof v === 'number' && v > 0)) as Record<string, number>;
     }
   } catch { /* sin acceso a localStorage: se usan los anchos por defecto */ }
-  return base;
+  return {};
 }
 
-function guardarAnchos(id: string, anchos: number[]) {
-  try { localStorage.setItem(CLAVE(id), JSON.stringify(anchos)); } catch { /* modo privado: no se guarda */ }
+function guardarMapa(id: string, mapa: Record<string, number>) {
+  try { localStorage.setItem(CLAVE(id), JSON.stringify(mapa)); } catch { /* modo privado: no se guarda */ }
 }
 
 // Tabla con columnas redimensionables como en Excel: arrastra el borde derecho del encabezado,
 // o haz doble clic para ajustar la columna al contenido más ancho.
 export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh', ariaLabel }: Props) {
-  const [anchos, setAnchos] = useState<number[]>(() => leerAnchos(id, columnas));
+  const [mapa, setMapa] = useState<Record<string, number>>(() => leerMapa(id));
   const tablaRef = useRef<HTMLTableElement>(null);
+  const anchos = columnas.map(c => Math.max(c.minimo ?? 56, mapa[c.id] ?? c.ancho));
   const total = anchos.reduce((s, x) => s + x, 0);
 
-  useEffect(() => { guardarAnchos(id, anchos); }, [id, anchos]);
+  useEffect(() => { guardarMapa(id, mapa); }, [id, mapa]);
+
+  const fijar = (colId: string, ancho: number) => setMapa(m => ({ ...m, [colId]: ancho }));
 
   function arrastrar(i: number, e: PointerReact<HTMLSpanElement>) {
     e.preventDefault();
@@ -55,10 +59,10 @@ export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh',
     const x0 = e.clientX;
     const w0 = anchos[i];
     const minimo = columnas[i].minimo ?? 56;
+    const colId = columnas[i].id;
     asa.setPointerCapture(e.pointerId);
     const mover = (ev: PointerEvent) => {
-      const nuevo = Math.min(SIN_LIMITE, Math.max(minimo, w0 + ev.clientX - x0));
-      setAnchos(a => a.map((x, k) => (k === i ? nuevo : x)));
+      fijar(colId, Math.min(SIN_LIMITE, Math.max(minimo, w0 + ev.clientX - x0)));
     };
     const fin = () => {
       asa.removeEventListener('pointermove', mover);
@@ -89,8 +93,7 @@ export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh',
       const celda = fila.cells[i];
       if (celda) medir(celda, (celda.textContent ?? '').trim());
     }
-    const nuevo = Math.min(SIN_LIMITE, Math.max(columnas[i].minimo ?? 56, Math.ceil(ancho) + 28));
-    setAnchos(a => a.map((x, k) => (k === i ? nuevo : x)));
+    fijar(columnas[i].id, Math.min(SIN_LIMITE, Math.max(columnas[i].minimo ?? 56, Math.ceil(ancho) + 28)));
   }
 
   return (

@@ -1,13 +1,15 @@
 import '../mantenimiento/mant.css';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, CheckCircle2, FileSpreadsheet, Pencil, Play, Plus, ScrollText, SearchX, XCircle } from 'lucide-react';
 import { OrdenServicioSheet, type OrdenParaEditar } from './OrdenServicioSheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
+import { LicensePlate } from '../../core/ui/LicensePlate';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Sheet } from '../../core/ui/Sheet';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -30,6 +32,31 @@ interface Detalle extends Orden {
 const ESTADOS = ['PENDIENTE', 'INICIADO', 'FINALIZADO', 'ANULADO'];
 const n = (v: unknown) => Number(v) || 0;
 const color = (e: string | null) => ({ PENDIENTE: 'amber', INICIADO: 'accent', FINALIZADO: 'green', ANULADO: 'gray' }[String(e ?? '').toUpperCase()] ?? 'gray');
+const estadoDe = (o: Orden) => String(o.estado_servicio ?? 'PENDIENTE').toUpperCase();
+const simboloMoneda = (m: string | null) => (/DOL/i.test(String(m ?? '')) ? 'US$' : 'S/');
+
+// Pastilla de color del tema (mismos tonos que el resto de la app)
+function Pastilla({ tono, children }: { tono: string; children: ReactNode }) {
+  return (
+    <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, background: `var(--${tono}-tint)`, color: `var(--${tono}-ink)`, fontSize: '0.6875rem', fontWeight: 700 }}>
+      {children}
+    </span>
+  );
+}
+
+const COLUMNAS: ColumnaTabla[] = [
+  { id: 'estado', titulo: 'Estado', ancho: 130 },
+  { id: 'codigo', titulo: 'Código de orden', ancho: 160, minimo: 120 },
+  { id: 'fecha', titulo: 'Fecha', ancho: 120 },
+  { id: 'cliente', titulo: 'Cliente', ancho: 240, minimo: 140 },
+  { id: 'servicio', titulo: 'Tipo de servicio', ancho: 180 },
+  { id: 'viaje', titulo: 'Viaje asignado', ancho: 150 },
+  { id: 'tracto', titulo: 'Tracto', ancho: 130 },
+  { id: 'carreta', titulo: 'Carreta', ancho: 130 },
+  { id: 'conductor', titulo: 'Conductor', ancho: 200 },
+  { id: 'flete', titulo: 'Flete', ancho: 150, alinear: 'right' },
+  { id: 'acciones', titulo: 'Acciones', ancho: 150, minimo: 120 },
+];
 
 // Operaciones › Órdenes de servicio: consulta, seguimiento de estado, alta/edición con rutas y guías, y exportación.
 export function OrdenesServicioPage() {
@@ -55,23 +82,30 @@ export function OrdenesServicioPage() {
   });
 
   const datos = lista.data ?? [];
-  const visibles = useMemo(() => datos.filter(o => !estado || String(o.estado_servicio ?? 'PENDIENTE').toUpperCase() === estado), [datos, estado]);
-  const conteo = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, datos.filter(o => String(o.estado_servicio ?? 'PENDIENTE').toUpperCase() === e).length])), [datos]);
+  const visibles = useMemo(() => datos.filter(o => !estado || estadoDe(o) === estado), [datos, estado]);
+  const conteo = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, datos.filter(o => estadoDe(o) === e).length])), [datos]);
   const puedeEditar = can('op_ordenes_servicio.editar', 'op_ordenes_servicio.crear', 'op_ordenes_viaje.editar');
   const puedeCrear = can('op_ordenes_servicio.crear', 'op_ordenes_servicio.editar', 'op_ordenes_viaje.editar');
   const abierta = datos.find(o => o.id === abiertoId) ?? null;
   const o = det.data ?? abierta;
 
-  async function cambiarEstado(nuevo: string) {
-    if (!abierta) return;
+  async function cambiarEstado(orden: Orden, nuevo: string) {
     setOcupado(true);
     try {
-      const r = await api<{ ok?: boolean; error?: string }>(`/operaciones/ordenes-servicio/${abierta.id}/estado`, { method: 'PUT', body: { estado_servicio: nuevo } });
+      const r = await api<{ ok?: boolean; error?: string }>(`/operaciones/ordenes-servicio/${orden.id}/estado`, { method: 'PUT', body: { estado_servicio: nuevo } });
       if (r.ok === false) throw new Error(r.error || 'No se pudo cambiar el estado');
-      haptic('success'); toast(`Orden ${abierta.codigo_orden}: ${nuevo.toLowerCase()}`);
+      haptic('success'); toast(`Orden ${orden.codigo_orden}: ${nuevo.toLowerCase()}`);
       await qc.invalidateQueries({ queryKey: ['operaciones'] });
     } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
     finally { setOcupado(false); }
+  }
+
+  // Editar desde la fila: se carga el detalle (rutas y documentos) antes de abrir el formulario
+  async function editarFila(id: number) {
+    try {
+      const r = await api<{ data: Detalle }>(`/operaciones/ordenes-servicio/${id}`);
+      setFormulario({ orden: r.data as unknown as OrdenParaEditar });
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
   }
 
   async function exportar() {
@@ -108,7 +142,6 @@ export function OrdenesServicioPage() {
 
       <OrdenServicioSheet open={!!formulario} orden={formulario?.orden ?? null} onClose={() => setFormulario(null)} />
 
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
           {[['', 'Todas', datos.length], ...ESTADOS.map(e => [e, e.charAt(0) + e.slice(1).toLowerCase() + 's', conteo[e] ?? 0])].map(([val, label, c]) => (
@@ -128,21 +161,38 @@ export function OrdenesServicioPage() {
             Las órdenes se crean desde la versión actual.
           </EmptyState>
         ) : (
-          <div className="tarjeta__lista">
-            {visibles.map(x => (
-              <button key={x.id} type="button" className="mov-fila" onClick={() => { haptic('selection'); setAbiertoId(x.id); }}>
-                <div className="mov-fila__icon" style={{ background: `var(--${color(x.estado_servicio)}-tint)`, color: `var(--${color(x.estado_servicio)}-ink)` }}><ScrollText size={16} /></div>
-                <div className="mov-fila__cuerpo">
-                  <span className="mov-fila__titulo">{x.codigo_orden} · {x.cliente_nombre || 'Sin cliente'}</span>
-                  <span className="mov-fila__sub">{[x.tipo_servicio, x.fecha_fmt, x.viaje_asignado && `Viaje ${x.viaje_asignado}`, x.conductor].filter(Boolean).join(' · ')}</span>
-                </div>
-                <div className="mov-fila__derecha">
-                  <span className="mov-fila__monto">{/DOL/i.test(String(x.moneda ?? '')) ? 'US$' : 'S/'} {n(x.costo_flete).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${color(x.estado_servicio)}-ink)` }}>{String(x.estado_servicio ?? 'PENDIENTE').toUpperCase()}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+          <TablaRedimensionable id="ordenes-servicio" columnas={COLUMNAS} ariaLabel="Órdenes de servicio">
+            {visibles.map(x => {
+              const e = estadoDe(x);
+              return (
+                <tr key={x.id} className="tabla-redim__fila--click" onClick={() => { haptic('selection'); setAbiertoId(x.id); }}>
+                  <Celda><Pastilla tono={color(e)}>{e}</Pastilla></Celda>
+                  <Celda mono>{x.codigo_orden}</Celda>
+                  <Celda mono>{x.fecha_fmt || '—'}</Celda>
+                  <Celda>{x.cliente_nombre || 'Sin cliente'}</Celda>
+                  <Celda>{x.tipo_servicio || '—'}</Celda>
+                  <Celda mono>{x.viaje_asignado || '—'}</Celda>
+                  <Celda><LicensePlate plate={x.placa_tracto ?? ''} size="sm" /></Celda>
+                  <Celda><LicensePlate plate={x.placa_carreta ?? ''} size="sm" /></Celda>
+                  <Celda>{x.conductor || '—'}</Celda>
+                  <Celda alinear="right" mono>{simboloMoneda(x.moneda)} {n(x.costo_flete).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Celda>
+                  <Celda>
+                    <span style={{ display: 'inline-flex', gap: 'var(--s-1)' }} onClick={ev => ev.stopPropagation()}>
+                      {puedeEditar && e !== 'FINALIZADO' && e !== 'ANULADO' && (
+                        <Button variant="secondary" icon={<Pencil size={15} />} aria-label={`Editar orden ${x.codigo_orden}`} onClick={() => editarFila(x.id)}>{''}</Button>
+                      )}
+                      {puedeEditar && e === 'PENDIENTE' && (
+                        <Button variant="secondary" icon={<Play size={15} />} aria-label={`Iniciar orden ${x.codigo_orden}`} loading={ocupado} onClick={() => cambiarEstado(x, 'INICIADO')}>{''}</Button>
+                      )}
+                      {puedeEditar && e === 'INICIADO' && (
+                        <Button variant="secondary" icon={<CheckCircle2 size={15} />} aria-label={`Finalizar orden ${x.codigo_orden}`} loading={ocupado} onClick={() => cambiarEstado(x, 'FINALIZADO')}>{''}</Button>
+                      )}
+                    </span>
+                  </Celda>
+                </tr>
+              );
+            })}
+          </TablaRedimensionable>
         )}
       </div>
 
@@ -151,9 +201,9 @@ export function OrdenesServicioPage() {
           puedeEditar && abierta && est !== 'FINALIZADO' && est !== 'ANULADO' ? (
             <>
               <Button variant="secondary" icon={<Pencil size={16} />} onClick={() => { if (det.data) { setFormulario({ orden: det.data as unknown as OrdenParaEditar }); setAbiertoId(null); } }} disabled={!det.data}>Editar</Button>
-              <Button variant="secondary" icon={<XCircle size={16} />} onClick={() => cambiarEstado('ANULADO')} loading={ocupado}>Anular</Button>
-              {est === 'PENDIENTE' && <Button variant="primary" icon={<Play size={16} />} onClick={() => cambiarEstado('INICIADO')} loading={ocupado}>Iniciar</Button>}
-              {est === 'INICIADO' && <Button variant="primary" icon={<CheckCircle2 size={16} />} onClick={() => cambiarEstado('FINALIZADO')} loading={ocupado}>Finalizar</Button>}
+              <Button variant="secondary" icon={<XCircle size={16} />} onClick={() => cambiarEstado(abierta, 'ANULADO')} loading={ocupado}>Anular</Button>
+              {est === 'PENDIENTE' && <Button variant="primary" icon={<Play size={16} />} onClick={() => cambiarEstado(abierta, 'INICIADO')} loading={ocupado}>Iniciar</Button>}
+              {est === 'INICIADO' && <Button variant="primary" icon={<CheckCircle2 size={16} />} onClick={() => cambiarEstado(abierta, 'FINALIZADO')} loading={ocupado}>Finalizar</Button>}
             </>
           ) : <Button variant="secondary" onClick={() => setAbiertoId(null)}>Cerrar</Button>
         }>
@@ -168,7 +218,7 @@ export function OrdenesServicioPage() {
               {fila('Cliente', o.cliente_nombre)}{fila('Servicio', o.tipo_servicio)}{fila('Modalidad', [o.tipo_contratacion, o.modalidad_ejecucion].filter(Boolean).join(' · '))}
               {fila('Viaje', o.viaje_asignado, true)}{fila('Conductor', o.conductor)}{fila('Tracto / carreta', [o.placa_tracto, o.placa_carreta].filter(Boolean).join(' / '), true)}
               {fila('Fecha', [o.fecha_fmt, o.fecha_fin_fmt].filter(Boolean).join(' → '), true)}{fila('Origen', o.puntos_carga)}{fila('Destino', o.puntos_destino)}{fila('Destinatario', o.destinatario)}
-              {fila('Flete', `${/DOL/i.test(String(o.moneda ?? '')) ? 'US$' : 'S/'} ${n(o.costo_flete).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`)}{fila('Observaciones', o.observaciones)}
+              {fila('Flete', `${simboloMoneda(o.moneda)} ${n(o.costo_flete).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`)}{fila('Observaciones', o.observaciones)}
             </div>
             {det.isLoading && <PageLoader />}
             {(det.data?.rutas ?? []).length > 0 && (

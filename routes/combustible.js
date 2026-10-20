@@ -1009,6 +1009,34 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
     // 8. 🗑️ ELIMINACIÓN MASIVA DE VALES (SELECCIÓN POR CHECKBOX)
     // ============================================================
+    // Estado de pago en lote: un solo UPDATE para todos los vales seleccionados
+    router.patch('/vales/estado-pago', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const valesTable = getValesTable(req);
+            const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number).filter(Number.isInteger) : [];
+            const estadoPago = req.body?.estado_pago;
+
+            if (ids.length === 0) {
+                return res.status(400).json({ ok: false, error: 'No se seleccionaron vales.' });
+            }
+            if (!['PAGADO', 'NO PAGADO'].includes(estadoPago)) {
+                return res.status(400).json({ ok: false, error: 'Estado de pago no válido.' });
+            }
+
+            const [resultado] = await tdb.query(`UPDATE ${valesTable} SET estado_pago = ? WHERE id IN (?)`, [estadoPago, ids]);
+            await auditar(tdb, actorFrom(req), {
+                action: 'UPDATE', entity: 'fueling', entityId: 'lote',
+                summary: `Marcó ${resultado.affectedRows} vales como ${estadoPago}`,
+                changes: null,
+            });
+            res.json({ ok: true, actualizados: resultado.affectedRows });
+        } catch (err) {
+            console.error('Error actualizando estado de pago en lote:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     router.post('/vales/eliminar-masivo', async (req, res) => {
         try {
             const tdb = getDb(req);
