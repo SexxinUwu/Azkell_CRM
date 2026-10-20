@@ -143,6 +143,7 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Almacén',
     items: [
       { key: 'almacen-dashboard', label: 'Dashboard financiero', clasico: 'almacen/dashboard-financiero', icon: BarChart3, permissions: ver('inv') },
+      { key: 'almacen-costos', label: 'Costos de almacén', clasico: 'almacen/costos', icon: Boxes, permissions: ver('inv') },
       { key: 'inventario', label: 'Inventario', clasico: 'almacen/inventario', icon: Boxes, permissions: ver('inv') },
       { key: 'entradas', label: 'Órdenes de compra', clasico: 'almacen/entradas', icon: PackagePlus, permissions: ver('ent_inv') },
       { key: 'recepcion', label: 'Recepción de compras', clasico: 'almacen/recepcion-compras', icon: PackagePlus, permissions: ver('rec_compras', 'ent_inv', 'inv') },
@@ -187,6 +188,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'cuentas', label: 'Cuentas por cobrar y pagar', clasico: 'tesoreria/cuentas', icon: FileText, permissions: ver('tesoreria_cuentas') },
       { key: 'bancos', label: 'Bancos', clasico: 'tesoreria/bancos', icon: Landmark, permissions: ver('tesoreria_bancos', 'tesoreria_caja') },
       { key: 'centros-costos', label: 'Centros de costos', clasico: 'tesoreria/centros-costos', icon: Boxes, permissions: ver('tesoreria_centros_costos', 'tesoreria_caja') },
+      { key: 'flujo-caja', label: 'Flujo de caja', clasico: 'tesoreria/flujo-caja', icon: BarChart3, permissions: ver('tesoreria_caja') },
     ],
   },
   {

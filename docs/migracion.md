@@ -66,7 +66,7 @@ Pasada de diseño sobre las pantallas ya migradas a React, bloque por bloque, ca
 **Estado al 2026-10-20.** La Fase 1 quedó cerrada (auto-sync y DDL de arranque retirados; migraciones 0 a 6 aplicadas en la maestra y en las 4 empresas). Lo que sigue, en orden:
 
 1. **Desplegar** lo subido a `main` el 2026-10-20 (costos en soles, recepción con TC de la OC, revocación de sesión, documentos de flota, sitios públicos) y verificar en navegador: costos de OT y recepción, flujo de sesión y Notificaciones.
-2. **Pantallas sin versión en React** (10 entradas del menú, ver catálogo) y las funciones parciales marcadas `[~]`.
+2. **Pantallas sin versión en React** (las casillas `[ ]` del catálogo) y las funciones parciales marcadas `[~]`.
 3. **Fase 2 pendiente:** `server/core`, conversión de permisos, Capacitor, Gemini en cadena.
 4. **Fase 5 (cierre):** borrar la versión clásica solo cuando no quede nada que abrir en ella.
 
@@ -154,7 +154,7 @@ Seguridad que no depende del código: **usuario MySQL propio para la app** (hoy 
 
 ## Catálogo de pantallas (93)
 
-> **Estado real (2026-10-20), según el menú:** una entrada abre la versión clásica solo si su pantalla de React no existe o si se decidió dejarla (guías SUNAT). El menú toma cada pantalla de `src/modules/<modulo>/rutas.ts` (`conModulos()` en `navigation.ts`), así que una pantalla nueva reemplaza sola al enlace clásico. Siguen **6 entradas sin pantalla en React**: Métricas y KPIs, Productividad personal, Frecuencias MP, Config. métrica, Unidades en Base (seguridad) y Empresas SaaS (SuperAdmin). Empresa, Notificaciones y API y desarrolladores ya están en React.
+> **Estado real (2026-10-20), según el menú:** una entrada abre la versión clásica solo si su pantalla de React no existe o si se decidió dejarla (guías SUNAT). El menú toma cada pantalla de `src/modules/<modulo>/rutas.ts` (`conModulos()` en `navigation.ts`), así que una pantalla nueva reemplaza sola al enlace clásico. Ya tienen pantalla en React (pendiente verificar en navegador): Métricas y KPIs, Productividad personal, Frecuencias MP, Config. métrica, Unidades en Base, Empresas SaaS, Flujo de caja y Costos de almacén. **No todo el menú está migrado:** siguen en el clásico las casillas `[ ]` y `[~]` del catálogo, entre ellas las guías de remisión SUNAT (decisión deliberada), monitoreo, reporte de viajes, asignación, rutas, configuración de fleetrun y la pantalla raíz de administración.
 > Pendientes de funcionalidad, no de pantalla: guías SUNAT (a propósito, hasta las pruebas supervisadas en ambiente de prueba), monitoreo GPS de viajes, asignación y rutas, Entradas al contado (depende de Tesorería), importación de inspecciones, y los sitios públicos que aún no están desplegados.
 
 Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplicado a revisar antes de migrar.
@@ -184,14 +184,14 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] mantenimiento/inspecciones *(estado de la flota, historial, ficha, registrar, editar, PDF oficial, WhatsApp y OT desde la inspección; importación de inspecciones pendiente de confirmar)*
 - [x] mantenimiento/checklist *(en /app, verificado en navegador 2026-10-16: listado con filtros por estado y empresa, Excel, nuevo y editar reporte con foto, firma y falla crítica, backlog pendiente de la unidad, generación de OTs, PDF oficial F-MAN-001 con cuadrícula ✓/✕ y envío por WhatsApp. Configurar sistemas de revisión abre la versión actual)*
 - [x] mantenimiento/planificacion · mantenimiento/kits-mp *(en /app: planificación con selector de mes y año, estados Programada, Vigente, Atrasada y Completada, formulario e importación desde Excel; Kits MP agrupados por vehículo; tipos-mp ya en /app)*
-- [ ] mantenimiento/configuracion-mp *(Frecuencias MP sigue en la versión clásica: no hay pantalla de React para ella)*
+- [x] mantenimiento/configuracion-mp *(en /app: frecuencias por marca y modelo con alta, edición, eliminación, plantilla e importación de Excel. Pendiente: verificar en navegador)*
 - [x] mantenimiento/backlog-taller *(en /app como pestaña Backlog de Órdenes de trabajo; el menú abre esa pestaña directamente)*
 - [x] mantenimiento/status-rampa *(en /app, verificado en navegador 2026-10-16: tablero, ingresar, editar, liberar y reactivar, evidencia, OT desde la visita, eliminar rampa, configurador, PDF y WhatsApp del tablero, columna de inspección con semáforo y resumen, y PDF de la rampa con OT, trabajos, materiales y evidencia. Pendiente: una sola foto de evidencia por rampa; liberar actualiza Disponibilidad al consultarla, verificado por código)*
 - [x] mantenimiento/neumaticos-ultimas · mantenimiento/neumaticos-analisis *(en /app: pestañas Últimas inspecciones, Requerimientos y Análisis de flota con ?tab=analisis; KPI de vigencia y llantas críticas, marcas y medidas, semáforo por unidad; la fórmula del remanente promedio no cambia)*
 - [x] mantenimiento/fleetrun *(en /app: km restante (próximo km − km GPS o del cambio), prioridades Vencido, Por vencer, Vigente y Sin datos, umbrales de la empresa, búsqueda y filtros)*
 - [ ] administracion/fleetrun-config *(no hay pantalla de React ni entrada de menú para esta configuración)*
-- [ ] mantenimiento/config-metrica
-- [ ] mantenimiento/productividad · mantenimiento/kpis-taller *(mantenimiento/personal ya en /app)*
+- [x] mantenimiento/config-metrica *(en /app. Pendiente: verificar en navegador)*
+- [x] mantenimiento/productividad · mantenimiento/kpis-taller *(en /app. Pendiente: verificar en navegador)*
 - [x] mantenimiento/finanzas-taller *(en /app: gasto total de taller, repuestos y mano de obra, costo por OT, evolución mensual de 12 meses, costo por tipo de OT y unidades con mayor costo. Mismos cálculos del clásico (solo OT aprobadas o cerradas). Pendiente: verificar en navegador con datos reales)*
 - [x] mantenimiento/incidencias-ruta *(en /app: registro con placa del catálogo de unidades activas, búsqueda con paginación de 50, detalle con costos en soles; sin notificaciones externas; en la base de la empresa)*
 - [x] mantenimiento/otros *(en /app)*
@@ -203,7 +203,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] almacen/salidas *(en /app, desde la OT: validado de extremo a extremo con datos reales del tenant azkell_fleet: entrada de prueba de 1 bushing a S/ 5,50, salida de 1 hacia una OT de prueba desde el formulario React, stock 0 → 1 → 0, repuesto y costo de S/ 5,50 en la pestaña Repuestos y Costos de la OT, salida en el kardex al costo promedio; luego anuladas la salida, la entrada y la OT de prueba, con stock final 0)*
 - [x] almacen/kardex *(en /app, verificado en navegador 2026-10-16: cuatro KPIs (entradas, salidas, stock de apertura y saldo valorizado al costo promedio), encabezado fijo, números a la derecha en fuente monoespaciada y tarjetas en móvil)*
 - [x] almacen/recepcion-compras *(en /app, verificado 2026-10-16: tipo de cambio SUNAT del día con equivalente en soles en vivo, y registro atómico en una sola transacción: costo promedio, O/C y cabecera + detalle con rollback si falla. La pantalla clásica no se modifica)*
-- [ ] almacen/costos
+- [x] almacen/costos *(en /app: valorizado por familia, artículos más caros y consumo por artículo, con los mismos endpoints del clásico. Pendiente: verificar en navegador)*
 - [x] almacen/dashboard-financiero *(en /app con agregados del servidor en solo lectura: capital inmovilizado, reposición crítica, stock sin rotación, consumo por familia y tendencia de compras. Pendiente: verificar en navegador)*
 
 ### E. Operaciones
@@ -222,7 +222,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [~] tesoreria/caja · tesoreria/caja-chica *(caja en /app; caja chica por confirmar)*
 - [x] tesoreria/movimientos *(en /app: libro unificado de bancos y caja, con totales en soles y dólares por separado y sin anulados. Pendiente: verificar en navegador)*
 - [x] tesoreria/bancos · tesoreria/cuentas *(en /app)*
-- [~] tesoreria/flujo-caja · tesoreria/centros-costos *(centros de costos en /app; flujo de caja sigue en el clásico)*
+- [x] tesoreria/flujo-caja · tesoreria/centros-costos *(en /app: flujo de caja con saldo disponible, proyección del mes, gráfico de 12 meses y grupos por centro de costos o cuenta, a partir de los movimientos reales. El clásico tenía cifras escritas a mano. Pendiente: verificar en navegador)*
 - [x] tesoreria/liquidaciones *(en /app: resumen por viaje con viáticos entregados, comprobantes rendidos, gastos por tipo y saldo a favor de la empresa o del conductor; el estado del viaje se muestra y LIQUIDADO se marca solo cuando el saldo cuadra. Verificado en navegador con datos simulados. El cierre automático en producción sigue pendiente de confirmar; la regla de cajas pendientes queda por decidir)*
 - [x] tesoreria/pago-requerimientos *(en /app: vencimiento según la condición de pago (crédito con sus días; contado sin fecha); si la O/C aún no tiene recepción, el vencimiento se estima con la fecha de la orden. Pago con constancia, cuenta origen y monto en S/ o US$. Verificado en navegador con datos simulados)*
 - [x] gerencia/aprobaciones-oc · gerencia/aprobaciones-caja *(en /app)*
@@ -231,7 +231,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] rrhh/personal *(en /app como Directorio › Personal, estilo Contactos: lista A–Z, tarjeta, RENIEC, foto, fotocheck, ficha, vCard, Excel). Corregido: rbac no mapeaba /rrhh y solo entraban administradores*
 - [x] rrhh/asistencia · rrhh/nomina *(en /app)*
 - [x] seguridad/unidades *(en /app)*
-- [ ] seguridad/unidades-base *(Unidades en Base sigue en el clásico)*
+- [x] seguridad/unidades-base *(en /app: panorama en vivo, alta, edición y baja del registro en base. Pendiente: verificar en navegador)*
 
 ### H. Sistema
 - [x] login → Fase 2B *(en /app)*
@@ -241,7 +241,8 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] sistema/auditoria *(en /app)*
 - [x] sistema/ajustes · sistema/integraciones *(en /app)*
 - [x] sistema/configuracion *(Empresa y Notificaciones en /app. Notificaciones: canales WhatsApp, correo y SMS, reglas por evento e historial; falta conectar los eventos reales (OC, vencimientos, fin de OT, checklist crítico), cargar credenciales de SMS y probar WhatsApp desde el servidor. Sedes: sin tabla ni decisión)*
-- [~] sistema/api-gateway *(API y desarrolladores en /app: llaves, permisos, métricas y registro. Webhooks en pausa hasta definir catálogo de eventos y reintentos)* · sistema/superadmin *(sigue en el clásico)*
+- [~] sistema/api-gateway *(API y desarrolladores en /app: llaves, permisos, métricas y registro. Webhooks en pausa hasta definir catálogo de eventos y reintentos)*
+- [x] sistema/superadmin *(en /app: listado, alta con aprovisionamiento de la base, edición de plan, límite de unidades, RUC, correo y estado. Pendiente: verificar en navegador)*
 - [ ] administracion (raíz)
 
 ## Endpoints actuales por archivo (499)

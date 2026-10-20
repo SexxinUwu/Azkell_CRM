@@ -44,4 +44,10 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./Seguridad2FAPage').then(m => ({ default: m.Seguridad2FAPage }))),
     nav: { key: '2fa', label: 'Seguridad 2FA', to: '/sistema/2fa', icon: 'KeyRound', permisos: [] },
   },
+  {
+    path: 'sistema/superadmin/*',
+    permisos: ['administracion'],
+    Page: lazy(() => import('./SuperadminEmpresasPage').then(m => ({ default: m.SuperadminEmpresasPage }))),
+    nav: { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', to: '/sistema/superadmin', icon: 'Building2', permisos: ['administracion'] },
+  },
 ];
