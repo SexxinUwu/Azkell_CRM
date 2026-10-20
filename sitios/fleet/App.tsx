@@ -1,9 +1,9 @@
-import { useState, type FormEvent } from 'react';
-import { motion } from 'motion/react';
+import { useRef, useState, type FormEvent } from 'react';
+import { motion, useScroll, useTransform } from 'motion/react';
 import { ArrowRight, ArrowUpRight, Check } from 'lucide-react';
 import { Boton, Cabecera, Fondo, Pie } from '../compartido/Estructura';
 import { Inclinar, Marquesina, Palabras, Revelar, Rotar, suave } from '../compartido/Movimiento';
-import { PanelDemo } from '../compartido/PanelDemo';
+import { VistaSistema } from '../compartido/VistaSistema';
 import { icono } from '../compartido/iconos';
 import { CARTERA_URL, INTEGRACIONES, MODULOS, PASOS, SEGURIDAD } from './datos';
 
@@ -47,6 +47,20 @@ function IngresoEmpresa() {
   );
 }
 
+/** La ventana del sistema se endereza mientras se baja la página: sigue al dedo 1:1 (solo transform) */
+function Escena() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start 95%', 'start 35%'] });
+  const rotateX = useTransform(scrollYProgress, [0, 1], [16, 0]);
+  const scale = useTransform(scrollYProgress, [0, 1], [0.93, 1]);
+  return (
+    <div ref={ref} className="escena">
+      <motion.div style={{ rotateX, scale, transformOrigin: '50% 0%' }}><VistaSistema /></motion.div>
+      <p className="sis-nota">Vista del sistema con datos de demostración. Toca una opción del menú.</p>
+    </div>
+  );
+}
+
 export function App() {
   return (
     <>
@@ -54,24 +68,21 @@ export function App() {
       <Cabecera marca="Azkell Fleet" logo="/favicon.png" enlaces={NAV} cta={{ texto: 'Ingresar', href: '#empresa' }} />
 
       <main>
-        <section id="inicio" className="heroe" style={{ position: 'relative' }}>
-          <div className="contenedor heroe__cuadricula">
-            <div>
-              <Revelar y={14}><span className="aviso"><span className="panel__punto panel__punto--verde" />Multiempresa · en producción</span></Revelar>
-              <h1><Palabras alCargar retraso={0.15} texto="Toda tu flota, en un solo sistema." /></h1>
-              <Revelar retraso={0.5}>
-                <p className="lead">
-                  Azkell Fleet reúne <Rotar palabras={['operación', 'mantenimiento', 'almacén', 'tesorería']} /> en un mismo lugar. Cada empresa con su propio espacio y sus propios datos.
-                </p>
-              </Revelar>
-              <Revelar retraso={0.65} className="heroe__acciones">
-                <Boton href="#empresa" variante="acento">Ingresar a mi empresa <ArrowRight size={18} /></Boton>
-                <Boton href="#modulos" variante="vidrio">Ver los módulos</Boton>
-              </Revelar>
-            </div>
-            <PanelDemo />
+        <section id="inicio" className="heroe heroe--centrado" style={{ position: 'relative' }}>
+          <div className="contenedor">
+            <Revelar y={10}><span className="aviso"><span className="punto-vivo" />Multiempresa · en producción</span></Revelar>
+            <h1><Palabras alCargar texto="Toda tu flota, en un solo sistema." /></h1>
+            <Revelar retraso={0.5}>
+              <p className="lead">
+                Azkell Fleet reúne <Rotar palabras={['operación', 'mantenimiento', 'almacén', 'tesorería']} /> en un mismo lugar. Cada empresa con su propio espacio y sus propios datos.
+              </p>
+            </Revelar>
+            <Revelar retraso={0.6} className="heroe__acciones">
+              <Boton href="#empresa" variante="acento">Ingresar a mi empresa <ArrowRight size={18} /></Boton>
+              <Boton href="#modulos" variante="vidrio">Ver los módulos</Boton>
+            </Revelar>
+            <Escena />
           </div>
-          <div className="desplazar" aria-hidden>Desliza<i /></div>
         </section>
 
         <div className="banda"><Marquesina items={INTEGRACIONES} /></div>
