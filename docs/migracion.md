@@ -154,7 +154,7 @@ Seguridad que no depende del código: **usuario MySQL propio para la app** (hoy 
 
 ## Catálogo de pantallas (93)
 
-> **Estado real (2026-10-20), según el menú:** una entrada abre la versión clásica solo si su pantalla de React no existe o si se decidió dejarla (guías SUNAT). El menú toma cada pantalla de `src/modules/<modulo>/rutas.ts` (`conModulos()` en `navigation.ts`), así que una pantalla nueva reemplaza sola al enlace clásico. Siguen **10 entradas sin pantalla en React**: Estaciones de proveedores, Métricas y KPIs, Productividad personal, Reporte financiero de taller, Frecuencias MP, Config. métrica, Dashboard financiero de almacén, Movimientos de tesorería, Unidades en Base (seguridad) y Empresas SaaS (SuperAdmin). Empresa, Notificaciones y API y desarrolladores ya están en React.
+> **Estado real (2026-10-20), según el menú:** una entrada abre la versión clásica solo si su pantalla de React no existe o si se decidió dejarla (guías SUNAT). El menú toma cada pantalla de `src/modules/<modulo>/rutas.ts` (`conModulos()` en `navigation.ts`), así que una pantalla nueva reemplaza sola al enlace clásico. Siguen **6 entradas sin pantalla en React**: Métricas y KPIs, Productividad personal, Frecuencias MP, Config. métrica, Unidades en Base (seguridad) y Empresas SaaS (SuperAdmin). Empresa, Notificaciones y API y desarrolladores ya están en React.
 > Pendientes de funcionalidad, no de pantalla: guías SUNAT (a propósito, hasta las pruebas supervisadas en ambiente de prueba), monitoreo GPS de viajes, asignación y rutas, Entradas al contado (depende de Tesorería), importación de inspecciones, y los sitios públicos que aún no están desplegados.
 
 Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplicado a revisar antes de migrar.
@@ -191,7 +191,8 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] mantenimiento/fleetrun *(en /app: km restante (próximo km − km GPS o del cambio), prioridades Vencido, Por vencer, Vigente y Sin datos, umbrales de la empresa, búsqueda y filtros)*
 - [ ] administracion/fleetrun-config *(no hay pantalla de React ni entrada de menú para esta configuración)*
 - [ ] mantenimiento/config-metrica
-- [ ] mantenimiento/productividad · mantenimiento/kpis-taller · mantenimiento/finanzas-taller *(mantenimiento/personal ya en /app)*
+- [ ] mantenimiento/productividad · mantenimiento/kpis-taller *(mantenimiento/personal ya en /app)*
+- [x] mantenimiento/finanzas-taller *(en /app: gasto total de taller, repuestos y mano de obra, costo por OT, evolución mensual de 12 meses, costo por tipo de OT y unidades con mayor costo. Mismos cálculos del clásico (solo OT aprobadas o cerradas). Pendiente: verificar en navegador con datos reales)*
 - [x] mantenimiento/incidencias-ruta *(en /app: registro con placa del catálogo de unidades activas, búsqueda con paginación de 50, detalle con costos en soles; sin notificaciones externas; en la base de la empresa)*
 - [x] mantenimiento/otros *(en /app)*
 - [x] mantenimiento/combustible · mantenimiento/combustible-vales · mantenimiento/combustible-analisis *(resueltas en operaciones/combustible-*, que es lo que usa el menú)*
@@ -202,7 +203,8 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] almacen/salidas *(en /app, desde la OT: validado de extremo a extremo con datos reales del tenant azkell_fleet: entrada de prueba de 1 bushing a S/ 5,50, salida de 1 hacia una OT de prueba desde el formulario React, stock 0 → 1 → 0, repuesto y costo de S/ 5,50 en la pestaña Repuestos y Costos de la OT, salida en el kardex al costo promedio; luego anuladas la salida, la entrada y la OT de prueba, con stock final 0)*
 - [x] almacen/kardex *(en /app, verificado en navegador 2026-10-16: cuatro KPIs (entradas, salidas, stock de apertura y saldo valorizado al costo promedio), encabezado fijo, números a la derecha en fuente monoespaciada y tarjetas en móvil)*
 - [x] almacen/recepcion-compras *(en /app, verificado 2026-10-16: tipo de cambio SUNAT del día con equivalente en soles en vivo, y registro atómico en una sola transacción: costo promedio, O/C y cabecera + detalle con rollback si falla. La pantalla clásica no se modifica)*
-- [ ] almacen/costos · almacen/dashboard-financiero *(el dashboard financiero sigue en el clásico)*
+- [ ] almacen/costos
+- [x] almacen/dashboard-financiero *(en /app con agregados del servidor en solo lectura: capital inmovilizado, reposición crítica, stock sin rotación, consumo por familia y tendencia de compras. Pendiente: verificar en navegador)*
 
 ### E. Operaciones
 - [~] operaciones/ordenes-viaje · operaciones/marsisa-ordenes-viaje ⚠️ (variante por empresa) *(en /app: alerta de documentos vencidos por placa, resumen financiero en la ficha (flete, gastos de ruta, margen y rentabilidad), órdenes de servicio del viaje, sincronización con MarsisaSoft solo en el dominio Marsisa; verificado en navegador 2026-10-16 con datos simulados: listado, filtro, ficha, validaciones de finalizar y alta sin conductor. Pendiente: monitoreo GPS y vales desde la ficha, que siguen en el clásico)*
@@ -212,12 +214,13 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] operaciones/combustible-vales · operaciones/marsisa-combustible-vales *(en /app: lista con filtros por estado, combustible, fechas y búsqueda que llega al servidor (placa, proveedor, estación, viaje, conductor); importación desde Excel; sincronización con MarsisaSoft solo en el dominio Marsisa. Verificado en navegador 2026-10-16 con datos simulados)*
 - [x] operaciones/combustible-analisis · operaciones/urea-analisis *(en /app: análisis de viajes por producto (combustible y urea) con tabla de viajes y auditoría. Verificado en navegador con datos simulados; los KPI de galones no quedaron confirmados en la prueba)*
 - [x] operaciones/combustible-matriz *(en /app: se abre desde Análisis de combustible o directamente con ?matriz=1; el menú lleva ahí. Verificado en navegador)*
-- [ ] operaciones/combustible-estaciones *(sigue en el clásico)*
+- [x] operaciones/combustible-estaciones *(en /app: alta, edición, eliminación y búsqueda de proveedores con sus estaciones. Pendiente: verificar en navegador)*
 - [ ] operaciones/guias-remision · operaciones/guia-remitente · operaciones/guia-transportista (SUNAT)
 - [~] operaciones/conductor-portal · operaciones/conductor/portal *(gastos del conductor en /app; trabajo sin conexión pendiente)*
 
 ### F. Tesorería y Gerencia
-- [~] tesoreria/caja · tesoreria/caja-chica *(caja en /app; caja chica por confirmar)* · tesoreria/movimientos *(sigue en el clásico)*
+- [~] tesoreria/caja · tesoreria/caja-chica *(caja en /app; caja chica por confirmar)*
+- [x] tesoreria/movimientos *(en /app: libro unificado de bancos y caja, con totales en soles y dólares por separado y sin anulados. Pendiente: verificar en navegador)*
 - [x] tesoreria/bancos · tesoreria/cuentas *(en /app)*
 - [~] tesoreria/flujo-caja · tesoreria/centros-costos *(centros de costos en /app; flujo de caja sigue en el clásico)*
 - [x] tesoreria/liquidaciones *(en /app: resumen por viaje con viáticos entregados, comprobantes rendidos, gastos por tipo y saldo a favor de la empresa o del conductor; el estado del viaje se muestra y LIQUIDADO se marca solo cuando el saldo cuadra. Verificado en navegador con datos simulados. El cierre automático en producción sigue pendiente de confirmar; la regla de cajas pendientes queda por decidir)*

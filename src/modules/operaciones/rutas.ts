@@ -50,6 +50,12 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./MatrizCombustiblePage').then(m => ({ default: m.MatrizCombustiblePage }))),
   },
   {
+    path: 'operaciones/combustible-estaciones/*',
+    permisos: ['operaciones.ver', 'admin'],
+    Page: lazy(() => import('./EstacionesProveedoresPage').then(m => ({ default: m.EstacionesProveedoresPage }))),
+    nav: { key: 'estaciones', label: 'Estaciones de proveedores', to: '/operaciones/combustible-estaciones', icon: 'MapPin', permisos: ['operaciones.ver', 'admin'] },
+  },
+  {
     path: 'operaciones/urea/*',
     permisos: ['operaciones.ver', 'admin'],
     Page: lazy(() => import('./UreaPage').then(m => ({ default: m.UreaPage }))),
