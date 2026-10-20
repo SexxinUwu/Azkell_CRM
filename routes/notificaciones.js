@@ -1,6 +1,7 @@
 // Notificaciones unificadas: canales, reglas por evento, prueba manual e historial.
 const express = require('express');
 const notif = require('../services/notificaciones');
+const eventos = require('../services/notificaciones_eventos');
 const { audit, actorFrom, diff } = require('../services/auditoria');
 
 function leerClaves(db, claves) {
@@ -156,6 +157,20 @@ module.exports = (db) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json((filas || []).map(f => ({ ...f, created_at: f.created_at instanceof Date ? f.created_at.toISOString() : f.created_at })));
       });
+  });
+
+  // Resumen de vencimientos de flota: ver lo que se enviaría hoy (sin enviar) o enviarlo ahora
+  router.get('/notificaciones/vista-previa/flota_vencimiento', async (req, res) => {
+    try { res.json(await eventos.ejecutarVencimientos(req.db || db, { soloVer: true, empresa: req.tenantInfo && req.tenantInfo.nombre_empresa })); }
+    catch (e) { res.status(500).json({ error: e.message }); }
+  });
+  router.post('/notificaciones/ejecutar/flota_vencimiento', async (req, res) => {
+    const pool = req.db || db;
+    try {
+      const r = await eventos.ejecutarVencimientos(pool, { forzar: true, empresa: req.tenantInfo && req.tenantInfo.nombre_empresa });
+      audit(pool, actorFrom(req), { action: 'SEND', entity: 'notification', entityId: 'flota_vencimiento', summary: `Envió ahora el resumen de vencimientos de flota (${r.enviados || 0} enviados)`, changes: null });
+      res.json(r);
+    } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
   // QR para vincular el WhatsApp de la empresa (la instancia se conecta desde el teléfono)

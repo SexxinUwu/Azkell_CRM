@@ -5138,6 +5138,12 @@ function programarGpsNocturno() {
     }, prox - ahora);
 }
 programarGpsNocturno();
+
+// Notificaciones: resumen diario de documentos de flota por vencer o vencidos (7:00 hora de Lima, por empresa)
+require('./services/notificaciones_eventos').programarVencimientos(async () => {
+    const { getAllActiveTenants } = require('./services/tenant_master');
+    return (await getAllActiveTenants()).map(t => ({ db: t.pool, nombre: t.nombre_empresa }));
+});
 setTimeout(() => gpsDeTodasLasEmpresas().catch(e => console.warn('Precarga GPS:', e.message)), 15000);
 
 // 4. Encender Servidor

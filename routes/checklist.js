@@ -1,5 +1,6 @@
 const express = require('express');
 const { uploadToS3, getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+const eventosNotif = require('../services/notificaciones_eventos');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
@@ -1205,6 +1206,8 @@ module.exports = function (db, broadcast, logAudit) {
              VALUES (?, ?, ?, 'Falla crítica', ?, ?, CURDATE(), 'Pendiente', ?, ?)`,
             [backlogId, placa || '', km || 0, descripcion, reportadoPor || 'Sistema', 'Sistema', folio]
         );
+        // Aviso de falla crítica (WhatsApp / correo / SMS según la regla "Alerta crítica de checklist"). No bloquea ni lanza errores.
+        eventosNotif.notificar(tdb, 'checklist_critico', eventosNotif.avisoChecklistCritico({ folio, placa, reportadoPor, detalle: descripcion, backlogId }));
     }
     function textoFallasCriticas(listas, libres) {
         const items = listas.flat().map(f => f && (f.obs || f.item || f.motivo || f.descripcion)).filter(Boolean);
