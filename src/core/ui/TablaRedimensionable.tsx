@@ -7,6 +7,8 @@ export interface ColumnaTabla {
   ancho: number;
   minimo?: number;
   alinear?: 'left' | 'right' | 'center';
+  // Color de fondo del encabezado (grupos como el teórico o el GPS); el texto pasa a blanco
+  fondo?: string;
 }
 
 interface Props {
@@ -98,7 +100,7 @@ export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh',
         <thead>
           <tr>
             {columnas.map((c, i) => (
-              <th key={c.id} style={{ textAlign: c.alinear ?? 'left' }}>
+              <th key={c.id} style={{ textAlign: c.alinear ?? 'left', ...(c.fondo ? { background: c.fondo, color: '#ffffff' } : {}) }}>
                 <span className="tabla-redim__titulo">{c.titulo}</span>
                 <span
                   className="tabla-redim__asa"

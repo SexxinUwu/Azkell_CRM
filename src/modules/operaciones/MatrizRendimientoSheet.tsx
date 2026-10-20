@@ -106,7 +106,7 @@ async function leerMatriz(archivo: File): Promise<Record<string, string | number
   });
 }
 
-export function MatrizRendimientoSheet({ open, onClose, puedeEditar }: { open: boolean; onClose: () => void; puedeEditar: boolean }) {
+export function MatrizRendimientoPanel({ puedeEditar }: { puedeEditar: boolean }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [q, setQ] = useState('');
@@ -124,7 +124,7 @@ export function MatrizRendimientoSheet({ open, onClose, puedeEditar }: { open: b
 
   const matriz = useQuery({
     queryKey: ['operaciones', 'matriz'],
-    enabled: open,
+    enabled: true,
     queryFn: () => api<{ data?: FilaMatriz[] }>('/combustible/matriz').then(r => r.data ?? []),
     staleTime: 30_000,
   });
@@ -179,49 +179,47 @@ export function MatrizRendimientoSheet({ open, onClose, puedeEditar }: { open: b
 
   return (
     <>
-      <Sheet open={open && !editar && !importando} onClose={onClose} title="Matriz de rendimiento (D2)"
-        footer={puedeEditar ? (
-          <>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+        {puedeEditar && (
+          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setVaciar(true)} disabled={!(matriz.data ?? []).length}>Vaciar</Button>
             <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => setImportando(true)}>Importar Excel</Button>
             <Button variant="primary" icon={<Plus size={16} />} onClick={() => setEditar(VACIO)}>Nueva ruta</Button>
-          </>
-        ) : <Button variant="secondary" onClick={onClose}>Cerrar</Button>}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          <SearchField value={q} onChange={setQ} placeholder="Ruta, motor o configuración…" />
-          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
-            {['', 'IDA', 'RETORNO'].map(s => (
-              <button key={s || 'todos'} type="button" className={`chip pressable${sentido === s ? ' chip--active' : ''}`} onClick={() => { haptic('selection'); setSentido(s); }}>{s || 'Todos'}</button>
-            ))}
           </div>
-
-          {matriz.isLoading ? <PageLoader /> : matriz.isError ? <Notice tone="error">{errorMessage(matriz.error)}</Notice>
-            : visibles.length === 0 ? <EmptyState title="Sin rutas" icon={<FileSpreadsheet size={22} />}>Agrega rutas o importa el Excel de la matriz.</EmptyState> : (
-            <TablaRedimensionable id="matriz-rendimiento" ariaLabel="Matriz de rendimiento teórico" columnas={COLUMNAS_MATRIZ} altoMax="60vh">
-              {visibles.map(f => (
-                <tr key={f.id}>
-                  <Celda>{f.sentido}</Celda>
-                  <Celda>{f.ruta}</Celda>
-                  <Celda mono>{f.motor}</Celda>
-                  <Celda mono>{f.confg}</Celda>
-                  {TRAMOS.map(t => (
-                    <Celda key={t} alinear="right" mono>{f[t] === '' || f[t] == null ? '—' : num(f[t]).toLocaleString('es-PE', { maximumFractionDigits: 2 })}</Celda>
-                  ))}
-                  <Celda alinear="right" mono>{num(f.km).toLocaleString('es-PE', { maximumFractionDigits: 2 })}</Celda>
-                  <Celda>
-                    {puedeEditar && (
-                      <span style={{ display: 'inline-flex', gap: 'var(--s-1)' }}>
-                        <Button variant="secondary" icon={<Pencil size={15} />} onClick={() => setEditar({ ...f })} aria-label={`Editar ruta ${f.ruta}`}>{''}</Button>
-                        <Button variant="secondary" icon={<Trash2 size={15} />} onClick={() => setBorrar(f)} aria-label={`Eliminar ruta ${f.ruta}`}>{''}</Button>
-                      </span>
-                    )}
-                  </Celda>
-                </tr>
-              ))}
-            </TablaRedimensionable>
-          )}
+        )}
+        <SearchField value={q} onChange={setQ} placeholder="Ruta, motor o configuración…" />
+        <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+          {['', 'IDA', 'RETORNO'].map(s => (
+            <button key={s || 'todos'} type="button" className={`chip pressable${sentido === s ? ' chip--active' : ''}`} onClick={() => { haptic('selection'); setSentido(s); }}>{s || 'Todos'}</button>
+          ))}
         </div>
-      </Sheet>
+
+        {matriz.isLoading ? <PageLoader /> : matriz.isError ? <Notice tone="error">{errorMessage(matriz.error)}</Notice>
+          : visibles.length === 0 ? <EmptyState title="Sin rutas" icon={<FileSpreadsheet size={22} />}>Agrega rutas o importa el Excel de la matriz.</EmptyState> : (
+          <TablaRedimensionable id="matriz-rendimiento" ariaLabel="Matriz de rendimiento teórico" columnas={COLUMNAS_MATRIZ} altoMax="70vh">
+            {visibles.map(f => (
+              <tr key={f.id}>
+                <Celda>{f.sentido}</Celda>
+                <Celda>{f.ruta}</Celda>
+                <Celda mono>{f.motor}</Celda>
+                <Celda mono>{f.confg}</Celda>
+                {TRAMOS.map(t => (
+                  <Celda key={t} alinear="right" mono>{f[t] === '' || f[t] == null ? '—' : num(f[t]).toLocaleString('es-PE', { maximumFractionDigits: 2 })}</Celda>
+                ))}
+                <Celda alinear="right" mono>{num(f.km).toLocaleString('es-PE', { maximumFractionDigits: 2 })}</Celda>
+                <Celda>
+                  {puedeEditar && (
+                    <span style={{ display: 'inline-flex', gap: 'var(--s-1)' }}>
+                      <Button variant="secondary" icon={<Pencil size={15} />} onClick={() => setEditar({ ...f })} aria-label={`Editar ruta ${f.ruta}`}>{''}</Button>
+                      <Button variant="secondary" icon={<Trash2 size={15} />} onClick={() => setBorrar(f)} aria-label={`Eliminar ruta ${f.ruta}`}>{''}</Button>
+                    </span>
+                  )}
+                </Celda>
+              </tr>
+            ))}
+          </TablaRedimensionable>
+        )}
+      </div>
 
       <FormularioFila fila={editar} onClose={() => setEditar(null)} />
 

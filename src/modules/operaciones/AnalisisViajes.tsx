@@ -1,6 +1,6 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowUpRight, ChevronDown, ChevronRight, Droplets, FileSpreadsheet, Fuel, RefreshCw, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
@@ -15,12 +15,13 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { MatrizRendimientoSheet } from './MatrizRendimientoSheet';
+import { analizarViaje, type AnalisisViaje, type MatrizCalc, type TramoCalc, type ViajeCalc } from './analisisCalculo';
 
 interface Stats { kmInicio: number; kmFin: number; recorridoKm: number; totalGalones: number; totalGasto: number; rendimiento: number }
-interface Voucher { id: number | string; fecha?: string; producto?: string; galones?: number; importe?: number; odometro?: number; estacion?: string; esPuntoPartida?: boolean }
+interface Voucher { id: number | string; fecha?: string; producto?: string; galones?: number; importe?: number; odometro?: number; estacion?: string; esPuntoPartida?: boolean; tipo?: string; peso?: number }
 interface Trip {
   viaje: string; placa: string; carreta: string; conductor: string; motor: string; marca: string; configuracion: string; ruta: string; rutaIda: string; rutaRetorno: string;
+  pesoMaxTn: number;
   ordenIda: string; ordenRetorno: string;
   estado: string; fechaInicio: string; fechaFin: string; kmInicio: number; kmFin: number; recorridoKm: number; odometroInconsistente: boolean;
   galonesIda: number; galonesRetorno: number; pesoIda: number; pesoRetorno: number; totalGalones: number; totalGasto: number; rendimiento: number;
@@ -122,6 +123,28 @@ function Pastilla({ color, children }: { color: string; children: string }) {
   );
 }
 
+// Colores de encabezado del clásico: base oscura, teórico naranja y GPS celeste
+const FONDO_BASE = '#1e293b';
+const FONDO_TEORICO = '#ea580c';
+const FONDO_GPS = '#0284c7';
+
+// Encabezados del Excel del clásico (mismo orden)
+const ENCABEZADOS_EXCEL = [
+  'ESTADO AUDITORÍA', 'OBSERVACIÓN AUDITORÍA', 'N° VIAJE', 'PLACA', 'CARRETA', 'ESTADO', 'MOTOR', 'RUTA', 'CONDUCTOR', 'PESO (Tn)',
+  'FECHA INICIO', 'FECHA FIN', 'KM INICIO (VALES)', 'KM FIN (VALES)', 'RECORRIDO (VALES)', 'TOTAL GALONES (REAL)', 'KM / GALÓN (REAL)',
+  'TOTAL GASTO (S/)', 'KM TEÓRICO (MATRIZ)', 'GALONES TEÓRICOS (MATRIZ)', 'KM / GALÓN (TEÓRICO MATRIZ)', 'DIFERENCIA (GALONES)',
+  'ESTADO CONSUMO', 'GALONES IDA', 'GALONES RETORNO', 'RECORRIDO (GPS CAN)', 'COMB. CONSUMIDO (GPS CAN)', 'RENDIMIENTO (GPS CAN)',
+  'VELOCIDAD MÁXIMA (GPS)', 'CONSUMO PROMEDIO EN RALENTÍ (GAL/H)', 'RPM MEDIA (RPM)', 'RPM MÁXIMA (RPM)', 'HORAS DE MOTOR', 'CANTIDAD VALES',
+];
+
+// Diferencia contra la matriz: positivo (sobreconsumo) en rojo, negativo (ahorro) en verde
+function Diferencia({ valor }: { valor: number | null }) {
+  if (valor == null) return <>—</>;
+  return <span style={{ color: valor > 0 ? 'var(--red-ink)' : 'var(--green-ink)', fontWeight: 700 }}>{valor > 0 ? '+' : ''}{fmt(valor, 2)}</span>;
+}
+
+const ptoDecimal = (v: number, d: number) => +v.toFixed(d);
+
 // Operaciones › Análisis de combustible y de urea: rendimiento por viaje y auditoría.
 export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' }) {
   const urea = producto === 'urea';
@@ -135,9 +158,11 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const [abierto, setAbierto] = useState<string | null>(null);
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [canActivo, setCanActivo] = useState(false);
+  const [mostrarObs, setMostrarObs] = useState(false);
   const [pagina, setPagina] = useState(1);
   const [tamano, setTamano] = useState(50);
   const toast = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => { setPagina(1); }, [q, desde, hasta, auditoria, tamano]);
 
@@ -152,6 +177,15 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     },
     staleTime: 60_000,
   });
+
+  // Matriz teórica (la misma que la pantalla de matriz): base de los cálculos de teórico por tramo
+  const matrizQ = useQuery<MatrizCalc[]>({
+    queryKey: ['operaciones', 'matriz'],
+    enabled: !urea,
+    queryFn: () => api<{ data?: MatrizCalc[] }>('/combustible/matriz').then(r => r.data ?? []),
+    staleTime: 5 * 60_000,
+  });
+  const matriz = matrizQ.data ?? [];
 
   // En urea solo cuentan los viajes con vales de urea, y las cifras son las de ese producto
   const trips = useMemo(() => {
@@ -173,6 +207,21 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const paginas = Math.max(1, Math.ceil(visibles.length / tamano));
   const pagActual = Math.min(pagina, paginas);
   const pagina_ = useMemo(() => visibles.slice((pagActual - 1) * tamano, pagActual * tamano), [visibles, pagActual, tamano]);
+
+  // Cálculo por viaje y por tramo (IDA / RETORNO) con la misma lógica del clásico
+  const analisis = useMemo(() => {
+    const mapa = new Map<string, AnalisisViaje>();
+    if (urea) return mapa;
+    for (const x of visibles) {
+      const viaje: ViajeCalc = {
+        ruta: x.ruta, rutaIda: x.rutaIda, rutaRetorno: x.rutaRetorno, motor: x.motor, configuracion: x.configuracion, carreta: x.carreta,
+        pesoIda: x.pesoIda, pesoRetorno: x.pesoRetorno, pesoMaxTn: x.pesoMaxTn, kmInicio: x.kmInicio, kmFin: x.kmFin,
+        vouchers: (x.vouchers ?? []).filter(v => !esUrea(String(v.producto ?? ''))),
+      };
+      mapa.set(x.viaje, analizarViaje(viaje, matriz));
+    }
+    return mapa;
+  }, [visibles, matriz, urea]);
 
   // CAN (GPS): los viajes de la página van en una sola petición; el servidor consulta Wialon en secuencia
   const lote = useMemo(() => pagina_.filter(x => x.placa).map((x, index) => {
@@ -199,42 +248,74 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
 
   const t = trips.find(x => x.viaje === abierto) ?? null;
   const Icono = urea ? Droplets : Fuel;
-  const [params, setParams] = useSearchParams();
-  const [matriz, setMatriz] = useState(params.get('matriz') === '1');
-  useEffect(() => { if (params.get('matriz')) setParams({}, { replace: true }); }, [params, setParams]);
   const puedeAuditar = can('combustible_analisis.editar', 'combustible.editar', 'urea_analisis.editar', 'combustible_analisis.crear');
 
+  // Columnas en el orden del clásico: auditoría, viaje, placa, carreta, estado, motor, ruta, conductor, peso, fechas, vales,
+  // teórico (naranja) y GPS (celeste)
   const columnas: ColumnaTabla[] = [
-    { id: 'auditoria', titulo: 'Auditoría', ancho: 130, minimo: 110 },
-    { id: 'viaje', titulo: 'N° viaje', ancho: 165, minimo: 130 },
-    { id: 'placa', titulo: 'Placa', ancho: 100 },
-    { id: 'carreta', titulo: 'Carreta', ancho: 100 },
-    { id: 'estado', titulo: 'Estado', ancho: 120 },
-    { id: 'motor', titulo: 'Motor', ancho: 100 },
-    { id: 'ruta', titulo: 'Ruta / trayecto', ancho: 260, minimo: 140 },
-    { id: 'conductor', titulo: 'Conductor', ancho: 220 },
-    { id: 'peso', titulo: 'Peso (t)', ancho: 90, alinear: 'right' },
-    { id: 'finicio', titulo: 'Fecha inicio', ancho: 150 },
-    { id: 'ffin', titulo: 'Fecha fin', ancho: 150 },
-    { id: 'kmini', titulo: 'Km inicio (vales)', ancho: 130, alinear: 'right' },
-    { id: 'kmfin', titulo: 'Km fin (vales)', ancho: 130, alinear: 'right' },
-    { id: 'recorrido', titulo: 'Recorrido (km)', ancho: 130, alinear: 'right' },
-    { id: 'galones', titulo: urea ? 'Urea (gl)' : 'Galones', ancho: 105, alinear: 'right' },
-    { id: 'gasto', titulo: 'Gasto (S/)', ancho: 120, alinear: 'right' },
-    { id: 'rendimiento', titulo: 'Km/gl', ancho: 90, alinear: 'right' },
-    { id: 'gps-recorrido', titulo: 'Recorrido GPS (km)', ancho: 140, alinear: 'right' },
-    { id: 'gps-rendimiento', titulo: 'Rend. GPS (km/gl)', ancho: 140, alinear: 'right' },
+    { id: 'auditoria', titulo: 'Auditoría', ancho: 140, minimo: 110, fondo: FONDO_BASE },
   ];
+  if (mostrarObs) columnas.push({ id: 'obs', titulo: 'Observación auditoría', ancho: 200, fondo: FONDO_BASE });
+  columnas.push(
+    { id: 'viaje', titulo: 'N° viaje', ancho: 165, minimo: 130, fondo: FONDO_BASE },
+    { id: 'placa', titulo: 'Placa', ancho: 100, fondo: FONDO_BASE },
+    { id: 'carreta', titulo: 'Carreta', ancho: 100, fondo: FONDO_BASE },
+    { id: 'estado', titulo: 'Estado', ancho: 110, fondo: FONDO_BASE },
+    { id: 'motor', titulo: 'Motor', ancho: 100, fondo: FONDO_BASE },
+    { id: 'ruta', titulo: 'Ruta / trayecto', ancho: 260, minimo: 140, fondo: FONDO_BASE },
+    { id: 'conductor', titulo: 'Conductor', ancho: 200, fondo: FONDO_BASE },
+    { id: 'peso', titulo: 'Peso (Tn)', ancho: 90, alinear: 'right', fondo: FONDO_BASE },
+    { id: 'finicio', titulo: 'Fecha inicio', ancho: 150, fondo: FONDO_BASE },
+    { id: 'ffin', titulo: 'Fecha fin', ancho: 150, fondo: FONDO_BASE },
+    { id: 'kmini', titulo: 'Km inicio (vales)', ancho: 130, alinear: 'right', fondo: FONDO_BASE },
+    { id: 'kmfin', titulo: 'Km fin (vales)', ancho: 130, alinear: 'right', fondo: FONDO_BASE },
+    { id: 'recorrido', titulo: 'Recorrido (vales)', ancho: 130, alinear: 'right', fondo: FONDO_BASE },
+    { id: 'galones', titulo: urea ? 'Urea (gl)' : 'Total gal.', ancho: 105, alinear: 'right', fondo: FONDO_BASE },
+    { id: 'rendimiento', titulo: 'Km/gal (real)', ancho: 120, alinear: 'right', fondo: FONDO_BASE },
+    { id: 'gasto', titulo: 'Total (S/)', ancho: 120, alinear: 'right', fondo: FONDO_BASE },
+  );
+  if (!urea) {
+    columnas.push(
+      { id: 'kmteo', titulo: 'Km teórico', ancho: 115, alinear: 'right', fondo: FONDO_TEORICO },
+      { id: 'galteo', titulo: 'Gal. teórico', ancho: 115, alinear: 'right', fondo: FONDO_TEORICO },
+      { id: 'rendteo', titulo: 'Km/gal (teórico)', ancho: 135, alinear: 'right', fondo: FONDO_TEORICO },
+      { id: 'dif', titulo: 'Diferencia', ancho: 115, alinear: 'right', fondo: FONDO_TEORICO },
+      { id: 'gps-rec', titulo: 'Recorrido (GPS CAN)', ancho: 150, alinear: 'right', fondo: FONDO_GPS },
+      { id: 'gps-comb', titulo: 'Comb. consumido (GPS CAN)', ancho: 180, alinear: 'right', fondo: FONDO_GPS },
+      { id: 'gps-rend', titulo: 'Rendimiento (GPS CAN)', ancho: 170, alinear: 'right', fondo: FONDO_GPS },
+      { id: 'gps-vel', titulo: 'Velocidad máx (GPS)', ancho: 160, alinear: 'right', fondo: FONDO_GPS },
+      { id: 'gps-ral', titulo: 'Consumo ralentí', ancho: 130, alinear: 'right', fondo: FONDO_GPS },
+      { id: 'gps-horas', titulo: 'Horas de motor', ancho: 130, alinear: 'right', fondo: FONDO_GPS },
+    );
+  }
 
   function onAlternarFila(viaje: string) {
     setExpandidos(prev => { const nx = new Set(prev); nx.has(viaje) ? nx.delete(viaje) : nx.add(viaje); return nx; });
   }
 
+  // Excel con las columnas del clásico. Los GPS salen solo de los viajes cuya telemetría ya se consultó.
   async function exportar() {
     try {
-      await exportarExcel(urea ? 'Analisis-urea' : 'Analisis-combustible', 'Viajes',
-        ['Viaje', 'Estado', 'Placa', 'Conductor', 'Ruta', 'Inicio', 'Fin', 'Km recorridos', urea ? 'Urea (gl)' : 'Galones', 'Gasto', 'Rendimiento (km/gl)', 'Auditoría', 'Observación'],
-        visibles.map(x => { const c = cifras(x); return [x.viaje, x.estado, x.placa, x.conductor, x.ruta, x.fechaInicio, x.fechaFin, n(x.recorridoKm), c.galones, c.gasto, c.rendimiento, x.estadoAuditoria, x.observacionAuditoria]; }));
+      const filas = visibles.map(x => {
+        const c = cifras(x);
+        const a = analisis.get(x.viaje);
+        const dif = a && a.galTeorico > 0 && c.galones > 0 ? c.galones - a.galTeorico : null;
+        const g = gps.data?.[x.viaje]?.data ?? null;
+        const gv = (v: number | null | undefined, d = 2) => (v == null ? '—' : ptoDecimal(Number(v), d));
+        const vales = (x.vouchers ?? []).filter(v => !v.esPuntoPartida && !esUrea(String(v.producto ?? ''))).length;
+        return [
+          x.estadoAuditoria, x.observacionAuditoria, x.viaje, x.placa || '---', x.carreta || '---', String(x.estado || 'INICIADO').toUpperCase(),
+          x.motor || '---', x.ruta || '---', x.conductor || '---', ptoDecimal(n(x.pesoMaxTn), 2), x.fechaInicio || '---', x.fechaFin || '---',
+          x.kmInicio > 0 ? ptoDecimal(x.kmInicio, 1) : '—', x.kmFin > 0 ? ptoDecimal(x.kmFin, 1) : '—', x.recorridoKm > 0 ? ptoDecimal(x.recorridoKm, 1) : '—',
+          ptoDecimal(c.galones, 2), c.rendimiento > 0 ? ptoDecimal(c.rendimiento, 2) : '—', ptoDecimal(c.gasto, 2),
+          a && a.kmTeorico > 0 ? ptoDecimal(a.kmTeorico, 1) : '—', a && a.galTeorico > 0 ? ptoDecimal(a.galTeorico, 2) : 0,
+          a && a.rendTeorico > 0 ? ptoDecimal(a.rendTeorico, 2) : '—', dif !== null ? ptoDecimal(dif, 2) : '—',
+          dif !== null ? (dif > 0 ? 'SOBRECONSUMO' : 'AHORRO') : '—', n(x.galonesIda), n(x.galonesRetorno),
+          gv(g?.recorridoKmGps, 1), gv(g?.combustibleConsumidoGps), gv(g?.rendimientoGps), gv(g?.velocidadMaxGps, 0), gv(g?.consumoRalentiGps),
+          gv(g?.rpmMediaGps, 0), gv(g?.rpmMaxGps, 0), gv(g?.horasMotorGps, 1), vales,
+        ];
+      });
+      await exportarExcel(urea ? 'Analisis-urea' : 'Analisis-combustible', 'Viajes', ENCABEZADOS_EXCEL, filas);
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
   }
@@ -248,7 +329,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         actions={
           <MenuOtros opciones={[
             { label: 'Exportar Excel', detalle: `${visibles.length} viajes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-            ...(urea ? [] : [{ label: 'Matriz de rendimiento', icon: <Fuel size={17} />, separado: true, onSelect: () => setMatriz(true) }]),
+            ...(urea ? [] : [{ label: 'Matriz de rendimiento', icon: <Fuel size={17} />, separado: true, onSelect: () => navigate('/operaciones/matriz-combustible') }]),
             { label: 'Telemetría y auditoría avanzada', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, separado: !urea, onSelect: () => abrirClasico(urea ? 'operaciones/urea-analisis' : 'operaciones/combustible-analisis') },
           ]} />
         }
@@ -270,12 +351,22 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
           <label className="aud-fecha"><span>Desde</span><input type="date" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} /></label>
           <label className="aud-fecha"><span>Hasta</span><input type="date" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} /></label>
           {!urea && (
-            <Button variant={canActivo ? 'primary' : 'secondary'} icon={<RefreshCw size={15} />} onClick={() => { haptic('selection'); setCanActivo(a => !a); }}
-              title="Consulta el recorrido y rendimiento que reporta el GPS (Wialon) para las filas de esta página">
-              {canActivo ? 'CAN (GPS) activo' : 'Consultar CAN (GPS)'}
-            </Button>
+            <>
+              <Button variant={mostrarObs ? 'primary' : 'secondary'} onClick={() => setMostrarObs(v => !v)}>{mostrarObs ? 'Ocultar observaciones' : 'Ver observaciones'}</Button>
+              <Button variant={canActivo ? 'primary' : 'secondary'} icon={<RefreshCw size={15} />} onClick={() => { haptic('selection'); setCanActivo(a => !a); }}
+                title="Consulta el recorrido y rendimiento que reporta el GPS (Wialon) para las filas de esta página">
+                {canActivo ? 'CAN (GPS) activo' : 'Consultar CAN (GPS)'}
+              </Button>
+            </>
           )}
         </div>
+
+        {!urea && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', flexWrap: 'wrap', padding: 'var(--s-2) var(--s-3)', borderRadius: 12, background: 'var(--amber-tint)', color: 'var(--amber-ink)', fontSize: '0.8125rem' }}>
+            <strong>Regla operativa:</strong>
+            <span>a las unidades que ruedan sin carreta (solo camión) se les calcula el teórico completo de ida + retorno y luego se aplica un descuento del 25% en los galones teóricos.</span>
+          </div>
+        )}
 
         {datos.isLoading ? <PageLoader /> : datos.isError ? <Notice tone="error">{errorMessage(datos.error)}</Notice> : visibles.length === 0 ? (
           <EmptyState icon={busqueda || auditoria || desde || hasta ? <SearchX size={22} /> : <Icono size={22} />} title={busqueda || auditoria ? 'Sin coincidencias' : 'Sin viajes para analizar'}>
@@ -284,45 +375,72 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         ) : (
           <>
             {gps.isError && <Notice tone="error">{errorMessage(gps.error)}</Notice>}
-            <TablaRedimensionable id={urea ? 'analisis-urea' : 'analisis-combustible'} columnas={columnas} ariaLabel={urea ? 'Análisis de urea por viaje' : 'Análisis de combustible por viaje'}>
+            <TablaRedimensionable id={`${urea ? 'analisis-urea' : 'analisis-combustible'}${mostrarObs ? '-obs' : ''}`} columnas={columnas} ariaLabel={urea ? 'Análisis de urea por viaje' : 'Análisis de combustible por viaje'}>
               {pagina_.map(x => {
                 const c = cifras(x);
-                const abiertoFila = expandidos.has(x.viaje);
+                const a = analisis.get(x.viaje);
+                const abiertoFila = !urea && expandidos.has(x.viaje);
                 const color = colorAudit(x.estadoAuditoria);
+                const gpsV = (campo: keyof TelemetriaWialon) => valorGps(canActivo, gps.isFetching, gps.data, x.viaje, campo);
+                const dif = a && a.galTeorico > 0 && c.galones > 0 ? c.galones - a.galTeorico : null;
+                const celdas: ReactNode[] = [
+                  <Celda key="aud">
+                    <Pastilla color={color}>{x.estadoAuditoria}</Pastilla>
+                    {x.odometroInconsistente && <AlertTriangle size={14} style={{ marginLeft: 6, color: 'var(--red-ink)', verticalAlign: 'middle' }} />}
+                  </Celda>,
+                ];
+                if (mostrarObs) celdas.push(<Celda key="obs">{x.observacionAuditoria || '—'}</Celda>);
+                celdas.push(
+                  <Celda key="viaje" mono>
+                    {!urea && (
+                      <button type="button" aria-expanded={abiertoFila} aria-label={`Ver ida y retorno del viaje ${x.viaje}`}
+                        onClick={e => { e.stopPropagation(); onAlternarFila(x.viaje); }}
+                        style={{ background: 'none', border: 0, padding: 0, marginRight: 4, cursor: 'pointer', color: 'var(--label-2)', verticalAlign: 'middle' }}>
+                        {abiertoFila ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      </button>
+                    )}
+                    {x.viaje}
+                  </Celda>,
+                  <Celda key="placa" mono>{x.placa || '—'}</Celda>,
+                  <Celda key="carreta" mono>{x.carreta || '—'}</Celda>,
+                  <Celda key="estado"><Pastilla color={x.estado === 'FINALIZADO' ? 'blue' : 'gray'}>{x.estado || '—'}</Pastilla></Celda>,
+                  <Celda key="motor" mono>{x.motor || '—'}</Celda>,
+                  <Celda key="ruta">{x.ruta || '—'}</Celda>,
+                  <Celda key="conductor">{x.conductor || '—'}</Celda>,
+                  <Celda key="peso" alinear="right" mono>{fmt(x.pesoMaxTn, 2)}</Celda>,
+                  <Celda key="finicio" mono>{x.fechaInicio || '—'}</Celda>,
+                  <Celda key="ffin" mono>{x.fechaFin || '—'}</Celda>,
+                  <Celda key="kmini" alinear="right" mono>{x.kmInicio > 0 ? fmt(x.kmInicio, 1) : '—'}</Celda>,
+                  <Celda key="kmfin" alinear="right" mono>{x.kmFin > 0 ? fmt(x.kmFin, 1) : '—'}</Celda>,
+                  <Celda key="recorrido" alinear="right" mono>{x.recorridoKm > 0 ? fmt(x.recorridoKm, 1) : '—'}</Celda>,
+                  <Celda key="galones" alinear="right" mono>{fmt(c.galones, 2)}</Celda>,
+                  <Celda key="rendimiento" alinear="right" mono>{c.rendimiento > 0 ? fmt(c.rendimiento, 2) : '—'}</Celda>,
+                  <Celda key="gasto" alinear="right" mono>{soles(c.gasto)}</Celda>,
+                );
+                if (!urea) {
+                  celdas.push(
+                    <Celda key="kmteo" alinear="right" mono>{a && a.kmTeorico > 0 ? fmt(a.kmTeorico, 1) : '—'}</Celda>,
+                    <Celda key="galteo" alinear="right" mono>
+                      {a && a.galTeorico > 0 ? fmt(a.galTeorico, 2) : '—'}
+                      {a?.sinCarreta && a.galTeorico > 0 && <span style={{ marginLeft: 4 }}><Pastilla color="amber">-25%</Pastilla></span>}
+                    </Celda>,
+                    <Celda key="rendteo" alinear="right" mono>{a && a.rendTeorico > 0 ? fmt(a.rendTeorico, 2) : '—'}</Celda>,
+                    <Celda key="dif" alinear="right" mono><Diferencia valor={dif} /></Celda>,
+                    <Celda key="gps-rec" alinear="right" mono>{gpsV('recorridoKmGps')}</Celda>,
+                    <Celda key="gps-comb" alinear="right" mono>{gpsV('combustibleConsumidoGps')}</Celda>,
+                    <Celda key="gps-rend" alinear="right" mono>{gpsV('rendimientoGps')}</Celda>,
+                    <Celda key="gps-vel" alinear="right" mono>{gpsV('velocidadMaxGps')}</Celda>,
+                    <Celda key="gps-ral" alinear="right" mono>{gpsV('consumoRalentiGps')}</Celda>,
+                    <Celda key="gps-horas" alinear="right" mono>{gpsV('horasMotorGps')}</Celda>,
+                  );
+                }
                 return (
-                  <FilaViaje key={x.viaje} abierta={abiertoFila} onAbrir={() => { haptic('selection'); setAbierto(x.viaje); }}
-                    seleccionada={abierto === x.viaje} rutaIda={x.rutaIda} rutaRetorno={x.rutaRetorno} galonesIda={x.galonesIda} galonesRetorno={x.galonesRetorno}
-                    pesoIda={x.pesoIda} pesoRetorno={x.pesoRetorno} ordenIda={x.ordenIda} ordenRetorno={x.ordenRetorno} ancho={columnas.length}
-                    celdas={
-                      <>
-                        <Celda><Pastilla color={color}>{x.estadoAuditoria}</Pastilla>{x.odometroInconsistente && <AlertTriangle size={14} style={{ marginLeft: 6, color: 'var(--red-ink)', verticalAlign: 'middle' }} />}</Celda>
-                        <Celda mono>
-                          <button type="button" aria-expanded={abiertoFila} aria-label={`Ver ida y retorno del viaje ${x.viaje}`}
-                            onClick={e => { e.stopPropagation(); onAlternarFila(x.viaje); }}
-                            style={{ background: 'none', border: 0, padding: 0, marginRight: 4, cursor: 'pointer', color: 'var(--label-2)', verticalAlign: 'middle' }}>
-                            {abiertoFila ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                          </button>
-                          {x.viaje}
-                        </Celda>
-                        <Celda mono>{x.placa || '—'}</Celda>
-                        <Celda mono>{x.carreta || '—'}</Celda>
-                        <Celda><Pastilla color={x.estado === 'FINALIZADO' ? 'blue' : 'gray'}>{x.estado || '—'}</Pastilla></Celda>
-                        <Celda mono>{x.motor || '—'}</Celda>
-                        <Celda>{x.rutaIda || x.ruta || '—'}</Celda>
-                        <Celda>{x.conductor || '—'}</Celda>
-                        <Celda alinear="right" mono>{fmt(x.pesoIda, 2)}</Celda>
-                        <Celda mono>{x.fechaInicio || '—'}</Celda>
-                        <Celda mono>{x.fechaFin || '—'}</Celda>
-                        <Celda alinear="right" mono>{fmt(x.kmInicio, 1)}</Celda>
-                        <Celda alinear="right" mono>{fmt(x.kmFin, 1)}</Celda>
-                        <Celda alinear="right" mono>{fmt(x.recorridoKm, 1)}</Celda>
-                        <Celda alinear="right" mono>{fmt(c.galones, 2)}</Celda>
-                        <Celda alinear="right" mono>{soles(c.gasto)}</Celda>
-                        <Celda alinear="right" mono>{c.rendimiento > 0 ? fmt(c.rendimiento, 2) : '—'}</Celda>
-                        <Celda alinear="right" mono>{valorGps(canActivo, gps.isFetching, gps.data, x.viaje, 'recorridoKmGps')}</Celda>
-                        <Celda alinear="right" mono>{valorGps(canActivo, gps.isFetching, gps.data, x.viaje, 'rendimientoGps')}</Celda>
-                      </>
-                    } />
+                  <FilaViaje key={x.viaje} seleccionada={abierto === x.viaje} onAbrir={() => { haptic('selection'); setAbierto(x.viaje); }}
+                    abierta={abiertoFila} celdas={celdas}
+                    tramos={abiertoFila && a ? [
+                      { etiqueta: 'IDA', tramo: a.ida, x, obs: mostrarObs, orden: x.ordenIda },
+                      { etiqueta: 'RETORNO', tramo: a.retorno, x, obs: mostrarObs, orden: x.ordenRetorno },
+                    ] : []} />
                 );
               })}
             </TablaRedimensionable>
@@ -342,41 +460,47 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       </div>
 
       <DetalleViaje trip={t} urea={urea} puedeAuditar={puedeAuditar} modulo={modulo} usuario={user?.name ?? ''} onClose={() => setAbierto(null)} cifras={cifras} />
-      <MatrizRendimientoSheet open={matriz} onClose={() => setMatriz(false)} puedeEditar={puedeAuditar} />
     </Page>
   );
 }
 
-// Fila del viaje + su desglose de ida y retorno (se despliega con la flecha)
-function FilaViaje({ abierta, onAbrir, seleccionada, rutaIda, rutaRetorno, galonesIda, galonesRetorno, pesoIda, pesoRetorno, ordenIda, ordenRetorno, ancho, celdas }: {
-  abierta: boolean; onAbrir: () => void; seleccionada: boolean; rutaIda: string; rutaRetorno: string; galonesIda: number; galonesRetorno: number;
-  pesoIda: number; pesoRetorno: number; ordenIda: string; ordenRetorno: string; ancho: number; celdas: ReactNode;
+// Fila del viaje y, al desplegarla, sus filas de IDA y RETORNO con las mismas columnas (cada tramo con sus propios cálculos)
+function FilaViaje({ abierta, onAbrir, seleccionada, celdas, tramos }: {
+  abierta: boolean; onAbrir: () => void; seleccionada: boolean; celdas: ReactNode[];
+  tramos: { etiqueta: 'IDA' | 'RETORNO'; tramo: TramoCalc; x: Trip; obs: boolean; orden: string }[];
 }) {
   return (
     <>
       <tr className={`tabla-redim__fila--click${seleccionada ? ' tabla-redim__fila--sel' : ''}`} onClick={onAbrir}>
         {celdas}
       </tr>
-      {abierta && (
-        <>
-          <tr className="tabla-redim__sub">
-            <td colSpan={ancho}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontWeight: 700, color: 'var(--label)' }}>Ida</span>
-                {rutaIda || '—'} · {fmt(pesoIda, 2)} t · {fmt(galonesIda, 2)} gl{ordenIda ? ` · OS ${ordenIda}` : ''}
-              </span>
-            </td>
-          </tr>
-          <tr className="tabla-redim__sub">
-            <td colSpan={ancho}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontWeight: 700, color: 'var(--label)' }}>Retorno</span>
-                {rutaRetorno || '—'} · {fmt(pesoRetorno, 2)} t · {fmt(galonesRetorno, 2)} gl{ordenRetorno ? ` · OS ${ordenRetorno}` : ''}
-              </span>
-            </td>
-          </tr>
-        </>
-      )}
+      {abierta && tramos.map(({ etiqueta, tramo, x, obs, orden }) => (
+        <tr key={etiqueta} className="tabla-redim__sub" title={orden ? `Orden de servicio: ${orden}` : undefined}>
+          <Celda>—</Celda>
+          {obs && <Celda>—</Celda>}
+          <Celda><Pastilla color={etiqueta === 'IDA' ? 'blue' : 'amber'}>{etiqueta}</Pastilla></Celda>
+          <Celda mono>{x.placa || '—'}</Celda>
+          <Celda mono>{x.carreta || '—'}</Celda>
+          <Celda>—</Celda>
+          <Celda mono>{x.motor || '—'}</Celda>
+          <Celda>{`${etiqueta === 'IDA' ? 'Ida' : 'Retorno'}: ${tramo.ruta || '—'}`}</Celda>
+          <Celda>—</Celda>
+          <Celda alinear="right" mono>{tramo.peso > 0 ? fmt(tramo.peso, 2) : '0.00 (vacío)'}</Celda>
+          <Celda>—</Celda>
+          <Celda>—</Celda>
+          <Celda alinear="right" mono>{tramo.kmIni > 0 ? fmt(tramo.kmIni, 1) : '—'}</Celda>
+          <Celda alinear="right" mono>{tramo.kmFin > 0 ? fmt(tramo.kmFin, 1) : '—'}</Celda>
+          <Celda alinear="right" mono>{tramo.recorrido > 0 ? fmt(tramo.recorrido, 1) : '—'}</Celda>
+          <Celda alinear="right" mono>{fmt(tramo.galones, 2)}</Celda>
+          <Celda alinear="right" mono>{tramo.rendimiento > 0 ? fmt(tramo.rendimiento, 2) : '—'}</Celda>
+          <Celda alinear="right" mono>{soles(tramo.gasto)}</Celda>
+          <Celda alinear="right" mono>{tramo.kmTeorico > 0 ? fmt(tramo.kmTeorico, 1) : '—'}</Celda>
+          <Celda alinear="right" mono>{tramo.galTeorico > 0 ? fmt(tramo.galTeorico, 2) : '—'}</Celda>
+          <Celda alinear="right" mono>{tramo.rendTeorico > 0 ? fmt(tramo.rendTeorico, 2) : '—'}</Celda>
+          <Celda alinear="right" mono><Diferencia valor={tramo.diferencia} /></Celda>
+          {Array.from({ length: 6 }, (_, i) => <Celda key={i} alinear="right" mono>—</Celda>)}
+        </tr>
+      ))}
     </>
   );
 }
