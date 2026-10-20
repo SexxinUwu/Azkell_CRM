@@ -66,6 +66,57 @@ export function useCaja(f: CajaFiltros = {}) {
   });
 }
 
+/** Libro unificado (GET /tesoreria/movimientos): ya viene normalizado por el servidor */
+export interface MovimientoTesoreria {
+  id: number;
+  caja_folio: string;
+  codigo_oc: string | null;
+  tipo_origen: string;               // ORDEN DE COMPRA | CAJA CHICA
+  fecha: string | null;
+  fecha_valuta: string | null;
+  tipo_movimiento: string;           // INGRESO | EGRESO
+  moneda: string;
+  monto: number;
+  debe: number;
+  haber: number;
+  motivo: string;
+  sub_motivo: string;
+  descripcion: string;
+  banco_cuenta: string;
+  numero_operacion: string;
+  numero_factura: string;
+  beneficiario: string;
+  tipo_persona: string;
+  usuario_creacion: string;
+  solicitante: string;
+  autoriza: string;
+  observacion: string;
+  fecha_aprobacion: string | null;
+  orden_viaje: string;
+  placa: string;
+  ruta: string;
+  centro_costo: string;
+  centro_costo_nombre: string;
+  estado: string;
+  voucher_url: string | null;
+  voucher_url_presigned: string | null;
+}
+
+export function useMovimientos(f: { desde?: string; hasta?: string; estado?: string } = {}) {
+  return useQuery<MovimientoTesoreria[]>({
+    queryKey: ['tesoreria', 'movimientos', f],
+    queryFn: () => {
+      const p = new URLSearchParams();
+      if (f.desde) p.set('fecha_desde', f.desde);
+      if (f.hasta) p.set('fecha_hasta', f.hasta);
+      if (f.estado) p.set('estado', f.estado);
+      const qs = p.toString();
+      return api(`/tesoreria/movimientos${qs ? '?' + qs : ''}`).then(r => arr<MovimientoTesoreria>(r));
+    },
+    staleTime: 30_000,
+  });
+}
+
 export interface OrdenViajeCaja { viaje: string; conductor: string | null; placa_tracto: string | null; placa_remolque: string | null; ruta: string | null; fecha_viaje: string | null }
 
 export const buscarOrdenesViaje = (q: string) =>
