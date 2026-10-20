@@ -45,6 +45,11 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'analisis-combustible', label: 'Análisis de combustible', to: '/operaciones/analisis-combustible', icon: 'BarChart2', permisos: ['operaciones.ver', 'admin'] },
   },
   {
+    path: 'operaciones/matriz-combustible/*',
+    permisos: ['operaciones.ver', 'admin'],
+    Page: lazy(() => import('./MatrizCombustiblePage').then(m => ({ default: m.MatrizCombustiblePage }))),
+  },
+  {
     path: 'operaciones/urea/*',
     permisos: ['operaciones.ver', 'admin'],
     Page: lazy(() => import('./UreaPage').then(m => ({ default: m.UreaPage }))),
