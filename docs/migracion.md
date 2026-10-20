@@ -16,10 +16,12 @@ Plan y avance de la migración de la versión actual (JS, HTML y CSS) a React + 
 | --- | --- |
 | Modelo multiempresa | ✅ Una base por empresa (`azkell_master` + `azkell_tenant_*`), un cliente Prisma por empresa resuelto por subdominio. Sin `companyId` |
 | Ícono de la animación de ingreso | ✅ El logo de cada empresa (`/api/tenant-logo`); si no tiene, el de Azkell. Como es imagen (no SVG), la animación usa la tarjeta → ícono, un trazo que lo rodea y un brillo, en lugar de dibujar el logo |
-| Librería de gráficos | ⏳ Pendiente (hoy Chart.js) |
+| Librería de gráficos | ✅ Recharts 3.10.1 (`src/core/ui/Graficos.tsx`). Tremor se descartó porque exige Tailwind; el clásico sigue con Chart.js |
 | Apps Android y TV | ⏳ Pendiente: migrar con el resto o al final |
-| Modo oscuro | ⏳ Pendiente |
+| Modo oscuro | ✅ Claro, oscuro y automático, por dispositivo (Mi cuenta y barra); color de la app elegible (`fleet_accent`) |
 | Despliegue | Coolify (como KINTSUGI) |
+| Sitios públicos | ✅ `azkell.com` (cartera) y `fleet.azkell.com` (producto), en el mismo servidor y por dominio (`services/sitios_publicos.js`, código en `sitios/`, `npm run build:sitios`). Subdominios reservados: www, app, azkell, fleet, admin, master, seguridad, api |
+| Sesiones | ✅ Un token solo vale mientras su fila siga en `sesiones_activas` (`verifyToken`, caché de 15 s). Cerrar sesión y cerrar otras sesiones lo revocan |
 | IA del asistente | Gemini con modelos en cadena, clave propia de este proyecto (`GEMINI_API_KEY`) |
 
 ## Auditoría de diseño (cerrada 2026-10-19)
@@ -61,9 +63,14 @@ Pasada de diseño sobre las pantallas ya migradas a React, bloque por bloque, ca
 
 ## Siguiente paso técnico
 
-**Retirar el auto-sync y los `ALTER` de arranque** (Fase 1, último punto abierto). Hoy `services/tenant_master.js`, `init_db.js` y las rutas copian tablas y columnas desde `DB_NAME` a todas las empresas fuera de las migraciones de Prisma. Mientras eso siga activo, el esquema de cada empresa puede cambiar sin pasar por `npm run db:deploy`. Es el requisito para que `server/core` (Fase 2) use Prisma sin divergencias entre empresas.
+**Estado al 2026-10-20.** La Fase 1 quedó cerrada (auto-sync y DDL de arranque retirados; migraciones 0 a 6 aplicadas en la maestra y en las 4 empresas). Lo que sigue, en orden:
 
-En paralelo, un punto de seguridad que no depende del código: **crear un usuario MySQL propio para la app** (hoy usa `root` y el puerto está abierto a internet). La rotación de contraseñas la hace el usuario.
+1. **Desplegar** lo subido a `main` el 2026-10-20 (costos en soles, recepción con TC de la OC, revocación de sesión, documentos de flota, sitios públicos) y verificar en navegador: costos de OT y recepción, flujo de sesión y Notificaciones.
+2. **Pantallas sin versión en React** (10 entradas del menú, ver catálogo) y las funciones parciales marcadas `[~]`.
+3. **Fase 2 pendiente:** `server/core`, conversión de permisos, Capacitor, Gemini en cadena.
+4. **Fase 5 (cierre):** borrar la versión clásica solo cuando no quede nada que abrir en ella.
+
+Seguridad que no depende del código: **usuario MySQL propio para la app** (hoy usa `root` abierto a internet) y **rotar los secretos del historial de git**. La rotación la hace el usuario.
 
 ## Fases
 
@@ -82,9 +89,9 @@ En paralelo, un punto de seguridad que no depende del código: **crear un usuari
   - [x] Sincronización de combustible: errores de conexión en español, sin mostrar valores de configuración
   - [ ] Usuario MySQL propio para la app (hoy usa `root` abierto a internet)
   - [ ] Detallar reglas y endpoints de cada pantalla (se hace al empezar cada módulo)
-- [ ] **Fase 1 — Prisma sobre la base existente**
-  - [ ] `prisma db pull` de una base de empresa; modelos repartidos por módulo con `@@map`
-  - [ ] Migración `0_baseline` marcada como aplicada en cada base de empresa
+- [x] **Fase 1 — Prisma sobre la base existente** *(cerrada 2026-10-20)*
+  - [x] Esquema Prisma por módulo a partir de una base de empresa (ver más abajo)
+  - [x] Migración `0_baseline` marcada como aplicada en cada base de empresa
   - [x] Comparar esquemas entre empresas → [fase1-esquema.md](fase1-esquema.md) (4 empresas, 107 tablas, 64 diferencias de columnas)
   - [x] Respaldo de las 6 bases, restaurado y verificado
   - [x] Casos especiales decididos; SQL de igualación generado y probado en copia ([sql/igualacion-2026-10/](../sql/igualacion-2026-10/))
@@ -94,7 +101,7 @@ En paralelo, un punto de seguridad que no depende del código: **crear un usuari
   - [x] Migración `0_baseline` (completada con `scripts/prisma_baseline.js`: 43 columnas `ON UPDATE CURRENT_TIMESTAMP` y 1 calculada) — probada creando una empresa nueva desde cero
   - [x] `0_baseline` marcada como aplicada en producción (maestra + 4 empresas): `npm run db:estado` → todas al día
   - [x] Fórmula del promedio de neumáticos: se queda `(r1+r2+r3)/3` (decisión 2026-10-12), igual en las bases, `init_db.js`, `routes/neumaticos.js` y `0_baseline`
-  - [ ] Apagar el "auto-sync" de `services/tenant_master.js` y los `ALTER` de arranque (`server.js`, `init_db.js`, rutas) cuando el servidor nuevo use Prisma: hoy siguen copiando tablas y columnas desde `DB_NAME` a todas las empresas por fuera de las migraciones
+  - [x] Auto-sync de `services/tenant_master.js` y `ALTER` de arranque apagados (pasos 3, 4 y 5 de abajo, cerrados el 2026-10-19)
     - Revisión de solo lectura del 2026-10-19 (referencia `azkell_tenant_marsisa`): **las empresas no tienen el mismo esquema.** Rosymar, Yoguitransport y Trahesa no tienen `flota_articulos`, `flota_documentos`, `flota_devoluciones`, `flota_movimientos` ni `fallas_conductor`, y les faltan columnas en `auditoria` (`ip`) y `cat_rampas`. Esas tablas las crea el código en tiempo de ejecución (`routes/almacen-flota.js`, `asegurarTablas`), solo donde se usan. `azkell_fleet` (base por defecto, `DB_NAME`) es la más atrasada: 15 tablas menos y decenas de columnas.
     - Orden propuesto: (1) migración de conciliación **solo aditiva** (tablas y columnas faltantes) creada contra una copia y revisada, (2) respaldo y `npm run db:deploy` en cada empresa, (3) quitar el auto-sync de `services/tenant_master.js`, (4) quitar los `asegurarTablas` y DDL de las rutas, (5) que `tenant_provisioner.js` cree empresas con `prisma migrate deploy` en lugar de `initDB()`. No se toca `guias_remision` (SUNAT) sin instrucción.
 
@@ -105,6 +112,8 @@ En paralelo, un punto de seguridad que no depende del código: **crear un usuari
   - [x] Arranque (2026-10-19): `server.js` ya no llama a `initDB()` al iniciar.
   - [x] Migración `2_tablas_de_servidor` (desplegada el 2026-10-19; respaldo en `C:Users	effaRespaldos_Azkell6-10-19_0901_antes_migracion_2`; las cuatro empresas quedan iguales a Marsisa) (2026-10-19): `log_auditoria`, `usuarios_2fa`, `webauthn_credentials` y cuatro columnas que una empresa nueva no tenía. Probada en base vacía (queda idéntica a Marsisa, 1720 columnas) y sobre una copia de empresa existente.
   - [x] Migración `3_telemetria_can` (2026-10-19): tabla de telemetría CAN por viaje. Desplegada en las 4 empresas tras respaldo (`Respaldos_Azkell6-10-19_0915_antes_migracion_3`). `routes/telemetria.js` ya no crea tablas.
+  - [x] Migración `4_audit_logs` (2026-10-19): tabla de auditoría de actividad. Desplegada en las 4 empresas tras respaldo (`Respaldos_Azkell\2026-10-19_1255_antes_migracion_4`).
+  - [x] Migraciones `5_notificaciones` y `6_indice_sesiones` (2026-10-20): historial y reglas de notificaciones; índice por token en `sesiones_activas` (prefijo de 191 caracteres, idempotente). Desplegadas en la maestra y en las 4 empresas tras respaldo (`Respaldos_Azkell\2026-10-20_0956_antes_migraciones_5_y_6`, 5 archivos completos). `npm run db:estado`: todo al día.
   - [x] Paso 4: DDL dentro de las rutas Express (cerrado 2026-10-19). Todas las rutas de la aplicación quedaron sin creación de tablas ni ALTER en tiempo de ejecución, salvo los módulos SUNAT, que se dejan intactos a propósito (`guias_remision`, `guia_transportista`, `guia_remitente`). Último grupo: `rrhh` (función `ensureTablesRRHH`), `checklist` (middleware de `reportes_fallas`) y `mantenimiento` (`ensureTableSql` en callbacks, reescrito con análisis sintáctico). Verificado con base de prueba nueva: rrhh 6/6, checklist 4/4, mantenimiento 5/5 rutas de lectura en 200. El POST de guardado de configuración de inspecciones no se probó con el arnés (solo lecturas).
 
 ### Cómo se cambia el esquema desde ahora
@@ -114,7 +123,7 @@ En paralelo, un punto de seguridad que no depende del código: **crear un usuari
 3. Revisar el SQL generado: mientras conviva la versión actual, **solo agregar** (columnas, tablas, índices).
 4. Respaldo, y luego `npm run db:deploy` aplica la migración en la maestra y en cada empresa (`--solo <slug>` para una sola). `npm run db:estado` muestra qué falta.
 5. Nunca `prisma db push` ni `migrate dev` contra producción.
-  - [ ] Quitar los `CREATE TABLE` / `ALTER TABLE` del arranque (75 tablas, 261 `ALTER` en el código)
+  - [x] Los `CREATE TABLE` / `ALTER TABLE` de arranque y de las rutas ya no corren (paso 4); solo quedan los módulos SUNAT, intactos a propósito
 - [ ] **Fase 2 — Base técnica**
   - [x] 2A. Vite + React + TS en `src/`, publicada en `/app/` (`npm run build` → `dist/app`, servida por `server.js`); núcleo de KINTSUGI copiado (`styles`, `ui`, `lib`, `auth`, `layout`)
   - [x] 2B. Login, bienvenida y despedida con el logo de cada empresa; sesión compartida con la versión actual (mismas claves `fleet_*`); permisos de la matriz convertidos a nombres en el cliente
@@ -124,8 +133,8 @@ En paralelo, un punto de seguridad que no depende del código: **crear un usuari
   - [ ] Conversión de permisos (`insp.l` → `inspecciones.ver`, etc.) con script sobre `permisos_json`
   - [ ] Capacitor apuntando al build de Vite (Android y TV)
   - [ ] Asistente con Gemini en cadena
-  - [ ] Revocar el token al cerrar sesión (hoy el JWT sigue válido hasta vencer; el servidor no revisa `sesiones_activas`)
-  - [ ] Avisos en vivo (SSE) entre dispositivos: hoy el aviso de conexión solo usa la red del dispositivo
+  - [x] Revocar el token al cerrar sesión (2026-10-20): `verifyToken` exige la fila en `sesiones_activas`; si la consulta falla no se bloquea a nadie. El login desde el dominio raíz también registra su sesión
+  - [x] Avisos en vivo (SSE `/api/eventos`, `useLiveUpdates`): cambios entre dispositivos y actividad de auditoría en tiempo real
 - [ ] **Fase 3 — Piloto: Flota › Placas**
   - [x] Consulta en `/app/placas`: resumen animado, búsqueda, filtros, tarjetas/lista y ficha (datos de la API actual)
   - [x] Crear y editar en la app nueva (mismos endpoints y reglas), con historial de cambios en la ficha
@@ -136,12 +145,13 @@ En paralelo, un punto de seguridad que no depende del código: **crear un usuari
   - [x] Inspecciones, parte 1 (2026-10-12): consulta. Corregido: cachés de inspecciones/GPS/TV compartidas entre empresas (fuga de datos) y fallas sin foto guardadas como "https://empresa.azkell.com/"
   - [x] Conductores (2026-10-12). Corregido: la foto nunca se guardaba (columna TEXT) y rbac dejaba borrar/importar conductores y cambiar métricas sin permiso
   - [~] Avance 2026-10-16: Status de rampa con herramientas (configurador de rampas, PDF y WhatsApp del reporte, OT desde la visita, eliminar rampa); Falla crítica en celular (objetivos ≥ 44 px, fotos reducidas en paralelo, firma con `touch-action: none`); Kardex con costo promedio y valor de saldo; recepción en dólares con TC SUNAT del día (respaldo 3.75); pago de requerimientos con vencimiento; rentabilidad y documentos vencidos en viajes. **Falta probar en teléfono real** la firma y las fotos.
+  - [~] Avance 2026-10-19 y 2026-10-20: auditoría de actividad completa (`audit_logs`, pantalla con filtros y actualización en vivo); Empresa, Notificaciones (WhatsApp, correo, SMS) y API y desarrolladores en React; horas y eficiencia por técnico y regularización de técnicos (React y clásico); costos de solicitudes a OT en soles (el servidor decide) y recepción de OC con el TC de la OC; Documentos de flota con plantilla e importación, configurador de placas, calendario del teléfono (.ics) y fechas sin hora en la matriz; exportaciones con fechas nativas de Excel. **Falta verificar en navegador** los costos de OT, la recepción y Notificaciones, y las pantallas nuevas de Documentos de flota en un teléfono.
 - [ ] **Fase 5 — Cierre:** borrar `Index.html`, `logica.js`, `Modulos/`, `routes/`; cookies HttpOnly; 2FA
 
 ## Catálogo de pantallas (93)
 
-> **Estado real (2026-10-16), según el menú:** una entrada sigue en el clásico solo si no tiene pantalla en React. Quedan **13 entradas en el clásico**: Dashboard financiero de almacén, Movimientos de tesorería, Métricas y KPIs, Productividad personal, Reporte financiero de taller, Config. métrica, Frecuencias MP, Estaciones de proveedores, Unidades en Base (seguridad), Notificaciones y SMTP, Empresa, API y desarrolladores, Empresas SaaS (SuperAdmin).
-> Pendientes de funcionalidad, no de pantalla: guías SUNAT (a propósito, hasta la fase formal), monitoreo GPS de viajes, asignación y rutas, Entradas al contado (depende de Tesorería), importación de inspecciones.
+> **Estado real (2026-10-20), según el menú:** una entrada abre la versión clásica solo si su pantalla de React no existe o si se decidió dejarla (guías SUNAT). El menú toma cada pantalla de `src/modules/<modulo>/rutas.ts` (`conModulos()` en `navigation.ts`), así que una pantalla nueva reemplaza sola al enlace clásico. Siguen **10 entradas sin pantalla en React**: Estaciones de proveedores, Métricas y KPIs, Productividad personal, Reporte financiero de taller, Frecuencias MP, Config. métrica, Dashboard financiero de almacén, Movimientos de tesorería, Unidades en Base (seguridad) y Empresas SaaS (SuperAdmin). Empresa, Notificaciones y API y desarrolladores ya están en React.
+> Pendientes de funcionalidad, no de pantalla: guías SUNAT (a propósito, hasta las pruebas supervisadas en ambiente de prueba), monitoreo GPS de viajes, asignación y rutas, Entradas al contado (depende de Tesorería), importación de inspecciones, y los sitios públicos que aún no están desplegados.
 
 Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplicado a revisar antes de migrar.
 
@@ -157,7 +167,7 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 
 ### B. Flota
 - [x] flota/placas *(piloto completo en /app; pendiente solo la API propia con Prisma)*
-- [x] flota/documentos *(en /app desde 2026-10-16: expediente por placa, matriz con datos generales y Excel, calendario, historial por documento, eliminar, WhatsApp, TIVE y otros tipos personalizados. Eliminar e importar vehículos están en Flota › Placas. Pendiente: quitar archivo en el formulario)*
+- [x] flota/documentos *(en /app desde 2026-10-16: expediente por placa, matriz con datos generales y Excel, calendario, historial por documento, eliminar, WhatsApp, TIVE y otros tipos personalizados. Eliminar e importar vehículos están en Flota › Placas. Pendiente: quitar archivo en el formulario). **2026-10-20:** descargar plantilla e importar desde Excel (placa nueva = se crea solo la placa; placa existente = lo del archivo reemplaza al dato actual y lo vacío no se toca; cada documento que cambia deja registro nuevo en su historial; una fila sin documentos no cambia nada), configurador de placas (se guarda en el dispositivo), calendario con botón para agregar al teléfono los vencidos y por vencer (.ics) y fechas de la matriz sin hora. Importación probada en base temporal; falta probar la pantalla en navegador y el .ics en un teléfono)*
 - [x] flota/disponibilidad *(en /app, 2026-10-16: cifras por placa como la versión actual, estados (taller, viaje), búsqueda, Excel con ubicación GPS, observaciones manuales. Pendiente: los gráficos por sub tipo siguen como tabla, sin gráfico ni clic)*
 - [x] flota/ubicacion (GPS Wialon) *(en /app, 2026-10-16: mapa con rumbo y animación, lista agrupada por empresa con casilla y colapso por grupo, KPIs que filtran por estado, historial y playback, WhatsApp. Búsqueda solo por placa o nombre, por decisión previa. Agrupa por empresa; no usa los grupos de Wialon de la clásica)*
 - [x] flota/entrega-vehiculos · seguridad/entrega-vehiculos ⚠️ *(en /app, 2026-10-16: una sola pantalla; las dos rutas clásicas eran el mismo archivo. Acta, croquis por configuración y cabina, inventario de partes, firmas y PDF. Pendiente: editar la plantilla del inventario, que sigue en la versión actual)*
@@ -220,11 +230,11 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 - [x] login → Fase 2B *(en /app)*
 - [x] dashboard → Centro de Control *(en /app)*
 - [x] sistema/usuarios *(en /app)*
-- [~] sistema/perfil *(Mi cuenta en /app; sesiones activas por confirmar)*
+- [x] sistema/perfil *(Mi cuenta en /app, con apariencia, color de la app, cambio de contraseña y sesiones activas; cerrar sesión ya revoca el token)*
 - [x] sistema/auditoria *(en /app)*
 - [x] sistema/ajustes · sistema/integraciones *(en /app)*
-- [ ] sistema/configuracion *(Empresa y notificaciones siguen en el clásico)*
-- [ ] sistema/api-gateway · sistema/superadmin *(siguen en el clásico)*
+- [x] sistema/configuracion *(Empresa y Notificaciones en /app. Notificaciones: canales WhatsApp, correo y SMS, reglas por evento e historial; falta conectar los eventos reales (OC, vencimientos, fin de OT, checklist crítico), cargar credenciales de SMS y probar WhatsApp desde el servidor. Sedes: sin tabla ni decisión)*
+- [~] sistema/api-gateway *(API y desarrolladores en /app: llaves, permisos, métricas y registro. Webhooks en pausa hasta definir catálogo de eventos y reintentos)* · sistema/superadmin *(sigue en el clásico)*
 - [ ] administracion (raíz)
 
 ## Endpoints actuales por archivo (499)
