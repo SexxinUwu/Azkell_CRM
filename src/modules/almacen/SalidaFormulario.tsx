@@ -24,7 +24,9 @@ const itemVacio = (): ItemSalida => ({
 
 export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset }: Props) {
   const toast = useToast();
-  const { data: inventario } = useInventario();
+  const { data: inventarioTodo } = useInventario();
+  // Solo artículos (INV): los servicios (SERV) no se solicitan a almacén
+  const inventario = (inventarioTodo ?? []).filter(a => !String(a.id ?? '').toUpperCase().startsWith('SERV'));
   const [guardando, setGuardando] = useState(false);
 
   const [fecha, setFecha] = useState('');

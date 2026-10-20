@@ -2410,6 +2410,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         // Todo se escribe en la base de esta empresa (req.db), no en la base por defecto
         const targetDb = getDb(req);
 
+        // Solo se despachan artículos (INV): los servicios (SERV) no salen del almacén
+        const servicios = (Array.isArray(items) ? items : []).filter(d => /^SERV/i.test(String(d.inventario_id || '')));
+        if (servicios.length) {
+            return res.status(400).json({ error: 'Solo se pueden solicitar artículos (INV). Quita los servicios: ' + servicios.map(d => d.inventario_id).join(', ') });
+        }
+
         // La OT debe existir en la base de esta empresa
         if (ticket_ot) {
             targetDb.query('SELECT estado FROM ordenes_trabajo WHERE id_ot = ?', [ticket_ot], (errOT, rowsOT) => {
