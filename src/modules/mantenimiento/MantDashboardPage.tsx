@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Activity, AlertTriangle, CheckCircle2, Clock,
+  Activity, AlertTriangle, CheckCircle2, Clock, Gauge,
   DollarSign, FileText, History, LayoutDashboard, Plus,
   ScrollText, ShieldCheck, Sun,
   Truck, Wrench,
@@ -16,6 +16,8 @@ import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { BarrasGrafico, DonaGrafico } from '../../core/ui/Graficos';
+import { MultiSelect } from '../../core/ui/MultiSelect';
+import { useFleetrunStats } from './FleetrunPage';
 import { api } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
@@ -508,25 +510,34 @@ export function MantDashboardPage() {
       .filter(p => p.estado.toLowerCase() === 'activa' && p.enUso)
       .map(p => ({
         placa: p.placa,
+        cliente: p.cliente || 'Sin empresa',
         ciclo: evaluarCiclo(ultimaMec.get(clavePlaca(p.placa)) ?? null, ultimaNeu.get(clavePlaca(p.placa)) ?? null),
         inspeccion: ultimaMec.get(clavePlaca(p.placa)) ?? null,
       }));
   }, [inspQ.data, neuQ.data, placasQ.data]);
 
+  // Filtro por empresa del semáforo preventivo (vacío = todas)
+  const [empresasSel, setEmpresasSel] = useState<string[]>([]);
+  const empresasOpc = useMemo(() => [...new Set(ciclos.map(c => c.cliente))].sort((a, b) => a.localeCompare(b, 'es')), [ciclos]);
+  const ciclosSel = useMemo(() => (empresasSel.length ? ciclos.filter(c => empresasSel.includes(c.cliente)) : ciclos), [ciclos, empresasSel]);
+  const fleetrun = useFleetrunStats();
+
   // Flota = placas activas en uso (sin valores de respaldo): si no hay datos, los porcentajes quedan sin cifra
-  const totalFlota     = ciclos.length;
-  const inspVencidas   = ciclos.filter(c => c.ciclo.estado === 'vencido').length;
-  const inspProximas   = ciclos.filter(c => c.ciclo.estado === 'proximo').length;
-  const inspConformes  = Math.max(0, totalFlota - inspVencidas - inspProximas);
+  const totalFlota     = ciclosSel.length;
+  const inspVencidas   = ciclosSel.filter(c => c.ciclo.estado === 'vencido').length;
+  const inspProximas   = ciclosSel.filter(c => c.ciclo.estado === 'proximo').length;
+  const inspSinRegistro = ciclosSel.filter(c => c.ciclo.estado === 'sin-registro').length;
+  const inspConformes  = ciclosSel.filter(c => c.ciclo.estado === 'vigente').length;
   // % flota operativa = (En Ruta + En Base) / flota activa, con el estado consolidado de Disponibilidad
   const cifrasFlota   = useMemo(() => cifrasDisponibilidad(dispQ.data ?? []), [dispQ.data]);
   const pctOperativas = porcentajeOperativa(cifrasFlota);
-  const pctConformes   = totalFlota > 0 ? Math.round((inspConformes / totalFlota) * 100) : null;
+  // Igual que Análisis de inspecciones: (vigentes + próximas a vencer) / unidades
+  const pctConformes   = totalFlota > 0 ? Math.round(((inspConformes + inspProximas) / totalFlota) * 100) : null;
 
   // Distribución de días para el próximo vencimiento de inspección (misma vigencia de arriba)
   const distribucionVencimientos = useMemo(() => {
     const cuenta = { vencidas: 0, a7: 0, a15: 0, a30: 0, mas30: 0, sinRegistro: 0 };
-    for (const c of ciclos) {
+    for (const c of ciclosSel) {
       const d = c.ciclo.dias;
       if (c.ciclo.estado === 'sin-registro' || d === null) cuenta.sinRegistro++;
       else if (d < 0 || c.ciclo.estado === 'vencido') cuenta.vencidas++;
@@ -543,7 +554,7 @@ export function MantDashboardPage() {
       { nombre: 'Más de 30 días', valor: cuenta.mas30, color: 'var(--green-ink)' },
       { nombre: 'Sin registro', valor: cuenta.sinRegistro, color: 'var(--label-3)' },
     ];
-  }, [ciclos]);
+  }, [ciclosSel]);
 
   // OT abiertas por semana de ingreso, últimas 8 semanas (lunes a domingo, hora de Lima)
   const otsPorSemana = useMemo(() => {
@@ -571,7 +582,7 @@ export function MantDashboardPage() {
   }, [otsData]);
 
   const unidadesUrgentes = useMemo(() => {
-    return ciclos
+    return ciclosSel
       .filter(c => c.ciclo.dias !== null && c.ciclo.dias <= 7)
       .sort((a, b) => (a.ciclo.dias ?? 0) - (b.ciclo.dias ?? 0))
       .slice(0, 6);
@@ -825,18 +836,43 @@ export function MantDashboardPage() {
             </div>
           </div>
 
-          {/* ─── Fila 2b: Distribución de vencimientos y OT por semana ─────────── */}
+          {/* ─── Centro de comando: estado de la flota (igual que el clásico) ───── */}
+          <div className="placas-resumen">
+            <div className="placas-kpi placas-kpi--blue"><span className="placas-kpi__valor t-numeric">{totalFlota}</span><span className="placas-kpi__label">Flota activa</span></div>
+            <div className="placas-kpi placas-kpi--green"><span className="placas-kpi__valor t-numeric">{inspConformes}</span><span className="placas-kpi__label">Inspecciones vigentes</span></div>
+            <div className="placas-kpi placas-kpi--amber"><span className="placas-kpi__valor t-numeric">{inspProximas}</span><span className="placas-kpi__label">Por vencer (7 días)</span></div>
+            <div className="placas-kpi"><span className="placas-kpi__valor t-numeric" style={{ color: 'var(--red-ink)' }}>{inspVencidas}</span><span className="placas-kpi__label">No vigentes</span></div>
+          </div>
+
+          {/* ─── Fila 2b: Estado de mantenimientos, vencimientos y OT por semana ─── */}
           <div className="mant-grid">
-            <div className="mant-col-6">
+            <div className="mant-col-4">
+              <div className="mant-card" style={{ height: '100%' }}>
+                <div className="mant-card__header">
+                  <div className="mant-card__title"><Gauge size={15} /> Estado de mantenimientos</div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--label-2)' }}>{fleetrun.total} unidades</span>
+                </div>
+                <DonaGrafico
+                  centro={fleetrun.total > 0 ? `${Math.round(((fleetrun.vigentes + fleetrun.porVencer) / fleetrun.total) * 100)}%` : '—'}
+                  porciones={[
+                    { nombre: 'Vigentes', valor: fleetrun.vigentes, color: 'var(--green-ink)' },
+                    { nombre: 'Por vencer', valor: fleetrun.porVencer, color: 'var(--amber-ink)' },
+                    { nombre: 'Vencidos', valor: fleetrun.vencidos, color: 'var(--red-ink)' },
+                    { nombre: 'Sin datos', valor: fleetrun.sinDatos, color: 'var(--label-3)' },
+                  ]}
+                />
+              </div>
+            </div>
+            <div className="mant-col-4">
               <div className="mant-card" style={{ height: '100%' }}>
                 <div className="mant-card__header">
                   <div className="mant-card__title"><ShieldCheck size={15} /> Vencimientos de inspección</div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--label-2)' }}>{ciclos.length} unidades</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--label-2)' }}>{ciclosSel.length} unidades</span>
                 </div>
                 <BarrasGrafico porciones={distribucionVencimientos} altura={220} />
               </div>
             </div>
-            <div className="mant-col-6">
+            <div className="mant-col-4">
               <div className="mant-card" style={{ height: '100%' }}>
                 <div className="mant-card__header">
                   <div className="mant-card__title"><Wrench size={15} /> OT ingresadas por semana</div>
@@ -856,9 +892,14 @@ export function MantDashboardPage() {
                   <div className="mant-card__title">
                     <ShieldCheck size={15} /> Semáforo Preventivo de Flota
                   </div>
-                  <Button variant="secondary" size="sm" icon={<History size={14} />} onClick={() => navigate('/inspecciones')}>
-                    Inspecciones
-                  </Button>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ minWidth: 200 }}>
+                      <MultiSelect label="Empresa" options={empresasOpc} value={empresasSel} onChange={setEmpresasSel} placeholder="Todas las empresas" />
+                    </div>
+                    <Button variant="secondary" size="sm" icon={<History size={14} />} onClick={() => navigate('/inspecciones')}>
+                      Inspecciones
+                    </Button>
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -866,9 +907,10 @@ export function MantDashboardPage() {
                     <DonaGrafico
                       centro={pctConformes != null ? `${pctConformes}%` : '—'}
                       porciones={[
-                        { nombre: 'Al día', valor: inspConformes, color: 'var(--green-ink)' },
+                        { nombre: 'Vigente', valor: inspConformes, color: 'var(--green-ink)' },
                         { nombre: 'Por vencer (7d)', valor: inspProximas, color: 'var(--amber-ink)' },
-                        { nombre: 'Vencidas', valor: inspVencidas, color: 'var(--red-ink)' },
+                        { nombre: 'No vigente', valor: inspVencidas, color: 'var(--red-ink)' },
+                        { nombre: 'Sin registro', valor: inspSinRegistro, color: 'var(--label-3)' },
                       ]}
                     />
                   </div>

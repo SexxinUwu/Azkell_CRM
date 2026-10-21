@@ -30,7 +30,7 @@
   overflow: auto; max-height: calc(100dvh - 360px); min-height: 240px; border-radius: var(--r-xl);
   background: var(--surface); box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
-.rt { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8125rem; }
+.rt { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 0.8125rem; }
 .rt th {
   position: sticky; top: 0; z-index: 1; padding: 11px 12px; text-align: left; white-space: nowrap;
   background: var(--surface); border-bottom: 1px solid var(--separator);
@@ -41,7 +41,7 @@
 .rt__fila:hover td { background: var(--fill-subtle); }
 .rt__fila:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .rt__rampa { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; white-space: nowrap; }
-.rt__obs { max-width: 22rem; color: var(--label-2); line-height: 1.35; }
+.rt__obs { color: var(--label-2); line-height: 1.35; }
 .rt__flecha { color: var(--label-3); }
 
 /* ─── Tarjetas (celular) ─── */
@@ -65,6 +65,14 @@
 .rm-chip--out { background: var(--red-tint); color: var(--red-ink); }
 .rm-pie { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; font-size: 0.8125rem; color: var(--label-2); }
 .rm-km { font-family: var(--font-mono); }
+
+/* Acciones de la barra superior: solo icono de color */
+.btn-accion-color {
+  display: inline-grid; place-items: center; width: 42px; height: 42px; flex-shrink: 0; border: 0; border-radius: 14px;
+  background: var(--fill); cursor: pointer; transition: background 0.15s ease, transform 0.15s ease;
+}
+.btn-accion-color:hover { background: var(--fill-2); }
+.btn-accion-color:active { transform: scale(0.96); }
 
 /* Inspección de la unidad: código con semáforo y días restantes; toda la celda es el botón */
 .rt__insp { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }

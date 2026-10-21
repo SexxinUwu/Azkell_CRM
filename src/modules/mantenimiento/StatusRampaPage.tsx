@@ -19,7 +19,9 @@ import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { crearOTHija, eliminarRampaRegistro, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, tecnicosDeOT, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
-import { ConfigurarRampasSheet, enviarWhatsApp, exportarRampasPDF, textoReporteRampas, type CatRampa } from './RampasHerramientas';
+import { ConfigurarRampasSheet, abrirPdfRampas, compartirRampasPdf, textoReporteRampas, type CatRampa, type DatosPdfRampa, type FilaPdfRampa } from './RampasHerramientas';
+import { rampasDelReporte } from './rampasReporte';
+import type { ReactNode } from 'react';
 import { LiberarRampa, RampaFormulario } from './RampaFormulario';
 import { SUBTIPOS_OT, TIPOS_OT } from './tipos-ot';
 import { useInspecciones, type Inspeccion } from '../inspecciones/api';
@@ -87,6 +89,45 @@ function formatTiempo(horas: number): string {
   const dias = Math.floor(horas / 24);
   const hrs  = Math.round(horas % 24);
   return hrs > 0 ? `${dias}d ${hrs}h` : `${dias}d`;
+}
+
+/** Filas del F-MAN-005 con los mismos valores que la tabla de pantalla (tiempos y semáforo de inspección) */
+function filasPdfRampas(entradas: RampaEntrada[], catalogo: CatRampa[], tecnicos: Map<string, string[]>, ultimas: Map<string, Inspeccion>): FilaPdfRampa[] {
+  const HEX = { green: '#15803d', amber: '#b45309', red: '#b91c1c', gray: '#64748b' } as const;
+  return rampasDelReporte(entradas, catalogo).map(e => {
+    const horas = horasEnRampa(e.fecha_ingreso);
+    const dias = diasInspeccion(e.placa, ultimas);
+    const insp = e.placa ? ultimas.get(clavePlaca(e.placa)) ?? null : null;
+    const sem = semaforoInspeccion(insp, dias);
+    const libre = !e.placa;
+    const tono = situacionTono(e.situacion);
+    return {
+      rampa: e.rampa,
+      fIn: formatFechaPe(e.fecha_ingreso) || '—',
+      hIn: soloHora(e.hora_ingreso),
+      placa: e.placa ?? '—',
+      situacion: libre ? 'LIBRE' : (e.situacion ?? '—'),
+      situacionColor: tono === 'amber' ? HEX.amber : tono === 'green' ? HEX.green : HEX.gray,
+      obs: e.observaciones ?? (libre ? 'Disponible para ingreso' : '—'),
+      fOut: formatFechaPe(e.salida_programada) || '—',
+      hOut: soloHora(e.hora_salida_programada),
+      horas: horas > 0 ? formatTiempo(horas) : '—',
+      horasColor: horas > 48 ? HEX.red : horas > 24 ? HEX.amber : HEX.green,
+      tecnicos: (tecnicos.get(rampaId(e)) ?? []).join(', ') || '—',
+      insp: dias.texto,
+      inspColor: HEX[sem],
+      libre,
+    };
+  });
+}
+
+/** Botón solo con icono de color (sin texto), visible en la barra superior */
+function BotonAccion({ titulo, color, icono, onClick }: { titulo: string; color: string; icono: ReactNode; onClick: () => void }) {
+  return (
+    <button type="button" className="btn-accion-color" style={{ color }} aria-label={titulo} title={titulo} onClick={onClick}>
+      {icono}
+    </button>
+  );
 }
 
 function tiempoColor(horas: number): string {
@@ -249,6 +290,29 @@ export function StatusRampaPage() {
   const historial = useMemo(() => entradas.filter(e => e.estado === 'Liberado'), [entradas]);
   const trabajosOT = useTrabajosOT();
   const tecnicosPorRampa = useMemo(() => tecnicosDeRampas(activas, ordenes.data ?? [], trabajosOT.data ?? []), [activas, ordenes.data, trabajosOT.data]);
+  const filasPdf = useMemo(() => filasPdfRampas(activas, (catalogo.data?.rampas ?? []) as CatRampa[], tecnicosPorRampa, ultimasInsp),
+    [activas, catalogo.data, tecnicosPorRampa, ultimasInsp]);
+  const datosPdf: DatosPdfRampa = useMemo(() => {
+    const ahora = new Date();
+    const libres = filasPdf.filter(f => f.libre).length;
+    const espera = filasPdf.filter(f => !f.libre && f.situacionColor === '#b45309').length;
+    const u = user as { nombre?: string; email?: string } | null;
+    return {
+      fecha: ahora.toLocaleString('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      emisor: String(u?.nombre ?? u?.email ?? ''),
+      total: filasPdf.length,
+      ocupadas: filasPdf.length - libres - espera,
+      espera,
+      libres,
+    };
+  }, [filasPdf, user]);
+  async function verPdf() {
+    try { await abrirPdfRampas(filasPdf, datosPdf); } catch (err) { toast(errorMessage(err), 'error'); }
+  }
+  async function enviarWa() {
+    try { await compartirRampasPdf(filasPdf, datosPdf, textoReporteRampas(activas, (catalogo.data?.rampas ?? []) as CatRampa[])); }
+    catch (err) { toast(errorMessage(err), 'error'); }
+  }
   const [verInspeccion, setVerInspeccion] = useState(leerVerInspeccion);
   function cambiarVerInspeccion(v: boolean) {
     setVerInspeccion(v);
@@ -281,6 +345,8 @@ export function StatusRampaPage() {
             <>
               <Button variant="plain" iconOnly className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
                 onClick={() => qc.invalidateQueries({ queryKey: ['mant'] })} />
+              <BotonAccion titulo="Ver PDF del reporte" color="var(--red-ink)" icono={<FileText size={19} />} onClick={verPdf} />
+              <BotonAccion titulo="Enviar reporte por WhatsApp" color="#16a34a" icono={<MessageCircle size={19} />} onClick={enviarWa} />
               <MenuOtros opciones={[
                 { label: 'Exportar historial a Excel', detalle: `${historial.length} registros`, icon: <FileSpreadsheet size={17} />,
                   onSelect: async () => {
@@ -292,12 +358,6 @@ export function StatusRampaPage() {
                     } catch (err) { toast(errorMessage(err), 'error'); }
                   } },
                 { label: 'Configurar rampas', detalle: 'Orden, color y si sale en el reporte', icon: <Settings2 size={17} />, onSelect: () => setConfigurando(true) },
-                { label: 'Exportar reporte a PDF', detalle: `${activas.length} rampas activas`, icon: <FileText size={17} />,
-                  onSelect: async () => {
-                    try { await exportarRampasPDF(activas, (catalogo.data?.rampas ?? []) as CatRampa[], tecnicosPorRampa); } catch (err) { toast(errorMessage(err), 'error'); }
-                  } },
-                { label: 'Enviar reporte por WhatsApp', detalle: 'Rampas marcadas en el reporte', icon: <MessageCircle size={17} />,
-                  onSelect: () => enviarWhatsApp(textoReporteRampas(activas, (catalogo.data?.rampas ?? []) as CatRampa[])) },
                 { label: 'OT, trabajos y catálogos de rampas', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/status-rampa') },
               ]} />
               {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ entrada: null })}>Ingresar</Button>}
@@ -449,6 +509,11 @@ function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasIns
   return (
     <div className="rt-caja">
       <table className="rt">
+        <colgroup>
+          {[150, 104, 72, 112, 150, undefined, 104, 72, 96, 150, 196, ...(verInspeccion ? [150] : []), 44].map((w, i) => (
+            <col key={i} style={w ? { width: w } : undefined} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
             <th>Rampa</th><th>Ingreso</th><th>Hora</th><th>Placa</th><th>Situación</th><th>Observaciones</th>

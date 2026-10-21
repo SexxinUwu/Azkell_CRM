@@ -505,3 +505,49 @@ export function FleetrunPage() {
     </Page>
   );
 }
+
+// Estado preventivo por placa (el peor de sus registros), con la misma regla que esta pantalla. Lo usa el dashboard de taller.
+export function useFleetrunStats() {
+  const { data } = useFleetrun();
+  const { data: placasData } = usePlacas();
+  const { data: metricas = new Map<string, string>() } = useMetricas();
+  const { data: umbrales = {} } = useFleetrunUmbrales();
+  return useMemo(() => {
+    const hoy = Date.now();
+    const ordenadas = [...(data ?? [])].sort((a, b) => {
+      const ta = parseFechaMs(a[3] as string | null);
+      const tb = parseFechaMs(b[3] as string | null);
+      const aFut = ta > hoy + 86_400_000;
+      const bFut = tb > hoy + 86_400_000;
+      if (aFut !== bFut) return aFut ? 1 : -1;
+      if (tb !== ta) return tb - ta;
+      return (Number(b[0] ?? 0)) - (Number(a[0] ?? 0));
+    });
+    const activas = placasData
+      ? new Map(placasData.filter(p => p.estado.toLowerCase() === 'activa' || p.estado === '').map(p => [p.placa.toUpperCase(), p]))
+      : null;
+    const unicas = new Map<string, FleetrunFila>();
+    for (const f of ordenadas) {
+      const placa = frPlaca(f).toUpperCase();
+      if (activas !== null && !activas.has(placa)) continue;
+      const clave = `${placa}__${frTipo(f).toUpperCase()}`;
+      if (!unicas.has(clave)) unicas.set(clave, f);
+    }
+    const porPlaca = new Map<string, EstadoFR>();
+    for (const f of unicas.values()) {
+      const placa = frPlaca(f).toUpperCase();
+      const uts = activas?.get(placa)?.uts || frUts(f);
+      const est = calcularEstado(f, uts, umbrales, metricas);
+      const prev = porPlaca.get(placa);
+      if (!prev || PRIORIDAD[est] > PRIORIDAD[prev]) porPlaca.set(placa, est);
+    }
+    let vencidos = 0, porVencer = 0, vigentes = 0, sinDatos = 0;
+    porPlaca.forEach(e => {
+      if (e === 'vencido') vencidos++;
+      else if (e === 'por_vencer') porVencer++;
+      else if (e === 'sin_datos') sinDatos++;
+      else vigentes++;
+    });
+    return { vencidos, porVencer, vigentes, sinDatos, total: porPlaca.size };
+  }, [data, placasData, metricas, umbrales]);
+}

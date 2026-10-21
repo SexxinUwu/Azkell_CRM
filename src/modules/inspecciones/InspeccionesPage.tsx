@@ -10,6 +10,7 @@ import { useToast } from '../../core/ui/Toast';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { MultiSelect } from '../../core/ui/MultiSelect';
 import { ToggleChips } from '../../core/ui/Chips';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { errorMessage } from '../../core/api/client';
@@ -65,6 +66,7 @@ export function InspeccionesPage() {
   const [busqueda, setBusqueda] = useState('');
   const [clase, setClase] = useState<Clase>('todas');
   const [estados, setEstados] = useState<Estado[]>([]);
+  const [empresas, setEmpresas] = useState<string[]>([]);
   const [abierta, setAbierta] = useState<Inspeccion | null>(null);
   const [eleccion, setEleccion] = useState<string | null>(null);   // placa a inspeccionar (selector)
   const [neuPlaca, setNeuPlaca] = useState<string | null>(null);   // placa del formulario de neumáticos
@@ -91,17 +93,21 @@ export function InspeccionesPage() {
     return m;
   }, [dispQ.data]);
 
+  // Filtro por empresa (vacío = todas): los porcentajes se calculan solo con las empresas elegidas
+  const empresasOpc = useMemo(() => [...new Set(unidades.map(u => u.placa.cliente || 'Sin empresa'))].sort((a, b) => a.localeCompare(b, 'es')), [unidades]);
+  const unidadesEmp = useMemo(() => (empresas.length ? unidades.filter(u => empresas.includes(u.placa.cliente || 'Sin empresa')) : unidades), [unidades, empresas]);
+
   const resumen = useMemo(() => {
     const r = { vigente: 0, proximo: 0, vencido: 0, 'sin-registro': 0 } as Record<Estado, number>;
-    unidades.forEach(u => { r[u.ciclo.estado]++; });
+    unidadesEmp.forEach(u => { r[u.ciclo.estado]++; });
     return r;
-  }, [unidades]);
-  const total = unidades.length;
+  }, [unidadesEmp]);
+  const total = unidadesEmp.length;
   const alDia = resumen.vigente + resumen.proximo;
   const porcentaje = total ? Math.round((alDia / total) * 100) : 0;
 
   const pal = busqueda.trim().toUpperCase();
-  const unidadesVisibles = unidades.filter(u =>
+  const unidadesVisibles = unidadesEmp.filter(u =>
     (clase === 'todas' || (clase === 'motoras' ? u.placa.motora : !u.placa.motora))
     && (!estados.length || estados.includes(u.ciclo.estado))
     && (!pal || [u.placa.placa, u.placa.cliente, u.placa.marca, u.placa.tipo].join(' ').toUpperCase().includes(pal) || clavePlaca(u.placa.placa).includes(clavePlaca(pal))));
@@ -189,6 +195,7 @@ export function InspeccionesPage() {
                   <div className="placas-toolbar__buscar"><SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, cliente, marca o tipo" /></div>
                   <SegmentedControl<Formato> label="Formato" value={formato} onChange={setFormato}
                     options={[{ value: 'tarjetas', label: 'Tarjetas' }, { value: 'tabla', label: 'Tabla' }]} />
+                  <MultiSelect label="Empresa" options={empresasOpc} value={empresas} onChange={setEmpresas} placeholder="Todas las empresas" />
                   <SegmentedControl<Clase> label="Clase" value={clase} onChange={setClase}
                     options={[{ value: 'todas', label: 'Todas' }, { value: 'motoras', label: 'Motoras' }, { value: 'no-motoras', label: 'No motoras' }]} />
                 </div>
