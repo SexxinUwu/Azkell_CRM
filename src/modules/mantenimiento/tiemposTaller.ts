@@ -80,3 +80,14 @@ export function indicadoresTaller(visitas: RampaEntrada[], ots: OrdenTrabajo[], 
 
 /** Horas con un decimal; null se muestra como guion */
 export const horasTxt = (h: number | null) => (h == null ? '—' : `${h.toLocaleString('es-PE', { maximumFractionDigits: 1 })} h`);
+
+/** Costo total de una OT (el servidor ya suma mano de obra, servicios, materiales y repuestos) */
+export const costoOT = (o: OrdenTrabajo) => Number(o.costo_total_pen ?? o.costo_total ?? 0) || 0;
+
+/** Suma de costos de las OT cuya fecha de ingreso cae en [desde, hasta]. La usan Ingresos a taller y el dashboard. */
+export function sumaCostoEnPeriodo(ots: OrdenTrabajo[], desde: string, hasta: string): number {
+  return ots.reduce((s, o) => {
+    const f = (o.fecha_ingreso || o.creado_en || o.created_at || '').slice(0, 10);
+    return f && f >= desde && f <= hasta ? s + costoOT(o) : s;
+  }, 0);
+}

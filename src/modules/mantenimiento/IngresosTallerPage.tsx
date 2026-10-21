@@ -8,7 +8,7 @@ import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { errorMessage } from '../../core/api/client';
 import { otDetalles, otId, otTipo, tiempoNetoOT, useOrdenesTrabajoData, useStatusRampa, type OrdenTrabajo } from './api';
-import { horasTxt, indicadoresTaller } from './tiemposTaller';
+import { costoOT, horasTxt, indicadoresTaller } from './tiemposTaller';
 
 // Reporte de ingresos a taller (equivalente al tablero de Power BI "Ingreso Taller").
 // Todo se calcula en el navegador sobre las OT del intervalo de fechas elegido.
@@ -56,7 +56,6 @@ function textoFalla(o: OrdenTrabajo): string {
 }
 
 const money = (v: number) => `S/ ${v.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const costoOT = (o: OrdenTrabajo) => Number(o.costo_total_pen ?? o.costo_total ?? 0) || 0;
 const minutosOT = (o: OrdenTrabajo) => Math.round(tiempoNetoOT(o).neto / 60000);
 
 const COL_OBS: ColumnaTabla[] = [

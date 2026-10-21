@@ -32,7 +32,7 @@ import { usePlacas } from '../placas/api';
 import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
 import { useDisponibilidad } from '../flota/api';
 import { cifrasDisponibilidad, porcentajeOperativa } from '../flota/disponibilidadCifras';
-import { horasTxt, indicadoresTaller } from './tiemposTaller';
+import { horasTxt, indicadoresTaller, sumaCostoEnPeriodo } from './tiemposTaller';
 
 // ─── Tipos y Helpers ──────────────────────────────────────────────────────────
 
@@ -454,13 +454,17 @@ export function MantDashboardPage() {
   }, [rampasData, otsData, rango]);
   const mttrHoras = indTaller.mttrHoras;
 
-  // Costo Total Acumulado en el Período
-  const costoTotalPeriodo = useMemo(() => {
-    return otsFiltradas.reduce((acc, o) => {
-      const c = Number(o.costo_total_pen ?? o.costo_total ?? 0);
-      return acc + (Number.isNaN(c) ? 0 : c);
-    }, 0);
-  }, [otsFiltradas]);
+  // Costo total del periodo: misma regla que Ingresos a taller (fecha de ingreso dentro del rango, costo de la OT)
+  const periodoCosto = useMemo(() => {
+    const dias = rango === 'hoy' ? 0 : rango === 'semana' ? 6 : rango === 'mes' ? 30 : 29;
+    const d = new Date();
+    d.setDate(d.getDate() - dias);
+    return {
+      desde: d.toLocaleDateString('en-CA', { timeZone: 'America/Lima' }),
+      hasta: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' }),
+    };
+  }, [rango]);
+  const costoTotalPeriodo = useMemo(() => sumaCostoEnPeriodo(otsData, periodoCosto.desde, periodoCosto.hasta), [otsData, periodoCosto]);
 
   // Proporción de trabajos: intervalo propio de la tarjeta y tipos del catálogo (igual que el clásico)
   const [propDesde, setPropDesde] = useState(() => fechaLimaDias(30));
@@ -729,9 +733,9 @@ export function MantDashboardPage() {
 
             <BentoKpiCard
               icon={<DollarSign size={22} />}
-              label={`Costo Taller (${rango})`}
+              label="Costo taller del periodo"
               valor={soles(costoTotalPeriodo)}
-              sub="Repuestos + Mano de obra"
+              sub={`Ingreso del ${periodoCosto.desde.split('-').reverse().join('/')} al ${periodoCosto.hasta.split('-').reverse().join('/')} · mismo criterio que Ingresos a taller`}
               color="var(--ink)"
             />
           </div>
