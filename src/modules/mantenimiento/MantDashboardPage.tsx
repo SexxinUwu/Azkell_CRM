@@ -23,9 +23,10 @@ import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import {
   formatoDuracion, otDetalles, otId, otTipo,
-  useOrdenesTrabajoData, useStatusRampa,
+  useCatalogosTaller, useOrdenesTrabajoData, useStatusRampa,
   type OrdenTrabajo, type RampaEntrada,
 } from './api';
+import { enReporte, type CatRampa } from './rampasReporte';
 import { clavePlaca, useInspecciones, useInspeccionesNeumaticos, type Inspeccion } from '../inspecciones/api';
 import { evaluarCiclo } from '../inspecciones/vigencia';
 import { usePlacas } from '../placas/api';
@@ -484,6 +485,22 @@ export function MantDashboardPage() {
   // Bahías / Rampas Activas
   const rampasOcupadas = rampasData.filter(r => r.estado !== 'Liberado');
 
+  // Bahías del tablero: visitas activas más las bahías libres del catálogo (igual que Status de rampa), en orden del catálogo
+  const catalogoQ = useCatalogosTaller();
+  const bahiasDashboard = useMemo<RampaEntrada[]>(() => {
+    const catRampas = (catalogoQ.data?.rampas ?? []) as CatRampa[];
+    const activas = rampasOcupadas;
+    const ocupadas = new Set(activas.map(r => r.rampaCatId));
+    const libres = catRampas.filter(c => enReporte(c) && !ocupadas.has(String(c.id))).map(c => ({
+      _id: `libre-${c.id}`, id: `libre-${c.id}`, rampa: String(c.nombre_rampa ?? c.nombre ?? c.id), rampaCatId: String(c.id), color: c.color ?? null,
+      placa: null, conductor: null, chofer: null, reportado_por: null, ticket_entrada: null,
+      fecha_ingreso: null, hora_ingreso: null, fecha_salida: null, salida_programada: null, hora_salida_programada: null,
+      situacion: 'Libre', estado: 'Libre', km: null, observaciones: null, evidencia_url: null, liberado_por: null,
+    }) as unknown as RampaEntrada);
+    const orden = (r: RampaEntrada) => Number(catRampas.find(c => String(c.id) === r.rampaCatId)?.orden ?? 999);
+    return [...activas, ...libres].sort((a, b) => orden(a) - orden(b));
+  }, [rampasOcupadas, catalogoQ.data]);
+
   // Mapear rampa activa con su OT correspondiente
   const mapRampaOT = useMemo(() => {
     const map = new Map<string, OrdenTrabajo>();
@@ -761,8 +778,8 @@ export function MantDashboardPage() {
 
                 {/* Grid de Bahías */}
                 <div className="mant-bays">
-                  {rampasData.slice(0, 8).map(r => {
-                    const ocupada = r.estado !== 'Liberado';
+                  {bahiasDashboard.map(r => {
+                    const ocupada = r.estado !== 'Liberado' && r.estado !== 'Libre';
                     const ot = r.placa ? mapRampaOT.get(r.placa.toUpperCase().replace(/[^A-Z0-9]/g, '')) : undefined;
 
                     return (
