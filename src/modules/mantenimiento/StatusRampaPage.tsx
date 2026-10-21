@@ -20,7 +20,7 @@ import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { crearOTHija, eliminarRampaRegistro, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, tecnicosDeOT, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
 import { ConfigurarRampasSheet, abrirPdfRampas, compartirRampasPdf, textoReporteRampas, type CatRampa, type DatosPdfRampa, type FilaPdfRampa } from './RampasHerramientas';
-import { rampasDelReporte } from './rampasReporte';
+import { enReporte, rampasDelReporte } from './rampasReporte';
 import type { ReactNode } from 'react';
 import { LiberarRampa, RampaFormulario } from './RampaFormulario';
 import { SUBTIPOS_OT, TIPOS_OT } from './tipos-ot';
@@ -276,6 +276,12 @@ export function StatusRampaPage() {
   const [busqueda, setBusqueda] = useState('');
   const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<{ entrada: RampaEntrada | null } | null>(null);
+  // Rampa que se preselecciona al ingresar desde una bahía libre (vacío = elegir)
+  const [rampaInicial, setRampaInicial] = useState<string | undefined>(undefined);
+  function abrirIngresoEn(catId: string) {
+    setRampaInicial(catId);
+    setFormulario({ entrada: null });
+  }
   const { can, user } = useAuth();
   const toast = useToast();
   const qc = useQueryClient();
@@ -290,8 +296,31 @@ export function StatusRampaPage() {
   const historial = useMemo(() => entradas.filter(e => e.estado === 'Liberado'), [entradas]);
   const trabajosOT = useTrabajosOT();
   const tecnicosPorRampa = useMemo(() => tecnicosDeRampas(activas, ordenes.data ?? [], trabajosOT.data ?? []), [activas, ordenes.data, trabajosOT.data]);
-  const filasPdf = useMemo(() => filasPdfRampas(activas, (catalogo.data?.rampas ?? []) as CatRampa[], tecnicosPorRampa, ultimasInsp),
-    [activas, catalogo.data, tecnicosPorRampa, ultimasInsp]);
+  // Bahías libres: rampas del catálogo que salen en el reporte y no tienen una visita activa
+  const catRampas = useMemo(() => (catalogo.data?.rampas ?? []) as CatRampa[], [catalogo.data]);
+  const nombreCat = (c: CatRampa) => String(c.nombre_rampa ?? c.nombre ?? c.id);
+  const ordenCat = (catId: string) => Number(catRampas.find(c => String(c.id) === catId)?.orden ?? 999);
+  const libresEntradas = useMemo<RampaEntrada[]>(() => {
+    const ocupadas = new Set(activas.map(e => e.rampaCatId));
+    return catRampas.filter(c => enReporte(c) && !ocupadas.has(String(c.id))).map(c => ({
+      _id: `libre-${c.id}`, id: `libre-${c.id}`, rampa: nombreCat(c), rampaCatId: String(c.id), color: c.color ?? null,
+      placa: null, conductor: null, chofer: null, reportado_por: null, ticket_entrada: null,
+      fecha_ingreso: null, hora_ingreso: null, fecha_salida: null, salida_programada: null, hora_salida_programada: null,
+      situacion: 'Libre', estado: 'Libre', km: null, observaciones: null, evidencia_url: null, liberado_por: null,
+    }) as unknown as RampaEntrada);
+  }, [activas, catRampas]);
+  // Orden del catálogo: Rampa 1, Rampa 2, Rampa 3…, igual que el clásico
+  const tablaEntradas = useMemo(
+    () => [...activas, ...libresEntradas].sort((a, b) => ordenCat(a.rampaCatId) - ordenCat(b.rampaCatId)),
+    [activas, libresEntradas, catRampas],
+  );
+  const filasPdf = useMemo(() => filasPdfRampas(tablaEntradas, catRampas, tecnicosPorRampa, ultimasInsp),
+    [tablaEntradas, catRampas, tecnicosPorRampa, ultimasInsp]);
+  // Al tocar una bahía libre se ingresa una unidad ahí; una visita abre su detalle
+  function abrirRampa(e: RampaEntrada) {
+    if (e.estado === 'Libre') abrirIngresoEn(e.rampaCatId);
+    else setSeleccionadaId(rampaId(e));
+  }
   const datosPdf: DatosPdfRampa = useMemo(() => {
     const ahora = new Date();
     const libres = filasPdf.filter(f => f.libre).length;
@@ -306,6 +335,14 @@ export function StatusRampaPage() {
       libres,
     };
   }, [filasPdf, user]);
+  async function exportarHistorialExcel() {
+    try {
+      await exportarExcel('Status-rampa', 'Rampas',
+        ['Rampa', 'Placa', 'Conductor', 'Km', 'Ingreso', 'Salida real', 'Situación', 'Observaciones'],
+        [...activas, ...historial].map(e => [e.rampa, e.placa, rampaConductor(e), e.km, formatFechaPe(e.fecha_ingreso),
+          formatFechaPe(e.fecha_salida), e.situacion, e.observaciones]));
+    } catch (err) { toast(errorMessage(err), 'error'); }
+  }
   async function verPdf() {
     try { await abrirPdfRampas(filasPdf, datosPdf); } catch (err) { toast(errorMessage(err), 'error'); }
   }
@@ -319,7 +356,7 @@ export function StatusRampaPage() {
     try { localStorage.setItem(CLAVE_VER_INSPECCION, v ? '1' : '0'); } catch { /* sin almacenamiento: dura solo la sesión */ }
   }
 
-  const lista = tab === 'Activas' ? activas : historial;
+  const lista = tab === 'Activas' ? tablaEntradas : historial;
 
   const visibles = useMemo(() => {
     if (!busqueda) return lista;
@@ -345,22 +382,14 @@ export function StatusRampaPage() {
             <>
               <Button variant="plain" iconOnly className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
                 onClick={() => qc.invalidateQueries({ queryKey: ['mant'] })} />
+              <BotonAccion titulo="Exportar historial a Excel" color="#15803d" icono={<FileSpreadsheet size={19} />} onClick={exportarHistorialExcel} />
               <BotonAccion titulo="Ver PDF del reporte" color="var(--red-ink)" icono={<FileText size={19} />} onClick={verPdf} />
               <BotonAccion titulo="Enviar reporte por WhatsApp" color="#16a34a" icono={<MessageCircle size={19} />} onClick={enviarWa} />
               <MenuOtros opciones={[
-                { label: 'Exportar historial a Excel', detalle: `${historial.length} registros`, icon: <FileSpreadsheet size={17} />,
-                  onSelect: async () => {
-                    try {
-                      await exportarExcel('Status-rampa', 'Rampas',
-                        ['Rampa', 'Placa', 'Conductor', 'Km', 'Ingreso', 'Salida real', 'Situación', 'Observaciones'],
-                        [...activas, ...historial].map(e => [e.rampa, e.placa, rampaConductor(e), e.km, formatFechaPe(e.fecha_ingreso),
-                          formatFechaPe(e.fecha_salida), e.situacion, e.observaciones]));
-                    } catch (err) { toast(errorMessage(err), 'error'); }
-                  } },
                 { label: 'Configurar rampas', detalle: 'Orden, color y si sale en el reporte', icon: <Settings2 size={17} />, onSelect: () => setConfigurando(true) },
                 { label: 'OT, trabajos y catálogos de rampas', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/status-rampa') },
               ]} />
-              {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ entrada: null })}>Ingresar</Button>}
+              {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setRampaInicial(undefined); setFormulario({ entrada: null }); }}>Ingresar</Button>}
             </>
           }
         />
@@ -431,10 +460,10 @@ export function StatusRampaPage() {
             ) : (
               <>
                 <div className="rt-solo-web">
-                  <RampaTabla entradas={activas} ots={ordenes.data ?? []} tecnicosPorRampa={tecnicosPorRampa} verInspeccion={verInspeccion} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
+                  <RampaTabla entradas={tablaEntradas} ots={ordenes.data ?? []} tecnicosPorRampa={tecnicosPorRampa} verInspeccion={verInspeccion} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); abrirRampa(e); }} />
                 </div>
                 <div className="rm-solo-movil">
-                  <RampaMovil entradas={activas} tecnicosPorRampa={tecnicosPorRampa} verInspeccion={verInspeccion} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); setSeleccionadaId(rampaId(e)); }} />
+                  <RampaMovil entradas={tablaEntradas} tecnicosPorRampa={tecnicosPorRampa} verInspeccion={verInspeccion} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); abrirRampa(e); }} />
                 </div>
               </>
             )
@@ -483,7 +512,7 @@ export function StatusRampaPage() {
         </div>
       )}
 
-      <RampaFormulario open={!!formulario} entrada={formulario?.entrada ?? null} usuario={user?.name ?? ''} onClose={() => setFormulario(null)} />
+      <RampaFormulario open={!!formulario} rampaInicial={rampaInicial} entrada={formulario?.entrada ?? null} usuario={user?.name ?? ''} onClose={() => setFormulario(null)} />
       <ConfigurarRampasSheet open={configurando} onClose={() => setConfigurando(false)} />
       <InspeccionFicha inspeccion={inspAbierta} onClose={() => setInspAbierta(null)} />
     </Page>
@@ -546,7 +575,7 @@ function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasIns
                 })()}</td>
                 <td>{tecnicosPorRampa.get(rampaId(e))?.join(', ') || '—'}</td>
                 {verInspeccion && <td><BadgeInspeccion placa={e.placa} ultimas={ultimasInsp} onAbrir={onInspeccion} /></td>}
-                <td><ChevronRight size={16} className="rt__flecha" aria-hidden /></td>
+                <td>{e.estado === 'Libre' ? <span className="rt__ingresar">+ Ingresar</span> : <ChevronRight size={16} className="rt__flecha" aria-hidden />}</td>
               </tr>
             );
           })}

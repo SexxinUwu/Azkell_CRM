@@ -43,6 +43,10 @@
 .rt__rampa { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; white-space: nowrap; }
 .rt__obs { color: var(--label-2); line-height: 1.35; }
 .rt__flecha { color: var(--label-3); }
+.rt__ingresar {
+  display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+  font-size: 0.75rem; font-weight: 700; color: var(--accent-ink); background: var(--accent-tint);
+}
 
 /* ─── Tarjetas (celular) ─── */
 .rm-lista { display: flex; flex-direction: column; gap: var(--s-3); }

@@ -22,8 +22,8 @@ const dia = (s: string | null | undefined) => (s ? String(s).split('T')[0] : '')
 const hora = (s: string | null | undefined) => (s ? String(s).slice(0, 5) : '');
 
 // Ingresar una unidad a una rampa, o editar su registro.
-export function RampaFormulario({ entrada, usuario, open, onClose }: {
-  entrada: RampaEntrada | null; usuario: string; open: boolean; onClose: () => void;
+export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial }: {
+  entrada: RampaEntrada | null; usuario: string; open: boolean; onClose: () => void; rampaInicial?: string;
 }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -49,11 +49,11 @@ export function RampaFormulario({ entrada, usuario, open, onClose }: {
   useEffect(() => {
     if (!open) return;
     setError(null); setEvidencia(null);
-    setRampa(entrada?.rampaCatId ?? ''); setPlaca(entrada?.placa ?? ''); setKm(entrada?.km != null ? String(entrada.km) : '');
+    setRampa(entrada?.rampaCatId ?? rampaInicial ?? ''); setPlaca(entrada?.placa ?? ''); setKm(entrada?.km != null ? String(entrada.km) : '');
     setConductor(entrada?.conductor ?? ''); setFIng(dia(entrada?.fecha_ingreso) || hoyISO()); setHIng(hora(entrada?.hora_ingreso) || horaAhora());
     setFSal(dia(entrada?.salida_programada)); setHSal(hora(entrada?.hora_salida_programada));
     setSituacion(entrada?.situacion ?? ''); setObs(entrada?.observaciones ?? '');
-  }, [open, entrada]);
+  }, [open, entrada, rampaInicial]);
 
   const rampas = cat.data?.rampas ?? [];
   const situaciones = (cat.data?.situaciones ?? []).map(s => s.descripcion ?? s.nombre ?? '').filter(Boolean);
