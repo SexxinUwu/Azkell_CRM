@@ -2055,7 +2055,9 @@ module.exports = function (db, broadcast, logAudit) {
             for (const t of trips) {
                 try {
                     const data = await consultarTelemetriaViajeWialon(baseUrl, sid, cache, t.placa, t.fechaInicio, t.fechaFin);
-                    results.push({ id: t.id || t.viaje || t.index, index: t.index, placa: t.placa, data });
+                    // Sin datos: la unidad no se encontró en Wialon (por placa) o el reporte no trajo filas para el periodo
+                    const error = data ? undefined : 'Sin unidad en Wialon para esta placa o sin telemetría en el periodo';
+                    results.push({ id: t.id || t.viaje || t.index, index: t.index, placa: t.placa, data, error });
                 } catch (err) {
                     console.warn(`Error telemetría viaje ${t.placa}:`, err.message);
                     results.push({ id: t.id || t.viaje || t.index, index: t.index, placa: t.placa, data: null, error: err.message });

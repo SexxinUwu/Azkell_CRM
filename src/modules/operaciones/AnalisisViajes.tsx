@@ -32,7 +32,7 @@ interface Resp { ok: boolean; trips: Trip[]; kpis: { totalViajes: number; totalG
 const n = (v: unknown) => Number(v) || 0;
 interface TelemetriaWialon {
   recorridoKmGps: number | null; combustibleConsumidoGps: number | null; rendimientoGps: number | null;
-  velocidadMaxGps: number | null; rpmMediaGps: number | null; rpmMaxGps: number | null; horasMotorGps: number | null; consumoRalentiGps: number | null;
+  velocidadMaxGps: number | null; rpmMediaGps: number | null; rpmMaxGps: number | null; horasMotorGps: string | number | null; consumoRalentiGps: number | null;
 }
 
 // Telemetría CAN Bus de Wialon para el periodo del viaje (de la primera a la última carga). Solo se consulta cuando se pide.
@@ -63,8 +63,8 @@ function useTelemetriaViaje(trip: Trip | null, habilitada: boolean) {
 
 function TelemetriaViaje({ trip, pedida, setPedida, q }: { trip: Trip; pedida: boolean; setPedida: (v: boolean) => void; q: ReturnType<typeof useTelemetriaViaje> }) {
   const t = q.data;
-  const dato = (label: string, valor: number | null | undefined, unidad: string) => (
-    <div className="dato"><span className="dato__label">{label}</span><span className="dato__valor dato__valor--mono">{valor == null ? '—' : `${fmt(valor, 1)} ${unidad}`}</span></div>
+  const dato = (label: string, valor: number | string | null | undefined, unidad: string) => (
+    <div className="dato"><span className="dato__label">{label}</span><span className="dato__valor dato__valor--mono">{valor == null ? '—' : typeof valor === 'string' ? `${valor} ${unidad}` : `${fmt(valor, 1)} ${unidad}`}</span></div>
   );
   return (
     <div>
@@ -100,8 +100,14 @@ type LoteGps = Record<string, { data: TelemetriaWialon | null; error?: string }>
 function valorGps(activo: boolean, cargando: boolean, lote: LoteGps | undefined, viaje: string, campo: keyof TelemetriaWialon) {
   if (!activo) return '—';
   if (cargando) return '…';
-  const x = lote?.[viaje]?.data?.[campo];
-  return x == null ? '—' : fmt(x, 2);
+  const fila = lote?.[viaje];
+  if (!fila) return '—';
+  // Wialon no devolvió datos para esta placa: se avisa en vez de dejar guiones sin explicación
+  if (!fila.data) return 'Sin datos';
+  const x = fila.data[campo];
+  if (x == null) return '—';
+  // Las horas de motor vienen como texto desde Wialon; formatearlas como número las mostraría como 0,00
+  return campo === 'horasMotorGps' ? String(x) : fmt(x, 2);
 }
 
 const fmt = (v: unknown, d = 1) => n(v).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -469,7 +475,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
           a && a.rendTeorico > 0 ? ptoDecimal(a.rendTeorico, 2) : '—', dif !== null ? ptoDecimal(dif, 2) : '—',
           dif !== null ? (dif > 0 ? 'SOBRECONSUMO' : 'AHORRO') : '—', n(x.galonesIda), n(x.galonesRetorno),
           gv(g?.recorridoKmGps, 1), gv(g?.combustibleConsumidoGps), gv(g?.rendimientoGps), gv(g?.velocidadMaxGps, 0), gv(g?.consumoRalentiGps),
-          gv(g?.rpmMediaGps, 0), gv(g?.rpmMaxGps, 0), gv(g?.horasMotorGps, 1), vales,
+          gv(g?.rpmMediaGps, 0), gv(g?.rpmMaxGps, 0), (g?.horasMotorGps == null ? '' : String(g.horasMotorGps)), vales,
         ];
       });
       await exportarExcel(urea ? 'Analisis-urea' : 'Analisis-combustible', 'Viajes', ENCABEZADOS_EXCEL, filas);
