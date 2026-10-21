@@ -40,6 +40,21 @@ function tipoOT(o: OrdenTrabajo): Tipo {
   return TIPOS.find(x => x.toLowerCase() === t) ?? 'Otros';
 }
 
+/** Falla reportada de la OT: mismo campo que la ficha de la OT (motivo, o las observaciones si no hay motivo) */
+const fallaOT = (o: OrdenTrabajo) => String(otDetalles(o).motivo || o.observaciones || '');
+
+/** Solo la descripción de la falla: sin "[Reporte F-…]", sin viñeta y sin la categoría ("Falla Manual : ") */
+function textoFalla(o: OrdenTrabajo): string {
+  return fallaOT(o)
+    .replace(/\[Reporte[^\]]*\]/gi, '\n')
+    .split(/\n|•/)
+    .map(l => l.trim())
+    .filter(Boolean)
+    .map(l => { const i = l.indexOf(' : '); return i >= 0 ? l.slice(i + 3).trim() : l; })
+    .filter(Boolean)
+    .join('\n');
+}
+
 const money = (v: number) => `S/ ${v.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const costoOT = (o: OrdenTrabajo) => Number(o.costo_total_pen ?? o.costo_total ?? 0) || 0;
 const minutosOT = (o: OrdenTrabajo) => Math.round(tiempoNetoOT(o).neto / 60000);
@@ -117,7 +132,7 @@ export function IngresosTallerPage() {
   }, [ots]);
 
   const observacionesPorPlaca = useMemo(
-    () => porPlaca.filter(p => p.ots.some(o => (o.observaciones ?? '').trim())).sort((a, b) => a.placa.localeCompare(b.placa)),
+    () => porPlaca.filter(p => p.ots.some(o => textoFalla(o))).sort((a, b) => a.placa.localeCompare(b.placa)),
     [porPlaca],
   );
   const tiempoPorPlaca = useMemo(() => [...porPlaca].sort((a, b) => b.min - a.min), [porPlaca]);
@@ -204,7 +219,7 @@ export function IngresosTallerPage() {
                       <Celda><LicensePlate plate={p.placa} size="sm" /></Celda>
                       <Celda>
                         <span style={{ whiteSpace: 'pre-line' }}>
-                          {p.ots.filter(o => (o.observaciones ?? '').trim()).map(o => o.observaciones).join('\n\n')}
+                          {p.ots.map(o => textoFalla(o)).filter(Boolean).join('\n')}
                         </span>
                       </Celda>
                     </tr>
@@ -271,8 +286,8 @@ export function IngresosTallerPage() {
                       <span style={{ color: 'var(--label-2)' }}>{o.estado}</span>
                       <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)' }}>{minutosOT(o).toLocaleString('es-PE')} min</span>
                     </div>
-                    <div style={{ marginTop: 6, whiteSpace: 'pre-line', fontSize: '0.8125rem', color: (o.observaciones ?? '').trim() ? 'var(--label)' : 'var(--label-3)' }}>
-                      {(o.observaciones ?? '').trim() || 'Sin observaciones registradas en esta OT'}
+                    <div style={{ marginTop: 6, whiteSpace: 'pre-line', fontSize: '0.8125rem', color: textoFalla(o) ? 'var(--label)' : 'var(--label-3)' }}>
+                      {textoFalla(o) || 'Sin falla reportada en esta OT'}
                     </div>
                   </div>
                 ))}
