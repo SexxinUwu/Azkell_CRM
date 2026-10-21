@@ -214,11 +214,11 @@ export function MarsisaOrdenesViajePage() {
         }
       />
 
-      <div className="inv-metricas">
-        <div className="inv-metrica"><span className="inv-metrica__num">{kpis.viajes.toLocaleString('es-PE')}</span><span className="inv-metrica__label">Viajes registrados</span></div>
-        <div className="inv-metrica"><span className="inv-metrica__num">{kpis.ordenes.toLocaleString('es-PE')}</span><span className="inv-metrica__label">Órdenes de servicio</span></div>
-        <div className="inv-metrica"><span className="inv-metrica__num">{(kpis.ida / 1000).toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} TN</span><span className="inv-metrica__label">Carga ida</span></div>
-        <div className="inv-metrica"><span className="inv-metrica__num">{(kpis.retorno / 1000).toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} TN</span><span className="inv-metrica__label">Carga retorno</span></div>
+      <div className="placas-resumen">
+        <div className="placas-kpi placas-kpi--blue"><span className="placas-kpi__valor t-numeric">{kpis.viajes.toLocaleString('es-PE')}</span><span className="placas-kpi__label">Viajes registrados</span></div>
+        <div className="placas-kpi placas-kpi--accent"><span className="placas-kpi__valor t-numeric">{kpis.ordenes.toLocaleString('es-PE')}</span><span className="placas-kpi__label">Órdenes de servicio</span></div>
+        <div className="placas-kpi placas-kpi--green"><span className="placas-kpi__valor t-numeric">{(kpis.ida / 1000).toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} TN</span><span className="placas-kpi__label">Carga ida</span></div>
+        <div className="placas-kpi placas-kpi--amber"><span className="placas-kpi__valor t-numeric">{(kpis.retorno / 1000).toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} TN</span><span className="placas-kpi__label">Carga retorno</span></div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
