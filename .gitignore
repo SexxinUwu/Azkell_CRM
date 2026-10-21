@@ -6,3 +6,6 @@ prisma/master/generated/
 
 # App nueva compilada (se genera en el build de Coolify)
 dist/
+
+# Scripts y archivos temporales de diagnóstico
+scratch/
