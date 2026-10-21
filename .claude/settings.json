@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "FileRead(*)",
+      "FileWrite(*)",
+      "FileEdit(*)",
+      "GlobTool(*)",
+      "GrepTool(*)",
+      "LS(*)",
+      "WebFetch(*)"
+    ],
+    "deny": []
+  }
+}
