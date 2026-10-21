@@ -81,15 +81,25 @@ const limiterGeneral = rateLimit({
     skip: (req) => req.path === '/eventos' || req.path === '/tenant-logo' || req.path.startsWith('/tenant-logo'),
     message: { error: 'Demasiadas solicitudes. Intenta en un momento.' }
 });
-const limiterLogin = rateLimit({
-    windowMs: 15 * 60 * 1000,  // ventana: 15 minutos
-    max: 20,                    // máximo 20 intentos de login por IP
+// Login: el tope por cuenta (correo + IP) va en la propia ruta, después del parser de JSON.
+// El tope por IP es amplio para que una oficina con muchos usuarios detrás de una misma IP no quede bloqueada.
+const limiterLoginIP = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 500,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: 'Demasiados intentos de acceso. Espera 15 minutos.' }
+    message: { error: 'Demasiados intentos de acceso desde esta red. Espera 15 minutos.' }
+});
+const limiterLoginCuenta = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    keyGenerator: (req) => `${req.ip}|${String((req.body && req.body.correo) || '').trim().toLowerCase()}`,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiados intentos para esta cuenta. Espera 15 minutos.' }
 });
 app.use('/api/', limiterGeneral);
-app.use('/api/login', limiterLogin);
+app.use('/api/login', limiterLoginIP);
 const ALLOWED_ORIGINS = [
     'https://azkell.com',
     'https://marsisa.azkell.com',
@@ -2351,7 +2361,8 @@ function logAudit(usuarioOrObj, modulo, submoduloOrAccion, accionOrDetalle, deta
 // ============================================================
 // 📡 SSE — SINCRONIZACIÓN EN TIEMPO REAL
 // ============================================================
-const sseClients = new Set();
+// Clientes SSE agrupados por empresa (clave: pool de la base de la empresa): un evento solo llega a su empresa
+const sseClients = new Map();
 
 // ============================================================
 // 🔑 MIDDLEWARE DE AUTENTICACIÓN JWT
@@ -2597,9 +2608,9 @@ function requirePerm(modulo, accion) {
 }
 
 setInterval(() => {
-    sseClients.forEach(c => {
-        try { c.write(': ping\n\n'); } catch(e) { sseClients.delete(c); }
-    });
+    sseClients.forEach(clientes => clientes.forEach(c => {
+        try { c.write(': ping\n\n'); } catch(e) { clientes.delete(c); }
+    }));
 }, 15000);
 
 app.get('/api/eventos', (req, res) => {
@@ -2612,15 +2623,22 @@ app.get('/api/eventos', (req, res) => {
     });
     res.flushHeaders();
     res.write('data: {"tipo":"conectado"}\n\n');
-    sseClients.add(res);
-    req.on('close', () => sseClients.delete(res));
+    const clave = req.db || defaultDbPool;
+    if (!sseClients.has(clave)) sseClients.set(clave, new Set());
+    sseClients.get(clave).add(res);
+    req.on('close', () => { const clientes = sseClients.get(clave); if (clientes) clientes.delete(res); });
 });
 
 function broadcast(modulo, accion, detalle) {
     const payload = Object.assign({ modulo, accion }, detalle || {});
     const msg = `event: datos-actualizados\ndata: ${JSON.stringify(payload)}\n\n`;
-    sseClients.forEach(c => {
-        try { c.write(msg); } catch(e) { sseClients.delete(c); }
+    // Solo a los clientes de la empresa que originó el cambio. Sin contexto de empresa cae en la base por defecto,
+    // nunca en la de otra empresa.
+    const clave = tenantStorage.getStore() || defaultDbPool;
+    const clientes = sseClients.get(clave);
+    if (!clientes) return;
+    clientes.forEach(c => {
+        try { c.write(msg); } catch(e) { clientes.delete(c); }
     });
 }
 
@@ -2671,7 +2689,7 @@ app.get('/api/ping', (req, res) => {
 // ============================================================
 // 🔐 API DE LOGIN (CON DETECTOR DE ERRORES EXACTO)
 // ============================================================
-app.post('/api/login', (req, res) => {
+app.post('/api/login', limiterLoginCuenta, (req, res) => {
     const { correo, password } = req.body;
     const loginInput = (correo || '').trim();
     const sql = `
@@ -5401,7 +5419,3 @@ app.listen(process.env.PORT || 3000, () => {
     );
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Azkell ERP Server activo y escuchando en el puerto ${PORT}`);
-});
