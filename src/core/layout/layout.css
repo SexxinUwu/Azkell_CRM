@@ -580,4 +580,6 @@
   .main:has(.page--fill) { display: flex; flex-direction: column; flex: 1 1 auto; height: auto; min-height: 0; overflow: hidden; padding-bottom: var(--s-3); box-sizing: border-box; }
   .page--fill { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; width: 100%; max-width: none; }
   .page--fill > .page-header { flex: 0 0 auto; }
+  /* El contenedor de la transición entre módulos queda entre main y la página: debe pasar la altura de la ventana, si no la página crece con su contenido */
+  .main:has(.page--fill) > .vista-transicion { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 }
