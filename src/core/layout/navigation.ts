@@ -116,6 +116,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'fleetrun', label: 'Mantenimiento preventivo (Fleetrun)', to: '/mantenimiento/fleetrun', icon: Gauge, permissions: ver('fleetrun', 'fleet') },
       { key: 'reportes-ot', label: 'Reportes OT', clasico: 'mantenimiento/reportes-ot', icon: ScrollText, permissions: ver('reportes_ot', 'ot') },
       { key: 'trabajos-ot', label: 'Historial de trabajos', to: '/mantenimiento/trabajos-ot', icon: History, permissions: ver('trabajos_ot') },
+      { key: 'ingresos-taller', label: 'Ingresos a taller', to: '/mantenimiento/ingresos-taller', icon: BarChart3, permissions: ver('mant_dashboard', 'reportes_ot', 'ot') },
       {
         key: 'neumaticos-grupo', label: 'Neumáticos', icon: Disc3, permissions: [],
         children: [

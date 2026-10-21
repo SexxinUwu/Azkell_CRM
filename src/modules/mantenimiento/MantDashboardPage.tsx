@@ -32,6 +32,7 @@ import { usePlacas } from '../placas/api';
 import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
 import { useDisponibilidad } from '../flota/api';
 import { cifrasDisponibilidad, porcentajeOperativa } from '../flota/disponibilidadCifras';
+import { horasTxt, indicadoresTaller } from './tiemposTaller';
 
 // ─── Tipos y Helpers ──────────────────────────────────────────────────────────
 
@@ -436,20 +437,16 @@ export function MantDashboardPage() {
     o => o.estado === 'Finalizado' || o.estado === 'Cerrada',
   ).length;
 
-  // MTTR (Mean Time to Repair) en Horas para las OTs finalizadas del período
-  // null cuando no hay OT cerradas con inicio y salida en el período (no se inventa un valor)
-  const mttrHoras = useMemo<number | null>(() => {
-    const finalizadas = otsFiltradas.filter(
-      o => (o.estado === 'Finalizado' || o.estado === 'Cerrada') && o.fecha_inicio_ot && o.fecha_hora_salida,
-    );
-    if (!finalizadas.length) return null;
-    const totalMs = finalizadas.reduce((acc, o) => {
-      const t1 = new Date((o.fecha_inicio_ot || '').replace(' ', 'T')).getTime();
-      const t2 = new Date((o.fecha_hora_salida || '').replace(' ', 'T')).getTime();
-      return acc + (t2 > t1 ? t2 - t1 : 0);
-    }, 0);
-    return Math.round((totalMs / finalizadas.length / (1000 * 60 * 60)) * 10) / 10;
-  }, [otsFiltradas]);
+  // Indicadores de tiempo con la regla de Ingresos a taller (tiemposTaller.ts). Intervalo según el rango elegido.
+  const indTaller = useMemo(() => {
+    const dias = rango === 'hoy' ? 0 : rango === 'semana' ? 6 : rango === 'mes' ? 30 : 29;
+    const d = new Date();
+    d.setDate(d.getDate() - dias);
+    const desde = d.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+    const hasta = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+    return indicadoresTaller(rampasData, otsData, desde, hasta);
+  }, [rampasData, otsData, rango]);
+  const mttrHoras = indTaller.mttrHoras;
 
   // Costo Total Acumulado en el Período
   const costoTotalPeriodo = useMemo(() => {
@@ -705,10 +702,24 @@ export function MantDashboardPage() {
 
             <BentoKpiCard
               icon={<Clock size={22} />}
-              label="Tiempo Promedio (MTTR)"
-              valor={mttrHoras != null ? `${mttrHoras} h` : '—'}
-              sub={mttrHoras != null ? 'Inicio a salida, OT cerradas' : 'Sin OT cerradas con fechas en el período'}
+              label="MTTR (trabajo sin pausas)"
+              valor={horasTxt(mttrHoras)}
+              sub={`${indTaller.mttrN} OT · ${indTaller.mttrExcluidas} excluidas sin fecha de inicio`}
               color="#3b82f6"
+            />
+            <BentoKpiCard
+              icon={<Clock size={22} />}
+              label="Permanencia promedio"
+              valor={horasTxt(indTaller.permanenciaHoras)}
+              sub={`${indTaller.permanenciaN} visitas liberadas · ${indTaller.permanenciaEnRampa} en rampa`}
+              color="#0ea5e9"
+            />
+            <BentoKpiCard
+              icon={<Clock size={22} />}
+              label="Tiempo de espera promedio"
+              valor={horasTxt(indTaller.esperaHoras)}
+              sub={`${indTaller.esperaN} OT con visita · ${indTaller.esperaSinVisita} sin visita`}
+              color="#f59e0b"
             />
 
             <BentoKpiCard

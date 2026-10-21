@@ -9,6 +9,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'mant-dashboard', label: 'Resumen de taller', to: '/mantenimiento/dashboard', icon: 'LayoutDashboard', permisos: ['mant_dashboard.ver', 'status_rampa.ver', 'admin'] },
   },
   {
+    path: 'mantenimiento/ingresos-taller/*',
+    permisos: ['mant_dashboard.ver', 'reportes_ot.ver', 'admin'],
+    Page: lazy(() => import('./IngresosTallerPage').then(m => ({ default: m.IngresosTallerPage }))),
+    nav: { key: 'ingresos-taller', label: 'Ingresos a taller', to: '/mantenimiento/ingresos-taller', icon: 'BarChart3', permisos: ['mant_dashboard.ver', 'reportes_ot.ver', 'admin'] },
+  },
+  {
     path: 'mantenimiento/finanzas-taller/*',
     permisos: ['mant_dashboard.ver', 'admin'],
     Page: lazy(() => import('./FinanzasTallerPage').then(m => ({ default: m.FinanzasTallerPage }))),
