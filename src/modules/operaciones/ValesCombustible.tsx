@@ -22,6 +22,8 @@ interface Vale {
   proveedor: string | null; ruc: string | null; kilometraje: number | null; galones: number | string | null; costo_gl: number | string | null;
   tipo_pago: string | null; dias_credito: number | null; moneda: string | null; importe: number | string | null;
   numero_comprobante: string | null; observacion: string | null; tipo: string | null; clase_vehiculo: string | null; archivo_url: string | null;
+  caja: string | null; estado_caja: string | null; departamento: string | null; provincia: string | null; distrito: string | null;
+  peso_tn: number | string | null; tipo_cambio: number | string | null;
 }
 interface Respuesta { ok: boolean; data: Vale[]; total: number; totalPages: number; kpis: { totalVales: number; totalGalones: number; totalGasto: number; costoPromedioGalon: number } }
 interface Catalogos { placas: string[]; conductores: string[]; combustibles: string[]; proveedores: { proveedor_razon_social: string; proveedor_ruc: string | null; estaciones_nombres: string | null }[]; siguienteCorrelativo: string }
@@ -122,14 +124,28 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
     { id: 'fecha', titulo: 'Fecha', ancho: 120 },
     { id: 'estado', titulo: 'Estado', ancho: 110 },
     { id: 'vehiculo', titulo: 'Vehículo', ancho: 130 },
+    { id: 'clase', titulo: 'Clase vehículo', ancho: 130 },
     { id: 'conductor', titulo: 'Conductor', ancho: 220 },
+    { id: 'caja', titulo: 'Caja', ancho: 110 },
+    { id: 'estado-caja', titulo: 'Estado caja', ancho: 120 },
+    { id: 'ruta', titulo: 'Ruta', ancho: 200 },
+    { id: 'departamento', titulo: 'Departamento', ancho: 130 },
+    { id: 'provincia', titulo: 'Provincia', ancho: 120 },
+    { id: 'distrito', titulo: 'Distrito', ancho: 120 },
     { id: 'estacion', titulo: 'Estación / proveedor', ancho: 220 },
+    { id: 'ruc', titulo: 'RUC', ancho: 130 },
     { id: 'producto', titulo: 'Producto', ancho: 110 },
+    { id: 'kilometraje', titulo: 'Kilometraje', ancho: 120, alinear: 'right' },
+    { id: 'peso', titulo: 'Peso (TN)', ancho: 110, alinear: 'right' },
     { id: 'galones', titulo: 'Galones', ancho: 100, alinear: 'right' },
     { id: 'costo', titulo: 'Costo/gl', ancho: 110, alinear: 'right' },
+    { id: 'tipo-pago', titulo: 'Tipo pago', ancho: 120 },
+    { id: 'dias', titulo: 'Días crédito', ancho: 120, alinear: 'right' },
     { id: 'importe', titulo: 'Importe', ancho: 130, alinear: 'right' },
     { id: 'pago', titulo: 'Estado de pago', ancho: 130 },
     { id: 'comprobante', titulo: 'N° comprobante', ancho: 150 },
+    { id: 'tipo-cambio', titulo: 'Tipo cambio', ancho: 120, alinear: 'right' },
+    { id: 'observacion', titulo: 'Observación', ancho: 240, minimo: 120 },
     { id: 'viaje', titulo: 'N° viaje', ancho: 130 },
   ];
 
@@ -257,14 +273,28 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
                     <Celda mono>{dia(v.fecha)}</Celda>
                     <Celda><Pastilla color={anulado ? 'gray' : 'green'}>{anulado ? 'ANULADO' : 'VÁLIDO'}</Pastilla></Celda>
                     <Celda><LicensePlate plate={v.vehiculo ?? ''} size="sm" /></Celda>
+                    <Celda>{v.clase_vehiculo || '—'}</Celda>
                     <Celda>{v.conductor || '—'}</Celda>
+                    <Celda mono>{v.caja || '—'}</Celda>
+                    <Celda>{v.estado_caja || '—'}</Celda>
+                    <Celda>{v.ruta || '—'}</Celda>
+                    <Celda>{v.departamento || '—'}</Celda>
+                    <Celda>{v.provincia || '—'}</Celda>
+                    <Celda>{v.distrito || '—'}</Celda>
                     <Celda>{v.estacion || v.proveedor || '—'}</Celda>
+                    <Celda mono>{v.ruc || '—'}</Celda>
                     <Celda>{v.tipo_combustible || '—'}</Celda>
+                    <Celda alinear="right" mono>{n(v.kilometraje) ? n(v.kilometraje).toLocaleString('es-PE') : '—'}</Celda>
+                    <Celda alinear="right" mono>{n(v.peso_tn) ? n(v.peso_tn).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}</Celda>
                     <Celda alinear="right" mono>{n(v.galones).toLocaleString('es-PE', { maximumFractionDigits: 2 })}</Celda>
                     <Celda alinear="right" mono>{money(v.costo_gl)}</Celda>
-                    <Celda alinear="right" mono>{v.moneda === 'DOLARES' ? 'US$ ' : 'S/ '}{money(v.importe)}</Celda>
+                    <Celda>{v.tipo_pago || '—'}</Celda>
+                    <Celda alinear="right" mono>{v.dias_credito ?? '—'}</Celda>
+                    <Celda alinear="right" mono>{v.moneda === 'DOLARES' ? 'US$ ' : 'S/ '}{money(v.importe)}</Celda>
                     <Celda><Pastilla color={anulado ? 'gray' : v.estado_pago === 'PAGADO' ? 'green' : 'amber'}>{anulado ? '—' : (v.estado_pago ?? '—')}</Pastilla></Celda>
                     <Celda mono>{v.numero_comprobante || '—'}</Celda>
+                    <Celda alinear="right" mono>{n(v.tipo_cambio) ? n(v.tipo_cambio).toLocaleString('es-PE', { minimumFractionDigits: 3, maximumFractionDigits: 4 }) : '—'}</Celda>
+                    <Celda>{v.observacion || '—'}</Celda>
                     <Celda mono>{v.viaje || '—'}</Celda>
                   </tr>
                 );
