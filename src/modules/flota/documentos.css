@@ -232,3 +232,35 @@
 .doc-conf__fila span { color: var(--label-2); font-size: 0.8125rem; margin-left: auto; text-align: right; }
 .doc-conf__fila input { width: 1.1rem; height: 1.1rem; accent-color: var(--accent); }
 .doc-conf__insignia { font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 999px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent-ink); align-self: center; }
+
+/* Matriz con mini calendario lateral (en celular el calendario baja bajo la matriz) */
+.doc-matriz-con-mini { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); align-items: start; }
+@media (min-width: 1100px) {
+  .doc-matriz-con-mini { grid-template-columns: minmax(0, 1fr) 280px; }
+  .page--fill .doc-matriz-con-mini { flex: 1 1 auto; min-height: 0; align-items: stretch; }
+  .page--fill .doc-matriz-con-mini > .doc-matriz-caja { min-height: 0; }
+  .page--fill .doc-mini { overflow-y: auto; }
+}
+.doc-mini { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-3); border-radius: var(--r-xl); background: var(--surface); box-shadow: 0 0 0 1px var(--separator); }
+.doc-mini__nav { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.doc-mini__mes { font-size: 0.875rem; text-align: center; }
+.doc-mini__grilla { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; justify-items: center; }
+.doc-mini__sem { font-size: 0.6875rem; font-weight: 700; color: var(--label-3); }
+.doc-mini__dia {
+  width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; background: none; padding: 0;
+  font: inherit; font-size: 0.75rem; color: var(--label-2); cursor: default;
+}
+.doc-mini__dia:not(:disabled) { cursor: pointer; font-weight: 700; color: #fff; background: var(--mini-color); border-color: var(--mini-color); }
+.doc-mini__dia--hoy:disabled { border-color: var(--separator); color: var(--label); font-weight: 700; }
+.doc-mini__dia--hoy:not(:disabled) { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--label-3); }
+.doc-mini__dia--sel { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--mini-color); }
+@media (max-width: 767px) { .doc-mini__dia { width: 40px; height: 40px; font-size: 0.8125rem; } }
+.doc-mini__leyenda { display: flex; flex-wrap: wrap; gap: 4px var(--s-3); font-size: 0.6875rem; color: var(--label-2); }
+.doc-mini__leyenda span { display: inline-flex; align-items: center; gap: 4px; }
+.doc-mini__leyenda i, .doc-mini__items i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.doc-mini__cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap; font-size: 0.8125rem; }
+.doc-mini__items { list-style: none; margin: var(--s-2) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.doc-mini__items li { display: flex; align-items: center; gap: var(--s-2); font-size: 0.78rem; }
+.doc-mini__items li > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.doc-mini__items small { color: var(--label-2); }
+.doc-mini__ics { background: none; border: 0; padding: 8px; cursor: pointer; color: var(--blue-ink); border-radius: 8px; }

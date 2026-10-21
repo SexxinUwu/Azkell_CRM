@@ -10,16 +10,16 @@ import type { FilaExpediente } from './DocExpediente';
 import { formatFechaPe } from '../../core/lib/format';
 
 const OTROS = 'otros';
-interface Evento { placa: string; clave: string; corto: string; titulo: string; color: string; fecha: string; estado: EstadoDoc }
+export interface Evento { placa: string; clave: string; corto: string; titulo: string; color: string; fecha: string; estado: EstadoDoc }
 
-const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+export const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const DIAS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 const TONO: Array<{ value: 'todos' | 'vencido' | 'alerta' | 'vigente'; label: string }> = [
   { value: 'todos', label: 'Todos' }, { value: 'vencido', label: 'Vencidos' }, { value: 'alerta', label: 'Por vencer' }, { value: 'vigente', label: 'Vigentes' },
 ];
 
 /** Cada vencimiento de la flota como un evento del calendario (los permanentes no tienen fecha que mostrar) */
-function eventosDe(filas: FilaExpediente[]): Evento[] {
+export function eventosDe(filas: FilaExpediente[]): Evento[] {
   const out: Evento[] = [];
   for (const { v, m } of filas) {
     for (const doc of DOCS) {

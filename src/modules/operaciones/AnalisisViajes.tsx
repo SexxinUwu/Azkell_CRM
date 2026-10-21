@@ -1,5 +1,5 @@
 import '../mantenimiento/mant.css';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowUpRight, ChevronDown, ChevronRight, Droplets, FileSpreadsheet, Fuel, RefreshCw, SearchX } from 'lucide-react';
@@ -18,7 +18,7 @@ import { abrirClasico } from '../../core/layout/navigation';
 import { analizarViaje, type AnalisisViaje, type MatrizCalc, type TramoCalc, type ViajeCalc } from './analisisCalculo';
 
 interface Stats { kmInicio: number; kmFin: number; recorridoKm: number; totalGalones: number; totalGasto: number; rendimiento: number }
-interface Voucher { id: number | string; fecha?: string; producto?: string; galones?: number; importe?: number; odometro?: number; estacion?: string; esPuntoPartida?: boolean; tipo?: string; peso?: number }
+interface Voucher { conductor?: string; id: number | string; fecha?: string; producto?: string; galones?: number; importe?: number; odometro?: number; estacion?: string; esPuntoPartida?: boolean; tipo?: string; peso?: number }
 interface Trip {
   viaje: string; placa: string; carreta: string; conductor: string; motor: string; marca: string; configuracion: string; ruta: string; rutaIda: string; rutaRetorno: string;
   pesoMaxTn: number;
@@ -61,9 +61,7 @@ function useTelemetriaViaje(trip: Trip | null, habilitada: boolean) {
   });
 }
 
-function TelemetriaViaje({ trip }: { trip: Trip }) {
-  const [pedida, setPedida] = useState(false);
-  const q = useTelemetriaViaje(trip, pedida);
+function TelemetriaViaje({ trip, pedida, setPedida, q }: { trip: Trip; pedida: boolean; setPedida: (v: boolean) => void; q: ReturnType<typeof useTelemetriaViaje> }) {
   const t = q.data;
   const dato = (label: string, valor: number | null | undefined, unidad: string) => (
     <div className="dato"><span className="dato__label">{label}</span><span className="dato__valor dato__valor--mono">{valor == null ? '—' : `${fmt(valor, 1)} ${unidad}`}</span></div>
@@ -158,6 +156,123 @@ function Diferencia({ valor }: { valor: number | null }) {
 
 const ptoDecimal = (v: number, d: number) => +v.toFixed(d);
 
+const ORDENES = [
+  { v: 'trip_desc', t: 'N° de viaje (más reciente)' }, { v: 'trip_asc', t: 'N° de viaje (más antiguo)' },
+  { v: 'date_desc', t: 'Fecha (más reciente)' }, { v: 'date_asc', t: 'Fecha (más antigua)' },
+  { v: 'gal_desc', t: 'Más galones' }, { v: 'cost_desc', t: 'Mayor gasto' },
+];
+
+// Guardado en vivo de la auditoría del viaje (POST /combustible/auditar-viaje, el mismo del clásico). Actualiza la tabla al instante.
+function useGuardarAuditoria(modulo: string, usuario: string) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: async (p: { viaje: string; estado: string; obs: string }) => {
+      const r = await api<{ ok?: boolean; error?: string }>(`/combustible/auditar-viaje?modulo=${modulo}`, {
+        method: 'POST', body: { viaje: p.viaje, estado_auditoria: p.estado, observacion: p.obs, usuario },
+      });
+      if (r.ok === false) throw new Error(r.error || 'No se pudo guardar la auditoría');
+      return r;
+    },
+    onMutate: p => {
+      qc.setQueriesData<Resp>({ queryKey: ['operaciones', 'analisis'] }, old => old && Array.isArray(old.trips)
+        ? { ...old, trips: old.trips.map(t => t.viaje === p.viaje ? { ...t, estadoAuditoria: p.estado, observacionAuditoria: p.obs, usuarioAuditoria: usuario || t.usuarioAuditoria } : t) }
+        : old);
+    },
+    onError: async err => { toast(errorMessage(err), 'error'); haptic('warning'); await qc.invalidateQueries({ queryKey: ['operaciones', 'analisis'] }); },
+  });
+}
+
+// Observación que se guarda al salir del campo; se bloquea cuando el viaje está CONFORME (igual que el clásico)
+function ObsInput({ viaje, estado, valor, puedeAuditar, onGuardar }: {
+  viaje: string; estado: string; valor: string; puedeAuditar: boolean; onGuardar: (viaje: string, estado: string, obs: string) => Promise<unknown>;
+}) {
+  const [v, setV] = useState(valor);
+  const [ok, setOk] = useState(false);
+  useEffect(() => { setV(valor); }, [valor]);
+  const bloqueado = !puedeAuditar || estado === 'CONFORME';
+  const guardar = async () => {
+    if (bloqueado || v.trim() === (valor ?? '').trim()) return;
+    try { await onGuardar(viaje, estado, v.trim()); setOk(true); window.setTimeout(() => setOk(false), 2000); } catch { /* el aviso lo da el hook */ }
+  };
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }} onClick={e => e.stopPropagation()}>
+      <input type="text" value={v} readOnly={bloqueado} aria-label={`Observación del viaje ${viaje}`}
+        placeholder={estado === 'OBSERVADO' ? 'Escribir motivo…' : 'Observación…'}
+        onChange={e => setV(e.target.value)} onBlur={guardar} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+        style={{ flex: 1, minWidth: 0, font: 'inherit', fontSize: '0.8125rem', padding: '3px 8px', borderRadius: 8, border: '1px solid var(--separator)', background: bloqueado ? 'transparent' : 'var(--surface)', color: 'var(--label)', cursor: bloqueado ? 'not-allowed' : 'text' }} />
+      {ok && <span style={{ fontSize: '0.6875rem', color: 'var(--green-ink)', fontWeight: 700 }}>Guardado</span>}
+    </span>
+  );
+}
+
+// Conciliación del viaje: lo despachado por vales frente a la matriz teórica y a la telemetría GPS, con las discrepancias señaladas
+function Conciliacion({ t, a, galones, gps }: { t: Trip; a: AnalisisViaje | undefined; galones: number; gps: TelemetriaWialon | null }) {
+  const g = (v: number | null | undefined) => (v == null ? null : Number(v));
+  const kmVales = n(t.recorridoKm);
+  const kmMatriz = a?.kmTeorico ?? 0;
+  const kmGps = g(gps?.recorridoKmGps);
+  const galMatriz = a?.galTeorico ?? 0;
+  const galGps = g(gps?.combustibleConsumidoGps);
+  const rendReal = galones > 0 && kmVales > 0 ? kmVales / galones : 0;
+  const rendMatriz = a?.rendTeorico ?? 0;
+  const rendGps = g(gps?.rendimientoGps);
+  const difMatriz = galMatriz > 0 && galones > 0 ? galones - galMatriz : null;
+  const difGps = galGps != null && galones > 0 ? galones - galGps : null;
+  const difKmGps = kmGps != null && kmVales > 0 ? kmVales - kmGps : null;
+  const sinOdo = (t.vouchers ?? []).filter(v => !v.esPuntoPartida && !n(v.odometro)).length;
+
+  const alertas: { tono: 'error' | 'neutral'; texto: string }[] = [];
+  if (t.odometroInconsistente) alertas.push({ tono: 'error', texto: 'Odómetro final menor al inicial: revisa los vales del viaje.' });
+  if (kmVales > LIMITE_KM_VIAJE) alertas.push({ tono: 'error', texto: `Recorrido de ${fmt(kmVales, 0)} km por vales: supera ${fmt(LIMITE_KM_VIAJE, 0)} km, probable odómetro mal digitado.` });
+  if (sinOdo > 0) alertas.push({ tono: 'neutral', texto: `${sinOdo} vale(s) sin odómetro: el recorrido por vales puede estar incompleto.` });
+  if (a && galMatriz === 0) alertas.push({ tono: 'neutral', texto: 'La matriz no tiene consumo teórico para esta ruta, motor o peso: no se puede comparar.' });
+  if (difMatriz != null && difMatriz > 0) alertas.push({ tono: 'error', texto: `Sobreconsumo sobre la matriz: +${fmt(difMatriz, 2)} gal.` });
+  if (difMatriz != null && difMatriz < 0) alertas.push({ tono: 'neutral', texto: `Ahorro frente a la matriz: ${fmt(difMatriz, 2)} gal.` });
+  if (a?.sinCarreta && galMatriz > 0) alertas.push({ tono: 'neutral', texto: 'Unidad sin carreta: el teórico ya lleva el descuento del 25%.' });
+
+  const cel = (v: number | null, d: number) => (v == null || v === 0 ? '—' : fmt(v, d));
+  const dif = (v: number | null) => (v == null ? '—' : <span style={{ color: v > 0 ? 'var(--red-ink)' : 'var(--green-ink)', fontWeight: 700 }}>{v > 0 ? '+' : ''}{fmt(v, 2)}</span>);
+  const th: CSSProperties = { textAlign: 'right', padding: '4px 6px', fontSize: '0.6875rem', textTransform: 'uppercase', color: 'var(--label-2)', fontWeight: 700 };
+  const td: CSSProperties = { textAlign: 'right', padding: '6px', fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', borderTop: '1px solid var(--separator)' };
+  const tdL: CSSProperties = { ...td, textAlign: 'left', fontFamily: 'inherit', fontWeight: 600 };
+  const tramo = (nombre: string, x: TramoCalc) => (
+    <tr key={nombre}>
+      <td style={tdL}>{nombre}</td><td style={td}>{x.recorrido > 0 ? fmt(x.recorrido, 1) : '—'}</td>
+      <td style={td}>{fmt(x.galones, 2)}</td><td style={td}>{x.galTeorico > 0 ? fmt(x.galTeorico, 2) : '—'}</td><td style={td}>{dif(x.diferencia)}</td>
+    </tr>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+      <p className="tarjeta__grupo-titulo">Conciliación: vales, matriz y GPS</p>
+      {alertas.map((al, i) => <Notice key={i} tone={al.tono} icon={al.tono === 'error' ? <AlertTriangle size={16} /> : undefined}>{al.texto}</Notice>)}
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead><tr><th style={{ ...th, textAlign: 'left' }}>Concepto</th><th style={th}>Vales</th><th style={th}>Matriz</th><th style={th}>GPS</th><th style={th}>Vales − matriz</th><th style={th}>Vales − GPS</th></tr></thead>
+          <tbody>
+            <tr><td style={tdL}>Recorrido (km)</td><td style={td}>{cel(kmVales, 1)}</td><td style={td}>{cel(kmMatriz, 1)}</td><td style={td}>{cel(kmGps, 1)}</td>
+              <td style={td}>{dif(kmMatriz > 0 && kmVales > 0 ? kmVales - kmMatriz : null)}</td><td style={td}>{dif(difKmGps)}</td></tr>
+            <tr><td style={tdL}>Combustible (gal)</td><td style={td}>{cel(galones, 2)}</td><td style={td}>{cel(galMatriz, 2)}</td><td style={td}>{cel(galGps, 2)}</td>
+              <td style={td}>{dif(difMatriz)}</td><td style={td}>{dif(difGps)}</td></tr>
+            <tr><td style={tdL}>Rendimiento (km/gl)</td><td style={td}>{cel(rendReal, 2)}</td><td style={td}>{cel(rendMatriz, 2)}</td><td style={td}>{cel(rendGps, 2)}</td>
+              <td style={td}>{dif(rendReal > 0 && rendMatriz > 0 ? rendReal - rendMatriz : null)}</td><td style={td}>{dif(rendReal > 0 && rendGps != null && rendGps > 0 ? rendReal - rendGps : null)}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      {gps == null && <span className="t-footnote c-secondary">Consulta la telemetría Wialon para completar la columna GPS.</span>}
+      {a && (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr><th style={{ ...th, textAlign: 'left' }}>Tramo</th><th style={th}>Recorrido km</th><th style={th}>Gal. real</th><th style={th}>Gal. teórico</th><th style={th}>Diferencia</th></tr></thead>
+            <tbody>{tramo('Ida', a.ida)}{tramo('Retorno', a.retorno)}</tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Operaciones › Análisis de combustible y de urea: rendimiento por viaje y auditoría.
 export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' }) {
   const urea = producto === 'urea';
@@ -170,6 +285,9 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const [desde, setDesde] = useState(hoyLima);
   const [hasta, setHasta] = useState(hoyLima);
   const [auditoria, setAuditoria] = useState('');
+  const [placaF, setPlacaF] = useState('');
+  const [conductorF, setConductorF] = useState('');
+  const [orden, setOrden] = useState('trip_desc');
   const [abierto, setAbierto] = useState<string | null>(null);
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [canActivo, setCanActivo] = useState(false);
@@ -179,7 +297,9 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const toast = useToast();
   const navigate = useNavigate();
 
-  useEffect(() => { setPagina(1); }, [q, desde, hasta, auditoria, tamano]);
+  useEffect(() => { setPagina(1); }, [q, desde, hasta, auditoria, placaF, conductorF, orden, tamano]);
+  const guardarAud = useGuardarAuditoria(modulo, user?.name ?? '');
+  const guardar = (viaje: string, estado: string, obs: string) => guardarAud.mutateAsync({ viaje, estado, obs });
 
   const datos = useQuery<Resp>({
     queryKey: ['operaciones', 'analisis', modulo, q, desde, hasta],
@@ -221,14 +341,23 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   };
 
   // Orden de viaje: del más reciente al más antiguo; los "SIN-VIAJE" (vales sueltos) van al final
+  const placas = useMemo(() => [...new Set(trips.map(t => t.placa).filter(Boolean))].sort(), [trips]);
+  const conductores = useMemo(() => [...new Set(trips.map(t => t.conductor).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [trips]);
   const visibles = useMemo(() => trips
-    .filter(t => !auditoria || t.estadoAuditoria === auditoria)
+    .filter(t => (!auditoria || t.estadoAuditoria === auditoria) && (!placaF || t.placa === placaF) && (!conductorF || t.conductor === conductorF))
     .sort((a, b) => {
       const sinA = a.viaje.startsWith('SIN-VIAJE') ? 1 : 0;
       const sinB = b.viaje.startsWith('SIN-VIAJE') ? 1 : 0;
       if (sinA !== sinB) return sinA - sinB;
-      return b.viaje.localeCompare(a.viaje, undefined, { numeric: true });
-    }), [trips, auditoria]);
+      switch (orden) {
+        case 'trip_asc': return a.viaje.localeCompare(b.viaje, undefined, { numeric: true });
+        case 'date_asc': return (a.fechaInicio || '').localeCompare(b.fechaInicio || '');
+        case 'date_desc': return (b.fechaFin || '').localeCompare(a.fechaFin || '');
+        case 'gal_desc': return n(b.totalGalones) - n(a.totalGalones);
+        case 'cost_desc': return n(b.totalGasto) - n(a.totalGasto);
+        default: return b.viaje.localeCompare(a.viaje, undefined, { numeric: true });
+      }
+    }), [trips, auditoria, placaF, conductorF, orden]);
   const paginas = Math.max(1, Math.ceil(visibles.length / tamano));
   const pagActual = Math.min(pagina, paginas);
   const pagina_ = useMemo(() => visibles.slice((pagActual - 1) * tamano, pagActual * tamano), [visibles, pagActual, tamano]);
@@ -358,7 +487,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
           <MenuOtros opciones={[
             { label: 'Exportar Excel', detalle: `${visibles.length} viajes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
             ...(urea ? [] : [{ label: 'Matriz de rendimiento', icon: <Fuel size={17} />, separado: true, onSelect: () => navigate('/operaciones/matriz-combustible') }]),
-            { label: 'Telemetría y auditoría avanzada', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, separado: !urea, onSelect: () => abrirClasico(urea ? 'operaciones/urea-analisis' : 'operaciones/combustible-analisis') },
+            ...(urea ? [{ label: 'Telemetría y auditoría avanzada', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, separado: false, onSelect: () => abrirClasico('operaciones/urea-analisis') }] : []),
           ]} />
         }
       />
@@ -381,6 +510,15 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
           <SelectInput value={auditoria} onChange={e => setAuditoria(e.target.value)} aria-label="Auditoría" style={{ width: 'auto' }}>
             <option value="">Toda auditoría</option>{AUDIT.map(a => <option key={a} value={a}>{a}</option>)}
+          </SelectInput>
+          <SelectInput value={placaF} onChange={e => setPlacaF(e.target.value)} aria-label="Placa" style={{ width: 'auto' }}>
+            <option value="">Todas las placas</option>{placas.map(p => <option key={p} value={p}>{p}</option>)}
+          </SelectInput>
+          <SelectInput value={conductorF} onChange={e => setConductorF(e.target.value)} aria-label="Conductor" style={{ width: 'auto', maxWidth: 220 }}>
+            <option value="">Todos los conductores</option>{conductores.map(c => <option key={c} value={c}>{c}</option>)}
+          </SelectInput>
+          <SelectInput value={orden} onChange={e => setOrden(e.target.value)} aria-label="Orden" style={{ width: 'auto' }}>
+            {ORDENES.map(o => <option key={o.v} value={o.v}>{o.t}</option>)}
           </SelectInput>
           <label className="aud-fecha"><span>Desde</span><input type="date" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} /></label>
           <label className="aud-fecha"><span>Hasta</span><input type="date" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} /></label>
@@ -420,7 +558,13 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                 const celdas: ReactNode[] = [
                   <Celda key="aud">
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <Pastilla color={color}>{x.estadoAuditoria}</Pastilla>
+                      {puedeAuditar && x.estadoAuditoria !== 'CONFORME' ? (
+                        <select value={x.estadoAuditoria} aria-label={`Auditoría del viaje ${x.viaje}`} onClick={e => e.stopPropagation()}
+                          onChange={e => { const est = e.target.value; if (est === 'OBSERVADO') setMostrarObs(true); haptic('selection'); guardar(x.viaje, est, x.observacionAuditoria || '').catch(() => undefined); }}
+                          style={{ font: 'inherit', fontSize: '0.75rem', fontWeight: 700, padding: '2px 6px', borderRadius: 999, border: '1px solid var(--separator)', background: `var(--${color}-tint)`, color: `var(--${color}-ink)`, cursor: 'pointer' }}>
+                          {AUDIT.map(a => <option key={a} value={a}>{a}</option>)}
+                        </select>
+                      ) : <Pastilla color={color}>{x.estadoAuditoria}</Pastilla>}
                       {(x.odometroInconsistente || n(x.recorridoKm) > LIMITE_KM_VIAJE) && (
                         <span title="Odómetro inconsistente: km final menor al inicial o salto anómalo (más de 3.000 km)" style={{ display: 'inline-flex', flexShrink: 0 }}>
                           <AlertTriangle size={14} style={{ color: 'var(--red-ink)' }} aria-label="Odómetro inconsistente" />
@@ -429,7 +573,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                     </span>
                   </Celda>,
                 ];
-                if (mostrarObs) celdas.push(<Celda key="obs">{x.observacionAuditoria || '—'}</Celda>);
+                if (mostrarObs) celdas.push(<Celda key="obs"><ObsInput viaje={x.viaje} estado={x.estadoAuditoria} valor={x.observacionAuditoria || ''} puedeAuditar={puedeAuditar} onGuardar={guardar} /></Celda>);
                 celdas.push(
                   <Celda key="viaje" mono>
                     {!urea && (
@@ -499,7 +643,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         )}
       </div>
 
-      <DetalleViaje trip={t} urea={urea} puedeAuditar={puedeAuditar} modulo={modulo} usuario={user?.name ?? ''} onClose={() => setAbierto(null)} cifras={cifras} />
+      <DetalleViaje trip={t} urea={urea} puedeAuditar={puedeAuditar} guardar={guardar} analisis={t ? analisis.get(t.viaje) : undefined} gpsLote={gps.data?.[t?.viaje ?? '']?.data ?? null} onClose={() => setAbierto(null)} cifras={cifras} />
     </Page>
   );
 }
@@ -545,27 +689,24 @@ function FilaViaje({ abierta, onAbrir, seleccionada, celdas, tramos }: {
   );
 }
 
-function DetalleViaje({ trip: t, urea, puedeAuditar, modulo, usuario, onClose, cifras }: {
-  trip: Trip | null; urea: boolean; puedeAuditar: boolean; modulo: string; usuario: string; onClose: () => void;
+function DetalleViaje({ trip: t, urea, puedeAuditar, guardar, analisis: a, gpsLote, onClose, cifras }: {
+  trip: Trip | null; urea: boolean; puedeAuditar: boolean; guardar: (viaje: string, estado: string, obs: string) => Promise<unknown>;
+  analisis: AnalisisViaje | undefined; gpsLote: TelemetriaWialon | null; onClose: () => void;
   cifras: (t: Trip) => { galones: number; gasto: number; rendimiento: number };
 }) {
-  const qc = useQueryClient();
-  const toast = useToast();
-  const [estado, setEstado] = useState('PENDIENTE');
   const [obs, setObs] = useState('');
-  useEffect(() => { if (t) { setEstado(t.estadoAuditoria || 'PENDIENTE'); setObs(t.observacionAuditoria || ''); } }, [t?.viaje]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [guardado, setGuardado] = useState(false);
+  const [pedida, setPedida] = useState(false);
+  useEffect(() => { if (t) { setObs(t.observacionAuditoria || ''); setGuardado(false); setPedida(false); } }, [t?.viaje]); // eslint-disable-line react-hooks/exhaustive-deps
+  const telQ = useTelemetriaViaje(t, pedida);
+  const estado = t?.estadoAuditoria || 'PENDIENTE';
+  const bloqueado = !puedeAuditar || estado === 'CONFORME';
 
-  const guardar = useMutation({
-    mutationFn: () => api<{ ok?: boolean; error?: string }>(`/combustible/auditar-viaje?modulo=${modulo}`, {
-      method: 'POST', body: { viaje: t?.viaje, estado_auditoria: estado, observacion: obs, usuario },
-    }),
-    onSuccess: async r => {
-      if (r.ok === false) { toast(r.error || 'No se pudo guardar', 'error'); return; }
-      haptic('success'); toast('Auditoría guardada');
-      await qc.invalidateQueries({ queryKey: ['operaciones', 'analisis'] });
-    },
-    onError: err => { toast(errorMessage(err), 'error'); haptic('warning'); },
-  });
+  // Guardado en vivo: el resultado al elegirlo y la observación al salir del campo
+  async function guardarAhora(est: string, texto: string) {
+    if (!t) return;
+    try { await guardar(t.viaje, est, texto.trim()); setGuardado(true); window.setTimeout(() => setGuardado(false), 2000); haptic('success'); } catch { /* el aviso lo da el hook */ }
+  }
 
   if (!t) return <Sheet open={false} onClose={onClose} title=""><span /></Sheet>;
   const c = cifras(t);
@@ -590,7 +731,8 @@ function DetalleViaje({ trip: t, urea, puedeAuditar, modulo, usuario, onClose, c
           {fila('Periodo', `${t.fechaInicio} → ${t.fechaFin}`, true)}
         </div>
 
-        {!urea && <TelemetriaViaje trip={t} />}
+        {!urea && <TelemetriaViaje trip={t} pedida={pedida} setPedida={setPedida} q={telQ} />}
+        {!urea && <Conciliacion t={t} a={a} galones={c.galones} gps={telQ.data ?? gpsLote} />}
 
         {vales.length > 0 && (
           <div>
@@ -608,13 +750,13 @@ function DetalleViaje({ trip: t, urea, puedeAuditar, modulo, usuario, onClose, c
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           <p className="tarjeta__grupo-titulo">Auditoría</p>
+          {estado === 'CONFORME' && <span className="t-footnote c-secondary">Auditoría conforme: queda bloqueada.</span>}
           <Field label="Resultado">
-            {p => <SelectInput {...p} value={estado} onChange={e => setEstado(e.target.value)} disabled={!puedeAuditar}>{AUDIT.map(a => <option key={a} value={a}>{a}</option>)}</SelectInput>}
+            {p => <SelectInput {...p} value={estado} onChange={e => guardarAhora(e.target.value, obs)} disabled={bloqueado}>{AUDIT.map(a2 => <option key={a2} value={a2}>{a2}</option>)}</SelectInput>}
           </Field>
-          <Field label="Observación" hint={t.usuarioAuditoria ? `Última revisión: ${t.usuarioAuditoria}` : undefined}>
-            {p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} disabled={!puedeAuditar} />}
+          <Field label="Observación" hint={guardado ? 'Guardado' : t.usuarioAuditoria ? `Última revisión: ${t.usuarioAuditoria}` : 'Se guarda al salir del campo'}>
+            {p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} onBlur={() => { if (!bloqueado && obs.trim() !== (t.observacionAuditoria || '').trim()) guardarAhora(estado, obs); }} disabled={bloqueado} />}
           </Field>
-          {puedeAuditar && <Button variant="primary" onClick={() => guardar.mutate()} loading={guardar.isPending}>Guardar auditoría</Button>}
         </div>
       </div>
     </Sheet>

@@ -67,6 +67,9 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   const placas = usePlacas();
   const firma = useRef<FirmaHandle>(null);
   const editando = !!reporte;
+  // Un reporte finalizado o anulado no se consulta: no hay nada que completar
+  const cerrado = !!reporte && /final|anula/i.test(String(reporte.estado ?? ''));
+  const consultar = open && !cerrado;
   const [v, setV] = useState<Record<string, string>>({});
   const [fallasT, setFallasT] = useState<Record<string, Marca>>({});
   const [fallasR, setFallasR] = useState<Record<string, Marca>>({});
@@ -118,11 +121,12 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
 
   const set = (k: string, val: string) => setV(a => ({ ...a, [k]: val }));
 
-  // Al escribir la placa del tracto en un reporte nuevo: se completa con el último ingreso de seguridad y el último viaje
-  // (como la versión actual). La orden de viaje manda sobre seguridad en el conductor; lo ya escrito no se pisa.
+  // Al escribir la placa del tracto (reporte nuevo o pendiente en edición): se completa con el último ingreso de seguridad y el último viaje
+  // (como la versión actual). La orden de viaje manda sobre seguridad en el conductor; lo ya escrito (o guardado) no se pisa.
+  // En edición no se preselecciona ningún viaje: los datos solo cambian si la persona elige uno explícitamente.
   useEffect(() => {
     setCondViaje(''); setCondSeg(''); setViajes([]); setViajeSel('');
-    if (!open || editando || !/^[A-Z0-9-]{5,8}$/.test(placaT)) return;
+    if (!consultar || !/^[A-Z0-9-]{5,8}$/.test(placaT)) return;
     let vigente = true;
     const t = setTimeout(async () => {
       const q = encodeURIComponent(placaT);
@@ -134,10 +138,10 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
       const s = seg?.data ?? null;
       const viaje = via?.data?.[0] ?? null;
       setViajes(via?.data ?? []);
-      if (viaje) setViajeSel(String(viaje.id ?? viaje.viaje ?? ''));
+      if (viaje && !editando) setViajeSel(String(viaje.id ?? viaje.viaje ?? ''));
       const cs = (s?.conductor ?? '').trim();
       const cv = (viaje?.conductor ?? '').trim();
-      setCondSeg(cs); setCondViaje(cv);
+      if (!editando) { setCondSeg(cs); setCondViaje(cv); }
       setV(a => {
         const n = { ...a };
         const remolque = (viaje?.placa_remolque || s?.placa_carreta || '').toUpperCase();
@@ -149,11 +153,12 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
       });
     }, 500);
     return () => { vigente = false; clearTimeout(t); };
-  }, [open, editando, placaT]);
+  }, [consultar, editando, placaT]);
 
-  // Último kilometraje GPS (Wialon, mismo origen que el checklist clásico): solo si el campo sigue vacío y la placa no cambió.
+  // Último kilometraje GPS (Wialon, mismo origen que el checklist clásico): solo si el campo sigue vacío (también en edición,
+  // donde un kilometraje ya guardado no se pisa) y la placa no cambió.
   useEffect(() => {
-    if (!open || editando || !/^[A-Z0-9-]{5,8}$/.test(placaT)) return;
+    if (!consultar || !/^[A-Z0-9-]{5,8}$/.test(placaT)) return;
     let vigente = true;
     const t = setTimeout(async () => {
       try {
@@ -170,7 +175,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
       } catch { /* sin GPS: el kilometraje se escribe a mano */ }
     }, 600);
     return () => { vigente = false; clearTimeout(t); };
-  }, [open, editando, placaT]);
+  }, [consultar, placaT]);
 
   // Elegir explícitamente un viaje: sí reemplaza orden, conductor, remolque y procedencia
   function vincular(id: string) {
@@ -307,6 +312,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
           <Field label={`Viaje de la unidad (${viajes.length} más recientes)`} wide>
             {p => (
               <SelectInput {...p} value={viajeSel} onChange={e => vincular(e.target.value)}>
+                {!viajeSel && <option value="">Elegir un viaje para vincular…</option>}
                 {viajes.map(w => {
                   const id = String(w.id ?? w.viaje ?? '');
                   return <option key={id} value={id}>{[w.viaje, w.ruta || [w.origen, w.destino].filter(Boolean).join(' - '), w.conductor, w.placa_remolque, w.fecha_viaje_fmt].filter(Boolean).join(' · ')}</option>;

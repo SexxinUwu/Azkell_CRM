@@ -5,7 +5,6 @@ import './documentos.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Briefcase, CircleAlert, Clock, Download, FileSpreadsheet, FileText, Plus, RefreshCw, SlidersHorizontal, Wrench } from 'lucide-react';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -23,6 +22,7 @@ import { DocumentoFormulario } from './DocumentoFormulario';
 import { DocExpediente, type EliminarDocumento, type FilaExpediente } from './DocExpediente';
 import { DocMatriz } from './DocMatriz';
 import { DocCalendario } from './DocCalendario';
+import { DocMiniCalendario } from './DocMiniCalendario';
 import { ConfigurarPlacasSheet, guardarSeleccion, leerSeleccion } from './ConfigurarPlacasSheet';
 import { ImportarDocumentosSheet } from './ImportarDocumentosSheet';
 import { descargarPlantilla } from './documentosExcel';
@@ -134,10 +134,8 @@ export function DocumentosPage() {
             <Button variant="plain" className="btn--icono btn--icono-acento" icon={<SlidersHorizontal size={18} />} aria-label="Configurar placas"
               title={seleccion ? `Placas a mostrar: ${seleccion.size} de ${todas.length}` : 'Configurar placas a mostrar'} onClick={() => setConfigurando(true)} />
             {seleccion && <span className="doc-conf__insignia" title="Hay un filtro de placas activo">{seleccion.size}/{todas.length}</span>}
-            <MenuOtros opciones={[
-              { label: 'Descargar plantilla', detalle: 'Excel con las columnas de importación', icon: <Download size={17} />, onSelect: () => descargarPlantilla().catch(aviso) },
-              puedeEditar && { label: 'Importar desde Excel', detalle: 'La fila del archivo pasa a ser el estado actual', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
-            ]} />
+            <Button variant="secondary" icon={<Download size={16} />} onClick={() => descargarPlantilla().catch(aviso)}>Descargar plantilla Excel</Button>
+            {puedeEditar && <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => setImportando(true)}>Importar documentos</Button>}
             {puedeEditar && (
               <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ placa: null, prefijo: null, personalizado: null })}>Nuevo documento</Button>
             )}
@@ -185,7 +183,12 @@ export function DocumentosPage() {
               onEditarPersonalizado={(p, doc) => setFormulario({ placa: p, prefijo: null, personalizado: doc })}
               onVerArchivo={verArchivo} onCompartir={compartir} onEliminar={setAEliminar} />
           )}
-          {vista === 'matriz' && <DocMatriz filas={filas} />}
+          {vista === 'matriz' && (
+            <div className="doc-matriz-con-mini">
+              <DocMatriz filas={filas} />
+              <DocMiniCalendario filas={filas} />
+            </div>
+          )}
           {vista === 'calendario' && (
             <DocCalendario filas={filas} onElegir={p => { setPlaca(p); setVista('expediente'); }} />
           )}

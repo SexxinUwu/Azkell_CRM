@@ -2271,6 +2271,12 @@ module.exports = function (db, broadcast, logAudit) {
             const rawViaje = String(viaje).trim();
             const cleanViaje = rawViaje.replace(/^#/, '').trim();
             const est = (estado_auditoria || 'PENDIENTE').toUpperCase();
+            if (!['PENDIENTE', 'CONFORME', 'OBSERVADO'].includes(est)) {
+                return res.status(400).json({ ok: false, error: 'Estado de auditoría inválido' });
+            }
+            if (observacion !== undefined && observacion !== null && String(observacion).length > 1000) {
+                return res.status(400).json({ ok: false, error: 'La observación supera los 1000 caracteres' });
+            }
             const obs = (observacion !== undefined && observacion !== null) ? String(observacion).trim() : '';
             const usuario = (req.user && (req.user.username || req.user.nombre)) || req.body.usuario || 'Auditor';
 

@@ -43,7 +43,7 @@ export function construirIcs(eventos: EventoVencimiento[], empresa: string): str
       `DTSTAMP:${ahora}`,
       `DTSTART;VALUE=DATE:${compacta(e.fecha)}`,
       `DTEND;VALUE=DATE:${sumarDia(e.fecha)}`,
-      `SUMMARY:${esc(`${e.vencido ? 'VENCIDO' : 'Vence'}: ${e.documento} · ${e.placa}`)}`,
+      `SUMMARY:${esc(`Vence ${e.documento} – ${e.placa}`)}`,
       `DESCRIPTION:${esc(`${e.documento} de la unidad ${e.placa}. ${cuando} (${e.fecha}).${empresa ? ` ${empresa}.` : ''} Generado desde Azkell Fleet.`)}`,
       'TRANSP:TRANSPARENT',
     ];

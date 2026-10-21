@@ -2,7 +2,7 @@ import './flota.css';
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, ClipboardList, FileSpreadsheet, FileText, ListChecks, Plus, SearchX, Trash2 } from 'lucide-react';
+import { CircleAlert, ClipboardList, FileSpreadsheet, FileText, ListChecks, MessageCircle, Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -13,19 +13,21 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
-import { exportarPDF, montarParaPDF } from '../../core/lib/pdf';
+import { compartirPDF } from '../../core/lib/pdf';
 import { haptic } from '../../core/lib/haptics';
 import { usePlacas } from '../placas/api';
 import { Firma, type FirmaHandle } from '../inspecciones/Firma';
 import { PlantillaEntregaSheet } from './PlantillaEntregaSheet';
 import { leerPlantillaEntrega } from './plantillaEntrega';
-import { CONFIG_CROQUIS, normalizarConfig, svgCroquis, type ConfigCroquis, type EstiloCabina } from './croquisEntrega';
+import { CONFIG_CROQUIS, normalizarConfig, type ConfigCroquis, type EstiloCabina } from './croquisEntrega';
+import { CroquisDanos, leerDanos, type Dano } from './croquisDanos';
+import { blobActaPDF, descargarActaPDF, nombreArchivoActa } from './actaEntregaPdf';
 
 interface Acta {
   id: string; numero_inventario: string | null; fecha: string; motivo: string | null; quien_entrega: string; quien_recibe: string;
   clase: string | null; marca: string | null; tipo: string | null; modelo: string | null; placa: string; color: string | null;
   numero_motor: string | null; numero_serie: string | null; kilometraje: number | null; configuracion: string | null; estilo_cabina?: string | null; empresa: string | null;
-  observaciones: string | null; inventario_partes_json: string | Record<string, string> | null; firma_entrega?: string | null; firma_recibe?: string | null;
+  observaciones: string | null; inventario_partes_json: string | Record<string, string> | null; firma_entrega?: string | null; firma_recibe?: string | null; croquis_danos_json?: string | unknown[] | null;
 }
 interface Grupo { id: string; titulo: string; items: Array<string | { id?: string; label?: string; texto?: string }> }
 
@@ -38,53 +40,9 @@ const etiqueta = (it: Grupo['items'][number]) => (typeof it === 'string' ? it : 
 const clave = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '_');
 const dia = (s?: string | null) => (s ? String(s).slice(0, 10) : '');
 const n = (v: unknown) => Number(v) || 0;
-const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 
 function parsePartes(a: Acta): Record<string, string> {
   try { return typeof a.inventario_partes_json === 'string' ? JSON.parse(a.inventario_partes_json) : (a.inventario_partes_json ?? {}); } catch { return {}; }
-}
-
-/** Croquis de un acta guardado (la configuración se normaliza al código del dibujo) */
-const croquisDe = (a: Acta, fondo = false) =>
-  svgCroquis(normalizarConfig(a.configuracion), a.estilo_cabina === 'trompa' ? 'trompa' : 'chata', true, { fondo });
-
-/** HTML del acta para el PDF: datos, croquis, partes con observación y firmas */
-function htmlActa(a: Acta): string {
-  const partes = parsePartes(a);
-  const conObs = Object.entries(partes).filter(([, v]) => v === 'M' || v === 'R');
-  const pares: Array<[string, unknown]> = [
-    ['Placa', a.placa], ['Unidad', [a.clase, a.marca, a.modelo, a.tipo].filter(Boolean).join(' · ')], ['Color', a.color],
-    ['N° de motor', a.numero_motor], ['N° de serie / VIN', a.numero_serie], ['Configuración', a.configuracion],
-    ['Kilometraje', n(a.kilometraje) ? n(a.kilometraje).toLocaleString('es-PE') : ''], ['Empresa', a.empresa],
-    ['Fecha', dia(a.fecha)], ['Motivo', a.motivo], ['Entrega', a.quien_entrega], ['Recibe', a.quien_recibe],
-  ];
-  const filas = pares.filter(([, v]) => v !== null && v !== undefined && v !== '')
-    .map(([k, v]) => `<tr><td style="padding:4px 8px;color:#64748b;width:32%">${esc(k)}</td><td style="padding:4px 8px;font-weight:600">${esc(v)}</td></tr>`).join('');
-  const obs = conObs.length
-    ? `<table style="width:100%;border-collapse:collapse;font-size:13px">${conObs.map(([k, v]) =>
-      `<tr><td style="padding:4px 8px">${esc(k.replace(/_/g, ' '))}</td><td style="padding:4px 8px;font-weight:700;color:${v === 'M' ? '#dc2626' : '#b45309'}">${v === 'M' ? 'Malo' : 'Regular'}</td></tr>`).join('')}</table>`
-    : '<p style="font-size:13px;color:#64748b">Sin partes con observación.</p>';
-  const firma = (src: string | null | undefined, nombre: string, rol: string) => `
-    <div style="flex:1;text-align:center">
-      <div style="height:80px">${src ? `<img src="${esc(src)}" style="max-height:80px;max-width:100%">` : ''}</div>
-      <div style="border-top:1px solid #334155;padding-top:4px;font-size:12px">${esc(nombre)}<br>${rol}</div>
-    </div>`;
-  return `
-    <div style="font-family:Arial,sans-serif;color:#0f172a;padding:24px;width:760px;background:#ffffff">
-      <h1 style="font-size:20px;margin:0">Acta de entrega de vehículo</h1>
-      <p style="margin:4px 0 16px;color:#64748b;font-size:13px">N° ${esc(a.numero_inventario || a.id)} · ${esc(dia(a.fecha))}</p>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">${filas}</table>
-      <h2 style="font-size:14px;margin:16px 0 6px">Croquis</h2>
-      <div>${croquisDe(a, true)}</div>
-      <h2 style="font-size:14px;margin:16px 0 6px">Partes con observación</h2>
-      ${obs}
-      <h2 style="font-size:14px;margin:16px 0 6px">Observaciones</h2>
-      <p style="font-size:13px;margin:0">${esc(a.observaciones) || '—'}</p>
-      <div style="display:flex;justify-content:space-between;margin-top:40px;gap:24px">
-        ${firma(a.firma_entrega, a.quien_entrega, 'Quien entrega')}
-        ${firma(a.firma_recibe, a.quien_recibe, 'Quien recibe')}
-      </div>
-    </div>`;
 }
 
 // Flota › Entrega de vehículos: actas de entrega/recepción con croquis, inventario de partes, firmas y PDF.
@@ -135,14 +93,23 @@ export function EntregaPage() {
   }
 
   async function imprimirActa(a: Acta) {
-    const el = document.createElement('div');
-    el.innerHTML = htmlActa(a);
-    const quitar = montarParaPDF(el);
+    setOcupado(true);
     try {
-      await exportarPDF(el, `Acta-${a.numero_inventario || a.id}`, { orientacion: 'portrait' });
+      await descargarActaPDF(a, parsePartes(a), await leerPlantillaEntrega(), leerDanos(a.croquis_danos_json));
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
-    finally { quitar(); }
+    finally { setOcupado(false); }
+  }
+
+  async function whatsappActa(a: Acta) {
+    setOcupado(true);
+    try {
+      const blob = await blobActaPDF(a, parsePartes(a), await leerPlantillaEntrega(), leerDanos(a.croquis_danos_json));
+      const res = await compartirPDF(blob, nombreArchivoActa(a), `Acta de entrega ${a.numero_inventario || a.id} · ${a.placa}`);
+      if (res === 'descargado') toast('PDF descargado. Adjúntalo en WhatsApp.');
+      if (res !== 'cancelado') haptic('success');
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+    finally { setOcupado(false); }
   }
 
   const partes = abierta ? parsePartes(abierta) : {};
@@ -196,7 +163,8 @@ export function EntregaPage() {
       <Sheet open={!!abierta} onClose={() => setAbiertoId(null)} title={abierta ? `Acta ${abierta.numero_inventario || abierta.id}` : ''}
         footer={abierta ? (
           <>
-            <Button variant="secondary" icon={<FileText size={16} />} onClick={() => imprimirActa(abierta)}>PDF del acta</Button>
+            <Button variant="secondary" icon={<FileText size={16} />} loading={ocupado} onClick={() => imprimirActa(abierta)}>PDF del acta</Button>
+            <Button variant="secondary" icon={<MessageCircle size={16} />} disabled={ocupado} onClick={() => whatsappActa(abierta)}>WhatsApp</Button>
             {puedeEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setPorEliminar(abierta)}>Eliminar</Button>}
           </>
         ) : <Button variant="secondary" onClick={() => setAbiertoId(null)}>Cerrar</Button>}>
@@ -209,8 +177,7 @@ export function EntregaPage() {
             </div>
             <div>
               <p className="tarjeta__grupo-titulo">Croquis de la unidad</p>
-              <div style={{ padding: 'var(--s-3)', borderRadius: 'var(--r-lg)', background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--separator)' }}
-                dangerouslySetInnerHTML={{ __html: croquisDe(abierta) }} />
+              <CroquisDanos config={normalizarConfig(abierta.configuracion)} cabina={abierta.estilo_cabina === 'trompa' ? 'trompa' : 'chata'} furgon danos={leerDanos(abierta.croquis_danos_json)} />
             </div>
             <div className="tarjeta__lista">
               {fila('Placa', abierta.placa, true)}{fila('Unidad', [abierta.clase, abierta.marca, abierta.modelo, abierta.tipo].filter(Boolean).join(' · '))}
@@ -258,6 +225,7 @@ function NuevaActa({ open, onClose, onHecho }: { open: boolean; onClose: () => v
   const [cabina, setCabina] = useState<EstiloCabina>('chata');
   const [carroceria, setCarroceria] = useState<'furgon' | 'plataforma'>('furgon');
   const [partes, setPartes] = useState<Record<string, 'B' | 'R' | 'M'>>({});
+  const [danos, setDanos] = useState<Dano[]>([]);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -271,7 +239,7 @@ function NuevaActa({ open, onClose, onHecho }: { open: boolean; onClose: () => v
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setPartes({}); setAbierto(null); setConfig('T3'); setCabina('chata'); setCarroceria('furgon');
+    setError(null); setPartes({}); setDanos([]); setAbierto(null); setConfig('T3'); setCabina('chata'); setCarroceria('furgon');
     setV({ placa: '', fecha: new Date().toISOString().slice(0, 10), motivo: 'ENTREGA DE UNIDAD', quien_entrega: '', quien_recibe: '', kilometraje: '', observaciones: '',
       clase: '', marca: '', modelo: '', tipo: '', color: '', numero_motor: '', numero_serie: '', empresa: '' });
     firmaE.current?.limpiar(); firmaR.current?.limpiar();
@@ -309,7 +277,7 @@ function NuevaActa({ open, onClose, onHecho }: { open: boolean; onClose: () => v
         method: 'POST',
         body: {
           ...v, configuracion: config, estilo_cabina: cabina,
-          kilometraje: parseFloat(v.kilometraje) || 0, inventario_partes_json: partes,
+          kilometraje: parseFloat(v.kilometraje) || 0, inventario_partes_json: partes, croquis_danos_json: danos,
           firma_entrega: firmaE.current && !firmaE.current.vacia() ? firmaE.current.obtener() : null,
           firma_recibe: firmaR.current && !firmaR.current.vacia() ? firmaR.current.obtener() : null,
         },
@@ -317,6 +285,13 @@ function NuevaActa({ open, onClose, onHecho }: { open: boolean; onClose: () => v
       if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el acta');
       haptic('success'); toast(`Acta ${r.id ?? ''} registrada`);
       await onHecho(); onClose();
+      // Como en la versión actual, al guardar se genera el PDF oficial (si falla, el acta ya quedó guardada)
+      try {
+        const acta = { ...v, id: r.id ?? '', numero_inventario: r.id ?? null, configuracion: config, estilo_cabina: cabina,
+          kilometraje: parseFloat(v.kilometraje) || 0, firma_entrega: firmaE.current && !firmaE.current.vacia() ? firmaE.current.obtener() : null,
+          firma_recibe: firmaR.current && !firmaR.current.vacia() ? firmaR.current.obtener() : null } as unknown as Acta;
+        await descargarActaPDF(acta, partes, grupos.map(g => ({ id: g.id, titulo: g.titulo, items: g.items.map(etiqueta) })), danos);
+      } catch (e) { toast(`Acta guardada, pero no se pudo generar el PDF: ${errorMessage(e)}`, 'error'); }
     } catch (err) { setError(errorMessage(err)); haptic('warning'); }
     finally { setEnviando(false); }
   }
@@ -357,8 +332,7 @@ function NuevaActa({ open, onClose, onHecho }: { open: boolean; onClose: () => v
             <ChoiceChips label="Configuración" value={config} onChange={setConfig} options={OPCIONES_CONFIG} />
             {esMotor && <ChoiceChips label="Cabina" value={cabina} onChange={setCabina} options={OPCIONES_CABINA} />}
             {tieneCarroceria && <ChoiceChips label="Carrocería" value={carroceria} onChange={setCarroceria} options={OPCIONES_CARROCERIA} />}
-            <div style={{ padding: 'var(--s-3)', borderRadius: 'var(--r-lg)', background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--separator)' }}
-              dangerouslySetInnerHTML={{ __html: svgCroquis(config, cabina, carroceria === 'furgon') }} />
+            <CroquisDanos config={config} cabina={cabina} furgon={carroceria === 'furgon'} danos={danos} onChange={setDanos} />
             <p className="t-footnote c-secondary" style={{ margin: 0 }}>{CONFIG_CROQUIS[config].desc}</p>
           </div>
         </div>

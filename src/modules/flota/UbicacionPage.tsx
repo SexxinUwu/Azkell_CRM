@@ -35,6 +35,19 @@ const SEGMENTOS: Array<{ value: Segmento; label: string }> = [
 const coincideSegmento = (u: UnidadMapa, s: Segmento) =>
   s === 'todos' || (s === 'senal' ? estadoUnidad(u) !== 'sin_senal' : estadoUnidad(u) === s);
 
+// Agrupación de la lista: por empresa o por grupo de Wialon (Líquidos, Carga Seca, GLP…).
+// Criterio: una unidad aparece en CADA grupo de Wialon al que pertenece (igual que el clásico, que usa unitIds por grupo);
+// sin grupo va a "Sin grupo". Se ignoran los grupos técnicos de consulta (TEMP / CONSULTA), como en el clásico.
+type Agrupar = 'empresa' | 'wialon';
+const AGRUPAR_OPCIONES: Array<{ value: Agrupar; label: string }> = [{ value: 'empresa', label: 'Empresa' }, { value: 'wialon', label: 'Grupo Wialon' }];
+const CLAVE_AGRUPAR = 'fleet_gps_agrupar';
+const SIN_GRUPO = 'Sin grupo';
+const gruposDeUnidad = (u: UnidadMapa) =>
+  (u.grupos ?? []).filter(n => { const m = n.toUpperCase(); return !m.includes('TEMP') && !m.includes('CONSULTA'); });
+function agrupacionGuardada(): Agrupar {
+  try { return localStorage.getItem(CLAVE_AGRUPAR) === 'wialon' ? 'wialon' : 'empresa'; } catch { return 'empresa'; }
+}
+
 const rumboTexto = (grados: number) => CARDINALES[Math.round(((grados % 360) + 360) % 360 / 45) % 8];
 const corta = (empresa: string) => claveEmpresa(empresa).split(' ')[0] || '—';
 const placaLimpia = (s: string) => s.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
@@ -56,6 +69,7 @@ export function UbicacionPage() {
   const unidades = data ?? [];
   const [empresa, setEmpresa] = useState('TODAS');
   const [segmento, setSegmento] = useState<Segmento>('todos');
+  const [agrupar, setAgrupar] = useState<Agrupar>(agrupacionGuardada);
   const [colapsados, setColapsados] = useState<Set<string>>(() => new Set());
   const [filtrando, setFiltrando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
@@ -85,17 +99,33 @@ export function UbicacionPage() {
     return delEmpresa.filter(u => (!q || [u.placa, u.nombre].some(t => t.toUpperCase().includes(q))) && coincideSegmento(u, segmento));
   }, [delEmpresa, busqueda, segmento]);
 
-  // La lista se agrupa por empresa, como los grupos de la versión actual
+  const cambiarAgrupar = (v: Agrupar) => {
+    haptic('selection');
+    setAgrupar(v);
+    try { localStorage.setItem(CLAVE_AGRUPAR, v); } catch { /* sin almacenamiento */ }
+  };
+
+  // La lista se agrupa por empresa o por grupo de Wialon (una unidad puede salir en varios grupos)
   const grupos = useMemo(() => {
     const m = new Map<string, { clave: string; nombre: string; units: UnidadMapa[] }>();
-    for (const u of lista) {
-      const clave = claveEmpresa(u.empresa) || 'OTRAS';
-      const g = m.get(clave) ?? { clave, nombre: empresas.find(e => e.clave === clave)?.nombre ?? 'Otras unidades', units: [] };
+    const meter = (clave: string, nombre: string, u: UnidadMapa) => {
+      const g = m.get(clave) ?? { clave, nombre, units: [] };
       g.units.push(u);
       m.set(clave, g);
+    };
+    for (const u of lista) {
+      if (agrupar === 'wialon') {
+        const gs = gruposDeUnidad(u);
+        if (!gs.length) meter('w:' + SIN_GRUPO, SIN_GRUPO, u);
+        for (const n of gs) meter('w:' + n.toUpperCase(), n, u);
+      } else {
+        const clave = claveEmpresa(u.empresa) || 'OTRAS';
+        meter(clave, empresas.find(e => e.clave === clave)?.nombre ?? 'Otras unidades', u);
+      }
     }
-    return [...m.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
-  }, [lista, empresas]);
+    // "Sin grupo" siempre al final
+    return [...m.values()].sort((a, b) => (a.nombre === SIN_GRUPO ? 1 : 0) - (b.nombre === SIN_GRUPO ? 1 : 0) || a.nombre.localeCompare(b.nombre, 'es'));
+  }, [lista, empresas, agrupar]);
 
   const cifras = useMemo(() => {
     let conSenal = 0;
@@ -285,6 +315,7 @@ export function UbicacionPage() {
           <div className="gps-layout" data-vista={vistaMovil} data-ficha={seleccion ? 'si' : 'no'}>
             <section className="gps-lista" aria-label="Unidades">
               <div className="gps-lista__cab">
+                <SegmentedControl label="Agrupar por" value={agrupar} onChange={cambiarAgrupar} options={AGRUPAR_OPCIONES} />
                 <label className="gps-check">
                   <input type="checkbox" checked={todasVisibles} onChange={alternarTodas} disabled={!lista.length} />
                   <span>Visibles ({visiblesEnMapa}/{enLista})</span>

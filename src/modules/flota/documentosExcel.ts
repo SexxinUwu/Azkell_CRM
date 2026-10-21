@@ -60,7 +60,7 @@ const ES_FECHA = new Set(COLUMNAS.map(c => c[1]).filter(c => /vencimiento|emisio
 export class ArchivoInvalido extends Error {}
 
 /** Lee el Excel y devuelve una fila por placa con los campos del servidor (solo los que traen dato) */
-export async function leerArchivoDocumentos(archivo: File): Promise<RegistroImportar[]> {
+export async function leerArchivoConFilas(archivo: File): Promise<Array<{ fila: number; registro: RegistroImportar }>> {
   if (!/\.xlsx$/i.test(archivo.name)) throw new ArchivoInvalido('El archivo debe ser Excel (.xlsx). Si tienes un .xls o .csv, guárdalo como .xlsx.');
   const { readSheet } = await import('read-excel-file/browser');
   let hoja: unknown[][];
@@ -71,8 +71,8 @@ export async function leerArchivoDocumentos(archivo: File): Promise<RegistroImpo
   if (cab < 0) throw new ArchivoInvalido('No encontré la columna PLACA. Descarga la plantilla para no equivocarte de columnas.');
   const campos = hoja[cab].map(c => POR_ENCABEZADO.get(plegar(String(c ?? ''))) ?? null);
 
-  const filas: RegistroImportar[] = [];
-  for (const f of hoja.slice(cab + 1)) {
+  const filas: Array<{ fila: number; registro: RegistroImportar }> = [];
+  for (const [n, f] of hoja.slice(cab + 1).entries()) {
     const r: RegistroImportar = {};
     campos.forEach((campo, i) => {
       if (!campo || r[campo] !== undefined) return;
@@ -80,8 +80,13 @@ export async function leerArchivoDocumentos(archivo: File): Promise<RegistroImpo
       const t = ES_FECHA.has(campo) ? aFecha(v) : (v == null || v instanceof Date ? '' : String(v).trim());
       if (t) r[campo] = t;
     });
-    if (Object.keys(r).length) filas.push(r);
+    if (Object.keys(r).length) filas.push({ fila: cab + n + 2, registro: r });
   }
   if (!filas.length) throw new ArchivoInvalido('El archivo no tiene filas con datos.');
   return filas;
+}
+
+/** Igual que leerArchivoConFilas, sin el número de fila */
+export async function leerArchivoDocumentos(archivo: File): Promise<RegistroImportar[]> {
+  return (await leerArchivoConFilas(archivo)).map(f => f.registro);
 }

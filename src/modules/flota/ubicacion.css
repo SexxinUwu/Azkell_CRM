@@ -24,7 +24,7 @@
   display: flex; flex-direction: column; min-height: 0; overflow: hidden;
   border-radius: var(--r-xl); background: var(--surface); box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
-.gps-lista__cab { padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--separator); }
+.gps-lista__cab { padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--separator); display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-2); }
 .gps-check { display: inline-flex; align-items: center; gap: var(--s-2); font-size: 0.875rem; font-weight: 600; cursor: pointer; }
 .gps-check input, .gps-tarjeta__check { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 .gps-lista__items { flex: 1; min-height: 0; overflow-y: auto; list-style: none; margin: 0; padding: var(--s-2); display: flex; flex-direction: column; gap: 6px; }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Notice } from '../../core/ui/Display';
 import { api, errorMessage } from '../../core/api/client';
+import { esOscuro, suscribirTema } from '../../core/lib/theme';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Leaflet = any;
@@ -42,8 +43,14 @@ interface Traza { puntos: Punto[]; paradasPin: Parada[]; excesosPin: Exceso[]; t
 
 const esc = (v: string) => v.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 const duracion = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h ${min % 60} min` : `${min} min`);
-const pinHtml = (color: string, simbolo: string) =>
-  `<div aria-hidden="true" style="width:24px;height:24px;border-radius:50%;background:${color};color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font:700 12px/1 system-ui,sans-serif">${simbolo}</div>`;
+// Pines con estilos en línea (la hoja .gps-pin no se carga en Operaciones). El contenedor de Leaflet mide 0x0 y la
+// píldora se centra sobre la coordenada con translate; el área táctil es de 32 px de alto como mínimo.
+const SVG_RELOJ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+const SVG_VELOCIMETRO = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 18a8.5 8.5 0 1 1 15 0"/><path d="M12 15l4-5"/><circle cx="12" cy="15" r="1" fill="#fff"/></svg>';
+const pinHtml = (color: string, svg: string, etiqueta: string) =>
+  `<div aria-hidden="true" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:4px;min-height:32px;min-width:32px;padding:0 10px 0 8px;box-sizing:border-box;border-radius:16px;background:${color};color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);white-space:nowrap;font:700 12px/1 system-ui,sans-serif">${svg}<span>${esc(etiqueta)}</span></div>`;
+const TILES_CLARO = { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '&copy; OpenStreetMap' };
+const TILES_OSCURO = { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' };
 const hora = (seg: number) => new Date(seg * 1000).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 // Las fechas del viaje son hora de Perú (UTC-5, sin horario de verano): se envían con su desfase para que el servidor no dependa de su zona horaria
 const aIso = (s: string) => s.trim().replace(' ', 'T') + '-05:00';
@@ -96,6 +103,7 @@ export function MapaRecorridoViaje({ placa, inicio, fin }: { placa: string; inic
   const [verParadas, setVerParadas] = useState(true);
   const [verExcesos, setVerExcesos] = useState(true);
   const capas = useRef<{ mapa: Leaflet; paradas: Leaflet; excesos: Leaflet } | null>(null);
+  const baldosas = useRef<{ L: Leaflet; mapa: Leaflet; capa: Leaflet; oscuro: boolean } | null>(null);
 
   useEffect(() => {
     if (!puntos || puntos.length === 0) return;
@@ -104,7 +112,10 @@ export function MapaRecorridoViaje({ placa, inicio, fin }: { placa: string; inic
     cargarLeaflet().then(L => {
       if (!vivo || !contenedor.current) return;
       mapa = L.map(contenedor.current, { zoomControl: true, attributionControl: true });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mapa);
+      const oscuro = esOscuro();
+      const t0 = oscuro ? TILES_OSCURO : TILES_CLARO;
+      const capaBase = L.tileLayer(t0.url, { maxZoom: 19, attribution: t0.attribution }).addTo(mapa);
+      baldosas.current = { L, mapa, capa: capaBase, oscuro };
       const linea = L.polyline(puntos.map(p => [p.lat, p.lng]), { color: '#0284c7', weight: 4, opacity: 0.9 }).addTo(mapa);
       const a = puntos[0];
       const b = puntos[puntos.length - 1];
@@ -118,22 +129,38 @@ export function MapaRecorridoViaje({ placa, inicio, fin }: { placa: string; inic
       (paradasPin ?? []).forEach(p => {
         L.marker([p.lat, p.lng], {
           title: `Parada de ${duracion(p.min)}`,
-          icon: L.divIcon({ className: '', html: pinHtml('#475569', '⏸'), iconSize: [24, 24], iconAnchor: [12, 12] }),
+          icon: L.divIcon({ className: '', html: pinHtml('#475569', SVG_RELOJ, duracion(p.min)), iconSize: [0, 0], iconAnchor: [0, 0] }),
         }).bindPopup(`<b>Parada · ${esc(duracion(p.min))}</b><br>Inicio: ${hora(p.ini)}<br>Fin: ${hora(p.fin)}`).addTo(grupoParadas);
       });
       (excesosPin ?? []).forEach(e => {
         L.marker([e.lat, e.lng], {
           title: `Exceso de velocidad: ${Math.round(e.vel)} km/h`,
-          icon: L.divIcon({ className: '', html: pinHtml('#dc2626', '!'), iconSize: [24, 24], iconAnchor: [12, 12] }),
+          icon: L.divIcon({ className: '', html: pinHtml('#dc2626', SVG_VELOCIMETRO, `${Math.round(e.vel)} km/h`), iconSize: [0, 0], iconAnchor: [0, 0] }),
         }).bindPopup(`<b>Exceso de velocidad · máx. ${Math.round(e.vel)} km/h</b><br>${hora(e.ini)}${e.fin > e.ini ? ` → ${hora(e.fin)}` : ''}`).addTo(grupoExcesos);
       });
       capas.current = { mapa, paradas: grupoParadas, excesos: grupoExcesos };
       mapa.fitBounds(linea.getBounds(), { padding: [24, 24] });
       setTimeout(() => mapa?.invalidateSize(), 50);
     }).catch((e: Error) => { if (vivo) setErrorMapa(e.message); });
-    return () => { vivo = false; capas.current = null; mapa?.remove(); };
+    return () => { vivo = false; capas.current = null; baldosas.current = null; mapa?.remove(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [puntos, paradasPin, excesosPin]);
+
+  // Tema claro/oscuro: cambia solo la capa de baldosas, sin recrear el mapa (conserva zoom y posición)
+  useEffect(() => {
+    const aplicar = () => {
+      const b = baldosas.current;
+      if (!b) return;
+      const oscuro = esOscuro();
+      if (oscuro === b.oscuro) return;
+      const t = oscuro ? TILES_OSCURO : TILES_CLARO;
+      b.mapa.removeLayer(b.capa);
+      b.capa = b.L.tileLayer(t.url, { maxZoom: 19, attribution: t.attribution }).addTo(b.mapa);
+      b.capa.bringToBack();
+      b.oscuro = oscuro;
+    };
+    return suscribirTema(aplicar);
+  }, []);
 
   // Mostrar/ocultar cada tipo de pin sin reconstruir el mapa (conserva el zoom)
   useEffect(() => {

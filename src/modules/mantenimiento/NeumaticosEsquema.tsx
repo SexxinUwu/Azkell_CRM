@@ -91,6 +91,16 @@ function Rueda({ x, y, pos, l, activa, onSelect }: {
   );
 }
 
+// Criterio de eje direccional: es el PRIMER eje de un tracto/camión (configuraciones con cabina: 4X2, 6X4, 6X2 y los 3 primeros
+// ejes de T3S3), el de ruedas simples delante. R2, S2 y S3 son carreta/semirremolque: no tienen direccional.
+// Tracción = los demás ejes del tracto con ruedas duales (en 6X2 el eje intermedio simple no es motriz y queda sin etiqueta).
+type RolEje = 'direccional' | 'traccion' | null;
+function rolDeEje(esTracto: boolean, indice: number, eje: { izquierda: string[]; derecha: string[] }): RolEje {
+  if (!esTracto) return null;
+  if (indice === 0) return 'direccional';
+  return eje.izquierda.length > 1 && eje.derecha.length > 1 ? 'traccion' : null;
+}
+
 function Chasis({ codigo, mapa, activa, onSelect }: {
   codigo: string; mapa: Map<string, LlantaDato>; activa: string; onSelect: (l: LlantaDato) => void;
 }) {
@@ -117,6 +127,14 @@ function Chasis({ codigo, mapa, activa, onSelect }: {
     ejes.forEach((eje, i) => {
       const ye = y + i * FILA;
       const yTrav = ye + H / 2 + 2;
+      const rol = rolDeEje(cabina, i, eje);
+      if (rol === 'traccion') {
+        piezas.push(<rect key={`rt${ye}`} x={X0 - 100} y={ye - 3} width={200} height={H + 6} rx={10} fill="var(--fill-subtle)" stroke="var(--separator, #d1d1d6)" strokeWidth={1} strokeDasharray="3 3" />);
+        piezas.push(<text key={`lt${ye}`} x={X0} y={yTrav - 5} textAnchor="middle" fontSize={8} fontWeight={600} fill="var(--label-2)">Tracción</text>);
+      } else if (rol === 'direccional') {
+        piezas.push(<rect key={`rd${ye}`} x={X0 - 100} y={ye - 3} width={200} height={H + 6} rx={10} fill="var(--blue-tint)" stroke="var(--blue)" strokeWidth={2} />);
+        piezas.push(<text key={`ld${ye}`} x={X0} y={yTrav - 5} textAnchor="middle" fontSize={8} fontWeight={700} fill="var(--blue-ink)">Direccional</text>);
+      }
       piezas.push(<line key={`tr${ye}`} x1={X0 - 86} x2={X0 + 86} y1={yTrav} y2={yTrav} stroke={trazo} strokeWidth={2} strokeLinecap="round" />);
       eje.izquierda.forEach((pos, k) => piezas.push(
         <Rueda key={pos} x={xLado(eje.izquierda.length, k, 'i')} y={ye} pos={pos} l={mapa.get(pos)} activa={activa === pos} onSelect={onSelect} />));

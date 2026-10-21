@@ -445,6 +445,8 @@ export interface UnidadMapa {
   voltaje: string;
   ignicion: boolean;
   ubicacion: string;
+  /** Grupos de Wialon a los que pertenece (el servidor los manda en `grupos` por unidad) */
+  grupos?: string[];
 }
 
 /** movimiento: más de 3 km/h · ralenti: encendida y casi quieta · detenido: apagada · sin_senal: sin posición */
@@ -492,6 +494,7 @@ export function useUnidadesGps() {
             voltaje: g.voltaje == null ? '' : String(g.voltaje),
             ignicion: g.ignicion === true || Number(g.ignicion) === 1,
             ubicacion: String(g.ubicacion ?? ''),
+            grupos: Array.isArray(g.grupos) ? g.grupos.map(x => String(x).trim()).filter(Boolean) : [],
           };
         })
         .filter(u => u.placa);
