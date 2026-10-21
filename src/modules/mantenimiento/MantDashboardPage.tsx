@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Activity, AlertTriangle, ArrowUpRight, CheckCircle2, Clock,
+  Activity, AlertTriangle, CheckCircle2, Clock,
   DollarSign, FileText, History, LayoutDashboard, Plus,
   ScrollText, ShieldCheck, Sun,
   Truck, Wrench,
@@ -15,11 +15,10 @@ import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { DonaGrafico } from '../../core/ui/Graficos';
+import { BarrasGrafico, DonaGrafico } from '../../core/ui/Graficos';
 import { api } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import {
   formatoDuracion, otId, otTipo,
   useOrdenesTrabajoData, useStatusRampa,
@@ -524,6 +523,53 @@ export function MantDashboardPage() {
   const pctOperativas = porcentajeOperativa(cifrasFlota);
   const pctConformes   = totalFlota > 0 ? Math.round((inspConformes / totalFlota) * 100) : null;
 
+  // Distribución de días para el próximo vencimiento de inspección (misma vigencia de arriba)
+  const distribucionVencimientos = useMemo(() => {
+    const cuenta = { vencidas: 0, a7: 0, a15: 0, a30: 0, mas30: 0, sinRegistro: 0 };
+    for (const c of ciclos) {
+      const d = c.ciclo.dias;
+      if (c.ciclo.estado === 'sin-registro' || d === null) cuenta.sinRegistro++;
+      else if (d < 0 || c.ciclo.estado === 'vencido') cuenta.vencidas++;
+      else if (d <= 7) cuenta.a7++;
+      else if (d <= 15) cuenta.a15++;
+      else if (d <= 30) cuenta.a30++;
+      else cuenta.mas30++;
+    }
+    return [
+      { nombre: 'Vencidas', valor: cuenta.vencidas, color: 'var(--red-ink)' },
+      { nombre: '0 a 7 días', valor: cuenta.a7, color: 'var(--amber-ink)' },
+      { nombre: '8 a 15 días', valor: cuenta.a15, color: 'var(--accent)' },
+      { nombre: '16 a 30 días', valor: cuenta.a30, color: '#3b82f6' },
+      { nombre: 'Más de 30 días', valor: cuenta.mas30, color: 'var(--green-ink)' },
+      { nombre: 'Sin registro', valor: cuenta.sinRegistro, color: 'var(--label-3)' },
+    ];
+  }, [ciclos]);
+
+  // OT abiertas por semana de ingreso, últimas 8 semanas (lunes a domingo, hora de Lima)
+  const otsPorSemana = useMemo(() => {
+    const lunes = (d: Date) => { const x = new Date(d); const dia = (x.getDay() + 6) % 7; x.setDate(x.getDate() - dia); x.setHours(0, 0, 0, 0); return x; };
+    const semanas: { inicio: Date; valor: number }[] = [];
+    const base = lunes(new Date());
+    for (let i = 7; i >= 0; i--) {
+      const inicio = new Date(base); inicio.setDate(base.getDate() - i * 7);
+      semanas.push({ inicio, valor: 0 });
+    }
+    for (const o of otsData) {
+      const f = o.fecha_ingreso ?? o.creado_en ?? o.created_at;
+      if (!f) continue;
+      const t = new Date(String(f).replace(' ', 'T'));
+      if (Number.isNaN(t.getTime())) continue;
+      const ini = lunes(t).getTime();
+      const hit = semanas.find(w => w.inicio.getTime() === ini);
+      if (hit) hit.valor++;
+    }
+    return semanas.map(w => ({
+      nombre: w.inicio.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }),
+      valor: w.valor,
+      color: 'var(--accent)',
+    }));
+  }, [otsData]);
+
   const unidadesUrgentes = useMemo(() => {
     return ciclos
       .filter(c => c.ciclo.dias !== null && c.ciclo.dias <= 7)
@@ -557,7 +603,6 @@ export function MantDashboardPage() {
                 { label: 'Status de Rampa [R]', icon: <LayoutDashboard size={17} />, onSelect: () => navigate('/mantenimiento/status-rampa') },
                 { label: 'Órdenes de Trabajo [O]', icon: <ScrollText size={17} />, onSelect: () => navigate('/mantenimiento/reportes-ot') },
                 { label: 'Checklist Móvil [C]', icon: <FileText size={17} />, onSelect: () => navigate('/flota/checklist') },
-                { label: 'Abrir versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/dashboard') },
               ]}
             />
           </div>
@@ -776,6 +821,28 @@ export function MantDashboardPage() {
                     <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)' }}>{tiposCounts.corr}</div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── Fila 2b: Distribución de vencimientos y OT por semana ─────────── */}
+          <div className="mant-grid">
+            <div className="mant-col-6">
+              <div className="mant-card" style={{ height: '100%' }}>
+                <div className="mant-card__header">
+                  <div className="mant-card__title"><ShieldCheck size={15} /> Vencimientos de inspección</div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--label-2)' }}>{ciclos.length} unidades</span>
+                </div>
+                <BarrasGrafico porciones={distribucionVencimientos} altura={220} />
+              </div>
+            </div>
+            <div className="mant-col-6">
+              <div className="mant-card" style={{ height: '100%' }}>
+                <div className="mant-card__header">
+                  <div className="mant-card__title"><Wrench size={15} /> OT ingresadas por semana</div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--label-2)' }}>últimas 8 semanas</span>
+                </div>
+                <BarrasGrafico porciones={otsPorSemana} altura={220} />
               </div>
             </div>
           </div>
