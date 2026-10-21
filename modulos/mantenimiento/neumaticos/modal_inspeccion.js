@@ -1,3 +1,5 @@
+// Semáforo único de neumáticos: crítico con menos de 3 mm (3 a 6 ámbar, más de 6 verde)
+window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
 /**
  * modal_inspeccion.js — Módulo Interactivo de Inspección de Neumáticos (Three.js 3D/2D + Bento UI)
  * ERP Azkell Fleet — Ultra-Optimized 60 FPS Engine
@@ -481,8 +483,8 @@
                         <div class="d-flex justify-content-between align-items-center mt-2 px-1 flex-wrap gap-2" style="font-size: 0.74rem;">
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:9px;height:9px;background:#10b981;"></span> <b>Óptima (>6mm)</b></div>
-                                <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:9px;height:9px;background:#f59e0b;"></span> <b>Alerta (4-6mm)</b></div>
-                                <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:9px;height:9px;background:#ef4444;"></span> <b>Crítica (≤4mm)</b></div>
+                                <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:9px;height:9px;background:#f59e0b;"></span> <b>Alerta (3-6mm)</b></div>
+                                <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:9px;height:9px;background:#ef4444;"></span> <b>Crítica (<3mm)</b></div>
                                 <div class="d-flex align-items-center gap-1"><span class="rounded-circle d-inline-block" style="width:9px;height:9px;background:#2563eb;"></span> <b>Rotada 🔄</b></div>
                             </div>
                             <span class="text-muted fw-bold font-monospace" id="neu-chassis-stats-summary">Total: 0 llantas</span>
@@ -1363,7 +1365,7 @@
                         ring.material.color.setHex(0x2563eb);
                     } else {
                         const prom = parseFloat(lData.remanente_promedio || 0);
-                        if (prom <= 4.0) ring.material.color.setHex(0xef4444);
+                        if (prom < window.NEU_MM_CRITICO) ring.material.color.setHex(0xef4444);
                         else if (prom <= 6.0) ring.material.color.setHex(0xf59e0b);
                         else ring.material.color.setHex(0x10b981);
                     }
@@ -1849,8 +1851,8 @@
 
         const promVal = (r4 > 0) ? ((r1 + r2 + r3 + r4) / 4.0) : ((r1 + r2 + r3) / 3.0);
         const prom = promVal.toFixed(1);
-        let color = promVal > 6.0 ? '#10b981' : (promVal > 4.0 ? '#f59e0b' : '#ef4444');
-        let statusBadge = promVal <= 4.0 ? '<span class="badge bg-danger ms-1 text-white">CRÍTICA (≤4mm)</span>' : (promVal <= 6.0 ? '<span class="badge bg-warning text-dark ms-1">ALERTA</span>' : '<span class="badge bg-success ms-1 text-white">ÓPTIMA</span>');
+        let color = promVal > 6.0 ? '#10b981' : (promVal >= window.NEU_MM_CRITICO ? '#f59e0b' : '#ef4444');
+        let statusBadge = promVal < window.NEU_MM_CRITICO ? '<span class="badge bg-danger ms-1 text-white">CRÍTICA (<3mm)</span>' : (promVal <= 6.0 ? '<span class="badge bg-warning text-dark ms-1">ALERTA</span>' : '<span class="badge bg-success ms-1 text-white">ÓPTIMA</span>');
         lbl.innerHTML = `Promedio: <b style="color:${color};" class="font-monospace">${prom} mm</b> ${statusBadge}`;
     };
 
@@ -2007,7 +2009,7 @@
 
         tbody.innerHTML = window._neuLlantasActuales.map((l, index) => {
             const prom = l.remanente_promedio;
-            const badgeClass = prom <= 4.0 ? 'bg-danger text-white' : (prom <= 6.0 ? 'bg-warning text-dark' : 'bg-success text-white');
+            const badgeClass = prom < window.NEU_MM_CRITICO ? 'bg-danger text-white' : (prom <= 6.0 ? 'bg-warning text-dark' : 'bg-success text-white');
             const fotosCount = (l.foto1 ? 1 : 0) + (l.foto2 ? 1 : 0) + (l.foto3 ? 1 : 0);
             const fotosBadge = fotosCount > 0 
                 ? `<span class="badge bg-primary text-white rounded-pill px-2 py-0.5"><i class="bi bi-camera-fill me-1"></i>${fotosCount}</span>` 

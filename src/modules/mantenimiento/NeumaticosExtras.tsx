@@ -10,6 +10,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { exportarExcel } from '../../core/lib/excel';
+import { MM_CRITICO } from './neumaticosSemaforo';
 import { EsquemaNeumaticos, HistorialLlantaSheet, LeyendaSemaforo, configReconocida, remanenteDe, tonoMm, type LlantaDato } from './NeumaticosEsquema';
 
 // Extras de neumáticos que el clásico tiene en "Análisis": esquema por placa
@@ -389,11 +390,11 @@ export function ImportarNeumaticosSheet({ open, onClose }: { open: boolean; onCl
         {insp.length > 0 && (
           <div className="field field--wide" style={{ overflowX: 'auto' }}>
             <table className="inv-kardex" style={{ minWidth: '40rem', fontSize: '0.8rem' }}>
-              <thead><tr><th>ID</th><th>Fecha</th><th>Placa</th><th>KM</th><th>Llantas</th><th>Críticas (≤4 mm)</th></tr></thead>
+              <thead><tr><th>ID</th><th>Fecha</th><th>Placa</th><th>KM</th><th>Llantas</th><th>Críticas (&lt;3 mm)</th></tr></thead>
               <tbody>
                 {insp.slice(0, 50).map((i, k) => {
-                  // Misma fórmula que el servidor: promedio de R1..R3 (o R1..R4 si hay R4); crítica con 4 mm o menos
-                  const criticas = i.items.filter(it => (it.r4 > 0 ? (it.r1 + it.r2 + it.r3 + it.r4) / 4 : (it.r1 + it.r2 + it.r3) / 3) <= 4).length;
+                  // Misma fórmula que el servidor: promedio de R1..R3 (o R1..R4 si hay R4); crítica con menos de 3 mm
+                  const criticas = i.items.filter(it => (it.r4 > 0 ? (it.r1 + it.r2 + it.r3 + it.r4) / 4 : (it.r1 + it.r2 + it.r3) / 3) < MM_CRITICO).length;
                   return (
                     <tr key={k}>
                       <td>{i.id_inspeccion || 'Auto'}</td><td>{i.fecha_inspeccion}</td><td><b>{i.placa}</b></td>

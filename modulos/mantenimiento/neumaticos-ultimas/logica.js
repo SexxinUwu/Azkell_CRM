@@ -1,3 +1,5 @@
+// Semáforo único de neumáticos: crítico con menos de 3 mm (3 a 6 ámbar, más de 6 verde)
+window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
 /**
  * logica.js — Últimas Inspecciones y Requerimiento de Llantas
  * ERP Azkell Fleet
@@ -78,7 +80,7 @@
         } else {
             if (btnUlt) { btnUlt.className = 'neu-main-tab'; }
             if (btnReq) { btnReq.className = 'neu-main-tab tab-req active'; }
-            if (titulo) titulo.innerText = 'Requerimiento de Llantas para Recambio (≤ 4.0 mm)';
+            if (titulo) titulo.innerText = 'Requerimiento de Llantas para Recambio (< 3 mm)';
         }
 
         window.neuFiltrarUltimas();
@@ -359,7 +361,7 @@
                                     const obs = det.observaciones || 'Ninguna';
 
                                     let badgeEstado = '';
-                                    if (det.alerta_cambio === 1 || remProm <= 4.0) {
+                                    if (det.alerta_cambio === 1 || remProm < window.NEU_MM_CRITICO) {
                                         badgeEstado = `<span class="badge rounded-pill px-2.5 py-1 text-nowrap" style="background:#ffe4e6; color:#be123c; border:1px solid #fecdd3;">● Crítica (≤4mm)</span>`;
                                     } else if (remProm <= 6.0) {
                                         badgeEstado = `<span class="badge rounded-pill px-2.5 py-1 text-nowrap" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a;">● Alerta (4-6mm)</span>`;
@@ -470,7 +472,7 @@
         
         filtradas.forEach(l => {
             const prom = parseFloat(l.remanente_promedio || 0);
-            const estLlant = prom <= 4.0 ? 'CRITICA' : (prom <= 6.0 ? 'ALERTA' : 'OPTIMA');
+            const estLlant = prom < window.NEU_MM_CRITICO ? 'CRITICA' : (prom <= 6.0 ? 'ALERTA' : 'OPTIMA');
             csv += `"${l.id || l.id_inspeccion || ''}","${(l.fecha_inspeccion||'').split('T')[0]}","${l.placa}","${estLlant}","${l.km||0}","${l.posicion}","${l.dueno||''}","${l.marca_unidad||''}","${l.tipo_unidad||''}","${l.marca||''}","${l.medida||''}","${l.modelo||''}","${l.r1||0}","${l.r2||0}","${l.r3||0}","${l.r4||0}","${l.presion_ant||0}","${l.presion_actual||0}","${l.estado||'NUEVA'}","${l.accion||'Inspeccion'}","${(l.observaciones||'').replace(/"/g, '""')}","${l.rot||'NO'}","${l.foto1 ? 'SI' : 'NO'}","${l.foto2 ? 'SI' : 'NO'}","${l.foto3 ? 'SI' : 'NO'}"\n`;
         });
 

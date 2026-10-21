@@ -150,7 +150,7 @@ export function NeumaticosAnalisis() {
           })}
         </div>
         <p className="t-footnote c-secondary" style={{ marginTop: 'var(--s-2)' }}>
-          Crítica: remanente de 4 mm o menos, o alerta de cambio marcada en la inspección.
+          Crítica: remanente de menos de 3 mm, o alerta de cambio marcada en la inspección.
         </p>
       </div>
       <MedidaDetalleSheet medida={medidaSel} onClose={() => setMedidaSel(null)} />

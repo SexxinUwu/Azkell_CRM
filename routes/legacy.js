@@ -1583,6 +1583,13 @@ router.post('/:metodo', async (req, res) => {
         const horas = parseInt(payload.horas || 24, 10);
         const fechaInicio = payload.fechaInicio || null;
         const fechaFin = payload.fechaFin || null;
+        // completo:true (solo lo envía el mapa del viaje): recorre todo el rango por ventanas de tiempo y reduce los puntos en el servidor
+        const completo = payload.completo === true;
+        const tdb = req.db || db;
+
+        if ((fechaInicio && isNaN(new Date(fechaInicio).getTime())) || (fechaFin && isNaN(new Date(fechaFin).getTime()))) {
+            return res.json({ data: { error: 'Fechas inválidas para consultar el historial.' } });
+        }
 
         const toSec = fechaFin ? Math.floor(new Date(fechaFin).getTime() / 1000) : Math.floor(Date.now() / 1000);
         const fromSec = fechaInicio ? Math.floor(new Date(fechaInicio).getTime() / 1000) : (toSec - (horas * 3600));
@@ -1590,15 +1597,18 @@ router.post('/:metodo', async (req, res) => {
         if (!placaParam && !targetUnitId) {
             return res.json({ data: { error: 'Debe especificar placa o unitId para consultar el historial.' } });
         }
+        if (completo && (toSec <= fromSec || toSec - fromSec > 72 * 3600)) {
+            return res.json({ data: { error: 'El rango del historial completo debe ser mayor a 0 y de máximo 72 horas.' } });
+        }
 
         try {
             const obtenerToken = () => new Promise((resolve) => {
-                db.query("SELECT valor FROM integraciones_api WHERE clave = 'wialon_token' LIMIT 1", (err, rows) => {
+                tdb.query("SELECT valor FROM integraciones_api WHERE clave = 'wialon_token' LIMIT 1", (err, rows) => {
                     resolve(rows && rows[0] && rows[0].valor ? rows[0].valor.trim() : (process.env.WIALON_TOKEN || ''));
                 });
             });
             const obtenerUrl = () => new Promise((resolve) => {
-                db.query("SELECT valor FROM integraciones_api WHERE clave = 'wialon_url' LIMIT 1", (err, rows) => {
+                tdb.query("SELECT valor FROM integraciones_api WHERE clave = 'wialon_url' LIMIT 1", (err, rows) => {
                     resolve(rows && rows[0] && rows[0].valor ? rows[0].valor.trim() : 'https://hst-api.wialon.us/wialon/ajax.html');
                 });
             });
@@ -1627,12 +1637,44 @@ router.post('/:metodo', async (req, res) => {
             }
 
             // Consultar mensajes / telemetría en el rango
-            const msgParams = { itemId: targetUnitId, timeFrom: fromSec, timeTo: toSec, flags: 0x0000, flagsMask: 0xFF00, loadCount: 2000 };
-            const msgRes = await fetch(`${baseUrl}?svc=messages/load_interval&params=${encodeURIComponent(JSON.stringify(msgParams))}&sid=${sid}`);
-            const msgData = await msgRes.json();
-            fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(()=>{});
+            // load_interval devuelve como máximo loadCount mensajes y, si el rango trae más, descarta los MÁS ANTIGUOS (se perdía el inicio del viaje).
+            const cargarVentana = async (desde, hasta, cuantos) => {
+                const msgParams = { itemId: targetUnitId, timeFrom: desde, timeTo: hasta, flags: 0x0000, flagsMask: 0xFF00, loadCount: cuantos };
+                const msgRes = await fetch(`${baseUrl}?svc=messages/load_interval&params=${encodeURIComponent(JSON.stringify(msgParams))}&sid=${sid}`);
+                const msgData = await msgRes.json();
+                return (msgData && Array.isArray(msgData.messages)) ? msgData.messages : [];
+            };
 
-            const rawMessages = (msgData && msgData.messages) ? msgData.messages : [];
+            let rawMessages = [];
+            let truncado = false;
+            if (!completo) {
+                rawMessages = await cargarVentana(fromSec, toSec, 2000);
+            } else {
+                // Ventanas de 2 h con tope de 5000 mensajes; si una ventana se satura se parte a la mitad (hasta 6 niveles).
+                // Topes de seguridad: 80 consultas, 150000 mensajes y 45 s.
+                const LOTE = 5000, VENTANA = 2 * 3600, MAX_LLAMADAS = 80, MAX_MENSAJES = 150000;
+                const limite = Date.now() + 45000;
+                let llamadas = 0;
+                const cargar = async (desde, hasta, prof) => {
+                    if (llamadas >= MAX_LLAMADAS || rawMessages.length >= MAX_MENSAJES || Date.now() > limite) { truncado = true; return; }
+                    llamadas++;
+                    const msgs = await cargarVentana(desde, hasta, LOTE);
+                    if (msgs.length >= LOTE) {
+                        if (hasta - desde > 120 && prof < 6) {
+                            const mid = Math.floor((desde + hasta) / 2);
+                            await cargar(desde, mid, prof + 1);
+                            await cargar(mid + 1, hasta, prof + 1);
+                            return;
+                        }
+                        truncado = true;
+                    }
+                    for (const m of msgs) rawMessages.push(m);
+                };
+                for (let a = fromSec; a <= toSec; a += VENTANA + 1) {
+                    await cargar(a, Math.min(a + VENTANA, toSec), 0);
+                }
+            }
+            fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(()=>{});
 
             // Helper de distancia Haversine (km)
             const calcDist = (lat1, lon1, lat2, lon2) => {
@@ -1648,6 +1690,7 @@ router.post('/:metodo', async (req, res) => {
             let speeds = [];
             let paradas = [];
             let excesos = [];
+            let excesosIdx = []; // índice en `puntos` de cada exceso (para conservarlo al reducir)
             let currentStop = null;
             let puntos = [];
 
@@ -1667,6 +1710,7 @@ router.post('/:metodo', async (req, res) => {
                 // Excesos de velocidad (> 80 km/h)
                 if (speed >= 80) {
                     excesos.push({ lat, lng, velocidad: speed, tiempo: t });
+                    excesosIdx.push(puntos.length);
                 }
 
                 // Cálculo de distancia acumulada
@@ -1679,9 +1723,10 @@ router.post('/:metodo', async (req, res) => {
                 // Detección de paradas (> 3 minutos detenidos)
                 if (speed <= 3) {
                     if (!currentStop) {
-                        currentStop = { startT: t, endT: t, lat, lng };
+                        currentStop = { startT: t, endT: t, lat, lng, _i0: puntos.length, _i1: puntos.length };
                     } else {
                         currentStop.endT = t;
+                        currentStop._i1 = puntos.length;
                     }
                 } else {
                     if (currentStop) {
@@ -1720,8 +1765,44 @@ router.post('/:metodo', async (req, res) => {
             const avgSpeed = speeds.length ? Math.round(speeds.reduce((a,b)=>a+b, 0) / speeds.length) : 0;
             const tiempoMovMin = speeds.length; // aprox puntos por minuto
 
+            const limpiarParada = (p) => ({ startT: p.startT, endT: p.endT, lat: p.lat, lng: p.lng, durMin: p.durMin });
+            let paradasOut = paradas.slice(-20).map(limpiarParada);
+            let excesosOut = excesos.slice(-20);
+            let puntosOut = puntos;
+            let extra = {};
+            if (completo) {
+                // Excesos consecutivos (huecos de hasta 3 min) = un evento con su velocidad máxima
+                const eventos = [];
+                let ev = null;
+                excesos.forEach((e, k) => {
+                    if (ev && e.tiempo - ev.tiempoFin <= 180) {
+                        ev.tiempoFin = e.tiempo;
+                        if (e.velocidad > ev.velocidad) { ev.velocidad = e.velocidad; ev.lat = e.lat; ev.lng = e.lng; ev._i = excesosIdx[k]; }
+                    } else {
+                        ev = { lat: e.lat, lng: e.lng, velocidad: e.velocidad, tiempo: e.tiempo, tiempoFin: e.tiempo, _i: excesosIdx[k] };
+                        eventos.push(ev);
+                    }
+                });
+                excesosOut = eventos.slice().sort((a, b) => b.velocidad - a.velocidad).slice(0, 100)
+                    .sort((a, b) => a.tiempo - b.tiempo).map(e => ({ lat: e.lat, lng: e.lng, velocidad: e.velocidad, tiempo: e.tiempo, tiempoFin: e.tiempoFin }));
+                paradasOut = paradas.slice().sort((a, b) => b.durMin - a.durMin).slice(0, 200)
+                    .sort((a, b) => a.startT - b.startT).map(limpiarParada);
+                // Reducir a ~2500 puntos conservando primero, último, inicio/fin de paradas y pico de cada exceso
+                const MAX_OUT = 2500;
+                if (puntos.length > MAX_OUT) {
+                    const keep = new Set([0, puntos.length - 1]);
+                    paradas.forEach(p => { keep.add(p._i0); keep.add(p._i1); });
+                    eventos.forEach(e => keep.add(e._i));
+                    const hueco = Math.max(0, MAX_OUT - keep.size);
+                    const paso = (puntos.length - 1) / Math.max(1, hueco);
+                    for (let x = 0; x < hueco; x++) keep.add(Math.round(x * paso));
+                    puntosOut = Array.from(keep).filter(i => i >= 0 && i < puntos.length).sort((a, b) => a - b).map(i => puntos[i]);
+                }
+                extra = { completo: true, truncado, excesosEventos: eventos.length, puntosDevueltos: puntosOut.length };
+            }
+
             return res.json({
-                data: {
+                data: Object.assign({
                     success: true,
                     placa: placaParam,
                     unitId: targetUnitId,
@@ -1735,10 +1816,10 @@ router.post('/:metodo', async (req, res) => {
                         paradasTotal: paradas.length,
                         excesosTotal: excesos.length
                     },
-                    paradas: paradas.slice(-20), // últimas 20 paradas
-                    excesos: excesos.slice(-20),
-                    puntos: puntos
-                }
+                    paradas: paradasOut, // sin `completo`: últimas 20 paradas
+                    excesos: excesosOut,
+                    puntos: puntosOut
+                }, extra)
             });
 
         } catch(histErr) {

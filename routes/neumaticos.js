@@ -2,6 +2,8 @@ const express = require('express');
 const { uploadToS3, getPresignedUrl } = require('../utils/s3');
 
 const { DEFAULT_MARCAS, DEFAULT_MEDIDAS, DEFAULT_MODELOS, DEFAULT_ACCIONES } = require('../services/catalogos_neumaticos');
+// Semáforo único de neumáticos: crítico con menos de 3 mm (3 a 6 ámbar, más de 6 verde)
+const MM_CRITICO = 3;
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
 
@@ -336,7 +338,7 @@ module.exports = function (db, broadcast, logAudit) {
                     const r3 = parseInt(it.r3 || 0, 10);
                     const r4 = parseInt(it.r4 || 0, 10);
                     const rProm = (r4 > 0) ? (r1 + r2 + r3 + r4) / 4.0 : (r1 + r2 + r3) / 3.0;
-                    const alertaCambio = rProm <= 4.0 ? 1 : 0;
+                    const alertaCambio = rProm < MM_CRITICO ? 1 : 0;
 
                     let foto1Url = it.foto1 || null;
                     let foto2Url = it.foto2 || null;
@@ -602,7 +604,7 @@ module.exports = function (db, broadcast, logAudit) {
                         LEFT JOIN placas p ON i1.placa = p.placa
                         WHERE UPPER(TRIM(COALESCE(p.en_uso, 'SI'))) != 'NO'
                     ) last_i ON d.id_inspeccion = last_i.id_inspeccion
-                    WHERE d.alerta_cambio = 1 OR d.r1 <= 4 OR d.r2 <= 4 OR d.r3 <= 4
+                    WHERE d.alerta_cambio = 1 OR d.r1 < ${MM_CRITICO} OR d.r2 < ${MM_CRITICO} OR d.r3 < ${MM_CRITICO}
                 `),
 
                 // 4. Total de unidades activas en uso y suma teórica de llantas de flota
@@ -674,7 +676,7 @@ module.exports = function (db, broadcast, logAudit) {
                         SELECT 
                             id_inspeccion,
                             COUNT(*) as total_llantas,
-                            SUM(CASE WHEN alerta_cambio = 1 OR r1 <= 4 OR r2 <= 4 OR r3 <= 4 THEN 1 ELSE 0 END) as total_criticas
+                            SUM(CASE WHEN alerta_cambio = 1 OR r1 < ${MM_CRITICO} OR r2 < ${MM_CRITICO} OR r3 < ${MM_CRITICO} THEN 1 ELSE 0 END) as total_criticas
                         FROM neumaticos_inspecciones_det
                         GROUP BY id_inspeccion
                     ) det_stats ON last_i.id_inspeccion = det_stats.id_inspeccion
@@ -931,7 +933,7 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ============================================================
-    // 7. ⚠️ REQUERIMIENTOS DE LLANTAS (Remanente <= 4mm)
+    // 7. ⚠️ REQUERIMIENTOS DE LLANTAS (Remanente < 3 mm)
     // ============================================================
     router.get('/requerimientos', async (req, res) => {
         try {
@@ -985,7 +987,7 @@ module.exports = function (db, broadcast, logAudit) {
                 ) i
                 INNER JOIN neumaticos_inspecciones_det d ON d.id_inspeccion = i.id_inspeccion
                 LEFT JOIN placas p ON p.placa = i.placa
-                WHERE (d.alerta_cambio = 1 OR d.remanente_promedio <= 4.0)
+                WHERE (d.alerta_cambio = 1 OR d.remanente_promedio < ${MM_CRITICO})
             `;
             const params = [];
 
@@ -1173,7 +1175,7 @@ module.exports = function (db, broadcast, logAudit) {
                     const r3 = parseInt(it.r3 || 0, 10);
                     const r4 = parseInt(it.r4 || 0, 10);
                     const rProm = (r4 > 0) ? (r1 + r2 + r3 + r4) / 4.0 : (r1 + r2 + r3) / 3.0;
-                    const alertaCambio = rProm <= 4.0 ? 1 : 0;
+                    const alertaCambio = rProm < MM_CRITICO ? 1 : 0;
 
                     await tdb.query(`
                         INSERT INTO neumaticos_inspecciones_det

@@ -5,6 +5,7 @@ import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice } from '../../core/ui/Display';
 import { api, errorMessage } from '../../core/api/client';
+import { tonoMm, ETIQUETA_TONO, type Tono } from './neumaticosSemaforo';
 import { CONFIGURACIONES, posicionesDeConfig } from '../inspecciones/components/ChasisEsquemaVisual';
 
 // Diagrama esquemático de chasis y ejes para neumáticos (vista cenital, frente arriba).
@@ -18,16 +19,7 @@ export interface LlantaDato {
   remanente_promedio?: number | string | null; presion_actual?: number | null; estado?: string | null; alerta_cambio?: number | null;
 }
 
-export type Tono = 'green' | 'amber' | 'red' | 'gray';
-
-/** Semáforo único de neumáticos: más de 6 mm verde, de 3 a 6 mm ámbar, menos de 3 mm rojo; sin dato, gris */
-export function tonoMm(mm: number | null): Tono {
-  if (mm === null || Number.isNaN(mm)) return 'gray';
-  return mm > 6 ? 'green' : mm >= 3 ? 'amber' : 'red';
-}
-export const ETIQUETA_TONO: Record<Tono, string> = {
-  green: 'Óptimo', amber: 'Alerta preventiva', red: 'Crítico para cambio', gray: 'Sin dato',
-};
+export { tonoMm, ETIQUETA_TONO, type Tono };
 
 /** Remanente de una llanta: el promedio guardado, o el de R1..R3; null si nunca se midió */
 export function remanenteDe(l: { r1?: number | null; r2?: number | null; r3?: number | null; remanente_promedio?: number | string | null }): number | null {

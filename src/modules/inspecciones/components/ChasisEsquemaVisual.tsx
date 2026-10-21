@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { SegmentedControl } from '../../../core/ui/SegmentedControl';
+import { tonoMm } from '../../mantenimiento/neumaticosSemaforo';
 import '../inspecciones.css';
 
 // Esquema de ejes y llantas por configuración, el mismo del clásico (modal_inspeccion.js).
@@ -48,13 +49,14 @@ const X_IZQ = 77, X_DER = 223;          // centros de las columnas de llantas
 const ALTURA_EJE = 96;                   // alto de cada eje
 const Y_INICIO = 84;                     // primer eje debajo de la cabina
 
-/** Semáforo del remanente (R1 + R2 + R3) / 3: >6 verde, 4 a 6 ámbar, 4 o menos rojo */
+/** Semáforo del remanente (R1 + R2 + R3) / 3: >6 verde, 3 a 6 ámbar, menos de 3 rojo */
 function colorRemanente(l: LlantaChasis | undefined): { fondo: string; texto: string } {
   const [a, b, c] = [l?.r1, l?.r2, l?.r3].map(v => Number(String(v ?? '').replace(',', '.')) || 0);
   if (!(a || b || c)) return { fondo: 'var(--fill-3, #e5e5ea)', texto: 'var(--label-2)' };
   const prom = (a + b + c) / 3;
-  if (prom > 6) return { fondo: '#34c759', texto: '#ffffff' };
-  if (prom > 4) return { fondo: '#ff9500', texto: '#ffffff' };
+  const t = tonoMm(prom);
+  if (t === 'green') return { fondo: '#34c759', texto: '#ffffff' };
+  if (t === 'amber') return { fondo: '#ff9500', texto: '#ffffff' };
   return { fondo: '#ff3b30', texto: '#ffffff' };
 }
 
@@ -153,8 +155,8 @@ export function ChasisEsquemaVisual({ configuracion, llantas, activa, onSelect }
       )}
       <div className="insp-chasis__leyenda" aria-hidden>
         <span><i style={{ background: '#34c759' }} />Más de 6 mm</span>
-        <span><i style={{ background: '#ff9500' }} />4 a 6 mm</span>
-        <span><i style={{ background: '#ff3b30' }} />4 mm o menos</span>
+        <span><i style={{ background: '#ff9500' }} />3 a 6 mm</span>
+        <span><i style={{ background: '#ff3b30' }} />Menos de 3 mm</span>
         <span><i style={{ background: '#007aff' }} />Rotada</span>
         <span><i style={{ background: 'var(--fill-3, #e5e5ea)' }} />Sin medir</span>
       </div>

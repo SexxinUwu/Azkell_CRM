@@ -1,3 +1,5 @@
+// Semáforo único de neumáticos: crítico con menos de 3 mm (3 a 6 ámbar, más de 6 verde)
+window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
 /**
  * logica.js — Análisis de Neumáticos
  * ERP Azkell Fleet
@@ -336,7 +338,7 @@
             let cardsHtml = llantas.map(l => {
                 const prom = parseFloat(l.remanente_promedio || 0);
                 const isGood = prom > 6;
-                const isWarning = prom > 4 && prom <= 6;
+                const isWarning = prom >= window.NEU_MM_CRITICO && prom <= 6;
                 const borderColor = isGood ? '#10b981' : (isWarning ? '#f59e0b' : '#ef4444');
                 const badgeBg = isGood ? '#059669' : (isWarning ? '#d97706' : '#dc2626');
 
@@ -416,7 +418,7 @@
                     
                     const prom = parseFloat(d.remanente_promedio || 0);
                     let badgeWear = '';
-                    if (prom <= 4.0) {
+                    if (prom < window.NEU_MM_CRITICO) {
                         badgeWear = `<span class="badge rounded-pill px-2 py-1 fw-bold text-white shadow-2xs" style="background:#dc2626; font-size:0.75rem;"><i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>Crítica (≤4mm)</span>`;
                     } else if (prom <= 6.0) {
                         badgeWear = `<span class="badge rounded-pill px-2 py-1 fw-bold text-dark shadow-2xs" style="background:#fef3c7; color:#b45309 !important; border:1px solid #fde68a; font-size:0.75rem;"><i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>Alerta (4-6mm)</span>`;
@@ -1178,9 +1180,9 @@
             const rem = item.remanente_promedio !== null ? Number(item.remanente_promedio).toFixed(1) : (item.r1 || '—');
             const remNum = Number(rem || 0);
             let remBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-0.5 rounded-pill font-monospace fw-bold">${rem} mm</span>`;
-            if (remNum <= 4 || item.alerta_cambio === 1) {
+            if (remNum < window.NEU_MM_CRITICO || item.alerta_cambio === 1) {
                 remBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-0.5 rounded-pill font-monospace fw-bold"><i class="bi bi-exclamation-octagon-fill me-1"></i>${rem} mm</span>`;
-            } else if (remNum <= 7) {
+            } else if (remNum <= 6) {
                 remBadge = `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-0.5 rounded-pill font-monospace fw-bold">${rem} mm</span>`;
             }
 

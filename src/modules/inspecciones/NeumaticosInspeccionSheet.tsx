@@ -9,6 +9,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { clavePlaca, useInspeccionesNeumaticos } from './api';
 import { ChasisEsquemaVisual, CONFIGURACIONES, posicionesDeConfig } from './components/ChasisEsquemaVisual';
+import { tonoMm, TINTA_TONO } from '../mantenimiento/neumaticosSemaforo';
 import './inspecciones.css';
 
 // Inspección de neumáticos (React). Mismo esquema que el clásico (modal_inspeccion.js):
@@ -56,12 +57,9 @@ function promedio(l: Llanta): number | null {
   const [a, b, c] = [numero(l.r1), numero(l.r2), numero(l.r3)];
   return a || b || c ? (a + b + c) / 3 : null;
 }
-/** Semáforo: >6 mm verde, 4 a 6 ámbar, 4 o menos rojo */
+/** Semáforo único (neumaticosSemaforo): >6 mm verde, 3 a 6 ámbar, <3 rojo */
 function tonoRemanente(p: number | null): string {
-  if (p === null) return 'var(--label-3)';
-  if (p > 6) return 'var(--green-ink)';
-  if (p > 4) return 'var(--amber-ink)';
-  return 'var(--red-ink)';
+  return TINTA_TONO[tonoMm(p)];
 }
 
 /** Foto de la cámara o del archivo, reducida en el cliente (máx. 1200 px, JPEG 0.8) antes de enviarla */
