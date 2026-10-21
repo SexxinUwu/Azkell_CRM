@@ -37,16 +37,7 @@ interface TelemetriaWialon {
 
 // Telemetría CAN Bus de Wialon para el periodo del viaje (de la primera a la última carga). Solo se consulta cuando se pide.
 function useTelemetriaViaje(trip: Trip | null, habilitada: boolean) {
-  const ini = useMemo(() => {
-    if (!trip) return '';
-    const fechas = (trip.vouchers ?? []).map(v => String(v.fecha ?? '')).filter(Boolean).sort();
-    return fechas[0] || trip.fechaInicio;
-  }, [trip]);
-  const fin = useMemo(() => {
-    if (!trip) return '';
-    const fechas = (trip.vouchers ?? []).map(v => String(v.fecha ?? '')).filter(Boolean).sort();
-    return fechas[fechas.length - 1] || trip.fechaFin;
-  }, [trip]);
+  const { ini, fin } = useMemo(() => (trip ? rangoViaje(trip) : { ini: '', fin: '' }), [trip]);
   return useQuery({
     queryKey: ['operaciones', 'wialon', trip?.viaje, trip?.placa, ini, fin],
     enabled: habilitada && !!trip?.placa,
@@ -87,10 +78,20 @@ function TelemetriaViaje({ trip, pedida, setPedida, q }: { trip: Trip; pedida: b
   );
 }
 
-// Periodo del viaje en Wialon: de la primera a la última carga de sus vales
+// Periodo del viaje en Wialon, igual que el clásico (_caGetTripDates): primero las fechas del viaje del servidor;
+// solo si faltan, la primera y la última carga de sus vales (ordenadas por fecha real)
 function rangoViaje(trip: Trip) {
-  const fechas = (trip.vouchers ?? []).map(v => String(v.fecha ?? '')).filter(Boolean).sort();
-  return { ini: fechas[0] || trip.fechaInicio, fin: fechas[fechas.length - 1] || trip.fechaFin };
+  const sinFecha = (f?: string | null) => !f || f === 'N/D' || f === '---';
+  let ini = trip.fechaInicio;
+  let fin = trip.fechaFin;
+  if (sinFecha(ini)) {
+    const vales = (trip.vouchers ?? []).filter(v => v.fecha).sort((a, b) => new Date(String(a.fecha)).getTime() - new Date(String(b.fecha)).getTime());
+    if (vales.length) {
+      ini = String(vales[0].fecha);
+      fin = String(vales[vales.length - 1].fecha);
+    }
+  }
+  return { ini: ini || trip.fechaInicio, fin: fin || trip.fechaFin };
 }
 
 // Telemetría de la página, por número de viaje (una sola consulta al servidor: ver `gps` en AnalisisViajes)
@@ -553,6 +554,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         ) : (
           <>
             {gps.isError && <Notice tone="error">{errorMessage(gps.error)}</Notice>}
+            {canActivo && !gps.isFetching && gps.data && Object.values(gps.data).every(f => !f.data) && <Notice>No se encontraron registros CAN para los viajes de esta página (revisa que la unidad exista en Wialon con esa placa).</Notice>}
             <TablaRedimensionable id={urea ? 'analisis-urea' : 'analisis-combustible'} columnas={columnas} ariaLabel={urea ? 'Análisis de urea por viaje' : 'Análisis de combustible por viaje'}>
               {pagina_.map(x => {
                 const c = cifras(x);
