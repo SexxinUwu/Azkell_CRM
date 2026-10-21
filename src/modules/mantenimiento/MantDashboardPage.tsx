@@ -22,7 +22,7 @@ import { api } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import {
-  formatoDuracion, otId, otTipo,
+  formatoDuracion, otDetalles, otId, otTipo,
   useOrdenesTrabajoData, useStatusRampa,
   type OrdenTrabajo, type RampaEntrada,
 } from './api';
@@ -35,6 +35,12 @@ import { cifrasDisponibilidad, porcentajeOperativa } from '../flota/disponibilid
 import { horasTxt, indicadoresTaller } from './tiemposTaller';
 
 // ─── Tipos y Helpers ──────────────────────────────────────────────────────────
+
+const fechaLimaDias = (dias: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - dias);
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+};
 
 type RangoTiempo = 'hoy' | 'semana' | 'mes' | '30d';
 
@@ -456,21 +462,20 @@ export function MantDashboardPage() {
     }, 0);
   }, [otsFiltradas]);
 
-  // Tipos de OT (Preventivo vs Correctivo vs Neumáticos)
+  // Proporción de trabajos: intervalo propio de la tarjeta y tipos del catálogo (igual que el clásico)
+  const [propDesde, setPropDesde] = useState(() => fechaLimaDias(30));
+  const [propHasta, setPropHasta] = useState(() => fechaLimaDias(0));
   const tiposCounts = useMemo(() => {
-    let prev = 0;
-    let corr = 0;
-    let neu = 0;
-    let aux = 0;
-    otsFiltradas.forEach(o => {
-      const t = otTipo(o).toLowerCase();
-      if (t.includes('prev')) prev++;
-      else if (t.includes('neu')) neu++;
-      else if (t.includes('aux')) aux++;
-      else corr++;
+    const cuenta: Record<string, number> = { Correctivo: 0, Preventivo: 0, Predictivo: 0, Proactivo: 0, Servicio: 0, Otros: 0 };
+    otsData.forEach(o => {
+      const f = (o.fecha_ingreso || o.creado_en || o.created_at || '').slice(0, 10);
+      if (!f || f < propDesde || f > propHasta) return;
+      const tipo = String(otDetalles(o).tipo_ot || otTipo(o).split(' / ')[0] || '').trim().toLowerCase();
+      const clave = ['Correctivo', 'Preventivo', 'Predictivo', 'Proactivo', 'Servicio'].find(k => k.toLowerCase() === tipo) ?? 'Otros';
+      cuenta[clave]++;
     });
-    return { prev, corr, neu, aux };
-  }, [otsFiltradas]);
+    return { cuenta, total: Object.values(cuenta).reduce((a, b) => a + b, 0) };
+  }, [otsData, propDesde, propHasta]);
 
   // Bahías / Rampas Activas
   const rampasOcupadas = rampasData.filter(r => r.estado !== 'Liberado');
@@ -818,30 +823,38 @@ export function MantDashboardPage() {
                   <div className="mant-card__title">
                     <Activity size={15} /> Proporción de Trabajos
                   </div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--label-2)' }}>{rango}</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', margin: 'var(--s-2) 0' }}>
+                  <label className="aud-fecha"><span>Desde</span><input type="date" value={propDesde} max={propHasta} onChange={e => setPropDesde(e.target.value)} /></label>
+                  <label className="aud-fecha"><span>Hasta</span><input type="date" value={propHasta} min={propDesde} onChange={e => setPropHasta(e.target.value)} /></label>
                 </div>
 
                 <div style={{ padding: 'var(--s-2) 0' }}>
                   <DonaGrafico
-                    centro={`${otsFiltradas.length} OTs`}
+                    centro={`${tiposCounts.total} OTs`}
                     porciones={[
-                      { nombre: 'Preventivo', valor: tiposCounts.prev, color: 'var(--green-ink)' },
-                      { nombre: 'Correctivo', valor: tiposCounts.corr, color: 'var(--accent)' },
-                      { nombre: 'Neumáticos', valor: tiposCounts.neu, color: '#3b82f6' },
-                      { nombre: 'Auxilios', valor: tiposCounts.aux, color: 'var(--amber-ink)' },
+                      { nombre: 'Correctivo', valor: tiposCounts.cuenta.Correctivo, color: 'var(--accent)' },
+                      { nombre: 'Preventivo', valor: tiposCounts.cuenta.Preventivo, color: 'var(--green-ink)' },
+                      { nombre: 'Predictivo', valor: tiposCounts.cuenta.Predictivo, color: '#3b82f6' },
+                      { nombre: 'Proactivo', valor: tiposCounts.cuenta.Proactivo, color: '#8b5cf6' },
+                      { nombre: 'Servicio', valor: tiposCounts.cuenta.Servicio, color: 'var(--amber-ink)' },
+                      ...(tiposCounts.cuenta.Otros ? [{ nombre: 'Otros', valor: tiposCounts.cuenta.Otros, color: 'var(--label-3)' }] : []),
                     ]}
                   />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 'auto' }}>
-                  <div style={{ padding: 8, background: 'var(--fill-2)', borderRadius: 10, textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--label-2)' }}>Preventivo</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--green-ink)' }}>{tiposCounts.prev}</div>
-                  </div>
-                  <div style={{ padding: 8, background: 'var(--fill-2)', borderRadius: 10, textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--label-2)' }}>Correctivo</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)' }}>{tiposCounts.corr}</div>
-                  </div>
+                  {(['Correctivo', 'Preventivo', 'Predictivo', 'Proactivo', 'Servicio'] as const).map(t => (
+                    <div key={t} style={{ padding: 8, background: 'var(--fill-2)', borderRadius: 10, textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--label-2)' }}>{t}</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                        {tiposCounts.cuenta[t]} <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>
+                          {tiposCounts.total ? Math.round((tiposCounts.cuenta[t] / tiposCounts.total) * 100) : 0}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -864,7 +877,7 @@ export function MantDashboardPage() {
                   <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--label-2)' }}>{fleetrun.total} unidades</span>
                 </div>
                 <DonaGrafico
-                  centro={fleetrun.total > 0 ? `${Math.round(((fleetrun.vigentes + fleetrun.porVencer) / fleetrun.total) * 100)}%` : '—'}
+                  centro={fleetrun.total > 0 ? `${Math.round((fleetrun.vigentes / fleetrun.total) * 100)}%` : '—'}
                   porciones={[
                     { nombre: 'Vigentes', valor: fleetrun.vigentes, color: 'var(--green-ink)' },
                     { nombre: 'Por vencer', valor: fleetrun.porVencer, color: 'var(--amber-ink)' },

@@ -136,6 +136,62 @@ const POR_PAGINA = 20;
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
+/** Estado preventivo de la flota: peor estado por placa (sin duplicar placa + tipo). Una sola regla para la pantalla y el dashboard. */
+export function resumenPreventivo(filas: FleetrunFila[], placasData: { placa: string; estado: string; uts: string }[] | undefined,
+  umbrales: Record<string, number>, metricas: Map<string, string>) {
+  const hoy = Date.now();
+  const ordenadas = [...filas].sort((a, b) => {
+    const ta = parseFechaMs(a[3] as string | null);
+    const tb = parseFechaMs(b[3] as string | null);
+    const aFut = ta > hoy + 86_400_000;
+    const bFut = tb > hoy + 86_400_000;
+    if (aFut !== bFut) return aFut ? 1 : -1;
+    if (tb !== ta) return tb - ta;
+    return (Number(b[0] ?? 0)) - (Number(a[0] ?? 0));
+  });
+  const activas = placasData
+    ? new Map(placasData.filter(p => p.estado.toLowerCase() === 'activa' || p.estado === '').map(p => [p.placa.toUpperCase(), p]))
+    : null;
+  const unicas = new Map<string, FleetrunFila>();
+  for (const f of ordenadas) {
+    const placa = frPlaca(f).toUpperCase();
+    if (activas !== null && !activas.has(placa)) continue;
+    const clave = `${placa}__${frTipo(f).toUpperCase()}`;
+    if (!unicas.has(clave)) unicas.set(clave, f);
+  }
+  const porPlaca = new Map<string, EstadoFR>();
+  for (const f of unicas.values()) {
+    const placa = frPlaca(f).toUpperCase();
+    const uts = activas?.get(placa)?.uts || frUts(f);
+    const est = calcularEstado(f, uts, umbrales, metricas);
+    const prev = porPlaca.get(placa);
+    if (!prev || PRIORIDAD[est] > PRIORIDAD[prev]) porPlaca.set(placa, est);
+  }
+  let vencidos = 0, porVencer = 0, vigentes = 0, sinDatos = 0;
+  porPlaca.forEach(e => {
+    if (e === 'vencido') vencidos++;
+    else if (e === 'por_vencer') porVencer++;
+    else if (e === 'sin_datos') sinDatos++;
+    else vigentes++;
+  });
+  return { vencidos, porVencer, vigentes, sinDatos, total: porPlaca.size };
+}
+
+/** Nombre de la empresa (configuración), para el encabezado del panel */
+export function useEmpresaNombre() {
+  return useQuery<string>({
+    queryKey: ['conf', 'empresa-nombre'],
+    queryFn: async () => {
+      try {
+        const r = await api<{ valor: string | null }>('/configuracion-clave/empresa_nombre');
+        if (r.valor) return r.valor;
+      } catch { /* sin configuración */ }
+      return (window.location.hostname.split('.')[0] || 'Azkell').toUpperCase();
+    },
+    staleTime: 300_000,
+  });
+}
+
 export function FleetrunPage() {
   const qc = useQueryClient();
   const { can, user } = useAuth();
@@ -146,6 +202,7 @@ export function FleetrunPage() {
   const { data: placasData } = usePlacas();
   const { data: metricas = new Map<string, string>() } = useMetricas();
   const { data: umbrales = {} } = useFleetrunUmbrales();
+  const empresa = useEmpresaNombre();
   const { data: kmDia } = useKmHistorico();
   const [formulario, setFormulario] = useState<{ registro: FleetrunFila | null } | null>(null);
   const [importando, setImportando] = useState(false);
@@ -196,25 +253,8 @@ export function FleetrunPage() {
     return Array.from(mapa.values());
   }, [filasOrdenadas, historial, placasActivas]);
 
-  // KPIs a nivel de PLACA (igual que la SPA — peor estado por placa)
-  const stats = useMemo(() => {
-    const placaEstado = new Map<string, EstadoFR>();
-    for (const f of datosVista) {
-      const placa = frPlaca(f).toUpperCase();
-      const uts   = placasActivas?.get(placa)?.uts || frUts(f);
-      const est   = calcularEstado(f, uts, umbrales, metricas);
-      const prev  = placaEstado.get(placa);
-      if (!prev || PRIORIDAD[est] > PRIORIDAD[prev]) placaEstado.set(placa, est);
-    }
-    let vencidos = 0, porVencer = 0, vigentes = 0, sinDatos = 0;
-    placaEstado.forEach(e => {
-      if (e === 'vencido') vencidos++;
-      else if (e === 'por_vencer') porVencer++;
-      else if (e === 'sin_datos') sinDatos++;
-      else vigentes++;
-    });
-    return { vencidos, porVencer, vigentes, sinDatos, total: placaEstado.size };
-  }, [datosVista, placasActivas, umbrales, metricas]);
+  // KPIs de la flota: misma función que el dashboard de taller
+  const stats = useMemo(() => resumenPreventivo(filas, placasData, umbrales, metricas), [filas, placasData, umbrales, metricas]);
 
   // Filtrado + búsqueda
   const filtrados = useMemo(() => {
@@ -310,6 +350,13 @@ export function FleetrunPage() {
           {/* KPIs + Donut */}
           {!historial && (
             <div style={{ display: 'flex', gap: 'var(--s-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div className="mant-card" style={{ minWidth: 200, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--s-2)' }}>
+                <img src="/api/tenant-logo" alt="" style={{ height: 64, maxWidth: 180, objectFit: 'contain' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                <div style={{ fontWeight: 700 }}>{empresa.data ?? ''}</div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--label-1)', background: 'var(--fill)', borderRadius: 999, padding: '3px 10px' }}>
+                  {new Date().toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Lima' })}
+                </span>
+              </div>
               <DonutChart vencidos={stats.vencidos} porVencer={stats.porVencer} vigentes={stats.vigentes} />
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, auto)', gap: 'var(--s-2) var(--s-4)' }}>
                 {[
@@ -512,42 +559,5 @@ export function useFleetrunStats() {
   const { data: placasData } = usePlacas();
   const { data: metricas = new Map<string, string>() } = useMetricas();
   const { data: umbrales = {} } = useFleetrunUmbrales();
-  return useMemo(() => {
-    const hoy = Date.now();
-    const ordenadas = [...(data ?? [])].sort((a, b) => {
-      const ta = parseFechaMs(a[3] as string | null);
-      const tb = parseFechaMs(b[3] as string | null);
-      const aFut = ta > hoy + 86_400_000;
-      const bFut = tb > hoy + 86_400_000;
-      if (aFut !== bFut) return aFut ? 1 : -1;
-      if (tb !== ta) return tb - ta;
-      return (Number(b[0] ?? 0)) - (Number(a[0] ?? 0));
-    });
-    const activas = placasData
-      ? new Map(placasData.filter(p => p.estado.toLowerCase() === 'activa' || p.estado === '').map(p => [p.placa.toUpperCase(), p]))
-      : null;
-    const unicas = new Map<string, FleetrunFila>();
-    for (const f of ordenadas) {
-      const placa = frPlaca(f).toUpperCase();
-      if (activas !== null && !activas.has(placa)) continue;
-      const clave = `${placa}__${frTipo(f).toUpperCase()}`;
-      if (!unicas.has(clave)) unicas.set(clave, f);
-    }
-    const porPlaca = new Map<string, EstadoFR>();
-    for (const f of unicas.values()) {
-      const placa = frPlaca(f).toUpperCase();
-      const uts = activas?.get(placa)?.uts || frUts(f);
-      const est = calcularEstado(f, uts, umbrales, metricas);
-      const prev = porPlaca.get(placa);
-      if (!prev || PRIORIDAD[est] > PRIORIDAD[prev]) porPlaca.set(placa, est);
-    }
-    let vencidos = 0, porVencer = 0, vigentes = 0, sinDatos = 0;
-    porPlaca.forEach(e => {
-      if (e === 'vencido') vencidos++;
-      else if (e === 'por_vencer') porVencer++;
-      else if (e === 'sin_datos') sinDatos++;
-      else vigentes++;
-    });
-    return { vencidos, porVencer, vigentes, sinDatos, total: porPlaca.size };
-  }, [data, placasData, metricas, umbrales]);
+  return useMemo(() => resumenPreventivo(data ?? [], placasData, umbrales, metricas), [data, placasData, metricas, umbrales]);
 }
