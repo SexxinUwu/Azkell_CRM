@@ -39,6 +39,15 @@ window.addEventListener('vite:preloadError', (e) => {
   e.preventDefault();
   window.location.reload();
 });
+// Algunos navegadores no emiten vite:preloadError: el import dinámico falla con su propio mensaje. Mismo criterio de una recarga.
+window.addEventListener('unhandledrejection', (e) => {
+  const msg = String((e.reason && (e.reason.message || e.reason)) || '');
+  if (!/Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(msg)) return;
+  const ultima = Number(sessionStorage.getItem('fleet_recarga_modulo') || 0);
+  if (Date.now() - ultima < 30_000) return;
+  sessionStorage.setItem('fleet_recarga_modulo', String(Date.now()));
+  window.location.reload();
+});
 
 // Los imports diferidos (lazy) de cada pantalla no siempre pasan por vite:preloadError: si la pestaña
 // tiene una versión anterior, el error llega como "Failed to fetch dynamically imported module". Mismo criterio: recargar una vez.
