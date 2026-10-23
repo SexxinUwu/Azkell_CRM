@@ -1047,7 +1047,6 @@ label.row__main { cursor: pointer; }
 .dato { position: relative; display: flex; flex-direction: column; gap: 0.125rem; padding: var(--s-2) var(--s-4); min-height: 3.25rem; justify-content: center; }
 .dato + .dato::before { content: ''; position: absolute; top: 0; left: var(--s-4); right: 0; height: 0.5px; background: var(--separator); }
 .dato__label { font-size: 0.8125rem; color: var(--label); font-weight: 500; }
-.dato__label::first-letter { text-transform: lowercase; }
 .dato__valor { font-size: 1rem; color: var(--label); overflow-wrap: anywhere; }
 .dato__valor--mono { font-family: var(--font-mono); font-size: 0.9375rem; }
 .dato__valor--enlace { color: var(--accent-ink, var(--accent)); }
