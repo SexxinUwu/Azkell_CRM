@@ -337,6 +337,17 @@ export const editarTrabajo = (id: string, d: {
   trabajo_realizado: string; fecha_trabajo: string | null; fecha_salida: string | null; personal: string; costo: number; estado: string;
 }) => api<{ ok: boolean }>(`/ot-trabajos/${encodeURIComponent(id)}`, { method: 'PUT', body: { accion: 'editar', ...d } });
 
+export const crearTrabajo = (d: {
+  ticket_visita: string; trabajo_realizado: string; fecha_trabajo: string | null; fecha_salida: string | null;
+  creado_por: string; personal: string; costo: number;
+}) => api<{ ok: boolean; id_ot: string }>('/ot-trabajos', {
+  method: 'POST',
+  body: {
+    ticket_visita: d.ticket_visita, trabajo_realizado: d.trabajo_realizado, fecha_trabajo: d.fecha_trabajo,
+    fecha_salida: d.fecha_salida, creado_por: d.creado_por, detalles_json: { personal: d.personal, costo: d.costo },
+  },
+});
+
 export const aprobarTrabajo = (id: string, usuario: string) =>
   api<{ ok: boolean }>(`/ot-trabajos/${encodeURIComponent(id)}`, { method: 'PUT', body: { accion: 'aprobar', usuario } });
 

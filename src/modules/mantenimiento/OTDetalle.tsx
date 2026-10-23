@@ -1,7 +1,7 @@
 import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/format';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Download, Package, Play, Share2, Timer } from 'lucide-react';
+import { ArrowUpRight, Download, Package, Pencil, Play, Plus, Share2, Timer } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, Notice } from '../../core/ui/Display';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -17,9 +17,10 @@ import { useInspecciones, type Inspeccion } from '../inspecciones/api';
 import {
   accionesDisponibles, costosOT, duracionPausa, estadoTrabajo, etiquetaEstado, formatoDuracion, marcarTrabajo, otDetalles, otId,
   pausasDe, tiempoNetoOT, trabajoCosto, trabajosDeOT, useInspeccionesDeOT, useMateriales, useTrabajosOT,
-  type AccionOT, type OrdenTrabajo, type PausaOT,
+  type AccionOT, type OrdenTrabajo, type PausaOT, type TrabajoOT,
 } from './api';
 import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
+import { TrabajoOTSheet } from './TrabajoOTSheet';
 import { OTServiciosTerceros } from './OTServiciosTerceros';
 import { SalidaFormulario } from '../almacen/SalidaFormulario';
 import { pdfOt } from './otPdf';
@@ -108,6 +109,10 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   const [inspeccionAbierta, setInspeccionAbierta] = useState<string | null>(null);
   const [marcando, setMarcando] = useState<string | null>(null);
   const [solicitando, setSolicitando] = useState(false);
+  // Formulario de trabajo: abierto para agregar (trabajoSel null) o para editar uno existente
+  const [trabajoAbierto, setTrabajoAbierto] = useState(false);
+  const [trabajoSel, setTrabajoSel] = useState<TrabajoOT | null>(null);
+  const puedeAgregarTrabajo = puedeEditar && !['Finalizado', 'Cerrada', 'Anulado'].includes(ot.estado);
 
   const ahora = useAhora(enCurso);
   const { data: materiales, isLoading: loadMat } = useMateriales(idOt);
@@ -260,8 +265,13 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
               Checklist de trabajo
               {totalTareas > 0 && <span className="ot-progreso t-numeric">{hechos} de {totalTareas}</span>}
             </p>
+            {puedeAgregarTrabajo && (
+              <div style={{ marginBottom: 'var(--s-3)' }}>
+                <Button variant="secondary" icon={<Plus size={15} />} onClick={() => { setTrabajoSel(null); setTrabajoAbierto(true); }}>Agregar trabajo</Button>
+              </div>
+            )}
             {loadTra ? <PageLoader /> : totalTareas === 0 ? (
-              <p className="t-footnote c-secondary">Sin trabajos registrados. Los trabajos se cargan desde Historial de trabajos o al importar el backlog.</p>
+              <p className="t-footnote c-secondary">Sin trabajos registrados. Usa "Agregar trabajo" para anotar la labor, quién la hizo y a qué hora.</p>
             ) : (
               <div className="tarjeta__lista">
                 {trabajos.map((t, i) => {
@@ -278,6 +288,11 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                         <span className="ot-linea__sub">{[t.tecnico, formatFechaPe(t.fecha_trabajo)].filter(Boolean).join(' · ') || '—'}</span>
                       </div>
                       <span className="ot-linea__importe t-numeric">{soles(trabajoCosto(t))}</span>
+                      {puedeEditar && (
+                        <button type="button" className="btn btn--icon" aria-label="Editar trabajo" title="Editar trabajo"
+                          style={{ minWidth: 44, minHeight: 44, border: 0, background: 'transparent', cursor: 'pointer', color: 'var(--label-2)' }}
+                          onClick={() => { setTrabajoSel(t); setTrabajoAbierto(true); }}><Pencil size={16} /></button>
+                      )}
                     </div>
                   );
                 })}
@@ -474,6 +489,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
 
       <PausarOTSheet ot={ot} open={pausando} onClose={() => setPausando(false)} usuario={usuario} />
       <CerrarOTSheet ot={ot} open={cerrando} onClose={() => setCerrando(false)} usuario={usuario} />
+      <TrabajoOTSheet ot={ot} trabajo={trabajoSel} open={trabajoAbierto} onClose={() => setTrabajoAbierto(false)} usuario={usuario} />
       <SalidaFormulario
         open={solicitando}
         salida={null}

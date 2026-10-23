@@ -7,6 +7,7 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { guardarSalida, TIPOS_DESTINO, useInventario, type ItemSalida, type SalidaInv } from './api';
 import { haptic } from '../../core/lib/haptics';
+import { ArticuloSelector, SolicitanteSelector, usePersonalSolicitante } from './SelectoresSalida';
 import { formatSoles } from '../../core/lib/format';
 
 interface Props {
@@ -28,6 +29,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
   // Solo artículos (INV): los servicios (SERV) no se solicitan a almacén
   const inventario = (inventarioTodo ?? []).filter(a => !String(a.id ?? '').toUpperCase().startsWith('SERV'));
   const [guardando, setGuardando] = useState(false);
+  const { data: personal } = usePersonalSolicitante();
 
   const [fecha, setFecha] = useState('');
   const [tipoDestino, setTipoDestino] = useState('Vehiculo');
@@ -62,6 +64,9 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
     if (disp !== null && Number(it.cantidad) > disp) return `Stock insuficiente: disponible ${disp}`;
     return null;
   }
+  // Desde una OT el solicitante es obligatorio, como en el clásico
+  const exigeResponsable = !!preset?.ticket_ot && !s;
+  const sinResponsable = exigeResponsable && !responsable.trim();
   const hayErrores = items.some(it => errorDeFila(it) !== null);
   const sinArticulos = !items.some(i => i.descripcion.trim() || i.inventario_id);
   const mostrar = (msg: string | undefined) => (intento ? msg : undefined);
@@ -121,7 +126,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
   async function guardar() {
     setIntento(true);
     const itemsValidos = items.filter(i => i.descripcion.trim() || i.inventario_id);
-    if (!fecha || sinArticulos || hayErrores) { haptic('warning'); return; }
+    if (!fecha || sinArticulos || hayErrores || sinResponsable) { haptic('warning'); return; }
 
     setGuardando(true);
     try {
@@ -175,8 +180,8 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
           </Field>
         </div>
 
-        <Field label="Responsable">
-          {p => <TextInput {...p} value={responsable} placeholder="Nombre del responsable" onChange={ev => setResponsable(ev.target.value)} />}
+        <Field label={exigeResponsable ? 'Solicitante / Responsable *' : 'Solicitante / Responsable'} error={mostrar(sinResponsable ? 'Elige quién solicita los repuestos.' : undefined)}>
+          {p => <SolicitanteSelector id={p.id} value={responsable} onChange={setResponsable} opciones={personal ?? []} invalido={intento && sinResponsable} />}
         </Field>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
@@ -217,21 +222,13 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
                 {items.map((it, idx) => (
                   <tr key={idx}>
                     <td>
-                      <input className="input" style={{ fontSize: '0.875rem', minHeight: '2.25rem' }}
+                      <ArticuloSelector
                         value={it.descripcion}
-                        list={`sal-arts-${idx}`}
-                        placeholder="Nombre del artículo"
-                        onChange={ev => {
-                          const val = ev.target.value;
-                          actualizarItem(idx, 'descripcion', val);
-                          seleccionarArticulo(idx, val);
-                        }}
+                        articulos={inventario ?? []}
+                        invalido={errorDeFila(it) !== null}
+                        onSelect={a => seleccionarArticulo(idx, a.articulo || a.id)}
+                        onTexto={t => { actualizarItem(idx, 'descripcion', t); if (it.inventario_id) actualizarItem(idx, 'inventario_id', null); }}
                       />
-                      <datalist id={`sal-arts-${idx}`}>
-                        {(inventario ?? []).slice(0, 100).map(a => (
-                          <option key={a.id} value={a.articulo || a.descripcion}>{a.id} — Stock: {a.stock_actual}</option>
-                        ))}
-                      </datalist>
                       {it.inventario_id && disponibleDe(it) !== null && (
                         <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--label-2)', marginTop: 2 }}>
                           Disponible: {disponibleDe(it)}

@@ -1,6 +1,9 @@
 // v54: descarta las páginas /app guardadas antes de excluirlas de la caché (apuntaban a archivos de compilación que ya no existen)
 const CACHE_NAME = 'azkell-fleet-v54';
 const STATIC_CACHE = 'azkell-libs-v2';
+// Fotos de artículos (S3): la URL firmada cambia en cada consulta, por eso se guardan por su ruta sin la firma
+const IMG_CACHE = 'azkell-img-v1';
+const IMG_MAX = 600;
 
 // Archivos de la app
 const APP_ASSETS = [
@@ -46,7 +49,7 @@ self.addEventListener('install', event => {
 
 // Activar: tomar control inmediato y limpiar versiones viejas
 self.addEventListener('activate', event => {
-  const keep = [CACHE_NAME, STATIC_CACHE];
+  const keep = [CACHE_NAME, STATIC_CACHE, IMG_CACHE];
   event.waitUntil(
     caches.keys().then(names =>
       Promise.all(names.map(n => keep.includes(n) ? undefined : caches.delete(n)))
@@ -70,9 +73,29 @@ function fetchWithTimeout(request, timeoutMs = 2500) {
 
 // Fetch: estrategia optimizada y blindada contra NetworkError
 self.addEventListener('fetch', event => {
-  // Solo interceptar peticiones GET del mismo origen
+  // Solo interceptar peticiones GET
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
+
+  // 0. Fotos de artículos en S3 → Cache First con clave sin la firma (cada foto se descarga una sola vez)
+  if (event.request.destination === 'image' && /.amazonaws.com$/.test(url.hostname)) {
+    const clave = new Request(url.origin + url.pathname);
+    event.respondWith(
+      caches.open(IMG_CACHE).then(cache => cache.match(clave).then(guardada => {
+        if (guardada) return guardada;
+        return fetch(event.request).then(resp => {
+          if (resp && (resp.status === 200 || resp.type === 'opaque')) {
+            cache.put(clave, resp.clone()).then(() => cache.keys()).then(ks => {
+              if (ks.length > IMG_MAX) return Promise.all(ks.slice(0, ks.length - IMG_MAX).map(k => cache.delete(k)));
+            }).catch(() => {});
+          }
+          return resp;
+        });
+      }))
+    );
+    return;
+  }
+
   if (url.origin !== self.location.origin) return;
 
   // 1. API → siempre red directa (nunca cachear)
