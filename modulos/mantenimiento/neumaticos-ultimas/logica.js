@@ -455,8 +455,8 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
             ws['!cols'] = [{ wch: 28 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 18 }];
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Reposicion');
-            const filasDet = [['Placa', 'Empresa', 'Tipo de unidad', 'Posición', 'Tipo de llanta', 'Medida', 'Marca', 'Modelo', 'R1 (mm)', 'R2 (mm)', 'R3 (mm)', 'R4 (mm)', 'Remanente (mm)', 'Estado']];
-            (window._neuListaVisible || []).forEach(l => filasDet.push([String(l.placa || '').toUpperCase(), String(l.dueno || ''), String(l.tipo_unidad || ''), String(l.posicion || ''), window.neuTipoLlanta(l), String(l.medida || ''), String(l.marca || ''), String(l.modelo || ''), l.r1 ?? '', l.r2 ?? '', l.r3 ?? '', l.r4 ?? '', l.remanente_promedio ?? '', String(l.estado || '')]));
+            const filasDet = [['Placa', 'Empresa', 'Tipo de unidad', 'Fecha inspección', 'Posición', 'Tipo de llanta', 'Medida', 'Marca', 'Modelo', 'R1 (mm)', 'R2 (mm)', 'R3 (mm)', 'R4 (mm)', 'Remanente (mm)', 'Estado']];
+            (window._neuListaVisible || []).forEach(l => filasDet.push([String(l.placa || '').toUpperCase(), String(l.dueno || ''), String(l.tipo_unidad || ''), String(l.fecha_inspeccion || '').split('T')[0], String(l.posicion || ''), window.neuTipoLlanta(l), String(l.medida || ''), String(l.marca || ''), String(l.modelo || ''), l.r1 ?? '', l.r2 ?? '', l.r3 ?? '', l.r4 ?? '', l.remanente_promedio ?? '', String(l.estado || '')]));
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(filasDet), 'Detalle por placa');
             XLSX.writeFile(wb, 'Resumen_Compras_Reposicion_' + new Date().toISOString().split('T')[0] + '.xlsx');
         } catch (e) {

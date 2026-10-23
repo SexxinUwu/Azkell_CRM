@@ -137,7 +137,7 @@ export async function exportarResumenExcel(filas: FilaResumen[], umbral: number,
   const t = totalesResumen(filas);
   const u = textoUmbral(umbral);
   const detalle = llantas.map(l => [
-    String(l.placa ?? '').toUpperCase(), String(l.dueno ?? ''), String(l.tipo_unidad ?? ''),
+    String(l.placa ?? '').toUpperCase(), String(l.dueno ?? ''), String(l.tipo_unidad ?? ''), String(l.fecha_inspeccion ?? '').split('T')[0],
     String(l.posicion ?? ''), tipoLlanta(l), String(l.medida ?? ''), String(l.marca ?? ''), String(l.modelo ?? ''),
     aNum(l.r1), aNum(l.r2), aNum(l.r3), aNum(l.r4), remanenteLlanta(l), String(l.estado ?? ''),
   ]);
@@ -146,7 +146,7 @@ export async function exportarResumenExcel(filas: FilaResumen[], umbral: number,
       ...filas.map(f => [f.medida, f.del, f.trac, f.arr, f.rep, f.total]),
       ['TOTAL', t.del, t.trac, t.arr, t.rep, t.total],
     ] },
-    { hoja: 'Detalle por placa', encabezados: ['Placa', 'Empresa', 'Tipo de unidad', 'Posición', 'Tipo de llanta', 'Medida', 'Marca', 'Modelo', 'R1 (mm)', 'R2 (mm)', 'R3 (mm)', 'R4 (mm)', 'Remanente (mm)', 'Estado'], filas: detalle },
+    { hoja: 'Detalle por placa', encabezados: ['Placa', 'Empresa', 'Tipo de unidad', 'Fecha inspección', 'Posición', 'Tipo de llanta', 'Medida', 'Marca', 'Modelo', 'R1 (mm)', 'R2 (mm)', 'R3 (mm)', 'R4 (mm)', 'Remanente (mm)', 'Estado'], filas: detalle },
   ]);
 }
 
