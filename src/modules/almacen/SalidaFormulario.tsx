@@ -227,7 +227,6 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
                         articulos={inventario ?? []}
                         invalido={errorDeFila(it) !== null}
                         onSelect={a => seleccionarArticulo(idx, a.articulo || a.id)}
-                        onTexto={t => { actualizarItem(idx, 'descripcion', t); if (it.inventario_id) actualizarItem(idx, 'inventario_id', null); }}
                       />
                       {it.inventario_id && disponibleDe(it) !== null && (
                         <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--label-2)', marginTop: 2 }}>

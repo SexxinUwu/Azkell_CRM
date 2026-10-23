@@ -23,7 +23,8 @@ import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
 import { TrabajoOTSheet } from './TrabajoOTSheet';
 import { OTServiciosTerceros } from './OTServiciosTerceros';
 import { SalidaFormulario } from '../almacen/SalidaFormulario';
-import { pdfOt } from './otPdf';
+import { pdfOt, pdfPlantillaOt } from './otPdf';
+import { rotGetCleanMotivoDisplay } from './otPdfClasico';
 
 export const ETIQUETA_ACCION: Record<AccionOT, string> = {
   iniciar:   'Iniciar OT',
@@ -166,6 +167,18 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     }
   }
 
+  async function descargarPlantilla() {
+    setExportando(true);
+    try {
+      const blob = await pdfPlantillaOt(ot);
+      descargarArchivo(blob, `Plantilla_OT_${idOt}.pdf`);
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+    } finally {
+      setExportando(false);
+    }
+  }
+
   // Acciones principales según el ciclo de vida; el resto va al menú
   const principal = (() => {
     if (!puedeEditar) return null;
@@ -187,6 +200,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       .map(a => ({ label: ETIQUETA_ACCION[a], destructiva: a === 'anular', separado: a === 'anular', onSelect: () => onAccion(a) })),
     puedeEditar && ot.estado === 'Pausada' && { label: 'Cerrar OT', onSelect: () => setCerrando(true) },
     puedeEliminar && ot.estado === 'Anulado' && { label: 'Eliminar', destructiva: true, separado: true, onSelect: onEliminar },
+    { label: 'Descargar plantilla', onSelect: descargarPlantilla },
     { label: 'Abrir en versión actual', icon: <ArrowUpRight size={15} />, onSelect: () => abrirClasico('mantenimiento/reportes-ot') },
   ].filter(Boolean) as Parameters<typeof MenuOtros>[0]['opciones'];
 
@@ -321,7 +335,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
           <div>
             <p className="tarjeta__grupo-titulo">Diagnóstico y asignación</p>
             <div className="tarjeta__lista">
-              {(det.motivo || ot.observaciones) && <div className="dato"><span className="dato__label">Falla reportada</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{String(det.motivo || ot.observaciones)}</span></div>}
+              {(det.motivo || ot.observaciones) && <div className="dato"><span className="dato__label">Falla reportada</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{String(rotGetCleanMotivoDisplay(det, ot))}</span></div>}
               {ot.tecnico && <div className="dato"><span className="dato__label">Técnico responsable</span><span className="dato__valor">{ot.tecnico}</span></div>}
               {ot.supervisor && <div className="dato"><span className="dato__label">Supervisor</span><span className="dato__valor">{ot.supervisor}</span></div>}
               {(ot.rampa_origen || ot.id_rampa) && <div className="dato"><span className="dato__label">Rampa asignada</span><span className="dato__valor">{ot.rampa_origen ?? ot.id_rampa}</span></div>}

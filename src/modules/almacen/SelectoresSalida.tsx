@@ -4,6 +4,7 @@ import { ImageOff } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
 import type { ArticuloInv } from './api';
+import { Sheet } from '../../core/ui/Sheet';
 
 // Selectores buscables de la Solicitud de Salida: calcados de los del clásico (solicitante con buscador,
 // artículo con código, descripción y stock) y con la foto de cada artículo.
@@ -120,46 +121,49 @@ function Miniatura({ url, nombre }: { url: string | null; nombre: string }) {
   );
 }
 
-/** Artículo del almacén: busca por código, nombre, descripción o familia, y muestra foto y stock de cada uno */
-export function ArticuloSelector({ value, articulos, onSelect, onTexto, invalido }: {
-  value: string; articulos: ArticuloInv[]; onSelect: (a: ArticuloInv) => void; onTexto: (t: string) => void; invalido?: boolean;
+/** Artículo del almacén: el campo muestra el elegido; al tocarlo se abre una hoja con buscador y la lista (foto, código y stock) */
+export function ArticuloSelector({ value, articulos, onSelect, invalido }: {
+  value: string; articulos: ArticuloInv[]; onSelect: (a: ArticuloInv) => void; invalido?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
-  const { raiz, lista, caja } = usePopover(abierto, () => setAbierto(false));
-  const listId = useId();
+  const [q, setQ] = useState('');
   const { visibles, total } = useMemo(() => {
-    const q = value.trim().toUpperCase();
-    const lista = q
-      ? articulos.filter(a => `${a.id} ${a.codigo_articulo ?? ''} ${a.articulo} ${a.descripcion} ${a.familia ?? ''}`.toUpperCase().includes(q))
+    const n = q.trim().toUpperCase();
+    const lista = n
+      ? articulos.filter(a => `${a.id} ${a.codigo_articulo ?? ''} ${a.articulo} ${a.descripcion} ${a.familia ?? ''}`.toUpperCase().includes(n))
       : articulos;
     return { visibles: lista.slice(0, MAX_FILAS), total: lista.length };
-  }, [articulos, value]);
+  }, [articulos, q]);
 
   return (
-    <div ref={raiz} style={{ position: 'relative', minWidth: 0 }}>
-      <input className="input" style={{ fontSize: '0.875rem', minHeight: '2.25rem' }} value={value} autoComplete="off"
-        placeholder="Buscar artículo por código o nombre..." aria-invalid={invalido || undefined} aria-expanded={abierto} aria-controls={listId} role="combobox"
-        onFocus={() => setAbierto(true)} onChange={e => { onTexto(e.target.value); setAbierto(true); }} />
-      {abierto && (
-        <ListaFlotante caja={caja} lista={lista} id={listId} ancho={420} maxAlto={340}>
-          {visibles.length === 0 ? (
-            <div style={{ padding: 14, color: 'var(--label-2)', fontSize: '0.875rem' }}>Sin resultados.</div>
-          ) : visibles.map(a => (
-            <button key={a.id} type="button" role="option" aria-selected={false}
-              onClick={() => { onSelect(a); setAbierto(false); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', minHeight: 56, padding: '6px 12px', border: 0, borderBottom: '1px solid var(--separator)', background: 'transparent', cursor: 'pointer', color: 'var(--label)' }}>
-              <Miniatura url={a.imagen_url} nombre={a.articulo} />
-              <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-                <span style={{ fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.articulo || a.descripcion}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{a.codigo_articulo || a.id} · Stock: <b>{a.stock_actual}</b>{a.unidad ? ` ${a.unidad}` : ''}</span>
-              </span>
-            </button>
-          ))}
-          {total > visibles.length && (
-            <div style={{ padding: '8px 12px', fontSize: '0.75rem', color: 'var(--label-2)' }}>Mostrando {visibles.length} de {total}. Escribe para afinar la búsqueda.</div>
-          )}
-        </ListaFlotante>
-      )}
-    </div>
+    <>
+      <button type="button" className="input" aria-invalid={invalido || undefined} onClick={() => { setQ(''); setAbierto(true); }}
+        style={{ textAlign: 'left', fontSize: '0.875rem', minHeight: '2.25rem', width: '100%', cursor: 'pointer', color: value ? 'var(--label)' : 'var(--label-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {value || 'Elegir artículo…'}
+      </button>
+      <Sheet open={abierto} onClose={() => setAbierto(false)} title="Buscar artículo">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+          <input className="input" autoFocus value={q} onChange={e => setQ(e.target.value)}
+            placeholder="Código, nombre o familia..." style={{ fontSize: '1rem', minHeight: 44 }} />
+          <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>
+            {total} artículo(s){total > visibles.length ? ` · mostrando ${visibles.length}, escribe para afinar` : ''}
+          </div>
+          <div role="listbox" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', maxHeight: 'min(60dvh, 520px)', border: '1px solid var(--separator)', borderRadius: 12 }}>
+            {visibles.length === 0 && <div style={{ padding: 16, color: 'var(--label-2)', fontSize: '0.875rem' }}>Sin resultados para “{q}”.</div>}
+            {visibles.map(a => (
+              <button key={a.id} type="button" role="option" aria-selected={a.articulo === value}
+                onClick={() => { onSelect(a); setAbierto(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', minHeight: 60, padding: '8px 12px', border: 0, borderBottom: '1px solid var(--separator)', background: a.articulo === value ? 'var(--accent-tint)' : 'transparent', cursor: 'pointer', color: 'var(--label)' }}>
+                <Miniatura url={a.imagen_url} nombre={a.articulo} />
+                <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.articulo || a.descripcion}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{a.codigo_articulo || a.id} · Stock: <b>{a.stock_actual}</b>{a.unidad ? ` ${a.unidad}` : ''}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </Sheet>
+    </>
   );
 }
