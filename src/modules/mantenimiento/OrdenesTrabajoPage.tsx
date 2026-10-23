@@ -18,7 +18,7 @@ import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import {
   ejecutarAccionOT, eliminarOT, etiquetaEstado,
-  estadoColor, otDetalles, otFecha, otId, otTipo,
+  accionesDisponibles, estadoColor, otDetalles, otFecha, otId, otTipo,
   useOrdenesTrabajoData,
   type AccionOT, type OrdenTrabajo,
 } from './api';
@@ -208,7 +208,7 @@ export function OrdenesTrabajoPage() {
     if (fDesde || fHasta || fMes) {
       return { desde: fDesde || (fMes ? fMes + '-01' : ''), hasta: fHasta || (fMes ? finDeMes(fMes) : hoy) };
     }
-    const est = ESTADOS_PESTANA[filtroEstado];
+    const est = filtroEstado === 'Pendientes' || filtroEstado === 'En Proceso' ? ESTADOS_PESTANA[filtroEstado] : undefined;
     if (est) {
       const fechas = ots.filter(o => est.includes(o.estado)).map(otFecha).filter(f => f !== '—').sort();
       return { desde: fechas[0] ?? hoy, hasta: hoy };
@@ -467,10 +467,10 @@ export function OrdenesTrabajoPage() {
                     <input type="month" value={fMes} onChange={e => { setFMes(e.target.value); setFDesde(''); setFHasta(''); }} style={{ minHeight: 44, padding: '0 10px', borderRadius: 10, border: '1px solid var(--separator)' }} />
                   </label>
                   <label style={{ display: 'grid', gap: 4, fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)' }}>DESDE
-                    <input type="date" value={fDesde} onChange={e => { setFDesde(e.target.value); setFMes(''); }} style={{ minHeight: 44, padding: '0 10px', borderRadius: 10, border: '1px solid var(--separator)' }} />
+                    <input type="date" value={fDesde || rango.desde} onChange={e => { setFDesde(e.target.value); setFMes(''); }} style={{ minHeight: 44, padding: '0 10px', borderRadius: 10, border: '1px solid var(--separator)' }} />
                   </label>
                   <label style={{ display: 'grid', gap: 4, fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)' }}>HASTA
-                    <input type="date" value={fHasta} onChange={e => { setFHasta(e.target.value); setFMes(''); }} style={{ minHeight: 44, padding: '0 10px', borderRadius: 10, border: '1px solid var(--separator)' }} />
+                    <input type="date" value={fHasta || rango.hasta} onChange={e => { setFHasta(e.target.value); setFMes(''); }} style={{ minHeight: 44, padding: '0 10px', borderRadius: 10, border: '1px solid var(--separator)' }} />
                   </label>
                   <Button variant="secondary" icon={<Trash2 size={14} />} onClick={() => { setFOT(''); setFPlaca(''); setFMes(''); setFDesde(''); setFHasta(''); }}>Limpiar filtros</Button>
                 </div>
@@ -488,7 +488,7 @@ export function OrdenesTrabajoPage() {
                   <table className="inv-kardex" style={{ minWidth: '78rem' }}>
                     <thead>
                       <tr>
-                        <th>Estado</th><th>N° OT</th><th>Fecha</th><th>Placa</th><th style={{ textAlign: 'right' }}>Kilometraje</th>
+                        <th>Acciones</th><th>N° OT</th><th>Fecha</th><th>Placa</th><th style={{ textAlign: 'right' }}>Kilometraje</th>
                         <th>Tipo / Sub tipo</th><th>Supervisor</th><th>Status rampa</th><th>Observaciones</th>
                         <th style={{ textAlign: 'right' }}>Costo total</th><th style={{ width: 56 }}>Ver</th>
                       </tr>
@@ -500,7 +500,16 @@ export function OrdenesTrabajoPage() {
                         const obs = String(det.motivo ?? o.observaciones ?? '').trim();
                         return (
                           <tr key={otId(o)} onClick={() => { haptic('selection'); setSeleccionada(o); }} style={{ cursor: 'pointer' }}>
-                            <td><span className={`ot-estado ot-estado--${estadoColor(o.estado)}`}>{etiquetaEstado(o.estado)}</span></td>
+                            <td style={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                              <span className={`ot-estado ot-estado--${estadoColor(o.estado)}`} style={{ marginRight: 6 }}>{etiquetaEstado(o.estado)}</span>
+                              {accionesDisponibles(o.estado).filter(a => a !== 'anular').map(a => (
+                                <button key={a} type="button" className="btn btn-sm" disabled={ejecutando}
+                                  onClick={() => setConfirmando({ accion: a, ot: o })}
+                                  style={{ minHeight: 36, marginRight: 4, padding: '0 10px', borderRadius: 999, fontSize: '0.8125rem', fontWeight: 600, border: '1px solid var(--separator)', background: 'var(--surface)', cursor: 'pointer' }}>
+                                  {ETIQUETA_ACCION[a]}
+                                </button>
+                              ))}
+                            </td>
                             <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>{otId(o)}{o.reporte_desvinculado && <> <Badge tone="amber">Reporte desvinculado</Badge></>}</td>
                             <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', color: 'var(--label-2)' }}>{otFecha(o)}</td>
                             <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{o.placa}</td>
