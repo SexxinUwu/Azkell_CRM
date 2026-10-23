@@ -79,7 +79,9 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
 
             // Actualizar badge de conteo de la pestaña
             const badgeUlt = document.getElementById('badge-ultimas-count');
-            if (badgeUlt) badgeUlt.innerText = window._neuDataUltimas.length.toLocaleString();
+            // Cuenta vehículos (placas únicas), igual que /app; no filas de llantas
+            const placasUlt = new Set((window._neuDataUltimas || []).map(r => String(r.placa || '').toUpperCase().trim()));
+            if (badgeUlt) badgeUlt.innerText = placasUlt.size.toLocaleString();
 
             // Extraer lista única de empresas/dueños para el selector
             window._neuPoblarSelectEmpresas();
