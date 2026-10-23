@@ -158,7 +158,7 @@ export function OrdenesServicioPage() {
 
         {lista.isLoading ? <PageLoader /> : lista.isError ? <Notice tone="error">{errorMessage(lista.error)}</Notice> : visibles.length === 0 ? (
           <EmptyState icon={busqueda || estado ? <SearchX size={22} /> : <ScrollText size={22} />} title={busqueda || estado ? 'Sin coincidencias' : 'Sin órdenes de servicio'}>
-            Las órdenes se crean desde la versión actual.
+            {puedeCrear ? 'Crea la primera con el botón «Nueva orden».' : 'Aún no hay órdenes registradas.'}
           </EmptyState>
         ) : (
           <TablaRedimensionable id="ordenes-servicio" columnas={COLUMNAS} ariaLabel="Órdenes de servicio">

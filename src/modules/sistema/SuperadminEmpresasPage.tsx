@@ -107,7 +107,7 @@ function EmpresaSheet({ abierto, empresa, onClose, onGuardado }: {
   // Autocompleta la razón social con SUNAT (GET /api/proxy/sunat?doc=RUC, el mismo que usa la versión actual)
   async function consultarRuc() {
     const ruc = v.ruc.trim();
-    if (!/^d{11}$/.test(ruc)) { setError('Ingresa un RUC de 11 números para consultar.'); haptic('warning'); return; }
+    if (!/^\d{11}$/.test(ruc)) { setError('Ingresa un RUC de 11 números para consultar.'); haptic('warning'); return; }
     setConsultando(true); setError(null);
     try {
       const d = await api<ConsultaDocumento>(`/proxy/sunat?doc=${ruc}`);
@@ -204,7 +204,7 @@ function EmpresaSheet({ abierto, empresa, onClose, onGuardado }: {
           {p => (
             <div style={{ display: 'flex', gap: 8 }}>
               <TextInput {...p} value={v.ruc} inputMode="numeric" disabled={guardando}
-                onChange={e => setV({ ...v, ruc: e.target.value.replace(/D/g, '').slice(0, 11) })} />
+                onChange={e => setV({ ...v, ruc: e.target.value.replace(/\D/g, '').slice(0, 11) })} />
               <Button variant="secondary" onClick={consultarRuc} loading={consultando} disabled={guardando || v.ruc.length !== 11}>Consultar RUC</Button>
             </div>
           )}

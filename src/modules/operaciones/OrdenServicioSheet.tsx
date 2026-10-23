@@ -199,7 +199,6 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '' }: 
   async function guardar() {
     setError(null);
     if (!f!.cliente.trim()) { setError('Escribe o elige el cliente.'); return; }
-    if (f!.modalidad === 'TERCERIZADO' && !f!.proveedor.trim()) { setError('Indica el proveedor tercero de la flota tercerizada.'); return; }
 
     const payload = {
       serie: f!.serie, numero: f!.numero, fecha: f!.fecha, moneda: f!.moneda, tipo_cambio: f!.tipo_cambio,
@@ -247,6 +246,7 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '' }: 
             </SelectInput>
           )}
         </Field>
+        {f.moneda !== 'SOLES' && <Field label="Tipo de cambio">{p => <TextInput {...p} inputMode="decimal" value={f.tipo_cambio} onChange={e => set({ tipo_cambio: e.target.value })} />}</Field>}
         <Field label="Cliente *" wide>
           {p => (
             <>
@@ -281,7 +281,7 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '' }: 
         {f.modalidad === 'TERCERIZADO' && (
           <>
             <Field label="Proveedor tercero">{p => <TextInput {...p} value={f.proveedor} onChange={e => set({ proveedor: e.target.value })} />}</Field>
-            <Field label="RUC del proveedor">{p => <TextInput {...p} value={f.proveedor_ruc} onChange={e => set({ proveedor_ruc: e.target.value })} />}</Field>
+            <Field label="RUC del proveedor">{p => <TextInput {...p} maxLength={11} inputMode="numeric" value={f.proveedor_ruc} onChange={e => set({ proveedor_ruc: e.target.value })} />}</Field>
           </>
         )}
         <Field label="Costo del flete">{p => <TextInput {...p} inputMode="decimal" value={f.costo_flete} onChange={e => set({ costo_flete: e.target.value })} />}</Field>

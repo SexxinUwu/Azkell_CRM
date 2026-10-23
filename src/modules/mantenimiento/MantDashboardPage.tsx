@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Activity, AlertTriangle, CheckCircle2, Clock, Gauge,
+  Activity, AlertTriangle, CheckCircle2, Clock,
   DollarSign, FileText, History, LayoutDashboard, Plus,
   ScrollText, ShieldCheck, Sun,
   Truck, Wrench,
@@ -17,7 +17,7 @@ import { Sheet } from '../../core/ui/Sheet';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { BarrasGrafico, DonaGrafico } from '../../core/ui/Graficos';
 import { MultiSelect } from '../../core/ui/MultiSelect';
-import { useFleetrunStats } from './FleetrunPage';
+import { useFleetrunStats, useEmpresaNombre, PanelEstadoFlota } from './FleetrunPage';
 import { api } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
@@ -544,6 +544,7 @@ export function MantDashboardPage() {
   const empresasOpc = useMemo(() => [...new Set(ciclos.map(c => c.cliente))].sort((a, b) => a.localeCompare(b, 'es')), [ciclos]);
   const ciclosSel = useMemo(() => (empresasSel.length ? ciclos.filter(c => empresasSel.includes(c.cliente)) : ciclos), [ciclos, empresasSel]);
   const fleetrun = useFleetrunStats();
+  const empresa = useEmpresaNombre();
 
   // Flota = placas activas en uso (sin valores de respaldo): si no hay datos, los porcentajes quedan sin cifra
   const totalFlota     = ciclosSel.length;
@@ -892,21 +893,7 @@ export function MantDashboardPage() {
           {/* ─── Fila 2b: Estado de mantenimientos, vencimientos y OT por semana ─── */}
           <div className="mant-grid">
             <div className="mant-col-4">
-              <div className="mant-card" style={{ height: '100%' }}>
-                <div className="mant-card__header">
-                  <div className="mant-card__title"><Gauge size={15} /> Estado de mantenimientos</div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--label-2)' }}>{fleetrun.total} unidades</span>
-                </div>
-                <DonaGrafico
-                  centro={fleetrun.total > 0 ? `${Math.round((fleetrun.vigentes / fleetrun.total) * 100)}%` : '—'}
-                  porciones={[
-                    { nombre: 'Vigentes', valor: fleetrun.vigentes, color: 'var(--green-ink)' },
-                    { nombre: 'Por vencer', valor: fleetrun.porVencer, color: 'var(--amber-ink)' },
-                    { nombre: 'Vencidos', valor: fleetrun.vencidos, color: 'var(--red-ink)' },
-                    { nombre: 'Sin datos', valor: fleetrun.sinDatos, color: 'var(--label-3)' },
-                  ]}
-                />
-              </div>
+              <PanelEstadoFlota stats={fleetrun} empresa={empresa.data ?? ''} />
             </div>
             <div className="mant-col-4">
               <div className="mant-card" style={{ height: '100%' }}>

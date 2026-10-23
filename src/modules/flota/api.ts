@@ -463,7 +463,7 @@ const numero = (v: unknown, defecto = 0) => {
   return v == null || v === '' || !Number.isFinite(n) ? defecto : n;
 };
 
-export function useUnidadesGps() {
+export function useUnidadesGps(intervaloMs = 4000) {
   return useQuery({
     queryKey: ['flota', 'gps-unidades'],
     queryFn: async (): Promise<UnidadMapa[]> => {
@@ -499,7 +499,7 @@ export function useUnidadesGps() {
         })
         .filter(u => u.placa);
     },
-    refetchInterval: 4000,
+    refetchInterval: intervaloMs,
     staleTime: 3000,
   });
 }

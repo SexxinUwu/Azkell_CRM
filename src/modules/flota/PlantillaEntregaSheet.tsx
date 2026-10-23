@@ -50,7 +50,7 @@ export function PlantillaEntregaSheet({ open, onClose }: { open: boolean; onClos
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
           {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
           <p className="t-footnote c-secondary" style={{ margin: 0 }}>
-            Las categorías y los ítems de abajo son los que se califican (Bueno, Regular, Malo) en cada acta nueva. Se guarda en este navegador.
+            Las categorías y los ítems de abajo son los que se califican (Bueno, Regular, Malo) en cada acta nueva. Se guarda en el servidor y vale para toda la empresa.
           </p>
           {b.length === 0 && <p className="t-footnote c-secondary">No hay categorías. Agrega una para comenzar.</p>}
           {b.map((g, i) => (

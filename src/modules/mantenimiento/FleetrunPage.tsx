@@ -15,6 +15,7 @@ import {
   frObs, frPlaca, frTipo, frUts, useFleetrun, type FleetrunFila,
 } from './api';
 import { usePlacas, useMetricas } from '../placas/api';
+import { useUnidadesGps } from '../flota/api';
 import { useKmHistorico } from './fleetrunApi';
 import { FleetrunFormulario } from './FleetrunFormulario';
 import { ImportarFleetrunSheet, descargarPlantillaFleetrun } from './ImportarFleetrunSheet';
@@ -41,6 +42,42 @@ function useFleetrunUmbrales() {
   });
 }
 
+// ─── Km / horas en vivo del GPS (mismo origen y emparejamiento que el clásico: buscarWialonPorPlaca) ───
+
+export type KmVivo = (placa: string) => { km: number; horas: number } | null;
+
+const limpiarPlaca = (p: string) => p.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+
+/** KPIs y listas: el GPS se consulta cada 30 s (el mapa sigue en 4 s) para no saturar el navegador */
+export function useKmVivo(): KmVivo {
+  const { data: unidades } = useUnidadesGps(30_000);
+  const { data: placas } = usePlacas();
+  return useMemo(() => {
+    if (!unidades || !unidades.length) return () => null;
+    const wialonDe = new Map<string, string>();
+    for (const p of placas ?? []) if (p.wialon) wialonDe.set(limpiarPlaca(p.placa), p.wialon.trim().toUpperCase());
+    return (placa: string) => {
+      const pl = limpiarPlaca(placa);
+      if (!pl) return null;
+      const wn = wialonDe.get(pl);
+      const exacta = wn ? unidades.find(u => u.nombre.trim().toUpperCase() === wn) : undefined;
+      if (exacta) return exacta;
+      return unidades.find(u => {
+        const wp = limpiarPlaca(u.placa);
+        const wnom = limpiarPlaca(u.nombre);
+        return (wp && (wp === pl || wp.includes(pl) || pl.includes(wp))) || (wnom && (wnom === pl || wnom.includes(pl) || pl.includes(wnom)));
+      }) ?? null;
+    };
+  }, [unidades, placas]);
+}
+
+/** Km (u horas) actual: el del GPS en vivo si la unidad aparece, si no el guardado en el registro */
+function kmActual(f: FleetrunFila, esHoras: boolean, vivo: KmVivo): number {
+  const v = vivo(frPlaca(f));
+  if (v) return (esHoras ? v.horas : v.km) || 0;
+  return frKmGps(f);
+}
+
 // ─── Lógica de estado (igual a la SPA clásica) ───────────────────────────────
 
 function calcularEstado(
@@ -48,10 +85,11 @@ function calcularEstado(
   uts: string,
   umbrales: Record<string, number>,
   metricas: Map<string, string>,
+  vivo: KmVivo,
 ): EstadoFR {
   const placa = frPlaca(f).toUpperCase();
   const esHoras = metricas.get(placa) === 'horas';
-  const kmG = frKmGps(f);
+  const kmG = kmActual(f, esHoras, vivo);
   let kmP = frKmProx(f);
   const kmC = frKmCambio(f);
   const frec = frFrecuencia(f);
@@ -129,6 +167,43 @@ function DonutChart({ vencidos, porVencer, vigentes }: { vencidos: number; porVe
   );
 }
 
+/** Panel de estado de la flota: logo, empresa, fecha, dona y KPIs. Lo usan Fleetrun y el dashboard de taller. */
+export function PanelEstadoFlota({ stats, empresa }: { stats: { total: number; vencidos: number; porVencer: number; vigentes: number }; empresa: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 'var(--s-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="mant-card" style={{ minWidth: 200, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--s-2)' }}>
+        <img src="/api/tenant-logo" alt="" style={{ height: 64, maxWidth: 180, objectFit: 'contain' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+        <div style={{ fontWeight: 700 }}>{empresa}</div>
+        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--label-1)', background: 'var(--fill)', borderRadius: 999, padding: '3px 10px' }}>
+          {new Date().toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Lima' })}
+        </span>
+      </div>
+      <DonutChart vencidos={stats.vencidos} porVencer={stats.porVencer} vigentes={stats.vigentes} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, auto)', gap: 'var(--s-2) var(--s-4)' }}>
+        {[
+          { label: 'Flota total',  valor: stats.total,     color: 'accent' as const },
+          { label: 'Vencidos',     valor: stats.vencidos,  color: 'red'    as const, pct: stats.total ? Math.round(stats.vencidos  / stats.total * 100) : 0 },
+          { label: 'Por vencer',   valor: stats.porVencer, color: 'amber'  as const, pct: stats.total ? Math.round(stats.porVencer / stats.total * 100) : 0 },
+          { label: 'Vigentes',     valor: stats.vigentes,  color: 'green'  as const, pct: stats.total ? Math.round(stats.vigentes  / stats.total * 100) : 0 },
+        ].map(s => (
+          <div key={s.label} style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{
+              fontSize: '1.375rem', fontWeight: 700, fontFamily: 'var(--font-mono)',
+              color: s.color === 'accent' ? 'var(--label)' : `var(--${s.color}-ink)`,
+            }}>
+              {s.valor}
+              {'pct' in s && (s as { pct: number }).pct > 0 && (
+                <span style={{ fontSize: '0.75rem', marginLeft: 4, opacity: 0.7 }}>{(s as { pct: number }).pct}%</span>
+              )}
+            </span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Constantes ──────────────────────────────────────────────────────────────
 
 const FILTROS = ['Todos', 'Vencido', 'Por vencer', 'Vigente', 'Sin datos'] as const;
@@ -138,7 +213,7 @@ const POR_PAGINA = 20;
 
 /** Estado preventivo de la flota: peor estado por placa (sin duplicar placa + tipo). Una sola regla para la pantalla y el dashboard. */
 export function resumenPreventivo(filas: FleetrunFila[], placasData: { placa: string; estado: string; uts: string }[] | undefined,
-  umbrales: Record<string, number>, metricas: Map<string, string>) {
+  umbrales: Record<string, number>, metricas: Map<string, string>, vivo: KmVivo) {
   const hoy = Date.now();
   const ordenadas = [...filas].sort((a, b) => {
     const ta = parseFechaMs(a[3] as string | null);
@@ -163,7 +238,7 @@ export function resumenPreventivo(filas: FleetrunFila[], placasData: { placa: st
   for (const f of unicas.values()) {
     const placa = frPlaca(f).toUpperCase();
     const uts = activas?.get(placa)?.uts || frUts(f);
-    const est = calcularEstado(f, uts, umbrales, metricas);
+    const est = calcularEstado(f, uts, umbrales, metricas, vivo);
     const prev = porPlaca.get(placa);
     if (!prev || PRIORIDAD[est] > PRIORIDAD[prev]) porPlaca.set(placa, est);
   }
@@ -204,6 +279,7 @@ export function FleetrunPage() {
   const { data: umbrales = {} } = useFleetrunUmbrales();
   const empresa = useEmpresaNombre();
   const { data: kmDia } = useKmHistorico();
+  const vivo = useKmVivo();
   const [formulario, setFormulario] = useState<{ registro: FleetrunFila | null } | null>(null);
   const [importando, setImportando] = useState(false);
 
@@ -254,7 +330,7 @@ export function FleetrunPage() {
   }, [filasOrdenadas, historial, placasActivas]);
 
   // KPIs de la flota: misma función que el dashboard de taller
-  const stats = useMemo(() => resumenPreventivo(filas, placasData, umbrales, metricas), [filas, placasData, umbrales, metricas]);
+  const stats = useMemo(() => resumenPreventivo(filas, placasData, umbrales, metricas, vivo), [filas, placasData, umbrales, metricas, vivo]);
 
   // Filtrado + búsqueda
   const filtrados = useMemo(() => {
@@ -267,7 +343,7 @@ export function FleetrunPage() {
       lista = lista.filter(f => {
         const placa = frPlaca(f).toUpperCase();
         const uts   = placasActivas?.get(placa)?.uts || frUts(f);
-        return calcularEstado(f, uts, umbrales, metricas) === target;
+        return calcularEstado(f, uts, umbrales, metricas, vivo) === target;
       });
     }
     if (busqueda) {
@@ -279,7 +355,7 @@ export function FleetrunPage() {
       );
     }
     return lista;
-  }, [datosVista, filtro, busqueda, placasActivas, umbrales, metricas]);
+  }, [datosVista, filtro, busqueda, placasActivas, umbrales, metricas, vivo]);
 
   // Paginación
   const totalPags   = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
@@ -349,37 +425,7 @@ export function FleetrunPage() {
 
           {/* KPIs + Donut */}
           {!historial && (
-            <div style={{ display: 'flex', gap: 'var(--s-3)', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div className="mant-card" style={{ minWidth: 200, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--s-2)' }}>
-                <img src="/api/tenant-logo" alt="" style={{ height: 64, maxWidth: 180, objectFit: 'contain' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                <div style={{ fontWeight: 700 }}>{empresa.data ?? ''}</div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--label-1)', background: 'var(--fill)', borderRadius: 999, padding: '3px 10px' }}>
-                  {new Date().toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Lima' })}
-                </span>
-              </div>
-              <DonutChart vencidos={stats.vencidos} porVencer={stats.porVencer} vigentes={stats.vigentes} />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, auto)', gap: 'var(--s-2) var(--s-4)' }}>
-                {[
-                  { label: 'Flota total',  valor: stats.total,     color: 'accent' as const },
-                  { label: 'Vencidos',     valor: stats.vencidos,  color: 'red'    as const, pct: stats.total ? Math.round(stats.vencidos  / stats.total * 100) : 0 },
-                  { label: 'Por vencer',   valor: stats.porVencer, color: 'amber'  as const, pct: stats.total ? Math.round(stats.porVencer / stats.total * 100) : 0 },
-                  { label: 'Vigentes',     valor: stats.vigentes,  color: 'green'  as const, pct: stats.total ? Math.round(stats.vigentes  / stats.total * 100) : 0 },
-                ].map(s => (
-                  <div key={s.label} style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{
-                      fontSize: '1.375rem', fontWeight: 700, fontFamily: 'var(--font-mono)',
-                      color: s.color === 'accent' ? 'var(--label)' : `var(--${s.color}-ink)`,
-                    }}>
-                      {s.valor}
-                      {'pct' in s && (s as { pct: number }).pct > 0 && (
-                        <span style={{ fontSize: '0.75rem', marginLeft: 4, opacity: 0.7 }}>{(s as { pct: number }).pct}%</span>
-                      )}
-                    </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{s.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <PanelEstadoFlota stats={stats} empresa={empresa.data ?? ''} />
           )}
 
           {/* Filtros + búsqueda */}
@@ -444,9 +490,9 @@ export function FleetrunPage() {
                       const uts   = placasActivas?.get(placa)?.uts || frUts(f);
                       const kmC   = frKmCambio(f);
                       let   kmP   = frKmProx(f);
-                      const kmG   = frKmGps(f);
                       const frec  = frFrecuencia(f);
                       const esHoras = metricas.get(placa) === 'horas';
+                      const kmG   = kmActual(f, esHoras, vivo);
                       const unidad  = esHoras ? 'h' : '';
 
                       if ((!kmP || kmP === 0) && frec > 0 && kmC > 0) kmP = kmC + frec;
@@ -455,7 +501,7 @@ export function FleetrunPage() {
                         ? kmP - kmG
                         : kmP > 0 && kmC > 0 ? kmP - kmC : 0;
 
-                      const est   = calcularEstado(f, uts, umbrales, metricas);
+                      const est   = calcularEstado(f, uts, umbrales, metricas, vivo);
                       const color = estadoColor(est);
 
                       return (
@@ -559,5 +605,6 @@ export function useFleetrunStats() {
   const { data: placasData } = usePlacas();
   const { data: metricas = new Map<string, string>() } = useMetricas();
   const { data: umbrales = {} } = useFleetrunUmbrales();
-  return useMemo(() => resumenPreventivo(data ?? [], placasData, umbrales, metricas), [data, placasData, metricas, umbrales]);
+  const vivo = useKmVivo();
+  return useMemo(() => resumenPreventivo(data ?? [], placasData, umbrales, metricas, vivo), [data, placasData, metricas, umbrales, vivo]);
 }

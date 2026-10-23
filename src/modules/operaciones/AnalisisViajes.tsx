@@ -32,7 +32,7 @@ interface Resp { ok: boolean; trips: Trip[]; kpis: { totalViajes: number; totalG
 const n = (v: unknown) => Number(v) || 0;
 interface TelemetriaWialon {
   recorridoKmGps: number | null; combustibleConsumidoGps: number | null; rendimientoGps: number | null;
-  velocidadMaxGps: number | null; rpmMediaGps: number | null; rpmMaxGps: number | null; horasMotorGps: string | number | null; consumoRalentiGps: number | null;
+  velocidadMaxGps: number | null; rpmMediaGps: number | null; rpmMediaMaxGps?: number | null; rpmMaxGps: number | null; rpmMaxMaxGps?: number | null; horasMotorGps: string | number | null; consumoRalentiGps: number | null;
 }
 
 // Telemetría CAN Bus de Wialon para el periodo del viaje (de la primera a la última carga). Solo se consulta cuando se pide.
@@ -152,7 +152,7 @@ const ENCABEZADOS_EXCEL = [
   'FECHA INICIO', 'FECHA FIN', 'KM INICIO (VALES)', 'KM FIN (VALES)', 'RECORRIDO (VALES)', 'TOTAL GALONES (REAL)', 'KM / GALÓN (REAL)',
   'TOTAL GASTO (S/)', 'KM TEÓRICO (MATRIZ)', 'GALONES TEÓRICOS (MATRIZ)', 'KM / GALÓN (TEÓRICO MATRIZ)', 'DIFERENCIA (GALONES)',
   'ESTADO CONSUMO', 'GALONES IDA', 'GALONES RETORNO', 'RECORRIDO (GPS CAN)', 'COMB. CONSUMIDO (GPS CAN)', 'RENDIMIENTO (GPS CAN)',
-  'VELOCIDAD MÁXIMA (GPS)', 'CONSUMO PROMEDIO EN RALENTÍ (GAL/H)', 'RPM MEDIA (RPM)', 'RPM MÁXIMA (RPM)', 'HORAS DE MOTOR', 'CANTIDAD VALES',
+  'VELOCIDAD MÁXIMA (GPS)', 'CONSUMO PROMEDIO EN RALENTÍ (GAL/H)', 'RPM MEDIA (RPM)', 'RPM MEDIA (MÁXIMA RPM)', 'RPM MÁXIMA (RPM)', 'RPM MÁXIMA (MÁXIMA RPM)', 'HORAS DE MOTOR', 'CANTIDAD VALES',
 ];
 
 // Diferencia contra la matriz: positivo (sobreconsumo) en rojo, negativo (ahorro) en verde
@@ -476,9 +476,16 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
           a && a.rendTeorico > 0 ? ptoDecimal(a.rendTeorico, 2) : '—', dif !== null ? ptoDecimal(dif, 2) : '—',
           dif !== null ? (dif > 0 ? 'SOBRECONSUMO' : 'AHORRO') : '—', n(x.galonesIda), n(x.galonesRetorno),
           gv(g?.recorridoKmGps, 1), gv(g?.combustibleConsumidoGps), gv(g?.rendimientoGps), gv(g?.velocidadMaxGps, 0), gv(g?.consumoRalentiGps),
-          gv(g?.rpmMediaGps, 0), gv(g?.rpmMaxGps, 0), (g?.horasMotorGps == null ? '' : String(g.horasMotorGps)), vales,
+          gv(g?.rpmMediaGps, 0), gv(g?.rpmMediaMaxGps, 0), gv(g?.rpmMaxGps, 0), gv(g?.rpmMaxMaxGps, 0), (g?.horasMotorGps == null ? '' : String(g.horasMotorGps)), vales,
         ];
       });
+      // Fila TOTAL al final, como el clásico: galones reales y combustible consumido por GPS
+      const totGal = visibles.reduce((t, x) => t + cifras(x).galones, 0);
+      const totGps = visibles.reduce((t, x) => { const v = gps.data?.[x.viaje]?.data?.combustibleConsumidoGps; return t + (v != null && !isNaN(Number(v)) ? Number(v) : 0); }, 0);
+      const total: (string | number)[] = ENCABEZADOS_EXCEL.map(() => '');
+      total[2] = 'TOTAL'; total[ENCABEZADOS_EXCEL.indexOf('TOTAL GALONES (REAL)')] = ptoDecimal(totGal, 2);
+      total[ENCABEZADOS_EXCEL.indexOf('COMB. CONSUMIDO (GPS CAN)')] = totGps > 0 ? ptoDecimal(totGps, 2) : '—';
+      filas.push(total);
       await exportarExcel(urea ? 'Analisis-urea' : 'Analisis-combustible', 'Viajes', ENCABEZADOS_EXCEL, filas);
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
