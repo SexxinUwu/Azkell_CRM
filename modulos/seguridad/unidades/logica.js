@@ -1488,7 +1488,7 @@ window._sguUpdateExpressPhotoGrid = function() {
             var sHtml = '';
             sList.forEach(function(item, idx) {
                 sHtml += '<div class="sgu-photo-thumb-box">' +
-                    '<img src="' + item.url + '" class="sgu-photo-thumb-img" alt="Evidencia ' + (idx + 1) + '" onclick="window.open(\'' + item.url + '\')">' +
+                    '<img src="' + item.url + '" class="sgu-photo-thumb-img" alt="Evidencia ' + (idx + 1) + '" onclick="window._sguAbrirVisorLista(\'salida\', ' + idx + ')">' +
                     '<button type="button" class="sgu-photo-thumb-del" onclick="window._sguRemovePhoto(\'salida\', ' + idx + ')" title="Eliminar foto">' +
                         '<i class="bi bi-x-lg"></i>' +
                     '</button>' +
@@ -1510,7 +1510,7 @@ window._sguUpdateExpressPhotoGrid = function() {
             var rHtml = '';
             rList.forEach(function(item, idx) {
                 rHtml += '<div class="sgu-photo-thumb-box">' +
-                    '<img src="' + item.url + '" class="sgu-photo-thumb-img" alt="Evidencia ' + (idx + 1) + '" onclick="window.open(\'' + item.url + '\')">' +
+                    '<img src="' + item.url + '" class="sgu-photo-thumb-img" alt="Evidencia ' + (idx + 1) + '" onclick="window._sguAbrirVisorLista(\'retorno\', ' + idx + ')">' +
                     '<button type="button" class="sgu-photo-thumb-del" onclick="window._sguRemovePhoto(\'retorno\', ' + idx + ')" title="Eliminar foto">' +
                         '<i class="bi bi-x-lg"></i>' +
                     '</button>' +
@@ -1915,7 +1915,7 @@ function _sguRenderChecklist() {
     } else {
         photosList.forEach(function(item, idx) {
             html += '<div class="sgu-photo-thumb-box">' +
-                '<img src="' + item.url + '" class="sgu-photo-thumb-img" alt="Evidencia ' + (idx + 1) + '" onclick="window.open(\'' + item.url + '\')">' +
+                '<img src="' + item.url + '" class="sgu-photo-thumb-img" alt="Evidencia ' + (idx + 1) + '" onclick="window._sguAbrirVisorLista(\'' + tipo + '\', ' + idx + ')">' +
                 '<button type="button" class="sgu-photo-thumb-del" onclick="window._sguRemovePhoto(\'' + tipo + '\', ' + idx + ')" title="Eliminar foto">' +
                     '<i class="bi bi-x-lg"></i>' +
                 '</button>' +
@@ -2972,6 +2972,146 @@ window._sguSaveSettings = function() {
 // =========================================================
 // 📸 GALERÍA DE FOTOS (Bottom Drawer)
 // =========================================================
+// =========================================================
+// 🖼️ VISOR DE FOTOS (galería a pantalla completa, como la del celular)
+// Foto grande, flechas, deslizar con el dedo y tira de miniaturas abajo.
+// =========================================================
+window._sguAbrirVisor = function(urls, indice, titulo) {
+    if (!urls || !urls.length) return;
+    var previo = document.getElementById('sgu-visor');
+    if (previo && previo.parentNode) previo.parentNode.removeChild(previo);
+
+    var n = urls.length;
+    var i = Math.max(0, Math.min(indice || 0, n - 1));
+    var visor = document.createElement('div');
+    visor.id = 'sgu-visor';
+    visor.className = 'sgu-visor';
+    visor.setAttribute('role', 'dialog');
+    visor.setAttribute('aria-modal', 'true');
+
+    var barra = document.createElement('div');
+    barra.className = 'sgu-visor__barra';
+    var tit = document.createElement('span');
+    tit.className = 'sgu-visor__titulo';
+    tit.textContent = titulo || 'Fotos';
+    var cuenta = document.createElement('span');
+    cuenta.className = 'sgu-visor__cuenta';
+    var cerrar = document.createElement('button');
+    cerrar.type = 'button';
+    cerrar.className = 'sgu-visor__cerrar';
+    cerrar.setAttribute('aria-label', 'Cerrar visor');
+    cerrar.innerHTML = '<i class="bi bi-x-lg"></i>';
+    barra.appendChild(tit); barra.appendChild(cuenta); barra.appendChild(cerrar);
+
+    var escena = document.createElement('div');
+    escena.className = 'sgu-visor__escena';
+    var foto = document.createElement('img');
+    foto.className = 'sgu-visor__foto';
+    foto.alt = 'Foto';
+    foto.draggable = false;
+    var izq = document.createElement('button');
+    izq.type = 'button'; izq.className = 'sgu-visor__flecha sgu-visor__flecha--izq';
+    izq.setAttribute('aria-label', 'Foto anterior');
+    izq.innerHTML = '<i class="bi bi-chevron-left"></i>';
+    var der = document.createElement('button');
+    der.type = 'button'; der.className = 'sgu-visor__flecha sgu-visor__flecha--der';
+    der.setAttribute('aria-label', 'Foto siguiente');
+    der.innerHTML = '<i class="bi bi-chevron-right"></i>';
+    escena.appendChild(foto); escena.appendChild(izq); escena.appendChild(der);
+
+    var tira = document.createElement('div');
+    tira.className = 'sgu-visor__tira';
+    var minis = [];
+    urls.forEach(function(u, k) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'sgu-visor__mini';
+        b.setAttribute('aria-label', 'Ver foto ' + (k + 1));
+        var im = document.createElement('img');
+        im.src = u; im.alt = ''; im.loading = 'lazy'; im.draggable = false;
+        b.appendChild(im);
+        b.addEventListener('click', function() { ir(k); });
+        tira.appendChild(b);
+        minis.push(b);
+    });
+
+    visor.appendChild(barra); visor.appendChild(escena);
+    if (n > 1) visor.appendChild(tira);
+    document.body.appendChild(visor);
+
+    function pintar() {
+        foto.src = urls[i];
+        foto.alt = 'Foto ' + (i + 1);
+        foto.style.transform = '';
+        cuenta.textContent = (i + 1) + ' / ' + n;
+        izq.style.display = (n > 1 && i > 0) ? '' : 'none';
+        der.style.display = (n > 1 && i < n - 1) ? '' : 'none';
+        minis.forEach(function(b, k) {
+            if (k === i) { b.classList.add('sgu-visor__mini--activa'); b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); }
+            else b.classList.remove('sgu-visor__mini--activa');
+        });
+    }
+    function ir(destino) {
+        if (destino < 0 || destino >= n || destino === i) return;
+        i = destino;
+        pintar();
+    }
+    function cerrarVisor() {
+        document.removeEventListener('keydown', teclado, true);
+        if (visor.parentNode) visor.parentNode.removeChild(visor);
+    }
+    function teclado(e) {
+        if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); cerrarVisor(); }
+        else if (e.key === 'ArrowRight') { e.stopImmediatePropagation(); ir(i + 1); }
+        else if (e.key === 'ArrowLeft') { e.stopImmediatePropagation(); ir(i - 1); }
+    }
+
+    // Deslizar con el dedo o el mouse: la foto sigue al dedo y, al soltar, cambia si el gesto fue suficiente
+    var x0 = null, dx = 0, t0 = 0;
+    escena.addEventListener('pointerdown', function(e) {
+        if (n < 2 || e.target.closest('.sgu-visor__flecha')) return;
+        x0 = e.clientX; dx = 0; t0 = Date.now();
+        try { escena.setPointerCapture(e.pointerId); } catch (err) { /* sin captura */ }
+    });
+    escena.addEventListener('pointermove', function(e) {
+        if (x0 === null) return;
+        dx = e.clientX - x0;
+        foto.style.transition = 'none';
+        foto.style.transform = 'translateX(' + dx + 'px)';
+    });
+    function soltar() {
+        if (x0 === null) return;
+        var vel = dx / Math.max(1, Date.now() - t0); // px/ms
+        var proyectado = dx + vel * 250;
+        foto.style.transition = '';
+        x0 = null;
+        if (proyectado < -80) ir(i + 1);
+        else if (proyectado > 80) ir(i - 1);
+        foto.style.transform = '';
+    }
+    escena.addEventListener('pointerup', soltar);
+    escena.addEventListener('pointercancel', soltar);
+
+    cerrar.addEventListener('click', cerrarVisor);
+    izq.addEventListener('click', function() { ir(i - 1); });
+    der.addEventListener('click', function() { ir(i + 1); });
+    document.addEventListener('keydown', teclado, true);
+    pintar();
+};
+
+// Miniaturas de los cajones (fotos aún sin guardar): abre el visor en la foto tocada
+window._sguAbrirVisorLista = function(tipo, idx) {
+    var lista = (_sguPhotos && _sguPhotos[tipo]) || [];
+    window._sguAbrirVisor(lista.map(function(p) { return p.url; }), idx, 'Evidencias — ' + (tipo === 'salida' ? 'Ida' : 'Vuelta'));
+};
+
+// Fotos del expediente abierto (detalle del checklist)
+window._sguAbrirVisorRec = function(tipo, idx) {
+    var rec = window._sguCurrentRecord || {};
+    var lista = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+    window._sguAbrirVisor(lista.map(function(f) { return f.url; }), idx, 'Evidencias Fotográficas — ' + (tipo === 'salida' ? 'Ida' : 'Vuelta'));
+};
+
 window._sguVerFotos = async function(tipo) {
     if (!window._sguCurrentRecord) return;
     var rec = window._sguCurrentRecord;
@@ -2981,9 +3121,7 @@ window._sguVerFotos = async function(tipo) {
 
     var titleEl = document.getElementById('sgu-gallery-title');
     if (titleEl) titleEl.textContent = 'Evidencias Fotográficas — ' + (tipo === 'salida' ? 'Ida' : 'Vuelta');
-    _sguOpenDrawer('sgu-gallery-overlay');
-
-    container.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando evidencias...</div>';
+    _sguToast('Cargando evidencias...', 'bi-images');
 
     // Obtener URLs con firma activa para evitar AccessDenied de S3
     var fotosFirmadas = [];
@@ -3003,19 +3141,10 @@ window._sguVerFotos = async function(tipo) {
     var fotos = todasFotos.filter(function(f) { return f.tipo === tipo; });
 
     if (fotos.length === 0) {
+        _sguOpenDrawer('sgu-gallery-overlay');
         container.innerHTML = '<div class="text-center py-5 text-secondary"><i class="bi bi-images fs-2 d-block mb-2"></i>No hay evidencias fotográficas registradas en la fase de ' + tipo + '.</div>';
     } else {
-        var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;">';
-        fotos.forEach(function(f, idx) {
-            html += '<div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#f8fafc;box-shadow:0 2px 8px rgba(0,0,0,0.04);position:relative;">';
-            html += '<a href="' + f.url + '" target="_blank" style="display:block;background:#f1f5f9;min-height:140px;">';
-            html += '<img src="' + f.url + '" style="width:100%;height:140px;object-fit:cover;display:block;" alt="Evidencia ' + (idx + 1) + '" loading="lazy">';
-            html += '</a>';
-            html += '<div style="padding:6px 8px;font-size:0.75rem;font-weight:700;color:#475569;text-align:center;background:#fff;border-top:1px solid #f1f5f9;">Foto ' + (idx + 1) + '</div>';
-            html += '</div>';
-        });
-        html += '</div>';
-        container.innerHTML = html;
+        window._sguAbrirVisor(fotos.map(function(f) { return f.url; }), 0, 'Evidencias Fotográficas — ' + (tipo === 'salida' ? 'Ida' : 'Vuelta'));
     }
 };
 
@@ -3069,7 +3198,7 @@ window._sguVerDetalles = function(tipo) {
             html += '<h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-images text-primary me-1"></i> Evidencias Fotográficas Adjuntas (' + fotos.length + ')</h6>';
             html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;">';
             fotos.forEach(function(f, idx) {
-                html += '<a href="' + f.url + '" target="_blank" style="display:block;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.04);">';
+                html += '<a href="#" onclick="window._sguAbrirVisorRec(\'' + tipo + '\', ' + idx + '); return false;" style="display:block;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.04);cursor:pointer;">';
                 html += '<img src="' + f.url + '" style="width:100%;height:110px;object-fit:cover;display:block;" alt="Evidencia ' + (idx + 1) + '" crossorigin="anonymous">';
                 html += '</a>';
             });
