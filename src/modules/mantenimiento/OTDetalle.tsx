@@ -11,7 +11,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { abrirClasico } from '../../core/layout/navigation';
-import { compartirPDF, descargarArchivo } from '../../core/lib/pdf';
+import { compartirPDF } from '../../core/lib/pdf';
 import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
 import { useInspecciones, type Inspeccion } from '../inspecciones/api';
 import {
@@ -153,13 +153,30 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     }
   }
 
+  /** PDF en otra pestaña, igual que el PDF de neumáticos: la pestaña se abre al tocar el botón y muestra un aviso mientras se genera */
+  async function abrirPdf(generar: () => Promise<Blob>, nombre: string) {
+    const win = window.open('', '_blank');
+    try { win?.document.write('<!doctype html><meta charset="utf-8"><title>Generando PDF…</title><body style="margin:0;height:100vh;display:grid;place-items:center;font:16px system-ui,sans-serif;color:#475569">Generando PDF…</body>'); win?.document.close(); } catch { /* sin acceso a la pestaña */ }
+    try {
+      const url = URL.createObjectURL(await generar());
+      if (win) win.location.href = url;
+      else { const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); }
+      setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    } catch (err) {
+      win?.close();
+      throw err;
+    }
+  }
+
   async function exportar(modo: 'descargar' | 'whatsapp') {
     setExportando(true);
     try {
+      if (modo === 'descargar') {
+        await abrirPdf(() => pdfOt({ ot, trabajos: trabajosTodos ?? [], materiales: materiales ?? [], usuario }), `OT-${idOt}-${ot.placa}.pdf`);
+        return;
+      }
       const blob = await pdfOt({ ot, trabajos: trabajosTodos ?? [], materiales: materiales ?? [], usuario });
-      const nombre = `OT-${idOt}-${ot.placa}.pdf`;
-      if (modo === 'descargar') descargarArchivo(blob, nombre);
-      else await compartirPDF(blob, nombre, `Orden de trabajo ${idOt} · placa ${ot.placa}`);
+      await compartirPDF(blob, `OT-${idOt}-${ot.placa}.pdf`, `Orden de trabajo ${idOt} · placa ${ot.placa}`);
     } catch (err) {
       toast(errorMessage(err), 'error');
     } finally {
@@ -170,8 +187,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   async function descargarPlantilla() {
     setExportando(true);
     try {
-      const blob = await pdfPlantillaOt(ot);
-      descargarArchivo(blob, `Plantilla_OT_${idOt}.pdf`);
+      await abrirPdf(() => pdfPlantillaOt(ot), `Plantilla_OT_${idOt}.pdf`);
     } catch (err) {
       toast(errorMessage(err), 'error');
     } finally {
@@ -226,7 +242,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         {principal}
         {botonesEstado}
         <Button variant="secondary" icon={<Download size={15} />} onClick={() => exportar('descargar')} disabled={exportando || loadMat || loadTra}>
-          Descargar PDF OT
+          PDF
         </Button>
         <Button variant="secondary" icon={<Share2 size={15} />} onClick={() => exportar('whatsapp')} disabled={exportando || loadMat || loadTra}>
           Compartir WhatsApp
@@ -333,7 +349,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
           <div>
             <p className="tarjeta__grupo-titulo">Diagnóstico y asignación</p>
             <div className="tarjeta__lista">
-              {(det.motivo || ot.observaciones) && <div className="dato"><span className="dato__label">Falla reportada</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{String(rotGetCleanMotivoDisplay(det, ot)).replace(/^•s*/gm, '').replace(/^(Falla Manual|MANUAL)s*:s*/i, '')}</span></div>}
+              {(det.motivo || ot.observaciones) && <div className="dato"><span className="dato__label">Falla reportada</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{String(rotGetCleanMotivoDisplay(det, ot)).replace(/^•\s*/gm, '').replace(/^(Falla Manual|MANUAL)\s*:\s*/i, '')}</span></div>}
               {ot.tecnico && <div className="dato"><span className="dato__label">Técnico responsable</span><span className="dato__valor">{ot.tecnico}</span></div>}
               {ot.supervisor && <div className="dato"><span className="dato__label">Supervisor</span><span className="dato__valor">{ot.supervisor}</span></div>}
               {(ot.rampa_origen || ot.id_rampa) && <div className="dato"><span className="dato__label">Rampa asignada</span><span className="dato__valor">{ot.rampa_origen ?? ot.id_rampa}</span></div>}

@@ -35,14 +35,11 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
   const [tipoDestino, setTipoDestino] = useState('Vehiculo');
   const [placa, setPlaca] = useState('');
   const [responsable, setResponsable] = useState('');
-  const [nroDoc, setNroDoc] = useState('');
-  const [almacen, setAlmacen] = useState('');
   const [ticketOt, setTicketOt] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [items, setItems] = useState<ItemSalida[]>([itemVacio()]);
   const [intento, setIntento] = useState(false);
 
-  const almacenes = [...new Set((inventario ?? []).map(i => i.almacen).filter(Boolean) as string[])].sort();
 
   /** Disponible del artículo: stock actual; al editar, lo que ya descontó esta salida vuelve a contar */
   function disponibleDe(it: ItemSalida): number | null {
@@ -79,15 +76,13 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
       setTipoDestino(s.tipo_destino ?? 'Vehiculo');
       setPlaca(s.placa ?? '');
       setResponsable(s.responsable ?? '');
-      setNroDoc(s.nro_documento ?? '');
-      setAlmacen(s.almacen ?? '');
       setTicketOt(s.ticket_ot ?? '');
       setObservaciones(s.observaciones ?? '');
-      setItems(s.items?.length ? s.items.map(i => ({ ...i })) : [itemVacio()]);
+      setItems(s.items?.length ? s.items.map(i => ({ ...i, cantidad: Number(i.cantidad), costo_unitario: Number(i.costo_unitario), importe: Number(i.importe) })) : [itemVacio()]);
     } else {
       const hoy = new Date().toISOString().split('T')[0];
       setFecha(hoy); setTipoDestino(preset?.tipo_destino ?? 'Vehiculo'); setPlaca(preset?.placa ?? '');
-      setResponsable(preset?.responsable ?? ''); setNroDoc(''); setAlmacen(''); setTicketOt(preset?.ticket_ot ?? '');
+      setResponsable(preset?.responsable ?? ''); setTicketOt(preset?.ticket_ot ?? '');
       setObservaciones('');
       setItems([itemVacio()]);
     }
@@ -115,7 +110,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
         ...nuevo[idx],
         inventario_id: art.id,
         descripcion: art.articulo || art.descripcion,
-        costo_unitario: art.costo_soles || 0,
+        costo_unitario: Number(art.costo_soles) || 0,
         moneda: 'PEN',
         importe: (nuevo[idx].cantidad || 1) * (art.costo_soles || 0),
       };
@@ -136,8 +131,6 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
         tipo_destino: tipoDestino,
         placa: placa.toUpperCase() || null,
         responsable: responsable || null,
-        nro_documento: nroDoc || null,
-        almacen: almacen || null,
         ticket_ot: ticketOt || null,
         observaciones: observaciones || null,
         moneda: 'PEN',
@@ -184,19 +177,6 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
           {p => <SolicitanteSelector id={p.id} value={responsable} onChange={setResponsable} opciones={personal ?? []} invalido={intento && sinResponsable} />}
         </Field>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
-          <Field label="N° documento">
-            {p => <TextInput {...p} value={nroDoc} placeholder="Ej: G001-000123" onChange={ev => setNroDoc(ev.target.value)} />}
-          </Field>
-          <Field label="Almacén origen">
-            {p => (
-              <>
-                <TextInput {...p} value={almacen} list="sal-almacenes" placeholder="Almacén principal" onChange={ev => setAlmacen(ev.target.value)} />
-                <datalist id="sal-almacenes">{almacenes.map(a => <option key={a} value={a} />)}</datalist>
-              </>
-            )}
-          </Field>
-        </div>
 
         {/* Tabla de ítems */}
         <div>
@@ -230,7 +210,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
                       />
                       {it.inventario_id && disponibleDe(it) !== null && (
                         <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--label-2)', marginTop: 2 }}>
-                          Disponible: {disponibleDe(it)}
+                          Disponible: {Number(disponibleDe(it)).toLocaleString('es-PE', { maximumFractionDigits: 2 })}
                         </span>
                       )}
                       {errorDeFila(it) && (

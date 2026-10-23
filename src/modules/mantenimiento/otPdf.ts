@@ -28,17 +28,15 @@ async function blobDeHtml(html: string): Promise<Blob> {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   doc.getElementById('btnPrint')?.remove();
   const el = document.createElement('div');
+  el.style.cssText = 'position:absolute;left:-9999px;top:0;background:#fff;width:210mm;';
   el.innerHTML = doc.body.innerHTML;
-  // El documento mide 210 mm: la caja de montaje de core/lib/pdf (0×0 con overflow oculto) lo recorta y sale en blanco.
-  // Aquí la caja deja ver todo el contenido, detrás del resto de la app y sin interacción.
-  const caja = document.createElement('div');
-  caja.style.cssText = 'position:absolute;left:0;top:0;width:210mm;height:0;overflow:visible;z-index:-1;pointer-events:none;';
-  caja.appendChild(el);
-  document.body.appendChild(caja);
+  document.body.appendChild(el);
+  // Se captura la hoja interior, no el contenedor: html2pdf copia los estilos del elemento y el left:-9999px
+  // del contenedor dejaba la hoja en blanco (mismo criterio que el PDF de neumáticos)
   try {
     await document.fonts?.ready;
-    return await generarPDFBlob(el, { orientacion: 'portrait' });
-  } finally { caja.remove(); }
+    return await generarPDFBlob(el.querySelector('.page-container') as HTMLElement, { orientacion: 'portrait' });
+  } finally { el.remove(); }
 }
 
 /** PDF de cierre de la OT (con trabajos, materiales y firmas), como el clásico */
