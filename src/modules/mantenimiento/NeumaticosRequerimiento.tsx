@@ -1,5 +1,14 @@
 import { useMemo, useState } from 'react';
-import { ClipboardCopy, Disc3, FileSpreadsheet, FileText, ShoppingCart } from 'lucide-react';
+import { ClipboardCopy, Disc3, ShoppingCart } from 'lucide-react';
+
+/** Logos de archivo: PDF en rojo y Excel en verde (sin texto alrededor) */
+const LogoArchivo = ({ tipo }: { tipo: 'pdf' | 'excel' }) => (
+  <svg width={22} height={22} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M6 2h8l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill={tipo === 'pdf' ? '#dc2626' : '#15803d'} />
+    <path d="M14 2v5h5" fill={tipo === 'pdf' ? '#fca5a5' : '#86efac'} />
+    <text x="12" y="16.5" textAnchor="middle" fontSize="5.5" fontWeight="700" fill="#fff" fontFamily="Arial, sans-serif">{tipo === 'pdf' ? 'PDF' : 'XLS'}</text>
+  </svg>
+);
 import { VehiculosTarjetas } from './NeumaticosVehiculos';
 import { Button } from '../../core/ui/Button';
 import { EmptyState } from '../../core/ui/Display';
@@ -81,10 +90,12 @@ export function RequerimientoNeumaticos({ llantas, umbral, onUmbral, hayBusqueda
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
             <UmbralMm valor={umbral} onChange={onUmbral} />
             <Button variant="secondary" icon={<ClipboardCopy size={15} />} onClick={copiar} style={{ minHeight: 44 }}>Copiar pedido</Button>
-            <Button variant="secondary" icon={<FileSpreadsheet size={15} />} loading={ocupado === 'excel'} disabled={!!ocupado} style={{ minHeight: 44 }}
-              onClick={() => correr('excel', () => exportarResumenExcel(filas, umbral))}>Excel</Button>
-            <Button variant="secondary" icon={<FileText size={15} />} loading={ocupado === 'pdf'} disabled={!!ocupado} style={{ minHeight: 44 }}
-              onClick={() => correr('pdf', () => abrirResumenPdf(filas, umbral))}>PDF</Button>
+            <Button variant="secondary" iconOnly icon={<LogoArchivo tipo="excel" />} loading={ocupado === 'excel'} disabled={!!ocupado}
+              aria-label="Exportar a Excel" title="Exportar a Excel" style={{ minHeight: 44, minWidth: 44 }}
+              onClick={() => correr('excel', () => exportarResumenExcel(filas, umbral))} />
+            <Button variant="secondary" iconOnly icon={<LogoArchivo tipo="pdf" />} loading={ocupado === 'pdf'} disabled={!!ocupado}
+              aria-label="Abrir PDF" title="Abrir PDF" style={{ minHeight: 44, minWidth: 44 }}
+              onClick={() => correr('pdf', () => abrirResumenPdf(filas, umbral))} />
           </div>
         </div>
 

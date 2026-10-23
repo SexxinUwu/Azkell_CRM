@@ -156,7 +156,8 @@ async function nombreEmpresaPdf(): Promise<string> {
 export async function abrirResumenPdf(filas: FilaResumen[], umbral: number) {
   const win = window.open('', '_blank');
   const el = document.createElement('div');
-  el.style.cssText = 'position:fixed;left:-10000px;top:0;background:#fff';
+  // Posición absoluta fuera de la vista (como el clásico): con position fixed el contenido salía en blanco
+  el.style.cssText = 'position:absolute;left:-9999px;top:0;background:#fff;width:1040px;';
   try {
     el.innerHTML = htmlResumenPdf(filas, umbral, await nombreEmpresaPdf());
     document.body.appendChild(el);

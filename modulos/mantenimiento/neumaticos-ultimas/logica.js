@@ -387,6 +387,8 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
     window.neuExportarResumenPDF = async function() {
         const d = window._neuResumenDatosExport();
         if (!d) return;
+        // Se abre la pestaña en el gesto del usuario y luego se carga el PDF (no se descarga)
+        const win = window.open('', '_blank');
         try {
             if (typeof html2pdf === 'undefined') {
                 await new Promise((resolve, reject) => {
@@ -447,18 +449,24 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
             wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;';
             wrapper.innerHTML = html;
             document.body.appendChild(wrapper);
+            let blob;
             try {
-                await html2pdf().set({
+                blob = await html2pdf().set({
                     margin: [8, 8, 8, 8],
                     filename: 'Resumen_Compras_Reposicion_' + new Date().toISOString().split('T')[0] + '.pdf',
                     image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: { scale: 2, useCORS: true },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-                }).from(wrapper.firstElementChild).save();
+                }).from(wrapper.firstElementChild).outputPdf('blob');
             } finally {
                 if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
             }
+            const url = URL.createObjectURL(blob);
+            if (win) win.location.href = url;
+            else { const a = document.createElement('a'); a.href = url; a.download = 'Resumen_Compras_Reposicion.pdf'; document.body.appendChild(a); a.click(); a.remove(); }
+            setTimeout(() => URL.revokeObjectURL(url), 120000);
         } catch (e) {
+            if (win) win.close();
             console.error('Error exportando PDF:', e);
             alert('No se pudo generar el PDF: ' + e.message);
         }
