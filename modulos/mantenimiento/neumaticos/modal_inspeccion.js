@@ -834,11 +834,10 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                                         <th>Marca</th>
                                         <th>Medida</th>
                                         <th>Modelo</th>
-                                        <th class="text-center">R1</th>
-                                        <th class="text-center">R2</th>
-                                        <th class="text-center">R3</th>
-                                        <th class="text-center">R4</th>
-                                        <th class="text-center">Prom</th>
+                                        <th class="text-center" style="width: 44px;">R1</th>
+                                        <th class="text-center" style="width: 44px;">R2</th>
+                                        <th class="text-center" style="width: 44px;">R3</th>
+                                        <th class="text-center" style="width: 80px;">Prom (mm)</th>
                                         <th class="text-center">Presión</th>
                                         <th>Estado</th>
                                         <th>Acción</th>
@@ -849,7 +848,7 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                                     </tr>
                                 </thead>
                                 <tbody id="neu-tabla-tbody">
-                                    <tr><td colspan="16" class="text-center text-muted py-3">Aún no has agregado ninguna llanta a la inspección.</td></tr>
+                                    <tr><td colspan="15" class="text-center text-muted py-3">Aún no has agregado ninguna llanta a la inspección.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -2182,7 +2181,6 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                     <td class="text-center fw-bold font-monospace text-dark">${l.r1}</td>
                     <td class="text-center fw-bold font-monospace text-dark">${l.r2}</td>
                     <td class="text-center fw-bold font-monospace text-dark">${l.r3}</td>
-                    <td class="text-center text-muted small font-monospace">${l.r4 || 0}</td>
                     <td class="text-center"><span class="badge ${badgeClass} px-2 py-0.5 font-monospace fw-bold">${prom} mm</span></td>
                     <td class="text-center small font-monospace text-dark">${l.presion_ant} ➔ <b>${l.presion_actual} PSI</b></td>
                     <td><span class="badge bg-secondary bg-opacity-10 text-secondary fw-semibold">${l.estado}</span></td>

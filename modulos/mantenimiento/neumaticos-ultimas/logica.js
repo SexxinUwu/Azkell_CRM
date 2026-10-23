@@ -561,11 +561,14 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                         <table class="neu-vehicle-table">
                             <thead>
                                 <tr>
-                                    <th class="text-center">POS</th>
+                                    <th class="text-center" style="width: 48px;">POS</th>
                                     <th>MARCA / MEDIDA / MODELO</th>
-                                    <th class="text-center">R1 R2 R3 R4 (MM)</th>
-                                    <th class="text-center">PRESIÓN PSI</th>
-                                    <th class="text-center">ESTADO</th>
+                                    <th class="text-center" style="width: 44px;">R1</th>
+                                    <th class="text-center" style="width: 44px;">R2</th>
+                                    <th class="text-center" style="width: 44px;">R3</th>
+                                    <th class="text-center" style="width: 95px;">PROM (MM)</th>
+                                    <th class="text-center" style="width: 105px;">PRESIÓN PSI</th>
+                                    <th class="text-center" style="width: 130px;">ESTADO</th>
                                     <th>OBSERVACIONES</th>
                                 </tr>
                             </thead>
@@ -579,19 +582,22 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                                     const r1 = det.r1 !== null ? det.r1 : '-';
                                     const r2 = det.r2 !== null ? det.r2 : '-';
                                     const r3 = det.r3 !== null ? det.r3 : '-';
-                                    const r4 = det.r4 !== null ? det.r4 : '-';
                                     const remProm = det.remanente_promedio !== null ? parseFloat(det.remanente_promedio) : 10;
                                     const presAct = det.presion_actual ? `${det.presion_actual} PSI` : '---';
                                     const presAnt = det.presion_ant ? `(Ant: ${det.presion_ant})` : '';
                                     const obs = det.observaciones || 'Ninguna';
 
                                     let badgeEstado = '';
+                                    let badgePromStyle = '';
                                     if (det.alerta_cambio === 1 || remProm < window.NEU_MM_CRITICO) {
                                         badgeEstado = `<span class="badge rounded-pill px-2.5 py-1 text-nowrap" style="background:#ffe4e6; color:#be123c; border:1px solid #fecdd3;">● Crítica (≤4mm)</span>`;
+                                        badgePromStyle = 'background:#ffe4e6; color:#be123c; border:1px solid #fecdd3;';
                                     } else if (remProm <= 6.0) {
                                         badgeEstado = `<span class="badge rounded-pill px-2.5 py-1 text-nowrap" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a;">● Alerta (4-6mm)</span>`;
+                                        badgePromStyle = 'background:#fef3c7; color:#b45309; border:1px solid #fde68a;';
                                     } else {
                                         badgeEstado = `<span class="badge rounded-pill px-2.5 py-1 text-nowrap" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">● Óptima (>6mm)</span>`;
+                                        badgePromStyle = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;';
                                     }
 
                                     let obsContent = obs;
@@ -610,7 +616,14 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                                                 <div class="fw-bold text-dark font-monospace text-nowrap" style="font-size:0.85rem;">${marcaL} ${modeloL ? '(' + modeloL + ')' : ''}</div>
                                                 <div class="text-muted small text-nowrap" style="font-size:0.75rem;">${medidaL} • ${estadoMat}</div>
                                             </td>
-                                            <td class="text-center fw-bold font-monospace fs-6 text-dark text-nowrap">${r1} &nbsp;${r2} &nbsp;${r3} &nbsp;${r4}</td>
+                                            <td class="text-center fw-bold font-monospace fs-6 text-dark">${r1}</td>
+                                            <td class="text-center fw-bold font-monospace fs-6 text-dark">${r2}</td>
+                                            <td class="text-center fw-bold font-monospace fs-6 text-dark">${r3}</td>
+                                            <td class="text-center font-monospace fw-bold">
+                                                <span class="badge rounded-pill px-2.5 py-1 text-nowrap shadow-2xs" style="${badgePromStyle}">
+                                                    ${remProm.toFixed(1)} mm
+                                                </span>
+                                            </td>
                                             <td class="text-center">
                                                 <div class="fw-bold text-dark text-nowrap">${presAct}</div>
                                                 ${presAnt ? `<div class="text-muted small text-nowrap" style="font-size:0.7rem;">${presAnt}</div>` : ''}

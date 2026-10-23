@@ -43,8 +43,15 @@ export function VehiculosTarjetas({ llantas, onInspeccionar }: { llantas: Llanta
             <div style={{ overflowX: 'auto' }}>
               <table className="inv-kardex" style={{ minWidth: '44rem' }}>
                 <thead><tr>
-                  <th style={{ textAlign: 'center' }}>POS</th><th>MARCA / MEDIDA / MODELO</th><th style={{ textAlign: 'center' }}>R1 R2 R3 R4 (MM)</th>
-                  <th style={{ textAlign: 'center' }}>PRESIÓN PSI</th><th style={{ textAlign: 'center' }}>ESTADO</th><th>OBSERVACIONES</th>
+                  <th style={{ textAlign: 'center', width: 46 }}>POS</th>
+                  <th>MARCA / MEDIDA / MODELO</th>
+                  <th style={{ textAlign: 'center', width: 44 }}>R1</th>
+                  <th style={{ textAlign: 'center', width: 44 }}>R2</th>
+                  <th style={{ textAlign: 'center', width: 44 }}>R3</th>
+                  <th style={{ textAlign: 'center', width: 95 }}>PROM (MM)</th>
+                  <th style={{ textAlign: 'center', width: 95 }}>PRESIÓN PSI</th>
+                  <th style={{ textAlign: 'center', width: 130 }}>ESTADO</th>
+                  <th>OBSERVACIONES</th>
                 </tr></thead>
                 <tbody>
                   {ls.map((d, k) => {
@@ -60,8 +67,22 @@ export function VehiculosTarjetas({ llantas, onInspeccionar }: { llantas: Llanta
                           </div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--label-2)', whiteSpace: 'nowrap' }}>{(d.medida || '---').toUpperCase()} • {(d.estado || 'NUEVA').toUpperCase()}</div>
                         </td>
-                        <td style={{ textAlign: 'center', fontWeight: 700, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
-                          {ver(d.r1)} &nbsp;{ver(d.r2)} &nbsp;{ver(d.r3)} &nbsp;{ver(d.r4)}
+                        <td style={{ textAlign: 'center', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{ver(d.r1)}</td>
+                        <td style={{ textAlign: 'center', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{ver(d.r2)}</td>
+                        <td style={{ textAlign: 'center', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{ver(d.r3)}</td>
+                        <td style={{ textAlign: 'center', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '0.8rem',
+                            fontWeight: 800,
+                            background: critica ? '#fee2e2' : rem <= MM_PREVENTIVO ? '#fef3c7' : '#dcfce7',
+                            color: critica ? '#991b1b' : rem <= MM_PREVENTIVO ? '#92400e' : '#166534',
+                            border: `1px solid ${critica ? '#fca5a5' : rem <= MM_PREVENTIVO ? '#fde68a' : '#bbf7d0'}`
+                          }}>
+                            {rem.toFixed(1)} mm
+                          </span>
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{d.presion_actual ? `${d.presion_actual} PSI` : '---'}</div>

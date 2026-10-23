@@ -237,9 +237,15 @@ function InspeccionDetalleSheet({ id, onClose }: { id: string | null; onClose: (
               <EmptyState icon={<Disc3 size={22} />} title="Sin llantas">No se encontraron llantas registradas para esta inspección.</EmptyState>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table className="inv-kardex" style={{ minWidth: '48rem', fontSize: '0.8rem' }}>
+                <table className="inv-kardex" style={{ minWidth: '52rem', fontSize: '0.8rem' }}>
                   <thead><tr>
-                    <th>Pos</th><th>Marca / Medida</th><th style={{ textAlign: 'center' }}>R1 R2 R3 R4</th><th style={{ textAlign: 'center' }}>Presión</th>
+                    <th style={{ width: 44, textAlign: 'center' }}>Pos</th>
+                    <th>Marca / Medida</th>
+                    <th style={{ textAlign: 'center', width: 44 }}>R1</th>
+                    <th style={{ textAlign: 'center', width: 44 }}>R2</th>
+                    <th style={{ textAlign: 'center', width: 44 }}>R3</th>
+                    <th style={{ textAlign: 'center', width: 95 }}>PROM (MM)</th>
+                    <th style={{ textAlign: 'center' }}>Presión</th>
                     <th style={{ textAlign: 'center' }}>Estado</th><th style={{ textAlign: 'center' }}>Fotos</th><th>Observaciones</th>
                   </tr></thead>
                   <tbody>
@@ -250,12 +256,28 @@ function InspeccionDetalleSheet({ id, onClose }: { id: string | null; onClose: (
                         .map((url, n) => ({ url, titulo: `Pos ${d.posicion} · foto ${n + 1}` }));
                       return (
                         <tr key={(d.id ?? '') + String(d.posicion) + k}>
-                          <td><b>{String(d.posicion ?? '-').toUpperCase()}</b></td>
+                          <td style={{ textAlign: 'center' }}><b>{String(d.posicion ?? '-').toUpperCase()}</b></td>
                           <td>
                             <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{(d.marca || '---').toUpperCase()}{d.modelo ? ` (${d.modelo.toUpperCase()})` : ''}</div>
                             <div style={{ fontSize: '0.72rem', color: 'var(--label-2)' }}>{(d.medida || '---').toUpperCase()} • {(d.estado || 'NUEVA').toUpperCase()}</div>
                           </td>
-                          <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.r1 ?? 0} {d.r2 ?? 0} {d.r3 ?? 0} <span style={{ color: 'var(--label-3)' }}>{d.r4 ?? 0}</span></td>
+                          <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.r1 ?? 0}</td>
+                          <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.r2 ?? 0}</td>
+                          <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.r3 ?? 0}</td>
+                          <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '2px 8px',
+                              borderRadius: '9999px',
+                              fontSize: '0.8rem',
+                              fontWeight: 800,
+                              background: tono === 'red' ? '#fee2e2' : tono === 'amber' ? '#fef3c7' : '#dcfce7',
+                              color: tono === 'red' ? '#991b1b' : tono === 'amber' ? '#92400e' : '#166534',
+                              border: `1px solid ${tono === 'red' ? '#fca5a5' : tono === 'amber' ? '#fde68a' : '#86efac'}`
+                            }}>
+                              {prom.toFixed(1)} mm
+                            </span>
+                          </td>
                           <td style={{ textAlign: 'center' }}>
                             {d.presion_actual ? <b>{d.presion_actual} PSI</b> : '---'}
                             {d.presion_ant ? <div style={{ fontSize: '0.7rem', color: 'var(--label-2)' }}>(Ant: {d.presion_ant})</div> : null}

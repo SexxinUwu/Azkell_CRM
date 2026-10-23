@@ -131,9 +131,30 @@ module.exports = function (db, broadcast, logAudit) {
         try {
             const tdb = getDb(req);
             const tipo = (req.params.tipo || '').toLowerCase();
-            const valor = (req.body.nombre || req.body.valor || '').trim().toUpperCase();
+            let valor = (req.body.nombre || req.body.valor || '').trim().toUpperCase();
 
             if (!valor) return res.status(400).json({ ok: false, error: 'El nombre es obligatorio' });
+
+            if (tipo === 'marcas' || tipo === 'marca') {
+                if (MARCAS_ALIAS_MAP[valor]) {
+                    return res.status(400).json({ 
+                        ok: false, 
+                        error: `"${valor}" no puede registrarse como nueva marca porque corresponde al nombre oficial "${MARCAS_ALIAS_MAP[valor]}".` 
+                    });
+                }
+                if (valor.length < 3) {
+                    return res.status(400).json({ ok: false, error: 'El nombre de la marca debe tener al menos 3 caracteres.' });
+                }
+            } else if (tipo === 'medidas' || tipo === 'medida') {
+                valor = normalizarMedida(valor);
+                if (valor.length < 5 || !valor.includes('R')) {
+                    return res.status(400).json({ ok: false, error: 'La medida debe tener formato estándar de neumático (ej: 295/80R22.5).' });
+                }
+            } else if (tipo === 'modelos' || tipo === 'modelo') {
+                if (valor.length < 2) {
+                    return res.status(400).json({ ok: false, error: 'El modelo debe tener al menos 2 caracteres.' });
+                }
+            }
 
             let tabla = '';
             if (tipo === 'marcas' || tipo === 'marca') tabla = 'cat_neumaticos_marcas';

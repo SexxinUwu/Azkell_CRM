@@ -470,8 +470,13 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                                     ${medida} • <span class="fw-semibold text-secondary">${estadoMat}</span>
                                 </div>
                             </td>
-                            <td class="text-center align-middle font-monospace fw-bold text-dark" style="font-size:0.86rem; letter-spacing: 0.08em;">
-                                ${r1} &nbsp;${r2} &nbsp;${r3} &nbsp;<span class="text-muted">${r4}</span>
+                            <td class="text-center align-middle font-monospace fw-bold text-dark" style="font-size:0.86rem;">${r1}</td>
+                            <td class="text-center align-middle font-monospace fw-bold text-dark" style="font-size:0.86rem;">${r2}</td>
+                            <td class="text-center align-middle font-monospace fw-bold text-dark" style="font-size:0.86rem;">${r3}</td>
+                            <td class="text-center align-middle font-monospace fw-bold">
+                                <span class="badge rounded-pill px-2.5 py-1 text-nowrap shadow-2xs" style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1; font-size:0.8rem;">
+                                    ${prom.toFixed(1)} mm
+                                </span>
                             </td>
                             <td class="text-center align-middle" style="font-size:0.82rem;">
                                 ${presAct}
@@ -585,15 +590,18 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                     <!-- BENTO 2: TABLA DE LLANTAS EVALUADAS (CON SCROLLBAR INVISIBLE) -->
                     <div class="card border-0 rounded-4 overflow-hidden bg-white shadow-2xs mb-3" style="border: 1px solid #e2e8f0 !important;">
                         <div class="neu-detalle-table-wrap" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                            <table class="table table-hover align-middle mb-0" style="min-width: 720px; width: 100%; border-collapse: collapse;">
+                            <table class="table table-hover align-middle mb-0" style="min-width: 820px; width: 100%; border-collapse: collapse;">
                                 <thead>
                                     <tr style="background: #ffffff; border-bottom: 1.5px solid #e2e8f0;">
-                                        <th style="width: 45px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">POS</th>
-                                        <th style="width: 180px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px;">MARCA / MEDIDA / MODELO</th>
-                                        <th style="width: 125px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">R1 R2 R3 R4 (MM)</th>
-                                        <th style="width: 105px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">PRESIÓN PSI</th>
-                                        <th style="width: 125px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">ESTADO</th>
-                                        <th style="width: 75px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px; text-align: center;">FOTOS</th>
+                                        <th style="width: 45px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 8px; text-align: center;">POS</th>
+                                        <th style="width: 170px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 10px;">MARCA / MEDIDA / MODELO</th>
+                                        <th style="width: 44px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 6px; text-align: center;">R1</th>
+                                        <th style="width: 44px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 6px; text-align: center;">R2</th>
+                                        <th style="width: 44px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 6px; text-align: center;">R3</th>
+                                        <th style="width: 95px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 8px; text-align: center;">PROM (MM)</th>
+                                        <th style="width: 100px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 8px; text-align: center;">PRESIÓN PSI</th>
+                                        <th style="width: 125px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 8px; text-align: center;">ESTADO</th>
+                                        <th style="width: 75px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 8px; text-align: center;">FOTOS</th>
                                         <th style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 10px 12px;">OBSERVACIONES</th>
                                     </tr>
                                 </thead>

@@ -303,7 +303,16 @@ export function HistorialLlantaSheet({ placa, llanta, onClose }: { placa: string
               ) : (
                 <div style={{ overflowX: 'auto' }}>
                   <table className="inv-kardex" style={{ minWidth: '44rem', fontSize: '0.8rem' }}>
-                    <thead><tr><th>Fecha</th><th>Km</th><th>Llanta</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Prom.</th><th>PSI ant.</th><th>PSI</th><th>Estado</th><th>Acción</th></tr></thead>
+                    <thead><tr>
+                      <th>Fecha</th><th>Km</th><th>Llanta</th>
+                      <th style={{ textAlign: 'center', width: 44 }}>R1</th>
+                      <th style={{ textAlign: 'center', width: 44 }}>R2</th>
+                      <th style={{ textAlign: 'center', width: 44 }}>R3</th>
+                      <th style={{ textAlign: 'center', width: 85 }}>Prom. (mm)</th>
+                      <th style={{ textAlign: 'center' }}>PSI ant.</th>
+                      <th style={{ textAlign: 'center' }}>PSI</th>
+                      <th>Estado</th><th>Acción</th>
+                    </tr></thead>
                     <tbody>{data.inspecciones.map(i => {
                       const m = remanenteDe(i);
                       const t = tonoMm(m);
@@ -311,9 +320,12 @@ export function HistorialLlantaSheet({ placa, llanta, onClose }: { placa: string
                         <tr key={i.id_inspeccion}>
                           <td>{i.fecha_inspeccion}</td><td>{celda(i.km_vehiculo)}</td>
                           <td>{[i.marca, i.medida].filter(Boolean).join(' ') || '—'}</td>
-                          <td>{celda(i.r1)}</td><td>{celda(i.r2)}</td><td>{celda(i.r3)}</td><td>{celda(i.r4)}</td>
-                          <td style={{ fontWeight: 700, color: t === 'gray' ? undefined : `var(--${t}-ink)` }}>{m === null ? '—' : m.toFixed(1)}</td>
-                          <td>{celda(i.presion_ant)}</td><td>{celda(i.presion_actual)}</td>
+                          <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{celda(i.r1)}</td>
+                          <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{celda(i.r2)}</td>
+                          <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{celda(i.r3)}</td>
+                          <td style={{ textAlign: 'center', fontWeight: 800, fontFamily: 'var(--font-mono)', color: t === 'gray' ? undefined : `var(--${t}-ink)` }}>{m === null ? '—' : `${m.toFixed(1)} mm`}</td>
+                          <td style={{ textAlign: 'center' }}>{celda(i.presion_ant)}</td>
+                          <td style={{ textAlign: 'center' }}>{celda(i.presion_actual)}</td>
                           <td>{celda(i.estado)}</td><td>{celda(i.accion)}</td>
                         </tr>
                       );
