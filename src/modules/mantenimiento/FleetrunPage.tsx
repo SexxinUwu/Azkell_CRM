@@ -211,6 +211,9 @@ const POR_PAGINA = 20;
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
+/** Número del ID del registro (como el clásico: los dígitos finales), para desempatar registros del mismo día */
+const idFila = (f: FleetrunFila) => parseInt((String(f[0] ?? '').match(/\d+$/) || ['0'])[0], 10);
+
 /** Estado preventivo de la flota: peor estado por placa (sin duplicar placa + tipo). Una sola regla para la pantalla y el dashboard. */
 export function resumenPreventivo(filas: FleetrunFila[], placasData: { placa: string; estado: string; uts: string }[] | undefined,
   umbrales: Record<string, number>, metricas: Map<string, string>, vivo: KmVivo) {
@@ -222,7 +225,7 @@ export function resumenPreventivo(filas: FleetrunFila[], placasData: { placa: st
     const bFut = tb > hoy + 86_400_000;
     if (aFut !== bFut) return aFut ? 1 : -1;
     if (tb !== ta) return tb - ta;
-    return (Number(b[0] ?? 0)) - (Number(a[0] ?? 0));
+    return idFila(b) - idFila(a);
   });
   const activas = placasData
     ? new Map(placasData.filter(p => p.estado.toLowerCase() === 'activa' || p.estado === '').map(p => [p.placa.toUpperCase(), p]))
@@ -311,7 +314,7 @@ export function FleetrunPage() {
       const bFut = tb > hoy + 86_400_000;
       if (aFut !== bFut) return aFut ? 1 : -1;
       if (tb !== ta) return tb - ta;
-      return (Number(b[0] ?? 0)) - (Number(a[0] ?? 0));
+      return idFila(b) - idFila(a);
     });
   }, [filas]);
 
