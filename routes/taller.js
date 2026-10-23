@@ -4,6 +4,7 @@ const path = require('path');
 const { getPresignedUploadUrl, getPresignedUrl } = require('../utils/s3');
 const { calcularHorasTecnicos, horasDeTrabajo, fechaNaive } = require('../services/horas_tecnicos');
 const eventosNotif = require('../services/notificaciones_eventos');
+const { htmlAPdf } = require('../services/ot_pdf');
 const router = express.Router();
 
 module.exports = (db, logAudit, _generarCodigoAlmacen) => {
@@ -1437,6 +1438,20 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     });
 
     // ✨ TALLER PERSONAL ✨
+    // PDF de la OT: el HTML del clásico convertido a PDF de texto real con Chromium del servidor
+    router.post('/ot-pdf', async (req, res) => {
+        const html = typeof req.body?.html === 'string' ? req.body.html : '';
+        if (!html.includes('<html')) return res.status(400).json({ error: 'Documento no válido' });
+        const titulo = String(req.body?.titulo || 'Orden de trabajo');
+        try {
+            const pdf = await htmlAPdf(html, titulo);
+            res.set('Content-Type', 'application/pdf').send(Buffer.from(pdf));
+        } catch (err) {
+            console.error('[ot-pdf]', err.message);
+            res.status(500).json({ error: 'No se pudo generar el PDF' });
+        }
+    });
+
     router.get('/taller-personal', (req, res) => {
         (req.db || db).query('SELECT * FROM taller_personal ORDER BY nombre ASC', (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });

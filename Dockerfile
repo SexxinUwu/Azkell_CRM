@@ -21,8 +21,10 @@ RUN npm run build:tv
 # ─── 2. Imagen final ─────────────────────────────────────────
 FROM base AS run
 ENV NODE_ENV=production
+# Chromium del sistema para el PDF de la OT (puppeteer-core no descarga navegador)
+ENV CHROME_PATH=/usr/bin/chromium
 # curl: para el healthcheck de Coolify
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates chromium fonts-liberation \
   && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
