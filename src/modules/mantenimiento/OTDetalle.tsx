@@ -102,6 +102,28 @@ const iconoPlantilla = {
   width: 34, height: 34, borderRadius: 10, display: 'grid', placeItems: 'center' as const, flexShrink: 0,
 };
 
+/** Fecha de una salida en dd/mm/yyyy, sin pasar por la zona horaria (la base guarda medianoche UTC) */
+function diaPe(s: string | null | undefined): string {
+  const m = String(s ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '—';
+}
+
+/** Código INV-xxxx y nombre del repuesto, quitando el código repetido del texto */
+function partesItem(d: string | null | undefined): { codigo: string; nombre: string } {
+  const t = String(d ?? '').trim();
+  const m = t.match(/^((?:INV-\d+\s*—\s*)+)(.*)$/);
+  if (!m) return { codigo: '', nombre: t || '—' };
+  const cod = m[1].match(/INV-\d+/);
+  return { codigo: cod ? cod[0] : '', nombre: m[2].trim() || t };
+}
+
+/** Pastilla de estado de una salida: Despachado en verde, Pendiente en ámbar, lo demás en gris */
+function pastillaEstado(e: string | null | undefined): React.CSSProperties {
+  const l = String(e ?? '').toLowerCase();
+  const [fondo, color] = l.includes('pend') ? ['#fef3c7', '#b45309'] : l.includes('anul') ? ['#e5e7eb', '#374151'] : ['#dcfce7', '#15803d'];
+  return { fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: fondo, color, whiteSpace: 'nowrap' };
+}
+
 export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, onEliminar }: OTDetalleProps) {
   const qc = useQueryClient();
   // La OT guarda el DNI de quien la inició o cerró, y el número de rampa: aquí se muestran nombre y nombre de rampa
@@ -512,51 +534,56 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       )}
 
       {seccion === 'repuestos' && (
-        <div>
-          <p className="tarjeta__grupo-titulo" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Package size={14} /> Repuestos despachados desde almacén
-            {costos.repuestos > 0 && <span style={{ marginLeft: 'auto', fontWeight: 700, color: 'var(--label)' }}>{soles(costos.repuestos)}</span>}
-          </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px', borderRadius: 16, background: 'var(--surface)', border: '1px solid var(--separator)', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ width: 38, height: 38, borderRadius: 12, background: '#fff1e6', color: '#f56300', display: 'grid', placeItems: 'center' }}><Package size={18} /></span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>Repuestos despachados</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{mats.length} salida{mats.length === 1 ? '' : 's'} de almacén</div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.68rem', color: 'var(--label-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</div>
+              <div className="t-numeric" style={{ fontWeight: 800, fontSize: '1.15rem' }}>{soles(costos.repuestos)}</div>
+            </div>
+          </div>
+
           <Button variant="primary" block icon={<Package size={15} />} onClick={() => setSolicitando(true)} disabled={!puedeEditar}>
             Solicitar repuesto a almacén
           </Button>
+
           {loadMat ? <PageLoader /> : mats.length === 0 ? (
-            <p className="t-footnote c-secondary">Sin repuestos despachados a esta OT. Las salidas de almacén aparecen aquí valorizadas.</p>
-          ) : (
-            <div className="tarjeta__lista" style={{ overflowX: 'auto' }}>
-              {mats.map(sal => (
-                <div key={sal.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--separator)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--label)' }}>{sal.id}</span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--label-2)' }}>{sal.fecha} · {sal.estado}</span>
-                    <span className="t-numeric" style={{ fontWeight: 700, fontSize: '0.875rem', fontFamily: 'var(--font-mono)' }}>{soles(Number(sal.total_pen))}</span>
-                  </div>
-                  {sal.items.length > 0 && (
-                    <table className="ot-tabla-mat">
-                      <thead>
-                        <tr>
-                          <th>Repuesto / insumo</th>
-                          <th className="num">Cant.</th>
-                          <th className="num">C. unit.</th>
-                          <th className="num">Importe</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sal.items.map((it, idx) => (
-                          <tr key={idx}>
-                            <td>{it.descripcion || '—'}</td>
-                            <td className="num">{it.cantidad}</td>
-                            <td className="num c-secondary">{soles(Number(it.costo_unitario))}</td>
-                            <td className="num strong">{soles(Number(it.importe))}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
+            <p className="t-footnote c-secondary" style={{ textAlign: 'center', padding: '12px 0' }}>Sin repuestos despachados a esta OT. Las salidas de almacén aparecen aquí valorizadas.</p>
+          ) : mats.map(sal => (
+            <div key={sal.id} style={{ borderRadius: 16, border: '1px solid var(--separator)', background: 'var(--surface)', overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 14px', background: 'var(--fill-1)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.85rem' }}>{sal.id}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{diaPe(sal.fecha)}</span>
                 </div>
-              ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={pastillaEstado(sal.estado)}>{sal.estado}</span>
+                  <span className="t-numeric" style={{ fontWeight: 800, fontSize: '0.95rem' }}>{soles(Number(sal.total_pen))}</span>
+                </div>
+              </div>
+              {sal.items.map((it, idx) => {
+                const { codigo, nombre } = partesItem(it.descripcion);
+                return (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, padding: '10px 14px', borderTop: idx ? '1px solid var(--separator)' : 'none' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{nombre}</div>
+                      {codigo && <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--label-2)' }}>{codigo}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className="t-numeric" style={{ fontWeight: 700, fontSize: '0.875rem' }}>{soles(Number(it.importe))}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--label-2)' }}>{it.cantidad} × {soles(Number(it.costo_unitario))}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
+          ))}
         </div>
       )}
 
