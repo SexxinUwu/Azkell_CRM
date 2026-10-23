@@ -17,7 +17,7 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import {
   abrirResumenPdf, consolidarPorMedida, exportarResumenExcel, guardarUmbral, MM_REQ_MAX, MM_REQ_MIN,
-  normalizarUmbral, remanenteLlanta, textoPedido, textoUmbral, totalesResumen, type LlantaUltima,
+  normalizarUmbral, remanenteLlanta, textoPedido, tipoLlanta, type TipoLlanta, textoUmbral, totalesResumen, type LlantaUltima,
 } from './neumaticosReposicion';
 
 const TH: Record<string, [string, string]> = {
@@ -58,13 +58,17 @@ export function RequerimientoNeumaticos({ llantas, umbral, onUmbral, hayBusqueda
 }) {
   const toast = useToast();
   const [ocupado, setOcupado] = useState<'excel' | 'pdf' | null>(null);
+  // Filtro por columna del cuadro (Delanteras, Tracción, Arrastre, Repuestos)
+  const [catSel, setCatSel] = useState<TipoLlanta | null>(null);
+  const alternarCat = (c: TipoLlanta) => setCatSel(catSel === c ? null : c);
   const filas = useMemo(() => consolidarPorMedida(llantas).sort((a, b) => b.total - a.total || a.medida.localeCompare(b.medida)), [llantas]);
   const tot = totalesResumen(filas);
 
   // Lista de vehículos: ordenada por menor remanente y, si hay medida elegida en el resumen, solo esa medida
   const visibles = useMemo(() => llantas
     .filter(l => !medidaSel || (l.medida || 'SIN ESPECIFICAR').toUpperCase().trim() === medidaSel)
-    .sort((a, b) => (remanenteLlanta(a) ?? 0) - (remanenteLlanta(b) ?? 0)), [llantas, medidaSel]);
+    .filter(l => !catSel || tipoLlanta(l) === catSel)
+    .sort((a, b) => (remanenteLlanta(a) ?? 0) - (remanenteLlanta(b) ?? 0)), [llantas, medidaSel, catSel]);
 
   const copiar = async () => {
     if (!filas.length) { toast('No hay requerimientos activos para copiar', 'error'); return; }
@@ -92,7 +96,7 @@ export function RequerimientoNeumaticos({ llantas, umbral, onUmbral, hayBusqueda
             <Button variant="secondary" icon={<ClipboardCopy size={15} />} onClick={copiar} style={{ minHeight: 44 }}>Copiar pedido</Button>
             <Button variant="secondary" iconOnly icon={<LogoArchivo tipo="excel" />} loading={ocupado === 'excel'} disabled={!!ocupado}
               aria-label="Exportar a Excel" title="Exportar a Excel" style={{ minHeight: 44, minWidth: 44 }}
-              onClick={() => correr('excel', () => exportarResumenExcel(filas, umbral))} />
+              onClick={() => correr('excel', () => exportarResumenExcel(filas, umbral, visibles))} />
             <Button variant="secondary" iconOnly icon={<LogoArchivo tipo="pdf" />} loading={ocupado === 'pdf'} disabled={!!ocupado}
               aria-label="Abrir PDF" title="Abrir PDF" style={{ minHeight: 44, minWidth: 44 }}
               onClick={() => correr('pdf', () => abrirResumenPdf(filas, umbral))} />
@@ -104,8 +108,10 @@ export function RequerimientoNeumaticos({ llantas, umbral, onUmbral, hayBusqueda
             <thead>
               <tr>
                 <th style={{ background: '#1e293b', color: '#fff', padding: '10px 12px' }}>MEDIDA LLANTA</th>
-                <th style={celdaTh('del')}>Delanteras</th><th style={celdaTh('trac')}>Tracción</th><th style={celdaTh('arr')}>Arrastre</th>
-                <th style={celdaTh('rep')}>Repuestos</th><th style={celdaTh('total')}>Total reposición</th>
+                <th onClick={() => alternarCat('Delantera')} title="Clic para filtrar la lista por delanteras" style={{ ...celdaTh('del'), cursor: 'pointer', boxShadow: catSel === 'Delantera' ? 'inset 0 -3px 0 var(--accent)' : undefined }}>Delanteras</th>
+                <th onClick={() => alternarCat('Tracción')} title="Clic para filtrar la lista por tracción" style={{ ...celdaTh('trac'), cursor: 'pointer', boxShadow: catSel === 'Tracción' ? 'inset 0 -3px 0 var(--accent)' : undefined }}>Tracción</th>
+                <th onClick={() => alternarCat('Arrastre')} title="Clic para filtrar la lista por arrastre" style={{ ...celdaTh('arr'), cursor: 'pointer', boxShadow: catSel === 'Arrastre' ? 'inset 0 -3px 0 var(--accent)' : undefined }}>Arrastre</th>
+                <th onClick={() => alternarCat('Repuesto')} title="Clic para filtrar la lista por repuestos" style={{ ...celdaTh('rep'), cursor: 'pointer', boxShadow: catSel === 'Repuesto' ? 'inset 0 -3px 0 var(--accent)' : undefined }}>Repuestos</th><th style={celdaTh('total')}>Total reposición</th>
               </tr>
             </thead>
             <tbody>
@@ -144,7 +150,7 @@ export function RequerimientoNeumaticos({ llantas, umbral, onUmbral, hayBusqueda
       {visibles.length === 0 ? (
         <EmptyState icon={<Disc3 size={22} />} title="Sin requerimientos">Ninguna llanta de la última inspección tiene remanente {textoUmbral(umbral)}{hayBusqueda ? ' para los filtros aplicados' : ''}.</EmptyState>
       ) : (
-        <VehiculosTarjetas llantas={visibles} onInspeccionar={onInspeccionar} />
+        <VehiculosTarjetas llantas={visibles} onInspeccionar={onInspeccionar} mostrarTipo />
       )}
     </div>
   );

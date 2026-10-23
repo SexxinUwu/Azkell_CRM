@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Badge } from '../../core/ui/Display';
 import { MM_CRITICO, MM_PREVENTIVO } from './neumaticosSemaforo';
-import type { LlantaUltima } from './neumaticosReposicion';
+import { tipoLlanta, type LlantaUltima } from './neumaticosReposicion';
 
 // Una tarjeta por vehículo con la tabla de sus llantas (clásico: neuRenderTabla de neumaticos-ultimas).
 // /neumaticos/ultimas devuelve una fila por llanta; aquí se agrupa por placa.
@@ -10,7 +10,7 @@ import type { LlantaUltima } from './neumaticosReposicion';
 const dia = (v: unknown) => (v ? String(v).split('T')[0] : '---');
 const ver = (v: unknown) => (v === null || v === undefined || v === '' ? '-' : String(v));
 
-export function VehiculosTarjetas({ llantas, onInspeccionar }: { llantas: LlantaUltima[]; onInspeccionar: (placa: string) => void }) {
+export function VehiculosTarjetas({ llantas, onInspeccionar, mostrarTipo = false }: { llantas: LlantaUltima[]; onInspeccionar: (placa: string) => void; mostrarTipo?: boolean }) {
   const grupos = useMemo(() => {
     const m = new Map<string, LlantaUltima[]>();
     for (const l of llantas) {
@@ -44,6 +44,7 @@ export function VehiculosTarjetas({ llantas, onInspeccionar }: { llantas: Llanta
               <table className="inv-kardex" style={{ minWidth: '44rem' }}>
                 <thead><tr>
                   <th style={{ textAlign: 'center', width: 46 }}>POS</th>
+                  {mostrarTipo && <th style={{ textAlign: 'center', width: 120 }}>TIPO</th>}
                   <th>MARCA / MEDIDA / MODELO</th>
                   <th style={{ textAlign: 'center', width: 44 }}>R1</th>
                   <th style={{ textAlign: 'center', width: 44 }}>R2</th>
@@ -61,6 +62,7 @@ export function VehiculosTarjetas({ llantas, onInspeccionar }: { llantas: Llanta
                     return (
                       <tr key={String(d.posicion) + k}>
                         <td style={{ textAlign: 'center' }}><Badge tone="ink">{String(d.posicion ?? '-').toUpperCase()}</Badge></td>
+                        {mostrarTipo && <td style={{ textAlign: 'center' }}><Badge>{tipoLlanta(d)}</Badge></td>}
                         <td>
                           <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
                             {(d.marca || '---').toUpperCase()}{d.modelo ? ` (${d.modelo.toUpperCase()})` : ''}

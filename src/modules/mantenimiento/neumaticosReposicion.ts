@@ -1,6 +1,6 @@
 // Requerimiento de llantas para reposición: una llanta entra cuando su remanente es MENOR O IGUAL al umbral elegido
 // (por defecto 3 mm, igual que el clásico). El semáforo global (crítica < 3 mm) no cambia: esto es solo el pedido de compra.
-import { exportarExcel } from '../../core/lib/excel';
+import { exportarExcel, exportarExcelHojas } from '../../core/lib/excel';
 import { generarPDFBlob } from '../../core/lib/pdf';
 import { api } from '../../core/api/client';
 import { esRequerimientoMm } from './neumaticosSemaforo';
@@ -44,13 +44,13 @@ export async function exportarUltimasExcel(llantas: LlantaUltima[]) {
   const txt = (v: unknown) => (v == null ? '' : String(v));
   const filas = [...porPlaca.values()].flat().map(l => [
     txt(l.placa).toUpperCase(), txt(l.dueno), txt(l.tipo_unidad), txt(l.marca_unidad), txt(l.fecha_inspeccion).split('T')[0],
-    txt(l.posicion), txt(l.marca), txt(l.medida), txt(l.modelo),
+    txt(l.posicion), tipoLlanta(l), txt(l.marca), txt(l.medida), txt(l.modelo),
     num(l.r1), num(l.r2), num(l.r3), num(l.r4), num(l.remanente_promedio),
     num(l.presion_ant), num(l.presion_actual), txt(l.estado), txt(l.observaciones),
   ]);
   const hoy = new Date().toISOString().split('T')[0];
   await exportarExcel('Ultimas-inspecciones-neumaticos-' + hoy, 'Últimas inspecciones',
-    ['Placa', 'Empresa', 'Tipo de unidad', 'Marca unidad', 'Fecha inspección', 'Posición', 'Marca', 'Medida', 'Modelo',
+    ['Placa', 'Empresa', 'Tipo de unidad', 'Marca unidad', 'Fecha inspección', 'Posición', 'Tipo de llanta', 'Marca', 'Medida', 'Modelo',
       'R1 (mm)', 'R2 (mm)', 'R3 (mm)', 'R4 (mm)', 'Remanente promedio (mm)', 'Presión ant.', 'Presión actual', 'Estado', 'Observaciones'],
     filas);
 }
@@ -88,6 +88,15 @@ export function esMotora(l: LlantaUltima): boolean {
 export interface FilaResumen { medida: string; del: number; trac: number; arr: number; rep: number; total: number }
 
 /** Consolida por medida igual que el clásico: R = repuesto; motora 1-2 = delantera, resto tracción; no motora = arrastre */
+/** Tipo de llanta según su posición: Repuesto (R); en motora, 1-2 delanteras y el resto tracción; en no motora, arrastre */
+export type TipoLlanta = 'Delantera' | 'Tracción' | 'Arrastre' | 'Repuesto';
+export function tipoLlanta(l: LlantaUltima): TipoLlanta {
+  const pos = String(l.posicion ?? '').trim().toUpperCase();
+  if (pos === 'R') return 'Repuesto';
+  if (!esMotora(l)) return 'Arrastre';
+  return pos === '1' || pos === '2' ? 'Delantera' : 'Tracción';
+}
+
 export function consolidarPorMedida(llantas: LlantaUltima[]): FilaResumen[] {
   const mapa = new Map<string, FilaResumen>();
   for (const l of llantas) {
@@ -124,12 +133,20 @@ export function textoPedido(filas: FilaResumen[], umbral: number): string {
 
 const ENCABEZADOS = ['Medida llanta', 'Delanteras', 'Tracción', 'Arrastre', 'Repuestos', 'Total reposición'];
 
-export async function exportarResumenExcel(filas: FilaResumen[], umbral: number) {
+export async function exportarResumenExcel(filas: FilaResumen[], umbral: number, llantas: LlantaUltima[] = []) {
   const t = totalesResumen(filas);
   const u = textoUmbral(umbral);
-  await exportarExcel(`Reposicion-neumaticos-${u.replace(/\s/g, '')}`, `Reposición ${u}`.slice(0, 31), ENCABEZADOS, [
-    ...filas.map(f => [f.medida, f.del, f.trac, f.arr, f.rep, f.total]),
-    ['TOTAL', t.del, t.trac, t.arr, t.rep, t.total],
+  const detalle = llantas.map(l => [
+    String(l.placa ?? '').toUpperCase(), String(l.dueno ?? ''), String(l.tipo_unidad ?? ''),
+    String(l.posicion ?? ''), tipoLlanta(l), String(l.medida ?? ''), String(l.marca ?? ''), String(l.modelo ?? ''),
+    aNum(l.r1), aNum(l.r2), aNum(l.r3), aNum(l.r4), remanenteLlanta(l), String(l.estado ?? ''),
+  ]);
+  await exportarExcelHojas(`Reposicion-neumaticos-${u.replace(/\s/g, '')}`, [
+    { hoja: 'Resumen', encabezados: ENCABEZADOS, filas: [
+      ...filas.map(f => [f.medida, f.del, f.trac, f.arr, f.rep, f.total]),
+      ['TOTAL', t.del, t.trac, t.arr, t.rep, t.total],
+    ] },
+    { hoja: 'Detalle por placa', encabezados: ['Placa', 'Empresa', 'Tipo de unidad', 'Posición', 'Tipo de llanta', 'Medida', 'Marca', 'Modelo', 'R1 (mm)', 'R2 (mm)', 'R3 (mm)', 'R4 (mm)', 'Remanente (mm)', 'Estado'], filas: detalle },
   ]);
 }
 
