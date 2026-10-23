@@ -341,8 +341,12 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     return todos.filter(t => Object.keys(t.fuelStats ?? {}).some(esUrea));
   }, [datos.data, urea]);
 
+  // Como el clásico con el filtro D2: las cifras del viaje salen del bloque de diésel (fuelStats.D2) si lo tiene; tabla y Excel usan el mismo
+  const bloqueD2 = (t: Trip) => (urea ? undefined : t.fuelStats?.D2);
   const cifras = (t: Trip) => {
     if (!urea) {
+      const d2 = bloqueD2(t);
+      if (d2) return { galones: n(d2.totalGalones), gasto: n(d2.totalGasto), rendimiento: n(d2.rendimiento) };
       const gal = Object.entries(t.fuelStats ?? {}).filter(([k]) => !esUrea(k)).reduce((s, [, v]) => s + n(v.totalGalones), 0) || t.totalGalones;
       // Gasto solo de diésel (D2), igual que los galones: el de urea se ve en su propia pantalla
       const gasto = Object.entries(t.fuelStats ?? {}).filter(([k]) => !esUrea(k)).reduce((s, [, v]) => s + n(v.totalGasto), 0) || t.totalGasto;
@@ -467,8 +471,8 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     try {
       // Igual que el clásico: con el filtro D2 las fechas, km, galones, gasto y rendimiento salen de las cifras del diésel (fuelStats.D2);
       // si el viaje no tiene D2 (o es urea) se usan las del viaje
-      const statsDe = (x: Trip) => (urea ? undefined : x.fuelStats?.D2);
-      const cifrasXls = (x: Trip) => { const s = statsDe(x); return s ? { galones: n(s.totalGalones), gasto: n(s.totalGasto), rendimiento: n(s.rendimiento) } : cifras(x); };
+      const statsDe = bloqueD2;
+      const cifrasXls = cifras;
       const filas = visibles.map(x => {
         const s = statsDe(x);
         const c = cifrasXls(x);
@@ -576,6 +580,9 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
             <TablaRedimensionable id={urea ? 'analisis-urea' : 'analisis-combustible'} columnas={columnas} ariaLabel={urea ? 'Análisis de urea por viaje' : 'Análisis de combustible por viaje'}>
               {pagina_.map(x => {
                 const c = cifras(x);
+                const s2 = bloqueD2(x);
+                const fIni = s2?.fechaInicio || x.fechaInicio, fFin = s2?.fechaFin || x.fechaFin;
+                const kIni = s2 ? n(s2.kmInicio) : x.kmInicio, kFin = s2 ? n(s2.kmFin) : x.kmFin, recKm = s2 ? n(s2.recorridoKm) : x.recorridoKm;
                 const a = analisis.get(x.viaje);
                 const abiertoFila = !urea && expandidos.has(x.viaje);
                 const color = colorAudit(x.estadoAuditoria);
@@ -618,11 +625,11 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                   <Celda key="ruta">{x.ruta || '—'}</Celda>,
                   <Celda key="conductor">{x.conductor || '—'}</Celda>,
                   <Celda key="peso" alinear="right" mono>{fmt(x.pesoMaxTn, 2)}</Celda>,
-                  <Celda key="finicio" mono>{x.fechaInicio || '—'}</Celda>,
-                  <Celda key="ffin" mono>{x.fechaFin || '—'}</Celda>,
-                  <Celda key="kmini" alinear="right" mono>{x.kmInicio > 0 ? fmt(x.kmInicio, 1) : '—'}</Celda>,
-                  <Celda key="kmfin" alinear="right" mono>{x.kmFin > 0 ? fmt(x.kmFin, 1) : '—'}</Celda>,
-                  <Celda key="recorrido" alinear="right" mono>{x.recorridoKm > 0 ? fmt(x.recorridoKm, 1) : '—'}</Celda>,
+                  <Celda key="finicio" mono>{fIni || '—'}</Celda>,
+                  <Celda key="ffin" mono>{fFin || '—'}</Celda>,
+                  <Celda key="kmini" alinear="right" mono>{kIni > 0 ? fmt(kIni, 1) : '—'}</Celda>,
+                  <Celda key="kmfin" alinear="right" mono>{kFin > 0 ? fmt(kFin, 1) : '—'}</Celda>,
+                  <Celda key="recorrido" alinear="right" mono>{recKm > 0 ? fmt(recKm, 1) : '—'}</Celda>,
                   <Celda key="galones" alinear="right" mono>{fmt(c.galones, 2)}</Celda>,
                   <Celda key="rendimiento" alinear="right" mono>{c.rendimiento > 0 ? fmt(c.rendimiento, 2) : '—'}</Celda>,
                   <Celda key="gasto" alinear="right" mono>{soles(c.gasto)}</Celda>,

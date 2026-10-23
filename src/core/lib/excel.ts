@@ -1,5 +1,5 @@
 // Exportar tablas a Excel (.xlsx) desde cualquier pantalla. Carga la librería solo al usarla.
-// Date = fecha nativa de Excel (dd/mm/aaaa, o dd/mm/aaaa hh:mm si trae hora). Se arma con UTC para que la hora no cambie.
+// Date = fecha nativa de Excel (aaaa-mm-dd, o aaaa-mm-dd hh:mm:ss si trae hora, como el clásico). Se arma con UTC para que la hora no cambie.
 type Celda = string | number | Date | null | undefined;
 
 // Fechas como fecha y hora reales de Excel (no texto): así las tablas dinámicas y los filtros por fecha funcionan.
@@ -9,7 +9,7 @@ function celdaDe(c: Celda) {
   if (c instanceof Date) {
     if (Number.isNaN(c.getTime())) return '';
     const conHora = c.getUTCHours() !== 0 || c.getUTCMinutes() !== 0 || c.getUTCSeconds() !== 0;
-    return { value: c, format: conHora ? 'dd/mm/yyyy hh:mm' : 'dd/mm/yyyy' };
+    return { value: c, format: conHora ? 'yyyy-mm-dd hh:mm:ss' : 'yyyy-mm-dd' };
   }
   if (typeof c === 'string') {
     const m = FECHA_HORA.exec(c.trim());
