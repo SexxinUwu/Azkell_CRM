@@ -1,6 +1,6 @@
 // PDF de la OT con el mismo diseño del clásico: el HTML sale de otPdfClasico.ts (copia de generarPDF_OT)
 // y aquí solo se convierte a PDF con la misma librería de la app.
-import { generarPDFBlob, montarParaPDF } from '../../core/lib/pdf';
+import { generarPDFBlob } from '../../core/lib/pdf';
 import { generarPDF_OT } from './otPdfClasico';
 import type { MaterialSalida, OrdenTrabajo, TrabajoOT } from './api';
 
@@ -29,11 +29,16 @@ async function blobDeHtml(html: string): Promise<Blob> {
   doc.getElementById('btnPrint')?.remove();
   const el = document.createElement('div');
   el.innerHTML = doc.body.innerHTML;
-  const quitar = montarParaPDF(el);
+  // El documento mide 210 mm: la caja de montaje de core/lib/pdf (0×0 con overflow oculto) lo recorta y sale en blanco.
+  // Aquí la caja deja ver todo el contenido, detrás del resto de la app y sin interacción.
+  const caja = document.createElement('div');
+  caja.style.cssText = 'position:absolute;left:0;top:0;width:210mm;height:0;overflow:visible;z-index:-1;pointer-events:none;';
+  caja.appendChild(el);
+  document.body.appendChild(caja);
   try {
     await document.fonts?.ready;
     return await generarPDFBlob(el, { orientacion: 'portrait' });
-  } finally { quitar(); }
+  } finally { caja.remove(); }
 }
 
 /** PDF de cierre de la OT (con trabajos, materiales y firmas), como el clásico */

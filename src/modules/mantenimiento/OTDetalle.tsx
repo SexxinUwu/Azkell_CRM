@@ -333,7 +333,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
           <div>
             <p className="tarjeta__grupo-titulo">Diagnóstico y asignación</p>
             <div className="tarjeta__lista">
-              {(det.motivo || ot.observaciones) && <div className="dato"><span className="dato__label">Falla reportada</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{String(rotGetCleanMotivoDisplay(det, ot))}</span></div>}
+              {(det.motivo || ot.observaciones) && <div className="dato"><span className="dato__label">Falla reportada</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{String(rotGetCleanMotivoDisplay(det, ot)).replace(/^•s*/gm, '').replace(/^(Falla Manual|MANUAL)s*:s*/i, '')}</span></div>}
               {ot.tecnico && <div className="dato"><span className="dato__label">Técnico responsable</span><span className="dato__valor">{ot.tecnico}</span></div>}
               {ot.supervisor && <div className="dato"><span className="dato__label">Supervisor</span><span className="dato__valor">{ot.supervisor}</span></div>}
               {(ot.rampa_origen || ot.id_rampa) && <div className="dato"><span className="dato__label">Rampa asignada</span><span className="dato__valor">{ot.rampa_origen ?? ot.id_rampa}</span></div>}
