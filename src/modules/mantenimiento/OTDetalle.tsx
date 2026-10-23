@@ -172,10 +172,10 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     setExportando(true);
     try {
       if (modo === 'descargar') {
-        await abrirPdf(() => pdfOt({ ot, trabajos: trabajosTodos ?? [], materiales: materiales ?? [], usuario }), `OT-${idOt}-${ot.placa}.pdf`);
+        await abrirPdf(() => pdfOt({ ot, trabajos, materiales: materiales ?? [], usuario }), `OT-${idOt}-${ot.placa}.pdf`);
         return;
       }
-      const blob = await pdfOt({ ot, trabajos: trabajosTodos ?? [], materiales: materiales ?? [], usuario });
+      const blob = await pdfOt({ ot, trabajos, materiales: materiales ?? [], usuario });
       await compartirPDF(blob, `OT-${idOt}-${ot.placa}.pdf`, `Orden de trabajo ${idOt} · placa ${ot.placa}`);
     } catch (err) {
       toast(errorMessage(err), 'error');
