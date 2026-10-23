@@ -1,7 +1,7 @@
-import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/format';
+import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Download, Package, Pencil, Play, Plus, Share2, Timer } from 'lucide-react';
+import { ArrowUpRight, Download, Package, Play, Plus, Share2, Timer } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, Notice } from '../../core/ui/Display';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -15,7 +15,7 @@ import { compartirPDF, descargarArchivo } from '../../core/lib/pdf';
 import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
 import { useInspecciones, type Inspeccion } from '../inspecciones/api';
 import {
-  accionesDisponibles, costosOT, duracionPausa, estadoTrabajo, etiquetaEstado, formatoDuracion, marcarTrabajo, otDetalles, otId,
+  aObjeto, trabajoId, accionesDisponibles, costosOT, duracionPausa, estadoTrabajo, etiquetaEstado, formatoDuracion, otDetalles, otId,
   pausasDe, tiempoNetoOT, trabajoCosto, trabajosDeOT, useInspeccionesDeOT, useMateriales, useTrabajosOT,
   type AccionOT, type OrdenTrabajo, type PausaOT, type TrabajoOT,
 } from './api';
@@ -112,7 +112,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   // Formulario de trabajo: abierto para agregar (trabajoSel null) o para editar uno existente
   const [trabajoAbierto, setTrabajoAbierto] = useState(false);
   const [trabajoSel, setTrabajoSel] = useState<TrabajoOT | null>(null);
-  const puedeAgregarTrabajo = puedeEditar && !['Finalizado', 'Cerrada', 'Anulado'].includes(ot.estado);
+  // Igual que el clásico (esAprobada): se pueden agregar trabajos desde Aprobada hasta Cerrada, también ya finalizada
+  const puedeAgregarTrabajo = puedeEditar && ['Aprobada', 'En Proceso', 'Pausada', 'Finalizado', 'Cerrada'].includes(ot.estado);
 
   const ahora = useAhora(enCurso);
   const { data: materiales, isLoading: loadMat } = useMateriales(idOt);
@@ -122,6 +123,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   const { data: inspecciones } = useInspecciones();
 
   const trabajos = trabajosDeOT(ot, trabajosTodos ?? []);
+  const totalAprobado = trabajos.filter(t => estadoTrabajo(t.estado) === 'Aprobado').reduce((sum, t) => sum + trabajoCosto(t), 0);
   const mats = (materiales ?? []).filter(m => m.estado !== 'Anulado');
   const costos = costosOT(ot, trabajosTodos ?? [], materiales ?? []);
   const pausas = pausasDe(ot);
@@ -133,23 +135,6 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     [inspeccionAbierta, inspecciones],
   );
 
-  // Hecho = realizado por el técnico o aprobado por el supervisor
-  const hechos = trabajos.filter(t => ['Realizado', 'Aprobado'].includes(estadoTrabajo(t.estado))).length
-    + backlog.filter(b => b.estado === 'Completado').length;
-  const totalTareas = trabajos.length + backlog.length;
-
-  /** Marca o desmarca un trabajo del checklist (estado Realizado / Pendiente) */
-  async function alternarTrabajo(id: string, realizado: boolean, t: (typeof trabajos)[number]) {
-    setMarcando(id);
-    try {
-      await marcarTrabajo(t, realizado);
-      await qc.invalidateQueries({ queryKey: ['mant', 'trabajos-ot'] });
-    } catch (err) {
-      toast(errorMessage(err), 'error');
-    } finally {
-      setMarcando(null);
-    }
-  }
 
   /** Marca o desmarca un ítem del backlog enlazado (Completado / Pendiente) */
   async function alternarBacklog(b: BacklogOT, completado: boolean) {
@@ -261,41 +246,58 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       {seccion === 'tareas' && (
         <>
           <div>
-            <p className="tarjeta__grupo-titulo">
-              Checklist de trabajo
-              {totalTareas > 0 && <span className="ot-progreso t-numeric">{hechos} de {totalTareas}</span>}
-            </p>
-            {puedeAgregarTrabajo && (
-              <div style={{ marginBottom: 'var(--s-3)' }}>
-                <Button variant="secondary" icon={<Plus size={15} />} onClick={() => { setTrabajoSel(null); setTrabajoAbierto(true); }}>Agregar trabajo</Button>
-              </div>
-            )}
-            {loadTra ? <PageLoader /> : totalTareas === 0 ? (
-              <p className="t-footnote c-secondary">Sin trabajos registrados. Usa "Agregar trabajo" para anotar la labor, quién la hizo y a qué hora.</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 'var(--s-2)' }}>
+              <p className="tarjeta__grupo-titulo" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                Trabajos realizados <Badge>{trabajos.length}</Badge>
+              </p>
+              {puedeAgregarTrabajo && (
+                <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => { setTrabajoSel(null); setTrabajoAbierto(true); }}>
+                  Agregar trabajo
+                </Button>
+              )}
+            </div>
+            {loadTra ? <PageLoader /> : trabajos.length === 0 ? (
+              <p className="t-footnote c-secondary">No hay trabajos registrados</p>
             ) : (
               <div className="tarjeta__lista">
-                {trabajos.map((t, i) => {
-                  const realizado = ['Realizado', 'Aprobado'].includes(estadoTrabajo(t.estado));
-                  const clave = `t-${t.id_ot}-${i}`;
+                {trabajos.map(t => {
+                  const aprobado = estadoTrabajo(t.estado) === 'Aprobado';
+                  const costo = trabajoCosto(t);
+                  const personal = String(aObjeto(t.detalles_json).personal ?? t.tecnico ?? '');
+                  const fechas = [t.fecha_trabajo, t.fecha_salida]
+                    .filter(Boolean)
+                    .map(f => formatFechaHoraPe(String(f).replace('Z', '').replace(' ', 'T').slice(0, 16)));
                   return (
-                    <div key={clave} className="ot-linea">
-                      <button type="button" role="checkbox" aria-checked={realizado} className={`ot-check-tarea${realizado ? ' ot-check-tarea--ok' : ''}`}
-                        disabled={!puedeEditar || marcando === clave} onClick={() => alternarTrabajo(clave, !realizado, t)} aria-label={`Marcar ${t.trabajo_realizado ?? 'trabajo'}`}>
-                        {realizado && <span aria-hidden>✓</span>}
-                      </button>
-                      <div className="ot-linea__cuerpo">
-                        <span className={`ot-linea__titulo${realizado ? ' ot-linea__titulo--hecho' : ''}`}>{t.trabajo_realizado || 'Trabajo sin descripción'}</span>
-                        <span className="ot-linea__sub">{[t.tecnico, formatFechaPe(t.fecha_trabajo)].filter(Boolean).join(' · ') || '—'}</span>
+                    <button key={trabajoId(t)} type="button" disabled={!puedeEditar}
+                      onClick={() => { setTrabajoSel(t); setTrabajoAbierto(true); }}
+                      style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 0, padding: 0, color: 'inherit', font: 'inherit', cursor: puedeEditar ? 'pointer' : 'default' }}>
+                      <div className="dato" style={{ alignItems: 'flex-start' }}>
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span className="t-footnote c-secondary">{t.ticket_visita}</span>
+                            <Badge tone={aprobado ? 'green' : 'amber'}>{aprobado ? 'Aprobado' : 'Pendiente'}</Badge>
+                          </span>
+                          <span>{t.trabajo_realizado || '—'}</span>
+                          {personal && <span className="t-footnote c-secondary">{personal}</span>}
+                          {fechas.length > 0 && <span className="t-footnote c-secondary">{fechas.join(' → ')}</span>}
+                          {puedeEditar && <span className="t-footnote c-secondary" style={{ opacity: 0.7 }}>Toca para editar</span>}
+                        </span>
+                        {costo > 0 && <span className="t-numeric" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{soles(costo)}</span>}
                       </div>
-                      <span className="ot-linea__importe t-numeric">{soles(trabajoCosto(t))}</span>
-                      {puedeEditar && (
-                        <button type="button" className="btn btn--icon" aria-label="Editar trabajo" title="Editar trabajo"
-                          style={{ minWidth: 44, minHeight: 44, border: 0, background: 'transparent', cursor: 'pointer', color: 'var(--label-2)' }}
-                          onClick={() => { setTrabajoSel(t); setTrabajoAbierto(true); }}><Pencil size={16} /></button>
-                      )}
-                    </div>
+                    </button>
                   );
                 })}
+                {totalAprobado > 0 && (
+                  <div className="dato"><span className="dato__label">Total aprobado</span><span className="dato__valor t-numeric">{soles(totalAprobado)}</span></div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {backlog.length > 0 && (
+            <div>
+              <p className="tarjeta__grupo-titulo">Mantenimientos pendientes (Backlog) <Badge>{backlog.length}</Badge></p>
+              <div className="tarjeta__lista">
                 {backlog.map(b => {
                   const hecho = b.estado === 'Completado';
                   const clave = b.backlog_id;
@@ -313,8 +315,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                   );
                 })}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <div>
             <p className="tarjeta__grupo-titulo">Diagnóstico y asignación</p>
