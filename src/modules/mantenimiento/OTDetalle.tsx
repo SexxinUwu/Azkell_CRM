@@ -23,7 +23,7 @@ import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
 import { TrabajoOTSheet } from './TrabajoOTSheet';
 import { OTServiciosTerceros } from './OTServiciosTerceros';
 import { SalidaFormulario } from '../almacen/SalidaFormulario';
-import { pdfOt, pdfPlantillaOt } from './otPdf';
+import { htmlOtPdf, htmlPlantillaOt, pdfOt } from './otPdf';
 import { rotGetCleanMotivoDisplay } from './otPdfClasico';
 
 export const ETIQUETA_ACCION: Record<AccionOT, string> = {
@@ -153,26 +153,18 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     }
   }
 
-  /** PDF en otra pestaña, igual que el PDF de neumáticos: la pestaña se abre al tocar el botón y muestra un aviso mientras se genera */
-  async function abrirPdf(generar: () => Promise<Blob>, nombre: string) {
-    const win = window.open('', '_blank');
-    try { win?.document.write('<!doctype html><meta charset="utf-8"><title>Generando PDF…</title><body style="margin:0;height:100vh;display:grid;place-items:center;font:16px system-ui,sans-serif;color:#475569">Generando PDF…</body>'); win?.document.close(); } catch { /* sin acceso a la pestaña */ }
-    try {
-      const url = URL.createObjectURL(await generar());
-      if (win) win.location.href = url;
-      else { const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); }
-      setTimeout(() => URL.revokeObjectURL(url), 120_000);
-    } catch (err) {
-      win?.close();
-      throw err;
-    }
+  /** Abre el documento en otra pestaña, igual que el clásico (Blob text/html con el botón de imprimir) */
+  function abrirDocumento(html: string) {
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 120_000);
   }
 
   async function exportar(modo: 'descargar' | 'whatsapp') {
     setExportando(true);
     try {
       if (modo === 'descargar') {
-        await abrirPdf(() => pdfOt({ ot, trabajos, materiales: materiales ?? [], usuario }), `Orden de trabajo ${idOt} ${ot.placa}.pdf`);
+        abrirDocumento(htmlOtPdf({ ot, trabajos, materiales: materiales ?? [], usuario }));
         return;
       }
       const blob = await pdfOt({ ot, trabajos, materiales: materiales ?? [], usuario });
@@ -187,7 +179,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   async function descargarPlantilla() {
     setExportando(true);
     try {
-      await abrirPdf(() => pdfPlantillaOt(ot), `Plantilla orden de trabajo ${idOt}.pdf`);
+      abrirDocumento(htmlPlantillaOt(ot));
     } catch (err) {
       toast(errorMessage(err), 'error');
     } finally {

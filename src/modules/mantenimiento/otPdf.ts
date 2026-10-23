@@ -54,3 +54,13 @@ export function pdfOt(d: DatosOtPdf): Promise<Blob> {
 export function pdfPlantillaOt(ot: OrdenTrabajo): Promise<Blob> {
   return blobDeHtml(generarPDF_OT(ot, [], [], true, undefined) as string, 'Plantilla orden de trabajo');
 }
+
+/** HTML del documento de la OT, igual que el clásico (generarPDF_OT): se muestra tal cual en una pestaña */
+export function htmlOtPdf(d: DatosOtPdf): string {
+  return generarPDF_OT(d.ot, d.trabajos, d.materiales, false, undefined) as string;
+}
+
+/** Plantilla vacía del clásico, tal cual */
+export function htmlPlantillaOt(ot: OrdenTrabajo): string {
+  return generarPDF_OT(ot, [], [], true, undefined) as string;
+}
