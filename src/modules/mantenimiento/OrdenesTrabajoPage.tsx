@@ -4,7 +4,7 @@ import '../almacen/almacen.css'; // estilos de tabla (.inv-kardex) que usa la li
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ArrowUpRight, BookOpen, Plus, ScrollText, SearchX, Filter, Trash2, Eye } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, BookOpen, CheckCircle2, Eye, Filter, Lock, Pause, Play, Plus, RotateCcw, ScrollText, SearchX, Trash2, XCircle } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -17,12 +17,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import {
-  ejecutarAccionOT, eliminarOT, etiquetaEstado,
-  accionesDisponibles, estadoColor, otDetalles, otFecha, otId, otTipo,
-  useOrdenesTrabajoData,
-  type AccionOT, type OrdenTrabajo,
-} from './api';
+import { ejecutarAccionOT, eliminarOT, otDetalles, otFecha, otId, otTipo, useOrdenesTrabajoData, type AccionOT, type OrdenTrabajo } from './api';
 import { ETIQUETA_ACCION, OTDetalle } from './OTDetalle';
 import { exportarReportesOT } from './exportarOT';
 import { abrirPdfReportesOT } from './exportarPDFOT';
@@ -97,6 +92,26 @@ const hoyLima = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Americ
 const finDeMes = (mes: string) => { const [a, m] = mes.split('-').map(Number); return new Date(Date.UTC(a, m, 0)).toISOString().slice(0, 10); };
 
 // ─── Componente principal ─────────────────────────────────────────────────────
+
+/** Acciones de la fila según el estado, como rotBotonesAccion del clásico. Finalizada muestra Reactivar junto a la píldora. */
+function AccionesFila({ estado, onAccion, disabled }: { estado: string; onAccion: (a: AccionOT) => void; disabled: boolean }) {
+  const boton = (accion: AccionOT, Icono: typeof Play, texto: string) => (
+    <button type="button" disabled={disabled} onClick={() => onAccion(accion)}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 36, padding: '0 12px', marginRight: 6, borderRadius: 999, border: '1px solid var(--separator)', background: 'var(--surface)', color: 'var(--label)', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}>
+      <Icono size={14} />{texto}
+    </button>
+  );
+  const pildora = (Icono: typeof Play, texto: string, color: string) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', marginRight: 6, borderRadius: 999, background: color, color: '#fff', fontSize: '0.75rem', fontWeight: 700 }}>
+      <Icono size={13} />{texto}
+    </span>
+  );
+  if (estado === 'En Proceso') return <>{boton('pausar', Pause, 'Pausar')}{boton('cerrar', Lock, 'Cerrar')}</>;
+  if (estado === 'Pausada') return <>{boton('reanudar', Play, 'Reanudar')}{boton('cerrar', Lock, 'Cerrar')}</>;
+  if (estado === 'Finalizado' || estado === 'Cerrada') return <>{pildora(CheckCircle2, 'Finalizado', 'var(--green-ink)')}{boton('reactivar', RotateCcw, 'Reactivar')}</>;
+  if (estado === 'Anulado') return pildora(XCircle, 'Anulado', 'var(--label-3)');
+  return boton('iniciar', Play, 'Iniciar');
+}
 
 export function OrdenesTrabajoPage() {
   const location = useLocation();
@@ -502,14 +517,7 @@ export function OrdenesTrabajoPage() {
                         return (
                           <tr key={otId(o)} onClick={() => { haptic('selection'); setSeleccionada(o); }} style={{ cursor: 'pointer' }}>
                             <td style={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
-                              <span className={`ot-estado ot-estado--${estadoColor(o.estado)}`} style={{ marginRight: 6 }}>{etiquetaEstado(o.estado)}</span>
-                              {accionesDisponibles(o.estado).filter(a => a !== 'anular').map(a => (
-                                <button key={a} type="button" className="btn btn-sm" disabled={ejecutando}
-                                  onClick={() => setConfirmando({ accion: a, ot: o })}
-                                  style={{ minHeight: 36, marginRight: 4, padding: '0 10px', borderRadius: 999, fontSize: '0.8125rem', fontWeight: 600, border: '1px solid var(--separator)', background: 'var(--surface)', cursor: 'pointer' }}>
-                                  {ETIQUETA_ACCION[a]}
-                                </button>
-                              ))}
+                              <AccionesFila estado={o.estado} disabled={ejecutando} onAccion={a => setConfirmando({ accion: a, ot: o })} />
                             </td>
                             <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>{otId(o)}{o.reporte_desvinculado && <> <Badge tone="amber">Reporte desvinculado</Badge></>}</td>
                             <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', color: 'var(--label-2)' }}>{otFecha(o)}</td>
