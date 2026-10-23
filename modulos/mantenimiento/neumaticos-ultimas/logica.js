@@ -431,6 +431,7 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
         if (!d) return;
         // Se abre la pestaña en el gesto del usuario y luego se carga el PDF (no se descarga)
         const win = window.open('', '_blank');
+        try { if (win) { win.document.write('<!doctype html><meta charset="utf-8"><title>Generando PDF…</title><body style="margin:0;height:100vh;display:grid;place-items:center;font:16px system-ui,sans-serif;color:#475569">Generando PDF…</body>'); win.document.close(); } } catch (eAviso) { /* sin acceso a la pestaña */ }
         try {
             if (typeof html2pdf === 'undefined') {
                 await new Promise((resolve, reject) => {
@@ -497,7 +498,7 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                     margin: [8, 8, 8, 8],
                     filename: 'Resumen_Compras_Reposicion_' + new Date().toISOString().split('T')[0] + '.pdf',
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true },
+                    html2canvas: { scale: 3, useCORS: true },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
                 }).from(wrapper.firstElementChild).outputPdf('blob');
             } finally {

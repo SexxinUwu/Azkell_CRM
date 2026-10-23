@@ -177,13 +177,17 @@ async function nombreEmpresaPdf(): Promise<string> {
 /** Genera el PDF A4 horizontal y lo abre en una pestaña nueva (o lo deja listo para descargar si el navegador bloquea la ventana) */
 export async function abrirResumenPdf(filas: FilaResumen[], umbral: number) {
   const win = window.open('', '_blank');
+  // La pestaña ya muestra un aviso mientras se genera el PDF (no parece colgada)
+  try { win?.document.write('<!doctype html><meta charset="utf-8"><title>Generando PDF…</title><body style="margin:0;height:100vh;display:grid;place-items:center;font:16px system-ui,sans-serif;color:#475569">Generando PDF…</body>'); win?.document.close(); } catch { /* sin acceso a la pestaña */ }
   const el = document.createElement('div');
-  // Posición absoluta fuera de la vista (como el clásico): con position fixed el contenido salía en blanco
   el.style.cssText = 'position:absolute;left:-9999px;top:0;background:#fff;width:1040px;';
   try {
     el.innerHTML = htmlResumenPdf(filas, umbral, await nombreEmpresaPdf());
     document.body.appendChild(el);
-    const blob = await generarPDFBlob(el, { orientacion: 'landscape', margen: [8, 8, 8, 8] });
+    // Se captura el documento interior, no el contenedor: html2pdf copia los estilos del elemento y el left:-9999px
+    // del contenedor dejaba la hoja en blanco (el clásico hace lo mismo con firstElementChild)
+    const hoja = el.firstElementChild as HTMLElement;
+    const blob = await generarPDFBlob(hoja, { orientacion: 'landscape', margen: [8, 8, 8, 8], escala: 3 });
     const url = URL.createObjectURL(blob);
     if (win) win.location.href = url;
     else { const a = document.createElement('a'); a.href = url; a.download = `Reposicion-neumaticos-${textoUmbral(umbral).replace(/\s/g, '')}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
