@@ -1,5 +1,6 @@
 import { formatFechaPe, formatSoles } from '../../core/lib/format';
 import './mant.css';
+import '../almacen/almacen.css'; // estilos de tabla (.inv-kardex) que usa la lista de OT
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
