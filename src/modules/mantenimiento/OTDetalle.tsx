@@ -24,6 +24,7 @@ import { TrabajoOTSheet } from './TrabajoOTSheet';
 import { OTServiciosTerceros } from './OTServiciosTerceros';
 import { SalidaFormulario } from '../almacen/SalidaFormulario';
 import { pdfOt, pdfPlantillaOt } from './otPdf';
+import { usePlacas } from '../placas/api';
 import { rotGetCleanMotivoDisplay } from './otPdfClasico';
 
 export const ETIQUETA_ACCION: Record<AccionOT, string> = {
@@ -131,6 +132,17 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     const c = (catalogoTaller?.rampas ?? []).find(x => String(x.id) === numero);
     return c ? String(c.nombre_rampa ?? c.nombre ?? numero) : numero;
   };
+  // Marca (tabla de placas), rampa (catálogo) y kilometraje: el PDF los muestra junto a los datos de la OT
+  const { data: placasLista } = usePlacas();
+  const extrasPdf = () => {
+    const d = aObjeto(ot.detalles_json);
+    return {
+      marca: (placasLista ?? []).find(p => p.placa === ot.placa)?.marca || undefined,
+      rampa: nombreRampa(ot.id_rampa) || undefined,
+      kmTablero: (d.km ?? d.kilometraje ?? d.km_tablero) as string | number | undefined,
+      kmGps: d.km_gps as string | number | undefined,
+    };
+  };
   const toast = useToast();
   const { user } = useAuth();
   const usuario = user?.name ?? '';
@@ -208,10 +220,10 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     setExportando(true);
     try {
       if (modo === 'descargar') {
-        await abrirPdf(() => pdfOt({ ot, trabajos, materiales: materiales ?? [], usuario }), `Orden de trabajo ${idOt} ${ot.placa}.pdf`);
+        await abrirPdf(() => pdfOt({ ot, trabajos, materiales: materiales ?? [], usuario, extras: extrasPdf() }), `Orden de trabajo ${idOt} ${ot.placa}.pdf`);
         return;
       }
-      const blob = await pdfOt({ ot, trabajos, materiales: materiales ?? [], usuario });
+      const blob = await pdfOt({ ot, trabajos, materiales: materiales ?? [], usuario, extras: extrasPdf() });
       await compartirPDF(blob, `Orden de trabajo ${idOt} ${ot.placa}.pdf`, `Orden de trabajo ${idOt} · placa ${ot.placa}`);
     } catch (err) {
       toast(errorMessage(err), 'error');
@@ -223,7 +235,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   async function descargarPlantilla() {
     setExportando(true);
     try {
-      await abrirPdf(() => pdfPlantillaOt(ot), `Plantilla orden de trabajo ${idOt}.pdf`);
+      await abrirPdf(() => pdfPlantillaOt(ot, extrasPdf()), `Plantilla orden de trabajo ${idOt}.pdf`);
     } catch (err) {
       toast(errorMessage(err), 'error');
     } finally {
