@@ -156,7 +156,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
   const totalCalculado = items.reduce((acc, i) => acc + (i.importe || 0), 0);
 
   return (
-    <Sheet open={open} onClose={onClose} title={s ? 'Editar salida' : 'Nueva salida'}>
+    <Sheet open={open} onClose={onClose} ancho title={s ? 'Editar salida' : 'Nueva salida'}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
           <Field label="Fecha *" error={mostrar(!fecha ? 'Selecciona la fecha.' : undefined)}>

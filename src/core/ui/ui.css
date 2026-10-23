@@ -445,6 +445,7 @@ button.row:active { background: var(--fill); }
     border-radius: var(--r-2xl);
     translate: -50% -50%;
   }
+  .sheet.sheet--ancho { width: min(56rem, calc(100vw - 2rem)); }
 }
 
 /* Móvil: hoja inferior flotante que se arrastra para cerrar */

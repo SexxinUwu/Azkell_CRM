@@ -1,4 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ImageOff } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
@@ -13,15 +14,43 @@ const MAX_FILAS = 80;
 
 function usePopover(abierto: boolean, cerrar: () => void) {
   const raiz = useRef<HTMLDivElement>(null);
+  const lista = useRef<HTMLDivElement>(null);
+  const [caja, setCaja] = useState<{ left: number; top: number; width: number } | null>(null);
+  // La lista se pinta fuera del formulario (portal) para que no la recorte el contenedor con scroll de la tabla
+  useLayoutEffect(() => {
+    if (!abierto) return;
+    const medir = () => { const r = raiz.current?.getBoundingClientRect(); if (r) setCaja({ left: r.left, top: r.bottom + 4, width: r.width }); };
+    medir();
+    window.addEventListener('resize', medir);
+    window.addEventListener('scroll', medir, true);
+    return () => { window.removeEventListener('resize', medir); window.removeEventListener('scroll', medir, true); };
+  }, [abierto]);
   useEffect(() => {
     if (!abierto) return;
-    const fuera = (e: PointerEvent) => { if (!raiz.current?.contains(e.target as Node)) cerrar(); };
-    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') cerrar(); };
+    const fuera = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!raiz.current?.contains(t) && !lista.current?.contains(t)) cerrar();
+    };
+    // Escape en captura: cierra solo la lista y no llega a la hoja que la contiene
+    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); cerrar(); } };
     document.addEventListener('pointerdown', fuera);
-    document.addEventListener('keydown', tecla);
-    return () => { document.removeEventListener('pointerdown', fuera); document.removeEventListener('keydown', tecla); };
+    window.addEventListener('keydown', tecla, true);
+    return () => { document.removeEventListener('pointerdown', fuera); window.removeEventListener('keydown', tecla, true); };
   }, [abierto, cerrar]);
-  return raiz;
+  return { raiz, lista, caja };
+}
+
+/** Lista desplegable anclada al campo, en un portal por encima de la hoja */
+function ListaFlotante({ caja, lista, id, ancho, children, maxAlto }: {
+  caja: { left: number; top: number; width: number } | null; lista: React.RefObject<HTMLDivElement | null>; id: string; ancho?: number; children: React.ReactNode; maxAlto: number;
+}) {
+  if (!caja) return null;
+  const w = Math.max(caja.width, ancho ?? 0);
+  const left = Math.max(8, Math.min(caja.left, window.innerWidth - w - 8));
+  return createPortal(
+    <div ref={lista} id={id} role="listbox" style={{ ...estiloLista, position: 'fixed', left, top: caja.top, width: w, right: 'auto', zIndex: 10000, maxHeight: maxAlto, overflowY: 'auto' }}>{children}</div>,
+    document.body,
+  );
 }
 
 const estiloLista: React.CSSProperties = {
@@ -53,7 +82,7 @@ export function SolicitanteSelector({ id, value, onChange, opciones, invalido }:
   id?: string; value: string; onChange: (v: string) => void; opciones: string[]; invalido?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
-  const raiz = usePopover(abierto, () => setAbierto(false));
+  const { raiz, lista, caja } = usePopover(abierto, () => setAbierto(false));
   const listId = useId();
   const visibles = useMemo(() => {
     const q = value.trim().toUpperCase();
@@ -66,7 +95,7 @@ export function SolicitanteSelector({ id, value, onChange, opciones, invalido }:
         aria-invalid={invalido || undefined} aria-expanded={abierto} aria-controls={listId} role="combobox"
         onFocus={() => setAbierto(true)} onChange={e => { onChange(e.target.value); setAbierto(true); }} />
       {abierto && visibles.length > 0 && (
-        <div id={listId} role="listbox" style={{ ...estiloLista, maxHeight: 260, overflowY: 'auto' }}>
+        <ListaFlotante caja={caja} lista={lista} id={listId} maxAlto={260}>
           {visibles.map(n => (
             <button key={n} type="button" role="option" aria-selected={n === value}
               onClick={() => { onChange(n); setAbierto(false); }}
@@ -74,7 +103,7 @@ export function SolicitanteSelector({ id, value, onChange, opciones, invalido }:
               {n}
             </button>
           ))}
-        </div>
+        </ListaFlotante>
       )}
     </div>
   );
@@ -96,7 +125,7 @@ export function ArticuloSelector({ value, articulos, onSelect, onTexto, invalido
   value: string; articulos: ArticuloInv[]; onSelect: (a: ArticuloInv) => void; onTexto: (t: string) => void; invalido?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
-  const raiz = usePopover(abierto, () => setAbierto(false));
+  const { raiz, lista, caja } = usePopover(abierto, () => setAbierto(false));
   const listId = useId();
   const { visibles, total } = useMemo(() => {
     const q = value.trim().toUpperCase();
@@ -112,7 +141,7 @@ export function ArticuloSelector({ value, articulos, onSelect, onTexto, invalido
         placeholder="Buscar artículo por código o nombre..." aria-invalid={invalido || undefined} aria-expanded={abierto} aria-controls={listId} role="combobox"
         onFocus={() => setAbierto(true)} onChange={e => { onTexto(e.target.value); setAbierto(true); }} />
       {abierto && (
-        <div id={listId} role="listbox" style={{ ...estiloLista, minWidth: 'min(26rem, 88vw)', maxHeight: 340, overflowY: 'auto' }}>
+        <ListaFlotante caja={caja} lista={lista} id={listId} ancho={420} maxAlto={340}>
           {visibles.length === 0 ? (
             <div style={{ padding: 14, color: 'var(--label-2)', fontSize: '0.875rem' }}>Sin resultados.</div>
           ) : visibles.map(a => (
@@ -129,7 +158,7 @@ export function ArticuloSelector({ value, articulos, onSelect, onTexto, invalido
           {total > visibles.length && (
             <div style={{ padding: '8px 12px', fontSize: '0.75rem', color: 'var(--label-2)' }}>Mostrando {visibles.length} de {total}. Escribe para afinar la búsqueda.</div>
           )}
-        </div>
+        </ListaFlotante>
       )}
     </div>
   );

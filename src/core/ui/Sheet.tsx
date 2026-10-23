@@ -18,6 +18,8 @@ interface SheetProps {
   footer?: ReactNode;
   /** Sube desde abajo también en escritorio, hasta una altura máxima (detalles largos) */
   anclaAbajo?: boolean;
+  /** Diálogo ancho en escritorio (formularios con tablas) */
+  ancho?: boolean;
 }
 
 /**
@@ -27,7 +29,7 @@ interface SheetProps {
  *   el impulso del dedo (skill apple-design §6) para decidir si cierra o vuelve.
  * Entra y sale por el mismo camino (§7). Escape cierra. El foco vuelve al disparador.
  */
-export function Sheet({ open, onClose, title, children, footer, anclaAbajo = false }: SheetProps) {
+export function Sheet({ open, onClose, title, children, footer, anclaAbajo = false, ancho = false }: SheetProps) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
   const titleId = useId();
   const dragControls = useDragControls();
@@ -103,7 +105,7 @@ export function Sheet({ open, onClose, title, children, footer, anclaAbajo = fal
           <motion.div
             key="sheet"
             ref={panelRef}
-            className={`sheet${anclaAbajo ? ' sheet--abajo' : ''}`}
+            className={`sheet${anclaAbajo ? ' sheet--abajo' : ''}${ancho ? ' sheet--ancho' : ''}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
