@@ -8,7 +8,7 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { empresaDePlaca, estiloEmpresa, hayAlerta, perteneceAEmpresa, tipoDe, type Pestana, type Recursos, type Registro } from './garitaBase';
+import { empresaDePlaca, estiloEmpresa, hayAlerta, perteneceAEmpresa, tipoDe, type EmpresaStats, type Pestana, type Recursos, type Registro } from './garitaBase';
 import { IconoTipo, useActaGarita } from './garitaPiezas';
 
 // Fechas tal como las guarda el clásico (dd-mm-aa); si llegan ISO se recortan
@@ -23,8 +23,8 @@ function EstadoPill({ r }: { r: Registro }) {
 }
 
 /** Lista "CheckList de Unidades" de la empresa elegida */
-export function GaritaLista({ empresa, registros, cargando, error, recursos, puedeCrear, puedeEliminar, onEmpresas, onRefrescar, onSalida, onPlantilla, onAbrir, onEliminar }: {
-  empresa: string; registros: Registro[]; cargando: boolean; error: unknown; recursos?: Recursos; puedeCrear: boolean; puedeEliminar: boolean;
+export function GaritaLista({ empresa, stats, registros, cargando, error, recursos, puedeCrear, puedeEliminar, onEmpresas, onRefrescar, onSalida, onPlantilla, onAbrir, onEliminar }: {
+  empresa: string; stats?: EmpresaStats; registros: Registro[]; cargando: boolean; error: unknown; recursos?: Recursos; puedeCrear: boolean; puedeEliminar: boolean;
   onEmpresas: () => void; onRefrescar: () => Promise<unknown>; onSalida: () => void; onPlantilla: () => void; onAbrir: (id: string) => void; onEliminar: (r: Registro) => void;
 }) {
   const toast = useToast();
@@ -34,12 +34,15 @@ export function GaritaLista({ empresa, registros, cargando, error, recursos, pue
   const [refrescando, setRefrescando] = useState(false);
 
   const deEmpresa = useMemo(() => registros.filter(r => perteneceAEmpresa(r, empresa, recursos)), [registros, empresa, recursos]);
-  const cuenta = {
-    total: deEmpresa.length,
-    ruta: deEmpresa.filter(r => r.estado === 'en_ruta').length,
-    comp: deEmpresa.filter(r => r.estado === 'completado').length,
-    alerta: deEmpresa.filter(hayAlerta).length,
-  };
+  // Tarjetas con las cifras reales del servidor; si aún no llegan, se cuentan los registros descargados
+  const cuenta = stats
+    ? { total: stats.en_ruta + stats.completados, ruta: stats.en_ruta, comp: stats.completados, alerta: stats.alertas }
+    : {
+      total: deEmpresa.length,
+      ruta: deEmpresa.filter(r => r.estado === 'en_ruta').length,
+      comp: deEmpresa.filter(r => r.estado === 'completado').length,
+      alerta: deEmpresa.filter(hayAlerta).length,
+    };
   const visibles = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     return deEmpresa.filter(r => {

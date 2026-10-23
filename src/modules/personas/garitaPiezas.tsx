@@ -8,6 +8,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { compartirPDF } from '../../core/lib/pdf';
+import { VisorFotos } from '../../core/ui/VisorFotos';
 import { abrirActaParaImprimir, cargarFlotaDocs, docsDeVehiculos, fotosParaActa, htmlActaGarita, nombreArchivoActa, pdfBlobDeActa, type DocsVehiculo, type FaseActa, type RegistroActa } from './garitaActa';
 import { ChecklistGarita, FotosEvidencia, useTemplateGarita, type CatChk, type ValoresChk } from './garitaComponentes';
 import type { FotoReg, Registro, TipoSalida } from './garitaBase';
@@ -90,6 +91,7 @@ export function resumenInspeccion(valores: ValoresChk, plantilla: CatChk[], foto
 
 // ── Detalle del checklist guardado (solo lectura) y galería de fotos ──
 export function DetalleChecklistSheet({ rec, fase, onClose }: { rec: Registro | null; fase: 'salida' | 'retorno' | null; onClose: () => void }) {
+  const [visor, setVisor] = useState<number | null>(null);
   const chk = rec && fase ? (fase === 'salida' ? rec.salida_checklist_json : rec.retorno_checklist_json) : null;
   const tpl = rec && fase ? (fase === 'salida' ? rec.salida_template_json : rec.retorno_template_json) : null;
   const fotos = (rec?.fotos ?? []).filter(f => f.tipo === fase);
@@ -120,9 +122,11 @@ export function DetalleChecklistSheet({ rec, fase, onClose }: { rec: Registro | 
       {fotos.length > 0 && (
         <div className="gar-chk">
           <div className="gar-chk__cab"><h4>Evidencias Fotográficas Adjuntas ({fotos.length})</h4></div>
-          <div className="gar-galeria">{fotos.map((f, i) => <a key={f.id ?? i} href={f.url} target="_blank" rel="noopener noreferrer"><img src={f.url} alt={`Evidencia ${i + 1}`} loading="lazy" /></a>)}</div>
+          <div className="gar-galeria">{fotos.map((f, i) => <button type="button" key={f.id ?? i} onClick={() => setVisor(i)} aria-label={`Ver evidencia ${i + 1}`}><img src={f.url} alt={`Evidencia ${i + 1}`} loading="lazy" /></button>)}</div>
         </div>
       )}
+      <VisorFotos open={visor !== null} indiceInicial={visor ?? 0} onClose={() => setVisor(null)}
+        titulo={`Evidencias — ${fase === 'salida' ? 'Ida' : 'Vuelta'}`} fotos={fotos.flatMap((f, i) => (f.url ? [{ url: f.url, titulo: `Evidencia ${i + 1}` }] : []))} />
     </Sheet>
   );
 }
@@ -137,13 +141,15 @@ export function GaleriaSheet({ rec, fase, onClose }: { rec: Registro | null; fas
   // URLs firmadas vigentes; si no llegan, las de la lista
   const todas = q.data?.length ? q.data : (rec?.fotos ?? []);
   const fotos = todas.filter(f => f.tipo === fase);
-  return (
-    <Sheet open={abierto} onClose={onClose} title={`Evidencias Fotográficas — ${fase === 'salida' ? 'Ida' : 'Vuelta'}`} anclaAbajo>
-      {q.isLoading ? <div className="gar-vacio">Cargando evidencias…</div> : fotos.length === 0
-        ? <div className="gar-vacio">No hay evidencias fotográficas registradas en la fase de {fase}.</div>
-        : <div className="gar-galeria">{fotos.map((f, i) => <a key={f.id ?? i} href={f.url} target="_blank" rel="noopener noreferrer"><img src={f.url} alt={`Evidencia ${i + 1}`} loading="lazy" /></a>)}</div>}
-    </Sheet>
-  );
+  const titulo = `Evidencias Fotográficas — ${fase === 'salida' ? 'Ida' : 'Vuelta'}`;
+  if (abierto && !q.isLoading && fotos.length === 0) {
+    return (
+      <Sheet open onClose={onClose} title={titulo} anclaAbajo>
+        <div className="gar-vacio">No hay evidencias fotográficas registradas en la fase de {fase}.</div>
+      </Sheet>
+    );
+  }
+  return <VisorFotos open={abierto} cargando={q.isLoading} onClose={onClose} titulo={titulo} fotos={fotos.flatMap((f, i) => (f.url ? [{ url: f.url, titulo: `Evidencia ${i + 1}` }] : []))} />;
 }
 
 // ── Acta PDF y WhatsApp (el acta no se toca: sale de garitaActa.ts) ──

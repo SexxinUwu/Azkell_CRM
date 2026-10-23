@@ -542,7 +542,7 @@ export function FleetrunPage() {
               <SegmentedControl value={filtro} onChange={cambiarFiltro} label="Filtrar por estado" options={opcionesFiltro} />
             )}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{ width: '14rem' }}>
+              <div style={{ width: '17rem' }}>
                 <SearchField value={busqueda} onChange={cambiarBusqueda} placeholder="Buscar placa, modelo, tipo…" />
               </div>
               <Button variant={historial ? 'primary' : 'secondary'} icon={<History size={16} />}
@@ -565,7 +565,10 @@ export function FleetrunPage() {
           ) : (
             <>
               <div className="tarjeta__lista" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                <table className="inv-kardex" style={{ minWidth: '70rem' }}>
+                <table className="inv-kardex" style={{ minWidth: '100rem', width: '100%', tableLayout: 'fixed' }}>
+                  <colgroup>
+                    {['9rem', '6rem', '7rem', '12rem', '6rem', '7rem', '6rem', '6rem', '6rem', '9rem', '6.5rem', '6rem', '14rem', '4rem'].map((w, k) => <col key={k} style={{ width: w }} />)}
+                  </colgroup>
                   <thead>
                     <tr>
                       <th>Placa</th>

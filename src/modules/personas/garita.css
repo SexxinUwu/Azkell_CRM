@@ -160,6 +160,9 @@ textarea.gar-input { padding: var(--s-2) var(--s-3); min-height: 4rem; resize: v
 .gar-chk__btns { display: flex; align-items: center; gap: 8px; }
 .gar-circ { width: 2.75rem; height: 2.75rem; border-radius: var(--r-full); border: 1.5px solid var(--separator-strong); background: var(--surface); color: var(--label-2); display: grid; place-items: center; font: inherit; font-size: 0.75rem; font-weight: 800; cursor: pointer; padding: 0; }
 .gar-circ:active { transform: scale(var(--press-scale)); }
+/* Como el clásico: X rojo suave y ✓ verde suave aunque no estén marcados */
+.gar-circ--mal:not([aria-pressed="true"]) { border-color: var(--red-ink); color: var(--red-ink); background: var(--red-tint); }
+.gar-circ--ok:not([aria-pressed="true"]) { border-color: var(--green-ink); color: var(--green-ink); background: var(--green-tint); }
 .gar-circ--mal[aria-pressed="true"] { background: var(--red-ink); border-color: var(--red-ink); color: #fff; }
 .gar-circ--na[aria-pressed="true"] { background: var(--gray-ink); border-color: var(--gray-ink); color: #fff; }
 .gar-circ--ok[aria-pressed="true"] { background: var(--green-ink); border-color: var(--green-ink); color: #fff; }
@@ -175,7 +178,7 @@ textarea.gar-input { padding: var(--s-2) var(--s-3); min-height: 4rem; resize: v
 .gar-foto button { position: absolute; top: 4px; right: 4px; width: 1.75rem; height: 1.75rem; border: none; border-radius: var(--r-full); background: rgba(220, 38, 38, 0.92); color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; }
 .gar-foto-vacio { grid-column: 1 / -1; text-align: center; font-size: 0.8125rem; font-style: italic; color: var(--label-2); padding: var(--s-3) 0; }
 .gar-galeria { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: var(--s-3); }
-.gar-galeria a { display: block; border-radius: var(--r-md); overflow: hidden; background: var(--fill); }
+.gar-galeria a, .gar-galeria button { display: block; padding: 0; border: 0; cursor: pointer; border-radius: var(--r-md); overflow: hidden; background: var(--fill); }
 .gar-galeria img { width: 100%; height: 8.5rem; object-fit: cover; display: block; }
 .gar-det-fila { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: 10px 0; border-bottom: 1px solid var(--separator); font-size: 0.875rem; }
 

@@ -7,7 +7,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
-import { useRecursos, useRegistros, type Registro, type TipoSalida } from './garitaBase';
+import { useEmpresasStats, useRecursos, useRegistros, type Registro, type TipoSalida } from './garitaBase';
 import { GaritaEmpresas } from './GaritaEmpresas';
 import { GaritaLista } from './GaritaLista';
 import { GaritaDestino, GaritaSalida } from './GaritaSalida';
@@ -38,6 +38,9 @@ export function SegUnidadesPage() {
   const puedeEliminar = can('seg_unidades.eliminar', 'seguridad_unidades.eliminar');
   const refrescar = () => qc.invalidateQueries({ queryKey: ['personas'] });
   const abierto = (lista.data ?? []).find(r => r.id === abiertoId) ?? null;
+  // Cifras reales del servidor (la lista solo descarga los registros más recientes)
+  const statsQ = useEmpresasStats(empresa);
+  const stats = empresa === 'TODAS' ? statsQ.data?.global : statsQ.data?.empresas.find(e => e.empresa === empresa);
 
   function elegirEmpresa(e: string) {
     setEmpresa(e);
@@ -64,7 +67,7 @@ export function SegUnidadesPage() {
         <GaritaEmpresas usuario={user?.name ?? ''} empresaActiva={empresa} nombreEmpresaSesion={user?.companyName ?? ''} onElegir={elegirEmpresa} />
       )}
       {vista === 'lista' && (
-        <GaritaLista empresa={empresa} registros={lista.data ?? []} cargando={lista.isLoading} error={lista.isError ? lista.error : null} recursos={recursos.data}
+        <GaritaLista empresa={empresa} stats={stats} registros={lista.data ?? []} cargando={lista.isLoading} error={lista.isError ? lista.error : null} recursos={recursos.data}
           puedeCrear={puedeCrear} puedeEliminar={puedeEliminar}
           onEmpresas={() => setVista('empresas')} onRefrescar={refrescar} onSalida={() => setVista('destino')} onPlantilla={() => setVista('plantilla')}
           onAbrir={id => { setAbiertoId(id); setVista('retorno'); }} onEliminar={setPorEliminar} />
