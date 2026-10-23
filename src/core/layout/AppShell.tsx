@@ -374,22 +374,27 @@ function Insignia({ item, contador, className }: { item: NavItem; contador: Cont
 }
 
 // Escritorio: un enlace, una opción con destino en la versión actual, un grupo desplegable o una opción "Pronto"
-function NavEscritorio({ item, pathname, contador }: { item: NavItem; pathname: string; contador: Contador }) {
-  const hayActivo = !!item.children?.some(c => isActive(c, pathname));
+function tieneActivo(item: NavItem, pathname: string): boolean {
+  return isActive(item, pathname) || !!item.children?.some(c => tieneActivo(c, pathname));
+}
+
+// nivel: 0 = directo bajo la sección; 1 y 2+ = submódulos (se sangran a la derecha de su padre)
+function NavEscritorio({ item, pathname, contador, nivel = 0 }: { item: NavItem; pathname: string; contador: Contador; nivel?: number }) {
+  const hayActivo = !!item.children?.some(c => tieneActivo(c, pathname));
   const [abierto, setAbierto] = useState(hayActivo);
   useEffect(() => { if (hayActivo) setAbierto(true); }, [hayActivo]);
 
   if (item.children) {
     return (
-      <div className="nav-grupo">
-        <button type="button" className="nav-item nav-grupo__cab" aria-expanded={abierto} onClick={() => setAbierto(v => !v)}>
+      <div className={`nav-grupo${hayActivo ? ' nav-grupo--activo' : ''}`}>
+        <button type="button" className={`nav-item nav-grupo__cab nav-item--n${Math.min(nivel, 2)}`} aria-expanded={abierto} onClick={() => setAbierto(v => !v)}>
           <item.icon size={18} strokeWidth={1.9} />
           <span className="sidebar__texto">{item.label}</span>
           <ChevronDown size={16} aria-hidden className={`nav-grupo__flecha sidebar__texto${abierto ? ' nav-grupo__flecha--abierta' : ''}`} />
         </button>
         {abierto && (
-          <div className="nav-grupo__hijos">
-            {item.children.map(c => <NavEscritorio key={c.key} item={c} pathname={pathname} contador={contador} />)}
+          <div className={`nav-grupo__hijos nav-grupo__hijos--n${Math.min(nivel + 1, 2)}`}>
+            {item.children.map(c => <NavEscritorio key={c.key} item={c} pathname={pathname} contador={contador} nivel={nivel + 1} />)}
           </div>
         )}
       </div>
@@ -405,9 +410,9 @@ function NavEscritorio({ item, pathname, contador }: { item: NavItem; pathname: 
       {!item.pronto && !item.to && <ArrowUpRight size={14} className="nav-item__ext sidebar__texto" aria-label="Se abre en la versión actual" />}
     </>
   );
-  if (item.pronto) return <span className="nav-item nav-item--soon" aria-disabled="true">{contenido}</span>;
-  if (item.to) return <NavLink to={item.to} end={item.to === '/'} className="nav-item">{contenido}</NavLink>;
-  return <a href="/" className="nav-item" onClick={e => { e.preventDefault(); abrirClasico(item.clasico!); }}>{contenido}</a>;
+  if (item.pronto) return <span className={`nav-item nav-item--soon nav-item--n${Math.min(nivel, 2)}`} aria-disabled="true">{contenido}</span>;
+  if (item.to) return <NavLink to={item.to} end={item.to === '/'} className={`nav-item nav-item--n${Math.min(nivel, 2)}`}>{contenido}</NavLink>;
+  return <a href="/" className={`nav-item nav-item--n${Math.min(nivel, 2)}`} onClick={e => { e.preventDefault(); abrirClasico(item.clasico!); }}>{contenido}</a>;
 }
 
 // Celular: la lista de pantallas de un módulo (los submenús salen como encabezado con sus opciones)

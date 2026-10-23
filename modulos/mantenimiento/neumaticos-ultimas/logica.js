@@ -11,27 +11,74 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
     window._neuTabActiva = 'ultimas'; // 'ultimas' | 'requerimientos'
     window._neuFiltroMotora = 'Todos'; // 'Todos' | 'Motora' | 'No Motora'
 
+    // ── Umbral de requerimiento (mm), editable y recordado ────────────────
+    // Solo afecta a la pestaña Requerimiento; el semáforo global (NEU_MM_CRITICO) no cambia.
+    window.neuUmbralReq = function() {
+        let v = NaN;
+        try { v = parseFloat(localStorage.getItem('fleet_neu_mm_requerimiento')); } catch (e) {}
+        if (isNaN(v)) v = 3;
+        return Math.min(10, Math.max(1, Math.round(v * 2) / 2));
+    };
+    window.neuFmtMm = function(v) {
+        return String(v).replace('.', ',');
+    };
+
+    // Requiere reposición si el remanente promedio (mismo valor que 'remProm') es <= umbral.
+    // Si no hay promedio, se recurre al flag guardado por el servidor (alerta_cambio, calculado con < 3).
+    window.neuEsRequerimiento = function(row, umbral) {
+        const p = (row.remanente_promedio !== null && row.remanente_promedio !== undefined && row.remanente_promedio !== '')
+            ? parseFloat(row.remanente_promedio) : NaN;
+        if (isNaN(p)) return Number(row.alerta_cambio) === 1;
+        return p <= umbral;
+    };
+
+    // Recalcula la lista de requerimientos desde las últimas inspecciones (/ultimas trae todas las llantas)
+    window.neuRecalcularRequerimientos = function() {
+        const u = window.neuUmbralReq();
+        window._neuDataRequerimientos = (window._neuDataUltimas || []).filter(r => window.neuEsRequerimiento(r, u));
+        window._neuDataRequerimientos.sort((a, b) => (parseFloat(a.remanente_promedio) || 0) - (parseFloat(b.remanente_promedio) || 0));
+
+        const badgeReq = document.getElementById('badge-req-count');
+        if (badgeReq) badgeReq.innerText = window._neuDataRequerimientos.length.toLocaleString();
+        const lblTab = document.getElementById('neu-tab-umbral');
+        if (lblTab) lblTab.innerText = window.neuFmtMm(u);
+        const inp = document.getElementById('neu-input-umbral-req');
+        if (inp && document.activeElement !== inp) inp.value = u;
+    };
+
+    window.neuSetUmbralReq = function(valor) {
+        let v = parseFloat(String(valor).replace(',', '.'));
+        if (isNaN(v)) v = 3;
+        v = Math.min(10, Math.max(1, Math.round(v * 2) / 2));
+        try { localStorage.setItem('fleet_neu_mm_requerimiento', String(v)); } catch (e) {}
+        const inp = document.getElementById('neu-input-umbral-req');
+        if (inp) inp.value = v;
+        window._neuFiltroMedidaSel = null;
+        window.neuRecalcularRequerimientos();
+        window._neuPoblarSelectEmpresas();
+        if (window._neuTabActiva === 'requerimientos') {
+            const titulo = document.getElementById('neu-ultimas-titulo');
+            if (titulo) titulo.innerText = `Requerimiento de Llantas para Recambio (≤ ${window.neuFmtMm(v)} mm)`;
+        }
+        window.neuFiltrarUltimas();
+    };
+
     window.neuUltimasCargar = async function() {
         const container = document.getElementById('neu-vehiculos-cards-container');
         if (container) container.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-secondary me-2"></div> Cargando inspecciones de vehículos...</div>';
 
         try {
-            const [resUlt, resReq] = await Promise.all([
-                fetch('/api/neumaticos/ultimas'),
-                fetch('/api/neumaticos/requerimientos')
-            ]);
+            // /ultimas trae todas las llantas de la última inspección; el requerimiento se calcula aquí con el umbral elegido
+            const resUlt = await fetch('/api/neumaticos/ultimas');
+            if (!resUlt.ok) throw new Error('HTTP ' + resUlt.status);
             const dataUlt = await resUlt.json();
-            const dataReq = await resReq.json();
 
             window._neuDataUltimas = (dataUlt.ok && Array.isArray(dataUlt.data)) ? dataUlt.data : [];
-            window._neuDataRequerimientos = (dataReq.ok && Array.isArray(dataReq.data)) ? dataReq.data : [];
+            window.neuRecalcularRequerimientos();
 
-            // Actualizar badges de conteo de pestañas
+            // Actualizar badge de conteo de la pestaña
             const badgeUlt = document.getElementById('badge-ultimas-count');
             if (badgeUlt) badgeUlt.innerText = window._neuDataUltimas.length.toLocaleString();
-
-            const badgeReq = document.getElementById('badge-req-count');
-            if (badgeReq) badgeReq.innerText = window._neuDataRequerimientos.length.toLocaleString();
 
             // Extraer lista única de empresas/dueños para el selector
             window._neuPoblarSelectEmpresas();
@@ -80,7 +127,7 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
         } else {
             if (btnUlt) { btnUlt.className = 'neu-main-tab'; }
             if (btnReq) { btnReq.className = 'neu-main-tab tab-req active'; }
-            if (titulo) titulo.innerText = 'Requerimiento de Llantas para Recambio (< 3 mm)';
+            if (titulo) titulo.innerText = `Requerimiento de Llantas para Recambio (≤ ${window.neuFmtMm(window.neuUmbralReq())} mm)`;
         }
 
         window.neuFiltrarUltimas();
@@ -267,7 +314,7 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
             return;
         }
 
-        let txt = `📋 *REQUERIMIENTO DE NEUMÁTICOS PARA COMPRAS* — ERP Azkell Fleet\n`;
+        let txt = `📋 *REQUERIMIENTO DE NEUMÁTICOS PARA COMPRAS* (≤ ${window.neuFmtMm(window.neuUmbralReq())} mm) — ERP Azkell Fleet\n`;
         txt += `📅 *Fecha:* ${new Date().toLocaleDateString()}\n\n`;
 
         let totalGral = 0;
@@ -287,6 +334,133 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
             if (typeof window.mostrarToast === 'function') window.mostrarToast('Resumen de compra copiado al portapapeles', 'success');
             else alert('Resumen de compra copiado al portapapeles.');
         });
+    };
+
+    // ── Exportar el cuadro resumen (Excel / PDF) ──────────────────────────
+    window._neuResumenDatosExport = function() {
+        const lista = window._neuResumenComprasMap || [];
+        if (!lista.length) {
+            alert('No hay requerimientos activos para exportar.');
+            return null;
+        }
+        const tot = { del: 0, trac: 0, arr: 0, rep: 0, total: 0 };
+        lista.forEach(it => { tot.del += it.del; tot.trac += it.trac; tot.arr += it.arr; tot.rep += it.rep; tot.total += it.total; });
+        const empSel = document.getElementById('neu-sel-empresa-filtro')?.value || 'Todos';
+        const empresa = empSel !== 'Todos' ? empSel : 'Todas las empresas';
+        const umbral = window.neuFmtMm(window.neuUmbralReq());
+        return { lista, tot, empresa, umbral, fecha: new Date().toLocaleDateString('es-PE') };
+    };
+
+    window.neuExportarResumenExcel = async function() {
+        const d = window._neuResumenDatosExport();
+        if (!d) return;
+        try {
+            if (typeof XLSX === 'undefined') {
+                await new Promise((resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = '/libs/xlsx.full.min.js';
+                    s.onload = resolve;
+                    s.onerror = () => reject(new Error('No se pudo cargar la librería Excel'));
+                    document.head.appendChild(s);
+                });
+            }
+            const aoa = [
+                ['Resumen Consolidado para Compras / Reposición'],
+                ['Empresa: ' + d.empresa, 'Fecha: ' + d.fecha, 'Remanente ≤ ' + d.umbral + ' mm'],
+                [],
+                ['MEDIDA LLANTA', 'DELANTERAS', 'TRACCIÓN', 'ARRASTRE', 'REPUESTOS', 'TOTAL REPOSICIÓN']
+            ];
+            d.lista.forEach(it => aoa.push([it.medida, it.del, it.trac, it.arr, it.rep, it.total]));
+            aoa.push(['TOTAL GENERAL A COMPRAR', d.tot.del, d.tot.trac, d.tot.arr, d.tot.rep, d.tot.total]);
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!cols'] = [{ wch: 28 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 18 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Reposicion');
+            XLSX.writeFile(wb, 'Resumen_Compras_Reposicion_' + new Date().toISOString().split('T')[0] + '.xlsx');
+        } catch (e) {
+            console.error('Error exportando Excel:', e);
+            alert('No se pudo generar el Excel: ' + e.message);
+        }
+    };
+
+    window.neuExportarResumenPDF = async function() {
+        const d = window._neuResumenDatosExport();
+        if (!d) return;
+        try {
+            if (typeof html2pdf === 'undefined') {
+                await new Promise((resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = '/libs/html2pdf.bundle.min.js';
+                    s.onload = resolve;
+                    s.onerror = () => reject(new Error('No se pudo cargar la librería PDF'));
+                    document.head.appendChild(s);
+                });
+            }
+            const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            let logo = '';
+            try { logo = localStorage.getItem('fleet_empresa_logo') || localStorage.getItem('empresa_logo') || ''; } catch (e) {}
+            const logoHtml = logo ? `<img src="${logo}" style="max-height:48px;max-width:160px;" alt="">` : '';
+            const th = 'padding:9px 10px;font-size:12px;font-weight:700;text-align:center;border:1px solid #e2e8f0;';
+            const td = 'padding:8px 10px;font-size:13px;font-weight:600;text-align:center;border:1px solid #e2e8f0;color:#1e293b;';
+
+            let filas = '';
+            d.lista.forEach(it => {
+                filas += `<tr>
+                    <td style="${td}text-align:left;font-family:monospace;font-weight:700;">${esc(it.medida)}</td>
+                    <td style="${td}">${it.del}</td><td style="${td}">${it.trac}</td><td style="${td}">${it.arr}</td><td style="${td}">${it.rep}</td>
+                    <td style="${td}color:#be123c;font-weight:800;">${it.total}</td></tr>`;
+            });
+            const tdT = 'padding:10px;font-size:13px;font-weight:800;text-align:center;background:#e11d48;color:#fff;border:1px solid #be123c;';
+
+            const html = `
+                <div style="font-family:Arial,Helvetica,sans-serif;padding:14px 18px;background:#fff;width:1040px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                        <div>
+                            <div style="font-size:20px;font-weight:800;color:#0f172a;">Resumen Consolidado para Compras / Reposición</div>
+                            <div style="font-size:12px;color:#64748b;margin-top:4px;">
+                                Empresa: <b>${esc(d.empresa)}</b> &nbsp;•&nbsp; Fecha: <b>${d.fecha}</b> &nbsp;•&nbsp; Remanente: <b>≤ ${d.umbral} mm</b> &nbsp;•&nbsp; Total: <b>${d.tot.total} llantas</b>
+                            </div>
+                        </div>
+                        <div>${logoHtml}</div>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead><tr>
+                            <th style="${th}background:#1e293b;color:#fff;text-align:left;">MEDIDA LLANTA</th>
+                            <th style="${th}background:#e0f2fe;color:#0284c7;">DELANTERAS</th>
+                            <th style="${th}background:#fef3c7;color:#b45309;">TRACCIÓN</th>
+                            <th style="${th}background:#dcfce7;color:#15803d;">ARRASTRE</th>
+                            <th style="${th}background:#f3e8ff;color:#6b21a8;">REPUESTOS</th>
+                            <th style="${th}background:#ffe4e6;color:#be123c;">TOTAL REPOSICIÓN</th>
+                        </tr></thead>
+                        <tbody>${filas}
+                            <tr>
+                                <td style="${tdT}text-align:left;">TOTAL GENERAL A COMPRAR</td>
+                                <td style="${tdT}">${d.tot.del}</td><td style="${tdT}">${d.tot.trac}</td><td style="${tdT}">${d.tot.arr}</td><td style="${tdT}">${d.tot.rep}</td>
+                                <td style="${tdT}font-size:15px;">${d.tot.total}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>`;
+
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;';
+            wrapper.innerHTML = html;
+            document.body.appendChild(wrapper);
+            try {
+                await html2pdf().set({
+                    margin: [8, 8, 8, 8],
+                    filename: 'Resumen_Compras_Reposicion_' + new Date().toISOString().split('T')[0] + '.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                }).from(wrapper.firstElementChild).save();
+            } finally {
+                if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+            }
+        } catch (e) {
+            console.error('Error exportando PDF:', e);
+            alert('No se pudo generar el PDF: ' + e.message);
+        }
     };
 
     window.neuRenderTabla = function(items) {

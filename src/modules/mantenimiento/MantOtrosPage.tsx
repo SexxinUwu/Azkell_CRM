@@ -114,7 +114,7 @@ export function MantOtrosPage() {
       descripcion: 'Control de vida útil, rotaciones y análisis de desgaste.',
       icon: <Disc3 size={20} />,
       color: 'var(--label-2)',
-      accion: () => nav('/mantenimiento/neumaticos'),    },
+      accion: () => nav('/mantenimiento/neumaticos-analisis'),    },
   ];
 
   const incidencias: Tarjeta[] = [

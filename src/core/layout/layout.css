@@ -506,9 +506,54 @@
 
 /* ─── Menú: submenús, contadores de pendientes y opciones "Pronto" ─── */
 .nav-grupo__cab { width: 100%; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
-.nav-grupo__hijos { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
 .nav-grupo__flecha { margin-left: auto; color: var(--label-3); transition: transform 200ms var(--ease-out); }
 .nav-grupo__flecha--abierta { transform: rotate(180deg); }
+
+/* Jerarquía: los submódulos se sangran a la derecha de su padre y una guía vertical los une */
+.nav-grupo__hijos {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+  margin-left: calc(var(--s-3) + 9px); /* centro del icono del padre */
+  padding-left: var(--s-2);
+  animation: nav-hijos-entrada 220ms var(--ease-out) both;
+}
+.nav-grupo__hijos::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 1.5px;
+  border-radius: 1px;
+  background: var(--separator);
+}
+.nav-grupo--activo > .nav-grupo__hijos::before { background: color-mix(in srgb, var(--accent) 45%, var(--separator)); }
+@keyframes nav-hijos-entrada {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Niveles inferiores: menos peso, texto e icono más pequeños */
+.nav-item--n1 { min-height: 2.25rem; font-size: 0.875rem; font-weight: 450; gap: var(--s-2); }
+.nav-item--n1 svg { width: 16px; height: 16px; }
+.nav-item--n2 { min-height: 2.125rem; font-size: 0.8125rem; font-weight: 450; gap: var(--s-2); color: var(--label-2); }
+.nav-item--n2 svg { width: 14px; height: 14px; }
+.nav-item--n1[aria-current='page'], .nav-item--n2[aria-current='page'] { color: var(--label); font-weight: 600; }
+/* Padre de la ruta activa: acento suave, sin píldora */
+.nav-grupo--activo > .nav-grupo__cab { color: var(--accent); }
+.nav-grupo--activo > .nav-grupo__cab svg:first-child { color: var(--accent); }
+.nav-grupo--activo > .nav-grupo__cab .nav-grupo__flecha { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-grupo__hijos { animation: none; }
+  .nav-grupo__flecha { transition: none; }
+}
+/* Riel contraído: sin sangría ni guía */
+.sidebar:not(:hover):not(.sidebar--teclado):not(.sidebar--fijo) .nav-grupo__hijos { margin-left: 0; padding-left: 0; }
+.sidebar:not(:hover):not(.sidebar--teclado):not(.sidebar--fijo) .nav-grupo__hijos::before { display: none; }
 
 .nav-item__contador {
   margin-left: auto;

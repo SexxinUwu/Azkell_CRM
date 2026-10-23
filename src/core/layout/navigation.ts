@@ -120,8 +120,8 @@ const SECCIONES_BASE: NavSection[] = [
       {
         key: 'neumaticos-grupo', label: 'Neumáticos', icon: Disc3, permissions: [],
         children: [
-          { key: 'neumaticos-analisis', label: 'Análisis de neumáticos', to: '/mantenimiento/neumaticos?tab=analisis', icon: Disc3, permissions: ver('neumaticos') },
-          { key: 'neumaticos', label: 'Últimas inspecciones', to: '/mantenimiento/neumaticos', icon: Clock, permissions: ver('neumaticos') },
+          { key: 'neumaticos-analisis', label: 'Análisis de neumáticos', to: '/mantenimiento/neumaticos-analisis', icon: Disc3, permissions: ver('neumaticos') },
+          { key: 'neumaticos', label: 'Últimas inspecciones', to: '/mantenimiento/neumaticos-ultimas', icon: Clock, permissions: ver('neumaticos') },
         ],
       },
       { key: 'incidencias', label: 'Incidencias en ruta', to: '/mantenimiento/incidencias', icon: ShieldCheck, permissions: ver('incidencias_ruta') },

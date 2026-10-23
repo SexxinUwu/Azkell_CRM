@@ -23,7 +23,7 @@ const num = (v: unknown) => (v == null || v === '' ? '—' : Number(v).toLocaleS
 
 // ─── Esquema de neumáticos por placa ─────────────────────────────────────────
 
-interface EstadoActual {
+export interface EstadoActual {
   ok?: boolean; error?: string; placa: string;
   unidad: { marca?: string; modelo_uts?: string; tipo?: string; configuracion?: string | null };
   ultima_inspeccion: { fecha_inspeccion?: string; km_vehiculo?: number } | null;

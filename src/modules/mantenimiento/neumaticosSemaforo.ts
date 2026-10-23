@@ -14,6 +14,9 @@ export function tonoMm(mm: number | null | undefined): Tono {
 /** Una llanta es crítica con menos de 3 mm */
 export const esCriticaMm = (mm: number): boolean => mm < MM_CRITICO;
 
+/** Requerimiento de reposición: remanente MENOR O IGUAL al umbral elegido (3 mm por defecto). No cambia el semáforo global. */
+export const esRequerimientoMm = (mm: number, umbral: number): boolean => mm <= umbral;
+
 export const ETIQUETA_TONO: Record<Tono, string> = {
   green: 'Óptimo', amber: 'Alerta preventiva', red: 'Crítico para cambio', gray: 'Sin dato',
 };

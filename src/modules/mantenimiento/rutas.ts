@@ -74,10 +74,22 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./FleetrunConfigPage').then(m => ({ default: m.FleetrunConfigPage }))),
   },
   {
+    path: 'mantenimiento/neumaticos-analisis/*',
+    permisos: ['neumaticos.ver'],
+    Page: lazy(() => import('./NeumaticosAnalisis').then(m => ({ default: m.NeumaticosAnalisisPage }))),
+    nav: { key: 'neumaticos-analisis', label: 'Análisis de neumáticos', to: '/mantenimiento/neumaticos-analisis', icon: 'Disc3', permisos: ['neumaticos.ver'] },
+  },
+  {
+    path: 'mantenimiento/neumaticos-ultimas/*',
+    permisos: ['neumaticos.ver'],
+    Page: lazy(() => import('./NeumaticosUltimasPage').then(m => ({ default: m.NeumaticosUltimasPage }))),
+    nav: { key: 'neumaticos', label: 'Últimas inspecciones', to: '/mantenimiento/neumaticos-ultimas', icon: 'Disc3', permisos: ['neumaticos.ver'] },
+  },
+  {
+    // Ruta antigua: redirige a una de las dos pantallas para no romper enlaces
     path: 'mantenimiento/neumaticos/*',
     permisos: ['neumaticos.ver'],
-    Page: lazy(() => import('./NeumaticosPage').then(m => ({ default: m.NeumaticosPage }))),
-    nav: { key: 'neumaticos', label: 'Neumáticos', to: '/mantenimiento/neumaticos', icon: 'Disc3', permisos: ['neumaticos.ver'] },
+    Page: lazy(() => import('./NeumaticosRedirect').then(m => ({ default: m.NeumaticosRedirect }))),
   },
   {
     path: 'mantenimiento/planificacion/*',
