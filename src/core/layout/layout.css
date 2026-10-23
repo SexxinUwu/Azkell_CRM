@@ -474,6 +474,8 @@
 
 /* ─── Hoja de módulo: lista de pantallas con ícono en baldosa ─── */
 .modulo-lista { display: flex; flex-direction: column; gap: var(--s-2); padding-bottom: var(--s-2); }
+/* Submódulos en el celular: sangrados bajo su sección, con guía vertical (igual que el menú de escritorio) */
+.more-section .modulo-lista { margin-left: 0.75rem; padding-left: 1rem; border-left: 2px solid var(--separator); }
 .modulo-fila {
   display: flex; align-items: center; gap: var(--s-3);
   padding: var(--s-3); border-radius: var(--r-lg);
