@@ -16,9 +16,7 @@ import { haptic } from '../../core/lib/haptics';
 import { compartirPDF } from '../../core/lib/pdf';
 import { usePlacas } from '../placas/api';
 import type { FirmaHandle } from '../inspecciones/Firma';
-import { cargarFlotaDocs, docsDeVehiculos, nombreArchivoActa, type FaseActa, type RegistroActa } from './garitaActa';
-import { construirPdfActa } from './garitaPdfVector';
-import { LOGO_URL } from '../../core/layout/BrandMark';
+import { abrirActaParaImprimir, cargarFlotaDocs, docsDeVehiculos, fotosParaActa, htmlActaGarita, nombreArchivoActa, pdfBlobDeActa, type FaseActa, type RegistroActa } from './garitaActa';
 import { ChecklistGarita, FirmaPar, FotosGarita, hayObservado, subirFotosGarita, useTemplateGarita, type ValoresChk } from './garitaComponentes';
 
 interface Registro {
@@ -84,27 +82,23 @@ export function SegUnidadesPage() {
   async function armarActa(r: Registro, fase: FaseActa) {
     const rec = r as unknown as RegistroActa;
     const flota = await cargarFlotaDocs();
-    const [docT, docC] = await Promise.all([
+    const [docT, docC, fotos] = await Promise.all([
       docsDeVehiculos(flota, rec.placa_tracto),
       docsDeVehiculos(flota, rec.retorno_placa_carreta || rec.placa_carreta),
+      fotosParaActa(rec.id, rec.fotos),
     ]);
-    const blob = await construirPdfActa(rec, fase, { docT, docC, plantillaGlobal: plantillaGlobal.data, nFotos: rec.fotos?.length ?? 0, logoUrl: LOGO_URL });
-    return { rec, blob };
+    return { rec, html: htmlActaGarita(rec, fase, { docT, docC, fotos, plantillaGlobal: plantillaGlobal.data }) };
   }
   const faseDe = (r: Registro): FaseActa => faseActa ?? (r.estado === 'en_ruta' ? 'salida' : 'completo');
 
   async function verPdf(r: Registro) {
     const fase = faseDe(r);
-    // La pestaña se abre antes del trabajo asíncrono para que el navegador no la bloquee
-    const win = window.open('', '_blank');
-    if (!win) { toast('El navegador bloqueó la ventana. Permite las ventanas emergentes.', 'error'); return; }
     setGenerando('pdf');
     try {
-      const { blob } = await armarActa(r, fase);
-      const url = URL.createObjectURL(blob);
-      win.location.href = url;
-      setTimeout(() => URL.revokeObjectURL(url), 120_000);
-    } catch (err) { win.close(); toast(errorMessage(err), 'error'); haptic('warning'); }
+      const { rec, html } = await armarActa(r, fase);
+      const placas = rec.placa_tracto + (rec.placa_carreta ? ` / ${rec.placa_carreta}` : '');
+      if (!abrirActaParaImprimir(html, `Checklist ${rec.placa_tracto} (${fase.toUpperCase()})`, placas, rec.id, true)) toast('El navegador bloqueó la ventana. Permite las ventanas emergentes.', 'error');
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
     finally { setGenerando(null); }
   }
 
@@ -112,8 +106,9 @@ export function SegUnidadesPage() {
     const fase = faseDe(r);
     setGenerando('wa');
     try {
-      const { rec, blob } = await armarActa(r, fase);
+      const { rec, html } = await armarActa(r, fase);
       const nombre = nombreArchivoActa(rec, fase);
+      const blob = await pdfBlobDeActa(html, nombre);
       const res = await compartirPDF(blob, nombre, `Checklist de inspección ${rec.placa_tracto} (${fase}) · ${rec.id}`);
       if (res === 'descargado') toast('PDF descargado. Adjúntalo en WhatsApp.');
       if (res !== 'cancelado') haptic('success');
