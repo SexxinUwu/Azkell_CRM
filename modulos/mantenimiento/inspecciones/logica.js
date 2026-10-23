@@ -3560,7 +3560,8 @@ window.init_inspecciones = function () {
                     fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
                         .then(r => r.json()).then(j => { window.dataGlobalInspecciones = j.data || []; dataGlobalInspecciones = window.dataGlobalInspecciones; }) : Promise.resolve(),
                 window.cargarDatosUnidadesBase(),
-                window.asegurarWialonCache()
+                window.asegurarWialonCache(),
+                window.asegurarNeumaticosInspecciones(true)
             ]);
         } catch(e) {
             console.warn("Error cargando dependencias de inspecciones:", e);
@@ -3581,7 +3582,8 @@ window.recargarInspecciones = function () {
                 window._dataGlobalInspeccionesRaw = dataGlobalInspecciones;
             }),
         window.cargarDatosUnidadesBase(),
-        window.asegurarWialonCache()
+        window.asegurarWialonCache(),
+        window.asegurarNeumaticosInspecciones(true)
     ]).finally(function() {
         mostrarStatusInspecciones(dataGlobalInspecciones || []);
     });
