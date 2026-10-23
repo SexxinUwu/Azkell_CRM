@@ -23,6 +23,36 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
         return String(v).replace('.', ',');
     };
 
+    // Empresa sin puntos, espacios ni mayúsculas (los datos traen 'MARSISA S.A.C.' y el selector antes decía 'Marsisa SAC')
+    window.neuNormEmpresa = function(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); };
+
+    // Tipo de llanta según la posición (igual que /app): R = Repuesto; en motora 1-2 Delantera y el resto Tracción; en no motora Arrastre
+    window.neuTipoLlanta = function(row) {
+        const pos = String(row.posicion || '').trim().toUpperCase();
+        if (pos === 'R') return 'Repuesto';
+        const mStr = String(row.motora || '').toUpperCase().trim();
+        const esMotora = mStr === 'SI' || mStr === '1' || mStr === 'MOTORA' || (row.tipo_unidad || '').toLowerCase().includes('tracto') || (row.tipo_unidad || '').toLowerCase().includes('camion');
+        if (!esMotora) return 'Arrastre';
+        return (pos === '1' || pos === '2') ? 'Delantera' : 'Tracción';
+    };
+
+    // Filtro por columna del cuadro (Delanteras, Tracción, Arrastre, Repuestos)
+    window._neuFiltroCatSel = window._neuFiltroCatSel || null;
+    window.neuSeleccionarCatFiltro = function(c) {
+        window._neuFiltroCatSel = window._neuFiltroCatSel === c ? null : c;
+        window.neuFiltrarUltimas();
+    };
+
+    // El selector de empresa se llena con las empresas que traen los datos
+    window.neuPoblarEmpresas = function() {
+        const sel = document.getElementById('neu-sel-empresa-filtro');
+        if (!sel) return;
+        const actual = sel.value;
+        const nombres = [...new Set((window._neuDataUltimas || []).map(r => String(r.dueno || '').trim()).filter(Boolean))].sort();
+        sel.innerHTML = '<option value="Todos">Todas las Empresas</option>' + nombres.map(n => '<option value="' + n.replace(/"/g, '&quot;') + '">' + n + '</option>').join('');
+        if (nombres.includes(actual)) sel.value = actual;
+    };
+
     // Requiere reposición si el remanente promedio (mismo valor que 'remProm') es <= umbral.
     // Si no hay promedio, se recurre al flag guardado por el servidor (alerta_cambio, calculado con < 3).
     window.neuEsRequerimiento = function(row, umbral) {
@@ -150,6 +180,7 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
     };
 
     window.neuFiltrarUltimas = function() {
+        window.neuPoblarEmpresas();
         const query = (document.getElementById('neu-input-busqueda-rapida')?.value || '').toLowerCase().trim();
         const empresa = (document.getElementById('neu-sel-empresa-filtro')?.value || 'Todos');
 
@@ -157,7 +188,7 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
 
         const filtradas = baseList.filter(row => {
             // Filtro por Empresa
-            if (empresa !== 'Todos' && row.dueno !== empresa) return false;
+            if (empresa !== 'Todos' && window.neuNormEmpresa(row.dueno) !== window.neuNormEmpresa(empresa)) return false;
 
             // Filtro Motora / No Motora (aplica SIEMPRE en ambas pestañas)
             if (window._neuFiltroMotora !== 'Todos') {
@@ -200,6 +231,9 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
             listaTabla = filtradas.filter(row => String(row.medida || '').toUpperCase().trim() === window._neuFiltroMedidaSel.toUpperCase().trim());
         }
 
+        if (window._neuFiltroCatSel && window._neuTabActiva === 'requerimientos') {
+            listaTabla = listaTabla.filter(row => window.neuTipoLlanta(row) === window._neuFiltroCatSel);
+        }
         window._neuListaVisible = listaTabla;
         const btnExcel = document.getElementById('neu-btn-excel-ultimas');
         if (btnExcel) btnExcel.classList.toggle('d-none', window._neuTabActiva !== 'ultimas');
@@ -228,11 +262,11 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
             });
             const num = v => (v === null || v === undefined || v === '' || !isFinite(Number(v)) ? '' : Number(v));
             const txt = v => (v === null || v === undefined ? '' : String(v));
-            const aoa = [['Placa', 'Empresa', 'Tipo de unidad', 'Marca unidad', 'Fecha inspección', 'Posición', 'Marca', 'Medida', 'Modelo',
+            const aoa = [['Placa', 'Empresa', 'Tipo de unidad', 'Marca unidad', 'Fecha inspección', 'Posición', 'Tipo de llanta', 'Marca', 'Medida', 'Modelo',
                 'R1 (mm)', 'R2 (mm)', 'R3 (mm)', 'R4 (mm)', 'Remanente promedio (mm)', 'Presión ant.', 'Presión actual', 'Estado', 'Observaciones']];
             [...porPlaca.values()].flat().forEach(l => aoa.push([
                 txt(l.placa).toUpperCase(), txt(l.dueno), txt(l.tipo_unidad), txt(l.marca_unidad), txt(l.fecha_inspeccion).split('T')[0],
-                txt(l.posicion), txt(l.marca), txt(l.medida), txt(l.modelo),
+                txt(l.posicion), window.neuTipoLlanta(l), txt(l.marca), txt(l.medida), txt(l.modelo),
                 num(l.r1), num(l.r2), num(l.r3), num(l.r4), num(l.remanente_promedio), num(l.presion_ant), num(l.presion_actual),
                 txt(l.estado), txt(l.observaciones)]));
             const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -421,6 +455,9 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
             ws['!cols'] = [{ wch: 28 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 18 }];
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Reposicion');
+            const filasDet = [['Placa', 'Empresa', 'Tipo de unidad', 'Posición', 'Tipo de llanta', 'Medida', 'Marca', 'Modelo', 'R1 (mm)', 'R2 (mm)', 'R3 (mm)', 'R4 (mm)', 'Remanente (mm)', 'Estado']];
+            (window._neuListaVisible || []).forEach(l => filasDet.push([String(l.placa || '').toUpperCase(), String(l.dueno || ''), String(l.tipo_unidad || ''), String(l.posicion || ''), window.neuTipoLlanta(l), String(l.medida || ''), String(l.marca || ''), String(l.modelo || ''), l.r1 ?? '', l.r2 ?? '', l.r3 ?? '', l.r4 ?? '', l.remanente_promedio ?? '', String(l.estado || '')]));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(filasDet), 'Detalle por placa');
             XLSX.writeFile(wb, 'Resumen_Compras_Reposicion_' + new Date().toISOString().split('T')[0] + '.xlsx');
         } catch (e) {
             console.error('Error exportando Excel:', e);
@@ -565,6 +602,7 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                             <thead>
                                 <tr>
                                     <th class="text-center" style="width: 48px;">POS</th>
+                                    ${window._neuTabActiva === 'requerimientos' ? '<th class="text-center" style="width: 110px;">TIPO</th>' : ''}
                                     <th>MARCA / MEDIDA / MODELO</th>
                                     <th class="text-center" style="width: 44px;">R1</th>
                                     <th class="text-center" style="width: 44px;">R2</th>
@@ -615,6 +653,7 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                                             <td class="text-center">
                                                 <span class="rounded-circle bg-dark text-white fw-bold d-inline-flex align-items-center justify-content-center" style="width:26px;height:26px;font-size:0.75rem;">${pos}</span>
                                             </td>
+                                            ${window._neuTabActiva === 'requerimientos' ? '<td class="text-center"><span class="badge bg-light text-dark border">' + window.neuTipoLlanta(det) + '</span></td>' : ''}
                                             <td>
                                                 <div class="fw-bold text-dark font-monospace text-nowrap" style="font-size:0.85rem;">${marcaL} ${modeloL ? '(' + modeloL + ')' : ''}</div>
                                                 <div class="text-muted small text-nowrap" style="font-size:0.75rem;">${medidaL} • ${estadoMat}</div>
@@ -704,7 +743,7 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
         let baseList = window._neuTabActiva === 'ultimas' ? window._neuDataUltimas : window._neuDataRequerimientos;
 
         const filtradas = baseList.filter(row => {
-            if (empresa !== 'Todos' && row.dueno !== empresa) return false;
+            if (empresa !== 'Todos' && window.neuNormEmpresa(row.dueno) !== window.neuNormEmpresa(empresa)) return false;
             return true;
         });
 
