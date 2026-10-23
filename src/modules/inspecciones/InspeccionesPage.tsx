@@ -95,7 +95,9 @@ export function InspeccionesPage() {
 
   // Filtro por empresa (vacío = todas): los porcentajes se calculan solo con las empresas elegidas
   const empresasOpc = useMemo(() => [...new Set(unidades.map(u => u.placa.cliente || 'Sin empresa'))].sort((a, b) => a.localeCompare(b, 'es')), [unidades]);
-  const unidadesEmp = useMemo(() => (empresas.length ? unidades.filter(u => empresas.includes(u.placa.cliente || 'Sin empresa')) : unidades), [unidades, empresas]);
+  // Con una sola empresa el filtro se oculta y se ignora cualquier selección previa
+  const hayVariasEmpresas = empresasOpc.length > 1;
+  const unidadesEmp = useMemo(() => (hayVariasEmpresas && empresas.length ? unidades.filter(u => empresas.includes(u.placa.cliente || 'Sin empresa')) : unidades), [unidades, empresas, hayVariasEmpresas]);
 
   const resumen = useMemo(() => {
     const r = { vigente: 0, proximo: 0, vencido: 0, 'sin-registro': 0 } as Record<Estado, number>;
@@ -195,7 +197,7 @@ export function InspeccionesPage() {
                   <div className="placas-toolbar__buscar"><SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, cliente, marca o tipo" /></div>
                   <SegmentedControl<Formato> label="Formato" value={formato} onChange={setFormato}
                     options={[{ value: 'tarjetas', label: 'Tarjetas' }, { value: 'tabla', label: 'Tabla' }]} />
-                  <MultiSelect label="Empresa" options={empresasOpc} value={empresas} onChange={setEmpresas} placeholder="Todas las empresas" />
+                  {hayVariasEmpresas && <MultiSelect label="Empresa" options={empresasOpc} value={empresas} onChange={setEmpresas} placeholder="Todas las empresas" />}
                   <SegmentedControl<Clase> label="Clase" value={clase} onChange={setClase}
                     options={[{ value: 'todas', label: 'Todas' }, { value: 'motoras', label: 'Motoras' }, { value: 'no-motoras', label: 'No motoras' }]} />
                 </div>

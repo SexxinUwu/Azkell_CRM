@@ -542,7 +542,9 @@ export function MantDashboardPage() {
   // Filtro por empresa del semáforo preventivo (vacío = todas)
   const [empresasSel, setEmpresasSel] = useState<string[]>([]);
   const empresasOpc = useMemo(() => [...new Set(ciclos.map(c => c.cliente))].sort((a, b) => a.localeCompare(b, 'es')), [ciclos]);
-  const ciclosSel = useMemo(() => (empresasSel.length ? ciclos.filter(c => empresasSel.includes(c.cliente)) : ciclos), [ciclos, empresasSel]);
+  // Con una sola empresa el filtro se oculta y se ignora cualquier selección previa (equivale a elegirla)
+  const hayVariasEmpresas = empresasOpc.length > 1;
+  const ciclosSel = useMemo(() => (hayVariasEmpresas && empresasSel.length ? ciclos.filter(c => empresasSel.includes(c.cliente)) : ciclos), [ciclos, empresasSel, hayVariasEmpresas]);
   const fleetrun = useFleetrunStats();
   const empresa = useEmpresaNombre();
 
@@ -925,9 +927,11 @@ export function MantDashboardPage() {
                     <ShieldCheck size={15} /> Semáforo Preventivo de Flota
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <div style={{ minWidth: 200 }}>
-                      <MultiSelect label="Empresa" options={empresasOpc} value={empresasSel} onChange={setEmpresasSel} placeholder="Todas las empresas" />
-                    </div>
+                    {hayVariasEmpresas && (
+                      <div style={{ minWidth: 200 }}>
+                        <MultiSelect label="Empresa" options={empresasOpc} value={empresasSel} onChange={setEmpresasSel} placeholder="Todas las empresas" />
+                      </div>
+                    )}
                     <Button variant="secondary" size="sm" icon={<History size={14} />} onClick={() => navigate('/inspecciones')}>
                       Inspecciones
                     </Button>

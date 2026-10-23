@@ -311,21 +311,22 @@ export function nombreArchivoActa(rec: RegistroActa, fase: FaseActa): string {
   return `${fecha} - ${placas} - ${km} km.pdf`.replace(/[/\\?%*:|"<>]/g, '-');
 }
 
-const CABEZA = `<meta charset="UTF-8"><script src="/libs/tailwind.min.js"></script>`
+// URL completa: dentro de una página blob: una ruta relativa como /libs/... no se resuelve y el acta salía sin estilos
+const CABEZA = `<meta charset="UTF-8"><script src="${window.location.origin}/libs/tailwind.min.js"></script>`
   + `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">`;
 
 /** Abre el acta en una pestaña con botón de imprimir (guardar como PDF), igual que el clásico */
 export function abrirActaParaImprimir(html: string, titulo: string, placas: string, folio: string, imprimirYa: boolean) {
   const doc = `<!DOCTYPE html><html lang="es"><head>${CABEZA}<title>${esc(titulo)}</title><meta name="viewport" content="width=device-width, initial-scale=1.0">`
-    + `<style>body{background:#F1F5F9;color:#0F172A;-webkit-font-smoothing:antialiased}.doc-grid-box{border:1.5px solid #0F172A}.report-page-break{page-break-before:always!important}`
+    + `<style>body{background:#F1F5F9;color:#0F172A;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}.doc-grid-box{border:1.5px solid #0F172A}.btn-action{transition:all .15s cubic-bezier(0.4,0,0.2,1)}.btn-action:hover{transform:translateY(-1px)}.btn-action:active{transform:scale(.98)}.report-page-break{page-break-before:always!important}`
     + `@media print{@page{size:A4 portrait;margin:4mm 5mm}body{background:#fff!important;padding:0!important;margin:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.no-print{display:none!important}.report-page{box-shadow:none!important;border:none!important;border-radius:0!important;padding:0!important;margin:0!important;width:100%!important;max-width:100%!important}}</style></head>`
     + `<body class="py-4 md:py-6 px-2 sm:px-4 flex flex-col items-center min-h-screen">`
-    + `<nav class="no-print w-full max-w-[840px] mb-4 flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-2.5 rounded-2xl border border-slate-200">`
-    + `<div class="flex items-center gap-2"><button onclick="window.close()" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700">Cerrar vista</button><span class="text-xs font-bold text-slate-900 font-mono">${esc(placas || 'MARSISA SGC')}</span><span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase">${esc(folio)}</span></div>`
-    + `<button onclick="window.print()" class="px-4 py-1.5 text-white text-xs font-medium rounded-xl" style="background:#0284C7">Guardar / Descargar PDF</button></nav>`
+    + `<nav class="no-print w-full max-w-[840px] mb-4 flex flex-wrap items-center justify-between gap-3 bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-xs">`
+    + `<div class="flex items-center gap-3"><button onclick="window.close()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"><svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg><span>Cerrar Vista</span></button><div class="h-4 w-px bg-slate-200"></div><div class="flex items-center gap-2"><span class="text-xs font-bold text-slate-900 font-mono">${esc(placas || 'MARSISA SGC')}</span><span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase">${esc(folio || 'F-SEG-002')}</span></div></div>`
+    + `<div class="flex items-center gap-2"><button onclick="window.print()" class="btn-action inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-medium rounded-xl shadow-xs transition"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg><span>Guardar / Descargar PDF (Vectorial HD)</span></button></div></nav>`
     + `<div class="w-full flex flex-col items-center gap-4">${html}</div>`
-    + `<aside class="no-print mt-3 text-center text-[10px] text-slate-400">Azkell Fleet • Documento digital de control vehicular</aside>`
-    + (imprimirYa ? '<script>window.onload=function(){setTimeout(function(){window.print()},700)}</script>' : '')
+    + `<aside class="no-print mt-3 text-center text-[10px] text-slate-400">Azkell Fleet • Documento digital de control vehicular 2026</aside>`
+    + (imprimirYa ? '<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script>' : '')
     + `</body></html>`;
   const url = URL.createObjectURL(new Blob([doc], { type: 'text/html;charset=utf-8' }));
   const w = window.open(url, '_blank');

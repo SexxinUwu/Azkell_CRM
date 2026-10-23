@@ -40,6 +40,8 @@ export interface OrdenTrabajo {
   rampa_origen?: string | null;
   iniciado_por?: string | null;
   costo_total_pen?: number | null;
+  /** El servidor lo marca cuando el reporte de falla original de la OT ya no existe */
+  reporte_desvinculado?: boolean;
   // Hasta 3 pausas por OT (ordenes_trabajo.fecha_pausaN / fecha_fin_pausaN / motivo_pausaN / pausado_por N)
   fecha_pausa1?: string | null; fecha_fin_pausa1?: string | null; motivo_pausa1?: string | null; pausado_por1?: string | null;
   fecha_pausa2?: string | null; fecha_fin_pausa2?: string | null; motivo_pausa2?: string | null; pausado_por2?: string | null;

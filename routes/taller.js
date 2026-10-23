@@ -264,6 +264,26 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         LEFT JOIN taller_rampas r ON r.id = o.id_rampa
         ORDER BY o.fecha_ingreso DESC`;
         targetDb.query(sql, (err, rows) => {
+            if (!err) {
+                // Marca reporte_desvinculado=true si la OT apunta a un reporte de falla que ya no existe
+                return targetDb.query('SELECT id, folio FROM reportes_fallas', (errR, reps) => {
+                    const lista = rows || [];
+                    if (!errR && reps) {
+                        const ids = new Set(reps.map(r => String(r.id)));
+                        const folios = new Set(reps.map(r => String(r.folio)));
+                        lista.forEach(o => {
+                            let d = {};
+                            try { d = typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : (o.detalles_json || {}); } catch (e) { }
+                            if (!d || typeof d !== 'object') return;
+                            const tieneRef = d.id_reporte_falla || d.folio_reporte;
+                            if (!tieneRef) return;
+                            const existe = (d.id_reporte_falla && ids.has(String(d.id_reporte_falla))) || (d.folio_reporte && folios.has(String(d.folio_reporte)));
+                            if (!existe) o.reporte_desvinculado = true;
+                        });
+                    }
+                    res.json(lista);
+                });
+            }
             if (err) {
                 console.error('Error en /ordenes-trabajo:', err);
                 targetDb.query("SELECT * FROM ordenes_trabajo ORDER BY fecha_ingreso DESC", (err2, rows2) => {

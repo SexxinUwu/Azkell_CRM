@@ -6,7 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, ArrowUpRight, BookOpen, FileSpreadsheet, Plus, ScrollText, SearchX, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
+import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
@@ -402,7 +402,7 @@ export function OrdenesTrabajoPage() {
                           <button type="button" className="ot-fila pressable" onClick={() => { haptic('selection'); setSeleccionada(o); }}>
                             <div className="ot-fila__icono"><Wrench size={16} /></div>
                             <div className="ot-fila__cuerpo">
-                              <span className="ot-fila__id">{otId(o)}</span>
+                              <span className="ot-fila__id">{otId(o)}{o.reporte_desvinculado && <> <Badge tone="amber">Reporte original desvinculado</Badge></>}</span>
                               <span className="ot-fila__sub">
                                 <span className="ot-fila__placa">{o.placa}</span>
                                 {' · '}{otTipo(o)}

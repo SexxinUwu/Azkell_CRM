@@ -1505,17 +1505,41 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ── DELETE /api/checklist/:id — Eliminar reporte de fallas ──────────
-    router.delete('/:id', (req, res) => {
+    // Regla de negocio: un reporte con OT asociada NO se puede eliminar (la OT tiene costos, repuestos y mano de obra).
+    router.delete('/:id', async (req, res) => {
         const tdb = getDb(req);
         const id = req.params.id;
-        tdb.query('DELETE FROM reportes_fallas WHERE id = ?', [id], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
+        try {
+            const [repRows] = await tdb.promise().query('SELECT id, folio, ots_generadas_json FROM reportes_fallas WHERE id = ?', [id]);
+            if (repRows && repRows.length) {
+                const rep = repRows[0];
+                const idsGen = [];
+                try {
+                    const parsed = typeof rep.ots_generadas_json === 'string' ? JSON.parse(rep.ots_generadas_json) : rep.ots_generadas_json;
+                    if (Array.isArray(parsed)) parsed.forEach(o => {
+                        if (o && o.idOt) idsGen.push(o.idOt);
+                        if (o && o.ticket_entrada) idsGen.push(o.ticket_entrada);
+                    });
+                } catch (e) { /* JSON inválido: se ignora */ }
+                let q = 'SELECT ticket_entrada, id_ot FROM ordenes_trabajo WHERE detalles_json LIKE ? OR detalles_json LIKE ?';
+                const params = [`%"id_reporte_falla":${Number(rep.id)}%`, `%"id_reporte_falla":"${Number(rep.id)}"%`];
+                if (rep.folio) { q += ' OR detalles_json LIKE ?'; params.push(`%"folio_reporte":"${String(rep.folio).replace(/[%_"]/g, '')}"%`); }
+                if (idsGen.length) { q += ' OR id_ot IN (?) OR ticket_entrada IN (?)'; params.push(idsGen, idsGen); }
+                const [ots] = await tdb.promise().query(q, params);
+                if (ots && ots.length) {
+                    const nombres = [...new Set(ots.map(o => o.id_ot || o.ticket_entrada).filter(Boolean))].join(', ');
+                    return res.status(409).json({ error: `No se puede eliminar este reporte porque tiene la orden de trabajo ${nombres} asociada` });
+                }
+            }
+            await tdb.promise().query('DELETE FROM reportes_fallas WHERE id = ?', [id]);
             if (typeof broadcast === 'function') broadcast('checklist', 'eliminar');
             if (typeof logAudit === 'function') {
                 logAudit(req, 'MANTENIMIENTO', 'Checklist', 'ELIMINÓ', `Eliminó Reporte de Fallas ID ${id}`);
             }
             res.json({ ok: true });
-        });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
     });
 
     return router;

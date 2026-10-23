@@ -17,7 +17,7 @@ import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { analizarViaje, type AnalisisViaje, type MatrizCalc, type TramoCalc, type ViajeCalc } from './analisisCalculo';
 
-interface Stats { kmInicio: number; kmFin: number; recorridoKm: number; totalGalones: number; totalGasto: number; rendimiento: number }
+interface Stats { fechaInicio?: string; fechaFin?: string; vouchers?: Voucher[]; kmInicio: number; kmFin: number; recorridoKm: number; totalGalones: number; totalGasto: number; rendimiento: number }
 interface Voucher { conductor?: string; id: number | string; fecha?: string; producto?: string; galones?: number; importe?: number; odometro?: number; estacion?: string; esPuntoPartida?: boolean; tipo?: string; peso?: number }
 interface Trip {
   viaje: string; placa: string; carreta: string; conductor: string; motor: string; marca: string; configuracion: string; ruta: string; rutaIda: string; rutaRetorno: string;
@@ -30,6 +30,11 @@ interface Trip {
 interface Resp { ok: boolean; trips: Trip[]; kpis: { totalViajes: number; totalGalones: number; totalGasto: number; totalKm: number; promGalViaje: number; promPrecioGal: number; promKmGal: number } }
 
 const n = (v: unknown) => Number(v) || 0;
+// 'AAAA-MM-DD[ HH:mm[:ss]]' (hora local) -> fecha nativa de Excel; si no es fecha queda el texto
+const fechaExcel = (s?: string | null): Date | string => {
+  const m = /^(d{4})-(d{2})-(d{2})(?:[ T](d{2}):(d{2})(?::(d{2}))?)?/.exec(String(s ?? '').trim());
+  return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] ?? 0), +(m[5] ?? 0), +(m[6] ?? 0))) : (s || '---');
+};
 interface TelemetriaWialon {
   recorridoKmGps: number | null; combustibleConsumidoGps: number | null; rendimientoGps: number | null;
   velocidadMaxGps: number | null; rpmMediaGps: number | null; rpmMediaMaxGps?: number | null; rpmMaxGps: number | null; rpmMaxMaxGps?: number | null; horasMotorGps: string | number | null; consumoRalentiGps: number | null;
@@ -460,17 +465,23 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   // Excel con las columnas del clásico. Los GPS salen solo de los viajes cuya telemetría ya se consultó.
   async function exportar() {
     try {
+      // Igual que el clásico: con el filtro D2 las fechas, km, galones, gasto y rendimiento salen de las cifras del diésel (fuelStats.D2);
+      // si el viaje no tiene D2 (o es urea) se usan las del viaje
+      const statsDe = (x: Trip) => (urea ? undefined : x.fuelStats?.D2);
+      const cifrasXls = (x: Trip) => { const s = statsDe(x); return s ? { galones: n(s.totalGalones), gasto: n(s.totalGasto), rendimiento: n(s.rendimiento) } : cifras(x); };
       const filas = visibles.map(x => {
-        const c = cifras(x);
+        const s = statsDe(x);
+        const c = cifrasXls(x);
+        const kmIni = s ? n(s.kmInicio) : x.kmInicio, kmFin = s ? n(s.kmFin) : x.kmFin, rec = s ? n(s.recorridoKm) : x.recorridoKm;
         const a = analisis.get(x.viaje);
         const dif = a && a.galTeorico > 0 && c.galones > 0 ? c.galones - a.galTeorico : null;
         const g = gps.data?.[x.viaje]?.data ?? null;
         const gv = (v: number | null | undefined, d = 2) => (v == null ? '—' : ptoDecimal(Number(v), d));
-        const vales = (x.vouchers ?? []).filter(v => !v.esPuntoPartida && !esUrea(String(v.producto ?? ''))).length;
+        const vales = (s?.vouchers ?? x.vouchers ?? []).filter(v => !v.esPuntoPartida && !esUrea(String(v.producto ?? ''))).length;
         return [
           x.estadoAuditoria, x.observacionAuditoria, x.viaje, x.placa || '---', x.carreta || '---', String(x.estado || 'INICIADO').toUpperCase(),
-          x.motor || '---', x.ruta || '---', x.conductor || '---', ptoDecimal(n(x.pesoMaxTn), 2), x.fechaInicio || '---', x.fechaFin || '---',
-          x.kmInicio > 0 ? ptoDecimal(x.kmInicio, 1) : '—', x.kmFin > 0 ? ptoDecimal(x.kmFin, 1) : '—', x.recorridoKm > 0 ? ptoDecimal(x.recorridoKm, 1) : '—',
+          x.motor || '---', x.ruta || '---', x.conductor || '---', ptoDecimal(n(x.pesoMaxTn), 2), fechaExcel(s?.fechaInicio || x.fechaInicio), fechaExcel(s?.fechaFin || x.fechaFin),
+          kmIni > 0 ? ptoDecimal(kmIni, 1) : '—', kmFin > 0 ? ptoDecimal(kmFin, 1) : '—', rec > 0 ? ptoDecimal(rec, 1) : '—',
           ptoDecimal(c.galones, 2), c.rendimiento > 0 ? ptoDecimal(c.rendimiento, 2) : '—', ptoDecimal(c.gasto, 2),
           a && a.kmTeorico > 0 ? ptoDecimal(a.kmTeorico, 1) : '—', a && a.galTeorico > 0 ? ptoDecimal(a.galTeorico, 2) : 0,
           a && a.rendTeorico > 0 ? ptoDecimal(a.rendTeorico, 2) : '—', dif !== null ? ptoDecimal(dif, 2) : '—',
@@ -480,9 +491,9 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         ];
       });
       // Fila TOTAL al final, como el clásico: galones reales y combustible consumido por GPS
-      const totGal = visibles.reduce((t, x) => t + cifras(x).galones, 0);
+      const totGal = visibles.reduce((t, x) => t + cifrasXls(x).galones, 0);
       const totGps = visibles.reduce((t, x) => { const v = gps.data?.[x.viaje]?.data?.combustibleConsumidoGps; return t + (v != null && !isNaN(Number(v)) ? Number(v) : 0); }, 0);
-      const total: (string | number)[] = ENCABEZADOS_EXCEL.map(() => '');
+      const total: (string | number | Date)[] = ENCABEZADOS_EXCEL.map(() => '');
       total[2] = 'TOTAL'; total[ENCABEZADOS_EXCEL.indexOf('TOTAL GALONES (REAL)')] = ptoDecimal(totGal, 2);
       total[ENCABEZADOS_EXCEL.indexOf('COMB. CONSUMIDO (GPS CAN)')] = totGps > 0 ? ptoDecimal(totGps, 2) : '—';
       filas.push(total);
