@@ -101,9 +101,53 @@ export function descargarArchivo(blob: Blob, nombre: string) {
 }
 
 /**
- * Envía un PDF por WhatsApp.
- * - Celular (y navegadores que permiten compartir archivos): hoja de compartir del sistema.
- * - Escritorio: el PDF se descarga y se abre WhatsApp con el texto, para adjuntarlo ahí.
+ * Toque nuevo para compartir: el navegador exige un gesto reciente del usuario y, si el PDF tardó en generarse,
+ * lo da por perdido (NotAllowedError). Igual que el clásico, se muestra un botón para repetir el gesto.
+ */
+function pedirToqueParaCompartir(archivo: File, nombre: string, texto: string): Promise<'compartido' | 'descargado' | 'cancelado'> {
+  return new Promise(resolve => {
+    const capa = document.createElement('div');
+    capa.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);';
+    const caja = document.createElement('div');
+    caja.style.cssText = 'background:#fff;border-radius:24px;padding:26px 20px;text-align:center;max-width:320px;width:88%;box-shadow:0 20px 40px rgba(0,0,0,.25);font-family:inherit;';
+    const titulo = document.createElement('h3');
+    titulo.textContent = 'PDF listo';
+    titulo.style.cssText = 'margin:0 0 8px;font-weight:800;color:#0f172a;font-size:1.1rem;';
+    const aviso = document.createElement('p');
+    aviso.textContent = 'Toca el botón para abrir WhatsApp y seleccionar el chat.';
+    aviso.style.cssText = 'margin:0 0 20px;color:#64748b;font-size:.83rem;';
+    const enviar = document.createElement('button');
+    enviar.type = 'button';
+    enviar.textContent = 'Enviar por WhatsApp';
+    enviar.style.cssText = 'background:#25D366;color:#fff;font-weight:700;border:none;padding:12px 24px;border-radius:14px;width:100%;font-size:.95rem;cursor:pointer;min-height:44px;';
+    const cancelar = document.createElement('button');
+    cancelar.type = 'button';
+    cancelar.textContent = 'Cancelar';
+    cancelar.style.cssText = 'background:transparent;color:#94a3b8;font-weight:600;border:none;margin-top:12px;font-size:.8rem;cursor:pointer;min-height:44px;';
+    caja.append(titulo, aviso, enviar, cancelar);
+    capa.append(caja);
+    document.body.appendChild(capa);
+
+    cancelar.onclick = () => { capa.remove(); resolve('cancelado'); };
+    enviar.onclick = async () => {
+      capa.remove();
+      try {
+        await navigator.share({ files: [archivo], title: nombre, text: texto });
+        resolve('compartido');
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') { resolve('cancelado'); return; }
+        window.location.href = 'whatsapp://';
+        resolve('compartido');
+      }
+    };
+  });
+}
+
+/**
+ * Envía un PDF por WhatsApp, como el clásico.
+ * - Celular y navegadores que permiten compartir archivos: hoja de compartir del sistema con el PDF adjunto.
+ * - Si el navegador pierde el gesto mientras se genera el PDF: botón "Enviar por WhatsApp" para repetirlo.
+ * - Sin compartir nativo: se abre la aplicación de WhatsApp. No se descarga el archivo.
  */
 export async function compartirPDF(blob: Blob, nombre: string, texto: string): Promise<'compartido' | 'descargado' | 'cancelado'> {
   const archivo = new File([blob], nombre, { type: 'application/pdf' });
@@ -112,11 +156,11 @@ export async function compartirPDF(blob: Blob, nombre: string, texto: string): P
       await navigator.share({ files: [archivo], title: nombre, text: texto });
       return 'compartido';
     } catch (err) {
-      if ((err as Error).name === 'AbortError') return 'cancelado';
-      // Si el sistema no deja compartir, se sigue por la descarga
+      const causa = (err as Error).name;
+      if (causa === 'AbortError') return 'cancelado';
+      if (causa === 'NotAllowedError') return pedirToqueParaCompartir(archivo, nombre, texto);
     }
   }
-  descargarArchivo(blob, nombre);
-  window.open(`https://wa.me/?text=${encodeURIComponent(`${texto}. Adjunta el PDF descargado.`)}`, '_blank', 'noopener');
-  return 'descargado';
+  window.location.href = 'whatsapp://';
+  return 'compartido';
 }

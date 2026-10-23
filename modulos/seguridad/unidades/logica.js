@@ -2981,13 +2981,24 @@ window._sguAbrirVisor = function(urls, indice, titulo) {
     var previo = document.getElementById('sgu-visor');
     if (previo && previo.parentNode) previo.parentNode.removeChild(previo);
 
+    var ZOOM_MAX = 5, ZOOM_DOBLE_TOQUE = 2.5;
     var n = urls.length;
     var i = Math.max(0, Math.min(indice || 0, n - 1));
+    var escala = 1, tx = 0, ty = 0;
     var visor = document.createElement('div');
     visor.id = 'sgu-visor';
     visor.className = 'sgu-visor';
     visor.setAttribute('role', 'dialog');
     visor.setAttribute('aria-modal', 'true');
+
+    function boton(clase, icono, etiqueta) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = clase;
+        b.setAttribute('aria-label', etiqueta);
+        b.innerHTML = '<i class="bi ' + icono + '"></i>';
+        return b;
+    }
 
     var barra = document.createElement('div');
     barra.className = 'sgu-visor__barra';
@@ -2996,12 +3007,11 @@ window._sguAbrirVisor = function(urls, indice, titulo) {
     tit.textContent = titulo || 'Fotos';
     var cuenta = document.createElement('span');
     cuenta.className = 'sgu-visor__cuenta';
-    var cerrar = document.createElement('button');
-    cerrar.type = 'button';
-    cerrar.className = 'sgu-visor__cerrar';
-    cerrar.setAttribute('aria-label', 'Cerrar visor');
-    cerrar.innerHTML = '<i class="bi bi-x-lg"></i>';
-    barra.appendChild(tit); barra.appendChild(cuenta); barra.appendChild(cerrar);
+    var zoomMenos = boton('sgu-visor__cerrar', 'bi-zoom-out', 'Alejar');
+    var zoomMas = boton('sgu-visor__cerrar', 'bi-zoom-in', 'Acercar');
+    var cerrar = boton('sgu-visor__cerrar', 'bi-x-lg', 'Cerrar visor');
+    barra.appendChild(tit); barra.appendChild(cuenta);
+    barra.appendChild(zoomMenos); barra.appendChild(zoomMas); barra.appendChild(cerrar);
 
     var escena = document.createElement('div');
     escena.className = 'sgu-visor__escena';
@@ -3009,14 +3019,8 @@ window._sguAbrirVisor = function(urls, indice, titulo) {
     foto.className = 'sgu-visor__foto';
     foto.alt = 'Foto';
     foto.draggable = false;
-    var izq = document.createElement('button');
-    izq.type = 'button'; izq.className = 'sgu-visor__flecha sgu-visor__flecha--izq';
-    izq.setAttribute('aria-label', 'Foto anterior');
-    izq.innerHTML = '<i class="bi bi-chevron-left"></i>';
-    var der = document.createElement('button');
-    der.type = 'button'; der.className = 'sgu-visor__flecha sgu-visor__flecha--der';
-    der.setAttribute('aria-label', 'Foto siguiente');
-    der.innerHTML = '<i class="bi bi-chevron-right"></i>';
+    var izq = boton('sgu-visor__flecha sgu-visor__flecha--izq', 'bi-chevron-left', 'Foto anterior');
+    var der = boton('sgu-visor__flecha sgu-visor__flecha--der', 'bi-chevron-right', 'Foto siguiente');
     escena.appendChild(foto); escena.appendChild(izq); escena.appendChild(der);
 
     var tira = document.createElement('div');
@@ -3039,13 +3043,33 @@ window._sguAbrirVisor = function(urls, indice, titulo) {
     if (n > 1) visor.appendChild(tira);
     document.body.appendChild(visor);
 
+    function aplicar() {
+        foto.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + escala + ')';
+        var ampliada = escala > 1.001;
+        zoomMenos.disabled = !ampliada;
+        zoomMas.disabled = escala >= ZOOM_MAX;
+        izq.style.display = (n > 1 && i > 0 && !ampliada) ? '' : 'none';
+        der.style.display = (n > 1 && i < n - 1 && !ampliada) ? '' : 'none';
+        foto.style.cursor = ampliada ? 'move' : 'zoom-in';
+    }
+    function limitar() {
+        var r = escena.getBoundingClientRect();
+        var mx = (escala - 1) * r.width / 2, my = (escala - 1) * r.height / 2;
+        tx = Math.max(-mx, Math.min(mx, tx));
+        ty = Math.max(-my, Math.min(my, ty));
+    }
+    function poner(k) {
+        escala = Math.max(1, Math.min(ZOOM_MAX, k));
+        if (escala <= 1.001) { escala = 1; tx = 0; ty = 0; } else limitar();
+        aplicar();
+    }
     function pintar() {
         foto.src = urls[i];
         foto.alt = 'Foto ' + (i + 1);
-        foto.style.transform = '';
         cuenta.textContent = (i + 1) + ' / ' + n;
-        izq.style.display = (n > 1 && i > 0) ? '' : 'none';
-        der.style.display = (n > 1 && i < n - 1) ? '' : 'none';
+        escala = 1; tx = 0; ty = 0;
+        foto.style.transition = '';
+        aplicar();
         minis.forEach(function(b, k) {
             if (k === i) { b.classList.add('sgu-visor__mini--activa'); b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); }
             else b.classList.remove('sgu-visor__mini--activa');
@@ -3064,35 +3088,84 @@ window._sguAbrirVisor = function(urls, indice, titulo) {
         if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); cerrarVisor(); }
         else if (e.key === 'ArrowRight') { e.stopImmediatePropagation(); ir(i + 1); }
         else if (e.key === 'ArrowLeft') { e.stopImmediatePropagation(); ir(i - 1); }
+        else if (e.key === '+' || e.key === '=') { e.stopImmediatePropagation(); poner(escala * 1.4); }
+        else if (e.key === '-') { e.stopImmediatePropagation(); poner(escala / 1.4); }
+        else if (e.key === '0') { e.stopImmediatePropagation(); poner(1); }
     }
 
-    // Deslizar con el dedo o el mouse: la foto sigue al dedo y, al soltar, cambia si el gesto fue suficiente
-    var x0 = null, dx = 0, t0 = 0;
+    // Gestos: deslizar para cambiar de foto, pellizco o rueda para zoom, arrastrar para mover la foto ampliada, doble toque para alternar
+    var punteros = {}, cuantos = 0;
+    var pellizco = null, arrastre = null, deslizar = null;
+    var inicio = { x: 0, y: 0 }, movio = false, ultimoToque = 0;
+    function distancia() {
+        var ids = Object.keys(punteros);
+        var a = punteros[ids[0]], b = punteros[ids[1]];
+        return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)) || 1;
+    }
+    function esFlecha(e) { return !!(e.target && e.target.closest && e.target.closest('.sgu-visor__flecha')); }
+
     escena.addEventListener('pointerdown', function(e) {
-        if (n < 2 || e.target.closest('.sgu-visor__flecha')) return;
-        x0 = e.clientX; dx = 0; t0 = Date.now();
+        if (esFlecha(e)) return;
+        punteros[e.pointerId] = { x: e.clientX, y: e.clientY };
+        cuantos = Object.keys(punteros).length;
+        inicio = { x: e.clientX, y: e.clientY };
+        movio = false;
+        foto.style.transition = 'none';
+        if (cuantos === 2) { pellizco = { dist: distancia(), escala: escala }; arrastre = null; deslizar = null; }
+        else if (escala > 1) { arrastre = { x: e.clientX, y: e.clientY, tx: tx, ty: ty }; }
+        else if (n > 1) { deslizar = { x: e.clientX, dx: 0, t: Date.now() }; }
         try { escena.setPointerCapture(e.pointerId); } catch (err) { /* sin captura */ }
     });
     escena.addEventListener('pointermove', function(e) {
-        if (x0 === null) return;
-        dx = e.clientX - x0;
-        foto.style.transition = 'none';
-        foto.style.transform = 'translateX(' + dx + 'px)';
+        if (!punteros[e.pointerId]) return;
+        punteros[e.pointerId] = { x: e.clientX, y: e.clientY };
+        if (Math.abs(e.clientX - inicio.x) + Math.abs(e.clientY - inicio.y) > 8) movio = true;
+        if (cuantos === 2 && pellizco) {
+            poner(pellizco.escala * (distancia() / pellizco.dist));
+        } else if (arrastre && escala > 1) {
+            tx = arrastre.tx + (e.clientX - arrastre.x);
+            ty = arrastre.ty + (e.clientY - arrastre.y);
+            limitar(); aplicar();
+        } else if (deslizar) {
+            deslizar.dx = e.clientX - deslizar.x;
+            foto.style.transform = 'translate(' + deslizar.dx + 'px,0) scale(1)';
+        }
     });
-    function soltar() {
-        if (x0 === null) return;
-        var vel = dx / Math.max(1, Date.now() - t0); // px/ms
-        var proyectado = dx + vel * 250;
-        foto.style.transition = '';
-        x0 = null;
-        if (proyectado < -80) ir(i + 1);
-        else if (proyectado > 80) ir(i - 1);
-        foto.style.transform = '';
+    function soltar(e) {
+        if (!punteros[e.pointerId]) return;
+        delete punteros[e.pointerId];
+        var eraUno = cuantos === 1;
+        cuantos = Object.keys(punteros).length;
+        if (cuantos < 2) pellizco = null;
+        if (cuantos === 0) {
+            foto.style.transition = '';
+            arrastre = null;
+            if (deslizar) {
+                var vel = deslizar.dx / Math.max(1, Date.now() - deslizar.t);
+                var proyectado = deslizar.dx + vel * 250;
+                deslizar = null;
+                if (proyectado < -80) ir(i + 1);
+                else if (proyectado > 80) ir(i - 1);
+                aplicar();
+            }
+        }
+        if (eraUno && !movio && e.type === 'pointerup' && !esFlecha(e)) {
+            var ahora = Date.now();
+            if (ahora - ultimoToque < 300) { poner(escala > 1 ? 1 : ZOOM_DOBLE_TOQUE); ultimoToque = 0; }
+            else ultimoToque = ahora;
+        }
     }
     escena.addEventListener('pointerup', soltar);
     escena.addEventListener('pointercancel', soltar);
+    escena.addEventListener('wheel', function(e) {
+        e.preventDefault();
+        foto.style.transition = '';
+        poner(escala * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+    }, { passive: false });
 
     cerrar.addEventListener('click', cerrarVisor);
+    zoomMas.addEventListener('click', function() { foto.style.transition = ''; poner(escala * 1.4); });
+    zoomMenos.addEventListener('click', function() { foto.style.transition = ''; poner(escala / 1.4); });
     izq.addEventListener('click', function() { ir(i - 1); });
     der.addEventListener('click', function() { ir(i + 1); });
     document.addEventListener('keydown', teclado, true);
@@ -3152,7 +3225,7 @@ window._sguVerFotos = async function(tipo) {
 // =========================================================
 // 📝 DETALLES DEL CHECKLIST (Bottom Drawer)
 // =========================================================
-window._sguVerDetalles = function(tipo) {
+window._sguVerDetalles = async function(tipo) {
     if (!window._sguCurrentRecord) return;
     var rec = window._sguCurrentRecord;
     var checklist = tipo === 'salida' ? rec.salida_checklist_json : rec.retorno_checklist_json;
@@ -3192,6 +3265,18 @@ window._sguVerDetalles = function(tipo) {
             });
         }
 
+        // Fotos con URLs firmadas vigentes: las guardadas en el registro vencen y no cargan (igual que en "Fotos")
+        try {
+            var fRes = await fetch('/api/seguridad/unidades/' + encodeURIComponent(rec.id) + '/fotos-presigned', {
+                headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('fleet_token') || '') }
+            });
+            if (fRes.ok) {
+                var firmadas = await fRes.json();
+                if (firmadas && firmadas.length) rec.fotos = firmadas;
+            }
+        } catch (eFirmadas) {
+            console.warn('Error cargando fotos firmadas:', eFirmadas);
+        }
         var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
         if (fotos.length > 0) {
             html += '<div class="sgu-form-card p-3 mb-3">';
@@ -3199,7 +3284,7 @@ window._sguVerDetalles = function(tipo) {
             html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;">';
             fotos.forEach(function(f, idx) {
                 html += '<a href="#" onclick="window._sguAbrirVisorRec(\'' + tipo + '\', ' + idx + '); return false;" style="display:block;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.04);cursor:pointer;">';
-                html += '<img src="' + f.url + '" style="width:100%;height:110px;object-fit:cover;display:block;" alt="Evidencia ' + (idx + 1) + '" crossorigin="anonymous">';
+                html += '<img src="' + f.url + '" style="width:100%;height:110px;object-fit:cover;display:block;" alt="Evidencia ' + (idx + 1) + '">';
                 html += '</a>';
             });
             html += '</div>';
@@ -4181,7 +4266,7 @@ function _sguAbrirVentanaImpresion(htmlBody, filename, titulo, autoPrint) {
         + '    <div class="flex items-center gap-2">\n'
         + '      <button onclick="window.print()" class="btn-action inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-medium rounded-xl shadow-xs transition">\n'
         + '        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>\n'
-        + '        <span>Guardar / Descargar PDF (Vectorial HD)</span>\n'
+        + '        <span>Descargar</span>\n'
         + '      </button>\n'
         + '    </div>\n'
         + '  </nav>\n'
@@ -4268,7 +4353,7 @@ window._sguGenerarPDF = async function(tipo) {
     var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
     var filename = _sguGetPdfFilename(rec, tipo);
 
-    _sguToast('Abriendo generador PDF Vectorial HD...', 'bi-file-earmark-pdf');
+    _sguToast('Abriendo generador PDF...', 'bi-file-earmark-pdf');
 
     try {
         var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);
@@ -4292,7 +4377,7 @@ window._sguGenerarPDFCompleto = async function() {
     var rec = window._sguCurrentRecord;
     var filename = _sguGetPdfFilename(rec, 'completo');
 
-    _sguToast('Abriendo generador Expediente Vectorial HD...', 'bi-file-earmark-pdf');
+    _sguToast('Abriendo generador de Expediente...', 'bi-file-earmark-pdf');
 
     try {
         var docT = await _sguObtenerDocVehiculo(rec.placa_tracto);

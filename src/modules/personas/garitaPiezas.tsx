@@ -94,7 +94,13 @@ export function DetalleChecklistSheet({ rec, fase, onClose }: { rec: Registro | 
   const [visor, setVisor] = useState<number | null>(null);
   const chk = rec && fase ? (fase === 'salida' ? rec.salida_checklist_json : rec.retorno_checklist_json) : null;
   const tpl = rec && fase ? (fase === 'salida' ? rec.salida_template_json : rec.retorno_template_json) : null;
-  const fotos = (rec?.fotos ?? []).filter(f => f.tipo === fase);
+  // Direcciones firmadas vigentes (las guardadas en el registro vencen y las fotos no cargan), igual que en la galería
+  const firmadas = useQuery<FotoReg[]>({
+    queryKey: ['personas', 'garita-fotos', rec?.id],
+    queryFn: () => api<FotoReg[]>(`/seguridad/unidades/${encodeURIComponent(rec!.id)}/fotos-presigned`),
+    enabled: !!rec && !!fase, staleTime: 0,
+  });
+  const fotos = (firmadas.data?.length ? firmadas.data : (rec?.fotos ?? [])).filter(f => f.tipo === fase);
   return (
     <Sheet open={!!rec && !!fase} onClose={onClose} title={`Checklist Técnico — ${fase === 'salida' ? 'Ida' : 'Vuelta'}`} anclaAbajo>
       {!chk || !Object.keys(chk).length ? <div className="gar-vacio">No se registró checklist en esta fase.</div> : (
