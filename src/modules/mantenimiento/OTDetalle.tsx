@@ -108,7 +108,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   });
   const nombrePersona = (v: string | null | undefined) => {
     const t = (v ?? '').trim();
-    if (!/^d{6,}$/.test(t)) return t;
+    if (!/^\d{6,}$/.test(t)) return t;
     const c = (conductoresLista ?? []).find(x => String(x.dni ?? '').trim() === t);
     return c ? String(c.nombre ?? t) : t;
   };
@@ -374,7 +374,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
               {(det.motivo || ot.observaciones) && <div className="dato"><span className="dato__label">Falla Reportada</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{String(rotGetCleanMotivoDisplay(det, ot)).replace(/^•\s*/gm, '').replace(/^(Falla Manual|MANUAL)\s*:\s*/i, '')}</span></div>}
               {ot.tecnico && <div className="dato"><span className="dato__label">Técnico Responsable</span><span className="dato__valor">{ot.tecnico}</span></div>}
               {ot.supervisor && <div className="dato"><span className="dato__label">Supervisor</span><span className="dato__valor">{ot.supervisor}</span></div>}
-              {(ot.rampa_origen || ot.id_rampa) && <div className="dato"><span className="dato__label">Rampa Asignada</span><span className="dato__valor">{ot.rampa_origen || nombreRampa(ot.id_rampa)}</span></div>}
+              {(ot.rampa_origen || ot.id_rampa) && <div className="dato"><span className="dato__label">Rampa Asignada</span><span className="dato__valor">{nombreRampa(ot.id_rampa) || ot.rampa_origen}</span></div>}
               {ot.situacion && <div className="dato"><span className="dato__label">Situación</span><span className="dato__valor">{ot.situacion}</span></div>}
               {(det.tipo_ot || det.sub_tipo) && <div className="dato"><span className="dato__label">Tipo</span><span className="dato__valor">{[det.tipo_ot, det.sub_tipo].filter(Boolean).join(' / ')}</span></div>}
               {det.km ? <div className="dato"><span className="dato__label">Kilometraje de Ingreso</span><span className="dato__valor dato__valor--mono">{String(det.km)}</span></div> : null}
