@@ -15,6 +15,7 @@ import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
+import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
 import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
@@ -118,6 +119,7 @@ export function OrdenesTrabajoPage() {
   const location = useLocation();
   const { data, isLoading, isError, error } = useOrdenesTrabajoData();
   const { can, user } = useAuth();
+  const esMovil = useMediaQuery(MOBILE_QUERY);
   const qc    = useQueryClient();
   const toast = useToast();
 
@@ -507,6 +509,40 @@ export function OrdenesTrabajoPage() {
                     : puedeCrear && <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setModalOT(true)}>Nueva OT</Button>}
                 </EmptyState>
               ) : (
+                <>
+                {esMovil ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {visibles.map(o => {
+                      const det = otDetalles(o);
+                      const km = Number(det.km_ingreso ?? det.km ?? 0);
+                      const obs = String(det.motivo ?? o.observaciones ?? '')
+                        .replace(/\[[^\]]*\]\s*/g, '')
+                        .replace(/•\s*/g, '')
+                        .replace(/(falla manual|manual)\s*:\s*/gi, '')
+                        .trim();
+                      return (
+                        <div key={otId(o)} onClick={() => { haptic('selection'); setSeleccionada(o); }}
+                          style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>{otId(o)}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--label-2)' }}>{otFecha(o)}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1rem' }}>{o.placa}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--green-ink)' }}>{formatSoles(Number(o.costo_total_pen ?? o.costo_total ?? 0) || 0)}</span>
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--label-2)' }}>
+                            {otTipo(o)}{km > 0 ? ` · ${km.toLocaleString('es-PE')} km` : ''}
+                          </div>
+                          {obs && <div style={{ fontSize: 13, color: 'var(--label)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{obs}</div>}
+                          <div onClick={e => e.stopPropagation()} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            <AccionesFila estado={o.estado} disabled={ejecutando} onAccion={a => abrirAccion(a, o)} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
                 <div className="tarjeta__lista" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                   <table className="inv-kardex" style={{ minWidth: '78rem' }}>
                     <thead style={{ textTransform: 'uppercase', letterSpacing: '0.03em', fontWeight: 800 }}>
@@ -551,6 +587,8 @@ export function OrdenesTrabajoPage() {
                     </tbody>
                   </table>
                 </div>
+                )}
+                </>
               )}
             </>
           ) : (
