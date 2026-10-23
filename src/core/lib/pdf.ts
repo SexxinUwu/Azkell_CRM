@@ -21,6 +21,10 @@ export interface OpcionesPDF {
   margen?: number | [number, number, number, number];
   /** Corta entre páginas sin partir una fila de tabla */
   paginado?: boolean;
+  /** Título del documento: es lo que muestra el visor de PDF */
+  titulo?: string;
+  /** Formato de la imagen de cada página: PNG da texto más nítido (más pesado) */
+  imagen?: 'jpeg' | 'png';
 }
 
 type Html2pdfWorker = {
@@ -33,7 +37,7 @@ function opcionesH2P(nombre: string, opciones: OpcionesPDF) {
   return {
     margin: opciones.margen ?? [10, 10, 10, 10],
     filename: nombre,
-    image: { type: 'jpeg', quality: 0.95 },
+    image: { type: opciones.imagen ?? 'jpeg', quality: 0.95 },
     html2canvas: { scale: opciones.escala ?? 2, useCORS: true, logging: false },
     jsPDF: {
       unit: 'mm',
@@ -62,7 +66,11 @@ export async function exportarPDF(
 export async function generarPDFBlob(elemento: HTMLElement, opciones: OpcionesPDF = {}): Promise<Blob> {
   await cargarHtml2pdf();
   const h2p = (window as unknown as { html2pdf: () => Html2pdfWorker }).html2pdf;
-  return h2p().from(elemento).set(opcionesH2P('reporte.pdf', opciones)).outputPdf('blob');
+  if (!opciones.titulo) return h2p().from(elemento).set(opcionesH2P('reporte.pdf', opciones)).outputPdf('blob');
+  const worker = h2p().from(elemento).set(opcionesH2P('reporte.pdf', opciones)) as unknown as { toPdf(): { get(k: 'pdf'): Promise<{ setProperties(p: { title: string }): void; output(t: 'blob'): Blob }> } };
+  const pdf = await worker.toPdf().get('pdf');
+  pdf.setProperties({ title: opciones.titulo });
+  return pdf.output('blob');
 }
 
 export async function exportarPDFPorId(

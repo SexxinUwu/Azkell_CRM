@@ -26,7 +26,7 @@ async function cargarFuenteOswald() {
 }
 
 /** Convierte el documento HTML del clásico a PDF. Quita el botón de imprimir, que no va en el PDF. */
-async function blobDeHtml(html: string): Promise<Blob> {
+async function blobDeHtml(html: string, titulo: string): Promise<Blob> {
   await cargarFuenteOswald();
   // Falla sin "• Falla Manual :" (solo en el PDF de /app; el HTML copiado del clásico no cambia)
   const limpio = html.replace(/•\s*Falla Manual\s*:\s*/gi, '');
@@ -40,16 +40,17 @@ async function blobDeHtml(html: string): Promise<Blob> {
   // del contenedor dejaba la hoja en blanco (mismo criterio que el PDF de neumáticos)
   try {
     await document.fonts.ready;
-    return await generarPDFBlob(el.querySelector('.page-container') as HTMLElement, { orientacion: 'portrait', escala: 3, margen: 0 });
+    return await generarPDFBlob(el.querySelector('.page-container') as HTMLElement, { orientacion: 'portrait', escala: 3, margen: 0, imagen: 'png', titulo });
   } finally { el.remove(); }
 }
 
 /** PDF de cierre de la OT (con trabajos, materiales y firmas), como el clásico */
 export function pdfOt(d: DatosOtPdf): Promise<Blob> {
-  return blobDeHtml(generarPDF_OT(d.ot, d.trabajos, d.materiales, false, undefined) as string);
+  const numero = d.ot.id_ot || d.ot.ticket_entrada || '';
+  return blobDeHtml(generarPDF_OT(d.ot, d.trabajos, d.materiales, false, undefined) as string, `Orden de trabajo ${numero} ${d.ot.placa ?? ''}`.trim());
 }
 
 /** Plantilla vacía para llenar a mano en taller (10 filas de trabajo y observaciones), como el clásico */
 export function pdfPlantillaOt(ot: OrdenTrabajo): Promise<Blob> {
-  return blobDeHtml(generarPDF_OT(ot, [], [], true, undefined) as string);
+  return blobDeHtml(generarPDF_OT(ot, [], [], true, undefined) as string, 'Plantilla orden de trabajo');
 }

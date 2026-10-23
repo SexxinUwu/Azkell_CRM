@@ -172,11 +172,11 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     setExportando(true);
     try {
       if (modo === 'descargar') {
-        await abrirPdf(() => pdfOt({ ot, trabajos, materiales: materiales ?? [], usuario }), `OT-${idOt}-${ot.placa}.pdf`);
+        await abrirPdf(() => pdfOt({ ot, trabajos, materiales: materiales ?? [], usuario }), `Orden de trabajo ${idOt} ${ot.placa}.pdf`);
         return;
       }
       const blob = await pdfOt({ ot, trabajos, materiales: materiales ?? [], usuario });
-      await compartirPDF(blob, `OT-${idOt}-${ot.placa}.pdf`, `Orden de trabajo ${idOt} · placa ${ot.placa}`);
+      await compartirPDF(blob, `Orden de trabajo ${idOt} ${ot.placa}.pdf`, `Orden de trabajo ${idOt} · placa ${ot.placa}`);
     } catch (err) {
       toast(errorMessage(err), 'error');
     } finally {
@@ -187,7 +187,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   async function descargarPlantilla() {
     setExportando(true);
     try {
-      await abrirPdf(() => pdfPlantillaOt(ot), `Plantilla_OT_${idOt}.pdf`);
+      await abrirPdf(() => pdfPlantillaOt(ot), `Plantilla orden de trabajo ${idOt}.pdf`);
     } catch (err) {
       toast(errorMessage(err), 'error');
     } finally {
