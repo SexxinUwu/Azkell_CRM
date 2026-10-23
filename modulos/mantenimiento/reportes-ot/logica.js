@@ -140,6 +140,22 @@ window.rotFiltrar = function() {
     var filHasta= rotVal('rot-fil-hasta');
     var filEst  = window._rotFiltroEstado || rotVal('rot-fil-estado') || '';
 
+    // Sin mes ni rango: Todos y Finalizadas muestran solo hoy; Pendientes y En Proceso, desde su fecha más antigua hasta hoy
+    var hoyLima = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Lima' });
+    var defDesde = '', defHasta = '';
+    if (!filMes && !filDesde && !filHasta) {
+        if (window._rotFiltroEstado === 'Pendiente' || window._rotFiltroEstado === 'En Proceso') {
+            var fechasEst = window.rotData.filter(function(o) {
+                var e = o.estado || 'Pendiente';
+                return window._rotFiltroEstado === 'Pendiente' ? e === 'Pendiente' : (e === 'En Proceso' || e === 'Pausada');
+            }).map(function(o) { return rotFechaISO(o.fecha_ingreso || o.creado_en || o.created_at); }).filter(Boolean).sort();
+            defDesde = fechasEst[0] || hoyLima;
+        } else {
+            defDesde = hoyLima;
+        }
+        defHasta = hoyLima;
+    }
+
     var resultado = window.rotData.filter(function(ot) {
         var det = rotDetalles(ot);
         var rawFecha = ot.fecha_ingreso || ot.creado_en || ot.created_at || (det ? (det.fecha_ingreso || det.fecha) : '');
@@ -163,11 +179,12 @@ window.rotFiltrar = function() {
         if (filPlaca && (ot.placa || '').toUpperCase().indexOf(filPlaca) === -1) return false;
 
         // Filtro fecha (mes / desde / hasta)
-        if (filMes || filDesde || filHasta) {
+        var dD = filDesde || defDesde, dH = filHasta || defHasta;
+        if (filMes || dD || dH) {
             if (!fechaOT) return false;
             if (filMes && fechaOT.slice(0, 7) !== filMes) return false;
-            if (filDesde && fechaOT < filDesde) return false;
-            if (filHasta && fechaOT > filHasta) return false;
+            if (dD && fechaOT < dD) return false;
+            if (dH && fechaOT > dH) return false;
         }
         
         // Filtro estado / tipo OT
@@ -1874,7 +1891,11 @@ window.rotExportarPDF = function() {
            + '   PREVENTIVO: S/' + costoPrev.toFixed(2),
            pageW / 2, finalY + 6, { align: 'center' });
 
-    doc.save('Reporte_OT_' + new Date().toISOString().slice(0, 10) + '.pdf');
+    // Se abre en una pestaña (blob:) sin descargarlo
+    var urlPdfOT = URL.createObjectURL(doc.output('blob'));
+    var ventanaPdfOT = window.open(urlPdfOT, '_blank');
+    if (!ventanaPdfOT) doc.save('Reporte_OT_' + new Date().toISOString().slice(0, 10) + '.pdf');
+    setTimeout(function() { URL.revokeObjectURL(urlPdfOT); }, 120000);
 };
 
 // ── Generador global de PDF de OT (reutilizable desde otros módulos) ──
