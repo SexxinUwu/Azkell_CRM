@@ -26,8 +26,9 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
     // Requiere reposición si el remanente promedio (mismo valor que 'remProm') es <= umbral.
     // Si no hay promedio, se recurre al flag guardado por el servidor (alerta_cambio, calculado con < 3).
     window.neuEsRequerimiento = function(row, umbral) {
+        // Sin decimales: el remanente se redondea al entero más cercano (2,9 cuenta como 3)
         const p = (row.remanente_promedio !== null && row.remanente_promedio !== undefined && row.remanente_promedio !== '')
-            ? parseFloat(row.remanente_promedio) : NaN;
+            ? Math.round(parseFloat(row.remanente_promedio)) : NaN;
         if (isNaN(p)) return Number(row.alerta_cambio) === 1;
         return p <= umbral;
     };

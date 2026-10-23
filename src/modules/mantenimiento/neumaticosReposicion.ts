@@ -42,13 +42,14 @@ const aNum = (v: unknown): number | null => (v == null || v === '' || !Number.is
  * que calcula la importación: R1..R3, o R1..R4 cuando hay R4. Sin ninguna medición devuelve null (no entra).
  */
 export function remanenteLlanta(l: LlantaUltima): number | null {
+  // Sin decimales: 2,9 cuenta como 3 (redondeo al entero más cercano)
   const guardado = aNum(l.remanente_promedio);
-  if (guardado !== null) return guardado;
+  if (guardado !== null) return Math.round(guardado);
   const r = [aNum(l.r1), aNum(l.r2), aNum(l.r3)];
   const r4 = aNum(l.r4);
   if (r4 !== null && r4 > 0) r.push(r4);
   const med = r.filter((x): x is number => x !== null);
-  return med.length ? med.reduce((a, b) => a + b, 0) / med.length : null;
+  return med.length ? Math.round(med.reduce((a, b) => a + b, 0) / med.length) : null;
 }
 
 export const entraEnRequerimiento = (l: LlantaUltima, umbral: number): boolean => {
