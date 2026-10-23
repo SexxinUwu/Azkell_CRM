@@ -157,7 +157,7 @@ export function ArticuloSelector({ value, articulos, onSelect, invalido }: {
                 <Miniatura url={a.imagen_url} nombre={a.articulo} />
                 <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
                   <span style={{ fontWeight: 700, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.articulo || a.descripcion}</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{a.codigo_articulo || a.id} · Stock: <b>{a.stock_actual}</b>{a.unidad ? ` ${a.unidad}` : ''}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{a.codigo_articulo || a.id} · Stock: <b>{Number(a.stock_actual).toLocaleString('es-PE', { maximumFractionDigits: 2 })}</b>{a.unidad ? ` ${a.unidad}` : ''}</span>
                 </span>
               </button>
             ))}
