@@ -1,7 +1,7 @@
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Download, Package, Play, Plus, Share2, Timer } from 'lucide-react';
+import { ArrowUpRight, ClipboardCheck, Disc, Download, FileText, Package, Play, Plus, Share2, Timer } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, Notice } from '../../core/ui/Display';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -93,6 +93,14 @@ interface OTDetalleProps {
   onAccion: (a: AccionOT) => void;
   onEliminar: () => void;
 }
+
+const tarjetaPlantilla = {
+  display: 'flex', alignItems: 'center', gap: 8, padding: 8, minHeight: 52, background: 'var(--surface)',
+  border: '1px solid var(--separator)', borderRadius: 12, cursor: 'pointer', textAlign: 'left' as const, color: 'var(--label)',
+};
+const iconoPlantilla = {
+  width: 34, height: 34, borderRadius: 10, display: 'grid', placeItems: 'center' as const, flexShrink: 0,
+};
 
 export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, onEliminar }: OTDetalleProps) {
   const qc = useQueryClient();
@@ -323,6 +331,20 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
 
       {seccion === 'tareas' && (
         <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+            <button type="button" onClick={() => abrirClasico('mantenimiento/reportes-ot')} style={tarjetaPlantilla}>
+              <span style={{ ...iconoPlantilla, background: '#dcfce7', color: '#16a34a' }}><ClipboardCheck size={17} /></span>
+              <span><b style={{ display: 'block', fontSize: '0.76rem' }}>Plantilla Inspecciones</b><small style={{ color: 'var(--label-2)', fontSize: '0.64rem' }}>F-MAN-001</small></span>
+            </button>
+            <button type="button" onClick={() => abrirPdf(() => pdfPlantillaOt(ot, extrasPdf()), `Plantilla orden de trabajo ${idOt}.pdf`)} style={tarjetaPlantilla}>
+              <span style={{ ...iconoPlantilla, background: '#dbeafe', color: '#2563eb' }}><FileText size={17} /></span>
+              <span><b style={{ display: 'block', fontSize: '0.76rem' }}>Plantilla OT</b><small style={{ color: 'var(--label-2)', fontSize: '0.64rem' }}>Impresión rápida</small></span>
+            </button>
+            <button type="button" onClick={() => abrirClasico('mantenimiento/reportes-ot')} style={tarjetaPlantilla}>
+              <span style={{ ...iconoPlantilla, background: '#fef9c3', color: '#ca8a04' }}><Disc size={17} /></span>
+              <span><b style={{ display: 'block', fontSize: '0.76rem' }}>Plantilla de Llantas</b><small style={{ color: 'var(--label-2)', fontSize: '0.64rem' }}>Formato A4 blanco</small></span>
+            </button>
+          </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 'var(--s-2)' }}>
               <p className="tarjeta__grupo-titulo" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>

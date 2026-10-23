@@ -4,7 +4,7 @@ import '../almacen/almacen.css'; // estilos de tabla (.inv-kardex) que usa la li
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ArrowUpRight, BookOpen, CheckCircle2, Eye, Filter, Lock, Pause, Play, Plus, RotateCcw, ScrollText, SearchX, Trash2, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, BookOpen, CheckCircle2, Eye, Filter, Lock, Pause, Play, Plus, ScrollText, SearchX, Trash2, XCircle } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -108,7 +108,7 @@ function AccionesFila({ estado, onAccion, disabled }: { estado: string; onAccion
   );
   if (estado === 'En Proceso') return <>{boton('pausar', Pause, 'Pausar')}{boton('cerrar', Lock, 'Cerrar')}</>;
   if (estado === 'Pausada') return <>{boton('reanudar', Play, 'Reanudar')}{boton('cerrar', Lock, 'Cerrar')}</>;
-  if (estado === 'Finalizado' || estado === 'Cerrada') return <>{pildora(CheckCircle2, 'Finalizado', 'var(--green-ink)')}{boton('reactivar', RotateCcw, 'Reactivar')}</>;
+  if (estado === 'Finalizado' || estado === 'Cerrada') return pildora(CheckCircle2, 'Finalizado', 'var(--green-ink)');
   if (estado === 'Anulado') return pildora(XCircle, 'Anulado', 'var(--label-3)');
   return boton('iniciar', Play, 'Iniciar');
 }
