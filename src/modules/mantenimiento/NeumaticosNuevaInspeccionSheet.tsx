@@ -195,8 +195,11 @@ export function NeumaticosNuevaInspeccionSheet({ open, placaInicial = '', onClos
 
 
   const placasOpts = (placas ?? []).map(p => ({ value: p, label: p }));
-  const marcasOpts  = (cats?.marcas  ?? []).map(m => ({ value: m, label: m }));
-  const medidasOpts = (cats?.medidas ?? []).map(m => ({ value: m, label: m }));
+  // Si una llanta trae una marca o medida que no está en el catálogo, igual debe verse en su fila (como el clásico, que acepta el texto)
+  const opcionesCon = (catalogo: string[] | undefined, usados: string[]) =>
+    [...new Set([...(catalogo ?? []), ...usados].map(v => String(v ?? '').trim()).filter(Boolean))].map(v => ({ value: v, label: v }));
+  const marcasOpts  = opcionesCon(cats?.marcas, filas.map(f => f.marca));
+  const medidasOpts = opcionesCon(cats?.medidas, filas.map(f => f.medida));
   const accionesOpts = (cats?.acciones ?? ['Inspección', 'Rotación', 'Instalación', 'Cambio', 'Baja'])
     .map(a => ({ value: a, label: a }));
   const estadosOpts = (cats?.estados ?? ['NUEVA', 'RENCAUCHADA'])
