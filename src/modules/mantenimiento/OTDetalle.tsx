@@ -95,6 +95,28 @@ interface OTDetalleProps {
 
 export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, onEliminar }: OTDetalleProps) {
   const qc = useQueryClient();
+  // La OT guarda el DNI de quien la inició o cerró, y el número de rampa: aquí se muestran nombre y nombre de rampa
+  const { data: conductoresLista } = useQuery({
+    queryKey: ['mant', 'conductores-nombres'],
+    queryFn: () => api<unknown>('/conductores').then(r => (Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? [])) as Record<string, unknown>[]),
+    staleTime: 10 * 60_000,
+  });
+  const { data: catalogoTaller } = useQuery({
+    queryKey: ['mant', 'catalogo-taller'],
+    queryFn: () => api<{ rampas?: Record<string, unknown>[] }>('/catalogos_taller').catch(() => ({ rampas: [] })),
+    staleTime: 10 * 60_000,
+  });
+  const nombrePersona = (v: string | null | undefined) => {
+    const t = (v ?? '').trim();
+    if (!/^d{6,}$/.test(t)) return t;
+    const c = (conductoresLista ?? []).find(x => String(x.dni ?? '').trim() === t);
+    return c ? String(c.nombre ?? t) : t;
+  };
+  const nombreRampa = (id: string | number | null | undefined) => {
+    if (id == null || id === '') return '';
+    const c = (catalogoTaller?.rampas ?? []).find(x => String(x.id) === String(id));
+    return c ? String(c.nombre_rampa ?? c.nombre ?? id) : String(id);
+  };
   const toast = useToast();
   const { user } = useAuth();
   const usuario = user?.name ?? '';
@@ -347,15 +369,15 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
           )}
 
           <div>
-            <p className="tarjeta__grupo-titulo">Diagnóstico y asignación</p>
+            <p className="tarjeta__grupo-titulo">Diagnóstico y Asignación</p>
             <div className="tarjeta__lista">
-              {(det.motivo || ot.observaciones) && <div className="dato"><span className="dato__label">Falla reportada</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{String(rotGetCleanMotivoDisplay(det, ot)).replace(/^•\s*/gm, '').replace(/^(Falla Manual|MANUAL)\s*:\s*/i, '')}</span></div>}
-              {ot.tecnico && <div className="dato"><span className="dato__label">Técnico responsable</span><span className="dato__valor">{ot.tecnico}</span></div>}
+              {(det.motivo || ot.observaciones) && <div className="dato"><span className="dato__label">Falla Reportada</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{String(rotGetCleanMotivoDisplay(det, ot)).replace(/^•\s*/gm, '').replace(/^(Falla Manual|MANUAL)\s*:\s*/i, '')}</span></div>}
+              {ot.tecnico && <div className="dato"><span className="dato__label">Técnico Responsable</span><span className="dato__valor">{ot.tecnico}</span></div>}
               {ot.supervisor && <div className="dato"><span className="dato__label">Supervisor</span><span className="dato__valor">{ot.supervisor}</span></div>}
-              {(ot.rampa_origen || ot.id_rampa) && <div className="dato"><span className="dato__label">Rampa asignada</span><span className="dato__valor">{ot.rampa_origen ?? ot.id_rampa}</span></div>}
+              {(ot.rampa_origen || ot.id_rampa) && <div className="dato"><span className="dato__label">Rampa Asignada</span><span className="dato__valor">{ot.rampa_origen || nombreRampa(ot.id_rampa)}</span></div>}
               {ot.situacion && <div className="dato"><span className="dato__label">Situación</span><span className="dato__valor">{ot.situacion}</span></div>}
               {(det.tipo_ot || det.sub_tipo) && <div className="dato"><span className="dato__label">Tipo</span><span className="dato__valor">{[det.tipo_ot, det.sub_tipo].filter(Boolean).join(' / ')}</span></div>}
-              {det.km ? <div className="dato"><span className="dato__label">Kilometraje de ingreso</span><span className="dato__valor dato__valor--mono">{String(det.km)}</span></div> : null}
+              {det.km ? <div className="dato"><span className="dato__label">Kilometraje de Ingreso</span><span className="dato__valor dato__valor--mono">{String(det.km)}</span></div> : null}
             </div>
           </div>
 
@@ -363,8 +385,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
             <div>
               <p className="tarjeta__grupo-titulo">Cierre</p>
               <div className="tarjeta__lista">
-                {ot.comentario_cierre && <div className="dato"><span className="dato__label">Observaciones finales</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{ot.comentario_cierre}</span></div>}
-                {ot.cerrado_por && <div className="dato"><span className="dato__label">Cerrado por</span><span className="dato__valor">{ot.cerrado_por}</span></div>}
+                {ot.comentario_cierre && <div className="dato"><span className="dato__label">Observaciones Finales</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{ot.comentario_cierre}</span></div>}
+                {ot.cerrado_por && <div className="dato"><span className="dato__label">Cerrado Por</span><span className="dato__valor">{nombrePersona(ot.cerrado_por)}</span></div>}
               </div>
             </div>
           )}
@@ -394,7 +416,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
           {limitePausas && <Notice>Esta OT ya usó sus 3 pausas; no admite más.</Notice>}
 
           <div>
-            <p className="tarjeta__grupo-titulo">Línea de tiempo</p>
+            <p className="tarjeta__grupo-titulo">Línea de Tiempo</p>
             {!tiempos.iniciado ? (
               <p className="t-footnote c-secondary">La OT aún no tiene inicio de trabajo.</p>
             ) : (
@@ -402,8 +424,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                 <li className="ot-timeline__item ot-timeline__item--inicio">
                   <span className="ot-timeline__punto" aria-hidden />
                   <div className="ot-timeline__cuerpo">
-                    <span className="ot-timeline__titulo">Inicio de trabajo</span>
-                    <span className="ot-timeline__sub">{fechaCorta(ot.fecha_inicio_ot)}{ot.iniciado_por ? ` · ${ot.iniciado_por}` : ''}</span>
+                    <span className="ot-timeline__titulo">Inicio de Trabajo</span>
+                    <span className="ot-timeline__sub">{fechaCorta(ot.fecha_inicio_ot)}{ot.iniciado_por ? ` · ${nombrePersona(ot.iniciado_por)}` : ''}</span>
                   </div>
                 </li>
                 {pausas.map(p => (
@@ -422,8 +444,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                   <li className="ot-timeline__item ot-timeline__item--fin">
                     <span className="ot-timeline__punto" aria-hidden />
                     <div className="ot-timeline__cuerpo">
-                      <span className="ot-timeline__titulo">Salida de la unidad</span>
-                      <span className="ot-timeline__sub">{fechaCorta(ot.fecha_hora_salida)}{ot.cerrado_por ? ` · ${ot.cerrado_por}` : ''}</span>
+                      <span className="ot-timeline__titulo">Salida de la Unidad</span>
+                      <span className="ot-timeline__sub">{fechaCorta(ot.fecha_hora_salida)}{ot.cerrado_por ? ` · ${nombrePersona(ot.cerrado_por)}` : ''}</span>
                     </div>
                   </li>
                 ) : (
