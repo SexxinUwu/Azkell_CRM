@@ -29,7 +29,7 @@ async function cargarFuenteOswald() {
 async function blobDeHtml(html: string): Promise<Blob> {
   await cargarFuenteOswald();
   // Falla sin "• Falla Manual :" (solo en el PDF de /app; el HTML copiado del clásico no cambia)
-  const limpio = html.replace(/•s*Falla Manuals*:s*/gi, '');
+  const limpio = html.replace(/•\s*Falla Manual\s*:\s*/gi, '');
   const doc = new DOMParser().parseFromString(limpio, 'text/html');
   doc.getElementById('btnPrint')?.remove();
   const el = document.createElement('div');
