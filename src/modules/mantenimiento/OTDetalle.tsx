@@ -112,10 +112,24 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     const c = (conductoresLista ?? []).find(x => String(x.dni ?? '').trim() === t);
     return c ? String(c.nombre ?? t) : t;
   };
+  // La OT guarda el id de una fila de taller_rampas; esa fila tiene el número de rampa, y el catálogo le da el nombre
+  const { data: rampasLista } = useQuery({
+    queryKey: ['mant', 'rampas-nombres'],
+    queryFn: async () => {
+      const [activas, historial] = await Promise.all([
+        api<unknown>('/taller-rampas').catch(() => []),
+        api<unknown>('/taller-rampas?historial=1').catch(() => []),
+      ]);
+      return [...(Array.isArray(activas) ? activas : []), ...(Array.isArray(historial) ? historial : [])] as Record<string, unknown>[];
+    },
+    staleTime: 10 * 60_000,
+  });
   const nombreRampa = (id: string | number | null | undefined) => {
     if (id == null || id === '') return '';
-    const c = (catalogoTaller?.rampas ?? []).find(x => String(x.id) === String(id));
-    return c ? String(c.nombre_rampa ?? c.nombre ?? id) : String(id);
+    const fila = (rampasLista ?? []).find(x => String(x.id) === String(id));
+    const numero = fila ? String(fila.rampa) : String(id);
+    const c = (catalogoTaller?.rampas ?? []).find(x => String(x.id) === numero);
+    return c ? String(c.nombre_rampa ?? c.nombre ?? numero) : numero;
   };
   const toast = useToast();
   const { user } = useAuth();
