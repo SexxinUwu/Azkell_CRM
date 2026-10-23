@@ -15,6 +15,7 @@ import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
+import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { ejecutarAccionOT, eliminarOT, otDetalles, otFecha, otId, otTipo, useOrdenesTrabajoData, type AccionOT, type OrdenTrabajo } from './api';
@@ -116,7 +117,7 @@ function AccionesFila({ estado, onAccion, disabled }: { estado: string; onAccion
 export function OrdenesTrabajoPage() {
   const location = useLocation();
   const { data, isLoading, isError, error } = useOrdenesTrabajoData();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const qc    = useQueryClient();
   const toast = useToast();
 
@@ -136,6 +137,12 @@ export function OrdenesTrabajoPage() {
   const [panelFiltros, setPanelFiltros] = useState(false);
   const [seleccionada, setSeleccionada] = useState<OrdenTrabajo | null>(null);
   const [confirmando, setConfirmando]   = useState<{ accion: AccionOT; ot: OrdenTrabajo } | null>(null);
+  // Pausar y Cerrar usan sus modales (motivo y checklist), como el clásico
+  const [accionSheet, setAccionSheet] = useState<{ accion: 'pausar' | 'cerrar'; ot: OrdenTrabajo } | null>(null);
+  const abrirAccion = (accion: AccionOT, ot: OrdenTrabajo) => {
+    if (accion === 'pausar' || accion === 'cerrar') setAccionSheet({ accion, ot });
+    else setConfirmando({ accion, ot });
+  };
   const [eliminando, setEliminando]     = useState<OrdenTrabajo | null>(null);
   const [ejecutando, setEjecutando]     = useState(false);
 
@@ -421,7 +428,7 @@ export function OrdenesTrabajoPage() {
           onVolver={() => setSeleccionada(null)}
           puedeEditar={puedeEditar}
           puedeEliminar={puedeEliminar}
-          onAccion={(accion) => setConfirmando({ accion, ot: otActual })}
+          onAccion={(accion) => abrirAccion(accion, otActual)}
           onEliminar={() => setEliminando(otActual)}
         />
       ) : (
@@ -517,7 +524,7 @@ export function OrdenesTrabajoPage() {
                         return (
                           <tr key={otId(o)} onClick={() => { haptic('selection'); setSeleccionada(o); }} style={{ cursor: 'pointer' }}>
                             <td style={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
-                              <AccionesFila estado={o.estado} disabled={ejecutando} onAccion={a => setConfirmando({ accion: a, ot: o })} />
+                              <AccionesFila estado={o.estado} disabled={ejecutando} onAccion={a => abrirAccion(a, o)} />
                             </td>
                             <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>{otId(o)}{o.reporte_desvinculado && <> <Badge tone="amber">Reporte desvinculado</Badge></>}</td>
                             <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', color: 'var(--label-2)' }}>{otFecha(o)}</td>
@@ -683,6 +690,13 @@ export function OrdenesTrabajoPage() {
           </SimpleLabel>
         </div>
       </Sheet>
+
+      {accionSheet?.accion === 'pausar' && (
+        <PausarOTSheet ot={accionSheet.ot} open onClose={() => setAccionSheet(null)} usuario={user?.name ?? ''} />
+      )}
+      {accionSheet?.accion === 'cerrar' && (
+        <CerrarOTSheet ot={accionSheet.ot} open onClose={() => setAccionSheet(null)} usuario={user?.name ?? ''} />
+      )}
 
       {/* Confirmación acción */}
       <ConfirmSheet
