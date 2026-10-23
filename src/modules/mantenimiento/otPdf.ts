@@ -40,7 +40,7 @@ async function blobDeHtml(html: string, titulo: string): Promise<Blob> {
   // del contenedor dejaba la hoja en blanco (mismo criterio que el PDF de neumáticos)
   try {
     await document.fonts.ready;
-    return await generarPDFBlob(el.querySelector('.page-container') as HTMLElement, { orientacion: 'portrait', escala: 3, margen: 0, imagen: 'png', titulo });
+    return await generarPDFBlob(el.querySelector('.page-container') as HTMLElement, { orientacion: 'portrait', escala: 4, margen: 0, imagen: 'png', titulo });
   } finally { el.remove(); }
 }
 
