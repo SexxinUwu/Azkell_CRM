@@ -321,6 +321,9 @@
             <i class="bi bi-search text-muted"></i>
             <input type="text" id="neu-input-busqueda-rapida" placeholder="Buscar placa, marca, medida o nota..." oninput="window.neuFiltrarUltimas()">
         </div>
+        <button id="neu-btn-excel-ultimas" class="btn btn-sm btn-light rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;" title="Exportar a Excel" aria-label="Exportar a Excel" onclick="window.neuExportarUltimasExcel()">
+            <i class="bi bi-filetype-xlsx text-success fs-4"></i>
+        </button>
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <select class="form-select form-select-sm rounded-pill px-3 fw-semibold border-secondary-subtle" id="neu-sel-empresa-filtro" onchange="window.neuFiltrarUltimas()" style="width: auto; min-width: 170px; height: 32px;">
                 <option value="Todos">Todas las Empresas</option>

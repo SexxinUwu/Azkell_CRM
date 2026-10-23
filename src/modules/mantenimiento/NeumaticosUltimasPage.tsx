@@ -5,14 +5,14 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Disc3, SearchX } from 'lucide-react';
 import { api, errorMessage } from '../../core/api/client';
-import { PageLoader } from '../../core/ui/Button';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { NeumaticosNuevaInspeccionSheet } from './NeumaticosNuevaInspeccionSheet';
-import { RequerimientoNeumaticos } from './NeumaticosRequerimiento';
+import { LogoArchivo, RequerimientoNeumaticos } from './NeumaticosRequerimiento';
 import { VehiculosTarjetas } from './NeumaticosVehiculos';
-import { entraEnRequerimiento, leerUmbral, textoUmbral, type LlantaUltima } from './neumaticosReposicion';
+import { entraEnRequerimiento, exportarUltimasExcel, leerUmbral, textoUmbral, type LlantaUltima } from './neumaticosReposicion';
 import { MM_CRITICO, MM_PREVENTIVO } from './neumaticosSemaforo';
 
 // Últimas inspecciones y requerimiento de llantas (clásico: modulos/mantenimiento/neumaticos-ultimas).
@@ -109,6 +109,11 @@ export function NeumaticosUltimasPage() {
             <div style={{ flex: '1 1 16rem', minWidth: 0 }}>
               <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar placa, marca, medida o nota..." />
             </div>
+            {tab === 'ultimas' && (
+              <Button variant="secondary" iconOnly icon={<LogoArchivo tipo="excel" />} disabled={visiblesUlt.length === 0}
+                aria-label="Exportar a Excel" title="Exportar a Excel" style={{ minHeight: 44, minWidth: 44 }}
+                onClick={() => exportarUltimasExcel(visiblesUlt).catch(e => alert('No se pudo exportar: ' + String(e)))} />
+            )}
             <SelectInput value={empresa} onChange={e => setEmpresa(e.target.value)} aria-label="Filtrar por empresa" style={{ minHeight: 44, width: 'auto', minWidth: 180 }}>
               <option value="Todos">Todas las Empresas</option>
               {empresas.map(e => <option key={e} value={e}>{e}</option>)}

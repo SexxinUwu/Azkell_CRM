@@ -33,6 +33,28 @@ export function guardarUmbral(n: number) {
   try { localStorage.setItem(CLAVE_MM_REQUERIMIENTO, String(n)); } catch { /* sin almacenamiento: no se recuerda */ }
 }
 
+/** Excel de "Últimas inspecciones": una fila por llanta, agrupadas por placa en el mismo orden que se ve en pantalla */
+export async function exportarUltimasExcel(llantas: LlantaUltima[]) {
+  const porPlaca = new Map<string, LlantaUltima[]>();
+  for (const l of llantas) {
+    const k = String(l.placa ?? 'SIN_PLACA').toUpperCase().trim();
+    porPlaca.set(k, [...(porPlaca.get(k) ?? []), l]);
+  }
+  const num = (v: unknown) => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
+  const txt = (v: unknown) => (v == null ? '' : String(v));
+  const filas = [...porPlaca.values()].flat().map(l => [
+    txt(l.placa).toUpperCase(), txt(l.dueno), txt(l.tipo_unidad), txt(l.marca_unidad), txt(l.fecha_inspeccion).split('T')[0],
+    txt(l.posicion), txt(l.marca), txt(l.medida), txt(l.modelo),
+    num(l.r1), num(l.r2), num(l.r3), num(l.r4), num(l.remanente_promedio),
+    num(l.presion_ant), num(l.presion_actual), txt(l.estado), txt(l.observaciones),
+  ]);
+  const hoy = new Date().toISOString().split('T')[0];
+  await exportarExcel('Ultimas-inspecciones-neumaticos-' + hoy, 'Últimas inspecciones',
+    ['Placa', 'Empresa', 'Tipo de unidad', 'Marca unidad', 'Fecha inspección', 'Posición', 'Marca', 'Medida', 'Modelo',
+      'R1 (mm)', 'R2 (mm)', 'R3 (mm)', 'R4 (mm)', 'Remanente promedio (mm)', 'Presión ant.', 'Presión actual', 'Estado', 'Observaciones'],
+    filas);
+}
+
 export const textoUmbral = (n: number) => `≤ ${n.toLocaleString('es-PE')} mm`;
 
 const aNum = (v: unknown): number | null => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));

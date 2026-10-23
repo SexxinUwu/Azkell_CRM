@@ -198,7 +198,49 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
             listaTabla = filtradas.filter(row => String(row.medida || '').toUpperCase().trim() === window._neuFiltroMedidaSel.toUpperCase().trim());
         }
 
+        window._neuListaVisible = listaTabla;
+        const btnExcel = document.getElementById('neu-btn-excel-ultimas');
+        if (btnExcel) btnExcel.classList.toggle('d-none', window._neuTabActiva !== 'ultimas');
         window.neuRenderTabla(listaTabla);
+    };
+
+    // Excel de lo que se ve en Últimas Inspecciones (mismos filtros), una fila por llanta agrupada por placa
+    window.neuExportarUltimasExcel = async function() {
+        const lista = window._neuListaVisible || [];
+        if (!lista.length) { alert('No hay inspecciones para exportar con los filtros actuales.'); return; }
+        try {
+            if (typeof XLSX === 'undefined') {
+                await new Promise((resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = '/libs/xlsx.full.min.js';
+                    s.onload = resolve;
+                    s.onerror = () => reject(new Error('No se pudo cargar la librería Excel'));
+                    document.head.appendChild(s);
+                });
+            }
+            const porPlaca = new Map();
+            lista.forEach(l => {
+                const k = String(l.placa || 'SIN_PLACA').toUpperCase().trim();
+                if (!porPlaca.has(k)) porPlaca.set(k, []);
+                porPlaca.get(k).push(l);
+            });
+            const num = v => (v === null || v === undefined || v === '' || !isFinite(Number(v)) ? '' : Number(v));
+            const txt = v => (v === null || v === undefined ? '' : String(v));
+            const aoa = [['Placa', 'Empresa', 'Tipo de unidad', 'Marca unidad', 'Fecha inspección', 'Posición', 'Marca', 'Medida', 'Modelo',
+                'R1 (mm)', 'R2 (mm)', 'R3 (mm)', 'R4 (mm)', 'Remanente promedio (mm)', 'Presión ant.', 'Presión actual', 'Estado', 'Observaciones']];
+            [...porPlaca.values()].flat().forEach(l => aoa.push([
+                txt(l.placa).toUpperCase(), txt(l.dueno), txt(l.tipo_unidad), txt(l.marca_unidad), txt(l.fecha_inspeccion).split('T')[0],
+                txt(l.posicion), txt(l.marca), txt(l.medida), txt(l.modelo),
+                num(l.r1), num(l.r2), num(l.r3), num(l.r4), num(l.remanente_promedio), num(l.presion_ant), num(l.presion_actual),
+                txt(l.estado), txt(l.observaciones)]));
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Ultimas inspecciones');
+            XLSX.writeFile(wb, 'Ultimas-inspecciones-neumaticos-' + new Date().toISOString().split('T')[0] + '.xlsx');
+        } catch (e) {
+            console.error('Error exportando Excel:', e);
+            alert('No se pudo exportar: ' + e.message);
+        }
     };
 
     // ── Selección Interactiva de Medida en el Cuadro Resumen ──────────
