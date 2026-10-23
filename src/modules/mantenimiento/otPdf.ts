@@ -1,6 +1,7 @@
 // PDF de la OT: el HTML sale de otPdfClasico.ts (copia de generarPDF_OT, sin cambios de diseño)
 // y el servidor lo convierte a PDF con Chromium (texto real, vectorial, igual de nítido que el clásico).
 import { generarPDF_OT } from './otPdfClasico';
+import { htmlPlantillaInspeccion, htmlPlantillaLlantas } from './otPlantillasClasico';
 import { TAB_ID } from '../../core/api/client';
 import { aObjeto, type MaterialSalida, type OrdenTrabajo, type TrabajoOT } from './api';
 
@@ -56,4 +57,15 @@ export function pdfOt(d: DatosOtPdf): Promise<Blob> {
 export function pdfPlantillaOt(ot: OrdenTrabajo, extras?: ExtrasPdf): Promise<Blob> {
   const html = generarPDF_OT(otConExtras(ot, extras), [], [], true, undefined) as string;
   return pdfDeHtml(html, 'Plantilla orden de trabajo');
+}
+
+/** Plantilla de inspecciones F-MAN-001 (checklist), como el clásico */
+export function pdfPlantillaInspeccion(idOt: string, placa: string, fechaIng: string | null, km: string | number | undefined, rampa: string | undefined): Promise<Blob> {
+  return htmlPlantillaInspeccion(idOt, placa, fechaIng ?? '', km ?? '', rampa ?? '').then((html: string) => pdfDeHtml(html, `Plantilla inspecciones ${idOt}`));
+}
+
+/** Plantilla de llantas A4 en blanco, como el clásico */
+export function pdfPlantillaLlantas(ot: OrdenTrabajo, extras?: ExtrasPdf): Promise<Blob> {
+  const numero = ot.id_ot || ot.ticket_entrada || '';
+  return htmlPlantillaLlantas(numero, otConExtras(ot, extras)).then((html: string) => pdfDeHtml(html, `Plantilla de llantas ${numero}`));
 }

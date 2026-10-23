@@ -23,7 +23,7 @@ import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
 import { TrabajoOTSheet } from './TrabajoOTSheet';
 import { OTServiciosTerceros } from './OTServiciosTerceros';
 import { SalidaFormulario } from '../almacen/SalidaFormulario';
-import { pdfOt, pdfPlantillaOt } from './otPdf';
+import { pdfOt, pdfPlantillaInspeccion, pdfPlantillaLlantas, pdfPlantillaOt } from './otPdf';
 import { usePlacas } from '../placas/api';
 import { rotGetCleanMotivoDisplay } from './otPdfClasico';
 
@@ -332,7 +332,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       {seccion === 'tareas' && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
-            <button type="button" onClick={() => abrirClasico('mantenimiento/reportes-ot')} style={tarjetaPlantilla}>
+            <button type="button" onClick={() => abrirPdf(() => pdfPlantillaInspeccion(idOt, ot.placa, ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || null, extrasPdf().kmTablero, extrasPdf().rampa), `Plantilla inspecciones ${idOt}.pdf`)} style={tarjetaPlantilla}>
               <span style={{ ...iconoPlantilla, background: '#dcfce7', color: '#16a34a' }}><ClipboardCheck size={17} /></span>
               <span><b style={{ display: 'block', fontSize: '0.76rem' }}>Plantilla Inspecciones</b><small style={{ color: 'var(--label-2)', fontSize: '0.64rem' }}>F-MAN-001</small></span>
             </button>
@@ -340,7 +340,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
               <span style={{ ...iconoPlantilla, background: '#dbeafe', color: '#2563eb' }}><FileText size={17} /></span>
               <span><b style={{ display: 'block', fontSize: '0.76rem' }}>Plantilla OT</b><small style={{ color: 'var(--label-2)', fontSize: '0.64rem' }}>Impresión rápida</small></span>
             </button>
-            <button type="button" onClick={() => abrirClasico('mantenimiento/reportes-ot')} style={tarjetaPlantilla}>
+            <button type="button" onClick={() => abrirPdf(() => pdfPlantillaLlantas(ot, extrasPdf()), `Plantilla de llantas ${idOt}.pdf`)} style={tarjetaPlantilla}>
               <span style={{ ...iconoPlantilla, background: '#fef9c3', color: '#ca8a04' }}><Disc size={17} /></span>
               <span><b style={{ display: 'block', fontSize: '0.76rem' }}>Plantilla de Llantas</b><small style={{ color: 'var(--label-2)', fontSize: '0.64rem' }}>Formato A4 blanco</small></span>
             </button>
