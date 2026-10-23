@@ -344,6 +344,123 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
         return fallback;
     };
 
+    // ── MAPA DE ALIAS Y NORMALIZACIÓN DEFENSIVA DE NEUMÁTICOS ─────────────────────
+    const CLIENT_ALIAS_MAP = {
+        'GOOD': 'GOODYEAR',
+        'GODYEAR': 'GOODYEAR',
+        'GOODYEAR YEAR': 'GOODYEAR',
+        'WIN': 'WINDPOWER',
+        'DURA': 'DURATURN',
+        'EVER': 'EVERGREEN',
+        'AUST': 'AUSTONE',
+        'WES': 'WESTLAKE',
+        'WOSE': 'WOSEN',
+        'WO': 'WOSEN',
+        'MI': 'MICHELIN',
+        'BRIGESTONE': 'BRIDGESTONE',
+        'GITY': 'GITI',
+        'KUN LUN': 'KUNLUN',
+        'LIN LONG': 'LINGLONG',
+        'CHAO YANG': 'CHAOYANG',
+        'JKTIRE': 'JK TYRE',
+        'JK TIRE': 'JK TYRE',
+        'JK-TYRE': 'JK TYRE',
+        'AMBERSTONE': 'AMBERTONE',
+        'AMBERSTARE': 'AMBERTONE',
+        'SUPERHAUK': 'SUPERHAWK',
+        'GOLDEN CROW': 'GOLDEN CROWN',
+        'MASHALL': 'MARSHAL',
+        'AFINE': 'AUFINE',
+        'CONTINETAL': 'CONTINENTAL',
+        'CATGOPOWER': 'CARGOPOWER',
+        'NIPON': 'NIPPON',
+        'LIM': 'LIMA CAUCHO'
+    };
+
+    window._neuNormalizarMarca = function(raw) {
+        if (!raw) return '';
+        let m = String(raw).trim().toUpperCase();
+        if (CLIENT_ALIAS_MAP[m]) return CLIENT_ALIAS_MAP[m];
+        const cats = window._neuCatalogos?.marcas || [];
+        if (cats.some(c => c.toUpperCase() === m)) return m;
+        if (m.length >= 3) {
+            const matches = cats.filter(c => c.toUpperCase().startsWith(m));
+            if (matches.length === 1) return matches[0];
+        }
+        return m;
+    };
+
+    window._neuNormalizarMedida = function(raw) {
+        if (!raw) return '';
+        let med = String(raw).trim().toUpperCase().replace(/,/g, '.').replace(/\s+/g, '');
+        if (med === '295' || med === '29') return '295/80R22.5';
+        if (med === '27') return '275/70R22.5';
+        if (med === '275/70R22.6') return '275/70R22.5';
+        if (med.includes('21575R17.5')) return '215/75R17.5';
+        return med;
+    };
+
+    window._neuOnBlurMarca = function(el) {
+        if (!el) return;
+        const prevVal = el.value.trim().toUpperCase();
+        const norm = window._neuNormalizarMarca(prevVal);
+        if (norm && norm !== prevVal) {
+            el.value = norm;
+            if (typeof showToast === 'function') showToast(`🔄 Marca ajustada: ${norm}`);
+        }
+        const cats = window._neuCatalogos?.marcas || [];
+        const fb = document.getElementById('neu-marca-feedback');
+        const curVal = el.value.trim().toUpperCase();
+        if (curVal && !cats.some(c => c.toUpperCase() === curVal)) {
+            el.classList.add('is-invalid');
+            if (fb) {
+                fb.innerText = `⚠️ "${curVal}" no está en el catálogo. Usa "+ Nueva" o escribe una marca oficial.`;
+                fb.style.display = 'block';
+            }
+        } else {
+            el.classList.remove('is-invalid');
+            if (fb) fb.style.display = 'none';
+        }
+    };
+
+    window._neuOnBlurMedida = function(el) {
+        if (!el) return;
+        const prevVal = el.value.trim().toUpperCase();
+        const norm = window._neuNormalizarMedida(prevVal);
+        if (norm && norm !== prevVal) {
+            el.value = norm;
+            if (typeof showToast === 'function') showToast(`🔄 Medida ajustada: ${norm}`);
+        }
+        const fb = document.getElementById('neu-medida-feedback');
+        const curVal = el.value.trim().toUpperCase();
+        if (curVal && (curVal.length < 5 || !curVal.includes('R'))) {
+            el.classList.add('is-invalid');
+            if (fb) {
+                fb.innerText = `⚠️ Medida incompleta (ej: 295/80R22.5).`;
+                fb.style.display = 'block';
+            }
+        } else {
+            el.classList.remove('is-invalid');
+            if (fb) fb.style.display = 'none';
+        }
+    };
+
+    window._neuOnBlurModelo = function(el) {
+        if (!el) return;
+        el.value = String(el.value || '').trim().toUpperCase();
+        const fb = document.getElementById('neu-modelo-feedback');
+        if (el.value && el.value.length < 2) {
+            el.classList.add('is-invalid');
+            if (fb) {
+                fb.innerText = `⚠️ El modelo debe tener al menos 2 caracteres.`;
+                fb.style.display = 'block';
+            }
+        } else {
+            el.classList.remove('is-invalid');
+            if (fb) fb.style.display = 'none';
+        }
+    };
+
     // ── APERTURA DEL MODAL PRINCIPAL ──────────────────────────────────────────────
     window.rotAbrirInspeccionNeumaticos = async function(placa, idOT, kmVehiculo, configCode) {
         window._neuLlantasActuales = [];
@@ -509,31 +626,34 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                             <div class="neu-scroll-x" id="neu-pos-selector"></div>
                         </div>
 
-                        <!-- Marca, Medida, Modelo con Buscador Autocomplete -->
+                        <!-- Marca, Medida, Modelo con Buscador Autocomplete y Validación Estricta -->
                         <div class="row g-2 mb-3">
                             <div class="col-12 col-sm-4">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label class="form-label text-muted fw-bold small m-0" style="font-size:0.72rem;">Marca</label>
+                                    <label class="form-label text-muted fw-bold small m-0" style="font-size:0.72rem;">Marca *</label>
                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('marcas')" class="text-primary small fw-bold" style="font-size:0.72rem;">+ Nueva</a>
                                 </div>
-                                <input type="text" class="form-control form-control-sm rounded-3 fw-bold text-uppercase" style="height: 38px;" id="neu-sel-marca" list="dl-neu-marcas" placeholder="Buscar marca..." autocomplete="off">
+                                <input type="text" class="form-control form-control-sm rounded-3 fw-bold text-uppercase" style="height: 38px;" id="neu-sel-marca" list="dl-neu-marcas" placeholder="Buscar marca..." autocomplete="off" onblur="window._neuOnBlurMarca(this)" onchange="window._neuOnBlurMarca(this)">
                                 <datalist id="dl-neu-marcas"></datalist>
+                                <div id="neu-marca-feedback" class="text-danger small mt-1" style="display:none; font-size:0.7rem; font-weight:600;"></div>
                             </div>
                             <div class="col-12 col-sm-4">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label class="form-label text-muted fw-bold small m-0" style="font-size:0.72rem;">Medida</label>
+                                    <label class="form-label text-muted fw-bold small m-0" style="font-size:0.72rem;">Medida *</label>
                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('medidas')" class="text-primary small fw-bold" style="font-size:0.72rem;">+ Nueva</a>
                                 </div>
-                                <input type="text" class="form-control form-control-sm rounded-3 fw-bold text-uppercase font-monospace" style="height: 38px;" id="neu-sel-medida" list="dl-neu-medidas" placeholder="Buscar medida..." autocomplete="off">
+                                <input type="text" class="form-control form-control-sm rounded-3 fw-bold text-uppercase font-monospace" style="height: 38px;" id="neu-sel-medida" list="dl-neu-medidas" placeholder="Buscar medida..." autocomplete="off" onblur="window._neuOnBlurMedida(this)" onchange="window._neuOnBlurMedida(this)">
                                 <datalist id="dl-neu-medidas"></datalist>
+                                <div id="neu-medida-feedback" class="text-danger small mt-1" style="display:none; font-size:0.7rem; font-weight:600;"></div>
                             </div>
                             <div class="col-12 col-sm-4">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label class="form-label text-muted fw-bold small m-0" style="font-size:0.72rem;">Modelo</label>
+                                    <label class="form-label text-muted fw-bold small m-0" style="font-size:0.72rem;">Modelo *</label>
                                     <a href="javascript:void(0)" onclick="window._neuAgregarNuevoCatalogo('modelos')" class="text-primary small fw-bold" style="font-size:0.72rem;">+ Nuevo</a>
                                 </div>
-                                <input type="text" class="form-control form-control-sm rounded-3 fw-bold text-uppercase" style="height: 38px;" id="neu-sel-modelo" list="dl-neu-modelos" placeholder="Buscar modelo..." autocomplete="off">
+                                <input type="text" class="form-control form-control-sm rounded-3 fw-bold text-uppercase" style="height: 38px;" id="neu-sel-modelo" list="dl-neu-modelos" placeholder="Buscar modelo..." autocomplete="off" onblur="window._neuOnBlurModelo(this)" onchange="window._neuOnBlurModelo(this)">
                                 <datalist id="dl-neu-modelos"></datalist>
+                                <div id="neu-modelo-feedback" class="text-danger small mt-1" style="display:none; font-size:0.7rem; font-weight:600;"></div>
                             </div>
                         </div>
 
@@ -1735,12 +1855,13 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                     }
                 }
             });
-        } else if (tieneHistorial) {
-            // Posición con registro histórico previo -> Por defecto 'Inspección'
             const prev = window._neuUltimaInspeccionMap[posKey];
-            if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = prev.marca || 'WINDPOWER';
-            if (document.getElementById('neu-sel-medida')) document.getElementById('neu-sel-medida').value = prev.medida || '275/70R22.5';
-            if (document.getElementById('neu-sel-modelo')) document.getElementById('neu-sel-modelo').value = prev.modelo || 'PROGUO1';
+            const marcaPrev = window._neuNormalizarMarca(prev.marca || 'WINDPOWER');
+            const medidaPrev = window._neuNormalizarMedida(prev.medida || '295/80R22.5');
+            const modeloPrev = String(prev.modelo || 'PROGUO1').trim().toUpperCase();
+            if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = marcaPrev;
+            if (document.getElementById('neu-sel-medida')) document.getElementById('neu-sel-medida').value = medidaPrev;
+            if (document.getElementById('neu-sel-modelo')) document.getElementById('neu-sel-modelo').value = modeloPrev;
             window._neuSetR('r1', prev.r1 || 12);
             window._neuSetR('r2', prev.r2 || 12);
             window._neuSetR('r3', prev.r3 || 12);
@@ -1911,9 +2032,38 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
     // ── GUARDAR / ACTUALIZAR LLANTA EN INSPECCIÓN ─────────────────────────────────
     window._neuGuardarLlantaEnLista = function() {
         const pos = window._neuPosicionActiva || '1';
-        const marca = document.getElementById('neu-sel-marca')?.value || '';
-        const medida = document.getElementById('neu-sel-medida')?.value || '';
-        const modelo = document.getElementById('neu-sel-modelo')?.value || '';
+        let marca = window._neuNormalizarMarca(document.getElementById('neu-sel-marca')?.value || '');
+        let medida = window._neuNormalizarMedida(document.getElementById('neu-sel-medida')?.value || '');
+        let modelo = String(document.getElementById('neu-sel-modelo')?.value || '').trim().toUpperCase();
+
+        // Reflejar valores normalizados en los inputs
+        if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = marca;
+        if (document.getElementById('neu-sel-medida')) document.getElementById('neu-sel-medida').value = medida;
+        if (document.getElementById('neu-sel-modelo')) document.getElementById('neu-sel-modelo').value = modelo;
+
+        // Validación estricta de Marca contra catálogo
+        const catalogoMarcas = window._neuCatalogos?.marcas || [];
+        const marcaValida = catalogoMarcas.some(c => c.toUpperCase() === marca.toUpperCase());
+        if (!marca || !marcaValida) {
+            alert(`⚠️ La marca "${marca || '(vacía)'}" no es válida o está incompleta.\n\nPor favor selecciona una marca oficial del catálogo (ej: GOODYEAR, WINDPOWER, GITI). Si es una marca nueva, usa "+ Nueva" para registrarla.`);
+            document.getElementById('neu-sel-marca')?.focus();
+            return;
+        }
+
+        // Validación estricta de Medida
+        if (!medida || medida.length < 5 || !medida.includes('R')) {
+            alert(`⚠️ La medida "${medida || '(vacía)'}" está incompleta.\n\nDebe ingresar el formato estándar completo (ej: 295/80R22.5, 11R22.5, 275/70R22.5).`);
+            document.getElementById('neu-sel-medida')?.focus();
+            return;
+        }
+
+        // Validación estricta de Modelo
+        if (!modelo || modelo.length < 2) {
+            alert(`⚠️ Por favor ingresa el modelo completo del neumático (ej: KMAX D, S800, SR80, etc.).`);
+            document.getElementById('neu-sel-modelo')?.focus();
+            return;
+        }
+
         const r1 = window._neuValR1 || 0;
         const r2 = window._neuValR2 || 0;
         const r3 = window._neuValR3 || 0;

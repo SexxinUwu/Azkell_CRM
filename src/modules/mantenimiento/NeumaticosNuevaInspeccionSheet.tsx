@@ -58,6 +58,44 @@ function usePlacasLista() {
   });
 }
 
+const ALIAS_REACT: Record<string, string> = {
+  GOOD: 'GOODYEAR',
+  GODYEAR: 'GOODYEAR',
+  'GOODYEAR YEAR': 'GOODYEAR',
+  WIN: 'WINDPOWER',
+  DURA: 'DURATURN',
+  EVER: 'EVERGREEN',
+  AUST: 'AUSTONE',
+  WES: 'WESTLAKE',
+  WO: 'WOSEN',
+  WOSE: 'WOSEN',
+  MI: 'MICHELIN',
+  BRIGESTONE: 'BRIDGESTONE',
+  GITY: 'GITI',
+  'KUN LUN': 'KUNLUN',
+  'LIN LONG': 'LINGLONG',
+  'CHAO YANG': 'CHAOYANG',
+  JKTIRE: 'JK TYRE',
+  'JK TIRE': 'JK TYRE',
+  'JK-TYRE': 'JK TYRE',
+  AMBERSTONE: 'AMBERTONE',
+  SUPERHAUK: 'SUPERHAWK',
+  'GOLDEN CROW': 'GOLDEN CROWN',
+  MASHALL: 'MARSHAL',
+  AFINE: 'AUFINE',
+  CONTINETAL: 'CONTINENTAL',
+  CATGOPOWER: 'CARGOPOWER',
+  NIPON: 'NIPPON',
+  LIM: 'LIMA CAUCHO'
+};
+const normReactMarca = (m: string) => ALIAS_REACT[m.toUpperCase().trim()] || m.toUpperCase().trim();
+const normReactMedida = (m: string) => {
+  const c = m.trim().toUpperCase().replace(/,/g, '.');
+  if (c === '295' || c === '29') return '295/80R22.5';
+  if (c === '27') return '275/70R22.5';
+  return c;
+};
+
 export function NeumaticosNuevaInspeccionSheet({ open, placaInicial = '', onClose }: { open: boolean; placaInicial?: string; onClose: () => void }) {
   const qc    = useQueryClient();
   const toast = useToast();
@@ -118,8 +156,8 @@ export function NeumaticosNuevaInspeccionSheet({ open, placaInicial = '', onClos
           const d = pos[k];
           return {
             posicion:      k,
-            marca:         String(d.marca ?? ''),
-            medida:        String(d.medida ?? ''),
+            marca:         normReactMarca(String(d.marca ?? '')),
+            medida:        normReactMedida(String(d.medida ?? '')),
             modelo:        String(d.modelo ?? ''),
             r1:            String(d.r1 ?? ''),
             r2:            String(d.r2 ?? ''),
@@ -145,8 +183,8 @@ export function NeumaticosNuevaInspeccionSheet({ open, placaInicial = '', onClos
       .filter(f => f.posicion.trim() !== '')
       .map(f => ({
         posicion:       f.posicion.trim().toUpperCase(),
-        marca:          f.marca.trim(),
-        medida:         f.medida.trim(),
+        marca:          normReactMarca(f.marca.trim()),
+        medida:         normReactMedida(f.medida.trim()),
         modelo:         f.modelo.trim(),
         r1:             Number(f.r1) || 0,
         r2:             Number(f.r2) || 0,
@@ -159,6 +197,17 @@ export function NeumaticosNuevaInspeccionSheet({ open, placaInicial = '', onClos
       }));
 
     if (items.length === 0) { toast('Agrega al menos una llanta', 'error'); return; }
+
+    for (const it of items) {
+      if (!it.marca) {
+        toast(`La llanta en posición #${it.posicion} requiere seleccionar una Marca`, 'error');
+        return;
+      }
+      if (!it.medida) {
+        toast(`La llanta en posición #${it.posicion} requiere seleccionar una Medida`, 'error');
+        return;
+      }
+    }
 
     setGuardando(true);
     try {

@@ -38,4 +38,73 @@ const DEFAULT_MODELOS = [
 
 const DEFAULT_ACCIONES = ['Inspección', 'Rotación', 'Instalación', 'Cambio', 'Reparación', 'Reencauche', 'Baja'];
 
-module.exports = { DEFAULT_MARCAS, DEFAULT_MEDIDAS, DEFAULT_MODELOS, DEFAULT_ACCIONES };
+const MARCAS_ALIAS_MAP = {
+    'GOOD': 'GOODYEAR',
+    'GODYEAR': 'GOODYEAR',
+    'GOODYEAR YEAR': 'GOODYEAR',
+    'WIN': 'WINDPOWER',
+    'DURA': 'DURATURN',
+    'EVER': 'EVERGREEN',
+    'AUST': 'AUSTONE',
+    'WES': 'WESTLAKE',
+    'WOSE': 'WOSEN',
+    'WO': 'WOSEN',
+    'MI': 'MICHELIN',
+    'BRIGESTONE': 'BRIDGESTONE',
+    'GITY': 'GITI',
+    'KUN LUN': 'KUNLUN',
+    'LIN LONG': 'LINGLONG',
+    'CHAO YANG': 'CHAOYANG',
+    'JKTIRE': 'JK TYRE',
+    'JK TIRE': 'JK TYRE',
+    'JK-TYRE': 'JK TYRE',
+    'AMBERSTONE': 'AMBERTONE',
+    'AMBERSTARE': 'AMBERTONE',
+    'SUPERHAUK': 'SUPERHAWK',
+    'GOLDEN CROW': 'GOLDEN CROWN',
+    'MASHALL': 'MARSHAL',
+    'AFINE': 'AUFINE',
+    'CONTINETAL': 'CONTINENTAL',
+    'CATGOPOWER': 'CARGOPOWER',
+    'NIPON': 'NIPPON',
+    'LIM': 'LIMA CAUCHO'
+};
+
+function normalizarMarca(raw, catalogoMarcas = []) {
+    if (!raw) return '';
+    let m = String(raw).trim().toUpperCase();
+    if (MARCAS_ALIAS_MAP[m]) {
+        return MARCAS_ALIAS_MAP[m];
+    }
+    const todos = Array.from(new Set([...DEFAULT_MARCAS, ...(catalogoMarcas || [])]));
+    if (todos.includes(m)) return m;
+
+    if (m.length >= 3) {
+        const matches = todos.filter(c => c.startsWith(m));
+        if (matches.length === 1) {
+            return matches[0];
+        }
+    }
+    return m;
+}
+
+function normalizarMedida(raw) {
+    if (!raw) return '';
+    let med = String(raw).trim().toUpperCase().replace(/,/g, '.').replace(/\s+/g, '');
+    if (med === '295' || med === '29') return '295/80R22.5';
+    if (med === '27') return '275/70R22.5';
+    if (med === '275/70R22.6') return '275/70R22.5';
+    if (med.includes('21575R17.5')) return '215/75R17.5';
+    return med;
+}
+
+module.exports = { 
+    DEFAULT_MARCAS, 
+    DEFAULT_MEDIDAS, 
+    DEFAULT_MODELOS, 
+    DEFAULT_ACCIONES,
+    MARCAS_ALIAS_MAP,
+    normalizarMarca,
+    normalizarMedida
+};
+

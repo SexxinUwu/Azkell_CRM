@@ -1,7 +1,15 @@
 const express = require('express');
 const { uploadToS3, getPresignedUrl } = require('../utils/s3');
 
-const { DEFAULT_MARCAS, DEFAULT_MEDIDAS, DEFAULT_MODELOS, DEFAULT_ACCIONES } = require('../services/catalogos_neumaticos');
+const { 
+    DEFAULT_MARCAS, 
+    DEFAULT_MEDIDAS, 
+    DEFAULT_MODELOS, 
+    DEFAULT_ACCIONES,
+    MARCAS_ALIAS_MAP,
+    normalizarMarca,
+    normalizarMedida
+} = require('../services/catalogos_neumaticos');
 // Semáforo único de neumáticos: crítico con menos de 3 mm (3 a 6 ámbar, más de 6 verde)
 const MM_CRITICO = 3;
 module.exports = function (db, broadcast, logAudit) {
@@ -113,7 +121,8 @@ module.exports = function (db, broadcast, logAudit) {
             modelos:  allModelos,
             medidas:  allMedidas,
             acciones: Array.from(uniqueAccionesMap.values()),
-            estados:  ['NUEVA', 'RENCAUCHADA']
+            estados:  ['NUEVA', 'RENCAUCHADA'],
+            alias_map: MARCAS_ALIAS_MAP
         });
     });
 
@@ -277,6 +286,39 @@ module.exports = function (db, broadcast, logAudit) {
 
             if (!items || items.length === 0) {
                 return res.status(400).json({ ok: false, error: 'Debes agregar al menos una llanta a la inspección' });
+            }
+
+            // Normalización y Validación Defensiva de Llantas
+            let dbMarcas = [];
+            try {
+                const [mRows] = await tdb.query("SELECT DISTINCT nombre FROM cat_neumaticos_marcas WHERE activo = 1");
+                dbMarcas = mRows.map(r => r.nombre);
+            } catch(e) {}
+
+            for (const it of items) {
+                const posClean = String(it.posicion || '1').toUpperCase();
+                it.marca = normalizarMarca(it.marca, dbMarcas);
+                it.medida = normalizarMedida(it.medida);
+                it.modelo = String(it.modelo || '').trim().toUpperCase();
+
+                if (!it.marca || it.marca.length < 3) {
+                    return res.status(400).json({ 
+                        ok: false, 
+                        error: `La llanta en posición #${posClean} tiene una marca incompleta o no válida ("${it.marca || ''}"). Debe seleccionarse una marca oficial del catálogo.` 
+                    });
+                }
+                if (!it.medida || it.medida.length < 5 || !it.medida.includes('R')) {
+                    return res.status(400).json({ 
+                        ok: false, 
+                        error: `La llanta en posición #${posClean} tiene una medida incompleta ("${it.medida || ''}"). Debe ingresar el formato estándar completo (ej: 295/80R22.5).` 
+                    });
+                }
+                if (!it.modelo || it.modelo.length < 2) {
+                    return res.status(400).json({ 
+                        ok: false, 
+                        error: `La llanta en posición #${posClean} requiere un modelo válido y completo.` 
+                    });
+                }
             }
 
             // Generar ID Correlativo Limpio (Ej: NEU-2026-0001)
