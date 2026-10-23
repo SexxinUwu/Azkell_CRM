@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { useRef } from 'react';
-import type { RefObject } from 'react';
-import { Camera, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import type { ChangeEvent, RefObject } from 'react';
+import { Camera, Check, CheckCheck, Images, X } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { api } from '../../core/api/client';
 import { Firma, type FirmaHandle } from '../inspecciones/Firma';
@@ -34,35 +34,32 @@ export function ChecklistGarita({ plantilla, valores, onCambio }: {
     cat.items.forEach(i => { nx[i.id] = 'ok'; });
     onCambio(nx);
   };
-  if (!plantilla.length) return <div style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>No hay plantilla de checklist configurada.</div>;
+  if (!plantilla.length) return <div className="gar-vacio">No se ha configurado la plantilla de checklist.</div>;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+    <div>
       {plantilla.map(cat => (
-        <div key={cat.id} className="tarjeta__lista" style={{ padding: 'var(--s-3)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s-2)' }}>
-            <strong style={{ fontSize: '0.875rem' }}>{cat.titulo}</strong>
-            <button type="button" className="chip" onClick={() => todoOk(cat)}>Todo OK</button>
+        <div key={cat.id} className="gar-chk">
+          <div className="gar-chk__cab">
+            <h4>{cat.titulo || 'Categoría'}</h4>
+            <Button size="sm" variant="secondary" icon={<CheckCheck size={15} />} onClick={() => todoOk(cat)}>Todo OK</Button>
           </div>
-          {cat.items.map(it => {
+          {(cat.items ?? []).map(it => {
             const val = valores[it.id];
             return (
-              <div key={it.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-2)', padding: '6px 0', borderTop: '1px solid var(--separator)' }}>
-                <span style={{ fontSize: '0.8125rem', flex: 1, minWidth: 0 }}>{it.label}</span>
-                {it.tiene_cantidad && (
-                  <input type="number" min={0} max={999} aria-label={`Cantidad de ${it.label}`}
-                    value={Number(valores[`${it.id}_cant`] ?? it.default_cantidad ?? 1)}
-                    onChange={e => onCambio({ ...valores, [`${it.id}_cant`]: Number(e.target.value) || 0 })}
-                    style={{ width: 52, height: 30, textAlign: 'center', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)' }} />
-                )}
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {([['mal', '✕', 'Observado'], ['na', 'N/A', 'No aplica'], ['ok', '✓', 'Conforme']] as const).map(([k, txt, titulo]) => (
-                    <button key={k} type="button" title={titulo} aria-pressed={val === k} onClick={() => marcar(it.id, k)}
-                      style={{
-                        minWidth: 34, height: 30, borderRadius: 15, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem',
-                        background: val === k ? (k === 'ok' ? 'var(--green-ink)' : k === 'mal' ? 'var(--red-ink)' : 'var(--gray-ink)') : 'var(--fill-2)',
-                        color: val === k ? '#fff' : 'var(--label-2)',
-                      }}>{txt}</button>
-                  ))}
+              <div key={it.id} className="gar-chk__fila" data-chk-item={it.id}>
+                <span>{it.label}</span>
+                <div className="gar-chk__btns">
+                  {it.tiene_cantidad && (
+                    <label className="gar-cant">Cant:
+                      <input type="number" min={0} max={999} aria-label={`Cantidad de ${it.label}`}
+                        value={String(valores[`${it.id}_cant`] ?? it.default_cantidad ?? 1)}
+                        onFocus={e => e.currentTarget.select()}
+                        onChange={e => onCambio({ ...valores, [`${it.id}_cant`]: e.target.value })} />
+                    </label>
+                  )}
+                  <button type="button" className="gar-circ gar-circ--mal" title="Observado / dañado" aria-label="Observado" aria-pressed={val === 'mal'} onClick={() => marcar(it.id, 'mal')}><X size={18} /></button>
+                  <button type="button" className="gar-circ gar-circ--na" title="No aplica" aria-label="No aplica" aria-pressed={val === 'na'} onClick={() => marcar(it.id, 'na')}>N/A</button>
+                  <button type="button" className="gar-circ gar-circ--ok" title="Conforme" aria-label="Conforme" aria-pressed={val === 'ok'} onClick={() => marcar(it.id, 'ok')}><Check size={18} /></button>
                 </div>
               </div>
             );
@@ -86,30 +83,62 @@ export function FirmaPar({ etiquetaConductor, etiquetaVigilancia, refConductor, 
   );
 }
 
-// Fotos de evidencia: se eligen en el móvil (cámara o galería) y se suben a S3 después de guardar el registro
-export function FotosGarita({ fotos, onCambio }: { fotos: File[]; onCambio: (f: File[]) => void }) {
-  const input = useRef<HTMLInputElement>(null);
+// Fotos de evidencia: cámara o galería, con miniaturas y contador (se suben a S3 después de guardar el registro)
+export function FotosEvidencia({ fotos, onCambio, max = 12 }: { fotos: File[]; onCambio: (f: File[]) => void; max?: number }) {
+  const [urls, setUrls] = useState<string[]>([]);
+  useEffect(() => {
+    const u = fotos.map(f => URL.createObjectURL(f));
+    setUrls(u);
+    return () => u.forEach(x => URL.revokeObjectURL(x));
+  }, [fotos]);
+  const agregar = (e: ChangeEvent<HTMLInputElement>) => {
+    const nuevas = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    if (nuevas.length) onCambio([...fotos, ...nuevas].slice(0, max));
+  };
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-      <input ref={input} type="file" accept="image/*" multiple hidden
-        onChange={e => { const nuevas = Array.from(e.target.files ?? []); onCambio([...fotos, ...nuevas].slice(0, 12)); e.target.value = ''; }} />
-      <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
-        <Button variant="secondary" icon={<Camera size={16} />} onClick={() => input.current?.click()}>Agregar fotos</Button>
-        <span style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>{fotos.length} de 12</span>
+    <div>
+      <div className="gar-fotos__cab">
+        <div><h4>Evidencias Fotográficas</h4><small>Fotos de odómetro, carrocería, comprobantes o novedades</small></div>
+        <span className="gar-chip">{fotos.length} foto(s)</span>
       </div>
-      {fotos.length > 0 && (
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {fotos.map((f, i) => (
-            <li key={`${f.name}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', fontSize: '0.8125rem' }}>
-              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-              <button type="button" aria-label="Quitar foto" onClick={() => onCambio(fotos.filter((_, j) => j !== i))}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--label-2)' }}><X size={15} /></button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="gar-fotos__btns">
+        <label className="btn btn--accent"><Camera size={16} /> Tomar Foto (Cámara)
+          <input type="file" accept="image/*" capture="environment" hidden onChange={agregar} /></label>
+        <label className="btn btn--secondary"><Images size={16} /> Subir Galería
+          <input type="file" accept="image/*" multiple hidden onChange={agregar} /></label>
+      </div>
+      <div className="gar-fotos__grid">
+        {fotos.length === 0 && <div className="gar-foto-vacio">Sin fotos adjuntas. Toma una foto con la cámara o selecciona desde tu galería.</div>}
+        {urls.map((u, i) => (
+          <div key={u} className="gar-foto">
+            <img src={u} alt={`Evidencia ${i + 1}`} onClick={() => window.open(u, '_blank', 'noopener')} />
+            <button type="button" aria-label="Quitar foto" onClick={() => onCambio(fotos.filter((_, j) => j !== i))}><X size={14} /></button>
+          </div>
+        ))}
+      </div>
     </div>
   );
+}
+
+// Reduce la foto antes de subirla (máx. 1600 px, JPEG 85 %), igual que el clásico
+function comprimirImagen(file: File, max = 1600, calidad = 0.85): Promise<Blob> {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+      if (w > max || h > max) { if (w > h) { h = Math.round((h * max) / w); w = max; } else { w = Math.round((w * max) / h); h = max; } }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const ctx = c.getContext('2d', { alpha: false });
+      if (!ctx) return resolve(file);
+      ctx.drawImage(img, 0, 0, w, h);
+      c.toBlob(b => resolve(b && b.size > 0 ? b : file), 'image/jpeg', calidad);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
 }
 
 // Sube las fotos a S3 con URLs prefirmadas y luego las registra en la base (mismo flujo que el clásico)
@@ -122,8 +151,13 @@ export async function subirFotosGarita(registroId: string, fase: 'salida' | 'ret
   for (let i = 0; i < archivos.length; i++) {
     const u = urls[i];
     if (!u) continue;
-    const put = await fetch(u.uploadUrl, { method: 'PUT', body: archivos[i], headers: { 'Content-Type': 'image/jpeg' } });
-    if (put.ok) exitosos.push({ key: u.key, fase: u.fase });
+    const cuerpo = await comprimirImagen(archivos[i]);
+    let ok = false;
+    for (let intento = 1; intento <= 4 && !ok; intento++) {
+      try { ok = (await fetch(u.uploadUrl, { method: 'PUT', body: cuerpo, headers: { 'Content-Type': 'image/jpeg' } })).ok; }
+      catch { await new Promise(r => setTimeout(r, 250 * intento)); }
+    }
+    if (ok) exitosos.push({ key: u.key, fase: u.fase });
   }
   if (!exitosos.length) throw new Error('No se pudieron subir las fotos. El registro quedó guardado; vuelve a intentarlo desde el registro.');
   await api(`/seguridad/unidades/${encodeURIComponent(registroId)}/fotos/confirmar`, { method: 'POST', body: { exitosos } });

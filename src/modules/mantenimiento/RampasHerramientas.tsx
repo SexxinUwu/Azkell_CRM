@@ -9,8 +9,7 @@ import { TextInput } from '../../core/ui/Field';
 import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
-import { compartirPDF } from '../../core/lib/pdf';
-import { construirPdfRampas } from './rampaPdfVector';
+import { compartirPDF, generarPDFBlob } from '../../core/lib/pdf';
 import { LOGO_RAMPA } from './rampaPdf';
 import type { CatalogosTaller } from './api';
 import { type CatRampa, enReporte } from './rampasReporte';
@@ -27,6 +26,61 @@ export type { CatRampa } from './rampasReporte';
 
 const nombreDe = (c: CatRampa) => c.nombre_rampa ?? c.nombre ?? String(c.id);
 const ordenadas = (lista: CatRampa[]) => [...lista].sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0) || Number(a.id) - Number(b.id));
+const escHtml = (v: unknown) => String(v ?? '—').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+
+const SEM_HEX = { verde: '#15803d', ambar: '#b45309', rojo: '#b91c1c', gris: '#64748b' };
+
+function htmlPdfRampas(filas: FilaPdfRampa[], empresa: string, d: DatosPdfRampa): string {
+  const cuerpo = filas.map(f => `<tr style="${f.libre ? 'color:#64748b' : ''}">
+      <td style="font-weight:700">${escHtml(f.rampa)}</td>
+      <td style="text-align:center">${escHtml(f.fIn)}</td>
+      <td style="text-align:center">${escHtml(f.hIn)}</td>
+      <td style="text-align:center;font-weight:700;font-family:Courier New,monospace">${escHtml(f.placa)}</td>
+      <td style="text-align:center;font-weight:700;color:${f.situacionColor}">${escHtml(f.situacion)}</td>
+      <td style="text-align:left;white-space:pre-line">${escHtml(f.obs)}</td>
+      <td style="text-align:center">${escHtml(f.fOut)}</td>
+      <td style="text-align:center">${escHtml(f.hOut)}</td>
+      <td style="text-align:center;font-weight:700;color:${f.horasColor}">${escHtml(f.horas)}</td>
+      <td style="text-align:left">${escHtml(f.tecnicos)}</td>
+      <td style="text-align:center;font-weight:700;color:${f.inspColor}">${escHtml(f.insp)}</td>
+    </tr>`).join('') || '<tr><td colspan="11" style="padding:10px">Sin unidades en rampa.</td></tr>';
+  return `
+  <div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:14px;width:1040px;background:#fff">
+    <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #000;padding-bottom:8px">
+      <img src="${LOGO_RAMPA}" alt="" style="height:54px" crossorigin="anonymous" />
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:700">${escHtml(empresa.toUpperCase())}</div>
+        <div style="font-size:20px;font-weight:800;text-align:center">ESTATUS DE UNIDADES EN TALLER</div>
+        <div style="font-size:10px;text-align:center">CONTROL DE OCUPACIÓN DE RAMPA Y TURNOS DE MANTENIMIENTO</div>
+      </div>
+      <table style="border:1px solid #000;font-size:10px;border-collapse:collapse">
+        <tr><td style="padding:3px 8px;text-align:right">CÓDIGO: F-MAN-005</td></tr>
+        <tr><td style="padding:3px 8px;text-align:right">VERSIÓN: 0</td></tr>
+        <tr><td style="padding:3px 8px;text-align:right">F. EMISIÓN: 10/11/2025</td></tr>
+      </table>
+    </div>
+    <div style="display:flex;gap:26px;flex-wrap:wrap;margin:10px 0;border:1px solid #000;border-radius:6px;padding:6px 10px;font-size:11px">
+      <span>EMISIÓN: <b>${escHtml(d.fecha)}</b></span>
+      <span>EMITIDO POR: <b>${escHtml(d.emisor)}</b></span>
+      <span style="margin-left:auto">TOTAL RAMPAS: <b>${d.total}</b></span>
+      <span>OCUPADAS: <b style="color:#dc2626">${d.ocupadas}</b></span>
+      <span>EN ESPERA / LAVADO: <b style="color:#b45309">${d.espera}</b></span>
+      <span>LIBRES: <b style="color:#15803d">${d.libres}</b></span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:10px">
+      <thead><tr style="background:#000;color:#fff">
+        <th style="padding:5px">RAMPA</th><th>F. INGRESO</th><th>HORA</th><th>PLACA</th><th>SITUACIÓN</th>
+        <th>OBSERVACIONES / TRABAJOS A REALIZAR</th><th>SALIDA (EST.)</th><th>HORA</th><th>H. TALLER</th><th>TÉCNICOS</th><th>INSPECCIÓN?</th>
+      </tr></thead>
+      <tbody>${cuerpo}</tbody>
+    </table>
+    <div style="display:flex;justify-content:space-between;border-top:1px solid #000;margin-top:10px;padding-top:6px;font-size:9px">
+      <span>Sistema ERP Azkell Fleet · Módulo de Control de Rampa y Mantenimiento</span>
+      <span>Semáforo Inspección: <b style="color:${SEM_HEX.verde}">&gt;7d Vigente</b> <b style="color:${SEM_HEX.ambar}">0-7d Próximo</b> <b style="color:${SEM_HEX.rojo}">&lt;0d Vencido</b></span>
+      <span><b>DOCUMENTO OFICIAL · HOJA 1 DE 1</b></span>
+    </div>
+  </div>`;
+}
 
 async function nombreEmpresa(): Promise<string> {
   try {
@@ -36,9 +90,17 @@ async function nombreEmpresa(): Promise<string> {
   return (window.location.hostname.split('.')[0] || 'Azkell').toUpperCase();
 }
 
-/** PDF vectorial F-MAN-005 (jsPDF): texto seleccionable, sin imágenes de la página */
+/** PDF oficial F-MAN-005 (horizontal). Un solo archivo para ver, descargar y enviar por WhatsApp. */
 export async function generarPdfRampas(filas: FilaPdfRampa[], d: DatosPdfRampa): Promise<Blob> {
-  return construirPdfRampas(filas, await nombreEmpresa(), d, LOGO_RAMPA);
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;left:-10000px;top:0;background:#fff';
+  el.innerHTML = htmlPdfRampas(filas, await nombreEmpresa(), d);
+  document.body.appendChild(el);
+  try {
+    return await generarPDFBlob(el, { orientacion: 'landscape', margen: [6, 6, 6, 6] });
+  } finally {
+    el.remove();
+  }
 }
 
 /** Abre el PDF en una pestaña nueva (enlace blob:), igual que el clásico */
