@@ -1,7 +1,7 @@
 import './mant.css';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, CircleAlert, FileSpreadsheet, Pencil, SearchX, Trash2, Users, Wrench } from 'lucide-react';
+import { CircleAlert, FileSpreadsheet, Pencil, SearchX, Trash2, Users, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -18,7 +18,7 @@ import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/fo
 import { haptic } from '../../core/lib/haptics';
 import { ImportarTrabajosSheet } from './ImportarTrabajosSheet';
 import {
-  aObjeto, aprobarTrabajo, editarTrabajo, eliminarTrabajo, ESTADOS_TRABAJO, estadoTrabajo, regularizarTecnicos, trabajoCosto, trabajoId, trabajoKmHoras,
+  aObjeto, editarTrabajo, eliminarTrabajo, ESTADOS_TRABAJO, estadoTrabajo, regularizarTecnicos, trabajoCosto, trabajoId, trabajoKmHoras,
   useHorasTecnicos, useTecnicosDisponibles, useTrabajosOT, useUltimoDiaTrabajos, type HorasTecnicosRespuesta, type TrabajoOT,
 } from './api';
 
@@ -26,7 +26,6 @@ const dia = (s: string | null | undefined) => (s ? String(s).split('T')[0] : 'â€
 const aLocal = (s: string | null | undefined) => (s ? String(s).replace('Z', '').replace(' ', 'T').slice(0, 16) : '');
 const tonoEstado = (e: string | null | undefined) => {
   const est = estadoTrabajo(e);
-  if (est === 'Aprobado') return 'green';
   if (est === 'Realizado') return 'accent';
   if (est === 'En Proceso') return 'blue';
   return 'amber';
@@ -74,7 +73,7 @@ export function TrabajosOtPage() {
   const [rangoLista, setRangoLista] = useState(() => ({ desde: hoyIso(), hasta: hoyIso() }));
   const { data, isLoading, isError, error } = useTrabajosOT(rangoLista.desde, rangoLista.hasta);
   const [regularizando, setRegularizando] = useState<TrabajoOT[] | null>(null);
-  const { can, user } = useAuth();
+  const { can } = useAuth();
   const toast = useToast();
   const [busqueda, setBusqueda] = useState('');
   const [estado, setEstado] = useState('');
@@ -157,7 +156,6 @@ export function TrabajosOtPage() {
           trabajo={seleccionado}
           puedeEditar={can('trabajos_ot.editar')}
           puedeEliminar={can('trabajos_ot.eliminar')}
-          usuario={user?.name ?? ''}
           onVolver={() => setSeleccionadoId(null)}
         />
       ) : (
@@ -422,8 +420,8 @@ function HorasMatriz({ datos }: { datos: HorasTecnicosRespuesta }) {
   );
 }
 
-function TrabajoDetalle({ trabajo: t, puedeEditar, puedeEliminar, usuario, onVolver }: {
-  trabajo: TrabajoOT; puedeEditar: boolean; puedeEliminar: boolean; usuario: string; onVolver: () => void;
+function TrabajoDetalle({ trabajo: t, puedeEditar, puedeEliminar, onVolver }: {
+  trabajo: TrabajoOT; puedeEditar: boolean; puedeEliminar: boolean; onVolver: () => void;
 }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -433,18 +431,8 @@ function TrabajoDetalle({ trabajo: t, puedeEditar, puedeEliminar, usuario, onVol
   const id = trabajoId(t);
   const kmh = trabajoKmHoras(t);
   const costo = trabajoCosto(t);
-  const aprobado = estadoTrabajo(t.estado) === 'Aprobado';
 
   const refrescar = () => qc.invalidateQueries({ queryKey: ['mant', 'trabajos-ot'] });
-
-  async function aprobar() {
-    setOcupado(true);
-    try {
-      await aprobarTrabajo(id, usuario);
-      haptic('success'); toast('Trabajo aprobado'); await refrescar();
-    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
-    finally { setOcupado(false); }
-  }
 
   async function eliminar() {
     setOcupado(true);
@@ -462,9 +450,6 @@ function TrabajoDetalle({ trabajo: t, puedeEditar, puedeEliminar, usuario, onVol
           <span style={{ fontSize: '1.2rem' }}>â€¹</span> Trabajos
         </button>
         <div className="tarjeta__barra-acciones">
-          {puedeEditar && !aprobado && (
-            <Button variant="secondary" icon={<CheckCircle2 size={16} />} onClick={aprobar} loading={ocupado}>Aprobar</Button>
-          )}
           {(puedeEditar || puedeEliminar) && (
             <MenuOtros opciones={[
               puedeEditar && { label: 'Editar', icon: <Pencil size={17} />, onSelect: () => setEditando(true) },

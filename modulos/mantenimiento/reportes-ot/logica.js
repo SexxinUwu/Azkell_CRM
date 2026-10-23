@@ -2926,7 +2926,6 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
     if (count) count.textContent = lista.length;
 
     var costoTotal = lista
-        .filter(function(t) { return t.estado === 'Aprobado'; })
         .reduce(function(s, t) {
             var d2 = {}; try { d2 = typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {}); } catch(e) {}
             return s + parseFloat(d2.costo || 0);
@@ -2939,9 +2938,7 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
         lista.forEach(function(t) {
             var det2 = {};
             try { det2 = typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {}); } catch(e) {}
-            var bdg = t.estado === 'Aprobado'
-                ? '<span style="background:rgba(22,163,74,0.12);color:#16a34a;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Aprobado</span>'
-                : '<span style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Pendiente</span>';
+            var bdg = '';
             var fecIni = t.fecha_trabajo ? String(t.fecha_trabajo).replace('T',' ').slice(0,16) : '';
             var fecFin = t.fecha_salida  ? String(t.fecha_salida).replace('T',' ').slice(0,16)  : '';
             var ticketDisplay = rotEscHtml(String(t.ticket_visita || ''));
@@ -2958,7 +2955,7 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
                   + '</div>';
         });
         if (costoTotal > 0) {
-            html += '<div style="padding:8px 12px;font-size:0.82rem;font-weight:700;text-align:right;color:#16a34a;">Total aprobado: S/' + costoTotal.toFixed(2) + '</div>';
+            html += '<div style="padding:8px 12px;font-size:0.82rem;font-weight:700;text-align:right;color:#16a34a;">Total: S/' + costoTotal.toFixed(2) + '</div>';
         }
     }
     body.innerHTML = html;

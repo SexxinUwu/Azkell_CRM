@@ -278,7 +278,7 @@ export interface TrabajoOT {
   ticket_visita: string | null;     // ticket de entrada de la OT a la que pertenece
   ot_id?: string | null;
   placa: string | null;
-  estado: string | null;            // Pendiente | Aprobado | …
+  estado: string | null;            // Pendiente | En Proceso | Realizado
   trabajo_realizado: string | null;
   tecnico: string | null;           // personal separado por coma
   fecha_trabajo: string | null;
@@ -290,7 +290,7 @@ export interface TrabajoOT {
 }
 
 /** Estados oficiales del trabajo de OT (vocabulario único de la pantalla y de la ficha) */
-export const ESTADOS_TRABAJO = ['Pendiente', 'En Proceso', 'Realizado', 'Aprobado'] as const;
+export const ESTADOS_TRABAJO = ['Pendiente', 'En Proceso', 'Realizado'] as const;
 export type EstadoTrabajo = typeof ESTADOS_TRABAJO[number];
 
 /**
@@ -299,7 +299,6 @@ export type EstadoTrabajo = typeof ESTADOS_TRABAJO[number];
  */
 export function estadoTrabajo(e: string | null | undefined): EstadoTrabajo {
   const l = (e ?? '').trim().toLowerCase();
-  if (l.startsWith('aprob')) return 'Aprobado';
   if (l.startsWith('realiz') || l.startsWith('final')) return 'Realizado';
   if (l.includes('proceso')) return 'En Proceso';
   return 'Pendiente';
@@ -347,9 +346,6 @@ export const crearTrabajo = (d: {
     fecha_salida: d.fecha_salida, creado_por: d.creado_por, detalles_json: { personal: d.personal, costo: d.costo },
   },
 });
-
-export const aprobarTrabajo = (id: string, usuario: string) =>
-  api<{ ok: boolean }>(`/ot-trabajos/${encodeURIComponent(id)}`, { method: 'PUT', body: { accion: 'aprobar', usuario } });
 
 export const eliminarTrabajo = (id: string) =>
   api<{ ok: boolean }>(`/ot-trabajos/${encodeURIComponent(id)}`, { method: 'DELETE' });

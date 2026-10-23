@@ -15,7 +15,7 @@ import { compartirPDF, descargarArchivo } from '../../core/lib/pdf';
 import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
 import { useInspecciones, type Inspeccion } from '../inspecciones/api';
 import {
-  aObjeto, trabajoId, accionesDisponibles, costosOT, duracionPausa, estadoTrabajo, etiquetaEstado, formatoDuracion, otDetalles, otId,
+  aObjeto, trabajoId, accionesDisponibles, costosOT, duracionPausa, etiquetaEstado, formatoDuracion, otDetalles, otId,
   pausasDe, tiempoNetoOT, trabajoCosto, trabajosDeOT, useInspeccionesDeOT, useMateriales, useTrabajosOT,
   type AccionOT, type OrdenTrabajo, type PausaOT, type TrabajoOT,
 } from './api';
@@ -124,7 +124,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   const { data: inspecciones } = useInspecciones();
 
   const trabajos = trabajosDeOT(ot, trabajosTodos ?? []);
-  const totalAprobado = trabajos.filter(t => estadoTrabajo(t.estado) === 'Aprobado').reduce((sum, t) => sum + trabajoCosto(t), 0);
+  const totalTrabajos = trabajos.reduce((sum, t) => sum + trabajoCosto(t), 0);
   const mats = (materiales ?? []).filter(m => m.estado !== 'Anulado');
   const costos = costosOT(ot, trabajosTodos ?? [], materiales ?? []);
   const pausas = pausasDe(ot);
@@ -275,7 +275,6 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
             ) : (
               <div className="tarjeta__lista">
                 {trabajos.map(t => {
-                  const aprobado = estadoTrabajo(t.estado) === 'Aprobado';
                   const costo = trabajoCosto(t);
                   const personal = String(aObjeto(t.detalles_json).personal ?? t.tecnico ?? '');
                   const fechas = [t.fecha_trabajo, t.fecha_salida]
@@ -289,7 +288,6 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                         <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span className="t-footnote c-secondary">{t.ticket_visita}</span>
-                            <Badge tone={aprobado ? 'green' : 'amber'}>{aprobado ? 'Aprobado' : 'Pendiente'}</Badge>
                           </span>
                           <span>{t.trabajo_realizado || '—'}</span>
                           {personal && <span className="t-footnote c-secondary">{personal}</span>}
@@ -301,8 +299,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                     </button>
                   );
                 })}
-                {totalAprobado > 0 && (
-                  <div className="dato"><span className="dato__label">Total aprobado</span><span className="dato__valor t-numeric">{soles(totalAprobado)}</span></div>
+                {totalTrabajos > 0 && (
+                  <div className="dato"><span className="dato__label">Total</span><span className="dato__valor t-numeric">{soles(totalTrabajos)}</span></div>
                 )}
               </div>
             )}

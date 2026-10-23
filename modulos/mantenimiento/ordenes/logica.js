@@ -243,10 +243,10 @@ function otDetalles(ot) {
     catch(e) { return {}; }
 }
 
-// Costos de una OT (suma trabajos aprobados + materiales despachados)
+// Costos de una OT (suma trabajos + materiales despachados)
 function otCalcCosto(ticketId) {
     var trb = window.otTrbData
-        .filter(function(t){ return t.ticket_visita === ticketId && t.estado === 'Aprobado'; })
+        .filter(function(t){ return t.ticket_visita === ticketId; })
         .reduce(function(s, t){ var d = otDetallesTrb(t); return s + (parseFloat(d.costo) || 0); }, 0);
     var mat = window.otMatData
         .filter(function(m){ return m.ticket_ot === ticketId && m.estado === 'Despachado'; })
@@ -541,13 +541,12 @@ function otAbrirDetalle(ticketId) {
     html += '<div class="ot-sec">';
     html += '<div class="ot-sec-hd">IV. Trabajos <span style="background:var(--surface); border:1px solid var(--border); color:var(--subtext); padding:1px 6px; border-radius:10px; font-size:0.7rem;">' + trabajos.length + '</span></div>';
     if (trabajos.length > 0) {
-        html += '<table class="ot-mini-table"><thead><tr><th>ID</th><th>Descripción</th><th>Estado</th><th>Costo</th></tr></thead><tbody>';
+        html += '<table class="ot-mini-table"><thead><tr><th>ID</th><th>Descripción</th><th>Costo</th></tr></thead><tbody>';
         trabajos.forEach(function(t) {
             var td = otDetallesTrb(t);
             html += '<tr onclick="otAbrirDetalleTrabajo(\'' + t.id_ot + '\')">'
                 + '<td><span class="ot-link">' + t.id_ot + '</span></td>'
                 + '<td style="white-space:normal; max-width:100px; font-size:0.75rem;">' + (t.trabajo_realizado || '—') + '</td>'
-                + '<td>' + (t.estado === 'Aprobado' ? '<span class="ot-badge badge-aprobada">Aprobado</span>' : '<span class="ot-badge badge-pendiente">Pendiente</span>') + '</td>'
                 + '<td>' + otFmtMoney(td.costo) + '</td></tr>';
         });
         html += '</tbody></table>';
@@ -582,7 +581,7 @@ function otAbrirDetalle(ticketId) {
 
     // Sección VI: Costos totales
     html += '<div class="ot-sec" style="border-color:rgba(22,163,74,0.3);">';
-    html += '<div class="ot-sec-hd" style="background:rgba(22,163,74,0.08); color:#16a34a;">VI. Costos Totales (Aprobados)</div>';
+    html += '<div class="ot-sec-hd" style="background:rgba(22,163,74,0.08); color:#16a34a;">VI. Costos Totales</div>';
     html += '<div class="ot-field"><div class="ot-field-lbl">Costo OT</div><div class="ot-field-val"><span style="font-size:1.1rem; color:#16a34a;">' + otFmtMoney(costo) + '</span></div></div>';
     html += '</div>';
 
@@ -653,7 +652,6 @@ function otAbrirDetalleTrabajo(idTrabajo) {
     html += '<div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:0.75rem;">';
     html += '<div><div style="font-size:1.2rem; font-weight:800;">' + t.id_ot + '</div><div style="font-size:0.82rem; color:var(--subtext);">Trabajo de: <span class="ot-link" onclick="otAbrirDetalle(\'' + t.ticket_visita + '\')">' + t.ticket_visita + '</span></div></div></div>';
     html += '<div class="ot-sec"><div class="ot-sec-hd">Detalle del Trabajo</div>';
-    html += '<div class="ot-field"><div class="ot-field-lbl">Estado</div><div class="ot-field-val">' + (t.estado === 'Aprobado' ? '<span class="ot-badge badge-aprobada">Aprobado</span>' : '<span class="ot-badge badge-pendiente">Pendiente</span>') + '</div></div>';
     html += '<div class="ot-field"><div class="ot-field-lbl">Personal</div><div class="ot-field-val" style="white-space:normal;">' + (td.personal || '—') + '</div></div>';
     html += '<div class="ot-field"><div class="ot-field-lbl">Descripción</div><div class="ot-field-val" style="white-space:normal;">' + (t.trabajo_realizado || '—') + '</div></div>';
     html += '<div class="ot-field"><div class="ot-field-lbl">F. Inicio</div><div class="ot-field-val">' + (t.fecha_trabajo ? otFmtFecha(t.fecha_trabajo) + ' ' + (td.hora_ini || '') : '—') + '</div></div>';
@@ -665,11 +663,7 @@ function otAbrirDetalleTrabajo(idTrabajo) {
     var footer = document.getElementById('ot-detalle-footer');
     if (footer) {
         footer.style.display = 'flex';
-        if (t.estado !== 'Aprobado' && canEdit) {
-            footer.innerHTML = '<button class="btn btn-sm btn-success flex-fill" onclick="otAprobarTrabajo(\'' + t.id_ot + '\')">✔ Aprobar Trabajo</button>';
-        } else {
-            footer.innerHTML = '<button class="btn btn-sm btn-outline-secondary" onclick="otAbrirDetalle(\'' + t.ticket_visita + '\')"><i class="bi bi-arrow-left me-1"></i>Volver a OT</button>';
-        }
+        footer.innerHTML = '<button class="btn btn-sm btn-outline-secondary" onclick="otAbrirDetalle(\'' + t.ticket_visita + '\')"><i class="bi bi-arrow-left me-1"></i>Volver a OT</button>';
     }
 }
 
@@ -703,7 +697,6 @@ function otRenderTrabajosTabla() {
             + '<td>' + (t.fecha_trabajo ? otFmtFecha(t.fecha_trabajo) : '—') + '</td>'
             + '<td>' + (t.fecha_salida ? otFmtDateTime(t.fecha_salida) : '—') + '</td>'
             + '<td><strong style="color:#16a34a;">' + otFmtMoney(td.costo) + '</strong></td>'
-            + '<td>' + (t.estado === 'Aprobado' ? '<span class="ot-badge badge-aprobada">Aprobado</span>' : '<span class="ot-badge badge-pendiente">Pendiente</span>') + '</td>';
         tr.onclick = function() { otAbrirDetalleTrabajo(t.id_ot); };
         tbody.appendChild(tr);
     });
@@ -912,21 +905,6 @@ window.otCerrarOT = function(ticketId) {
         window.mostrarAlerta('Error al cerrar OT', 'danger');
     });
 };
-
-function otAprobarTrabajo(idTrabajo) {
-    if (!window.guardAction('ot', 'e')) return;
-    fetch('/api/ot-trabajos/' + encodeURIComponent(idTrabajo), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accion: 'aprobar', usuario: localStorage.getItem('fleet_correo') || '' })
-    }).then(function(r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-    }).then(function() {
-        window.otCargarTodo();
-        window.mostrarAlerta('Trabajo aprobado', 'success');
-    }).catch(function(err) { console.error(err); window.mostrarAlerta('Error al aprobar trabajo', 'danger'); });
-}
 
 function otDespacharMaterial(id) {
     if (!window.guardAction('ot', 'e')) return;
@@ -1356,7 +1334,7 @@ function otGenerarPDF(ticketId) {
     var ot = window.otData.find(function(o){ return o.ticket_entrada === ticketId; });
     if (!ot) return;
     var d = otDetalles(ot);
-    var trabajos  = window.otTrbData.filter(function(t){ return t.ticket_visita === ticketId && t.estado === 'Aprobado'; });
+    var trabajos  = window.otTrbData.filter(function(t){ return t.ticket_visita === ticketId; });
     var materiales = window.otMatData.filter(function(m){ return m.ticket_ot === ticketId && m.estado === 'Despachado'; });
     var costo = otCalcCosto(ticketId);
 

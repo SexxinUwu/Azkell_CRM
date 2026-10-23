@@ -874,13 +874,6 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.put('/ot-trabajos/:id', (req, res) => {
         const idTrabajo = req.params.id;
         const { accion } = req.body;
-        if (accion === 'aprobar') {
-            (req.db || db).query("UPDATE trabajos_ot SET estado = 'Aprobado' WHERE id_ot = ?", [idTrabajo], (err) => {
-                if (err) return res.status(500).json({ error: err.message });
-                if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
-            });
-            return;
-        }
         if (accion === 'editar') {
             const { trabajo_realizado, fecha_trabajo, fecha_salida, personal, costo, estado } = req.body;
             const detJson = JSON.stringify({ personal: personal || '', costo: parseFloat(costo) || 0 });

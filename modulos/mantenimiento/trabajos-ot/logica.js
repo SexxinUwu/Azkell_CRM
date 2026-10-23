@@ -150,12 +150,6 @@ function totFmtFecha(iso) {
     return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: '2-digit' });
 }
 
-function totBadge(estado) {
-    if (estado === 'Aprobado') {
-        return '<span class="tot-badge badge-aprobado">Aprobado</span>';
-    }
-    return '<span class="tot-badge badge-pendiente">Pendiente</span>';
-}
 
 function totParseDetalles(t) {
     try { return typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {}); }
@@ -357,7 +351,6 @@ function totAbrirDetalle(t) {
 
     html += '<div class="tot-sec">';
     html += '<div class="tot-sec-hd">Información del Trabajo</div>';
-    html += '<div class="tot-field"><div class="tot-field-lbl">Estado</div><div class="tot-field-val">' + totBadge(t.estado) + '</div></div>';
     html += '<div class="tot-field"><div class="tot-field-lbl">Placa</div><div class="tot-field-val"><strong>' + totEsc(t.placa || '—') + '</strong></div></div>';
     html += '<div class="tot-field"><div class="tot-field-lbl">Kilometraje</div><div class="tot-field-val"><strong>' + totFmtKm(t) + '</strong></div></div>';
     html += '<div class="tot-field"><div class="tot-field-lbl">Trabajador(es)</div><div class="tot-field-val" style="white-space:normal;">' + totEsc(det.personal || t.tecnico || '—') + '</div></div>';
