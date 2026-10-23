@@ -45,9 +45,9 @@ const placaNorm = (s: string | null | undefined) => String(s ?? '').trim().toUpp
 function otsDeRampa(e: RampaEntrada, ots: OrdenTrabajo[], entradas: RampaEntrada[]): OrdenTrabajo[] {
   const rampasActivas = new Set(entradas.map(x => String(x.id ?? '')));
   return ots.filter(o => {
-    if (/cerrad|finaliz|anulad/i.test(String(o.estado ?? ''))) return false;
     const rampaOT = String(o.id_rampa ?? '');
-    if (rampaOT === String(e.id ?? '')) return true;
+    if (rampaOT && rampaOT === String(e.id ?? '')) return true;
+    if (/cerrad|finaliz|anulad/i.test(String(o.estado ?? ''))) return false;
     return placaNorm(o.placa) !== '' && placaNorm(o.placa) === placaNorm(e.placa) && !rampasActivas.has(rampaOT);
   });
 }
