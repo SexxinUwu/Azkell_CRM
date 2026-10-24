@@ -74,23 +74,33 @@ function colorRemanente(l: LlantaChasis | undefined): { fondo: string; texto: st
   return { fondo: '#ff3b30', texto: '#ffffff' };
 }
 
+/** Llanta como en el clásico: neumático oscuro con rin y un círculo azul con el número de la posición.
+ *  El color del remanente va en un aro alrededor; rotada = aro azul con 🔄; activa = contorno negro. */
 function Llanta({ x, y, pos, llanta, activa, onSelect, xray }: {
   x: number; y: number; pos: string; llanta?: LlantaChasis; activa: boolean; onSelect: (pos: string) => void; xray: boolean;
 }) {
   const rotada = llanta?.rot === 'SI';
-  const { fondo, texto } = colorRemanente(llanta);
+  const { fondo } = colorRemanente(llanta);
   const cx = x, cy = y + ALTO / 2;
-  const fill = xray ? 'rgba(50, 215, 255, 0.28)' : rotada ? '#007aff' : fondo;
-  const color = xray ? '#7ff0ff' : rotada ? '#ffffff' : texto;
+  const aro = rotada ? '#007aff' : fondo;
+  const caucho = xray ? 'rgba(50, 215, 255, 0.28)' : '#222328';
+  const rin = xray ? 'rgba(127, 240, 255, 0.5)' : '#cbd5e1';
+  const numero = pos.length > 2 ? 'bold 9px sans-serif' : 'bold 12px sans-serif';
   return (
     <g role="button" tabIndex={0} aria-label={`Llanta posición ${pos}`} aria-pressed={activa}
       onClick={() => onSelect(pos)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(pos); } }}
       style={{ cursor: 'pointer', transition: 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1)' }}
       transform={activa ? `translate(${cx} ${cy}) scale(1.08) translate(${-cx} ${-cy})` : undefined}>
-      <rect x={x - ANCHO / 2} y={y} width={ANCHO} height={ALTO} rx={4}
-        fill={fill} stroke={activa ? '#1d1d1f' : xray ? '#32d7ff' : 'none'} strokeWidth={activa ? 3 : 1} />
-      <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fontSize={12} fontWeight={700} fill={color}>{pos}</text>
-      {rotada && <text x={x + ANCHO / 2 - 4} y={y + 8} textAnchor="end" fontSize={10} fill="#ffffff" aria-label="Rotada">🔄</text>}
+      {/* Aro de estado */}
+      <rect x={x - ANCHO / 2 - 2} y={y - 2} width={ANCHO + 4} height={ALTO + 4} rx={7} fill="none" stroke={activa ? '#1d1d1f' : aro} strokeWidth={activa ? 3 : 2.5} />
+      {/* Neumático */}
+      <rect x={x - ANCHO / 2} y={y} width={ANCHO} height={ALTO} rx={5} fill={caucho} />
+      {/* Rin */}
+      <rect x={x - ANCHO / 2 + 8} y={y + 8} width={ANCHO - 16} height={ALTO - 16} rx={3} fill={rin} />
+      {/* Número de posición */}
+      <circle cx={cx} cy={cy} r={9} fill={xray ? 'rgba(50, 215, 255, 0.85)' : '#2563eb'} stroke="#ffffff" strokeWidth={1} />
+      <text x={cx} y={cy + 0.5} textAnchor="middle" dominantBaseline="middle" fill="#ffffff" style={{ font: numero }}>{pos}</text>
+      {rotada && <text x={x + ANCHO / 2 + 5} y={y + 6} textAnchor="start" fontSize={10} fill="#007aff" aria-label="Rotada">🔄</text>}
     </g>
   );
 }
