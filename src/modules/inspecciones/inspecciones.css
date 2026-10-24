@@ -379,6 +379,42 @@
 .insp-tipo__icono--mecanica { background: #fef3c7; color: #d97706; }
 @media (prefers-reduced-motion: reduce) { .insp-tipo, .insp-tipo:hover { transition: none; transform: none; } }
 
+/* Efecto de agua: el selector se llena desde abajo al abrirse; cada tarjeta deja una onda al pasar el mouse */
+.insp-tipos { animation: insp-tipos-agua 0.9s cubic-bezier(0.22, 0.8, 0.24, 1) backwards; }
+@keyframes insp-tipos-agua {
+  0% { clip-path: circle(0% at 50% 100%); transform: translateY(14px); }
+  60% { transform: translateY(-2px); }
+  100% { clip-path: circle(150% at 50% 100%); transform: translateY(0); }
+}
+.insp-tipo { position: relative; overflow: hidden; isolation: isolate; animation: insp-tipo-entrada 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+.insp-tipo:nth-child(2) { animation-delay: 0.12s; }
+@keyframes insp-tipo-entrada {
+  from { opacity: 0; transform: translateY(18px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+.insp-tipo::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.16) 0%, rgba(10, 132, 255, 0.06) 60%, transparent 72%);
+  border-radius: 42% 58% 55% 45% / 48% 42% 58% 52%;
+  transform-origin: var(--px, 50%) var(--py, 50%); transform: scale(0); opacity: 0;
+  transition: transform 0.7s cubic-bezier(0.22, 0.8, 0.24, 1), opacity 0.4s ease;
+}
+@media (hover: hover) {
+  .insp-tipo:hover::before { transform: scale(2.6); opacity: 1; animation: insp-tipo-ola 2.8s ease-in-out infinite alternate; }
+}
+.insp-tipo:focus-visible::before { transform: scale(2.6); opacity: 1; }
+@keyframes insp-tipo-ola {
+  0% { border-radius: 42% 58% 55% 45% / 48% 42% 58% 52%; }
+  50% { border-radius: 58% 42% 45% 55% / 52% 58% 42% 48%; }
+  100% { border-radius: 48% 52% 60% 40% / 40% 50% 50% 60%; }
+}
+.insp-tipo__icono { transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@media (hover: hover) { .insp-tipo:hover .insp-tipo__icono { transform: scale(1.1) rotate(-6deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .insp-tipos, .insp-tipo, .insp-tipo::before, .insp-tipo:hover::before { animation: none; }
+  .insp-tipo::before { transition: none; }
+}
+
 /* ── Formulario de neumáticos ───────────────────────────────────────── */
 .insp-neu { display: flex; flex-direction: column; gap: var(--s-4); }
 .insp-neu__bloque { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4); border-radius: var(--r-xl); background: var(--surface); box-shadow: 0 0 0 1px var(--separator); }
@@ -402,6 +438,8 @@
 
 /* Configuración vehicular en pastillas */
 .insp-neu__pills { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.insp-neu__config { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
+.insp-neu__config-nota { font-size: 0.75rem; color: var(--label-2); }
 .insp-neu__pill { display: inline-flex; align-items: center; gap: 6px; min-height: 2.5rem; padding: 0 var(--s-3); border: 0; border-radius: var(--r-full); background: var(--fill); color: var(--label); font-size: 0.8125rem; cursor: pointer; }
 .insp-neu__pill span { color: var(--label-2); }
 .insp-neu__pill--activa { background: var(--ink); color: var(--label-inverse); }

@@ -19,7 +19,6 @@ import './inspecciones.css';
 // Diferencia con el clásico: el esquema del chasis es un SVG (ChasisEsquemaVisual) con perspectivas
 // 2D, isométrica, lateral y rayos X; las rotaciones son entre dos posiciones con un botón.
 
-const CONFIG_ORDEN = ['R2', 'S2', 'S3', '4X2', '6X4', '6X2', 'T3S3'];
 const ESTADOS = ['NUEVA', 'BUENA', 'RECAPADA', 'REGULAR', 'MALA', 'CRÍTICA'] as const;
 const ACCIONES = ['Inspección', 'Rotación', 'Instalación', 'Cambio', 'Reparación', 'Reencauche', 'Baja'] as const;
 
@@ -335,19 +334,20 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
                 )}
               </Field>
             </div>
+            {/* La configuración es la que tiene la placa en Placas: no se elige aquí */}
             <div>
               <p className="insp-neu__titulo">Configuración del vehículo</p>
-              <div className="insp-neu__pills" role="radiogroup" aria-label="Configuración del vehículo">
-                {CONFIG_ORDEN.map(codigo => {
-                  const c = CONFIGURACIONES[codigo];
-                  return (
-                    <button key={codigo} type="button" role="radio" aria-checked={config === codigo}
-                      className={`insp-neu__pill pressable${config === codigo ? ' insp-neu__pill--activa' : ''}`} onClick={() => setConfig(codigo)}>
-                      <strong>{codigo}</strong> <span>{c.nombre} · {c.llantas} llantas</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {config ? (
+                <div className="insp-neu__config">
+                  <span className="insp-neu__pill insp-neu__pill--activa">
+                    <strong>{config}</strong>
+                    <span>{CONFIGURACIONES[config] ? `${CONFIGURACIONES[config].nombre} · ${CONFIGURACIONES[config].llantas} llantas` : 'Según la ficha de la placa'}</span>
+                  </span>
+                  <span className="insp-neu__config-nota">Tomada de la ficha de Placas</span>
+                </div>
+              ) : (
+                <p className="insp-neu__error" role="alert">Esta placa no tiene configuración de ejes. Regístrala en Placas para ver su esquema.</p>
+              )}
             </div>
           </section>
 
