@@ -8,7 +8,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { clavePlaca, useInspeccionesNeumaticos } from './api';
-import { ChasisEsquemaVisual, CONFIGURACIONES, posicionesPorDefecto } from './components/ChasisEsquemaVisual';
+import { ChasisEsquemaVisual, CONFIGURACIONES, normalizarConfiguracion, posicionesPorDefecto } from './components/ChasisEsquemaVisual';
 import { tonoMm, TINTA_TONO } from '../mantenimiento/neumaticosSemaforo';
 import { corregirMarca } from './neumaticosAlias';
 import './inspecciones.css';
@@ -29,7 +29,7 @@ interface PosicionUltima {
   presion_actual?: number | string | null;
 }
 interface PlacaUltima {
-  ok?: boolean; configuracion?: string; fecha_inspeccion?: string | null; km_vehiculo?: number | string | null;
+  ok?: boolean; configuracion?: string; km_sugerido?: number | string | null; fecha_inspeccion?: string | null; km_vehiculo?: number | string | null;
   inspector?: string | null; datosPosiciones?: Record<string, PosicionUltima>;
 }
 interface Llanta {
@@ -173,8 +173,9 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
   useEffect(() => {
     const u = ultima.data;
     if (!u) return;
-    setConfig(u.configuracion ?? '');
-    setKm(texto(u.km_vehiculo));
+    setConfig(normalizarConfiguracion(u.configuracion));
+    // Odómetro: de la telemetría de la unidad (o Placas); si no hay, el de la última inspección
+    setKm(texto(u.km_sugerido ?? u.km_vehiculo));
     const lista = Object.entries(u.datosPosiciones ?? {})
       .sort(([a], [b]) => (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b))
       .map(([clave, d]): Llanta => ({
@@ -411,7 +412,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
                 </div>
 
                 <div className="form-grid">
-                  <Field label="Presión anterior (PSI)">{p => <TextInput {...p} value={actual.presion_ant} disabled />}</Field>
+                  <Field label="Presión anterior (PSI)">{p => <TextInput {...p} inputMode="numeric" value={actual.presion_ant} onChange={e => set(actual.posicion, { presion_ant: e.target.value.replace(/\D/g, '') })} />}</Field>
                   <Field label="Presión actual (PSI)">{p => <TextInput {...p} inputMode="numeric" value={actual.presion_actual} onChange={e => set(actual.posicion, { presion_actual: e.target.value.replace(/\D/g, '') })} />}</Field>
                   <Field label="Estado">{p => <SelectInput {...p} value={actual.estado} onChange={e => set(actual.posicion, { estado: e.target.value })}>{ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}</SelectInput>}</Field>
                   <Field label="Acción">{p => <SelectInput {...p} value={actual.accion} onChange={e => set(actual.posicion, { accion: e.target.value })}>{ACCIONES.map(s => <option key={s} value={s}>{s}</option>)}</SelectInput>}</Field>

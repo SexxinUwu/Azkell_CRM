@@ -37,6 +37,13 @@ export const CONFIGURACIONES: Record<string, Configuracion> = {
     ] },
 };
 
+/** Códigos de la ficha de Placas (C2, C3, T3…) hacia la configuración del esquema, igual que el clásico (ALIAS_MAPPER) */
+const ALIAS_CONFIG: Record<string, string> = { C2: '4X2', T2: '4X2', C3: '6X4', T3: '6X4', C3S3: 'T3S3' };
+export function normalizarConfiguracion(valor: string | null | undefined): string {
+  const k = String(valor ?? '').trim().toUpperCase().replace(/\s+/g, '');
+  return ALIAS_CONFIG[k] ?? k;
+}
+
 /** Todas las posiciones de una configuración, en orden (ejes y luego repuestos) */
 export function posicionesDeConfig(codigo: string): string[] {
   const c = CONFIGURACIONES[codigo];

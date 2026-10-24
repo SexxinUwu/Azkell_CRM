@@ -906,10 +906,18 @@ module.exports = function (db, broadcast, logAudit) {
 
             const configPlaca = (pRows && pRows.length > 0) ? (pRows[0].configuracion || pRows[0].tipo || '') : '';
 
+            // Kilometraje sugerido: último dato de telemetría de la placa; si no hay, el odómetro de Placas; si no, la última inspección
+            const [telRows] = await tdb.query('SELECT recorrido_km FROM telemetria_can WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?)) ORDER BY fecha DESC LIMIT 1', [placa]).catch(() => [[]]);
+            const [odoRows] = await tdb.query('SELECT odometro FROM placas WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?)) LIMIT 1', [placa]).catch(() => [[]]);
+            const kmTelemetria = telRows && telRows.length ? Number(telRows[0].recorrido_km) || null : null;
+            const kmPlaca = odoRows && odoRows.length ? Number(odoRows[0].odometro) || null : null;
+            const kmSugerido = kmTelemetria ?? kmPlaca ?? (lastInsp ? lastInsp.km_vehiculo : null);
+
             res.json({
                 ok: true,
                 placa,
                 configuracion: configPlaca,
+                km_sugerido: kmSugerido,
                 id_inspeccion: lastInsp ? lastInsp.id_inspeccion : null,
                 fecha_inspeccion: lastInsp ? lastInsp.fecha_inspeccion : null,
                 km_vehiculo: lastInsp ? lastInsp.km_vehiculo : null,
