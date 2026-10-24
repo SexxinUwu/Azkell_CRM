@@ -336,9 +336,10 @@ export function AppShell() {
             </button>
           </div>
         </div>
-      </Sheet>
+
         {/* Espacio final: que la última opción no quede pegada al borde redondeado de la hoja */}
         <div aria-hidden style={{ height: 'calc(40px + env(safe-area-inset-bottom, 0px))' }} />
+      </Sheet>
 
       <Sheet open={iosHelp} onClose={() => setIosHelp(false)} title="Instalar en tu iPhone" footer={<Button variant="primary" onClick={() => setIosHelp(false)}>Entendido</Button>}>
         <ol className="install-steps">
