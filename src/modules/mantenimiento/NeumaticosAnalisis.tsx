@@ -15,6 +15,7 @@ import {
   EsquemaPlacaSheet, ImportarNeumaticosSheet, MedidaDetalleSheet, descargarPlantillaNeumaticos, exportarNeumaticos, type EstadoActual,
 } from './NeumaticosExtras';
 import { NeumaticosNuevaInspeccionSheet } from './NeumaticosNuevaInspeccionSheet';
+import { obtenerReporteCiclo } from './NeumaticosCicloExcel';
 import { InspeccionDetalleSheet } from './NeumaticosDetalleSheet';
 import { MM_CRITICO, TINTA_TONO, tonoMm } from './neumaticosSemaforo';
 
@@ -266,6 +267,8 @@ export function NeumaticosAnalisisPage() {
             <MenuOtros opciones={[
               { label: 'Descargar plantilla', icon: <Download size={17} />, detalle: '27 columnas oficiales',
                 onSelect: () => descargarPlantillaNeumaticos().catch(e => toast(errorMessage(e), 'error')) },
+              { label: 'Exportar ciclo de vida (Excel)', icon: <FileSpreadsheet size={17} />, detalle: 'Hojas Llantas y Por unidad',
+                onSelect: async () => { try { await obtenerReporteCiclo(); } catch (e) { toast(errorMessage(e), 'error'); } } },
             ]} />
           </div>
         }

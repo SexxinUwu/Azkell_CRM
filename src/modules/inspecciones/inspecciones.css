@@ -558,3 +558,8 @@
 .insp-alm__opcion[aria-pressed='true'] { background: var(--ink); color: var(--label-inverse); }
 .insp-alm__error { margin: 0; font-size: 0.75rem; color: var(--red-ink); }
 .insp-alm__error--bloque { padding: var(--s-3) var(--s-4); border-radius: var(--r-lg); background: var(--red-tint); font-size: 0.875rem; }
+
+/* Código de la llanta con el botón de su hoja de vida */
+.insp-neu__codigo { display: flex; gap: var(--s-2); align-items: center; }
+.insp-neu__codigo > .input { flex: 1; min-width: 0; }
+.insp-neu__codigo > .btn { flex: none; white-space: nowrap; }

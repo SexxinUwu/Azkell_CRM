@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Camera, CircleAlert, Cloud, Minus, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { Camera, CircleAlert, Cloud, FileText, Minus, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
@@ -12,6 +12,7 @@ import { ChasisEsquemaVisual, CONFIGURACIONES, normalizarConfiguracion, posicion
 import { AlmacenesNeumaticos, type AlmacenesHandle, type LlantaDisponible } from './components/AlmacenesNeumaticos';
 import { tonoMm, TINTA_TONO } from '../mantenimiento/neumaticosSemaforo';
 import { corregirMarca } from './neumaticosAlias';
+import { NeumaticoHojaVida } from '../mantenimiento/NeumaticoHojaVida';
 import './inspecciones.css';
 
 // Inspección de neumáticos (React). Mismo esquema que el clásico (modal_inspeccion.js):
@@ -161,6 +162,8 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
   const [activa, setActiva] = useState('1');
   const [nuevaPos, setNuevaPos] = useState('');
   const [destinoRot, setDestinoRot] = useState('');
+  // Código de la llanta cuya hoja de vida está abierta encima de esta hoja (null = cerrada)
+  const [hojaCodigo, setHojaCodigo] = useState<string | null>(null);
   const [errores, setErrores] = useState<Errores>({});
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -179,7 +182,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
   useEffect(() => {
     if (!placa) return;
     setFecha(hoyISO()); setKm(''); setDias(30); setObs(''); setConfig(''); setLlantas([]);
-    setActiva('1'); setNuevaPos(''); setDestinoRot(''); setErrores({}); setError(null);
+    setActiva('1'); setNuevaPos(''); setDestinoRot(''); setHojaCodigo(null); setErrores({}); setError(null);
     kmDesdeGps.current = false;
   }, [placa]);
 
@@ -349,199 +352,209 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
     : undefined;
 
   return (
-    <Sheet open={!!placa} onClose={() => !enviando && onClose()} anclaAbajo title={`Neumáticos · ${placa ?? ''}`}
-      footer={<>
-        <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
-        <Button variant="primary" icon={<Cloud size={16} />} onClick={guardar} loading={enviando}>Guardar inspección</Button>
-      </>}>
-      {cargando ? <PageLoader /> : (
-        <div className="insp-neu">
-          {/* Aviso de la última inspección: rojo si fue hace 7 días o menos, azul si es más antigua */}
-          <div role="status" className={`insp-neu__aviso insp-neu__aviso--${aviso.tono}`}>
-            <CircleAlert size={18} aria-hidden />
-            <div><strong>{aviso.titulo}.</strong> {aviso.texto}</div>
-          </div>
-
-          {error && <div className="insp-neu__error-general" role="alert">{error}</div>}
-
-          {/* Bento 1: datos generales */}
-          <section className="insp-neu__bloque">
-            <div className="form-grid">
-              <Field label="Fecha de inspección" error={errores.fecha}>
-                {p => <TextInput {...p} type="date" value={fecha} onChange={e => { setFecha(e.target.value); setErrores(x => ({ ...x, fecha: undefined })); }} />}
-              </Field>
-              <Field label="Inspector" error={errores.inspector}>
-                {p => <TextInput {...p} value={usuario} disabled />}
-              </Field>
-              <Field label="Kilometraje (odómetro)" error={errores.km} hint={notaGps}>
-                {p => <TextInput {...p} inputMode="numeric" value={km} onChange={e => { setKm(e.target.value.replace(/\D/g, '')); setErrores(x => ({ ...x, km: undefined })); }} placeholder="Ej. 154200" />}
-              </Field>
-              <Field label="Días propuestos para la próxima">
-                {() => (
-                  <div className="insp-neu__stepper" role="group" aria-label="Días propuestos">
-                    <button type="button" className="insp-neu__paso pressable" onClick={() => setDias(d => Math.max(5, d - 5))} aria-label="Restar 5 días"><Minus size={14} /></button>
-                    <span className="insp-neu__stepper-valor t-numeric">{dias} días</span>
-                    <button type="button" className="insp-neu__paso pressable" onClick={() => setDias(d => d + 5)} aria-label="Sumar 5 días"><Plus size={14} /></button>
-                  </div>
-                )}
-              </Field>
+    <>
+      <Sheet open={!!placa} onClose={() => !enviando && onClose()} anclaAbajo title={`Neumáticos · ${placa ?? ''}`}
+        footer={<>
+          <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
+          <Button variant="primary" icon={<Cloud size={16} />} onClick={guardar} loading={enviando}>Guardar inspección</Button>
+        </>}>
+        {cargando ? <PageLoader /> : (
+          <div className="insp-neu">
+            {/* Aviso de la última inspección: rojo si fue hace 7 días o menos, azul si es más antigua */}
+            <div role="status" className={`insp-neu__aviso insp-neu__aviso--${aviso.tono}`}>
+              <CircleAlert size={18} aria-hidden />
+              <div><strong>{aviso.titulo}.</strong> {aviso.texto}</div>
             </div>
-            {/* La configuración es la que tiene la placa en Placas: no se elige aquí */}
-            <div>
-              <p className="insp-neu__titulo">Configuración del vehículo</p>
-              {config ? (
-                <div className="insp-neu__config">
-                  <span className="insp-neu__pill insp-neu__pill--activa">
-                    <strong>{config}</strong>
-                    <span>{CONFIGURACIONES[config] ? `${CONFIGURACIONES[config].nombre} · ${CONFIGURACIONES[config].llantas} llantas` : 'Según la ficha de la placa'}</span>
-                  </span>
-                  <span className="insp-neu__config-nota">Tomada de la ficha de Placas</span>
-                </div>
-              ) : (
-                <p className="insp-neu__error" role="alert">Esta placa no tiene configuración de ejes. Regístrala en Placas para ver su esquema.</p>
-              )}
-            </div>
-          </section>
 
-          {/* Bento 2: esquema del chasis, debajo de los datos generales y encima del editor */}
-          <ChasisEsquemaVisual configuracion={config} llantas={llantas} activa={activa} onSelect={setActiva} onRotar={rotarPosiciones}
-            onSoltarAire={(pos, x, y) => almacenRef.current?.soltarDesdeModelo(pos, x, y)} posicionRef={modeloPosRef} />
-          <AlmacenesNeumaticos ref={almacenRef} placa={placa ?? ''} km={km} llantas={llantas} modeloPosRef={modeloPosRef}
-            onRetirada={vaciarPosicion} onMontada={montarPosicion} />
+            {error && <div className="insp-neu__error-general" role="alert">{error}</div>}
 
-          {/* Posiciones: chips y editor de la llanta activa */}
-          <section className="insp-neu__bloque">
-            <p className="insp-neu__titulo">Posiciones ({llantas.length})</p>
-            <div className="insp-neu__chips" role="tablist" aria-label="Posiciones de llantas">
-              {llantas.map(l => {
-                const p = promedio(l);
-                return (
-                  <button key={l.posicion} type="button" role="tab" aria-selected={activa === l.posicion}
-                    className={`insp-neu__chip pressable${activa === l.posicion ? ' insp-neu__chip--activa' : ''}`} onClick={() => setActiva(l.posicion)}>
-                    {l.posicion}
-                    {p !== null && <span className="insp-neu__chip-prom" style={{ background: tonoRemanente(p) }} aria-hidden />}
-                  </button>
-                );
-              })}
-              <span className="insp-neu__agregar">
-                <TextInput value={nuevaPos} onChange={e => setNuevaPos(e.target.value)} placeholder="Nueva" aria-label="Posición nueva" />
-                <Button variant="secondary" size="sm" icon={<Plus size={14} />} onClick={agregar} disabled={!nuevaPos.trim()}>Agregar</Button>
-              </span>
-            </div>
-            {errores.llantas && <p className="insp-neu__error" role="alert">{errores.llantas}</p>}
-
-            {actual && (
-              <div className="insp-neu__editor">
-                <div className="insp-neu__editor-cab">
-                  <span className="insp-neu__pos">Posición {actual.posicion}</span>
-                  <span className="insp-neu__prom-badge" style={{ color: tonoRemanente(promedio(actual)) }}>
-                    Promedio {promedio(actual) === null ? '—' : `${promedio(actual)!.toFixed(1)} mm`}
-                  </span>
-                </div>
-                <div className="form-grid">
-                  <Field label="Marca">{p => (<>
-                    <TextInput {...p} value={actual.marca} list="neu-marcas" onChange={e => set(actual.posicion, { marca: e.target.value })}
-                      onBlur={() => set(actual.posicion, { marca: corregirMarca(actual.marca, opciones('marcas')) })} />
-                    <datalist id="neu-marcas">{opciones('marcas').map(o => <option key={o} value={o} />)}</datalist>
-                  </>)}</Field>
-                  <Field label="Medida">{p => <TextInput {...p} value={actual.medida} list="neu-medidas" onChange={e => set(actual.posicion, { medida: e.target.value })} />}</Field>
-                  <Field label="Modelo">{p => <TextInput {...p} value={actual.modelo} list="neu-modelos" onChange={e => set(actual.posicion, { modelo: e.target.value })} />}</Field>
-                  <Field label="Código de la llanta" hint={actual.codigoBase ? 'Viene de la base de llantas' : undefined}>{p => (
-                    <TextInput {...p} value={actual.codigo} readOnly={actual.codigoBase} placeholder="Ej. LL-0001"
-                      onChange={e => set(actual.posicion, { codigo: e.target.value })} />
-                  )}</Field>
-                </div>
-                <datalist id="neu-medidas">{opciones('medidas').map(o => <option key={o} value={o} />)}</datalist>
-                <datalist id="neu-modelos">{opciones('modelos').map(o => <option key={o} value={o} />)}</datalist>
-
-                <div className="insp-neu__mms">
-                  <Milimetros etiqueta="R1" valor={actual.r1} onChange={v => set(actual.posicion, { r1: v })} />
-                  <Milimetros etiqueta="R2" valor={actual.r2} onChange={v => set(actual.posicion, { r2: v })} />
-                  <Milimetros etiqueta="R3" valor={actual.r3} onChange={v => set(actual.posicion, { r3: v })} />
-                  <Milimetros etiqueta="R4 (opcional)" valor={actual.r4} onChange={v => set(actual.posicion, { r4: v })} />
-                </div>
-
-                <div className="form-grid">
-                  <Field label="Presión anterior (PSI)">{p => <TextInput {...p} inputMode="numeric" value={actual.presion_ant} onChange={e => set(actual.posicion, { presion_ant: e.target.value.replace(/\D/g, '') })} />}</Field>
-                  <Field label="Presión actual (PSI)">{p => <TextInput {...p} inputMode="numeric" value={actual.presion_actual} onChange={e => set(actual.posicion, { presion_actual: e.target.value.replace(/\D/g, '') })} />}</Field>
-                  <Field label="Estado">{p => <SelectInput {...p} value={actual.estado} onChange={e => set(actual.posicion, { estado: e.target.value })}>{ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}</SelectInput>}</Field>
-                  <Field label="Acción">{p => <SelectInput {...p} value={actual.accion} onChange={e => set(actual.posicion, { accion: e.target.value })}>{ACCIONES.map(s => <option key={s} value={s}>{s}</option>)}</SelectInput>}</Field>
-                  <Field label="ROT (rotada)">{p => <SelectInput {...p} value={actual.rot} onChange={e => set(actual.posicion, { rot: e.target.value as 'NO' | 'SI' })}><option value="NO">NO</option><option value="SI">SI</option></SelectInput>}</Field>
-                  <Field label="Observación de la llanta" wide>{p => <TextInput {...p} value={actual.observacion} onChange={e => set(actual.posicion, { observacion: e.target.value })} />}</Field>
-                </div>
-
-                {/* Rotación con otra posición */}
-                <div className="insp-neu__rotar">
-                  <span className="insp-neu__titulo">Rotar con otra posición</span>
-                  <div className="insp-neu__rotar-control">
-                    <SelectInput value={destinoRot} onChange={e => setDestinoRot(e.target.value)} aria-label="Posición destino de la rotación" disabled={otrasPosiciones.length === 0}>
-                      <option value="">Elige la posición…</option>
-                      {otrasPosiciones.map(l => <option key={l.posicion} value={l.posicion}>Posición {l.posicion}</option>)}
-                    </SelectInput>
-                    <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={rotar} disabled={!destinoRot}>Rotar</Button>
-                  </div>
-                </div>
-
-                {/* Evidencia fotográfica: tres fotos por llanta */}
-                <div>
-                  <p className="insp-neu__titulo">Evidencia fotográfica</p>
-                  <div className="insp-neu__fotos">
-                    <FotoSlot etiqueta="Foto 1" valor={actual.foto1} onChange={v => set(actual.posicion, { foto1: v })} />
-                    <FotoSlot etiqueta="Foto 2" valor={actual.foto2} onChange={v => set(actual.posicion, { foto2: v })} />
-                    <FotoSlot etiqueta="Foto 3" valor={actual.foto3} onChange={v => set(actual.posicion, { foto3: v })} />
-                  </div>
-                </div>
-
-                <div className="insp-neu__acciones-llanta">
-                  <Button variant="plain" onClick={limpiar}>Limpiar campos</Button>
-                  <Button variant="secondary" onClick={siguiente}>Guardar llanta y seguir</Button>
-                  <button type="button" className="insp-neu__quitar pressable" onClick={() => quitar(actual.posicion)} aria-label={`Quitar posición ${actual.posicion}`}><Trash2 size={15} /></button>
-                </div>
+            {/* Bento 1: datos generales */}
+            <section className="insp-neu__bloque">
+              <div className="form-grid">
+                <Field label="Fecha de inspección" error={errores.fecha}>
+                  {p => <TextInput {...p} type="date" value={fecha} onChange={e => { setFecha(e.target.value); setErrores(x => ({ ...x, fecha: undefined })); }} />}
+                </Field>
+                <Field label="Inspector" error={errores.inspector}>
+                  {p => <TextInput {...p} value={usuario} disabled />}
+                </Field>
+                <Field label="Kilometraje (odómetro)" error={errores.km} hint={notaGps}>
+                  {p => <TextInput {...p} inputMode="numeric" value={km} onChange={e => { setKm(e.target.value.replace(/\D/g, '')); setErrores(x => ({ ...x, km: undefined })); }} placeholder="Ej. 154200" />}
+                </Field>
+                <Field label="Días propuestos para la próxima">
+                  {() => (
+                    <div className="insp-neu__stepper" role="group" aria-label="Días propuestos">
+                      <button type="button" className="insp-neu__paso pressable" onClick={() => setDias(d => Math.max(5, d - 5))} aria-label="Restar 5 días"><Minus size={14} /></button>
+                      <span className="insp-neu__stepper-valor t-numeric">{dias} días</span>
+                      <button type="button" className="insp-neu__paso pressable" onClick={() => setDias(d => d + 5)} aria-label="Sumar 5 días"><Plus size={14} /></button>
+                    </div>
+                  )}
+                </Field>
               </div>
-            )}
-          </section>
+              {/* La configuración es la que tiene la placa en Placas: no se elige aquí */}
+              <div>
+                <p className="insp-neu__titulo">Configuración del vehículo</p>
+                {config ? (
+                  <div className="insp-neu__config">
+                    <span className="insp-neu__pill insp-neu__pill--activa">
+                      <strong>{config}</strong>
+                      <span>{CONFIGURACIONES[config] ? `${CONFIGURACIONES[config].nombre} · ${CONFIGURACIONES[config].llantas} llantas` : 'Según la ficha de la placa'}</span>
+                    </span>
+                    <span className="insp-neu__config-nota">Tomada de la ficha de Placas</span>
+                  </div>
+                ) : (
+                  <p className="insp-neu__error" role="alert">Esta placa no tiene configuración de ejes. Regístrala en Placas para ver su esquema.</p>
+                )}
+              </div>
+            </section>
 
-          {/* Resumen: cada fila se toca para corregirla */}
-          <section className="insp-neu__bloque">
-            <p className="insp-neu__titulo">Resumen de llantas</p>
-            <div className="insp-neu__tabla-caja">
-              <table className="insp-neu__tabla">
-                <thead>
-                  <tr><th>Pos</th><th>Marca</th><th>Medida</th><th>Modelo</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Prom.</th><th>PSI</th><th>Estado</th><th>Acción</th><th>ROT</th><th>Fotos</th><th>Observación</th></tr>
-                </thead>
-                <tbody>
-                  {llantas.map(l => {
-                    const p = promedio(l);
-                    const fotos = [l.foto1, l.foto2, l.foto3].filter(Boolean).length;
-                    return (
-                      <tr key={l.posicion} className={`insp-neu__fila pressable${activa === l.posicion ? ' insp-neu__fila--activa' : ''}`} onClick={() => setActiva(l.posicion)} tabIndex={0}
-                        onKeyDown={e => { if (e.key === 'Enter') setActiva(l.posicion); }}>
-                        <td className="t-numeric">{l.posicion}</td>
-                        <td>{l.marca || '—'}</td>
-                        <td>{l.medida || '—'}</td>
-                        <td>{l.modelo || '—'}</td>
-                        <td className="t-numeric">{l.r1 || '—'}</td>
-                        <td className="t-numeric">{l.r2 || '—'}</td>
-                        <td className="t-numeric">{l.r3 || '—'}</td>
-                        <td className="t-numeric">{l.r4 || '—'}</td>
-                        <td className="t-numeric" style={{ color: tonoRemanente(p), fontWeight: 700 }}>{p === null ? '—' : p.toFixed(1)}</td>
-                        <td className="t-numeric">{l.presion_actual || '—'}</td>
-                        <td>{l.estado}</td>
-                        <td>{l.accion}</td>
-                        <td>{l.rot}</td>
-                        <td className="t-numeric">{fotos}/3</td>
-                        <td className="insp-neu__obs">{l.observacion || '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
+            {/* Bento 2: esquema del chasis, debajo de los datos generales y encima del editor */}
+            <ChasisEsquemaVisual configuracion={config} llantas={llantas} activa={activa} onSelect={setActiva} onRotar={rotarPosiciones}
+              onSoltarAire={(pos, x, y) => almacenRef.current?.soltarDesdeModelo(pos, x, y)} posicionRef={modeloPosRef} />
+            <AlmacenesNeumaticos ref={almacenRef} placa={placa ?? ''} km={km} llantas={llantas} modeloPosRef={modeloPosRef}
+              onRetirada={vaciarPosicion} onMontada={montarPosicion} />
 
-          <Field label="Observaciones generales" wide>{p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} placeholder="Opcional" />}</Field>
-        </div>
-      )}
-    </Sheet>
+            {/* Posiciones: chips y editor de la llanta activa */}
+            <section className="insp-neu__bloque">
+              <p className="insp-neu__titulo">Posiciones ({llantas.length})</p>
+              <div className="insp-neu__chips" role="tablist" aria-label="Posiciones de llantas">
+                {llantas.map(l => {
+                  const p = promedio(l);
+                  return (
+                    <button key={l.posicion} type="button" role="tab" aria-selected={activa === l.posicion}
+                      className={`insp-neu__chip pressable${activa === l.posicion ? ' insp-neu__chip--activa' : ''}`} onClick={() => setActiva(l.posicion)}>
+                      {l.posicion}
+                      {p !== null && <span className="insp-neu__chip-prom" style={{ background: tonoRemanente(p) }} aria-hidden />}
+                    </button>
+                  );
+                })}
+                <span className="insp-neu__agregar">
+                  <TextInput value={nuevaPos} onChange={e => setNuevaPos(e.target.value)} placeholder="Nueva" aria-label="Posición nueva" />
+                  <Button variant="secondary" size="sm" icon={<Plus size={14} />} onClick={agregar} disabled={!nuevaPos.trim()}>Agregar</Button>
+                </span>
+              </div>
+              {errores.llantas && <p className="insp-neu__error" role="alert">{errores.llantas}</p>}
+
+              {actual && (
+                <div className="insp-neu__editor">
+                  <div className="insp-neu__editor-cab">
+                    <span className="insp-neu__pos">Posición {actual.posicion}</span>
+                    <span className="insp-neu__prom-badge" style={{ color: tonoRemanente(promedio(actual)) }}>
+                      Promedio {promedio(actual) === null ? '—' : `${promedio(actual)!.toFixed(1)} mm`}
+                    </span>
+                  </div>
+                  <div className="form-grid">
+                    <Field label="Marca">{p => (<>
+                      <TextInput {...p} value={actual.marca} list="neu-marcas" onChange={e => set(actual.posicion, { marca: e.target.value })}
+                        onBlur={() => set(actual.posicion, { marca: corregirMarca(actual.marca, opciones('marcas')) })} />
+                      <datalist id="neu-marcas">{opciones('marcas').map(o => <option key={o} value={o} />)}</datalist>
+                    </>)}</Field>
+                    <Field label="Medida">{p => <TextInput {...p} value={actual.medida} list="neu-medidas" onChange={e => set(actual.posicion, { medida: e.target.value })} />}</Field>
+                    <Field label="Modelo">{p => <TextInput {...p} value={actual.modelo} list="neu-modelos" onChange={e => set(actual.posicion, { modelo: e.target.value })} />}</Field>
+                    <Field label="Código de la llanta" hint={actual.codigoBase ? 'Viene de la base de llantas' : undefined}>{p => (
+                      <div className="insp-neu__codigo">
+                        <TextInput {...p} value={actual.codigo} readOnly={actual.codigoBase} placeholder="Ej. LL-0001"
+                          onChange={e => set(actual.posicion, { codigo: e.target.value })} />
+                        <Button variant="secondary" size="sm" icon={<FileText size={14} />} disabled={!actual.codigo.trim()}
+                          onClick={() => setHojaCodigo(actual.codigo.trim().toUpperCase())}>
+                          {actual.codigo.trim() ? 'Hoja de vida' : 'Sin código'}
+                        </Button>
+                      </div>
+                    )}</Field>
+                  </div>
+                  <datalist id="neu-medidas">{opciones('medidas').map(o => <option key={o} value={o} />)}</datalist>
+                  <datalist id="neu-modelos">{opciones('modelos').map(o => <option key={o} value={o} />)}</datalist>
+
+                  <div className="insp-neu__mms">
+                    <Milimetros etiqueta="R1" valor={actual.r1} onChange={v => set(actual.posicion, { r1: v })} />
+                    <Milimetros etiqueta="R2" valor={actual.r2} onChange={v => set(actual.posicion, { r2: v })} />
+                    <Milimetros etiqueta="R3" valor={actual.r3} onChange={v => set(actual.posicion, { r3: v })} />
+                    <Milimetros etiqueta="R4 (opcional)" valor={actual.r4} onChange={v => set(actual.posicion, { r4: v })} />
+                  </div>
+
+                  <div className="form-grid">
+                    <Field label="Presión anterior (PSI)">{p => <TextInput {...p} inputMode="numeric" value={actual.presion_ant} onChange={e => set(actual.posicion, { presion_ant: e.target.value.replace(/\D/g, '') })} />}</Field>
+                    <Field label="Presión actual (PSI)">{p => <TextInput {...p} inputMode="numeric" value={actual.presion_actual} onChange={e => set(actual.posicion, { presion_actual: e.target.value.replace(/\D/g, '') })} />}</Field>
+                    <Field label="Estado">{p => <SelectInput {...p} value={actual.estado} onChange={e => set(actual.posicion, { estado: e.target.value })}>{ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}</SelectInput>}</Field>
+                    <Field label="Acción">{p => <SelectInput {...p} value={actual.accion} onChange={e => set(actual.posicion, { accion: e.target.value })}>{ACCIONES.map(s => <option key={s} value={s}>{s}</option>)}</SelectInput>}</Field>
+                    <Field label="ROT (rotada)">{p => <SelectInput {...p} value={actual.rot} onChange={e => set(actual.posicion, { rot: e.target.value as 'NO' | 'SI' })}><option value="NO">NO</option><option value="SI">SI</option></SelectInput>}</Field>
+                    <Field label="Observación de la llanta" wide>{p => <TextInput {...p} value={actual.observacion} onChange={e => set(actual.posicion, { observacion: e.target.value })} />}</Field>
+                  </div>
+
+                  {/* Rotación con otra posición */}
+                  <div className="insp-neu__rotar">
+                    <span className="insp-neu__titulo">Rotar con otra posición</span>
+                    <div className="insp-neu__rotar-control">
+                      <SelectInput value={destinoRot} onChange={e => setDestinoRot(e.target.value)} aria-label="Posición destino de la rotación" disabled={otrasPosiciones.length === 0}>
+                        <option value="">Elige la posición…</option>
+                        {otrasPosiciones.map(l => <option key={l.posicion} value={l.posicion}>Posición {l.posicion}</option>)}
+                      </SelectInput>
+                      <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={rotar} disabled={!destinoRot}>Rotar</Button>
+                    </div>
+                  </div>
+
+                  {/* Evidencia fotográfica: tres fotos por llanta */}
+                  <div>
+                    <p className="insp-neu__titulo">Evidencia fotográfica</p>
+                    <div className="insp-neu__fotos">
+                      <FotoSlot etiqueta="Foto 1" valor={actual.foto1} onChange={v => set(actual.posicion, { foto1: v })} />
+                      <FotoSlot etiqueta="Foto 2" valor={actual.foto2} onChange={v => set(actual.posicion, { foto2: v })} />
+                      <FotoSlot etiqueta="Foto 3" valor={actual.foto3} onChange={v => set(actual.posicion, { foto3: v })} />
+                    </div>
+                  </div>
+
+                  <div className="insp-neu__acciones-llanta">
+                    <Button variant="plain" onClick={limpiar}>Limpiar campos</Button>
+                    <Button variant="secondary" onClick={siguiente}>Guardar llanta y seguir</Button>
+                    <button type="button" className="insp-neu__quitar pressable" onClick={() => quitar(actual.posicion)} aria-label={`Quitar posición ${actual.posicion}`}><Trash2 size={15} /></button>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Resumen: cada fila se toca para corregirla */}
+            <section className="insp-neu__bloque">
+              <p className="insp-neu__titulo">Resumen de llantas</p>
+              <div className="insp-neu__tabla-caja">
+                <table className="insp-neu__tabla">
+                  <thead>
+                    <tr><th>Pos</th><th>Marca</th><th>Medida</th><th>Modelo</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Prom.</th><th>PSI</th><th>Estado</th><th>Acción</th><th>ROT</th><th>Fotos</th><th>Observación</th></tr>
+                  </thead>
+                  <tbody>
+                    {llantas.map(l => {
+                      const p = promedio(l);
+                      const fotos = [l.foto1, l.foto2, l.foto3].filter(Boolean).length;
+                      return (
+                        <tr key={l.posicion} className={`insp-neu__fila pressable${activa === l.posicion ? ' insp-neu__fila--activa' : ''}`} onClick={() => setActiva(l.posicion)} tabIndex={0}
+                          onKeyDown={e => { if (e.key === 'Enter') setActiva(l.posicion); }}>
+                          <td className="t-numeric">{l.posicion}</td>
+                          <td>{l.marca || '—'}</td>
+                          <td>{l.medida || '—'}</td>
+                          <td>{l.modelo || '—'}</td>
+                          <td className="t-numeric">{l.r1 || '—'}</td>
+                          <td className="t-numeric">{l.r2 || '—'}</td>
+                          <td className="t-numeric">{l.r3 || '—'}</td>
+                          <td className="t-numeric">{l.r4 || '—'}</td>
+                          <td className="t-numeric" style={{ color: tonoRemanente(p), fontWeight: 700 }}>{p === null ? '—' : p.toFixed(1)}</td>
+                          <td className="t-numeric">{l.presion_actual || '—'}</td>
+                          <td>{l.estado}</td>
+                          <td>{l.accion}</td>
+                          <td>{l.rot}</td>
+                          <td className="t-numeric">{fotos}/3</td>
+                          <td className="insp-neu__obs">{l.observacion || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <Field label="Observaciones generales" wide>{p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} placeholder="Opcional" />}</Field>
+          </div>
+        )}
+      </Sheet>
+      {/* Hoja de vida de la llanta: se monta solo con código y va encima; su cierre no cierra esta hoja */}
+      {hojaCodigo !== null && <NeumaticoHojaVida codigo={hojaCodigo} onClose={() => setHojaCodigo(null)} />}
+    </>
   );
 }
