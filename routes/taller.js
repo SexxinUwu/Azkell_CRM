@@ -234,7 +234,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                     SELECT SUM(s.total_pen) 
                     FROM salidas_inv s 
                     WHERE (s.ticket_ot = o.ticket_entrada OR s.ticket_ot = o.id_ot) 
-                      AND s.estado != 'Anulado'
+                      AND LOWER(s.estado) = 'despachado'
                 ), 0) +
                 COALESCE((
                     SELECT SUM(COALESCE(t.costo, 0) + COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(t.detalles_json, '$.costo')) AS DECIMAL(10,2)), 0))
