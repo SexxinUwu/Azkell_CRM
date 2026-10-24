@@ -6,6 +6,8 @@ const { documentosVencidosPara, mensajeAdvertencia } = require('../services/docu
 const { rentabilidadPeriodo } = require('../services/rentabilidad');
 
 module.exports = function (db, broadcast, logAudit, opciones = {}) {
+    // Hora de Lima (America/Lima), como el resto del sistema; toISOString daría UTC
+    const ahoraLima = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date());
     const router = express.Router();
 
     function getDb(req) {
@@ -440,7 +442,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             const vencidosViaje = await documentosVencidosPara(tdb, [placa_tracto, placa_remolque]);
             // Solo advertencia: el despacho sigue permitido mientras se renueva el documento
 
-            const fechaFinal = fecha_viaje || new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const fechaFinal = fecha_viaje || ahoraLima();
             const userCreador = usuario_creacion || (req.user && req.user.nombre) || 'ADMINISTRADOR DEL SISTEMA';
 
             const parsedKm = parseInt(kilometraje_inicial, 10);
@@ -567,7 +569,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
 
             const codeViaje = req.params.viaje;
             const { fecha_inicio, kilometraje_inicial, horas_motor_remolque } = req.body;
-            const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const nowStr = ahoraLima();
             const fechaInicioSql = fecha_inicio ? (fecha_inicio.length <= 10 ? fecha_inicio + ' ' + nowStr.slice(11) : fecha_inicio) : nowStr;
             const kmIniVal = kilometraje_inicial ? parseInt(kilometraje_inicial, 10) : null;
             const hrRemVal = horas_motor_remolque ? parseInt(horas_motor_remolque, 10) : null;
@@ -615,7 +617,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
 
             const codeViaje = req.params.viaje;
             const { fecha_fin, kilometraje_final, usuario_finalizacion } = req.body;
-            const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const nowStr = ahoraLima();
             const fechaFinSql = fecha_fin ? (fecha_fin.length <= 10 ? fecha_fin + ' ' + nowStr.slice(11) : fecha_fin) : nowStr;
             const userFinaliza = usuario_finalizacion || (req.user && req.user.nombre) || 'ADMINISTRADOR DEL SISTEMA';
 
@@ -2143,7 +2145,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             // ── Sincronización Automática con la Orden de Viaje (OV) ──
             if (viajeCode) {
                 try {
-                    const nowStr = fecha_inicio ? `${fecha_inicio} 00:00:00` : new Date().toISOString().slice(0, 19).replace('T', ' ');
+                    const nowStr = fecha_inicio ? `${fecha_inicio} 00:00:00` : ahoraLima();
                     if (estUpper === 'INICIADO') {
                         // Al iniciar una OS: si la OV no está iniciada ni finalizada, pasa a INICIADO
                         const [ovRows] = await tdb.query(`SELECT estado, fecha_inicio FROM operaciones_ordenes_viaje WHERE viaje = ?`, [viajeCode]);
