@@ -152,7 +152,7 @@ export function InspeccionesPage() {
             <MenuOtros opciones={[
               can('insp.crear') && { label: 'Importar Excel', detalle: 'Con revisión antes de guardar', icon: <Upload size={17} />, onSelect: () => setImportando(true) },
               can('insp.crear') && { label: 'Descargar plantilla', icon: <Download size={17} />, onSelect: () => { descargarPlantillaInspecciones(esquema.data ?? []).catch(err => toast(errorMessage(err), 'error')); } },
-              can('insp.crear') && { label: 'Plantilla de inspección', detalle: 'Sistemas e ítems que se revisan', icon: <ListChecks size={17} />, onSelect: () => setEditandoPlantilla(true) },
+              (can('insp.crear') || can('insp.editar')) && { label: 'Plantilla de inspección', detalle: 'Sistemas e ítems que se revisan', icon: <ListChecks size={17} />, onSelect: () => setEditandoPlantilla(true) },
               { label: 'Abrir en la versión actual', detalle: 'Editar y PDF', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/inspecciones') },
             ]} />
             {can('insp.crear') && <Button variant="primary" icon={<Plus size={16} />} onClick={() => navigate('/inspecciones/nueva')}>Nueva inspección</Button>}
