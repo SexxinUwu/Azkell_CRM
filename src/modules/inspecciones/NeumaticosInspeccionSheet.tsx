@@ -229,20 +229,26 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
   };
 
   // Rotación: intercambia los datos de dos posiciones; ambas quedan con ROT = SI y acción Rotación
-  const rotar = () => {
-    if (!actual || !destinoRot || destinoRot === actual.posicion) return;
-    const otra = llantas.find(l => l.posicion === destinoRot);
-    if (!otra) return;
+  // Intercambia los datos de dos posiciones (botón o arrastre en 3D); ambas quedan rotadas y se selecciona la de origen
+  const rotarPosiciones = (origen: string, destino: string) => {
+    if (!origen || !destino || origen === destino) return;
+    const lo = llantas.find(l => l.posicion === origen);
+    const ld = llantas.find(l => l.posicion === destino);
+    if (!lo || !ld) return;
     const datos = (l: Llanta) => ({ marca: l.marca, medida: l.medida, modelo: l.modelo, r1: l.r1, r2: l.r2, r3: l.r3, r4: l.r4, presion_ant: l.presion_ant, presion_actual: l.presion_actual, estado: l.estado, foto1: l.foto1, foto2: l.foto2, foto3: l.foto3 });
-    const origen = actual.posicion, destino = otra.posicion;
     setLlantas(ls => ls.map(l => {
-      if (l.posicion === origen) return { ...l, ...datos(otra), rot: 'SI', accion: 'Rotación', observacion: `De Posición #${destino} a Posición #${origen}` };
-      if (l.posicion === destino) return { ...l, ...datos(actual), rot: 'SI', accion: 'Rotación', observacion: `De Posición #${origen} a Posición #${destino}` };
+      if (l.posicion === origen) return { ...l, ...datos(ld), rot: 'SI', accion: 'Rotación', observacion: `De Posición #${destino} a Posición #${origen}` };
+      if (l.posicion === destino) return { ...l, ...datos(lo), rot: 'SI', accion: 'Rotación', observacion: `De Posición #${origen} a Posición #${destino}` };
       return l;
     }));
-    setDestinoRot('');
+    setActiva(origen);
     haptic('success');
-    toast(`Rotación: posición ${origen} ⇄ ${destino}`);
+    toast(`Rotación realizada: Posición #${origen} ⇄ #${destino}`);
+  };
+  const rotar = () => {
+    if (!actual || !destinoRot) return;
+    rotarPosiciones(actual.posicion, destinoRot);
+    setDestinoRot('');
   };
 
   const medidas = (l: Llanta) => [l.r1, l.r2, l.r3, l.r4].some(v => numero(v) > 0);
@@ -353,7 +359,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
           </section>
 
           {/* Bento 2: esquema del chasis, debajo de los datos generales y encima del editor */}
-          <ChasisEsquemaVisual configuracion={config} llantas={llantas} activa={activa} onSelect={setActiva} />
+          <ChasisEsquemaVisual configuracion={config} llantas={llantas} activa={activa} onSelect={setActiva} onRotar={rotarPosiciones} />
 
           {/* Posiciones: chips y editor de la llanta activa */}
           <section className="insp-neu__bloque">

@@ -496,6 +496,8 @@
 .insp-chasis__modo { display: inline-flex; align-items: center; gap: 6px; min-height: 2.25rem; padding: 0 var(--s-3); border: 0; border-radius: var(--r-full); background: var(--fill); color: var(--label); font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
 .insp-chasis__modo[aria-pressed='true'] { background: var(--ink); color: var(--label-inverse); }
 .insp-chasis__aviso { margin: 0; font-size: 0.8125rem; color: var(--amber-ink); }
+/* Banner azul mientras se arrastra una llanta en 3D (como el clásico) */
+.insp-chasis__arrastre { position: absolute; top: var(--s-2); left: 50%; transform: translateX(-50%); z-index: 2; max-width: 92%; padding: 6px 14px; border-radius: var(--r-full); background: #2563eb; color: #ffffff; font-size: 0.8125rem; font-weight: 600; text-align: center; box-shadow: 0 8px 20px -8px rgba(37, 99, 235, 0.6); pointer-events: none; }
 .insp-chasis--xray .insp-chasis__info, .insp-chasis--xray .insp-chasis__leyenda { color: #9fd9e6; }
 
 /* ── Rotación ───────────────────────────────────────────────────────── */

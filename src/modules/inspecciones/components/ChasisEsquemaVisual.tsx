@@ -158,13 +158,15 @@ function preferir3d(soporta: boolean): boolean {
 }
 
 /** Chasis interactivo: pulsar una llanta la selecciona en el editor de abajo */
-export function ChasisEsquemaVisual({ configuracion, llantas, activa, onSelect }: {
-  configuracion: string; llantas: LlantaChasis[]; activa: string; onSelect: (pos: string) => void;
+export function ChasisEsquemaVisual({ configuracion, llantas, activa, onSelect, onRotar }: {
+  configuracion: string; llantas: LlantaChasis[]; activa: string; onSelect: (pos: string) => void; onRotar: (origen: string, destino: string) => void;
 }) {
   const [vista, setVista] = useState<VistaChasis>('2d');
   const [soporta3d] = useState(webglDisponible);
   const [modo3d, setModo3d] = useState(() => preferir3d(soporta3d));
   const [aviso3d, setAviso3d] = useState(false);
+  // Llanta que se arrastra en 3D y posición sobre la que está (para el banner)
+  const [arrastre, setArrastre] = useState<{ origen: string; destino: string | null } | null>(null);
   const c = CONFIGURACIONES[configuracion];
   const xray = vista === 'xray';
   const transform = vista === 'iso' ? 'perspective(700px) rotateX(42deg) rotateZ(-6deg)' : vista === 'lat' ? 'perspective(700px) rotateY(-52deg)' : undefined;
@@ -201,9 +203,19 @@ export function ChasisEsquemaVisual({ configuracion, llantas, activa, onSelect }
       {c ? (
         modo3d ? (
           // Mientras carga el motor 3D se muestra el esquema 2D (fallback)
-          <Suspense fallback={plano}>
-            <Chasis3D configuracion={configuracion} llantas={llantas} activa={activa} vista={vista} onSelect={onSelect} onPerdida={perderContexto} />
-          </Suspense>
+          <div style={{ position: 'relative' }}>
+            <Suspense fallback={plano}>
+              <Chasis3D configuracion={configuracion} llantas={llantas} activa={activa} vista={vista} onSelect={onSelect}
+                onRotar={onRotar} onArrastre={(origen, destino) => setArrastre(origen ? { origen, destino } : null)} onPerdida={perderContexto} />
+            </Suspense>
+            {arrastre && (
+              <div className="insp-chasis__arrastre" role="status">
+                {arrastre.destino
+                  ? `Suelta para intercambiar #${arrastre.origen} ⇄ #${arrastre.destino}`
+                  : `Arrastrando Llanta #${arrastre.origen} — Suelta sobre otra posición para intercambiar`}
+              </div>
+            )}
+          </div>
         ) : plano
       ) : (
         <p className="insp-chasis__vacio">Elige la configuración del vehículo para ver sus ejes.</p>
