@@ -893,8 +893,9 @@ module.exports = function (db, broadcast, logAudit) {
             const tdb = getDb(req);
             const { placa } = req.params;
             const [rows] = await tdb.query(`
-                SELECT 
+                SELECT
                     d.posicion,
+                    COALESCE(h.codigo_llanta, h.id_neumatico, d.id_neumatico) AS codigo,
                     d.marca,
                     d.medida,
                     d.modelo,
@@ -913,7 +914,10 @@ module.exports = function (db, broadcast, logAudit) {
                     ORDER BY fecha_inspeccion DESC, created_at DESC
                     LIMIT 1
                 ) last_i ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = last_i.id_inspeccion COLLATE utf8mb4_unicode_ci
-            `, [placa]);
+                LEFT JOIN neumaticos_hoja_vida h
+                    ON (UPPER(TRIM(h.placa_actual)) = UPPER(TRIM(?)) AND h.posicion_actual = d.posicion)
+                    OR (d.id_neumatico IS NOT NULL AND (h.codigo_llanta = d.id_neumatico OR h.id_neumatico = d.id_neumatico))
+            `, [placa, placa]);
 
             // Obtener datos de la última inspección
             const datosPosiciones = {};
