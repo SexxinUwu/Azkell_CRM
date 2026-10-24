@@ -81,7 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const [me, companyName] = await Promise.all([api<PerfilResponse>('/perfil/me'), empresaActual()]);
+      // Con límite de tiempo: si el servidor no responde, la app no se queda cargando para siempre
+      const [me, companyName] = await Promise.race([
+        Promise.all([api<PerfilResponse>('/perfil/me'), empresaActual()]),
+        new Promise<never>((_, rechazar) => setTimeout(() => rechazar(new Error('TIEMPO_AGOTADO')), 10000)),
+      ]);
       const email = me.correo ?? localStorage.getItem('fleet_correo') ?? '';
       const roleName = me.rol ?? localStorage.getItem('fleet_rol') ?? '';
       try {
@@ -95,7 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       // Sin señal o servidor caído: se sigue con la sesión guardada.
       // Solo una sesión rechazada por el servidor cierra la app.
-      if (err instanceof ApiError && (err.status === 0 || err.status >= 500) && tokenStore.getProfile()) return;
+      const sinRespuesta = (err instanceof Error && err.message === 'TIEMPO_AGOTADO') || (err instanceof ApiError && (err.status === 0 || err.status >= 500));
+      if (sinRespuesta && tokenStore.getProfile()) return;
       clear();
     }
   }, [clear, guardar]);
