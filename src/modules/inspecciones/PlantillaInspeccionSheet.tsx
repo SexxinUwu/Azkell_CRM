@@ -106,24 +106,30 @@ export function PlantillaInspeccionSheet({ open, onClose }: { open: boolean; onC
   function pedirRestaurar() {
     setPendiente({
       titulo: '¿Restaurar la plantilla de fábrica?',
-      mensaje: 'Se reemplazan los sistemas e ítems de esta pantalla por la plantilla estándar. Nada se guarda hasta que pulses Guardar plantilla.',
-      confirmar: 'Restaurar',
+      mensaje: 'Se reemplaza la plantilla actual por la estándar y se guarda de inmediato.',
+      confirmar: 'Restaurar y guardar',
       accion: () => {
         setRecienAgregado(null);
         setError(null);
-        setSistemas(aEditable(ESQUEMA_POR_DEFECTO));
+        const fabrica = aEditable(ESQUEMA_POR_DEFECTO);
+        setSistemas(fabrica);
+        void guardarLista(fabrica);
       },
     });
   }
 
-  async function guardar() {
-    if (!sistemas || enviando) return;
-    const problema = validar(sistemas);
+  function guardar() {
+    if (sistemas) void guardarLista(sistemas);
+  }
+
+  async function guardarLista(lista: NonNullable<typeof sistemas>) {
+    if (enviando) return;
+    const problema = validar(lista);
     if (problema) { setError(problema); return; }
     setError(null);
     setEnviando(true);
     try {
-      const templates = sistemas.map((s, idx) => ({
+      const templates = lista.map((s, idx) => ({
         template_id: s.id || `cat_${idx + 1}`,
         titulo: s.titulo.trim().toUpperCase(),
         items_json: s.items.map(it => ({ id: it.id, label: it.label.trim(), type: it.tipo })),

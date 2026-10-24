@@ -202,9 +202,10 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
   // Llega (o cambia con la fecha) la lectura GPS: se precarga el km; sigue editable
   useEffect(() => {
     const g = kmGps.data;
-    if (g && g.km !== null && g.km !== undefined) {
+    // Kilometraje actual de GPS; si la unidad no tiene lectura, el campo queda vacío para escribirlo a mano
+    if (g) {
       kmDesdeGps.current = true;
-      setKm(String(g.km));
+      setKm(g.km !== null && g.km !== undefined ? String(g.km) : '');
     }
   }, [kmGps.data]);
 

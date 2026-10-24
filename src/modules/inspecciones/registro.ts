@@ -171,7 +171,7 @@ export function respuestasDesde(i: Inspeccion, esquema: Seccion[]): Record<strin
       if (p.estado === 'OK') r.estado = 'OK';
       if (p.estado === 'FALLA') { r.estado = 'FALLA'; r.observacion = p.observacion ?? ''; r.foto = p.foto ?? ''; }
     } else if (it.tipo === 'percent') {
-      const m = /^(d+)%$/.exec(p.estado ?? '');
+      const m = /^(\d+)%$/.exec(p.estado ?? '');
       if (m) r.porcentaje = m[1];
     } else if (p.estado === 'REGISTRADO') {
       r.texto = p.observacion ?? '';
