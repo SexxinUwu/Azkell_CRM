@@ -268,6 +268,8 @@ function construirCamion(configuracion: string, llantas: LlantaChasis[]): Camion
     grupo.add(llanta.grupo);
   });
 
+  // Material normal de cada parte de la cabina: rayos X lo cambia y al salir debe volver
+  carroceria.forEach(m => { m.userData.normal = m.material; });
   return { grupo, ruedas, carroceria, chasis, tanques, zMin, zMax };
 }
 
