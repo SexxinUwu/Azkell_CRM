@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { AlertTriangle, Check, Download, Minus, Pencil, Share2, Wrench, X } from 'lucide-react';
+import { AlertTriangle, Check, Disc3, Download, Minus, Pencil, Share2, Wrench, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -10,10 +10,11 @@ import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { spring } from '../../core/lib/motion';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { Notice } from '../../core/ui/Display';
+import { InspeccionDetalleSheet } from '../mantenimiento/NeumaticosAnalisis';
 import { compartirPDF, descargarArchivo } from '../../core/lib/pdf';
 import { fallaEstadoColor, useChecklist, type ReporteFalla } from '../flota/api';
 import { GenerarOTsSheet } from '../flota/GenerarOTsSheet';
-import { useFotosFirmadas, type Inspeccion, type PuntoRevisado } from './api';
+import { clavePlaca, useFotosFirmadas, useInspeccionesNeumaticos, type Inspeccion, type PuntoRevisado } from './api';
 import { pdfInspeccion } from './inspeccionPdf';
 
 const fechaLarga = (d: Date | null) => (d ? d.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : 'Sin fecha');
@@ -45,6 +46,15 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
   const fotosListas = fotos.length === 0 || !firmadas.isPending;
 
   const reporte = useMemo(() => (i && checklist.data ? checklist.data.find(r => reporteDeInspeccion(r, i.id)) ?? null : null), [i, checklist.data]);
+
+  // Inspección de neumáticos asociada: misma placa y dentro de 35 días de esta inspección (como el clásico)
+  const neu = useInspeccionesNeumaticos();
+  const neuAsociada = useMemo(() => {
+    if (!i) return null;
+    const clave = clavePlaca(i.placa);
+    return (neu.data ?? []).find(n => clavePlaca(n.placa) === clave && (!n.fecha || !i.fecha || Math.abs(n.fecha.getTime() - i.fecha.getTime()) / 86_400_000 <= 35)) ?? null;
+  }, [i, neu.data]);
+  const [neuDetalle, setNeuDetalle] = useState<string | null>(null);
   const reporteActivo = !!reporte && fallaEstadoColor(reporte) === 'amber';
 
   const conteo = useMemo(() => {
@@ -132,6 +142,16 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
                 <Button variant="secondary" icon={<Wrench size={16} />} onClick={generarOt} disabled={!!reporte && !reporteActivo}>Generar OT desde inspección</Button>
               )}
             </div>
+            {neuAsociada && (
+              <div className="insp-neu-asociada">
+                <div className="insp-neu-asociada__texto">
+                  <strong>Inspección de neumáticos asociada</strong>
+                  <span className="insp-neu-asociada__id">{neuAsociada.id}</span>
+                  <small>{neuAsociada.fecha ? neuAsociada.fecha.toLocaleDateString('es-PE') : 'Sin fecha'} · Llantas críticas: {neuAsociada.llantasCriticas}</small>
+                </div>
+                <Button variant="secondary" icon={<Disc3 size={16} />} onClick={() => setNeuDetalle(neuAsociada.id)}>Ver detalle de neumáticos</Button>
+              </div>
+            )}
             {aviso && <Notice tone={aviso.tono}>{aviso.texto}</Notice>}
 
             <div className="insp-resumen">
@@ -198,6 +218,7 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
       </Sheet>
 
       {reporte && <GenerarOTsSheet falla={reporte} open={otAbierta} onClose={() => setOtAbierta(false)} />}
+      <InspeccionDetalleSheet id={neuDetalle} onClose={() => setNeuDetalle(null)} />
 
       {/* Foto ampliada */}
       {createPortal(

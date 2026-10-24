@@ -210,7 +210,8 @@ interface RespDetalle {
   data: { id_inspeccion: string; placa: string; fecha_inspeccion: string; km_vehiculo: number | null; inspector?: string | null; detalles: DetalleLlanta[] };
 }
 
-function InspeccionDetalleSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
+/** Detalle de una inspección de neumáticos (medidas, presión, estado y fotos); lo usa también la ficha de inspección */
+export function InspeccionDetalleSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
   const [fotos, setFotos] = useState<{ lista: FotoVisor[]; i: number } | null>(null);
   const { data, isLoading, error } = useQuery<RespDetalle>({
     queryKey: ['mant', 'neumaticos-detalle', id],
