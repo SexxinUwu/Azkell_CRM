@@ -10,6 +10,7 @@ import { haptic } from '../../core/lib/haptics';
 import { clavePlaca, useInspeccionesNeumaticos } from './api';
 import { ChasisEsquemaVisual, CONFIGURACIONES, posicionesDeConfig } from './components/ChasisEsquemaVisual';
 import { tonoMm, TINTA_TONO } from '../mantenimiento/neumaticosSemaforo';
+import { corregirMarca } from './neumaticosAlias';
 import './inspecciones.css';
 
 // Inspección de neumáticos (React). Mismo esquema que el clásico (modal_inspeccion.js):
@@ -385,7 +386,8 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
                 </div>
                 <div className="form-grid">
                   <Field label="Marca">{p => (<>
-                    <TextInput {...p} value={actual.marca} list="neu-marcas" onChange={e => set(actual.posicion, { marca: e.target.value })} />
+                    <TextInput {...p} value={actual.marca} list="neu-marcas" onChange={e => set(actual.posicion, { marca: e.target.value })}
+                      onBlur={() => set(actual.posicion, { marca: corregirMarca(actual.marca, opciones('marcas')) })} />
                     <datalist id="neu-marcas">{opciones('marcas').map(o => <option key={o} value={o} />)}</datalist>
                   </>)}</Field>
                   <Field label="Medida">{p => <TextInput {...p} value={actual.medida} list="neu-medidas" onChange={e => set(actual.posicion, { medida: e.target.value })} />}</Field>
