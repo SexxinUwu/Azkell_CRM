@@ -32,14 +32,14 @@ function otConExtras(ot: OrdenTrabajo, extras: ExtrasPdf = {}): OrdenTrabajo {
 }
 
 /** Pide al servidor el PDF de un documento HTML. Usa la misma sesión que el resto de la app. */
-async function pdfDeHtml(html: string, titulo: string): Promise<Blob> {
+export async function pdfDeHtml(html: string, titulo: string, horizontal = false): Promise<Blob> {
   // La falla se muestra sin "• Falla Manual :" (el resto del documento queda como en el clásico)
   const limpio = html.replace(/•\s*Falla Manual\s*:\s*/gi, '');
   const res = await fetch('/api/ot-pdf', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', 'x-azkell-tab': TAB_ID },
-    body: JSON.stringify({ html: limpio, titulo }),
+    body: JSON.stringify({ html: limpio, titulo, horizontal }),
   });
   if (!res.ok) throw new Error(`No se pudo generar el PDF (HTTP ${res.status})`);
   return res.blob();

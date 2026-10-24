@@ -1444,7 +1444,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         if (!html.includes('<html')) return res.status(400).json({ error: 'Documento no válido' });
         const titulo = String(req.body?.titulo || 'Orden de trabajo');
         try {
-            const pdf = await htmlAPdf(html, titulo);
+            const pdf = await htmlAPdf(html, titulo, req.body?.horizontal === true);
             res.set('Content-Type', 'application/pdf').send(Buffer.from(pdf));
         } catch (err) {
             console.error('[ot-pdf]', err.message);

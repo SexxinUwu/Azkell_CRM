@@ -9,7 +9,8 @@ import { TextInput } from '../../core/ui/Field';
 import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
-import { compartirPDF, generarPDFBlob } from '../../core/lib/pdf';
+import { compartirPDF } from '../../core/lib/pdf';
+import { pdfDeHtml } from './otPdf';
 import { LOGO_RAMPA } from './rampaPdf';
 import type { CatalogosTaller } from './api';
 import { type CatRampa, enReporte } from './rampasReporte';
@@ -30,7 +31,7 @@ const escHtml = (v: unknown) => String(v ?? '—').replace(/[&<>"']/g, c => ({ '
 
 const SEM_HEX = { verde: '#15803d', ambar: '#b45309', rojo: '#b91c1c', gris: '#64748b' };
 
-function htmlPdfRampas(filas: FilaPdfRampa[], empresa: string, d: DatosPdfRampa): string {
+function htmlPdfRampas(filas: FilaPdfRampa[], empresa: string, d: DatosPdfRampa, logo: string): string {
   const cuerpo = filas.map(f => `<tr style="${f.libre ? 'color:#64748b' : ''}">
       <td style="font-weight:700">${escHtml(f.rampa)}</td>
       <td style="text-align:center">${escHtml(f.fIn)}</td>
@@ -47,7 +48,7 @@ function htmlPdfRampas(filas: FilaPdfRampa[], empresa: string, d: DatosPdfRampa)
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:14px;width:1040px;background:#fff">
     <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #000;padding-bottom:8px">
-      <img src="${LOGO_RAMPA}" alt="" style="height:54px" crossorigin="anonymous" />
+      ${logo ? `<img src="${logo}" alt="" style="height:54px" />` : ''}
       <div style="flex:1">
         <div style="font-size:12px;font-weight:700">${escHtml(empresa.toUpperCase())}</div>
         <div style="font-size:20px;font-weight:800;text-align:center">ESTATUS DE UNIDADES EN TALLER</div>
@@ -90,17 +91,25 @@ async function nombreEmpresa(): Promise<string> {
   return (window.location.hostname.split('.')[0] || 'Azkell').toUpperCase();
 }
 
-/** PDF oficial F-MAN-005 (horizontal). Un solo archivo para ver, descargar y enviar por WhatsApp. */
-export async function generarPdfRampas(filas: FilaPdfRampa[], d: DatosPdfRampa): Promise<Blob> {
-  const el = document.createElement('div');
-  el.style.cssText = 'position:fixed;left:-10000px;top:0;background:#fff';
-  el.innerHTML = htmlPdfRampas(filas, await nombreEmpresa(), d);
-  document.body.appendChild(el);
+/** El logo va incrustado en el documento: el servidor no descarga imágenes del sitio */
+async function logoEmbebido(): Promise<string> {
   try {
-    return await generarPDFBlob(el, { orientacion: 'landscape', margen: [6, 6, 6, 6] });
-  } finally {
-    el.remove();
-  }
+    const res = await fetch(LOGO_RAMPA, { credentials: 'include' });
+    if (!res.ok) return '';
+    const blob = await res.blob();
+    return await new Promise<string>((ok, no) => {
+      const lector = new FileReader();
+      lector.onload = () => ok(String(lector.result));
+      lector.onerror = () => no(lector.error);
+      lector.readAsDataURL(blob);
+    });
+  } catch { return ''; }
+}
+
+/** PDF oficial F-MAN-005 (horizontal) generado en el servidor con Chromium: texto real, nítido en cualquier zoom. */
+export async function generarPdfRampas(filas: FilaPdfRampa[], d: DatosPdfRampa): Promise<Blob> {
+  const html = htmlPdfRampas(filas, await nombreEmpresa(), d, await logoEmbebido());
+  return pdfDeHtml(`<!doctype html><html><head><meta charset="utf-8"><title>Status de rampa</title></head><body style="margin:0">${html}</body></html>`, 'Status de rampa', true);
 }
 
 /** Abre el PDF en una pestaña nueva (enlace blob:), igual que el clásico */

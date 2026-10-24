@@ -22,7 +22,7 @@ async function obtenerNavegador() {
 }
 
 /** HTML del documento -> PDF (Buffer). El título queda como metadato del PDF, que es lo que muestra el visor. */
-async function htmlAPdf(html, titulo) {
+async function htmlAPdf(html, titulo, horizontal = false) {
   const b = await obtenerNavegador();
   const documento = html
     .replace(/<button id="btnPrint"[\s\S]*?<\/button>/, '')
@@ -38,7 +38,7 @@ async function htmlAPdf(html, titulo) {
     });
     await pagina.setContent(documento, { waitUntil: 'networkidle0', timeout: 30000 });
     await pagina.evaluate(() => document.fonts.ready);
-    return await pagina.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: false, margin: { top: '0', right: '0', bottom: '0', left: '0' } });
+    return await pagina.pdf({ format: 'A4', landscape: horizontal, printBackground: true, preferCSSPageSize: false, margin: { top: '0', right: '0', bottom: '0', left: '0' } });
   } finally {
     await pagina.close();
   }
