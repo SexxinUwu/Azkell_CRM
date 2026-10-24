@@ -541,7 +541,7 @@ function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasIns
     <div className="rt-caja">
       <table className="rt">
         <colgroup>
-          {[150, 88, 52, 112, 168, undefined, 88, 52, 76, 150, 150, ...(verInspeccion ? [150] : []), 84].map((w, i) => (
+          {[130, 84, 50, 92, 158, undefined, 84, 50, 72, 150, 130, ...(verInspeccion ? [120] : []), 76].map((w, i) => (
             <col key={i} style={w ? { width: w } : undefined} />
           ))}
         </colgroup>
