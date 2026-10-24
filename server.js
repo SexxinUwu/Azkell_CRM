@@ -5011,8 +5011,10 @@ app.put('/api/integraciones', (req, res) => {
 app.use('/api/clientes', require('./routes/clientes')(db, logAudit));
 app.use('/api/disponibilidad-flota', require('./routes/disponibilidad')(db, logAudit));
 app.use('/api/neumaticos', require('./routes/neumaticos')(db, broadcast, logAudit));
-app.use('/api/combustible', require('./routes/combustible')(db, broadcast, logAudit));
-app.use('/api/operaciones', require('./routes/operaciones')(db, broadcast, logAudit));
+app.use('/api/neumaticos', require('./routes/neumaticos-ciclo')(db));
+const combustibleRouter = require('./routes/combustible')(db, broadcast, logAudit);
+app.use('/api/combustible', combustibleRouter);
+app.use('/api/operaciones', require('./routes/operaciones')(db, broadcast, logAudit, { recorridoWialon: combustibleRouter.recorridoWialon }));
 app.use('/api/guias-remision', require('./routes/guias_remision')(db, broadcast, logAudit));
 app.use('/api/guia-transportista', require('./routes/guia_transportista')(db, broadcast, logAudit));
 app.use('/api/guia-remitente', require('./routes/guia_remitente')(db, broadcast, logAudit));

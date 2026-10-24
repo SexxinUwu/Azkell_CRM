@@ -2308,6 +2308,14 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // Recorrido GPS de un viaje (lo usa operaciones al cerrar la orden). Devuelve km o null.
+    router.recorridoWialon = async (req, { placa, fechaInicio, fechaFin }) => {
+        const { sid, baseUrl, cache } = await getWialonContext(req.db || db);
+        if (!cache.targetResourceId || !cache.targetTemplateId) return null;
+        const data = await consultarTelemetriaViajeWialon(baseUrl, sid, cache, placa, fechaInicio, fechaFin);
+        return data ? data.recorridoKmGps : null;
+    };
+
     return router;
 };
 

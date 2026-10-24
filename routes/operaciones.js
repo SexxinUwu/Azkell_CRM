@@ -5,7 +5,7 @@ const { recalcularLiquidacionViaje } = require('../services/liquidacion_viaje');
 const { documentosVencidosPara, mensajeAdvertencia } = require('../services/documentos_flota');
 const { rentabilidadPeriodo } = require('../services/rentabilidad');
 
-module.exports = function (db, broadcast, logAudit) {
+module.exports = function (db, broadcast, logAudit, opciones = {}) {
     const router = express.Router();
 
     function getDb(req) {
@@ -55,6 +55,63 @@ module.exports = function (db, broadcast, logAudit) {
             _remotePool = mysql.createPool(REMOTE_CONFIG);
         }
         return _remotePool;
+    }
+
+    // ── Recorrido GPS del viaje (km que midió Wialon; se guarda una vez al cerrar la orden) ──
+    // `opciones.recorridoWialon(req, { placa, fechaInicio, fechaFin })` es la consulta de telemetría de
+    // routes/combustible.js (consultarTelemetriaViajeWialon) y debe devolver km o null.
+    // - Sin función inyectada: no guarda nada (queda NULL para un cierre posterior).
+    // - Wialon falla, no responde a tiempo o no hay dato: guarda NULL con fuente 'ODOMETRO'.
+    // - Si la orden ya tiene fuente guardada, no vuelve a consultar Wialon.
+    // Nunca lanza: el cierre del viaje no depende de Wialon.
+    const TIMEOUT_RECORRIDO_WIALON_MS = 20000;
+
+    async function guardarRecorridoGpsViaje(req, tdb, codeViaje) {
+        try {
+            const recorridoWialon = opciones && opciones.recorridoWialon;
+            if (typeof recorridoWialon !== 'function') return;
+
+            const [rows] = await tdb.query(
+                `SELECT placa_tracto,
+                        DATE_FORMAT(COALESCE(fecha_inicio, fecha_viaje), '%Y-%m-%d %H:%i:%s') AS ini,
+                        DATE_FORMAT(fecha_fin, '%Y-%m-%d %H:%i:%s') AS fin,
+                        km_recorrido_gps_fuente
+                 FROM operaciones_ordenes_viaje
+                 WHERE viaje = ? LIMIT 1`,
+                [codeViaje]
+            );
+            if (!rows.length || rows[0].km_recorrido_gps_fuente) return;
+
+            const { placa_tracto, ini, fin } = rows[0];
+            let km = null;
+            if (placa_tracto && ini && fin) {
+                let timer = null;
+                try {
+                    const timeout = new Promise((_, reject) => {
+                        timer = setTimeout(() => reject(new Error('Wialon no respondió a tiempo')), TIMEOUT_RECORRIDO_WIALON_MS);
+                    });
+                    const valor = await Promise.race([
+                        recorridoWialon(req, { placa: placa_tracto, fechaInicio: ini, fechaFin: fin }),
+                        timeout
+                    ]);
+                    const n = Number(valor);
+                    if (Number.isFinite(n) && n > 0) km = Math.round(n * 10) / 10;
+                } catch (errWialon) {
+                    console.warn('[Operaciones] Recorrido GPS sin dato para', codeViaje, '-', errWialon.message);
+                } finally {
+                    clearTimeout(timer);
+                }
+            }
+
+            await tdb.query(
+                `UPDATE operaciones_ordenes_viaje
+                 SET km_recorrido_gps = ?, km_recorrido_gps_fuente = ?
+                 WHERE viaje = ? AND km_recorrido_gps_fuente IS NULL`,
+                [km, km !== null ? 'WIALON' : 'ODOMETRO', codeViaje]
+            );
+        } catch (err) {
+            console.warn('[Operaciones] No se pudo guardar el recorrido GPS del viaje', codeViaje, '-', err.message);
+        }
     }
 
     // ── GET /api/operaciones/ordenes-viaje ────────────────────────
@@ -588,6 +645,7 @@ module.exports = function (db, broadcast, logAudit) {
                 });
             }
 
+            await guardarRecorridoGpsViaje(req, tdb, codeViaje);
             await recalcularLiquidacionViaje(tdb, codeViaje).catch(() => {});
             res.json({ ok: true, message: `El viaje ${codeViaje} ha sido finalizado exitosamente.` });
         } catch (err) {
@@ -2122,6 +2180,7 @@ module.exports = function (db, broadcast, logAudit) {
                                     usuario_finalizacion = COALESCE(usuario_finalizacion, ?)
                                 WHERE viaje = ?
                             `, [nowStr, userFinaliza, viajeCode]);
+                            await guardarRecorridoGpsViaje(req, tdb, viajeCode);
                             await recalcularLiquidacionViaje(tdb, viajeCode).catch(() => {});
                         }
                     }
