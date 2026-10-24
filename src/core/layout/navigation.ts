@@ -44,8 +44,6 @@ export interface NavSection {
 }
 
 const ver = (...claves: string[]) => claves.map(c => `${c}.ver`);
-const PRONTO = ['pronto.ver'];
-const pronto = (key: string, label: string, icon: LucideIcon): NavItem => ({ key, label, icon, permissions: PRONTO, pronto: true });
 
 const SECCIONES_BASE: NavSection[] = [
   {
@@ -224,7 +222,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: Building2, permissions: ver('administracion', 'cfg_empresa') },
       { key: 'notificaciones', label: 'Notificaciones', to: '/sistema/notificaciones', icon: Bell, permissions: ver('administracion') },
       { key: 'apariencia', label: 'Apariencia', to: '/perfil', icon: Palette, permissions: [] },
-      pronto('accesibilidad', 'Accesibilidad e idioma', Accessibility),
+      { key: 'accesibilidad', label: 'Accesibilidad e idioma', to: '/sistema/accesibilidad', icon: Accessibility, permissions: [] },
       { key: 'integraciones', label: 'Integraciones', clasico: 'sistema/integraciones', icon: Cog, permissions: ver('integraciones', 'administracion') },
     ],
   },

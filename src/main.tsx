@@ -7,15 +7,18 @@ import './core/styles/tokens.css';
 import './core/styles/base.css';
 import './core/ui/ui.css';
 import './core/ui/listado.css';
+import './modules/sistema/accesibilidad.css';
 import { AuthProvider } from './core/auth/AuthProvider';
 import { ToastProvider } from './core/ui/Toast';
 import { ApiError } from './core/api/client';
 import App from './App';
 import { iniciarAcento } from './core/lib/accent';
 import { iniciarTema } from './core/lib/theme';
+import { aplicarPreferencias } from './core/lib/preferencias';
 
 iniciarTema(); // claro / oscuro / automático, antes de pintar
 iniciarAcento(); // color elegido, antes de pintar
+aplicarPreferencias(); // tamaño de texto, contraste y movimiento, antes de pintar
 
 const queryClient = new QueryClient({
   defaultOptions: {

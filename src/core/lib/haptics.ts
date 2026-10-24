@@ -1,5 +1,6 @@
 // Respuesta háptica breve (skill apple-design §13): solo en momentos con significado
 // — encaje de una selección, éxito, alerta. Funciona en Android; iOS Safari la ignora.
+import { vibracionActiva } from './preferencias';
 
 const PATTERNS = {
   selection: 6,          // cambiar de pestaña, encajar en un valor
@@ -10,6 +11,7 @@ const PATTERNS = {
 export function haptic(kind: keyof typeof PATTERNS = 'selection') {
   try {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!vibracionActiva()) return;
     navigator.vibrate?.(PATTERNS[kind] as number | number[]);
   } catch {
     /* sin soporte: no pasa nada */

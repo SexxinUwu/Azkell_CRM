@@ -1,0 +1,85 @@
+/* Accesibilidad: cada preferencia es un atributo en <html> (lo pone aplicarPreferencias) */
+
+/* Texto en negrita */
+html[data-negrita='si'] body { font-weight: 500; }
+
+/* Alto contraste: bordes y textos secundarios más oscuros (claro) o más claros (oscuro) */
+html[data-contraste='alto'] {
+  --separator: #5c5c63;
+  --label-2: #1d1d1f;
+  --label-3: #3a3a40;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-contraste='alto']:not([data-theme='light']) {
+    --separator: #9a9aa3;
+    --label-2: #f2f2f7;
+    --label-3: #d1d1d6;
+  }
+}
+html[data-contraste='alto'][data-theme='dark'] {
+  --separator: #9a9aa3;
+  --label-2: #f2f2f7;
+  --label-3: #d1d1d6;
+}
+
+/* Reducir movimiento: sin animaciones ni transiciones (las transiciones terminan al instante) */
+html[data-movimiento='reducido'] *,
+html[data-movimiento='reducido'] *::before,
+html[data-movimiento='reducido'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Reducir transparencias: superficies sólidas, sin desenfoque */
+html[data-transparencia='reducida'] * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Botones y filas más grandes para tocar con el dedo o con guantes */
+html[data-tactil='grande'] button,
+html[data-tactil='grande'] a.row,
+html[data-tactil='grande'] .row,
+html[data-tactil='grande'] .modulo-fila {
+  min-height: 48px;
+}
+
+/* Página de Accesibilidad */
+.acc-vista {
+  border-radius: 20px;
+  padding: 20px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--separator), 0 10px 30px -18px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.acc-vista__titulo { font-size: 1.05rem; font-weight: 700; }
+.acc-vista__cuerpo { color: var(--label-2); line-height: 1.45; }
+.acc-vista__fila {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 14px; background: var(--fill-1);
+}
+.acc-vista__icono {
+  width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--accent-tint); color: var(--accent-ink); flex-shrink: 0;
+}
+.acc-tamano { display: flex; flex-direction: column; gap: 10px; }
+.acc-tamano input[type='range'] { width: 100%; accent-color: var(--accent); }
+.acc-tamano__escala { display: flex; justify-content: space-between; align-items: baseline; color: var(--label-2); }
+.acc-tarjeta { display: flex; flex-direction: column; gap: 14px; padding: 20px; }
+.acc-tarjeta__titulo {
+  display: flex; align-items: center; gap: 8px; margin: 0;
+  font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--label-2);
+}
+.acc-fila { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; }
+.acc-fila__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.acc-fila__titulo { font-size: 1rem; color: var(--label); }
+.acc-fila__detalle { font-size: 0.8125rem; color: var(--label-2); line-height: 1.35; }
+.acc-marca { color: var(--green-ink); flex-shrink: 0; }
+.acc-pie { display: flex; justify-content: center; padding: 8px 0 32px; }
+.acc-guardado {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 600; color: var(--green-ink);
+}
