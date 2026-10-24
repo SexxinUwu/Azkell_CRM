@@ -374,7 +374,8 @@ export default function Chasis3D({ configuracion, llantas, activa, vista, onSele
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     const canvas = renderer.domElement;
-    canvas.style.touchAction = 'pan-y';
+    // touch-action: none para que el dedo arrastre la llanta y no desplace la página en medio del gesto
+    canvas.style.touchAction = 'none';
     cont.appendChild(canvas);
 
     const scene = new THREE.Scene();
