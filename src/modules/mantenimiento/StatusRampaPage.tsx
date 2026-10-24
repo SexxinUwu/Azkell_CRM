@@ -539,7 +539,7 @@ function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasIns
     <div className="rt-caja">
       <table className="rt">
         <colgroup>
-          {[150, 104, 72, 112, 150, undefined, 104, 72, 96, 150, 196, ...(verInspeccion ? [150] : []), 44].map((w, i) => (
+          {[130, 96, 60, 96, 130, undefined, 96, 60, 84, 132, 160, ...(verInspeccion ? [150] : []), 104].map((w, i) => (
             <col key={i} style={w ? { width: w } : undefined} />
           ))}
         </colgroup>
@@ -565,7 +565,7 @@ function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasIns
                 <td>{soloHora(e.hora_ingreso)}</td>
                 <td><span className="rt__placa">{e.placa ?? '—'}</span></td>
                 <td><span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{e.situacion ?? '—'}</span></td>
-                <td className="rt__obs">{e.observaciones ?? '—'}</td>
+                <td className="rt__obs"><span className="rt__obs-texto" title={e.observaciones ?? ''}>{e.observaciones ?? '—'}</span></td>
                 <td>{soloFecha(e.salida_programada)}</td>
                 <td>{soloHora(e.hora_salida_programada)}</td>
                 <td><span className="rt__tiempo" style={{ color: tiempoColor(horas) }}>{horas > 0 ? formatTiempo(horas) : '—'}</span></td>
