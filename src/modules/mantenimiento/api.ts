@@ -150,10 +150,27 @@ export function estadoColor(estado: string): string {
   }
 }
 
+/** La base guarda la hora de Perú, pero el servidor la envía marcada como UTC (…T09:20:00.000Z).
+ *  Se toma tal cual: 09:20 se ve como 09:20, igual que en el clásico (no se convierte a otra zona). */
+const HORA_UTC_MARCADA = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?Z$/;
+function sinZonaFechas<T>(v: T): T {
+  if (typeof v === 'string') {
+    const m = HORA_UTC_MARCADA.exec(v);
+    return (m ? `${m[1]} ${m[2]}` : v) as T;
+  }
+  if (Array.isArray(v)) return v.map(sinZonaFechas) as T;
+  if (v && typeof v === 'object') {
+    const r: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v as Record<string, unknown>)) r[k] = sinZonaFechas(x);
+    return r as T;
+  }
+  return v;
+}
+
 export function useOrdenesTrabajoData() {
   return useQuery<OrdenTrabajo[]>({
     queryKey: ['mant', 'ots'],
-    queryFn: () => api('/ordenes-trabajo'),
+    queryFn: async () => sinZonaFechas(await api<OrdenTrabajo[]>('/ordenes-trabajo')),
     staleTime: 30_000,
   });
 }
@@ -405,7 +422,7 @@ export function useTrabajosOT(desde = '', hasta = '') {
   const rango = desde && hasta ? `?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}` : '';
   return useQuery<TrabajoOT[]>({
     queryKey: ['mant', 'trabajos-ot', desde, hasta],
-    queryFn: () => api(`/ot-trabajos${rango}`),
+    queryFn: async () => sinZonaFechas(await api<TrabajoOT[]>(`/ot-trabajos${rango}`)),
     staleTime: 30_000,
   });
 }
