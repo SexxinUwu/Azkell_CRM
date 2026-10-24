@@ -15,6 +15,7 @@ import './inspecciones.css';
 
 // Inspección de neumáticos (React). Mismo esquema que el clásico (modal_inspeccion.js):
 //   GET  /neumaticos/placa-ultima/:placa  → configuración, posiciones y última inspección
+//   GET  /neumaticos/km-gps/:placa?fecha  → odómetro GPS (Wialon) en la fecha de la inspección
 //   GET  /neumaticos/catalogos            → marcas, medidas y modelos sugeridos
 //   POST /neumaticos/inspecciones         → items con medidas, ROT, estado, acción y fotos (base64; el servidor las sube a S3)
 // Diferencia con el clásico: el esquema del chasis es un SVG (ChasisEsquemaVisual) con perspectivas
@@ -29,7 +30,7 @@ interface PosicionUltima {
   presion_actual?: number | string | null;
 }
 interface PlacaUltima {
-  ok?: boolean; configuracion?: string; km_sugerido?: number | string | null; fecha_inspeccion?: string | null; km_vehiculo?: number | string | null;
+  ok?: boolean; configuracion?: string; fecha_inspeccion?: string | null; km_vehiculo?: number | string | null;
   inspector?: string | null; datosPosiciones?: Record<string, PosicionUltima>;
 }
 interface Llanta {
@@ -161,12 +162,23 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
   const [errores, setErrores] = useState<Errores>({});
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Odómetro GPS de la fecha: si ya llegó, la última inspección no lo pisa (las dos consultas corren en paralelo)
+  const kmDesdeGps = useRef(false);
+
+  // Odómetro GPS (Wialon) de la unidad en la fecha de la inspección; se actualiza al cambiar la fecha
+  const kmGps = useQuery<{ ok?: boolean; km: number | null; fecha: string | null }>({
+    queryKey: ['neumaticos', 'km-gps', placa, fecha],
+    enabled: !!placa && !!fecha,
+    queryFn: () => api<{ ok?: boolean; km: number | null; fecha: string | null }>(`/neumaticos/km-gps/${encodeURIComponent(placa ?? '')}`, { query: { fecha } }),
+    staleTime: 0,
+  });
 
   // Al abrir una placa se reinicia el formulario
   useEffect(() => {
     if (!placa) return;
     setFecha(hoyISO()); setKm(''); setDias(30); setObs(''); setConfig(''); setLlantas([]);
     setActiva('1'); setNuevaPos(''); setDestinoRot(''); setErrores({}); setError(null);
+    kmDesdeGps.current = false;
   }, [placa]);
 
   // Con la última inspección: configuración, kilometraje y posiciones precargadas (se pueden corregir)
@@ -174,8 +186,8 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
     const u = ultima.data;
     if (!u) return;
     setConfig(normalizarConfiguracion(u.configuracion));
-    // Odómetro: de la telemetría de la unidad (o Placas); si no hay, el de la última inspección
-    setKm(texto(u.km_sugerido ?? u.km_vehiculo));
+    // Kilometraje: el GPS de la fecha tiene prioridad; si aún no llegó, el de la última inspección
+    if (!kmDesdeGps.current) setKm(texto(u.km_vehiculo));
     const lista = Object.entries(u.datosPosiciones ?? {})
       .sort(([a], [b]) => (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b))
       .map(([clave, d]): Llanta => ({
@@ -186,6 +198,15 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
     setLlantas(lista);
     setActiva(lista[0]?.posicion ?? '1');
   }, [ultima.data]);
+
+  // Llega (o cambia con la fecha) la lectura GPS: se precarga el km; sigue editable
+  useEffect(() => {
+    const g = kmGps.data;
+    if (g && g.km !== null && g.km !== undefined) {
+      kmDesdeGps.current = true;
+      setKm(String(g.km));
+    }
+  }, [kmGps.data]);
 
   // Al elegir una configuración, aparecen sus posiciones (el chasis y el conteo de llantas se actualizan)
   useEffect(() => {
@@ -304,6 +325,12 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
       : { tono: 'info', titulo: 'Última inspección de neumáticos', texto: <>Fue el <strong>{fechaDMY(ultimaFecha)}</strong> (hace {hace} días){inspectorUltimo ? <> por <strong>{inspectorUltimo}</strong></> : null}.</> }
     : { tono: 'neutral', titulo: 'Sin inspecciones previas', texto: <>Esta unidad no tiene inspecciones de neumáticos registradas.</> };
   const otrasPosiciones = llantas.filter(l => l.posicion !== activa);
+  // Nota bajo el odómetro: fecha de la lectura GPS que devolvió el servidor
+  const notaGps = kmGps.data
+    ? (kmGps.data.km === null || kmGps.data.km === undefined
+        ? 'Sin lectura GPS para esa fecha'
+        : `GPS del ${fechaDMY(aFecha(kmGps.data.fecha ?? fecha))}`)
+    : undefined;
 
   return (
     <Sheet open={!!placa} onClose={() => !enviando && onClose()} anclaAbajo title={`Neumáticos · ${placa ?? ''}`}
@@ -330,7 +357,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
               <Field label="Inspector" error={errores.inspector}>
                 {p => <TextInput {...p} value={usuario} disabled />}
               </Field>
-              <Field label="Kilometraje (odómetro)" error={errores.km}>
+              <Field label="Kilometraje (odómetro)" error={errores.km} hint={notaGps}>
                 {p => <TextInput {...p} inputMode="numeric" value={km} onChange={e => { setKm(e.target.value.replace(/\D/g, '')); setErrores(x => ({ ...x, km: undefined })); }} placeholder="Ej. 154200" />}
               </Field>
               <Field label="Días propuestos para la próxima">

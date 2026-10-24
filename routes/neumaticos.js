@@ -853,6 +853,39 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ============================================================
+    // 5.4 🛰️ ODÓMETRO GPS (WIALON) DE UNA PLACA EN UNA FECHA
+    // ============================================================
+    router.get('/km-gps/:placa', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const placaNorm = String(req.params.placa || '').replace(/[-\s]/g, '').toUpperCase();
+            const pedida = String(req.query.fecha || '');
+            // Sin fecha válida, se usa la de hoy en Lima (no la zona horaria del servidor)
+            const fecha = /^\d{4}-\d{2}-\d{2}$/.test(pedida)
+                ? pedida
+                : new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+
+            const [rows] = await tdb.query(`
+                SELECT km_gps, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha
+                FROM km_snapshots
+                WHERE UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ? AND fecha <= ?
+                ORDER BY fecha DESC
+                LIMIT 1
+            `, [placaNorm, fecha]);
+
+            const fila = rows && rows.length ? rows[0] : null;
+            res.json({
+                ok: true,
+                km: fila && fila.km_gps !== null && fila.km_gps !== undefined ? Number(fila.km_gps) : null,
+                fecha: fila ? fila.fecha : null
+            });
+        } catch (err) {
+            console.error("Error en km-gps:", err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // ============================================================
     // 5.5 🔍 OBTENER ÚLTIMA INSPECCIÓN DE UNA PLACA POR POSICIÓN (AUTOPOBLADO)
     // ============================================================
     router.get('/placa-ultima/:placa', async (req, res) => {
@@ -906,17 +939,10 @@ module.exports = function (db, broadcast, logAudit) {
 
             const configPlaca = (pRows && pRows.length > 0) ? (pRows[0].configuracion || pRows[0].tipo || '') : '';
 
-            // Kilometraje sugerido: odómetro de Placas; si no hay, el de la última inspección.
-            // (telemetria_can.recorrido_km es la distancia de cada viaje, no el odómetro total)
-            const [odoRows] = await tdb.query('SELECT odometro FROM placas WHERE UPPER(TRIM(placa)) = UPPER(TRIM(?)) LIMIT 1', [placa]).catch(() => [[]]);
-            const kmPlaca = odoRows && odoRows.length ? Number(odoRows[0].odometro) || null : null;
-            const kmSugerido = kmPlaca ?? (lastInsp ? lastInsp.km_vehiculo : null);
-
             res.json({
                 ok: true,
                 placa,
                 configuracion: configPlaca,
-                km_sugerido: kmSugerido,
                 id_inspeccion: lastInsp ? lastInsp.id_inspeccion : null,
                 fecha_inspeccion: lastInsp ? lastInsp.fecha_inspeccion : null,
                 km_vehiculo: lastInsp ? lastInsp.km_vehiculo : null,
