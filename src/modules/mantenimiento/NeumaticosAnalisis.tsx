@@ -2,21 +2,21 @@ import '../almacen/almacen.css';
 import './mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Camera, ChevronRight, Disc3, Download, Eye, FileSpreadsheet, Plus, RefreshCw, ScanSearch, Search, Trash2, Truck, Upload } from 'lucide-react';
+import { ChevronRight, Disc3, Download, Eye, FileSpreadsheet, Plus, RefreshCw, ScanSearch, Search, Trash2, Truck, Upload } from 'lucide-react';
 import { api, errorMessage } from '../../core/api/client';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
+import { Badge, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { DonaGrafico } from '../../core/ui/Graficos';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
+import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
-import { VisorFotos, type FotoVisor } from '../../core/ui/VisorFotos';
 import {
   EsquemaPlacaSheet, ImportarNeumaticosSheet, MedidaDetalleSheet, descargarPlantillaNeumaticos, exportarNeumaticos, type EstadoActual,
 } from './NeumaticosExtras';
 import { NeumaticosNuevaInspeccionSheet } from './NeumaticosNuevaInspeccionSheet';
-import { MM_CRITICO, MM_PREVENTIVO, TINTA_TONO, tonoMm } from './neumaticosSemaforo';
+import { InspeccionDetalleSheet } from './NeumaticosDetalleSheet';
+import { MM_CRITICO, TINTA_TONO, tonoMm } from './neumaticosSemaforo';
 
 // Análisis y Rendimiento de Neumáticos (clásico: modulos/mantenimiento/neumaticos-analisis).
 // GET /api/neumaticos/analisis: todo se lee de la base de la empresa.
@@ -198,118 +198,6 @@ function VisorPlaca({ onInspeccionar, onEsquema }: { onInspeccionar: (placa: str
 }
 
 // ─── Detalle de una inspección (GET /neumaticos/inspecciones/:id) ─────────────
-
-interface DetalleLlanta {
-  id?: number; posicion?: string; marca?: string; modelo?: string; medida?: string; estado?: string;
-  r1?: number | null; r2?: number | null; r3?: number | null; r4?: number | null; remanente_promedio?: number | string | null;
-  presion_actual?: number | null; presion_ant?: number | null; observaciones?: string | null;
-  foto1?: string | null; foto2?: string | null; foto3?: string | null;
-}
-interface RespDetalle {
-  ok?: boolean; error?: string;
-  data: { id_inspeccion: string; placa: string; fecha_inspeccion: string; km_vehiculo: number | null; inspector?: string | null; detalles: DetalleLlanta[] };
-}
-
-/** Detalle de una inspección de neumáticos (medidas, presión, estado y fotos); lo usa también la ficha de inspección */
-export function InspeccionDetalleSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
-  const [fotos, setFotos] = useState<{ lista: FotoVisor[]; i: number } | null>(null);
-  const { data, isLoading, error } = useQuery<RespDetalle>({
-    queryKey: ['mant', 'neumaticos-detalle', id],
-    enabled: id !== null,
-    queryFn: async () => {
-      const r = await api<RespDetalle>(`/neumaticos/inspecciones/${encodeURIComponent(id ?? '')}`);
-      if (r.ok === false) throw new Error(r.error ?? 'Error cargando detalle');
-      return r;
-    },
-  });
-  const insp = data?.data;
-  return (
-    <>
-      <Sheet open={id !== null} onClose={onClose} title={`Inspección ${id ?? ''}`}
-        footer={<Button variant="secondary" onClick={onClose}>Cerrar</Button>}>
-        {error && <Notice tone="error">{errorMessage(error)}</Notice>}
-        {isLoading ? <PageLoader /> : insp && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>
-              <b style={{ color: 'var(--label-1)' }}>{insp.placa}</b> · {dia(insp.fecha_inspeccion)}
-              {insp.km_vehiculo ? ` · ${num(insp.km_vehiculo)} km` : ''}{insp.inspector ? ` · ${insp.inspector}` : ''}
-            </div>
-            {insp.detalles.length === 0 ? (
-              <EmptyState icon={<Disc3 size={22} />} title="Sin llantas">No se encontraron llantas registradas para esta inspección.</EmptyState>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table className="inv-kardex" style={{ minWidth: '52rem', fontSize: '0.8rem' }}>
-                  <thead><tr>
-                    <th style={{ width: 44, textAlign: 'center' }}>Pos</th>
-                    <th>Marca / Medida</th>
-                    <th style={{ textAlign: 'center', width: 44 }}>R1</th>
-                    <th style={{ textAlign: 'center', width: 44 }}>R2</th>
-                    <th style={{ textAlign: 'center', width: 44 }}>R3</th>
-                    <th style={{ textAlign: 'center', width: 95 }}>PROM (MM)</th>
-                    <th style={{ textAlign: 'center' }}>Presión</th>
-                    <th style={{ textAlign: 'center' }}>Estado</th><th style={{ textAlign: 'center' }}>Fotos</th><th>Observaciones</th>
-                  </tr></thead>
-                  <tbody>
-                    {insp.detalles.map((d, k) => {
-                      const prom = Number(d.remanente_promedio ?? 0) || 0;
-                      const tono = tonoMm(prom);
-                      const lista = [d.foto1, d.foto2, d.foto3].filter((f): f is string => typeof f === 'string' && f.trim() !== '')
-                        .map((url, n) => ({ url, titulo: `Pos ${d.posicion} · foto ${n + 1}` }));
-                      return (
-                        <tr key={(d.id ?? '') + String(d.posicion) + k}>
-                          <td style={{ textAlign: 'center' }}><b>{String(d.posicion ?? '-').toUpperCase()}</b></td>
-                          <td>
-                            <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{(d.marca || '---').toUpperCase()}{d.modelo ? ` (${d.modelo.toUpperCase()})` : ''}</div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--label-2)' }}>{(d.medida || '---').toUpperCase()} • {(d.estado || 'NUEVA').toUpperCase()}</div>
-                          </td>
-                          <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.r1 ?? 0}</td>
-                          <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.r2 ?? 0}</td>
-                          <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.r3 ?? 0}</td>
-                          <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>
-                            <span style={{
-                              display: 'inline-block',
-                              padding: '2px 8px',
-                              borderRadius: '9999px',
-                              fontSize: '0.8rem',
-                              fontWeight: 800,
-                              background: tono === 'red' ? '#fee2e2' : tono === 'amber' ? '#fef3c7' : '#dcfce7',
-                              color: tono === 'red' ? '#991b1b' : tono === 'amber' ? '#92400e' : '#166534',
-                              border: `1px solid ${tono === 'red' ? '#fca5a5' : tono === 'amber' ? '#fde68a' : '#86efac'}`
-                            }}>
-                              {prom.toFixed(1)} mm
-                            </span>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            {d.presion_actual ? <b>{d.presion_actual} PSI</b> : '---'}
-                            {d.presion_ant ? <div style={{ fontSize: '0.7rem', color: 'var(--label-2)' }}>(Ant: {d.presion_ant})</div> : null}
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <Badge tone={tono === 'green' ? 'green' : tono === 'amber' ? 'amber' : 'red'}>
-                              {prom < MM_CRITICO ? `Crítica (<${MM_CRITICO} mm)` : prom <= MM_PREVENTIVO ? `Alerta (${MM_CRITICO}-${MM_PREVENTIVO} mm)` : `Óptima (>${MM_PREVENTIVO} mm)`}
-                            </Badge>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            {lista.length === 0 ? '—' : lista.map((_f, n) => (
-                              <Button key={n} variant="secondary" size="sm" icon={<Camera size={12} />} onClick={() => setFotos({ lista, i: n })}>
-                                Ver {lista.length > 1 ? n + 1 : ''}
-                              </Button>
-                            ))}
-                          </td>
-                          <td style={{ color: 'var(--label-2)' }}>{d.observaciones || 'Ninguna'}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </Sheet>
-      <VisorFotos open={!!fotos} onClose={() => setFotos(null)} fotos={fotos?.lista ?? []} indiceInicial={fotos?.i ?? 0} titulo="Fotografía de neumático" />
-    </>
-  );
-}
 
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 

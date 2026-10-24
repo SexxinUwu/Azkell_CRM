@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPortal } from 'react-dom';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { AlertTriangle, Check, Disc3, Download, Minus, Pencil, Share2, Wrench, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
@@ -10,10 +9,11 @@ import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { spring } from '../../core/lib/motion';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { Notice } from '../../core/ui/Display';
-import { InspeccionDetalleSheet } from '../mantenimiento/NeumaticosAnalisis';
+import { InspeccionDetalleSheet } from '../mantenimiento/NeumaticosDetalleSheet';
 import { compartirPDF, descargarArchivo } from '../../core/lib/pdf';
 import { fallaEstadoColor, useChecklist, type ReporteFalla } from '../flota/api';
 import { GenerarOTsSheet } from '../flota/GenerarOTsSheet';
+import { VisorFotos, type FotoVisor } from '../../core/ui/VisorFotos';
 import { clavePlaca, useFotosFirmadas, useInspeccionesNeumaticos, type Inspeccion, type PuntoRevisado } from './api';
 import { pdfInspeccion } from './inspeccionPdf';
 
@@ -34,7 +34,7 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
   const navigate = useNavigate();
   const { can, user } = useAuth();
   const checklist = useChecklist();
-  const [ampliada, setAmpliada] = useState<string | null>(null);
+  const [visor, setVisor] = useState<{ lista: FotoVisor[]; i: number } | null>(null);
   const [otAbierta, setOtAbierta] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<{ tono: 'error' | 'neutral'; texto: string } | null>(null);
@@ -42,6 +42,11 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
   const fotos = useMemo(() => [...(i?.puntos.map(p => p.foto).filter(Boolean) ?? []), i?.firma ?? ''].filter(Boolean), [i]);
   const firmadas = useFotosFirmadas(fotos);
   const ver = (url: string) => firmadas.data?.[url] ?? url;
+  // Abre el visor con todas las fotos de la inspección, empezando por la tocada
+  const abrirFoto = (foto: string) => {
+    const lista: FotoVisor[] = (i?.puntos ?? []).filter(p => p.foto).map(p => ({ url: ver(p.foto), titulo: p.item }));
+    setVisor({ lista, i: Math.max(0, lista.findIndex(f => f.url === ver(foto))) });
+  };
   // El PDF necesita las fotos ya firmadas: si todavía se están firmando, los botones esperan
   const fotosListas = fotos.length === 0 || !firmadas.isPending;
 
@@ -197,7 +202,7 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
                         {!['OK', 'FALLA', 'SIN DATOS'].includes(p.estado) && <div className="row__subtitle">{p.estado}</div>}
                       </div>
                       {p.foto && (
-                        <button type="button" className="insp-foto pressable" onClick={() => setAmpliada(ver(p.foto))} aria-label={`Ver foto de ${p.item}`}>
+                        <button type="button" className="insp-foto pressable" onClick={() => abrirFoto(p.foto)} aria-label={`Ver foto de ${p.item}`}>
                           <img src={ver(p.foto)} alt="" loading="lazy" />
                         </button>
                       )}
@@ -220,18 +225,8 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
       {reporte && <GenerarOTsSheet falla={reporte} open={otAbierta} onClose={() => setOtAbierta(false)} />}
       <InspeccionDetalleSheet id={neuDetalle} onClose={() => setNeuDetalle(null)} />
 
-      {/* Foto ampliada */}
-      {createPortal(
-        <AnimatePresence>
-          {ampliada && (
-            <motion.div className="insp-visor" onClick={() => setAmpliada(null)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-              <motion.img src={ampliada} alt="Foto de la falla" initial={{ scale: reduce ? 1 : 0.92 }} animate={{ scale: 1 }} exit={{ scale: reduce ? 1 : 0.95 }} transition={spring} />
-              <button type="button" className="insp-visor__cerrar glass-btn" aria-label="Cerrar foto"><X size={20} /></button>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body,
-      )}
+      {/* Visor de fotos: el mismo de Seguridad (galería con zoom y miniaturas) */}
+      <VisorFotos open={visor !== null} onClose={() => setVisor(null)} fotos={visor?.lista ?? []} indiceInicial={visor?.i ?? 0} titulo="Fotos de la inspección" />
     </>
   );
 }

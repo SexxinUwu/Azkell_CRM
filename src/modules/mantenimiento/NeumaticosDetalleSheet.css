@@ -1,0 +1,71 @@
+/* Detalle de una inspección de neumáticos: encabezado, datos y una tarjeta por llanta */
+.neu-det { display: flex; flex-direction: column; gap: var(--s-4); }
+.neu-det__cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; }
+.neu-det__id { display: flex; flex-direction: column; align-items: flex-end; }
+.neu-det__id span { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--label-2); }
+.neu-det__id strong { font-family: var(--font-mono); font-size: 1rem; color: var(--accent-ink); }
+
+.neu-det__datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--s-2); }
+.neu-det__dato { display: flex; flex-direction: column; gap: 4px; padding: var(--s-3); border-radius: var(--r-lg); background: var(--fill-1); }
+.neu-det__dato-etiqueta { display: inline-flex; align-items: center; gap: 6px; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--label-2); }
+.neu-det__dato-valor { font-size: 0.9375rem; font-weight: 700; color: var(--label); }
+
+.neu-det__leyenda { margin: 0; font-size: 0.75rem; color: var(--label-2); }
+
+.neu-det__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: var(--s-3); }
+.neu-det__llanta {
+  display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4);
+  border-radius: var(--r-xl); background: var(--surface); box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.neu-det__llanta-cab { display: flex; align-items: center; gap: var(--s-3); }
+.neu-det__pos {
+  display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; flex-shrink: 0;
+  border-radius: 50%; background: var(--ink); color: var(--label-inverse); font-weight: 800; font-size: 0.8125rem;
+}
+.neu-det__llanta-id { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.neu-det__llanta-id strong { font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.neu-det__llanta-id span { font-size: 0.75rem; color: var(--label-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.neu-det__pill { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; white-space: nowrap; }
+.neu-det__pill--green { color: var(--green-ink); background: var(--green-tint); }
+.neu-det__pill--amber { color: var(--amber-ink); background: var(--amber-tint); }
+.neu-det__pill--red { color: var(--red-ink); background: var(--red-tint); }
+.neu-det__pill--gray { color: var(--label-2); background: var(--fill); }
+
+.neu-det__medidas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2); }
+.neu-det__medida { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s-2) 4px; border-radius: var(--r-lg); background: var(--fill-1); }
+.neu-det__medida span { font-size: 0.6875rem; font-weight: 700; color: var(--label-2); }
+.neu-det__medida strong { font-family: var(--font-mono); font-size: 1rem; font-variant-numeric: tabular-nums; }
+.neu-det__medida--green strong { color: var(--green-ink); }
+.neu-det__medida--amber strong { color: var(--amber-ink); }
+.neu-det__medida--red strong { color: var(--red-ink); }
+.neu-det__medida--gray strong { color: var(--label-3); }
+.neu-det__medida--prom { background: var(--fill-2); }
+.neu-det__medida--green { background: var(--green-tint); }
+.neu-det__medida--amber { background: var(--amber-tint); }
+.neu-det__medida--red { background: var(--red-tint); }
+.neu-det__medida--prom.neu-det__medida--green { background: var(--green-tint); }
+.neu-det__medida--prom.neu-det__medida--amber { background: var(--amber-tint); }
+.neu-det__medida--prom.neu-det__medida--red { background: var(--red-tint); }
+
+.neu-det__pie { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap; font-size: 0.8125rem; }
+.neu-det__presion { color: var(--label); }
+.neu-det__presion small { color: var(--label-2); }
+.neu-det__estado { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; color: var(--label-2); }
+
+.neu-det__obs {
+  margin: 0; padding: var(--s-2) var(--s-3); border-radius: var(--r-lg); background: var(--fill-1);
+  font-size: 0.8125rem; line-height: 1.4; color: var(--label-2);
+}
+
+.neu-det__fotos { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.neu-det__foto {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 2.25rem; padding: 0 var(--s-3);
+  border: 0; border-radius: var(--r-full); background: var(--accent-tint); color: var(--accent-ink);
+  font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer;
+}
+.neu-det__sin-fotos { font-size: 0.75rem; color: var(--label-3); }
+
+@media (max-width: 639px) {
+  .neu-det__grid { grid-template-columns: 1fr; }
+}
