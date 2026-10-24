@@ -466,7 +466,7 @@ export function StatusRampaPage() {
                   <RampaTabla entradas={tablaEntradas} ots={ordenes.data ?? []} tecnicosPorRampa={tecnicosPorRampa} verInspeccion={verInspeccion} ultimasInsp={ultimasInsp} puedeEditar={puedeEditar} onEditar={e => setFormulario({ entrada: e })} onLiberar={setLiberando} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); abrirRampa(e); }} />
                 </div>
                 <div className="rm-solo-movil">
-                  <RampaMovil entradas={tablaEntradas} tecnicosPorRampa={tecnicosPorRampa} verInspeccion={verInspeccion} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); abrirRampa(e); }} />
+                  <RampaMovil entradas={tablaEntradas} tecnicosPorRampa={tecnicosPorRampa} verInspeccion={verInspeccion} ultimasInsp={ultimasInsp} puedeEditar={puedeEditar} onEditar={e => setFormulario({ entrada: e })} onLiberar={setLiberando} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); abrirRampa(e); }} />
                 </div>
               </>
             )
@@ -610,34 +610,56 @@ function BadgeInspeccion({ placa, ultimas, onAbrir }: { placa: string | null; ul
   );
 }
 
-function RampaMovil({ entradas, tecnicosPorRampa, verInspeccion, ultimasInsp, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; tecnicosPorRampa: Map<string, string[]>; verInspeccion: boolean; ultimasInsp: Map<string, Inspeccion>; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
+function RampaMovil({ entradas, tecnicosPorRampa, verInspeccion, ultimasInsp, puedeEditar, onEditar, onLiberar, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; tecnicosPorRampa: Map<string, string[]>; verInspeccion: boolean; ultimasInsp: Map<string, Inspeccion>; puedeEditar: boolean; onEditar: (e: RampaEntrada) => void; onLiberar: (e: RampaEntrada) => void; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
   return (
     <div className="rm-lista">
       {entradas.map(e => {
         const horas = horasEnRampa(e.fecha_ingreso);
+        const tecs = tecnicosPorRampa.get(rampaId(e)) ?? [];
+        const motivo = motivoIngreso(e.observaciones);
+        const libre = e.estado === 'Libre';
+        // Es un div y no un botón: dentro hay otros botones (inspección, editar, liberar)
         return (
-          <button key={rampaId(e)} type="button" className="rm-card pressable" onClick={() => { haptic('selection'); onAbrir(e); }}>
+          <div key={rampaId(e)} role="button" tabIndex={0} className="rm-card pressable"
+            onClick={() => { haptic('selection'); onAbrir(e); }}
+            onKeyDown={ev => { if (ev.key === 'Enter') onAbrir(e); }}>
             <span className="rm-num" style={{ background: COLOR_RAMPA(e) }}>{NUM_RAMPA(e.rampa)}</span>
             <span className="rm-cuerpo">
               <span className="rm-cab">
                 <span className="rm-rampa">{e.rampa}</span>
-                <span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{e.situacion ?? '—'}</span>
+                <span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{libre ? 'Libre' : (e.situacion ?? '—')}</span>
               </span>
-              <strong className="rm-placa">{e.placa ?? '—'}</strong>
-              {(tecnicosPorRampa.get(rampaId(e)) ?? []).length > 0 && <span className="rm-km">Técnicos: {tecnicosPorRampa.get(rampaId(e))?.map(nombrePersona).join(', ')}</span>}
-              <span className="rm-fechas">
-                <span className="rm-chip rm-chip--in">Entrada {soloFecha(e.fecha_ingreso)} · {soloHora(e.hora_ingreso)}</span>
-                <span className="rm-chip rm-chip--out">Salida est. {soloFecha(e.salida_programada)} · {soloHora(e.hora_salida_programada)}</span>
-              </span>
-              <span className="rm-pie">
-                <span className="rm-km">KM: {e.km ? String(e.km) : '—'}</span>
-                {verInspeccion && <span className="rm-km"><BadgeInspeccion placa={e.placa} ultimas={ultimasInsp} onAbrir={onInspeccion} /></span>}
-                {horas > 0 && (
-                  <span className="rt__tiempo" style={{ color: tiempoColor(horas) }}><Clock size={11} /> {formatTiempo(horas)}</span>
-                )}
-              </span>
+              {libre ? (
+                <span className="rm-km">Bahía disponible para ingreso</span>
+              ) : (
+                <>
+                  {e.placa ? <LicensePlate plate={e.placa} size="sm" /> : null}
+                  {motivo && <span className="rm-motivo">{motivo}</span>}
+                  {tecs.length > 0 && (
+                    <span className="rm-tecnicos">{tecs.map(n => <span key={n} className="rt__tecnico">{nombrePersona(n)}</span>)}</span>
+                  )}
+                  <span className="rm-fechas">
+                    <span className="rm-chip rm-chip--in">Entrada {soloFecha(e.fecha_ingreso)} · {soloHora(e.hora_ingreso)}</span>
+                    <span className="rm-chip rm-chip--out">Salida est. {soloFecha(e.salida_programada)} · {soloHora(e.hora_salida_programada)}</span>
+                  </span>
+                  <span className="rm-pie">
+                    <span className="rm-km">KM: {e.km ? String(e.km) : '—'}</span>
+                    {verInspeccion && <BadgeInspeccion placa={e.placa} ultimas={ultimasInsp} onAbrir={onInspeccion} />}
+                    {horas > 0 && (
+                      <span className="rt__tiempo" style={{ color: tiempoColor(horas) }}><Clock size={11} /> {formatTiempo(horas)}</span>
+                    )}
+                  </span>
+                  {puedeEditar && (
+                    <span className="rm-acciones" onClick={ev => ev.stopPropagation()}>
+                      <button type="button" className="rm-accion" onClick={() => onEditar(e)}><Pencil size={16} /> Editar</button>
+                      <button type="button" className="rm-accion rm-accion--peligro" onClick={() => onLiberar(e)}><LogOut size={16} /> Liberar</button>
+                    </span>
+                  )}
+                </>
+              )}
+              {libre && <span className="rt__ingresar rm-ingresar">+ Ingresar</span>}
             </span>
-          </button>
+          </div>
         );
       })}
     </div>
