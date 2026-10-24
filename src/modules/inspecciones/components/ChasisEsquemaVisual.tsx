@@ -95,6 +95,47 @@ function Llanta({ x, y, pos, llanta, activa, onSelect, xray }: {
   );
 }
 
+/** Chasis de la vista cenital, como el clásico: largueros oscuros, ejes, cabina blanca con parabrisas, tanques en camiones
+ *  y lanza con pivote en remolques. En rayos X se atenúa, igual que en el clásico. */
+function Chasis({ c, xray }: { c: Configuracion; xray: boolean }) {
+  const bastidor = xray ? 'rgba(127, 240, 255, 0.35)' : '#334155';
+  const cromo = xray ? 'rgba(127, 240, 255, 0.35)' : '#cbd5e1';
+  const cabina = xray ? 'none' : '#f8fafc';
+  const trazo = xray ? '#32d7ff' : '#94a3b8';
+  const centrosEjes = c.ejes.map((_, i) => Y_INICIO + i * ALTURA_EJE + 4 + (ALTO + GAP) / 2 + ALTO / 2);
+  const yFin = (centrosEjes[centrosEjes.length - 1] ?? Y_INICIO) + 24;
+  const yIni = Y_INICIO - 16;
+  return (
+    <g opacity={xray ? 0.3 : 1} stroke={trazo} strokeWidth={1}>
+      {/* Largueros del bastidor */}
+      <rect x={122} y={yIni} width={6} height={yFin - yIni} rx={3} fill={bastidor} stroke="none" />
+      <rect x={172} y={yIni} width={6} height={yFin - yIni} rx={3} fill={bastidor} stroke="none" />
+      {/* Ejes */}
+      {centrosEjes.map((y, i) => (
+        <rect key={i} x={75} y={y - 2} width={150} height={4} rx={2} fill={bastidor} stroke="none" />
+      ))}
+      {c.cabina ? (
+        <>
+          {/* Tanques de combustible a los lados, entre la cabina y los ejes */}
+          <rect x={98} y={104} width={12} height={52} rx={6} fill={xray ? 'none' : '#64748b'} />
+          <rect x={190} y={104} width={12} height={52} rx={6} fill={xray ? 'none' : '#64748b'} />
+          {/* Cabina blanca con parabrisas, parrilla y defensa */}
+          <rect x={112} y={12} width={76} height={70} rx={18} fill={cabina} />
+          <rect x={122} y={34} width={56} height={16} rx={4} fill={xray ? 'none' : '#0284c7'} fillOpacity={0.55} />
+          <rect x={126} y={6} width={48} height={6} rx={2} fill={cromo} stroke="none" />
+          <rect x={108} y={0} width={84} height={5} rx={2} fill={cromo} stroke="none" />
+        </>
+      ) : (
+        <>
+          {/* Lanza con pivote (kingpin) al frente del remolque */}
+          <path d="M138 72 L150 34 L162 72" fill="none" stroke={bastidor} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx={150} cy={34} r={5} fill={cromo} stroke="none" />
+        </>
+      )}
+    </g>
+  );
+}
+
 function Plano({ codigo, llantas, activa, onSelect, xray }: {
   codigo: string; llantas: LlantaChasis[]; activa: string; onSelect: (pos: string) => void; xray: boolean;
 }) {
@@ -103,23 +144,14 @@ function Plano({ codigo, llantas, activa, onSelect, xray }: {
   const ejesAltura = c.ejes.length * ALTURA_EJE;
   const yRepuestos = Y_INICIO + ejesAltura + 8;
   const alto = yRepuestos + 80;
-  const color = xray ? '#7ff0ff' : 'var(--separator, #d1d1d6)';
   return (
     <svg viewBox={`0 0 300 ${alto}`} role="group" aria-label={`Esquema ${codigo}`} style={{ width: '100%', maxWidth: 300, display: 'block', margin: '0 auto' }}>
-      {/* Cabina y enganche */}
-      {c.cabina && <rect x={100} y={8} width={100} height={60} rx={22} fill={xray ? 'none' : 'var(--fill, #f2f2f7)'} stroke={color} strokeWidth={1.5} />}
-      {c.cabina && <path d="M118 22 Q150 14 182 22 L182 40 Q150 46 118 40 Z" fill={xray ? 'none' : 'var(--surface, #fff)'} stroke={color} strokeWidth={1} />}
-      {!c.cabina && <rect x={132} y={6} width={36} height={22} rx={8} fill="none" stroke={color} strokeWidth={1.5} />}
-      {/* Chasis y travesaños */}
-      <rect x={112} y={Y_INICIO - 8} width={76} height={ejesAltura + 8} rx={8} fill="none" stroke={color} strokeWidth={1.5} />
+      <Chasis c={c} xray={xray} />
       {c.ejes.map((eje, i) => {
         const y0 = Y_INICIO + i * ALTURA_EJE + 4;
         const dualIzq = eje.izquierda.length > 1, dualDer = eje.derecha.length > 1;
-        // Centro del eje: entre las dos llantas de un dual, o en la llanta sencilla
-        const yTravesano = y0 + (ALTO + GAP) / 2 + ALTO / 2;
         return (
           <g key={i}>
-            <line x1={60} x2={240} y1={yTravesano} y2={yTravesano} stroke={color} strokeWidth={2} strokeLinecap="round" />
             {eje.izquierda.map((pos, k) => (
               <Llanta key={pos} x={X_IZQ} y={dualIzq ? y0 + k * (ALTO + GAP) : y0 + (ALTO + GAP) / 2 - 0} pos={pos} llanta={mapa.get(pos)} activa={activa === pos} onSelect={onSelect} xray={xray} />
             ))}
