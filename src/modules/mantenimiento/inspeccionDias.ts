@@ -35,13 +35,14 @@ export function ultimasPorPlaca(lista: Inspeccion[]): Map<string, Inspeccion> {
 export function diasInspeccion(placa: string | null | undefined, ultimas: Map<string, Inspeccion>): DiasInspeccion {
   if (!placa) return { texto: '—', color: '#94a3b8', valor: 9999 };
   const ultima = ultimas.get(clavePlaca(placa));
-  if (!ultima?.fecha) return { texto: 'Sin Insp.', color: '#dc2626', valor: -999 };
+  if (!ultima?.fecha) return { texto: 'Sin inspección', color: '#dc2626', valor: -999 };
   const prox = inicioDelDia(ultima.fecha);
   prox.setDate(prox.getDate() + (ultima.diasPropuestos || 30));
   const dias = Math.round((prox.getTime() - inicioDelDia(new Date()).getTime()) / DIA);
-  if (dias < 0) return { texto: `${dias} d`, color: '#dc2626', valor: dias };
-  if (dias <= 7) return { texto: `${dias} d`, color: '#d97706', valor: dias };
-  return { texto: `+${dias} d`, color: '#16a34a', valor: dias };
+  if (dias < 0) return { texto: `Vencida hace ${-dias} ${-dias === 1 ? 'día' : 'días'}`, color: '#dc2626', valor: dias };
+  if (dias === 0) return { texto: 'Vence hoy', color: '#d97706', valor: dias };
+  if (dias <= 7) return { texto: `Faltan ${dias} ${dias === 1 ? 'día' : 'días'}`, color: '#d97706', valor: dias };
+  return { texto: `Faltan ${dias} días`, color: '#16a34a', valor: dias };
 }
 
 /** Semáforo de la inspección: verde sin fallas; ámbar con fallas vigentes; rojo con fallas y la inspección vencida. */

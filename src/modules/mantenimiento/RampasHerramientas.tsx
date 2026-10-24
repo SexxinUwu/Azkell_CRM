@@ -36,16 +36,17 @@ function htmlPdfRampas(filas: FilaPdfRampa[], empresa: string, d: DatosPdfRampa,
       <td style="font-weight:700">${escHtml(f.rampa)}</td>
       <td style="text-align:center">${escHtml(f.fIn)}</td>
       <td style="text-align:center">${escHtml(f.hIn)}</td>
-      <td style="text-align:center;font-weight:700;font-family:Courier New,monospace">${escHtml(f.placa)}</td>
+      <td style="text-align:center"><span style="display:inline-block;border:1.5px solid #000;border-radius:4px;padding:1px 6px;font-weight:700;font-family:Courier New,monospace">${escHtml(f.placa)}</span></td>
       <td style="text-align:center;font-weight:700;color:${f.situacionColor}">${escHtml(f.situacion)}</td>
       <td style="text-align:left;white-space:pre-line">${escHtml(f.obs)}</td>
       <td style="text-align:center">${escHtml(f.fOut)}</td>
       <td style="text-align:center">${escHtml(f.hOut)}</td>
       <td style="text-align:center;font-weight:700;color:${f.horasColor}">${escHtml(f.horas)}</td>
-      <td style="text-align:left">${escHtml(f.tecnicos)}</td>
+      <td style="text-align:left;white-space:pre-line">${escHtml(f.tecnicos)}</td>
       <td style="text-align:center;font-weight:700;color:${f.inspColor}">${escHtml(f.insp)}</td>
     </tr>`).join('') || '<tr><td colspan="11" style="padding:10px">Sin unidades en rampa.</td></tr>';
   return `
+  <style>.rp td,.rp th{border:1px solid #000;padding:3px 4px}</style>
   <div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:14px;width:1040px;background:#fff">
     <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #000;padding-bottom:8px">
       ${logo ? `<img src="${logo}" alt="" style="height:54px" />` : ''}
@@ -68,10 +69,10 @@ function htmlPdfRampas(filas: FilaPdfRampa[], empresa: string, d: DatosPdfRampa,
       <span>EN ESPERA / LAVADO: <b style="color:#b45309">${d.espera}</b></span>
       <span>LIBRES: <b style="color:#15803d">${d.libres}</b></span>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:10px">
+    <table class="rp" style="width:100%;border-collapse:collapse;font-size:10px">
       <thead><tr style="background:#000;color:#fff">
         <th style="padding:5px">RAMPA</th><th>F. INGRESO</th><th>HORA</th><th>PLACA</th><th>SITUACIÓN</th>
-        <th>OBSERVACIONES / TRABAJOS A REALIZAR</th><th>SALIDA (EST.)</th><th>HORA</th><th>H. TALLER</th><th>TÉCNICOS</th><th>INSPECCIÓN?</th>
+        <th>MOTIVO DE INGRESO</th><th>SALIDA (EST.)</th><th>HORA</th><th>H. TALLER</th><th>TÉCNICOS</th><th>INSPECCIÓN?</th>
       </tr></thead>
       <tbody>${cuerpo}</tbody>
     </table>

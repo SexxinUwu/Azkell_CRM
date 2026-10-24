@@ -27,8 +27,9 @@ import { SUBTIPOS_OT, TIPOS_OT } from './tipos-ot';
 import { useInspecciones, type Inspeccion } from '../inspecciones/api';
 import { diasInspeccion, semaforoInspeccion, ultimasPorPlaca } from './inspeccionDias';
 import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
-import { Badge } from '../../core/ui/Display';
 import { clavePlaca } from '../inspecciones/api';
+import { LicensePlate } from '../../core/ui/LicensePlate';
+import { motivoIngreso, nombrePersona } from './rampasFormato';
 
 const TABS = ['Activas', 'Historial'] as const;
 
@@ -108,12 +109,12 @@ function filasPdfRampas(entradas: RampaEntrada[], catalogo: CatRampa[], tecnicos
       placa: e.placa ?? '—',
       situacion: libre ? 'LIBRE' : (e.situacion ?? '—'),
       situacionColor: tono === 'amber' ? HEX.amber : tono === 'green' ? HEX.green : HEX.gray,
-      obs: e.observaciones ?? (libre ? 'Disponible para ingreso' : '—'),
+      obs: motivoIngreso(e.observaciones) || (libre ? 'Disponible para ingreso' : '—'),
       fOut: formatFechaPe(e.salida_programada) || '—',
       hOut: soloHora(e.hora_salida_programada),
       horas: horas > 0 ? formatTiempo(horas) : '—',
       horasColor: horas > 48 ? HEX.red : horas > 24 ? HEX.amber : HEX.green,
-      tecnicos: (tecnicos.get(rampaId(e)) ?? []).join(', ') || '—',
+      tecnicos: (tecnicos.get(rampaId(e)) ?? []).map(nombrePersona).join('\n') || '—',
       insp: dias.texto,
       inspColor: HEX[sem],
       libre,
@@ -276,6 +277,8 @@ export function StatusRampaPage() {
   const [busqueda, setBusqueda] = useState('');
   const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<{ entrada: RampaEntrada | null } | null>(null);
+  // Visita a la que se le da salida desde la tabla (botón de liberar)
+  const [liberando, setLiberando] = useState<RampaEntrada | null>(null);
   // Rampa que se preselecciona al ingresar desde una bahía libre (vacío = elegir)
   const [rampaInicial, setRampaInicial] = useState<string | undefined>(undefined);
   function abrirIngresoEn(catId: string) {
@@ -460,7 +463,7 @@ export function StatusRampaPage() {
             ) : (
               <>
                 <div className="rt-solo-web">
-                  <RampaTabla entradas={tablaEntradas} ots={ordenes.data ?? []} tecnicosPorRampa={tecnicosPorRampa} verInspeccion={verInspeccion} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); abrirRampa(e); }} />
+                  <RampaTabla entradas={tablaEntradas} ots={ordenes.data ?? []} tecnicosPorRampa={tecnicosPorRampa} verInspeccion={verInspeccion} ultimasInsp={ultimasInsp} puedeEditar={puedeEditar} onEditar={e => setFormulario({ entrada: e })} onLiberar={setLiberando} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); abrirRampa(e); }} />
                 </div>
                 <div className="rm-solo-movil">
                   <RampaMovil entradas={tablaEntradas} tecnicosPorRampa={tecnicosPorRampa} verInspeccion={verInspeccion} ultimasInsp={ultimasInsp} onInspeccion={setInspAbierta} onAbrir={(e: RampaEntrada) => { haptic('selection'); abrirRampa(e); }} />
@@ -513,6 +516,7 @@ export function StatusRampaPage() {
       )}
 
       <RampaFormulario open={!!formulario} rampaInicial={rampaInicial} entrada={formulario?.entrada ?? null} usuario={user?.name ?? ''} onClose={() => setFormulario(null)} />
+      {liberando && <LiberarRampa entrada={liberando} usuario={user?.name ?? ''} open onClose={() => setLiberando(null)} />}
       <ConfigurarRampasSheet open={configurando} onClose={() => setConfigurando(false)} />
       <InspeccionFicha inspeccion={inspAbierta} onClose={() => setInspAbierta(null)} />
     </Page>
@@ -534,18 +538,18 @@ function situacionTono(s: string | null) {
   return 'gray';
 }
 
-function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasInsp, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; ots: OrdenTrabajo[]; tecnicosPorRampa: Map<string, string[]>; verInspeccion: boolean; ultimasInsp: Map<string, Inspeccion>; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
+function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasInsp, puedeEditar, onEditar, onLiberar, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; ots: OrdenTrabajo[]; tecnicosPorRampa: Map<string, string[]>; verInspeccion: boolean; ultimasInsp: Map<string, Inspeccion>; puedeEditar: boolean; onEditar: (e: RampaEntrada) => void; onLiberar: (e: RampaEntrada) => void; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
   return (
     <div className="rt-caja">
       <table className="rt">
         <colgroup>
-          {[160, 92, 56, 92, 176, undefined, 92, 56, 80, 160, 130, ...(verInspeccion ? [150] : []), 104].map((w, i) => (
+          {[150, 88, 52, 112, 168, undefined, 88, 52, 76, 150, 150, ...(verInspeccion ? [150] : []), 84].map((w, i) => (
             <col key={i} style={w ? { width: w } : undefined} />
           ))}
         </colgroup>
         <thead>
           <tr>
-            <th>Rampa</th><th>Ingreso</th><th>Hora</th><th>Placa</th><th>Situación</th><th>Observaciones</th>
+            <th>Rampa</th><th>Ingreso</th><th>Hora</th><th>Placa</th><th>Situación</th><th>Motivo de Ingreso</th>
             <th>Salida est.</th><th>Hora</th><th>H. taller</th><th>OT</th><th>Técnicos</th>{verInspeccion && <th>Inspección</th>}<th aria-label="Abrir" />
           </tr>
         </thead>
@@ -563,9 +567,9 @@ function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasIns
                 </td>
                 <td>{soloFecha(e.fecha_ingreso)}</td>
                 <td>{soloHora(e.hora_ingreso)}</td>
-                <td><span className="rt__placa">{e.placa ?? '—'}</span></td>
+                <td>{e.placa ? <LicensePlate plate={e.placa} size="sm" /> : '—'}</td>
                 <td><span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{e.situacion ?? '—'}</span></td>
-                <td className="rt__obs"><span className="rt__obs-texto" title={e.observaciones ?? ''}>{e.observaciones ?? '—'}</span></td>
+                <td className="rt__obs"><span className="rt__obs-texto" title={motivoIngreso(e.observaciones)}>{motivoIngreso(e.observaciones) || '—'}</span></td>
                 <td>{soloFecha(e.salida_programada)}</td>
                 <td>{soloHora(e.hora_salida_programada)}</td>
                 <td><span className="rt__tiempo" style={{ color: tiempoColor(horas) }}>{horas > 0 ? formatTiempo(horas) : '—'}</span></td>
@@ -573,9 +577,17 @@ function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasIns
                   const de = otsDeRampa(e, ots, entradas);
                   return de.length ? <span className="rt__ot" title={de.map(o => o.id_ot).join(', ')}>{de.length} OT · {de[0].id_ot}</span> : '—';
                 })()}</td>
-                <td>{tecnicosPorRampa.get(rampaId(e))?.join(', ') || '—'}</td>
+                <td>{(() => {
+                  const tecs = tecnicosPorRampa.get(rampaId(e)) ?? [];
+                  return tecs.length ? tecs.map(n => <span key={n} className="rt__tecnico">{nombrePersona(n)}</span>) : '—';
+                })()}</td>
                 {verInspeccion && <td><BadgeInspeccion placa={e.placa} ultimas={ultimasInsp} onAbrir={onInspeccion} /></td>}
-                <td>{e.estado === 'Libre' ? <span className="rt__ingresar">+ Ingresar</span> : <ChevronRight size={16} className="rt__flecha" aria-hidden />}</td>
+                <td>{e.estado === 'Libre' ? <span className="rt__ingresar">+ Ingresar</span> : puedeEditar ? (
+                  <span className="rt__acciones">
+                    <button type="button" className="rt__accion" title="Editar" aria-label="Editar rampa" onClick={ev => { ev.stopPropagation(); onEditar(e); }}><Pencil size={14} /></button>
+                    <button type="button" className="rt__accion rt__accion--peligro" title="Liberar" aria-label="Liberar rampa" onClick={ev => { ev.stopPropagation(); onLiberar(e); }}><LogOut size={14} /></button>
+                  </span>
+                ) : <ChevronRight size={16} className="rt__flecha" aria-hidden />}</td>
               </tr>
             );
           })}
@@ -589,11 +601,10 @@ function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasIns
 function BadgeInspeccion({ placa, ultimas, onAbrir }: { placa: string | null; ultimas: Map<string, Inspeccion>; onAbrir: (i: Inspeccion) => void }) {
   const insp = placa ? ultimas.get(clavePlaca(placa)) ?? null : null;
   const dias = diasInspeccion(placa, ultimas);
-  if (!insp) return <Badge tone="gray">{dias.texto}</Badge>;
+  if (!insp) return <span className="rt__insp-dias" style={{ color: dias.color }}>{dias.texto}</span>;
   return (
     <button type="button" className="rt__insp" aria-label={`Ver inspección ${insp.id}`}
       onClick={e => { e.stopPropagation(); onAbrir(insp); }}>
-      <Badge tone={semaforoInspeccion(insp, dias)}>{insp.id}</Badge>
       <span className="rt__insp-dias" style={{ color: dias.color }}>{dias.texto}</span>
     </button>
   );
@@ -613,7 +624,7 @@ function RampaMovil({ entradas, tecnicosPorRampa, verInspeccion, ultimasInsp, on
                 <span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{e.situacion ?? '—'}</span>
               </span>
               <strong className="rm-placa">{e.placa ?? '—'}</strong>
-              {(tecnicosPorRampa.get(rampaId(e)) ?? []).length > 0 && <span className="rm-km">Técnicos: {tecnicosPorRampa.get(rampaId(e))?.join(', ')}</span>}
+              {(tecnicosPorRampa.get(rampaId(e)) ?? []).length > 0 && <span className="rm-km">Técnicos: {tecnicosPorRampa.get(rampaId(e))?.map(nombrePersona).join(', ')}</span>}
               <span className="rm-fechas">
                 <span className="rm-chip rm-chip--in">Entrada {soloFecha(e.fecha_ingreso)} · {soloHora(e.hora_ingreso)}</span>
                 <span className="rm-chip rm-chip--out">Salida est. {soloFecha(e.salida_programada)} · {soloHora(e.hora_salida_programada)}</span>
