@@ -170,6 +170,8 @@ model OrdenViaje {
   fecha_fin              DateTime? @db.DateTime(0)
   usuario_creacion       String?   @default("ADMINISTRADOR DEL SISTEMA") @db.VarChar(150)
   usuario_finalizacion   String?   @db.VarChar(150)
+  km_recorrido_gps       Decimal?  @db.Decimal(10, 1)
+  km_recorrido_gps_fuente String?  @db.VarChar(20)
 
   @@index([fecha_viaje], map: "idx_fecha_viaje")
   @@index([id_remoto], map: "idx_id_remoto")

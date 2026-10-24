@@ -51,11 +51,59 @@ model NeumaticoHojaVida {
   posicion_actual   String?                            @db.VarChar(10)
   estado_operativo  NeumaticosHojaVidaEstadoOperativo? @default(Stock_Taller)
   fecha_instalacion DateTime?                          @db.Date
+  codigo_llanta        String?                            @unique(map: "uq_codigo_llanta") @db.VarChar(30)
+  vida                 String?                            @default("R0") @db.VarChar(2)
+  contador_reencauches Int?                               @default(0)
+  costo_reencauches    Decimal?                           @default(0.00) @db.Decimal(10, 2)
+  estado_ciclo         String?                            @db.VarChar(20)
+  almacen_id           Int?
   created_at        DateTime?                          @default(now()) @db.Timestamp(0)
 
   @@index([estado_operativo], map: "idx_estado")
   @@index([placa_actual], map: "idx_placa")
+  @@index([almacen_id], map: "idx_almacen")
+  @@index([estado_ciclo], map: "idx_estado_ciclo")
   @@map("neumaticos_hoja_vida")
+}
+
+// Instalaciones de una llanta en una unidad: una fila por periodo (fecha/km de entrada y de salida).
+// Mientras fecha_out sea NULL, la llanta está montada en esa placa y posición.
+model NeumaticoInstalacion {
+  id            Int       @id @default(autoincrement())
+  id_neumatico  String    @db.VarChar(50)
+  placa         String    @db.VarChar(20)
+  posicion      String    @db.VarChar(10)
+  fecha_in      DateTime  @db.Date
+  km_in         Int       @default(0)
+  fecha_out     DateTime? @db.Date
+  km_out        Int?
+  motivo_salida String?   @db.VarChar(200)
+  usuario       String?   @db.VarChar(100)
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([id_neumatico, fecha_out], map: "idx_neu_inst_neumatico")
+  @@index([placa, posicion, fecha_out], map: "idx_neu_inst_placa_pos")
+  @@map("neumaticos_instalaciones")
+}
+
+// Kardex de cada llanta: ingresos, traslados entre almacenes, instalaciones, retiros, reencauches y desecho.
+model NeumaticoMovimiento {
+  id                 Int       @id @default(autoincrement())
+  id_neumatico       String    @db.VarChar(50)
+  tipo               String    @db.VarChar(30)
+  almacen_origen_id  Int?
+  almacen_destino_id Int?
+  placa              String?   @db.VarChar(20)
+  posicion           String?   @db.VarChar(10)
+  km                 Int?      @default(0)
+  fecha              DateTime  @db.DateTime(0)
+  usuario            String?   @db.VarChar(100)
+  observacion        String?   @db.Text
+  created_at         DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([id_neumatico, fecha], map: "idx_neu_mov_neumatico_fecha")
+  @@index([tipo], map: "idx_neu_mov_tipo")
+  @@map("neumaticos_movimientos")
 }
 
 model NeumaticoInspeccion {
