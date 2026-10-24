@@ -82,6 +82,7 @@
   font-size: 0.8125rem; color: var(--label-2); line-height: 1.3; white-space: pre-line;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
+.rm-texto { font-size: 0.8125rem; color: var(--label-2); }
 .rm-tecnicos { display: flex; flex-direction: column; font-size: 0.8125rem; color: var(--label); }
 .rm-acciones { display: flex; gap: var(--s-2); margin-top: var(--s-1); }
 .rm-accion {

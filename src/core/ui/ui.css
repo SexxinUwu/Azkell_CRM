@@ -509,7 +509,7 @@ button.row:active { background: var(--fill); }
 }
 .page-header__text { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
 .page-header__subtitle { color: var(--label-2); font-size: 1.0625rem; letter-spacing: -0.012em; }
-.page-header__actions { display: flex; gap: var(--s-2); }
+.page-header__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s-2); }
 
 /* ─── Barra de herramientas ─── */
 .toolbar {

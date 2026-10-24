@@ -45,6 +45,10 @@
 }
 .page--narrow { max-width: 44rem; }
 .page--ancho { max-width: none; }
+/* Celular: el final de cada pantalla queda por encima de la barra de módulos y de la burbuja del chat */
+@media (max-width: 1023px) {
+  .page { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
+}
 
 /* ─── Barra lateral (escritorio ≥ 1024px): riel de iconos que se expande ───
    Por defecto muestra solo iconos (riel). Al pasar el puntero, o al enfocarla con teclado,
