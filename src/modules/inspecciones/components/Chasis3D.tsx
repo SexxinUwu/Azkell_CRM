@@ -213,7 +213,9 @@ function construirCamion(configuracion: string, llantas: LlantaChasis[]): Camion
 
   // Límites como en el clásico: la cabina o la lanza definen el frente, los repuestos el fondo
   const zMin = Math.min(delantero - (esRemolque ? 2.0 : 2.8));
-  const zMax = Math.max(trasero, config.repuestos.length ? zRepuestos : trasero);
+  // Solo los repuestos que la unidad tiene (R1, y R2 si existe)
+  const repuestos = config.repuestos.filter(p => mapa.has(p));
+  const zMax = Math.max(trasero, repuestos.length ? zRepuestos : trasero);
   const largo = Math.max(9, zMax - zMin + 2);
   const zCentro = (zMin + zMax) / 2;
 
@@ -259,8 +261,8 @@ function construirCamion(configuracion: string, llantas: LlantaChasis[]): Camion
     }
   });
   // Repuestos montados atrás del bastidor
-  config.repuestos.forEach((pos, i) => {
-    const x = config.repuestos.length === 1 ? 0 : -0.8 + i * 1.6;
+  repuestos.forEach((pos, i) => {
+    const x = repuestos.length === 1 ? 0 : -0.8 + i * 1.6;
     const llanta = crearLlanta(pos, x, zRepuestos, 1, mapa.get(pos));
     ruedas.push(llanta);
     grupo.add(llanta.grupo);

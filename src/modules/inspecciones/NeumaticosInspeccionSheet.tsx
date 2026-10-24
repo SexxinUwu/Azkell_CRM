@@ -8,7 +8,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { clavePlaca, useInspeccionesNeumaticos } from './api';
-import { ChasisEsquemaVisual, CONFIGURACIONES, posicionesDeConfig } from './components/ChasisEsquemaVisual';
+import { ChasisEsquemaVisual, CONFIGURACIONES, posicionesPorDefecto } from './components/ChasisEsquemaVisual';
 import { tonoMm, TINTA_TONO } from '../mantenimiento/neumaticosSemaforo';
 import { corregirMarca } from './neumaticosAlias';
 import './inspecciones.css';
@@ -177,8 +177,9 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
     setKm(texto(u.km_vehiculo));
     const lista = Object.entries(u.datosPosiciones ?? {})
       .sort(([a], [b]) => (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b))
-      .map(([pos, d]): Llanta => ({
-        ...vacia(pos), marca: texto(d.marca), medida: texto(d.medida), modelo: texto(d.modelo),
+      .map(([clave, d]): Llanta => ({
+        // Inspecciones anteriores guardaron el repuesto único como "R": ahora es R1
+        ...vacia(clave === 'R' ? 'R1' : clave), marca: texto(d.marca), medida: texto(d.medida), modelo: texto(d.modelo),
         r1: texto(d.r1), r2: texto(d.r2), r3: texto(d.r3), r4: texto(d.r4), presion_ant: texto(d.presion_actual),
       }));
     setLlantas(lista);
@@ -188,7 +189,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
   // Al elegir una configuración, aparecen sus posiciones (el chasis y el conteo de llantas se actualizan)
   useEffect(() => {
     if (!config || !CONFIGURACIONES[config]) return;
-    const esperadas = posicionesDeConfig(config);
+    const esperadas = posicionesPorDefecto(config);
     setLlantas(ls => {
       const existentes = new Set(ls.map(l => l.posicion));
       const faltan = esperadas.filter(pos => !existentes.has(pos)).map(vacia);
@@ -455,7 +456,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
             <div className="insp-neu__tabla-caja">
               <table className="insp-neu__tabla">
                 <thead>
-                  <tr><th>Pos</th><th>Marca</th><th>Medida</th><th>Modelo</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Prom.</th><th>PSI</th><th>Estado</th><th>Acción</th><th>ROT</th><th>Fotos</th></tr>
+                  <tr><th>Pos</th><th>Marca</th><th>Medida</th><th>Modelo</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Prom.</th><th>PSI</th><th>Estado</th><th>Acción</th><th>ROT</th><th>Fotos</th><th>Observación</th></tr>
                 </thead>
                 <tbody>
                   {llantas.map(l => {
@@ -478,6 +479,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
                         <td>{l.accion}</td>
                         <td>{l.rot}</td>
                         <td className="t-numeric">{fotos}/3</td>
+                        <td className="insp-neu__obs">{l.observacion || '—'}</td>
                       </tr>
                     );
                   })}

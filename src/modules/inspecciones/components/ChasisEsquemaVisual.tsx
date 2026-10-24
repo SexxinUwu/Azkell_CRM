@@ -18,13 +18,13 @@ interface Configuracion { ejes: Eje[]; repuestos: string[]; cabina: boolean; lla
 const p = (...xs: number[]) => xs.map(String);
 
 export const CONFIGURACIONES: Record<string, Configuracion> = {
-  '4X2': { nombre: 'Tracto / Camión C2', cabina: true, llantas: 6, repuestos: ['R'],
+  '4X2': { nombre: 'Tracto / Camión C2', cabina: true, llantas: 6, repuestos: ['R1', 'R2'],
     ejes: [{ izquierda: p(1), derecha: p(2) }, { izquierda: p(3, 4), derecha: p(5, 6) }] },
-  '6X4': { nombre: 'Tracto C3 / T3', cabina: true, llantas: 10, repuestos: ['R'],
+  '6X4': { nombre: 'Tracto C3 / T3', cabina: true, llantas: 10, repuestos: ['R1', 'R2'],
     ejes: [{ izquierda: p(1), derecha: p(2) }, { izquierda: p(3, 4), derecha: p(5, 6) }, { izquierda: p(7, 8), derecha: p(9, 10) }] },
-  '6X2': { nombre: 'Tracto', cabina: true, llantas: 8, repuestos: ['R'],
+  '6X2': { nombre: 'Tracto', cabina: true, llantas: 8, repuestos: ['R1', 'R2'],
     ejes: [{ izquierda: p(1), derecha: p(2) }, { izquierda: p(3), derecha: p(4) }, { izquierda: p(5, 6), derecha: p(7, 8) }] },
-  R2: { nombre: 'Carreta / Burrita', cabina: false, llantas: 8, repuestos: ['R'],
+  R2: { nombre: 'Carreta / Burrita', cabina: false, llantas: 8, repuestos: ['R1', 'R2'],
     ejes: [{ izquierda: p(1, 2), derecha: p(3, 4) }, { izquierda: p(5, 6), derecha: p(7, 8) }] },
   S2: { nombre: 'Semirremolque', cabina: false, llantas: 8, repuestos: ['R1', 'R2'],
     ejes: [{ izquierda: p(1, 2), derecha: p(3, 4) }, { izquierda: p(5, 6), derecha: p(7, 8) }] },
@@ -42,6 +42,13 @@ export function posicionesDeConfig(codigo: string): string[] {
   const c = CONFIGURACIONES[codigo];
   if (!c) return [];
   return [...c.ejes.flatMap(e => [...e.izquierda, ...e.derecha]), ...c.repuestos];
+}
+
+/** Al elegir la configuración se agregan los ejes y el repuesto R1; R2 solo aparece si la unidad lo tiene */
+export function posicionesPorDefecto(codigo: string): string[] {
+  const c = CONFIGURACIONES[codigo];
+  if (!c) return [];
+  return [...c.ejes.flatMap(e => [...e.izquierda, ...e.derecha]), ...c.repuestos.slice(0, 1)];
 }
 
 // Geometría (vista cenital, el frente arriba)
@@ -117,8 +124,8 @@ function Plano({ codigo, llantas, activa, onSelect, xray }: {
         );
       })}
       {/* Repuestos, debajo del último eje */}
-      {c.repuestos.map((pos, i) => {
-        const cantidad = c.repuestos.length;
+      {c.repuestos.filter(p => mapa.has(p)).map((pos, i, lista) => {
+        const cantidad = lista.length;
         const x = cantidad === 1 ? 150 : 120 + i * 60;
         return <Llanta key={pos} x={x} y={yRepuestos} pos={pos} llanta={mapa.get(pos)} activa={activa === pos} onSelect={onSelect} xray={xray} />;
       })}
@@ -168,6 +175,7 @@ export function ChasisEsquemaVisual({ configuracion, llantas, activa, onSelect, 
   // Llanta que se arrastra en 3D y posición sobre la que está (para el banner)
   const [arrastre, setArrastre] = useState<{ origen: string; destino: string | null } | null>(null);
   const c = CONFIGURACIONES[configuracion];
+  const repuestosPresentes = c ? c.repuestos.filter(p => llantas.some(l => l.posicion === p)) : [];
   const xray = vista === 'xray';
   const transform = vista === 'iso' ? 'perspective(700px) rotateX(42deg) rotateZ(-6deg)' : vista === 'lat' ? 'perspective(700px) rotateY(-52deg)' : undefined;
 
@@ -192,7 +200,7 @@ export function ChasisEsquemaVisual({ configuracion, llantas, activa, onSelect, 
     <section className={`insp-chasis${xray ? ' insp-chasis--xray' : ''}`} aria-label="Esquema de ejes y llantas">
       <div className="insp-chasis__cab">
         <SegmentedControl<VistaChasis> label="Perspectiva" value={vista} onChange={setVista} options={OPCIONES_VISTA} />
-        {c && <span className="insp-chasis__info">{configuracion} · {c.nombre} · {c.llantas} llantas{c.repuestos.length ? ` + ${c.repuestos.join(', ')}` : ''}</span>}
+        {c && <span className="insp-chasis__info">{configuracion} · {c.nombre} · {c.llantas} llantas{repuestosPresentes.length ? ` + ${repuestosPresentes.join(', ')}` : ''}</span>}
         {soporta3d && (
           <button type="button" className="insp-chasis__modo pressable" aria-pressed={modo3d} onClick={() => cambiarModo(!modo3d)}>
             {modo3d ? <><Ruler size={14} aria-hidden /> Vista 2D clásica</> : <><Box size={14} aria-hidden /> Vista 3D Pro</>}

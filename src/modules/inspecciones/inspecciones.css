@@ -497,6 +497,8 @@
 .insp-chasis__modo[aria-pressed='true'] { background: var(--ink); color: var(--label-inverse); }
 .insp-chasis__aviso { margin: 0; font-size: 0.8125rem; color: var(--amber-ink); }
 /* Celular: los cuatro modos de vista caben en una fila que se desliza, sin cortar "Rayos X" */
+/* Observación de cada llanta en el resumen del formulario */
+.insp-neu__obs { min-width: 10rem; max-width: 16rem; white-space: normal; font-size: 0.75rem; color: var(--label-2); }
 /* Celular: los cuatro modos ocupan todo el ancho del recuadro, en cuatro columnas iguales */
 .insp-chasis__cab > .segmented { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; }
 .insp-chasis__cab > .segmented .segmented__item { min-width: 0; padding: 0 4px; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
