@@ -626,7 +626,7 @@ function RampaMovil({ entradas, tecnicosPorRampa, verInspeccion, ultimasInsp, pu
                 <span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{libre ? 'Libre' : (e.situacion ?? '—')}</span>
               </span>
               {libre ? (
-                <span className="rm-km">Bahía disponible para ingreso</span>
+                <span className="rm-texto">Bahía disponible para ingreso</span>
               ) : (
                 <>
                   {e.placa ? <LicensePlate plate={e.placa} size="sm" /> : null}
