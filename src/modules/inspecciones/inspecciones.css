@@ -537,3 +537,24 @@
 .insp-neu-asociada__texto { display: flex; flex-direction: column; gap: 2px; font-size: 0.875rem; }
 .insp-neu-asociada__texto small { color: var(--label-2); font-size: 0.75rem; }
 .insp-neu-asociada__id { font-family: var(--font-mono); font-weight: 700; color: var(--accent-ink); }
+
+/* Almacenes de llantas junto al modelo: papelera (desecho), reencauche y repisa de disponibles */
+.insp-alm { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--s-2); }
+.insp-alm__caja { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: var(--s-3); border-radius: var(--r-lg); background: var(--surface); box-shadow: 0 0 0 1px var(--separator); }
+.insp-alm__caja--papelera { box-shadow: inset 0 0 0 1px var(--red-tint), 0 0 0 1px var(--red-tint); }
+.insp-alm__caja--reencauche { box-shadow: inset 0 0 0 1px var(--amber-tint), 0 0 0 1px var(--amber-tint); }
+.insp-alm__cab { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 600; color: var(--label); }
+.insp-alm__nota { margin: 0; font-size: 0.6875rem; color: var(--label-2); }
+.insp-alm__titulo { margin: 0; font-size: 0.875rem; font-weight: 600; }
+.insp-alm__texto { margin: 0; font-size: 0.875rem; color: var(--label-2); }
+.insp-alm__repisa { display: flex; flex-direction: column; gap: 4px; max-height: 170px; overflow-y: auto; }
+.insp-alm__llanta { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; padding: 6px 10px; border: 0; border-radius: var(--r-md); background: var(--fill); color: var(--label); font: inherit; font-size: 0.75rem; text-align: left; cursor: grab; touch-action: none; user-select: none; }
+.insp-alm__llanta strong { font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+.insp-alm__llanta span { color: var(--label-2); }
+.insp-alm__fantasma { position: fixed; z-index: 1000; pointer-events: none; transform: translate(-50%, -130%); padding: 4px 12px; border-radius: var(--r-full); background: #2563eb; color: #ffffff; font-size: 0.8125rem; font-weight: 700; box-shadow: 0 8px 20px -8px rgba(37, 99, 235, 0.6); white-space: nowrap; }
+.insp-alm__dialogo { display: flex; flex-direction: column; gap: var(--s-3); }
+.insp-alm__opciones { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
+.insp-alm__opcion { min-height: 2.75rem; padding: 0 var(--s-2); border: 0; border-radius: var(--r-md); background: var(--fill); color: var(--label); font: inherit; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+.insp-alm__opcion[aria-pressed='true'] { background: var(--ink); color: var(--label-inverse); }
+.insp-alm__error { margin: 0; font-size: 0.75rem; color: var(--red-ink); }
+.insp-alm__error--bloque { padding: var(--s-3) var(--s-4); border-radius: var(--r-lg); background: var(--red-tint); font-size: 0.875rem; }

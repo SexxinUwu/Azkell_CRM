@@ -84,9 +84,13 @@ function webglDisponible(): boolean {
 
 const AVISO_3D = 'No se puede mostrar el modelo 3D en este equipo.';
 
+/** Posición del modelo bajo un punto de la pantalla (o null) */
+export type PosicionBajo = (x: number, y: number) => string | null;
+
 /** Modelo 3D de ejes y llantas, como el clásico. Las vistas cenital, isométrica, lateral y rayos X mueven la cámara. */
-export function ChasisEsquemaVisual({ configuracion, llantas, activa, onSelect, onRotar }: {
+export function ChasisEsquemaVisual({ configuracion, llantas, activa, onSelect, onRotar, onSoltarAire, posicionRef }: {
   configuracion: string; llantas: LlantaChasis[]; activa: string; onSelect: (pos: string) => void; onRotar: (origen: string, destino: string) => void;
+  onSoltarAire?: (origen: string, x: number, y: number) => void; posicionRef?: { current: PosicionBajo | null };
 }) {
   const [vista, setVista] = useState<VistaChasis>('2d');
   const [soporta3d] = useState(webglDisponible);
@@ -112,14 +116,15 @@ export function ChasisEsquemaVisual({ configuracion, llantas, activa, onSelect, 
           <VisorSeguro respaldo={<p className="insp-chasis__vacio">{AVISO_3D}</p>}>
             <Suspense fallback={<p className="insp-chasis__vacio">Cargando modelo 3D…</p>}>
               <Chasis3D configuracion={configuracion} llantas={llantas} activa={activa} vista={vista} onSelect={onSelect}
-                onRotar={onRotar} onArrastre={(origen, destino) => setArrastre(origen ? { origen, destino } : null)} onPerdida={() => setPerdido(true)} />
+                onRotar={onRotar} onArrastre={(origen, destino) => setArrastre(origen ? { origen, destino } : null)} onPerdida={() => setPerdido(true)}
+                onSoltarAire={onSoltarAire} posicionRef={posicionRef} />
             </Suspense>
           </VisorSeguro>
           {arrastre && (
             <div className="insp-chasis__arrastre" role="status">
               {arrastre.destino
                 ? `Suelta para intercambiar #${arrastre.origen} ⇄ #${arrastre.destino}`
-                : `Arrastrando Llanta #${arrastre.origen} — Suelta sobre otra posición para intercambiar`}
+                : `Arrastrando Llanta #${arrastre.origen} — Suelta sobre otra posición, la papelera o el reencauche`}
             </div>
           )}
         </div>

@@ -8,7 +8,8 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { clavePlaca, useInspeccionesNeumaticos } from './api';
-import { ChasisEsquemaVisual, CONFIGURACIONES, normalizarConfiguracion, posicionesPorDefecto } from './components/ChasisEsquemaVisual';
+import { ChasisEsquemaVisual, CONFIGURACIONES, normalizarConfiguracion, posicionesPorDefecto, type PosicionBajo } from './components/ChasisEsquemaVisual';
+import { AlmacenesNeumaticos, type AlmacenesHandle, type LlantaDisponible } from './components/AlmacenesNeumaticos';
 import { tonoMm, TINTA_TONO } from '../mantenimiento/neumaticosSemaforo';
 import { corregirMarca } from './neumaticosAlias';
 import './inspecciones.css';
@@ -28,13 +29,14 @@ interface PosicionUltima {
   marca?: string; medida?: string; modelo?: string;
   r1?: number | string | null; r2?: number | string | null; r3?: number | string | null; r4?: number | string | null;
   presion_actual?: number | string | null;
+  codigo?: string | null;
 }
 interface PlacaUltima {
   ok?: boolean; configuracion?: string; fecha_inspeccion?: string | null; km_vehiculo?: number | string | null;
   inspector?: string | null; datosPosiciones?: Record<string, PosicionUltima>;
 }
 interface Llanta {
-  posicion: string; marca: string; medida: string; modelo: string;
+  posicion: string; codigo: string; codigoBase: boolean; marca: string; medida: string; modelo: string;
   r1: string; r2: string; r3: string; r4: string;
   presion_ant: string; presion_actual: string; estado: string; accion: string; observacion: string;
   rot: 'NO' | 'SI'; foto1: string; foto2: string; foto3: string;
@@ -49,7 +51,7 @@ const hoyISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.get
 export const fechaDMY = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 const aFecha = (iso: string) => { const [y, m, dd] = iso.slice(0, 10).split('-').map(Number); return new Date(y, m - 1, dd); };
 const vacia = (posicion: string): Llanta => ({
-  posicion, marca: '', medida: '', modelo: '', r1: '', r2: '', r3: '', r4: '', presion_ant: '', presion_actual: '',
+  posicion, codigo: '', codigoBase: false, marca: '', medida: '', modelo: '', r1: '', r2: '', r3: '', r4: '', presion_ant: '', presion_actual: '',
   estado: 'BUENA', accion: 'Inspección', observacion: '', rot: 'NO', foto1: '', foto2: '', foto3: '',
 });
 
@@ -192,7 +194,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
       .sort(([a], [b]) => (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b))
       .map(([clave, d]): Llanta => ({
         // Inspecciones anteriores guardaron el repuesto único como "R": ahora es R1
-        ...vacia(clave === 'R' ? 'R1' : clave), marca: texto(d.marca), medida: texto(d.medida), modelo: texto(d.modelo),
+        ...vacia(clave === 'R' ? 'R1' : clave), codigo: texto(d.codigo), codigoBase: !!texto(d.codigo), marca: texto(d.marca), medida: texto(d.medida), modelo: texto(d.modelo),
         r1: texto(d.r1), r2: texto(d.r2), r3: texto(d.r3), r4: texto(d.r4), presion_ant: texto(d.presion_actual),
       }));
     setLlantas(lista);
@@ -259,7 +261,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
     const lo = llantas.find(l => l.posicion === origen);
     const ld = llantas.find(l => l.posicion === destino);
     if (!lo || !ld) return;
-    const datos = (l: Llanta) => ({ marca: l.marca, medida: l.medida, modelo: l.modelo, r1: l.r1, r2: l.r2, r3: l.r3, r4: l.r4, presion_ant: l.presion_ant, presion_actual: l.presion_actual, estado: l.estado, foto1: l.foto1, foto2: l.foto2, foto3: l.foto3 });
+    const datos = (l: Llanta) => ({ codigo: l.codigo, codigoBase: l.codigoBase, marca: l.marca, medida: l.medida, modelo: l.modelo, r1: l.r1, r2: l.r2, r3: l.r3, r4: l.r4, presion_ant: l.presion_ant, presion_actual: l.presion_actual, estado: l.estado, foto1: l.foto1, foto2: l.foto2, foto3: l.foto3 });
     setLlantas(ls => ls.map(l => {
       if (l.posicion === origen) return { ...l, ...datos(ld), rot: 'SI', accion: 'Rotación', observacion: `De Posición #${destino} a Posición #${origen}` };
       if (l.posicion === destino) return { ...l, ...datos(lo), rot: 'SI', accion: 'Rotación', observacion: `De Posición #${origen} a Posición #${destino}` };
@@ -273,6 +275,19 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
     if (!actual || !destinoRot) return;
     rotarPosiciones(actual.posicion, destinoRot);
     setDestinoRot('');
+  };
+
+  // Almacenes (papelera, reencauche y repisa): retiro desde el modelo y montaje desde la repisa
+  const modeloPosRef = useRef<PosicionBajo | null>(null);
+  const almacenRef = useRef<AlmacenesHandle>(null);
+  const vaciarPosicion = (pos: string) => { setLlantas(ls => ls.map(l => (l.posicion === pos ? vacia(pos) : l))); setActiva(pos); };
+  const montarPosicion = (pos: string, item: LlantaDisponible) => {
+    // La llanta de la repisa trae su código y su ficha; las mediciones las toma el inspector
+    setLlantas(ls => ls.map(l => (l.posicion === pos ? {
+      ...l, codigo: item.codigo, codigoBase: true, marca: texto(item.marca), medida: texto(item.medida), modelo: texto(item.modelo),
+      accion: 'Instalación', rot: 'NO',
+    } : l)));
+    setActiva(pos);
   };
 
   const medidas = (l: Llanta) => [l.r1, l.r2, l.r3, l.r4].some(v => numero(v) > 0);
@@ -296,7 +311,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
     setErrores(e);
     if (Object.keys(e).length) return;
     const items = llantas.filter(medidas).map(l => ({
-      posicion: l.posicion.toUpperCase(), marca: l.marca.trim().toUpperCase(), medida: l.medida.trim().toUpperCase(), modelo: l.modelo.trim().toUpperCase(),
+      posicion: l.posicion.toUpperCase(), codigo: l.codigo.trim().toUpperCase(), marca: l.marca.trim().toUpperCase(), medida: l.medida.trim().toUpperCase(), modelo: l.modelo.trim().toUpperCase(),
       r1: numero(l.r1), r2: numero(l.r2), r3: numero(l.r3), r4: numero(l.r4),
       presion_ant: numero(l.presion_ant), presion_actual: numero(l.presion_actual),
       estado: l.estado, accion: l.accion, rot: l.rot, observaciones: l.observacion.trim(),
@@ -389,7 +404,10 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
           </section>
 
           {/* Bento 2: esquema del chasis, debajo de los datos generales y encima del editor */}
-          <ChasisEsquemaVisual configuracion={config} llantas={llantas} activa={activa} onSelect={setActiva} onRotar={rotarPosiciones} />
+          <ChasisEsquemaVisual configuracion={config} llantas={llantas} activa={activa} onSelect={setActiva} onRotar={rotarPosiciones}
+            onSoltarAire={(pos, x, y) => almacenRef.current?.soltarDesdeModelo(pos, x, y)} posicionRef={modeloPosRef} />
+          <AlmacenesNeumaticos ref={almacenRef} placa={placa ?? ''} km={km} llantas={llantas} modeloPosRef={modeloPosRef}
+            onRetirada={vaciarPosicion} onMontada={montarPosicion} />
 
           {/* Posiciones: chips y editor de la llanta activa */}
           <section className="insp-neu__bloque">
@@ -428,6 +446,10 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
                   </>)}</Field>
                   <Field label="Medida">{p => <TextInput {...p} value={actual.medida} list="neu-medidas" onChange={e => set(actual.posicion, { medida: e.target.value })} />}</Field>
                   <Field label="Modelo">{p => <TextInput {...p} value={actual.modelo} list="neu-modelos" onChange={e => set(actual.posicion, { modelo: e.target.value })} />}</Field>
+                  <Field label="Código de la llanta" hint={actual.codigoBase ? 'Viene de la base de llantas' : undefined}>{p => (
+                    <TextInput {...p} value={actual.codigo} readOnly={actual.codigoBase} placeholder="Ej. LL-0001"
+                      onChange={e => set(actual.posicion, { codigo: e.target.value })} />
+                  )}</Field>
                 </div>
                 <datalist id="neu-medidas">{opciones('medidas').map(o => <option key={o} value={o} />)}</datalist>
                 <datalist id="neu-modelos">{opciones('modelos').map(o => <option key={o} value={o} />)}</datalist>

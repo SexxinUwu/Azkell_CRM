@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { CONFIGURACIONES, type LlantaChasis, type VistaChasis } from './ChasisEsquemaVisual';
+import { CONFIGURACIONES, type LlantaChasis, type PosicionBajo, type VistaChasis } from './ChasisEsquemaVisual';
 import { tonoMm, type Tono } from '../../mantenimiento/neumaticosSemaforo';
 
 // Vista 3D del chasis (Three.js), con el mismo modelo y encuadre que el clásico (modal_inspeccion.js):
@@ -22,6 +22,10 @@ export interface Chasis3DProps {
   onArrastre: (origen: string | null, destino: string | null) => void;
   /** Se llama si el contexto WebGL se pierde (poca memoria o cambio de app en el celular) */
   onPerdida: () => void;
+  /** Llanta soltada en el aire (no sobre otra posición): coordenadas de pantalla para ver si cayó en la papelera o el reencauche */
+  onSoltarAire?: (origen: string, x: number, y: number) => void;
+  /** Dice qué posición del modelo está bajo un punto de la pantalla (para montar una llanta de la repisa) */
+  posicionRef?: { current: PosicionBajo | null };
 }
 
 /** Llanta que vuelve a su eje tras soltarla fuera de otra posición */
@@ -315,7 +319,7 @@ function poseDeVista(vista: VistaChasis, zMin: number, zMax: number): Pose {
 const FOV = 40;
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-export default function Chasis3D({ configuracion, llantas, activa, vista, onSelect, onRotar, onArrastre, onPerdida }: Chasis3DProps) {
+export default function Chasis3D({ configuracion, llantas, activa, vista, onSelect, onRotar, onArrastre, onPerdida, onSoltarAire, posicionRef }: Chasis3DProps) {
   const contenedor = useRef<HTMLDivElement>(null);
   const esc = useRef<{
     renderer: THREE.WebGLRenderer; scene: THREE.Scene; camara: THREE.PerspectiveCamera; controles: OrbitControls;
@@ -332,6 +336,8 @@ export default function Chasis3D({ configuracion, llantas, activa, vista, onSele
   onPerdidaRef.current = onPerdida;
   onRotarRef.current = onRotar;
   onArrastreRef.current = onArrastre;
+  const onSoltarAireRef = useRef(onSoltarAire);
+  onSoltarAireRef.current = onSoltarAire;
 
   // Firma de lo que cambia la geometría: si no cambia (p. ej. solo el foco), no se reconstruye
   const firma = configuracion + '|' + llantas.map(l => `${l.posicion}:${l.r1}:${l.r2}:${l.r3}:${l.rot}`).join(',');
@@ -437,12 +443,12 @@ export default function Chasis3D({ configuracion, llantas, activa, vista, onSele
     const punto = new THREE.Vector3();
     let arrastre: { pos: string; grupo: THREE.Group; origen: THREE.Vector3; inicioX: number; inicioY: number; activo: boolean; destino: string | null } | null = null;
 
-    const apuntar = (ev: PointerEvent) => {
+    const apuntar = (ev: { clientX: number; clientY: number }) => {
       const r = canvas.getBoundingClientRect();
       rayo.setFromCamera(new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), camara);
     };
     // Llanta bajo el puntero, sin contar la que se arrastra
-    const llantaBajo = (ev: PointerEvent, excluir?: string): { pos: string; grupo: THREE.Group } | null => {
+    const llantaBajo = (ev: { clientX: number; clientY: number }, excluir?: string): { pos: string; grupo: THREE.Group } | null => {
       const e = esc.current;
       if (!e?.camion) return null;
       apuntar(ev);
@@ -453,6 +459,7 @@ export default function Chasis3D({ configuracion, llantas, activa, vista, onSele
       }
       return null;
     };
+    if (posicionRef) posicionRef.current = (x, y) => llantaBajo({ clientX: x, clientY: y })?.pos ?? null;
 
     const bajar = (ev: PointerEvent) => {
       const llanta = llantaBajo(ev);
@@ -498,8 +505,10 @@ export default function Chasis3D({ configuracion, llantas, activa, vista, onSele
       onArrastreRef.current(null, null);
       if (a.destino) {
         onRotarRef.current(a.pos, a.destino);
-      } else if (e) {
-        e.retornos.push({ grupo: a.grupo, desde: a.grupo.position.clone(), hasta: a.origen, inicio: performance.now() });
+      } else {
+        if (e) e.retornos.push({ grupo: a.grupo, desde: a.grupo.position.clone(), hasta: a.origen, inicio: performance.now() });
+        // Solo un soltar real (no una cancelación del navegador) puede caer en la papelera o el reencauche
+        if (ev.type === 'pointerup') onSoltarAireRef.current?.(a.pos, ev.clientX, ev.clientY);
       }
       pedirRender();
     };
@@ -509,6 +518,7 @@ export default function Chasis3D({ configuracion, llantas, activa, vista, onSele
     canvas.addEventListener('pointercancel', soltar);
 
     return () => {
+      if (posicionRef) posicionRef.current = null;
       canvas.removeEventListener('webglcontextlost', alPerder);
       canvas.removeEventListener('pointerdown', bajar, { capture: true });
       canvas.removeEventListener('pointermove', mover);
