@@ -490,7 +490,7 @@
 /* Rayos X: fondo oscuro y llantas en cian translúcido */
 .insp-chasis--xray { background: #1c1c1e; box-shadow: 0 0 0 1px rgba(50, 215, 255, 0.25); }
 /* Vista 3D (Three.js): lienzo que llena el bloque; se apaga a 2D si el equipo no la soporta */
-.insp-chasis__3d { position: relative; width: 100%; height: min(62vh, 420px); min-height: 260px; overflow: hidden; border-radius: var(--r-lg); background: var(--fill); touch-action: none; }
+.insp-chasis__3d { position: relative; width: 100%; height: min(80vh, 680px); min-height: 360px; overflow: hidden; border-radius: var(--r-lg); background: var(--fill); touch-action: none; }
 .insp-chasis__3d canvas { display: block; width: 100% !important; height: 100% !important; }
 .insp-chasis__3d--cargando { display: grid; place-items: center; font-size: 0.8125rem; color: var(--label-2); }
 .insp-chasis__modo { display: inline-flex; align-items: center; gap: 6px; min-height: 2.25rem; padding: 0 var(--s-3); border: 0; border-radius: var(--r-full); background: var(--fill); color: var(--label); font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }

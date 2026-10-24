@@ -43,9 +43,9 @@ const COLOR_XRAY = 0x32d7ff;
 const RADIO_LLANTA = 0.58;
 const ANCHO_LLANTA = 0.36;
 const ALTURA_EJE = 0.6;
-const SEP_EJE = 1.35;
-const LADO_EXTERIOR = 1.52;
-const LADO_INTERIOR = 0.96;
+const SEP_EJE = 2.1;
+const LADO_EXTERIOR = 2.2;
+const LADO_INTERIOR = 1.5;
 /** Desgaste de referencia (mm): a este valor la banda se deforma al máximo */
 const MM_REF = 12;
 
