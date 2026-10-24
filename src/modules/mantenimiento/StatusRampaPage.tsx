@@ -527,8 +527,6 @@ export function StatusRampaPage() {
 
 // ─── Rampas activas: tabla en escritorio, tarjetas compactas en celular ───────
 
-const COLOR_RAMPA = (e: RampaEntrada) => (e.color && !['#ef4444', '#007aff', '#64748b'].includes(e.color) ? e.color : 'var(--ink)');
-const NUM_RAMPA = (nombre: string) => nombre.match(/\d+/)?.[0] ?? nombre.trim().charAt(0).toUpperCase();
 const soloFecha = (f: string | null | undefined) => formatFechaPe(f);
 const soloHora = (h: string | null | undefined) => (h ? h.slice(0, 5) : '—');
 function situacionTono(s: string | null) {
@@ -561,7 +559,6 @@ function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasIns
                 onKeyDown={ev => { if (ev.key === 'Enter') onAbrir(e); }}>
                 <td>
                   <span className="rt__rampa">
-                    <span className="rt__num" style={{ background: COLOR_RAMPA(e) }}>{NUM_RAMPA(e.rampa)}</span>
                     {e.rampa}
                   </span>
                 </td>
@@ -623,7 +620,6 @@ function RampaMovil({ entradas, tecnicosPorRampa, verInspeccion, ultimasInsp, pu
           <div key={rampaId(e)} role="button" tabIndex={0} className="rm-card pressable"
             onClick={() => { haptic('selection'); onAbrir(e); }}
             onKeyDown={ev => { if (ev.key === 'Enter') onAbrir(e); }}>
-            <span className="rm-num" style={{ background: COLOR_RAMPA(e) }}>{NUM_RAMPA(e.rampa)}</span>
             <span className="rm-cuerpo">
               <span className="rm-cab">
                 <span className="rm-rampa">{e.rampa}</span>
