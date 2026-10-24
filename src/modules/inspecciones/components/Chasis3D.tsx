@@ -305,10 +305,10 @@ interface Pose { pos: THREE.Vector3; objetivo: THREE.Vector3; arriba: THREE.Vect
 function poseDeVista(vista: VistaChasis, zMin: number, zMax: number): Pose {
   const zc = (zMin + zMax) / 2;
   // Un poco más cerca que el clásico (1.95): el visor aquí es más ancho y el camión se veía chico
-  const alto = Math.max(12, (zMax - zMin + 2) * 1.35);
+  const alto = Math.max(22, (zMax - zMin + 2) * 2.4);
   const objetivo = new THREE.Vector3(0, 0, zc);
   if (vista === '2d') return { pos: new THREE.Vector3(0, alto, zc), objetivo, arriba: new THREE.Vector3(0, 0, -1), orbitar: false };
-  if (vista === 'lat') return { pos: new THREE.Vector3(14, 1.5, zc), objetivo, arriba: new THREE.Vector3(0, 1, 0), orbitar: true };
+  if (vista === 'lat') return { pos: new THREE.Vector3(22, 2.5, zc), objetivo, arriba: new THREE.Vector3(0, 1, 0), orbitar: true };
   return { pos: new THREE.Vector3(10, alto * 0.7, zc + 10), objetivo, arriba: new THREE.Vector3(0, 1, 0), orbitar: true };
 }
 
