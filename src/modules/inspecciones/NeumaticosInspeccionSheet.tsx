@@ -389,7 +389,7 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
           </section>
 
           {/* Bento 2: esquema del chasis, debajo de los datos generales y encima del editor */}
-          <ChasisEsquemaVisual configuracion={config} llantas={llantas} activa={activa} onSelect={setActiva} onRotar={rotarPosiciones} />
+          <ChasisEsquemaVisual configuracion={config} llantas={llantas} activa={activa} onSelect={setActiva} />
 
           {/* Posiciones: chips y editor de la llanta activa */}
           <section className="insp-neu__bloque">

@@ -1,5 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
-import { Box, Ruler } from 'lucide-react';
+import { useState } from 'react';
 import { SegmentedControl } from '../../../core/ui/SegmentedControl';
 import { tonoMm } from '../../mantenimiento/neumaticosSemaforo';
 import '../inspecciones.css';
@@ -147,91 +146,26 @@ const OPCIONES_VISTA = [
   { value: 'xray' as VistaChasis, label: 'Rayos X' },
 ];
 
-// Three.js va en un chunk aparte: solo se descarga cuando se abre la vista 3D
-const Chasis3D = lazy(() => import('./Chasis3D'));
-const CLAVE_3D = 'fleet_chasis_3d';
-
-/** Este equipo puede dibujar en WebGL */
-function webglDisponible(): boolean {
-  try {
-    const lienzo = document.createElement('canvas');
-    return !!(lienzo.getContext('webgl2') || lienzo.getContext('webgl'));
-  } catch { return false; }
-}
-
-/** 3D por defecto salvo poca memoria o que el usuario la haya apagado en este equipo */
-function preferir3d(soporta: boolean): boolean {
-  if (!soporta) return false;
-  const memoria = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
-  if (typeof memoria === 'number' && memoria < 2) return false;
-  try {
-    const guardado = localStorage.getItem(CLAVE_3D);
-    if (guardado !== null) return guardado === '1';
-  } catch { /* sin almacenamiento: vale la preferencia por defecto */ }
-  return true;
-}
-
-/** Chasis interactivo: pulsar una llanta la selecciona en el editor de abajo */
-export function ChasisEsquemaVisual({ configuracion, llantas, activa, onSelect, onRotar }: {
-  configuracion: string; llantas: LlantaChasis[]; activa: string; onSelect: (pos: string) => void; onRotar: (origen: string, destino: string) => void;
+/** Esquema de ejes y llantas en 2D, con vistas cenital, isométrica, lateral y rayos X */
+export function ChasisEsquemaVisual({ configuracion, llantas, activa, onSelect }: {
+  configuracion: string; llantas: LlantaChasis[]; activa: string; onSelect: (pos: string) => void;
 }) {
   const [vista, setVista] = useState<VistaChasis>('2d');
-  const [soporta3d] = useState(webglDisponible);
-  const [modo3d, setModo3d] = useState(() => preferir3d(soporta3d));
-  const [aviso3d, setAviso3d] = useState(false);
-  // Llanta que se arrastra en 3D y posición sobre la que está (para el banner)
-  const [arrastre, setArrastre] = useState<{ origen: string; destino: string | null } | null>(null);
   const c = CONFIGURACIONES[configuracion];
   const repuestosPresentes = c ? c.repuestos.filter(p => llantas.some(l => l.posicion === p)) : [];
   const xray = vista === 'xray';
   const transform = vista === 'iso' ? 'perspective(700px) rotateX(42deg) rotateZ(-6deg)' : vista === 'lat' ? 'perspective(700px) rotateY(-52deg)' : undefined;
-
-  function cambiarModo(v: boolean) {
-    setModo3d(v);
-    setAviso3d(false);
-    try { localStorage.setItem(CLAVE_3D, v ? '1' : '0'); } catch { /* sin almacenamiento: dura solo la sesión */ }
-  }
-  // Si el contexto WebGL se pierde, se vuelve al esquema 2D sin romper el formulario
-  function perderContexto() {
-    setModo3d(false);
-    setAviso3d(true);
-  }
-
-  const plano = (
-    <div className="insp-chasis__lienzo" style={{ transform, transition: 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)' }}>
-      <Plano codigo={configuracion} llantas={llantas} activa={activa} onSelect={onSelect} xray={xray} />
-    </div>
-  );
 
   return (
     <section className={`insp-chasis${xray ? ' insp-chasis--xray' : ''}`} aria-label="Esquema de ejes y llantas">
       <div className="insp-chasis__cab">
         <SegmentedControl<VistaChasis> label="Perspectiva" value={vista} onChange={setVista} options={OPCIONES_VISTA} />
         {c && <span className="insp-chasis__info">{configuracion} · {c.nombre} · {c.llantas} llantas{repuestosPresentes.length ? ` + ${repuestosPresentes.join(', ')}` : ''}</span>}
-        {soporta3d && (
-          <button type="button" className="insp-chasis__modo pressable" aria-pressed={modo3d} onClick={() => cambiarModo(!modo3d)}>
-            {modo3d ? <><Ruler size={14} aria-hidden /> Vista 2D clásica</> : <><Box size={14} aria-hidden /> Vista 3D Pro</>}
-          </button>
-        )}
       </div>
-      {aviso3d && <p className="insp-chasis__aviso" role="status">La vista 3D no está disponible en este equipo; se usa la vista 2D.</p>}
       {c ? (
-        modo3d ? (
-          // Mientras carga el motor 3D se muestra el esquema 2D (fallback)
-          <div style={{ position: 'relative' }}>
-            <Suspense fallback={plano}>
-              <Chasis3D configuracion={configuracion} llantas={llantas} activa={activa} vista={vista} onSelect={onSelect}
-                onRotar={onRotar} onArrastre={(origen, destino) => setArrastre(origen ? { origen, destino } : null)} onPerdida={perderContexto} />
-            </Suspense>
-            {arrastre && (
-              <div className="insp-chasis__arrastre" role="status">
-                {arrastre.destino
-                  ? `Suelta para intercambiar #${arrastre.origen} ⇄ #${arrastre.destino}`
-                  : `Arrastrando Llanta #${arrastre.origen} — Suelta sobre otra posición para intercambiar`}
-              </div>
-            )}
-          </div>
-        ) : plano
+        <div className="insp-chasis__lienzo" style={{ transform, transition: 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)' }}>
+          <Plano codigo={configuracion} llantas={llantas} activa={activa} onSelect={onSelect} xray={xray} />
+        </div>
       ) : (
         <p className="insp-chasis__vacio">Elige la configuración del vehículo para ver sus ejes.</p>
       )}
