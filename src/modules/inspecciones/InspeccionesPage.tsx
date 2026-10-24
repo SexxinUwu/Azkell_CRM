@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight, ClipboardCheck, Disc3, Download, Plus, SearchX, Upload, Wrench } from 'lucide-react';
+import { ArrowUpRight, ClipboardCheck, Disc3, Download, ListChecks, Plus, SearchX, Upload, Wrench } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -24,6 +24,7 @@ import { InspeccionFicha } from './InspeccionFicha';
 import { TipoInspeccionSheet } from './TipoInspeccionSheet';
 import { NeumaticosInspeccionSheet } from './NeumaticosInspeccionSheet';
 import { ImportarInspeccionesSheet, descargarPlantillaInspecciones } from './ImportarInspeccionesSheet';
+import { PlantillaInspeccionSheet } from './PlantillaInspeccionSheet';
 import { useEsquema } from './registro';
 import './inspecciones.css';
 
@@ -57,6 +58,7 @@ export function InspeccionesPage() {
   const esquema = useEsquema();
   const toast = useToast();
   const [importando, setImportando] = useState(false);
+  const [editandoPlantilla, setEditandoPlantilla] = useState(false);
   const dispQ = useDisponibilidad();
   const reduce = useReducedMotion();
   const navigate = useNavigate();
@@ -150,6 +152,7 @@ export function InspeccionesPage() {
             <MenuOtros opciones={[
               can('insp.crear') && { label: 'Importar Excel', detalle: 'Con revisión antes de guardar', icon: <Upload size={17} />, onSelect: () => setImportando(true) },
               can('insp.crear') && { label: 'Descargar plantilla', icon: <Download size={17} />, onSelect: () => { descargarPlantillaInspecciones(esquema.data ?? []).catch(err => toast(errorMessage(err), 'error')); } },
+              can('insp.crear') && { label: 'Plantilla de inspección', detalle: 'Sistemas e ítems que se revisan', icon: <ListChecks size={17} />, onSelect: () => setEditandoPlantilla(true) },
               { label: 'Abrir en la versión actual', detalle: 'Editar y PDF', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/inspecciones') },
             ]} />
             {can('insp.crear') && <Button variant="primary" icon={<Plus size={16} />} onClick={() => navigate('/inspecciones/nueva')}>Nueva inspección</Button>}
@@ -339,6 +342,7 @@ export function InspeccionesPage() {
       <InspeccionFicha inspeccion={abierta} onClose={() => setAbierta(null)} />
       <ImportarInspeccionesSheet open={importando} onClose={() => setImportando(false)}
         existentes={insp.data ?? []} placasRegistradas={(placasQ.data ?? []).map(p => p.placa)} />
+      <PlantillaInspeccionSheet open={editandoPlantilla} onClose={() => setEditandoPlantilla(false)} />
     </Page>
   );
 }
