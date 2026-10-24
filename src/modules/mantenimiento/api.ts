@@ -261,7 +261,8 @@ export async function marcarDisponibilidadEnBase(placa: string, usuario: string)
  */
 export function costosOT(ot: OrdenTrabajo, trabajos: TrabajoOT[], materiales: MaterialSalida[]) {
   const manoObra = trabajosDeOT(ot, trabajos).reduce((s, t) => s + trabajoCosto(t), 0);
-  const repuestos = materiales.filter(m => m.estado !== 'Anulado').reduce((s, m) => s + Number(m.total_pen || 0), 0);
+  // Solo lo despachado cuenta como costo; las salidas pendientes todavía no salieron de almacén
+  const repuestos = materiales.filter(m => String(m.estado ?? '').toLowerCase() === 'despachado').reduce((s, m) => s + Number(m.total_pen || 0), 0);
   const total = Number(ot.costo_total ?? 0);
   return { manoObra, repuestos, otros: Math.max(0, total - manoObra - repuestos), total };
 }

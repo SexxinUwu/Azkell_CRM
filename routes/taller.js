@@ -253,7 +253,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                     SELECT SUM(COALESCE(m.costo_total, m.cantidad * m.costo_unit, 0))
                     FROM ot_materiales m
                     WHERE (m.ticket_ot = o.ticket_entrada OR m.ticket_ot = o.id_ot)
-                      AND m.estado != 'Anulado'
+                      AND LOWER(m.estado) = 'despachado'
                 ), 0) +
                 COALESCE((
                     SELECT SUM(COALESCE(tr.total, tr.cantidad * tr.precio_unitario, 0))
