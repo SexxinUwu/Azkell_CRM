@@ -3,13 +3,17 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Check, Contrast, Globe, Hand, Layers, RotateCcw, Type, Vibrate } from 'lucide-react';
 import { Page, PageHeader } from '../../core/ui/Display';
 import { Button } from '../../core/ui/Button';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Switch } from '../../core/ui/Switch';
 import { useToast } from '../../core/ui/Toast';
 import { haptic } from '../../core/lib/haptics';
 import { spring } from '../../core/lib/motion';
 import {
-  ESCALAS_TEXTO, NOMBRES_TAMANO, PREFERENCIAS_POR_DEFECTO, guardarPreferencias, leerPreferencias, type Preferencias,
+  ESCALAS_TEXTO, NOMBRES_TAMANO, PERFILES, PREFERENCIAS_POR_DEFECTO, guardarPreferencias, leerPreferencias,
+  perfilActivo, type ClavePerfil, type Preferencias,
 } from '../../core/lib/preferencias';
+
+const OPCIONES_PERFIL = (Object.keys(PERFILES) as ClavePerfil[]).map(value => ({ value, label: PERFILES[value].titulo }));
 
 // Fila con texto visible; el interruptor ya vibra al tocar (haptics en Switch)
 function Opcion({ id, titulo, detalle, checked, onChange }: {
@@ -49,6 +53,15 @@ export function AccesibilidadPage() {
     setGuardadoEn(Date.now());
   }
 
+  function aplicarPerfil(clave: ClavePerfil) {
+    const siguiente = { ...PERFILES[clave].valores, vibracion: p.vibracion };
+    setP(siguiente);
+    guardarPreferencias(siguiente);
+    setGuardadoEn(Date.now());
+    haptic('selection');
+    toast(`Perfil ${PERFILES[clave].titulo} aplicado`);
+  }
+
   function restablecer() {
     setP({ ...PREFERENCIAS_POR_DEFECTO });
     guardarPreferencias({ ...PREFERENCIAS_POR_DEFECTO });
@@ -58,6 +71,7 @@ export function AccesibilidadPage() {
   }
 
   const porcentaje = Math.round(ESCALAS_TEXTO[p.tamano] * 100);
+  const perfil = perfilActivo(p);
 
   return (
     <Page narrow>
@@ -76,6 +90,15 @@ export function AccesibilidadPage() {
           </AnimatePresence>
         }
       />
+
+      {/* Perfiles de un toque: al cambiar uno, las opciones de abajo se actualizan solas */}
+      <section className="acc-perfiles">
+        <SegmentedControl<ClavePerfil | 'personal'> label="Perfiles rápidos" block
+          value={perfil ?? 'personal'} onChange={v => v !== 'personal' && aplicarPerfil(v)} options={OPCIONES_PERFIL} />
+        <p className="acc-perfiles__nota">
+          {perfil ? PERFILES[perfil].detalle : 'Personalizado: ajustado a mano abajo'}
+        </p>
+      </section>
 
       {/* Vista previa: hereda el tamaño, la negrita y el contraste en vivo */}
       <section className="acc-vista" aria-label="Vista previa">

@@ -12,7 +12,7 @@ export interface Preferencias {
   vibracion: boolean;
 }
 
-export const ESCALAS_TEXTO = [0.9, 1, 1.12, 1.25, 1.4] as const;
+export const ESCALAS_TEXTO = [0.9, 1, 1.15, 1.2, 1.4] as const;
 export const NOMBRES_TAMANO = ['Pequeño', 'Normal', 'Grande', 'Muy grande', 'Enorme'] as const;
 
 export const PREFERENCIAS_POR_DEFECTO: Preferencias = {
@@ -24,6 +24,36 @@ export const PREFERENCIAS_POR_DEFECTO: Preferencias = {
   botonesGrandes: false,
   vibracion: true,
 };
+
+export type ClavePerfil = 'predeterminado' | 'taller' | 'lectura';
+
+/** Perfiles de un toque para cada tipo de usuario. Conservan la vibración de la preferencia actual. */
+export const PERFILES: Record<ClavePerfil, { titulo: string; detalle: string; valores: Omit<Preferencias, 'vibracion'> }> = {
+  predeterminado: {
+    titulo: 'Predeterminado',
+    detalle: 'Valores estándar',
+    valores: { tamano: 1, negrita: false, altoContraste: false, reducirMovimiento: false, reducirTransparencia: false, botonesGrandes: false },
+  },
+  taller: {
+    titulo: 'Taller / Patio',
+    detalle: 'Sol, guantes y mecánicos',
+    valores: { tamano: 3, negrita: false, altoContraste: true, reducirMovimiento: false, reducirTransparencia: false, botonesGrandes: true },
+  },
+  lectura: {
+    titulo: 'Lectura / Reportes',
+    detalle: 'Tablas densas y reportes',
+    valores: { tamano: 2, negrita: true, altoContraste: false, reducirMovimiento: false, reducirTransparencia: true, botonesGrandes: false },
+  },
+};
+
+/** Clave del perfil que coincide exactamente con las preferencias, o null si no hay ninguno */
+export function perfilActivo(p: Preferencias): ClavePerfil | null {
+  const claves = Object.keys(PERFILES) as ClavePerfil[];
+  return claves.find(k => {
+    const { valores } = PERFILES[k];
+    return (Object.keys(valores) as (keyof typeof valores)[]).every(c => valores[c] === p[c]);
+  }) ?? null;
+}
 
 const CLAVE = 'fleet_accesibilidad';
 

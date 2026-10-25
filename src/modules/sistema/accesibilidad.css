@@ -80,6 +80,8 @@ html[data-tactil='grande'] .modulo-fila {
 .acc-fila__detalle { font-size: 0.8125rem; color: var(--label-2); line-height: 1.35; }
 .acc-marca { color: var(--green-ink); flex-shrink: 0; }
 .acc-pie { display: flex; justify-content: center; padding: 8px 0 32px; }
+.acc-perfiles { display: flex; flex-direction: column; gap: 8px; }
+.acc-perfiles__nota { margin: 0; font-size: 0.8125rem; color: var(--label-2); text-align: center; }
 .acc-guardado {
   display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 600; color: var(--green-ink);
 }
