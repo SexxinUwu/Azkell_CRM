@@ -54,6 +54,6 @@ export const RUTAS: RutaModulo[] = [
     path: 'sistema/superadmin/*',
     permisos: ['administracion'],
     Page: lazy(() => import('./SuperadminEmpresasPage').then(m => ({ default: m.SuperadminEmpresasPage }))),
-    nav: { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', to: '/sistema/superadmin', icon: 'Building2', permisos: ['administracion'] },
+    nav: { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', to: '/sistema/superadmin', icon: 'Building2', permisos: [] },
   },
 ];

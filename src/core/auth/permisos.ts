@@ -10,6 +10,12 @@ export const ADMIN = '*';
 const ACCIONES: Record<string, string> = { l: 'ver', c: 'crear', e: 'editar', d: 'eliminar' };
 const activo = (v: unknown) => v === 1 || v === true || v === '1';
 
+/** Dueño del SaaS: misma regla que routes/superadmin.js. No depende de los permisos de la empresa. */
+export function esFundadorSaaS(user: { email: string; roleName: string } | null | undefined): boolean {
+  if (!user) return false;
+  return user.email.toLowerCase() === 'admin@azkell.com' || user.roleName === 'Fundador' || user.roleName === 'SuperAdmin';
+}
+
 export function permisosDesdeMatriz(raw: unknown, rol = '', correo = ''): string[] {
   let p: Record<string, unknown> = {};
   try {

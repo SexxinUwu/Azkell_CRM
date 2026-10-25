@@ -30,6 +30,8 @@ export interface NavItem {
   soloEmpresa?: string;
   /** Oculto en esta empresa (su versión propia está en otra sección) */
   noEmpresa?: string;
+  /** Solo para Fundador o admin@azkell.com (misma regla que routes/superadmin.js en el servidor) */
+  soloFundador?: boolean;
   /** Submenú: el elemento agrupa estas opciones */
   children?: NavItem[];
   /** Todavía no existe en la app: se muestra deshabilitado con "Pronto" */
@@ -216,7 +218,7 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Configuración',
     items: [
       { key: 'usuarios', label: 'Usuarios', clasico: 'sistema/usuarios', icon: UserCog, permissions: ver('usuarios') },
-      { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', clasico: 'sistema/superadmin', icon: Building2, permissions: ver('administracion') },
+      { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', clasico: 'sistema/superadmin', icon: Building2, permissions: [], soloFundador: true },
       { key: 'auditoria', label: 'Auditoría', clasico: 'sistema/auditoria', icon: History, permissions: ver('mod_auditoria') },
       { key: 'api-gateway', label: 'API y desarrolladores', to: '/sistema/api', icon: Code, permissions: ver('administracion') },
       { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: Building2, permissions: ver('administracion', 'cfg_empresa') },
@@ -261,21 +263,22 @@ const empresaDelDominio = () => (typeof window === 'undefined' ? '' : window.loc
 export const ALL_NAV_ITEMS = aplanar(NAV_SECTIONS.flatMap(s => s.items));
 
 // Quita lo que el usuario no puede ver. Un grupo solo aparece si le queda alguna opción visible.
-function filtrarItems(items: NavItem[], can: (...p: string[]) => boolean, empresa: string): NavItem[] {
+function filtrarItems(items: NavItem[], can: (...p: string[]) => boolean, empresa: string, esFundador: boolean): NavItem[] {
   return items
-    .map(i => (i.children ? { ...i, children: filtrarItems(i.children, can, empresa) } : i))
+    .map(i => (i.children ? { ...i, children: filtrarItems(i.children, can, empresa, esFundador) } : i))
     .filter(i => {
       if (i.children && i.children.length === 0) return false;
       if (i.soloEmpresa && !empresa.includes(i.soloEmpresa)) return false;
       if (i.noEmpresa && empresa.includes(i.noEmpresa)) return false;
+      if (i.soloFundador && !esFundador) return false;
       return can(...i.permissions);
     });
 }
 
-export function visibleSections(can: (...p: string[]) => boolean): NavSection[] {
+export function visibleSections(can: (...p: string[]) => boolean, esFundador = false): NavSection[] {
   const empresa = empresaDelDominio();
   return NAV_SECTIONS
-    .map(s => ({ ...s, items: filtrarItems(s.items, can, empresa) }))
+    .map(s => ({ ...s, items: filtrarItems(s.items, can, empresa, esFundador) }))
     .filter(s => s.items.length > 0);
 }
 

@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { ArrowUpRight, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
+import { esFundadorSaaS } from '../../core/auth/permisos';
 import { Notice, Page } from '../../core/ui/Display';
 import { firstName, formatLongDate, greeting } from '../../core/lib/format';
 import { spring } from '../../core/lib/motion';
@@ -19,7 +20,7 @@ const tile = (i: number) => ({
 export function InicioPage() {
   const { user, can } = useAuth();
   const navigate = useNavigate();
-  const sections = visibleSections(can)
+  const sections = visibleSections(can, esFundadorSaaS(user))
     // Los submenús se muestran como accesos sueltos; lo que todavía no existe (Pronto) no se muestra
     .map(s => ({ ...s, items: s.items.flatMap(i => i.children ?? [i]).filter(i => i.key !== 'inicio' && !i.pronto) }))
     .filter(s => s.items.length > 0);

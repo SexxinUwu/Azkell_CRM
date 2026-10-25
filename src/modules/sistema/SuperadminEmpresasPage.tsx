@@ -10,6 +10,8 @@ import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/Ta
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { esFundadorSaaS } from '../../core/auth/permisos';
 
 // Empresas SaaS (SuperAdmin): una fila por empresa del registro maestro (azkell_master, tabla empresas).
 // Usa GET/POST /api/superadmin/empresas, PUT /api/superadmin/empresas/:id y PUT /api/superadmin/empresas/:id/estado.
@@ -50,14 +52,25 @@ const tono = (e: string | null) => (e === 'activo' ? 'var(--green-ink)' : e === 
 
 export function SuperadminEmpresasPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const soyFundador = esFundadorSaaS(user);
   const [editando, setEditando] = useState<Empresa | null | 'nueva'>(null);
   const lista = useQuery<Empresa[]>({
     queryKey: ['superadmin', 'empresas'],
     queryFn: () => api<Empresa[]>('/superadmin/empresas'),
     staleTime: 30_000,
+    enabled: soyFundador, // sin este permiso el servidor responde 401; no se pide nada
   });
   const empresas = useMemo(() => lista.data ?? [], [lista.data]);
   const cuenta = (e: string) => empresas.filter(x => x.estado === e).length;
+
+  if (!soyFundador) {
+    return (
+      <Page narrow>
+        <PageHeader title="Empresas SaaS" subtitle="Solo el administrador de Azkell puede ver esta sección." />
+      </Page>
+    );
+  }
 
   return (
     <Page>

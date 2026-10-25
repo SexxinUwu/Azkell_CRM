@@ -9,6 +9,7 @@ import { api } from '../api/client';
 import { PaletaComandos, type OpcionPaleta } from './PaletaComandos';
 import { useInstallApp } from '../lib/useInstallApp';
 import { useAuth } from '../auth/AuthProvider';
+import { esFundadorSaaS } from '../auth/permisos';
 import { AvatarPropio } from '../../modules/perfil/AvatarPropio';
 import { Button, PageLoader } from '../ui/Button';
 import { Sheet } from '../ui/Sheet';
@@ -55,7 +56,7 @@ export function AppShell() {
   const alternarMenuFijo = () => setMenuFijo(v => { const nv = !v; try { localStorage.setItem('fleet_nav_fijo', nv ? '1' : '0'); } catch { /* nada */ } return nv; });
   const app = useInstallApp();
   const live = useLiveUpdates(); // cambios de otros dispositivos, al instante
-  const sections = visibleSections(can);
+  const sections = visibleSections(can, esFundadorSaaS(user));
   const contador = useNavBadges(can('gerencia.ver'));
   // Menú en acordeón: solo una sección abierta a la vez. Al entrar a una pantalla, se abre la sección que la contiene.
   const [seccionAbierta, setSeccionAbierta] = useState<string | null>(null);
