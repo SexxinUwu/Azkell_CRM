@@ -1748,6 +1748,7 @@ module.exports = (db, logAudit) => {
                 return res.json({ ok: true, data: [] });
             }
             const out = (rows || []).map(r => {
+                r.estilo_carroceria = r.carroceria || 'furgon';
                 if (!r.configuracion && r.placa_configuracion) {
                     r.configuracion = r.placa_configuracion;
                 }
@@ -1769,6 +1770,7 @@ module.exports = (db, logAudit) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
             const r = rows[0];
+            r.estilo_carroceria = r.carroceria || 'furgon';
             if (!r.configuracion && r.placa_configuracion) {
                 r.configuracion = r.placa_configuracion;
             }
@@ -1781,7 +1783,7 @@ module.exports = (db, logAudit) => {
         const {
             numero_inventario, fecha, motivo, quien_entrega, quien_recibe,
             clase, marca, tipo, modelo, placa, color, cilindros, numero_motor, numero_serie, kilometraje,
-            configuracion, estilo_cabina,
+            configuracion, estilo_cabina, estilo_carroceria,
             llantas_del_der_marca, llantas_del_izq_marca, llantas_tra_der_marca, llantas_tra_izq_marca, llantas_repuesto_marca, llantas_ref_json,
             inventario_partes_json, observaciones, croquis_danos_json,
             firma_entrega, firma_recibe, doc_entrega, doc_recibe,
@@ -1816,12 +1818,12 @@ module.exports = (db, logAudit) => {
                     INSERT INTO seg_entrega_vehiculos (
                         id, numero_inventario, fecha, motivo, quien_entrega, quien_recibe,
                         clase, marca, tipo, modelo, placa, color, cilindros, numero_motor, numero_serie, kilometraje,
-                        configuracion, estilo_cabina,
+                        configuracion, estilo_cabina, carroceria,
                         llantas_del_der_marca, llantas_del_izq_marca, llantas_tra_der_marca, llantas_tra_izq_marca, llantas_repuesto_marca, llantas_ref_json,
                         inventario_partes_json, observaciones, croquis_danos_json,
                         firma_entrega, firma_recibe, doc_entrega, doc_recibe,
                         empresa, creado_por
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `;
 
                 const values = [
@@ -1843,6 +1845,7 @@ module.exports = (db, logAudit) => {
                     parseFloat(kilometraje) || 0,
                     configuracion ? String(configuracion).trim().toUpperCase() : null,
                     estilo_cabina ? String(estilo_cabina).trim() : null,
+                    estilo_carroceria ? String(estilo_carroceria).trim().toLowerCase() : 'furgon',
                     llantas_del_der_marca || null,
                     llantas_del_izq_marca || null,
                     llantas_tra_der_marca || null,
@@ -1874,7 +1877,7 @@ module.exports = (db, logAudit) => {
         const id = req.params.id;
         const {
             fecha, quien_recibe, clase, marca, tipo, modelo, color, numero_motor, numero_serie,
-            kilometraje, configuracion, estilo_cabina, inventario_partes_json, observaciones, firma_entrega, firma_recibe, empresa
+            kilometraje, configuracion, estilo_cabina, estilo_carroceria, inventario_partes_json, observaciones, firma_entrega, firma_recibe, empresa
         } = req.body;
 
         const fInventarioPartes = typeof inventario_partes_json === 'string' ? inventario_partes_json : JSON.stringify(inventario_partes_json || {});
@@ -1894,10 +1897,11 @@ module.exports = (db, logAudit) => {
                 kilometraje = ?,
                 configuracion = COALESCE(?, configuracion),
                 estilo_cabina = COALESCE(?, estilo_cabina),
+                carroceria = COALESCE(?, carroceria),
                 inventario_partes_json = ?,
                 observaciones = ?,
-                firma_entrega = COALESCE(?, firma_entrega),
-                firma_recibe = COALESCE(?, firma_recibe),
+                firma_entrega = CASE WHEN ? THEN ? ELSE firma_entrega END,
+                firma_recibe = CASE WHEN ? THEN ? ELSE firma_recibe END,
                 empresa = COALESCE(?, empresa)
             WHERE id = ?
         `;
@@ -1915,9 +1919,12 @@ module.exports = (db, logAudit) => {
             parseFloat(kilometraje) || 0,
             configuracion ? String(configuracion).trim().toUpperCase() : null,
             estilo_cabina ? String(estilo_cabina).trim() : null,
+            estilo_carroceria ? String(estilo_carroceria).trim().toLowerCase() : null,
             fInventarioPartes,
             observaciones || null,
+            'firma_entrega' in req.body ? 1 : 0,
             firma_entrega || null,
+            'firma_recibe' in req.body ? 1 : 0,
             firma_recibe || null,
             empresa || null,
             id

@@ -357,6 +357,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
       kilometraje: parseFloat(campos.kilometraje) || 0,
       configuracion: croquis.configuracion,
       estilo_cabina: croquis.estiloCabina,
+      estilo_carroceria: croquis.estiloCarroceria,
       inventario_partes_json: partes,
       observaciones: campos.observaciones,
       doc_entrega: entrega,

@@ -67,6 +67,7 @@ model SegEntregaVehiculo {
   actualizado_en         DateTime? @default(now()) @db.Timestamp(0)
   configuracion          String?   @db.VarChar(50)
   estilo_cabina          String?   @db.VarChar(50)
+  carroceria             String?   @default("furgon") @db.VarChar(50)
 
   @@index([empresa], map: "idx_empresa")
   @@index([fecha], map: "idx_fecha")
