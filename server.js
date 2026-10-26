@@ -16,6 +16,7 @@ const multer = require('multer');
 const fs = require('fs');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = require('express-rate-limit');
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl } = require('./utils/s3');
 const { AsyncLocalStorage } = require('async_hooks');
 const tenantStorage = new AsyncLocalStorage();
@@ -93,7 +94,7 @@ const limiterLoginIP = rateLimit({
 const limiterLoginCuenta = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 20,
-    keyGenerator: (req) => `${req.ip}|${String((req.body && req.body.correo) || '').trim().toLowerCase()}`,
+    keyGenerator: (req) => `${ipKeyGenerator(req.ip)}|${String((req.body && req.body.correo) || '').trim().toLowerCase()}`,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Demasiados intentos para esta cuenta. Espera 15 minutos.' }
