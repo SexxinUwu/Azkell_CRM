@@ -2375,12 +2375,19 @@ module.exports = function (db, broadcast, logAudit) {
                 }
                 const formatted = String(nextNum).padStart(8, '0');
 
-                // Motivo de gasto del catálogo para el submotivo de la OC (el mismo que usa caja)
-                const [catMotivo] = await tdb.query(
-                    "SELECT motivo FROM tesoreria_motivos_gastos WHERE estado = 'ACTIVO' AND sub_motivo = ? LIMIT 1",
-                    [oc.sub_motivo || '']
-                ).catch(() => [[]]);
-                const motivoCatalogo = (catMotivo && catMotivo[0] && catMotivo[0].motivo) || oc.motivo_entrada || 'COMPRA / ALMACÉN';
+                // Motivo y submotivo de Caja para el submotivo de la OC (equivalencias en services/tesoreria_motivos_oc.js)
+                const { equivalenciaOC } = require('../services/tesoreria_motivos_oc');
+                const eqOC = equivalenciaOC(oc.sub_motivo);
+                let motivoCatalogo = eqOC ? eqOC.motivo : null;
+                if (!eqOC) {
+                    // Sin equivalencia aprobada: si el submotivo existe tal cual en el catálogo activo, se usa su motivo
+                    const [catMotivo] = await tdb.query(
+                        "SELECT motivo FROM tesoreria_motivos_gastos WHERE estado = 'ACTIVO' AND sub_motivo = ? LIMIT 1",
+                        [oc.sub_motivo || '']
+                    ).catch(() => [[]]);
+                    motivoCatalogo = (catMotivo && catMotivo[0] && catMotivo[0].motivo) || 'COMPRA / ALMACÉN';
+                }
+                const subCaja = eqOC ? eqOC.sub : (oc.sub_motivo || 'PAGO REQUERIMIENTO');
 
                 const insertCajaSql = `
                     INSERT INTO tesoreria_caja (
@@ -2419,7 +2426,7 @@ module.exports = function (db, broadcast, logAudit) {
                     oc.autoriza || oc.aprobado_por || usuarioPago,
                     motivoCatalogo,
                     oc.centro_costo || 'CC-100',
-                    oc.sub_motivo || 'PAGO REQUERIMIENTO',
+                    subCaja,
                     cuentaOrigen.includes('CAJA') ? 'EFECTIVO' : 'TRANSFERENCIA',
                     monStr,
                     oc.proveedor_nombre || 'PROVEEDOR GENERAL',
