@@ -1,0 +1,56 @@
+/* Editor de la plantilla de inventario (Entrega de vehículos). Usa los tokens de core/styles/tokens.css. */
+
+.ce-plantilla {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.ce-plantilla__ayuda {
+  margin: 0;
+}
+
+.ce-plantilla__cat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.ce-plantilla__cat-cab {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-2);
+}
+
+.ce-plantilla__cat-nombre {
+  flex: 1;
+  min-width: 0;
+}
+
+.ce-plantilla__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.ce-plantilla__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.ce-plantilla__item > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.ce-plantilla__cat > .btn {
+  align-self: flex-start;
+}

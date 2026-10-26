@@ -30,7 +30,7 @@ export function normalizarConfig(texto: string | null | undefined): ConfigCroqui
 export function svgCroquis(config: ConfigCroquis, estiloCabina: EstiloCabina, furgon: boolean, { fondo = false } = {}): string {
   const chata = estiloCabina === 'chata';
   let svg = `
-    <svg viewBox="0 0 920 340" width="100%" style="display:block;max-width:820px;margin:0 auto;" xmlns="http://www.w3.org/2000/svg"${fondo ? ' style="background:#ffffff"' : ''}>
+    <svg viewBox="0 0 920 340" width="100%" style="display:block;max-width:820px;margin:0 auto;${fondo ? 'background:#ffffff;' : ''}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="evChassisGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#475569" /><stop offset="100%" stop-color="#1e293b" /></linearGradient>
         <linearGradient id="evCabGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff" /><stop offset="60%" stop-color="#f8fafc" /><stop offset="100%" stop-color="#e2e8f0" /></linearGradient>

@@ -1,147 +1,229 @@
-import './flota.css';
-import '../mantenimiento/mant.css';
-import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, ArrowUpRight, ClipboardCheck, FileSpreadsheet, SearchX } from 'lucide-react';
-import { Button, PageLoader } from '../../core/ui/Button';
-import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
-import { Sheet } from '../../core/ui/Sheet';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Page } from '../../core/ui/Display';
+import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
-import { exportarExcel } from '../../core/lib/excel';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { ADMIN } from '../../core/auth/permisos';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
-import { formatFechaHoraPe } from '../../core/lib/format';
+import { descargarArchivo } from '../../core/lib/pdf';
+import { CePortal, type StatsEntrega } from './ce-Portal';
+import { CeLista, type AccionFila, type CifrasLista } from './ce-Lista';
+import { CeFormulario } from './ce-Formulario';
+import { CePlantilla } from './ce-PlantillaEditor';
+import { generarPdfEntrega, compartirEntregaWhatsApp, nombrePdfEntrega } from './ce-pdf';
+import { exportarEntregasExcel } from './ce-excel';
+import { cargarPlantilla } from './ce-plantilla';
+import type { EntregaVehiculo } from './ce-tipos';
 
-type Item = Record<string, unknown>;
-interface Seccion { id?: string; titulo?: string; items?: Item[] }
-interface Registro {
-  id: string; placa_tracto: string; placa_carreta: string | null; conductor: string; estado: string; salida_fecha: string | null; retorno_fecha: string | null;
-  salida_has_alert: number | boolean; retorno_has_alert: number | boolean;
-  salida_checklist_json: unknown; retorno_checklist_json: unknown;
-}
+type Vista = 'portal' | 'lista' | 'formulario';
+type ModoForm = 'nuevo' | 'editar' | 'ver';
 
-// El checklist se guarda como lista de secciones con ítems, o como lista plana de ítems
-function itemsDe(c: unknown): Item[] {
-  if (!Array.isArray(c)) return [];
-  return (c as (Seccion | Item)[]).flatMap(x => (Array.isArray((x as Seccion).items) ? ((x as Seccion).items as Item[]) : [x as Item]));
-}
-const evaluado = (i: Item) => i.valor !== undefined || i.estado !== undefined || i.ok !== undefined || i.resultado !== undefined;
-const esOk = (i: Item) => i.ok === true || i.valor === true || ['ok', 'bueno', 'b', 'si', 'sí', 'conforme'].includes(String(i.valor ?? i.estado ?? i.resultado ?? '').toLowerCase());
-const pct = (items: Item[]) => (items.length ? Math.round((items.filter(esOk).length / items.length) * 100) : 0);
-const nombreItem = (i: Item) => String(i.label ?? i.nombre ?? i.texto ?? i.id ?? 'Ítem');
-const dia = (s?: string | null) => formatFechaHoraPe(s);
-const tonoPct = (p: number) => (p >= 80 ? 'green' : p >= 50 ? 'amber' : 'red');
+// La misma clave que usa el clásico y Garita: la empresa elegida se recuerda en el navegador
+const EMPRESA_KEY = 'sgu_empresa_activa';
+const leerEmpresa = () => { try { return localStorage.getItem(EMPRESA_KEY) || 'TODAS'; } catch { return 'TODAS'; } };
+const guardarEmpresa = (e: string) => { try { localStorage.setItem(EMPRESA_KEY, e); } catch { /* sin almacenamiento */ } };
 
-// Flota › Checklist de entrega: revisión de cada unidad al salir y al volver (se captura en Garita).
+const hoyIso = () => {
+  const d = new Date();
+  const p = (x: number) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
+/** Flota › Checklist de entrega de vehículos. Portal de empresas → listado → formulario (vistas internas, sin recargar). */
 export function ChecklistEntregaPage() {
+  const qc = useQueryClient();
   const toast = useToast();
-  const [busqueda, setBusqueda] = useState('');
-  const [soloAlertas, setSoloAlertas] = useState(false);
-  const [abiertoId, setAbiertoId] = useState<string | null>(null);
+  const { user, can } = useAuth();
+  // Igual que el clásico: eliminar actas solo lo hace el administrador
+  const puedeEliminar = can(ADMIN);
 
-  const q = useQuery<Registro[]>({
-    queryKey: ['flota', 'checklist-entregas'],
-    queryFn: () => api<Registro[]>('/seguridad/unidades?limit=300').then(r => (Array.isArray(r) ? r : [])),
+  const [vista, setVista] = useState<Vista>('portal');
+  const [empresa, setEmpresa] = useState<string>(leerEmpresa);
+  const [formulario, setFormulario] = useState<{ registro: EntregaVehiculo | null; modo: ModoForm } | null>(null);
+  const [plantillaAbierta, setPlantillaAbierta] = useState(false);
+  const [porEliminar, setPorEliminar] = useState<EntregaVehiculo | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+  const [ocupadoId, setOcupadoId] = useState<string | null>(null);
+
+  const statsQ = useQuery<StatsEntrega>({
+    queryKey: ['flota', 'ce-stats'],
+    queryFn: () => api<StatsEntrega>('/seguridad/entrega-vehiculos/stats'),
     staleTime: 30_000,
   });
 
-  const conChecklist = useMemo(() => (q.data ?? []).filter(r => itemsDe(r.salida_checklist_json).length || itemsDe(r.retorno_checklist_json).length), [q.data]);
-  const visibles = useMemo(() => {
-    const t = busqueda.trim().toUpperCase();
-    return conChecklist.filter(r => (!soloAlertas || r.salida_has_alert || r.retorno_has_alert)
-      && (!t || [r.id, r.placa_tracto, r.placa_carreta, r.conductor].some(x => String(x ?? '').toUpperCase().includes(t))));
-  }, [conChecklist, busqueda, soloAlertas]);
-  const abierto = (q.data ?? []).find(r => r.id === abiertoId) ?? null;
+  const registrosQ = useQuery<EntregaVehiculo[]>({
+    queryKey: ['flota', 'ce-registros', empresa],
+    queryFn: () => api<{ ok?: boolean; data?: EntregaVehiculo[] }>('/seguridad/entrega-vehiculos', {
+      query: empresa !== 'TODAS' ? { empresa } : undefined,
+    }).then(r => (Array.isArray(r?.data) ? r.data : [])),
+    enabled: vista !== 'portal',
+    staleTime: 15_000,
+  });
 
-  async function exportar() {
-    try {
-      await exportarExcel('Checklist-de-entrega', 'Checklist',
-        ['Folio', 'Tracto', 'Carreta', 'Conductor', 'Salida', 'Retorno', '% salida', '% retorno', 'Alerta'],
-        visibles.map(r => [r.id, r.placa_tracto, r.placa_carreta, r.conductor, dia(r.salida_fecha), dia(r.retorno_fecha),
-          pct(itemsDe(r.salida_checklist_json)), pct(itemsDe(r.retorno_checklist_json)), r.salida_has_alert || r.retorno_has_alert ? 'Sí' : '']));
-      haptic('success');
-    } catch (err) { toast(errorMessage(err), 'error'); }
+  const registros = registrosQ.data ?? [];
+
+  // Cifras del servidor (la lista solo trae los 300 registros más recientes); si no llegan, se cuentan de la lista
+  const cifras: CifrasLista = (() => {
+    const s = statsQ.data;
+    const porEmpresa = empresa === 'TODAS' ? s?.global : s?.empresas.find(e => e.empresa.toUpperCase() === empresa.toUpperCase());
+    if (porEmpresa) {
+      const vehiculos = empresa === 'TODAS' ? (s?.empresas ?? []).reduce((acc, e) => acc + (e.vehiculos ?? 0), 0) : (porEmpresa.vehiculos ?? 0);
+      return { total: porEmpresa.total_actas, hoy: porEmpresa.hoy, vehiculos };
+    }
+    const hoy = hoyIso();
+    return {
+      total: registros.length,
+      hoy: registros.filter(r => String(r.fecha ?? '').slice(0, 10) === hoy).length,
+      vehiculos: new Set(registros.map(r => r.placa)).size,
+    };
+  })();
+
+  function elegirEmpresa(e: string) {
+    setEmpresa(e);
+    guardarEmpresa(e);
+    setVista('lista');
   }
 
-  const detalle = (titulo: string, c: unknown) => {
-    const items = itemsDe(c);
-    if (!items.length) return null;
-    const p = pct(items);
-    return (
-      <div>
-        <p className="tarjeta__grupo-titulo">{titulo} · {p}% conforme ({items.filter(evaluado).length}/{items.length} revisados)</p>
-        <div className="tarjeta__lista">
-          {items.map((it, i) => (
-            <div key={i} className="dato" style={{ flexDirection: 'row', alignItems: 'center', gap: 'var(--s-2)' }}>
-              <span className="dato__valor" style={{ flex: 1, fontSize: '0.875rem' }}>{nombreItem(it)}</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: esOk(it) ? 'var(--green-ink)' : evaluado(it) ? 'var(--red-ink)' : 'var(--label-3)' }}>
-                {esOk(it) ? 'Conforme' : evaluado(it) ? String(it.valor ?? it.estado ?? it.resultado ?? 'Observado') : 'Sin revisar'}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
+  function nuevaEntrega() {
+    setFormulario({ registro: null, modo: 'nuevo' });
+    setVista('formulario');
+  }
+
+  function refrescarListado() {
+    return Promise.all([
+      qc.invalidateQueries({ queryKey: ['flota', 'ce-registros'] }),
+      qc.invalidateQueries({ queryKey: ['flota', 'ce-stats'] }),
+    ]);
+  }
+
+  /** Trae el acta completa (la lista puede venir sin todos los campos) */
+  async function detalle(id: string | number): Promise<EntregaVehiculo> {
+    const res = await api<{ ok?: boolean; data?: EntregaVehiculo }>(`/seguridad/entrega-vehiculos/${encodeURIComponent(String(id))}`);
+    if (!res?.data) throw new Error('No se pudo obtener el registro');
+    return res.data;
+  }
+
+  async function accion(a: AccionFila, r: EntregaVehiculo) {
+    haptic('selection');
+    if (a === 'eliminar') { setPorEliminar(r); return; }
+    setOcupadoId(String(r.id));
+    try {
+      const d = await detalle(r.id);
+      if (a === 'ver' || a === 'editar') {
+        setFormulario({ registro: d, modo: a === 'ver' ? 'ver' : 'editar' });
+        setVista('formulario');
+      } else if (a === 'pdf') {
+        const blob = await generarPdfEntrega(d);
+        descargarArchivo(blob, nombrePdfEntrega(d));
+        haptic('success');
+      } else {
+        await compartirEntregaWhatsApp(d);
+      }
+    } catch (err) {
+      // Cancelar la hoja de compartir del sistema no es un error
+      if (err instanceof Error && err.name === 'AbortError') return;
+      toast(errorMessage(err), 'error');
+      haptic('warning');
+    } finally {
+      setOcupadoId(null);
+    }
+  }
+
+  async function eliminar() {
+    if (!porEliminar) return;
+    setEliminando(true);
+    try {
+      await api(`/seguridad/entrega-vehiculos/${encodeURIComponent(String(porEliminar.id))}`, { method: 'DELETE' });
+      haptic('success');
+      toast('Acta eliminada');
+      setPorEliminar(null);
+      await refrescarListado();
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+      haptic('warning');
+    } finally {
+      setEliminando(false);
+    }
+  }
+
+  async function exportar(filas: EntregaVehiculo[]) {
+    if (filas.length === 0) { toast('No hay actas para exportar', 'error'); return; }
+    try {
+      const plantilla = await cargarPlantilla().catch(() => null);
+      await exportarEntregasExcel(filas, plantilla ?? null);
+      haptic('success');
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+    }
+  }
+
+  const usuario = user?.name ?? '';
+  const statsError = statsQ.isError ? statsQ.error : null;
 
   return (
-    <Page>
-      <PageHeader
-        eyebrow="Flota"
-        title="Checklist de entrega"
-        subtitle={q.isLoading ? 'Cargando…' : `${conChecklist.length} unidades con checklist`}
-        actions={
-          <MenuOtros opciones={[
-            { label: 'Exportar Excel', detalle: `${visibles.length} registros`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-            { label: soloAlertas ? 'Ver todos' : 'Ver solo con alerta', icon: <AlertTriangle size={17} />, onSelect: () => setSoloAlertas(v => !v) },
-            { label: 'Capturar checklist, firmas y fotos', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('seguridad/unidades') },
-          ]} />
-        }
+    <Page wide>
+      {vista === 'portal' && (
+        <CePortal
+          usuario={usuario}
+          stats={statsQ.data}
+          cargando={statsQ.isLoading}
+          error={statsError}
+          actualizando={statsQ.isFetching && !statsQ.isLoading}
+          onElegir={elegirEmpresa}
+          onActualizar={() => { void statsQ.refetch(); }}
+        />
+      )}
+
+      {vista === 'lista' && (
+        <CeLista
+          empresa={empresa}
+          registros={registros}
+          cargando={registrosQ.isLoading}
+          error={registrosQ.isError ? registrosQ.error : null}
+          cifras={cifras}
+          actualizando={registrosQ.isFetching && !registrosQ.isLoading}
+          ocupadoId={ocupadoId}
+          puedeEliminar={puedeEliminar}
+          onEmpresas={() => setVista('portal')}
+          onPlantilla={() => setPlantillaAbierta(true)}
+          onActualizar={() => { void refrescarListado(); }}
+          onRegistrar={nuevaEntrega}
+          onAccion={(a, r) => { void accion(a, r); }}
+          onExcel={exportar}
+        />
+      )}
+
+      {vista === 'formulario' && formulario && (
+        <CeFormulario
+          registro={formulario.registro}
+          empresa={empresa}
+          modo={formulario.modo}
+          onCerrar={() => { setFormulario(null); setVista('lista'); }}
+          onGuardado={() => {
+            haptic('success');
+            toast('Acta guardada');
+            setFormulario(null);
+            setVista('lista');
+            void refrescarListado();
+          }}
+        />
+      )}
+
+      <CePlantilla abierta={plantillaAbierta} onCerrar={() => setPlantillaAbierta(false)} />
+
+      <ConfirmSheet
+        open={!!porEliminar}
+        onClose={() => { if (!eliminando) setPorEliminar(null); }}
+        onConfirm={() => { void eliminar(); }}
+        title="Eliminar acta"
+        message={porEliminar
+          ? `Se eliminará el acta ${porEliminar.numero_inventario || porEliminar.id} de ${porEliminar.placa || 'la unidad'}. Esta acción no se puede deshacer.`
+          : ''}
+        confirmLabel="Eliminar acta"
+        loading={eliminando}
       />
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <SearchField value={busqueda} onChange={setBusqueda} placeholder="Folio, placa o conductor…" />
-        {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : visibles.length === 0 ? (
-          <EmptyState icon={busqueda || soloAlertas ? <SearchX size={22} /> : <ClipboardCheck size={22} />} title={busqueda || soloAlertas ? 'Sin coincidencias' : 'Sin checklists registrados'}>
-            Los checklists se capturan al registrar la salida y el retorno de una unidad en Garita.
-          </EmptyState>
-        ) : (
-          <div className="tarjeta__lista">
-            {visibles.map(r => {
-              const ps = pct(itemsDe(r.salida_checklist_json)), pr = pct(itemsDe(r.retorno_checklist_json));
-              const alerta = !!(r.salida_has_alert || r.retorno_has_alert);
-              return (
-                <button key={r.id} type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setAbiertoId(r.id); }}>
-                  <div className="mov-fila__icon" style={{ background: alerta ? 'var(--red-tint)' : 'var(--green-tint)', color: alerta ? 'var(--red-ink)' : 'var(--green-ink)' }}>
-                    {alerta ? <AlertTriangle size={16} /> : <ClipboardCheck size={16} />}
-                  </div>
-                  <div className="mov-fila__cuerpo">
-                    <span className="mov-fila__titulo">{r.placa_tracto}{r.placa_carreta ? ` + ${r.placa_carreta}` : ''} · {r.conductor}</span>
-                    <span className="mov-fila__sub">{r.id} · salida {dia(r.salida_fecha)}{r.retorno_fecha ? ` · retorno ${dia(r.retorno_fecha)}` : ''}</span>
-                  </div>
-                  <div className="mov-fila__derecha">
-                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${tonoPct(ps)}-ink)` }}>Salida {ps}%</span>
-                    {itemsDe(r.retorno_checklist_json).length > 0 && <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${tonoPct(pr)}-ink)` }}>Retorno {pr}%</span>}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <Sheet open={!!abierto} onClose={() => setAbiertoId(null)} title={abierto ? `${abierto.placa_tracto} · ${abierto.id}` : ''} footer={<Button variant="secondary" onClick={() => setAbiertoId(null)}>Cerrar</Button>}>
-        {abierto && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-            {(abierto.salida_has_alert || abierto.retorno_has_alert) && <Notice tone="error" icon={<AlertTriangle size={16} />}>Hay ítems con observación en este checklist.</Notice>}
-            {detalle('Checklist de salida', abierto.salida_checklist_json)}
-            {detalle('Checklist de retorno', abierto.retorno_checklist_json)}
-          </div>
-        )}
-      </Sheet>
     </Page>
   );
 }

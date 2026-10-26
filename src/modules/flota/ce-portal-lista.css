@@ -1,0 +1,262 @@
+/* Checklist de entrega: portal de empresas (ce-Portal.tsx) y listado de actas (ce-Lista.tsx).
+   Prefijo cep- para no chocar con ce-croquis.css ni con otros módulos. */
+
+.cep-vista { display: flex; flex-direction: column; gap: var(--s-4); }
+
+/* ── Portal: bienvenida ───────────────────────────────────────────────────── */
+.cep-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+}
+.cep-hero__izq { display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
+.cep-hero__avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 1rem;
+}
+.cep-eyebrow {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.cep-hero__titulo { margin: 4px 0 2px; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; color: var(--label); }
+.cep-hero__texto { margin: 0; font-size: 0.875rem; color: var(--label-2); }
+
+/* ── Portal: tarjetas de empresa ──────────────────────────────────────────── */
+.cep-portal-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-3);
+}
+@media (min-width: 720px) {
+  .cep-portal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .cep-portal-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.cep-emp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+  padding: var(--s-4);
+  background: var(--surface);
+  border: 1px solid transparent;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.cep-emp:hover,
+.cep-emp:focus-visible { border-color: var(--separator-strong); }
+.cep-emp--global { background: var(--fill); border: 1px dashed var(--separator-strong); box-shadow: none; }
+.cep-emp__top { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.cep-emp__icono {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+.cep-emp__nombre { margin: 0; font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.cep-emp__sub { margin: 2px 0 0; font-size: 0.8125rem; color: var(--label-2); }
+.cep-emp__cifras {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-radius: 12px;
+  background: var(--fill);
+}
+.cep-emp--global .cep-emp__cifras { background: var(--surface); }
+.cep-emp__cifra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--s-2);
+}
+.cep-emp__cifra + .cep-emp__cifra { border-left: 0.5px solid var(--separator); }
+.cep-emp__cifra b {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.0625rem;
+  color: var(--label);
+}
+.cep-emp__cifra span {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--label-2);
+}
+.cep-emp__accion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-ink);
+}
+.cep-vacio {
+  padding: var(--s-6) var(--s-4);
+  text-align: center;
+  color: var(--label-2);
+  font-size: 0.875rem;
+}
+
+/* ── Listado: encabezado ──────────────────────────────────────────────────── */
+.cep-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.cep-header__izq { display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
+.cep-header__icono {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+}
+.cep-header__titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.cep-header__sub { margin: 2px 0 0; font-size: 0.8125rem; color: var(--label-2); }
+.cep-header__acciones { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+/* ── Listado: KPI ─────────────────────────────────────────────────────────── */
+.cep-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+.cep-kpi {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+}
+.cep-kpi__icono {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+}
+.cep-kpi__cuerpo { display: flex; flex-direction: column; min-width: 0; }
+.cep-kpi__valor {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--label);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cep-kpi__etiqueta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--label-2);
+}
+
+/* ── Listado: barra de búsqueda ───────────────────────────────────────────── */
+.cep-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-3);
+}
+.cep-barra__buscar { flex: 1 1 16rem; max-width: 26rem; min-width: 0; }
+.cep-barra__conteo { font-size: 0.8125rem; font-weight: 600; color: var(--label-2); }
+
+/* ── Celdas de la tabla ───────────────────────────────────────────────────── */
+.cep-placa {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.cep-inv { font-family: var(--font-mono); font-weight: 700; color: var(--label); }
+.cep-recorte { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cep-muted { color: var(--label-2); font-size: 0.8125rem; }
+.cep-acciones { display: flex; justify-content: center; align-items: center; gap: 2px; flex-wrap: nowrap; }
+.cep-btn-peligro { color: var(--red-ink); }
+
+/* ── Listado para celular: tarjetas ───────────────────────────────────────── */
+.cep-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.cep-lista__item { border-bottom: 0.5px solid var(--separator); }
+.cep-lista__item:last-child { border-bottom: none; }
+.cep-lista__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: var(--s-3) var(--s-4) var(--s-2);
+}
+.cep-lista__fila { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); min-width: 0; }
+.cep-lista__titulo { font-size: 0.9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cep-lista__sub { font-size: 0.8125rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cep-lista__acciones { display: flex; justify-content: flex-end; padding: 0 var(--s-2) var(--s-2); }
