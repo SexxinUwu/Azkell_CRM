@@ -1,31 +1,44 @@
 const express = require('express');
+const { AsyncLocalStorage } = require('async_hooks');
 const router = express.Router();
+const tenantStorage = new AsyncLocalStorage();
 
-module.exports = (db, broadcast, logAudit, alertas = {}) => {
+module.exports = (defaultDb, broadcast, logAudit, alertas = {}) => {
     const { enviarEmailAlerta, verificarAlertasRetraso } = alertas;
 
-    // ── Middleware de Auditoría Automática para Planificación ────────────────
-    router.use((req, res, next) => {
-        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
-            const originalJson = res.json.bind(res);
-            res.json = function (data) {
-                if (data && (data.ok === true || data.data === 'Éxito' || data.success || data.id || res.statusCode < 400)) {
-                    if (typeof logAudit === 'function') {
-                        const accion = req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ';
-                        let sub = 'Planificación MP';
-                        let desc = `Operación de ${accion.toLowerCase()} en Planificación MP (${req.path})`;
-                        if (req.body) {
-                            if (req.body.placa && req.body.tipo_mp) desc = `${accion} plan preventivo ${req.body.tipo_mp} para unidad ${req.body.placa}`;
-                            else if (req.body.placa) desc = `${accion} planificación para unidad ${req.body.placa}`;
-                            else if (req.params.id) desc = `${accion} plan ID: ${req.params.id}`;
-                        }
-                        logAudit(req, 'MANTENIMIENTO', sub, accion, desc);
-                    }
-                }
-                return originalJson(data);
-            };
+    // Proxy para que cualquier llamada a db.query(...) use automáticamente la base de la empresa actual
+    const db = new Proxy(defaultDb, {
+        get(target, prop) {
+            const current = tenantStorage.getStore() || target;
+            const val = current[prop];
+            return typeof val === 'function' ? val.bind(current) : val;
         }
-        next();
+    });
+
+    // ── Middleware de Aislamiento Tenant y Auditoría Automática para Planificación ────
+    router.use((req, res, next) => {
+        tenantStorage.run(req.db || defaultDb, () => {
+            if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+                const originalJson = res.json.bind(res);
+                res.json = function (data) {
+                    if (data && (data.ok === true || data.data === 'Éxito' || data.success || data.id || res.statusCode < 400)) {
+                        if (typeof logAudit === 'function') {
+                            const accion = req.method === 'POST' ? 'CREÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'MODIFICÓ';
+                            let sub = 'Planificación MP';
+                            let desc = `Operación de ${accion.toLowerCase()} en Planificación MP (${req.path})`;
+                            if (req.body) {
+                                if (req.body.placa && req.body.tipo_mp) desc = `${accion} plan preventivo ${req.body.tipo_mp} para unidad ${req.body.placa}`;
+                                else if (req.body.placa) desc = `${accion} planificación para unidad ${req.body.placa}`;
+                                else if (req.params.id) desc = `${accion} plan ID: ${req.params.id}`;
+                            }
+                            logAudit(req, 'MANTENIMIENTO', sub, accion, desc);
+                        }
+                    }
+                    return originalJson(data);
+                };
+            }
+            next();
+        });
     });
 
 // MÓDULO PLANIFICACIÓN PREVENTIVOS

@@ -34,10 +34,10 @@ function parseMesInt(val) {
     return null;
 }
 
-function generarIdFleetrunUnico(placa, tipoMp, fecha, cb) {
+function generarIdFleetrunUnico(placa, tipoMp, fecha, cb, tdb) {
     const anio = new Date().getFullYear();
     const prefix = `Prev-${anio}-`;
-    db.query(
+    (tdb || db).query(
         `SELECT idRegistro FROM fleetrun WHERE idRegistro LIKE ? ORDER BY idRegistro DESC LIMIT 1`,
         [`${prefix}%`],
         (err, rows) => {
@@ -322,6 +322,7 @@ router.post('/importarPlacasMasivo', async (req, res) => {
 // 🔥 IMPORTACIÓN MASIVA DE INSPECCIONES (DESDE EXCEL)
 // ============================================================
 router.post('/importarInspeccionesMasivo', async (req, res) => {
+    const targetDb = req.db || db;
     const registros = req.body.registros;
     if (!registros || !Array.isArray(registros)) {
         return res.status(400).json({ error: "Datos inválidos" });
@@ -376,7 +377,7 @@ router.post('/importarInspeccionesMasivo', async (req, res) => {
 
             try {
                 await new Promise((resolve, reject) => {
-                    db.query(sql, [vals], (err) => {
+                    targetDb.query(sql, [vals], (err) => {
                         if (err) return reject(err);
                         okCount += lote.length;
                         resolve();
@@ -398,6 +399,7 @@ router.post('/importarInspeccionesMasivo', async (req, res) => {
 // 🔥 IMPORTACIÓN MASIVA DE FLEETRUN (DESDE EXCEL)
 // ============================================================
 router.post('/importarFleetrunMasivo', async (req, res) => {
+    const targetDb = req.db || db;
     const registros = req.body.registros;
     if (!registros || !Array.isArray(registros)) return res.status(400).json({ error: "Datos inválidos" });
 
@@ -433,7 +435,7 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
         let startSeq = 1;
         try {
             const [rows] = await new Promise((resolve, reject) => {
-                db.query(
+                targetDb.query(
                     `SELECT idRegistro FROM fleetrun WHERE idRegistro LIKE ? ORDER BY idRegistro DESC LIMIT 1`,
                     [`${prefix}%`],
                     (err, rows) => {
@@ -491,7 +493,7 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
 
             try {
                 await new Promise((resolve, reject) => {
-                    db.query(sql, [vals], (err) => {
+                    targetDb.query(sql, [vals], (err) => {
                         if (err) return reject(err);
                         okCount += lote.length;
                         resolve();
@@ -846,7 +848,7 @@ router.post('/:metodo', async (req, res) => {
     }
 
     if (metodo === 'obtenerVehiculosFlota') {
-        db.query('SELECT * FROM vehiculos_flota ORDER BY placa ASC', (err, results) => {
+        reqDb.query('SELECT * FROM vehiculos_flota ORDER BY placa ASC', (err, results) => {
             if (err) return res.json({ data: [] });
             return res.json({ data: results });
         });
@@ -908,7 +910,7 @@ router.post('/:metodo', async (req, res) => {
             formatearFecha(d.ext_vencimiento), d.ext_cantidad || null
         ];
 
-        db.query(query, values, (err) => {
+        reqDb.query(query, values, (err) => {
             if (err) { console.error("❌ Error en BD vehiculos_flota:", err); return res.json({ data: "Error al guardar vehículo" }); }
             console.log("✅ Vehículo guardado correctamente:", placa);
             broadcast('vehiculos_flota', metodo);
@@ -1006,7 +1008,7 @@ router.post('/:metodo', async (req, res) => {
             if (isEdit) {
                 if (passwordPlain) {
                     const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, password=?, password_visible=?, estado=?, permisos_json=?, rol=?, rol_id=?, roles_ids=? WHERE idUsuario=?";
-                    db.query(sqlUpdate, [nombre, cargo, correo, password, passwordPlain, estado, permisos, rol, rolId, req.body.roles_ids || "[]", idFinal], (err) => {
+                    reqDb.query(sqlUpdate, [nombre, cargo, correo, password, passwordPlain, estado, permisos, rol, rolId, req.body.roles_ids || "[]", idFinal], (err) => {
                         if (err) return res.json({ data: "Error BD: " + err.message });
                         broadcast('usuarios', 'actualizar');
                         if (typeof logAudit === 'function') {
@@ -1016,7 +1018,7 @@ router.post('/:metodo', async (req, res) => {
                     });
                 } else {
                     const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, estado=?, permisos_json=?, rol=?, rol_id=?, roles_ids=? WHERE idUsuario=?";
-                    db.query(sqlUpdate, [nombre, cargo, correo, estado, permisos, rol, rolId, req.body.roles_ids || "[]", idFinal], (err) => {
+                    reqDb.query(sqlUpdate, [nombre, cargo, correo, estado, permisos, rol, rolId, req.body.roles_ids || "[]", idFinal], (err) => {
                         if (err) return res.json({ data: "Error BD: " + err.message });
                         broadcast('usuarios', 'actualizar');
                         if (typeof logAudit === 'function') {
@@ -1027,7 +1029,7 @@ router.post('/:metodo', async (req, res) => {
                 }
             } else {
                 const sqlInsert = "INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, password_visible, rol, estado, permisos_json, rol_id, roles_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                db.query(sqlInsert, [idFinal, nombre, cargo, correo, password, passwordPlain, rol, estado, permisos, rolId, req.body.roles_ids || "[]"], (err) => {
+                reqDb.query(sqlInsert, [idFinal, nombre, cargo, correo, password, passwordPlain, rol, estado, permisos, rolId, req.body.roles_ids || "[]"], (err) => {
                     if (err) return res.json({ data: "Error BD: " + err.message });
                     broadcast('usuarios', 'guardar');
                     if (typeof logAudit === 'function') {
@@ -1041,7 +1043,7 @@ router.post('/:metodo', async (req, res) => {
         if (isEdit) {
             ejecutarGuardado(form.idUsuarioEdit);
         } else {
-            db.query("SELECT idUsuario FROM usuarios", (err, results) => {
+            reqDb.query("SELECT idUsuario FROM usuarios", (err, results) => {
                 let maxId = 1000;
                 if (!err && results) {
                     results.forEach(r => {
@@ -1178,7 +1180,7 @@ router.post('/:metodo', async (req, res) => {
             const query = `
                 INSERT INTO fleetrun (idRegistro, fecha, mes, anio, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, observacion, tecnico, km_gps, combustible, modelo)\n                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n                ON DUPLICATE KEY UPDATE\n                fecha=?, mes=?, anio=?, placa=?, marca=?, dueno=?, uts=?, tipo_mp=?, km_actual=?, frecuencia_km=?, km_proximo=?, observacion=?, tecnico=?, km_gps=?, combustible=?, modelo=?
             `;
-            db.query(query, [...values, ...values.slice(1)], (err) => {
+            reqDb.query(query, [...values, ...values.slice(1)], (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
                 broadcast('fleetrun', metodo);
                 const placa   = ((isEdit ? form.editF_placa  : form.f_placa)  || '').toUpperCase();
@@ -1190,7 +1192,7 @@ router.post('/:metodo', async (req, res) => {
                 if (isEdit) {
                     const newFecha = (isEdit ? form.editF_fecha : null) || null;
                     const newKmAct = parseFloat(isEdit ? form.editF_kmact : 0) || null;
-                    db.query(
+                    reqDb.query(
                         `UPDATE planificacion SET fecha_real_ejecucion=?, km_real_ejecucion=?
                          WHERE fleetrun_id_ejecutado=? AND estado='Completada'`,
                         [newFecha, newKmAct, idFinal],
@@ -1199,14 +1201,14 @@ router.post('/:metodo', async (req, res) => {
                 }
                 // Auto-link a planificación si existe una activa
                 if (placa && tipomp && !isEdit) {
-                    db.query(
+                    reqDb.query(
                         `SELECT id FROM planificacion
                          WHERE UPPER(placa)=? AND tipo_mp=? AND estado NOT IN ('Completada','Cancelada')
                          ORDER BY fecha_inicio_ventana ASC LIMIT 1`,
                         [placa, tipomp],
                         (e2, plans) => {
                             if (!e2 && plans.length) {
-                                db.query(
+                                reqDb.query(
                                     `UPDATE planificacion SET fleetrun_id_ejecutado=? WHERE id=?`,
                                     [idFinal, plans[0].id],
                                     () => {}
@@ -1223,7 +1225,7 @@ router.post('/:metodo', async (req, res) => {
             const placaEnviada = (form.editF_placa || '').trim();
             if (!placaEnviada) {
                 // Safeguard: placa vacía → recuperar del propio registro en DB antes de sobrescribir
-                db.query('SELECT placa FROM fleetrun WHERE idRegistro=? LIMIT 1', [form.editF_id], (errP, rowsP) => {
+                reqDb.query('SELECT placa FROM fleetrun WHERE idRegistro=? LIMIT 1', [form.editF_id], (errP, rowsP) => {
                     if (!errP && rowsP.length && rowsP[0].placa) {
                         form.editF_placa = rowsP[0].placa;
                     }
@@ -1248,7 +1250,7 @@ router.post('/:metodo', async (req, res) => {
     }
 
     if (metodo === 'obtenerDatosConductores') {
-        db.query('SELECT * FROM conductores', (err, results) => {
+        reqDb.query('SELECT * FROM conductores', (err, results) => {
             if (err) return res.json({ data: [] });
             return res.json({ data: results });
         });
@@ -1271,7 +1273,7 @@ router.post('/:metodo', async (req, res) => {
             let params = [nombre, empresa, telefono, dni, licencia, estado];
             if (foto) { sql += ', foto=?'; params.push(foto); }
             sql += ' WHERE idConductor=?'; params.push(form.idConductor);
-            db.query(sql, params, (err) => {
+            reqDb.query(sql, params, (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
                 broadcast('conductores', 'actualizar');
                 if (typeof logAudit === 'function') {
@@ -1280,7 +1282,7 @@ router.post('/:metodo', async (req, res) => {
                 return res.json({ data: "Éxito" });
             });
         } else {
-            db.query('INSERT INTO conductores (nombre, empresa, telefono, dni, licencia, estado, foto) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            reqDb.query('INSERT INTO conductores (nombre, empresa, telefono, dni, licencia, estado, foto) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [nombre, empresa, telefono, dni, licencia, estado, foto], (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
                 broadcast('conductores', 'guardar');
@@ -1294,7 +1296,7 @@ router.post('/:metodo', async (req, res) => {
     }
 
     if (metodo === 'obtenerTiposMantenimiento') {
-        db.query('SELECT * FROM tipos_mantenimiento', (err, results) => {
+        reqDb.query('SELECT * FROM tipos_mantenimiento', (err, results) => {
             if (err) return res.json({ data: [] });
             return res.json({ data: results });
         });
@@ -1302,7 +1304,7 @@ router.post('/:metodo', async (req, res) => {
     }
 
     if (metodo === 'obtenerTPMP') {
-        db.query('SELECT * FROM tp_mp', (err, results) => {
+        reqDb.query('SELECT * FROM tp_mp', (err, results) => {
             if (err) return res.json({ data: [] });
             return res.json({ data: results.map(r => r.tipo_mant) });
         });
@@ -1336,7 +1338,7 @@ router.post('/:metodo', async (req, res) => {
         const refrescarWialon = (req) => (async () => {
             // Lee token desde DB; si no hay, cae en .env como fallback
             const obtenerTokenWialon = () => new Promise((resolve) => {
-                db.query(
+                reqDb.query(
                     "SELECT valor FROM integraciones_api WHERE clave = 'wialon_token' LIMIT 1",
                     (err, rows) => {
                         const tokenDB = rows && rows[0] && rows[0].valor ? rows[0].valor.trim() : null;
@@ -1345,7 +1347,7 @@ router.post('/:metodo', async (req, res) => {
                 );
             });
             const obtenerUrlWialon = () => new Promise((resolve) => {
-                db.query(
+                reqDb.query(
                     "SELECT valor FROM integraciones_api WHERE clave = 'wialon_url' LIMIT 1",
                     (err, rows) => {
                         const urlDB = rows && rows[0] && rows[0].valor ? rows[0].valor.trim() : null;
@@ -1415,7 +1417,7 @@ router.post('/:metodo', async (req, res) => {
                 let resolverPlaca = crearResolutorPlacas([]);
                 try {
                     const [pRows] = await new Promise((resolve) => {
-                        db.query("SELECT placa, wialon_name, cliente, tipo, marca, modelo_uts FROM placas", (err, rows) => {
+                        reqDb.query("SELECT placa, wialon_name, cliente, tipo, marca, modelo_uts FROM placas", (err, rows) => {
                             resolve([rows || []]);
                         });
                     });
@@ -1525,7 +1527,7 @@ router.post('/:metodo', async (req, res) => {
                 const hoy = new Date().toISOString().split('T')[0];
                 vehiculosLive.forEach(v => {
                     if (!v.placa || (!v.km && !v.horas)) return;
-                    db.query(
+                    reqDb.query(
                         `INSERT IGNORE INTO km_snapshots (placa, fecha, km_gps, horas_motor)
                          VALUES (?, ?, ?, ?)`,
                         [v.placa, hoy, v.km || 0, v.horas || 0],

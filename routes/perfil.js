@@ -23,11 +23,12 @@ const TIPOS_IMAGEN_PERFIL = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/we
 const CLAVE_IMAGEN_PERFIL = /^perfil\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
 
 module.exports = (db, logAudit) => {
+    const tdb = req => req.db || db;
     // GET /api/perfil/me
     router.get('/perfil/me', (req, res) => {
         if (!req.user || !req.user.correo) return res.status(401).json({ error: 'No autenticado' });
         
-        db.query(
+        tdb(req).query(
             `SELECT u.nombre, u.correo, u.cargo, u.telefono, u.avatar_url, u.banner_url, u.firma_digital, u.preferencias_json, u.rol, u.rol_id, u.permisos_json, r.nombre AS rol_nombre, r.permisos_json AS r_permisos_json, r.es_admin AS rol_es_admin
              FROM usuarios u
              LEFT JOIN roles r ON u.rol_id = r.id
@@ -89,9 +90,9 @@ module.exports = (db, logAudit) => {
         values.push(req.user.correo);
 
         // "Antes" para el registro firmado: los datos de perfil tal como estaban (sin fotos ni firma)
-        db.query('SELECT nombre, telefono FROM usuarios WHERE correo=?', [req.user.correo], (errA, filasA) => {
+        tdb(req).query('SELECT nombre, telefono FROM usuarios WHERE correo=?', [req.user.correo], (errA, filasA) => {
             if (!errA && filasA && filasA[0]) req.auditAntes = filasA[0];
-            db.query(`UPDATE usuarios SET ${fields.join(',')} WHERE correo=?`, values, (err) => {
+            tdb(req).query(`UPDATE usuarios SET ${fields.join(',')} WHERE correo=?`, values, (err) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (logAudit) logAudit(req.user.correo, 'perfil', 'ACTUALIZÓ', 'Datos de perfil');
                 res.json({ ok: true });
@@ -104,7 +105,7 @@ module.exports = (db, logAudit) => {
         if (!req.user || !req.user.correo) return res.status(401).json({ error: 'No autenticado' });
         
         const prefsStr = JSON.stringify(req.body.preferencias || {});
-        db.query('UPDATE usuarios SET preferencias_json=? WHERE correo=?', [prefsStr, req.user.correo], (err) => {
+        tdb(req).query('UPDATE usuarios SET preferencias_json=? WHERE correo=?', [prefsStr, req.user.correo], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true });
         });
@@ -117,7 +118,7 @@ module.exports = (db, logAudit) => {
         const { actual, nueva } = req.body;
         if (!actual || !nueva) return res.status(400).json({ error: 'Faltan datos' });
         
-        db.query('SELECT password FROM usuarios WHERE correo=?', [req.user.correo], async (err, results) => {
+        tdb(req).query('SELECT password FROM usuarios WHERE correo=?', [req.user.correo], async (err, results) => {
             if (err) return res.status(500).json({ error: err.message });
             if (results.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
             
@@ -137,7 +138,7 @@ module.exports = (db, logAudit) => {
 
             // La clave nueva solo se guarda como hash; password_visible queda vacío (no hay texto plano)
             const newHash = await bcrypt.hash(nueva, 10);
-            db.query('UPDATE usuarios SET password=?, password_visible=? WHERE correo=?', [newHash, '', req.user.correo], (err2) => {
+            tdb(req).query('UPDATE usuarios SET password=?, password_visible=? WHERE correo=?', [newHash, '', req.user.correo], (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 if (logAudit) logAudit(req.user.correo, 'perfil', 'CAMBIO CLAVE', 'Cambió su contraseña');
                 res.json({ ok: true });
@@ -150,12 +151,12 @@ module.exports = (db, logAudit) => {
         if (!req.user || !req.user.correo) return res.status(401).json({ error: 'No autenticado' });
         
         // Limpieza de sesiones inactivas
-        db.query(
+        tdb(req).query(
             'DELETE FROM sesiones_activas WHERE TIMESTAMPDIFF(HOUR, ultima_actividad, NOW()) > 12 OR TIMESTAMPDIFF(DAY, fecha_login, NOW()) >= 1',
             () => {}
         );
 
-        db.query(
+        tdb(req).query(
             'SELECT id, ip, dispositivo, fecha_login, ultima_actividad, (token = ?) as actual FROM sesiones_activas WHERE usuario_correo = ? ORDER BY ultima_actividad DESC',
             [tokenDeSesion(req), req.user.correo],
             (err, results) => {
@@ -170,7 +171,7 @@ module.exports = (db, logAudit) => {
         if (!req.user || !req.user.correo) return res.status(401).json({ error: 'No autenticado' });
         const currentToken = tokenDeSesion(req);
         
-        db.query(
+        tdb(req).query(
             'DELETE FROM sesiones_activas WHERE usuario_correo = ? AND token != ?',
             [req.user.correo, currentToken],
             (err, result) => {
@@ -184,7 +185,7 @@ module.exports = (db, logAudit) => {
     router.delete('/perfil/sesiones/:id', (req, res) => {
         if (!req.user || !req.user.correo) return res.status(401).json({ error: 'No autenticado' });
         
-        db.query(
+        tdb(req).query(
             'DELETE FROM sesiones_activas WHERE id = ? AND usuario_correo = ?',
             [req.params.id, req.user.correo],
             (err) => {
@@ -228,7 +229,7 @@ module.exports = (db, logAudit) => {
     router.post('/auth/logout', (req, res) => {
         const token = tokenDeSesion(req);
         if (token) {
-            db.query('DELETE FROM sesiones_activas WHERE token = ?', [token], () => {});
+            tdb(req).query('DELETE FROM sesiones_activas WHERE token = ?', [token], () => {});
         }
         res.json({ ok: true });
     });

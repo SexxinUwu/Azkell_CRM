@@ -19,6 +19,7 @@
  */
 
 const express = require('express');
+const { AsyncLocalStorage } = require('async_hooks');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 const {
@@ -31,6 +32,8 @@ const {
 const APP_NAME = 'Azkell Fleet';
 const RP_ID = process.env.RP_ID || 'localhost';
 const RP_ORIGIN = process.env.RP_ORIGIN || `http://${RP_ID}`;
+
+const tenantStorage = new AsyncLocalStorage();
 
 // Almacena challenges temporales en memoria (TTL 5 min).
 // En producción con múltiples instancias usa Redis, pero para un solo proceso está bien.
@@ -49,12 +52,16 @@ function getChallenge(key) {
 module.exports = function (db) {
     const router = express.Router();
 
+    router.use((req, res, next) => {
+        tenantStorage.run(req.db || db, next);
+    });
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-
     function dbq(sql, params) {
+        const pool = tenantStorage.getStore() || db;
         return new Promise((resolve, reject) => {
-            db.query(sql, params, (err, rows) => err ? reject(err) : resolve(rows));
+            pool.query(sql, params, (err, rows) => err ? reject(err) : resolve(rows));
         });
     }
 
