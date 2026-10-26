@@ -1,453 +1,333 @@
-import '../mantenimiento/mant.css';
+import './pago.css';
 import { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CreditCard, SearchX } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowUpRight, CreditCard, FileSpreadsheet, RefreshCw, SearchX, Wallet } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
+import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { Sheet } from '../../core/ui/Sheet';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
-import { api, errorMessage } from '../../core/api/client';
+import { errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
+import { exportarExcel } from '../../core/lib/excel';
+import { formatDolares, formatFechaHoraPe, formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
+import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
+import { PagoDetalleSheet } from './pago-detalle-sheet';
+import { PagoProcesarSheet } from './pago-procesar-sheet';
+import {
+  codigoOC, esPagada, esPendiente, esUSD, esCredito, importeOC, usePagoRequerimientos, vencimiento,
+  type FiltroEstado, type OrdenPago,
+} from './pago-datos';
 
-// ─── Tipos ───────────────────────────────────────────────────────────────────
+type FiltroMoneda = 'TODAS' | 'PEN' | 'USD';
 
-interface OrdenCompra {
-  id: string | number;
-  fecha_vencimiento?: string | null;
-  codigo_oc?: string;
-  estado?: string;
-  moneda?: string;
-  importe?: number | string;
-  total_pen?: number | string;
-  monto_total?: number | string;
-  solicitante?: string;
-  creado_por?: string;
-  creado_por_nombre?: string;
-  centro_costo?: string;
-  sub_motivo?: string;
-  motivo?: string;
-  proveedor_nombre?: string;
-  proveedor_ruc?: string;
-  fecha?: string;
-  numero_operacion?: string;
-  pagado_por?: string;
-  fecha_pago?: string;
-  url_voucher?: string;
-  cuentas_bancarias?: Array<{ texto: string; banco: string; numero_cuenta: string; moneda: string }>;
-  [key: string]: unknown;
+const COLUMNAS: ColumnaTabla[] = [
+  { id: 'oc', titulo: 'Orden de compra', ancho: 150 },
+  { id: 'prov', titulo: 'Proveedor', ancho: 240 },
+  { id: 'motivo', titulo: 'Motivo / centro de costo', ancho: 240 },
+  { id: 'importe', titulo: 'Importe', ancho: 150, alinear: 'right' },
+  { id: 'solic', titulo: 'Solicitante', ancho: 170 },
+  { id: 'venc', titulo: 'Vencimiento', ancho: 180 },
+  { id: 'cuenta', titulo: 'Cuenta destino (proveedor)', ancho: 280 },
+  { id: 'origen', titulo: 'Cuenta origen (empresa)', ancho: 260 },
+  { id: 'estado', titulo: 'Estado', ancho: 170 },
+  { id: 'accion', titulo: '', ancho: 120 },
+];
+
+const ENCABEZADOS_EXCEL = [
+  'N°', 'Estado', 'Moneda', 'Importe', 'Condición de pago', 'Días de crédito', 'Solicitante', 'Centro de costo',
+  'Motivo', 'Orden de compra', 'Usuario de creación', 'Fecha de registro', 'Usuario de aprobación',
+  'Fecha de aprobación', 'Proveedor', 'RUC', 'Cuenta destino', 'Cuenta origen', 'N° de operación / constancia',
+];
+
+// Texto para buscar: sin tildes y en mayúsculas, para que "Perez" encuentre "PÉREZ".
+const normalizar = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+
+function textoBusqueda(o: OrdenPago): string {
+  return normalizar([
+    codigoOC(o), o.proveedor_nombre, o.proveedor_ruc, o.motivo, o.motivo_entrada, o.sub_motivo, o.centro_costo,
+    o.solicitante, o.creador_nombre, o.creado_por, o.aprobador_nombre, o.aprobado_por, o.cuenta_bancaria_proveedor,
+    o.cuenta_bancaria_empresa, o.numero_operacion, o.placa, o.ot_id,
+  ].filter(Boolean).join(' '));
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function esUSD(moneda?: string): boolean {
-  const m = (moneda ?? '').toUpperCase();
-  return m.includes('DOL') || m === 'USD' || m === 'US$';
+function estadoBadge(o: OrdenPago) {
+  if (esPendiente(o)) return <Badge tone="amber">Por pagar</Badge>;
+  if (esPagada(o)) return <Badge tone="green">Procesado</Badge>;
+  return <Badge>{o.estado || '—'}</Badge>;
 }
 
-function ocImporte(oc: OrdenCompra): number {
-  return parseFloat(String(oc.importe ?? oc.total_pen ?? oc.monto_total ?? 0)) || 0;
+function VencimientoCelda({ oc }: { oc: OrdenPago }) {
+  if (!esCredito(oc)) return <span className="t-footnote c-secondary">Al contado</span>;
+  if (esPagada(oc)) return <Badge>Liquidado</Badge>;
+  const v = vencimiento(oc);
+  return (
+    <span className="pago-venc">
+      {v && <Badge tone={v.tono}>{v.texto}</Badge>}
+      <span className="t-footnote c-secondary">{formatFechaPe(oc.fecha_vencimiento)} · {Number(oc.dias_credito) || 0} días</span>
+    </span>
+  );
 }
 
-function ocCodigo(oc: OrdenCompra): string {
-  return String(oc.codigo_oc ?? `OC-${oc.id}`);
+function CuentaCelda({ texto, usd }: { texto?: string; usd: boolean }) {
+  if (!texto) return <span className="t-footnote c-secondary">Pendiente de pago</span>;
+  return (
+    <span className="pago-cuenta">
+      <Badge tone={usd ? 'accent' : 'green'}>{usd ? 'USD' : 'PEN'}</Badge>
+      <span className="pago-cuenta__texto" title={texto}>{texto}</span>
+    </span>
+  );
 }
-
-function ocEstadoColor(estado?: string): string {
-  const e = (estado ?? '').toLowerCase();
-  if (e === 'procesado' || e === 'pagado') return 'green';
-  if (e === 'aprobado' || e === 'autorizado') return 'blue';
-  if (e === 'rechazado' || e === 'anulado') return 'red';
-  return 'neutral';
-}
-
-// Días que faltan para el vencimiento (negativo = ya venció). La fecha viene como AAAA-MM-DD.
-function vencimiento(fecha?: string | null): { tono: string; texto: string } | null {
-  if (!fecha) return null;
-  const m = String(fecha).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return null;
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-  const vence = new Date(+m[1], +m[2] - 1, +m[3]);
-  const dias = Math.round((vence.getTime() - hoy.getTime()) / 86400000);
-  if (dias < 0) return { tono: 'red', texto: `Vencida hace ${-dias} ${-dias === 1 ? 'día' : 'días'}` };
-  if (dias === 0) return { tono: 'red', texto: 'Vence hoy' };
-  if (dias <= 7) return { tono: 'amber', texto: `Vence en ${dias} ${dias === 1 ? 'día' : 'días'}` };
-  return { tono: 'green', texto: `${m[3]}/${m[2]}/${m[1]}` };
-}
-
-// Moneda con su símbolo y espacio no divisible: S/ 1,200.00 · US$ 300.00
-function fmtMonto(valor: number, usd: boolean): string {
-  return `${usd ? 'US$' : 'S/'}\u00a0${valor.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-// Fecha peruana dd/mm/aaaa a partir de AAAA-MM-DD (o ISO), sin cambio de zona horaria
-function fechaPe(v?: string | null): string {
-  const m = String(v ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : '—';
-}
-
-// ─── Hook ────────────────────────────────────────────────────────────────────
-
-type FiltroEstado = 'aprobado' | 'procesados' | 'todos';
-
-function usePagoReq(estado: FiltroEstado) {
-  return useQuery<OrdenCompra[]>({
-    queryKey: ['tesoreria', 'pago-req', estado],
-    queryFn: () =>
-      api(`/tesoreria/pago-requerimientos?estado=${estado}`).then((r: unknown) => {
-        if (Array.isArray(r)) return r as OrdenCompra[];
-        return (r as { data?: OrdenCompra[] }).data ?? [];
-      }),
-    staleTime: 30_000,
-  });
-}
-
-// ─── Componente principal ─────────────────────────────────────────────────────
-
-const FORM_VACIO = { numero_constancia: '', cuenta_origen: '', monto: '', moneda: 'PEN' };
 
 export function PagoRequerimientosPage() {
-  const qc    = useQueryClient();
+  const qc = useQueryClient();
   const toast = useToast();
+  const movil = useMediaQuery(MOBILE_QUERY);
 
-  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('aprobado');
-  const [filtroMoneda, setFiltroMoneda] = useState<'TODAS' | 'PEN' | 'USD'>('TODAS');
-  const [errPago, setErrPago] = useState<{ numero_constancia?: string; monto?: string }>({});
-  const [busqueda, setBusqueda]         = useState('');
-  const [procesando, setProcesando]     = useState<OrdenCompra | null>(null);
-  const [form, setForm]                 = useState(FORM_VACIO);
-  const [guardando, setGuardando]       = useState(false);
+  const [estado, setEstado] = useState<FiltroEstado>('aprobado');
+  const [moneda, setMoneda] = useState<FiltroMoneda>('TODAS');
+  const [busqueda, setBusqueda] = useState('');
+  const [detalle, setDetalle] = useState<{ oc: OrdenPago | null; abierto: boolean }>({ oc: null, abierto: false });
+  const [procesar, setProcesar] = useState<{ oc: OrdenPago | null; abierto: boolean; sesion: number }>({ oc: null, abierto: false, sesion: 0 });
 
-  const { data, isLoading, isError, error } = usePagoReq(filtroEstado);
-  const ocs = data ?? [];
-
-  // KPIs siempre sobre datos de "aprobado" (para no confundir con totales)
-  const { data: dataTodos } = useQuery<OrdenCompra[]>({
-    queryKey: ['tesoreria', 'pago-req', 'todos'],
-    queryFn: () => api('/tesoreria/pago-requerimientos?estado=todos').then((r: unknown) => {
-      if (Array.isArray(r)) return r as OrdenCompra[];
-      return (r as { data?: OrdenCompra[] }).data ?? [];
-    }),
-    staleTime: 30_000,
-  });
+  const lista = usePagoRequerimientos(estado);
+  // Los KPI y el filtro "Todos" usan la lista completa, así los totales no dependen de la pestaña
+  const todos = usePagoRequerimientos('todos');
+  const ocs = lista.data ?? [];
 
   const kpis = useMemo(() => {
-    const todos = dataTodos ?? [];
-    const pendientes = todos.filter(o => ['aprobado', 'autorizado'].includes((o.estado ?? '').toLowerCase()));
-    const pagados    = todos.filter(o => ['procesado', 'pagado'].includes((o.estado ?? '').toLowerCase()));
-    const totalPEN = pendientes.filter(o => !esUSD(o.moneda)).reduce((s, o) => s + ocImporte(o), 0);
-    const totalUSD = pendientes.filter(o => esUSD(o.moneda)).reduce((s, o) => s + ocImporte(o), 0);
-    return { pendientes: pendientes.length, pagados: pagados.length, totalPEN, totalUSD };
-  }, [dataTodos]);
+    const t = todos.data ?? [];
+    let totalPEN = 0;
+    let totalUSD = 0;
+    let pendientes = 0;
+    let pagados = 0;
+    for (const o of t) {
+      if (esPendiente(o)) {
+        pendientes++;
+        if (esUSD(o.moneda)) totalUSD += importeOC(o);
+        else totalPEN += importeOC(o);
+      } else if (esPagada(o)) {
+        pagados++;
+      }
+    }
+    return { pendientes, pagados, totalPEN, totalUSD };
+  }, [todos.data]);
 
-  // Filtrado
   const visibles = useMemo(() => {
-    let lista = ocs;
-    if (filtroMoneda === 'PEN') lista = lista.filter(o => !esUSD(o.moneda));
-    if (filtroMoneda === 'USD') lista = lista.filter(o => esUSD(o.moneda));
-    if (busqueda) {
-      const q = busqueda.toUpperCase();
-      lista = lista.filter(o =>
-        ocCodigo(o).toUpperCase().includes(q) ||
-        String(o.proveedor_nombre ?? '').toUpperCase().includes(q) ||
-        String(o.motivo ?? o.sub_motivo ?? '').toUpperCase().includes(q) ||
-        String(o.solicitante ?? o.creado_por_nombre ?? o.creado_por ?? '').toUpperCase().includes(q) ||
-        String(o.centro_costo ?? '').toUpperCase().includes(q)
-      );
-    }
-    return lista;
-  }, [ocs, filtroMoneda, busqueda]);
-
-  // Abrir modal de pago
-  function abrirProcesar(oc: OrdenCompra) {
-    setProcesando(oc);
-    setErrPago({});
-    setForm({
-      numero_constancia: '',
-      cuenta_origen:     oc.cuentas_bancarias?.[0]?.texto ?? '',
-      monto:             String(ocImporte(oc) || ''),
-      moneda:            esUSD(oc.moneda) ? 'USD' : 'PEN',
+    const q = normalizar(busqueda.trim());
+    return ocs.filter(o => {
+      if (moneda === 'PEN' && esUSD(o.moneda)) return false;
+      if (moneda === 'USD' && !esUSD(o.moneda)) return false;
+      return !q || textoBusqueda(o).includes(q);
     });
+  }, [ocs, moneda, busqueda]);
+
+  function abrirDetalle(oc: OrdenPago) {
+    setDetalle({ oc, abierto: true });
   }
 
-  // Procesar pago
-  async function procesarPago() {
-    if (!procesando) return;
-    const e: { numero_constancia?: string; monto?: string } = {};
-    if (!form.numero_constancia.trim()) e.numero_constancia = 'Ingresa el número de constancia.';
-    if (!form.monto || parseFloat(form.monto) <= 0) e.monto = 'Ingresa un monto mayor que cero.';
-    setErrPago(e);
-    if (e.numero_constancia || e.monto) { haptic('warning'); return; }
-    setGuardando(true);
+  function abrirProcesar(oc: OrdenPago) {
+    setDetalle(d => ({ ...d, abierto: false }));
+    setProcesar(p => ({ oc, abierto: true, sesion: p.sesion + 1 }));
+  }
+
+  function irKpi(e: FiltroEstado, m: FiltroMoneda) {
+    haptic('selection');
+    setEstado(e);
+    setMoneda(m);
+  }
+
+  async function exportar() {
+    if (visibles.length === 0) { toast('No hay registros para exportar', 'error'); return; }
+    const filas = visibles.map((o, i) => [
+      i + 1,
+      esPendiente(o) ? 'Por pagar' : esPagada(o) ? 'Procesado' : (o.estado ?? ''),
+      esUSD(o.moneda) ? 'USD' : 'PEN',
+      importeOC(o),
+      o.condicion_pago || 'Al contado',
+      Number(o.dias_credito) || 0,
+      o.solicitante ?? '',
+      o.centro_costo ?? '',
+      o.motivo_entrada || o.motivo || '',
+      codigoOC(o),
+      o.creador_nombre || o.creado_por || '',
+      formatFechaHoraPe(o.fecha),
+      o.aprobador_nombre || o.aprobado_por || '',
+      formatFechaHoraPe(o.fecha_aprobacion),
+      o.proveedor_nombre ?? '',
+      o.proveedor_ruc ?? '',
+      o.cuenta_bancaria_proveedor ?? '',
+      o.cuenta_bancaria_empresa ?? '',
+      o.numero_operacion ?? '',
+    ]);
     try {
-      await api(`/tesoreria/pago-requerimientos/${procesando.id}/procesar`, {
-        method: 'POST',
-        body: {
-          numero_constancia: form.numero_constancia,
-          cuenta_origen:     form.cuenta_origen,
-          monto:             parseFloat(form.monto),
-          moneda:            form.moneda,
-        },
-      });
-      toast('Pago procesado correctamente');
-      setProcesando(null);
-      qc.invalidateQueries({ queryKey: ['tesoreria', 'pago-req'] });
-    } catch (e) {
-      toast(errorMessage(e), 'error');
-    } finally {
-      setGuardando(false);
+      await exportarExcel('Pago_Requerimientos_Tesoreria', 'Pago_Requerimientos', ENCABEZADOS_EXCEL, filas);
+    } catch (err) {
+      toast(errorMessage(err), 'error');
     }
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  const tiles: Array<{ id: string; label: string; valor: string; tono: string; activo: boolean; ir: () => void }> = [
+    { id: 'pendientes', label: 'Por pagar', valor: String(kpis.pendientes), tono: 'accent', activo: estado === 'aprobado' && moneda === 'TODAS', ir: () => irKpi('aprobado', 'TODAS') },
+    { id: 'soles', label: 'Total en soles', valor: formatSoles(kpis.totalPEN), tono: 'green', activo: estado === 'aprobado' && moneda === 'PEN', ir: () => irKpi('aprobado', 'PEN') },
+    { id: 'dolares', label: 'Total en dólares', valor: formatDolares(kpis.totalUSD), tono: 'amber', activo: estado === 'aprobado' && moneda === 'USD', ir: () => irKpi('aprobado', 'USD') },
+    { id: 'pagados', label: 'Procesados', valor: String(kpis.pagados), tono: 'ink', activo: estado === 'procesados', ir: () => irKpi('procesados', 'TODAS') },
+  ];
+
+  const hayFiltro = busqueda.trim() !== '' || moneda !== 'TODAS';
 
   return (
-    <Page>
+    <Page wide>
       <PageHeader
         eyebrow="Tesorería"
         title="Pago de requerimientos"
-        subtitle={isLoading ? 'Cargando…' : `${ocs.length} órdenes`}
+        subtitle={lista.isLoading ? 'Cargando…' : `${ocs.length} ${ocs.length === 1 ? 'orden' : 'órdenes'} en esta vista`}
         actions={
           <MenuOtros opciones={[
+            { label: 'Actualizar', icon: <RefreshCw size={17} />,
+              onSelect: () => { qc.invalidateQueries({ queryKey: ['tesoreria', 'pago-req'] }); } },
+            { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, onSelect: exportar },
             { label: 'Abrir en versión actual', icon: <ArrowUpRight size={17} />,
               onSelect: () => abrirClasico('tesoreria/pago-requerimientos') },
           ]} />
         }
       />
 
-      {isError && <Notice tone="error">{errorMessage(error)}</Notice>}
+      {lista.isError && <Notice tone="error">{errorMessage(lista.error)}</Notice>}
 
-      {/* KPI cards */}
-      <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', marginBottom: 'var(--s-3)' }}>
-        {[
-          { label: 'Por pagar', valor: String(kpis.pendientes), color: 'blue', onClick: () => { setFiltroEstado('aprobado'); setFiltroMoneda('TODAS'); } },
-          { label: 'Total S/', valor: fmtMonto(kpis.totalPEN, false), color: 'amber', onClick: () => { setFiltroEstado('aprobado'); setFiltroMoneda('PEN'); } },
-          { label: 'Total US$', valor: fmtMonto(kpis.totalUSD, true), color: 'amber', onClick: () => { setFiltroEstado('aprobado'); setFiltroMoneda('USD'); } },
-          { label: 'Pagados', valor: String(kpis.pagados), color: 'green', onClick: () => { setFiltroEstado('procesados'); setFiltroMoneda('TODAS'); } },
-        ].map(k => (
-          <div key={k.label} className="pressable" role="button" tabIndex={0} onClick={() => { haptic('selection'); k.onClick(); }}
-            onKeyDown={e => { if (e.key === 'Enter') { haptic('selection'); k.onClick(); } }}
-            style={{ flex: 1, minWidth: '9rem', background: 'var(--fill-1)', borderRadius: 10, padding: '10px 14px',
-              border: '1px solid var(--separator)', cursor: 'pointer', userSelect: 'none' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1.1rem', color: `var(--${k.color}-ink)` }}>
-              {k.valor}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--label-2)', fontWeight: 600 }}>{k.label}</div>
-          </div>
+      <div className="pago-kpis">
+        {tiles.map(k => (
+          <button key={k.id} type="button" className={`pago-kpi pressable${k.activo ? ' pago-kpi--activo' : ''}`}
+            aria-pressed={k.activo} onClick={k.ir}>
+            <span className={`pago-kpi__valor pago-kpi__valor--${k.tono}`}>{k.valor}</span>
+            <span className="pago-kpi__etiqueta">{k.label}</span>
+          </button>
         ))}
       </div>
 
-      {/* Filtros */}
-      <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center', marginBottom: 'var(--s-3)' }}>
-        {[
-          { key: 'aprobado' as FiltroEstado, label: 'Por pagar' },
-          { key: 'procesados' as FiltroEstado, label: 'Pagados' },
-          { key: 'todos' as FiltroEstado, label: 'Todos' },
-        ].map(f => (
-          <button key={f.key} type="button"
-            className={`chip pressable${filtroEstado === f.key ? ' chip--active' : ''}`}
-            onClick={() => { haptic('selection'); setFiltroEstado(f.key); }}>
-            {f.label}
-          </button>
-        ))}
-        <div style={{ width: 1, height: 18, background: 'var(--separator)', margin: '0 4px' }} />
-        {(['TODAS', 'PEN', 'USD'] as const).map(m => (
-          <button key={m} type="button"
-            className={`chip pressable${filtroMoneda === m ? ' chip--active' : ''}`}
-            onClick={() => { haptic('selection'); setFiltroMoneda(m); }}>
-            {m === 'TODAS' ? 'Toda moneda' : m}
-          </button>
-        ))}
-        <div style={{ marginLeft: 'auto', maxWidth: '16rem' }}>
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="OC, proveedor, motivo…" />
+      <div className="pago-barra">
+        <SegmentedControl label="Estado de la orden" value={estado} onChange={setEstado} options={[
+          { value: 'aprobado', label: 'Por pagar' },
+          { value: 'procesados', label: 'Procesados' },
+          { value: 'todos', label: 'Todos' },
+        ]} />
+        <SegmentedControl label="Moneda" value={moneda} onChange={setMoneda} options={[
+          { value: 'TODAS', label: 'Todas' },
+          { value: 'PEN', label: 'S/ Soles' },
+          { value: 'USD', label: 'US$ Dólares' },
+        ]} />
+        <div className="pago-barra__buscar">
+          <SearchField value={busqueda} onChange={setBusqueda} placeholder="OC, proveedor, RUC, motivo, solicitante, cuenta…" />
         </div>
       </div>
 
-      {/* Tabla */}
-      {isLoading ? <PageLoader /> : visibles.length === 0 ? (
-        <EmptyState icon={busqueda ? <SearchX size={22} /> : <CreditCard size={22} />}
-          title={busqueda ? 'Sin coincidencias' : filtroEstado === 'aprobado' ? 'Sin órdenes pendientes' : 'Sin órdenes'}>
-          {busqueda && <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Limpiar búsqueda</button>}
+      {lista.isLoading ? <PageLoader /> : visibles.length === 0 ? (
+        <EmptyState
+          icon={hayFiltro ? <SearchX size={22} /> : <CreditCard size={22} />}
+          title={hayFiltro ? 'Sin coincidencias' : estado === 'aprobado' ? 'Sin órdenes por pagar' : 'Sin órdenes'}
+        >
+          {hayFiltro && (
+            <Button variant="secondary" size="sm" onClick={() => { setBusqueda(''); setMoneda('TODAS'); }}>Limpiar filtros</Button>
+          )}
         </EmptyState>
+      ) : movil ? (
+        <ul className="pago-lista" aria-label="Órdenes de compra">
+          {visibles.map(oc => {
+            const pendiente = esPendiente(oc);
+            const usd = esUSD(oc.moneda);
+            const importe = importeOC(oc);
+            return (
+              <li key={String(oc.id)} className="pago-lista__item">
+                <div className="pago-lista__abrir" role="button" tabIndex={0}
+                  onClick={() => abrirDetalle(oc)}
+                  onKeyDown={e => { if (e.key === 'Enter') abrirDetalle(oc); }}>
+                  <div className="pago-lista__cuerpo">
+                    <span className="pago-lista__titulo">{oc.proveedor_nombre || 'Proveedor'}</span>
+                    <span className="pago-lista__sub">{codigoOC(oc)} · {oc.motivo_entrada || oc.motivo || 'Sin motivo'}</span>
+                    <span className="pago-lista__sub">{oc.solicitante || '—'} · {formatFechaPe(oc.fecha)}</span>
+                    <span className="pago-lista__fila-badges">
+                      {estadoBadge(oc)}
+                      <VencimientoCelda oc={oc} />
+                    </span>
+                  </div>
+                  <span className="pago-lista__monto">{importe > 0 ? formatMoneda(importe, usd ? 'USD' : 'PEN') : '—'}</span>
+                </div>
+                {pendiente && (
+                  <div className="pago-lista__acciones">
+                    <Button variant="primary" size="sm" icon={<Wallet size={15} />} onClick={() => abrirProcesar(oc)}>Procesar pago</Button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       ) : (
-        <div className="tarjeta__lista" style={{ overflowX: 'auto' }}>
-          <table className="inv-kardex" style={{ minWidth: '56rem' }}>
-            <thead>
-              <tr>
-                <th>Código OC</th>
-                <th>Proveedor</th>
-                <th>Motivo / CC</th>
-                <th style={{ textAlign: 'right' }}>Importe</th>
-                <th>Moneda</th>
-                <th>Solicitante</th>
-                <th>Fecha</th>
-                <th>Vence</th>
-                <th>Estado</th>
-                {filtroEstado !== 'procesados' && <th style={{ width: 100 }} />}
-              </tr>
-            </thead>
-            <tbody>
-              {visibles.map(oc => {
-                const color = ocEstadoColor(oc.estado);
-                const usd   = esUSD(oc.moneda);
-                const imp   = ocImporte(oc);
-                const estado = String(oc.estado ?? '');
-                const pendiente = ['aprobado', 'autorizado'].includes(estado.toLowerCase());
-                return (
-                  <tr key={String(oc.id)}>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--label)' }}>
-                      {ocCodigo(oc)}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{oc.proveedor_nombre || '—'}</div>
-                      {oc.proveedor_ruc && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{oc.proveedor_ruc}</div>
-                      )}
-                    </td>
-                    <td style={{ fontSize: '0.8125rem' }}>
-                      <div>{oc.motivo || oc.sub_motivo || '—'}</div>
-                      {oc.centro_costo && (
-                        <div style={{ color: 'var(--label-2)', fontSize: '0.75rem' }}>{oc.centro_costo}</div>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700,
-                      color: usd ? 'var(--blue-ink)' : 'var(--label-1)' }}>
-                      {imp > 0 ? fmtMonto(imp, usd) : '—'}
-                    </td>
-                    <td style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>
-                      {usd ? 'USD' : 'PEN'}
-                    </td>
-                    <td style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>
-                      {oc.solicitante || oc.creado_por_nombre || oc.creado_por || '—'}
-                    </td>
-                    <td style={{ fontSize: '0.8125rem', fontFamily: 'var(--font-mono)', color: 'var(--label-2)' }}>
-                      {fechaPe(oc.fecha)}
-                    </td>
-                    <td>
-                      {(() => {
-                        // Al contado se paga al recibir: no hay vencimiento que mostrar
-                        if (!/cr[eé]dito/i.test(String(oc.condicion_pago ?? ''))) return <span style={{ color: 'var(--label-2)', fontSize: '0.8125rem' }}>Al contado</span>;
-                        const v = vencimiento(oc.fecha_vencimiento);
-                        return (
-                          <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 2 }}>
-                            {v ? <span className={`ot-estado ot-estado--${v.tono}`} style={{ fontSize: '0.75rem' }}>{v.texto}</span> : <span style={{ color: 'var(--label-2)', fontSize: '0.8125rem' }}>—</span>}
-                            <span style={{ fontSize: '0.7rem', color: 'var(--label-3)' }}>Crédito · {Number(oc.dias_credito) || 0} días</span>
-                          </span>
-                        );
-                      })()}
-                    </td>
-                    <td>
-                      <span className={`ot-estado ot-estado--${color}`} style={{ fontSize: '0.75rem' }}>
-                        {estado || '—'}
+        <TablaRedimensionable id="pago-requerimientos" columnas={COLUMNAS} ariaLabel="Órdenes de compra para pagar" altoMax="68vh">
+          {visibles.map(oc => {
+            const pendiente = esPendiente(oc);
+            const usd = esUSD(oc.moneda);
+            const importe = importeOC(oc);
+            const usdDestino = oc.cuenta_destino_moneda ? oc.cuenta_destino_moneda === 'USD' : usd;
+            const usdOrigen = oc.cuenta_origen_moneda === 'USD';
+            return (
+              <tr key={String(oc.id)} className="tabla-redim__fila--click" onClick={() => abrirDetalle(oc)}>
+                <Celda mono><span className="pago-codigo">{codigoOC(oc)}</span></Celda>
+                <Celda>
+                  <span className="pago-prov">
+                    <span className="pago-prov__nombre">{oc.proveedor_nombre || '—'}</span>
+                    {oc.proveedor_ruc && <span className="pago-prov__ruc">RUC {oc.proveedor_ruc}</span>}
+                  </span>
+                </Celda>
+                <Celda>
+                  <span className="pago-motivo">
+                    <span>{oc.motivo_entrada || oc.motivo || '—'}</span>
+                    {oc.centro_costo && <span className="t-footnote c-secondary">{oc.centro_costo}</span>}
+                  </span>
+                </Celda>
+                <Celda alinear="right" mono>{importe > 0 ? formatMoneda(importe, usd ? 'USD' : 'PEN') : '—'}</Celda>
+                <Celda>{oc.solicitante || '—'}</Celda>
+                <Celda><VencimientoCelda oc={oc} /></Celda>
+                <Celda><CuentaCelda texto={oc.cuenta_bancaria_proveedor} usd={usdDestino} /></Celda>
+                <Celda><CuentaCelda texto={oc.cuenta_bancaria_empresa} usd={usdOrigen} /></Celda>
+                <Celda>
+                  <span className="pago-estado">
+                    {estadoBadge(oc)}
+                    {esPagada(oc) && (
+                      <span className="t-footnote c-secondary">
+                        {formatFechaPe(oc.fecha_pago)}{oc.numero_operacion ? ` · ${oc.numero_operacion}` : ''}
                       </span>
-                      {oc.fecha_pago && (
-                        <div style={{ fontSize: '0.7rem', color: 'var(--label-3)', marginTop: 2 }}>
-                          {fechaPe(oc.fecha_pago)}
-                        </div>
-                      )}
-                    </td>
-                    {filtroEstado !== 'procesados' && (
-                      <td>
-                        {pendiente && (
-                          <Button variant="primary" size="sm" onClick={() => abrirProcesar(oc)}>
-                            Procesar
-                          </Button>
-                        )}
-                      </td>
                     )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  </span>
+                </Celda>
+                <Celda alinear="right">
+                  {pendiente ? (
+                    <Button variant="primary" size="sm" onClick={e => { e.stopPropagation(); abrirProcesar(oc); }}>Procesar</Button>
+                  ) : oc.url_voucher_presigned ? (
+                    <a className="btn btn--secondary btn--sm" href={oc.url_voucher_presigned} target="_blank" rel="noreferrer"
+                      onClick={e => e.stopPropagation()}>Voucher</a>
+                  ) : null}
+                </Celda>
+              </tr>
+            );
+          })}
+        </TablaRedimensionable>
       )}
 
-      {/* Modal procesar pago */}
-      <Sheet
-        open={!!procesando}
-        onClose={() => setProcesando(null)}
-        title={`Procesar pago — ${procesando ? ocCodigo(procesando) : ''}`}
-        footer={
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <Button variant="plain" onClick={() => setProcesando(null)} disabled={guardando}>Cancelar</Button>
-            <Button variant="primary" onClick={procesarPago} loading={guardando}>
-              Confirmar pago
-            </Button>
-          </div>
-        }
-      >
-        {procesando && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-            {/* Resumen OC */}
-            <div style={{ background: 'var(--fill-2)', borderRadius: 8, padding: '10px 14px', fontSize: '0.875rem' }}>
-              <div style={{ fontWeight: 600 }}>{procesando.proveedor_nombre || 'Proveedor'}</div>
-              <div style={{ color: 'var(--label-2)' }}>{procesando.motivo || procesando.sub_motivo || '—'}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, marginTop: 4, color: 'var(--label)', fontVariantNumeric: 'tabular-nums' }}>
-                {fmtMonto(ocImporte(procesando), esUSD(procesando.moneda))}
-              </div>
-            </div>
-
-            <Field label="N° de constancia / operación" error={errPago.numero_constancia}>
-              {props => (
-                <TextInput {...props} value={form.numero_constancia}
-                  onChange={e => { setErrPago(x => ({ ...x, numero_constancia: undefined })); setForm(f => ({ ...f, numero_constancia: e.target.value })); }}
-                  placeholder="Ej. 00123456" autoFocus />
-              )}
-            </Field>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-2)' }}>
-              <Field label="Monto pagado" error={errPago.monto}>
-                {props => (
-                  <TextInput {...props} type="number" value={form.monto}
-                    onChange={e => { setErrPago(x => ({ ...x, monto: undefined })); setForm(f => ({ ...f, monto: e.target.value })); }}
-                    placeholder="0.00" step="0.01" min="0" />
-                )}
-              </Field>
-              <Field label="Moneda">
-                {props => (
-                  <SelectInput {...props} value={form.moneda}
-                    onChange={e => setForm(f => ({ ...f, moneda: e.target.value }))}>
-                    <option value="PEN">Soles (PEN)</option>
-                    <option value="USD">Dólares (USD)</option>
-                  </SelectInput>
-                )}
-              </Field>
-            </div>
-
-            <Field label="Cuenta bancaria origen (opcional)">
-              {props => (
-                <TextInput {...props} value={form.cuenta_origen}
-                  onChange={e => setForm(f => ({ ...f, cuenta_origen: e.target.value }))}
-                  placeholder="Banco — N° de cuenta" />
-              )}
-            </Field>
-
-            {procesando.cuentas_bancarias && procesando.cuentas_bancarias.length > 0 && (
-              <div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--label-2)', marginBottom: 6, fontWeight: 600 }}>
-                  Cuentas del proveedor:
-                </div>
-                {procesando.cuentas_bancarias.map((cta, i) => (
-                  <button key={i} type="button"
-                    onClick={() => setForm(f => ({ ...f, cuenta_origen: cta.texto, moneda: cta.moneda }))}
-                    style={{
-                      display: 'block', width: '100%', textAlign: 'left',
-                      padding: '6px 10px', marginBottom: 4, borderRadius: 6, fontSize: '0.8rem',
-                      background: form.cuenta_origen === cta.texto ? 'var(--accent-tint)' : 'var(--fill-2)',
-                      border: `1px solid ${form.cuenta_origen === cta.texto ? 'var(--accent)' : 'var(--separator)'}`,
-                      color: 'var(--label-1)', cursor: 'pointer',
-                    }}>
-                    {cta.texto}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </Sheet>
+      <PagoDetalleSheet
+        oc={detalle.oc}
+        open={detalle.abierto}
+        onClose={() => setDetalle(d => ({ ...d, abierto: false }))}
+        onProcesar={abrirProcesar}
+      />
+      <PagoProcesarSheet
+        key={procesar.sesion}
+        oc={procesar.oc}
+        open={procesar.abierto}
+        onClose={() => setProcesar(p => ({ ...p, abierto: false }))}
+      />
     </Page>
   );
 }

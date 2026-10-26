@@ -1,0 +1,31 @@
+/* Liquidaciones de viaje (Tesorería). Clases con prefijo liq- para no chocar con el resto. */
+
+.liq-fila { cursor: pointer; }
+.liq-fila:hover td { background: var(--fill-subtle); }
+.liq-fila:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.liq-stack { display: flex; flex-direction: column; gap: var(--s-4); }
+.liq-cabecera { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-3); align-items: center; font-size: 0.8125rem; color: var(--label-2); }
+.liq-cabecera strong { color: var(--label); font-weight: 600; }
+.liq-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.liq-num--total { font-weight: 700; }
+.liq-enlace { display: inline-flex; align-items: center; gap: var(--s-1); color: var(--accent-ink); font-weight: 600; font-size: 0.8125rem; text-decoration: none; }
+.liq-enlace:hover { text-decoration: underline; }
+.liq-tachado { text-decoration: line-through; color: var(--label-3); }
+.liq-celda-aviso { font-size: 0.75rem; color: var(--label-3); }
+
+.liq-opciones { display: flex; flex-direction: column; gap: var(--s-2); border: 0; margin: 0; padding: 0; min-width: 0; }
+.liq-opciones legend { padding: 0; margin-bottom: var(--s-2); }
+.liq-opcion { display: flex; gap: var(--s-3); align-items: flex-start; padding: var(--s-3) var(--s-4); border-radius: var(--r-lg); background: var(--fill); border: 1.5px solid transparent; cursor: pointer; }
+.liq-opcion--on { border-color: var(--ink); }
+.liq-opcion input { margin-top: 3px; accent-color: var(--ink); flex-shrink: 0; }
+.liq-opcion__cuerpo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.liq-opcion__titulo { font-weight: 600; font-size: 0.9375rem; color: var(--label); }
+.liq-opcion__ayuda { font-size: 0.8125rem; color: var(--label-2); }
+
+.liq-previa { display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-3) var(--s-4); border-radius: var(--r-lg); background: var(--fill); }
+.liq-previa__titulo { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--label-2); }
+.liq-previa__linea { display: flex; justify-content: space-between; gap: var(--s-3); font-size: 0.875rem; color: var(--label); }
+.liq-previa__linea--total { border-top: 0.5px solid var(--separator); padding-top: var(--s-2); font-weight: 700; }
+
+.liq-seccion-vacia { padding: var(--s-3) var(--s-4); font-size: 0.875rem; color: var(--label-2); }

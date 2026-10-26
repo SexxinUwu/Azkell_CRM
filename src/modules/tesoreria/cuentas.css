@@ -1,0 +1,50 @@
+/* Cuentas por cobrar y pagar (Tesorería). Tokens de src/core/ui/ui.css. */
+
+/* Totales de la lista */
+.cuentas-metricas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-3); }
+.cuentas-metrica {
+  display: flex; flex-direction: column; gap: var(--s-1); min-width: 0;
+  padding: var(--s-3) var(--s-4); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-card);
+}
+.cuentas-metrica__num {
+  font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+  font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cuentas-metrica__label { font-size: 0.75rem; color: var(--label-2); font-weight: 500; }
+.cuentas-metrica__pie { font-size: 0.75rem; color: var(--red-ink); font-weight: 600; }
+.cuentas-metrica--ambar .cuentas-metrica__num { color: var(--amber-ink); }
+.cuentas-metrica--verde .cuentas-metrica__num { color: var(--green-ink); }
+
+/* Filtros */
+.cuentas-filtros { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
+.cuentas-filtros .search { flex: 1 1 220px; min-width: 0; }
+.cuentas-rango { display: flex; align-items: center; gap: var(--s-2); }
+.cuentas-rango__etiqueta { font-size: 0.75rem; color: var(--label-2); font-weight: 600; }
+.cuentas-filtros__cuenta { margin-left: auto; font-size: 0.8125rem; color: var(--label-2); font-weight: 600; }
+
+/* Formulario y ficha */
+.cuentas-titulo {
+  font-size: 0.8125rem; font-weight: 700; color: var(--label-2);
+  text-transform: uppercase; letter-spacing: 0.04em; padding-top: var(--s-2);
+  border-top: 0.5px solid var(--separator);
+}
+.cuentas-calculado { background: var(--surface-sunken) !important; font-variant-numeric: tabular-nums; }
+.cuentas-neto { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.cuentas-seccion { display: flex; flex-direction: column; gap: var(--s-2); }
+.cuentas-seccion__titulo { font-size: 0.8125rem; font-weight: 700; color: var(--label-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.cuentas-detalle { display: flex; flex-direction: column; gap: var(--s-4); }
+.cuentas-detalle__resumen {
+  display: flex; flex-direction: column; gap: var(--s-1); padding: var(--s-4);
+  background: var(--surface-sunken); border-radius: var(--r-lg);
+}
+.cuentas-detalle__cabecera { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.cuentas-detalle__cliente { font-weight: 700; font-size: 1rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cuentas-detalle__monto { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.cuentas-detalle__nota { font-size: 0.8125rem; color: var(--label-2); }
+.cuentas-detalle__docs { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+@media (max-width: 640px) {
+  .cuentas-metricas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cuentas-metrica__num { font-size: 1.25rem; }
+}

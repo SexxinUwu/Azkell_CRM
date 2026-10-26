@@ -1,0 +1,34 @@
+/* Flujo de caja (flujo-*). Tarjetas de totales, gráfico mensual y tablas de grupos. */
+
+.flujo-cuerpo { display: flex; flex-direction: column; gap: var(--s-4); }
+
+.flujo-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-3); }
+.flujo-kpi {
+  display: flex; flex-direction: column; gap: var(--s-1); min-width: 0;
+  padding: var(--s-3) var(--s-4); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-card);
+}
+.flujo-kpi__etiqueta { font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
+.flujo-kpi__num {
+  font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+  font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.flujo-kpi__num--ingreso { color: var(--green-ink); }
+.flujo-kpi__num--egreso, .flujo-kpi__num--negativo { color: var(--red-ink); }
+.flujo-kpi__nota { font-size: 0.75rem; line-height: 1.35; color: var(--label-2); }
+
+.flujo-tarjeta {
+  display: flex; flex-direction: column; gap: var(--s-3); min-width: 0;
+  padding: var(--s-4); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-card);
+}
+.flujo-tarjeta__cabecera { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+.flujo-tarjeta__titulo { margin: 0; font-size: 0.9375rem; font-weight: 700; color: var(--label); }
+.flujo-tarjeta__controles { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
+.flujo-nota { margin: 0; font-size: 0.75rem; line-height: 1.4; color: var(--label-2); }
+
+.flujo-neg { color: var(--red-ink); }
+.flujo-total td { font-weight: 700; background: var(--surface-sunken); border-top: 1px solid var(--separator-strong); }
+
+@media (max-width: 760px) {
+  .flujo-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .flujo-kpi__num { font-size: 1.15rem; }
+}
