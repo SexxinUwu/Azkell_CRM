@@ -16,8 +16,13 @@ export default defineConfig({
     port: 5173,
     host: true, // permite probar en el teléfono conectado a la misma red Wi-Fi
     proxy: {
-      // API y recursos de la versión actual (npm start en el puerto 3000)
-      '/api': { target: 'http://localhost:3000', changeOrigin: true },
+      // API y recursos de la versión actual (npm start en el puerto 3000).
+      // DEV_TENANT=marsisa npx vite  → prueba contra la base de esa empresa (solo desarrollo).
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ...(process.env.DEV_TENANT ? { headers: { 'x-tenant-slug': process.env.DEV_TENANT } } : {}),
+      },
     },
   },
 });

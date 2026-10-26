@@ -126,9 +126,19 @@ export function previaCompensacion(tipo: TipoCompensacion, saldo: number, gastos
   if (tipo === 'DEVOLUCION_EMPRESA') {
     return { lineas: [{ concepto: 'Sobrante de viáticos', importe }], total: importe, cuadra: true, sobrepago: 0 };
   }
-  const calculo = lineasReembolsoServidor(gastos);
-  const lineas = calculo.length ? calculo : [{ concepto: 'Viáticos / Alimentación choferes', importe }];
-  const total = redondear(lineas.reduce((s, l) => s + l.importe, 0));
-  const exceso = redondear(total - importe);
-  return { lineas, total, cuadra: Math.abs(exceso) <= 0.01, sobrepago: exceso > 0.01 ? exceso : 0 };
+  // El reembolso es el faltante neto: se reparte entre submotivos en proporción a lo rendido (igual que el servidor)
+  const brutas = lineasReembolsoServidor(gastos);
+  const totalBrutas = brutas.reduce((s, l) => s + l.importe, 0);
+  if (importe <= 0 || totalBrutas <= 0) {
+    return { lineas: [{ concepto: 'Viáticos / Alimentación choferes', importe }], total: importe, cuadra: importe > 0, sobrepago: 0 };
+  }
+  let asignado = 0;
+  const lineas = brutas
+    .map((l, i) => {
+      const parte = i === brutas.length - 1 ? redondear(importe - asignado) : redondear((importe * l.importe) / totalBrutas);
+      asignado = redondear(asignado + parte);
+      return { concepto: l.concepto, importe: parte };
+    })
+    .filter(l => l.importe > 0);
+  return { lineas, total: importe, cuadra: true, sobrepago: 0 };
 }

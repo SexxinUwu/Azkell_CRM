@@ -1936,42 +1936,62 @@ module.exports = function (db, broadcast, logAudit) {
                 });
 
             } else {
-                // REEMBOLSO AL CONDUCTOR: Agrupar por sub_motivo
-                let listaConceptos = [];
+                // REEMBOLSO AL CONDUCTOR: el monto es el faltante neto del viaje (rendido − depositado).
+                // Se calcula aquí con los mismos datos que muestra la lista; el importe del cliente solo sirve
+                // para detectar que la pantalla tiene un saldo viejo.
+                const [depRows] = await tdb.query(`
+                    SELECT tipo_movimiento, SUM(importe_total) AS total
+                    FROM tesoreria_caja
+                    WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(TRIM(estado)) IN ('PROCESADO', 'REGISTRADO')
+                    GROUP BY tipo_movimiento
+                `, [orden_viaje]);
+                let netoDepositado = 0;
+                (depRows || []).forEach(c => {
+                    const t = parseFloat(c.total || 0);
+                    netoDepositado += c.tipo_movimiento === 'INGRESO' ? -t : t;
+                });
 
+                const [gastosAgrup] = await tdb.query(`
+                    SELECT COALESCE(NULLIF(sub_motivo, ''), NULLIF(tipo_gasto, ''), 'Gastos de Viaje y Ruta') as sub_mot,
+                           SUM(importe) as total_grupo
+                    FROM tesoreria_liquidaciones_gastos
+                    WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND estado != 'RECHAZADO'
+                    GROUP BY sub_mot
+                `, [orden_viaje]);
+                const grupos = (gastosAgrup || [])
+                    .map(g => ({ sub_motivo: g.sub_mot, importe: parseFloat(g.total_grupo || 0) }))
+                    .filter(g => g.importe > 0);
+                const totalRendido = grupos.reduce((s, g) => s + g.importe, 0);
+                const faltante = Math.round((totalRendido - netoDepositado) * 100) / 100;
+
+                if (faltante <= 0) {
+                    return res.status(400).json({ error: 'Este viaje no tiene faltante que reembolsar.' });
+                }
+                if (importe !== undefined && importe !== null && importe !== '' && Math.abs(safeNum(importe) - faltante) > 0.01) {
+                    return res.status(409).json({ error: `El faltante del viaje es S/ ${faltante.toFixed(2)}. Actualice la pantalla y vuelva a intentar.` });
+                }
+
+                let listaConceptos = [];
                 if (Array.isArray(conceptos) && conceptos.length > 0) {
                     listaConceptos = conceptos.map(c => ({
                         sub_motivo: (c.sub_motivo || c.concepto || 'Gastos de Viaje y Ruta').trim(),
                         importe: safeNum(c.importe || 0),
                         centro_costo: (c.centro_costo || getCentroCosto('Gastos de Viaje y Ruta', c.sub_motivo || c.concepto)).trim()
                     })).filter(c => c.importe > 0);
-                } else {
-                    // Consultar automáticamente los gastos de liquidación de este viaje y agruparlos por sub_motivo
-                    const [gastosAgrup] = await tdb.query(`
-                        SELECT COALESCE(NULLIF(sub_motivo, ''), NULLIF(tipo_gasto, ''), 'Gastos de Viaje y Ruta') as sub_mot,
-                               SUM(importe) as total_grupo
-                        FROM tesoreria_liquidaciones_gastos
-                        WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND estado != 'RECHAZADO'
-                        GROUP BY sub_mot
-                    `, [orden_viaje]);
-
-                    if (gastosAgrup && gastosAgrup.length > 0) {
-                        listaConceptos = gastosAgrup.map(g => ({
-                            sub_motivo: g.sub_mot,
-                            importe: parseFloat(g.total_grupo || 0),
-                            centro_costo: getCentroCosto('Gastos de Viaje y Ruta', g.sub_mot)
-                        })).filter(c => c.importe > 0);
-                    } else {
-                        // Fallback con importe directo
-                        const impNum = safeNum(importe);
-                        if (impNum > 0) {
-                            listaConceptos = [{
-                                sub_motivo: 'Viáticos / Alimentación choferes',
-                                importe: impNum,
-                                centro_costo: 'CC-300'
-                            }];
-                        }
+                    const sumaConceptos = Math.round(listaConceptos.reduce((s, c) => s + c.importe, 0) * 100) / 100;
+                    if (Math.abs(sumaConceptos - faltante) > 0.01) {
+                        return res.status(409).json({ error: `Los conceptos suman S/ ${sumaConceptos.toFixed(2)} y el faltante es S/ ${faltante.toFixed(2)}.` });
                     }
+                } else {
+                    // Reparto del faltante entre submotivos en proporción a lo rendido; la última parte absorbe el redondeo
+                    let asignado = 0;
+                    listaConceptos = grupos.map((g, i) => {
+                        const imp = i === grupos.length - 1
+                            ? Math.round((faltante - asignado) * 100) / 100
+                            : Math.round(faltante * g.importe / totalRendido * 100) / 100;
+                        asignado = Math.round((asignado + imp) * 100) / 100;
+                        return { sub_motivo: g.sub_motivo, importe: imp, centro_costo: getCentroCosto('Gastos de Viaje y Ruta', g.sub_motivo) };
+                    }).filter(c => c.importe > 0);
                 }
 
                 if (listaConceptos.length === 0) {
@@ -2295,6 +2315,13 @@ module.exports = function (db, broadcast, logAudit) {
             const [ocRows] = await tdb.query("SELECT * FROM entradas_inv WHERE id = ?", [id]);
             if (!ocRows.length) return res.status(404).json({ error: 'Orden de Compra no encontrada' });
             const oc = ocRows[0];
+            // Solo se paga una orden aprobada o autorizada: una ya procesada no puede generar otro egreso
+            const estadoOc = String(oc.estado || '').toLowerCase().trim();
+            if (!['aprobado', 'autorizado'].includes(estadoOc)) {
+                return res.status(409).json({
+                    error: `La orden de compra no se puede pagar: su estado actual es "${oc.estado}". Solo se pueden procesar órdenes Aprobadas o Autorizadas.`
+                });
+            }
 
             // Moneda y monto del pago: los de la orden (el formulario no los envía). En dólares es el importe original
             // en US$ (total en soles ÷ tipo de cambio, igual que la pantalla); en soles, el total en soles.
@@ -2318,8 +2345,9 @@ module.exports = function (db, broadcast, logAudit) {
                 voucherUrl = await uploadToS3(f.buffer, key, f.mimetype);
             }
 
-            // 3. Actualizar estado de la Orden de Compra a PROCESADO
-            await tdb.query(`
+            // 3. Actualizar estado de la Orden de Compra a PROCESADO. El UPDATE solo toca la fila si sigue
+            // aprobada: dos pulsaciones o reintentos a la vez no pueden pagar dos veces ni crear dos egresos.
+            const [updOc] = await tdb.query(`
                 UPDATE entradas_inv SET
                     estado = 'Procesado',
                     numero_operacion = ?,
@@ -2327,8 +2355,11 @@ module.exports = function (db, broadcast, logAudit) {
                     url_voucher = ?,
                     pagado_por = ?,
                     fecha_pago = NOW()
-                WHERE id = ?
+                WHERE id = ? AND LOWER(TRIM(estado)) IN ('aprobado', 'autorizado')
             `, [numeroConstancia, cuentaOrigen, voucherUrl, usuarioPago, id]);
+            if (!updOc || updOc.affectedRows === 0) {
+                return res.status(409).json({ error: 'La orden de compra ya fue procesada por otro pago. No se registró un nuevo egreso.' });
+            }
 
             // 4. Asentar egreso automático en tesoreria_caja (Conciliación automática)
             try {
@@ -2505,25 +2536,40 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // Movimientos de caja de OCs que ya no existen. Antes se borraban en cada GET de movimientos;
+    // ahora solo se borran con una acción manual: sin { confirmar: true } solo informa cuántos son.
+    const HUERFANOS_DESDE = `tesoreria_caja c
+        LEFT JOIN entradas_inv e ON (
+            c.descripcion LIKE CONCAT('%', e.id, '%')
+            OR c.descripcion LIKE CONCAT('%', REPLACE(e.id, 'ENT-', ''), '%')
+            OR c.observacion LIKE CONCAT('%', e.id, '%')
+            OR c.observacion LIKE CONCAT('%', REPLACE(e.id, 'ENT-', ''), '%')
+        )
+        WHERE (c.tipo_comprobante = 'ORDEN DE COMPRA' OR c.sub_motivo = 'PAGO REQUERIMIENTO' OR c.descripcion LIKE '%PAGO DE REQUERIMIENTO OC%')
+          AND e.id IS NULL`;
+
+    router.post('/movimientos/limpiar-huerfanos', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'DB no disponible' });
+            const confirmar = req.body && req.body.confirmar === true;
+
+            const [conteo] = await tdb.query(`SELECT COUNT(*) AS total FROM ${HUERFANOS_DESDE}`);
+            const candidatos = Number((conteo && conteo[0] && conteo[0].total) || 0);
+            if (!confirmar) {
+                return res.json({ confirmar: false, candidatos, mensaje: 'Revise el conteo y envíe confirmar: true para eliminarlos.' });
+            }
+            const [borrado] = await tdb.query(`DELETE c FROM ${HUERFANOS_DESDE}`);
+            res.json({ confirmar: true, candidatos, eliminados: borrado.affectedRows });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     router.get('/movimientos', async (req, res) => {
         try {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'DB no disponible' });
-
-            // Limpieza preventiva de movimientos huérfanos de OCs que ya fueron eliminadas del sistema
-            try {
-                await tdb.query(`
-                    DELETE c FROM tesoreria_caja c
-                    LEFT JOIN entradas_inv e ON (
-                        c.descripcion LIKE CONCAT('%', e.id, '%') 
-                        OR c.descripcion LIKE CONCAT('%', REPLACE(e.id, 'ENT-', ''), '%')
-                        OR c.observacion LIKE CONCAT('%', e.id, '%')
-                        OR c.observacion LIKE CONCAT('%', REPLACE(e.id, 'ENT-', ''), '%')
-                    )
-                    WHERE (c.tipo_comprobante = 'ORDEN DE COMPRA' OR c.sub_motivo = 'PAGO REQUERIMIENTO' OR c.descripcion LIKE '%PAGO DE REQUERIMIENTO OC%')
-                      AND e.id IS NULL
-                `);
-            } catch (errPurge) {}
 
             const { banco, estado, fecha_desde, fecha_hasta, tipo_movimiento, search } = req.query;
 
