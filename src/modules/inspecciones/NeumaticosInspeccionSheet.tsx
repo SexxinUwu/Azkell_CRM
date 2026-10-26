@@ -23,7 +23,7 @@ import './inspecciones.css';
 // Diferencia con el clásico: el esquema del chasis es un SVG (ChasisEsquemaVisual) con perspectivas
 // 2D, isométrica, lateral y rayos X; las rotaciones son entre dos posiciones con un botón.
 
-const ESTADOS = ['NUEVA', 'BUENA', 'RECAPADA', 'REGULAR', 'MALA', 'CRÍTICA'] as const;
+const ESTADOS = ['NUEVA', 'BUENA', 'REENCAUCHADA', 'REGULAR', 'MALA', 'CRÍTICA'] as const;
 const ACCIONES = ['Inspección', 'Rotación', 'Instalación', 'Cambio', 'Reparación', 'Reencauche', 'Baja'] as const;
 
 interface PosicionUltima {

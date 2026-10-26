@@ -745,7 +745,7 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                                 <select class="form-select form-select-sm rounded-3 fw-semibold" style="height: 38px;" id="neu-sel-estado">
                                     <option value="NUEVA">NUEVA</option>
                                     <option value="BUENA">BUENA</option>
-                                    <option value="RECAPADA">RECAPADA</option>
+                                    <option value="REENCAUCHADA">REENCAUCHADA</option>
                                     <option value="REGULAR">REGULAR</option>
                                     <option value="MALA">MALA</option>
                                     <option value="CRÍTICA">CRÍTICA</option>
