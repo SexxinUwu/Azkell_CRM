@@ -113,6 +113,31 @@
 }
 .input:disabled, .select:disabled { opacity: 0.55; cursor: not-allowed; }
 
+/* Fechas: todas las <input type="date">, con o sin clase, usan el mismo lenguaje que los demás campos.
+   :where() no sube la especificidad, así que .input (TextInput) sigue mandando en sus propios campos. */
+:where(input[type='date']) {
+  min-height: 2.5rem;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: var(--fill);
+  color: var(--label);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+:where(input[type='date']):hover { background: var(--fill-strong); }
+:where(input[type='date']):focus { background: var(--surface); border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-ring); }
+:where(input[type='date'])[aria-invalid='true'] { border-color: var(--red); background: var(--surface); }
+:where(input[type='date']):disabled { opacity: 0.55; cursor: not-allowed; }
+:where(input[type='date'])::-webkit-calendar-picker-indicator {
+  opacity: 0.55; cursor: pointer; padding: 4px; border-radius: 6px; transition: opacity 150ms ease, background-color 150ms ease;
+}
+:where(input[type='date'])::-webkit-calendar-picker-indicator:hover { opacity: 1; background: var(--fill-strong); }
+
 .select {
   appearance: none;
   padding-right: var(--s-10);
