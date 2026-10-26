@@ -10,6 +10,7 @@ import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { NeumaticosNuevaInspeccionSheet } from './NeumaticosNuevaInspeccionSheet';
+import { NeumaticosHistorialPlaca } from './NeumaticosHistorialPlaca';
 import { LogoArchivo, RequerimientoNeumaticos } from './NeumaticosRequerimiento';
 import { VehiculosTarjetas } from './NeumaticosVehiculos';
 import { entraEnRequerimiento, exportarUltimasExcel, leerUmbral, textoUmbral, type LlantaUltima } from './neumaticosReposicion';
@@ -61,6 +62,7 @@ export function NeumaticosUltimasPage() {
   const [umbral, setUmbral] = useState(leerUmbral);
   const [medidaSel, setMedidaSel] = useState<string | null>(null);
   const [nueva, setNueva] = useState<{ abierta: boolean; placa: string }>({ abierta: false, placa: '' });
+  const [historial, setHistorial] = useState<{ abierto: boolean; placa: string }>({ abierto: false, placa: '' });
 
   const ultimas = useMemo(() => data ?? [], [data]);
   const empresas = useMemo(() => [...new Set(ultimas.map(l => (l.dueno ?? '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [ultimas]);
@@ -138,7 +140,7 @@ export function NeumaticosUltimasPage() {
                 {hayFiltros ? 'No se encontraron registros que coincidan con los filtros aplicados.' : 'Aún no hay inspecciones de neumáticos.'}
               </EmptyState>
             ) : (
-              <VehiculosTarjetas llantas={visiblesUlt} onInspeccionar={abrirInspeccion} />
+              <VehiculosTarjetas llantas={visiblesUlt} onInspeccionar={abrirInspeccion} onHistorial={placa => setHistorial({ abierto: true, placa })} />
             )
           ) : (
             <RequerimientoNeumaticos llantas={visiblesReq} umbral={umbral} onUmbral={u => { setUmbral(u); setMedidaSel(null); }} hayBusqueda={hayFiltros}
@@ -148,6 +150,7 @@ export function NeumaticosUltimasPage() {
       )}
 
       <NeumaticosNuevaInspeccionSheet open={nueva.abierta} placaInicial={nueva.placa} onClose={() => setNueva({ abierta: false, placa: '' })} />
+      <NeumaticosHistorialPlaca placa={historial.placa} open={historial.abierto} onClose={() => setHistorial({ abierto: false, placa: '' })} />
     </Page>
   );
 }

@@ -1147,6 +1147,106 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
     // 8. 🚚 ESTADO ACTUAL DE NEUMÁTICOS POR PLACA (Visor Interactivo)
     // ============================================================
+    // Historial completo de una placa: cada inspección con su resumen y cada llanta comparada contra su
+    // medición anterior en la misma posición (Δ mm y km recorridos). Se calcula sobre todo el historial;
+    // el filtro de fechas solo decide qué inspecciones se devuelven.
+    router.get('/historial-placa/:placa', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const placa = (req.params.placa || '').trim().toUpperCase();
+            if (!placa) return res.status(400).json({ ok: false, error: 'Placa requerida' });
+            const FECHA = /^\d{4}-\d{2}-\d{2}$/;
+            const desde = FECHA.test(req.query.desde || '') ? req.query.desde : null;
+            const hasta = FECHA.test(req.query.hasta || '') ? req.query.hasta : null;
+
+            const [filas] = await tdb.query(`
+                SELECT i.id_inspeccion, DATE_FORMAT(i.fecha_inspeccion, '%Y-%m-%d') AS fecha, i.km_vehiculo AS km,
+                       UPPER(TRIM(d.posicion)) AS posicion, d.marca, d.modelo, d.medida,
+                       d.r1, d.r2, d.r3, d.r4, d.remanente_promedio, d.presion_ant, d.presion_actual,
+                       d.estado, d.alerta_cambio, d.observaciones
+                FROM neumaticos_inspecciones_det d
+                INNER JOIN neumaticos_inspecciones i
+                    ON d.id_inspeccion COLLATE utf8mb4_unicode_ci = i.id_inspeccion COLLATE utf8mb4_unicode_ci
+                WHERE UPPER(TRIM(i.placa)) = ?
+                ORDER BY i.fecha_inspeccion ASC, i.created_at ASC, d.posicion ASC
+            `, [placa]);
+
+            // Odómetro de cada inspección: el que se guardó en el formulario o, si vino en 0, el GPS de esa fecha
+            // (mismo criterio de /km-gps: el último registro en o antes de la fecha)
+            const num = v => (v === null || v === undefined || v === '' ? null : Number(v));
+            const kmPorInspeccion = new Map();
+            for (const f of filas) {
+                if (!kmPorInspeccion.has(f.id_inspeccion)) kmPorInspeccion.set(f.id_inspeccion, { km: num(f.km) || null, fecha: f.fecha, fuente: num(f.km) ? 'inspeccion' : null });
+            }
+            for (const v of kmPorInspeccion.values()) {
+                if (v.km) continue;
+                const [gps] = await tdb.query(
+                    "SELECT km_gps FROM km_snapshots WHERE REPLACE(placa, '-', '') = ? AND fecha <= ? ORDER BY fecha DESC LIMIT 1",
+                    [placa.replace(/-/g, ''), v.fecha]
+                );
+                if (gps && gps[0] && gps[0].km_gps !== null) { v.km = Number(gps[0].km_gps); v.fuente = 'gps'; }
+            }
+            const redondear = v => (v === null ? null : Math.round(v * 100) / 100);
+            const promedioDe = f => {
+                const p = num(f.remanente_promedio);
+                if (p !== null && !Number.isNaN(p)) return p;
+                const medidas = [f.r1, f.r2, f.r3, f.r4].map(num).filter(x => x !== null && !Number.isNaN(x));
+                return medidas.length ? medidas.reduce((s, x) => s + x, 0) / medidas.length : null;
+            };
+
+            // Inspecciones en orden cronológico, con sus llantas y la comparación contra la medición previa
+            const cronologico = new Map();
+            const ultimaPorPosicion = new Map();
+            for (const f of filas) {
+                const odo = kmPorInspeccion.get(f.id_inspeccion);
+                if (!cronologico.has(f.id_inspeccion)) {
+                    cronologico.set(f.id_inspeccion, { id_inspeccion: f.id_inspeccion, fecha: f.fecha, km: odo.km, km_fuente: odo.fuente, llantas: [] });
+                }
+                const promedio = promedioDe(f);
+                const km = odo.km;
+                const previa = ultimaPorPosicion.get(f.posicion);
+                const deltaMm = previa && promedio !== null && previa.promedio !== null ? previa.promedio - promedio : null;
+                const kmDesde = previa && km !== null && previa.km !== null ? km - previa.km : null;
+                cronologico.get(f.id_inspeccion).llantas.push({
+                    posicion: f.posicion, marca: f.marca, modelo: f.modelo, medida: f.medida,
+                    r1: num(f.r1), r2: num(f.r2), r3: num(f.r3), r4: num(f.r4),
+                    promedio: redondear(promedio),
+                    presion_ant: f.presion_ant, presion_actual: f.presion_actual,
+                    estado: f.estado, alerta_cambio: f.alerta_cambio === 1 || f.alerta_cambio === true,
+                    anterior_mm: redondear(previa ? previa.promedio : null),
+                    delta_mm: redondear(deltaMm),
+                    km_desde_anterior: kmDesde,
+                    mm_por_1000km: deltaMm !== null && kmDesde && kmDesde > 0 ? redondear((deltaMm / kmDesde) * 1000) : null,
+                    observaciones: f.observaciones
+                });
+                ultimaPorPosicion.set(f.posicion, { promedio, km });
+            }
+
+            const lista = [...cronologico.values()];
+            const enRango = f => (!desde || f.fecha >= desde) && (!hasta || f.fecha <= hasta);
+            const inspecciones = lista.map((insp, i) => {
+                const anterior = i > 0 ? lista[i - 1] : null;
+                const promedios = insp.llantas.map(l => l.promedio).filter(p => p !== null);
+                return {
+                    id_inspeccion: insp.id_inspeccion,
+                    fecha: insp.fecha,
+                    km: insp.km,
+                    km_fuente: insp.km_fuente,
+                    km_desde_anterior: insp.km !== null && anterior && anterior.km !== null ? insp.km - anterior.km : null,
+                    llantas_cuenta: insp.llantas.length,
+                    promedio_general: promedios.length ? redondear(promedios.reduce((s, p) => s + p, 0) / promedios.length) : null,
+                    criticas: insp.llantas.filter(l => l.alerta_cambio || (l.promedio !== null && l.promedio < MM_CRITICO)).length,
+                    llantas: insp.llantas
+                };
+            }).filter(enRango).reverse();
+
+            res.json({ ok: true, placa, desde, hasta, inspecciones });
+        } catch (err) {
+            console.error('Error en historial-placa de neumáticos:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     router.get('/estado-actual/:placa', async (req, res) => {
         try {
             const tdb = getDb(req);

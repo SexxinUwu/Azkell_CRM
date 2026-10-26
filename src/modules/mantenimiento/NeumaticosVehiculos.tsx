@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, History } from 'lucide-react';
+import { Button } from '../../core/ui/Button';
 import { Badge } from '../../core/ui/Display';
 import { MM_CRITICO, MM_PREVENTIVO } from './neumaticosSemaforo';
 import { tipoLlanta, type LlantaUltima } from './neumaticosReposicion';
@@ -10,7 +11,7 @@ import { tipoLlanta, type LlantaUltima } from './neumaticosReposicion';
 const dia = (v: unknown) => (v ? String(v).split('T')[0] : '---');
 const ver = (v: unknown) => (v === null || v === undefined || v === '' ? '-' : String(v));
 
-export function VehiculosTarjetas({ llantas, onInspeccionar, mostrarTipo = false }: { llantas: LlantaUltima[]; onInspeccionar: (placa: string) => void; mostrarTipo?: boolean }) {
+export function VehiculosTarjetas({ llantas, onInspeccionar, onHistorial, mostrarTipo = false }: { llantas: LlantaUltima[]; onInspeccionar: (placa: string) => void; onHistorial?: (placa: string) => void; mostrarTipo?: boolean }) {
   const grupos = useMemo(() => {
     const m = new Map<string, LlantaUltima[]>();
     for (const l of llantas) {
@@ -38,7 +39,12 @@ export function VehiculosTarjetas({ llantas, onInspeccionar, mostrarTipo = false
                   </div>
                 </div>
               </div>
-              <Badge>{ls.length} posición(es)</Badge>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
+                {onHistorial && (
+                  <Button variant="plain" size="sm" icon={<History size={15} />} onClick={() => onHistorial(placa)}>Historial</Button>
+                )}
+                <Badge>{ls.length} posición(es)</Badge>
+              </div>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table className="inv-kardex" style={{ minWidth: '44rem' }}>
