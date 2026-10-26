@@ -20,32 +20,32 @@ export function MovFilaTabla({ m, onAbrir }: { m: MovimientoTesoreria; onAbrir: 
       onKeyDown={e => { if (e.key === 'Enter') abrir(); }}
       tabIndex={0}
     >
-      <Celda mono>{formatFechaPe(m.fecha_valuta || m.fecha)}</Celda>
-      <Celda mono>{m.codigo_oc || m.caja_folio || '—'}</Celda>
-      <td><Badge tone={oc ? 'accent' : 'amber'}>{oc ? 'ORDEN DE COMPRA' : 'CAJA CHICA'}</Badge></td>
-      <td><Badge tone={ingreso ? 'green' : 'red'}>{ingreso ? 'INGRESO' : 'EGRESO'}</Badge></td>
-      <Celda alinear="right" mono>{ingreso ? importeMov(m.monto, m.moneda) : ''}</Celda>
-      <Celda alinear="right" mono>{!ingreso ? importeMov(m.monto, m.moneda) : ''}</Celda>
-      <Celda>{limpio(m.beneficiario) || '—'}</Celda>
-      <Celda>{m.motivo || '—'}</Celda>
-      <Celda>{limpio(m.sub_motivo) || '—'}</Celda>
-      <Celda>{limpio(m.descripcion) || '—'}</Celda>
-      <Celda>{limpio(m.banco_cuenta) || '—'}</Celda>
-      <Celda mono>{limpio(m.numero_operacion) || '—'}</Celda>
-      <Celda mono>{limpio(m.numero_factura) || '—'}</Celda>
-      <Celda>{limpio(m.tipo_persona) || '—'}</Celda>
-      <Celda>{[m.centro_costo_nombre || m.centro_costo].filter(Boolean).join(' · ') || '—'}</Celda>
-      <Celda mono>{[limpio(m.placa), limpio(m.orden_viaje)].filter(Boolean).join(' · ') || '—'}</Celda>
-      <Celda>{limpio(m.solicitante) || '—'}</Celda>
-      <Celda>{limpio(m.usuario_creacion) || '—'}</Celda>
-      <Celda>{limpio(m.autoriza) || '—'}</Celda>
-      <Celda mono>{formatFechaPe(m.fecha_aprobacion)}</Celda>
-      <td><Badge tone={tonoEstado(m.estado)}>{m.estado}</Badge></td>
       <td onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
         {comprobante
           ? <a className="btn btn--secondary btn--sm" href={comprobante} target="_blank" rel="noreferrer" aria-label="Abrir comprobante"><Paperclip size={14} /> Ver</a>
           : <span style={{ color: 'var(--label-2)' }}>—</span>}
       </td>
+      <td><Badge tone={ingreso ? 'green' : 'red'}>{ingreso ? 'INGRESO' : 'EGRESO'}</Badge></td>
+      <Celda alinear="right" mono>{ingreso ? importeMov(m.monto, m.moneda) : ''}</Celda>
+      <Celda alinear="right" mono>{!ingreso ? importeMov(m.monto, m.moneda) : ''}</Celda>
+      <Celda>{m.motivo || '—'}</Celda>
+      <Celda>{limpio(m.sub_motivo) || '—'}</Celda>
+      <td><Badge tone={oc ? 'accent' : 'amber'}>{oc ? 'ORDEN DE COMPRA' : 'CAJA CHICA'}</Badge></td>
+      <Celda mono>{m.codigo_oc || m.caja_folio || '—'}</Celda>
+      <Celda>{limpio(m.descripcion) || '—'}</Celda>
+      <Celda mono>{formatFechaPe(m.fecha_valuta || m.fecha)}</Celda>
+      <Celda mono>{limpio(m.numero_operacion) || '—'}</Celda>
+      <Celda mono>{limpio(m.numero_factura) || '—'}</Celda>
+      <Celda>{limpio(m.beneficiario) || '—'}</Celda>
+      <Celda>{limpio(m.tipo_persona) || '—'}</Celda>
+      <Celda>{limpio(m.usuario_creacion) || '—'}</Celda>
+      <Celda>{limpio(m.solicitante) || '—'}</Celda>
+      <Celda>{limpio(m.autoriza) || '—'}</Celda>
+      <Celda mono>{formatFechaPe(m.fecha_aprobacion)}</Celda>
+      <Celda>{[m.centro_costo_nombre || m.centro_costo].filter(Boolean).join(' · ') || '—'}</Celda>
+      <Celda mono>{[limpio(m.placa), limpio(m.orden_viaje)].filter(Boolean).join(' · ') || '—'}</Celda>
+      <td><Badge tone={tonoEstado(m.estado)}>{m.estado}</Badge></td>
+      <Celda>{limpio(m.banco_cuenta) || '—'}</Celda>
     </tr>
   );
 }

@@ -25,16 +25,21 @@ import {
 type FiltroMoneda = 'TODAS' | 'PEN' | 'USD';
 
 const COLUMNAS: ColumnaTabla[] = [
+  { id: 'accion', titulo: 'Acción', ancho: 130 },
+  { id: 'importe', titulo: 'Monto a proceder', ancho: 150, alinear: 'right' },
+  { id: 'solic', titulo: 'Solicitante', ancho: 150 },
+  { id: 'centro', titulo: 'Centro costo', ancho: 120 },
+  { id: 'motivo', titulo: 'Motivo', ancho: 240 },
   { id: 'oc', titulo: 'Orden de compra', ancho: 150 },
+  { id: 'creador', titulo: 'Usuario creación', ancho: 160 },
+  { id: 'fecha', titulo: 'Fecha registro', ancho: 130 },
+  { id: 'venc', titulo: 'Días restantes', ancho: 140, alinear: 'center' },
+  { id: 'aprobador', titulo: 'Usuario aprobación', ancho: 170 },
+  { id: 'fechaAprob', titulo: 'Fecha aprobación', ancho: 150 },
   { id: 'prov', titulo: 'Proveedor', ancho: 240 },
-  { id: 'motivo', titulo: 'Motivo / centro de costo', ancho: 240 },
-  { id: 'importe', titulo: 'Importe', ancho: 150, alinear: 'right' },
-  { id: 'solic', titulo: 'Solicitante', ancho: 170 },
-  { id: 'venc', titulo: 'Vencimiento', ancho: 180 },
   { id: 'cuenta', titulo: 'Cuenta destino (proveedor)', ancho: 280 },
   { id: 'origen', titulo: 'Cuenta origen (empresa)', ancho: 260 },
   { id: 'estado', titulo: 'Estado', ancho: 170 },
-  { id: 'accion', titulo: '', ancho: 120 },
 ];
 
 const ENCABEZADOS_EXCEL = [
@@ -257,7 +262,7 @@ export function PagoRequerimientosPage() {
                 </div>
                 {pendiente && (
                   <div className="pago-lista__acciones">
-                    <Button variant="primary" size="sm" icon={<Wallet size={15} />} onClick={() => abrirProcesar(oc)}>Procesar pago</Button>
+                    <Button className="pago-procesar" variant="primary" size="sm" icon={<Wallet size={15} />} onClick={() => abrirProcesar(oc)}>Procesar pago</Button>
                   </div>
                 )}
               </li>
@@ -274,22 +279,30 @@ export function PagoRequerimientosPage() {
             const usdOrigen = oc.cuenta_origen_moneda === 'USD';
             return (
               <tr key={String(oc.id)} className="tabla-redim__fila--click" onClick={() => abrirDetalle(oc)}>
+                <Celda>
+                  {pendiente ? (
+                    <Button className="pago-procesar" variant="primary" size="sm" onClick={e => { e.stopPropagation(); abrirProcesar(oc); }}>Procesar</Button>
+                  ) : oc.url_voucher_presigned ? (
+                    <a className="btn btn--secondary btn--sm" href={oc.url_voucher_presigned} target="_blank" rel="noreferrer"
+                      onClick={e => e.stopPropagation()}>Voucher</a>
+                  ) : null}
+                </Celda>
+                <Celda alinear="right" mono>{importe > 0 ? formatMoneda(importe, usd ? 'USD' : 'PEN') : '—'}</Celda>
+                <Celda>{oc.solicitante || '—'}</Celda>
+                <Celda>{oc.centro_costo || '—'}</Celda>
+                <Celda>{oc.motivo_entrada || oc.motivo || '—'}</Celda>
                 <Celda mono><span className="pago-codigo">{codigoOC(oc)}</span></Celda>
+                <Celda>{oc.creador_nombre || oc.creado_por || '—'}</Celda>
+                <Celda mono>{formatFechaPe(oc.fecha)}</Celda>
+                <Celda alinear="center"><VencimientoCelda oc={oc} /></Celda>
+                <Celda>{oc.aprobador_nombre || oc.aprobado_por || '—'}</Celda>
+                <Celda mono>{formatFechaHoraPe(oc.fecha_aprobacion)}</Celda>
                 <Celda>
                   <span className="pago-prov">
                     <span className="pago-prov__nombre">{oc.proveedor_nombre || '—'}</span>
                     {oc.proveedor_ruc && <span className="pago-prov__ruc">RUC {oc.proveedor_ruc}</span>}
                   </span>
                 </Celda>
-                <Celda>
-                  <span className="pago-motivo">
-                    <span>{oc.motivo_entrada || oc.motivo || '—'}</span>
-                    {oc.centro_costo && <span className="t-footnote c-secondary">{oc.centro_costo}</span>}
-                  </span>
-                </Celda>
-                <Celda alinear="right" mono>{importe > 0 ? formatMoneda(importe, usd ? 'USD' : 'PEN') : '—'}</Celda>
-                <Celda>{oc.solicitante || '—'}</Celda>
-                <Celda><VencimientoCelda oc={oc} /></Celda>
                 <Celda><CuentaCelda texto={oc.cuenta_bancaria_proveedor} usd={usdDestino} /></Celda>
                 <Celda><CuentaCelda texto={oc.cuenta_bancaria_empresa} usd={usdOrigen} /></Celda>
                 <Celda>
@@ -301,14 +314,6 @@ export function PagoRequerimientosPage() {
                       </span>
                     )}
                   </span>
-                </Celda>
-                <Celda alinear="right">
-                  {pendiente ? (
-                    <Button variant="primary" size="sm" onClick={e => { e.stopPropagation(); abrirProcesar(oc); }}>Procesar</Button>
-                  ) : oc.url_voucher_presigned ? (
-                    <a className="btn btn--secondary btn--sm" href={oc.url_voucher_presigned} target="_blank" rel="noreferrer"
-                      onClick={e => e.stopPropagation()}>Voucher</a>
-                  ) : null}
                 </Celda>
               </tr>
             );
