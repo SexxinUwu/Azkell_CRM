@@ -63,7 +63,7 @@ export function useLineaTiempo(codigo: string | null) {
 export function usePlacasLista() {
   return useQuery<string[]>({
     queryKey: ['mant', 'placas-lista'],
-    queryFn: () => api<{ data?: string[] }>('/placas-lista').then(r => r.data ?? []),
+    queryFn: () => api<{ ok?: boolean; data?: string[] }>('/neumaticos/placas').then(r => r.data ?? []),
     staleTime: 5 * 60_000,
   });
 }

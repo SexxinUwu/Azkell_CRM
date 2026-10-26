@@ -88,7 +88,7 @@ export const RUTAS: RutaModulo[] = [
   {
     // Tablero de movimientos de llantas (se abre desde la pestaña Neumáticos de la placa)
     path: 'mantenimiento/neumaticos-tablero/:placa?',
-    permisos: ['neumaticos'],
+    permisos: ['neumaticos.ver'],
     Page: lazy(() => import('./NeumaticosTablero').then(m => ({ default: m.NeumaticosTablero }))),
   },
   {

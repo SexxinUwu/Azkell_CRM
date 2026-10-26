@@ -659,6 +659,19 @@ module.exports = function (db) {
     }
 
     // GET /api/neumaticos/tablero/:placa -> TableroPlaca
+    // Unidades para el selector del tablero: la tabla de placas de la empresa
+    router.get('/placas', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            const [filas] = await pool(req).query(
+                "SELECT UPPER(TRIM(placa)) AS placa, configuracion FROM placas WHERE placa IS NOT NULL AND TRIM(placa) <> '' ORDER BY placa ASC"
+            );
+            res.json({ ok: true, data: (filas || []).map(f => f.placa) });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
     router.get('/tablero/:placa', async (req, res) => {
         try {
             if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
