@@ -1,60 +1,173 @@
-/* Hoja de vida de una llanta: cabecera, campos, cifras, gráfico y líneas de tiempo */
-.hv { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+/* Ficha de un neumático: cabecera con datos, pestañas (presión y surco, vida, detalles) y línea de tiempo.
+   Los bloques nuevos llevan prefijo nhv2- (nhv2-ranura, nhv2-timeline). Colores y radios por tokens: modo oscuro incluido. */
 
-.hv__cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; }
-.hv__codigo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.hv__codigo span { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--label-2); }
-.hv__codigo strong { font-family: var(--font-mono); font-size: 1.25rem; color: var(--accent-ink); overflow-wrap: anywhere; }
+.nhv { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
 
-.hv__pills { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
-.hv__pill {
-  display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px;
-  font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
-  color: var(--label-2); background: var(--fill);
+/* Migas de pan y volver (solo en pantalla completa) */
+.nhv__ruta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.8125rem; color: var(--label-2); }
+.nhv__volver {
+  display: inline-flex; align-items: center; gap: 2px; padding: 0; border: 0; background: none;
+  font: inherit; color: var(--accent); cursor: pointer;
 }
-.hv__pill--vida { color: var(--accent-ink); }
+.nhv__volver:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; border-radius: 4px; }
+.nhv__ruta-actual { font-family: var(--font-mono); color: var(--label); }
 
-.hv__campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--s-2); }
-.hv__cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: var(--s-2); }
-.hv__campo {
-  display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: var(--s-3);
-  border-radius: var(--r-lg); background: var(--fill-1);
+/* Cabecera */
+.nhv__cab {
+  display: flex; align-items: center; gap: var(--s-5); flex-wrap: wrap;
+  padding: var(--s-4); border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card);
 }
-.hv__campo-etiqueta {
-  display: inline-flex; align-items: center; gap: 6px; font-size: 0.6875rem; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.05em; color: var(--label-2);
+.nhv__cab-foto { position: relative; display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding-bottom: 12px; }
+.nhv__disco {
+  width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--fill-2); color: var(--label-2);
 }
-.hv__campo-valor { font-size: 0.9375rem; font-weight: 700; color: var(--label); overflow-wrap: anywhere; }
-.hv__campo--cifra { background: var(--fill-2); }
-.hv__campo--cifra .hv__campo-valor { font-family: var(--font-mono); font-size: 1.05rem; font-variant-numeric: tabular-nums; }
-
-.hv__seccion { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }
-.hv__seccion h3 {
-  margin: 0; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--label-2);
+.nhv__cab-foto .badge { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+.nhv__cab-datos {
+  flex: 1 1 360px; min-width: 0; display: grid; gap: var(--s-4) var(--s-5);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
-.hv__grafico { width: 100%; height: 260px; }
-
-/* Línea de tiempo: riel vertical con un punto por evento */
-.hv__linea {
-  list-style: none; margin: 0 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: var(--s-2);
-  border-left: 2px solid var(--separator);
+/* Dato suelto: etiqueta chica arriba, valor debajo */
+.nhv__dato { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.nhv__dato-etiqueta {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 0.6875rem; color: var(--label-2);
 }
-.hv__linea > li { position: relative; padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4); border-radius: var(--r-lg); background: var(--fill-1); min-width: 0; }
-.hv__linea > li::before {
-  content: ''; position: absolute; left: -5px; top: 16px; width: 10px; height: 10px; border-radius: 50%;
-  background: var(--accent); box-shadow: 0 0 0 3px var(--surface);
+.nhv__dato-valor {
+  display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0;
+  font-size: 0.9375rem; font-weight: 600; color: var(--label); overflow-wrap: anywhere;
+}
+.nhv__dato--grande .nhv__dato-valor { font-size: 1.25rem; font-weight: 700; }
+
+/* Cuerpo: en escritorio, pestañas a la izquierda y timeline a la derecha; en celular, la timeline va debajo */
+.nhv__cuerpo { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); align-items: start; }
+.nhv__principal { display: flex; flex-direction: column; min-width: 0; }
+.nhv__lateral { min-width: 0; }
+@media (min-width: 960px) {
+  .nhv__cuerpo { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); }
 }
 
-.hv__item-cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap; }
-.hv__item-titulo { display: inline-flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; min-width: 0; font-size: 0.8125rem; }
-.hv__item-fecha { font-family: var(--font-mono); font-size: 0.75rem; color: var(--label-2); white-space: nowrap; }
-.hv__item-ruta { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.8125rem; font-weight: 600; flex-wrap: wrap; min-width: 0; }
-.hv__item-ruta svg { color: var(--label-2); flex-shrink: 0; }
-.hv__item-datos { display: flex; flex-wrap: wrap; gap: 4px var(--s-4); margin-top: 6px; font-size: 0.75rem; color: var(--label-2); }
-.hv__item-datos strong { color: var(--label); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.hv__item-obs { margin: 6px 0 0; font-size: 0.75rem; line-height: 1.4; font-style: italic; color: var(--label-2); overflow-wrap: anywhere; }
+/* Pestañas: en celular se desplazan horizontalmente */
+.nhv__pestanas {
+  display: flex; gap: var(--s-1); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  padding: 0 var(--s-1);
+}
+.nhv__pestanas::-webkit-scrollbar { display: none; }
+.nhv__pestana {
+  flex-shrink: 0; padding: var(--s-2) var(--s-3); border: 0; border-bottom: 2px solid transparent;
+  background: none; font: inherit; font-size: 0.875rem; font-weight: 600; color: var(--label-2); white-space: nowrap; cursor: pointer;
+}
+.nhv__pestana.is-activa { color: var(--accent); border-bottom-color: var(--accent); }
+.nhv__pestana:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: -2px; border-radius: var(--r-sm); }
 
+.nhv__panel {
+  display: flex; flex-direction: column; gap: var(--s-4); min-width: 0;
+  padding: var(--s-4); border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card);
+}
+
+/* Bloques plegables (Presión, Ranura) */
+.nhv__bloque { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.nhv__bloque-cab {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); width: 100%;
+  padding: 0 0 var(--s-2); border: 0; border-bottom: 1px solid var(--separator); background: none;
+  font: inherit; font-size: 0.9375rem; font-weight: 600; color: var(--accent); text-align: left; cursor: pointer;
+}
+.nhv__bloque-cab:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; border-radius: var(--r-sm); }
+.nhv__bloque-cuerpo { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+
+.nhv__chev { flex-shrink: 0; color: var(--accent); transform: rotate(-90deg); transition: transform 0.2s var(--ease-out); }
+.nhv__chev.is-abierto { transform: rotate(0deg); }
+@media (prefers-reduced-motion: reduce) {
+  .nhv__chev { transition: none; }
+}
+
+.nhv__par { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--s-3); }
+.nhv__accion { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--s-3); }
+.nhv__nota { font-size: 0.75rem; color: var(--label-3); }
+.nhv__nota--arriba { margin: 0; }
+
+/* Datos en rejilla (Vida actual, Detalles) */
+.nhv__rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s-4) var(--s-3); }
+
+/* Ranura del neumático: foto de la banda y, a la derecha, las tres filas de surco */
+.nhv2-ranura { display: grid; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr); gap: var(--s-4); align-items: center; }
+.nhv2-ranura__foto { display: grid; place-items: center; color: var(--label-2); min-width: 0; }
+.nhv2-ranura__foto img { display: block; width: 100%; height: auto; object-fit: contain; }
+.nhv2-ranura__filas { display: flex; flex-direction: column; min-width: 0; }
+.nhv2-fila {
+  display: grid; grid-template-columns: minmax(90px, 1fr) minmax(90px, auto) minmax(90px, auto);
+  gap: var(--s-3); align-items: center; padding: var(--s-3) 0; border-bottom: 1px solid var(--separator);
+}
+.nhv2-fila:last-child { border-bottom: 0; }
+.nhv2-fila__etiqueta { font-size: 0.8125rem; color: var(--label-2); }
+.nhv2-fila__bloque { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nhv2-fila__bloque small { font-size: 0.6875rem; color: var(--label-3); }
+.nhv2-fila__bloque strong {
+  display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono);
+  font-size: 0.9375rem; font-variant-numeric: tabular-nums; color: var(--label); white-space: nowrap;
+}
+.nhv2-fila__bloque strong.is-desgaste { color: var(--red); }
+.nhv2-fila__bloque strong.is-sin-dato { color: var(--label-3); font-family: inherit; font-weight: 600; }
 @media (max-width: 600px) {
-  .hv__item-fecha { white-space: normal; }
+  .nhv2-ranura { grid-template-columns: minmax(0, 1fr); }
+  .nhv2-ranura__foto { max-width: 220px; justify-self: center; }
+  .nhv2-fila { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .nhv2-fila__etiqueta { grid-column: 1 / -1; }
+}
+
+/* Timeline de la llanta */
+.nhv2-timeline {
+  display: flex; flex-direction: column; gap: var(--s-3); min-width: 0;
+  padding: var(--s-4); border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card);
+}
+.nhv2-timeline__cab {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); width: 100%;
+  padding: 0 0 var(--s-2); border: 0; border-bottom: 1px solid var(--separator); background: none;
+  font: inherit; font-size: 0.9375rem; font-weight: 600; color: var(--accent); text-align: left; cursor: pointer;
+}
+.nhv2-timeline__cab:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; border-radius: var(--r-sm); }
+.nhv2-timeline__lista {
+  list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;
+  max-height: 620px; overflow-y: auto; overscroll-behavior: contain;
+}
+@media (max-width: 959px) {
+  .nhv2-timeline__lista { max-height: none; overflow: visible; }
+}
+.nhv2-ev {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: var(--s-3);
+  padding: var(--s-3) 0; border-bottom: 1px solid var(--separator);
+}
+.nhv2-ev:last-child { border-bottom: 0; }
+.nhv2-ev__icono {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--fill-2); color: var(--label-2);
+}
+.nhv2-ev--aplicacion .nhv2-ev__icono { color: var(--accent); }
+.nhv2-ev--retiro .nhv2-ev__icono { color: var(--amber); }
+.nhv2-ev--reforma .nhv2-ev__icono { color: var(--green); }
+.nhv2-ev--medicion-presion .nhv2-ev__icono { color: var(--blue); }
+.nhv2-ev--apunte-surco .nhv2-ev__icono { color: var(--amber); }
+.nhv2-ev--marca-fuego .nhv2-ev__icono { color: var(--red); }
+.nhv2-ev--compra .nhv2-ev__icono { color: var(--green); }
+.nhv2-ev__cuerpo { min-width: 0; }
+.nhv2-ev__cab { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--s-1) var(--s-2); }
+.nhv2-ev__titulo { font-size: 0.875rem; color: var(--label); }
+.nhv2-ev__fecha { font-family: var(--font-mono); font-size: 0.6875rem; color: var(--label-2); white-space: nowrap; }
+.nhv2-ev__datos {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: var(--s-2) var(--s-3); margin: var(--s-2) 0 0;
+}
+.nhv2-ev__dato { min-width: 0; }
+.nhv2-ev__dato dt { font-size: 0.6875rem; color: var(--label-2); }
+.nhv2-ev__dato dd {
+  margin: 2px 0 0; display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; min-width: 0;
+  font-size: 0.8125rem; font-weight: 600; color: var(--label); font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.nhv2-ev__detalle { margin: var(--s-2) 0 0; font-size: 0.75rem; line-height: 1.4; font-style: italic; color: var(--label-2); overflow-wrap: anywhere; }
+
+/* Celular: cabecera más compacta */
+@media (max-width: 600px) {
+  .nhv__cab { gap: var(--s-3); }
+  .nhv__cab-datos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nhv__disco { width: 56px; height: 56px; }
+  .nhv__dato--grande .nhv__dato-valor { font-size: 1.0625rem; }
 }

@@ -168,3 +168,81 @@ export function texturaEtiqueta(texto: string, color: string): THREE.CanvasTextu
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
+
+/**
+ * Letrero de la marca para el capó: texto en relieve con brillo. Tres mapas: color (letras plateadas con sombra
+ * para que parezcan elevadas), relieve (letras blancas difuminadas sobre negro) y rugosidad (letras lisas, fondo mate).
+ * El texto se ajusta al ancho del lienzo.
+ */
+export function texturasMarca(texto: string): TexturasBanda {
+  const ancho = 1024;
+  const alto = 432;
+  const nombre = texto.trim().toUpperCase().slice(0, 24);
+  const color = lienzo(ancho, alto);
+  const relieve = lienzo(ancho, alto);
+  const rugosidad = lienzo(ancho, alto);
+  const fuente = (px: number) => `900 ${px}px "Arial Black", "Segoe UI", system-ui, sans-serif`;
+
+  // Tamaño: el mayor que entra en el 90% del ancho
+  let px = 300;
+  const medir = (ctx: CanvasRenderingContext2D) => {
+    ctx.font = fuente(px);
+    return ctx.measureText(nombre).width;
+  };
+  if (color.ctx) {
+    while (px > 40 && medir(color.ctx) > ancho * 0.9) px -= 8;
+  }
+  const y = alto / 2 + px * 0.04;
+
+  if (color.ctx) {
+    const ctx = color.ctx;
+    ctx.font = fuente(px);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Sombra: da la sensación de letra elevada sobre la pintura
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillText(nombre, ancho / 2 + 4, y + 10);
+    // Cuerpo: plateado con brillo de arriba abajo
+    const degradado = ctx.createLinearGradient(0, y - px / 2, 0, y + px / 2);
+    degradado.addColorStop(0, '#ffffff');
+    degradado.addColorStop(0.5, '#e8edf4');
+    degradado.addColorStop(1, '#9aa6b6');
+    ctx.fillStyle = degradado;
+    ctx.fillText(nombre, ancho / 2, y);
+    // Filo de luz en el borde superior de las letras
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.lineWidth = 3;
+    ctx.strokeText(nombre, ancho / 2, y - 2);
+  }
+  if (relieve.ctx) {
+    const ctx = relieve.ctx;
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, ancho, alto);
+    ctx.filter = 'blur(5px)';
+    ctx.font = fuente(px);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(nombre, ancho / 2, y);
+    ctx.filter = 'none';
+  }
+  if (rugosidad.ctx) {
+    const ctx = rugosidad.ctx;
+    // Pintura mate alrededor y letras muy lisas (el material multiplica su roughness por este mapa)
+    ctx.fillStyle = '#a6a6a6';
+    ctx.fillRect(0, 0, ancho, alto);
+    ctx.font = fuente(px);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#141414';
+    ctx.fillText(nombre, ancho / 2, y);
+  }
+
+  const crear = (cv: HTMLCanvasElement, esColor: boolean) => {
+    const t = new THREE.CanvasTexture(cv);
+    if (esColor) t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  };
+  return { color: crear(color.canvas, true), relieve: crear(relieve.canvas, false), rugosidad: crear(rugosidad.canvas, false) };
+}

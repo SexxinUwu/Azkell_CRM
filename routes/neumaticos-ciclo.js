@@ -128,6 +128,45 @@ function filaLlanta(r) {
     };
 }
 
+// ── Listado y ficha (sección 9) ─────────────────────────────────
+
+// Claves del listado: "activo" suma las llantas que no están dadas de baja; las demás son situaciones exclusivas
+const CLAVES_LISTADO = ['activo', 'disponible', 'en_actividad', 'enviar_reforma', 'en_reformadora', 'esperando_descarte', 'desactivacion', 'sin_marca'];
+
+// Texto legible de cada situación. "desactivacion" está reservada: el ciclo todavía no tiene un estado que la marque.
+const SITUACION = {
+    disponible: 'Disponible',
+    en_actividad: 'En actividad',
+    enviar_reforma: 'Enviar para reforma',
+    en_reformadora: 'En la reformadora',
+    esperando_descarte: 'Esperando descarte',
+    desactivacion: 'Desactivación',
+    sin_marca: 'Sin marca de fuego',
+};
+
+// Una sola situación por llanta. Sin código de marca de fuego manda sobre el estado del ciclo.
+// Estado nuevo o sin estado: se trata como en almacén (igual que la migración al asignar estado_ciclo).
+function situacionLlanta(codigoLlanta, estadoCiclo, almacenId) {
+    if (!txt(codigoLlanta)) return 'sin_marca';
+    switch (estadoCiclo) {
+        case 'en_unidad': return 'en_actividad';
+        case 'en_reencauche': return almacenId === ALMACEN.REENCAUCHE ? 'enviar_reforma' : 'en_reformadora';
+        case 'desechado': return 'esperando_descarte';
+        default: return 'disponible';
+    }
+}
+
+// Presión en PSI; 0 o vacío = sin medición (la columna tiene 0 por defecto)
+function psiValido(v) {
+    const n = Number(v);
+    return v == null || !Number.isFinite(n) || n <= 0 ? null : n;
+}
+
+// Promedio de los tres surcos a un decimal
+function surcoPromedio(r1, r2, r3) {
+    return Math.round(((Number(r1) + Number(r2) + Number(r3)) / 3) * 10) / 10;
+}
+
 module.exports = function (db) {
     const router = express.Router();
 
@@ -664,9 +703,9 @@ module.exports = function (db) {
         try {
             if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
             const [filas] = await pool(req).query(
-                "SELECT UPPER(TRIM(placa)) AS placa, configuracion FROM placas WHERE placa IS NOT NULL AND TRIM(placa) <> '' ORDER BY placa ASC"
+                "SELECT UPPER(TRIM(placa)) AS placa, cliente, marca, configuracion FROM placas WHERE placa IS NOT NULL AND TRIM(placa) <> '' ORDER BY placa ASC"
             );
-            res.json({ ok: true, data: (filas || []).map(f => f.placa) });
+            res.json({ ok: true, data: (filas || []).map(f => ({ placa: f.placa, cliente: f.cliente || null, marca: f.marca || null, configuracion: f.configuracion || null })) });
         } catch (err) {
             responder(res, err);
         }
@@ -732,6 +771,211 @@ module.exports = function (db) {
                 'Content-Disposition': `inline; filename="posicion-neumaticos-${nombre}.pdf"`,
             });
             res.send(Buffer.from(pdf));
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
+    // ============================================================
+    // 9. LISTADO DE NEUMÁTICOS Y FICHA DE UNA LLANTA (solo lectura)
+    // ============================================================
+
+    // Una fila por llanta con su situación. Mismo JOIN que SQL_LLANTAS (placa montada abierta), con el código crudo
+    // para distinguir las llantas sin código de marca de fuego.
+    async function cargarListado(p) {
+        const [filas] = await p.query(`
+            SELECT h.codigo_llanta, h.id_neumatico, h.marca, h.modelo, h.medida, h.estado_ciclo, h.vida,
+                   h.almacen_id, h.placa_actual, h.costo_compra, i.placa AS placa_montada
+            FROM neumaticos_hoja_vida h
+            LEFT JOIN neumaticos_instalaciones i ON i.id_neumatico = h.id_neumatico AND i.fecha_out IS NULL
+            ORDER BY COALESCE(h.codigo_llanta, h.id_neumatico)`);
+        return filas.map(r => {
+            const almacenId = r.almacen_id == null ? null : Number(r.almacen_id);
+            const compra = Number(r.costo_compra) || 0;
+            const clave = situacionLlanta(r.codigo_llanta, r.estado_ciclo, almacenId);
+            return {
+                clave,
+                estado_ciclo: r.estado_ciclo || null,
+                dato: {
+                    codigo: txt(r.codigo_llanta) || txt(r.id_neumatico),
+                    vida: vidaNumero(r.vida),
+                    medida: r.medida || null,
+                    marca: r.marca || null,
+                    modelo: r.modelo || null,
+                    estado_ciclo: r.estado_ciclo || null,
+                    almacen: NOMBRE_ALMACEN[almacenId] || null,
+                    placa_actual: r.placa_montada || r.placa_actual || null,
+                    gastos_compra: compra > 0 ? compra : '',
+                    situacion: SITUACION[clave],
+                },
+            };
+        });
+    }
+
+    // GET /api/neumaticos/listado?estado=&q= -> { conteos, data }
+    // El texto de búsqueda (q) filtra los conteos; el estado solo filtra data.
+    router.get('/listado', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            const estado = txt(req.query.estado) || 'TODOS';
+            if (estado !== 'TODOS' && !CLAVES_LISTADO.includes(estado)) throw aviso(400, 'Estado de listado no válido');
+            const q = txt(req.query.q).toLowerCase();
+
+            const todas = (await cargarListado(pool(req)))
+                .filter(l => !q || [l.dato.codigo, l.dato.marca, l.dato.modelo, l.dato.medida, l.dato.placa_actual]
+                    .some(v => String(v ?? '').toLowerCase().includes(q)));
+
+            const conteos = Object.fromEntries(CLAVES_LISTADO.map(k => [k, 0]));
+            for (const l of todas) {
+                conteos[l.clave] += 1;
+                if (l.estado_ciclo !== ESTADO.DESECHO.ciclo) conteos.activo += 1;
+            }
+
+            const data = todas
+                .filter(l => estado === 'TODOS' || (estado === 'activo' ? l.estado_ciclo !== ESTADO.DESECHO.ciclo : l.clave === estado))
+                .map(l => l.dato);
+
+            res.json({ ok: true, conteos, data });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
+    // Mediciones de una llanta: las suyas (id_neumatico) y las de su posición mientras estuvo montada
+    // (neumaticos_inspecciones_det trae id_neumatico NULL en las filas registradas desde la inspección).
+    // Orden: más reciente primero.
+    async function medicionesLlanta(p, idNeumatico) {
+        const [filas] = await p.query(`
+            SELECT d.id, d.posicion, d.r1, d.r2, d.r3, d.presion_actual, i.placa, i.km_vehiculo,
+                   DATE_FORMAT(i.fecha_inspeccion, '%Y-%m-%d') AS fecha,
+                   DATE_FORMAT(COALESCE(i.created_at, i.fecha_inspeccion), '%Y-%m-%d %H:%i') AS fecha_hora
+            FROM neumaticos_inspecciones_det d
+            INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_general_ci = i.id_inspeccion COLLATE utf8mb4_general_ci
+            WHERE d.id_neumatico = ?
+               OR (d.id_neumatico IS NULL AND EXISTS (
+                    SELECT 1 FROM neumaticos_instalaciones n
+                    WHERE n.id_neumatico = ?
+                      AND UPPER(TRIM(n.placa)) = UPPER(TRIM(i.placa))
+                      AND UPPER(TRIM(n.posicion)) = UPPER(TRIM(d.posicion))
+                      AND i.fecha_inspeccion >= n.fecha_in
+                      AND (n.fecha_out IS NULL OR i.fecha_inspeccion <= n.fecha_out)))
+            ORDER BY i.fecha_inspeccion DESC, i.created_at DESC, d.id DESC`, [idNeumatico, idNeumatico]);
+        return filas;
+    }
+
+    // Eventos de kardex (neumaticos_movimientos) en el contrato de la línea de tiempo de la ficha
+    function eventosKardex(movs, llanta) {
+        return movs.map(m => {
+            const destino = NOMBRE_ALMACEN[Number(m.almacen_destino_id)] || null;
+            const base = {
+                fecha: m.fecha, placa: m.placa || null, posicion: m.posicion || null,
+                km: m.km == null ? null : Number(m.km), proveedor: null, valor: null,
+                detalle: m.observacion || '',
+            };
+            switch (m.tipo) {
+                case MOV.ALTA:
+                    return { ...base, tipo: 'COMPRA', titulo: 'Alta en almacén', detalle: `Almacén ${destino || '—'}`,
+                        placa: null, posicion: null, km: null, valor: llanta.costo_compra };
+                case MOV.INSTALACION:
+                    return { ...base, tipo: 'APLICACION', titulo: `Montada en ${m.placa || 'la unidad'}`,
+                        detalle: m.posicion ? `Posición ${m.posicion}` : '' };
+                case MOV.RETIRO_DESECHO:
+                    return { ...base, tipo: 'RETIRO', titulo: 'Retirada a desecho', detalle: m.observacion || 'Enviada a desecho (Scrap)' };
+                case MOV.RETIRO_REENCAUCHE:
+                    return { ...base, tipo: 'RETIRO', titulo: 'Enviada a reencauche', detalle: m.observacion || 'Enviada a reencauche' };
+                case MOV.RETORNO_REENCAUCHE: {
+                    // El retorno guarda "Proveedor: X. Costo servicio: N. …" (routes/neumaticos-ciclo.js, POST /retorno-reencauche)
+                    const obs = m.observacion || '';
+                    const prov = /Proveedor: (.*?)\. Costo servicio:/.exec(obs);
+                    const costo = /Costo servicio: ([\d.]+)/.exec(obs);
+                    return { ...base, tipo: 'REFORMA', titulo: 'Regresó de reencauche', detalle: obs,
+                        proveedor: prov ? prov[1] : null, valor: costo ? Number(costo[1]) : null };
+                }
+                default:
+                    return { ...base, tipo: 'OTRO', titulo: String(m.tipo) };
+            }
+        });
+    }
+
+    // GET /api/neumaticos/ficha/:codigo -> { llanta, presion, surco, timeline }
+    router.get('/ficha/:codigo', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            const p = pool(req);
+            const buscado = mayus(req.params.codigo);
+            const [filas] = await p.query(`${SQL_LLANTAS} WHERE (h.codigo_llanta = ? OR h.id_neumatico = ?) LIMIT 1`, [buscado, buscado]);
+            if (!filas.length) throw aviso(404, 'Llanta no encontrada');
+            const base = filas[0];
+            const llanta = filaLlanta(base);
+
+            const [movs] = await p.query(
+                `SELECT DATE_FORMAT(fecha, '%Y-%m-%d %H:%i') AS fecha, tipo, almacen_destino_id, placa, posicion, km, observacion
+                 FROM neumaticos_movimientos WHERE id_neumatico = ? ORDER BY fecha DESC, id DESC`,
+                [base.id_neumatico]);
+            const mediciones = await medicionesLlanta(p, base.id_neumatico);
+
+            // Presión: última medición con valor y todas en orden cronológico para la gráfica
+            const conPresion = mediciones.filter(m => psiValido(m.presion_actual) != null);
+            const ultimaPresion = conPresion[0] || null;
+            const presion = {
+                ultima_medicion: ultimaPresion ? psiValido(ultimaPresion.presion_actual) : null,
+                fecha: ultimaPresion ? ultimaPresion.fecha : null,
+                historial: conPresion.slice().reverse().map(m => ({ fecha: m.fecha, valor: psiValido(m.presion_actual) })),
+            };
+
+            // Surco: última medición; el desgaste es la medición anterior menos la actual (positivo = desgaste)
+            const ult = mediciones[0] || null;
+            const ant = mediciones[1] || null;
+            const resta = (a, b) => (a && b ? Number(a) - Number(b) : null);
+            const surco = ult ? {
+                fecha: ult.fecha,
+                interno: ult.r1, central: ult.r2, externo: ult.r3,
+                desgaste_interno: resta(ant && ant.r1, ult.r1),
+                desgaste_central: resta(ant && ant.r2, ult.r2),
+                desgaste_externo: resta(ant && ant.r3, ult.r3),
+            } : null;
+
+            const eventos = [
+                ...eventosKardex(movs, llanta),
+                ...mediciones.flatMap(m => {
+                    const lista = [{
+                        fecha: m.fecha_hora, tipo: 'APUNTE_SURCO', titulo: 'Medición de surco',
+                        detalle: `Interno ${m.r1} · Central ${m.r2} · Externo ${m.r3} mm`,
+                        placa: m.placa || null, posicion: m.posicion || null, proveedor: null,
+                        km: m.km_vehiculo == null ? null : Number(m.km_vehiculo), valor: surcoPromedio(m.r1, m.r2, m.r3),
+                    }];
+                    const psi = psiValido(m.presion_actual);
+                    if (psi != null) lista.push({
+                        fecha: m.fecha_hora, tipo: 'MEDICION_PRESION', titulo: 'Medición de presión',
+                        detalle: `${psi} PSI`, placa: m.placa || null, posicion: m.posicion || null, proveedor: null,
+                        km: m.km_vehiculo == null ? null : Number(m.km_vehiculo), valor: psi,
+                    });
+                    return lista;
+                }),
+            ].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+
+            res.json({
+                ok: true,
+                llanta: {
+                    codigo: llanta.codigo,
+                    marca: llanta.marca || null,
+                    modelo: llanta.modelo || null,
+                    medida: llanta.medida || null,
+                    vida: vidaNumero(llanta.vida),
+                    estado_ciclo: llanta.estado || null,
+                    almacen: NOMBRE_ALMACEN[llanta.almacen_id] || null,
+                    placa_actual: llanta.placa || null,
+                    posicion_actual: llanta.posicion || null,
+                    km_acumulado: llanta.km_acumulado,
+                    costo_compra: llanta.costo_compra,
+                    costo_reencauches: llanta.costo_reencauches,
+                    cpk: llanta.cpk,
+                    contador_reencauches: llanta.reencauches,
+                },
+                presion,
+                surco,
+                timeline: eventos,
+            });
         } catch (err) {
             responder(res, err);
         }

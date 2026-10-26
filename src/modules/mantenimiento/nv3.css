@@ -1,4 +1,4 @@
-/* Vista cenital 3D de neumáticos (nv3-vista.tsx). El lienzo es transparente: toma el color de la tarjeta, claro u oscuro. */
+/* Vista 3D de neumáticos (nv3-vista.tsx). El lienzo es transparente: toma el color de la tarjeta, claro u oscuro. */
 .nv3-vista {
   position: relative;
   width: 100%;
@@ -7,7 +7,11 @@
   user-select: none;
   -webkit-user-select: none;
 }
-.nv3-vista canvas {
+.nv3-lienzo {
+  position: absolute;
+  inset: 0;
+}
+.nv3-lienzo canvas {
   display: block;
   width: 100%;
   height: 100%;
@@ -16,4 +20,38 @@
 }
 @media (max-width: 760px) {
   .nv3-vista { height: 360px; }
+}
+
+/* Control Plano / Isometría sobre el lienzo, arriba a la izquierda */
+.nv3-modos {
+  position: absolute;
+  top: var(--s-2);
+  left: var(--s-2);
+  z-index: 1;
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--r-full);
+  background: var(--fill);
+}
+.nv3-modos__op {
+  border: 0;
+  background: transparent;
+  padding: 4px 12px;
+  border-radius: var(--r-full);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--label);
+  opacity: 0.6;
+  cursor: pointer;
+}
+.nv3-modos__op[aria-pressed="true"] {
+  background: var(--surface);
+  opacity: 1;
+  box-shadow: var(--shadow-raised);
+}
+.nv3-modos__op:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

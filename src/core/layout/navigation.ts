@@ -12,7 +12,7 @@
 //
 // Permisos: 'clave.ver' según la matriz de permisos actual (ver core/auth/permisos.ts). Los administradores ven todo.
 import {
-  Accessibility, Activity, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, Ruler, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
+  Accessibility, Activity, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, Ruler, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
 } from 'lucide-react';
 import type { RutaModulo } from '../../modules/personal/rutas.tipos';
 
@@ -122,6 +122,7 @@ const SECCIONES_BASE: NavSection[] = [
         children: [
           { key: 'neumaticos-analisis', label: 'Análisis de neumáticos', to: '/mantenimiento/neumaticos-analisis', icon: Disc3, permissions: ver('neumaticos') },
           { key: 'neumaticos', label: 'Últimas inspecciones', to: '/mantenimiento/neumaticos-ultimas', icon: Clock, permissions: ver('neumaticos') },
+          { key: 'neumaticos-listado', label: 'Neumáticos', to: '/mantenimiento/neumaticos-listado', icon: List, permissions: ver('neumaticos') },
           { key: 'neumaticos-tablero', label: 'Tablero de movimientos', to: '/mantenimiento/neumaticos-tablero', icon: ArrowLeftRight, permissions: ver('neumaticos') },
         ],
       },

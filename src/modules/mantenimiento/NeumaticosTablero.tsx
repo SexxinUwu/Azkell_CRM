@@ -247,7 +247,7 @@ export function NeumaticosTablero() {
     );
   }
 
-  const opcionesPlaca = (placas.data ?? []).map(p => ({ placa: p }));
+  const opcionesPlaca = (placas.data ?? []).map(p => ({ placa: p.placa, detalle: p.cliente }));
 
   return (
     <Page wide>
@@ -325,6 +325,7 @@ export function NeumaticosTablero() {
                 <NeumaticosCenital
                   llantas={llantasDato} configuracion={configCodigo} activa={posicionActiva}
                   sobre={sobre?.tipo === 'posicion' ? sobre.posicion : null} sondaRef={sondaRef} onSelect={() => undefined}
+                  marca={(placas.data ?? []).find(p => p.placa === placa)?.marca ?? null}
                 />
               </div>
               <LeyendaSemaforo />

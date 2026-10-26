@@ -1,274 +1,260 @@
 import './NeumaticoHojaVida.css';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Calculator, CircleDollarSign, Disc3, Gauge, History, MapPin, RefreshCw } from 'lucide-react';
-import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ChevronDown, ChevronLeft, CircleDollarSign, CircleDot, Disc3, Flame, Gauge, Hammer, Heart, MapPin, RefreshCw, Tag, Truck } from 'lucide-react';
 import { api, errorMessage } from '../../core/api/client';
+import { formatFechaHoraPe } from '../../core/lib/format';
+import { haptic } from '../../core/lib/haptics';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { EmptyState, Notice } from '../../core/ui/Display';
-import { useColores } from '../../core/ui/Graficos';
+import { Badge, Notice, Page } from '../../core/ui/Display';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Sheet } from '../../core/ui/Sheet';
-import { MM_CRITICO, MM_PREVENTIVO } from './neumaticosSemaforo';
+import { NhvRanura } from './nhv2-Ranura';
+import { NhvTimeline } from './nhv2-Timeline';
+import {
+  fmtCpk, fmtEntero, fmtKm, fmtPsi, fmtSoles, normalizarFicha,
+  type Ficha, type FichaRaw, type Llanta,
+} from './nhv2-datos';
 
-// Hoja de vida de una llanta (GET /neumaticos/llantas/:codigo): cabecera, cifras de costo y km,
-// gráfico de remanente promedio contra kilometraje, y las líneas de tiempo de instalaciones y movimientos.
+// Ficha de un neumático (GET /api/neumaticos/ficha/:codigo).
+// Dos modos: hoja modal (prop onClose, desde las hojas de inspección) y pantalla completa
+// (ruta mantenimiento/neumaticos-ficha/:codigo, vía NeumaticoHojaVidaRuta).
 
-// ---- Contrato de la API (tal como llega; los decimales de MySQL pueden venir como texto) ----
-interface LlantaRaw {
-  codigo?: string | null; marca?: string | null; medida?: string | null; modelo?: string | null; estado?: string | null;
-  almacen?: string | null; placa_actual?: string | null; posicion_actual?: string | null;
-  vida?: number | string | null; reencauches?: number | string | null; km_acumulado?: number | string | null;
-  costo_compra?: number | string | null; costo_reencauches?: number | string | null; cpk?: number | string | null;
-}
-interface InstalacionRaw {
-  placa?: string | null; posicion?: string | null; fecha_in?: string | null; km_in?: number | string | null;
-  fecha_out?: string | null; km_out?: number | string | null; km_recorridos?: number | string | null;
-}
-interface MovimientoRaw {
-  fecha?: string | null; tipo?: string | null; origen?: string | null; destino?: string | null; placa?: string | null;
-  posicion?: string | null; km?: number | string | null; usuario?: string | null; observacion?: string | null;
-}
-interface MedicionRaw { fecha?: string | null; r1?: number | string | null; r2?: number | string | null; r3?: number | string | null; km?: number | string | null }
-interface RespLlanta {
-  ok?: boolean; error?: string;
-  llanta?: LlantaRaw | null; instalaciones?: InstalacionRaw[] | null; movimientos?: MovimientoRaw[] | null; mediciones?: MedicionRaw[] | null;
-}
+const PESTANAS = [
+  { id: 'presion', etiqueta: 'Presión y surco' },
+  { id: 'vida', etiqueta: 'Vida actual del neumático' },
+  { id: 'detalles', etiqueta: 'Detalles' },
+] as const;
+type IdPestana = (typeof PESTANAS)[number]['id'];
 
-// ---- Modelo ya normalizado para la pantalla ----
-interface Llanta {
-  codigo: string; marca: string | null; medida: string | null; modelo: string | null; estado: string | null;
-  vida: string | null; ubicacion: string; reencauches: number | null; kmAcumulado: number | null;
-  costoCompra: number | null; costoReencauches: number | null; cpk: number | null;
-}
-interface Instalacion {
-  placa: string | null; posicion: string | null; fechaIn: string | null; kmIn: number | null;
-  fechaOut: string | null; kmOut: number | null; kmRecorridos: number | null;
-}
-interface Movimiento {
-  fecha: string | null; tipo: string | null; origen: string | null; destino: string | null; placa: string | null;
-  posicion: string | null; km: number | null; usuario: string | null; observacion: string | null;
-}
-interface Medicion { fecha: string | null; prom: number | null; km: number | null }
-interface Hoja { llanta: Llanta | null; instalaciones: Instalacion[]; movimientos: Movimiento[]; mediciones: Medicion[] }
+type Tono = 'gray' | 'green' | 'amber' | 'red';
 
-// ---- Utilidades de formato y normalización ----
-const num = (v: unknown): number | null => {
-  if (v === null || v === undefined || String(v).trim() === '') return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-};
-const txt = (v: unknown): string | null => {
-  if (v === null || v === undefined) return null;
-  const s = String(v).trim();
-  return s === '' ? null : s;
-};
-/** Fecha como AAAA-MM-DD (acepta también ISO con hora) */
-const isoDia = (v: unknown): string | null => {
-  const m = String(v ?? '').match(/^(\d{4}-\d{2}-\d{2})/);
-  return m ? m[1] : null;
-};
-const fmtDia = (iso: string | null): string => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—');
-const fmtKm = (n: number | null): string => (n === null ? '—' : `${Math.round(n).toLocaleString('es-PE')} km`);
-const fmtSoles = (n: number | null): string =>
-  n === null ? '—' : `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-/** Vida: el número 0 a 3 se muestra como R0 a R3; si llega como texto (p. ej. "R2"), se muestra tal cual */
-const fmtVida = (v: unknown): string | null => {
-  const n = num(v);
-  return n !== null ? `R${n}` : txt(v);
-};
-/** Remanente promedio de una medición: solo cuentan las mediciones de la llanta con valor mayor a 0 (0 = sin medir) */
-const promedioMm = (r1: unknown, r2: unknown, r3: unknown): number | null => {
-  const valores = [r1, r2, r3].map(num).filter((v): v is number => v !== null && v > 0);
-  return valores.length ? valores.reduce((s, v) => s + v, 0) / valores.length : null;
-};
-const porFechaDesc = <T,>(f: (x: T) => string | null) => (a: T, b: T) => (f(b) ?? '').localeCompare(f(a) ?? '');
-
-function normalizar(r: RespLlanta): Hoja {
-  const l = r.llanta;
-  const placa = txt(l?.placa_actual);
-  const posicion = txt(l?.posicion_actual);
-  return {
-    llanta: l ? {
-      codigo: txt(l.codigo) ?? '—',
-      marca: txt(l.marca), medida: txt(l.medida), modelo: txt(l.modelo), estado: txt(l.estado),
-      vida: fmtVida(l.vida),
-      ubicacion: placa ? `${placa}${posicion ? ` · ${posicion}` : ''}` : (txt(l.almacen) ?? 'Almacén'),
-      reencauches: num(l.reencauches), kmAcumulado: num(l.km_acumulado),
-      costoCompra: num(l.costo_compra), costoReencauches: num(l.costo_reencauches), cpk: num(l.cpk),
-    } : null,
-    instalaciones: (r.instalaciones ?? []).map(i => ({
-      placa: txt(i.placa), posicion: txt(i.posicion), fechaIn: isoDia(i.fecha_in), kmIn: num(i.km_in),
-      fechaOut: isoDia(i.fecha_out), kmOut: num(i.km_out), kmRecorridos: num(i.km_recorridos),
-    })).sort(porFechaDesc(i => i.fechaIn)),
-    movimientos: (r.movimientos ?? []).map(m => ({
-      fecha: isoDia(m.fecha), tipo: txt(m.tipo), origen: txt(m.origen), destino: txt(m.destino), placa: txt(m.placa),
-      posicion: txt(m.posicion), km: num(m.km), usuario: txt(m.usuario), observacion: txt(m.observacion),
-    })).sort(porFechaDesc(m => m.fecha)),
-    mediciones: (r.mediciones ?? []).map(m => ({
-      fecha: isoDia(m.fecha), prom: promedioMm(m.r1, m.r2, m.r3), km: num(m.km),
-    })),
-  };
+/** Color del chip de estado: en actividad en ámbar, disponible en verde, reforma o descarte en rojo */
+function tonoEstado(estado: string): Tono {
+  const e = estado.toUpperCase();
+  if (e.includes('ACTIV')) return 'amber';
+  if (e.includes('DISPON')) return 'green';
+  if (e.includes('REFORMA') || e.includes('DESCART')) return 'red';
+  return 'gray';
 }
 
-function Campo({ etiqueta, valor, icono, clase = '' }: { etiqueta: string; valor: string; icono?: ReactNode; clase?: string }) {
+/** "EN_ACTIVIDAD" -> "En actividad" */
+function etiquetaEstado(estado: string): string {
+  const s = estado.toLowerCase().replace(/_/g, ' ').trim();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function useFicha(codigo: string | null) {
+  return useQuery<Ficha>({
+    queryKey: ['mant', 'neumatico-ficha', codigo],
+    enabled: codigo !== null && codigo !== '',
+    queryFn: async () => {
+      const r = await api<FichaRaw>(`/neumaticos/ficha/${encodeURIComponent(codigo ?? '')}`);
+      if (r.ok === false) throw new Error(r.error ?? 'No se pudo cargar la ficha');
+      return normalizarFicha(r);
+    },
+  });
+}
+type ConsultaFicha = ReturnType<typeof useFicha>;
+
+function Dato({ etiqueta, valor, icono, grande = false }: { etiqueta: string; valor: ReactNode; icono?: ReactNode; grande?: boolean }) {
   return (
-    <div className={`hv__campo ${clase}`.trim()}>
-      <span className="hv__campo-etiqueta">{icono}{etiqueta}</span>
-      <strong className="hv__campo-valor">{valor}</strong>
+    <div className={`nhv__dato${grande ? ' nhv__dato--grande' : ''}`}>
+      <span className="nhv__dato-etiqueta">{icono}{etiqueta}</span>
+      <strong className="nhv__dato-valor">{valor}</strong>
     </div>
   );
 }
 
-/** Remanente promedio (mm) contra kilómetros. Las líneas de referencia son los umbrales del semáforo. */
-function GraficoDesgaste({ puntos }: { puntos: { km: number; prom: number }[] }) {
-  const [acento, secundario, grilla, rojo, ambar] = useColores(['var(--accent)', 'var(--label-2)', 'var(--separator)', 'var(--red-ink)', 'var(--amber-ink)']);
+/** Bloque plegable de una pestaña (Presión, Ranura) */
+function Bloque({ titulo, children }: { titulo: string; children: ReactNode }) {
+  const [abierto, setAbierto] = useState(true);
   return (
-    <div className="hv__grafico">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={puntos} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
-          <CartesianGrid vertical={false} stroke={grilla} strokeDasharray="3 4" />
-          <XAxis type="number" dataKey="km" domain={['dataMin', 'dataMax']} tickLine={false} axisLine={false}
-            tickFormatter={v => Math.round(Number(v)).toLocaleString('es-PE')} tick={{ fill: secundario, fontSize: 11 }} />
-          <YAxis width={60} domain={[0, 'auto']} tickLine={false} axisLine={false}
-            tickFormatter={v => `${v} mm`} tick={{ fill: secundario, fontSize: 11 }} />
-          <ReferenceLine y={MM_CRITICO} stroke={rojo} strokeDasharray="5 4"
-            label={{ value: `Crítico ${MM_CRITICO} mm`, position: 'insideTopRight', fill: rojo, fontSize: 11 }} />
-          <ReferenceLine y={MM_PREVENTIVO} stroke={ambar} strokeDasharray="5 4"
-            label={{ value: `Preventivo ${MM_PREVENTIVO} mm`, position: 'insideTopRight', fill: ambar, fontSize: 11 }} />
-          <Tooltip formatter={(v) => `${Number(v).toFixed(1)} mm`} labelFormatter={(km) => fmtKm(Number(km))} />
-          <Line type="monotone" dataKey="prom" name="Remanente promedio" stroke={acento} strokeWidth={2.5}
-            dot={{ r: 4, fill: acento, strokeWidth: 0 }} isAnimationActive={false} />
-        </LineChart>
-      </ResponsiveContainer>
+    <section className="nhv__bloque">
+      <button
+        type="button"
+        className="nhv__bloque-cab"
+        aria-expanded={abierto}
+        onClick={() => { haptic('selection'); setAbierto(v => !v); }}
+      >
+        <span>{titulo}</span>
+        <ChevronDown size={18} className={`nhv__chev${abierto ? ' is-abierto' : ''}`} aria-hidden />
+      </button>
+      {abierto && <div className="nhv__bloque-cuerpo">{children}</div>}
+    </section>
+  );
+}
+
+/** Acción que todavía no está conectada: visible, deshabilitada, con su aviso */
+function AccionProximamente({ icono, children }: { icono: ReactNode; children: ReactNode }) {
+  return (
+    <div className="nhv__accion">
+      <span className="nhv__nota">Próximamente</span>
+      <Button variant="primary" disabled icon={icono} title="Próximamente">{children}</Button>
     </div>
   );
 }
 
-function Contenido({ hoja, llanta }: { hoja: Hoja; llanta: Llanta }) {
-  const costoTotal = llanta.costoCompra === null && llanta.costoReencauches === null
+function Cabecera({ l }: { l: Llanta }) {
+  return (
+    <header className="nhv__cab">
+      <div className="nhv__cab-foto">
+        <span className="nhv__disco" aria-hidden><Disc3 size={40} strokeWidth={1.5} /></span>
+        {l.estado && <Badge tone={tonoEstado(l.estado)}>{etiquetaEstado(l.estado)}</Badge>}
+      </div>
+      <div className="nhv__cab-datos">
+        <Dato grande etiqueta="Nombre / Marca de fuego" icono={<Flame size={14} />} valor={l.codigo} />
+        <Dato grande etiqueta="Vida del neumático" icono={<Heart size={14} />} valor={fmtEntero(l.vida)} />
+        <Dato grande etiqueta="Marca de neumático" icono={<Tag size={14} />} valor={l.marca ?? '—'} />
+        <Dato grande etiqueta="Modelo de neumático" icono={<CircleDot size={14} />} valor={l.modelo ?? '—'} />
+        <Dato grande etiqueta="Medida de neumático" icono={<Truck size={14} />} valor={l.medida ?? '—'} />
+      </div>
+    </header>
+  );
+}
+
+function PanelPresionSurco({ f }: { f: Ficha }) {
+  return (
+    <>
+      <Bloque titulo="Presión de neumático">
+        <div className="nhv__par">
+          <Dato etiqueta="Fecha/Hora" valor={formatFechaHoraPe(f.presionFecha)} />
+          <Dato etiqueta="Última medición" valor={fmtPsi(f.presionUltima)} />
+        </div>
+        <AccionProximamente icono={<Gauge size={16} />}>Medición de presión</AccionProximamente>
+      </Bloque>
+      <Bloque titulo="Ranura del neumático">
+        {f.surcoFecha && <p className="nhv__nota nhv__nota--arriba">Último apunte: {formatFechaHoraPe(f.surcoFecha)}</p>}
+        <NhvRanura filas={f.surco} />
+        <AccionProximamente icono={<Hammer size={16} />}>Apuntar sulco</AccionProximamente>
+      </Bloque>
+    </>
+  );
+}
+
+function PanelVida({ l }: { l: Llanta }) {
+  const costoTotal = l.costoCompra === null && l.costoReencauches === null
     ? null
-    : (llanta.costoCompra ?? 0) + (llanta.costoReencauches ?? 0);
-  const puntos = hoja.mediciones
-    .flatMap(m => (m.prom !== null && m.km !== null ? [{ km: m.km, prom: m.prom }] : []))
-    .sort((a, b) => a.km - b.km);
+    : (l.costoCompra ?? 0) + (l.costoReencauches ?? 0);
+  return (
+    <div className="nhv__rejilla">
+      <Dato etiqueta="Vida" icono={<Heart size={14} />} valor={fmtEntero(l.vida)} />
+      <Dato etiqueta="Reencauches" icono={<RefreshCw size={14} />} valor={fmtEntero(l.reencauches)} />
+      <Dato etiqueta="Km acumulados" icono={<Gauge size={14} />} valor={fmtKm(l.kmAcumulado)} />
+      <Dato etiqueta="CPK (S/ por km)" icono={<CircleDollarSign size={14} />} valor={fmtCpk(l.cpk)} />
+      <Dato etiqueta="Costo de compra" valor={fmtSoles(l.costoCompra)} />
+      <Dato etiqueta="Costo de reencauches" valor={fmtSoles(l.costoReencauches)} />
+      <Dato etiqueta="Costo total" valor={fmtSoles(costoTotal)} />
+    </div>
+  );
+}
+
+function PanelDetalles({ l }: { l: Llanta }) {
+  return (
+    <div className="nhv__rejilla">
+      <Dato etiqueta="Código" valor={l.codigo} />
+      <Dato etiqueta="Marca" valor={l.marca ?? '—'} />
+      <Dato etiqueta="Modelo" valor={l.modelo ?? '—'} />
+      <Dato etiqueta="Medida" valor={l.medida ?? '—'} />
+      <Dato etiqueta="Estado" valor={l.estado ? etiquetaEstado(l.estado) : '—'} />
+      <Dato etiqueta="Almacén" valor={l.almacen ?? '—'} />
+      <Dato etiqueta="Vehículo actual" valor={l.placaActual ? <LicensePlate plate={l.placaActual} size="sm" /> : '—'} />
+      <Dato etiqueta="Posición actual" valor={l.posicionActual ?? '—'} icono={<MapPin size={14} />} />
+    </div>
+  );
+}
+
+function FichaContenido({ f, l }: { f: Ficha; l: Llanta }) {
+  const [pestana, setPestana] = useState<IdPestana>('presion');
+  const contenido = pestana === 'presion' ? <PanelPresionSurco f={f} />
+    : pestana === 'vida' ? <PanelVida l={l} />
+    : <PanelDetalles l={l} />;
 
   return (
-    <div className="hv">
-      <header className="hv__cab">
-        <div className="hv__codigo">
-          <span>Código</span>
-          <strong>{llanta.codigo}</strong>
-        </div>
-        <div className="hv__pills">
-          {llanta.estado && <span className="hv__pill">{llanta.estado}</span>}
-          {llanta.vida && <span className="hv__pill hv__pill--vida">Vida {llanta.vida}</span>}
-        </div>
-      </header>
-
-      <div className="hv__campos">
-        <Campo etiqueta="Marca" valor={llanta.marca ?? '—'} />
-        <Campo etiqueta="Medida" valor={llanta.medida ?? '—'} />
-        <Campo etiqueta="Modelo" valor={llanta.modelo ?? '—'} />
-        <Campo etiqueta="Ubicación" valor={llanta.ubicacion} icono={<MapPin size={13} />} />
-      </div>
-
-      <div className="hv__cifras">
-        <Campo clase="hv__campo--cifra" etiqueta="Km acumulados" valor={fmtKm(llanta.kmAcumulado)} icono={<Gauge size={13} />} />
-        <Campo clase="hv__campo--cifra" etiqueta="Reencauches" valor={llanta.reencauches === null ? '—' : String(llanta.reencauches)} icono={<RefreshCw size={13} />} />
-        <Campo clase="hv__campo--cifra" etiqueta="CPK (S/ por km)"
-          valor={llanta.cpk === null ? '—' : `S/ ${llanta.cpk.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`}
-          icono={<Calculator size={13} />} />
-        <Campo clase="hv__campo--cifra" etiqueta="Costo total" valor={fmtSoles(costoTotal)} icono={<CircleDollarSign size={13} />} />
-      </div>
-
-      <section className="hv__seccion">
-        <h3>Desgaste: remanente promedio contra kilómetros</h3>
-        {puntos.length > 0 ? <GraficoDesgaste puntos={puntos} /> : (
-          <EmptyState icon={<Gauge size={22} />} title="Sin mediciones con kilometraje">
-            Hace falta una inspección con odómetro para graficar el desgaste.
-          </EmptyState>
-        )}
-      </section>
-
-      <section className="hv__seccion">
-        <h3>Instalaciones ({hoja.instalaciones.length})</h3>
-        {hoja.instalaciones.length === 0 ? (
-          <EmptyState icon={<Disc3 size={22} />} title="Sin instalaciones registradas" />
-        ) : (
-          <ol className="hv__linea">
-            {hoja.instalaciones.map((i, n) => (
-              <li key={`${i.placa ?? 'x'}-${i.fechaIn ?? n}-${n}`}>
-                <div className="hv__item-cab">
-                  <span className="hv__item-titulo">
-                    {i.placa ? <LicensePlate plate={i.placa} size="sm" /> : <strong>Sin placa</strong>}
-                    {i.posicion && <span className="hv__pill">{i.posicion}</span>}
-                  </span>
-                  <span className="hv__item-fecha">{fmtDia(i.fechaIn)} → {i.fechaOut ? fmtDia(i.fechaOut) : 'Actual'}</span>
-                </div>
-                <div className="hv__item-datos">
-                  <span>Km entrada <strong>{fmtKm(i.kmIn)}</strong></span>
-                  <span>Km salida <strong>{fmtKm(i.kmOut)}</strong></span>
-                  <span>Recorrido <strong>{fmtKm(i.kmRecorridos)}</strong></span>
-                </div>
-              </li>
+    <div className="nhv">
+      <Cabecera l={l} />
+      <div className="nhv__cuerpo">
+        <div className="nhv__principal">
+          <div className="nhv__pestanas" role="tablist" aria-label="Secciones de la ficha">
+            {PESTANAS.map(p => (
+              <button
+                key={p.id}
+                type="button"
+                role="tab"
+                id={`nhv-tab-${p.id}`}
+                aria-selected={pestana === p.id}
+                aria-controls={`nhv-panel-${p.id}`}
+                className={`nhv__pestana${pestana === p.id ? ' is-activa' : ''}`}
+                onClick={() => { if (pestana !== p.id) { haptic('selection'); setPestana(p.id); } }}
+              >
+                {p.etiqueta}
+              </button>
             ))}
-          </ol>
-        )}
-      </section>
-
-      <section className="hv__seccion">
-        <h3>Movimientos ({hoja.movimientos.length})</h3>
-        {hoja.movimientos.length === 0 ? (
-          <EmptyState icon={<History size={22} />} title="Sin movimientos registrados" />
-        ) : (
-          <ol className="hv__linea">
-            {hoja.movimientos.map((m, n) => (
-              <li key={`${m.fecha ?? 'x'}-${m.tipo ?? ''}-${n}`}>
-                <div className="hv__item-cab">
-                  <span className="hv__pill">{m.tipo ?? 'Movimiento'}</span>
-                  <span className="hv__item-fecha">{fmtDia(m.fecha)}</span>
-                </div>
-                <div className="hv__item-ruta">
-                  <span>{m.origen ?? '—'}</span><ArrowRight size={14} aria-hidden /><span>{m.destino ?? '—'}</span>
-                </div>
-                <div className="hv__item-datos">
-                  {m.placa && <span>Unidad <strong>{m.placa}{m.posicion ? ` · ${m.posicion}` : ''}</strong></span>}
-                  <span>Km <strong>{fmtKm(m.km)}</strong></span>
-                  {m.usuario && <span>Por <strong>{m.usuario}</strong></span>}
-                </div>
-                {m.observacion && <p className="hv__item-obs">{m.observacion}</p>}
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+          </div>
+          <div className="nhv__panel" role="tabpanel" id={`nhv-panel-${pestana}`} aria-labelledby={`nhv-tab-${pestana}`}>
+            {contenido}
+          </div>
+        </div>
+        <aside className="nhv__lateral">
+          <NhvTimeline eventos={f.timeline} />
+        </aside>
+      </div>
     </div>
+  );
+}
+
+function FichaCuerpo({ codigo, consulta }: { codigo: string | null; consulta: ConsultaFicha }) {
+  const { data, isLoading, error } = consulta;
+  if (error) return <Notice tone="error">{errorMessage(error)}</Notice>;
+  if (isLoading) return <PageLoader />;
+  if (!data) return null;
+  if (!data.llanta) return <Notice tone="error">No se encontró el neumático {codigo}.</Notice>;
+  return <FichaContenido f={data} l={data.llanta} />;
+}
+
+function FichaPagina({ codigo, consulta }: { codigo: string | null; consulta: ConsultaFicha }) {
+  const navigate = useNavigate();
+  // Volver a la pantalla anterior; si la ficha se abrió directo, a la lista de neumáticos
+  const volver = () => {
+    if ((window.history.state?.idx ?? 0) > 0) navigate(-1);
+    else navigate('/mantenimiento/neumaticos-ultimas');
+  };
+  return (
+    <Page wide>
+      <nav className="nhv__ruta" aria-label="Ubicación">
+        <button type="button" className="nhv__volver" onClick={volver}>
+          <ChevronLeft size={16} aria-hidden />Neumáticos
+        </button>
+        <span aria-hidden>/</span>
+        <span className="nhv__ruta-actual">{codigo ?? '—'}</span>
+      </nav>
+      <FichaCuerpo codigo={codigo} consulta={consulta} />
+    </Page>
   );
 }
 
 /**
- * Hoja de vida de una llanta. Se abre con el código de la llanta; con `codigo` en null queda cerrada.
- * Un error del servidor se muestra como aviso dentro de la hoja, sin romper la pantalla de atrás.
+ * Ficha de un neumático.
+ * - Con `onClose`: se muestra como hoja modal (codigo null = cerrada).
+ * - Sin `onClose`: pantalla completa, para la ruta de la ficha.
+ * Un error del servidor se muestra como aviso dentro de la ficha.
  */
-export function NeumaticoHojaVida({ codigo, onClose }: { codigo: string | null; onClose: () => void }) {
-  const { data, isLoading, error } = useQuery<Hoja>({
-    queryKey: ['mant', 'neumatico-hoja-vida', codigo],
-    enabled: codigo !== null,
-    queryFn: async () => {
-      const r = await api<RespLlanta>(`/neumaticos/llantas/${encodeURIComponent(codigo ?? '')}`);
-      if (r.ok === false) throw new Error(r.error ?? 'No se pudo cargar la hoja de vida');
-      return normalizar(r);
-    },
-  });
+export function NeumaticoHojaVida({ codigo, onClose }: { codigo: string | null; onClose?: () => void }) {
+  const consulta = useFicha(codigo);
+  if (onClose) {
+    return (
+      <Sheet open={codigo !== null} onClose={onClose} title={codigo ? `Ficha · ${codigo}` : 'Ficha del neumático'} ancho
+        footer={<Button variant="secondary" onClick={onClose}>Cerrar</Button>}>
+        <FichaCuerpo codigo={codigo} consulta={consulta} />
+      </Sheet>
+    );
+  }
+  return <FichaPagina codigo={codigo} consulta={consulta} />;
+}
 
-  return (
-    <Sheet open={codigo !== null} onClose={onClose} title={codigo ? `Hoja de vida · ${codigo}` : 'Hoja de vida'} ancho
-      footer={<Button variant="secondary" onClick={onClose}>Cerrar</Button>}>
-      {error && <Notice tone="error">{errorMessage(error)}</Notice>}
-      {isLoading && <PageLoader />}
-      {data && !data.llanta && !error && <Notice tone="error">No se encontró la llanta {codigo}.</Notice>}
-      {data?.llanta && <Contenido hoja={data} llanta={data.llanta} />}
-    </Sheet>
-  );
+/** Página de la ruta mantenimiento/neumaticos-ficha/:codigo: toma el código de la URL */
+export function NeumaticoHojaVidaRuta() {
+  const { codigo } = useParams();
+  return <NeumaticoHojaVida codigo={codigo ? codigo : null} />;
 }

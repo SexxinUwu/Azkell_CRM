@@ -60,10 +60,18 @@ export function useLineaTiempo(codigo: string | null) {
 }
 
 /** Placas del sistema para el selector (mismo endpoint que las demás pantallas de mantenimiento) */
+/** Unidad del selector del tablero: la placa y su cliente (tabla placas) */
+export interface PlacaLista {
+  placa: string;
+  cliente: string | null;
+  marca: string | null;
+  configuracion: string | null;
+}
+
 export function usePlacasLista() {
-  return useQuery<string[]>({
+  return useQuery<PlacaLista[]>({
     queryKey: ['mant', 'placas-lista'],
-    queryFn: () => api<{ ok?: boolean; data?: string[] }>('/neumaticos/placas').then(r => r.data ?? []),
+    queryFn: () => api<{ ok?: boolean; data?: PlacaLista[] }>('/neumaticos/placas').then(r => r.data ?? []),
     staleTime: 5 * 60_000,
   });
 }

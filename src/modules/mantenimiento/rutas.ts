@@ -86,10 +86,22 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'neumaticos', label: 'Últimas inspecciones', to: '/mantenimiento/neumaticos-ultimas', icon: 'Disc3', permisos: ['neumaticos.ver'] },
   },
   {
+    // Listado de todos los neumáticos (ciclo de vida); cada fila abre la ficha
+    path: 'mantenimiento/neumaticos-listado/*',
+    permisos: ['neumaticos.ver'],
+    Page: lazy(() => import('./NeumaticosListado').then(m => ({ default: m.NeumaticosListado }))),
+  },
+  {
     // Tablero de movimientos de llantas (se abre desde la pestaña Neumáticos de la placa)
     path: 'mantenimiento/neumaticos-tablero/:placa?',
     permisos: ['neumaticos.ver'],
     Page: lazy(() => import('./NeumaticosTablero').then(m => ({ default: m.NeumaticosTablero }))),
+  },
+  {
+    // Ficha de un neumático (pantalla completa; también existe como hoja desde las inspecciones)
+    path: 'mantenimiento/neumaticos-ficha/:codigo',
+    permisos: ['neumaticos.ver'],
+    Page: lazy(() => import('./NeumaticoHojaVida').then(m => ({ default: m.NeumaticoHojaVidaRuta }))),
   },
   {
     // Ruta antigua: redirige a una de las dos pantallas para no romper enlaces

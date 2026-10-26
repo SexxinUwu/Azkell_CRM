@@ -1,4 +1,4 @@
-// Vista cenital de neumáticos: dibuja la unidad en 3D (Three.js, en un chunk aparte). Si WebGL no está disponible,
+// Vista de neumáticos: dibuja la unidad en 3D (Three.js, en un chunk aparte) en cenital o isométrica. Si WebGL no está disponible,
 // si falla al dibujar o si la configuración no encaja con las posiciones, muestra el esquema SVG de siempre.
 import { Component, lazy, Suspense, useState, type ReactNode } from 'react';
 import { CONFIGURACIONES, posicionesDeConfig } from '../inspecciones/components/ChasisEsquemaVisual';
@@ -20,6 +20,8 @@ export interface NeumaticosCenitalProps {
   onSelect: (l: LlantaDato) => void;
   /** Recibe la función que dice qué posición hay bajo un punto de la pantalla (para soltar llantas) */
   sondaRef?: { current: SondaPosicion | null };
+  /** Marca del tracto para el letrero del capó (opcional; sin marca no se dibuja texto) */
+  marca?: string | null;
 }
 
 /** Este equipo puede dibujar en WebGL */
@@ -40,7 +42,7 @@ class RespaldoSeguro extends Component<{ respaldo: ReactNode; children: ReactNod
   render() { return this.state.fallo ? this.props.respaldo : this.props.children; }
 }
 
-export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef }: NeumaticosCenitalProps) {
+export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, marca = null }: NeumaticosCenitalProps) {
   const [soportaWebgl] = useState(webglDisponible);
   const [perdido, setPerdido] = useState(false);
 
@@ -56,7 +58,7 @@ export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null
       <Suspense fallback={respaldo}>
         <Nv3Vista
           configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} onSelect={onSelect}
-          sondaRef={sondaRef} onPerdida={() => setPerdido(true)}
+          sondaRef={sondaRef} marca={marca} onPerdida={() => setPerdido(true)}
         />
       </Suspense>
     </RespaldoSeguro>

@@ -12,7 +12,7 @@ import { LeyendaSemaforo, configReconocida } from './NeumaticosEsquema';
 import { NeumaticosCenital } from './nv3-cenital';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
 import { PERMISO_MOVER_NEUMATICOS, PERMISO_VER_NEUMATICOS } from './neumaticos-tablero-tipos';
-import { useTablero } from './ntb-api';
+import { useTablero, usePlacasLista } from './ntb-api';
 import { LlantaItem, aLlantaDato } from './ntb-llanta';
 import { LineaTiempo } from './ntb-linea-tiempo';
 import './ntb.css';
@@ -32,6 +32,8 @@ export function NeumaticosPlacaTab({ placa }: { placa: string }) {
   const puedeVer = can(PERMISO_VER_NEUMATICOS);
   const puedeMover = can(PERMISO_MOVER_NEUMATICOS);
   const tablero = useTablero(puedeVer ? placa : '');
+  const placas = usePlacasLista();
+  const marcaUnidad = placas.data?.find(p => p.placa === placa)?.marca ?? null;
   const [codigoLinea, setCodigoLinea] = useState<string | null>(null);
 
   if (!puedeVer) {
@@ -73,6 +75,7 @@ export function NeumaticosPlacaTab({ placa }: { placa: string }) {
           <NeumaticosCenital
             llantas={llantasDato}
             configuracion={configCodigo}
+            marca={marcaUnidad}
             activa=""
             onSelect={l => {
               const m = montadas.find(x => x.posicion === l.posicion);

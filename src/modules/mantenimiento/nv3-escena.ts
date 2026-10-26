@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
 import { remanenteDe, type LlantaDato } from './NeumaticosEsquema';
 import { tonoMm, type Tono } from './neumaticosSemaforo';
-import { COLOR_SEMAFORO_CANVAS, fotoBandaLista, texturaEtiqueta, texturasBanda } from './nv3-texturas';
+import { COLOR_SEMAFORO_CANVAS, fotoBandaLista, texturaEtiqueta, texturasBanda, texturasMarca } from './nv3-texturas';
 
 export const RADIO_LLANTA = 0.58;
 export const ANCHO_LLANTA = 0.36;
@@ -16,17 +16,33 @@ const LADO_EXTERIOR = 2.2;
 const LADO_INTERIOR = 1.5;
 /** Desgaste de referencia (mm): a este valor la banda se deforma al máximo */
 const MM_REF = 12;
-/** Campo de visión vertical de la cámara (grados): poca perspectiva para que la cabina no tape las llantas */
+/** Campo de visión vertical de la cámara cenital (grados): poca perspectiva para que la cabina no tape las llantas */
 export const CAMPO_VISION = 22;
+/** Campo de visión de la isometría (grados): algo más de perspectiva para que se lea el volumen */
+export const CAMPO_ISOMETRIA = 30;
 /** Inclinación de la cámara hacia el eje del camión (grados): casi cenital. Solo en Z (de frente a atrás): en X
  * la cabina y los tanques taparían las llantas del costado opuesto. */
 const INCLINACION = 6;
 
-/** Materiales compartidos por todo el modelo; las bandas y etiquetas se guardan en caché por tono */
+/**
+ * Colores del camión. Solo cambian la carrocería y el bastidor: el semáforo de las llantas sigue igual.
+ * Para cambiar el color de marca se edita `pintura` (hex, p. ej. 0xc8102e para rojo).
+ */
+export const PALETA = {
+  /** Azul acero brillante: cabina, capó y tapas */
+  pintura: 0x2b7bd0,
+  /** Bastidor y largueros: acero claro pulido */
+  bastidor: 0xaeb7c4,
+} as const;
+
+/** Neón del marco de la llanta seleccionada (cian) */
+export const COLOR_NEON = 0x19f5ff;
+
+/** Materiales compartidos por todo el modelo; las bandas, etiquetas y marcas se guardan en caché */
 export class Recursos {
   readonly acero = new THREE.MeshStandardMaterial({ color: 0x8a94a3, metalness: 0.9, roughness: 0.3 });
-  readonly chasis = new THREE.MeshStandardMaterial({ color: 0x4b5563, metalness: 0.7, roughness: 0.42 });
-  readonly pintura = new THREE.MeshPhysicalMaterial({ color: 0xf3f5f8, metalness: 0, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.06 });
+  readonly chasis = new THREE.MeshStandardMaterial({ color: PALETA.bastidor, metalness: 0.8, roughness: 0.28 });
+  readonly pintura = new THREE.MeshPhysicalMaterial({ color: PALETA.pintura, metalness: 0.15, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.03 });
   readonly vidrio = new THREE.MeshPhysicalMaterial({ color: 0x163447, metalness: 0.1, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0.02, transparent: true, opacity: 0.88 });
   readonly cromo = new THREE.MeshStandardMaterial({ color: 0xe6e9ee, metalness: 1, roughness: 0.14 });
   readonly rin = new THREE.MeshStandardMaterial({ color: 0xc8ced8, metalness: 1, roughness: 0.2 });
@@ -38,7 +54,25 @@ export class Recursos {
 
   private bandas = new Map<string, THREE.MeshStandardMaterial>();
   private etiquetas = new Map<string, THREE.SpriteMaterial>();
+  private marcas = new Map<string, THREE.MeshPhysicalMaterial>();
   private texturas: THREE.Texture[] = [];
+
+  /** Letrero de la marca sobre el capó (texto en relieve con brillo), en caché por nombre */
+  materialMarca(marca: string): THREE.MeshPhysicalMaterial {
+    const clave = marca.trim().toUpperCase();
+    let material = this.marcas.get(clave);
+    if (!material) {
+      const t = texturasMarca(clave);
+      this.texturas.push(t.color, t.relieve, t.rugosidad);
+      material = new THREE.MeshPhysicalMaterial({
+        map: t.color, bumpMap: t.relieve, bumpScale: 2.5, roughnessMap: t.rugosidad, roughness: 1,
+        clearcoat: 0.8, clearcoatRoughness: 0.05, transparent: true, depthWrite: false,
+        polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+      });
+      this.marcas.set(clave, material);
+    }
+    return material;
+  }
 
   /** Banda de rodadura con su color, relieve y rugosidad (caché por combinación de tonos) */
   materialBanda(bandas: (number | null)[]): THREE.MeshStandardMaterial {
@@ -72,9 +106,11 @@ export class Recursos {
     for (const m of [this.acero, this.chasis, this.pintura, this.vidrio, this.cromo, this.rin, this.cubo, this.flanco, this.hueco]) m.dispose();
     for (const m of this.bandas.values()) m.dispose();
     for (const m of this.etiquetas.values()) m.dispose();
+    for (const m of this.marcas.values()) m.dispose();
     for (const t of this.texturas) t.dispose();
     this.bandas.clear();
     this.etiquetas.clear();
+    this.marcas.clear();
     this.texturas = [];
   }
 }
@@ -179,8 +215,9 @@ function crearLlanta(pos: string, x: number, z: number, lado: number, dato: Llan
   return { posicion: pos, grupo, caucho, etiqueta, montada };
 }
 
-/** Camión completo según la configuración: `datos` tiene solo las llantas montadas (clave en mayúsculas) */
-export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, rec: Recursos): Camion3D | null {
+/** Camión completo según la configuración: `datos` tiene solo las llantas montadas (clave en mayúsculas).
+ * `marca` (opcional) se dibuja sobre el capó del tracto; sin marca no hay letrero. */
+export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, rec: Recursos, marca?: string | null): Camion3D | null {
   const config = CONFIGURACIONES[codigo];
   if (!config) return null;
   const grupo = new THREE.Group();
@@ -228,6 +265,17 @@ export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, 
     malla(new THREE.BoxGeometry(2.1, 0.9, 0.1), rec.vidrio, 0, 2.35, delantero - 1.7, -0.2);
     malla(new THREE.BoxGeometry(2.4, 0.45, 0.3), rec.cromo, 0, 0.6, delantero - 2.65);
     for (const x of [-1.25, 1.25]) malla(new THREE.BoxGeometry(0.12, 0.5, 0.12), rec.cromo, x, 2.0, delantero - 1.8);
+    // Letrero de la marca sobre el capó (su cara superior: la parte delantera queda arriba en la vista cenital).
+    // El capó termina en y = 2.0; la parte de atrás del capó queda dentro de la cabina, por eso el letrero va adelante.
+    if (marca?.trim()) {
+      const geoMarca = new THREE.PlaneGeometry(1.9, 0.8);
+      geometrias.push(geoMarca);
+      const letrero = new THREE.Mesh(geoMarca, rec.materialMarca(marca));
+      letrero.rotation.x = -Math.PI / 2;
+      letrero.position.set(0, 2.012, delantero - 2.18);
+      letrero.renderOrder = 4;
+      grupo.add(letrero);
+    }
   } else {
     // Carreta: lanza triangular y pivote (kingpin) al frente
     for (const lado of [-0.4, 0.4]) {
@@ -309,4 +357,46 @@ export function marcoLlanta(ancho: number, alto: number, radio: number, grosor: 
   const geo = new THREE.ShapeGeometry(forma, 6);
   geo.rotateX(-Math.PI / 2);
   return geo;
+}
+
+/** Anillo que marca la llanta de lado: va en el plano del neumático (normal en X) */
+export function anilloLlanta(): THREE.RingGeometry {
+  const geo = new THREE.RingGeometry(RADIO_LLANTA + 0.05, RADIO_LLANTA + 0.14, 72);
+  geo.rotateY(Math.PI / 2);
+  return geo;
+}
+
+/** Límites de la cámara isométrica: el objetivo no sale del camión (x, y, z) */
+export function limitesCamion(zMin: number, zMax: number): { min: THREE.Vector3; max: THREE.Vector3 } {
+  return {
+    min: new THREE.Vector3(-3, 0, zMin - 1),
+    max: new THREE.Vector3(3, 2.5, zMax + 1),
+  };
+}
+
+/**
+ * Isometría: cámara en perspectiva desde delante y a un costado, con el camión completo encuadrado.
+ * El alejamiento sale del largo del camión y del aspecto del lienzo (en un celular el ancho manda).
+ */
+export function poseIsometrica(zMin: number, zMax: number, aspecto: number): { pos: THREE.Vector3; objetivo: THREE.Vector3; fov: number; distancia: number } {
+  const zc = (zMin + zMax) / 2;
+  const largo = zMax - zMin + 2.4;
+  const objetivo = new THREE.Vector3(0, 0.9, zc);
+  const tanV = Math.tan(THREE.MathUtils.degToRad(CAMPO_ISOMETRIA / 2));
+  const distanciaAlto = (largo * 0.4 + 0.6) / tanV;
+  const distanciaAncho = 3.4 / (tanV * Math.max(aspecto, 0.2));
+  const distancia = Math.max(distanciaAlto, distanciaAncho, 9);
+  // Desde delante (z negativo, arriba en la vista cenital), a la izquierda y arriba
+  const direccion = new THREE.Vector3(-0.62, 0.62, -0.5).normalize();
+  const pos = objetivo.clone().addScaledVector(direccion, distancia);
+  return { pos, objetivo, fov: CAMPO_ISOMETRIA, distancia };
+}
+
+/** Plano lateral de una llanta: la cámara queda de lado, a la altura del neumático, con la llanta en primer plano */
+export function poseLateral(x: number, z: number): { pos: THREE.Vector3; objetivo: THREE.Vector3; fov: number; distancia: number } {
+  const lado = x < -0.05 ? -1 : 1;
+  const distancia = 5.2;
+  const objetivo = new THREE.Vector3(x, ALTURA_EJE, z);
+  const pos = new THREE.Vector3(x + lado * distancia, ALTURA_EJE + 1.1, z);
+  return { pos, objetivo, fov: CAMPO_ISOMETRIA, distancia };
 }
