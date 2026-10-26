@@ -2375,6 +2375,13 @@ module.exports = function (db, broadcast, logAudit) {
                 }
                 const formatted = String(nextNum).padStart(8, '0');
 
+                // Motivo de gasto del catálogo para el submotivo de la OC (el mismo que usa caja)
+                const [catMotivo] = await tdb.query(
+                    "SELECT motivo FROM tesoreria_motivos_gastos WHERE estado = 'ACTIVO' AND sub_motivo = ? LIMIT 1",
+                    [oc.sub_motivo || '']
+                ).catch(() => [[]]);
+                const motivoCatalogo = (catMotivo && catMotivo[0] && catMotivo[0].motivo) || oc.motivo_entrada || 'COMPRA / ALMACÉN';
+
                 const insertCajaSql = `
                     INSERT INTO tesoreria_caja (
                         fecha, hora, fecha_valuta, hora_valuta,
@@ -2410,16 +2417,16 @@ module.exports = function (db, broadcast, logAudit) {
                     oc.ot_id || '',
                     oc.placa || '',
                     oc.autoriza || oc.aprobado_por || usuarioPago,
-                    oc.motivo_entrada || 'COMPRA / ALMACÉN',
+                    motivoCatalogo,
                     oc.centro_costo || 'CC-100',
-                    'PAGO REQUERIMIENTO',
+                    oc.sub_motivo || 'PAGO REQUERIMIENTO',
                     cuentaOrigen.includes('CAJA') ? 'EFECTIVO' : 'TRANSFERENCIA',
                     monStr,
                     oc.proveedor_nombre || 'PROVEEDOR GENERAL',
                     totalFinal,
                     totalFinal,
                     oc.tipo_cambio || 1,
-                    `PAGO DE REQUERIMIENTO OC ${id} - ${descripcionPago}`,
+                    oc.motivo_entrada || descripcionPago,
                     oc.cuenta_bancaria_proveedor || '',
                     cuentaOrigen || 'BCP - CTA CTE SOLES',
                     voucherUrl,
