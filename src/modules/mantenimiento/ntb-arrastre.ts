@@ -64,6 +64,11 @@ export function useArrastre(opciones: Opciones) {
 
   const iniciar = useCallback((e: ReactPointerEvent, item: ItemArrastre) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.pointerType === 'mouse') {
+      // Sin esto el navegador empieza una selección o un arrastre nativo del texto, cancela el puntero y el gesto se pierde
+      e.preventDefault();
+      window.getSelection?.()?.removeAllRanges();
+    }
     gestoRef.current?.limpiar();
     const x0 = e.clientX;
     const y0 = e.clientY;

@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
 import { remanenteDe, type LlantaDato } from './NeumaticosEsquema';
 import { tonoMm, type Tono } from './neumaticosSemaforo';
-import { COLOR_SEMAFORO_CANVAS, texturaEtiqueta, texturasBanda } from './nv3-texturas';
+import { COLOR_SEMAFORO_CANVAS, fotoBandaLista, texturaEtiqueta, texturasBanda } from './nv3-texturas';
 
 export const RADIO_LLANTA = 0.58;
 export const ANCHO_LLANTA = 0.36;
@@ -16,10 +16,11 @@ const LADO_EXTERIOR = 2.2;
 const LADO_INTERIOR = 1.5;
 /** Desgaste de referencia (mm): a este valor la banda se deforma al máximo */
 const MM_REF = 12;
-/** Campo de visión de la cámara cenital (grados) */
-export const CAMPO_VISION = 28;
-/** Inclinación de la cámara respecto a la vertical (grados): casi cenital, lo justo para ver los rines */
-const INCLINACION = 14;
+/** Campo de visión vertical de la cámara (grados): poca perspectiva para que la cabina no tape las llantas */
+export const CAMPO_VISION = 22;
+/** Inclinación de la cámara hacia el eje del camión (grados): casi cenital. Solo en Z (de frente a atrás): en X
+ * la cabina y los tanques taparían las llantas del costado opuesto. */
+const INCLINACION = 6;
 
 /** Materiales compartidos por todo el modelo; las bandas y etiquetas se guardan en caché por tono */
 export class Recursos {
@@ -41,7 +42,7 @@ export class Recursos {
 
   /** Banda de rodadura con su color, relieve y rugosidad (caché por combinación de tonos) */
   materialBanda(bandas: (number | null)[]): THREE.MeshStandardMaterial {
-    const clave = bandas.map(v => tonoMm(v)).join('|');
+    const clave = (fotoBandaLista() ? 'foto|' : 'codigo|') + bandas.map(v => tonoMm(v)).join('|');
     let material = this.bandas.get(clave);
     if (!material) {
       const t = texturasBanda(bandas);
@@ -267,15 +268,21 @@ export function liberarCamion(camion: Camion3D) {
   camion.grupo.removeFromParent();
 }
 
-/** Cámara casi cenital: frente arriba, inclinada hacia un costado para que se vean los flancos y los rines */
-export function poseCenital(zMin: number, zMax: number): { pos: THREE.Vector3; objetivo: THREE.Vector3; mitad: number } {
+/**
+ * Cámara casi cenital sobre el centro del camión. El encuadre sale del aspecto del lienzo: el camión entra completo
+ * (a lo largo y a lo ancho) y queda centrado. Frente arriba (el up de la cámara es -Z).
+ */
+export function poseCenital(zMin: number, zMax: number, aspecto: number): { pos: THREE.Vector3; objetivo: THREE.Vector3; mitad: number } {
   const zc = (zMin + zMax) / 2;
-  const extension = zMax - zMin + 2.4;
-  const mitad = extension / 2;
+  const altoNecesario = zMax - zMin + 2.4;
+  const anchoNecesario = 2 * 2.78 + 1.2;
+  // Alto visible (unidades de mundo) que cubre el largo y, con el aspecto, también el ancho
+  const alto = Math.max(altoNecesario, aspecto > 0 ? anchoNecesario / aspecto : altoNecesario);
+  const mitad = alto / 2;
   const distancia = mitad / Math.tan(THREE.MathUtils.degToRad(CAMPO_VISION / 2));
   const objetivo = new THREE.Vector3(0, 0.5, zc);
   const tilt = THREE.MathUtils.degToRad(INCLINACION);
-  const pos = new THREE.Vector3(objetivo.x - Math.sin(tilt) * distancia, objetivo.y + Math.cos(tilt) * distancia, zc);
+  const pos = new THREE.Vector3(0, objetivo.y + Math.cos(tilt) * distancia, zc + Math.sin(tilt) * distancia);
   return { pos, objetivo, mitad };
 }
 

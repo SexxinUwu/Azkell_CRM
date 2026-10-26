@@ -3,11 +3,12 @@
 // Entorno RoomEnvironment para los reflejos, sombra suave (PCFSoft) sobre un plano ShadowMaterial y fondo transparente
 // para que se vea el color de la tarjeta, claro u oscuro. La posición se detecta con raycasting: tocar una llanta llama
 // a onSelect, y la sonda sirve al arrastre del tablero para soltar sobre una posición.
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { remanenteDe, type LlantaDato } from './NeumaticosEsquema';
 import type { SondaPosicion } from './ntb-arrastre';
+import { cargarFotoBanda } from './nv3-texturas';
 import {
   ANCHO_LLANTA, CAMPO_VISION, RADIO_LLANTA, Recursos, construirCamion, liberarCamion, marcoLlanta, poseCenital, type Camion3D,
 } from './nv3-escena';
@@ -38,6 +39,8 @@ interface Escena {
   geometriaMarco: THREE.BufferGeometry;
   camion: Camion3D | null;
   configActual: string;
+  /** Largo del camión (Z) para encuadrar la cámara; null mientras no hay camión */
+  rango: { zMin: number; zMax: number } | null;
   raf: number;
 }
 
@@ -48,10 +51,33 @@ export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSele
   const esc = useRef<Escena | null>(null);
   // Últimos valores de las props para los oyentes que se montan una sola vez
   const vivo = useRef({ onSelect, onPerdida, llantas });
+  // Foto de la banda: al cargar se reconstruyen las llantas con ella
+  const [foto, setFoto] = useState(false);
   vivo.current = { onSelect, onPerdida, llantas };
 
   // Firma de lo que cambia la geometría: si no cambia (p. ej. solo la selección), no se reconstruye
   const firma = configuracion + '|' + llantas.map(l => `${normal(l.posicion)}:${remanenteDe(l)}:${l.r1}:${l.r2}:${l.r3}`).join(',');
+
+  /** Encuadre de la cámara según el tamaño actual del lienzo (cenital, centrada, sin recorte) */
+  function encuadrar(e: Escena) {
+    if (!e.rango) return;
+    const pose = poseCenital(e.rango.zMin, e.rango.zMax, e.camara.aspect);
+    e.camara.position.copy(pose.pos);
+    e.camara.lookAt(pose.objetivo);
+    e.camara.updateProjectionMatrix();
+    // Luz diagonal desde arriba a la izquierda; el área de sombra cubre el camión
+    e.sol.position.set(pose.objetivo.x - 7, 16, pose.objetivo.z - 7);
+    e.sol.target.position.copy(pose.objetivo);
+    e.sol.target.updateMatrixWorld();
+    const s = e.sol.shadow.camera;
+    s.left = -(pose.mitad + 2);
+    s.right = pose.mitad + 2;
+    s.top = pose.mitad + 2;
+    s.bottom = -(pose.mitad + 2);
+    s.near = 1;
+    s.far = 60;
+    s.updateProjectionMatrix();
+  }
 
   function pedirRender() {
     const e = esc.current;
@@ -143,7 +169,7 @@ export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSele
     esc.current = {
       renderer, scene, camara, recursos, sol, suelo,
       marcaActiva: marco(0x0a84ff), marcaSobre: marco(0x16a34a), geometriaMarco,
-      camion: null, configActual: '', raf: 0,
+      camion: null, configActual: '', rango: null, raf: 0,
     };
 
     // Tamaño según la tarjeta
@@ -153,6 +179,7 @@ export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSele
       renderer.setSize(w, h, false);
       camara.aspect = w / h;
       camara.updateProjectionMatrix();
+      if (esc.current) encuadrar(esc.current);
       pedirRender();
     };
     const observador = new ResizeObserver(ajustar);
@@ -218,7 +245,14 @@ export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSele
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reconstruye el camión cuando cambian la configuración o las llantas; la cámara se coloca solo al cambiar de configuración
+  // Carga la foto de la banda una vez; al llegar, las llantas se reconstruyen con ella
+  useEffect(() => {
+    let vigente = true;
+    cargarFotoBanda().then(ok => { if (vigente && ok) setFoto(true); });
+    return () => { vigente = false; };
+  }, []);
+
+  // Reconstruye el camión cuando cambian la configuración, las llantas o la foto; la cámara se encuadra al cambiar de configuración
   useEffect(() => {
     const e = esc.current;
     if (!e) return;
@@ -231,31 +265,16 @@ export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSele
     if (camion) {
       e.camion = camion;
       e.scene.add(camion.grupo);
+      e.rango = { zMin: camion.zMin, zMax: camion.zMax };
       if (e.configActual !== configuracion) {
         e.configActual = configuracion;
-        const pose = poseCenital(camion.zMin, camion.zMax);
-        e.camara.position.copy(pose.pos);
-        e.camara.up.set(0, 0, -1);
-        e.camara.lookAt(pose.objetivo);
-        e.camara.updateProjectionMatrix();
-        // Luz diagonal desde arriba a la izquierda; el área de sombra cubre el camión
-        e.sol.position.set(pose.objetivo.x - 7, 16, pose.objetivo.z - 7);
-        e.sol.target.position.copy(pose.objetivo);
-        e.sol.target.updateMatrixWorld();
-        const s = e.sol.shadow.camera;
-        s.left = -(pose.mitad + 2);
-        s.right = pose.mitad + 2;
-        s.top = pose.mitad + 2;
-        s.bottom = -(pose.mitad + 2);
-        s.near = 1;
-        s.far = 60;
-        s.updateProjectionMatrix();
+        encuadrar(e);
       }
     }
     aplicarMarcas();
     pedirRender();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firma]);
+  }, [firma, foto]);
 
   // Selección y destino del arrastre
   useEffect(() => {

@@ -86,6 +86,8 @@ export function NeumaticosTablero() {
   const datos = tablero.data;
 
   const [seleccion, setSeleccion] = useState<string | null>(null);
+  // Posición vacía elegida al tocarla en la unidad (muestra "Posición libre" en el detalle)
+  const [posLibre, setPosLibre] = useState<string | null>(null);
   const [enMano, setEnMano] = useState<ItemArrastre | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [aviso, setAviso] = useState<Aviso | null>(null);
@@ -96,6 +98,7 @@ export function NeumaticosTablero() {
   // Al cambiar de unidad no se arrastra ni se selecciona nada de la anterior
   useEffect(() => {
     setSeleccion(null);
+    setPosLibre(null);
     setEnMano(null);
     setAviso(null);
   }, [placa]);
@@ -109,7 +112,7 @@ export function NeumaticosTablero() {
   const llantasDato = useMemo(() => montadas.map(m => aLlantaDato(m.llanta, m.posicion)), [montadas]);
   const configCodigo = configReconocida(datos?.configuracion);
   const cfg = configCodigo ? CONFIGURACIONES[configCodigo] : null;
-  const posicionActiva = montadas.find(m => m.llanta.codigo === seleccion)?.posicion ?? '';
+  const posicionActiva = montadas.find(m => m.llanta.codigo === seleccion)?.posicion ?? posLibre ?? '';
 
   const buscada = busqueda.trim().toLowerCase();
   const bodegaFiltrada = useMemo(() => (
@@ -119,6 +122,12 @@ export function NeumaticosTablero() {
   ), [bodega, buscada]);
 
   const llantaEnPosicion = (pos: string): LlantaTablero | null => posiciones.find(p => p.posicion === pos)?.llanta ?? null;
+
+  /** Selecciona una llanta (en la unidad, en bodega o en una zona) y deja de mostrar una posición libre */
+  function elegirLlanta(codigo: string) {
+    setSeleccion(codigo);
+    setPosLibre(null);
+  }
 
   // Llanta del detalle y dónde está ahora
   const detalle = useMemo((): { llanta: LlantaTablero; grupo: Grupo; posicion: string | null } | null => {
@@ -178,7 +187,7 @@ export function NeumaticosTablero() {
   /** Toque sobre una llanta de bodega: la selecciona y, con permiso, la deja "en mano" para tocar un destino */
   function tocarBodega(codigo: string) {
     setAviso(null);
-    setSeleccion(codigo);
+    elegirLlanta(codigo);
     if (!puedeMover) return;
     setEnMano(prev => (prev?.codigo === codigo ? null : { codigo, origen: 'bodega' }));
   }
@@ -187,8 +196,9 @@ export function NeumaticosTablero() {
   function tocarPosicion(pos: string) {
     if (!enMano) {
       const l = llantaEnPosicion(pos);
-      if (l) setSeleccion(l.codigo);
-      else setAviso({ tono: 'accent', texto: 'Primero elige una llanta de "Disponible para uso" y luego toca la posición.' });
+      setAviso(null);
+      if (l) elegirLlanta(l.codigo);
+      else { setSeleccion(null); setPosLibre(pos); }
       return;
     }
     proponer(enMano, { tipo: 'posicion', posicion: pos });
@@ -198,7 +208,7 @@ export function NeumaticosTablero() {
     sondaRef,
     onTap: (item) => {
       if (item.origen === 'bodega') tocarBodega(item.codigo);
-      else { setAviso(null); setSeleccion(item.codigo); }
+      else { setAviso(null); elegirLlanta(item.codigo); }
     },
     onSoltar: (item, destino) => proponer(item, destino),
   });
@@ -340,7 +350,7 @@ export function NeumaticosTablero() {
                   <div className="ntb-lista">
                     {montadas.map(m => (
                       <LlantaItem key={m.llanta.codigo} llanta={m.llanta} posicion={m.posicion}
-                        activa={seleccion === m.llanta.codigo} onActivar={() => setSeleccion(m.llanta.codigo)} />
+                        activa={seleccion === m.llanta.codigo} onActivar={() => elegirLlanta(m.llanta.codigo)} />
                     ))}
                   </div>
                 ) : (
@@ -353,12 +363,12 @@ export function NeumaticosTablero() {
               <ZonaDrop
                 zona="reforma" titulo="Enviar para reforma" nota="Arrastra aquí una llanta montada para enviarla a reencauche."
                 llantas={reforma} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'reforma'}
-                permitido={puedeReforma} onActivar={setSeleccion}
+                permitido={puedeReforma} onActivar={elegirLlanta}
               />
               <ZonaDrop
                 zona="descarte" titulo="Enviar para descarte" nota="Arrastra aquí una llanta montada para darla de baja."
                 llantas={descarte} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'descarte'}
-                permitido={puedeBaja} onActivar={setSeleccion}
+                permitido={puedeBaja} onActivar={elegirLlanta}
               />
             </div>
           </div>
@@ -368,7 +378,19 @@ export function NeumaticosTablero() {
             <div className="ntb-col__cab">
               <h2 className="ntb-col__titulo">Detalles de neumático</h2>
             </div>
-            {!detalle ? (
+            {!detalle && posLibre ? (
+              <>
+                <div className="ntb-det__cab">
+                  <span className="ntb-det__codigo">Posición libre</span>
+                  <span className="t-footnote c-secondary">{`${posLibre} · ${placa}`}</span>
+                </div>
+                <p className="ntb-det__ayuda">
+                  {puedeMover
+                    ? `Arrastra aquí una llanta de "Disponible para uso" o tócala y luego toca la posición ${posLibre}.`
+                    : 'No tienes permiso para instalar llantas en esta posición.'}
+                </p>
+              </>
+            ) : !detalle ? (
               <p className="ntb-vacio">Selecciona una llanta para ver sus datos y su línea de tiempo.</p>
             ) : (
               <>
@@ -378,12 +400,14 @@ export function NeumaticosTablero() {
                 </div>
                 <dl className="ntb-det__datos">
                   <div><dt>Vida</dt><dd><VidaChip vida={detalle.llanta.vida} /></dd></div>
-                  <div><dt>Remanente</dt><dd><RemanenteChip mm={detalle.llanta.remanente_mm} /></dd></div>
+                  <div><dt>Remanente promedio</dt><dd><RemanenteChip mm={detalle.llanta.remanente_mm} /></dd></div>
                   <div><dt>Ubicación</dt><dd>{
                     detalle.grupo === 'unidad' ? `${placa} · ${detalle.posicion}`
                       : detalle.grupo === 'bodega' ? (detalle.llanta.almacen ?? 'Bodega')
                         : detalle.grupo === 'reforma' ? 'Reforma (reencauche)' : 'Descarte'
                   }</dd></div>
+                  <div><dt>Marca</dt><dd>{detalle.llanta.marca ?? '—'}</dd></div>
+                  <div><dt>Modelo</dt><dd>{detalle.llanta.modelo ?? '—'}</dd></div>
                   <div><dt>Medida</dt><dd>{detalle.llanta.medida ?? '—'}</dd></div>
                   {detalle.grupo === 'unidad' && (
                     <>

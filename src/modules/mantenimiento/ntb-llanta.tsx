@@ -1,5 +1,5 @@
 // Piezas pequeñas del tablero de neumáticos: remanente con el semáforo, fila de llanta y mapeo al diagrama.
-import type { PointerEvent as ReactPointerEvent } from 'react';
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import { Badge } from '../../core/ui/Display';
 import { tonoMm, ETIQUETA_TONO, type Tono } from './neumaticosSemaforo';
 import type { LlantaDato } from './NeumaticosEsquema';
@@ -50,6 +50,7 @@ export function LlantaItem({ llanta, posicion, activa, arrastrable, onPointerDow
       onPointerDown={onPointerDown}
       onClick={arrastrable ? undefined : onActivar}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivar(); } }}
+      style={arrastrable ? { userSelect: 'none', WebkitUserDrag: 'none' } as CSSProperties : undefined}
     >
       <div className="ntb-llanta__cuerpo">
         <span className="ntb-llanta__codigo">{llanta.codigo}</span>
