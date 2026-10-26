@@ -1,0 +1,305 @@
+// Modelo cenital del camión para neumáticos (Three.js), sin React: lo usa nv3-vista.tsx.
+// Chasis de acero, cabina pintada con barniz, vidrio, tanques, llantas con banda generada por canvas (desgaste
+// según el semáforo), rines de aluminio y repuestos. Las posiciones y ejes salen de CONFIGURACIONES, igual que el
+// esquema SVG, para que ambas vistas nombren las mismas llantas.
+import * as THREE from 'three';
+import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
+import { remanenteDe, type LlantaDato } from './NeumaticosEsquema';
+import { tonoMm, type Tono } from './neumaticosSemaforo';
+import { COLOR_SEMAFORO_CANVAS, texturaEtiqueta, texturasBanda } from './nv3-texturas';
+
+export const RADIO_LLANTA = 0.58;
+export const ANCHO_LLANTA = 0.36;
+export const ALTURA_EJE = 0.6;
+const SEP_EJE = 2.1;
+const LADO_EXTERIOR = 2.2;
+const LADO_INTERIOR = 1.5;
+/** Desgaste de referencia (mm): a este valor la banda se deforma al máximo */
+const MM_REF = 12;
+/** Campo de visión de la cámara cenital (grados) */
+export const CAMPO_VISION = 28;
+/** Inclinación de la cámara respecto a la vertical (grados): casi cenital, lo justo para ver los rines */
+const INCLINACION = 14;
+
+/** Materiales compartidos por todo el modelo; las bandas y etiquetas se guardan en caché por tono */
+export class Recursos {
+  readonly acero = new THREE.MeshStandardMaterial({ color: 0x8a94a3, metalness: 0.9, roughness: 0.3 });
+  readonly chasis = new THREE.MeshStandardMaterial({ color: 0x4b5563, metalness: 0.7, roughness: 0.42 });
+  readonly pintura = new THREE.MeshPhysicalMaterial({ color: 0xf3f5f8, metalness: 0, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.06 });
+  readonly vidrio = new THREE.MeshPhysicalMaterial({ color: 0x163447, metalness: 0.1, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0.02, transparent: true, opacity: 0.88 });
+  readonly cromo = new THREE.MeshStandardMaterial({ color: 0xe6e9ee, metalness: 1, roughness: 0.14 });
+  readonly rin = new THREE.MeshStandardMaterial({ color: 0xc8ced8, metalness: 1, roughness: 0.2 });
+  readonly cubo = new THREE.MeshStandardMaterial({ color: 0x2a2f38, metalness: 0.5, roughness: 0.45 });
+  /** Flancos del neumático: caucho con un barniz leve (brillo en los costados) */
+  readonly flanco = new THREE.MeshPhysicalMaterial({ color: 0x1d1d22, roughness: 0.6, clearcoat: 0.35, clearcoatRoughness: 0.3 });
+  /** Hueco de una posición sin llanta montada */
+  readonly hueco = new THREE.MeshStandardMaterial({ color: 0x9aa1ac, roughness: 0.8, transparent: true, opacity: 0.3, depthWrite: false });
+
+  private bandas = new Map<string, THREE.MeshStandardMaterial>();
+  private etiquetas = new Map<string, THREE.SpriteMaterial>();
+  private texturas: THREE.Texture[] = [];
+
+  /** Banda de rodadura con su color, relieve y rugosidad (caché por combinación de tonos) */
+  materialBanda(bandas: (number | null)[]): THREE.MeshStandardMaterial {
+    const clave = bandas.map(v => tonoMm(v)).join('|');
+    let material = this.bandas.get(clave);
+    if (!material) {
+      const t = texturasBanda(bandas);
+      this.texturas.push(t.color, t.relieve, t.rugosidad);
+      material = new THREE.MeshStandardMaterial({
+        map: t.color, bumpMap: t.relieve, bumpScale: 2, roughnessMap: t.rugosidad, roughness: 1, metalness: 0,
+      });
+      this.bandas.set(clave, material);
+    }
+    return material;
+  }
+
+  /** Número de la posición sobre la llanta, con el color del semáforo */
+  materialEtiqueta(texto: string, tono: Tono): THREE.SpriteMaterial {
+    const clave = `${texto}|${tono}`;
+    let material = this.etiquetas.get(clave);
+    if (!material) {
+      const t = texturaEtiqueta(texto, COLOR_SEMAFORO_CANVAS[tono]);
+      this.texturas.push(t);
+      material = new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true });
+      this.etiquetas.set(clave, material);
+    }
+    return material;
+  }
+
+  dispose() {
+    for (const m of [this.acero, this.chasis, this.pintura, this.vidrio, this.cromo, this.rin, this.cubo, this.flanco, this.hueco]) m.dispose();
+    for (const m of this.bandas.values()) m.dispose();
+    for (const m of this.etiquetas.values()) m.dispose();
+    for (const t of this.texturas) t.dispose();
+    this.bandas.clear();
+    this.etiquetas.clear();
+    this.texturas = [];
+  }
+}
+
+export interface Llanta3D {
+  posicion: string;
+  grupo: THREE.Group;
+  caucho: THREE.Mesh;
+  etiqueta: THREE.Sprite;
+  montada: boolean;
+}
+
+export interface Camion3D {
+  grupo: THREE.Group;
+  llantas: Map<string, Llanta3D>;
+  /** Mallas de caucho: sobre ellas se hace el raycasting */
+  cauchos: THREE.Mesh[];
+  zMin: number;
+  zMax: number;
+  /** Geometrías propias de este modelo (se liberan al reconstruirlo) */
+  geometrias: THREE.BufferGeometry[];
+}
+
+/** Remanentes R1, R2, R3 de una llanta; si no hay por banda, el promedio en las tres */
+function bandasDe(dato: LlantaDato, mm: number | null): (number | null)[] {
+  const medidas = [dato.r1, dato.r2, dato.r3].map(v => {
+    const n = Number(v);
+    return v !== null && v !== undefined && n > 0 ? n : null;
+  });
+  return medidas.some(v => v !== null) ? medidas : [mm, mm, mm];
+}
+
+/** Neumático: el radio se reduce en los hombros (redondeo) y en la banda según el desgaste de cada franja */
+function geometriaLlanta(bandas: (number | null)[]): THREE.CylinderGeometry {
+  const geo = new THREE.CylinderGeometry(RADIO_LLANTA, RADIO_LLANTA, ANCHO_LLANTA, 48, 10, false);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const t = pos.getY(i) / ANCHO_LLANTA + 0.5; // 0 abajo, 1 arriba (R1)
+    const c = (t - 0.5) * 2;                     // -1 a 1 a lo ancho
+    const hombro = 1 - 0.12 * Math.pow(Math.abs(c), 4);
+    const mm = t > 2 / 3 ? bandas[0] : t < 1 / 3 ? bandas[2] : bandas[1];
+    const desgaste = mm === null ? 0 : Math.min(1, Math.max(0, (MM_REF - mm) / MM_REF));
+    const escala = hombro * (1 - 0.06 * desgaste);
+    pos.setX(i, pos.getX(i) * escala);
+    pos.setZ(i, pos.getZ(i) * escala);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/** Rines de aluminio a los dos lados: disco, cinco radios y cubo */
+function crearRin(rec: Recursos, geometrias: THREE.BufferGeometry[]): THREE.Group {
+  const rin = new THREE.Group();
+  const disco = new THREE.CylinderGeometry(0.36, 0.36, 0.03, 28);
+  const radio = new THREE.BoxGeometry(0.03, 0.26, 0.06);
+  const cubo = new THREE.CylinderGeometry(0.12, 0.12, 0.05, 16);
+  geometrias.push(disco, radio, cubo);
+  for (const lado of [-1, 1]) {
+    const plato = new THREE.Mesh(disco, rec.rin);
+    plato.rotation.z = Math.PI / 2;
+    plato.position.x = lado * 0.195;
+    rin.add(plato);
+    for (let k = 0; k < 5; k++) {
+      const a = (k * 2 * Math.PI) / 5;
+      const brazo = new THREE.Mesh(radio, rec.rin);
+      brazo.rotation.x = a;
+      brazo.position.set(lado * 0.205, 0.2 * Math.cos(a), 0.2 * Math.sin(a));
+      rin.add(brazo);
+    }
+    const eje = new THREE.Mesh(cubo, rec.cubo);
+    eje.rotation.z = Math.PI / 2;
+    eje.position.x = lado * 0.225;
+    rin.add(eje);
+  }
+  return rin;
+}
+
+function crearLlanta(pos: string, x: number, z: number, lado: number, dato: LlantaDato | undefined, rec: Recursos, geometrias: THREE.BufferGeometry[]): Llanta3D {
+  const grupo = new THREE.Group();
+  grupo.position.set(x, ALTURA_EJE, z);
+  grupo.userData.posicion = pos;
+  const montada = !!dato;
+  const mm = dato ? remanenteDe(dato) : null;
+  const bandas = dato ? bandasDe(dato, mm) : [null, null, null];
+
+  const geo = geometriaLlanta(bandas);
+  geometrias.push(geo);
+  // Banda (grupo 0 de la geometría) y flancos (tapas, grupos 1 y 2)
+  const caucho = new THREE.Mesh(geo, montada ? [rec.materialBanda(bandas), rec.flanco, rec.flanco] : rec.hueco);
+  caucho.rotation.z = lado > 0 ? -Math.PI / 2 : Math.PI / 2;
+  caucho.castShadow = montada;
+  caucho.userData.posicion = pos;
+  grupo.add(caucho);
+  if (montada) grupo.add(crearRin(rec, geometrias));
+
+  const etiqueta = new THREE.Sprite(rec.materialEtiqueta(pos, montada ? tonoMm(mm) : 'gray'));
+  etiqueta.scale.set(0.56, 0.56, 1);
+  etiqueta.position.set(0, RADIO_LLANTA + 0.42, 0);
+  etiqueta.renderOrder = 10;
+  grupo.add(etiqueta);
+  return { posicion: pos, grupo, caucho, etiqueta, montada };
+}
+
+/** Camión completo según la configuración: `datos` tiene solo las llantas montadas (clave en mayúsculas) */
+export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, rec: Recursos): Camion3D | null {
+  const config = CONFIGURACIONES[codigo];
+  if (!config) return null;
+  const grupo = new THREE.Group();
+  const geometrias: THREE.BufferGeometry[] = [];
+  const llantas = new Map<string, Llanta3D>();
+
+  const malla = (geo: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number, rotX = 0, rotZ = 0) => {
+    geometrias.push(geo);
+    const m = new THREE.Mesh(geo, material);
+    m.position.set(x, y, z);
+    m.rotation.set(rotX, 0, rotZ);
+    m.castShadow = true;
+    grupo.add(m);
+    return m;
+  };
+
+  // Ejes: el primero es el delantero; los demás van hacia atrás
+  const zEjes = config.ejes.map((_, i) => i * SEP_EJE);
+  const delantero = zEjes[0] ?? 0;
+  const trasero = zEjes[zEjes.length - 1] ?? 0;
+  const zRepuestos = trasero + 0.6;
+  const esRemolque = !config.cabina;
+  const zMin = delantero - (esRemolque ? 2.0 : 2.8);
+  // Solo los repuestos que la unidad tiene, igual que el esquema SVG
+  const repuestos = config.repuestos.filter(p => datos.has(p));
+  const zMax = Math.max(trasero, repuestos.length ? zRepuestos : trasero);
+  const largo = Math.max(9, zMax - zMin + 2);
+  const zCentro = (zMin + zMax) / 2;
+
+  // Bastidor: largueros, travesaños entre ejes y el del frente
+  for (const x of [-0.55, 0.55]) malla(new THREE.BoxGeometry(0.2, 0.3, largo), rec.chasis, x, 0.85, zCentro);
+  for (const z of [...zEjes.slice(0, -1).map(e => e + SEP_EJE / 2), zMin + 0.8]) {
+    malla(new THREE.BoxGeometry(1.5, 0.2, 0.14), rec.chasis, 0, 0.9, z);
+  }
+  // Ejes
+  for (const z of zEjes) malla(new THREE.CylinderGeometry(0.09, 0.09, 3.1, 14), rec.acero, 0, ALTURA_EJE, z, 0, Math.PI / 2);
+
+  if (config.cabina) {
+    // Tanques de combustible entre la cabina y los ejes traseros
+    for (const x of [-1.05, 1.05]) malla(new THREE.CylinderGeometry(0.32, 0.32, 1.6, 18), rec.acero, x, 0.75, delantero + 2.0, Math.PI / 2);
+    // Cabina, capó, parrilla, parabrisas, defensa y espejos, con las posiciones del clásico
+    malla(new THREE.BoxGeometry(2.3, 2.4, 2.6), rec.pintura, 0, 1.9, delantero - 0.4);
+    malla(new THREE.BoxGeometry(2.2, 1.3, 1.5), rec.pintura, 0, 1.35, delantero - 1.9);
+    malla(new THREE.BoxGeometry(1.8, 1.0, 0.1), rec.cromo, 0, 1.25, delantero - 2.66);
+    malla(new THREE.BoxGeometry(2.1, 0.9, 0.1), rec.vidrio, 0, 2.35, delantero - 1.7, -0.2);
+    malla(new THREE.BoxGeometry(2.4, 0.45, 0.3), rec.cromo, 0, 0.6, delantero - 2.65);
+    for (const x of [-1.25, 1.25]) malla(new THREE.BoxGeometry(0.12, 0.5, 0.12), rec.cromo, x, 2.0, delantero - 1.8);
+  } else {
+    // Carreta: lanza triangular y pivote (kingpin) al frente
+    for (const lado of [-0.4, 0.4]) {
+      malla(new THREE.CylinderGeometry(0.08, 0.08, 1.8, 10), rec.chasis, lado, 0.6, zMin + 0.6, 0, lado > 0 ? -Math.PI / 4 : Math.PI / 4);
+    }
+    malla(new THREE.CylinderGeometry(0.16, 0.16, 0.3, 14), rec.cromo, 0, 0.6, zMin);
+  }
+
+  // Ruedas: un lado con dos llantas es dual (exterior e interior); las sencillas van en el exterior
+  config.ejes.forEach((eje, i) => {
+    const z = zEjes[i] ?? 0;
+    const lados: Array<[number, string[]]> = [[-1, eje.izquierda], [1, eje.derecha]];
+    for (const [lado, posiciones] of lados) {
+      posiciones.forEach((pos, k) => {
+        const x = lado * (posiciones.length > 1 && k > 0 ? LADO_INTERIOR : LADO_EXTERIOR);
+        const llanta = crearLlanta(pos, x, z, lado, datos.get(pos), rec, geometrias);
+        llantas.set(pos, llanta);
+        grupo.add(llanta.grupo);
+      });
+    }
+  });
+  // Repuestos montados atrás del bastidor
+  repuestos.forEach((pos, i) => {
+    const x = repuestos.length === 1 ? 0 : -0.8 + i * 1.6;
+    const llanta = crearLlanta(pos, x, zRepuestos, 1, datos.get(pos), rec, geometrias);
+    llantas.set(pos, llanta);
+    grupo.add(llanta.grupo);
+  });
+
+  return {
+    grupo, llantas, cauchos: [...llantas.values()].map(l => l.caucho), zMin, zMax, geometrias,
+  };
+}
+
+/** Quita el camión de la escena y libera sus geometrías (los materiales compartidos quedan en Recursos) */
+export function liberarCamion(camion: Camion3D) {
+  for (const g of camion.geometrias) g.dispose();
+  camion.grupo.removeFromParent();
+}
+
+/** Cámara casi cenital: frente arriba, inclinada hacia un costado para que se vean los flancos y los rines */
+export function poseCenital(zMin: number, zMax: number): { pos: THREE.Vector3; objetivo: THREE.Vector3; mitad: number } {
+  const zc = (zMin + zMax) / 2;
+  const extension = zMax - zMin + 2.4;
+  const mitad = extension / 2;
+  const distancia = mitad / Math.tan(THREE.MathUtils.degToRad(CAMPO_VISION / 2));
+  const objetivo = new THREE.Vector3(0, 0.5, zc);
+  const tilt = THREE.MathUtils.degToRad(INCLINACION);
+  const pos = new THREE.Vector3(objetivo.x - Math.sin(tilt) * distancia, objetivo.y + Math.cos(tilt) * distancia, zc);
+  return { pos, objetivo, mitad };
+}
+
+function contornoRedondeado(ancho: number, alto: number, radio: number): THREE.Vector2[] {
+  const x0 = -ancho / 2, y0 = -alto / 2, x1 = ancho / 2, y1 = alto / 2;
+  const puntos: THREE.Vector2[] = [];
+  const arco = (cx: number, cy: number, inicio: number) => {
+    for (let i = 0; i <= 6; i++) {
+      const a = inicio + (i / 6) * (Math.PI / 2);
+      puntos.push(new THREE.Vector2(cx + radio * Math.cos(a), cy + radio * Math.sin(a)));
+    }
+  };
+  arco(x1 - radio, y1 - radio, 0);
+  arco(x0 + radio, y1 - radio, Math.PI / 2);
+  arco(x0 + radio, y0 + radio, Math.PI);
+  arco(x1 - radio, y0 + radio, (3 * Math.PI) / 2);
+  return puntos;
+}
+
+/** Marco redondeado plano (en el plano del piso) que marca la llanta activa o el destino del arrastre */
+export function marcoLlanta(ancho: number, alto: number, radio: number, grosor: number): THREE.ShapeGeometry {
+  const forma = new THREE.Shape(contornoRedondeado(ancho, alto, radio));
+  forma.holes.push(new THREE.Path(contornoRedondeado(ancho - 2 * grosor, alto - 2 * grosor, Math.max(0.01, radio - grosor))));
+  const geo = new THREE.ShapeGeometry(forma, 6);
+  geo.rotateX(-Math.PI / 2);
+  return geo;
+}

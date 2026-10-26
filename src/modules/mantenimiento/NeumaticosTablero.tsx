@@ -1,6 +1,6 @@
 // Tablero de movimientos de neumáticos: bodega (izquierda), unidad con sus posiciones (centro) y zonas de
 // reforma y descarte (abajo); detalle de la llanta y su línea de tiempo (derecha). Arrastrar, o tocar y luego tocar el destino.
-import { useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, Disc3, Lock } from 'lucide-react';
@@ -14,12 +14,13 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { formatFechaPe } from '../../core/lib/format';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
-import { EsquemaNeumaticos, LeyendaSemaforo, configReconocida } from './NeumaticosEsquema';
+import { LeyendaSemaforo, configReconocida } from './NeumaticosEsquema';
+import { NeumaticosCenital } from './nv3-cenital';
 import {
   PERMISO_BAJA, PERMISO_MOVER_NEUMATICOS, PERMISO_REENCAUCHE, PERMISO_VER_NEUMATICOS,
   type LlantaTablero, type PosicionTablero,
 } from './neumaticos-tablero-tipos';
-import { useArrastre, posicionDelNodo, type Destino, type ItemArrastre } from './ntb-arrastre';
+import { useArrastre, posicionDeEvento, type Destino, type ItemArrastre, type SondaPosicion } from './ntb-arrastre';
 import { tituloLlanta, useTablero, usePlacasLista, vidaTexto } from './ntb-api';
 import { LlantaItem, RemanenteChip, VidaChip, aLlantaDato } from './ntb-llanta';
 import { LineaTiempo } from './ntb-linea-tiempo';
@@ -89,6 +90,8 @@ export function NeumaticosTablero() {
   const [busqueda, setBusqueda] = useState('');
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const [hoja, setHoja] = useState<{ id: number; abierta: boolean; propuesta: Propuesta | null }>({ id: 0, abierta: false, propuesta: null });
+  // Lo rellena el lienzo 3D de la unidad con la posición que hay bajo un punto (si la vista es 3D)
+  const sondaRef = useRef<SondaPosicion | null>(null);
 
   // Al cambiar de unidad no se arrastra ni se selecciona nada de la anterior
   useEffect(() => {
@@ -106,6 +109,7 @@ export function NeumaticosTablero() {
   const llantasDato = useMemo(() => montadas.map(m => aLlantaDato(m.llanta, m.posicion)), [montadas]);
   const configCodigo = configReconocida(datos?.configuracion);
   const cfg = configCodigo ? CONFIGURACIONES[configCodigo] : null;
+  const posicionActiva = montadas.find(m => m.llanta.codigo === seleccion)?.posicion ?? '';
 
   const buscada = busqueda.trim().toLowerCase();
   const bodegaFiltrada = useMemo(() => (
@@ -191,6 +195,7 @@ export function NeumaticosTablero() {
   }
 
   const arrastre = useArrastre({
+    sondaRef,
     onTap: (item) => {
       if (item.origen === 'bodega') tocarBodega(item.codigo);
       else { setAviso(null); setSeleccion(item.codigo); }
@@ -200,14 +205,14 @@ export function NeumaticosTablero() {
 
   function alChasisPresionar(e: ReactPointerEvent<HTMLDivElement>) {
     if (!puedeMover) return;
-    const pos = posicionDelNodo(e.target);
+    const pos = posicionDeEvento(e, sondaRef.current);
     const l = pos ? llantaEnPosicion(pos) : null;
     if (!l) return;
     arrastre.iniciar(e, { codigo: l.codigo, origen: 'unidad' });
   }
 
   function alChasisClic(e: ReactMouseEvent<HTMLDivElement>) {
-    const pos = posicionDelNodo(e.target);
+    const pos = posicionDeEvento(e, sondaRef.current);
     if (pos) tocarPosicion(pos);
   }
 
@@ -307,7 +312,10 @@ export function NeumaticosTablero() {
                   : datos?.configuracion ? `Configuración ${datos.configuracion} no reconocida` : 'Sin configuración de ejes registrada'}
               </p>
               <div className="ntb-chasis" onPointerDown={alChasisPresionar} onClick={alChasisClic}>
-                <EsquemaNeumaticos llantas={llantasDato} configuracion={configCodigo} activa={seleccion ?? ''} onSelect={() => undefined} />
+                <NeumaticosCenital
+                  llantas={llantasDato} configuracion={configCodigo} activa={posicionActiva}
+                  sobre={sobre?.tipo === 'posicion' ? sobre.posicion : null} sondaRef={sondaRef} onSelect={() => undefined}
+                />
               </div>
               <LeyendaSemaforo />
 

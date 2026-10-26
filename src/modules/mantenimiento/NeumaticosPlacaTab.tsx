@@ -8,7 +8,8 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice } from '../../core/ui/Display';
 import { Sheet } from '../../core/ui/Sheet';
 import { errorMessage } from '../../core/api/client';
-import { EsquemaNeumaticos, LeyendaSemaforo, configReconocida } from './NeumaticosEsquema';
+import { LeyendaSemaforo, configReconocida } from './NeumaticosEsquema';
+import { NeumaticosCenital } from './nv3-cenital';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
 import { PERMISO_MOVER_NEUMATICOS, PERMISO_VER_NEUMATICOS } from './neumaticos-tablero-tipos';
 import { useTablero } from './ntb-api';
@@ -69,7 +70,7 @@ export function NeumaticosPlacaTab({ placa }: { placa: string }) {
             </span>
           </div>
           {!cfg && <p className="t-footnote c-secondary">La unidad no tiene una configuración de ejes reconocida; las llantas se muestran agrupadas.</p>}
-          <EsquemaNeumaticos
+          <NeumaticosCenital
             llantas={llantasDato}
             configuracion={configCodigo}
             activa=""

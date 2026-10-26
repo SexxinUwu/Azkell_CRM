@@ -21,15 +21,23 @@ export function posicionDelNodo(nodo: EventTarget | null): string | null {
   return pos || null;
 }
 
-/** Destino bajo un punto de la pantalla (o null) */
-export function destinoBajo(x: number, y: number): Destino | null {
+/** Dice qué posición hay bajo un punto de la pantalla (lo usa el lienzo 3D, que no tiene nodos DOM por llanta) */
+export type SondaPosicion = (x: number, y: number) => string | null;
+
+/** Posición de un toque o clic: primero por nodo DOM (SVG) y, si no, con la sonda del lienzo 3D */
+export function posicionDeEvento(e: { target: EventTarget | null; clientX: number; clientY: number }, sonda: SondaPosicion | null | undefined): string | null {
+  return posicionDelNodo(e.target) ?? (sonda ? sonda(e.clientX, e.clientY) : null);
+}
+
+/** Destino bajo un punto de la pantalla (o null). Dentro del lienzo 3D (data-nv3) se pregunta a la sonda. */
+export function destinoBajo(x: number, y: number, sonda?: SondaPosicion | null): Destino | null {
   const el = document.elementFromPoint(x, y);
   if (!el) return null;
   const zona = el.closest<HTMLElement>('[data-ntb-zona]');
   if (zona?.dataset.ntbZona === 'reforma' || zona?.dataset.ntbZona === 'descarte') {
     return { tipo: 'zona', zona: zona.dataset.ntbZona };
   }
-  const pos = posicionDelNodo(el);
+  const pos = posicionDelNodo(el) ?? (sonda && el.closest('[data-nv3]') ? sonda(x, y) : null);
   return pos ? { tipo: 'posicion', posicion: pos } : null;
 }
 
@@ -38,6 +46,8 @@ interface Opciones {
   onTap: (item: ItemArrastre) => void;
   /** Se soltó sobre un destino válido */
   onSoltar: (item: ItemArrastre, destino: Destino) => void;
+  /** Sonda del lienzo 3D, si la vista de la unidad es 3D */
+  sondaRef?: { current: SondaPosicion | null };
 }
 
 export interface Fantasma extends ItemArrastre { x: number; y: number }
@@ -74,7 +84,7 @@ export function useArrastre(opciones: Opciones) {
         movido = true;
       }
       setFantasma({ ...item, x: ev.clientX, y: ev.clientY });
-      setSobre(destinoBajo(ev.clientX, ev.clientY));
+      setSobre(destinoBajo(ev.clientX, ev.clientY, opcionesRef.current.sondaRef?.current));
     }
 
     function soltar(ev: PointerEvent) {
@@ -83,7 +93,7 @@ export function useArrastre(opciones: Opciones) {
         opcionesRef.current.onTap(item);
         return;
       }
-      const destino = destinoBajo(ev.clientX, ev.clientY);
+      const destino = destinoBajo(ev.clientX, ev.clientY, opcionesRef.current.sondaRef?.current);
       if (destino) opcionesRef.current.onSoltar(item, destino);
     }
 

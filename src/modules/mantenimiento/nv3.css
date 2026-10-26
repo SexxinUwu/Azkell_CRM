@@ -1,0 +1,19 @@
+/* Vista cenital 3D de neumáticos (nv3-vista.tsx). El lienzo es transparente: toma el color de la tarjeta, claro u oscuro. */
+.nv3-vista {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  min-height: 300px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.nv3-vista canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  touch-action: pan-y;
+}
+@media (max-width: 760px) {
+  .nv3-vista { height: 360px; }
+}
