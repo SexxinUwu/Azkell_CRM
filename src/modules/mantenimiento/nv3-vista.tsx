@@ -2,6 +2,8 @@
 // lienzo y el control Plano / Isometría; el dibujo, la cámara y la selección viven en nv3-motor.ts.
 // Un solo motor por componente: se crea al montar y se libera al desmontar.
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { posicionesDeConfig } from '../inspecciones/components/ChasisEsquemaVisual';
 import { remanenteDe, type LlantaDato } from './NeumaticosEsquema';
 import type { SondaPosicion } from './ntb-arrastre';
 import { MotorNeumaticos, type ModoVista } from './nv3-motor';
@@ -21,6 +23,9 @@ export interface Nv3VistaProps {
   onPerdida: () => void;
   /** Marca del tracto para el letrero del capó; sin marca no se dibuja texto */
   marca?: string | null;
+  /** Vista controlada por el padre; si no se pasa, el control la guarda aquí */
+  modo?: ModoVista;
+  onModo?: (modo: ModoVista) => void;
 }
 
 const normal = (p: string) => String(p).trim().toUpperCase();
@@ -33,7 +38,7 @@ const OPCIONES_VISTA: Array<{ valor: ModoVista; etiqueta: string }> = [
 /** Los controles sobre el lienzo no deben llegar al arrastre ni al toque de la unidad */
 const detener = (e: SyntheticEvent) => e.stopPropagation();
 
-export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSelect, sondaRef, onPerdida, marca }: Nv3VistaProps) {
+export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSelect, sondaRef, onPerdida, marca, modo: modoPadre, onModo }: Nv3VistaProps) {
   const lienzo = useRef<HTMLDivElement>(null);
   const motor = useRef<MotorNeumaticos | null>(null);
   // Últimos valores de las props para los oyentes que se montan una sola vez
@@ -41,7 +46,9 @@ export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSele
   vivo.current = { onSelect, onPerdida, llantas };
   // Foto de la banda: al cargar se reconstruyen las llantas con ella
   const [foto, setFoto] = useState(false);
-  const [modo, setModo] = useState<ModoVista>('plano');
+  const [modoPropio, setModoPropio] = useState<ModoVista>('plano');
+  const modo = modoPadre ?? modoPropio;
+  const cambiarModo = (nuevo: ModoVista) => (onModo ? onModo(nuevo) : setModoPropio(nuevo));
 
   // Firma de lo que cambia la geometría: si no cambia (p. ej. solo la selección), no se reconstruye
   const firma = configuracion + '|' + llantas.map(l => `${normal(l.posicion)}:${remanenteDe(l)}:${l.r1}:${l.r2}:${l.r3}`).join(',');
@@ -96,6 +103,16 @@ export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSele
     motor.current?.setModo(modo);
   }, [modo]);
 
+  // Flechas (solo en isometría): pasan a la llanta anterior o siguiente, en el orden de los ejes de la unidad
+  const enOrden = posicionesDeConfig(configuracion).flatMap(p => llantas.filter(l => normal(l.posicion) === p));
+  const pasar = (paso: 1 | -1) => {
+    const n = enOrden.length;
+    if (!n) return;
+    const i = enOrden.findIndex(l => normal(l.posicion) === normal(activa));
+    const destino = i < 0 ? (paso > 0 ? 0 : n - 1) : (i + paso + n) % n;
+    onSelect(enOrden[destino]);
+  };
+
   return (
     <div className="nv3-vista" data-nv3>
       <div ref={lienzo} className="nv3-lienzo" role="img" aria-label={`Vista de la unidad, configuración ${configuracion}`} />
@@ -106,12 +123,24 @@ export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSele
             type="button"
             className="nv3-modos__op"
             aria-pressed={modo === o.valor}
-            onClick={() => setModo(o.valor)}
+            onClick={() => cambiarModo(o.valor)}
           >
             {o.etiqueta}
           </button>
         ))}
       </div>
+      {modo === 'isometria' && enOrden.length > 1 && (
+        <>
+          <button type="button" className="nv3-flecha nv3-flecha--ant" aria-label="Neumático anterior"
+            onPointerDown={detener} onClick={() => pasar(-1)}>
+            <ChevronLeft size={22} />
+          </button>
+          <button type="button" className="nv3-flecha nv3-flecha--sig" aria-label="Neumático siguiente"
+            onPointerDown={detener} onClick={() => pasar(1)}>
+            <ChevronRight size={22} />
+          </button>
+        </>
+      )}
     </div>
   );
 }

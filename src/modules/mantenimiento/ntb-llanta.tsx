@@ -24,7 +24,7 @@ export function VidaChip({ vida }: { vida: unknown }) {
 
 /** Llanta como dato del diagrama de ejes (EsquemaNeumaticos) */
 export function aLlantaDato(l: LlantaTablero, posicion: string): LlantaDato {
-  return { posicion, marca: l.marca, modelo: l.modelo, medida: l.medida, remanente_promedio: l.remanente_mm };
+  return { posicion, marca: l.marca, modelo: l.modelo, medida: l.medida, remanente_promedio: l.remanente_mm, r1: l.r1, r2: l.r2, r3: l.r3 };
 }
 
 interface LlantaItemProps {

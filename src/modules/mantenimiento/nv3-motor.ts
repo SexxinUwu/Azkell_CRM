@@ -8,8 +8,8 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import type { LlantaDato } from './NeumaticosEsquema';
 import type { SondaPosicion } from './ntb-arrastre';
 import {
-  ANCHO_LLANTA, CAMPO_VISION, COLOR_NEON, RADIO_LLANTA, Recursos, anilloLlanta, construirCamion, liberarCamion,
-  limitesCamion, marcoLlanta, poseCenital, poseIsometrica, poseLateral, type Camion3D, type Llanta3D,
+  ANCHO_LLANTA, CAMPO_VISION, COLOR_NEON, RADIO_LLANTA, Recursos, anilloLlanta, construirCamion, giroLetreroIsometria,
+  liberarCamion, limitesCamion, marcoLlanta, poseCenital, poseIsometrica, poseLateral, type Camion3D, type Llanta3D,
 } from './nv3-escena';
 
 export type ModoVista = 'plano' | 'isometria';
@@ -188,6 +188,7 @@ export class MotorNeumaticos {
       this.camion = camion;
       this.scene.add(camion.grupo);
       this.rango = { zMin: camion.zMin, zMax: camion.zMax };
+      this.orientarLetrero();
       if (this.configActual !== configuracion) {
         this.configActual = configuracion;
         this.encuadrarAhora();
@@ -195,6 +196,12 @@ export class MotorNeumaticos {
     }
     this.aplicarMarcas();
     this.arrancar();
+  }
+
+  /** El letrero del capó se lee de frente en isometría y queda como en el plano en la vista cenital */
+  private orientarLetrero() {
+    const letrero = this.camion?.letrero;
+    if (letrero) letrero.rotation.y = this.modo === 'isometria' ? giroLetreroIsometria() : 0;
   }
 
   /** Llanta seleccionada y destino del arrastre. En isometría, si cambia la selección, la cámara va a su plano lateral. */
@@ -219,6 +226,7 @@ export class MotorNeumaticos {
   setModo(modo: ModoVista) {
     if (this.destruido || modo === this.modo) return;
     this.modo = modo;
+    this.orientarLetrero();
     this.controles.enabled = modo === 'isometria' && !this.gesto;
     this.canvas.style.touchAction = modo === 'isometria' ? 'none' : 'pan-y';
     if (this.rango) this.irA(modo === 'plano' ? this.poseDePlano() : this.poseDeIsometria());

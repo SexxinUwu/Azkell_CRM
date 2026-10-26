@@ -16,6 +16,7 @@ import { formatFechaPe } from '../../core/lib/format';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
 import { LeyendaSemaforo, configReconocida } from './NeumaticosEsquema';
 import { NeumaticosCenital } from './nv3-cenital';
+import type { ModoVista } from './nv3-motor';
 import {
   PERMISO_BAJA, PERMISO_MOVER_NEUMATICOS, PERMISO_REENCAUCHE, PERMISO_VER_NEUMATICOS,
   type LlantaTablero, type PosicionTablero,
@@ -40,9 +41,9 @@ function textoSobre(d: Destino, ocupante: LlantaTablero | null): string {
   return ocupante ? `Suelta para cambiar la llanta de ${d.posicion}` : `Suelta para instalar en ${d.posicion}`;
 }
 
-function ZonaDrop({ zona, titulo, nota, llantas, resaltada, permitido, onActivar }: {
+function ZonaDrop({ zona, titulo, nota, llantas, resaltada, permitido, bloqueo, onActivar }: {
   zona: 'reforma' | 'descarte'; titulo: string; nota: string; llantas: LlantaTablero[];
-  resaltada: boolean; permitido: boolean; onActivar: (codigo: string) => void;
+  resaltada: boolean; permitido: boolean; bloqueo: string; onActivar: (codigo: string) => void;
 }) {
   return (
     <div role="group" aria-label={titulo} data-ntb-zona={zona}
@@ -52,7 +53,7 @@ function ZonaDrop({ zona, titulo, nota, llantas, resaltada, permitido, onActivar
         <span className="ntb-count">{llantas.length}</span>
       </div>
       <p className="ntb-zona__nota">
-        {permitido ? nota : <><Lock size={13} aria-hidden /> Sin permiso para esta acción</>}
+        {permitido ? nota : <><Lock size={13} aria-hidden /> {bloqueo}</>}
       </p>
       {llantas.length > 0 ? (
         <div className="ntb-lista">
@@ -80,6 +81,12 @@ export function NeumaticosTablero() {
   const puedeReforma = puedeMover && can(PERMISO_REENCAUCHE);
   const puedeBaja = puedeMover && can(PERMISO_BAJA);
   const puedeRetorno = can(PERMISO_REENCAUCHE);
+
+  // Los movimientos de llantas se hacen solo en Plano; en Isometría la unidad es solo para verla
+  const [modo, setModo] = useState<ModoVista>('plano');
+  const enPlano = modo === 'plano';
+  const puedeMoverAqui = puedeMover && enPlano;
+  const bloqueoVista = enPlano ? 'Sin permiso para esta acción' : 'Cambia a Plano para mover';
 
   const placas = usePlacasLista();
   const tablero = useTablero(placa);
@@ -153,6 +160,10 @@ export function NeumaticosTablero() {
   /** Decide qué movimiento corresponde a soltar (o tocar) un ítem sobre un destino, y abre su confirmación */
   function proponer(item: ItemArrastre, destino: Destino) {
     setAviso(null);
+    if (!enPlano) {
+      setAviso({ tono: 'accent', texto: 'En Isometría solo se ve la unidad. Cambia a Plano para mover neumáticos.' });
+      return;
+    }
     if (destino.tipo === 'posicion') {
       if (item.origen === 'unidad') {
         setAviso({ tono: 'accent', texto: 'Una llanta montada solo se envía a reforma o descarte. Para cambiarla de posición, primero envíala a reforma o descarte.' });
@@ -188,7 +199,7 @@ export function NeumaticosTablero() {
   function tocarBodega(codigo: string) {
     setAviso(null);
     elegirLlanta(codigo);
-    if (!puedeMover) return;
+    if (!puedeMoverAqui) return;
     setEnMano(prev => (prev?.codigo === codigo ? null : { codigo, origen: 'bodega' }));
   }
 
@@ -214,7 +225,7 @@ export function NeumaticosTablero() {
   });
 
   function alChasisPresionar(e: ReactPointerEvent<HTMLDivElement>) {
-    if (!puedeMover) return;
+    if (!puedeMoverAqui) return;
     const pos = posicionDeEvento(e, sondaRef.current);
     const l = pos ? llantaEnPosicion(pos) : null;
     if (!l) return;
@@ -295,8 +306,8 @@ export function NeumaticosTablero() {
                   key={l.codigo}
                   llanta={l}
                   activa={seleccion === l.codigo}
-                  arrastrable={puedeMover}
-                  onPointerDown={puedeMover ? e => arrastre.iniciar(e, { codigo: l.codigo, origen: 'bodega' }) : undefined}
+                  arrastrable={puedeMoverAqui}
+                  onPointerDown={puedeMoverAqui ? e => arrastre.iniciar(e, { codigo: l.codigo, origen: 'bodega' }) : undefined}
                   onActivar={() => tocarBodega(l.codigo)}
                 />
               ))}
@@ -311,6 +322,19 @@ export function NeumaticosTablero() {
             <section className="card ntb-col" aria-label="Vehículo">
               <div className="ntb-col__cab">
                 <LicensePlate plate={placa} size="lg" />
+                {montadas.length > 0 && (
+                  <div className="ntb-chips" role="group" aria-label="Posiciones de la unidad">
+                    {montadas.map(m => (
+                      <button key={m.posicion} type="button" data-ntb-chip={m.posicion}
+                        className={`ntb-pos${posicionActiva === m.posicion ? ' ntb-pos--activa' : ''}`}
+                        aria-pressed={posicionActiva === m.posicion}
+                        aria-label={`Posición ${m.posicion}`}
+                        onClick={() => tocarPosicion(m.posicion)}>
+                        {m.posicion}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <span className="ntb-conteos">
                   <span>{montadas.length} montadas</span>
                   <span>{libres.length} libres</span>
@@ -318,14 +342,16 @@ export function NeumaticosTablero() {
               </div>
               <p className="t-footnote c-secondary">
                 {cfg && configCodigo
-                  ? `${configCodigo} · ${cfg.nombre} · ${cfg.llantas} llantas`
+                  ? `${configCodigo} · ${cfg.nombre} · ${montadas.length} llantas montadas`
                   : datos?.configuracion ? `Configuración ${datos.configuracion} no reconocida` : 'Sin configuración de ejes registrada'}
               </p>
               <div className="ntb-chasis" onPointerDown={alChasisPresionar} onClick={alChasisClic}>
                 <NeumaticosCenital
                   llantas={llantasDato} configuracion={configCodigo} activa={posicionActiva}
-                  sobre={sobre?.tipo === 'posicion' ? sobre.posicion : null} sondaRef={sondaRef} onSelect={() => undefined}
+                  sobre={sobre?.tipo === 'posicion' ? sobre.posicion : null} sondaRef={sondaRef}
+                  onSelect={l => { const m = montadas.find(x => x.posicion === l.posicion); if (m) elegirLlanta(m.llanta.codigo); }}
                   marca={(placas.data ?? []).find(p => p.placa === placa)?.marca ?? null}
+                  modo={modo} onModo={setModo}
                 />
               </div>
               <LeyendaSemaforo />
@@ -336,7 +362,7 @@ export function NeumaticosTablero() {
                   <div className="ntb-libres__lista">
                     {libres.map(p => (
                       <button key={p.posicion} type="button" data-ntb-pos={p.posicion} className="ntb-pos ntb-pos--libre"
-                        disabled={!puedeMover} onClick={() => tocarPosicion(p.posicion)}
+                        disabled={!puedeMoverAqui} onClick={() => tocarPosicion(p.posicion)}
                         aria-label={`Posición ${p.posicion} libre`}>
                         {p.posicion}
                       </button>
@@ -344,32 +370,18 @@ export function NeumaticosTablero() {
                   </div>
                 </div>
               )}
-
-              <div className="ntb-montadas">
-                <span className="t-footnote c-secondary">Montadas en la unidad</span>
-                {montadas.length > 0 ? (
-                  <div className="ntb-lista">
-                    {montadas.map(m => (
-                      <LlantaItem key={m.llanta.codigo} llanta={m.llanta} posicion={m.posicion}
-                        activa={seleccion === m.llanta.codigo} onActivar={() => elegirLlanta(m.llanta.codigo)} />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="ntb-vacio">Ninguna llanta montada en esta unidad.</p>
-                )}
-              </div>
             </section>
 
             <div className="ntb-zonas">
               <ZonaDrop
                 zona="reforma" titulo="Enviar para reforma" nota="Arrastra aquí una llanta montada para enviarla a reencauche."
                 llantas={reforma} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'reforma'}
-                permitido={puedeReforma} onActivar={elegirLlanta}
+                permitido={puedeReforma && enPlano} bloqueo={bloqueoVista} onActivar={elegirLlanta}
               />
               <ZonaDrop
                 zona="descarte" titulo="Enviar para descarte" nota="Arrastra aquí una llanta montada para darla de baja."
                 llantas={descarte} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'descarte'}
-                permitido={puedeBaja} onActivar={elegirLlanta}
+                permitido={puedeBaja && enPlano} bloqueo={bloqueoVista} onActivar={elegirLlanta}
               />
             </div>
           </div>
@@ -386,9 +398,11 @@ export function NeumaticosTablero() {
                   <span className="t-footnote c-secondary">{`${posLibre} · ${placa}`}</span>
                 </div>
                 <p className="ntb-det__ayuda">
-                  {puedeMover
+                  {puedeMoverAqui
                     ? `Arrastra aquí una llanta de "Disponible para uso" o tócala y luego toca la posición ${posLibre}.`
-                    : 'No tienes permiso para instalar llantas en esta posición.'}
+                    : puedeMover
+                      ? 'Cambia a Plano para instalar llantas en esta posición.'
+                      : 'No tienes permiso para instalar llantas en esta posición.'}
                 </p>
               </>
             ) : !detalle ? (
@@ -422,19 +436,24 @@ export function NeumaticosTablero() {
                 {detalle.grupo === 'unidad' && (puedeReforma || puedeBaja) && (
                   <div className="ntb-det__acciones">
                     {puedeReforma && (
-                      <Button variant="secondary" onClick={() => proponer({ codigo: detalle.llanta.codigo, origen: 'unidad' }, { tipo: 'zona', zona: 'reforma' })}>
+                      <Button variant="secondary" disabled={!enPlano} onClick={() => proponer({ codigo: detalle.llanta.codigo, origen: 'unidad' }, { tipo: 'zona', zona: 'reforma' })}>
                         Enviar a reforma
                       </Button>
                     )}
                     {puedeBaja && (
-                      <Button variant="danger" onClick={() => proponer({ codigo: detalle.llanta.codigo, origen: 'unidad' }, { tipo: 'zona', zona: 'descarte' })}>
+                      <Button variant="danger" disabled={!enPlano} onClick={() => proponer({ codigo: detalle.llanta.codigo, origen: 'unidad' }, { tipo: 'zona', zona: 'descarte' })}>
                         Dar de baja
                       </Button>
                     )}
+                    {!enPlano && <p className="ntb-det__ayuda">Cambia a Plano para enviar esta llanta a reforma o baja.</p>}
                   </div>
                 )}
                 {detalle.grupo === 'bodega' && puedeMover && (
-                  <p className="ntb-det__ayuda">Arrástrala a una posición de la unidad, o tócala y luego toca la posición.</p>
+                  <p className="ntb-det__ayuda">
+                    {enPlano
+                      ? 'Arrástrala a una posición de la unidad, o tócala y luego toca la posición.'
+                      : 'Cambia a Plano para instalarla en la unidad.'}
+                  </p>
                 )}
                 {detalle.grupo === 'reforma' && puedeRetorno && (
                   <div className="ntb-det__acciones">

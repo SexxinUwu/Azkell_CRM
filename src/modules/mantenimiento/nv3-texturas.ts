@@ -80,16 +80,18 @@ function anchoFoto(img: HTMLImageElement, alto: number): number {
   return Math.round(2 * img.naturalHeight * (alto / img.naturalWidth));
 }
 
-/** Franjas de semáforo sobre la banda: `color` mezcla el tono con la luminosidad de la foto o del caucho */
+/**
+ * Franjas de semáforo sobre la banda (R1 arriba, R2 en medio, R3 abajo). Color pleno sobre el caucho: un mezclado con
+ * la luminosidad de la foto quedaba oscuro y no se distinguía el verde, el amarillo y el rojo.
+ */
 function tintarFranjas(ctx: CanvasRenderingContext2D, ancho: number, alto: number, valores: (number | null)[], alfa: number) {
+  ctx.save();
+  ctx.globalAlpha = alfa;
   for (let i = 0; i < 3; i++) {
-    ctx.globalAlpha = alfa;
-    ctx.globalCompositeOperation = 'color';
     ctx.fillStyle = COLOR_SEMAFORO_CANVAS[tonoMm(valores[i] ?? null)];
     ctx.fillRect(0, (i * alto) / 3, ancho, alto / 3 + 1);
   }
-  ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = 'source-over';
+  ctx.restore();
 }
 
 /** Banda de un neumático: tres franjas de semáforo de arriba abajo (R1, R2, R3) con los surcos encima */
@@ -106,7 +108,7 @@ export function texturasBanda(valores: (number | null)[]): TexturasBanda {
     // Color: foto real tintada por franjas; relieve y rugosidad: la foto en gris (surcos bajos, caucho alto)
     if (color.ctx) {
       dibujarFoto(color.ctx, foto, alto, 'none');
-      tintarFranjas(color.ctx, ancho, alto, valores, 0.55);
+      tintarFranjas(color.ctx, ancho, alto, valores, 0.8);
     }
     if (relieve.ctx) dibujarFoto(relieve.ctx, foto, alto, 'grayscale(1) contrast(1.2)');
     if (rugosidad.ctx) dibujarFoto(rugosidad.ctx, foto, alto, 'grayscale(1) contrast(0.6) brightness(1.15)');
@@ -115,12 +117,7 @@ export function texturasBanda(valores: (number | null)[]): TexturasBanda {
       color.ctx.fillStyle = '#2b2b31';
       color.ctx.fillRect(0, 0, ancho, alto);
       // Fila superior del canvas = parte superior del cilindro (uv.y = 1 - v con flipY): R1 arriba, como el desgaste
-      for (let i = 0; i < 3; i++) {
-        color.ctx.globalAlpha = 0.45;
-        color.ctx.fillStyle = COLOR_SEMAFORO_CANVAS[tonoMm(valores[i] ?? null)];
-        color.ctx.fillRect(0, (i * alto) / 3, ancho, alto / 3 + 1);
-      }
-      color.ctx.globalAlpha = 1;
+      tintarFranjas(color.ctx, ancho, alto, valores, 0.85);
       dibujarSurcos(color.ctx, ancho, alto, paso, '#0c0c0f', '#16161a');
     }
     if (relieve.ctx) {

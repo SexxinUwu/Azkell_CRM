@@ -13,7 +13,7 @@ import { NeumaticosCenital } from './nv3-cenital';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
 import { PERMISO_MOVER_NEUMATICOS, PERMISO_VER_NEUMATICOS } from './neumaticos-tablero-tipos';
 import { useTablero, usePlacasLista } from './ntb-api';
-import { LlantaItem, aLlantaDato } from './ntb-llanta';
+import { aLlantaDato } from './ntb-llanta';
 import { LineaTiempo } from './ntb-linea-tiempo';
 import './ntb.css';
 
@@ -83,21 +83,7 @@ export function NeumaticosPlacaTab({ placa }: { placa: string }) {
             }}
           />
           <LeyendaSemaforo />
-        </section>
-
-        <section className="card ntb-col" aria-label="Llantas montadas">
-          <div className="ntb-col__cab">
-            <span className="ntb-col__titulo">Llantas montadas ({montadas.length})</span>
-          </div>
-          {montadas.length > 0 ? (
-            <div className="ntb-lista">
-              {montadas.map(m => (
-                <LlantaItem key={m.llanta.codigo} llanta={m.llanta} posicion={m.posicion} onActivar={() => abrirLinea(m.llanta.codigo)} />
-              ))}
-            </div>
-          ) : (
-            <p className="ntb-vacio">Esta unidad no tiene llantas montadas.</p>
-          )}
+          {montadas.length === 0 && <p className="ntb-vacio">Esta unidad no tiene llantas montadas.</p>}
           {puedeMover ? (
             <Button variant="accent" block onClick={irAlTablero}>Mover neumáticos</Button>
           ) : (

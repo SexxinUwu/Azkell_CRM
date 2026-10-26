@@ -4,6 +4,7 @@ import { Component, lazy, Suspense, useState, type ReactNode } from 'react';
 import { CONFIGURACIONES, posicionesDeConfig } from '../inspecciones/components/ChasisEsquemaVisual';
 import { EsquemaNeumaticos, type LlantaDato } from './NeumaticosEsquema';
 import type { SondaPosicion } from './ntb-arrastre';
+import type { ModoVista } from './nv3-motor';
 import './nv3.css';
 
 // Three.js solo se descarga al abrir una pantalla con neumáticos; mientras tanto se ve el SVG
@@ -22,6 +23,9 @@ export interface NeumaticosCenitalProps {
   sondaRef?: { current: SondaPosicion | null };
   /** Marca del tracto para el letrero del capó (opcional; sin marca no se dibuja texto) */
   marca?: string | null;
+  /** Vista activa (plano o isometría). Si el padre la controla, el control Plano / Isometría se maneja desde fuera */
+  modo?: ModoVista;
+  onModo?: (modo: ModoVista) => void;
 }
 
 /** Este equipo puede dibujar en WebGL */
@@ -42,7 +46,7 @@ class RespaldoSeguro extends Component<{ respaldo: ReactNode; children: ReactNod
   render() { return this.state.fallo ? this.props.respaldo : this.props.children; }
 }
 
-export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, marca = null }: NeumaticosCenitalProps) {
+export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, marca = null, modo, onModo }: NeumaticosCenitalProps) {
   const [soportaWebgl] = useState(webglDisponible);
   const [perdido, setPerdido] = useState(false);
 
@@ -58,7 +62,7 @@ export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null
       <Suspense fallback={respaldo}>
         <Nv3Vista
           configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} onSelect={onSelect}
-          sondaRef={sondaRef} marca={marca} onPerdida={() => setPerdido(true)}
+          sondaRef={sondaRef} marca={marca} onPerdida={() => setPerdido(true)} modo={modo} onModo={onModo}
         />
       </Suspense>
     </RespaldoSeguro>

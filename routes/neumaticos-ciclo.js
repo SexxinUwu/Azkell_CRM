@@ -13,6 +13,7 @@
 const express = require('express');
 const { htmlAPdf } = require('../services/ot_pdf');
 const { htmlMapaPosiciones } = require('../services/neumaticos_mapa_pdf');
+const { armarPosicionesUnidad } = require('../services/neumaticos_unidad');
 
 // Almacenes del ciclo de vida
 const ALMACEN = { NUEVAS: 100, REENCAUCHE: 1142, REPARADAS: 1144, SCRAP: 1148 };
@@ -546,29 +547,40 @@ module.exports = function (db) {
         return filas.length ? Number(filas[0].km_gps) : null;
     }
 
+    // Una fila de inspección como medición: r1, r2 y r3 son las tres franjas de la banda (r2 = surco central)
+    function medicionDe(f) {
+        const num = v => (v == null ? null : Number(v));
+        return {
+            remanente: num(f.remanente_promedio),
+            surco_central: num(f.r2),
+            r1: num(f.r1),
+            r2: num(f.r2),
+            r3: num(f.r3),
+            fecha: f.fecha || null,
+        };
+    }
+
     // Última medición por llanta y por llanta+posición (la primera fila de cada clave es la más reciente)
     async function ultimasMediciones(p, ids) {
         const porLlanta = new Map();
         const porLlantaPos = new Map();
         if (!ids.length) return { porLlanta, porLlantaPos };
         const [filas] = await p.query(
-            `SELECT d.id_neumatico, d.posicion, d.r2, d.remanente_promedio
+            `SELECT d.id_neumatico, d.posicion, d.r1, d.r2, d.r3, d.remanente_promedio
              FROM neumaticos_inspecciones_det d
              INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_general_ci = i.id_inspeccion COLLATE utf8mb4_general_ci
              WHERE d.id_neumatico IN (?)
              ORDER BY i.fecha_inspeccion DESC, i.created_at DESC, d.id DESC`,
             [ids]);
         for (const f of filas) {
-            const medicion = {
-                remanente: f.remanente_promedio == null ? null : Number(f.remanente_promedio),
-                surco_central: f.r2 == null ? null : Number(f.r2),   // r2 = surco central (r1 y r3 son los laterales)
-            };
+            const medicion = medicionDe(f);
             if (!porLlanta.has(f.id_neumatico)) porLlanta.set(f.id_neumatico, medicion);
             const clave = `${f.id_neumatico}|${f.posicion}`;
             if (!porLlantaPos.has(clave)) porLlantaPos.set(clave, medicion);
         }
         return { porLlanta, porLlantaPos };
     }
+
 
     // Vida en número (R0 = 0 ... R3 = 3); null si no es una vida conocida
     function vidaNumero(vida) {
@@ -606,33 +618,73 @@ module.exports = function (db) {
             [placa]);
         const configuracion = configRows.length ? (txt(configRows[0].configuracion) || null) : null;
 
-        const ids = [...new Set([...montadas, ...enStock].map(f => f.id_neumatico))];
+        // Última inspección de la placa: define las llantas de la unidad y sus mediciones (ver services/neumaticos_unidad.js)
+        const [ultimas] = await p.query(
+            `SELECT i.id_inspeccion, DATE_FORMAT(i.fecha_inspeccion, '%Y-%m-%d') AS fecha
+             FROM neumaticos_inspecciones i
+             WHERE UPPER(TRIM(i.placa)) = ?
+             ORDER BY i.fecha_inspeccion DESC, i.created_at DESC
+             LIMIT 1`,
+            [placa]);
+        const fechaInspeccion = ultimas.length ? ultimas[0].fecha : null;
+        let detalleInspeccion = [];
+        if (ultimas.length) {
+            [detalleInspeccion] = await p.query(
+                `SELECT d.posicion, d.id_neumatico, d.marca, d.modelo, d.medida, d.r1, d.r2, d.r3, d.remanente_promedio
+                 FROM neumaticos_inspecciones_det d
+                 WHERE d.id_inspeccion = ?`,
+                [ultimas[0].id_inspeccion]);
+        }
+        const idsInspeccion = detalleInspeccion.map(d => d.id_neumatico).filter(Boolean);
+        const hojasInspeccion = new Map();
+        if (idsInspeccion.length) {
+            const [hojas] = await p.query(
+                `SELECT h.id_neumatico, COALESCE(h.codigo_llanta, h.id_neumatico) AS codigo, h.marca, h.modelo, h.medida, h.vida
+                 FROM neumaticos_hoja_vida h WHERE h.id_neumatico IN (?)`,
+                [idsInspeccion]);
+            for (const h of hojas) hojasInspeccion.set(h.id_neumatico, h);
+        }
+
+        const ids = [...new Set([...montadas, ...enStock].map(f => f.id_neumatico).concat(idsInspeccion))];
         const { porLlanta, porLlantaPos } = await ultimasMediciones(p, ids);
         const kmActual = montadas.length ? await kmActualPlaca(p, placa) : null;
 
-        const detalleMontadas = montadas.map(m => {
-            const medicion = porLlantaPos.get(`${m.id_neumatico}|${m.posicion}`) || porLlanta.get(m.id_neumatico) || null;
-            const kmMontaje = Number(m.km_in) || 0;
+        const posicionesUnidad = armarPosicionesUnidad({ fechaInspeccion, detalleInspeccion, instalaciones: montadas });
+        const detalleMontadas = posicionesUnidad.map(({ posicion, fuente, instalacion, detalle }) => {
+            const idLlanta = fuente === 'movimiento' ? instalacion.id_neumatico : (detalle.id_neumatico || (instalacion && instalacion.id_neumatico) || null);
+            // Datos de la llanta: su hoja de vida; si la inspección no la liga, los de la instalación o los de la inspección
+            const hoja = fuente === 'movimiento' ? instalacion
+                : (detalle.id_neumatico ? hojasInspeccion.get(detalle.id_neumatico) : instalacion) || detalle;
+            // Medición: la de la inspección cuando manda; si no, la última de la llanta
+            const medicionInspeccion = detalle ? medicionDe({ ...detalle, fecha: fechaInspeccion }) : null;
+            const medicion = fuente === 'inspeccion' ? medicionInspeccion
+                : (detalle && detalle.id_neumatico === idLlanta ? medicionInspeccion
+                    : porLlantaPos.get(`${idLlanta}|${posicion}`) || porLlanta.get(idLlanta) || null);
+            const instDeLlanta = instalacion && instalacion.id_neumatico === idLlanta ? instalacion : null;
+            const kmMontaje = instDeLlanta ? Number(instDeLlanta.km_in) || 0 : null;
             return {
-                posicion: m.posicion,
+                posicion,
                 surco_central: medicion ? medicion.surco_central : null,
                 llanta: {
-                    codigo: m.codigo,
-                    marca: m.marca || null,
-                    modelo: m.modelo || null,
-                    medida: m.medida || null,
-                    vida: vidaNumero(m.vida),
+                    codigo: hoja && hoja.codigo ? hoja.codigo : (idLlanta || `SIN REGISTRO ${posicion}`),
+                    marca: hoja.marca || null,
+                    modelo: hoja.modelo || null,
+                    medida: hoja.medida || null,
+                    vida: vidaNumero(hoja.vida),
                     estado_ciclo: 'en_unidad',
                     almacen: null,
-                    placa_actual: m.placa,
-                    posicion_actual: m.posicion,
+                    placa_actual: placa,
+                    posicion_actual: posicion,
                     remanente_mm: medicion ? medicion.remanente : null,
-                    fecha_montaje: m.fecha_in,
+                    r1: medicion ? medicion.r1 : null,
+                    r2: medicion ? medicion.r2 : null,
+                    r3: medicion ? medicion.r3 : null,
+                    fecha_montaje: instDeLlanta ? instDeLlanta.fecha_in : null,
                     km_montaje: kmMontaje,
-                    km_recorridos: kmRecorridos(kmActual, kmMontaje),
+                    km_recorridos: kmMontaje == null ? null : kmRecorridos(kmActual, kmMontaje),
                 },
             };
-        });
+        }).sort((a, b) => a.posicion.localeCompare(b.posicion, 'es', { numeric: true }));
 
         // Llanta fuera de la unidad (almacén, reencauche o desecho)
         const aLlanta = (f) => {

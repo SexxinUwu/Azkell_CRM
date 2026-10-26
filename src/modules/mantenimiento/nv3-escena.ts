@@ -132,6 +132,8 @@ export interface Camion3D {
   zMax: number;
   /** Geometrías propias de este modelo (se liberan al reconstruirlo) */
   geometrias: THREE.BufferGeometry[];
+  /** Pivote del letrero de la marca (null si no hay marca): gira según la vista */
+  letrero: THREE.Group | null;
 }
 
 /** Remanentes R1, R2, R3 de una llanta; si no hay por banda, el promedio en las tres */
@@ -223,8 +225,9 @@ export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, 
   const grupo = new THREE.Group();
   const geometrias: THREE.BufferGeometry[] = [];
   const llantas = new Map<string, Llanta3D>();
+  let letreroPivote: THREE.Group | null = null;
 
-  const malla = (geo: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number, rotX = 0, rotZ = 0) => {
+  const malla =(geo: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number, rotX = 0, rotZ = 0) => {
     geometrias.push(geo);
     const m = new THREE.Mesh(geo, material);
     m.position.set(x, y, z);
@@ -267,14 +270,17 @@ export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, 
     for (const x of [-1.25, 1.25]) malla(new THREE.BoxGeometry(0.12, 0.5, 0.12), rec.cromo, x, 2.0, delantero - 1.8);
     // Letrero de la marca sobre el capó (su cara superior: la parte delantera queda arriba en la vista cenital).
     // El capó termina en y = 2.0; la parte de atrás del capó queda dentro de la cabina, por eso el letrero va adelante.
+    // Va dentro de un pivote para girarlo según la vista (ver giroLetreroIsometria).
     if (marca?.trim()) {
       const geoMarca = new THREE.PlaneGeometry(1.9, 0.8);
       geometrias.push(geoMarca);
       const letrero = new THREE.Mesh(geoMarca, rec.materialMarca(marca));
       letrero.rotation.x = -Math.PI / 2;
-      letrero.position.set(0, 2.012, delantero - 2.18);
       letrero.renderOrder = 4;
-      grupo.add(letrero);
+      letreroPivote = new THREE.Group();
+      letreroPivote.position.set(0, 2.012, delantero - 2.18);
+      letreroPivote.add(letrero);
+      grupo.add(letreroPivote);
     }
   } else {
     // Carreta: lanza triangular y pivote (kingpin) al frente
@@ -306,7 +312,7 @@ export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, 
   });
 
   return {
-    grupo, llantas, cauchos: [...llantas.values()].map(l => l.caucho), zMin, zMax, geometrias,
+    grupo, llantas, cauchos: [...llantas.values()].map(l => l.caucho), zMin, zMax, geometrias, letrero: letreroPivote,
   };
 }
 
@@ -374,8 +380,23 @@ export function limitesCamion(zMin: number, zMax: number): { min: THREE.Vector3;
   };
 }
 
+/** Desde dónde mira la cámara isométrica: delante (z negativo, arriba en la vista cenital), a la izquierda y arriba */
+const DIRECCION_ISOMETRIA = new THREE.Vector3(-0.62, 0.62, -0.5).normalize();
+
 /**
- * Isometría: cámara en perspectiva desde delante y a un costado, con el camión completo encuadrado.
+ * Giro (radianes, eje Y) del letrero del capó para que se lea de frente desde la isometría. Con giro 0 (plano) el texto
+ * corre hacia +X y su parte superior apunta hacia -Z; con θ queda con la parte superior en (-sen θ, -cos θ).
+ */
+export function giroLetreroIsometria(): number {
+  // Dirección horizontal en la que mira la cámara (desde la cámara hacia el camión)
+  const fx = -DIRECCION_ISOMETRIA.x;
+  const fz = -DIRECCION_ISOMETRIA.z;
+  // La parte superior del texto debe apuntar lejos de la cámara: hacia fx, fz
+  return Math.atan2(-fx, -fz);
+}
+
+/**
+ * Isometría: cámara en perspectiva desde delante y a un costado, con el camión completo encuadrado y algo de margen.
  * El alejamiento sale del largo del camión y del aspecto del lienzo (en un celular el ancho manda).
  */
 export function poseIsometrica(zMin: number, zMax: number, aspecto: number): { pos: THREE.Vector3; objetivo: THREE.Vector3; fov: number; distancia: number } {
@@ -385,10 +406,9 @@ export function poseIsometrica(zMin: number, zMax: number, aspecto: number): { p
   const tanV = Math.tan(THREE.MathUtils.degToRad(CAMPO_ISOMETRIA / 2));
   const distanciaAlto = (largo * 0.4 + 0.6) / tanV;
   const distanciaAncho = 3.4 / (tanV * Math.max(aspecto, 0.2));
-  const distancia = Math.max(distanciaAlto, distanciaAncho, 9);
-  // Desde delante (z negativo, arriba en la vista cenital), a la izquierda y arriba
-  const direccion = new THREE.Vector3(-0.62, 0.62, -0.5).normalize();
-  const pos = objetivo.clone().addScaledVector(direccion, distancia);
+  // Margen extra (30 %): la unidad entera queda visible, con aire alrededor y sin cortar la cabina
+  const distancia = Math.max(distanciaAlto, distanciaAncho, 9) * 1.3;
+  const pos = objetivo.clone().addScaledVector(DIRECCION_ISOMETRIA, distancia);
   return { pos, objetivo, fov: CAMPO_ISOMETRIA, distancia };
 }
 

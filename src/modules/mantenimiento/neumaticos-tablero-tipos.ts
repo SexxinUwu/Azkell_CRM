@@ -19,6 +19,9 @@ export interface LlantaTablero {
   placa_actual: string | null;
   posicion_actual: string | null;
   remanente_mm: number | null;     // última medición conocida
+  r1?: number | null;              // franjas de la banda de la última medición (mm): R1 arriba, R2 centro, R3 abajo
+  r2?: number | null;
+  r3?: number | null;
   fecha_montaje: string | null;    // yyyy-mm-dd
   km_montaje: number | null;
   km_recorridos: number | null;

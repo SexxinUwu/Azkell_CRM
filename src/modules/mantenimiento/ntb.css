@@ -98,6 +98,10 @@
   cursor: pointer;
 }
 button.ntb-pos:disabled { opacity: 0.6; cursor: default; }
+/* Chips de las posiciones de la unidad (arriba, junto a la placa): tocar uno selecciona su llanta */
+.ntb-chips { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; flex: 1; min-width: 0; }
+button.ntb-pos { cursor: pointer; }
+.ntb-pos--activa { background: var(--accent); color: #fff; box-shadow: var(--shadow-raised); }
 .ntb-libres { display: flex; flex-direction: column; gap: var(--s-2); }
 .ntb-libres__lista { display: flex; flex-wrap: wrap; gap: 6px; }
 .ntb-montadas { display: flex; flex-direction: column; gap: var(--s-2); }
