@@ -592,7 +592,8 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                                 <small class="text-muted" style="font-size:0.75rem;">${subUni} ${subUni ? '•' : ''} Última Inspex: <b>${fechaFmt}</b></small>
                             </div>
                         </div>
-                        <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3" onclick="window.neuAbrirHistorialPlaca('${placa}')" title="Ver el historial de inspecciones de ${placa}"><i class="bi bi-clock-history"></i> Historial</button>
                             <span class="badge bg-light text-dark border rounded-pill px-3 py-1.5 fw-bold" style="font-size:0.78rem;">${llantas.length} posición(es)</span>
                         </div>
                     </div>
@@ -712,6 +713,128 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
         document.getElementById('imgPreviewNeu').src = src;
         const bsModal = bootstrap.Modal.getInstance(m) || new bootstrap.Modal(m);
         bsModal.show();
+    };
+
+    // ── Historial de inspecciones de una placa: mismo endpoint y mismas dos hojas que la pantalla de React ──
+    const neuEscHist = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const neuNum = (v, dec = 1) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? '—' : Number(v).toFixed(dec));
+    const neuKm = v => (v === null || v === undefined ? '—' : Math.round(Number(v)).toLocaleString('es-PE') + ' km');
+    const neuFecha = s => (s ? String(s).split('T')[0].split('-').reverse().join('/') : '—');
+    const neuFuente = f => (f === 'gps' ? 'GPS' : f === 'inspeccion' ? 'Inspección' : 'Sin dato');
+
+    function neuAsegurarModalHistorial() {
+        let modal = document.getElementById('neuModalHistorial');
+        if (modal) return modal;
+        modal = document.createElement('div');
+        modal.id = 'neuModalHistorial';
+        modal.className = 'modal fade';
+        modal.tabIndex = -1;
+        modal.innerHTML = `
+            <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title neu-hist-titulo fw-bold"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+                        <label class="small text-muted">Desde<input type="date" class="form-control form-control-sm" data-neu-desde></label>
+                        <label class="small text-muted">Hasta<input type="date" class="form-control form-control-sm" data-neu-hasta></label>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-neu-todo>Todo el historial</button>
+                        <button type="button" class="btn btn-sm btn-success ms-auto" data-neu-excel><i class="bi bi-file-earmark-excel"></i> Exportar Excel</button>
+                    </div>
+                    <div data-neu-contenido></div>
+                </div>
+            </div></div>`;
+        document.body.appendChild(modal);
+        const recargar = () => window.neuCargarHistorialPlaca();
+        modal.querySelector('[data-neu-desde]').addEventListener('change', recargar);
+        modal.querySelector('[data-neu-hasta]').addEventListener('change', recargar);
+        modal.querySelector('[data-neu-todo]').addEventListener('click', () => {
+            modal.querySelector('[data-neu-desde]').value = '';
+            modal.querySelector('[data-neu-hasta]').value = '';
+            recargar();
+        });
+        modal.querySelector('[data-neu-excel]').addEventListener('click', () => window.neuExportarHistorialPlaca());
+        return modal;
+    }
+
+    window.neuAbrirHistorialPlaca = function (placa) {
+        const modal = neuAsegurarModalHistorial();
+        modal.dataset.placa = placa;
+        modal.querySelector('.neu-hist-titulo').textContent = 'Historial de ' + placa;
+        modal.querySelector('[data-neu-desde]').value = '';
+        modal.querySelector('[data-neu-hasta]').value = '';
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+        window.neuCargarHistorialPlaca();
+    };
+
+    window.neuCargarHistorialPlaca = async function () {
+        const modal = document.getElementById('neuModalHistorial');
+        if (!modal) return;
+        const cont = modal.querySelector('[data-neu-contenido]');
+        const desde = modal.querySelector('[data-neu-desde]').value;
+        const hasta = modal.querySelector('[data-neu-hasta]').value;
+        const qs = new URLSearchParams();
+        if (desde) qs.set('desde', desde);
+        if (hasta) qs.set('hasta', hasta);
+        cont.innerHTML = '<div class="text-center text-muted py-4">Cargando historial…</div>';
+        try {
+            const res = await fetch(`/api/neumaticos/historial-placa/${encodeURIComponent(modal.dataset.placa)}${qs.toString() ? '?' + qs.toString() : ''}`);
+            const data = await res.json();
+            if (!res.ok || !data.ok) throw new Error(data.error || 'No se pudo cargar el historial');
+            window._neuHistorialPlaca = data.inspecciones || [];
+            if (!window._neuHistorialPlaca.length) {
+                cont.innerHTML = `<div class="text-center text-muted py-4">${desde || hasta ? 'No hay inspecciones en ese periodo.' : 'Esta placa todavía no tiene inspecciones de neumáticos.'}</div>`;
+                return;
+            }
+            cont.innerHTML = window._neuHistorialPlaca.map(i => `
+                <section class="border rounded-3 p-3 mb-3">
+                    <div class="d-flex flex-wrap gap-3 align-items-baseline mb-2">
+                        <strong>${neuFecha(i.fecha)}</strong>
+                        <span>Odómetro: ${neuKm(i.km)} <span class="text-muted">(${neuFuente(i.km_fuente)})</span></span>
+                        <span>+${neuKm(i.km_desde_anterior)} desde la anterior</span>
+                        <span>Promedio: ${neuNum(i.promedio_general)} mm</span>
+                        <span>${i.llantas_cuenta} llanta(s) · ${i.criticas} crítica(s)</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead><tr><th>Pos</th><th>Marca / modelo</th><th>Medida</th><th>R1</th><th>R2</th><th>R3</th><th>Promedio</th><th>Anterior</th><th>Δ mm</th><th>Km desde anterior</th><th>mm / 1.000 km</th><th>Estado</th></tr></thead>
+                            <tbody>${i.llantas.map(l => `
+                                <tr>
+                                    <td>${neuEscHist(l.posicion)}</td>
+                                    <td>${neuEscHist(l.marca ?? '—')} ${l.modelo ? '· ' + neuEscHist(l.modelo) : ''}</td>
+                                    <td>${neuEscHist(l.medida ?? '—')}</td>
+                                    <td>${neuNum(l.r1, 0)}</td><td>${neuNum(l.r2, 0)}</td><td>${neuNum(l.r3, 0)}</td>
+                                    <td>${neuNum(l.promedio)} mm</td>
+                                    <td>${neuNum(l.anterior_mm)} mm</td>
+                                    <td>${neuNum(l.delta_mm)}</td>
+                                    <td>${neuKm(l.km_desde_anterior)}</td>
+                                    <td>${neuNum(l.mm_por_1000km, 2)}</td>
+                                    <td>${l.alerta_cambio ? '<span class="text-danger fw-bold">Crítica</span>' : neuEscHist(l.estado ?? '—')}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>`).join('');
+        } catch (err) {
+            cont.innerHTML = `<div class="alert alert-danger mb-0">${neuEscHist(err.message)}</div>`;
+        }
+    };
+
+    window.neuExportarHistorialPlaca = async function () {
+        const data = window._neuHistorialPlaca || [];
+        const modal = document.getElementById('neuModalHistorial');
+        if (!data.length || !modal) { alert('No hay historial para exportar con las fechas elegidas.'); return; }
+        if (typeof XLSX === 'undefined') {
+            // La librería se carga aparte (igual que en el Excel de Últimas inspecciones)
+            await new Promise((ok, fallo) => { const s = document.createElement('script'); s.src = '/libs/xlsx.full.min.js'; s.onload = ok; s.onerror = fallo; document.head.appendChild(s); });
+        }
+        const placa = modal.dataset.placa;
+        const resumen = [['Fecha', 'Odómetro (km)', 'Fuente km', 'Km desde anterior', 'Llantas', 'Promedio general (mm)', 'Críticas (< 3 mm)']];
+        data.forEach(i => resumen.push([neuFecha(i.fecha), i.km, neuFuente(i.km_fuente), i.km_desde_anterior, i.llantas_cuenta, i.promedio_general, i.criticas]));
+        const detalle = [['Fecha', 'Odómetro (km)', 'Posición', 'Marca', 'Modelo', 'Medida', 'R1 (mm)', 'R2 (mm)', 'R3 (mm)', 'Promedio (mm)', 'Anterior (mm)', 'Δ mm', 'Km desde anterior', 'mm por 1.000 km', 'Presión anterior', 'Presión actual', 'Estado', 'Crítica', 'Observaciones']];
+        data.forEach(i => i.llantas.forEach(l => detalle.push([neuFecha(i.fecha), i.km, l.posicion, l.marca ?? '', l.modelo ?? '', l.medida ?? '', l.r1, l.r2, l.r3, l.promedio, l.anterior_mm, l.delta_mm, l.km_desde_anterior, l.mm_por_1000km, l.presion_ant ?? '', l.presion_actual ?? '', l.estado ?? '', l.alerta_cambio ? 'Sí' : 'No', l.observaciones ?? ''])));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Resumen');
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detalle), 'Detalle');
+        XLSX.writeFile(wb, `Historial-${placa}-${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
     window.abrirModalInspeccionNeumaticos = function(placa, idOT, km) {

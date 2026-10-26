@@ -1216,7 +1216,8 @@ module.exports = function (db, broadcast, logAudit) {
                     anterior_mm: redondear(previa ? previa.promedio : null),
                     delta_mm: redondear(deltaMm),
                     km_desde_anterior: kmDesde,
-                    mm_por_1000km: deltaMm !== null && kmDesde && kmDesde > 0 ? redondear((deltaMm / kmDesde) * 1000) : null,
+                    // Un Δ negativo es cambio o rotación de la llanta (la medición subió), no desgaste: no se calcula tasa
+                    mm_por_1000km: deltaMm !== null && deltaMm >= 0 && kmDesde && kmDesde > 0 ? redondear((deltaMm / kmDesde) * 1000) : null,
                     observaciones: f.observaciones
                 });
                 ultimaPorPosicion.set(f.posicion, { promedio, km });
