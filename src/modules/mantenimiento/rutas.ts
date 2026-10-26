@@ -86,6 +86,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'neumaticos', label: 'Últimas inspecciones', to: '/mantenimiento/neumaticos-ultimas', icon: 'Disc3', permisos: ['neumaticos.ver'] },
   },
   {
+    // Tablero de movimientos de llantas (se abre desde la pestaña Neumáticos de la placa)
+    path: 'mantenimiento/neumaticos-tablero/:placa?',
+    permisos: ['neumaticos'],
+    Page: lazy(() => import('./NeumaticosTablero').then(m => ({ default: m.NeumaticosTablero }))),
+  },
+  {
     // Ruta antigua: redirige a una de las dos pantallas para no romper enlaces
     path: 'mantenimiento/neumaticos/*',
     permisos: ['neumaticos.ver'],

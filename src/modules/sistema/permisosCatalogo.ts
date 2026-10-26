@@ -25,6 +25,7 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'MANTENIMIENTO', key: 'neumaticos', nombre: 'Neumáticos', desc: 'Control e inspección de llantas', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'neumaticos.baja', nombre: 'Neumáticos: dar de baja', desc: 'Retirar llantas a desecho (Scrap)', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'neumaticos.reencauche', nombre: 'Neumáticos: enviar a reencauche', desc: 'Retirar llantas para reencauche', lcad: true },
+  { grupo: 'MANTENIMIENTO', key: 'neumaticos.mover', nombre: 'Neumáticos: mover en unidad', desc: 'Instalar y retirar llantas de una unidad', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'incidencias_ruta', nombre: 'Incidencias en Ruta', desc: 'Reportes e incidencias de auxilio en ruta', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'otros_mant', nombre: 'Otros (Catálogos y Parámetros)', desc: 'Hub de mantenimiento, plan, KPIs y configuraciones MP', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'cfg_fleetrun', nombre: 'Configuración de Umbrales Fleetrun', desc: 'Definir umbrales de alerta preventiva por UTS', lcad: true },

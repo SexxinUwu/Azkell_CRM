@@ -1,0 +1,208 @@
+/* Tablero de movimientos de neumáticos (NeumaticosTablero.tsx) y pestaña Neumáticos de la placa (NeumaticosPlacaTab.tsx).
+   Prefijo ntb- para no chocar con otros módulos. Colores solo con tokens: el modo oscuro sale de tokens.css. */
+
+/* ── Tablero: bodega | unidad | detalle; en pantallas medianas se reacomoda; en celular se apilan ── */
+.ntb-tablero {
+  display: grid;
+  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr) minmax(260px, 320px);
+  gap: var(--s-4);
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .ntb-tablero { grid-template-columns: minmax(230px, 1fr) minmax(0, 1.4fr); }
+  .ntb-detalle { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .ntb-tablero { grid-template-columns: minmax(0, 1fr); }
+}
+
+.ntb-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+  padding: var(--s-4);
+}
+.ntb-col__cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.ntb-col__titulo { margin: 0; font-size: 1rem; font-weight: 700; color: var(--label); }
+.ntb-bodega .ntb-lista { max-height: 62vh; overflow-y: auto; padding-right: 2px; }
+.ntb-centro { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+.ntb-conteos { display: inline-flex; gap: var(--s-3); font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
+.ntb-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 26px; height: 22px; padding: 0 8px; border-radius: var(--r-full);
+  background: var(--fill); color: var(--label-2);
+  font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700;
+}
+.ntb-vacio { margin: 0; padding: var(--s-4) 0; text-align: center; font-size: 0.8125rem; color: var(--label-3); }
+.ntb-lista { display: flex; flex-direction: column; gap: 6px; }
+
+/* ── Llantas (fila) ── */
+.ntb-llanta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  min-height: 52px;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--fill-subtle);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.ntb-llanta:hover { background: var(--fill); }
+.ntb-llanta:active { background: var(--fill-strong, var(--fill)); }
+.ntb-llanta:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.ntb-llanta--activa { background: var(--accent-tint); box-shadow: inset 0 0 0 2px var(--accent); }
+/* En celular el gesto vertical es de desplazamiento: el arrastre es sobre todo con mouse; con el dedo se toca y luego el destino */
+.ntb-llanta--arrastrable { cursor: grab; touch-action: pan-y; }
+.ntb-llanta--arrastrable:active { cursor: grabbing; }
+.ntb-llanta__cuerpo { display: flex; flex-direction: column; min-width: 0; }
+.ntb-llanta__codigo { font-family: var(--font-mono); font-size: 0.875rem; font-weight: 700; color: var(--label); }
+.ntb-llanta__sub {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 0.75rem; color: var(--label-2);
+}
+.ntb-llanta__meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+/* Remanente: semáforo de tono.ts (más de 6 mm verde, 3 a 6 ámbar, menos de 3 rojo, sin dato gris) */
+.ntb-rem {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: var(--r-full);
+  font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; white-space: nowrap;
+}
+.ntb-rem--green { background: var(--green-tint); color: var(--green-ink); }
+.ntb-rem--amber { background: var(--amber-tint); color: var(--amber-ink); }
+.ntb-rem--red { background: var(--red-tint); color: var(--red-ink); }
+.ntb-rem--gray { background: var(--gray-tint); color: var(--label-2); }
+
+/* Posiciones */
+.ntb-pos {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 40px; height: 26px; padding: 0 8px; border: 0; border-radius: var(--r-sm);
+  background: var(--fill); color: var(--label);
+  font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700;
+}
+.ntb-pos--libre {
+  background: var(--blue-tint); color: var(--blue-ink);
+  box-shadow: inset 0 0 0 1px var(--blue);
+  cursor: pointer;
+}
+button.ntb-pos:disabled { opacity: 0.6; cursor: default; }
+.ntb-libres { display: flex; flex-direction: column; gap: var(--s-2); }
+.ntb-libres__lista { display: flex; flex-wrap: wrap; gap: 6px; }
+.ntb-montadas { display: flex; flex-direction: column; gap: var(--s-2); }
+.ntb-chasis { padding: var(--s-2) 0; user-select: none; -webkit-user-select: none; }
+
+/* ── Zonas de reforma y descarte ── */
+.ntb-zonas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-4); }
+@media (max-width: 760px) { .ntb-zonas { grid-template-columns: minmax(0, 1fr); } }
+.ntb-zona {
+  display: flex; flex-direction: column; gap: var(--s-2);
+  min-width: 0; padding: var(--s-4);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-card);
+  transition: box-shadow 0.15s ease, opacity 0.15s ease;
+}
+.ntb-zona--reforma { background: var(--amber-tint); }
+.ntb-zona--descarte { background: var(--red-tint); }
+.ntb-zona--sobre { box-shadow: 0 0 0 2px var(--accent), var(--shadow-card); }
+.ntb-zona--bloqueada { opacity: 0.85; }
+.ntb-zona__titulo { font-weight: 700; font-size: 0.9375rem; color: var(--label); }
+.ntb-zona__nota { display: flex; align-items: center; gap: 4px; margin: 0; font-size: 0.75rem; color: var(--label-2); }
+.ntb-zona__vacia { margin: 0; padding: var(--s-2) 0; font-size: 0.75rem; color: var(--label-3); }
+
+/* ── Banner de arrastre / toque y fantasma ── */
+.ntb-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  margin-bottom: var(--s-3); padding: var(--s-2) var(--s-2) var(--s-2) var(--s-4);
+  border-radius: var(--r-lg); background: var(--accent-tint); color: var(--accent-ink);
+  font-size: 0.875rem; font-weight: 600;
+}
+.ntb-fantasma {
+  position: fixed; z-index: 60; transform: translate(-50%, -140%);
+  pointer-events: none;
+  padding: 4px 12px; border-radius: var(--r-full);
+  background: var(--ink); color: var(--label-inverse);
+  box-shadow: var(--shadow-pop);
+  font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── Detalle ── */
+.ntb-detalle { position: sticky; top: var(--s-4); }
+@media (max-width: 1100px) { .ntb-detalle { position: static; } }
+.ntb-det__cab { display: flex; flex-direction: column; gap: 2px; }
+.ntb-det__codigo { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; color: var(--label); }
+.ntb-det__datos {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3) var(--s-4); margin: 0;
+}
+.ntb-det__datos > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ntb-det__datos dt { font-size: 0.75rem; color: var(--label-2); }
+.ntb-det__datos dd { margin: 0; font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere; }
+.ntb-det__acciones { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.ntb-det__ayuda { margin: 0; font-size: 0.8125rem; color: var(--label-2); }
+.ntb-det__subtitulo { margin: var(--s-2) 0 0; font-size: 0.875rem; font-weight: 700; color: var(--label); }
+
+/* Línea de tiempo */
+.ntb-linea { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.ntb-linea__evento {
+  position: relative;
+  display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: var(--s-3);
+  padding-bottom: var(--s-4);
+}
+.ntb-linea__evento::before {
+  content: ''; position: absolute; left: 6px; top: 16px; bottom: 0; width: 2px;
+  background: var(--separator);
+}
+.ntb-linea__evento:last-child { padding-bottom: 0; }
+.ntb-linea__evento:last-child::before { display: none; }
+.ntb-linea__punto {
+  width: 12px; height: 12px; margin-top: 4px; border-radius: 50%;
+  background: var(--label-3); box-shadow: 0 0 0 3px var(--surface);
+}
+.ntb-linea__punto--green { background: var(--green-ink); }
+.ntb-linea__punto--amber { background: var(--amber-ink); }
+.ntb-linea__punto--red { background: var(--red-ink); }
+.ntb-linea__punto--blue { background: var(--blue-ink); }
+.ntb-linea__cuerpo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ntb-linea__titulo { font-size: 0.875rem; font-weight: 700; color: var(--label); }
+.ntb-linea__detalle { font-size: 0.8125rem; color: var(--label-2); overflow-wrap: anywhere; }
+.ntb-linea__meta { font-family: var(--font-mono); font-size: 0.75rem; color: var(--label-3); overflow-wrap: anywhere; }
+
+/* ── Hoja de confirmación ── */
+.ntb-hoja { display: flex; flex-direction: column; gap: var(--s-4); }
+.ntb-resumen {
+  display: flex; flex-direction: column; gap: var(--s-2);
+  padding: var(--s-3) var(--s-4); border-radius: var(--r-lg);
+  background: var(--fill-subtle); font-size: 0.9375rem;
+}
+.ntb-resumen p { margin: 0; }
+.ntb-hoja__nota { font-size: 0.8125rem; color: var(--label-2); }
+
+/* ── Pestaña Neumáticos de la placa ── */
+.ntb-placa { display: flex; flex-direction: column; gap: var(--s-4); }
+.ntb-cifras { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s-2); }
+@media (max-width: 760px) { .ntb-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ntb-cifra {
+  display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  padding: var(--s-3); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-card);
+}
+.ntb-cifra--accent { background: var(--accent-tint); }
+.ntb-cifra--green { background: var(--green-tint); }
+.ntb-cifra--amber { background: var(--amber-tint); }
+.ntb-cifra--red { background: var(--red-tint); }
+.ntb-cifra__valor { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 800; color: var(--label); }
+.ntb-cifra__etiqueta { font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
+.ntb-placa__cuerpo {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--s-4); align-items: start;
+}
+@media (max-width: 760px) { .ntb-placa__cuerpo { grid-template-columns: minmax(0, 1fr); } }

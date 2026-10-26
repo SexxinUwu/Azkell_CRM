@@ -151,6 +151,10 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/almacen/configuracion')) mod = ['inv', 'ent_inv', 'sal_inv', 'cfg_almacen'];
 
     // MANTENIMIENTO Y OPERACIONES
+    // Movimientos de llantas: la regla global pide cualquiera de sus permisos; cada endpoint exige el suyo exacto
+    else if (path.startsWith('/neumaticos') && /\/(instalar|retirar|retorno-reencauche)$/.test(path)) {
+        mod = ['neumaticos.mover', 'neumaticos.reencauche', 'neumaticos.baja'];
+    }
     else if (path.startsWith('/neumaticos') || path.includes('neumaticos')) {
         mod = ['neumaticos', 'insp', 'ot', 'fleetrun'];
     }

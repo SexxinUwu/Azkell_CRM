@@ -1,21 +1,85 @@
-import { useRef, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight, History, Pencil, Trash2 } from 'lucide-react';
+import { ArrowUpRight, History, Pencil, Printer, Trash2 } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { spring } from '../../core/lib/motion';
+import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
+import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { useToast } from '../../core/ui/Toast';
 import { useHistorial, type Placa } from './api';
 import { formatRelative } from '../../core/lib/format';
+import { NeumaticosPlacaTab } from '../mantenimiento/NeumaticosPlacaTab';
+import { NeumaticosHistorialPlaca } from '../mantenimiento/NeumaticosHistorialPlaca';
+import { PERMISO_VER_NEUMATICOS } from '../mantenimiento/neumaticos-tablero-tipos';
+import { PlfTabs, type TabFicha } from './PlfTabs';
+import { PlfInspecciones } from './PlfInspecciones';
+import './plf.css';
 
-// Ficha de una unidad: placa grande y datos agrupados. Solo consulta.
+// Ficha de una unidad: placa grande, pestañas y datos agrupados. Solo consulta.
+// Pestañas: Visión general (datos de la unidad), Neumáticos (tablero de llantas) e Inspecciones.
+// La pestaña activa va en la URL (?tab=) para enlazarla y recargarla.
 export function PlacaFicha({ placa, onClose, onEditar, onEliminar }: { placa: Placa | null; onClose: () => void; onEditar?: (p: Placa) => void; onEliminar?: (p: Placa) => void }) {
   // Se conserva la última placa mientras la hoja se cierra (anima con su contenido)
   const ultima = useRef<Placa | null>(null);
   if (placa) ultima.current = placa;
   const p = placa ?? ultima.current;
   const reduce = useReducedMotion();
+  const { can } = useAuth();
+  const toast = useToast();
+  const [params, setParams] = useSearchParams();
+  const [historialAbierto, setHistorialAbierto] = useState(false);
+  const [imprimiendo, setImprimiendo] = useState(false);
+
+  // Neumáticos e inspecciones de neumáticos solo con permiso de ver neumáticos
+  const puedeVerNeumaticos = can(PERMISO_VER_NEUMATICOS);
+  const tabs: Array<{ id: TabFicha; label: string }> = puedeVerNeumaticos
+    ? [{ id: 'general', label: 'Visión general' }, { id: 'neumaticos', label: 'Neumáticos' }, { id: 'inspecciones', label: 'Inspecciones' }]
+    : [{ id: 'general', label: 'Visión general' }];
+  const pedida = params.get('tab');
+  const tab: TabFicha = tabs.some(t => t.id === pedida) ? (pedida as TabFicha) : 'general';
+
+  function cambiarTab(id: TabFicha) {
+    const siguiente = new URLSearchParams(params);
+    siguiente.set('tab', id);
+    setParams(siguiente, { replace: true });
+  }
+
+  // Abre el mapa de llantas (PDF generado en el servidor) en una pestaña nueva
+  async function imprimirMapa(placaNombre: string) {
+    if (imprimiendo) return;
+    // La pestaña se abre dentro del gesto del usuario, antes del fetch, para que el navegador no la bloquee
+    const ventana = window.open('', '_blank');
+    if (!ventana) {
+      toast('Permite las ventanas emergentes para ver el mapa.', 'error');
+      return;
+    }
+    setImprimiendo(true);
+    try {
+      let res: Response;
+      try {
+        res = await fetch(`/api/neumaticos/mapa-pdf/${encodeURIComponent(placaNombre)}`, { credentials: 'include' });
+      } catch {
+        throw new Error('No hay conexión con el servidor.');
+      }
+      if (!res.ok) {
+        const cuerpo = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(cuerpo?.error || `No se pudo generar el mapa (HTTP ${res.status}).`);
+      }
+      const url = URL.createObjectURL(await res.blob());
+      ventana.location.href = url;
+      window.setTimeout(() => URL.revokeObjectURL(url), 5 * 60_000);
+      haptic('success');
+    } catch (err) {
+      ventana.close();
+      toast(err instanceof Error ? err.message : 'No se pudo abrir el mapa.', 'error');
+    } finally {
+      setImprimiendo(false);
+    }
+  }
 
   const seccion = (i: number) => ({
     initial: { opacity: 0, y: reduce ? 0 : 10 },
@@ -56,50 +120,77 @@ export function PlacaFicha({ placa, onClose, onEditar, onEliminar }: { placa: Pl
             </div>
           </motion.div>
 
-          <motion.div {...seccion(0)}>
-            <Grupo titulo="General">
-              <Dato label="Cliente" value={p.cliente} />
-              <Dato label="RUC / DNI" value={p.ruc} mono />
-              <Dato label="Año" value={p.anio} />
-              <Dato label="Color" value={p.color} />
-              <Dato label="Sub tipo" value={p.subTipo} />
-            </Grupo>
-          </motion.div>
+          {puedeVerNeumaticos && <PlfTabs tabs={tabs} value={tab} onChange={cambiarTab} />}
 
-          <motion.div {...seccion(1)}>
-            <Grupo titulo="Técnico">
-              <Dato label="Modelo de motor" value={p.modeloMotor} />
-              <Dato label="N.º de motor" value={p.nroMotor} mono />
-              <Dato label="N.º de caja" value={p.nroCaja} mono />
-              <Dato label="N.º de corona" value={p.nroCorona} mono />
-              <Dato label="VIN" value={p.vin} mono />
-              <Dato label="Llantas" value={p.llantas} />
-            </Grupo>
-          </motion.div>
+          <div className="plf-panel" role="tabpanel" id={`plf-panel-${tab}`} aria-labelledby={`plf-tab-${tab}`}>
+            {tab === 'general' && (
+              <>
+                <motion.div {...seccion(0)}>
+                  <Grupo titulo="General">
+                    <Dato label="Cliente" value={p.cliente} />
+                    <Dato label="RUC / DNI" value={p.ruc} mono />
+                    <Dato label="Año" value={p.anio} />
+                    <Dato label="Color" value={p.color} />
+                    <Dato label="Sub tipo" value={p.subTipo} />
+                  </Grupo>
+                </motion.div>
 
-          <motion.div {...seccion(2)}>
-            <Grupo titulo="Capacidad">
-              <Dato label="Combustible" value={p.combustible} />
-              <Dato label="Tanques" value={[p.tanque1, p.tanque2, p.tanque3].filter(Boolean).join(' · ')} />
-              <Dato label="Capacidad total" value={p.capacidadTanque} />
-              <Dato label="Carga útil" value={p.cargaUtil} />
-              <Dato label="Peso neto" value={p.pesoNeto} />
-              <Dato label="Peso bruto" value={p.pesoBruto} />
-              <Dato label="Tara" value={p.tara} />
-            </Grupo>
-          </motion.div>
+                <motion.div {...seccion(1)}>
+                  <Grupo titulo="Técnico">
+                    <Dato label="Modelo de motor" value={p.modeloMotor} />
+                    <Dato label="N.º de motor" value={p.nroMotor} mono />
+                    <Dato label="N.º de caja" value={p.nroCaja} mono />
+                    <Dato label="N.º de corona" value={p.nroCorona} mono />
+                    <Dato label="VIN" value={p.vin} mono />
+                    <Dato label="Llantas" value={p.llantas} />
+                  </Grupo>
+                </motion.div>
 
-          <motion.div {...seccion(3)}>
-            <Grupo titulo="Operación">
-              <Dato label="En uso" value={p.enUso ? 'Sí' : 'No'} />
-              <Dato label="UTS" value={p.uts} />
-              <Dato label="Unidad en Wialon (GPS)" value={p.wialon} />
-            </Grupo>
-          </motion.div>
+                <motion.div {...seccion(2)}>
+                  <Grupo titulo="Capacidad">
+                    <Dato label="Combustible" value={p.combustible} />
+                    <Dato label="Tanques" value={[p.tanque1, p.tanque2, p.tanque3].filter(Boolean).join(' · ')} />
+                    <Dato label="Capacidad total" value={p.capacidadTanque} />
+                    <Dato label="Carga útil" value={p.cargaUtil} />
+                    <Dato label="Peso neto" value={p.pesoNeto} />
+                    <Dato label="Peso bruto" value={p.pesoBruto} />
+                    <Dato label="Tara" value={p.tara} />
+                  </Grupo>
+                </motion.div>
 
-          <motion.div {...seccion(4)}>
-            <Historial placa={placa ? p.placa : null} />
-          </motion.div>
+                <motion.div {...seccion(3)}>
+                  <Grupo titulo="Operación">
+                    <Dato label="En uso" value={p.enUso ? 'Sí' : 'No'} />
+                    <Dato label="UTS" value={p.uts} />
+                    <Dato label="Unidad en Wialon (GPS)" value={p.wialon} />
+                  </Grupo>
+                </motion.div>
+
+                <motion.div {...seccion(4)}>
+                  <Historial placa={placa ? p.placa : null} />
+                </motion.div>
+              </>
+            )}
+
+            {tab === 'neumaticos' && puedeVerNeumaticos && (
+              <>
+                <div className="plf-barra">
+                  <Button variant="secondary" size="sm" icon={<Printer size={16} />} loading={imprimiendo} onClick={() => imprimirMapa(p.placa)}>
+                    Imprimir mapa
+                  </Button>
+                </div>
+                <NeumaticosPlacaTab placa={p.placa} />
+              </>
+            )}
+
+            {tab === 'inspecciones' && puedeVerNeumaticos && (
+              <PlfInspecciones placa={p.placa} onVerHistorial={() => setHistorialAbierto(true)} />
+            )}
+          </div>
+
+          {puedeVerNeumaticos && (
+            <NeumaticosHistorialPlaca placa={p.placa} open={historialAbierto} onClose={() => setHistorialAbierto(false)} />
+          )}
         </div>
       )}
     </Sheet>

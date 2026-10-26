@@ -11,11 +11,18 @@
 // - neumaticos_movimientos: kardex de la llanta. Cada cambio de estado deja una fila.
 
 const express = require('express');
+const { htmlAPdf } = require('../services/ot_pdf');
+const { htmlMapaPosiciones } = require('../services/neumaticos_mapa_pdf');
 
 // Almacenes del ciclo de vida
 const ALMACEN = { NUEVAS: 100, REENCAUCHE: 1142, REPARADAS: 1144, SCRAP: 1148 };
 const ALMACENES_ALTA = [ALMACEN.NUEVAS, ALMACEN.REENCAUCHE, ALMACEN.REPARADAS];
 const ALMACENES_INSTALAR = [ALMACEN.NUEVAS, ALMACEN.REENCAUCHE, ALMACEN.REPARADAS];
+const NOMBRE_ALMACEN = { 100: 'Nuevas', 1142: 'Reencauche', 1144: 'Reparadas', 1148: 'Scrap' };
+
+// Permisos del catálogo (src/modules/sistema/permisosCatalogo.ts)
+const PERMISO_VER = 'neumaticos';
+const PERMISO_MOVER = 'neumaticos.mover';
 
 // Vida del neumático: R0 nueva; cada reencauche sube un nivel; R3 no admite más
 const VIDAS = ['R0', 'R1', 'R2', 'R3'];
@@ -267,6 +274,7 @@ module.exports = function (db) {
     // ============================================================
     router.post('/instalar', async (req, res) => {
         try {
+            if (!tienePermiso(req, PERMISO_MOVER, 'c')) throw aviso(403, `Sin permiso (${PERMISO_MOVER}) para instalar llantas`);
             const b = req.body || {};
             const codigo = mayus(b.codigo);
             const placa = mayus(b.placa);
@@ -280,6 +288,10 @@ module.exports = function (db) {
                 const almacenPrevio = llanta.almacen_id == null ? null : Number(llanta.almacen_id);
                 if (!ALMACENES_INSTALAR.includes(almacenPrevio)) {
                     throw aviso(409, 'La llanta no está en un almacén disponible (Nuevas 100, Reencauche 1142 o Reparadas 1144)');
+                }
+                // Una llanta enviada a reencauche también queda en el almacén 1142, pero está fuera del taller
+                if (llanta.estado_ciclo === ESTADO.EN_REENCAUCHE.ciclo) {
+                    throw aviso(409, 'La llanta está en reencauche y no se puede instalar hasta que regrese');
                 }
 
                 const [montada] = await conn.query(
@@ -323,6 +335,7 @@ module.exports = function (db) {
     // ============================================================
     router.post('/retirar', async (req, res) => {
         try {
+            if (!tienePermiso(req, PERMISO_MOVER, 'c')) throw aviso(403, `Sin permiso (${PERMISO_MOVER}) para retirar llantas`);
             const b = req.body || {};
             const codigo = mayus(b.codigo);
             const placa = mayus(b.placa);
@@ -402,6 +415,7 @@ module.exports = function (db) {
     // ============================================================
     router.post('/retorno-reencauche', async (req, res) => {
         try {
+            if (!tienePermiso(req, 'neumaticos.reencauche', 'c')) throw aviso(403, 'Sin permiso (neumaticos.reencauche) para registrar el retorno de reencauche');
             const b = req.body || {};
             const codigo = mayus(b.codigo);
             if (!codigo) throw aviso(400, 'El código de la llanta es obligatorio');
@@ -473,6 +487,238 @@ module.exports = function (db) {
         try {
             const [filas] = await pool(req).query(`${SQL_LLANTAS} ORDER BY codigo`);
             res.json({ ok: true, data: filas.map(filaLlanta) });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
+    // ============================================================
+    // 8. TABLERO DE LA UNIDAD, LÍNEA DE TIEMPO Y MAPA IMPRIMIBLE (solo lectura)
+    // ============================================================
+
+    // Último odómetro GPS de la unidad (km_snapshots); null si no hay lectura
+    async function kmActualPlaca(p, placa) {
+        const norma = placa.replace(/[-\s]/g, '').toUpperCase();
+        const [filas] = await p.query(
+            `SELECT km_gps FROM km_snapshots
+             WHERE UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ? AND km_gps > 0
+             ORDER BY fecha DESC LIMIT 1`,
+            [norma]);
+        return filas.length ? Number(filas[0].km_gps) : null;
+    }
+
+    // Última medición por llanta y por llanta+posición (la primera fila de cada clave es la más reciente)
+    async function ultimasMediciones(p, ids) {
+        const porLlanta = new Map();
+        const porLlantaPos = new Map();
+        if (!ids.length) return { porLlanta, porLlantaPos };
+        const [filas] = await p.query(
+            `SELECT d.id_neumatico, d.posicion, d.r2, d.remanente_promedio
+             FROM neumaticos_inspecciones_det d
+             INNER JOIN neumaticos_inspecciones i ON d.id_inspeccion COLLATE utf8mb4_general_ci = i.id_inspeccion COLLATE utf8mb4_general_ci
+             WHERE d.id_neumatico IN (?)
+             ORDER BY i.fecha_inspeccion DESC, i.created_at DESC, d.id DESC`,
+            [ids]);
+        for (const f of filas) {
+            const medicion = {
+                remanente: f.remanente_promedio == null ? null : Number(f.remanente_promedio),
+                surco_central: f.r2 == null ? null : Number(f.r2),   // r2 = surco central (r1 y r3 son los laterales)
+            };
+            if (!porLlanta.has(f.id_neumatico)) porLlanta.set(f.id_neumatico, medicion);
+            const clave = `${f.id_neumatico}|${f.posicion}`;
+            if (!porLlantaPos.has(clave)) porLlantaPos.set(clave, medicion);
+        }
+        return { porLlanta, porLlantaPos };
+    }
+
+    // Vida en número (R0 = 0 ... R3 = 3); null si no es una vida conocida
+    function vidaNumero(vida) {
+        const i = VIDAS.indexOf(String(vida || '').toUpperCase());
+        return i < 0 ? null : i;
+    }
+
+    // Km recorridos por la llanta en la unidad: km actual de la placa menos el km de montaje
+    function kmRecorridos(kmActual, kmMontaje) {
+        if (kmActual == null || kmMontaje == null) return null;
+        return kmActual >= kmMontaje ? kmActual - kmMontaje : null;
+    }
+
+    // Arma el tablero de una placa. Devuelve el contrato TableroPlaca y el detalle del croquis (con surco central).
+    async function cargarTablero(p, placa) {
+        const [montadas] = await p.query(
+            `SELECT i.placa, i.posicion, i.km_in, DATE_FORMAT(i.fecha_in, '%Y-%m-%d') AS fecha_in,
+                    h.id_neumatico, COALESCE(h.codigo_llanta, h.id_neumatico) AS codigo,
+                    h.marca, h.modelo, h.medida, h.vida
+             FROM neumaticos_instalaciones i
+             INNER JOIN neumaticos_hoja_vida h ON h.id_neumatico = i.id_neumatico
+             WHERE i.fecha_out IS NULL AND UPPER(TRIM(i.placa)) = ?
+             ORDER BY CAST(i.posicion AS UNSIGNED), i.posicion`,
+            [placa]);
+
+        const [enStock] = await p.query(
+            `SELECT h.id_neumatico, COALESCE(h.codigo_llanta, h.id_neumatico) AS codigo,
+                    h.marca, h.modelo, h.medida, h.vida, h.estado_ciclo, h.almacen_id
+             FROM neumaticos_hoja_vida h
+             WHERE h.estado_ciclo IN ('en_almacen', 'en_reencauche', 'desechado')
+             ORDER BY codigo`);
+
+        const [configRows] = await p.query(
+            'SELECT configuracion FROM placas WHERE UPPER(TRIM(placa)) = ? LIMIT 1',
+            [placa]);
+        const configuracion = configRows.length ? (txt(configRows[0].configuracion) || null) : null;
+
+        const ids = [...new Set([...montadas, ...enStock].map(f => f.id_neumatico))];
+        const { porLlanta, porLlantaPos } = await ultimasMediciones(p, ids);
+        const kmActual = montadas.length ? await kmActualPlaca(p, placa) : null;
+
+        const detalleMontadas = montadas.map(m => {
+            const medicion = porLlantaPos.get(`${m.id_neumatico}|${m.posicion}`) || porLlanta.get(m.id_neumatico) || null;
+            const kmMontaje = Number(m.km_in) || 0;
+            return {
+                posicion: m.posicion,
+                surco_central: medicion ? medicion.surco_central : null,
+                llanta: {
+                    codigo: m.codigo,
+                    marca: m.marca || null,
+                    modelo: m.modelo || null,
+                    medida: m.medida || null,
+                    vida: vidaNumero(m.vida),
+                    estado_ciclo: 'en_unidad',
+                    almacen: null,
+                    placa_actual: m.placa,
+                    posicion_actual: m.posicion,
+                    remanente_mm: medicion ? medicion.remanente : null,
+                    fecha_montaje: m.fecha_in,
+                    km_montaje: kmMontaje,
+                    km_recorridos: kmRecorridos(kmActual, kmMontaje),
+                },
+            };
+        });
+
+        // Llanta fuera de la unidad (almacén, reencauche o desecho)
+        const aLlanta = (f) => {
+            const medicion = porLlanta.get(f.id_neumatico) || null;
+            return {
+                codigo: f.codigo,
+                marca: f.marca || null,
+                modelo: f.modelo || null,
+                medida: f.medida || null,
+                vida: vidaNumero(f.vida),
+                estado_ciclo: f.estado_ciclo,
+                almacen: NOMBRE_ALMACEN[Number(f.almacen_id)] || null,
+                placa_actual: null,
+                posicion_actual: null,
+                remanente_mm: medicion ? medicion.remanente : null,
+                fecha_montaje: null,
+                km_montaje: null,
+                km_recorridos: null,
+            };
+        };
+
+        const tablero = {
+            ok: true,
+            placa,
+            configuracion,
+            posiciones: detalleMontadas.map(({ posicion, llanta }) => ({ posicion, llanta })),
+            disponibles: enStock
+                .filter(f => f.estado_ciclo === 'en_almacen' && ALMACENES_INSTALAR.includes(Number(f.almacen_id)))
+                .map(aLlanta),
+            reforma: enStock.filter(f => f.estado_ciclo === 'en_reencauche').map(aLlanta),
+            descarte: enStock.filter(f => f.estado_ciclo === 'desechado').map(aLlanta),
+        };
+        return { tablero, croquis: detalleMontadas };
+    }
+
+    // Convierte una fila de neumaticos_movimientos al contrato EventoLlanta
+    function eventoLlanta(r) {
+        const origen = NOMBRE_ALMACEN[Number(r.almacen_origen_id)] || null;
+        const destino = NOMBRE_ALMACEN[Number(r.almacen_destino_id)] || null;
+        const lugar = r.placa ? `${r.placa}${r.posicion ? ` posición ${r.posicion}` : ''}` : null;
+        let detalle;
+        switch (r.tipo) {
+            case MOV.ALTA: detalle = `Alta en almacén ${destino || '—'}`; break;
+            case MOV.INSTALACION: detalle = `Montada en ${lugar || 'la unidad'}`; break;
+            case MOV.RETIRO_DESECHO: detalle = `Retirada de ${lugar || 'la unidad'}; enviada a desecho (Scrap)`; break;
+            case MOV.RETIRO_REENCAUCHE: detalle = `Retirada de ${lugar || 'la unidad'}; enviada a reencauche`; break;
+            case MOV.RETORNO_REENCAUCHE: detalle = `Regresó de reencauche a ${destino || 'almacén'}`; break;
+            default: detalle = String(r.tipo);
+        }
+        if (r.observacion) detalle += `. ${r.observacion}`;
+        return {
+            id: r.id,
+            fecha: r.fecha,
+            tipo: r.tipo,
+            detalle,
+            origen,
+            destino,
+            placa: r.placa || null,
+            posicion: r.posicion || null,
+            km: r.km == null ? null : Number(r.km),
+            usuario: r.usuario || null,
+        };
+    }
+
+    // GET /api/neumaticos/tablero/:placa -> TableroPlaca
+    router.get('/tablero/:placa', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            const placa = mayus(req.params.placa);
+            if (!placa) throw aviso(400, 'La placa es obligatoria');
+            const { tablero } = await cargarTablero(pool(req), placa);
+            res.json(tablero);
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
+    // GET /api/neumaticos/linea-tiempo/:codigo -> LineaTiempoLlanta (más reciente primero)
+    router.get('/linea-tiempo/:codigo', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            const p = pool(req);
+            const buscado = mayus(req.params.codigo);
+            const [llantas] = await p.query(
+                `SELECT id_neumatico, COALESCE(codigo_llanta, id_neumatico) AS codigo
+                 FROM neumaticos_hoja_vida WHERE codigo_llanta = ? OR id_neumatico = ? LIMIT 1`,
+                [buscado, buscado]);
+            if (!llantas.length) throw aviso(404, 'Llanta no encontrada');
+
+            const [filas] = await p.query(
+                `SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i') AS fecha, tipo, almacen_origen_id, almacen_destino_id,
+                        placa, posicion, km, usuario, observacion
+                 FROM neumaticos_movimientos
+                 WHERE id_neumatico = ?
+                 ORDER BY fecha DESC, id DESC`,
+                [llantas[0].id_neumatico]);
+            res.json({ ok: true, codigo: llantas[0].codigo, eventos: filas.map(eventoLlanta) });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
+    // GET /api/neumaticos/mapa-pdf/:placa -> PDF "Posición de los neumáticos en el vehículo {placa}" (solo lectura)
+    router.get('/mapa-pdf/:placa', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            const placa = mayus(req.params.placa);
+            if (!placa) throw aviso(400, 'La placa es obligatoria');
+            const { croquis } = await cargarTablero(pool(req), placa);
+            const posiciones = croquis.map(c => ({
+                posicion: c.posicion,
+                codigo: c.llanta.codigo,
+                vida: c.llanta.vida == null ? null : VIDAS[c.llanta.vida],
+                fecha_montaje: c.llanta.fecha_montaje,
+                km_recorridos: c.llanta.km_recorridos,
+                surco_central: c.surco_central,
+            }));
+            const html = htmlMapaPosiciones({ placa, fechaImpresion: hoyLima(), posiciones });
+            const pdf = await htmlAPdf(html, `Posición de los neumáticos en el vehículo ${placa}`);
+            const nombre = placa.replace(/[^A-Z0-9]+/g, '-');
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `inline; filename="posicion-neumaticos-${nombre}.pdf"`,
+            });
+            res.send(Buffer.from(pdf));
         } catch (err) {
             responder(res, err);
         }
