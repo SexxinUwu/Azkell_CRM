@@ -19,13 +19,23 @@ import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
 import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import { ejecutarAccionOT, eliminarOT, otDetalles, otFecha, otId, otTipo, useOrdenesTrabajoData, type AccionOT, type OrdenTrabajo } from './api';
+import { ejecutarAccionOT, eliminarOT, otDetalles, otFecha, otId, otTipo, useOrdenesTrabajoData, type AccionOT, type DetallesOT, type OrdenTrabajo } from './api';
 import { ETIQUETA_ACCION, OTDetalle } from './OTDetalle';
 import { exportarReportesOT } from './exportarOT';
 import { abrirPdfReportesOT } from './exportarPDFOT';
 import { LogoArchivo } from './NeumaticosRequerimiento';
 
 // ─── Tipos adicionales ────────────────────────────────────────────────────────
+
+/** Kilometraje o horas de motor de la OT, igual que la pantalla clásica: si tiene horas de motor, se muestran en hrs */
+function kmOHoras(det: DetallesOT): string {
+  if (det.horas_motor) {
+    const h = Number(det.horas_motor);
+    return `${isNaN(h) ? String(det.horas_motor) : h.toLocaleString('es-PE')} hrs`;
+  }
+  const km = Number(det.km_ingreso ?? det.km ?? 0);
+  return km > 0 ? `${km.toLocaleString('es-PE')} km` : '—';
+}
 
 interface BacklogItem {
   id: number;
@@ -384,7 +394,6 @@ export function OrdenesTrabajoPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {visibles.map(o => {
                       const det = otDetalles(o);
-                      const km = Number(det.km_ingreso ?? det.km ?? 0);
                       const obs = String(det.motivo ?? o.observaciones ?? '')
                         .replace(/\[[^\]]*\]\s*/g, '')
                         .replace(/•\s*/g, '')
@@ -402,7 +411,7 @@ export function OrdenesTrabajoPage() {
                             <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--green-ink)' }}>{formatSoles(Number(o.costo_total_pen ?? o.costo_total ?? 0) || 0)}</span>
                           </div>
                           <div style={{ fontSize: 12, color: 'var(--label-2)' }}>
-                            {otTipo(o)}{km > 0 ? ` · ${km.toLocaleString('es-PE')} km` : ''}
+                            {otTipo(o)}{kmOHoras(det) !== '—' ? ` · ${kmOHoras(det)}` : ''}
                           </div>
                           {obs && <div style={{ fontSize: 13, color: 'var(--label)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{obs}</div>}
                           <div onClick={e => e.stopPropagation()} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -425,7 +434,6 @@ export function OrdenesTrabajoPage() {
                     <tbody>
                       {visibles.map(o => {
                         const det = otDetalles(o);
-                        const km = Number(det.km_ingreso ?? det.km ?? 0);
                         const obs = String(det.motivo ?? o.observaciones ?? '')
                           .replace(/\[[^\]]*\]\s*/g, '')
                           .replace(/•\s*/g, '')
@@ -439,7 +447,7 @@ export function OrdenesTrabajoPage() {
                             <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>{otId(o)}{o.reporte_desvinculado && <> <Badge tone="amber">Reporte desvinculado</Badge></>}</td>
                             <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', color: 'var(--label-2)' }}>{otFecha(o)}</td>
                             <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{o.placa}</td>
-                            <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{km > 0 ? km.toLocaleString('es-PE') + ' km' : '—'}</td>
+                            <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{kmOHoras(det)}</td>
                             <td style={{ fontWeight: 600 }}>{otTipo(o)}</td>
                             <td style={{ fontSize: '0.8125rem' }}>{String(det.supervisor ?? o.supervisor ?? '—')}</td>
                             <td style={{ fontSize: '0.8125rem' }}>{String(o.situacion ?? '—')}</td>
