@@ -4,6 +4,7 @@
 // esquema SVG, para que ambas vistas nombren las mismas llantas.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
 import { remanenteDe, type LlantaDato } from './NeumaticosEsquema';
 import { tonoMm, type Tono } from './neumaticosSemaforo';
@@ -219,7 +220,7 @@ function bandasDe(dato: LlantaDato, mm: number | null): (number | null)[] {
 
 /** Neumático: el radio se reduce en los hombros (redondeo) y en la banda según el desgaste de cada franja */
 function geometriaLlanta(bandas: (number | null)[]): THREE.CylinderGeometry {
-  const geo = new THREE.CylinderGeometry(RADIO_LLANTA, RADIO_LLANTA, ANCHO_LLANTA, 48, 10, false);
+  const geo = new THREE.CylinderGeometry(RADIO_LLANTA, RADIO_LLANTA, ANCHO_LLANTA, 72, 14, false);
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     const t = pos.getY(i) / ANCHO_LLANTA + 0.5; // 0 abajo, 1 arriba (R1)
@@ -341,11 +342,11 @@ export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, 
     // Tanques de combustible entre la cabina y los ejes traseros
     for (const x of [-1.05, 1.05]) malla(new THREE.CylinderGeometry(0.32, 0.32, 1.6, 18), rec.acero, x, 0.75, delantero + 2.0, Math.PI / 2);
     // Cabina, capó, parrilla, parabrisas, defensa y espejos, con las posiciones del clásico
-    malla(new THREE.BoxGeometry(2.3, 2.4, 2.6), rec.pintura, 0, 1.9, delantero - 0.4);
-    malla(new THREE.BoxGeometry(2.2, 1.3, 1.5), rec.pintura, 0, 1.35, delantero - 1.9);
+    malla(new RoundedBoxGeometry(2.3, 2.4, 2.6, 8, 0.32), rec.pintura, 0, 1.9, delantero - 0.4);
+    malla(new RoundedBoxGeometry(2.2, 1.3, 1.5, 8, 0.3), rec.pintura, 0, 1.35, delantero - 1.9);
     malla(new THREE.BoxGeometry(1.8, 1.0, 0.1), rec.cromo, 0, 1.25, delantero - 2.66);
     malla(new THREE.BoxGeometry(2.1, 0.9, 0.1), rec.vidrio, 0, 2.35, delantero - 1.7, -0.2);
-    malla(new THREE.BoxGeometry(2.4, 0.45, 0.3), rec.cromo, 0, 0.6, delantero - 2.65);
+    malla(new RoundedBoxGeometry(2.4, 0.45, 0.3, 6, 0.14), rec.cromo, 0, 0.6, delantero - 2.65);
     for (const x of [-1.25, 1.25]) malla(new THREE.BoxGeometry(0.12, 0.5, 0.12), rec.cromo, x, 2.0, delantero - 1.8);
     // Letrero de la marca sobre el capó (su cara superior: la parte delantera queda arriba en la vista cenital).
     // El capó termina en y = 2.0; la parte de atrás del capó queda dentro de la cabina, por eso el letrero va adelante.
