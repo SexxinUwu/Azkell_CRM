@@ -428,37 +428,36 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
-    // Importación masiva desde Excel
+    // Importación masiva desde Excel. Una fila por ruta, sentido, motor y configuración: si esa clave ya existe
+    // se sobrescribe con lo subido, y si quedaron duplicados activos de esa clave se desactivan (se conserva el más reciente).
     router.post('/matriz/importar', async (req, res) => {
         try {
             const tdb = getDb(req);
             const items = req.body && Array.isArray(req.body.items) ? req.body.items : (Array.isArray(req.body) ? req.body : []);
             const limpiarExistentes = req.body && req.body.limpiar_existentes === true;
 
-            if (limpiarExistentes) {
-                await tdb.query("TRUNCATE TABLE combustible_matriz_d2");
-            }
-
             if (!items.length) {
                 return res.status(400).json({ ok: false, error: 'No se enviaron filas para importar.' });
             }
 
-            let insertados = 0;
+            const parseNum = (val) => {
+                if (val === null || val === undefined) return 0;
+                if (typeof val === 'number') return isNaN(val) ? 0 : val;
+                const clean = String(val).replace(/[^0-9.,-]/g, '').replace(',', '.');
+                const n = parseFloat(clean);
+                return isNaN(n) ? 0 : n;
+            };
+
+            // Filas del archivo normalizadas. Si una ruta viene repetida dentro del mismo archivo, gana la última.
+            const porClave = new Map();
             for (const it of items) {
                 const ruta = String(it.ruta || it.RUTA || '').trim().toUpperCase();
                 if (!ruta) continue;
 
-                const sentido = String(it.sentido || it.SENTIDO || 'IDA').trim().toUpperCase();
+                let sentido = String(it.sentido || it.SENTIDO || 'IDA').trim().toUpperCase();
+                if (sentido === 'REGRESO') sentido = 'RETORNO';
                 const motor = String(it.motor || it.MOTOR || 'MC11.44').trim().toUpperCase();
                 const confg = String(it.confg || it.CONFG || it.configuracion || 'T3').trim().toUpperCase();
-
-                const parseNum = (val) => {
-                    if (val === null || val === undefined) return 0;
-                    if (typeof val === 'number') return isNaN(val) ? 0 : val;
-                    const clean = String(val).replace(/[^0-9.,-]/g, '').replace(',', '.');
-                    const n = parseFloat(clean);
-                    return isNaN(n) ? 0 : n;
-                };
 
                 const km_0 = parseNum(it['0'] !== undefined ? it['0'] : it.km_0);
                 const km_5 = parseNum(it['5'] !== undefined ? it['5'] : it.km_5);
@@ -469,17 +468,66 @@ module.exports = function (db, broadcast, logAudit) {
                 const km_30 = parseNum(it['30'] !== undefined ? it['30'] : it.km_30);
                 const km = parseNum(it.KM !== undefined ? it.KM : (it.km !== undefined ? it.km : it.distancia));
 
-                await tdb.query(
-                    `INSERT INTO combustible_matriz_d2 
-                    (sentido, ruta, motor, confg, km_0, km_5, km_10, km_15, km_20, km_25, km_30, km)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [sentido, ruta, motor, confg, km_0, km_5, km_10, km_15, km_20, km_25, km_30, km]
-                );
-                insertados++;
+                porClave.set(`${ruta}|${sentido}|${motor}|${confg}`, [sentido, ruta, motor, confg, km_0, km_5, km_10, km_15, km_20, km_25, km_30, km]);
             }
 
-            if (logAudit) logAudit(req, 'COMBUSTIBLE', 'IMPORTAR_MATRIZ_EXCEL', `Importadas ${insertados} rutas en matriz D2`);
-            res.json({ ok: true, insertados, message: `Se importaron ${insertados} registros a la Matriz de Combustible exitosamente.` });
+            if (!porClave.size) {
+                return res.status(400).json({ ok: false, error: 'Ninguna fila tiene nombre de ruta.' });
+            }
+
+            if (limpiarExistentes) {
+                await tdb.query("TRUNCATE TABLE combustible_matriz_d2");
+            }
+
+            // Filas activas de la matriz por clave, la más reciente primero
+            const [activas] = await tdb.query(
+                `SELECT id, UPPER(TRIM(ruta)) ruta, UPPER(TRIM(sentido)) sentido, UPPER(TRIM(motor)) motor, UPPER(TRIM(confg)) confg
+                 FROM combustible_matriz_d2 WHERE estado = 'ACTIVO' ORDER BY id DESC`
+            );
+            const existentes = new Map();
+            for (const r of activas) {
+                const clave = `${r.ruta}|${r.sentido}|${r.motor}|${r.confg}`;
+                existentes.set(clave, [...(existentes.get(clave) ?? []), r.id]);
+            }
+
+            let insertados = 0;
+            let actualizados = 0;
+            let desactivados = 0;
+            for (const [clave, fila] of porClave) {
+                const ids = existentes.get(clave) ?? [];
+                if (ids.length) {
+                    await tdb.query(
+                        `UPDATE combustible_matriz_d2 SET
+                            sentido = ?, ruta = ?, motor = ?, confg = ?,
+                            km_0 = ?, km_5 = ?, km_10 = ?, km_15 = ?, km_20 = ?, km_25 = ?, km_30 = ?, km = ?
+                        WHERE id = ?`,
+                        [...fila, ids[0]]
+                    );
+                    actualizados++;
+                    for (const dup of ids.slice(1)) {
+                        await tdb.query(`UPDATE combustible_matriz_d2 SET estado = 'INACTIVO' WHERE id = ?`, [dup]);
+                        desactivados++;
+                    }
+                } else {
+                    await tdb.query(
+                        `INSERT INTO combustible_matriz_d2
+                        (sentido, ruta, motor, confg, km_0, km_5, km_10, km_15, km_20, km_25, km_30, km)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        fila
+                    );
+                    insertados++;
+                }
+            }
+
+            const detalleDup = desactivados ? `, ${desactivados} duplicados desactivados` : '';
+            if (logAudit) logAudit(req, 'COMBUSTIBLE', 'IMPORTAR_MATRIZ_EXCEL', `Matriz D2: ${insertados} nuevas, ${actualizados} actualizadas${detalleDup}`);
+            res.json({
+                ok: true,
+                insertados,
+                actualizados,
+                desactivados,
+                message: `Se importaron ${insertados + actualizados} registros a la Matriz de Combustible exitosamente (${insertados} nuevos, ${actualizados} actualizados${detalleDup}).`,
+            });
         } catch (err) {
             console.error("Error al importar matriz:", err);
             res.status(500).json({ ok: false, error: err.message });
