@@ -62,18 +62,18 @@
   flex-wrap: nowrap; padding: 6px 2px 8px;
 }
 .prev-barra > * { flex: 0 0 auto; }
-.prev-barra__estado { height: 36px; display: flex; align-items: center; }
-.prev-barra__estado > * { height: 36px; }
-.prev-barra__empresa { width: 14rem; height: 36px; }
+/* Todos los controles de la barra miden lo mismo (40 px): el control segmentado trae su marco de 2 px */
+.prev-barra__estado { display: flex; align-items: center; }
+.prev-barra__empresa { width: 14rem; }
 .prev-barra__empresa select {
-  height: 36px; min-height: 36px; padding-top: 0; padding-bottom: 0;
+  height: 40px; min-height: 40px; padding-top: 0; padding-bottom: 0;
   border-radius: 999px; font-size: 0.8125rem; width: 100%;
 }
 .prev-barra__der { margin-left: auto; display: flex; align-items: center; gap: var(--s-2); }
-.prev-barra__buscar { width: 15rem; height: 36px; }
-.prev-barra__buscar input { height: 36px; min-height: 36px; font-size: 0.8125rem; }
-.prev-barra__der > button { height: 36px; min-height: 36px; font-size: 0.8125rem; white-space: nowrap; }
-.prev-barra__der > button.btn--icono { width: 36px; padding: 0; justify-content: center; }
+.prev-barra__buscar { width: 15rem; }
+.prev-barra__buscar input { height: 40px; min-height: 40px; font-size: 0.8125rem; }
+.prev-barra__der > button { height: 40px; min-height: 40px; font-size: 0.8125rem; white-space: nowrap; }
+.prev-barra__der > button.btn--icono { width: 40px; padding: 0; justify-content: center; }
 
 /* ── Tabla por placa: celdas de una línea, fila de alto uniforme ── */
 .prev-grupo td {

@@ -1,3 +1,4 @@
+import './mant.css';
 import { Fragment, useMemo, useState, type CSSProperties } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowUpRight, Bus, ChevronDown, ChevronRight, Clock, Columns3, Download, FileDown, FileSpreadsheet, Gauge, History, MessageCircle, Pencil, Plus, SearchX, ShieldCheck, Trash2, Upload } from 'lucide-react';
@@ -751,7 +752,7 @@ export function FleetrunPage() {
             )}
             <div className="prev-barra__der">
               <div className="prev-barra__buscar">
-                <SearchField value={busqueda} onChange={cambiarBusqueda} placeholder="Buscar placa, modelo, tipo…" />
+                <SearchField value={busqueda} onChange={cambiarBusqueda} placeholder="Buscar placa" />
               </div>
               <Button variant={historial ? 'primary' : 'secondary'} icon={<History size={16} />}
                 onClick={() => { setHistorial(h => !h); setPagina(1); setBusqueda(''); setFiltro('Todos'); }}>Historial</Button>
