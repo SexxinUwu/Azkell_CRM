@@ -5,22 +5,22 @@
 /* ── Panel de estado: logo, dona con su leyenda y KPI. Las tres tarjetas tienen la misma altura ── */
 .prev-stats {
   display: grid;
-  grid-template-columns: minmax(190px, 0.8fr) minmax(0, 1.6fr) minmax(0, 1.4fr);
-  gap: var(--s-3);
+  grid-template-columns: minmax(160px, 0.7fr) minmax(0, 1.6fr) minmax(0, 1.5fr);
+  gap: var(--s-2);
   align-items: stretch;
 }
 .prev-logo {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: var(--s-2); text-align: center; padding: var(--s-4);
+  display: flex; flex-direction: row; align-items: center; justify-content: center;
+  gap: var(--s-2); text-align: left; padding: var(--s-2) var(--s-3);
 }
-.prev-logo img { height: 88px; max-width: 200px; object-fit: contain; }
-.prev-logo__empresa { font-weight: 800; font-size: 0.9375rem; }
+.prev-logo img { height: 40px; max-width: 110px; object-fit: contain; }
+.prev-logo__empresa { font-weight: 800; font-size: 0.8125rem; line-height: 1.2; }
 .prev-logo__fecha {
-  font-size: 0.6875rem; font-weight: 600; color: var(--label-2);
-  background: var(--fill); border-radius: 999px; padding: 3px 10px;
+  font-size: 0.625rem; font-weight: 600; color: var(--label-2);
+  background: var(--fill); border-radius: 999px; padding: 2px 8px; white-space: nowrap;
 }
 
-.prev-dona { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4); }
+.prev-dona { display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-2) var(--s-3); }
 .prev-dona__cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap; }
 .prev-dona__titulo { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 700; color: var(--label-1); }
 .prev-chip {
@@ -28,17 +28,17 @@
   border-radius: 6px; padding: 2px 8px; white-space: nowrap;
 }
 .prev-dona__cuerpo {
-  display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: var(--s-4); align-items: center;
+  display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: var(--s-3); align-items: center;
 }
-.prev-dona__grafico { position: relative; width: 168px; height: 168px; }
+.prev-dona__grafico { position: relative; width: 112px; height: 112px; }
 .prev-dona__centro {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-family: var(--font-mono); font-weight: 800; font-size: 1.25rem; pointer-events: none;
 }
 .prev-dona__leyenda { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .prev-dona__leyenda li {
-  display: grid; grid-template-columns: 10px minmax(0, 1fr) 40px 44px; align-items: center; gap: 8px;
-  font-size: 0.8125rem;
+  display: grid; grid-template-columns: 8px minmax(0, 1fr) 32px 40px; align-items: center; gap: 6px;
+  font-size: 0.75rem;
 }
 .prev-dona__punto { width: 10px; height: 10px; border-radius: 3px; }
 .prev-dona__nombre { font-weight: 600; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -47,19 +47,19 @@
 
 .prev-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
 .prev-kpi {
-  display: flex; flex-direction: column; justify-content: space-between; gap: 4px;
-  padding: var(--s-3) var(--s-4); min-height: 0;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 2px;
+  padding: var(--s-2) var(--s-3); min-height: 0;
 }
 .prev-kpi__top { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
 .prev-kpi__label { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-2); }
 .prev-kpi__icono { display: inline-flex; opacity: 0.85; }
-.prev-kpi__valor { font-size: 1.625rem; font-weight: 800; font-family: var(--font-mono); line-height: 1.1; }
+.prev-kpi__valor { font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); line-height: 1.1; }
 .prev-kpi__nota { font-size: 0.6875rem; color: var(--label-3); }
 
 /* ── Barra de filtros: una sola fila, controles de la misma altura (36 px) ── */
 .prev-barra {
   display: flex; align-items: center; gap: var(--s-2);
-  flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px;
+  flex-wrap: nowrap; padding: 6px 2px 8px;
 }
 .prev-barra > * { flex: 0 0 auto; }
 .prev-barra__estado { height: 36px; display: flex; align-items: center; }
@@ -123,6 +123,27 @@
 .prev-reg__datos dd { margin: 0; font-family: var(--font-mono); font-size: 0.75rem; }
 .prev-reg__obs { margin: 0; font-size: 0.6875rem; color: var(--label-2); }
 .prev-reg__acciones { display: flex; justify-content: flex-end; gap: 2px; }
+
+/* ── Marco de la tabla: contenedor redondeado y encabezados con su línea divisoria ── */
+.prev-tabla-marco {
+  border: 1px solid var(--separator, rgba(0, 0, 0, 0.08));
+  border-radius: 16px; overflow: hidden; background: var(--surface);
+  box-shadow: var(--shadow-raised);
+}
+.prev-tabla-marco .tabla-redim__tabla th {
+  background: var(--fill); color: var(--label-2);
+  font-size: 0.625rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 6px 8px; height: 30px;
+  border-bottom: 1px solid var(--separator, rgba(0, 0, 0, 0.08));
+  border-right: 1px solid var(--separator, rgba(0, 0, 0, 0.06));
+}
+.prev-tabla-marco .tabla-redim__tabla th:last-child { border-right: none; }
+.prev-tabla-marco .tabla-redim__tabla td {
+  padding: 5px 8px; height: 34px;
+  border-bottom: 1px solid var(--separator, rgba(0, 0, 0, 0.06));
+  border-right: 1px solid var(--separator, rgba(0, 0, 0, 0.04));
+}
+.prev-tabla-marco .tabla-redim__tabla td:last-child { border-right: none; }
 
 /* ── Editor de columnas ── */
 .prev-cols { display: flex; flex-direction: column; padding: var(--s-2) 0; }

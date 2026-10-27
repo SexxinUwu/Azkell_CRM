@@ -279,7 +279,6 @@ function EstadoMantenimientos({ stats, empresa, filtrada }: { stats: { total: nu
               <span className="prev-kpi__icono" style={{ color: k.color }}>{k.icono}</span>
             </div>
             <div className="prev-kpi__valor" style={{ color: k.color }}>{k.valor}</div>
-            <div className="prev-kpi__nota">{k.nota}</div>
           </article>
         ))}
       </div>
@@ -439,13 +438,6 @@ export function FleetrunPage() {
     );
   }, [placasData]);
 
-  // Empresas (clientes) de las unidades activas, para el filtro
-  const empresas = useMemo(() => {
-    const set = new Set<string>();
-    placasActivas?.forEach(p => { if (p.cliente) set.add(p.cliente); });
-    return [...set].sort((a, b) => a.localeCompare(b, 'es'));
-  }, [placasActivas]);
-
   const clienteDe = (placa: string) => placasActivas?.get(placa.toUpperCase())?.cliente ?? '';
 
   // Registros de la empresa elegida (la dona y los KPI se calculan sobre ellos)
@@ -460,7 +452,7 @@ export function FleetrunPage() {
   // Ordenar igual que la SPA: fecha DESC, ID DESC; registros futuros al final
   const filasOrdenadas = useMemo(() => {
     const hoy = Date.now();
-    return [...filasEmpresa].sort((a, b) => {
+    return [...filas].sort((a, b) => {
       const ta = parseFechaMs(a[3] as string | null);
       const tb = parseFechaMs(b[3] as string | null);
       const aFut = ta > hoy + 86_400_000;
@@ -469,7 +461,7 @@ export function FleetrunPage() {
       if (tb !== ta) return tb - ta;
       return idFila(b) - idFila(a);
     });
-  }, [filasEmpresa]);
+  }, [filas]);
 
   // Deduplicar (último por placa+tipo) y filtrar por placas activas
   const datosVista = useMemo(() => {
@@ -488,20 +480,35 @@ export function FleetrunPage() {
   // KPIs de la flota (de la empresa elegida): misma función que el dashboard de taller
   const stats = useMemo(() => resumenPreventivo(filasEmpresa, placasData, umbrales, metricas, vivo), [filasEmpresa, placasData, umbrales, metricas, vivo]);
 
-  // Filtrado + búsqueda
-  const filtrados = useMemo(() => {
+  // Registros del estado elegido (sin la empresa ni la búsqueda): de aquí salen las empresas del filtro
+  const porEstado = useMemo(() => {
+    if (filtro === 'Todos') return datosVista;
     const LABEL_A_ESTADO: Record<string, EstadoFR> = {
       'Vencido': 'vencido', 'Por vencer': 'por_vencer', 'Vigente': 'vigente', 'Sin datos': 'sin_datos',
     };
-    let lista = datosVista;
-    if (filtro !== 'Todos') {
-      const target = LABEL_A_ESTADO[filtro];
-      lista = lista.filter(f => {
-        const placa = frPlaca(f).toUpperCase();
-        const uts   = placasActivas?.get(placa)?.uts || frUts(f);
-        return calcularEstado(f, uts, umbrales, metricas, vivo) === target;
-      });
+    const target = LABEL_A_ESTADO[filtro];
+    return datosVista.filter(f => {
+      const placa = frPlaca(f).toUpperCase();
+      const uts   = placasActivas?.get(placa)?.uts || frUts(f);
+      return calcularEstado(f, uts, umbrales, metricas, vivo) === target;
+    });
+  }, [datosVista, filtro, placasActivas, umbrales, metricas, vivo]);
+
+  // Solo las empresas que tienen registros en la lista que se ve
+  const empresas = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of porEstado) {
+      const cliente = clienteDe(frPlaca(f));
+      if (cliente) set.add(cliente);
     }
+    return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+  }, [porEstado, placasActivas]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Filtrado final: empresa elegida (si sigue en la lista) y búsqueda
+  const empresaActiva = empresaFiltro === 'Todas' || empresas.includes(empresaFiltro) ? empresaFiltro : 'Todas';
+  const filtrados = useMemo(() => {
+    let lista = porEstado;
+    if (empresaActiva !== 'Todas') lista = lista.filter(f => clienteDe(frPlaca(f)) === empresaActiva);
     if (busqueda) {
       const q = busqueda.toUpperCase();
       lista = lista.filter(f =>
@@ -511,7 +518,8 @@ export function FleetrunPage() {
       );
     }
     return lista;
-  }, [datosVista, filtro, busqueda, placasActivas, umbrales, metricas, vivo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [porEstado, empresaActiva, busqueda, placasActivas]);
 
   // Agrupar por placa en el orden en que aparecen, como el clásico (fila de placa que se despliega)
   const grupos = useMemo(() => {
@@ -735,7 +743,7 @@ export function FleetrunPage() {
             )}
             {!historial && (
               <div className="prev-barra__empresa">
-                <SelectInput aria-label="Filtrar por empresa" value={empresaFiltro} onChange={e => cambiarEmpresa(e.target.value)}>
+                <SelectInput aria-label="Filtrar por empresa" value={empresaActiva} onChange={e => cambiarEmpresa(e.target.value)}>
                   <option value="Todas">Todas las empresas</option>
                   {empresas.map(e => <option key={e} value={e}>{e}</option>)}
                 </SelectInput>
@@ -815,6 +823,7 @@ export function FleetrunPage() {
               })}
             </div>
           ) : (
+            <div className="prev-tabla-marco">
             <TablaRedimensionable id="preventivo-tabla" columnas={columnasTabla} ariaLabel="Mantenimiento preventivo por placa" altoMax="72vh">
               {vistaGrupos.map(g => {
                 const abierta = abiertas.has(g.placa);
@@ -855,6 +864,7 @@ export function FleetrunPage() {
                 );
               })}
             </TablaRedimensionable>
+            </div>
           )}
 
           {/* Paginación */}
