@@ -4387,17 +4387,34 @@ window.inspCerrarTipoSeleccion = function() {
     if (backdrop) backdrop.classList.remove('open');
 };
 
+// Antes de abrir otro flujo se quitan las capas que dejó el anterior (fondos y modales ya cerrados);
+// si quedan, la pantalla se pone gris y no responde.
+window._inspLimpiarCapas = function() {
+    var backdrop = document.getElementById('inspDrawerBackdrop');
+    if (backdrop) backdrop.classList.remove('open');
+    if (!document.querySelector('.modal.show')) {
+        document.querySelectorAll('.modal-backdrop').forEach(function(b) { b.remove(); });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+    }
+};
+
+// Un modal que se oculta no debe conservar el foco dentro (aviso de accesibilidad y bloqueo del teclado)
+document.addEventListener('hide.bs.modal', function(e) {
+    var activo = document.activeElement;
+    if (activo && e.target.contains(activo) && typeof activo.blur === 'function') activo.blur();
+});
+
 window.inspSeleccionarTipo = function(tipo) {
     var placaSel = window._inspPlacaSeleccionada || '';
     var kmSel = window._inspKmSeleccionado || 0;
 
     var selModal = document.getElementById('modalTipoInspeccionSeleccion');
     if (selModal) selModal.classList.remove('open');
+    window._inspLimpiarCapas();
 
     if (tipo === 'neumaticos') {
-        var backdrop = document.getElementById('inspDrawerBackdrop');
-        if (backdrop) backdrop.classList.remove('open');
-
         if (typeof window.rotAbrirInspeccionNeumaticos === 'function') {
             window.rotAbrirInspeccionNeumaticos(placaSel, '', kmSel);
         } else {

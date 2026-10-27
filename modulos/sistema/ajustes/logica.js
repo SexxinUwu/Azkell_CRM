@@ -13,6 +13,10 @@ window.init_ajustes = function() {
     let lsRol = localStorage.getItem('fleet_rol') || window.rolLogueado || 'USUARIO';
     let lsCorreo = localStorage.getItem('fleet_correo') || '';
     let lsAvatar = localStorage.getItem('fleet_avatar');
+    // Foto en S3 (bucket privado): se pide por el servidor, que la redirige a una URL firmada
+    if (lsAvatar && lsAvatar.indexOf('amazonaws.com') >= 0 && lsAvatar.indexOf('X-Amz-Signature') < 0) {
+        lsAvatar = '/api/perfil/imagen-redir?url=' + encodeURIComponent(lsAvatar);
+    }
 
     if (nombreEl) nombreEl.textContent = lsUser;
     if (roleEl)   roleEl.textContent   = lsRol && lsRol !== 'null' ? lsRol.toUpperCase() : 'USUARIO';
