@@ -30,7 +30,7 @@ export interface ArticuloInv {
   stock_regularizado: number;
   stock_actual: number;    // calculado por el servidor
   fecha_regularizacion: string | null;
-  estado_art: 'Activo' | 'Inactivo';
+  estado_art: 'Activo' | 'Inactivo' | 'Descontinuado';
   codigo_barras: string | null;
   imagen_url: string | null;
   proveedor_id: number | null;

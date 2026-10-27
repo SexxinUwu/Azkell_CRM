@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, Edit, Package, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { stockLabel, stockTono, useKardex, type ArticuloInv } from './api';
+import { api } from '../../core/api/client';
 import { RegularizarSheet } from './RegularizarSheet';
 import { formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
 
@@ -26,6 +28,13 @@ function Dato({ label, valor }: { label: string; valor: string | number | null |
 
 export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, onActualizado }: Props) {
   const [regularizando, setRegularizando] = useState(false);
+  // Llantas (familia NEUMATICOS): medida y modelo viven en neumaticos_articulo
+  const esLlanta = (a.familia ?? '').trim().toUpperCase() === 'NEUMATICOS';
+  const llantaQ = useQuery<{ data?: { medida: string | null; modelo: string | null } | null }>({
+    queryKey: ['almacen', 'neumaticos-articulo', a.id],
+    queryFn: () => api('/almacen/neumaticos-articulo/' + encodeURIComponent(a.id)),
+    enabled: esLlanta,
+  });
   const tono = stockTono(a);
 
   const { data: kardexData } = useKardex(a.id);
@@ -102,6 +111,17 @@ export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, o
           {marcasArr.length > 0 && <Dato label="Compatible con" valor={marcasArr.join(', ')} />}
         </div>
       </div>
+
+      {esLlanta && (
+        <div>
+          <p className="tarjeta__grupo-titulo">Datos de la llanta</p>
+          <div className="tarjeta__lista">
+            <Dato label="Marca" valor={a.marca} />
+            <Dato label="Medida" valor={llantaQ.data?.data?.medida} />
+            <Dato label="Modelo" valor={llantaQ.data?.data?.modelo} />
+          </div>
+        </div>
+      )}
 
       <div>
         <p className="tarjeta__grupo-titulo">Costos</p>

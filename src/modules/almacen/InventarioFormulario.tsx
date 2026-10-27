@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
-import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { MultiSelect } from '../../core/ui/MultiSelect';
 import { useToast } from '../../core/ui/Toast';
-import { errorMessage } from '../../core/api/client';
-import { guardarArticulo, useInventario, type ArticuloInv, type ArticuloNuevo } from './api';
-import { api } from '../../core/api/client';
+import { api, errorMessage } from '../../core/api/client';
+import { guardarArticulo, useAlmacenesLista, type ArticuloInv, type ArticuloNuevo } from './api';
 
 interface Props {
   open: boolean;
@@ -15,41 +15,128 @@ interface Props {
   onGuardado: (id?: string) => void;
 }
 
-const TIPOS = ['Repuesto', 'Lubricante', 'Servicio', 'Herramienta', 'Material', 'Consumible'];
-const UNIDADES = ['und', 'lt', 'gl', 'kg', 'ml', 'par', 'juego', 'm', 'm2', 'Servicio'];
+interface Unidad { nombre: string; descripcion: string | null }
+interface Nombrado { nombre: string }
+interface DatosLlanta { medida: string | null; modelo: string | null; cocada_inicial: number | null }
+
+// Mismas listas que el formulario clásico (tipos, subtipos y estados)
+const TIPOS = ['Original', 'Alternativo', 'Servicio'];
+const SUB_TIPOS = ['Nuevo', 'Reparado'];
+const ESTADOS = ['Activo', 'Inactivo', 'Descontinuado'];
+// Familia de las llantas: pide medida, modelo y cocada, y oculta lo que no aplica
+const FAMILIA_LLANTA = 'NEUMATICOS';
+
+function useCatalogo<T>(clave: string, ruta: string) {
+  return useQuery<T[]>({
+    queryKey: ['almacen', 'catalogo', clave],
+    queryFn: () => api<T[]>(ruta).then(r => (Array.isArray(r) ? r : [])),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** Opciones de una lista. Si el valor guardado no está en la lista, se agrega para no perderlo. */
+function opciones(lista: string[], actual: string): string[] {
+  return actual && !lista.includes(actual) ? [actual, ...lista] : lista;
+}
+
+/** Lista guardada como JSON (marca_unidad) */
+function leerLista(texto: string | null): string[] {
+  try {
+    const v = JSON.parse(texto || '[]');
+    return Array.isArray(v) ? v.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+const grilla = (columnas: string): CSSProperties => ({
+  display: 'grid', gridTemplateColumns: columnas, gap: 'var(--s-3)',
+});
 
 export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }: Props) {
   const toast = useToast();
-  const { data: todos } = useInventario();
-  const [guardando, setGuardando] = useState(false);
-  const [tab, setTab] = useState<'general' | 'clasificacion' | 'costos'>('general');
+  const almacenesQ = useAlmacenesLista();
+  const unidadesQ = useCatalogo<Unidad>('unidades', '/almacen/unidades');
+  const marcasQ = useCatalogo<Nombrado>('marcas', '/almacen/marcas');
+  const familiasQ = useCatalogo<Nombrado>('familias', '/almacen/familias');
+  const marcasPlacasQ = useCatalogo<string>('marcas-placas', '/almacen/marcas-placas');
+  const configQ = useQuery<Record<string, string>>({
+    queryKey: ['almacen', 'configuracion'],
+    queryFn: () => api<Record<string, string>>('/almacen/configuracion'),
+    staleTime: 5 * 60_000,
+  });
 
+  const [guardando, setGuardando] = useState(false);
   const [articulo, setArticulo] = useState('');
   const [codigoArticulo, setCodigoArticulo] = useState('');
+  const [codigoBarras, setCodigoBarras] = useState('');
+  const [marca, setMarca] = useState('');
+  const [marcasUnidad, setMarcasUnidad] = useState<string[]>([]);
+  const [familia, setFamilia] = useState('');
   const [tipo, setTipo] = useState('');
   const [subTipo, setSubTipo] = useState('');
-  const [familia, setFamilia] = useState('');
   const [almacen, setAlmacen] = useState('');
-  const [unidad, setUnidad] = useState('und');
-  const [sistema, setSistema] = useState('');
-  const [subSistema, setSubSistema] = useState('');
-  const [ubicacion, setUbicacion] = useState('');
+  const [anaquel, setAnaquel] = useState('');
+  const [unidad, setUnidad] = useState('Unidades');
   const [stockMin, setStockMin] = useState('0');
   const [stockMax, setStockMax] = useState('0');
+  const [cantidadInicial, setCantidadInicial] = useState('0');
   const [moneda, setMoneda] = useState<'PEN' | 'USD'>('PEN');
   const [costoRef, setCostoRef] = useState('0');
   const [tipoCambio, setTipoCambio] = useState('');
+  const [estado, setEstado] = useState('Activo');
   const [observaciones, setObservaciones] = useState('');
-  const [cantidadInicial, setCantidadInicial] = useState('0');
-  // Datos de la llanta (familia NEUMATICOS): se usan al recepcionar para crear cada neumático
-  const esLlanta = familia.trim().toUpperCase() === 'NEUMATICOS';
+  // Sin campo en el formulario (igual que el clásico): se conservan al editar
+  const [sistema, setSistema] = useState('');
+  const [subSistema, setSubSistema] = useState('');
+  const [ubicacion, setUbicacion] = useState('');
+  // Datos de la llanta (tabla neumaticos_articulo)
   const [medida, setMedida] = useState('');
   const [modeloLlanta, setModeloLlanta] = useState('');
   const [cocada, setCocada] = useState('');
+
+  const llanta = familia.trim().toUpperCase() === FAMILIA_LLANTA;
+  const tcPorDefecto = Number(configQ.data?.tipo_cambio) || 3.7;
+
   useEffect(() => {
-    if (!open || !a?.id) return;
-    api<{ ok?: boolean; data?: { medida: string | null; modelo: string | null; cocada_inicial: number | null } | null }>(
-      '/almacen/neumaticos-articulo/' + encodeURIComponent(String(a.id)))
+    if (!open) return;
+    if (a) {
+      setArticulo(a.articulo ?? '');
+      setCodigoArticulo(a.codigo_articulo ?? '');
+      setCodigoBarras(a.codigo_barras ?? '');
+      setMarca(a.marca ?? '');
+      setMarcasUnidad(leerLista(a.marca_unidad));
+      setFamilia(a.familia ?? '');
+      setTipo(a.tipo ?? '');
+      setSubTipo(a.sub_tipo ?? '');
+      setAlmacen(a.almacen ?? '');
+      setAnaquel(a.anaquel ?? '');
+      setUnidad(a.unidad ?? 'Unidades');
+      setStockMin(String(a.stock_min ?? 0));
+      setStockMax(String(a.stock_max ?? 0));
+      setCantidadInicial('0');
+      setMoneda((a.moneda as 'PEN' | 'USD') ?? 'PEN');
+      setCostoRef(String(a.costo_referencial ?? 0));
+      setTipoCambio(a.tipo_cambio != null ? String(a.tipo_cambio) : '');
+      setEstado(a.estado_art ?? 'Activo');
+      setObservaciones(a.observaciones ?? '');
+      setSistema(a.sistema ?? '');
+      setSubSistema(a.sub_sistema ?? '');
+      setUbicacion(a.ubicacion ?? '');
+    } else {
+      // Alta nueva: la familia viene en NEUMATICOS, como en el clásico
+      setArticulo(''); setCodigoArticulo(''); setCodigoBarras(''); setMarca(''); setMarcasUnidad([]);
+      setFamilia(FAMILIA_LLANTA); setTipo(''); setSubTipo(''); setAlmacen(''); setAnaquel('');
+      setUnidad('Unidades'); setStockMin('0'); setStockMax('0'); setCantidadInicial('0');
+      setMoneda('PEN'); setCostoRef('0'); setTipoCambio(''); setEstado('Activo'); setObservaciones('');
+      setSistema(''); setSubSistema(''); setUbicacion('');
+    }
+  }, [open, a]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!a?.id) { setMedida(''); setModeloLlanta(''); setCocada(''); return; }
+    api<{ ok?: boolean; data?: DatosLlanta | null }>('/almacen/neumaticos-articulo/' + encodeURIComponent(String(a.id)))
       .then(r => {
         const d = r.data;
         setMedida(d?.medida ?? '');
@@ -59,71 +146,55 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
       .catch(() => {});
   }, [open, a?.id]);
 
-  const familias = [...new Set((todos ?? []).map(i => i.familia).filter(Boolean) as string[])].sort();
-  const almacenes = [...new Set((todos ?? []).map(i => i.almacen).filter(Boolean) as string[])].sort();
-  const sistemas = [...new Set((todos ?? []).map(i => i.sistema).filter(Boolean) as string[])].sort();
+  // Unidad: el clásico guarda la descripción (Kilogramos), aunque en la BD esté el código (KG)
+  const unidades = unidadesQ.data ?? [];
+  const unidadActual = unidades.find(u => u.nombre === unidad || u.descripcion === unidad);
+  const unidadValor = unidadActual ? (unidadActual.descripcion || unidadActual.nombre) : unidad;
+  const marcasOpc = [...new Set((marcasPlacasQ.data ?? []).map(m => String(m).trim().toUpperCase()).filter(Boolean))].sort();
 
-  useEffect(() => {
-    if (!open) return;
-    setTab('general');
-    if (a) {
-      setArticulo(a.articulo ?? '');
-      setCodigoArticulo(a.codigo_articulo ?? '');
-      setTipo(a.tipo ?? '');
-      setSubTipo(a.sub_tipo ?? '');
-      setFamilia(a.familia ?? '');
-      setAlmacen(a.almacen ?? '');
-      setUnidad(a.unidad ?? 'und');
-      setSistema(a.sistema ?? '');
-      setSubSistema(a.sub_sistema ?? '');
-      setUbicacion(a.ubicacion ?? '');
-      setStockMin(String(a.stock_min ?? 0));
-      setStockMax(String(a.stock_max ?? 0));
-      setMoneda((a.moneda as 'PEN' | 'USD') ?? 'PEN');
-      setCostoRef(String(a.costo_referencial ?? 0));
-      setTipoCambio(String(a.tipo_cambio ?? ''));
-      setObservaciones(a.observaciones ?? '');
-      setCantidadInicial('0');
-    } else {
-      setArticulo(''); setCodigoArticulo(''); setTipo(''); setSubTipo('');
-      setFamilia(''); setAlmacen(''); setUnidad('und'); setSistema(''); setSubSistema('');
-      setUbicacion(''); setStockMin('0'); setStockMax('0');
-      setMoneda('PEN'); setCostoRef('0'); setTipoCambio(''); setObservaciones('');
-      setCantidadInicial('0');
-    }
-  }, [open, a]);
+  const marcasU = marcasUnidad.join(', ');
+  const nombreGenerado = `${articulo.trim()}${codigoArticulo.trim() ? ' ' + codigoArticulo.trim() : ''}${marcasU ? ' - ' + marcasU : ''}${marca ? ' / ' + marca : ''}`.trim();
 
   async function guardar() {
-    if (!articulo.trim()) { toast('Ingresa el nombre del artículo', 'error'); setTab('general'); return; }
+    if (!articulo.trim()) { toast('Ingresa el nombre del artículo', 'error'); return; }
     setGuardando(true);
     try {
-      const body: Partial<ArticuloNuevo> = {
+      const body = {
         articulo: articulo.trim(),
-        codigo_articulo: codigoArticulo || null,
-        tipo: tipo || null,
+        codigo_articulo: codigoArticulo.trim() || null,
+        codigo_barras: codigoBarras.trim() || null,
+        familia: familia.trim() || null,
+        marca: marca || null,
+        marca_unidad: JSON.stringify(marcasUnidad),
+        tipo: llanta && !a ? 'Original' : (tipo || null),
         sub_tipo: subTipo || null,
-        familia: familia || null,
         almacen: almacen || null,
-        unidad: unidad || null,
-        sistema: sistema || null,
-        sub_sistema: subSistema || null,
         ubicacion: ubicacion || null,
+        anaquel: anaquel.trim() || null,
+        unidad: llanta ? 'Unidades' : (unidadValor || null),
         stock_min: parseFloat(stockMin) || 0,
         stock_max: parseFloat(stockMax) || 0,
         moneda,
         costo_referencial: parseFloat(costoRef) || 0,
-        tipo_cambio: tipoCambio ? parseFloat(tipoCambio) : null,
-        observaciones: observaciones || null,
+        tipo_cambio: moneda === 'USD' ? (parseFloat(tipoCambio) || tcPorDefecto) : null,
+        estado_art: llanta && !a ? 'Activo' : estado,
+        observaciones: observaciones.trim() || null,
+        sistema: sistema || null,
+        sub_sistema: subSistema || null,
         cantidad_inicial: !a ? (parseFloat(cantidadInicial) || 0) : undefined,
       } as Partial<ArticuloNuevo>;
 
       const res = await guardarArticulo(body, a?.id) as { id?: string } | undefined;
-      const idArticulo = a?.id ?? res?.id;
-      if (esLlanta && idArticulo) {
-        await api('/almacen/neumaticos-articulo/' + encodeURIComponent(String(idArticulo)), {
-          method: 'PUT',
-          body: { medida, modelo: modeloLlanta, cocada_inicial: cocada === '' ? null : Number(cocada) },
-        });
+      const idArticulo = res?.id ?? a?.id;
+      if (llanta && idArticulo) {
+        try {
+          await api('/almacen/neumaticos-articulo/' + encodeURIComponent(String(idArticulo)), {
+            method: 'PUT',
+            body: { medida, modelo: modeloLlanta, cocada_inicial: cocada === '' ? null : Number(cocada) },
+          });
+        } catch {
+          toast('El artículo se guardó, pero no los datos de la llanta', 'error');
+        }
       }
       toast(a ? 'Artículo actualizado' : 'Artículo creado');
       onGuardado(res?.id);
@@ -136,128 +207,160 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
 
   return (
     <Sheet open={open} onClose={onClose} title={a ? 'Editar artículo' : 'Nuevo artículo'}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-5)' }}>
-        <SegmentedControl<'general' | 'clasificacion' | 'costos'>
-          block label="Sección" value={tab} onChange={setTab}
-          options={[{ value: 'general', label: 'General' }, { value: 'clasificacion', label: 'Clasificación' }, { value: 'costos', label: 'Costos' }]}
-        />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
+        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--label-2)' }}>
+          Nombre generado: <strong>{nombreGenerado || '—'}</strong>
+        </p>
 
-        {tab === 'general' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-            <Field label="Nombre del artículo *">
-              {p => <TextInput {...p} value={articulo} placeholder="Ej: Filtro de aceite" onChange={e => setArticulo(e.target.value)} />}
+        <Field label="Código de barras">
+          {p => <TextInput {...p} value={codigoBarras} placeholder="EAN-13 / QR..." onChange={e => setCodigoBarras(e.target.value)} />}
+        </Field>
+        <Field label="Artículo *">
+          {p => <TextInput {...p} value={articulo} placeholder="Ej: Filtro de aceite" onChange={e => setArticulo(e.target.value)} />}
+        </Field>
+        <Field label="Código interno">
+          {p => <TextInput {...p} value={codigoArticulo} placeholder="Ej: LF3000" onChange={e => setCodigoArticulo(e.target.value)} />}
+        </Field>
+        <Field label="Marca">
+          {p => (
+            <SelectInput {...p} value={marca} onChange={e => setMarca(e.target.value)}>
+              <option value="">— Sin marca —</option>
+              {opciones((marcasQ.data ?? []).map(m => m.nombre), marca).map(m => <option key={m} value={m}>{m}</option>)}
+            </SelectInput>
+          )}
+        </Field>
+        <Field label="Familia">
+          {p => (
+            <SelectInput {...p} value={familia} onChange={e => setFamilia(e.target.value)}>
+              <option value="">— Sin familia —</option>
+              {opciones((familiasQ.data ?? []).map(f => f.nombre), familia).map(f => <option key={f} value={f}>{f}</option>)}
+            </SelectInput>
+          )}
+        </Field>
+
+        {llanta && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--label-2)' }}>
+              Datos de la llanta: se usan al recepcionar para crear cada neumático.
+            </p>
+            <Field label="Medida">
+              {p => <TextInput {...p} value={medida} placeholder="Ej: 295/80R22.5" onChange={e => setMedida(e.target.value)} />}
             </Field>
-            <Field label="Código de artículo">
-              {p => <TextInput {...p} value={codigoArticulo} placeholder="Ej: FERSA-FL456" onChange={e => setCodigoArticulo(e.target.value)} />}
+            <Field label="Modelo">
+              {p => <TextInput {...p} value={modeloLlanta} placeholder="Ej: S200" onChange={e => setModeloLlanta(e.target.value)} />}
             </Field>
+            <Field label="Cocada inicial (mm)">
+              {p => <TextInput {...p} type="number" min={0} value={cocada} placeholder="Ej: 20" onChange={e => setCocada(e.target.value)} />}
+            </Field>
+          </div>
+        )}
+
+        {!llanta && (
+          <div style={grilla('1fr 1fr')}>
             <Field label="Tipo">
               {p => (
                 <SelectInput {...p} value={tipo} onChange={e => setTipo(e.target.value)}>
-                  <option value="">Sin tipo</option>
-                  {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
+                  <option value="">— Sin tipo —</option>
+                  {opciones(TIPOS, tipo).map(t => <option key={t} value={t}>{t}</option>)}
                 </SelectInput>
               )}
             </Field>
-            <Field label="Subtipo">
-              {p => <TextInput {...p} value={subTipo} placeholder="Ej: Filtro de motor" onChange={e => setSubTipo(e.target.value)} />}
-            </Field>
-            <Field label="Unidad de medida">
+            <Field label="Sub-tipo">
               {p => (
-                <SelectInput {...p} value={unidad} onChange={e => setUnidad(e.target.value)}>
-                  {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                <SelectInput {...p} value={subTipo} onChange={e => setSubTipo(e.target.value)}>
+                  <option value="">— Sin sub-tipo —</option>
+                  {opciones(SUB_TIPOS, subTipo).map(t => <option key={t} value={t}>{t}</option>)}
                 </SelectInput>
               )}
-            </Field>
-            {!a && (
-              <Field label="Stock inicial">
-                {p => <TextInput {...p} type="number" min={0} value={cantidadInicial} placeholder="0" onChange={e => setCantidadInicial(e.target.value)} />}
-              </Field>
-            )}
-            {esLlanta && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-                <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--label-2)' }}>
-                  Datos de la llanta: se usan al recepcionar para crear cada neumático.
-                </p>
-                <Field label="Medida">
-                  {p => <TextInput {...p} value={medida} placeholder="Ej: 295/80R22.5" onChange={e => setMedida(e.target.value)} />}
-                </Field>
-                <Field label="Modelo">
-                  {p => <TextInput {...p} value={modeloLlanta} placeholder="Ej: S200" onChange={e => setModeloLlanta(e.target.value)} />}
-                </Field>
-                <Field label="Cocada inicial (mm)">
-                  {p => <TextInput {...p} type="number" min={0} value={cocada} placeholder="Ej: 20" onChange={e => setCocada(e.target.value)} />}
-                </Field>
-              </div>
-            )}
-            <Field label="Observaciones">
-              {p => <TextInput {...p} value={observaciones} placeholder="Notas adicionales" onChange={e => setObservaciones(e.target.value)} />}
             </Field>
           </div>
         )}
 
-        {tab === 'clasificacion' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-            <Field label="Familia">
-              {p => (
-                <>
-                  <TextInput {...p} value={familia} list="inv-familias" placeholder="Ej: Filtros" onChange={e => setFamilia(e.target.value)} />
-                  <datalist id="inv-familias">{familias.map(f => <option key={f} value={f} />)}</datalist>
-                </>
-              )}
+        <Field label="Almacén">
+          {p => (
+            <SelectInput {...p} value={almacen} onChange={e => setAlmacen(e.target.value)}>
+              <option value="">— Sin almacén —</option>
+              {opciones((almacenesQ.data ?? []).map(al => al.nombre), almacen).map(al => <option key={al} value={al}>{al}</option>)}
+            </SelectInput>
+          )}
+        </Field>
+
+        {!llanta && (
+          <>
+            <Field label="Anaquel">
+              {p => <TextInput {...p} value={anaquel} placeholder="Ej: 6-4, A-2, etc." onChange={e => setAnaquel(e.target.value)} />}
             </Field>
-            <Field label="Sistema">
-              {p => (
-                <>
-                  <TextInput {...p} value={sistema} list="inv-sistemas" placeholder="Ej: Motor" onChange={e => setSistema(e.target.value)} />
-                  <datalist id="inv-sistemas">{sistemas.map(s => <option key={s} value={s} />)}</datalist>
-                </>
-              )}
-            </Field>
-            <Field label="Subsistema">
-              {p => <TextInput {...p} value={subSistema} placeholder="Ej: Lubricación" onChange={e => setSubSistema(e.target.value)} />}
-            </Field>
-            <Field label="Almacén">
-              {p => (
-                <>
-                  <TextInput {...p} value={almacen} list="inv-almacenes" placeholder="Ej: Almacén principal" onChange={e => setAlmacen(e.target.value)} />
-                  <datalist id="inv-almacenes">{almacenes.map(al => <option key={al} value={al} />)}</datalist>
-                </>
-              )}
-            </Field>
-            <Field label="Ubicación / Zona">
-              {p => <TextInput {...p} value={ubicacion} placeholder="Ej: Estante A-3" onChange={e => setUbicacion(e.target.value)} />}
-            </Field>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
-              <Field label="Stock mínimo">
-                {p => <TextInput {...p} type="number" min={0} value={stockMin} onChange={e => setStockMin(e.target.value)} />}
+            <div style={grilla('1fr 1fr 1fr')}>
+              <Field label="Unidad">
+                {p => (
+                  <SelectInput {...p} value={unidadValor} onChange={e => setUnidad(e.target.value)}>
+                    <option value="">— Sin unidad —</option>
+                    {opciones(unidades.map(u => u.descripcion || u.nombre), unidadValor).map(u => <option key={u} value={u}>{u}</option>)}
+                  </SelectInput>
+                )}
               </Field>
-              <Field label="Stock máximo">
-                {p => <TextInput {...p} type="number" min={0} value={stockMax} onChange={e => setStockMax(e.target.value)} />}
+              <Field label="Mín.">
+                {p => <TextInput {...p} type="number" min={0} step="0.0001" value={stockMin} onChange={e => setStockMin(e.target.value)} />}
+              </Field>
+              <Field label="Máx.">
+                {p => <TextInput {...p} type="number" min={0} step="0.0001" value={stockMax} onChange={e => setStockMax(e.target.value)} />}
               </Field>
             </div>
-          </div>
+          </>
         )}
 
-        {tab === 'costos' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-            <Field label="Moneda">
-              {p => (
-                <SelectInput {...p} value={moneda} onChange={e => setMoneda(e.target.value as 'PEN' | 'USD')}>
-                  <option value="PEN">S/ Soles</option>
-                  <option value="USD">US$ Dólares</option>
-                </SelectInput>
-              )}
-            </Field>
-            <Field label={`Costo referencial (${moneda})`}>
-              {p => <TextInput {...p} type="number" min={0} step="0.01" value={costoRef} onChange={e => setCostoRef(e.target.value)} />}
-            </Field>
-            {moneda === 'USD' && (
-              <Field label="Tipo de cambio (S/)">
-                {p => <TextInput {...p} type="number" min={0} step="0.001" value={tipoCambio} placeholder="3.750" onChange={e => setTipoCambio(e.target.value)} />}
-              </Field>
-            )}
-          </div>
+        {!a && (
+          <Field label="Stock inicial / cantidad (conteo con el que ingresa)">
+            {p => <TextInput {...p} type="number" min={0} step="0.0001" value={cantidadInicial} placeholder="Ej: 10" onChange={e => setCantidadInicial(e.target.value)} />}
+          </Field>
         )}
+
+        <div style={grilla('1fr 1fr')}>
+          <Field label="Costo">
+            {p => <TextInput {...p} type="number" min={0} step="0.0001" value={costoRef} placeholder="0.00" onChange={e => setCostoRef(e.target.value)} />}
+          </Field>
+          <Field label="Moneda">
+            {p => (
+              <SelectInput {...p} value={moneda} onChange={e => setMoneda(e.target.value as 'PEN' | 'USD')}>
+                <option value="PEN">PEN (S/)</option>
+                <option value="USD">USD ($)</option>
+              </SelectInput>
+            )}
+          </Field>
+        </div>
+        {moneda === 'USD' && (
+          <Field label="T/C USD → S/">
+            {p => <TextInput {...p} type="number" min={0.01} step="0.0001" value={tipoCambio} placeholder={String(tcPorDefecto)} onChange={e => setTipoCambio(e.target.value)} />}
+          </Field>
+        )}
+
+        {!llanta && (
+          <Field label="Estado">
+            {p => (
+              <SelectInput {...p} value={estado} onChange={e => setEstado(e.target.value)}>
+                {opciones(ESTADOS, estado).map(s => <option key={s} value={s}>{s}</option>)}
+              </SelectInput>
+            )}
+          </Field>
+        )}
+
+        {!llanta && (
+          <Field label="Observaciones">
+            {p => <TextInput {...p} value={observaciones} placeholder="Notas adicionales..." onChange={e => setObservaciones(e.target.value)} />}
+          </Field>
+        )}
+
+        <Field label="Unidades compatibles">
+          {() => (
+            <MultiSelect
+              label="Unidades compatibles"
+              value={marcasUnidad}
+              onChange={setMarcasUnidad}
+              options={[...marcasOpc, ...marcasUnidad.filter(m => !marcasOpc.includes(m))]}
+              placeholder="Ninguna"
+            />
+          )}
+        </Field>
 
         <Button variant="primary" loading={guardando} onClick={guardar} style={{ width: '100%' }}>
           {a ? 'Guardar cambios' : 'Crear artículo'}
