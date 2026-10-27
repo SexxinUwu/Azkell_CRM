@@ -155,6 +155,19 @@ export function DocumentosPage() {
                 <span>
                   <span className="disp-kpi__label">{k.label}</span>
                   <AnimatedNumber value={k.valor} className="disp-kpi__valor t-numeric" />
+                  {(() => {
+                    // Porcentaje sobre la flota total; en Vigentes también cuánto falta para el 100 %
+                    const pct = cifras.total > 0 ? Math.round((k.valor / cifras.total) * 1000) / 10 : 0;
+                    return (
+                      <span className="disp-kpi__pct">
+                        <span className="t-numeric">{pct}%</span>{' '}
+                        {k.clave === 'vigente' ? <span>· falta {Math.round((100 - pct) * 10) / 10}%</span> : <span>de la flota</span>}
+                        <span aria-hidden style={{ display: 'block', height: 4, borderRadius: 999, background: 'var(--fill, rgba(0,0,0,0.08))', overflow: 'hidden', marginTop: 4 }}>
+                          <span style={{ display: 'block', height: '100%', width: pct + '%', background: 'currentColor', borderRadius: 999 }} />
+                        </span>
+                      </span>
+                    );
+                  })()}
                 </span>
                 <span className="disp-kpi__icono" aria-hidden>{k.icono}</span>
               </button>
