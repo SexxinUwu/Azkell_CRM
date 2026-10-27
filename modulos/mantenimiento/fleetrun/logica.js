@@ -1088,8 +1088,9 @@ function enviarFleetrun(event, formObj) {
         const el = formObj.elements[i];
         if (el.name) {
             let val = el.value;
-            if (!val && document.getElementById(el.id + '-txt')) val = document.getElementById(el.id + '-txt').value;
-            data[el.name] = val;
+            var txtAlterno = document.getElementById(el.id + '-txt');
+            if (!val && txtAlterno && typeof txtAlterno.value === 'string') val = txtAlterno.value;
+            data[el.name] = val == null ? '' : val;
         }
     }
     
@@ -1174,8 +1175,9 @@ function enviarEdicionFleetrun(event, formObj) {
         const el = formObj.elements[i];
         if (el.name) {
             let val = el.value;
-            if (!val && document.getElementById(el.id + '-txt')) val = document.getElementById(el.id + '-txt').value;
-            data[el.name] = val;
+            var txtAlterno = document.getElementById(el.id + '-txt');
+            if (!val && txtAlterno && typeof txtAlterno.value === 'string') val = txtAlterno.value;
+            data[el.name] = val == null ? '' : val;
         }
     }
     
