@@ -163,7 +163,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
     // ── ORDENES DE TRABAJO ────────────────────────────────────────────
     // Lectura de claves de configuración de mantenimiento desde la base de la empresa (solo claves permitidas)
-    const CLAVES_CONFIG_MANT = ['fleetrun_uts_umbrales'];
+    const CLAVES_CONFIG_MANT = ['fleetrun_uts_umbrales', 'empresa_nombre'];
     router.get('/configuracion-clave/:clave', (req, res) => {
         const clave = req.params.clave;
         if (!CLAVES_CONFIG_MANT.includes(clave)) return res.status(404).json({ error: 'Clave no disponible' });

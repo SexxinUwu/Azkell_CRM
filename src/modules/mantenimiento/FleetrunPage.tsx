@@ -7,6 +7,8 @@ import { SearchField, SelectInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
 import { DonaGrafico } from '../../core/ui/Graficos';
+import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
 import { exportarExcel } from '../../core/lib/excel';
 import { compartirPDF } from '../../core/lib/pdf';
@@ -218,36 +220,67 @@ function LogoEmpresa({ empresa }: { empresa: string }) {
   );
 }
 
-/** Estado de mantenimientos: logo, dona con su leyenda a la derecha y KPI en cuadrícula */
+/** Dona del estado de la flota con su leyenda alineada en columnas (número y porcentaje a la derecha) */
+function DonaPreventivo({ stats }: { stats: { total: number; vencidos: number; porVencer: number; vigentes: number } }) {
+  const porciones = porcionesEstado(stats);
+  const pctDe = (n: number) => (stats.total ? Math.round((n / stats.total) * 100) : 0);
+  const conDatos = porciones.filter(p => p.valor > 0).length;
+  return (
+    <div className="prev-dona__cuerpo">
+      <div className="prev-dona__grafico">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={porciones} dataKey="valor" nameKey="nombre" innerRadius="64%" outerRadius="100%"
+              paddingAngle={conDatos > 1 ? 2 : 0} stroke="none" isAnimationActive={false}>
+              {porciones.map(p => <Cell key={p.nombre} fill={p.color} />)}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+        <span className="prev-dona__centro">{stats.total}</span>
+      </div>
+      <ul className="prev-dona__leyenda">
+        {porciones.map(p => (
+          <li key={p.nombre}>
+            <span className="prev-dona__punto" style={{ background: p.color }} />
+            <span className="prev-dona__nombre">{p.nombre}</span>
+            <span className="prev-dona__n">{p.valor}</span>
+            <span className="prev-dona__pct">{pctDe(p.valor)}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Estado de mantenimientos: logo, dona con su leyenda y KPI en cuadrícula */
 function EstadoMantenimientos({ stats, empresa, filtrada }: { stats: { total: number; vencidos: number; porVencer: number; vigentes: number }; empresa: string; filtrada: boolean }) {
   const pct = (n: number) => (stats.total ? Math.round((n / stats.total) * 100) : 0);
   const kpis = [
-    { label: 'Flota total', valor: stats.total, color: 'var(--label)', icono: <Bus size={20} /> },
-    { label: 'Vencidos', valor: stats.vencidos, color: COLOR_VENCIDO, pct: pct(stats.vencidos), icono: <AlertTriangle size={20} /> },
-    { label: 'Por vencer', valor: stats.porVencer, color: COLOR_POR_VENCER, pct: pct(stats.porVencer), icono: <Clock size={20} /> },
-    { label: 'Vigentes', valor: stats.vigentes, color: COLOR_VIGENTE, pct: pct(stats.vigentes), icono: <ShieldCheck size={20} /> },
+    { label: 'Flota total', valor: stats.total, color: 'var(--label)', icono: <Bus size={18} />, nota: 'unidades activas' },
+    { label: 'Vencidos', valor: stats.vencidos, color: COLOR_VENCIDO, icono: <AlertTriangle size={18} />, nota: `${pct(stats.vencidos)}% de la flota` },
+    { label: 'Por vencer', valor: stats.porVencer, color: COLOR_POR_VENCER, icono: <Clock size={18} />, nota: `${pct(stats.porVencer)}% de la flota` },
+    { label: 'Vigentes', valor: stats.vigentes, color: COLOR_VIGENTE, icono: <ShieldCheck size={18} />, nota: `${pct(stats.vigentes)}% de la flota` },
   ];
   return (
     <div className="prev-stats">
       <LogoEmpresa empresa={empresa} />
       <section className="mant-card prev-dona">
-        <div className="mant-card__header">
-          <span className="mant-card__title"><Gauge size={15} /> Estado de mantenimientos</span>
+        <div className="prev-dona__cab">
+          <span className="prev-dona__titulo"><Gauge size={15} /> Estado de mantenimientos</span>
           <span className="prev-chip">{filtrada ? 'Empresa filtrada' : 'Flota activa'}</span>
         </div>
-        <DonaGrafico porciones={porcionesEstado(stats)} centro={String(stats.total)} altura={210} />
+        <DonaPreventivo stats={stats} />
       </section>
       <div className="prev-kpis">
         {kpis.map(k => (
-          <div key={k.label} className="mant-card prev-kpi">
-            <div>
-              <div className="prev-kpi__label">
-                {k.label}{'pct' in k && <span style={{ color: k.color }}>{k.pct}%</span>}
-              </div>
-              <div className="prev-kpi__valor" style={{ color: k.color }}>{k.valor}</div>
+          <article key={k.label} className="mant-card prev-kpi">
+            <div className="prev-kpi__top">
+              <span className="prev-kpi__label">{k.label}</span>
+              <span className="prev-kpi__icono" style={{ color: k.color }}>{k.icono}</span>
             </div>
-            <span style={{ color: k.color, opacity: 0.85 }}>{k.icono}</span>
-          </div>
+            <div className="prev-kpi__valor" style={{ color: k.color }}>{k.valor}</div>
+            <div className="prev-kpi__nota">{k.nota}</div>
+          </article>
         ))}
       </div>
     </div>
@@ -273,6 +306,15 @@ const COLUMNAS: Array<{ id: ColId; titulo: string }> = [
   { id: 'kmRec', titulo: 'Km recorrido' },
   { id: 'ubi', titulo: 'Ubicación' },
 ];
+
+/** Ancho inicial de cada columna (px): lo bastante para el texto. El usuario lo ajusta arrastrando el borde del encabezado */
+const ANCHO_COLUMNA: Record<ColId, number> = {
+  placa: 104, fecha: 104, modelo: 136, tipo: 230, kmCambio: 116, kmGps: 128, falta: 116, kmProx: 120,
+  frec: 110, obs: 200, estado: 116, kmRec: 116, ubi: 230,
+};
+
+/** Columnas con números: se muestran en fuente monoespaciada para que las cifras cuadren */
+const NUMERICAS = new Set<ColId>(['kmCambio', 'kmGps', 'falta', 'kmProx', 'frec', 'kmRec']);
 
 const CLAVE_COLUMNAS = 'fleet_preventivo_columnas_ocultas';
 
@@ -488,6 +530,10 @@ export function FleetrunPage() {
   const vistaGrupos = grupos.slice((pagActual - 1) * POR_PAGINA, pagActual * POR_PAGINA);
 
   const columnasVisibles = COLUMNAS.filter(c => !ocultas.has(c.id));
+  const columnasTabla: ColumnaTabla[] = [
+    ...columnasVisibles.map(c => ({ id: c.id, titulo: c.titulo, ancho: ANCHO_COLUMNA[c.id], minimo: 72, alinear: 'center' as const })),
+    { id: 'acciones', titulo: '', ancho: 84, minimo: 84, alinear: 'center' as const },
+  ];
 
   function cambiarFiltro(f: string) { setFiltro(f); setPagina(1); }
   function cambiarBusqueda(v: string) { setBusqueda(v); setPagina(1); }
@@ -683,7 +729,9 @@ export function FleetrunPage() {
           {/* Filtros, búsqueda y herramientas */}
           <div className="prev-barra">
             {!historial && (
-              <SegmentedControl value={filtro} onChange={cambiarFiltro} label="Filtrar por estado" options={opcionesFiltro} />
+              <div className="prev-barra__estado">
+                <SegmentedControl value={filtro} onChange={cambiarFiltro} label="Filtrar por estado" options={opcionesFiltro} />
+              </div>
             )}
             {!historial && (
               <div className="prev-barra__empresa">
@@ -767,60 +815,46 @@ export function FleetrunPage() {
               })}
             </div>
           ) : (
-            <div className="prev-tabla-wrap">
-              <table className="prev-tabla">
-                <colgroup>
-                  {columnasVisibles.map(c => <col key={c.id} />)}
-                  <col style={{ width: 84 }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    {columnasVisibles.map(c => <th key={c.id}>{c.titulo}</th>)}
-                    <th aria-label="Acciones" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {vistaGrupos.map(g => {
-                    const abierta = abiertas.has(g.placa);
-                    const esHoras = metricas.get(g.placa) === 'horas';
-                    const kmDiaT = kmDiaTexto(kmDia?.get(g.placa), esHoras);
-                    const cliente = placasActivas?.get(g.placa)?.cliente ?? '';
-                    const uts = placasActivas?.get(g.placa)?.uts || frUts(g.registros[0]);
-                    return (
-                      <Fragment key={g.placa}>
-                        <tr className="prev-grupo" onClick={() => alternarGrupo(g.placa)} aria-expanded={abierta}>
-                          <td colSpan={columnasVisibles.length + 1}>
-                            <div className="prev-grupo__cab">
-                              {abierta ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                              <span className="prev-placa">{g.placa}</span>
-                              {cliente && <span style={pildora('#475569')}>{cliente}</span>}
-                              {uts && <span style={pildora('#0891b2')}>{uts}</span>}
-                              {kmDiaT && <span className="prev-muted">{kmDiaT}</span>}
-                              <span style={{ ...pildora('#d97706'), marginLeft: 'auto' }}>{g.registros.length} registros</span>
-                            </div>
-                          </td>
+            <TablaRedimensionable id="preventivo-tabla" columnas={columnasTabla} ariaLabel="Mantenimiento preventivo por placa" altoMax="72vh">
+              {vistaGrupos.map(g => {
+                const abierta = abiertas.has(g.placa);
+                const esHoras = metricas.get(g.placa) === 'horas';
+                const kmDiaT = kmDiaTexto(kmDia?.get(g.placa), esHoras);
+                const cliente = placasActivas?.get(g.placa)?.cliente ?? '';
+                const uts = placasActivas?.get(g.placa)?.uts || frUts(g.registros[0]);
+                return (
+                  <Fragment key={g.placa}>
+                    <tr className="prev-grupo" onClick={() => alternarGrupo(g.placa)} aria-expanded={abierta}>
+                      <td colSpan={columnasTabla.length}>
+                        <div className="prev-grupo__cab">
+                          {abierta ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          <span className="prev-placa">{g.placa}</span>
+                          {cliente && <span style={pildora('#475569')}>{cliente}</span>}
+                          {uts && <span style={pildora('#0891b2')}>{uts}</span>}
+                          {kmDiaT && <span className="prev-muted">{kmDiaT}</span>}
+                          <span style={{ ...pildora('#d97706'), marginLeft: 'auto' }}>{g.registros.length} registros</span>
+                        </div>
+                      </td>
+                    </tr>
+                    {abierta && g.registros.map(f => {
+                      const d = datosFila(f);
+                      return (
+                        <tr key={d.id || `${d.placa}-${d.tipo}-${d.fecha}`} className="prev-fila">
+                          {columnasVisibles.map(c => (
+                            <Celda key={c.id} alinear="center" mono={NUMERICAS.has(c.id)}>
+                              {valorColumna(c.id, d)}
+                            </Celda>
+                          ))}
+                          <Celda alinear="center">
+                            <div className="prev-acciones">{accionesRegistro(f, d.placa, d.id)}</div>
+                          </Celda>
                         </tr>
-                        {abierta && g.registros.map(f => {
-                          const d = datosFila(f);
-                          return (
-                            <tr key={d.id || `${d.placa}-${d.tipo}-${d.fecha}`} className="prev-fila">
-                              {columnasVisibles.map(c => (
-                                <td key={c.id} className={c.id === 'ubi' || c.id === 'obs' ? 'prev-texto' : undefined} title={c.id === 'ubi' ? d.ubicacion : undefined}>
-                                  {valorColumna(c.id, d)}
-                                </td>
-                              ))}
-                              <td>
-                                <div className="prev-acciones">{accionesRegistro(f, d.placa, d.id)}</div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      );
+                    })}
+                  </Fragment>
+                );
+              })}
+            </TablaRedimensionable>
           )}
 
           {/* Paginación */}
