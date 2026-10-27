@@ -173,7 +173,7 @@ export class MotorNeumaticos {
   }
 
   /** Reconstruye el camión (configuración, llantas, marca). La cámara solo se encuadra al cambiar la configuración. */
-  setDatos(configuracion: string, llantas: LlantaDato[], marca: string | null) {
+  setDatos(configuracion: string, llantas: LlantaDato[], marca: string | null, esCamion = false) {
     if (this.destruido) return;
     if (this.camion) {
       liberarCamion(this.camion);
@@ -181,7 +181,7 @@ export class MotorNeumaticos {
     }
     const montadas = new Map(llantas.map(l => [normal(l.posicion), l] as const));
     // Solo los camiones Scania (configuración C…) usan el modelo; los tractos (T…) y las demás marcas siguen con sus formas básicas
-    const esScania = /scania/i.test(marca ?? '') && /^C/i.test(configuracion);
+    const esScania = /scania/i.test(marca ?? '') && esCamion;
     if (esScania && !this.cuerpoScania) {
       cargarCuerpoScania().then(cuerpo => {
         if (cuerpo && !this.destruido) {

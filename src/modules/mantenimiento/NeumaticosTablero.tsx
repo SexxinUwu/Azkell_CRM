@@ -370,6 +370,7 @@ export function NeumaticosTablero() {
                     sobre={sobre?.tipo === 'posicion' ? sobre.posicion : null} sondaRef={sondaRef}
                     onSelect={l => { const m = montadas.find(x => x.posicion === l.posicion); if (m) elegirLlanta(m.llanta.codigo); }}
                     marca={(placas.data ?? []).find(p => p.placa === placa)?.marca ?? null}
+                    camion={/^C/i.test(datos?.configuracion ?? '')}
                     modo={modo} onModo={setModo}
                   />
                 </div>

@@ -23,6 +23,8 @@ export interface Nv3VistaProps {
   onPerdida: () => void;
   /** Marca del tracto para el letrero del capó; sin marca no se dibuja texto */
   marca?: string | null;
+  /** Camión (no tracto): solo estos usan el modelo de la marca */
+  camion?: boolean;
   /** Vista controlada por el padre; si no se pasa, el control la guarda aquí */
   modo?: ModoVista;
   onModo?: (modo: ModoVista) => void;
@@ -38,7 +40,7 @@ const OPCIONES_VISTA: Array<{ valor: ModoVista; etiqueta: string }> = [
 /** Los controles sobre el lienzo no deben llegar al arrastre ni al toque de la unidad */
 const detener = (e: SyntheticEvent) => e.stopPropagation();
 
-export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSelect, sondaRef, onPerdida, marca, modo: modoPadre, onModo }: Nv3VistaProps) {
+export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSelect, sondaRef, onPerdida, marca, camion = false, modo: modoPadre, onModo }: Nv3VistaProps) {
   const lienzo = useRef<HTMLDivElement>(null);
   const motor = useRef<MotorNeumaticos | null>(null);
   // Últimos valores de las props para los oyentes que se montan una sola vez
@@ -89,9 +91,9 @@ export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSele
 
   // Reconstruye el camión cuando cambian la configuración, las llantas, la foto o la marca
   useEffect(() => {
-    motor.current?.setDatos(configuracion, llantas, marca ?? null);
+    motor.current?.setDatos(configuracion, llantas, marca ?? null, camion);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firma, foto, marca]);
+  }, [firma, foto, marca, camion]);
 
   // Selección y destino del arrastre
   useEffect(() => {
