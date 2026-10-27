@@ -476,6 +476,8 @@ app.get('/api/tenant-logo', async (req, res) => {
 });
 
 // Archivos en /libs/ son librerías estáticas → cachear agresivamente (30 días)
+// Modelos 3D de unidades (glTF/GLB): solo lectura, para la vista de llantas
+app.use('/assets/3d', express.static(path.join(__dirname, 'assets', '3d'), { maxAge: '7d' }));
 app.use('/libs', express.static(path.join(__dirname, 'libs'), {
     maxAge: '30d',
     immutable: true

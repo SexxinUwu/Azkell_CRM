@@ -3,6 +3,7 @@
 // según el semáforo), rines de aluminio y repuestos. Las posiciones y ejes salen de CONFIGURACIONES, igual que el
 // esquema SVG, para que ambas vistas nombren las mismas llantas.
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
 import { remanenteDe, type LlantaDato } from './NeumaticosEsquema';
 import { tonoMm, type Tono } from './neumaticosSemaforo';
@@ -123,6 +124,55 @@ export interface Llanta3D {
   montada: boolean;
 }
 
+/** Cuerpo de un modelo externo (glTF), ya sin sus ruedas: el visor pone las suyas en las posiciones de la base */
+export type CuerpoExterno = THREE.Group;
+
+const RUTA_MODELO_SCANIA = '/assets/3d/scania_s730_final.glb';
+let cargaScania: Promise<CuerpoExterno | null> | null = null;
+
+/** Carga el modelo una sola vez. Si no se puede leer, devuelve null y el camión sigue con sus formas básicas. */
+export function cargarCuerpoScania(): Promise<CuerpoExterno | null> {
+  if (!cargaScania) {
+    cargaScania = new Promise(resolver => {
+      new GLTFLoader().load(
+        RUTA_MODELO_SCANIA,
+        gltf => resolver(gltf.scene),
+        undefined,
+        () => resolver(null),
+      );
+    });
+  }
+  return cargaScania;
+}
+
+/** Copia del cuerpo sin sus ruedas, escalado para caber en el largo y el alto del camión */
+function ajustarCuerpo(cuerpo: CuerpoExterno, largo: number, altoMax: number): THREE.Group {
+  const copia = cuerpo.clone(true);
+  const ruedas: THREE.Object3D[] = [];
+  copia.traverse(o => {
+    const nombre = (o.name || '').toLowerCase();
+    if (o instanceof THREE.Mesh && (nombre.includes('tire') || nombre.includes('rim'))) ruedas.push(o);
+    if (o instanceof THREE.Mesh) { o.castShadow = true; o.receiveShadow = true; }
+  });
+  ruedas.forEach(o => o.parent?.remove(o));
+
+  // Escala uniforme: el modelo está en unidades de exportación, así que se mide su caja real
+  copia.updateMatrixWorld(true);
+  const tam = new THREE.Box3().setFromObject(copia).getSize(new THREE.Vector3());
+  const escala = Math.min(largo / Math.max(tam.z, 1e-6), altoMax / Math.max(tam.y, 1e-6));
+  copia.scale.multiplyScalar(escala);
+
+  // Centro en x y z; la base queda en y = 0 y se coloca después
+  copia.updateMatrixWorld(true);
+  const caja = new THREE.Box3().setFromObject(copia);
+  const centro = caja.getCenter(new THREE.Vector3());
+  copia.position.set(-centro.x, -caja.min.y, -centro.z);
+
+  const envoltorio = new THREE.Group();
+  envoltorio.add(copia);
+  return envoltorio;
+}
+
 export interface Camion3D {
   grupo: THREE.Group;
   llantas: Map<string, Llanta3D>;
@@ -219,7 +269,7 @@ function crearLlanta(pos: string, x: number, z: number, lado: number, dato: Llan
 
 /** Camión completo según la configuración: `datos` tiene solo las llantas montadas (clave en mayúsculas).
  * `marca` (opcional) se dibuja sobre el capó del tracto; sin marca no hay letrero. */
-export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, rec: Recursos, marca?: string | null): Camion3D | null {
+export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, rec: Recursos, marca?: string | null, cuerpo?: CuerpoExterno | null): Camion3D | null {
   const config = CONFIGURACIONES[codigo];
   if (!config) return null;
   const grupo = new THREE.Group();
@@ -258,7 +308,12 @@ export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, 
   // Ejes
   for (const z of zEjes) malla(new THREE.CylinderGeometry(0.09, 0.09, 3.1, 14), rec.acero, 0, ALTURA_EJE, z, 0, Math.PI / 2);
 
-  if (config.cabina) {
+  if (config.cabina && cuerpo) {
+    // Modelo externo de la marca: ocupa el lugar de la cabina y la litera, sobre el bastidor
+    const externo = ajustarCuerpo(cuerpo, Math.max(3, zMax - zMin - 1), 3.6);
+    externo.position.set(0, 0.85, zCentro);
+    grupo.add(externo);
+  } else if (config.cabina) {
     // Tanques de combustible entre la cabina y los ejes traseros
     for (const x of [-1.05, 1.05]) malla(new THREE.CylinderGeometry(0.32, 0.32, 1.6, 18), rec.acero, x, 0.75, delantero + 2.0, Math.PI / 2);
     // Cabina, capó, parrilla, parabrisas, defensa y espejos, con las posiciones del clásico

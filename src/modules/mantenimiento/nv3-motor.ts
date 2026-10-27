@@ -8,7 +8,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import type { LlantaDato } from './NeumaticosEsquema';
 import type { SondaPosicion } from './ntb-arrastre';
 import {
-  ANCHO_LLANTA, CAMPO_VISION, COLOR_NEON, RADIO_LLANTA, Recursos, anilloLlanta, construirCamion, giroLetreroIsometria,
+  ANCHO_LLANTA, CAMPO_VISION, COLOR_NEON, RADIO_LLANTA, Recursos, anilloLlanta, cargarCuerpoScania, construirCamion, giroLetreroIsometria, type CuerpoExterno,
   liberarCamion, limitesCamion, marcoLlanta, poseCenital, poseIsometrica, poseLateral, type Camion3D, type Llanta3D,
 } from './nv3-escena';
 
@@ -65,6 +65,7 @@ export class MotorNeumaticos {
   private readonly ndc = new THREE.Vector2();
 
   private camion: Camion3D | null = null;
+  private cuerpoScania: CuerpoExterno | null = null;
   private configActual = '';
   private rango: { zMin: number; zMax: number } | null = null;
   private modo: ModoVista = 'plano';
@@ -179,7 +180,17 @@ export class MotorNeumaticos {
       this.camion = null;
     }
     const montadas = new Map(llantas.map(l => [normal(l.posicion), l] as const));
-    const camion = construirCamion(configuracion, montadas, this.recursos, marca);
+    // Solo las unidades de marca Scania usan el modelo de la marca; las demás siguen con sus formas básicas
+    const esScania = /scania/i.test(marca ?? '');
+    if (esScania && !this.cuerpoScania) {
+      cargarCuerpoScania().then(cuerpo => {
+        if (cuerpo && !this.destruido) {
+          this.cuerpoScania = cuerpo;
+          this.setDatos(configuracion, llantas, marca);
+        }
+      });
+    }
+    const camion = construirCamion(configuracion, montadas, this.recursos, marca, esScania ? this.cuerpoScania : null);
     if (camion) {
       this.camion = camion;
       this.scene.add(camion.grupo);
