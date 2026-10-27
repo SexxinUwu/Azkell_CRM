@@ -94,7 +94,7 @@ export const CATALOGOS: ConfigCatalogo[] = [
     clave: 'personal-taller', ruta: '/mantenimiento/personal', eyebrow: 'Mantenimiento · Taller', titulo: 'Personal de taller', singular: 'Técnico',
     icono: UserCog, permiso: 'pers_mant', descripcion: 'Técnicos del taller y su costo por hora, que se usa para calcular la mano de obra de las OT.',
     campos: [
-      { clave: 'nombre', label: 'Nombre', tipo: 'texto', requerido: true, mayusculas: true, ancho: true },
+      { clave: 'nombre', label: 'Nombre', tipo: 'persona', requerido: true, ancho: true, ayuda: 'Elige una persona del directorio de personal, o escribe el nombre si no está' },
       { clave: 'sueldo_mensual', label: 'Sueldo mensual', tipo: 'moneda' },
       { clave: 'costo_hora', label: 'Costo por hora', tipo: 'moneda', ayuda: 'Se sugiere sueldo ÷ 208 horas; puedes ajustarlo' },
     ],

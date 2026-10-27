@@ -7,7 +7,7 @@ export type Registro = Record<string, unknown> & { id: number | string };
 export interface Campo {
   clave: string;
   label: string;
-  tipo: 'texto' | 'textoLargo' | 'numero' | 'moneda' | 'activo' | 'etiquetas';
+  tipo: 'texto' | 'textoLargo' | 'numero' | 'moneda' | 'activo' | 'etiquetas' | 'persona';
   requerido?: boolean;
   mayusculas?: boolean;
   ayuda?: string;

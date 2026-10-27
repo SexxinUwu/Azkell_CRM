@@ -6,16 +6,40 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, TextInput } from '../../core/ui/Field';
+import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
 import { Sheet, ConfirmSheet } from '../../core/ui/Sheet';
 import { Switch } from '../../core/ui/Switch';
 import { TagInput } from '../../core/ui/TagInput';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
+import { nombrePropio } from '../../core/lib/texto';
+import { nombreCompleto, usePersonal } from '../personal/api';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import type { ConfigCatalogo, Registro } from './tipos';
 import './catalogos.css';
+
+/** Nombre de una persona: se elige del directorio de personal, o se escribe si todavía no está ahí */
+function SelectorPersona({ valor, onCambio, ...aria }: {
+  valor: string; onCambio: (v: string) => void;
+  id?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string;
+}) {
+  const personas = usePersonal();
+  const opciones = useMemo(() => {
+    const lista: ComboboxOption[] = (personas.data ?? []).map(p => {
+      const nombre = nombreCompleto(p);
+      return { value: nombre, label: nombrePropio(nombre), description: p.cargo || undefined };
+    });
+    if (valor && !lista.some(o => o.value === valor)) lista.unshift({ value: valor, label: nombrePropio(valor), description: 'No está en el directorio' });
+    return lista;
+  }, [personas.data, valor]);
+  return (
+    <Combobox {...aria} options={opciones} value={valor || null} loading={personas.isLoading}
+      onChange={v => onCambio(v ?? '')} onCreate={texto => onCambio(texto.trim())} createLabel="Usar"
+      placeholder="Busca en el directorio o escribe el nombre" />
+  );
+}
 
 const plegar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const esActivo = (v: unknown) => v === undefined || v === null ? true : v === true || v === 1 || v === '1';
@@ -235,7 +259,9 @@ function FormularioCatalogo({ config, abierto, onClose, existentes }: {
           }
           return (
             <Field key={c.clave} label={c.label} error={error} hint={c.ayuda} wide={c.ancho || c.tipo === 'textoLargo'}>
-              {props => c.tipo === 'textoLargo' ? (
+              {props => c.tipo === 'persona' ? (
+                <SelectorPersona {...props} valor={String(d[c.clave] ?? '')} onCambio={v => cambiar(c.clave, v)} />
+              ) : c.tipo === 'textoLargo' ? (
                 <textarea {...props} className="input" rows={3} value={String(d[c.clave] ?? '')} placeholder={c.placeholder} onChange={e => cambiar(c.clave, e.target.value)} />
               ) : c.tipo === 'moneda' ? (
                 <div className="input-affix">

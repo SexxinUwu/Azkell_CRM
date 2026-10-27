@@ -123,7 +123,7 @@ export function otTipo(o: OrdenTrabajo): string {
 
 export function otFecha(o: OrdenTrabajo): string {
   const f = o.fecha_ingreso || o.creado_en || o.created_at;
-  return f ? f.split('T')[0] : '—';
+  return f ? String(f).slice(0, 10) : '—';
 }
 
 export type AccionOT = 'iniciar' | 'pausar' | 'reanudar' | 'cerrar' | 'anular' | 'reactivar';
