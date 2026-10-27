@@ -565,6 +565,14 @@ function actualizarKPIs() {
     setTxt('kpi-alerta', ale);
     setTxt('kpi-vencido', ven);
     setTxt('kpi-sin-doc', sinDoc);
+    // Porcentaje de cada estado sobre la flota total (y cuánto falta para el 100 % en vigentes)
+    var pct = function(n) { return t > 0 ? Math.round((n / t) * 1000) / 10 : 0; };
+    var setPct = function(id, txt) { var e = document.getElementById(id); if (e) e.innerText = txt; };
+    setPct('kpi-pct-total', '100% de la flota');
+    setPct('kpi-pct-vigente', pct(vig) + '% · falta ' + (Math.round((100 - pct(vig)) * 10) / 10) + '%');
+    setPct('kpi-pct-alerta', pct(ale) + '% de la flota');
+    setPct('kpi-pct-vencido', pct(ven) + '% de la flota');
+    setPct('kpi-pct-sin-doc', pct(sinDoc) + '% de la flota');
 }
 
 function filtrarKPI(tipo, element) {
