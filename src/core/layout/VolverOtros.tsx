@@ -15,8 +15,11 @@ export function VolverOtros() {
   });
   if (!esHerramienta) return null;
   return (
-    <button type="button" className="otros-volver" onClick={() => navigate(RUTA_HUB)}>
-      <ArrowLeft size={14} aria-hidden /> Otros
-    </button>
+    <div className="otros-volver-fila">
+      <button type="button" className="otros-volver" onClick={() => navigate(RUTA_HUB)}>
+        <ArrowLeft size={18} strokeWidth={2.25} aria-hidden />
+        <span>Otros</span>
+      </button>
+    </div>
   );
 }
