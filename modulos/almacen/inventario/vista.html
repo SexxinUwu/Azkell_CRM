@@ -6,6 +6,10 @@
     .form-servicio-mode .ent-doc-card:not(:first-child) {
         display: none !important;
     }
+    /* Formulario de llantas: estos campos van ocultos con su valor fijo */
+    .form-llanta-mode .llanta-oculto {
+        display: none !important;
+    }
     
 /* ─── Lista estilo KeyFacil — tarjetas horizontales ─────────────── */
 .inv-list-card {
@@ -749,7 +753,7 @@
             </div>
           </div>
           <!-- Datos de la llanta (familia NEUMATICOS): se usan al recepcionar -->
-          <div id="inv-llanta-bloque" class="d-none mt-2">
+          <div id="inv-llanta-bloque" class="d-none mt-2" style="grid-column:1/-1;">
             <div class="ent-field-label mb-1">Datos de la llanta</div>
             <div class="row g-2">
               <div class="col-md-4"><input type="text" id="inv-f-llanta-medida" class="ent-input-sm w-100" placeholder="Medida (ej. 295/80R22.5)"></div>
@@ -759,7 +763,7 @@
           </div>
 
           <!-- Tipo -->
-          <div>
+          <div class="llanta-oculto">
             <div class="ent-field-label">Tipo</div>
             <div class="position-relative">
               <input type="text" id="inv-f-tipo-txt" class="ent-input-sm w-100" placeholder="Buscar..." autocomplete="off" oninput="window._invCbFiltrar('inv-f-tipo')" onfocus="window._invCbFiltrar('inv-f-tipo')" onblur="window._cbHide('inv-f-tipo')">
@@ -769,7 +773,7 @@
           </div>
 
           <!-- Sub-tipo -->
-          <div>
+          <div class="llanta-oculto">
             <div class="ent-field-label">Sub-tipo</div>
             <div class="position-relative">
               <input type="text" id="inv-f-sub-tipo-txt" class="ent-input-sm w-100" placeholder="Buscar..." autocomplete="off" oninput="window._invCbFiltrar('inv-f-sub-tipo')" onfocus="window._invCbFiltrar('inv-f-sub-tipo')" onblur="window._cbHide('inv-f-sub-tipo')">
@@ -798,13 +802,13 @@
           </div>
 
           <!-- Anaquel -->
-          <div>
+          <div class="llanta-oculto">
             <div class="ent-field-label">Anaquel</div>
             <input type="text" id="inv-f-anaquel" class="ent-input-sm" placeholder="Ej: 6-4, A-2, etc.">
           </div>
 
           <!-- Unidad -->
-          <div style="grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+          <div class="llanta-oculto" style="grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
             <div>
               <div class="ent-field-label">Unidad</div>
               <div class="position-relative">
@@ -856,7 +860,7 @@
           <div style="grid-column:1/-1; height:1px; background:#e2e8f0; margin:4px 0;"></div>
 
           <!-- Estado -->
-          <div style="grid-column:1/-1;">
+          <div class="llanta-oculto" style="grid-column:1/-1;">
             <div class="ent-field-label">Estado</div>
             <div class="position-relative">
               <input type="text" id="inv-f-estado-art-txt" class="ent-input-sm w-100" placeholder="Activo..." autocomplete="off" oninput="window._invCbFiltrar('inv-f-estado-art')" onfocus="window._invCbFiltrar('inv-f-estado-art')" onblur="window._cbHide('inv-f-estado-art')">
@@ -866,7 +870,7 @@
           </div>
 
           <!-- Observaciones -->
-          <div style="grid-column:1/-1;">
+          <div class="llanta-oculto" style="grid-column:1/-1;">
             <div class="ent-field-label">Observaciones</div>
             <textarea id="inv-f-obs" class="ent-input-sm" rows="3" placeholder="Notas adicionales..." style="resize:none;"></textarea>
           </div>

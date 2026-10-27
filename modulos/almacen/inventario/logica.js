@@ -1389,6 +1389,11 @@ window.abrirDetalleInv = function(id) {
     html += techItem('6 col-md-3', 'Anaquel / Fila', item.anaquel ? 'Anaquel ' + item.anaquel : '');
     html += techItem('6 col-md-3', 'Unidad de Medida', item.unidad);
     html += techItem('6 col-md-3', 'Estado', item.estado_art || 'Activo', true, item.estado_art === 'Inactivo' ? '#ef4444' : '#16a34a');
+    if (invEsItemLlanta(item)) {
+        html += techItem('6 col-md-3', 'Marca', item.marca);
+        html += invCeldaLlanta('Medida', 'inv-det-llanta-medida');
+        html += invCeldaLlanta('Modelo', 'inv-det-llanta-modelo');
+    }
     
     if (!isService) {
         html += techItem('6 col-md-3', 'Stock Mínimo', parseFloat(item.stock_min || 0) + ' ' + (item.unidad || ''));
@@ -1432,6 +1437,7 @@ window.abrirDetalleInv = function(id) {
     }
 
     body.innerHTML = html;
+    if (invEsItemLlanta(item)) invCargarDetalleLlanta(item.id);
 
     // Renderizar Barcode en vivo en el modal
     if (!isService) {
@@ -1865,6 +1871,11 @@ window.abrirModalInventario = function(id, tabOrModo) {
         if (cantWrapN) cantWrapN.style.display = 'block';
         _invSetField('inv-f-cantidad-inicial', '');
 
+        // Almacén de llantas: la familia viene en NEUMATICOS
+        if (!isServicio) {
+            window._cbSet('inv-f-familia', 'NEUMATICOS', 'NEUMATICOS');
+            invActualizarBloqueLlanta();
+        }
         // Default: moneda PEN → ocultar T/C
         window._cbSet('inv-f-moneda', 'PEN', 'PEN (S/)');
         var tcRow0 = document.getElementById('inv-tc-row');
@@ -2092,7 +2103,7 @@ window.guardarArticuloInv = function(event) {
         codigo_articulo: codigoArticulo || null,
         // descripcion se genera en el servidor a partir de los campos anteriores
         familia:        g('inv-f-familia') || null,
-        unidad:         g('inv-f-unidad') || null,
+        unidad:         invEsFamiliaLlanta() ? 'Unidades' : (g('inv-f-unidad') || null),
         moneda:         g('inv-f-moneda') || 'PEN',
         costo_referencial: gN('inv-f-costo'),
         tipo_cambio: (function(){
@@ -2769,8 +2780,20 @@ function invEsFamiliaLlanta() {
   return f.trim().toUpperCase() === 'NEUMATICOS';
 }
 function invActualizarBloqueLlanta() {
+  var llanta = invEsFamiliaLlanta();
   var b = document.getElementById('inv-llanta-bloque');
-  if (b) b.classList.toggle('d-none', !invEsFamiliaLlanta());
+  if (b) b.classList.toggle('d-none', !llanta);
+  var f = document.getElementById('form-inv-articulo');
+  if (f) f.classList.toggle('form-llanta-mode', llanta);
+  if (llanta) invValoresLlanta();
+}
+// Campos que el formulario de llantas no pide: van ocultos con su valor fijo.
+// Solo en alta nueva: al editar se conserva lo que ya tenga el artículo.
+function invValoresLlanta() {
+  var editando = !!((document.getElementById('inv-edit-id') || {}).value);
+  if (editando) return;
+  window._cbSet('inv-f-tipo', 'Original', 'Original');
+  window._cbSet('inv-f-estado-art', 'Activo', 'Activo');
 }
 function invCargarDatosLlanta(id) {
   if (!id) return;
@@ -2809,3 +2832,24 @@ document.addEventListener('click', function() { setTimeout(invActualizarBloqueLl
 document.addEventListener('input', function(e) {
   if (e.target && e.target.id === 'inv-f-familia-txt') invActualizarBloqueLlanta();
 });
+
+// ── Detalle de llantas: medida, marca y modelo ────────────────────
+function invEsItemLlanta(item) {
+  return String((item && item.familia) || '').trim().toUpperCase() === 'NEUMATICOS';
+}
+function invCeldaLlanta(etiqueta, id) {
+  return '<div class="col-6 col-md-3"><div class="p-2.5 rounded-3 bg-light border border-light-subtle h-100">' +
+         '<span class="text-muted d-block fw-bold" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:2px;">' + etiqueta + '</span>' +
+         '<div id="' + id + '" class="fw-bold text-dark text-truncate" style="font-size:0.86rem;">—</div></div></div>';
+}
+function invCargarDetalleLlanta(id) {
+  fetch('/api/almacen/neumaticos-articulo/' + encodeURIComponent(id))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(j) {
+      var d = (j && j.data) || {};
+      var pon = function(elId, v) { var e = document.getElementById(elId); if (e && v) e.textContent = v; };
+      pon('inv-det-llanta-medida', d.medida);
+      pon('inv-det-llanta-modelo', d.modelo);
+    })
+    .catch(function() {});
+}
