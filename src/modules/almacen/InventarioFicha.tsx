@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import JsBarcode from 'jsbarcode';
-import { ChevronLeft, Edit, Package, RefreshCw, Trash2 } from 'lucide-react';
+import { ChevronLeft, Edit, Package, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { stockLabel, stockTono, useKardex, type ArticuloInv } from './api';
 import { RegularizarSheet } from './RegularizarSheet';
 import { api } from '../../core/api/client';
+import { useToast } from '../../core/ui/Toast';
+import { imprimirEtiqueta } from './etiquetaArticulo';
 import { formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
 
 interface Props {
@@ -48,6 +50,7 @@ function CodigoBarras({ valor }: { valor: string }) {
 
 export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, onActualizado }: Props) {
   const [regularizando, setRegularizando] = useState(false);
+  const toast = useToast();
   // Llantas (familia NEUMATICOS): medida, modelo y cocada viven en neumaticos_articulo
   const esLlanta = (a.familia ?? '').trim().toUpperCase() === 'NEUMATICOS';
   const llantaQ = useQuery<{ data?: DatosLlanta | null }>({
@@ -83,6 +86,10 @@ export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, o
           <span className="inv-det__id">{a.id} • CB: {codigoBarra}</span>
         </div>
         <div className="inv-det__acciones">
+          <Button variant="secondary" size="sm" icon={<Printer size={15} />}
+            onClick={() => { if (!imprimirEtiqueta(a)) toast('No se pudo abrir la etiqueta. Permite las ventanas emergentes para este sitio.', 'error'); }}>
+            Imprimir
+          </Button>
           <Button variant="secondary" size="sm" icon={<RefreshCw size={15} />} onClick={() => setRegularizando(true)}>Regularizar</Button>
           {onEditar && <Button variant="primary" size="sm" icon={<Edit size={15} />} onClick={onEditar}>Editar</Button>}
           <MenuOtros opciones={[

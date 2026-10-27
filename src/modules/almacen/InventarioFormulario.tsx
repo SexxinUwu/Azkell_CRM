@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react';
+import { Plus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
@@ -7,6 +8,8 @@ import { MultiSelect } from '../../core/ui/MultiSelect';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { guardarArticulo, useAlmacenesLista, type ArticuloInv, type ArticuloNuevo } from './api';
+import { InventarioImagen } from './InventarioImagen';
+import { NuevaOpcionSheet } from './NuevaOpcionSheet';
 
 interface Props {
   open: boolean;
@@ -94,12 +97,15 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
   const [medida, setMedida] = useState('');
   const [modeloLlanta, setModeloLlanta] = useState('');
   const [cocada, setCocada] = useState('');
+  const [imagenUrl, setImagenUrl] = useState<string | null>(null);
+  const [nuevaOpcion, setNuevaOpcion] = useState<'marca' | 'familia' | null>(null);
 
   const llanta = familia.trim().toUpperCase() === FAMILIA_LLANTA;
   const tcPorDefecto = Number(configQ.data?.tipo_cambio) || 3.7;
 
   useEffect(() => {
     if (!open) return;
+    setImagenUrl(a?.imagen_url ?? null);
     if (a) {
       setArticulo(a.articulo ?? '');
       setCodigoArticulo(a.codigo_articulo ?? '');
@@ -206,6 +212,7 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
   }
 
   return (
+    <>
     <Sheet open={open} onClose={onClose} title={a ? 'Editar artículo' : 'Nuevo artículo'}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
         <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--label-2)' }}>
@@ -223,18 +230,24 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
         </Field>
         <Field label="Marca">
           {p => (
-            <SelectInput {...p} value={marca} onChange={e => setMarca(e.target.value)}>
-              <option value="">— Sin marca —</option>
-              {opciones((marcasQ.data ?? []).map(m => m.nombre), marca).map(m => <option key={m} value={m}>{m}</option>)}
-            </SelectInput>
+            <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+              <SelectInput {...p} value={marca} onChange={e => setMarca(e.target.value)} style={{ flex: 1 }}>
+                <option value="">— Sin marca —</option>
+                {opciones((marcasQ.data ?? []).map(m => m.nombre), marca).map(m => <option key={m} value={m}>{m}</option>)}
+              </SelectInput>
+              <Button variant="secondary" iconOnly icon={<Plus size={16} />} aria-label="Nueva marca" onClick={() => setNuevaOpcion('marca')} />
+            </div>
           )}
         </Field>
         <Field label="Familia">
           {p => (
-            <SelectInput {...p} value={familia} onChange={e => setFamilia(e.target.value)}>
-              <option value="">— Sin familia —</option>
-              {opciones((familiasQ.data ?? []).map(f => f.nombre), familia).map(f => <option key={f} value={f}>{f}</option>)}
-            </SelectInput>
+            <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+              <SelectInput {...p} value={familia} onChange={e => setFamilia(e.target.value)} style={{ flex: 1 }}>
+                <option value="">— Sin familia —</option>
+                {opciones((familiasQ.data ?? []).map(f => f.nombre), familia).map(f => <option key={f} value={f}>{f}</option>)}
+              </SelectInput>
+              <Button variant="secondary" iconOnly icon={<Plus size={16} />} aria-label="Nueva familia" onClick={() => setNuevaOpcion('familia')} />
+            </div>
           )}
         </Field>
 
@@ -362,10 +375,21 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
           )}
         </Field>
 
+        <Field label="Foto y código QR">
+          {() => <InventarioImagen articuloId={a?.id} imagenUrl={imagenUrl} onCambio={setImagenUrl} />}
+        </Field>
+
         <Button variant="primary" loading={guardando} onClick={guardar} style={{ width: '100%' }}>
           {a ? 'Guardar cambios' : 'Crear artículo'}
         </Button>
       </div>
     </Sheet>
+      <NuevaOpcionSheet
+        open={nuevaOpcion !== null}
+        tipo={nuevaOpcion ?? 'marca'}
+        onClose={() => setNuevaOpcion(null)}
+        onCreado={nombre => (nuevaOpcion === 'familia' ? setFamilia(nombre) : setMarca(nombre))}
+      />
+    </>
   );
 }

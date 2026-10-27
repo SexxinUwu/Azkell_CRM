@@ -310,3 +310,6 @@
 .inv-campo--doble { grid-column: span 2; }
 .inv-campo__etiqueta { font-size: 0.625rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--label-2); }
 .inv-campo__valor { font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere; }
+
+.inv-enlace { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 600; color: var(--accent); text-decoration: none; }
+.inv-enlace:hover { text-decoration: underline; }
