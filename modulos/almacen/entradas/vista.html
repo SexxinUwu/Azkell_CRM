@@ -1238,6 +1238,21 @@
   padding: 18px 24px !important;
   gap: 14px !important;
 }
+/* Tarjetas del detalle de la OC: barra de color arriba, sombra suave y elevación al pasar el mouse */
+#modalDetalleEntradaOC .det-oc-card {
+    position: relative; overflow: hidden; gap: 6px;
+    border-radius: 14px; background: #ffffff; border: 1px solid #e8edf3;
+    box-shadow: 0 8px 22px -12px rgba(15, 23, 42, 0.18);
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+#modalDetalleEntradaOC .det-oc-card::before {
+    content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px;
+    background: linear-gradient(90deg, var(--acento), color-mix(in srgb, var(--acento) 35%, #ffffff));
+}
+#modalDetalleEntradaOC .det-oc-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 30px -14px rgba(15, 23, 42, 0.28);
+}
 #modalDetalleEntradaOC #det-oc-titulo-num {
   font-size: 1.5rem !important;
   font-weight: 700 !important;
@@ -1449,7 +1464,7 @@
                 <div class="row g-2 mb-0 flex-shrink-0">
                     <!-- Card 1: Solicitud -->
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="p-2.5 px-3 h-100 d-flex flex-column" style="border-radius: 12px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 3px 12px -2px rgba(0, 0, 0, 0.03); gap: 4px;">
+                        <div class="det-oc-card p-2.5 px-3 h-100 d-flex flex-column" style="--acento: #0284c7;">
                             <div class="fw-bold d-flex align-items-center gap-1.5" style="font-size: 0.70rem; letter-spacing: 0.05em; color: #0284c7; text-transform: uppercase;">
                                 <i class="bi bi-person-fill" style="font-size: 0.82rem;"></i> SOLICITUD
                             </div>
@@ -1466,7 +1481,7 @@
 
                     <!-- Card 2: Emisión & Destino -->
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="p-2.5 px-3 h-100 d-flex flex-column" style="border-radius: 12px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 3px 12px -2px rgba(0, 0, 0, 0.03); gap: 4px;">
+                        <div class="det-oc-card p-2.5 px-3 h-100 d-flex flex-column" style="--acento: #d97706;">
                             <div class="fw-bold d-flex align-items-center gap-1.5" style="font-size: 0.70rem; letter-spacing: 0.05em; color: #d97706; text-transform: uppercase;">
                                 <i class="bi bi-calendar-event-fill" style="font-size: 0.82rem;"></i> EMISIÓN & DESTINO
                             </div>
@@ -1483,7 +1498,7 @@
 
                     <!-- Card 3: Proveedor -->
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="p-2.5 px-3 h-100 d-flex flex-column" style="border-radius: 12px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 3px 12px -2px rgba(0, 0, 0, 0.03); gap: 4px;">
+                        <div class="det-oc-card p-2.5 px-3 h-100 d-flex flex-column" style="--acento: #059669;">
                             <div class="fw-bold d-flex align-items-center gap-1.5" style="font-size: 0.70rem; letter-spacing: 0.05em; color: #059669; text-transform: uppercase;">
                                 <i class="bi bi-building-fill" style="font-size: 0.82rem;"></i> PROVEEDOR
                             </div>
@@ -1495,12 +1510,20 @@
                                 <span class="d-block" style="font-size: 0.66rem; color: #64748b; font-weight: 600;">Motivo / Justificación:</span>
                                 <span class="d-block text-dark fw-bold text-uppercase" id="det-oc-card-motivo" style="font-size: 0.82rem; color: #0f172a; line-height: 1.25; word-break: break-word;">—</span>
                             </div>
+                            <div>
+                                <span class="d-block" style="font-size: 0.66rem; color: #64748b; font-weight: 600;">Naturaleza del gasto:</span>
+                                <span class="d-block text-dark fw-bold" id="det-oc-card-naturaleza" style="font-size: 0.80rem; color: #0f172a; line-height: 1.25;">—</span>
+                            </div>
+                            <div>
+                                <span class="d-block" style="font-size: 0.66rem; color: #64748b; font-weight: 600;">Sub motivo (detalle):</span>
+                                <span class="d-block text-dark fw-bold" id="det-oc-card-submotivo" style="font-size: 0.80rem; color: #0f172a; line-height: 1.25; word-break: break-word;">—</span>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Card 4: Documentos & Pago -->
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="p-2.5 px-3 h-100 d-flex flex-column" style="border-radius: 12px; background: #ffffff; border: 1.5px solid #eef2f6; box-shadow: 0 3px 12px -2px rgba(0, 0, 0, 0.03); gap: 4px;">
+                        <div class="det-oc-card p-2.5 px-3 h-100 d-flex flex-column" style="--acento: #4f46e5;">
                             <div class="fw-bold d-flex align-items-center gap-1.5" style="font-size: 0.70rem; letter-spacing: 0.05em; color: #4f46e5; text-transform: uppercase;">
                                 <i class="bi bi-credit-card-2-front-fill" style="font-size: 0.82rem;"></i> DOCUMENTOS & PAGO
                             </div>

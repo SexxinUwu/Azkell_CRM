@@ -3039,6 +3039,16 @@ window.abrirModalDetalleOC = async function(id) {
 
     var cardMotivo = document.getElementById('det-oc-card-motivo');
     if (cardMotivo) cardMotivo.innerText = (d.motivo_entrada || 'STOCK - COMPRA DE CONSUMIBLES').toUpperCase();
+    // Naturaleza del gasto: se deduce del sub motivo (mismo mapa del formulario); el sub motivo se muestra tal cual
+    var subMotivo = d.sub_motivo || '';
+    var naturaleza = '';
+    Object.keys(window._entSubMotivosMap || {}).forEach(function(m) {
+        if ((window._entSubMotivosMap[m] || []).indexOf(subMotivo) >= 0) naturaleza = m;
+    });
+    var cardNaturaleza = document.getElementById('det-oc-card-naturaleza');
+    if (cardNaturaleza) cardNaturaleza.innerText = naturaleza || '—';
+    var cardSubMotivo = document.getElementById('det-oc-card-submotivo');
+    if (cardSubMotivo) cardSubMotivo.innerText = subMotivo || '—';
 
     var pagoTxt = (d.moneda === 'USD' ? 'DÓLARES (USD)' : 'SOLES (PEN)') + ' • ' + (d.condicion_pago || 'AL CONTADO').toUpperCase();
     if (d.dias_credito && (pagoTxt.includes('CRÉDITO') || pagoTxt.includes('CREDITO'))) {
