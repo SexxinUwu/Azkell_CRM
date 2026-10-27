@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, X } from 'lucide-react';
+import { ChevronDown, CircleAlert, Search, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -14,12 +14,55 @@ import { frFecha, frFrecuencia, frKmCambio, frKmGps, frObs, frPlaca, frTipo, frI
 import {
   actualizarFleetrun, buscarFrecuencia, guardarFleetrun, useFrecuenciasMp, useTiposPreventivo, type FleetrunCampos,
 } from './fleetrunApi';
+import { tipoOracion } from './fleetrunReporte';
 
 // Registrar mantenimiento preventivo (uno o varios tipos de MP a la vez) o editar un registro.
 // Misma lógica que modulos/mantenimiento/fleetrun/logica.js: la frecuencia sale de las Frecuencias MP según
 // marca, tipo de MP, UTS, combustible y modelo de la unidad; km próximo = km actual + frecuencia.
 
 interface ItemTipo { tipo: string; frec: string; prox: string }
+
+const sinAcentos = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+/** Elige un tipo de mantenimiento con búsqueda, igual que el selector de placa: un campo que abre una hoja con buscador */
+function TipoPicker({ id, opciones, onPick, 'aria-describedby': ariaDescribedBy }: {
+  id?: string;
+  opciones: string[];
+  onPick: (tipo: string) => void;
+  'aria-describedby'?: string;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const buscada = sinAcentos(busqueda);
+  const visibles = opciones.filter(t => sinAcentos(t).includes(buscada));
+
+  function cerrar() { setAbierto(false); setBusqueda(''); }
+
+  return (
+    <>
+      <button type="button" id={id} className="campo-picker" aria-haspopup="dialog" aria-describedby={ariaDescribedBy}
+        onClick={() => { haptic('selection'); setAbierto(true); }}>
+        <Search size={16} aria-hidden />
+        <span className="campo-picker__vacio">Agregar un tipo de mantenimiento…</span>
+        <ChevronDown size={16} aria-hidden className="campo-picker__chevron" />
+      </button>
+      <Sheet open={abierto} onClose={cerrar} title="Tipos de mantenimiento">
+        <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar tipo de mantenimiento" />
+        {visibles.length > 0 ? (
+          <div className="list">
+            {visibles.map(t => (
+              <button key={t} type="button" className="row" onClick={() => { haptic('selection'); onPick(t); cerrar(); }}>
+                <span className="row__main"><span className="row__title">{tipoOracion(t)}</span></span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="t-callout c-secondary" style={{ textAlign: 'center' }}>Ningún tipo coincide.</p>
+        )}
+      </Sheet>
+    </>
+  );
+}
 
 const hoyLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const num = (s: string) => { const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
@@ -195,12 +238,7 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
 
           {!editando && (
             <Field label="Tipos de mantenimiento" wide hint={unidad ? `${unidad.marca || 'Sin marca'} · ${unidad.uts || 'Sin UTS'} — la frecuencia sale de Frecuencias MP` : 'Elige primero la placa para calcular la frecuencia'}>
-              {p => (
-                <SelectInput {...p} value="" onChange={e => agregarTipo(e.target.value)}>
-                  <option value="">Agregar un tipo de MP…</option>
-                  {tiposDisponibles.map(t => <option key={t} value={t}>{t}</option>)}
-                </SelectInput>
-              )}
+              {p => <TipoPicker id={p.id} aria-describedby={p['aria-describedby']} opciones={tiposDisponibles} onPick={agregarTipo} />}
             </Field>
           )}
         </div>
@@ -212,7 +250,7 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
             )}
             {items.map((it, i) => (
               <div key={it.tipo} className="dato" style={{ display: 'grid', gridTemplateColumns: '1fr 6rem 7rem auto', gap: 'var(--s-2)', alignItems: 'center' }}>
-                <span className="dato__label" style={{ fontWeight: 700 }}>{it.tipo}</span>
+                <span className="dato__label" style={{ fontWeight: 700 }}>{tipoOracion(it.tipo)}</span>
                 <TextInput type="number" min={0} aria-label={`Frecuencia de ${it.tipo} (${u})`} placeholder={`Frec. ${u}`}
                   value={it.frec} onChange={e => editarFrec(i, e.target.value)} />
                 <TextInput type="number" min={0} aria-label={`Próximo de ${it.tipo} (${u})`} placeholder={`Próx. ${u}`}

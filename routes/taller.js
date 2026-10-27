@@ -5,6 +5,7 @@ const { getPresignedUploadUrl, getPresignedUrl } = require('../utils/s3');
 const { calcularHorasTecnicos, horasDeTrabajo, fechaNaive } = require('../services/horas_tecnicos');
 const eventosNotif = require('../services/notificaciones_eventos');
 const { htmlAPdf } = require('../services/ot_pdf');
+const { htmlReporteFleetrun } = require('../services/fleetrun_reporte');
 const router = express.Router();
 
 module.exports = (db, logAudit, _generarCodigoAlmacen) => {
@@ -1435,6 +1436,26 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 });
             });
         });
+    });
+
+    // Reporte F-MAN-006 de mantenimientos preventivos: el formato del clásico en PDF con Chromium del servidor.
+    // Recibe las filas ya leídas por el cliente (ver services/fleetrun_reporte.js).
+    router.post('/fleetrun-pdf', async (req, res) => {
+        const filas = Array.isArray(req.body?.filas) ? req.body.filas.slice(0, 5000) : [];
+        const logo = typeof req.body?.logo === 'string' && req.body.logo.startsWith('data:image/') ? req.body.logo : null;
+        try {
+            const html = htmlReporteFleetrun({
+                filas,
+                empresa: String(req.body?.empresa || '').slice(0, 120),
+                emisor: String(req.body?.emisor || '').slice(0, 120),
+                logo,
+            });
+            const pdf = await htmlAPdf(html, 'Estatus de Mantenimientos Preventivos - F-MAN-006', true);
+            res.set('Content-Type', 'application/pdf').send(Buffer.from(pdf));
+        } catch (err) {
+            console.error('[fleetrun-pdf]', err.message);
+            res.status(500).json({ error: 'No se pudo generar el PDF' });
+        }
     });
 
     // ✨ TALLER PERSONAL ✨
