@@ -13,24 +13,23 @@ import { TagInput } from '../../core/ui/TagInput';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { nombrePropio } from '../../core/lib/texto';
-import { nombreCompleto, usePersonal } from '../personal/api';
+import { useConductores } from '../conductores/api';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import type { ConfigCatalogo, Registro } from './tipos';
 import './catalogos.css';
 
-/** Nombre de una persona: se elige del directorio de personal, o se escribe si todavía no está ahí */
+/** Nombre de un técnico: se elige del directorio de conductores (activos), o se escribe si todavía no está ahí */
 function SelectorPersona({ valor, onCambio, ...aria }: {
   valor: string; onCambio: (v: string) => void;
   id?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string;
 }) {
-  const personas = usePersonal();
+  const personas = useConductores();
   const opciones = useMemo(() => {
-    const lista: ComboboxOption[] = (personas.data ?? []).map(p => {
-      const nombre = nombreCompleto(p);
-      return { value: nombre, label: nombrePropio(nombre), description: p.cargo || undefined };
-    });
+    const lista: ComboboxOption[] = (personas.data ?? [])
+      .filter(c => c.estado.trim().toLowerCase() !== 'inactivo')
+      .map(c => ({ value: c.nombre, label: nombrePropio(c.nombre), description: c.empresa || undefined }));
     if (valor && !lista.some(o => o.value === valor)) lista.unshift({ value: valor, label: nombrePropio(valor), description: 'No está en el directorio' });
     return lista;
   }, [personas.data, valor]);
