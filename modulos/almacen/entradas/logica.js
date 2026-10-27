@@ -3589,18 +3589,33 @@ window.asegurarModalProveedorYAbrir = function(rucTyped) {
     var openForm = function() {
         if (typeof window.abrirModalProveedor === 'function') {
             window._onProveedorCreado = function(newId, provNombre, provRuc) {
-                if (typeof window._entCargarProveedores === 'function') {
-                    window._entCargarProveedores();
-                }
-                setTimeout(function() {
-                    var displayTxt = provNombre + (provRuc ? ' (' + provRuc + ')' : '');
-                    if (typeof window._cbSet === 'function') {
+                // Antes de seleccionar el proveedor nuevo: se recarga la lista (con sus cuentas bancarias) y se espera.
+                // Así su cuenta aparece al instante, sin salir del formulario.
+                var ctaEmpresaAntes = (document.getElementById('ent-f-cuenta-empresa') || {}).value || '';
+                var displayTxt = provNombre + (provRuc ? ' (' + provRuc + ')' : '');
+                fetch('/api/almacen/proveedores')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        var lista = data || [];
+                        window._entProveedoresRaw = lista;
+                        window._entProvItems = lista.map(function(p) {
+                            var nombre = p.razon_social ? p.razon_social : p.nombre;
+                            return { value: p.id, label: nombre + (p.numero_documento ? ' (' + p.numero_documento + ')' : '') };
+                        });
+                        window._cbInit('ent-f-proveedor', window._entProvItems, 'Buscar proveedor…');
+                        window._cbOnSelect('ent-f-proveedor', function(provId) { window._entCargarCuentasProveedor(provId); });
                         window._cbSet('ent-f-proveedor', newId, displayTxt);
-                    }
-                    if (typeof window.rotToast === 'function') {
-                        window.rotToast('Proveedor "' + provNombre + '" registrado y seleccionado.', 'bg-success');
-                    }
-                }, 300);
+                        window._entCargarCuentasProveedor(newId);
+                        // La cuenta de la empresa se vuelve a cargar conservando la que ya estaba elegida
+                        window._entCargarCuentasEmpresa(ctaEmpresaAntes);
+                        if (typeof window.rotToast === 'function') {
+                            window.rotToast('Proveedor "' + provNombre + '" registrado y seleccionado.', 'bg-success');
+                        }
+                    })
+                    .catch(function(err) {
+                        console.warn('No se pudo recargar los proveedores:', err);
+                        if (typeof window._entCargarProveedores === 'function') window._entCargarProveedores();
+                    });
             };
 
             window.abrirModalProveedor();
