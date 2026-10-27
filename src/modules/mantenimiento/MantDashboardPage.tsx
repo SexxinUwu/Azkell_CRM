@@ -12,7 +12,7 @@ import { errorMessage } from '../../core/api/client';
 import {
   otDetalles, otId, otTipo, tecnicosDeOT, tiempoNetoOT, trabajosDeOT,
   useFleetrun, useOrdenesTrabajoData, useStatusRampa, useTrabajosOT,
-  frFecha, frKmCambio, frPlaca, frTipo,
+  frFecha, frFechaIso, frKmCambio, frPlaca, frTipo,
   type OrdenTrabajo, type RampaEntrada, type TrabajoOT,
 } from './api';
 import { useInspecciones, useInspeccionesNeumaticos, type Inspeccion, type InspeccionNeumaticos } from '../inspecciones/api';
@@ -248,8 +248,8 @@ export function MantDashboardPage() {
   );
   const cambios = useMemo(
     () => filasFleetrun
-      .filter(f => { const d = frFecha(f).slice(0, 10); return d >= desde && d <= hasta; })
-      .sort((a, b) => frFecha(b).localeCompare(frFecha(a))),
+      .filter(f => { const d = frFechaIso(f); return d >= desde && d <= hasta; })
+      .sort((a, b) => frFechaIso(b).localeCompare(frFechaIso(a))),
     [filasFleetrun, desde, hasta],
   );
 
@@ -308,10 +308,12 @@ export function MantDashboardPage() {
       <PageHeader eyebrow="Mantenimiento" title="Dashboard de taller" subtitle={cargando ? 'Cargando…' : `${otsRango.length} órdenes de trabajo en el rango`} />
 
       {/* Filtros: fecha y empresa, para todo el dashboard */}
-      <div style={{ display: 'flex', gap: 'var(--s-3)', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 'var(--s-4)' }}>
+      <div className="mant-dash-filtros">
         <label className="aud-fecha"><span>Desde</span><input type="date" value={desde} max={hasta} onChange={e => setDesde(e.target.value)} /></label>
         <label className="aud-fecha"><span>Hasta</span><input type="date" value={hasta} min={desde} onChange={e => setHasta(e.target.value)} /></label>
-        <MultiSelect label="Empresa" options={listaEmpresas} value={empresas} onChange={setEmpresas} placeholder="Todas" />
+        <div className="mant-dash-empresa">
+          <MultiSelect label="Empresa" options={listaEmpresas} value={empresas} onChange={setEmpresas} placeholder="Todas" />
+        </div>
       </div>
 
       <div style={{ marginBottom: 'var(--s-4)' }}>
@@ -368,7 +370,7 @@ export function MantDashboardPage() {
                 <TablaRedimensionable id="dash-ultimos-cambios" columnas={COL_CAMBIOS} ariaLabel="Últimos cambios de preventivo" altoMax="45vh">
                   {cambios.map((f, i) => (
                     <tr key={`${frPlaca(f)}-${frFecha(f)}-${i}`}>
-                      <Celda mono>{fechaDMY(frFecha(f))}</Celda>
+                      <Celda mono>{fechaDMY(frFechaIso(f))}</Celda>
                       <Celda><LicensePlate plate={frPlaca(f)} size="sm" /></Celda>
                       <Celda>{frTipo(f)}</Celda>
                       <Celda alinear="right" mono>{frKmCambio(f).toLocaleString('es-PE')}</Celda>

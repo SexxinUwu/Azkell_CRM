@@ -584,6 +584,11 @@ export const reactivarRampa = (id: string, usuario: string) =>
 // La API legada devuelve arrays posicionales: [id, ?, ?, fecha, placa, ?, cliente, uts, tipo_mp, km_cambio, frecuencia, km_prox, obs, ?, km_gps]
 export type FleetrunFila = (string | number | null)[];
 
+/** Fecha del registro en AAAA-MM-DD (frFecha viene como DD/MM/YYYY): sirve para filtrar y ordenar */
+export function frFechaIso(r: FleetrunFila): string {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(frFecha(r));
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+}
 export function frPlaca(r: FleetrunFila)     { return String(r[4] ?? '') || '—'; }
 export function frFecha(r: FleetrunFila)     { return String(r[3] ?? '') || '—'; }
 export function frTipo(r: FleetrunFila)      { return String(r[8] ?? '') || '—'; }
