@@ -90,16 +90,26 @@ export function useTiposPreventivo() {
 
 const norm = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
 
-/** Frecuencia de un tipo de MP para una unidad (igual que _buscarFrecuenciaTipo del clásico): la primera fila que coincide; vacío en la tabla = comodín */
+/**
+ * Frecuencia de un tipo de MP para una unidad. Regla igual que el servidor (routes/planificacion.js):
+ * vacío o "TODOS" en la tabla = comodín; de las reglas que coinciden gana la más específica
+ * (la que fija más columnas: marca, UTS, combustible, modelo).
+ */
 export function buscarFrecuencia(
   tabla: FrecuenciaMp[], u: { marca: string; uts: string; combustible: string; modelo: string }, tipoMp: string, horas: boolean,
 ): number {
   const marca = norm(u.marca), tipo = norm(tipoMp);
   if (!marca || !tipo) return 0;
-  const m = tabla.find(t =>
-    (!norm(t.marca) || norm(t.marca) === marca) && (!norm(t.tipo_mp) || norm(t.tipo_mp) === tipo) &&
-    (!norm(t.uts) || norm(t.uts) === norm(u.uts)) && (!norm(t.combustible) || norm(t.combustible) === norm(u.combustible)) &&
-    (!norm(t.modelo) || norm(t.modelo) === norm(u.modelo)));
+  const comodin = (v: unknown) => !norm(v) || norm(v) === 'todos';
+  const coincide = (regla: unknown, valor: string) => comodin(regla) || norm(regla) === valor;
+  let m: FrecuenciaMp | undefined;
+  let mejor = -1;
+  for (const t of tabla) {
+    if (!coincide(t.marca, marca) || !coincide(t.tipo_mp, tipo) || !coincide(t.uts, norm(u.uts))
+      || !coincide(t.combustible, norm(u.combustible)) || !coincide(t.modelo, norm(u.modelo))) continue;
+    const fijas = [t.marca, t.uts, t.combustible, t.modelo].filter(v => !comodin(v)).length;
+    if (fijas > mejor) { m = t; mejor = fijas; }
+  }
   if (!m) return 0;
   const km = parseFloat(String(m.frecuencia_km)) || 0, hr = parseFloat(String(m.frecuencia_horas)) || 0;
   return horas ? hr || km : km || hr;

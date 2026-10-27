@@ -212,6 +212,21 @@ module.exports = (db, logAudit) => {
         }
     });
 
+    // GET /api/perfil/imagen-redir?url=… — redirige a la URL firmada (1 h) de la foto de perfil.
+    // Sirve para usarla como fondo de imagen (CSS) cuando el bucket es privado.
+    router.get('/perfil/imagen-redir', async (req, res) => {
+        if (!req.user || !req.user.correo) return res.status(401).end();
+        const clave = s3KeyFromUrl(String(req.query.url || ''));
+        if (!clave || !CLAVE_IMAGEN_PERFIL.test(clave)) return res.status(400).end();
+        try {
+            res.set('Cache-Control', 'private, max-age=600');
+            res.redirect(302, await getPresignedUrl(clave, 3600));
+        } catch (e) {
+            console.error('Error firmando foto de perfil:', e);
+            res.status(500).end();
+        }
+    });
+
     // POST /api/perfil/imagen-lectura — URL firmada (1 h) para ver una foto o portada de perfil
     router.post('/perfil/imagen-lectura', async (req, res) => {
         if (!req.user || !req.user.correo) return res.status(401).json({ error: 'No autenticado' });

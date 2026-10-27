@@ -709,14 +709,22 @@ router.get('/planificacion-sugerir', (req, res) => {
         (err, frRows) => {
             if (err) return res.status(500).json({ error: err.message });
 
-            // 2. Configuración de frecuencia desde tipos_mantenimiento
-            // ORDER BY prioriza el que coincide con el uts del vehículo (NACIONAL vs LOCAL)
+            // 2. Configuración de frecuencia desde tipos_mantenimiento (misma regla que la pantalla, fleetrunApi.buscarFrecuencia):
+            // vacío o TODOS = comodín; gana la regla que fija más columnas (marca, UTS, combustible, modelo)
+            // Columna de la regla -> columna de la placa (el modelo de la placa se llama modelo_uts). Comparación sin
+            // diferencias de collation entre las dos tablas.
+            const reglas = [['marca', 'marca'], ['uts', 'uts'], ['combustible', 'combustible'], ['modelo', 'modelo_uts']];
+            const comodin = (c) => `(tm.${c} IS NULL OR TRIM(tm.${c}) = '' OR UPPER(TRIM(tm.${c})) = 'TODOS')`;
+            const igual = (c, pc) => `UPPER(TRIM(tm.${c})) COLLATE utf8mb4_unicode_ci = UPPER(TRIM(p.${pc})) COLLATE utf8mb4_unicode_ci`;
+            const condicion = reglas.map(([c, pc]) => `(${comodin(c)} OR ${igual(c, pc)})`).join(' AND ');
+            const puntaje = reglas.map(([c]) => `(NOT ${comodin(c)})`).join(' + ');
             db.query(
-                `SELECT tm.frecuencia_km, tm.frecuencia_dias, tm.uts
+                `SELECT tm.frecuencia_km, tm.frecuencia_horas, tm.frecuencia_dias, tm.uts
                  FROM tipos_mantenimiento tm
-                 INNER JOIN placas p ON UPPER(p.marca) = UPPER(tm.marca)
-                 WHERE UPPER(p.placa)=? AND UPPER(tm.tipo_mp)=?
-                 ORDER BY CASE WHEN UPPER(tm.uts) = UPPER(p.uts) THEN 0 ELSE 1 END, tm.id ASC
+                 INNER JOIN placas p ON UPPER(TRIM(p.placa)) = UPPER(TRIM(?))
+                 WHERE UPPER(TRIM(tm.tipo_mp)) COLLATE utf8mb4_unicode_ci = UPPER(TRIM(?)) COLLATE utf8mb4_unicode_ci
+                   AND ${condicion}
+                 ORDER BY (${puntaje}) DESC, tm.id ASC
                  LIMIT 1`,
                 [placa.toUpperCase(), tipomp.toUpperCase()],
                 (err2, tmRows) => {

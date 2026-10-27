@@ -517,6 +517,16 @@
             <button type="button" class="fl-segment-item" data-filter="VENCIDO" onclick="window.filtrarDesdeKpiFleetrun('VENCIDO', this)">Vencidos</button>
         </div>
 
+        <!-- Acciones móvil: PDF y WhatsApp solo con íconos -->
+        <div class="d-flex d-md-none align-items-center gap-1">
+            <button class="btn btn-light bg-white border btn-sm shadow-2xs rounded-3 d-flex align-items-center justify-content-center" style="height: 38px; width: 38px;" onclick="generarPDFFleetrun()" title="Descargar PDF del reporte" aria-label="Descargar PDF del reporte">
+                <i class="bi bi-file-earmark-pdf text-danger"></i>
+            </button>
+            <button class="btn btn-light bg-white border btn-sm shadow-2xs rounded-3 d-flex align-items-center justify-content-center" style="height: 38px; width: 38px;" onclick="compartirFleetrunWhatsApp()" title="Enviar reporte por WhatsApp" aria-label="Enviar reporte por WhatsApp">
+                <i class="bi bi-whatsapp text-success"></i>
+            </button>
+        </div>
+
         <!-- Acciones Desktop -->
         <div class="d-none d-md-flex align-items-center gap-1">
             <div id="col-picker-fleet"></div>

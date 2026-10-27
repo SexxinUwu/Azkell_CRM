@@ -182,7 +182,11 @@ window.verificarSesionGuardada = function() {
     if (perfilNombreEl) perfilNombreEl.innerText = usuarioLogueado;
 
     // Avatar generado con iniciales en el topbar o desde S3
-    const cachedAvatar = localStorage.getItem('fleet_avatar');
+    let cachedAvatar = localStorage.getItem('fleet_avatar');
+    // Foto en S3 (bucket privado): se pide por el servidor, que la redirige a una URL firmada
+    if (cachedAvatar && cachedAvatar.indexOf('amazonaws.com') >= 0 && cachedAvatar.indexOf('X-Amz-Signature') < 0) {
+        cachedAvatar = '/api/perfil/imagen-redir?url=' + encodeURIComponent(cachedAvatar);
+    }
     var avatarTopWrap = document.getElementById('topbar-avatar-icon');
     var nomUser = usuarioLogueado || localStorage.getItem('fleet_user') || 'Usuario';
     var hasValidAvatarImg = cachedAvatar && cachedAvatar !== 'null' && cachedAvatar !== 'undefined' && (cachedAvatar.startsWith('http') || cachedAvatar.startsWith('data:') || cachedAvatar.startsWith('/'));
