@@ -55,6 +55,22 @@ export function configReconocida(...crudos: Array<string | null | undefined>): s
   return null;
 }
 
+/**
+ * Configuración con la que se dibuja la unidad. La inspección manda: si la configuración de la ficha cubre todas
+ * las posiciones con llanta, se usa; si no, la más chica que las cubre (una unidad C3 con llantas 11 y 12 se dibuja como S3).
+ */
+export function configParaPosiciones(declarada: string | null | undefined, posiciones: string[]): string | null {
+  const ficha = configReconocida(declarada);
+  const pos = posiciones.map(p => String(p).trim().toUpperCase());
+  if (!pos.length) return ficha;
+  const cubre = (codigo: string) => pos.every(p => posicionesDeConfig(codigo).includes(p));
+  if (ficha && cubre(ficha)) return ficha;
+  const candidatas = Object.keys(CONFIGURACIONES)
+    .filter(cubre)
+    .sort((a, b) => CONFIGURACIONES[a].llantas - CONFIGURACIONES[b].llantas);
+  return candidatas[0] ?? ficha;
+}
+
 // Geometría
 const W = 28, H = 42, SEP = 3, FILA = 66, X0 = 130;
 const IZQ_SIMPLE = X0 - 62, DER_SIMPLE = X0 + 62;

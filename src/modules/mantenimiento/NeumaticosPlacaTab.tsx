@@ -8,7 +8,7 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice } from '../../core/ui/Display';
 import { Sheet } from '../../core/ui/Sheet';
 import { errorMessage } from '../../core/api/client';
-import { LeyendaSemaforo, configReconocida } from './NeumaticosEsquema';
+import { LeyendaSemaforo, configParaPosiciones } from './NeumaticosEsquema';
 import { NeumaticosCenital } from './nv3-cenital';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
 import { PERMISO_MOVER_NEUMATICOS, PERMISO_VER_NEUMATICOS } from './neumaticos-tablero-tipos';
@@ -46,7 +46,7 @@ export function NeumaticosPlacaTab({ placa }: { placa: string }) {
 
   const montadas = datos.posiciones.flatMap(p => (p.llanta ? [{ posicion: p.posicion, llanta: p.llanta }] : []));
   const libres = datos.posiciones.length - montadas.length;
-  const configCodigo = configReconocida(datos.configuracion);
+  const configCodigo = configParaPosiciones(datos.configuracion, montadas.map(m => m.posicion));
   const cfg = configCodigo ? CONFIGURACIONES[configCodigo] : null;
   const llantasDato = montadas.map(m => aLlantaDato(m.llanta, m.posicion));
 

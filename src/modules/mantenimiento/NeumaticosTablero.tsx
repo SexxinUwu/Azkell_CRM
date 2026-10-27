@@ -14,7 +14,7 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { formatFechaPe } from '../../core/lib/format';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
-import { LeyendaSemaforo, configReconocida, tonoMm, type Tono } from './NeumaticosEsquema';
+import { LeyendaSemaforo, configParaPosiciones, configReconocida, tonoMm, type Tono } from './NeumaticosEsquema';
 import { NeumaticosCenital } from './nv3-cenital';
 import type { ModoVista } from './nv3-motor';
 import {
@@ -120,7 +120,9 @@ export function NeumaticosTablero() {
   const montadas = useMemo(() => montadasDe(posiciones), [posiciones]);
   const libres = useMemo(() => posiciones.filter(p => !p.llanta), [posiciones]);
   const llantasDato = useMemo(() => montadas.map(m => aLlantaDato(m.llanta, m.posicion)), [montadas]);
-  const configCodigo = configReconocida(datos?.configuracion);
+  // La inspección manda: la configuración se toma de las posiciones con llanta si la ficha no las cubre
+  const configCodigo = configParaPosiciones(datos?.configuracion, posiciones.map(p => p.posicion));
+  const configFicha = configReconocida(datos?.configuracion);
   const cfg = configCodigo ? CONFIGURACIONES[configCodigo] : null;
   const posicionActiva = montadas.find(m => m.llanta.codigo === seleccion)?.posicion ?? posLibre ?? '';
 
@@ -355,6 +357,9 @@ export function NeumaticosTablero() {
                   ? `${configCodigo} · ${cfg.nombre} · ${montadas.length} llantas montadas`
                   : datos?.configuracion ? `Configuración ${datos.configuracion} no reconocida` : 'Sin configuración de ejes registrada'}
               </p>
+              {configFicha && configCodigo && configFicha !== configCodigo && (
+                <p className="t-footnote c-secondary">La ficha dice {configFicha}; se dibuja según las llantas de la inspección.</p>
+              )}
               <div className="ntb-chasis" onPointerDown={alChasisPresionar} onClick={alChasisClic}>
                 <NeumaticosCenital
                   llantas={llantasDato} configuracion={configCodigo} activa={posicionActiva}
