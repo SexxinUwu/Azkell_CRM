@@ -70,7 +70,8 @@ export function ChecklistEntregaPage() {
     const porEmpresa = empresa === 'TODAS' ? s?.global : s?.empresas.find(e => e.empresa.toUpperCase() === empresa.toUpperCase());
     if (porEmpresa) {
       const vehiculos = empresa === 'TODAS' ? (s?.empresas ?? []).reduce((acc, e) => acc + (e.vehiculos ?? 0), 0) : (porEmpresa.vehiculos ?? 0);
-      return { total: porEmpresa.total_actas, hoy: porEmpresa.hoy, vehiculos };
+      const motoras = empresa === 'TODAS' ? (s?.empresas ?? []).reduce((acc, e) => acc + (e.total_flota ?? 0), 0) : (porEmpresa.total_flota ?? 0);
+      return { total: porEmpresa.total_actas, hoy: porEmpresa.hoy, vehiculos, motoras };
     }
     const hoy = hoyIso();
     return {

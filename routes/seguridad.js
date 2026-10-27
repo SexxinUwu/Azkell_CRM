@@ -1512,7 +1512,7 @@ module.exports = (db, logAudit) => {
         const sqlEmpresas = `
             SELECT 
                 COALESCE(cliente, 'MARSISA') as empresa,
-                COUNT(*) as total_flota
+                SUM(CASE WHEN LOWER(TRIM(motora)) = 'motora' THEN 1 ELSE 0 END) as total_flota
             FROM placas
             WHERE cliente IS NOT NULL AND TRIM(cliente) <> '' AND TRIM(cliente) <> 'NULL'
             GROUP BY COALESCE(cliente, 'MARSISA')

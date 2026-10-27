@@ -77,7 +77,7 @@ export function CePortal({ usuario, stats, cargando, error, actualizando, onEleg
               <button key={e.empresa} type="button" className="cep-emp pressable" onClick={() => { haptic('selection'); onElegir(e.empresa); }}>
                 <div className="cep-emp__top">
                   <span className="cep-emp__icono" style={{ background: pal.bg, color: pal.color }}><pal.Icono size={20} /></span>
-                  <Badge>{formatQuantity(e.total_flota || 0)} unidades</Badge>
+                  <Badge>{formatQuantity(e.total_flota || 0)} motoras</Badge>
                 </div>
                 <div>
                   <h3 className="cep-emp__nombre">{e.empresa}</h3>
@@ -99,7 +99,7 @@ export function CePortal({ usuario, stats, cargando, error, actualizando, onEleg
                 <h3 className="cep-emp__nombre">Todas las empresas</h3>
                 <p className="cep-emp__sub">Vista general combinada de todas las empresas de la flota</p>
               </div>
-              <CifrasEmpresa actas={global.total_actas} hoy={global.hoy} flota={global.total_flota} etiquetaFlota="Total flota" />
+              <CifrasEmpresa actas={global.total_actas} hoy={global.hoy} flota={global.total_flota} etiquetaFlota="Total motoras" />
               <span className="cep-emp__accion"><Eye size={17} /> Ver flota global →</span>
             </button>
           )}
@@ -109,7 +109,7 @@ export function CePortal({ usuario, stats, cargando, error, actualizando, onEleg
   );
 }
 
-function CifrasEmpresa({ actas, hoy, flota, etiquetaFlota = 'Flota' }: { actas: number; hoy: number; flota: number; etiquetaFlota?: string }) {
+function CifrasEmpresa({ actas, hoy, flota, etiquetaFlota = 'Motoras' }: { actas: number; hoy: number; flota: number; etiquetaFlota?: string }) {
   return (
     <div className="cep-emp__cifras">
       <div className="cep-emp__cifra"><b>{formatQuantity(actas || 0)}</b><span>Actas</span></div>

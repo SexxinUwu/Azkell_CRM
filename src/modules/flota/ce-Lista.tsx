@@ -17,6 +17,8 @@ export interface CifrasLista {
   total: number;
   hoy: number;
   vehiculos: number;
+  /** Unidades motoras de la empresa (o de todas): el denominador de las actas */
+  motoras?: number;
 }
 
 interface PropsLista {
@@ -76,7 +78,7 @@ export function CeLista({
   }
 
   const kpis = [
-    { id: 'total', etiqueta: 'Total actas', valor: cifras.total, fondo: 'var(--blue-tint)', color: 'var(--blue-ink)', Icono: ClipboardList },
+    { id: 'total', etiqueta: cifras.motoras != null ? 'Actas / unidades motoras' : 'Total actas', valor: cifras.motoras != null ? `${cifras.total}/${cifras.motoras}` : cifras.total, fondo: 'var(--blue-tint)', color: 'var(--blue-ink)', Icono: ClipboardList },
     { id: 'hoy', etiqueta: 'Entregas hoy', valor: cifras.hoy, fondo: 'var(--green-tint)', color: 'var(--green-ink)', Icono: CalendarCheck },
     { id: 'veh', etiqueta: 'Vehículos', valor: cifras.vehiculos, fondo: 'var(--amber-tint)', color: 'var(--amber-ink)', Icono: CarFront },
   ];
@@ -110,7 +112,7 @@ export function CeLista({
           <div key={k.id} className="cep-kpi">
             <span className="cep-kpi__icono" style={{ background: k.fondo, color: k.color }} aria-hidden><k.Icono size={18} /></span>
             <div className="cep-kpi__cuerpo">
-              <span className="cep-kpi__valor">{formatQuantity(k.valor)}</span>
+              <span className="cep-kpi__valor">{typeof k.valor === 'number' ? formatQuantity(k.valor) : k.valor}</span>
               <span className="cep-kpi__etiqueta">{k.etiqueta}</span>
             </div>
           </div>
