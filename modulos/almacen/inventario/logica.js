@@ -1809,6 +1809,8 @@ window.abrirModalInventario = function(id, tabOrModo) {
         _invSetField('inv-f-codigo-articulo',   item.codigo_articulo);
         _invSetField('inv-f-marca',             item.marca);
         _invSetField('inv-f-familia',           item.familia);
+        invActualizarBloqueLlanta();
+        invCargarDatosLlanta(item.id);
         // Unidad: mostrar descripción aunque en BD esté el código
         (function() {
             var uObjE = (window._invUnidadesData || []).find(function(u) {
@@ -2127,6 +2129,7 @@ window.guardarArticuloInv = function(event) {
             });
         })
         .then(function(res) {
+            invGuardarDatosLlanta((res && res.id) || id);
             window._invCerrarDrawer();
             if (typeof window.cargarInventario === 'function') window.cargarInventario();
             if (typeof window.rotToast === 'function') {
@@ -2758,3 +2761,51 @@ window.actualizarBadgeGlobalFiltrosInv = function() {
         }
     }
 };
+
+// ── Datos de la llanta (familia NEUMATICOS) ───────────────────────
+// Medida, modelo y cocada inicial: se usan al recepcionar para crear cada neumático.
+function invEsFamiliaLlanta() {
+  var f = (document.getElementById('inv-f-familia') || {}).value || '';
+  return f.trim().toUpperCase() === 'NEUMATICOS';
+}
+function invActualizarBloqueLlanta() {
+  var b = document.getElementById('inv-llanta-bloque');
+  if (b) b.classList.toggle('d-none', !invEsFamiliaLlanta());
+}
+function invCargarDatosLlanta(id) {
+  if (!id) return;
+  fetch('/api/almacen/neumaticos-articulo/' + encodeURIComponent(id))
+    .then(function(r) { return r.json(); })
+    .then(function(j) {
+      var d = j && j.data;
+      var set = function(elId, v) { var e = document.getElementById(elId); if (e) e.value = v; };
+      set('inv-f-llanta-medida', d && d.medida ? d.medida : '');
+      set('inv-f-llanta-modelo', d && d.modelo ? d.modelo : '');
+      set('inv-f-llanta-cocada', d && d.cocada_inicial != null ? d.cocada_inicial : '');
+    })
+    .catch(function() {});
+}
+function invGuardarDatosLlanta(id) {
+  if (!id || !invEsFamiliaLlanta()) return Promise.resolve();
+  var v = function(elId) { var e = document.getElementById(elId); return e ? e.value.trim() : ''; };
+  var cocada = v('inv-f-llanta-cocada');
+  return fetch('/api/almacen/neumaticos-articulo/' + encodeURIComponent(id), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      medida: v('inv-f-llanta-medida') || null,
+      modelo: v('inv-f-llanta-modelo') || null,
+      cocada_inicial: cocada === '' ? null : Number(cocada),
+    }),
+  }).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+  }).catch(function(err) {
+    console.error('Datos de la llanta:', err);
+    if (typeof window.rotToast === 'function') window.rotToast('El artículo se guardó, pero no los datos de la llanta', 'bg-warning');
+  });
+}
+// El bloque aparece al elegir (o escribir) la familia
+document.addEventListener('click', function() { setTimeout(invActualizarBloqueLlanta, 60); });
+document.addEventListener('input', function(e) {
+  if (e.target && e.target.id === 'inv-f-familia-txt') invActualizarBloqueLlanta();
+});
