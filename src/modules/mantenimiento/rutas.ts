@@ -116,6 +116,11 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'planificacion', label: 'Planificación', to: '/mantenimiento/planificacion', icon: 'History', permisos: ['plan.ver'] },
   },
   {
+    path: 'mantenimiento/otros/*',
+    permisos: [],
+    Page: lazy(() => import('./OtrosMantenimientoPage').then(m => ({ default: m.OtrosMantenimientoPage }))),
+  },
+  {
     path: 'mantenimiento/tipos-mp/*',
     permisos: ['plan.ver'],
     Page: lazy(() => import('./TiposAlertasPage').then(m => ({ default: m.TiposAlertasPage }))),

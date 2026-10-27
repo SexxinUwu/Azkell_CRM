@@ -47,6 +47,20 @@ export interface NavSection {
 
 const ver = (...claves: string[]) => claves.map(c => `${c}.ver`);
 
+// Opciones de "Otros" de Mantenimiento: la página /mantenimiento/otros las muestra en casillas
+export const OTROS_MANTENIMIENTO: NavItem[] = [
+        { key: 'planificacion', label: 'Planificación de mantenimientos', to: '/mantenimiento/planificacion', icon: CalendarDays, permissions: ver('plan') },
+        { key: 'backlog', label: 'Backlog pendientes', to: '/mantenimiento/reportes-ot?tab=backlog', icon: Hourglass, permissions: ver('mant_dashboard', 'trabajos_ot') },
+        { key: 'kpis', label: 'Métricas y KPIs', clasico: 'mantenimiento/kpis-taller', icon: Activity, permissions: ver('mant_dashboard') },
+        { key: 'productividad', label: 'Productividad personal', clasico: 'mantenimiento/productividad', icon: HardHat, permissions: ver('pers_mant', 'mant_dashboard') },
+        { key: 'finanzas-taller', label: 'Reporte financiero', clasico: 'mantenimiento/finanzas-taller', icon: Wallet, permissions: ver('mant_dashboard') },
+        { key: 'frecuencias-mp', label: 'Frecuencias MP', clasico: 'mantenimiento/configuracion-mp', icon: Settings, permissions: ver('cfg_mant') },
+        { key: 'kits-mp', label: 'Kits MP', to: '/mantenimiento/kits-mp', icon: Package, permissions: ver('cfg_mant') },
+        { key: 'tipos-mp', label: 'Tipos MP', to: '/mantenimiento/tipos-mp', icon: Wrench, permissions: ver('cfg_mant') },
+        { key: 'fleetrun-config', label: 'Umbrales Fleetrun', to: '/mantenimiento/fleetrun-config', icon: Gauge, permissions: ver('cfg_fleetrun') },
+        { key: 'config-metrica', label: 'Config. métrica', clasico: 'mantenimiento/config-metrica', icon: Target, permissions: ver('cfg_mant') },
+];
+
 const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Dashboard',
@@ -127,21 +141,7 @@ const SECCIONES_BASE: NavSection[] = [
         ],
       },
       { key: 'incidencias', label: 'Incidencias en ruta', to: '/mantenimiento/incidencias', icon: ShieldCheck, permissions: ver('incidencias_ruta') },
-      {
-        key: 'mant-otros-grupo', label: 'Otros (hub de mantenimiento avanzado)', icon: Layers, permissions: [],
-        children: [
-          { key: 'planificacion', label: 'Planificación de mantenimientos', to: '/mantenimiento/planificacion', icon: CalendarDays, permissions: ver('plan') },
-          { key: 'backlog', label: 'Backlog pendientes', to: '/mantenimiento/reportes-ot?tab=backlog', icon: Hourglass, permissions: ver('mant_dashboard', 'trabajos_ot') },
-          { key: 'kpis', label: 'Métricas y KPIs', clasico: 'mantenimiento/kpis-taller', icon: Activity, permissions: ver('mant_dashboard') },
-          { key: 'productividad', label: 'Productividad personal', clasico: 'mantenimiento/productividad', icon: HardHat, permissions: ver('pers_mant', 'mant_dashboard') },
-          { key: 'finanzas-taller', label: 'Reporte financiero', clasico: 'mantenimiento/finanzas-taller', icon: Wallet, permissions: ver('mant_dashboard') },
-          { key: 'frecuencias-mp', label: 'Frecuencias MP', clasico: 'mantenimiento/configuracion-mp', icon: Settings, permissions: ver('cfg_mant') },
-          { key: 'kits-mp', label: 'Kits MP', to: '/mantenimiento/kits-mp', icon: Package, permissions: ver('cfg_mant') },
-          { key: 'tipos-mp', label: 'Tipos MP', to: '/mantenimiento/tipos-mp', icon: Wrench, permissions: ver('cfg_mant') },
-          { key: 'fleetrun-config', label: 'Umbrales Fleetrun', to: '/mantenimiento/fleetrun-config', icon: Gauge, permissions: ver('cfg_fleetrun') },
-          { key: 'config-metrica', label: 'Config. métrica', clasico: 'mantenimiento/config-metrica', icon: Target, permissions: ver('cfg_mant') },
-        ],
-      },
+      { key: 'mant-otros', label: 'Otros', to: '/mantenimiento/otros', icon: Layers, permissions: [] },
     ],
   },
   {
