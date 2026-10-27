@@ -662,7 +662,7 @@ export function FleetrunPage() {
       case 'kmCambio': return d.kmC > 0 ? `${d.kmC.toLocaleString('es-PE')}${d.unidad}` : '—';
       case 'kmGps': return d.kmG > 0 ? `${d.kmG.toLocaleString('es-PE')}${d.unidad}` : '—';
       case 'falta': return (
-        <span style={{ fontWeight: d.falta < 0 ? 700 : undefined, color: d.falta < 0 ? 'var(--red-ink)' : d.falta === 0 ? 'var(--label-3)' : 'var(--label-1)' }}>
+        <span style={{ fontWeight: 700, color: d.falta === 0 ? 'var(--label-3)' : colorEstadoFila(d.est) }}>
           {d.falta !== 0 ? `${d.falta.toLocaleString('es-PE')}${d.unidad}` : '—'}
         </span>
       );
