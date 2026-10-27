@@ -101,12 +101,14 @@ export function buscarFrecuencia(
   const marca = norm(u.marca), tipo = norm(tipoMp);
   if (!marca || !tipo) return 0;
   const comodin = (v: unknown) => !norm(v) || norm(v) === 'todos';
-  const coincide = (regla: unknown, valor: string) => comodin(regla) || norm(regla) === valor;
+  const coincide = (regla: unknown, valor: string, f: (s: unknown) => string = norm) => comodin(regla) || f(regla) === valor;
+  // Modelo sin espacios, guiones ni puntos: "FTT XF 105" y "FTT XF105" son el mismo modelo
+  const soloLetras = (s: unknown) => norm(s).replace(/[^a-z0-9]/g, '');
   let m: FrecuenciaMp | undefined;
   let mejor = -1;
   for (const t of tabla) {
     if (!coincide(t.marca, marca) || !coincide(t.tipo_mp, tipo) || !coincide(t.uts, norm(u.uts))
-      || !coincide(t.combustible, norm(u.combustible)) || !coincide(t.modelo, norm(u.modelo))) continue;
+      || !coincide(t.combustible, norm(u.combustible)) || !coincide(t.modelo, soloLetras(u.modelo), soloLetras)) continue;
     const fijas = [t.marca, t.uts, t.combustible, t.modelo].filter(v => !comodin(v)).length;
     if (fijas > mejor) { m = t; mejor = fijas; }
   }

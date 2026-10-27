@@ -7,6 +7,9 @@ import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
+import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
+import { usePlacas } from '../placas/api';
+import { useTiposPreventivo } from './fleetrunApi';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -51,6 +54,27 @@ export function FrecuenciasMpPage() {
     staleTime: 60_000,
   });
   const marcas = useMemo(() => [...new Set((lista.data ?? []).map(r => (r.marca ?? '').trim()).filter(Boolean))].sort(), [lista.data]);
+  const placas = usePlacas();
+  const tiposCatalogo = useTiposPreventivo();
+  const opciones = (...listas: Array<Array<string | null | undefined>>): ComboboxOption[] => {
+    const vistos = new Map<string, string>();
+    for (const l of listas) for (const v of l) {
+      const texto = (v ?? '').trim().replace(/s+/g, ' ');
+      if (!texto) continue;
+      const clave = texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (!vistos.has(clave)) vistos.set(clave, texto);
+    }
+    return [...vistos.values()].sort((a, b) => a.localeCompare(b, 'es')).map(v => ({ value: v, label: v }));
+  };
+  const datosRegla = (campo: keyof TipoMp) => (lista.data ?? []).map(r => String(r[campo] ?? ''));
+  const datosPlaca = (campo: 'marca' | 'modelo' | 'combustible' | 'uts') => (placas.data ?? []).map(p => String(p[campo] ?? ''));
+  const opcionesMarca = useMemo(() => opciones(datosRegla('marca'), datosPlaca('marca')), [lista.data, placas.data]);
+  const opcionesModelo = useMemo(() => opciones(datosRegla('modelo'), datosPlaca('modelo')), [lista.data, placas.data]);
+  const opcionesTipoMp = useMemo(() => opciones(tiposCatalogo.data ?? [], datosRegla('tipo_mp')), [lista.data, tiposCatalogo.data]);
+  const opcionesTipo = useMemo(() => opciones(['Cambio', 'Inspección', 'Regulación', 'Calibración', 'Engrase', 'Limpieza', 'Ajuste'], datosRegla('tipo')), [lista.data]);
+  const opcionesSistema = useMemo(() => opciones(['Motor', 'Transmisión / Caja', 'Diferencial', 'Frenos', 'Suspensión', 'Eléctrico', 'Neumáticos', 'Dirección', 'Refrigeración', 'Combustible', 'Cabina'], datosRegla('sistema')), [lista.data]);
+  const opcionesCombustible = useMemo(() => opciones(['DIÉSEL', 'GNV', 'GLP'], datosRegla('combustible'), datosPlaca('combustible')), [lista.data, placas.data]);
+  const opcionesUts = useMemo(() => opciones(['NACIONAL', 'LOCAL', 'RUTA'], datosRegla('uts'), datosPlaca('uts')), [lista.data, placas.data]);
   const datos = useMemo(() => {
     const t = q.trim().toUpperCase();
     return (lista.data ?? []).filter(r =>
@@ -100,6 +124,23 @@ export function FrecuenciasMpPage() {
     } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
     finally { setGuardando(false); }
   }
+
+  const lista2 = (k: keyof Borrador, label: string, opcionesCampo: ComboboxOption[], wide = false, ayuda?: string) => (
+    <Field label={label} wide={wide} hint={ayuda}>
+      {p => (
+        <Combobox
+          id={p.id}
+          aria-describedby={p['aria-describedby']}
+          options={opcionesCampo}
+          value={String(borrador?.[k] ?? '') || null}
+          onChange={v => setBorrador(b => (b ? { ...b, [k]: v ?? '' } : b))}
+          onCreate={texto => setBorrador(b => (b ? { ...b, [k]: texto.trim() } : b))}
+          createLabel="Usar"
+          placeholder="Elige o escribe para buscar…"
+        />
+      )}
+    </Field>
+  );
 
   const txt = (k: keyof Borrador, label: string, wide = false, placeholder?: string) => (
     <Field label={label} wide={wide}>
@@ -156,10 +197,11 @@ export function FrecuenciasMpPage() {
           <Button variant="primary" onClick={guardar} loading={guardando}>Guardar</Button></>}>
         {borrador && (
           <div className="form-grid">
-            {txt('marca', 'Marca')}{txt('modelo', 'Modelo')}
-            {txt('tipo_mp', 'Tipo de mantenimiento', true, 'Ej. CAMBIO DE ACEITE Y FILTROS')}
+            {lista2('marca', 'Marca', opcionesMarca, false, 'Elige o escribe una marca nueva')}
+            {lista2('modelo', 'Modelo', opcionesModelo, false, 'Vacío = todos los modelos de la marca')}
+            {lista2('tipo_mp', 'Tipo de mantenimiento', opcionesTipoMp, true, 'Ej. CAMBIO DE ACEITE Y FILTROS, PM1')}
             {txt('frecuencia_km', 'Cada (km)')}{txt('frecuencia_horas', 'Cada (horas de motor)')}{txt('frecuencia_dias', 'Cada (días)')}
-            {txt('tipo', 'Tipo')}{txt('sistema', 'Sistema')}{txt('combustible', 'Combustible')}{txt('uts', 'UTS')}
+            {lista2('tipo', 'Tipo', opcionesTipo)}{lista2('sistema', 'Sistema', opcionesSistema)}{lista2('combustible', 'Combustible', opcionesCombustible)}{lista2('uts', 'UTS', opcionesUts, false, 'Vacío = todas las UTS')}
             {txt('descripcion', 'Descripción', true)}
           </div>
         )}

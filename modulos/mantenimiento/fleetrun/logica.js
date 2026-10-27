@@ -671,7 +671,7 @@ window._buscarFrecuenciaTipo = function(tipoMP) {
     var marca = _normStr(document.getElementById('f_marca').value);
     var uts = _normStr(document.getElementById('f_uts').value);
     var combustible = _normStr(document.getElementById('f_combustible').value);
-    var modelo = _normStr(document.getElementById('f_modelo').value);
+    var modelo = _normStr(document.getElementById('f_modelo').value).replace(/[^a-z0-9]/g, '');
     tipoMP = _normStr(tipoMP);
     
     if (!marca || !tipoMP) return 0;
@@ -684,7 +684,7 @@ window._buscarFrecuenciaTipo = function(tipoMP) {
         var tTipoMP = _normStr(t.tipo_mp);
         var tUts = _normStr(t.uts);
         var tComb = _normStr(t.combustible);
-        var tMod = _normStr(t.modelo);
+        var tMod = _normStr(t.modelo).replace(/[^a-z0-9]/g, '');
         var ok = (comodin(tMarca) || tMarca === marca) &&
                  (comodin(tTipoMP) || tTipoMP === tipoMP) &&
                  (comodin(tUts) || tUts === uts) &&

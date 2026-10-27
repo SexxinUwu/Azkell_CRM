@@ -715,7 +715,10 @@ router.get('/planificacion-sugerir', (req, res) => {
             // diferencias de collation entre las dos tablas.
             const reglas = [['marca', 'marca'], ['uts', 'uts'], ['combustible', 'combustible'], ['modelo', 'modelo_uts']];
             const comodin = (c) => `(tm.${c} IS NULL OR TRIM(tm.${c}) = '' OR UPPER(TRIM(tm.${c})) = 'TODOS')`;
-            const igual = (c, pc) => `UPPER(TRIM(tm.${c})) COLLATE utf8mb4_unicode_ci = UPPER(TRIM(p.${pc})) COLLATE utf8mb4_unicode_ci`;
+            const sinSimbolos = (x) => `REPLACE(REPLACE(REPLACE(UPPER(TRIM(${x})), ' ', ''), '-', ''), '.', '')`;
+            const igual = (c, pc) => (c === 'modelo'
+                ? `${sinSimbolos('tm.' + c)} COLLATE utf8mb4_unicode_ci = ${sinSimbolos('p.' + pc)} COLLATE utf8mb4_unicode_ci`
+                : `UPPER(TRIM(tm.${c})) COLLATE utf8mb4_unicode_ci = UPPER(TRIM(p.${pc})) COLLATE utf8mb4_unicode_ci`);
             const condicion = reglas.map(([c, pc]) => `(${comodin(c)} OR ${igual(c, pc)})`).join(' AND ');
             const puntaje = reglas.map(([c]) => `(NOT ${comodin(c)})`).join(' + ');
             db.query(
