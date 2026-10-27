@@ -12,6 +12,18 @@
     <meta name="theme-color" content="#f5f5f7" />
     <meta name="description" content="Azkell Fleet — gestión de flotas" />
     <title>Azkell Fleet</title>
+    <script>
+      // Si el archivo principal de la app no carga (se publicó una versión nueva y esta página es vieja), se recarga
+      // una sola vez para tomar la versión actual. Sin este paso la pantalla queda en blanco hasta mover la dirección.
+      window.addEventListener('error', function (e) {
+        var t = e.target;
+        if (!t || t.tagName !== 'SCRIPT') return;
+        var ultima = Number(sessionStorage.getItem('fleet_recarga_script') || 0);
+        if (Date.now() - ultima < 30000) return;
+        sessionStorage.setItem('fleet_recarga_script', String(Date.now()));
+        window.location.reload();
+      }, true);
+    </script>
   </head>
   <body>
     <div id="root"></div>

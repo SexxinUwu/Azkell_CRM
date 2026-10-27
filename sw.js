@@ -1,5 +1,5 @@
-// v54: descarta las páginas /app guardadas antes de excluirlas de la caché (apuntaban a archivos de compilación que ya no existen)
-const CACHE_NAME = 'azkell-fleet-v54';
+// v55: sale /app del service worker y descarta lo que quedó guardado (archivos de compilación que ya no existen)
+const CACHE_NAME = 'azkell-fleet-v55';
 const STATIC_CACHE = 'azkell-libs-v2';
 // Fotos de artículos (S3): la URL firmada cambia en cada consulta, por eso se guardan por su ruta sin la firma
 const IMG_CACHE = 'azkell-img-v1';
@@ -76,6 +76,9 @@ self.addEventListener('fetch', event => {
   // Solo interceptar peticiones GET
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
+
+  // La app nueva (/app) no pasa por el service worker: su HTML y sus archivos con hash siempre vienen de la red
+  if (url.pathname.startsWith('/app')) return;
 
   // 0. Fotos de artículos en S3 → Cache First con clave sin la firma (cada foto se descarga una sola vez)
   if (event.request.destination === 'image' && /.amazonaws.com$/.test(url.hostname)) {
