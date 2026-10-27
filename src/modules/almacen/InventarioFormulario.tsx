@@ -6,6 +6,7 @@ import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { guardarArticulo, useInventario, type ArticuloInv, type ArticuloNuevo } from './api';
+import { api } from '../../core/api/client';
 
 interface Props {
   open: boolean;
@@ -40,6 +41,23 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
   const [tipoCambio, setTipoCambio] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [cantidadInicial, setCantidadInicial] = useState('0');
+  // Datos de la llanta (familia NEUMATICOS): se usan al recepcionar para crear cada neumático
+  const esLlanta = familia.trim().toUpperCase() === 'NEUMATICOS';
+  const [medida, setMedida] = useState('');
+  const [modeloLlanta, setModeloLlanta] = useState('');
+  const [cocada, setCocada] = useState('');
+  useEffect(() => {
+    if (!open || !a?.id) return;
+    api<{ ok?: boolean; data?: { medida: string | null; modelo: string | null; cocada_inicial: number | null } | null }>(
+      '/almacen/neumaticos-articulo/' + encodeURIComponent(String(a.id)))
+      .then(r => {
+        const d = r.data;
+        setMedida(d?.medida ?? '');
+        setModeloLlanta(d?.modelo ?? '');
+        setCocada(d?.cocada_inicial == null ? '' : String(d.cocada_inicial));
+      })
+      .catch(() => {});
+  }, [open, a?.id]);
 
   const familias = [...new Set((todos ?? []).map(i => i.familia).filter(Boolean) as string[])].sort();
   const almacenes = [...new Set((todos ?? []).map(i => i.almacen).filter(Boolean) as string[])].sort();
@@ -100,6 +118,13 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
       } as Partial<ArticuloNuevo>;
 
       const res = await guardarArticulo(body, a?.id) as { id?: string } | undefined;
+      const idArticulo = a?.id ?? res?.id;
+      if (esLlanta && idArticulo) {
+        await api('/almacen/neumaticos-articulo/' + encodeURIComponent(String(idArticulo)), {
+          method: 'PUT',
+          body: { medida, modelo: modeloLlanta, cocada_inicial: cocada === '' ? null : Number(cocada) },
+        });
+      }
       toast(a ? 'Artículo actualizado' : 'Artículo creado');
       onGuardado(res?.id);
     } catch (err) {
@@ -147,6 +172,22 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
               <Field label="Stock inicial">
                 {p => <TextInput {...p} type="number" min={0} value={cantidadInicial} placeholder="0" onChange={e => setCantidadInicial(e.target.value)} />}
               </Field>
+            )}
+            {esLlanta && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+                <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--label-2)' }}>
+                  Datos de la llanta: se usan al recepcionar para crear cada neumático.
+                </p>
+                <Field label="Medida">
+                  {p => <TextInput {...p} value={medida} placeholder="Ej: 295/80R22.5" onChange={e => setMedida(e.target.value)} />}
+                </Field>
+                <Field label="Modelo">
+                  {p => <TextInput {...p} value={modeloLlanta} placeholder="Ej: S200" onChange={e => setModeloLlanta(e.target.value)} />}
+                </Field>
+                <Field label="Cocada inicial (mm)">
+                  {p => <TextInput {...p} type="number" min={0} value={cocada} placeholder="Ej: 20" onChange={e => setCocada(e.target.value)} />}
+                </Field>
+              </div>
             )}
             <Field label="Observaciones">
               {p => <TextInput {...p} value={observaciones} placeholder="Notas adicionales" onChange={e => setObservaciones(e.target.value)} />}

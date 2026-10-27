@@ -3,7 +3,7 @@
 // entran como "Sin código de fuego"; las que ya existían con PROV- quedan como "Código provisional".
 
 const ALMACEN_NUEVAS = 100;
-const ESTADO_ALMACEN = { ciclo: 'en_almacen', operativo: 'Stock_Taller' };
+const ESTADO_ALMACEN = { ciclo: 'en_almacen', operativo: 'Stock Taller' };
 const MOV_ALTA = 'ALTA';
 const PREFIJO_PROVISIONAL = 'PROV-';
 const PREFIJO_RECEPCION = 'SFC-';
@@ -85,7 +85,7 @@ async function crearLlantasDeRecepcion(conn, { recepcionId, linea, inventarioId,
              (id_neumatico, marca, modelo, medida, estado, remanente_inicial, remanente_actual, costo_compra,
               km_acumulado, estado_ciclo, vida, contador_reencauches, costo_reencauches, almacen_id, estado_operativo)
              VALUES (?, ?, ?, ?, 'NUEVA', ?, ?, ?, 0, ?, 'R0', 0, 0, ?, ?)`,
-            [id, marca || null, art.modelo || null, art.medida || null, cocada, cocada, costo,
+            [id, marca || '', art.modelo || '', art.medida || '', cocada ?? 0, cocada ?? 0, costo,
              ESTADO_ALMACEN.ciclo, ALMACEN_NUEVAS, ESTADO_ALMACEN.operativo]);
 
         await conn.query(

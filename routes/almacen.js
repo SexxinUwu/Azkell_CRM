@@ -856,6 +856,14 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    // Lectura de los datos de la llanta de un artículo (para el formulario de inventario)
+    router.get('/neumaticos-articulo/:id', (req, res) => {
+        getDb(req).query('SELECT medida, modelo, cocada_inicial FROM neumaticos_articulo WHERE inventario_id = ?', [String(req.params.id || '')], (err, rows) => {
+            if (err) return res.status(500).json({ ok: false, error: err.message });
+            res.json({ ok: true, data: rows && rows[0] ? rows[0] : null });
+        });
+    });
+
     // Datos del artículo "Llanta" (familia NEUMATICOS): medida, modelo y cocada inicial, que usa la recepción para crear la llanta
     router.put('/neumaticos-articulo/:id', async (req, res) => {
         try {
