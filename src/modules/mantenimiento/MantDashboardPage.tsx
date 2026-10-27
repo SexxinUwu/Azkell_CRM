@@ -13,13 +13,15 @@ import {
   otDetalles, otId, otTipo, tecnicosDeOT, tiempoNetoOT, trabajosDeOT,
   useFleetrun, useOrdenesTrabajoData, useStatusRampa, useTrabajosOT,
   frFecha, frKmCambio, frPlaca, frTipo,
-  type OrdenTrabajo, type TrabajoOT,
+  type OrdenTrabajo, type RampaEntrada, type TrabajoOT,
 } from './api';
 import { useInspecciones, useInspeccionesNeumaticos, type Inspeccion, type InspeccionNeumaticos } from '../inspecciones/api';
-import { evaluarCiclo } from '../inspecciones/vigencia';
+import { ETIQUETA_ESTADO, evaluarCiclo, type Estado } from '../inspecciones/vigencia';
 import { useMetricas, usePlacas, type Placa } from '../placas/api';
 import { resumenPreventivo, useFleetrunUmbrales, useKmVivo } from './FleetrunPage';
 import { costoOT } from './tiemposTaller';
+import { fechaDMY, oracion } from '../../core/lib/texto';
+import { usePersonalCanonico } from './personalCanonico';
 
 // Dashboard de taller. Dos pestañas: Resumen y Ingresos a taller. El rango de fechas y la empresa
 // afectan a todo. Los estados actuales (taller, rampa, preventivo) no cambian con el rango.
@@ -84,16 +86,19 @@ function lunesDe(f: string): string {
 
 const COL_TALLER: ColumnaTabla[] = [
   { id: 'placa', titulo: 'Placa', ancho: 110 },
-  { id: 'ot', titulo: 'OT', ancho: 130 },
+  { id: 'ot', titulo: 'OT', ancho: 120 },
   { id: 'tipo', titulo: 'Tipo', ancho: 120 },
   { id: 'estado', titulo: 'Estado', ancho: 120 },
   { id: 'ingreso', titulo: 'Ingreso', ancho: 110 },
-];
-const COL_RAMPA: ColumnaTabla[] = [
-  { id: 'placa', titulo: 'Placa', ancho: 110 },
-  { id: 'rampa', titulo: 'Rampa', ancho: 140 },
+  { id: 'rampa', titulo: 'Rampa', ancho: 130 },
   { id: 'salida', titulo: 'Salida programada', ancho: 170 },
 ];
+/** "27-10-2026 12:00": fecha y hora de salida de la rampa, sin el formato ISO de la base */
+const salidaProgramada = (e?: RampaEntrada) => {
+  if (!e?.salida_programada) return '—';
+  return `${fechaDMY(e.salida_programada)} ${(e.hora_salida_programada ?? '').slice(0, 5)}`.trim();
+};
+
 const COL_CAMBIOS: ColumnaTabla[] = [
   { id: 'fecha', titulo: 'Fecha', ancho: 110 },
   { id: 'placa', titulo: 'Placa', ancho: 110 },
@@ -164,6 +169,7 @@ export function MantDashboardPage() {
   const { data: metricas = new Map<string, string>() } = useMetricas();
   const { data: umbrales = {} } = useFleetrunUmbrales();
   const vivo = useKmVivo();
+  const canon = usePersonalCanonico();
 
   const placasTodas = placasQ.data ?? [];
   const empresaDe = useMemo(() => new Map(placasTodas.map(p => [p.placa, p.cliente.trim() || 'Sin empresa'])), [placasQ.data]);
@@ -177,7 +183,6 @@ export function MantDashboardPage() {
   const enEmpresa = (placa: string | null | undefined) => placasEmpresa === null || placasEmpresa.has(String(placa ?? '').toUpperCase());
 
   const flota = useMemo(() => placasTodas.filter(p => esActiva(p) && enEmpresa(p.placa)), [placasQ.data, placasEmpresa]);
-  const corte = useMemo(() => new Date(`${hasta}T00:00:00`), [hasta]);
 
   // OT que ingresaron en el rango y de la empresa
   const otsRango = useMemo(
@@ -201,29 +206,39 @@ export function MantDashboardPage() {
   const enTaller = useMemo(() => (otsQ.data ?? []).filter(o => ESTADOS_ABIERTOS.includes(o.estado) && enEmpresa(o.placa)), [otsQ.data, placasEmpresa]);
   const enRampa = useMemo(() => (rampasQ.data ?? []).filter(e => e.estado === 'Activo' && enEmpresa(e.placa)), [rampasQ.data, placasEmpresa]);
 
-  // Inspecciones vigentes al final del rango: vigente (incluye próximo a vencer), vencida o sin inspección
+  // Unidades en taller: una fila por placa, con su OT abierta y su visita a rampa si la tiene
+  const tallerRows = useMemo(() => {
+    const filas = new Map<string, { placa: string; ot?: OrdenTrabajo; rampa?: RampaEntrada }>();
+    enTaller.forEach(o => { const k = o.placa.toUpperCase(); if (!filas.has(k)) filas.set(k, { placa: o.placa, ot: o }); });
+    enRampa.forEach(e => {
+      const k = String(e.placa ?? '').toUpperCase();
+      const prev = filas.get(k);
+      filas.set(k, { placa: prev?.placa ?? e.placa ?? '—', ot: prev?.ot, rampa: e });
+    });
+    return [...filas.values()];
+  }, [enTaller, enRampa]);
+
+  // Inspecciones: misma regla que la pantalla de análisis (unidades activas y en uso, vigencia a hoy, sin filtrar por fecha)
   const inspecciones = useMemo(() => {
     const mec = new Map<string, Inspeccion>();
     (inspQ.data ?? []).forEach(i => {
-      if (!i.fecha || ymd(i.fecha) > hasta) return;
+      if (!i.fecha) return;
       const prev = mec.get(i.placa);
       if (!prev || (prev.fecha?.getTime() ?? 0) < i.fecha.getTime()) mec.set(i.placa, i);
     });
     const neu = new Map<string, InspeccionNeumaticos>();
     (neuQ.data ?? []).forEach(i => {
-      if (!i.fecha || ymd(i.fecha) > hasta) return;
+      if (!i.fecha) return;
       const prev = neu.get(i.placa);
       if (!prev || (prev.fecha?.getTime() ?? 0) < i.fecha.getTime()) neu.set(i.placa, i);
     });
-    const cuenta = { vigente: 0, vencida: 0, sin: 0 };
-    flota.forEach(p => {
-      const c = evaluarCiclo(mec.get(p.placa) ?? null, neu.get(p.placa) ?? null, corte);
-      if (c.estado === 'vigente' || c.estado === 'proximo') cuenta.vigente++;
-      else if (c.estado === 'vencido') cuenta.vencida++;
-      else cuenta.sin++;
+    const cuenta: Record<Estado, number> = { vigente: 0, proximo: 0, vencido: 0, 'sin-registro': 0 };
+    flota.filter(p => p.enUso).forEach(p => {
+      cuenta[evaluarCiclo(mec.get(p.placa) ?? null, neu.get(p.placa) ?? null).estado]++;
     });
     return cuenta;
-  }, [inspQ.data, neuQ.data, flota, hasta, corte]);
+  }, [inspQ.data, neuQ.data, flota]);
+  const totalInspecciones = Object.values(inspecciones).reduce((s, n) => s + n, 0);
 
   // Preventivo: estado actual de cada placa por su peor registro (misma regla que la pantalla de Fleetrun)
   const filasFleetrun = useMemo(() => (fleetQ.data ?? []).filter(f => enEmpresa(frPlaca(f))), [fleetQ.data, placasEmpresa]);
@@ -242,13 +257,13 @@ export function MantDashboardPage() {
   const ultimoTecnico = useMemo(() => {
     const m = new Map<string, TrabajoOT>();
     (trabajosQ.data ?? []).filter(t => t.tecnico && enEmpresa(t.placa)).forEach(t => {
-      tecnicosDe(t).forEach(nombre => {
+      tecnicosDe(t).map(canon).forEach(nombre => {
         const prev = m.get(nombre);
         if (!prev || fechaTrabajo(t) > fechaTrabajo(prev) || (fechaTrabajo(t) === fechaTrabajo(prev) && (t.id ?? 0) > (prev.id ?? 0))) m.set(nombre, t);
       });
     });
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'es'));
-  }, [trabajosQ.data, placasEmpresa]);
+  }, [trabajosQ.data, placasEmpresa, canon]);
 
   // Ingresos a taller (pestaña 2)
   const placasIngreso = useMemo(() => {
@@ -266,7 +281,7 @@ export function MantDashboardPage() {
     const m = new Map<string, number>();
     otsRango.forEach(o => { const l = lunesDe(fechaIngreso(o)); m.set(l, (m.get(l) ?? 0) + 1); });
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([lunes, n]) => ({
-      nombre: `Sem. ${lunes.slice(8, 10)}/${lunes.slice(5, 7)} · ${n}`,
+      nombre: `Sem. ${fechaDMY(lunes).slice(0, 5)} · ${n}`,
       valor: n,
       color: 'var(--accent)',
     }));
@@ -311,11 +326,11 @@ export function MantDashboardPage() {
       {cargando ? <PageLoader /> : error ? <Notice tone="error">{errorMessage(error)}</Notice> : pestana === 'resumen' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
           {/* Cifras principales */}
-          <div className="placas-resumen">
+          <div className="mant-dash-kpis">
             <div className="placas-kpi placas-kpi--blue"><span className="placas-kpi__valor t-numeric">{flota.length}</span><span className="placas-kpi__label">Flota activa (vehículos)</span></div>
             <div className="placas-kpi placas-kpi--accent"><span className="placas-kpi__valor t-numeric">{otsRango.length}</span><span className="placas-kpi__label">OT en el rango</span></div>
             <div className="placas-kpi placas-kpi--green"><span className="placas-kpi__valor t-numeric">{money(costoRango)}</span><span className="placas-kpi__label">Costo de las OT del rango</span></div>
-            <div className="placas-kpi placas-kpi--amber"><span className="placas-kpi__valor t-numeric">{new Set(enTaller.map(o => o.placa)).size}</span><span className="placas-kpi__label">Unidades en taller ahora</span></div>
+            <div className="placas-kpi placas-kpi--amber"><span className="placas-kpi__valor t-numeric">{tallerRows.length}</span><span className="placas-kpi__label">Unidades en taller ahora</span></div>
             <div className="placas-kpi placas-kpi--blue"><span className="placas-kpi__valor t-numeric">{enRampa.length}</span><span className="placas-kpi__label">En rampa ahora</span></div>
           </div>
 
@@ -323,9 +338,10 @@ export function MantDashboardPage() {
             <div className="mant-col-4">
               <Tarjeta titulo="Inspecciones" icono={<Truck size={15} />}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-                  <Barra etiqueta="Vigente" valor={inspecciones.vigente} total={flota.length} color="var(--green-ink)" />
-                  <Barra etiqueta="Vencida" valor={inspecciones.vencida} total={flota.length} color="var(--red-ink)" />
-                  <Barra etiqueta="Sin inspección" valor={inspecciones.sin} total={flota.length} color="var(--label-3)" />
+                  <Barra etiqueta={ETIQUETA_ESTADO.vigente} valor={inspecciones.vigente} total={totalInspecciones} color="var(--green-ink)" />
+                  <Barra etiqueta={ETIQUETA_ESTADO.proximo} valor={inspecciones.proximo} total={totalInspecciones} color="var(--amber-ink)" />
+                  <Barra etiqueta={ETIQUETA_ESTADO.vencido} valor={inspecciones.vencido} total={totalInspecciones} color="var(--red-ink)" />
+                  <Barra etiqueta={ETIQUETA_ESTADO['sin-registro']} valor={inspecciones['sin-registro']} total={totalInspecciones} color="var(--label-3)" />
                 </div>
               </Tarjeta>
             </div>
@@ -352,7 +368,7 @@ export function MantDashboardPage() {
                 <TablaRedimensionable id="dash-ultimos-cambios" columnas={COL_CAMBIOS} ariaLabel="Últimos cambios de preventivo" altoMax="45vh">
                   {cambios.map((f, i) => (
                     <tr key={`${frPlaca(f)}-${frFecha(f)}-${i}`}>
-                      <Celda mono>{frFecha(f)}</Celda>
+                      <Celda mono>{fechaDMY(frFecha(f))}</Celda>
                       <Celda><LicensePlate plate={frPlaca(f)} size="sm" /></Celda>
                       <Celda>{frTipo(f)}</Celda>
                       <Celda alinear="right" mono>{frKmCambio(f).toLocaleString('es-PE')}</Celda>
@@ -362,15 +378,14 @@ export function MantDashboardPage() {
               </Tarjeta>
             </div>
             <div className="mant-col-5">
-              <Tarjeta titulo="Unidades en taller" icono={<Wrench size={15} />}>
-                <TablaRedimensionable id="dash-en-taller" columnas={COL_TALLER} ariaLabel="Unidades en taller" altoMax="45vh">
-                  {enTaller.map(o => (
-                    <tr key={otId(o)}>
-                      <Celda><LicensePlate plate={o.placa} size="sm" /></Celda>
-                      <Celda mono>{otId(o)}</Celda>
-                      <Celda>{tipoOT(o)}</Celda>
-                      <Celda>{o.estado}</Celda>
-                      <Celda mono>{fechaIngreso(o)}</Celda>
+              <Tarjeta titulo="Último trabajo por técnico" icono={<CircleDollarSign size={15} />}>
+                <TablaRedimensionable id="dash-tecnicos" columnas={COL_TECNICOS} ariaLabel="Último trabajo por técnico" altoMax="45vh">
+                  {ultimoTecnico.map(([nombre, t]) => (
+                    <tr key={nombre}>
+                      <Celda>{nombre}</Celda>
+                      <Celda>{oracion(t.trabajo_realizado) || '—'}</Celda>
+                      <Celda><LicensePlate plate={t.placa ?? '—'} size="sm" /></Celda>
+                      <Celda mono>{fechaDMY(fechaTrabajo(t))}</Celda>
                     </tr>
                   ))}
                 </TablaRedimensionable>
@@ -379,28 +394,18 @@ export function MantDashboardPage() {
           </div>
 
           <div className="mant-grid">
-            <div className="mant-col-7">
-              <Tarjeta titulo="Unidades en rampa" icono={<Truck size={15} />}>
-                <TablaRedimensionable id="dash-en-rampa" columnas={COL_RAMPA} ariaLabel="Unidades en rampa" altoMax="35vh">
-                  {enRampa.map(e => (
-                    <tr key={`${e.id ?? e.placa}`}>
-                      <Celda><LicensePlate plate={e.placa ?? '—'} size="sm" /></Celda>
-                      <Celda>{e.rampa}</Celda>
-                      <Celda mono>{[e.salida_programada, e.hora_salida_programada].filter(Boolean).join(' ') || '—'}</Celda>
-                    </tr>
-                  ))}
-                </TablaRedimensionable>
-              </Tarjeta>
-            </div>
-            <div className="mant-col-5">
-              <Tarjeta titulo="Último trabajo por técnico" icono={<CircleDollarSign size={15} />}>
-                <TablaRedimensionable id="dash-tecnicos" columnas={COL_TECNICOS} ariaLabel="Último trabajo por técnico" altoMax="35vh">
-                  {ultimoTecnico.map(([nombre, t]) => (
-                    <tr key={nombre}>
-                      <Celda>{nombre}</Celda>
-                      <Celda>{t.trabajo_realizado || '—'}</Celda>
-                      <Celda><LicensePlate plate={t.placa ?? '—'} size="sm" /></Celda>
-                      <Celda mono>{fechaTrabajo(t) || '—'}</Celda>
+            <div className="mant-col-12">
+              <Tarjeta titulo="Unidades en taller" icono={<Wrench size={15} />}>
+                <TablaRedimensionable id="dash-en-taller" columnas={COL_TALLER} ariaLabel="Unidades en taller y su rampa" altoMax="45vh">
+                  {tallerRows.map(f => (
+                    <tr key={f.placa}>
+                      <Celda><LicensePlate plate={f.placa} size="sm" /></Celda>
+                      <Celda mono>{f.ot ? otId(f.ot) : '—'}</Celda>
+                      <Celda>{f.ot ? tipoOT(f.ot) : '—'}</Celda>
+                      <Celda>{f.ot?.estado ?? '—'}</Celda>
+                      <Celda mono>{f.ot ? fechaDMY(fechaIngreso(f.ot)) : '—'}</Celda>
+                      <Celda>{f.rampa?.rampa ?? '—'}</Celda>
+                      <Celda mono>{salidaProgramada(f.rampa)}</Celda>
                     </tr>
                   ))}
                 </TablaRedimensionable>
@@ -410,7 +415,7 @@ export function MantDashboardPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-          <div className="placas-resumen">
+          <div className="mant-dash-kpis">
             <div className="placas-kpi placas-kpi--accent"><span className="placas-kpi__valor t-numeric">{otsRango.length}</span><span className="placas-kpi__label">OT ingresadas en el rango</span></div>
             <div className="placas-kpi placas-kpi--blue"><span className="placas-kpi__valor t-numeric">{placasIngreso.length}</span><span className="placas-kpi__label">Placas con ingreso</span></div>
             <div className="placas-kpi placas-kpi--amber"><span className="placas-kpi__valor t-numeric">{reingresos}</span><span className="placas-kpi__label">Placas con reingreso</span></div>
@@ -448,22 +453,22 @@ export function MantDashboardPage() {
                   <div key={otId(o)} style={{ padding: 'var(--s-3)', borderRadius: 12, background: 'var(--fill-2)' }}>
                     <div style={{ display: 'flex', gap: 'var(--s-3)', flexWrap: 'wrap', alignItems: 'baseline', fontSize: '0.8125rem' }}>
                       <b style={{ fontFamily: 'var(--font-mono)' }}>{otId(o)}</b>
-                      <span>{fechaIngreso(o)}</span>
+                      <span>{fechaDMY(fechaIngreso(o))}</span>
                       <span style={{ color: 'var(--label-2)' }}>{tipoOT(o)}</span>
                       <span style={{ color: 'var(--label-2)' }}>{o.estado}</span>
                       <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)' }}>{minutosOT(o).toLocaleString('es-PE')} min</span>
                     </div>
                     <div style={{ marginTop: 6, whiteSpace: 'pre-line', fontSize: '0.8125rem', color: textoFalla(o) ? 'var(--label)' : 'var(--label-3)' }}>
-                      Motivo: {textoFalla(o) || 'Sin falla reportada en esta OT'}
+                      Motivo: {oracion(textoFalla(o)) || 'Sin falla reportada en esta OT'}
                     </div>
                     <div style={{ marginTop: 6, fontSize: '0.8125rem', color: 'var(--label-2)' }}>
-                      Técnicos: {tecnicosDeOT(o).join(', ') || '—'}
+                      Técnicos: {tecnicosDeOT(o).map(canon).join(', ') || '—'}
                     </div>
                     {trabajosDe(o).length > 0 && (
                       <ul style={{ marginTop: 6, paddingLeft: 18, fontSize: '0.8125rem' }}>
                         {trabajosDe(o).map(t => (
                           <li key={t.id_ot}>
-                            {t.trabajo_realizado || 'Sin descripción'} · {t.tecnico || 'sin técnico'} · {t.estado || '—'} · {fechaTrabajo(t) || 'sin fecha'}
+                            {oracion(t.trabajo_realizado) || 'Sin descripción'} · {tecnicosDe(t).map(canon).join(', ') || 'sin técnico'} · {fechaDMY(fechaTrabajo(t))}
                           </li>
                         ))}
                       </ul>
@@ -481,11 +486,11 @@ export function MantDashboardPage() {
               {porDia.map(g => (
                 <tr key={`${g.placa}|${g.fecha}`} onClick={() => setPlacaSel(g.placa)} style={{ cursor: 'pointer' }}>
                   <Celda><LicensePlate plate={g.placa} size="sm" /></Celda>
-                  <Celda mono>{g.fecha}</Celda>
+                  <Celda mono>{fechaDMY(g.fecha)}</Celda>
                   <Celda alinear="right" mono>{g.ots.length}</Celda>
                   <Celda>
                     <span style={{ whiteSpace: 'pre-line' }}>
-                      {g.ots.map(o => `${tipoOT(o)}: ${textoFalla(o) || 'sin falla reportada'}`).join('\n')}
+                      {g.ots.map(o => `${tipoOT(o)}: ${oracion(textoFalla(o)) || 'sin falla reportada'}`).join('\n')}
                     </span>
                   </Celda>
                 </tr>

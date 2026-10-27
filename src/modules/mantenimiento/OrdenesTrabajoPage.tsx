@@ -63,7 +63,6 @@ function useBacklog(placa?: string) {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const TABS_MAIN = ['OTs', 'Backlog'] as const;
 
 // Pestañas de estado (igual que el clásico). 'Todas' no filtra por estado.
 const ESTADOS_PESTANA: Record<string, readonly string[]> = {
@@ -116,7 +115,7 @@ export function OrdenesTrabajoPage() {
   const { data: placas }    = usePlacasLista();
 
   // ?tab=backlog abre directamente la pestaña de Backlog (enlace desde el menú)
-  const [tab, setTab]           = useState<typeof TABS_MAIN[number]>(() => (location.search.includes('tab=backlog') ? 'Backlog' : 'OTs'));
+  const [tab, setTab]           = useState<'OTs' | 'Backlog'>(() => (location.search.includes('tab=backlog') ? 'Backlog' : 'OTs'));
   useEffect(() => { if (location.search.includes('tab=backlog')) setTab('Backlog'); }, [location.search]);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('Todas');
@@ -284,8 +283,8 @@ export function OrdenesTrabajoPage() {
       {!soloDetalle && (
         <PageHeader
           eyebrow="Mantenimiento"
-          title="Órdenes de trabajo"
-          subtitle="Órdenes de trabajo, seguimiento técnico y registro de mantenimiento"
+          title={tab === 'Backlog' ? 'Backlog pendientes' : 'Órdenes de trabajo'}
+          subtitle={tab === 'Backlog' ? 'Averías reportadas que aún no tienen OT' : 'Órdenes de trabajo, seguimiento técnico y registro de mantenimiento'}
           actions={
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {tab === 'Backlog' && (
@@ -337,21 +336,6 @@ export function OrdenesTrabajoPage() {
               ))}
             </div>
           )}
-
-          {/* Tabs OTs / Backlog */}
-          <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
-            {TABS_MAIN.map(t => (
-              <button key={t} type="button" onClick={() => setTab(t)}
-                style={{
-                  padding: '0.375rem 1rem', borderRadius: 'var(--r-full)', fontSize: '0.875rem',
-                  fontWeight: 600, border: 'none', cursor: 'pointer',
-                  background: tab === t ? 'var(--ink)' : 'var(--fill)',
-                  color: tab === t ? 'var(--label-inverse)' : 'var(--label-2)',
-                }}>
-                {t === 'OTs' ? <><ScrollText size={13} style={{ marginRight: 5, verticalAlign: 'middle' }} />OTs</> : <><BookOpen size={13} style={{ marginRight: 5, verticalAlign: 'middle' }} />Backlog</>}
-              </button>
-            ))}
-          </div>
 
           {tab === 'OTs' ? (
             <>

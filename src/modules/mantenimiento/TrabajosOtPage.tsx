@@ -16,6 +16,8 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel, exportarExcelHojas } from '../../core/lib/excel';
 import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
+import { oracion } from '../../core/lib/texto';
+import { usePersonalCanonico } from './personalCanonico';
 import { ImportarTrabajosSheet } from './ImportarTrabajosSheet';
 import {
   aObjeto, editarTrabajo, eliminarTrabajo, ESTADOS_TRABAJO, estadoTrabajo, regularizarTecnicos, trabajoCosto, trabajoId, trabajoKmHoras,
@@ -76,7 +78,6 @@ export function TrabajosOtPage() {
   const { can } = useAuth();
   const toast = useToast();
   const [busqueda, setBusqueda] = useState('');
-  const [estado, setEstado] = useState('');
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
   const [importando, setImportando] = useState(false);
   const [vista, setVista] = useState<'trabajos' | 'horas'>('trabajos');
@@ -84,24 +85,24 @@ export function TrabajosOtPage() {
   const horas = useHorasTecnicos(rango.desde, rango.hasta, vista === 'horas');
 
   const trabajos = data ?? [];
+  const canon = usePersonalCanonico();
   const ultimoDia = useUltimoDiaTrabajos(trabajos.length === 0).data?.fecha ?? null;
   const seleccionado = trabajos.find(t => trabajoId(t) === seleccionadoId) ?? null;
 
   const visibles = useMemo(() => {
     const q = busqueda.trim().toUpperCase();
     return trabajos.filter(t =>
-      (!estado || estadoTrabajo(t.estado) === estado) &&
       (!q || trabajoId(t).toUpperCase().includes(q) || (t.placa ?? '').toUpperCase().includes(q) ||
         personalDe(t).join(' ').toUpperCase().includes(q) || (t.trabajo_realizado ?? '').toUpperCase().includes(q) ||
         (t.ticket_visita ?? '').toUpperCase().includes(q)));
-  }, [trabajos, busqueda, estado]);
+  }, [trabajos, busqueda]);
 
   async function exportar() {
     try {
       await exportarExcel('Trabajos-OT', 'Trabajos',
         ['Trabajo', 'OT', 'Placa', 'Estado', 'Trabajo realizado', 'Personal', 'Inicio', 'Salida', 'Costo', 'Creado por'],
-        visibles.map(t => [trabajoId(t), t.ticket_visita, t.placa, estadoTrabajo(t.estado), t.trabajo_realizado, personalDe(t).join(', '),
-          dia(t.fecha_trabajo), dia(t.fecha_salida), trabajoCosto(t), t.creado_por]));
+        visibles.map(t => [trabajoId(t), t.ticket_visita, t.placa, estadoTrabajo(t.estado), oracion(t.trabajo_realizado), personalDe(t).map(canon).join(', '),
+          dia(t.fecha_trabajo), dia(t.fecha_salida), trabajoCosto(t), canon(t.creado_por)]));
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
   }
@@ -174,10 +175,6 @@ export function TrabajosOtPage() {
             <Button variant="plain" onClick={() => setRangoLista({ desde: '', hasta: '' })}>Todas las fechas</Button>
           </div>
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, técnico, trabajo, OT o ticket…" />
-          <SelectInput value={estado} onChange={e => setEstado(e.target.value)} aria-label="Estado">
-            <option value="">Todos los estados</option>
-            {ESTADOS_TRABAJO.map(e => <option key={e} value={e}>{e} · {trabajos.filter(t => estadoTrabajo(t.estado) === e).length}</option>)}
-          </SelectInput>
 
           {visibles.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title={trabajos.length === 0 ? 'Sin trabajos en este rango' : 'Sin coincidencias'}>
@@ -186,7 +183,7 @@ export function TrabajosOtPage() {
                   Ver el último día con trabajos ({formatFechaPe(ultimoDia)})
                 </Button>
               )}
-              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setEstado(''); }}>Quitar filtros</button>
+              <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Quitar filtros</button>
             </EmptyState>
           ) : (
             <div className="ot-tabla-caja">
@@ -194,7 +191,7 @@ export function TrabajosOtPage() {
                 <thead>
                   <tr>
                     <th>ID trabajo</th><th>N° OT</th><th>Placa</th><th>Km / Horas</th><th>F/H inicio</th>
-                    <th>Trabajo realizado</th><th>Personal</th><th>Creado por</th><th>F/H salida</th><th>Costo</th><th>Tiempo (hrs)</th><th>Estado</th>
+                    <th>Trabajo realizado</th><th>Personal</th><th>Creado por</th><th>F/H salida</th><th>Costo</th><th>Tiempo (hrs)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -211,13 +208,12 @@ export function TrabajosOtPage() {
                         <td><span className="ot-fila__placa">{t.placa || '—'}</span></td>
                         <td>{trabajoKmHoras(t)}</td>
                         <td>{formatFechaHoraPe(aLocal(t.fecha_trabajo))}</td>
-                        <td className="ot-tabla__trabajo">{t.trabajo_realizado || '—'}</td>
-                        <td>{personalDe(t).join(', ') || '—'}</td>
-                        <td>{t.creado_por || '—'}</td>
+                        <td className="ot-tabla__trabajo">{oracion(t.trabajo_realizado) || '—'}</td>
+                        <td>{personalDe(t).map(canon).join(', ') || '—'}</td>
+                        <td>{canon(t.creado_por) || '—'}</td>
                         <td>{formatFechaHoraPe(aLocal(t.fecha_salida))}</td>
                         <td>{costo > 0 ? formatSoles(costo) : '—'}</td>
                         <td>{horas == null ? '—' : `${horas.toFixed(1)} h`}</td>
-                        <td><span className={`ot-estado ot-estado--${tonoEstado(t.estado)}`} style={{ fontSize: '0.6875rem' }}>{estadoTrabajo(t.estado)}</span></td>
                       </tr>
                     );
                   })}
@@ -296,7 +292,7 @@ function RegularizarTecnicosSheet({ open, onClose, trabajos, desde, hasta }: {
                   <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{id}</span>
                   <span style={{ fontWeight: 700 }}>{t.placa || '—'}</span>
                   <span style={{ color: 'var(--label-2)' }}>{formatFechaHoraPe(aLocal(t.fecha_trabajo))}</span>
-                  <span style={{ flexBasis: '100%', color: 'var(--label-1)' }}>{t.trabajo_realizado || '—'}</span>
+                  <span style={{ flexBasis: '100%', color: 'var(--label-1)' }}>{oracion(t.trabajo_realizado) || '—'}</span>
                 </div>
                 <MultiSelect label={`Técnicos · ${id}`} options={opciones} value={asignados[id] ?? []}
                   onChange={v => setAsignados(a => ({ ...a, [id]: v }))} placeholder="Sin asignar" />
@@ -443,6 +439,7 @@ function TrabajoDetalle({ trabajo: t, puedeEditar, puedeEliminar, onVolver }: {
     finally { setOcupado(false); }
   }
 
+  const canon = usePersonalCanonico();
   return (
     <div className="ot-ficha">
       <div className="tarjeta__barra">
@@ -468,8 +465,8 @@ function TrabajoDetalle({ trabajo: t, puedeEditar, puedeEliminar, onVolver }: {
       <div>
         <p className="tarjeta__grupo-titulo">Trabajo</p>
         <div className="tarjeta__lista">
-          <div className="dato"><span className="dato__label">Trabajo realizado</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{t.trabajo_realizado || '—'}</span></div>
-          <div className="dato"><span className="dato__label">Personal</span><span className="dato__valor">{personalDe(t).join(', ') || '—'}</span></div>
+          <div className="dato"><span className="dato__label">Trabajo realizado</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{oracion(t.trabajo_realizado) || '—'}</span></div>
+          <div className="dato"><span className="dato__label">Personal</span><span className="dato__valor">{personalDe(t).map(canon).join(', ') || '—'}</span></div>
           {kmh !== '—' && <div className="dato"><span className="dato__label">Km / Horas</span><span className="dato__valor dato__valor--mono">{kmh}</span></div>}
           {costo > 0 && <div className="dato"><span className="dato__label">Costo</span><span className="dato__valor" style={{ fontWeight: 700 }}>S/ {costo.toFixed(2)}</span></div>}
         </div>
@@ -480,7 +477,7 @@ function TrabajoDetalle({ trabajo: t, puedeEditar, puedeEliminar, onVolver }: {
         <div className="tarjeta__lista">
           <div className="dato"><span className="dato__label">Inicio</span><span className="dato__valor dato__valor--mono">{aLocal(t.fecha_trabajo).replace('T', ' ') || '—'}</span></div>
           <div className="dato"><span className="dato__label">Salida</span><span className="dato__valor dato__valor--mono">{aLocal(t.fecha_salida).replace('T', ' ') || '—'}</span></div>
-          {t.creado_por && <div className="dato"><span className="dato__label">Registrado por</span><span className="dato__valor">{t.creado_por}</span></div>}
+          {t.creado_por && <div className="dato"><span className="dato__label">Registrado por</span><span className="dato__valor">{canon(t.creado_por)}</span></div>}
         </div>
       </div>
 

@@ -483,3 +483,22 @@
 .ot-tabla tbody tr:last-child td { border-bottom: none; }
 .ot-tabla__id { font-family: var(--font-mono); font-weight: 700; }
 .ot-tabla__trabajo { white-space: normal; min-width: 16rem; }
+
+/* ─── Dashboard de taller: cifras en una sola fila; en el teléfono, dos columnas sin scroll horizontal ─── */
+.mant-dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+.mant-dash-kpis > * { min-width: 0; }
+.mant-dash-kpis .placas-kpi__valor { font-size: clamp(1.5rem, 2.6vw, 2.25rem); }
+
+@media (max-width: 1024px) {
+  .mant-dash-kpis .placas-kpi__valor { font-size: clamp(1.25rem, 3.2vw, 1.75rem); }
+}
+
+@media (max-width: 639px) {
+  .mant-dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); }
+  .mant-dash-kpis > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .mant-dash-kpis .placas-kpi__valor { font-size: 1.5rem; }
+}
