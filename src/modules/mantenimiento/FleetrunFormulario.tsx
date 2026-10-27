@@ -4,14 +4,14 @@ import { ChevronDown, CircleAlert, Search, Users, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, TextInput } from '../../core/ui/Field';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { SeleccionMultiple, type OpcionSeleccion } from '../../core/ui/SeleccionMultiple';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { usePlacas, useMetricas, type Placa } from '../placas/api';
-import { frFecha, frFrecuencia, frKmCambio, frKmGps, frObs, frPlaca, frTipo, frId, type FleetrunFila } from './api';
+import { frFecha, frFrecuencia, frKmCambio, frKmGps, frKmProx, frObs, frPlaca, frTipo, frId, type FleetrunFila } from './api';
 import {
   actualizarFleetrun, buscarFrecuencia, guardarFleetrun, useFrecuenciasMp, useTiposPreventivo, type FleetrunCampos,
 } from './fleetrunApi';
@@ -125,8 +125,6 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
   const [tecs, setTecs] = useState<string[]>([]);
   const [obs, setObs] = useState('');
   const [items, setItems] = useState<ItemTipo[]>([]);
-  const [tipoEdit, setTipoEdit] = useState('');
-  const [frecEdit, setFrecEdit] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -147,7 +145,7 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setTipoEdit('');
+    setError(null);
     if (registro) {
       setFecha(aIso(String(registro[3] ?? '')));
       setPlaca(frPlaca(registro) === '—' ? '' : frPlaca(registro).toUpperCase());
@@ -155,11 +153,10 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
       setKmGps(frKmGps(registro) ? String(frKmGps(registro)) : '');
       setTecs(String(registro[13] ?? '').split(/\s*[/,]\s*/).map(s => s.trim()).filter(Boolean));
       setObs(frObs(registro));
-      setTipoEdit(frTipo(registro) === '—' ? '' : frTipo(registro));
-      setFrecEdit(frFrecuencia(registro) ? String(frFrecuencia(registro)) : '');
-      setItems([]);
+      const tipoReg = frTipo(registro) === '—' ? '' : frTipo(registro);
+      setItems(tipoReg ? [{ tipo: tipoReg.toUpperCase(), frec: frFrecuencia(registro) ? String(frFrecuencia(registro)) : '', prox: frKmProx(registro) ? String(frKmProx(registro)) : '' }] : []);
     } else {
-      setFecha(hoyLocal()); setPlaca(''); setKmAct(''); setKmGps(''); setTecs([]); setObs(''); setItems([]); setFrecEdit('');
+      setFecha(hoyLocal()); setPlaca(''); setKmAct(''); setKmGps(''); setTecs([]); setObs(''); setItems([]);
     }
   }, [open, registro]);
 
@@ -185,7 +182,6 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
 
   function cambiarKmAct(v: string) {
     setKmAct(v);
-    if (editando) return;
     const act = num(v);
     setItems(prev => prev.map(it => (num(it.frec) > 0 ? { ...it, prox: String(act + num(it.frec)) } : it)));
   }
@@ -194,6 +190,11 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
   function alternarTipo(tipo: string) {
     const t = tipo.toUpperCase().trim();
     if (!t) return;
+    if (editando) {
+      const f = frecDe(t);
+      setItems([{ tipo: t, frec: f ? String(f) : '', prox: f > 0 ? String(num(kmAct) + f) : '0' }]);
+      return;
+    }
     if (items.some(i => i.tipo === t)) {
       setItems(prev => prev.filter(i => i.tipo !== t));
       return;
@@ -210,15 +211,11 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
     setTecs(prev => (prev.includes(nombre) ? prev.filter(n => n !== nombre) : [...prev, nombre]));
   }
 
-  // Edición: km próximo = km actual + frecuencia (vacío si no hay frecuencia)
-  const proxEdit = num(frecEdit) > 0 ? String(num(kmAct) + num(frecEdit)) : '';
-
   async function guardar() {
     if (!fecha) { setError('Indica la fecha del mantenimiento.'); return; }
     if (!placa) { setError('Elige la placa de la unidad.'); return; }
     if (kmAct.trim() === '') { setError(`Indica el ${horas ? 'horómetro' : 'kilometraje'} actual.`); return; }
-    if (!editando && items.length === 0) { setError('Selecciona al menos un tipo de mantenimiento.'); return; }
-    if (editando && !tipoEdit) { setError('Elige el tipo de mantenimiento.'); return; }
+    if (items.length === 0) { setError('Selecciona al menos un tipo de mantenimiento.'); return; }
     const tecnicos = tecs.join(SEPARADOR_TECNICOS);
     if (tecnicos.length > MAX_TECNICOS_BD) {
       setError(`Son demasiados técnicos para guardar (máximo ${MAX_TECNICOS_BD} caracteres). Quita alguno.`);
@@ -233,7 +230,8 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
     setGuardando(true); setError(null);
     try {
       if (registro) {
-        await actualizarFleetrun({ ...base, id: frId(registro), tipomp: tipoEdit, freckm: frecEdit, kmprox: proxEdit }, usuario);
+        const it = items[0];
+        await actualizarFleetrun({ ...base, id: frId(registro), tipomp: it.tipo, freckm: it.frec || '0', kmprox: it.prox }, usuario);
       } else {
         // Un registro por tipo, en orden; si alguno falla se informa cuál y se refresca lo que sí se guardó
         const fallos: string[] = [];
@@ -284,14 +282,14 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
             {p => <TextInput {...p} type="number" inputMode="numeric" min={0} value={kmGps} onChange={e => setKmGps(e.target.value)} />}
           </Field>
 
-          {!editando && (
+          {(
             <Field label="Tipos de mantenimiento" wide hint={unidad ? `${unidad.marca || 'Sin marca'} · ${unidad.uts || 'Sin UTS'} — la frecuencia sale de Frecuencias MP` : 'Elige primero la placa para calcular la frecuencia'}>
               {p => <TipoPicker id={p.id} describedBy={p['aria-describedby']} opciones={opcionesTipos} seleccionados={seleccionadosTipos} onToggle={alternarTipo} />}
             </Field>
           )}
         </div>
 
-        {!editando && (
+        {(
           <div className="tarjeta__lista">
             {items.length === 0 && (
               <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-3)' }}>Marca los tipos de mantenimiento realizados</span></div>
@@ -312,20 +310,6 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
           </div>
         )}
 
-        {editando && (
-          <div className="form-grid">
-            <Field label="Tipo de MP">
-              {p => (
-                <SelectInput {...p} value={tipoEdit} onChange={e => { setTipoEdit(e.target.value); const f = frecDe(e.target.value); if (f) setFrecEdit(String(f)); }}>
-                  <option value="">Elige el tipo…</option>
-                  {[...new Set([...(tiposMp.data ?? []), ...(tipoEdit ? [tipoEdit] : [])])].sort().map(t => <option key={t} value={t}>{tipoOracion(t)}</option>)}
-                </SelectInput>
-              )}
-            </Field>
-            <Field label={`Frecuencia (${u})`}>{p => <TextInput {...p} type="number" min={0} value={frecEdit} onChange={e => setFrecEdit(e.target.value)} />}</Field>
-            <Field label={`Próximo (${u})`} hint="Km actual + frecuencia">{p => <TextInput {...p} value={proxEdit} readOnly />}</Field>
-          </div>
-        )}
 
         <div className="form-grid">
           <Field label="Técnicos / responsables" wide hint={`Puedes elegir varios. Máximo ${MAX_TECNICOS_BD} caracteres en total.`}>

@@ -115,34 +115,43 @@
         <div class="row g-3">
           <div class="col-sm-4">
             <label class="form-label fw-bold" style="font-size:0.8rem">Marca *</label>
-            <select class="form-select form-select-sm text-uppercase" id="cf-marca" onchange="if(window._cfPopularModelos) window._cfPopularModelos(this.value);">
-              <option value="">Seleccionar...</option>
-            </select>
+            <div class="position-relative">
+              <input type="text" class="form-control form-control-sm" id="cf-marca-txt" placeholder="Elige o escribe una marca" autocomplete="off" style="border-radius: 10px;" oninput="window._cfboxFiltrar('cf-marca')" onfocus="window._cfboxFiltrar('cf-marca')" onblur="window._cfboxOcultar('cf-marca')">
+              <input type="hidden" id="cf-marca">
+              <div id="cf-marca-dd" class="cb-dropdown" style="display: none;"></div>
+            </div>
           </div>
           <div class="col-sm-4">
             <label class="form-label fw-bold" style="font-size:0.8rem">Tipo MP *</label>
-            <select class="form-select form-select-sm text-uppercase" id="cf-tipo-mp">
-              <option value="">Seleccionar...</option>
-            </select>
+            <div class="position-relative">
+              <input type="text" class="form-control form-control-sm" id="cf-tipo-mp-txt" placeholder="Elige o escribe el tipo de MP" autocomplete="off" style="border-radius: 10px;" oninput="window._cfboxFiltrar('cf-tipo-mp')" onfocus="window._cfboxFiltrar('cf-tipo-mp')" onblur="window._cfboxOcultar('cf-tipo-mp')">
+              <input type="hidden" id="cf-tipo-mp">
+              <div id="cf-tipo-mp-dd" class="cb-dropdown" style="display: none;"></div>
+            </div>
           </div>
           <div class="col-sm-4">
             <label class="form-label fw-bold" style="font-size:0.8rem">UTS</label>
-            <select class="form-select form-select-sm" id="cf-uts">
-              <option value="LOCAL">LOCAL</option>
-              <option value="NACIONAL">NACIONAL</option>
-            </select>
+            <div class="position-relative">
+              <input type="text" class="form-control form-control-sm" id="cf-uts-txt" placeholder="LOCAL, NACIONAL o RUTA" autocomplete="off" style="border-radius: 10px;" oninput="window._cfboxFiltrar('cf-uts')" onfocus="window._cfboxFiltrar('cf-uts')" onblur="window._cfboxOcultar('cf-uts')">
+              <input type="hidden" id="cf-uts">
+              <div id="cf-uts-dd" class="cb-dropdown" style="display: none;"></div>
+            </div>
           </div>
           <div class="col-sm-6">
             <label class="form-label fw-bold" style="font-size:0.8rem">Combustible</label>
-            <select class="form-select form-select-sm text-uppercase" id="cf-combustible">
-              <option value="">Seleccionar...</option>
-            </select>
+            <div class="position-relative">
+              <input type="text" class="form-control form-control-sm" id="cf-combustible-txt" placeholder="DIÉSEL, GNV, GLP…" autocomplete="off" style="border-radius: 10px;" oninput="window._cfboxFiltrar('cf-combustible')" onfocus="window._cfboxFiltrar('cf-combustible')" onblur="window._cfboxOcultar('cf-combustible')">
+              <input type="hidden" id="cf-combustible">
+              <div id="cf-combustible-dd" class="cb-dropdown" style="display: none;"></div>
+            </div>
           </div>
           <div class="col-sm-6">
             <label class="form-label fw-bold" style="font-size:0.8rem">Modelo</label>
-            <select class="form-select form-select-sm text-uppercase" id="cf-modelo">
-              <option value="">Seleccionar...</option>
-            </select>
+            <div class="position-relative">
+              <input type="text" class="form-control form-control-sm" id="cf-modelo-txt" placeholder="Vacío = todos los modelos" autocomplete="off" style="border-radius: 10px;" oninput="window._cfboxFiltrar('cf-modelo')" onfocus="window._cfboxFiltrar('cf-modelo')" onblur="window._cfboxOcultar('cf-modelo')">
+              <input type="hidden" id="cf-modelo">
+              <div id="cf-modelo-dd" class="cb-dropdown" style="display: none;"></div>
+            </div>
           </div>
           <div class="col-sm-4">
             <label class="form-label fw-bold" style="font-size:0.8rem">Frecuencia KM</label>
@@ -161,15 +170,19 @@
           </div>
           <div class="col-sm-6">
             <label class="form-label fw-bold" style="font-size:0.8rem">Tipo</label>
-            <select class="form-select form-select-sm" id="cf-tipo">
-              <option value="">Seleccionar...</option>
-            </select>
+            <div class="position-relative">
+              <input type="text" class="form-control form-control-sm" id="cf-tipo-txt" placeholder="Cambio, Engrase…" autocomplete="off" style="border-radius: 10px;" oninput="window._cfboxFiltrar('cf-tipo')" onfocus="window._cfboxFiltrar('cf-tipo')" onblur="window._cfboxOcultar('cf-tipo')">
+              <input type="hidden" id="cf-tipo">
+              <div id="cf-tipo-dd" class="cb-dropdown" style="display: none;"></div>
+            </div>
           </div>
           <div class="col-sm-6">
             <label class="form-label fw-bold" style="font-size:0.8rem">Sistema</label>
-            <select class="form-select form-select-sm" id="cf-sistema">
-              <option value="">Seleccionar...</option>
-            </select>
+            <div class="position-relative">
+              <input type="text" class="form-control form-control-sm" id="cf-sistema-txt" placeholder="Motor, Frenos…" autocomplete="off" style="border-radius: 10px;" oninput="window._cfboxFiltrar('cf-sistema')" onfocus="window._cfboxFiltrar('cf-sistema')" onblur="window._cfboxOcultar('cf-sistema')">
+              <input type="hidden" id="cf-sistema">
+              <div id="cf-sistema-dd" class="cb-dropdown" style="display: none;"></div>
+            </div>
           </div>
           <div class="col-12">
             <label class="form-label fw-bold" style="font-size:0.8rem">Descripción</label>

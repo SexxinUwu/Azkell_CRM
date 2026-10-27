@@ -75,14 +75,13 @@ function _cfPopularDatalists() {
     });
     tipos.sort();
 
-    function _fill(id, vals) {
-        var dl = document.getElementById(id);
-        if (dl) dl.innerHTML = '<option value="">Seleccionar...</option>' + vals.map(function(v){ return '<option value="'+v+'">'+v+'</option>'; }).join('');
-    }
-    _fill('cf-marca',   marcas);
-    _fill('cf-sistema', sistemas);
-    _fill('cf-combustible', combustibles);
-    _fill('cf-tipo', tipos);
+    function _fill(id, vals) { window._cfboxInit(id, vals); }
+    // Opciones fijas (como en la pantalla nueva) más lo que ya existe en las reglas y en las placas
+    _fill('cf-marca', marcas);
+    _fill('cf-sistema', ['Motor', 'Transmisión / Caja', 'Diferencial', 'Frenos', 'Suspensión', 'Eléctrico', 'Neumáticos', 'Dirección', 'Refrigeración', 'Combustible', 'Cabina'].concat(sistemas));
+    _fill('cf-combustible', ['DIÉSEL', 'GNV', 'GLP'].concat(combustibles));
+    _fill('cf-tipo', ['Cambio', 'Inspección', 'Regulación', 'Calibración', 'Engrase', 'Limpieza', 'Ajuste'].concat(tipos));
+    window._cfboxInit('cf-uts', ['LOCAL', 'NACIONAL', 'RUTA']);
 
     // Tipos de Preventivo: desde tabla maestra
     return fetch('/api/tipos-preventivo')
@@ -111,8 +110,7 @@ window._cfPopularModelos = function(marcaSeleccionada) {
         }
     });
     modelos.sort();
-    var dl = document.getElementById('cf-modelo');
-    if (dl) dl.innerHTML = '<option value="">Seleccionar...</option>' + modelos.map(function(v){ return '<option value="'+v+'">'+v+'</option>'; }).join('');
+    window._cfboxInit('cf-modelo', modelos);
 };
 
 // ── TIPOS DE MANTENIMIENTO ────────────────────────────────────────
@@ -241,10 +239,11 @@ window.eliminarMasivoConfigFlota = function() {
 };
 
 window.abrirModalConfigFlota = function() {
-    ['cf-id','cf-marca','cf-tipo-mp','cf-combustible','cf-modelo','cf-frec-km','cf-frec-horas','cf-frec-dias','cf-tipo','cf-sistema','cf-descripcion'].forEach(function(id){
+    ['cf-id','cf-frec-km','cf-frec-horas','cf-frec-dias','cf-descripcion'].forEach(function(id){
         var el=document.getElementById(id); if(el) el.value='';
     });
-    var el = document.getElementById('cf-uts'); if(el) el.value='LOCAL';
+    ['cf-marca','cf-tipo-mp','cf-combustible','cf-modelo','cf-tipo','cf-sistema'].forEach(function(id){ window._cfboxSet(id, ''); });
+    window._cfboxSet('cf-uts', 'LOCAL');
     var t = document.getElementById('modalConfigFlota-titulo');
     if(t) t.innerHTML='<i class="bi bi-plus-circle me-1 text-primary"></i>Nuevo Tipo de Mantenimiento';
     _cfPopularDatalists();
@@ -257,32 +256,7 @@ window.editarConfigFlota = function(id) {
         var r = (window.cfgDataFlota||[]).find(function(x){ return x.id==id; });
         if (!r) return;
         var set    = function(elId, v){ var el=document.getElementById(elId); if(el) el.value = v != null ? v : ''; };
-        var setStr = function(elId, v){
-            var el=document.getElementById(elId);
-            if(el) {
-                var val = (v || '').trim().toUpperCase();
-                if (!val) { el.value = ''; return; }
-                if (el.tagName === 'SELECT' && el.options) {
-                    var exists = false;
-                    for (var i = 0; i < el.options.length; i++) {
-                        if (el.options[i].value.toUpperCase() === val) {
-                            exists = true;
-                            val = el.options[i].value;
-                            break;
-                        }
-                    }
-                    if (!exists) {
-                        var opt = document.createElement('option');
-                        opt.value = val;
-                        opt.text = val;
-                        el.add(opt);
-                    }
-                    el.value = val;
-                } else {
-                    el.value = (v || '').trim(); // Normal inputs retain original case
-                }
-            }
-        };
+        var setStr = function(elId, v){ window._cfboxSet(elId, (v || '').trim()); };
         var p = _cfPopularDatalists() || Promise.resolve();
         p.then(function() {
             if (window._cfPopularModelos) window._cfPopularModelos(r.marca);
@@ -504,4 +478,57 @@ window.cmpConfirmarImport = function() {
     .finally(function(){
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-upload me-1"></i>Importar'; }
     });
+};
+
+// ── Listas con búsqueda (igual que la pantalla nueva): escribe para buscar; lo que no está en la lista se puede usar ──
+window._cfboxData = window._cfboxData || {};
+function _cfEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function _cfSinTildes(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+window._cfboxInit = function(id, valores) {
+  var vistos = {}, lista = [];
+  (valores || []).forEach(function(v) {
+    var t = String(v == null ? '' : v).trim().replace(/\s+/g, ' ');
+    if (!t) return;
+    var k = _cfSinTildes(t).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!vistos[k]) { vistos[k] = true; lista.push(t); }
+  });
+  window._cfboxData[id] = lista.sort(function(a, b) { return a.localeCompare(b, 'es'); });
+};
+window._cfboxSet = function(id, v) {
+  var hid = document.getElementById(id), txt = document.getElementById(id + '-txt'), dd = document.getElementById(id + '-dd');
+  if (hid) hid.value = v || '';
+  if (txt) txt.value = v || '';
+  if (dd) dd.style.display = 'none';
+};
+window._cfboxPick = function(id, v) {
+  window._cfboxSet(id, v);
+  if (id === 'cf-marca' && window._cfPopularModelos) window._cfPopularModelos(v);
+};
+window._cfboxFiltrar = function(id) {
+  var txt = document.getElementById(id + '-txt'), hid = document.getElementById(id), dd = document.getElementById(id + '-dd');
+  if (!txt || !dd) return;
+  var escrito = txt.value.trim();
+  if (hid) hid.value = escrito;
+  var q = _cfSinTildes(escrito);
+  var lista = (window._cfboxData[id] || []).filter(function(v) { return !q || _cfSinTildes(v).indexOf(q) >= 0; }).slice(0, 60);
+  var html = lista.map(function(v) {
+    return '<div class="cb-opt" data-v="' + _cfEsc(v) + '" onmousedown="window._cfboxPick(\'' + id + '\', this.getAttribute(\'data-v\'))">' + _cfEsc(v) + '</div>';
+  }).join('');
+  var existe = (window._cfboxData[id] || []).some(function(v) { return v.toUpperCase() === escrito.toUpperCase(); });
+  if (escrito && !existe) {
+    html += '<div class="cb-opt text-primary fw-bold border-top" data-v="' + _cfEsc(escrito) + '" onmousedown="window._cfboxPick(\'' + id + '\', this.getAttribute(\'data-v\'))">' +
+      '<i class="bi bi-plus-circle-fill me-1"></i>Usar «' + _cfEsc(escrito) + '»</div>';
+  }
+  dd.innerHTML = html || '<div class="cb-opt text-muted">Sin resultados</div>';
+  dd.style.display = 'block';
+};
+window._cfboxOcultar = function(id) {
+  setTimeout(function() {
+    var dd = document.getElementById(id + '-dd');
+    if (dd) dd.style.display = 'none';
+    if (id === 'cf-marca' && window._cfPopularModelos) {
+      var hid = document.getElementById(id);
+      window._cfPopularModelos(hid ? hid.value : '');
+    }
+  }, 150);
 };

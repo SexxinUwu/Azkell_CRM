@@ -24,7 +24,6 @@ import { ETIQUETA_ACCION, OTDetalle } from './OTDetalle';
 import { exportarReportesOT } from './exportarOT';
 import { abrirPdfReportesOT } from './exportarPDFOT';
 import { LogoArchivo } from './NeumaticosRequerimiento';
-import { useInspecciones, clavePlaca } from '../inspecciones/api';
 
 // ─── Tipos adicionales ────────────────────────────────────────────────────────
 
@@ -51,14 +50,6 @@ function usePlacasLista() {
   });
 }
 
-function useCatalogosTaller() {
-  return useQuery<{ rampas: { id: number; rampa: string }[]; situaciones: { id: number; descripcion: string }[] }>({
-    queryKey: ['catalogos-taller'],
-    queryFn: () => api('/catalogos_taller'),
-    staleTime: 600_000,
-  });
-}
-
 function useBacklog(placa?: string) {
   return useQuery<BacklogItem[]>({
     queryKey: ['mant', 'ot-backlog', placa],
@@ -72,7 +63,6 @@ function useBacklog(placa?: string) {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const TIPOS_OT  = ['Correctivo', 'Preventivo', 'Predictivo', 'Auxilio Ruta', 'Emergencia', 'Inspección', 'Otro'];
 const TABS_MAIN = ['OTs', 'Backlog'] as const;
 
 // Pestañas de estado (igual que el clásico). 'Todas' no filtra por estado.
@@ -124,7 +114,6 @@ export function OrdenesTrabajoPage() {
   const toast = useToast();
 
   const { data: placas }    = usePlacasLista();
-  const { data: catsTaller } = useCatalogosTaller();
 
   // ?tab=backlog abre directamente la pestaña de Backlog (enlace desde el menú)
   const [tab, setTab]           = useState<typeof TABS_MAIN[number]>(() => (location.search.includes('tab=backlog') ? 'Backlog' : 'OTs'));
@@ -148,21 +137,6 @@ export function OrdenesTrabajoPage() {
   const [eliminando, setEliminando]     = useState<OrdenTrabajo | null>(null);
   const [ejecutando, setEjecutando]     = useState(false);
 
-  // Modal crear OT
-  const [modalOT, setModalOT]   = useState(false);
-  const [guardandoOT, setGuardandoOT] = useState(false);
-  const [nPlaca, setNPlaca]     = useState('');
-  const [nTipoOT, setNTipoOT]   = useState('Correctivo');
-  const [nSubTipo, setNSubTipo] = useState('');
-  const [nKm, setNKm]           = useState('');
-  const [nHoras, setNHoras]     = useState('');
-  const [nTecnico, setNTecnico] = useState('');
-  const [nSupervisor, setNSupervisor] = useState('');
-  const [nSituacion, setNSituacion]   = useState('');
-  const [nFecha, setNFecha]     = useState(() => new Date().toISOString().split('T')[0]);
-  const [nObs, setNObs]         = useState('');
-  const [nRampa, setNRampa]     = useState('');
-  const [nBacklog, setNBacklog] = useState<number[]>([]);
 
   // Modal crear backlog
   const [modalBK, setModalBK]   = useState(false);
@@ -180,10 +154,9 @@ export function OrdenesTrabajoPage() {
   const navegar = useNavigate();
   const [otPorAbrir, setOtPorAbrir] = useState<string | null>(null);
   useEffect(() => {
-    const st = location.state as { nuevaOT?: boolean; abrirOT?: string } | null;
-    if (!st?.nuevaOT && !st?.abrirOT) return;
-    if (st.nuevaOT) setModalOT(true);
-    if (st.abrirOT) setOtPorAbrir(st.abrirOT);
+    const st = location.state as { abrirOT?: string } | null;
+    if (!st?.abrirOT) return;
+    setOtPorAbrir(st.abrirOT);
     navegar(location.pathname, { replace: true, state: null });
   }, [location.state, location.pathname, navegar]);
   useEffect(() => {
@@ -192,37 +165,6 @@ export function OrdenesTrabajoPage() {
     if (ot) setSeleccionada(ot);
     setOtPorAbrir(null);
   }, [otPorAbrir, data]);
-
-  // Datos para el formulario de Nueva OT: inspecciones, averías pendientes de la placa elegida
-  const { data: inspecciones } = useInspecciones();
-  const { data: backlogPlaca = [] } = useBacklog(nPlaca || undefined);
-  const pendientesPlaca = backlogPlaca.filter(b => b.estado === 'Pendiente' && !b.ticket_ot);
-
-  /** Último kilometraje conocido de la placa: la inspección o la OT más reciente */
-  function kmSugerido(placa: string): { km: number; fuente: string } | null {
-    const clave = clavePlaca(placa);
-    if (!clave) return null;
-    const candidatos: Array<{ km: number; fecha: number; fuente: string }> = [];
-    (inspecciones ?? []).forEach(i => {
-      if (clavePlaca(i.placa) === clave && i.km && i.fecha) candidatos.push({ km: i.km, fecha: i.fecha.getTime(), fuente: `inspección ${i.id}` });
-    });
-    ots.forEach(o => {
-      const km = Number(otDetalles(o).km) || 0;
-      const fecha = Date.parse(otFecha(o));
-      if (clavePlaca(o.placa) === clave && km > 0 && !Number.isNaN(fecha)) candidatos.push({ km, fecha, fuente: `OT ${otId(o)}` });
-    });
-    // Más reciente primero; a igual fecha, el kilometraje mayor (el odómetro no baja)
-    candidatos.sort((a, b) => b.fecha - a.fecha || b.km - a.km);
-    return candidatos[0] ? { km: candidatos[0].km, fuente: candidatos[0].fuente } : null;
-  }
-  const sugerenciaKm = nPlaca ? kmSugerido(nPlaca) : null;
-
-  function elegirPlaca(placa: string) {
-    setNPlaca(placa);
-    setNBacklog([]);
-    const sug = kmSugerido(placa);
-    if (sug && !nKm) setNKm(String(sug.km));
-  }
 
   const estadosFiltro: readonly string[] | null = ESTADOS_PESTANA[filtroEstado] ?? null;
 
@@ -303,56 +245,6 @@ export function OrdenesTrabajoPage() {
     }
   }
 
-  async function crearOT() {
-    if (!nPlaca) { toast('Selecciona una placa', 'error'); return; }
-    setGuardandoOT(true);
-    try {
-      const detalles_json = {
-        tipo_ot:   nTipoOT,
-        sub_tipo:  nSubTipo || undefined,
-        km:        nKm   ? Number(nKm)   : undefined,
-        horas_motor: nHoras ? Number(nHoras) : undefined,
-        situacion: nSituacion || undefined,
-      };
-      const res = await api<{ ok: boolean; id_ot: string }>('/ordenes-trabajo', {
-        method: 'POST',
-        body: {
-          placa:         nPlaca.toUpperCase(),
-          estado:        'Pendiente',
-          fecha_ingreso: nFecha,
-          creado_por:    '',
-          detalles_json,
-          tecnico:       nTecnico || undefined,
-          supervisor:    nSupervisor || undefined,
-          observaciones: nObs || undefined,
-          id_rampa:      nRampa ? Number(nRampa) : undefined,
-        },
-      });
-      if (res?.ok) {
-        // Averías importadas del backlog: quedan enlazadas a la nueva OT y en curso
-        const importados = pendientesPlaca.filter(b => nBacklog.includes(b.id));
-        const resultados = await Promise.allSettled(importados.map(b =>
-          api(`/ot-backlog/${b.id}`, {
-            method: 'PUT',
-            body: { placa: b.placa, tarea: b.tarea, tema: b.tema ?? '', km: b.km ?? 0, reportado_por: b.reportado_por ?? '', ticket_ot: res.id_ot, estado: 'En Progreso' },
-          })));
-        const fallidos = resultados.filter(r => r.status === 'rejected').length;
-        const ok = importados.length - fallidos;
-        toast(`OT ${res.id_ot} creada${ok ? ` · ${ok} avería${ok === 1 ? '' : 's'} importada${ok === 1 ? '' : 's'}` : ''}${fallidos ? ` · ${fallidos} sin importar` : ''}`, fallidos ? 'error' : undefined);
-        haptic('success');
-        setModalOT(false);
-        setNBacklog([]);
-        setNRampa('');
-        qc.invalidateQueries({ queryKey: ['mant', 'ots'] });
-        qc.invalidateQueries({ queryKey: ['mant', 'ot-backlog'] });
-      }
-    } catch (e) {
-      toast(errorMessage(e), 'error');
-    } finally {
-      setGuardandoOT(false);
-    }
-  }
-
   async function crearBacklog() {
     if (!bkPlaca || !bkTarea) { toast('Placa y tarea son requeridos', 'error'); return; }
     setGuardandoBK(true);
@@ -381,7 +273,6 @@ export function OrdenesTrabajoPage() {
 
   const puedeEditar  = can('ot.e') || can('reportes_ot.e');
   const puedeEliminar = can('ot.d') || can('reportes_ot.d');
-  const puedeCrear   = can('ot.c') || can('reportes_ot.c') || can('admin');
   // Se busca la OT en los datos actuales: el detalle refleja pausas y cierres tras cada acción
   const otActual = seleccionada ? (ots.find(o => otId(o) === otId(seleccionada)) ?? seleccionada) : null;
   const soloDetalle  = !!otActual;
@@ -397,11 +288,6 @@ export function OrdenesTrabajoPage() {
           subtitle="Órdenes de trabajo, seguimiento técnico y registro de mantenimiento"
           actions={
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {puedeCrear && tab === 'OTs' && (
-                <Button variant="primary" size="sm" icon={<Plus size={15} />} onClick={() => setModalOT(true)}>
-                  Nueva OT
-                </Button>
-              )}
               {tab === 'Backlog' && (
                 <Button variant="primary" size="sm" icon={<Plus size={15} />} onClick={() => setModalBK(true)}>
                   Agregar tarea
@@ -506,7 +392,7 @@ export function OrdenesTrabajoPage() {
                   title={busqueda || filtroEstado !== 'Todas' ? 'Sin coincidencias' : 'Sin órdenes de trabajo'}>
                   {(busqueda || filtroEstado !== 'Todas')
                     ? <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setFiltroEstado('Todas'); }}>Quitar filtros</button>
-                    : puedeCrear && <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setModalOT(true)}>Nueva OT</Button>}
+                    : null}
                 </EmptyState>
               ) : (
                 <>
@@ -597,108 +483,6 @@ export function OrdenesTrabajoPage() {
         </div>
       )}
 
-      {/* ── Modal Crear OT ── */}
-      <Sheet
-        open={modalOT}
-        onClose={() => setModalOT(false)}
-        title="Nueva orden de trabajo"
-        footer={
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => setModalOT(false)} disabled={guardandoOT}>Cancelar</Button>
-            <Button variant="primary" onClick={crearOT} loading={guardandoOT}>Crear OT</Button>
-          </div>
-        }
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* Placa */}
-          <SimpleLabel label="Placa *">
-            <PlacaPicker value={nPlaca} onChange={elegirPlaca} opciones={(placas ?? []).map(p => ({ placa: p }))} />
-          </SimpleLabel>
-
-          {/* Tipo y subtipo */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <SimpleLabel label="Tipo de OT">
-              <ChoiceChips<string> label="Tipo de OT" value={nTipoOT} onChange={setNTipoOT}
-                options={TIPOS_OT.map(t => ({ value: t, label: t }))} />
-            </SimpleLabel>
-            <SimpleLabel label="Sub-tipo">
-              <TextInput value={nSubTipo} onChange={e => setNSubTipo(e.target.value)} placeholder="Ej. Cambio de aceite" />
-            </SimpleLabel>
-          </div>
-
-          {/* KM / Horas motor */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <SimpleLabel label="KM actual">
-              <TextInput type="number" value={nKm} onChange={e => setNKm(e.target.value)} placeholder="0" min="0" />
-            </SimpleLabel>
-            <SimpleLabel label="Horas motor">
-              <TextInput type="number" value={nHoras} onChange={e => setNHoras(e.target.value)} placeholder="0" min="0" />
-            </SimpleLabel>
-          </div>
-
-          {sugerenciaKm && (
-            <p className="t-footnote c-secondary" style={{ marginTop: -6 }}>
-              Último registro de la unidad: {sugerenciaKm.km.toLocaleString('es-PE')} km ({sugerenciaKm.fuente}). Puedes cambiarlo.
-            </p>
-          )}
-
-          {/* Técnico / Supervisor */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <SimpleLabel label="Técnico asignado">
-              <TextInput value={nTecnico} onChange={e => setNTecnico(e.target.value)} placeholder="Nombre del técnico" />
-            </SimpleLabel>
-            <SimpleLabel label="Supervisor">
-              <TextInput value={nSupervisor} onChange={e => setNSupervisor(e.target.value)} placeholder="Nombre del supervisor" />
-            </SimpleLabel>
-          </div>
-
-          {/* Situación / Fecha */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <SimpleLabel label="Situación">
-              <SelectInput value={nSituacion} onChange={e => setNSituacion(e.target.value)}>
-                <option value="">Sin situación</option>
-                {(catsTaller?.situaciones ?? []).map(s => (
-                  <option key={s.id} value={s.descripcion}>{s.descripcion}</option>
-                ))}
-              </SelectInput>
-            </SimpleLabel>
-            <SimpleLabel label="Fecha de ingreso">
-              <TextInput type="date" value={nFecha} onChange={e => setNFecha(e.target.value)} />
-            </SimpleLabel>
-          </div>
-
-          {/* Asignación de rampa */}
-          <SimpleLabel label="Rampa asignada">
-            <SelectInput value={nRampa} onChange={e => setNRampa(e.target.value)}>
-              <option value="">Sin rampa por ahora</option>
-              {(catsTaller?.rampas ?? []).map(r => (
-                <option key={r.id} value={String(r.id)}>{r.rampa}</option>
-              ))}
-            </SelectInput>
-          </SimpleLabel>
-
-          {/* Averías pendientes del backlog de la unidad: se importan a la OT con un clic */}
-          {nPlaca && pendientesPlaca.length > 0 && (
-            <div className="ot-form__bloque">
-              <span className="ot-form__etiqueta">Averías pendientes de esta unidad · {nBacklog.length} de {pendientesPlaca.length} importadas</span>
-              <div className="ot-form__lista">
-                {pendientesPlaca.map(b => (
-                  <label key={b.id} className="ot-check">
-                    <input type="checkbox" checked={nBacklog.includes(b.id)}
-                      onChange={e => setNBacklog(prev => (e.target.checked ? [...prev, b.id] : prev.filter(x => x !== b.id)))} />
-                    <span>{b.tarea}{b.tema ? <small> · {b.tema}</small> : null}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Observaciones */}
-          <SimpleLabel label="Observaciones">
-            <TextInput value={nObs} onChange={e => setNObs(e.target.value)} placeholder="Falla reportada, trabajos a realizar…" />
-          </SimpleLabel>
-        </div>
-      </Sheet>
 
       {/* ── Modal Crear Backlog ── */}
       <Sheet

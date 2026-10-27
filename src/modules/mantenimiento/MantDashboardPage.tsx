@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Activity, AlertTriangle, CheckCircle2, Clock,
-  DollarSign, FileText, History, LayoutDashboard, Plus,
+  DollarSign, FileText, History, LayoutDashboard,
   ScrollText, ShieldCheck, Sun,
   Truck, Wrench,
 } from 'lucide-react';
@@ -373,11 +373,7 @@ export function MantDashboardPage() {
       if (el?.isContentEditable || ['input', 'textarea', 'select'].includes(el?.tagName?.toLowerCase() ?? '')) return;
       if (document.querySelector('[role="dialog"]')) return;
 
-      if (e.key === 'n' || e.key === 'N') {
-        e.preventDefault();
-        haptic('selection');
-        navigate('/mantenimiento/reportes-ot', { state: { nuevaOT: true } });
-      } else if (e.key === 'r' || e.key === 'R') {
+      if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
         haptic('selection');
         navigate('/mantenimiento/status-rampa');
@@ -625,16 +621,6 @@ export function MantDashboardPage() {
         subtitle="Monitoreo operativo y financiero en tiempo real"
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Button
-              variant="primary"
-              icon={<Plus size={16} />}
-              onClick={() => {
-                haptic('selection');
-                navigate('/mantenimiento/reportes-ot', { state: { nuevaOT: true } });
-              }}
-            >
-              Nueva OT <span className="mant-keycap">N</span>
-            </Button>
             <MenuOtros
               opciones={[
                 { label: 'Status de Rampa [R]', icon: <LayoutDashboard size={17} />, onSelect: () => navigate('/mantenimiento/status-rampa') },
