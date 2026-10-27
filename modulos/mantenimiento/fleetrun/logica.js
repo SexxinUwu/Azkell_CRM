@@ -676,18 +676,23 @@ window._buscarFrecuenciaTipo = function(tipoMP) {
     
     if (!marca || !tipoMP) return 0;
 
-    var match = window.dataTiposMant.find(function(t) {
+    // Misma regla que la pantalla nueva: vacío o TODOS = comodín; gana la regla que fija más columnas
+    var comodin = function(v) { return !v || v === 'todos'; };
+    var match = null, mejor = -1;
+    window.dataTiposMant.forEach(function(t) {
         var tMarca = _normStr(t.marca);
         var tTipoMP = _normStr(t.tipo_mp);
         var tUts = _normStr(t.uts);
         var tComb = _normStr(t.combustible);
         var tMod = _normStr(t.modelo);
-        
-        return (!tMarca || tMarca === marca) &&
-               (!tTipoMP || tTipoMP === tipoMP) &&
-               (!tUts || tUts === uts) &&
-               (!tComb || tComb === combustible) &&
-               (!tMod || tMod === modelo);
+        var ok = (comodin(tMarca) || tMarca === marca) &&
+                 (comodin(tTipoMP) || tTipoMP === tipoMP) &&
+                 (comodin(tUts) || tUts === uts) &&
+                 (comodin(tComb) || tComb === combustible) &&
+                 (comodin(tMod) || tMod === modelo);
+        if (!ok) return;
+        var fijas = [tMarca, tUts, tComb, tMod].filter(function(v) { return !comodin(v); }).length;
+        if (fijas > mejor) { match = t; mejor = fijas; }
     });
     if (!match) return 0;
 
@@ -837,13 +842,12 @@ function abrirModalNuevoFleetrun() {
         if (!window._frCbInitDone) {
             if (window.dataGlobalPlacas) window._cbInit('f_placa', window.dataGlobalPlacas.map(function(p){ return {value:p[0], label:p[0]}; }), 'Buscar placa...');
             if (window._frTipoLista) window._cbInit('f_tipomp', window._frTipoLista.map(function(t){ return {value:t, label:t}; }), 'Buscar tipo...');
-            if (window.dataGlobalConductores) window._cbInit('f_tec', window.dataGlobalConductores, 'Buscar responsable…');
             window._frCbInitDone = true;
         } else {
             if (typeof window._cbSet === 'function') {
                 window._cbSet('f_placa', '', '');
                 window._cbSet('f_tipomp', '', '');
-                window._cbSet('f_tec', '', '');
+                window.fleetrunResetTecnicos();
             }
         }
     }, 0);
@@ -2543,4 +2547,53 @@ window._editarProxTipo = function(idx, newVal) {
         window.fleetrunTiposMulti[idx].kmProximo = v;
         window.renderTiposMulti();
     }
+};
+
+// ── Técnicos / responsables: varios a la vez (se guardan separados por " / ", como en la pantalla nueva) ──
+window._frTecSeleccion = [];
+window._frTecMax = 100;
+window.fleetrunResetTecnicos = function() {
+    window._frTecSeleccion = [];
+    var hid = document.getElementById('f_tec'); if (hid) hid.value = '';
+    var txt = document.getElementById('f_tec-txt');
+    if (txt) { txt.textContent = 'Elige uno o varios técnicos…'; txt.classList.add('text-secondary'); }
+};
+window.fleetrunAbrirTecnicos = function() {
+    var lista = document.getElementById('frTecLista');
+    var nombres = (window.dataGlobalConductores || []).map(function(c) { return c.value; });
+    if (lista) {
+        lista.innerHTML = nombres.map(function(n) {
+            var marcado = window._frTecSeleccion.indexOf(n) >= 0 ? ' checked' : '';
+            var id = 'frtec_' + n.replace(/[^A-Za-z0-9]/g, '_');
+            return '<label class="d-flex align-items-center gap-3 p-2 px-3 border rounded-3 bg-white fleetrun-tec-opcion" for="' + id + '" style="cursor:pointer; transition: transform .15s, box-shadow .15s;">' +
+                '<input class="form-check-input m-0" type="checkbox" id="' + id + '" value="' + n.replace(/"/g, '&quot;') + '"' + marcado + '>' +
+                '<span class="fw-semibold text-dark">' + n.replace(/</g, '&lt;') + '</span></label>';
+        }).join('') || '<p class="text-muted small mb-0">No hay técnicos registrados.</p>';
+    }
+    var buscar = document.getElementById('frTecBuscar'); if (buscar) buscar.value = '';
+    var m = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalTecnicosMulti'));
+    m.show();
+};
+window.fleetrunFiltrarTecnicos = function(q) {
+    var s = String(q || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    document.querySelectorAll('#frTecLista .fleetrun-tec-opcion').forEach(function(el) {
+        var txt = el.textContent.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+        el.style.display = txt.indexOf(s) >= 0 ? '' : 'none';
+    });
+};
+window.fleetrunAplicarTecnicos = function() {
+    var marcados = Array.prototype.map.call(document.querySelectorAll('#frTecLista input:checked'), function(i) { return i.value; });
+    var texto = marcados.join(' / ');
+    if (texto.length > window._frTecMax) {
+        alert('Son demasiados técnicos para guardar (máximo ' + window._frTecMax + ' caracteres). Quita alguno.');
+        return;
+    }
+    window._frTecSeleccion = marcados;
+    var hid = document.getElementById('f_tec'); if (hid) hid.value = texto;
+    var txt = document.getElementById('f_tec-txt');
+    if (txt) {
+        txt.textContent = marcados.length ? marcados.join(' · ') : 'Elige uno o varios técnicos…';
+        txt.classList.toggle('text-secondary', !marcados.length);
+    }
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalTecnicosMulti')).hide();
 };

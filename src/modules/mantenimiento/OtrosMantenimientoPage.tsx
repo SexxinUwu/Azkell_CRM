@@ -10,7 +10,7 @@ import '../../core/ui/otros-tarjetas.css';
 const SECCIONES: Array<{ titulo: string; claves: string[] }> = [
   { titulo: 'Programación operativa', claves: ['planificacion', 'backlog'] },
   { titulo: 'Rendimiento e indicadores', claves: ['kpis', 'productividad', 'finanzas-taller'] },
-  { titulo: 'Configuración y parámetros', claves: ['frecuencias-mp', 'kits-mp', 'tipos-mp', 'fleetrun-config', 'config-metrica'] },
+  { titulo: 'Configuración y parámetros', claves: ['frecuencias-mp', 'kits-mp', 'tipos-mp', 'fleetrun-config', 'config-metrica', 'personal-taller', 'situaciones'] },
 ];
 
 export function OtrosMantenimientoPage() {

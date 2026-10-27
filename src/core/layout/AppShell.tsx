@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { VolverOtros } from './VolverOtros';
 import {
   ArrowUpRight, Banknote, Boxes, ChevronDown, ChevronRight, Contact, IdCard, House, LogOut, Palette, PanelLeftClose, PanelLeftOpen, Route, Settings, Share, ShieldCheck, Truck,
   SquarePlus, Smartphone, Users, Wrench, Search, EyeOff, Star, type LucideIcon,
@@ -271,6 +272,7 @@ export function AppShell() {
 
         <main className="main" ref={mainRef}>
           {/* Pantallas que se descargan aparte: el marco (barras) no se mueve mientras llegan */}
+          <VolverOtros />
           <Suspense fallback={<PageLoader />}>
             {/* Cada módulo entra con su propia transición; la clave cambia con la ruta */}
             <div key={location.pathname} className="vista-transicion">

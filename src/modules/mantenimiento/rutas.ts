@@ -143,10 +143,4 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./KitsMpPage').then(m => ({ default: m.KitsMpPage }))),
     nav: { key: 'kits-mp', label: 'Kits de mantenimiento', to: '/mantenimiento/kits-mp', icon: 'PackageCheck', permisos: ['plan.ver', 'admin'] },
   },
-  {
-    path: 'mantenimiento/otros/*',
-    permisos: ['admin', 'status_rampa.ver', 'ot.ver'],
-    Page: lazy(() => import('./MantOtrosPage').then(m => ({ default: m.MantOtrosPage }))),
-    nav: { key: 'mant-otros', label: 'Otros', to: '/mantenimiento/otros', icon: 'Layers', permisos: ['admin', 'status_rampa.ver', 'ot.ver'] },
-  },
 ];

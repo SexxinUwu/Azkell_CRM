@@ -723,9 +723,12 @@
               <div class="col-12">
                 <label class="form-label fw-bold text-secondary text-uppercase small" style="font-size: 0.68rem;">Técnico / Responsable</label>
                 <div class="position-relative">
-                  <input type="text" id="f_tec-txt" class="form-control form-control-sm text-uppercase border-primary shadow-sm" placeholder="Buscar responsable..." autocomplete="off" style="border-radius: 12px; min-height: 42px;" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('f_tec')" onfocus="window._cbFiltrar('f_tec')" onblur="window._cbHide('f_tec')">
+                  <button type="button" id="f_tec-btn" class="btn btn-light w-100 text-start border shadow-sm d-flex align-items-center gap-2" style="border-radius: 12px; min-height: 42px;" onclick="window.fleetrunAbrirTecnicos()">
+                    <i class="bi bi-people text-primary"></i>
+                    <span id="f_tec-txt" class="text-truncate text-secondary">Elige uno o varios técnicos…</span>
+                    <i class="bi bi-chevron-down ms-auto text-muted"></i>
+                  </button>
                   <input type="hidden" id="f_tec" name="f_tec">
-                  <div id="f_tec-dd" class="cb-dropdown"></div>
                 </div>
               </div>
               <div class="col-12">
@@ -894,3 +897,22 @@
   </div>
 </div>
 
+<!-- Técnicos: varios a la vez, con buscador y casillas -->
+<div class="modal fade" id="modalTecnicosMulti" tabindex="-1" aria-labelledby="modalTecnicosMultiTitulo">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="modalTecnicosMultiTitulo">Técnicos / responsables</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <input type="search" id="frTecBuscar" class="form-control mb-3" placeholder="Buscar técnico…" oninput="window.fleetrunFiltrarTecnicos(this.value)" style="border-radius: 12px;">
+        <div id="frTecLista" class="d-flex flex-column gap-2" style="max-height: 50vh; overflow-y: auto;"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light fw-bold px-4" style="border-radius: 10px;" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary fw-bold px-4" style="border-radius: 10px;" onclick="window.fleetrunAplicarTecnicos()">Listo</button>
+      </div>
+    </div>
+  </div>
+</div>
