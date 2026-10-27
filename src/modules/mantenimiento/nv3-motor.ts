@@ -186,7 +186,7 @@ export class MotorNeumaticos {
       cargarCuerpoScania().then(cuerpo => {
         if (cuerpo && !this.destruido) {
           this.cuerpoScania = cuerpo;
-          this.setDatos(configuracion, llantas, marca);
+          this.setDatos(configuracion, llantas, marca, esCamion);
         }
       });
     }
