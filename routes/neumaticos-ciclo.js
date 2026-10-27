@@ -132,7 +132,7 @@ function filaLlanta(r) {
 // ── Listado y ficha (sección 9) ─────────────────────────────────
 
 // Claves del listado: "activo" suma las llantas que no están dadas de baja; las demás son situaciones exclusivas
-const CLAVES_LISTADO = ['activo', 'disponible', 'en_actividad', 'enviar_reforma', 'en_reformadora', 'esperando_descarte', 'desactivacion', 'sin_marca'];
+const CLAVES_LISTADO = ['activo', 'disponible', 'en_actividad', 'enviar_reforma', 'en_reformadora', 'esperando_descarte', 'desactivacion', 'sin_codigo', 'provisional'];
 
 // Texto legible de cada situación. "desactivacion" está reservada: el ciclo todavía no tiene un estado que la marque.
 const SITUACION = {
@@ -142,13 +142,15 @@ const SITUACION = {
     en_reformadora: 'En la reformadora',
     esperando_descarte: 'Esperando descarte',
     desactivacion: 'Desactivación',
-    sin_marca: 'Sin marca de fuego',
+    sin_codigo: 'Sin código de fuego',
+    provisional: 'Código provisional',
 };
 
 // Una sola situación por llanta. Sin código de marca de fuego manda sobre el estado del ciclo.
 // Estado nuevo o sin estado: se trata como en almacén (igual que la migración al asignar estado_ciclo).
-function situacionLlanta(codigoLlanta, estadoCiclo, almacenId) {
-    if (!txt(codigoLlanta)) return 'sin_marca';
+function situacionLlanta(codigoLlanta, estadoCiclo, almacenId, idNeumatico) {
+    // Sin código de fuego: las provisionales (PROV-) tienen su propio estado; las nuevas esperan su secuencia
+    if (!txt(codigoLlanta)) return String(idNeumatico || '').startsWith('PROV-') ? 'provisional' : 'sin_codigo';
     switch (estadoCiclo) {
         case 'en_unidad': return 'en_actividad';
         case 'en_reencauche': return almacenId === ALMACEN.REENCAUCHE ? 'enviar_reforma' : 'en_reformadora';
@@ -167,6 +169,8 @@ function psiValido(v) {
 function surcoPromedio(r1, r2, r3) {
     return Math.round(((Number(r1) + Number(r2) + Number(r3)) / 3) * 10) / 10;
 }
+
+const { aviso: avisoCodigo, anioLima, formatearCodigo, asignarCodigosFuego } = require('../services/neumaticos_codigo');
 
 module.exports = function (db) {
     const router = express.Router();
@@ -264,46 +268,54 @@ module.exports = function (db) {
     });
 
     // ============================================================
-    // 3. ALTA DE LLANTA
+    // 3. CÓDIGO DE FUEGO (reemplaza al alta manual: la llanta recibida recibe su código por secuencia)
     // ============================================================
-    router.post('/llantas', async (req, res) => {
+    router.get('/codigo-fuego', async (req, res) => {
         try {
-            const b = req.body || {};
-            const codigo = mayus(b.codigo);
-            if (!codigo) throw aviso(400, 'El código de la llanta es obligatorio');
-            const marca = txt(b.marca);
-            const medida = txt(b.medida);
-            const modelo = txt(b.modelo);
-            if (!marca || !medida) throw aviso(400, 'Marca y medida son obligatorias');
-            const almacenId = (b.almacen_id == null || b.almacen_id === '') ? ALMACEN.NUEVAS : Number(b.almacen_id);
-            if (!ALMACENES_ALTA.includes(almacenId)) {
-                throw aviso(400, 'El alta solo puede ir a Nuevas (100), Reencauche (1142) o Reparadas (1144)');
-            }
-            const costo = numeroNoNegativo(b.costo_compra, 'Costo de compra');
-            const fecha = fechaDe(b.fecha_compra);
-
-            await conTransaccion(pool(req), async (conn) => {
-                const [dup] = await conn.query(
-                    'SELECT 1 FROM neumaticos_hoja_vida WHERE codigo_llanta = ? OR id_neumatico = ? LIMIT 1',
-                    [codigo, codigo]);
-                if (dup.length) throw aviso(409, `Ya existe una llanta con el código ${codigo}`);
-
-                // id_neumatico (clave primaria) toma el mismo código que codigo_llanta
-                await conn.query(
-                    `INSERT INTO neumaticos_hoja_vida
-                     (id_neumatico, codigo_llanta, marca, modelo, medida, estado_ciclo, vida, contador_reencauches,
-                      costo_compra, costo_reencauches, km_acumulado, almacen_id, estado_operativo)
-                     VALUES (?, ?, ?, ?, ?, ?, 'R0', 0, ?, 0, 0, ?, ?)`,
-                    [codigo, codigo, marca, modelo, medida, ESTADO.ALMACEN.ciclo, costo, almacenId, ESTADO.ALMACEN.operativo]);
-
-                await registrarMovimiento(conn, {
-                    id_neumatico: codigo, tipo: MOV.ALTA, destino: almacenId, km: 0,
-                    fecha: `${fecha} 00:00:00`, usuario: usuarioDe(req),
-                    observacion: `Alta en almacén ${almacenId}. Costo de compra: ${costo}`,
-                });
+            if (!tienePermiso(req, PERMISO_VER, 'l')) throw avisoCodigo(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            const p = pool(req);
+            const [cfg] = await p.query('SELECT letra, actualizado_por, actualizado_en FROM neumaticos_codigo_fuego_config WHERE id = 1');
+            const anio = anioLima();
+            const [sec] = await p.query('SELECT ultimo FROM neumaticos_codigo_fuego_secuencia WHERE anio = ?', [anio]);
+            const ultimo = sec.length ? Number(sec[0].ultimo) : 0;
+            const letra = cfg.length && cfg[0].letra ? String(cfg[0].letra) : null;
+            res.json({
+                ok: true,
+                letra,
+                anio,
+                ultimo,
+                proximo: letra ? formatearCodigo(letra, anio, ultimo + 1) : null,
+                actualizado_por: cfg.length ? cfg[0].actualizado_por : null,
+                actualizado_en: cfg.length ? cfg[0].actualizado_en : null,
             });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
 
-            res.json({ ok: true, data: { codigo, almacen_id: almacenId, estado: ESTADO.ALMACEN.ciclo } });
+    router.put('/codigo-fuego/letra', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_VER, 'l')) throw avisoCodigo(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            const letra = txt((req.body || {}).letra).toUpperCase();
+            if (!/^[A-Z]$/.test(letra)) throw avisoCodigo(400, 'La letra debe ser una sola letra de la A a la Z');
+            await pool(req).query(
+                'UPDATE neumaticos_codigo_fuego_config SET letra = ?, actualizado_por = ? WHERE id = 1',
+                [letra, usuarioDe(req)]);
+            res.json({ ok: true, letra });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
+    router.post('/codigo-fuego/generar', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_VER, 'l')) throw avisoCodigo(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            const entrada = Array.isArray((req.body || {}).ids) ? req.body.ids : [];
+            const ids = [...new Set(entrada.map(v => txt(v)).filter(Boolean))];
+            if (!ids.length) throw avisoCodigo(400, 'Selecciona al menos una llanta');
+            if (ids.length > 200) throw avisoCodigo(400, 'Se pueden generar hasta 200 códigos por vez');
+            const asignados = await conTransaccion(pool(req), conn => asignarCodigosFuego(conn, ids));
+            res.json({ ok: true, asignados, message: `Se generaron ${asignados.length} códigos de fuego` });
         } catch (err) {
             responder(res, err);
         }
@@ -847,7 +859,7 @@ module.exports = function (db) {
         return filas.map(r => {
             const almacenId = r.almacen_id == null ? null : Number(r.almacen_id);
             const compra = Number(r.costo_compra) || 0;
-            const clave = situacionLlanta(r.codigo_llanta, r.estado_ciclo, almacenId);
+            const clave = situacionLlanta(r.codigo_llanta, r.estado_ciclo, almacenId, r.id_neumatico);
             return {
                 clave,
                 estado_ciclo: r.estado_ciclo || null,

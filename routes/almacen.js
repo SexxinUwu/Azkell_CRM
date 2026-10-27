@@ -1,4 +1,5 @@
 const express = require('express');
+const { crearLlantasDeRecepcion } = require('../services/neumaticos_codigo');
 const router = express.Router();
 const { createApprovalToken } = require('../services/ocApprovalService');
 const { fechaVencimiento, normalizarCondicion } = require('../services/condicion_oc');
@@ -854,6 +855,30 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 });
         });
     });
+
+    // Datos del artículo "Llanta" (familia NEUMATICOS): medida, modelo y cocada inicial, que usa la recepción para crear la llanta
+    router.put('/neumaticos-articulo/:id', async (req, res) => {
+        try {
+            const inventarioId = String(req.params.id || '').trim();
+            const b = req.body || {};
+            const medida = String(b.medida || '').trim() || null;
+            const modelo = String(b.modelo || '').trim() || null;
+            const cocada = (b.cocada_inicial === '' || b.cocada_inicial == null) ? null : Number(b.cocada_inicial);
+            if (cocada !== null && (!Number.isFinite(cocada) || cocada < 0)) {
+                return res.status(400).json({ ok: false, error: 'La cocada inicial debe ser un número positivo' });
+            }
+            await new Promise((resolve, reject) => getDb(req).query(
+                `INSERT INTO neumaticos_articulo (inventario_id, medida, modelo, cocada_inicial)
+                 VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE medida = VALUES(medida), modelo = VALUES(modelo), cocada_inicial = VALUES(cocada_inicial)`,
+                [inventarioId, medida, modelo, cocada],
+                (err, r) => (err ? reject(err) : resolve(r))));
+            res.json({ ok: true, inventario_id: inventarioId, medida, modelo, cocada_inicial: cocada });
+        } catch (err) {
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     router.put('/inventario/:id', (req, res) => {
         const { articulo, codigo_articulo, descripcion, familia, almacen, unidad, moneda, costo_referencial,
             tipo_cambio,
@@ -3063,6 +3088,22 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                      VALUES ?`,
                     [detalleVals]
                 );
+
+                // 3. Llantas que llegan: cada unidad entra a Neumáticos como "Sin código de fuego" (flujo aprobado)
+                const lineasLlanta = items.map((it, i) => ({ it, linea: i + 1 })).filter(x => x.it.inventario_id);
+                if (lineasLlanta.length) {
+                    const [arts] = await conn.query('SELECT id, familia, marca FROM inventario WHERE id IN (?)', [lineasLlanta.map(x => x.it.inventario_id)]);
+                    const porId = new Map(arts.map(a => [a.id, a]));
+                    for (const { it, linea } of lineasLlanta) {
+                        const art = porId.get(it.inventario_id);
+                        if (!art || String(art.familia || '').trim().toUpperCase() !== 'NEUMATICOS') continue;
+                        await crearLlantasDeRecepcion(conn, {
+                            recepcionId, linea, inventarioId: art.id, marca: art.marca,
+                            cantidad: it.cantidad_recibida, costoUnitario: it.costo_unitario,
+                            usuario: usuario || 'Almacén Central', fecha: fechaHoraSQL,
+                        });
+                    }
+                }
 
                 await conn.commit();
             } catch (errTx) {
