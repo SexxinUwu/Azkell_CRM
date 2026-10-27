@@ -38,7 +38,7 @@ const PRIORIDAD: Record<EstadoFR, number> = { sin_datos: -1, vigente: 0, por_ven
 
 // ─── Hook: umbrales configurables desde /api/configuracion ───────────────────
 
-function useFleetrunUmbrales() {
+export function useFleetrunUmbrales() {
   return useQuery<Record<string, number>>({
     queryKey: ['conf', 'fleetrun-umbrales'],
     queryFn: async () => {
