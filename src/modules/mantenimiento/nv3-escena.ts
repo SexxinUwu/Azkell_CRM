@@ -145,6 +145,24 @@ export function cargarCuerpoScania(): Promise<CuerpoExterno | null> {
   return cargaScania;
 }
 
+/** true si la parte más alta del modelo (la cabina) está en z positivo */
+function cabinaEnPositivoZ(obj: THREE.Object3D): boolean {
+  const medio = (new THREE.Box3().setFromObject(obj).min.z + new THREE.Box3().setFromObject(obj).max.z) / 2;
+  let alturaPositiva = -Infinity;
+  let alturaNegativa = -Infinity;
+  const v = new THREE.Vector3();
+  obj.traverse(o => {
+    if (!(o instanceof THREE.Mesh)) return;
+    const pos = o.geometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+      if (v.z >= medio) alturaPositiva = Math.max(alturaPositiva, v.y);
+      else alturaNegativa = Math.max(alturaNegativa, v.y);
+    }
+  });
+  return alturaPositiva > alturaNegativa;
+}
+
 /** Copia del cuerpo sin sus ruedas, escalado para caber en el largo y el alto del camión */
 function ajustarCuerpo(cuerpo: CuerpoExterno, largo: number, altoMax: number): THREE.Group {
   const copia = cuerpo.clone(true);
@@ -156,11 +174,15 @@ function ajustarCuerpo(cuerpo: CuerpoExterno, largo: number, altoMax: number): T
   });
   ruedas.forEach(o => o.parent?.remove(o));
 
-  // Escala uniforme: el modelo está en unidades de exportación, así que se mide su caja real
+  // Frente: la cabina (la parte más alta) queda hacia z negativo, como en el visor
   copia.updateMatrixWorld(true);
+  if (cabinaEnPositivoZ(copia)) copia.rotation.y = Math.PI;
+  copia.updateMatrixWorld(true);
+  // Alto ajustado al camión; el largo se estira para cubrir los tres ejes (escala no uniforme en z)
   const tam = new THREE.Box3().setFromObject(copia).getSize(new THREE.Vector3());
-  const escala = Math.min(largo / Math.max(tam.z, 1e-6), altoMax / Math.max(tam.y, 1e-6));
-  copia.scale.multiplyScalar(escala);
+  const escalaXY = altoMax / Math.max(tam.y, 1e-6);
+  const escalaZ = largo / Math.max(tam.z, 1e-6);
+  copia.scale.set(escalaXY, escalaXY, escalaZ);
 
   // Centro en x y z; la base queda en y = 0 y se coloca después
   copia.updateMatrixWorld(true);
