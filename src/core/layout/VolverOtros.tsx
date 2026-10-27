@@ -7,11 +7,13 @@ import '../ui/otros-tarjetas.css';
 const RUTA_HUB = '/mantenimiento/otros';
 
 export function VolverOtros() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
+  // Una entrada con ?tab=… (como Backlog pendientes) solo cuenta cuando esa pestaña está abierta
   const esHerramienta = OTROS_MANTENIMIENTO.some(i => {
-    const ruta = i.to?.split('?')[0];
-    return !!ruta && pathname.startsWith(ruta);
+    const [ruta, query] = (i.to ?? '').split('?');
+    if (!ruta || !pathname.startsWith(ruta)) return false;
+    return !query || search.includes(query);
   });
   if (!esHerramienta) return null;
   return (

@@ -2,7 +2,7 @@ import './NeumaticoHojaVida.css';
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, CircleDollarSign, CircleDot, Disc3, Flame, Gauge, Hammer, Heart, MapPin, RefreshCw, Tag, Truck } from 'lucide-react';
+import { ChevronDown, ChevronLeft, CircleDot, Disc3, Flame, Gauge, Hammer, Heart, MapPin, Tag, Truck } from 'lucide-react';
 import { api, errorMessage } from '../../core/api/client';
 import { formatFechaHoraPe } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
@@ -138,30 +138,46 @@ function PanelVida({ l }: { l: Llanta }) {
     ? null
     : (l.costoCompra ?? 0) + (l.costoReencauches ?? 0);
   return (
-    <div className="nhv__rejilla">
-      <Dato etiqueta="Vida" icono={<Heart size={14} />} valor={fmtEntero(l.vida)} />
-      <Dato etiqueta="Reencauches" icono={<RefreshCw size={14} />} valor={fmtEntero(l.reencauches)} />
-      <Dato etiqueta="Km acumulados" icono={<Gauge size={14} />} valor={fmtKm(l.kmAcumulado)} />
-      <Dato etiqueta="CPK (S/ por km)" icono={<CircleDollarSign size={14} />} valor={fmtCpk(l.cpk)} />
-      <Dato etiqueta="Costo de compra" valor={fmtSoles(l.costoCompra)} />
-      <Dato etiqueta="Costo de reencauches" valor={fmtSoles(l.costoReencauches)} />
-      <Dato etiqueta="Costo total" valor={fmtSoles(costoTotal)} />
-    </div>
+    <>
+      <Bloque titulo="Indicadores de costo">
+        <div className="nhv__rejilla">
+          <Dato etiqueta="Costo total de la vida" valor={fmtSoles(costoTotal)} />
+          <Dato etiqueta="Costo de compra" valor={fmtSoles(l.costoCompra)} />
+          <Dato etiqueta="Costo de reencauches" valor={fmtSoles(l.costoReencauches)} />
+          <Dato etiqueta="CPK (S/ por km)" valor={fmtCpk(l.cpk)} />
+        </div>
+      </Bloque>
+      <Bloque titulo="Indicadores de desgaste">
+        <div className="nhv__rejilla">
+          <Dato etiqueta="Vida" valor={fmtEntero(l.vida)} />
+          <Dato etiqueta="Reencauches" valor={fmtEntero(l.reencauches)} />
+          <Dato etiqueta="Km acumulados" valor={fmtKm(l.kmAcumulado)} />
+        </div>
+      </Bloque>
+    </>
   );
 }
 
 function PanelDetalles({ l }: { l: Llanta }) {
   return (
-    <div className="nhv__rejilla">
-      <Dato etiqueta="Código" valor={l.codigo} />
-      <Dato etiqueta="Marca" valor={l.marca ?? '—'} />
-      <Dato etiqueta="Modelo" valor={l.modelo ?? '—'} />
-      <Dato etiqueta="Medida" valor={l.medida ?? '—'} />
-      <Dato etiqueta="Estado" valor={l.estado ? etiquetaEstado(l.estado) : '—'} />
-      <Dato etiqueta="Almacén" valor={l.almacen ?? '—'} />
-      <Dato etiqueta="Vehículo actual" valor={l.placaActual ? <LicensePlate plate={l.placaActual} size="sm" /> : '—'} />
-      <Dato etiqueta="Posición actual" valor={l.posicionActual ?? '—'} icono={<MapPin size={14} />} />
-    </div>
+    <>
+      <Bloque titulo="Documentación">
+        <div className="nhv__rejilla">
+          <Dato etiqueta="Código" valor={l.codigo} />
+          <Dato etiqueta="Marca" valor={l.marca ?? '—'} />
+          <Dato etiqueta="Modelo" valor={l.modelo ?? '—'} />
+          <Dato etiqueta="Medida" valor={l.medida ?? '—'} />
+          <Dato etiqueta="Estado" valor={l.estado ? etiquetaEstado(l.estado) : '—'} />
+          <Dato etiqueta="Almacén" valor={l.almacen ?? '—'} />
+        </div>
+      </Bloque>
+      <Bloque titulo="Ubicación">
+        <div className="nhv__rejilla">
+          <Dato etiqueta="Vehículo actual" valor={l.placaActual ? <LicensePlate plate={l.placaActual} size="sm" /> : '—'} />
+          <Dato etiqueta="Posición actual" valor={l.posicionActual ?? '—'} icono={<MapPin size={14} />} />
+        </div>
+      </Bloque>
+    </>
   );
 }
 

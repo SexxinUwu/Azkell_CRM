@@ -19,14 +19,16 @@
 }
 .nhv__cab-foto { position: relative; display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding-bottom: 12px; }
 .nhv__disco {
-  width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--fill-2); color: var(--label-2);
+  width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--fill-2); color: var(--label);
 }
 .nhv__cab-foto .badge { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; }
 .nhv__cab-datos {
   flex: 1 1 360px; min-width: 0; display: grid; gap: var(--s-4) var(--s-5);
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
+/* Separadores verticales entre los datos de la cabecera, como en la ficha de referencia */
+.nhv__cab-datos > .nhv__dato + .nhv__dato { border-left: 1px solid var(--separator); padding-left: var(--s-4); }
 
 /* Dato suelto: etiqueta chica arriba, valor debajo */
 .nhv__dato { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -171,3 +173,10 @@
   .nhv__disco { width: 56px; height: 56px; }
   .nhv__dato--grande .nhv__dato-valor { font-size: 1.0625rem; }
 }
+
+/* Datos de las secciones: etiqueta en negrita y valor normal (como la ficha de referencia) */
+.nhv__dato:not(.nhv__dato--grande) .nhv__dato-etiqueta { font-size: 0.8125rem; font-weight: 700; color: var(--label); }
+.nhv__dato:not(.nhv__dato--grande) .nhv__dato-valor { font-size: 0.875rem; font-weight: 400; color: var(--label-2); }
+
+/* Línea de tiempo: iconos en círculo azul como en la referencia */
+.nhv2-ev .nhv2-ev__icono { background: var(--accent); color: #fff; }

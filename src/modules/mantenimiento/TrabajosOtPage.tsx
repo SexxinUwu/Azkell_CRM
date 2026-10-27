@@ -1,4 +1,5 @@
 import './mant.css';
+import '../almacen/almacen.css'; // tabla .inv-kardex, igual que la lista de OT
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, FileSpreadsheet, Pencil, SearchX, Trash2, Users, Wrench } from 'lucide-react';
@@ -187,8 +188,8 @@ export function TrabajosOtPage() {
             </EmptyState>
           ) : (
             <div className="ot-tabla-caja">
-              <table className="ot-tabla">
-                <thead>
+              <table className="inv-kardex" style={{ minWidth: '78rem' }}>
+                <thead style={{ textTransform: 'uppercase', letterSpacing: '0.03em', fontWeight: 800 }}>
                   <tr>
                     <th>ID trabajo</th><th>N° OT</th><th>Placa</th><th>Km / Horas</th><th>F/H inicio</th>
                     <th>Trabajo realizado</th><th>Personal</th><th>Creado por</th><th>F/H salida</th><th>Costo</th><th>Tiempo (hrs)</th>
