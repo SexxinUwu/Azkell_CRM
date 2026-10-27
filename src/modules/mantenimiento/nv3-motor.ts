@@ -8,7 +8,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import type { LlantaDato } from './NeumaticosEsquema';
 import type { SondaPosicion } from './ntb-arrastre';
 import {
-  ANCHO_LLANTA, CAMPO_VISION, COLOR_NEON, RADIO_LLANTA, Recursos, anilloLlanta, cargarCuerpoScania, construirCamion, giroLetreroIsometria, type CuerpoExterno,
+  ANCHO_LLANTA, CAMPO_VISION, COLOR_NEON, RADIO_LLANTA, Recursos, anilloLlanta, construirCamion, giroLetreroIsometria,
   liberarCamion, limitesCamion, marcoLlanta, poseCenital, poseIsometrica, poseLateral, type Camion3D, type Llanta3D,
 } from './nv3-escena';
 
@@ -65,7 +65,6 @@ export class MotorNeumaticos {
   private readonly ndc = new THREE.Vector2();
 
   private camion: Camion3D | null = null;
-  private cuerpoScania: CuerpoExterno | null = null;
   private configActual = '';
   private rango: { zMin: number; zMax: number } | null = null;
   private modo: ModoVista = 'plano';
@@ -173,24 +172,14 @@ export class MotorNeumaticos {
   }
 
   /** Reconstruye el camión (configuración, llantas, marca). La cámara solo se encuadra al cambiar la configuración. */
-  setDatos(configuracion: string, llantas: LlantaDato[], marca: string | null, esCamion = false) {
+  setDatos(configuracion: string, llantas: LlantaDato[], marca: string | null, _esCamion = false) {
     if (this.destruido) return;
     if (this.camion) {
       liberarCamion(this.camion);
       this.camion = null;
     }
     const montadas = new Map(llantas.map(l => [normal(l.posicion), l] as const));
-    // Solo los camiones Scania (configuración C…) usan el modelo; los tractos (T…) y las demás marcas siguen con sus formas básicas
-    const esScania = /scania/i.test(marca ?? '') && esCamion;
-    if (esScania && !this.cuerpoScania) {
-      cargarCuerpoScania().then(cuerpo => {
-        if (cuerpo && !this.destruido) {
-          this.cuerpoScania = cuerpo;
-          this.setDatos(configuracion, llantas, marca, esCamion);
-        }
-      });
-    }
-    const camion = construirCamion(configuracion, montadas, this.recursos, marca, esScania ? this.cuerpoScania : null);
+    const camion = construirCamion(configuracion, montadas, this.recursos, marca);
     if (camion) {
       this.camion = camion;
       this.scene.add(camion.grupo);

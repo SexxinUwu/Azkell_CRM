@@ -319,11 +319,13 @@ export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, 
   // Solo los repuestos que la unidad tiene, igual que el esquema SVG
   const repuestos = config.repuestos.filter(p => datos.has(p));
   const zMax = Math.max(trasero, repuestos.length ? zRepuestos : trasero);
-  const largo = Math.max(9, zMax - zMin + 2);
   const zCentro = (zMin + zMax) / 2;
 
   // Bastidor: largueros, travesaños entre ejes y el del frente
-  for (const x of [-0.55, 0.55]) malla(new THREE.BoxGeometry(0.2, 0.3, largo), rec.chasis, x, 0.85, zCentro);
+  // Largueros desde bajo la cabina hasta atrás (sin tramo delante de la cabina)
+  const zInicioLargueros = delantero - 0.6;
+  const largoLargueros = zMax - zInicioLargueros;
+  for (const x of [-0.55, 0.55]) malla(new THREE.BoxGeometry(0.2, 0.3, largoLargueros), rec.chasis, x, 0.85, (zMax + zInicioLargueros) / 2);
   for (const z of [...zEjes.slice(0, -1).map(e => e + SEP_EJE / 2), zMin + 0.8]) {
     malla(new THREE.BoxGeometry(1.5, 0.2, 0.14), rec.chasis, 0, 0.9, z);
   }
