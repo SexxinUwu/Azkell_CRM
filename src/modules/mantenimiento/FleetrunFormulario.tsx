@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, CircleAlert, Search, X } from 'lucide-react';
+import { ChevronDown, CircleAlert, Search, Users, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
+import { SeleccionMultiple, type OpcionSeleccion } from '../../core/ui/SeleccionMultiple';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
@@ -16,53 +17,15 @@ import {
 } from './fleetrunApi';
 import { tipoOracion } from './fleetrunReporte';
 
-// Registrar mantenimiento preventivo (uno o varios tipos de MP a la vez) o editar un registro.
+// Registrar mantenimiento preventivo (uno o varios tipos de MP y uno o varios técnicos) o editar un registro.
 // Misma lógica que modulos/mantenimiento/fleetrun/logica.js: la frecuencia sale de las Frecuencias MP según
 // marca, tipo de MP, UTS, combustible y modelo de la unidad; km próximo = km actual + frecuencia.
 
 interface ItemTipo { tipo: string; frec: string; prox: string }
 
-const sinAcentos = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-
-/** Elige un tipo de mantenimiento con búsqueda, igual que el selector de placa: un campo que abre una hoja con buscador */
-function TipoPicker({ id, opciones, onPick, 'aria-describedby': ariaDescribedBy }: {
-  id?: string;
-  opciones: string[];
-  onPick: (tipo: string) => void;
-  'aria-describedby'?: string;
-}) {
-  const [abierto, setAbierto] = useState(false);
-  const [busqueda, setBusqueda] = useState('');
-  const buscada = sinAcentos(busqueda);
-  const visibles = opciones.filter(t => sinAcentos(t).includes(buscada));
-
-  function cerrar() { setAbierto(false); setBusqueda(''); }
-
-  return (
-    <>
-      <button type="button" id={id} className="campo-picker" aria-haspopup="dialog" aria-describedby={ariaDescribedBy}
-        onClick={() => { haptic('selection'); setAbierto(true); }}>
-        <Search size={16} aria-hidden />
-        <span className="campo-picker__vacio">Agregar un tipo de mantenimiento…</span>
-        <ChevronDown size={16} aria-hidden className="campo-picker__chevron" />
-      </button>
-      <Sheet open={abierto} onClose={cerrar} title="Tipos de mantenimiento">
-        <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar tipo de mantenimiento" />
-        {visibles.length > 0 ? (
-          <div className="list">
-            {visibles.map(t => (
-              <button key={t} type="button" className="row" onClick={() => { haptic('selection'); onPick(t); cerrar(); }}>
-                <span className="row__main"><span className="row__title">{tipoOracion(t)}</span></span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="t-callout c-secondary" style={{ textAlign: 'center' }}>Ningún tipo coincide.</p>
-        )}
-      </Sheet>
-    </>
-  );
-}
+/** Los técnicos se guardan en una sola columna de la base (varchar de 100): separados por " / " */
+const SEPARADOR_TECNICOS = ' / ';
+const MAX_TECNICOS_BD = 100;
 
 const hoyLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const num = (s: string) => { const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
@@ -71,6 +34,70 @@ const aIso = (s: string) => {
   const p = s.split('/');
   return p.length === 3 ? `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}` : /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : '';
 };
+
+/** Campo que abre la hoja de selección (mismo diseño que el de placa): muestra lo elegido o el texto de ayuda */
+function CampoElegir({ id, icono, vacio, resumen, abrir, describedBy }: {
+  id?: string;
+  icono: ReactNode;
+  vacio: string;
+  resumen: string;
+  abrir: () => void;
+  describedBy?: string;
+}) {
+  return (
+    <button type="button" id={id} className="campo-picker" aria-haspopup="dialog" aria-describedby={describedBy}
+      onClick={() => { haptic('selection'); abrir(); }}>
+      {icono}
+      {resumen
+        ? <span className="campo-picker__detalle" style={{ textAlign: 'left' }}>{resumen}</span>
+        : <span className="campo-picker__vacio">{vacio}</span>}
+      <ChevronDown size={16} aria-hidden className="campo-picker__chevron" />
+    </button>
+  );
+}
+
+/** Tipos de mantenimiento: varios a la vez, con buscador y casillas */
+function TipoPicker({ id, describedBy, opciones, seleccionados, onToggle }: {
+  id?: string;
+  describedBy?: string;
+  opciones: string[];
+  seleccionados: string[];
+  onToggle: (tipo: string) => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const lista: OpcionSeleccion[] = opciones.map(t => ({ valor: t, titulo: tipoOracion(t) }));
+  const resumen = seleccionados.length ? seleccionados.map(tipoOracion).join(' · ') : '';
+  return (
+    <>
+      <CampoElegir id={id} describedBy={describedBy} icono={<Search size={16} aria-hidden />}
+        vacio="Elige uno o varios tipos de mantenimiento…" resumen={resumen} abrir={() => setAbierto(true)} />
+      <SeleccionMultiple open={abierto} onClose={() => setAbierto(false)} titulo="Tipos de mantenimiento"
+        opciones={lista} seleccionados={seleccionados} onToggle={onToggle} placeholder="Buscar tipo de mantenimiento"
+        vacio="Ningún tipo coincide." />
+    </>
+  );
+}
+
+/** Técnicos: uno o varios, con el mismo buscador que la placa */
+function TecnicoPicker({ id, describedBy, opciones, seleccionados, onToggle }: {
+  id?: string;
+  describedBy?: string;
+  opciones: string[];
+  seleccionados: string[];
+  onToggle: (nombre: string) => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const lista: OpcionSeleccion[] = opciones.map(n => ({ valor: n, titulo: n }));
+  return (
+    <>
+      <CampoElegir id={id} describedBy={describedBy} icono={<Users size={16} aria-hidden />}
+        vacio="Elige uno o varios técnicos…" resumen={seleccionados.join(' · ')} abrir={() => setAbierto(true)} />
+      <SeleccionMultiple open={abierto} onClose={() => setAbierto(false)} titulo="Técnicos"
+        opciones={lista} seleccionados={seleccionados} onToggle={onToggle} placeholder="Buscar técnico"
+        vacio="Ningún técnico coincide." />
+    </>
+  );
+}
 
 export function FleetrunFormulario({ registro, usuario, open, onClose }: {
   registro: FleetrunFila | null; usuario: string; open: boolean; onClose: () => void;
@@ -95,7 +122,7 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
   const [placa, setPlaca] = useState('');
   const [kmAct, setKmAct] = useState('');
   const [kmGps, setKmGps] = useState('');
-  const [tec, setTec] = useState('');
+  const [tecs, setTecs] = useState<string[]>([]);
   const [obs, setObs] = useState('');
   const [items, setItems] = useState<ItemTipo[]>([]);
   const [tipoEdit, setTipoEdit] = useState('');
@@ -126,12 +153,13 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
       setPlaca(frPlaca(registro) === '—' ? '' : frPlaca(registro).toUpperCase());
       setKmAct(frKmCambio(registro) ? String(frKmCambio(registro)) : '');
       setKmGps(frKmGps(registro) ? String(frKmGps(registro)) : '');
-      setTec(String(registro[13] ?? '')); setObs(frObs(registro));
+      setTecs(String(registro[13] ?? '').split(/\s*[/,]\s*/).map(s => s.trim()).filter(Boolean));
+      setObs(frObs(registro));
       setTipoEdit(frTipo(registro) === '—' ? '' : frTipo(registro));
       setFrecEdit(frFrecuencia(registro) ? String(frFrecuencia(registro)) : '');
       setItems([]);
     } else {
-      setFecha(hoyLocal()); setPlaca(''); setKmAct(''); setKmGps(''); setTec(''); setObs(''); setItems([]); setFrecEdit('');
+      setFecha(hoyLocal()); setPlaca(''); setKmAct(''); setKmGps(''); setTecs([]); setObs(''); setItems([]); setFrecEdit('');
     }
   }, [open, registro]);
 
@@ -162,15 +190,25 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
     setItems(prev => prev.map(it => (num(it.frec) > 0 ? { ...it, prox: String(act + num(it.frec)) } : it)));
   }
 
-  function agregarTipo(tipo: string) {
+  /** Marca o desmarca un tipo de mantenimiento (varios a la vez) */
+  function alternarTipo(tipo: string) {
     const t = tipo.toUpperCase().trim();
-    if (!t || items.some(i => i.tipo === t)) return;
+    if (!t) return;
+    if (items.some(i => i.tipo === t)) {
+      setItems(prev => prev.filter(i => i.tipo !== t));
+      return;
+    }
     const f = frecDe(t);
     setItems(prev => [...prev, { tipo: t, frec: f ? String(f) : '', prox: f > 0 ? String(num(kmAct) + f) : '0' }]);
   }
   const editarFrec = (i: number, v: string) =>
     setItems(prev => prev.map((it, k) => (k === i ? { ...it, frec: v, prox: num(v) > 0 ? String(num(kmAct) + num(v)) : it.prox } : it)));
   const editarProx = (i: number, v: string) => setItems(prev => prev.map((it, k) => (k === i ? { ...it, prox: v } : it)));
+
+  /** Marca o desmarca un técnico */
+  function alternarTecnico(nombre: string) {
+    setTecs(prev => (prev.includes(nombre) ? prev.filter(n => n !== nombre) : [...prev, nombre]));
+  }
 
   // Edición: km próximo = km actual + frecuencia (vacío si no hay frecuencia)
   const proxEdit = num(frecEdit) > 0 ? String(num(kmAct) + num(frecEdit)) : '';
@@ -181,10 +219,15 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
     if (kmAct.trim() === '') { setError(`Indica el ${horas ? 'horómetro' : 'kilometraje'} actual.`); return; }
     if (!editando && items.length === 0) { setError('Selecciona al menos un tipo de mantenimiento.'); return; }
     if (editando && !tipoEdit) { setError('Elige el tipo de mantenimiento.'); return; }
+    const tecnicos = tecs.join(SEPARADOR_TECNICOS);
+    if (tecnicos.length > MAX_TECNICOS_BD) {
+      setError(`Son demasiados técnicos para guardar (máximo ${MAX_TECNICOS_BD} caracteres). Quita alguno.`);
+      return;
+    }
 
     const base: FleetrunCampos = {
       fecha, placa, marca: datosUnidad.marca, dueno: unidad?.cliente ?? (registro ? String(registro[6] ?? '') : ''),
-      uts: datosUnidad.uts, tipomp: '', kmact: kmAct, freckm: '', kmprox: '', obs: obs.trim(), tec: tec.trim(), kmgps: kmGps,
+      uts: datosUnidad.uts, tipomp: '', kmact: kmAct, freckm: '', kmprox: '', obs: obs.trim(), tec: tecnicos, kmgps: kmGps,
       combustible: datosUnidad.combustible, modelo: datosUnidad.modelo,
     };
     setGuardando(true); setError(null);
@@ -211,10 +254,15 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
     finally { setGuardando(false); }
   }
 
-  const tiposDisponibles = (tiposMp.data ?? []).filter(t => !items.some(i => i.tipo === t.toUpperCase()));
+  // Todos los tipos del catálogo (sin repetir), para marcarlos en la hoja
+  const opcionesTipos = useMemo(
+    () => [...new Set((tiposMp.data ?? []).map(t => t.toUpperCase()))].sort(),
+    [tiposMp.data]);
+  const seleccionadosTipos = items.map(i => i.tipo);
+  const opcionesTecnicos = useMemo(() => [...new Set(conductores.data ?? [])].sort((a, b) => a.localeCompare(b, 'es')), [conductores.data]);
 
   return (
-    <Sheet open={open} onClose={() => !guardando && onClose()}
+    <Sheet open={open} onClose={() => !guardando && onClose()} ancho
       title={editando ? `Editar ${registro ? frPlaca(registro) : ''}` : 'Registrar mantenimiento'}
       footer={<><Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button>
         <Button variant="primary" onClick={guardar} loading={guardando}>{editando ? 'Guardar cambios' : 'Guardar'}</Button></>}>
@@ -238,7 +286,7 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
 
           {!editando && (
             <Field label="Tipos de mantenimiento" wide hint={unidad ? `${unidad.marca || 'Sin marca'} · ${unidad.uts || 'Sin UTS'} — la frecuencia sale de Frecuencias MP` : 'Elige primero la placa para calcular la frecuencia'}>
-              {p => <TipoPicker id={p.id} aria-describedby={p['aria-describedby']} opciones={tiposDisponibles} onPick={agregarTipo} />}
+              {p => <TipoPicker id={p.id} describedBy={p['aria-describedby']} opciones={opcionesTipos} seleccionados={seleccionadosTipos} onToggle={alternarTipo} />}
             </Field>
           )}
         </div>
@@ -246,10 +294,10 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
         {!editando && (
           <div className="tarjeta__lista">
             {items.length === 0 && (
-              <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-3)' }}>Agrega los tipos de mantenimiento realizados</span></div>
+              <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-3)' }}>Marca los tipos de mantenimiento realizados</span></div>
             )}
             {items.map((it, i) => (
-              <div key={it.tipo} className="dato" style={{ display: 'grid', gridTemplateColumns: '1fr 6rem 7rem auto', gap: 'var(--s-2)', alignItems: 'center' }}>
+              <div key={it.tipo} className="dato" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 6.5rem 7.5rem auto', gap: 'var(--s-2)', alignItems: 'center' }}>
                 <span className="dato__label" style={{ fontWeight: 700 }}>{tipoOracion(it.tipo)}</span>
                 <TextInput type="number" min={0} aria-label={`Frecuencia de ${it.tipo} (${u})`} placeholder={`Frec. ${u}`}
                   value={it.frec} onChange={e => editarFrec(i, e.target.value)} />
@@ -270,7 +318,7 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
               {p => (
                 <SelectInput {...p} value={tipoEdit} onChange={e => { setTipoEdit(e.target.value); const f = frecDe(e.target.value); if (f) setFrecEdit(String(f)); }}>
                   <option value="">Elige el tipo…</option>
-                  {[...new Set([...(tiposMp.data ?? []), ...(tipoEdit ? [tipoEdit] : [])])].sort().map(t => <option key={t} value={t}>{t}</option>)}
+                  {[...new Set([...(tiposMp.data ?? []), ...(tipoEdit ? [tipoEdit] : [])])].sort().map(t => <option key={t} value={t}>{tipoOracion(t)}</option>)}
                 </SelectInput>
               )}
             </Field>
@@ -280,13 +328,8 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
         )}
 
         <div className="form-grid">
-          <Field label="Técnico / responsable" wide>
-            {p => (
-              <>
-                <TextInput {...p} list="fleetrun-tecnicos" value={tec} onChange={e => setTec(e.target.value)} placeholder="Opcional" autoComplete="off" />
-                <datalist id="fleetrun-tecnicos">{(conductores.data ?? []).map(n => <option key={n} value={n} />)}</datalist>
-              </>
-            )}
+          <Field label="Técnicos / responsables" wide hint={`Puedes elegir varios. Máximo ${MAX_TECNICOS_BD} caracteres en total.`}>
+            {p => <TecnicoPicker id={p.id} describedBy={p['aria-describedby']} opciones={opcionesTecnicos} seleccionados={tecs} onToggle={alternarTecnico} />}
           </Field>
           <Field label="Observaciones" wide>{p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} placeholder="Opcional" />}</Field>
         </div>

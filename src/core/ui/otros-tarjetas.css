@@ -1,0 +1,52 @@
+/* Panel "Otros": casillas grandes en cuadrícula con animación al pasar el mouse y al tocarlas */
+
+.otros-panel { display: flex; flex-direction: column; gap: var(--s-4); padding: var(--s-2) 0 var(--s-4); }
+.otros-grupo + .otros-grupo { border-top: 1px solid var(--separator, rgba(0, 0, 0, 0.06)); padding-top: var(--s-4); }
+
+.otros-tarjetas {
+  display: grid; gap: var(--s-3);
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+
+.otros-tile {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: var(--s-3);
+  min-height: 76px; padding: 14px 16px; text-align: left; cursor: pointer;
+  background: var(--surface); color: inherit;
+  border: 1px solid var(--separator, rgba(0, 0, 0, 0.08));
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms ease, border-color 200ms ease;
+}
+/* Brillo que sigue el borde superior al pasar el mouse */
+.otros-tile::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%);
+  opacity: 0; transition: opacity 240ms ease;
+}
+.otros-tile:hover { transform: translateY(-3px); box-shadow: 0 14px 28px -10px rgba(15, 23, 42, 0.22); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.otros-tile:hover::before { opacity: 1; }
+.otros-tile:active { transform: translateY(-1px) scale(0.985); transition-duration: 90ms; }
+.otros-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.otros-tile:disabled { opacity: 0.55; cursor: default; transform: none; box-shadow: none; }
+
+.otros-tile__icono {
+  flex: 0 0 auto; width: 44px; height: 44px; border-radius: 14px;
+  display: grid; place-items: center;
+  background: var(--fill); color: var(--accent);
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 200ms ease;
+}
+.otros-tile:hover .otros-tile__icono { transform: scale(1.08) rotate(-4deg); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+
+.otros-tile__texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; position: relative; }
+.otros-tile__titulo { font-size: 0.9375rem; font-weight: 600; line-height: 1.25; }
+.otros-tile__detalle { font-size: 0.75rem; color: var(--label-2); line-height: 1.35; }
+
+.otros-tile--peligro .otros-tile__icono { color: var(--red-ink, #dc2626); }
+.otros-tile--peligro:hover { border-color: color-mix(in srgb, var(--red-ink, #dc2626) 45%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .otros-tile, .otros-tile__icono, .otros-tile::before { transition: none; }
+  .otros-tile:hover, .otros-tile:active { transform: none; }
+  .otros-tile:hover .otros-tile__icono { transform: none; }
+}
