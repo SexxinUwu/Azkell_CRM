@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { ArrowDownToLine, ChevronDown, CircleDot, Disc3, Flame, Gauge, Hammer, Receipt, RefreshCw, Truck } from 'lucide-react';
+import { ChevronDown, CircleDashed, CircleDot, Disc, Disc3, Flame, Gauge, Hammer, Receipt, Truck } from 'lucide-react';
 import { formatFechaHoraPe } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 import { EmptyState } from '../../core/ui/Display';
@@ -8,8 +8,8 @@ import { ETIQUETA_EVENTO, fmtKm, fmtDos, fmtPsi, type Evento, type TipoEvento } 
 
 const ICONO: Record<TipoEvento, ReactNode> = {
   APLICACION: <Truck size={16} />,
-  RETIRO: <ArrowDownToLine size={16} />,
-  REFORMA: <RefreshCw size={16} />,
+  RETIRO: <CircleDashed size={16} />,
+  REFORMA: <Disc size={16} />,
   MEDICION_PRESION: <Gauge size={16} />,
   APUNTE_SURCO: <Hammer size={16} />,
   MARCA_FUEGO: <Flame size={16} />,
