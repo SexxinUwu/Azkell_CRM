@@ -66,6 +66,8 @@ export interface PlacaLista {
   cliente: string | null;
   marca: string | null;
   configuracion: string | null;
+  /** La unidad tiene llantas montadas (viene de la inspección); sin ellas no aparece en el selector del tablero */
+  tiene_llantas: boolean;
 }
 
 export function usePlacasLista() {

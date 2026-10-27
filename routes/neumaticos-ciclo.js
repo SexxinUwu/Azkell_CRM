@@ -755,9 +755,12 @@ module.exports = function (db) {
         try {
             if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
             const [filas] = await pool(req).query(
-                "SELECT UPPER(TRIM(placa)) AS placa, cliente, marca, configuracion FROM placas WHERE placa IS NOT NULL AND TRIM(placa) <> '' ORDER BY placa ASC"
+                `SELECT UPPER(TRIM(placa)) AS placa, cliente, marca, configuracion,
+                        EXISTS (SELECT 1 FROM neumaticos_instalaciones i
+                                WHERE i.fecha_out IS NULL AND UPPER(TRIM(i.placa)) = UPPER(TRIM(placas.placa))) AS tiene_llantas
+                 FROM placas WHERE placa IS NOT NULL AND TRIM(placa) <> '' ORDER BY placa ASC`
             );
-            res.json({ ok: true, data: (filas || []).map(f => ({ placa: f.placa, cliente: f.cliente || null, marca: f.marca || null, configuracion: f.configuracion || null })) });
+            res.json({ ok: true, data: (filas || []).map(f => ({ placa: f.placa, cliente: f.cliente || null, marca: f.marca || null, configuracion: f.configuracion || null, tiene_llantas: !!f.tiene_llantas })) });
         } catch (err) {
             responder(res, err);
         }

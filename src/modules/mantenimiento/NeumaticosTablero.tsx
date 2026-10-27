@@ -265,7 +265,10 @@ export function NeumaticosTablero() {
     );
   }
 
-  const opcionesPlaca = (placas.data ?? []).map(p => ({ placa: p.placa, detalle: p.cliente }));
+  // Solo las unidades con llantas registradas; la que está abierta siempre aparece
+  const opcionesPlaca = (placas.data ?? [])
+    .filter(p => p.tiene_llantas || p.placa === placa)
+    .map(p => ({ placa: p.placa, detalle: p.cliente }));
   // Color del fantasma del arrastre: el del semáforo de la llanta que se lleva
   const llantaArrastrada = arrastre.fantasma
     ? [...montadas.map(m => m.llanta), ...bodega].find(l => l.codigo === arrastre.fantasma?.codigo)
@@ -360,15 +363,19 @@ export function NeumaticosTablero() {
               {configFicha && configCodigo && configFicha !== configCodigo && (
                 <p className="t-footnote c-secondary">La ficha dice {configFicha}; se dibuja según las llantas de la inspección.</p>
               )}
-              <div className="ntb-chasis" onPointerDown={alChasisPresionar} onClick={alChasisClic}>
-                <NeumaticosCenital
-                  llantas={llantasDato} configuracion={configCodigo} activa={posicionActiva}
-                  sobre={sobre?.tipo === 'posicion' ? sobre.posicion : null} sondaRef={sondaRef}
-                  onSelect={l => { const m = montadas.find(x => x.posicion === l.posicion); if (m) elegirLlanta(m.llanta.codigo); }}
-                  marca={(placas.data ?? []).find(p => p.placa === placa)?.marca ?? null}
-                  modo={modo} onModo={setModo}
-                />
-              </div>
+              {montadas.length > 0 ? (
+                <div className="ntb-chasis" onPointerDown={alChasisPresionar} onClick={alChasisClic}>
+                  <NeumaticosCenital
+                    llantas={llantasDato} configuracion={configCodigo} activa={posicionActiva}
+                    sobre={sobre?.tipo === 'posicion' ? sobre.posicion : null} sondaRef={sondaRef}
+                    onSelect={l => { const m = montadas.find(x => x.posicion === l.posicion); if (m) elegirLlanta(m.llanta.codigo); }}
+                    marca={(placas.data ?? []).find(p => p.placa === placa)?.marca ?? null}
+                    modo={modo} onModo={setModo}
+                  />
+                </div>
+              ) : (
+                <p className="ntb-vacio">Esta unidad no tiene llantas registradas: no tiene inspección de neumáticos.</p>
+              )}
               <LeyendaSemaforo />
 
               {libres.length > 0 && (
