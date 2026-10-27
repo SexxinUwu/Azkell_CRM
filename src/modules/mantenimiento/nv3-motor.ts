@@ -180,8 +180,8 @@ export class MotorNeumaticos {
       this.camion = null;
     }
     const montadas = new Map(llantas.map(l => [normal(l.posicion), l] as const));
-    // Solo las unidades de marca Scania usan el modelo de la marca; las demás siguen con sus formas básicas
-    const esScania = /scania/i.test(marca ?? '');
+    // Solo los camiones Scania (configuración C…) usan el modelo; los tractos (T…) y las demás marcas siguen con sus formas básicas
+    const esScania = /scania/i.test(marca ?? '') && /^C/i.test(configuracion);
     if (esScania && !this.cuerpoScania) {
       cargarCuerpoScania().then(cuerpo => {
         if (cuerpo && !this.destruido) {
