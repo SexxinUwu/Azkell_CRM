@@ -9,3 +9,8 @@ dist/
 
 # Scripts y archivos temporales de diagnóstico
 scratch/
+
+# Modelos 3D intermedios (el final es assets/3d/scania_s730_final.glb y sí va al repositorio)
+assets/3d/scania_s730_original.glb
+assets/3d/scania_s730.glb
+assets/3d/scania_s730_ligero*.glb
