@@ -72,7 +72,6 @@ export class MotorNeumaticos {
   private sobre: string | null = null;
   private anim: Animacion | null = null;
   private parpadeo = false;
-  private gesto = false;
   private inicioClic: { x: number; y: number } | null = null;
   private raf = 0;
   private destruido = false;
@@ -154,9 +153,6 @@ export class MotorNeumaticos {
     this.canvas.addEventListener('pointermove', this.alMover);
     this.canvas.addEventListener('click', this.alClic);
     this.canvas.addEventListener('webglcontextlost', this.alPerder);
-    window.addEventListener('pointerup', this.alSoltar);
-    window.addEventListener('pointercancel', this.alSoltar);
-
     this.controles = new OrbitControls(this.camara, this.canvas);
     this.controles.enabled = false;
     this.controles.enableDamping = true;
@@ -214,9 +210,9 @@ export class MotorNeumaticos {
     this.aplicarMarcas();
     if (cambio && nueva && this.modo === 'isometria' && this.camion) {
       const llanta = this.llantaDe(nueva);
-      if (llanta) {
-        const p = poseLateral(llanta.grupo.position.x, llanta.grupo.position.z);
-        this.irA(p);
+      if (llanta && this.rango) {
+        const iso = poseIsometrica(this.rango.zMin, this.rango.zMax, this.camara.aspect);
+        this.irA(poseLateral(llanta.grupo.position.x, (this.rango.zMin + this.rango.zMax) / 2, iso.distancia));
       }
     }
     this.arrancar();
@@ -227,7 +223,7 @@ export class MotorNeumaticos {
     if (this.destruido || modo === this.modo) return;
     this.modo = modo;
     this.orientarLetrero();
-    this.controles.enabled = modo === 'isometria' && !this.gesto;
+    this.controles.enabled = modo === 'isometria';
     this.canvas.style.touchAction = modo === 'isometria' ? 'none' : 'pan-y';
     if (this.rango) this.irA(modo === 'plano' ? this.poseDePlano() : this.poseDeIsometria());
     this.aplicarMarcas();
@@ -244,8 +240,6 @@ export class MotorNeumaticos {
     this.canvas.removeEventListener('pointermove', this.alMover);
     this.canvas.removeEventListener('click', this.alClic);
     this.canvas.removeEventListener('webglcontextlost', this.alPerder);
-    window.removeEventListener('pointerup', this.alSoltar);
-    window.removeEventListener('pointercancel', this.alSoltar);
     this.controles.removeEventListener('change', this.arrancar);
     this.controles.dispose();
     if (this.opciones.sondaRef && this.opciones.sondaRef.current === this.sonda) this.opciones.sondaRef.current = null;
@@ -451,29 +445,19 @@ export class MotorNeumaticos {
 
   // ── Puntero ─────────────────────────────────────────────────────────────
 
-  /** Si el dedo cae sobre una llanta en isometría, la rotación de la cámara se pausa (la llanta es para arrastrarla) */
   private alBajar = (ev: PointerEvent) => {
     this.inicioClic = { x: ev.clientX, y: ev.clientY };
-    if (this.modo === 'isometria' && this.posicionBajo(ev.clientX, ev.clientY)) {
-      this.gesto = true;
-      this.controles.enabled = false;
-    }
   };
 
-  private alSoltar = () => {
-    if (!this.gesto) return;
-    this.gesto = false;
-    this.controles.enabled = this.modo === 'isometria';
-    this.arrancar();
-  };
-
+  /** En plano el cursor avisa que la llanta se puede tocar. En isometría las llantas no se tocan: solo cambian con las flechas */
   private alMover = (ev: PointerEvent) => {
-    this.canvas.style.cursor = this.posicionBajo(ev.clientX, ev.clientY) ? 'pointer' : 'default';
+    this.canvas.style.cursor = this.modo === 'plano' && this.posicionBajo(ev.clientX, ev.clientY) ? 'pointer' : 'default';
   };
 
   private alClic = (ev: MouseEvent) => {
     const inicio = this.inicioClic;
     this.inicioClic = null;
+    if (this.modo === 'isometria') return;
     // Un giro de la cámara que termina sobre una llanta no cuenta como toque
     if (inicio && Math.hypot(ev.clientX - inicio.x, ev.clientY - inicio.y) > UMBRAL_CLIC_PX) return;
     const pos = this.posicionBajo(ev.clientX, ev.clientY);

@@ -1,6 +1,6 @@
 // Tablero de movimientos de neumáticos: bodega (izquierda), unidad con sus posiciones (centro) y zonas de
 // reforma y descarte (abajo); detalle de la llanta y su línea de tiempo (derecha). Arrastrar, o tocar y luego tocar el destino.
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, Disc3, Lock } from 'lucide-react';
@@ -14,7 +14,7 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { formatFechaPe } from '../../core/lib/format';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
-import { LeyendaSemaforo, configReconocida } from './NeumaticosEsquema';
+import { LeyendaSemaforo, configReconocida, tonoMm, type Tono } from './NeumaticosEsquema';
 import { NeumaticosCenital } from './nv3-cenital';
 import type { ModoVista } from './nv3-motor';
 import {
@@ -29,6 +29,9 @@ import { MovimientoSheet, type Propuesta } from './ntb-movimiento-sheet';
 import './ntb.css';
 
 type Grupo = 'bodega' | 'unidad' | 'reforma' | 'descarte';
+
+/** Colores del semáforo para la llanta que se arrastra (mismos tonos que LeyendaSemaforo) */
+const COLOR_TONO: Record<Tono, string> = { green: '#10b981', amber: '#f59e0b', red: '#ef4444', gray: '#c7c7cc' };
 type Aviso = { tono: 'error' | 'accent'; texto: string };
 
 /** Posiciones con llanta montada, en el orden de la configuración */
@@ -233,6 +236,8 @@ export function NeumaticosTablero() {
   }
 
   function alChasisClic(e: ReactMouseEvent<HTMLDivElement>) {
+    // En isometría la unidad no se toca: las llantas cambian solo con las flechas
+    if (!enPlano) return;
     const pos = posicionDeEvento(e, sondaRef.current);
     if (pos) tocarPosicion(pos);
   }
@@ -259,6 +264,11 @@ export function NeumaticosTablero() {
   }
 
   const opcionesPlaca = (placas.data ?? []).map(p => ({ placa: p.placa, detalle: p.cliente }));
+  // Color del fantasma del arrastre: el del semáforo de la llanta que se lleva
+  const llantaArrastrada = arrastre.fantasma
+    ? [...montadas.map(m => m.llanta), ...bodega].find(l => l.codigo === arrastre.fantasma?.codigo)
+    : undefined;
+  const tonoFantasma = tonoMm(llantaArrastrada?.remanente_mm ?? null);
 
   return (
     <Page wide>
@@ -474,7 +484,8 @@ export function NeumaticosTablero() {
 
       {arrastre.fantasma && (
         <div className="ntb-fantasma" style={{ left: arrastre.fantasma.x, top: arrastre.fantasma.y }} aria-hidden>
-          {arrastre.fantasma.codigo}
+          <span className="ntb-fantasma__llanta" style={{ '--tono': COLOR_TONO[tonoFantasma] } as CSSProperties} />
+          <span className="ntb-fantasma__codigo">{arrastre.fantasma.codigo}</span>
         </div>
       )}
 

@@ -131,14 +131,22 @@ button.ntb-pos { cursor: pointer; }
   border-radius: var(--r-lg); background: var(--accent-tint); color: var(--accent-ink);
   font-size: 0.875rem; font-weight: 600;
 }
+/* Llanta que se arrastra: un neumático pegado al puntero, con el color de su remanente y su código debajo */
 .ntb-fantasma {
-  position: fixed; z-index: 60; transform: translate(-50%, -140%);
+  position: fixed; z-index: 60; transform: translate(-50%, -50%);
   pointer-events: none;
-  padding: 4px 12px; border-radius: var(--r-full);
-  background: var(--ink); color: var(--label-inverse);
-  box-shadow: var(--shadow-pop);
-  font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 700;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
   white-space: nowrap;
+}
+.ntb-fantasma__llanta {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: radial-gradient(circle, #15151a 0 30%, #5b5f68 33% 38%, #1c1c22 42% 64%, #5b5f68 67% 71%, #15151a 75%);
+  box-shadow: 0 0 0 4px var(--tono, #c7c7cc), var(--shadow-pop);
+}
+.ntb-fantasma__codigo {
+  padding: 2px 10px; border-radius: var(--r-full);
+  background: var(--ink); color: var(--label-inverse);
+  font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700;
 }
 
 /* ── Detalle ── */

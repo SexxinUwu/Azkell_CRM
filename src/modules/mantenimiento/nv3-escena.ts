@@ -412,11 +412,13 @@ export function poseIsometrica(zMin: number, zMax: number, aspecto: number): { p
   return { pos, objetivo, fov: CAMPO_ISOMETRIA, distancia };
 }
 
-/** Plano lateral de una llanta: la cámara queda de lado, a la altura del neumático, con la llanta en primer plano */
-export function poseLateral(x: number, z: number): { pos: THREE.Vector3; objetivo: THREE.Vector3; fov: number; distancia: number } {
+/**
+ * Vista de lado para la llanta elegida: la cámara se pone del costado de esa llanta, a la distancia de la isometría
+ * para que la unidad entera siga en cuadro (y no un primer plano de la llanta). El centro queda en la mitad del camión.
+ */
+export function poseLateral(x: number, zc: number, distancia: number): { pos: THREE.Vector3; objetivo: THREE.Vector3; fov: number; distancia: number } {
   const lado = x < -0.05 ? -1 : 1;
-  const distancia = 5.2;
-  const objetivo = new THREE.Vector3(x, ALTURA_EJE, z);
-  const pos = new THREE.Vector3(x + lado * distancia, ALTURA_EJE + 1.1, z);
+  const objetivo = new THREE.Vector3(0, 0.9, zc);
+  const pos = new THREE.Vector3(lado * distancia * 0.9, 0.9 + distancia * 0.45, zc);
   return { pos, objetivo, fov: CAMPO_ISOMETRIA, distancia };
 }
