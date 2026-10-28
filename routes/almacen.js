@@ -2810,6 +2810,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                 autoriza: oc.autoriza || oc.solicitante || '-',
                                 almacen: oc.almacen || 'ALM CENTRAL',
                                 moneda: oc.moneda || 'PEN',
+                                // TC de la compra (si es en dólares): la recepción valoriza con este mismo TC
+                                tipo_cambio: parseFloat(oc.tipo_cambio) || null,
                                 importe: parseFloat(oc.total_pen || 0),
                                 condicion_pago: oc.condicion_pago || 'Al contado',
                                 dias_credito: oc.dias_credito || null,
