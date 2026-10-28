@@ -3,15 +3,15 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowUpRight, Boxes, CircleCheck, Clock, FileSpreadsheet, LayoutGrid, MapPin, Package,
-  PackageMinus, PackagePlus, Plus, RefreshCw, SearchX, Truck, TriangleAlert, Warehouse,
+  ArrowUpRight, Boxes, CircleCheck, Clock, FileSpreadsheet, LayoutGrid, Package,
+  PackageMinus, PackagePlus, Plus, RefreshCw, SearchX, Table2, Truck, TriangleAlert, Warehouse,
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { MultiSelect } from '../../core/ui/MultiSelect';
-import { ConfirmSheet } from '../../core/ui/Sheet';
+import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
@@ -20,7 +20,6 @@ import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { formatSoles } from '../../core/lib/format';
 import { abrirClasico } from '../../core/layout/navigation';
-import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import {
   almacenesUnicos, coincideInv, eliminarArticulo, familiasUnicas, useAlmacenesLista,
   useInventario, stockTono, type ArticuloInv,
@@ -34,12 +33,11 @@ import './almacen.css';
 
 type Filtro = 'todos' | 'ok' | 'warning' | 'critical';
 type Pestana = 'fisicos' | 'servicios';
-const DIVIDIDO = '(min-width: 900px)';
 const ESTADO_TEXTO = { ok: 'Stock OK', warning: 'Stock bajo', critical: '¡Reponer!' } as const;
 
 /** Servicios (SERV-…) no se descuentan físicamente: van en su propia pestaña */
 const esServicio = (a: ArticuloInv) => a.tipo === 'Servicio' || a.id.toUpperCase().startsWith('SERV');
-const formatoCantidad = (n: number) => (n % 1 === 0 ? String(n) : n.toFixed(2));
+const dosDecimales = (n: number) => n.toFixed(2);
 
 function Kpi({ etiqueta, valor, tono, icono }: { etiqueta: string; valor: number; tono?: 'ok' | 'warning' | 'critical'; icono: ReactNode }) {
   return (
@@ -53,6 +51,7 @@ function Kpi({ etiqueta, valor, tono, icono }: { etiqueta: string; valor: number
   );
 }
 
+/** Fila de la lista: mismo formato que el clásico (miniatura, nombre, familia • código, chips, estado, cantidad y precio) */
 function FilaArticulo({ a, activo, onClick }: { a: ArticuloInv; activo: boolean; onClick: () => void }) {
   const tono = stockTono(a);
   const costo = a.moneda === 'USD' ? Number(a.costo_soles ?? 0) : Number(a.costo_referencial ?? 0);
@@ -60,20 +59,22 @@ function FilaArticulo({ a, activo, onClick }: { a: ArticuloInv; activo: boolean;
     <button type="button" className={`inv-card pressable${activo ? ' inv-card--activo' : ''}`} onClick={onClick}>
       {a.imagen_url
         ? <img src={a.imagen_url} alt="" className="inv-card__foto" />
-        : <div className="inv-card__icono"><Package size={18} strokeWidth={1.8} /></div>}
+        : <div className={`inv-card__icono${tono !== 'ok' ? ` inv-card__icono--${tono}` : ''}`}><Package size={22} strokeWidth={1.8} /></div>}
       <div className="inv-card__cuerpo">
         <span className="inv-card__nombre">{a.articulo || a.descripcion}</span>
         <span className="inv-card__sub">{[a.familia, a.id].filter(Boolean).join(' • ')}</span>
         <div className="inv-card__chips">
-          <span className="inv-chip"><Warehouse size={12} /> {a.almacen || 'Central'}</span>
-          {a.anaquel && <span className="inv-chip"><MapPin size={12} /> Anaquel: {a.anaquel}</span>}
+          <span className="inv-chip inv-chip--almacen"><Warehouse size={12} /> {a.almacen || 'Central'}</span>
+          {a.anaquel && <span className="inv-chip"><Table2 size={12} /> Anaquel: {a.anaquel}</span>}
           {a.ultimo_proveedor && <span className="inv-chip"><Truck size={12} /> {a.ultimo_proveedor}</span>}
         </div>
         <span className={`inv-estado inv-estado--${tono}`}>{ESTADO_TEXTO[tono]}</span>
       </div>
       <div className="inv-card__stock">
-        <span className="inv-card__num">{formatoCantidad(Number(a.stock_actual))}</span>
-        <span className="inv-card__unidad">{a.unidad ?? 'und'}</span>
+        <div className="inv-card__cantidad">
+          <span className="inv-card__num">{dosDecimales(Number(a.stock_actual))}</span>
+          <span className="inv-card__unidad">{a.unidad ?? 'Unidades'}</span>
+        </div>
         <span className="inv-card__costo">{formatSoles(costo)}</span>
         <span className="inv-card__limites">Min: {a.stock_min} | Máx: {a.stock_max}</span>
       </div>
@@ -89,7 +90,6 @@ export function InventarioPage() {
   const qc = useQueryClient();
   const toast = useToast();
   const reduce = useReducedMotion();
-  const dividido = useMediaQuery(DIVIDIDO);
 
   const [enPortal, setEnPortal] = useState(true);
   const [almacenSel, setAlmacenSel] = useState<string | null>(null);
@@ -140,9 +140,6 @@ export function InventarioPage() {
     };
   }, [base, visibles, hayFiltros]);
 
-  // En pantalla ancha, abre el primero automáticamente
-  const efectivoSeleccionado = seleccionado ?? (dividido && visibles.length ? visibles[0] : null);
-
   function abrir(a: ArticuloInv) {
     haptic('selection');
     setSeleccionado(a);
@@ -161,7 +158,6 @@ export function InventarioPage() {
       await eliminarArticulo(porEliminar.id);
       toast(`"${porEliminar.articulo}" eliminado del inventario`);
       haptic('success');
-      if (efectivoSeleccionado?.id === porEliminar.id) setSeleccionado(null);
       setPorEliminar(null);
       await qc.invalidateQueries({ queryKey: ['almacen', 'inventario'] });
     } catch (err) {
@@ -171,8 +167,6 @@ export function InventarioPage() {
       setEliminando(false);
     }
   }
-
-  const soloFicha = !dividido && !!efectivoSeleccionado && !enPortal;
 
   const otros = (
     <MenuOtros opciones={[
@@ -194,12 +188,12 @@ export function InventarioPage() {
     ]} />
   );
 
-  const ficha = efectivoSeleccionado && (
+  // Ficha dentro de una ventana sobre la lista. Editar o eliminar la cierran; al guardar se vuelve a abrir.
+  const ficha = seleccionado && (
     <InventarioFicha
-      articulo={efectivoSeleccionado}
-      onVolver={dividido ? undefined : () => setSeleccionado(null)}
-      onEditar={puedeEditar ? () => setFormulario({ articulo: efectivoSeleccionado }) : undefined}
-      onEliminar={puedeEliminar ? () => setPorEliminar(efectivoSeleccionado) : undefined}
+      articulo={seleccionado}
+      onEditar={puedeEditar ? () => { setFormulario({ articulo: seleccionado }); setSeleccionado(null); } : undefined}
+      onEliminar={puedeEliminar ? () => { setPorEliminar(seleccionado); setSeleccionado(null); } : undefined}
       onActualizado={() => qc.invalidateQueries({ queryKey: ['almacen', 'inventario'] })}
     />
   );
@@ -218,7 +212,7 @@ export function InventarioPage() {
         </EmptyState>
       ) : enPortal ? (
         <InventarioPortal items={items} almacenes={almacenes} onElegir={elegirAlmacen} />
-      ) : soloFicha ? ficha : (
+      ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
           {/* ─── Encabezado ─── */}
           <header className="inv-head">
@@ -276,49 +270,37 @@ export function InventarioPage() {
             )}
           </div>
 
-          {/* ─── Lista y ficha ─── */}
-          <div className={dividido ? 'inv-dividido' : ''}>
-            <div className={dividido ? 'inv-dividido__lista' : ''}>
-              {visibles.length === 0 ? (
-                <EmptyState icon={<SearchX size={22} />} title="Ningún artículo coincide">
-                  {hayFiltros && (
-                    <button type="button" className="placas-limpiar"
-                      onClick={() => { setBusqueda(''); setAnaquel(''); setFiltro('todos'); setFamilias([]); }}>
-                      Quitar filtros
-                    </button>
-                  )}
-                </EmptyState>
-              ) : (
-                <div className="inv-lista" style={{ padding: dividido ? 'var(--s-2) var(--s-2)' : '0' }}>
-                  <AnimatePresence initial={false}>
-                    {visibles.map(a => (
-                      <motion.div key={a.id} layout={!reduce} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring}>
-                        <FilaArticulo a={a} activo={efectivoSeleccionado?.id === a.id} onClick={() => abrir(a)} />
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                  <p style={{ textAlign: 'center', color: 'var(--label-2)', fontSize: '0.8125rem', padding: 'var(--s-4) 0' }}>
-                    {visibles.length} artículo{visibles.length !== 1 ? 's' : ''}
-                  </p>
-                </div>
+          {/* ─── Lista ─── */}
+          {visibles.length === 0 ? (
+            <EmptyState icon={<SearchX size={22} />} title="Ningún artículo coincide">
+              {hayFiltros && (
+                <button type="button" className="placas-limpiar"
+                  onClick={() => { setBusqueda(''); setAnaquel(''); setFiltro('todos'); setFamilias([]); }}>
+                  Quitar filtros
+                </button>
               )}
+            </EmptyState>
+          ) : (
+            <div className="inv-lista">
+              <AnimatePresence initial={false}>
+                {visibles.map(a => (
+                  <motion.div key={a.id} layout={!reduce} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring}>
+                    <FilaArticulo a={a} activo={seleccionado?.id === a.id} onClick={() => abrir(a)} />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              <p style={{ textAlign: 'center', color: 'var(--label-2)', fontSize: '0.8125rem', padding: 'var(--s-4) 0' }}>
+                {visibles.length} artículo{visibles.length !== 1 ? 's' : ''}
+              </p>
             </div>
-
-            {dividido && (
-              <div className="inv-dividido__detalle">
-                <AnimatePresence mode="wait" initial={false}>
-                  {ficha || (
-                    <motion.div key="vacio" className="inv-sin-seleccion"
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <Boxes size={28} /> <span>Elige un artículo de la lista</span>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       )}
+
+      {/* Ficha del artículo: ventana sobre la lista */}
+      <Sheet open={!!seleccionado && !enPortal} onClose={() => setSeleccionado(null)} title="Artículo" ancho>
+        {ficha}
+      </Sheet>
 
       <InventarioFormulario
         open={!!formulario}

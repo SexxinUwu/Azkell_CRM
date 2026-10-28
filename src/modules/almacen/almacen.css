@@ -1,47 +1,19 @@
 /* Almacén — Inventario, Entradas, Salidas, Kardex, Proveedores */
 
 /* ─── Lista de artículos ─────────────────────────────────────────────────── */
-.inv-lista { display: flex; flex-direction: column; gap: 0.375rem; }
 
-.inv-card {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-2) var(--s-4);
-  min-height: 3.75rem;
-  background: var(--surface);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-card);
-  cursor: pointer;
-  transition: background-color 120ms ease, box-shadow 120ms ease;
-  text-align: left;
-  width: 100%;
-}
 .inv-card:hover { background: var(--fill-subtle); }
-.inv-card:active { background: var(--fill); }
 .inv-card--activo { background: var(--ink); color: var(--label-inverse); box-shadow: none; }
-.inv-card--activo:hover { background: var(--ink); }
 
-.inv-card__icono {
-  width: 2.5rem; height: 2.5rem; border-radius: var(--r-md); flex-shrink: 0;
-  display: grid; place-items: center;
-  background: var(--fill); color: var(--label-2);
-}
 .inv-card--activo .inv-card__icono { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.85); }
 
-.inv-card__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
 .inv-card__nombre {
   font-size: 0.9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   letter-spacing: -0.01em;
 }
-.inv-card__sub {
-  font-size: 0.75rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
 .inv-card--activo .inv-card__sub { color: rgba(255,255,255,0.6); }
 
-.inv-card__stock { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
 .inv-card__num { font-size: 1.25rem; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
-.inv-card__unidad { font-size: 0.6875rem; color: var(--label-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .inv-card--activo .inv-card__unidad { color: rgba(255,255,255,0.6); }
 
 /* Badges de estado de stock */
@@ -248,15 +220,9 @@
 .inv-barra__buscar { flex: 1; min-width: 220px; }
 .inv-barra__anaquel { width: 200px; }
 
-.inv-card__foto { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
 .inv-card__chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.inv-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 8px; border-radius: 8px; border: 0.5px solid var(--separator); font-size: 0.6875rem; color: var(--label-2); background: var(--bg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .inv-card__costo { font-size: 0.8125rem; font-weight: 600; }
-.inv-card__limites { font-size: 0.625rem; color: var(--label-2); text-transform: uppercase; letter-spacing: 0.02em; }
-.inv-estado { display: inline-block; font-size: 0.6875rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; width: fit-content; }
-.inv-estado--ok { background: var(--green-tint); color: var(--green-ink); }
 .inv-estado--warning { background: var(--amber-tint); color: var(--amber-ink); }
-.inv-estado--critical { background: var(--red-tint); color: var(--red-ink); }
 
 .inv-portal { display: flex; flex-direction: column; gap: var(--s-4); }
 .inv-portal__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s-3); }
@@ -313,3 +279,68 @@
 
 .inv-enlace { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 600; color: var(--accent); text-decoration: none; }
 .inv-enlace:hover { text-decoration: underline; }
+
+/* ─── Filas de la lista de inventario (igual que el clásico) ─── */
+.inv-lista { display: flex; flex-direction: column; gap: 10px; }
+.inv-card {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  cursor: pointer; text-align: left; width: 100%;
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+.inv-card:hover { background: var(--fill-subtle); }
+.inv-card:active { background: var(--fill); }
+.inv-card--activo { background: var(--ink); color: var(--label-inverse); box-shadow: none; }
+.inv-card--activo .inv-card__sub,
+.inv-card--activo .inv-card__unidad,
+.inv-card--activo .inv-card__limites { color: rgba(255,255,255,0.6); }
+
+.inv-card__icono {
+  width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0;
+  display: grid; place-items: center;
+  background: var(--fill); color: var(--label-2);
+}
+.inv-card__icono--warning,
+.inv-card__icono--critical { background: var(--red-tint); color: var(--red-ink); }
+.inv-card__foto { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+
+.inv-card__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.inv-card__nombre {
+  font-size: 0.9375rem; font-weight: 700; letter-spacing: -0.01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.inv-card__sub {
+  font-size: 0.6875rem; color: var(--label-2); text-transform: uppercase; letter-spacing: 0.03em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.inv-card__chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.inv-chip {
+  display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
+  padding: 3px 8px; border-radius: 8px;
+  border: 0.5px solid var(--separator); background: var(--bg);
+  font-size: 0.6875rem; font-weight: 600; color: var(--label-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.inv-chip--almacen { background: var(--accent-tint); color: var(--accent-ink); border-color: transparent; }
+.inv-estado {
+  display: inline-block; width: fit-content; margin-top: 2px;
+  font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 8px; border-radius: 6px;
+}
+.inv-estado--ok { background: var(--green-tint); color: var(--green-ink); }
+.inv-estado--warning { background: var(--amber-tint); color: var(--amber-ink); }
+.inv-estado--critical { background: var(--red-tint); color: var(--red-ink); }
+
+.inv-card__stock { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.inv-card__cantidad { display: flex; align-items: baseline; gap: 6px; }
+.inv-card__num { font-size: 1.375rem; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+.inv-card__unidad { font-size: 0.625rem; color: var(--label-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.inv-card__costo { font-size: 0.8125rem; font-weight: 600; }
+.inv-card__limites { font-size: 0.625rem; color: var(--label-2); text-transform: uppercase; letter-spacing: 0.02em; }
+@media (max-width: 600px) {
+  .inv-card { padding: 12px 14px; gap: 12px; }
+  .inv-card__icono, .inv-card__foto { width: 44px; height: 44px; }
+}
