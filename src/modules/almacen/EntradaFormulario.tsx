@@ -663,7 +663,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
                 <Field label="Días de crédito *" error={mostrar(errorCab.dias)}>
                   {p => <TextInput {...p} type="number" min={1} value={diasCredito} onChange={ev => setDiasCredito(ev.target.value)} />}
                 </Field>
-              ) : <div />}
+              ) : null}
               <Field label="Prioridad *">
                 {p => (
                   <SelectInput {...p} value={prioridad} onChange={ev => setPrioridad(ev.target.value)}>
@@ -671,7 +671,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
                   </SelectInput>
                 )}
               </Field>
-              <Field label="Cotización del proveedor" hint="Opcional, pero recomendada">
+              <Field label="Cotización del proveedor" wide hint="Opcional, pero recomendada">
                 {() => (
                   <div className="oc-cotizacion">
                     <input
