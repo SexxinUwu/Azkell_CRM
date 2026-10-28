@@ -329,3 +329,8 @@ table[aria-label="Órdenes de compra"] tbody tr:hover td { background: color-mix
 }
 .oc-acciones__boton:hover::after,
 .oc-acciones__boton:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+.oc-acciones__boton--peligro { color: var(--red-ink); }
+.oc-acciones__boton.oc-acciones__boton--verde { color: #15803d; background: rgba(52, 199, 89, 0.16); }
+.oc-acciones__boton.oc-acciones__boton--azul { color: #0a64d6; background: rgba(0, 122, 255, 0.14); }
+.oc-acciones__boton.oc-acciones__boton--violeta { color: #6d28d9; background: rgba(124, 58, 237, 0.14); }
+.oc-acciones__boton.oc-acciones__boton--celeste { color: #0369a1; background: rgba(14, 165, 233, 0.16); }

@@ -1,7 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Ban, Check, CircleAlert, CreditCard, Eye, FileDown, Package, Paperclip, Pencil, Shield, Trash2, X } from 'lucide-react';
-import { Button } from '../../core/ui/Button';
-import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
 import { formatFechaPe, formatMoneda } from '../../core/lib/format';
 import { type EntradaInv } from './api';
 import {
@@ -61,7 +59,7 @@ export function EntradaDetalle({
   const recepParcial = procesado && recibido > 0 && recibido < totalCant;
   const aprobadoReal = aprobado || procesado || recepCompleta;
   const aprobador = aprobadoReal
-    ? (e.aprobador_nombre || e.aprobado_por || 'Gerencia')
+    ? (e.aprobador_nombre || e.aprobado_por || e.autoriza || 'Gerencia')
     : (observado || anulado ? (e.aprobador_nombre || e.aprobado_por || '') : '—');
   const etiqueta = etiquetaEstado(e.estado);
 
@@ -80,7 +78,7 @@ export function EntradaDetalle({
   } else if (procesado) {
     banner = { tono: 'oc-banner--azul', titulo: 'PROCESADA', texto: 'Pago registrado por Tesorería · En camino a almacén.' };
   } else if (aprobado) {
-    banner = { tono: 'oc-banner--verde', titulo: 'APROBADA', texto: 'V°B° presupuestario concedido por Gerencia.' };
+    banner = { tono: 'oc-banner--verde', titulo: 'APROBADA', texto: `V°B° presupuestario concedido por ${aprobador}.` };
   } else {
     banner = { tono: 'oc-banner--gris', titulo: 'REGISTRADA', texto: 'En espera de visto bueno presupuestario por Gerencia.' };
   }
@@ -111,13 +109,6 @@ export function EntradaDetalle({
   const esSrv = esServicio(e.tipo_orden);
   const tituloTipo = esSrv ? 'Orden de servicio' : 'Orden de compra';
 
-  const menu: Array<OpcionOtros | false | null | undefined> = [
-    onEditar && { label: 'Editar orden', icon: <Pencil size={17} />, onSelect: onEditar },
-    { label: 'Adjuntos y sustentos', icon: <Paperclip size={17} />, detalle: 'Cotización, factura y voucher', onSelect: onAdjuntos },
-    onAnular && { label: 'Anular orden', icon: <Ban size={17} />, destructiva: true, separado: true, onSelect: onAnular },
-    onEliminar && { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, onSelect: onEliminar },
-  ];
-
   return (
     <div className="oc-ficha">
       {/* Cabecera: identificación, estado y menú */}
@@ -127,13 +118,16 @@ export function EntradaDetalle({
           <h2 className="oc-hero__titulo">{e.proveedor_nombre || e.motivo_entrada || 'Sin proveedor'}</h2>
           <span className={`badge ${TONO_BADGE[etiqueta.tono]}`.trim()}>{etiqueta.texto}</span>
         </div>
-        <MenuOtros opciones={menu} />
       </header>
 
       {/* Acciones principales */}
       <div className="oc-acciones">
-        <Button variant="secondary" icon={<FileDown size={16} />} loading={generandoPdf} onClick={onPdf}>Descargar PDF</Button>
-        <Button variant="plain" icon={<Eye size={16} />} onClick={onVistaPrevia}>Vista previa</Button>
+        {onEditar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Editar orden" aria-label="Editar orden" onClick={onEditar}><Pencil size={17} /></button>}
+        <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Adjuntos y sustentos" aria-label="Adjuntos y sustentos" onClick={onAdjuntos}><Paperclip size={17} /></button>
+        <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Descargar PDF" aria-label="Descargar PDF" disabled={generandoPdf} onClick={onPdf}><FileDown size={17} /></button>
+        <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Vista previa" aria-label="Vista previa" onClick={onVistaPrevia}><Eye size={17} /></button>
+        {onAnular && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--peligro" data-tip="Anular orden" aria-label="Anular orden" onClick={onAnular}><Ban size={17} /></button>}
+        {onEliminar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--peligro" data-tip="Eliminar" aria-label="Eliminar" onClick={onEliminar}><Trash2 size={17} /></button>}
       </div>
 
       {/* Estado */}

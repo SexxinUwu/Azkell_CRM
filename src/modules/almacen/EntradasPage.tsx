@@ -364,18 +364,18 @@ export function EntradasPage() {
           actions={
             <>
               <div className="oc-acciones">
-                <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Exportar a Excel" aria-label="Exportar a Excel" onClick={exportar}>
+                <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--verde" data-tip="Exportar a Excel" aria-label="Exportar a Excel" onClick={exportar}>
                   <FileSpreadsheet size={17} />
                 </button>
-                <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Descargar plantilla" aria-label="Descargar plantilla" onClick={() => { void descargarPlantillaEntradas(); }}>
+                <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--azul" data-tip="Descargar plantilla" aria-label="Descargar plantilla" onClick={() => { void descargarPlantillaEntradas(); }}>
                   <Download size={17} />
                 </button>
                 {puedeCrear && (
-                  <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Importar desde Excel" aria-label="Importar desde Excel" onClick={() => setImportando(true)}>
+                  <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--violeta" data-tip="Importar desde Excel" aria-label="Importar desde Excel" onClick={() => setImportando(true)}>
                     <Upload size={17} />
                   </button>
                 )}
-                <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Actualizar" aria-label="Actualizar" onClick={() => { void qc.invalidateQueries({ queryKey: ['almacen', 'entradas'] }); }}>
+                <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--celeste" data-tip="Actualizar" aria-label="Actualizar" onClick={() => { void qc.invalidateQueries({ queryKey: ['almacen', 'entradas'] }); }}>
                   <RefreshCw size={17} />
                 </button>
               </div>

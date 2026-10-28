@@ -1824,7 +1824,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const esAprob = (estado.toLowerCase().startsWith('aprob') || estado.toLowerCase().startsWith('autoriz'));
         const esRech = (estado.toLowerCase().startsWith('rechaz') || estado.toLowerCase().startsWith('anul'));
         const esObs = estado.toLowerCase().startsWith('observ');
-        const aprobadorVal = (esAprob || esRech || esObs) ? (usuario || 'Gerencia') : (estado.toLowerCase() === 'registrado' ? null : undefined);
+        const aprobadorVal = (esAprob || esRech || esObs) ? ((req.user && req.user.nombre) || usuario || 'Gerencia') : (estado.toLowerCase() === 'registrado' ? null : undefined);
 
         let setFields = ['estado=?'];
         let params = [estado];

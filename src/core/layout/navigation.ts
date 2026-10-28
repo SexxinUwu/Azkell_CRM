@@ -12,7 +12,7 @@
 //
 // Permisos: 'clave.ver' según la matriz de permisos actual (ver core/auth/permisos.ts). Los administradores ven todo.
 import {
-  Accessibility, Activity, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, Ruler, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
+  Accessibility, Activity, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
 } from 'lucide-react';
 import type { RutaModulo } from '../../modules/personal/rutas.tipos';
 
@@ -155,17 +155,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'salidas', label: 'Órdenes de salida', to: '/almacen/salidas', icon: PackageMinus, permissions: ver('sal_inv') },
       { key: 'kardex', label: 'Kardex', clasico: 'almacen/kardex', icon: History, permissions: ver('kardex') },
       { key: 'proveedores', label: 'Proveedores', clasico: 'almacen/proveedores', icon: Warehouse, permissions: ver('prov_inv') },
-      {
-        key: 'almacen-otros-grupo', label: 'Otros (catálogos de almacén)', icon: Layers, permissions: [],
-        children: [
-          { key: 'almacenes', label: 'Almacenes y sucursales', to: '/almacen/almacenes', icon: Building2, permissions: ver('cfg_almacen', 'inv') },
-          { key: 'familias', label: 'Familias', to: '/almacen/familias', icon: Layers, permissions: ver('cfg_familias') },
-          { key: 'unidades', label: 'Unidades de medida', to: '/almacen/unidades', icon: Ruler, permissions: ver('cfg_unidades') },
-          { key: 'sistemas', label: 'Sistemas de vehículos', to: '/almacen/sistemas', icon: Cog, permissions: ver('cfg_sistemas') },
-          { key: 'marcas', label: 'Marcas', to: '/almacen/marcas', icon: Tag, permissions: ver('cfg_marcas') },
-          { key: 'almacen-kits-mp', label: 'Kits MP', to: '/mantenimiento/kits-mp', icon: Package, permissions: ver('cfg_mant', 'inv') },
-        ],
-      },
+      { key: 'almacen-otros', label: 'Otros', to: '/almacen/otros', icon: Layers, permissions: [] },
     ],
   },
   {
