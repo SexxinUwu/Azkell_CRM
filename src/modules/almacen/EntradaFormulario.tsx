@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Package, Paperclip, Plus, ScanLine, X } from 'lucide-react';
+import { CreditCard, FileText, Truck, Landmark, Package, Paperclip, Plus, ScanLine, Users, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
@@ -65,6 +65,28 @@ function costoReferencia(a: ArticuloInv, moneda: string, tc: number): number {
 function tcRespaldoDe(valor: string | undefined): number {
   const v = Number(valor);
   return v > 0 && v !== 3.7 ? v : 3.4;
+}
+
+/** Tarjeta de una sección del formulario: cabecera con icono pastel, título, separador y cuerpo */
+function Seccion({ tono, icono, titulo, badge, accion, children }: {
+  tono: 'azul' | 'ambar' | 'violeta' | 'verde' | 'rosa' | 'celeste';
+  icono: ReactNode;
+  titulo: string;
+  badge?: string;
+  accion?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className={`oc-card oc-card--${tono}`}>
+      <header className="oc-card__cabecera">
+        <span className="oc-card__icono">{icono}</span>
+        <h3 className="oc-card__titulo">{titulo}</h3>
+        {badge && <span className="oc-card__badge">{badge}</span>}
+        {accion && <span className="oc-card__accion">{accion}</span>}
+      </header>
+      <div className="oc-card__cuerpo">{children}</div>
+    </section>
+  );
 }
 
 export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Props) {
@@ -502,11 +524,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
       <Sheet open={open} onClose={onClose} title={tituloSheet} ancho footer={pie}>
         <div className="oc-form">
 
-          {/* Datos de la orden */}
-          <section className="oc-card">
-            <h3 className="oc-card__titulo">Datos de la orden</h3>
-            <div className="oc-grid">
-              <Field label="N° de orden">
+          <Seccion tono="azul" icono={<FileText size={15} />} titulo="Datos de la orden" badge={codigoMostrado}>
+            <div className="oc-grid oc-grid--3">
+              <Field label="N° de orden / correlativo">
                 {p => <TextInput {...p} readOnly value={codigoMostrado} className="oc-mono" />}
               </Field>
               <Field label="Fecha de registro" hint="Se registra con la fecha de hoy">
@@ -534,11 +554,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
                 </Field>
               )}
             </div>
-          </section>
+          </Seccion>
 
-          {/* Destino y motivo */}
-          <section className="oc-card">
-            <h3 className="oc-card__titulo">{servicio ? 'Servicio y vehículo' : 'Vehículo y motivo'}</h3>
+          <Seccion tono="ambar" icono={<Truck size={15} />} titulo={servicio ? 'Servicio y vehículo' : 'Destino, vehículo y motivo'}>
             <div className="oc-grid">
               {servicio ? (
                 <>
@@ -569,11 +587,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
                 )}
               </Field>
             </div>
-          </section>
+          </Seccion>
 
-          {/* Concepto, centro de costo y autorización */}
-          <section className="oc-card">
-            <h3 className="oc-card__titulo">Concepto y autorización</h3>
+          <Seccion tono="violeta" icono={<Users size={15} />} titulo="Concepto y autorización">
             <div className="oc-grid">
               <Field label="Autoriza / solicitante *" error={mostrar(errorCab.autoriza)}>
                 {p => (
@@ -605,11 +621,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
                 )}
               </Field>
             </div>
-          </section>
+          </Seccion>
 
-          {/* Proveedor y cuentas */}
-          <section className="oc-card">
-            <h3 className="oc-card__titulo">Proveedor y cuentas bancarias</h3>
+          <Seccion tono="verde" icono={<Landmark size={15} />} titulo="Proveedor y cuentas bancarias">
             <div className="oc-grid">
               <Field label="Proveedor *" error={mostrar(errorCab.proveedor)} hint={proveedor ? (proveedor.ruc ? `RUC ${proveedor.ruc}` : 'Este proveedor no tiene RUC registrado') : 'Si no está en la lista, escríbelo y regístralo ahí mismo'}>
                 {p => (
@@ -646,11 +660,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
                 )}
               </Field>
             </div>
-          </section>
+          </Seccion>
 
-          {/* Condiciones de pago y cotización */}
-          <section className="oc-card">
-            <h3 className="oc-card__titulo">Condiciones de pago y cotización</h3>
+          <Seccion tono="rosa" icono={<CreditCard size={15} />} titulo="Condiciones de pago y cotización">
             <div className="oc-grid">
               <Field label="Condición de pago *">
                 {p => (
@@ -700,16 +712,10 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
                 )}
               </Field>
             </div>
-          </section>
+          </Seccion>
 
-          {/* Artículos */}
-          <section className="oc-card">
-            <div className="oc-lineas__cabecera">
-              <h3 className="oc-card__titulo" style={{ margin: 0 }}>{servicio ? 'Servicios' : 'Artículos'}</h3>
-              <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setLineas(prev => [...prev, nuevaLinea()])}>
-                Agregar
-              </Button>
-            </div>
+          <Seccion tono="celeste" icono={<Package size={15} />} titulo={servicio ? 'Servicios' : 'Artículos'} badge={`${usados.length} ${usados.length === 1 ? 'línea' : 'líneas'}`}
+            accion={<Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setLineas(prev => [...prev, nuevaLinea()])}>Agregar</Button>}>
             {mostrar(errorCab.articulos) && <p role="alert" className="t-footnote oc-error">{errorCab.articulos}</p>}
 
             {lineas.length === 0 && (
@@ -792,7 +798,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
                 );
               })}
             </div>
-          </section>
+          </Seccion>
         </div>
       </Sheet>
 

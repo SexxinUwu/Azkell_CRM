@@ -283,3 +283,33 @@ table[aria-label="Órdenes de compra"] tbody tr:hover td { background: color-mix
   .oc-card, .oc-linea { animation: none !important; transition: none !important; }
   .oc-card:hover, .oc-linea:hover, .inv-kpis .inv-kpi:hover { transform: none; }
 }
+
+/* ─── Formulario de la orden: secciones con cabecera pastel ─── */
+.oc-card { --tono: #2563eb; --tono-suave: #eaf2ff; --tono-borde: #cfe0ff; gap: 0; padding: 0; overflow: hidden; }
+.oc-card--azul { --tono: #2563eb; --tono-suave: #eaf2ff; --tono-borde: #cfe0ff; }
+.oc-card--ambar { --tono: #b45309; --tono-suave: #fff6e0; --tono-borde: #ffe3a3; }
+.oc-card--violeta { --tono: #6d28d9; --tono-suave: #f3efff; --tono-borde: #ddd2ff; }
+.oc-card--verde { --tono: #15803d; --tono-suave: #e9f8ef; --tono-borde: #bfe9cf; }
+.oc-card--rosa { --tono: #be185d; --tono-suave: #fdeef5; --tono-borde: #f7c6dc; }
+.oc-card--celeste { --tono: #0369a1; --tono-suave: #e7f5fc; --tono-borde: #bde3f5; }
+.oc-card { border: 1px solid var(--tono-borde); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 30px -22px rgba(15, 23, 42, 0.22); }
+.oc-card__cabecera {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 16px; background: var(--tono-suave); border-bottom: 1px solid var(--tono-borde);
+}
+.oc-card__icono { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: var(--surface); color: var(--tono); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08); flex-shrink: 0; }
+.oc-card__titulo { margin: 0; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--tono); }
+.oc-card__titulo::before { content: none; }
+.oc-card__badge { margin-left: auto; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: var(--surface); color: var(--tono); font-family: var(--font-mono); }
+.oc-card__accion { margin-left: auto; }
+.oc-card__cuerpo { display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+.oc-grid { gap: 14px 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.oc-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 720px) { .oc-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .oc-grid--3, .oc-grid { grid-template-columns: 1fr; } }
+.oc-grid .field__label { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-2); margin-bottom: 2px; }
+.oc-grid .input, .oc-grid .select, .oc-grid .textarea, .oc-grid .combobox__input { min-height: 44px; }
+.oc-grid .combobox__input { padding-left: 40px; }
+.oc-grid .combobox__search { left: 14px; }
+.oc-grid .combobox__field { min-width: 0; }
+.oc-grid .field { min-width: 0; }
