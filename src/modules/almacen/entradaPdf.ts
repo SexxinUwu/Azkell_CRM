@@ -3,6 +3,7 @@
 // Sustituye al PDF clásico (_entGenerarHtmlPDF) con el mismo lenguaje visual de los PDF de OT e inspecciones.
 import { generarPDFBlob, montarParaPDF } from '../../core/lib/pdf';
 import type { EmpresaDocumentos, EntradaInv, ProveedorInv } from './api';
+import { desgloseIgv, numeroALetras } from './entradaReglas';
 
 /** Logo de la empresa del subdominio (el mismo de la barra lateral) */
 export const LOGO_ENTRADA = '/api/tenant-logo';
@@ -35,12 +36,14 @@ const celda = (contenido: string, extra = '') => `<td style="padding:6px 8px;bor
 const encabezados = (cols: Array<[string, string?]>) => `<tr>${cols.map(([c, align]) => `<th style="padding:6px 8px;text-align:${align ?? 'left'};background:#f5f5f7;color:#6e6e73;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e5e5ea">${esc(c)}</th>`).join('')}</tr>`;
 const dato = (k: string, v: string) => `<div style="padding:5px 0;border-bottom:1px dotted #d2d2d7"><div style="font-size:10px;color:#6e6e73;text-transform:uppercase;letter-spacing:.4px">${esc(k)}</div><div style="font-size:12px;font-weight:600">${esc(v)}</div></div>`;
 
-/** Cálculo del documento: subtotal de las líneas, IGV si la orden lleva IGV, total en la moneda de la orden */
+/**
+ * Cálculo del documento. Los importes de las líneas ya llevan el IGV cuando la orden lo tiene (así los guarda el clásico),
+ * así que el total es la suma de las líneas y el IGV se desglosa desde el total.
+ */
 export function totalesEntrada(e: EntradaInv) {
-  const subtotal = (e.items ?? []).reduce((s, i) => s + (Number(i.importe) || (Number(i.cantidad) || 0) * (Number(i.costo_unitario) || 0)), 0);
-  const conIgv = e.tipo_igv === 'mas_igv';
-  const igv = conIgv ? subtotal * TASA_IGV : 0;
-  return { subtotal, igv, conIgv, total: subtotal + igv };
+  const total = (e.items ?? []).reduce((s, i) => s + (Number(i.importe) || (Number(i.cantidad) || 0) * (Number(i.costo_unitario) || 0)), 0);
+  const { gravado, igv, conIgv } = desgloseIgv(total, e.tipo_igv);
+  return { subtotal: gravado, igv, conIgv, total };
 }
 
 /** HTML del PDF de la orden de compra */
@@ -131,6 +134,8 @@ export function htmlEntradaPdf(d: DatosEntradaPdf): string {
     </div>
 
     <div style="margin-top:14px">${tablaLineas}</div>
+
+    <div style="margin-top:10px;font-size:11px;color:#334155"><strong>SON:</strong> ${esc(numeroALetras(total))} ${e.moneda === 'USD' ? 'DÓLARES AMERICANOS' : 'SOLES'}</div>
 
     <div style="display:flex;justify-content:flex-end;margin-top:10px">
       <div style="width:320px">${resumen}</div>

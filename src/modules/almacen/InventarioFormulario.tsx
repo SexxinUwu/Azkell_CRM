@@ -14,6 +14,8 @@ import { NuevaOpcionSheet } from './NuevaOpcionSheet';
 interface Props {
   open: boolean;
   articulo: ArticuloInv | null;
+  /** Alta rápida desde una orden de compra: nombre escrito y si es un servicio */
+  inicial?: { articulo?: string; servicio?: boolean } | null;
   onClose: () => void;
   onGuardado: (id?: string) => void;
 }
@@ -64,7 +66,7 @@ function nombreLlanta(medida: string, modelo: string, marca: string): string {
   return ['Llanta', medMod, mar ? '/ ' + mar : ''].filter(Boolean).join(' ');
 }
 
-export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }: Props) {
+export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGuardado }: Props) {
   const toast = useToast();
   const almacenesQ = useAlmacenesLista();
   const unidadesQ = useCatalogo<Unidad>('unidades', '/almacen/unidades');
@@ -144,13 +146,15 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
       setUbicacion(a.ubicacion ?? '');
     } else {
       // Alta nueva: la familia viene en NEUMATICOS, como en el clásico
-      setArticulo(''); setCodigoArticulo(''); setCodigoBarras(''); setMarca(''); setMarcasUnidad([]);
-      setFamilia(FAMILIA_LLANTA); setTipo(''); setSubTipo(''); setAlmacen(''); setAnaquel('');
-      setUnidad('Unidades'); setStockMin('0'); setStockMax('0'); setCantidadInicial('0');
+      // Alta rápida de un servicio: tipo y unidad "Servicio", como el clásico
+      const servicio = !!inicial?.servicio;
+      setArticulo(inicial?.articulo ?? ''); setCodigoArticulo(''); setCodigoBarras(''); setMarca(''); setMarcasUnidad([]);
+      setFamilia(servicio ? '' : FAMILIA_LLANTA); setTipo(servicio ? 'Servicio' : ''); setSubTipo(''); setAlmacen(''); setAnaquel('');
+      setUnidad(servicio ? 'Servicio' : 'Unidades'); setStockMin('0'); setStockMax('0'); setCantidadInicial('0');
       setMoneda('PEN'); setCostoRef('0'); setTipoCambio(''); setEstado('Activo'); setObservaciones('');
       setSistema(''); setSubSistema(''); setUbicacion('');
     }
-  }, [open, a]);
+  }, [open, a, inicial?.articulo, inicial?.servicio]);
 
   useEffect(() => {
     if (!open) return;

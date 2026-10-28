@@ -1,77 +1,318 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, FileSpreadsheet, PackagePlus, Plus, SearchX } from 'lucide-react';
-import { exportarConsolidadoOC } from './exportarEntradas';
+import { ArrowUpRight, CircleCheck, Eye, FileSpreadsheet, FileDown, PackagePlus, Pencil, Plus, Paperclip, RefreshCw, SearchX, Trash2, Upload } from 'lucide-react';
+import { exportarConsolidadoOC, exportarDetalleArticulosOC, descargarPlantillaEntradas } from './exportarEntradas';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
-import { descargarArchivo } from '../../core/lib/pdf';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
+import { TablaRedimensionable, Celda, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
+import { descargarArchivo } from '../../core/lib/pdf';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
-import {
-  anularEntrada, aprobarEntrada, eliminarEntrada, etiquetaEstadoEntrada, grupoEntrada, tipoDeOrden, useEmpresaDocumentos,
-  useEntradas, useInventario, useProveedores, type EntradaInv,
-} from './api';
-import { EntradaFormulario } from './EntradaFormulario';
-import { pdfEntrada } from './entradaPdf';
+import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
+import {
+  aprobarEntrada, anularEntrada, eliminarEntrada, useEmpresaDocumentos, useEntradas, useInventario, useProveedores,
+  type EntradaInv, type ItemEntrada,
+} from './api';
+import {
+  categoriaEstado, codigoLimpio, descripcionArticulo, etiquetaEstado, esServicio, filtrarOrdenes, hoyLima, itemsVisibles, kpisOrdenes,
+  rangoParaCategoria, cabeceraCoincide, estadoEditable, type FiltroEstado, type TonoEstado,
+} from './entradaReglas';
+import { EntradaFormulario } from './EntradaFormulario';
+import { EntradaDetalle } from './EntradaDetalle';
+import { AdjuntosEntradaSheet } from './AdjuntosEntradaSheet';
+import { ImportarEntradasSheet } from './ImportarEntradasSheet';
+import { pdfEntrada } from './entradaPdf';
+import './entradas.css';
 
 /** Permisos para aprobar (V°B°): el mismo acceso que el menú de Aprobación de O/C (gerencia) o su módulo de aprobación */
 const PERMISOS_APROBAR = ['gerencia.ver', 'aprob_oc.crear', 'aprob_oc.editar'];
+const POR_PAGINA = 20;
+/** Desde esta anchura se muestra la tabla; antes, tarjetas (como el clásico: d-md-none / d-none d-md-block) */
+const TABLA_QUERY = '(min-width: 768px)';
 
-type FiltroEstado = 'todos' | 'pendientes' | 'aprobadas' | 'anuladas';
+type Vista = 'articulos' | 'ordenes';
 
-/** Color según el grupo del estado: 'Registrado' y 'Pendiente' esperan aprobación (ámbar) */
-const estadoTono = (estado: string | null) => {
-  const g = grupoEntrada(estado);
-  if (g === 'aprobadas') return 'green';
-  if (g === 'anuladas') return 'red';
-  return 'amber';
-};
+const COLUMNAS: ColumnaTabla[] = [
+  { id: 'acciones', titulo: 'Acciones', ancho: 72, minimo: 64, alinear: 'center' },
+  { id: 'fecha', titulo: 'Fecha', ancho: 110 },
+  { id: 'tipo', titulo: 'Tipo de orden', ancho: 140 },
+  { id: 'orden', titulo: 'Orden de compra', ancho: 130 },
+  { id: 'estado', titulo: 'Estado', ancho: 120, alinear: 'center' },
+  { id: 'placa', titulo: 'Placa', ancho: 96 },
+  { id: 'motivo', titulo: 'Motivo', ancho: 180 },
+  { id: 'proveedor', titulo: 'Proveedor', ancho: 210 },
+  { id: 'codigo', titulo: 'Cód. art.', ancho: 104 },
+  { id: 'articulo', titulo: 'Artículo', ancho: 220 },
+  { id: 'cant', titulo: 'Cant.', ancho: 76, alinear: 'right' },
+  { id: 'costo', titulo: 'Costo unit.', ancho: 104, alinear: 'right' },
+  { id: 'total_oc', titulo: 'Total O.C.', ancho: 120, alinear: 'right' },
+  { id: 'total_soles', titulo: 'Total (S/)', ancho: 120, alinear: 'right' },
+  { id: 'cc', titulo: 'Centro de costo', ancho: 130 },
+  { id: 'voucher', titulo: 'Voucher', ancho: 104, alinear: 'center' },
+  { id: 'cotizacion', titulo: 'Cotización', ancho: 110, alinear: 'center' },
+  { id: 'factura', titulo: 'Factura', ancho: 100, alinear: 'center' },
+];
 
-function FechaCorta({ fecha }: { fecha: string | null }) {
-  if (!fecha) return <>—</>;
-  return <>{formatFechaPe(fecha)}</>;
+const TONO_CLASE: Record<TonoEstado, string> = { gray: '', green: 'badge--green', sky: 'oc-badge--sky', amber: 'badge--amber', red: 'badge--red' };
+
+function EstadoBadge({ estado }: { estado: string | null }) {
+  const e = etiquetaEstado(estado);
+  return <span className={`badge ${TONO_CLASE[e.tono]}`.trim()}>{e.texto}</span>;
 }
 
-function MontoFmt({ monto, moneda }: { monto: number; moneda: string }) {
-  return <>{formatMoneda(monto, moneda)}</>;
+/** Importe en la moneda de la orden; si falta, se calcula desde el total en soles */
+function totalOrden(o: EntradaInv): number {
+  if (o.total_oc != null) return Number(o.total_oc) || 0;
+  const tc = Number(o.tipo_cambio) || 0;
+  return o.moneda === 'USD' && tc > 0 ? (Number(o.total_pen) || 0) / tc : (Number(o.total_pen) || 0);
+}
+
+/** Adjunto: enlace si existe; si no, "Subir" abre la hoja de adjuntos */
+function CeldaAdjunto({ url, texto, tono, onSubir }: { url?: string | null; texto: string; tono: 'rojo' | 'azul' | 'verde'; onSubir: () => void }) {
+  return url
+    ? <a href={url} target="_blank" rel="noreferrer" className={`oc-adj oc-adj--${tono}`}>{texto}</a>
+    : <button type="button" className="oc-adj oc-adj--subir" onClick={onSubir}>Subir</button>;
+}
+
+interface AccionesFila {
+  onVer: (o: EntradaInv) => void;
+  onAdjuntos: (o: EntradaInv) => void;
+  onPdf: (o: EntradaInv) => void;
+  onEditar?: (o: EntradaInv) => void;
+  onAprobar?: (o: EntradaInv) => void;
+  onEliminar?: (o: EntradaInv) => void;
+}
+
+function menuDe(o: EntradaInv, a: AccionesFila): Array<OpcionOtros | false | null | undefined> {
+  return [
+    { label: 'Ver detalle', icon: <Eye size={17} />, onSelect: () => a.onVer(o) },
+    { label: 'Adjuntos y sustentos', icon: <Paperclip size={17} />, onSelect: () => a.onAdjuntos(o) },
+    { label: 'Imprimir PDF', icon: <FileDown size={17} />, onSelect: () => a.onPdf(o) },
+    a.onEditar && estadoEditable(o.estado) && { label: 'Editar orden', icon: <Pencil size={17} />, onSelect: () => a.onEditar?.(o) },
+    a.onAprobar && categoriaEstado(o.estado) === 'registradas' && { label: 'Aprobar O/C', icon: <CircleCheck size={17} />, onSelect: () => a.onAprobar?.(o) },
+    a.onEliminar && { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: () => a.onEliminar?.(o) },
+  ];
+}
+
+interface FilaProps extends AccionesFila {
+  orden: EntradaInv;
+  /** Artículo de la orden (vista «Por artículos»); null si la fila es la orden entera o no tiene artículos */
+  item: ItemEntrada | null;
+  vista: Vista;
+}
+
+/** Una fila de la tabla: la orden completa (vista «Por órdenes») o un artículo de la orden («Por artículos») */
+function FilaOC({ orden: o, item, vista, ...acciones }: FilaProps) {
+  const items = o.items ?? [];
+  const moneda = o.moneda === 'USD' ? 'USD' : 'PEN';
+  const totalCant = items.reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
+  const toc = totalOrden(o);
+  const codigo = codigoLimpio(o.id);
+  const tipo = esServicio(o.tipo_orden) ? 'ORDEN DE SERVICIO' : 'ORDEN DE COMPRA';
+  const fecha = o.fecha ? formatFechaPe(String(o.fecha).split('T')[0]) : '—';
+  const cabecera = [
+    <Celda key="acc" alinear="center"><MenuOtros soloIcono label="Acciones" opciones={menuDe(o, acciones)} /></Celda>,
+    <Celda key="fecha">{fecha}</Celda>,
+    <Celda key="tipo"><span className="oc-chip">{tipo}</span></Celda>,
+    <Celda key="orden"><button type="button" className="oc-codigo" onClick={() => acciones.onVer(o)} title="Ver detalle">{codigo}</button></Celda>,
+    <Celda key="estado" alinear="center"><EstadoBadge estado={o.estado} /></Celda>,
+    <Celda key="placa" mono>{o.placa || '—'}</Celda>,
+    <Celda key="motivo">{o.motivo_entrada || '—'}</Celda>,
+    <Celda key="prov">{o.proveedor_nombre || '—'}</Celda>,
+  ];
+  const cola = [
+    <Celda key="cc"><span className="oc-chip oc-chip--mono">{o.centro_costo || 'CC-100'}</span></Celda>,
+    <Celda key="voucher" alinear="center"><CeldaAdjunto url={o.url_voucher_presigned || o.url_voucher} texto="Ver voucher" tono="rojo" onSubir={() => acciones.onAdjuntos(o)} /></Celda>,
+    <Celda key="cot" alinear="center"><CeldaAdjunto url={o.url_cotizacion_presigned || o.url_cotizacion} texto="Ver cotización" tono="azul" onSubir={() => acciones.onAdjuntos(o)} /></Celda>,
+    <Celda key="fac" alinear="center"><CeldaAdjunto url={o.url_factura_presigned || o.url_factura} texto="Ver factura" tono="verde" onSubir={() => acciones.onAdjuntos(o)} /></Celda>,
+  ];
+  const totales = [
+    <Celda key="toc" alinear="right"><strong className="oc-importe">{formatMoneda(toc, moneda)}</strong></Celda>,
+    <Celda key="tsol" alinear="right"><strong className="oc-importe">{formatSoles(Number(o.total_pen) || 0)}</strong></Celda>,
+  ];
+
+  if (vista === 'ordenes') {
+    const primera = items[0] ? (descripcionArticulo(items[0].descripcion, items[0].inventario_id) || items[0].inventario_id || '—') : '';
+    const descripcion = items.length === 0 ? 'Sin artículos'
+      : items.length === 1 ? primera
+      : `${primera} · +${items.length - 1} más`;
+    return (
+      <tr>
+        {cabecera}
+        <Celda key="codigo">{items.length} {items.length === 1 ? 'ítem' : 'ítems'}</Celda>
+        <Celda key="articulo">{descripcion}</Celda>
+        <Celda key="cant" alinear="right">{totalCant.toLocaleString('es-PE', { maximumFractionDigits: 2 })} u.</Celda>
+        <Celda key="costo" alinear="right">—</Celda>
+        {totales}
+        {cola}
+      </tr>
+    );
+  }
+
+  // Artículos: si la búsqueda coincide con un artículo, la fila muestra ese artículo
+  const cant = Number(item?.cantidad) || 0;
+  const costo = Number(item?.costo_unitario) || 0;
+  return (
+    <tr>
+      {cabecera}
+      <Celda key="codigo" mono>{item?.inventario_id || '—'}</Celda>
+      <Celda key="articulo">{item ? (descripcionArticulo(item.descripcion, item.inventario_id) || '—') : 'Sin artículos'}</Celda>
+      <Celda key="cant" alinear="right">{item ? cant.toLocaleString('es-PE', { maximumFractionDigits: 3 }) : '—'}</Celda>
+      <Celda key="costo" alinear="right">{item ? formatMoneda(costo, moneda) : '—'}</Celda>
+      {totales}
+      {cola}
+    </tr>
+  );
 }
 
 export function EntradasPage() {
   const { data, isLoading, isError, error } = useEntradas();
+  const inventarioQ = useInventario();
+  const proveedoresQ = useProveedores();
+  const empresaQ = useEmpresaDocumentos();
   const { can, user } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
   const reduce = useReducedMotion();
+  const esTabla = useMediaQuery(TABLA_QUERY);
+
+  const entradas = useMemo(() => data ?? [], [data]);
+  const inventario = inventarioQ.data ?? [];
 
   const [busqueda, setBusqueda] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('todos');
-  const [seleccionada, setSeleccionada] = useState<EntradaInv | null>(null);
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const [estado, setEstado] = useState<FiltroEstado>('registradas');
+  const [vista, setVista] = useState<Vista>('articulos');
+  const [pagina, setPagina] = useState(1);
+  const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<{ entrada: EntradaInv | null } | null>(null);
   const [porEliminar, setPorEliminar] = useState<EntradaInv | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const [aprobando, setAprobando] = useState<EntradaInv | null>(null);
   const [comentarioAprobacion, setComentarioAprobacion] = useState('');
   const [enviandoAprobacion, setEnviandoAprobacion] = useState(false);
+  const [anulando, setAnulando] = useState<EntradaInv | null>(null);
+  const [motivoAnulacion, setMotivoAnulacion] = useState('');
+  const [enviandoAnulacion, setEnviandoAnulacion] = useState(false);
+  const [adjuntosId, setAdjuntosId] = useState<string | null>(null);
+  const [importando, setImportando] = useState(false);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
 
   const puedeCrear = can('ent_inv.crear');
   const puedeEditar = can('ent_inv.editar');
   const puedeEliminar = can('ent_inv.eliminar');
   const puedeAprobar = can(...PERMISOS_APROBAR);
 
-  const entradas = data ?? [];
+  // Al cargar, el filtro empieza en «Registradas» con sus fechas (como el clásico)
+  const iniciado = useRef(false);
+  useEffect(() => {
+    if (iniciado.current || !data) return;
+    iniciado.current = true;
+    elegirEstado('registradas');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
-  // La ficha muestra la versión actual de la entrada (tras aprobar cambia de estado sin cerrar la ficha)
-  const seleccionadaActual = seleccionada ? (entradas.find(x => x.id === seleccionada.id) ?? seleccionada) : null;
+  useEffect(() => { setPagina(1); }, [busqueda, desde, hasta, estado]);
+
+  /** Cambia el estado y pone las fechas que corresponden (clásico: _entCambiarEstadoFiltro) */
+  function elegirEstado(nuevo: FiltroEstado) {
+    setEstado(nuevo);
+    const hoy = hoyLima();
+    if (nuevo === 'todas') {
+      setDesde(d => d || hoy);
+      setHasta(h => h || hoy);
+      return;
+    }
+    const rango = rangoParaCategoria(nuevo, entradas, hoy);
+    if (rango) { setDesde(rango.desde); setHasta(rango.hasta); }
+  }
+
+  const visibles = useMemo(
+    () => filtrarOrdenes(entradas, { busqueda, desde, hasta, estado }),
+    [entradas, busqueda, desde, hasta, estado],
+  );
+  const kpis = useMemo(() => kpisOrdenes(visibles), [visibles]);
+  const conteo = useMemo(() => {
+    const c = { registradas: 0, aprobadas: 0, procesadas: 0 };
+    for (const o of entradas) {
+      const cat = categoriaEstado(o.estado);
+      if (cat === 'registradas') c.registradas++;
+      else if (cat === 'aprobadas') c.aprobadas++;
+      else if (cat === 'procesadas') c.procesadas++;
+    }
+    return { ...c, todas: entradas.length };
+  }, [entradas]);
+
+  const totalPag = Math.max(1, Math.ceil(visibles.length / POR_PAGINA));
+  const pag = Math.min(pagina, totalPag);
+  const paginaOrdenes = visibles.slice((pag - 1) * POR_PAGINA, pag * POR_PAGINA);
+
+  const seleccionada = seleccionadaId ? (entradas.find(x => x.id === seleccionadaId) ?? null) : null;
+  const adjuntos = adjuntosId ? (entradas.find(x => x.id === adjuntosId) ?? null) : null;
+
+  const proveedores = proveedoresQ.data ?? [];
+  const unidadDe = (id: string | null) => (id ? (inventario.find(a => a.id === id)?.unidad ?? '') : '');
+
+  /** Filas de la tabla: por orden, o por artículo (con la búsqueda aplicada a los artículos) */
+  const filas = useMemo(() => {
+    const q = busqueda.toLowerCase().trim();
+    const out: Array<{ key: string; orden: EntradaInv; item: ItemEntrada | null }> = [];
+    for (const o of paginaOrdenes) {
+      if (vista === 'ordenes') { out.push({ key: o.id, orden: o, item: null }); continue; }
+      const items = o.items ?? [];
+      if (!items.length) { out.push({ key: `${o.id}-0`, orden: o, item: null }); continue; }
+      const coincideCab = q ? cabeceraCoincide(o, q) : true;
+      itemsVisibles(items, coincideCab, busqueda).forEach((it, i) => out.push({ key: `${o.id}-${it.id ?? i}-${i}`, orden: o, item: it }));
+    }
+    return out;
+  }, [paginaOrdenes, vista, busqueda]);
+
+  // ── Acciones ──────────────────────────────────────────────────────────────
+
+  const acciones: AccionesFila = {
+    onVer: o => { setSeleccionadaId(o.id); },
+    onAdjuntos: o => setAdjuntosId(o.id),
+    onPdf: o => { void verPdf(o, false); },
+    onEditar: puedeEditar ? o => setFormulario({ entrada: o }) : undefined,
+    onAprobar: puedeAprobar ? o => setAprobando(o) : undefined,
+    onEliminar: puedeEliminar ? o => setPorEliminar(o) : undefined,
+  };
+
+  /** PDF de la orden: se descarga o se abre como vista previa */
+  async function verPdf(o: EntradaInv, vistaPrevia: boolean) {
+    const ventana = vistaPrevia ? window.open('', '_blank') : null;
+    setGenerandoPdf(true);
+    try {
+      const unidades = new Map(inventario.map(a => [a.id, a.unidad ?? undefined]));
+      const proveedor = proveedores.find(p => p.id === o.proveedor_id) ?? null;
+      const conUnidad = { ...o, items: (o.items ?? []).map(i => ({ ...i, item_unidad: i.item_unidad ?? unidades.get(i.inventario_id ?? '') })) };
+      const blob = await pdfEntrada({ entrada: conUnidad, proveedor, empresa: empresaQ.data ?? null, usuario: user?.name ?? '' });
+      if (vistaPrevia) {
+        const url = URL.createObjectURL(blob);
+        if (ventana) ventana.location.href = url;
+        else window.open(url, '_blank');
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      } else {
+        descargarArchivo(blob, `Orden_de_Compra_${codigoLimpio(o.id)}.pdf`);
+      }
+    } catch (err) {
+      ventana?.close();
+      toast(errorMessage(err), 'error');
+    } finally {
+      setGenerandoPdf(false);
+    }
+  }
 
   async function confirmarAprobacion() {
     if (!aprobando) return;
@@ -90,32 +331,32 @@ export function EntradasPage() {
     }
   }
 
-  const visibles = useMemo(() => entradas.filter(e => {
-    const q = busqueda.toUpperCase();
-    if (filtroEstado !== 'todos' && grupoEntrada(e.estado) !== filtroEstado) return false;
-    if (!q) return true;
-    return (
-      String(e.id).toUpperCase().includes(q) ||
-      (e.proveedor_nombre ?? '').toUpperCase().includes(q) ||
-      (e.documento_referencia ?? '').toUpperCase().includes(q) ||
-      (e.motivo_entrada ?? '').toUpperCase().includes(q)
-    );
-  }), [entradas, busqueda, filtroEstado]);
-
-  const resumen = useMemo(() => ({
-    total: entradas.length,
-    pendientes: entradas.filter(e => grupoEntrada(e.estado) === 'pendientes').length,
-    monto: entradas.filter(e => grupoEntrada(e.estado) !== 'anuladas').reduce((s, e) => s + (e.total_pen || 0), 0),
-  }), [entradas]);
+  async function confirmarAnulacion() {
+    if (!anulando) return;
+    if (!motivoAnulacion.trim()) { toast('Escribe el motivo de la anulación', 'error'); return; }
+    setEnviandoAnulacion(true);
+    try {
+      await anularEntrada(anulando.id, motivoAnulacion.trim());
+      toast('Orden anulada');
+      if (seleccionadaId === anulando.id) setSeleccionadaId(null);
+      setAnulando(null);
+      setMotivoAnulacion('');
+      await qc.invalidateQueries({ queryKey: ['almacen', 'entradas'] });
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+    } finally {
+      setEnviandoAnulacion(false);
+    }
+  }
 
   async function confirmarEliminar() {
     if (!porEliminar) return;
     setEliminando(true);
     try {
       await eliminarEntrada(porEliminar.id);
-      toast('Entrada eliminada');
+      toast('Orden eliminada');
       haptic('success');
-      if (seleccionada?.id === porEliminar.id) setSeleccionada(null);
+      if (seleccionadaId === porEliminar.id) setSeleccionadaId(null);
       setPorEliminar(null);
       await qc.invalidateQueries({ queryKey: ['almacen', 'entradas'] });
     } catch (err) {
@@ -125,27 +366,39 @@ export function EntradasPage() {
     }
   }
 
+  async function exportar() {
+    if (!visibles.length) { toast('No hay datos para exportar', 'error'); return; }
+    try {
+      if (vista === 'ordenes') await exportarConsolidadoOC(visibles);
+      else await exportarDetalleArticulosOC(visibles);
+      haptic('success');
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+    }
+  }
+
   const soloDetalle = !!seleccionada;
+  const menuPrincipal: Array<OpcionOtros | false | null | undefined> = [
+    { label: 'Exportar a Excel', detalle: `${visibles.length} ${visibles.length === 1 ? 'orden' : 'órdenes'} filtradas · ${vista === 'ordenes' ? 'por órdenes' : 'por artículos'}`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+    { label: 'Descargar plantilla', icon: <ArrowUpRight size={17} />, onSelect: async () => { await descargarPlantillaEntradas(); } },
+    puedeCrear && { label: 'Importar desde Excel', icon: <Upload size={17} />, onSelect: () => setImportando(true) },
+    { label: 'Actualizar', icon: <RefreshCw size={17} />, onSelect: () => { void qc.invalidateQueries({ queryKey: ['almacen', 'entradas'] }); } },
+    { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('almacen/entradas') },
+  ];
 
   return (
     <Page>
       {!soloDetalle && (
         <PageHeader
           eyebrow="Almacén"
-          title="Entradas"
-          subtitle={isLoading ? 'Cargando…' : `${resumen.total} órdenes de compra${resumen.pendientes ? ` · ${resumen.pendientes} pendientes` : ''}`}
+          title="Órdenes de compra"
+          subtitle={isLoading ? 'Cargando…' : `${entradas.length} ${entradas.length === 1 ? 'orden' : 'órdenes'}${conteo.registradas ? ` · ${conteo.registradas} pendientes de aprobación` : ''}`}
           actions={
             <>
-              <MenuOtros opciones={[
-                { label: 'Exportar consolidado (Excel)', detalle: `${visibles.length} órdenes`, icon: <FileSpreadsheet size={17} />,
-                  onSelect: async () => {
-                    try { await exportarConsolidadoOC(visibles); haptic('success'); } catch (err) { toast(errorMessage(err), 'error'); }
-                  } },
-                { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('almacen/entradas') },
-              ]} />
+              <MenuOtros opciones={menuPrincipal} />
               {puedeCrear && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ entrada: null })}>
-                  Nueva entrada
+                  Nueva orden
                 </Button>
               )}
             </>
@@ -155,87 +408,102 @@ export function EntradasPage() {
 
       {isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
-      ) : seleccionadaActual ? (
+      ) : seleccionada ? (
         <EntradaDetalle
-          entrada={seleccionadaActual}
-          onVolver={() => setSeleccionada(null)}
-          onEditar={puedeEditar ? () => setFormulario({ entrada: seleccionadaActual }) : undefined}
-          onEliminar={puedeEliminar ? () => setPorEliminar(seleccionadaActual) : undefined}
-          onAprobar={puedeAprobar && grupoEntrada(seleccionadaActual.estado) === 'pendientes' ? () => setAprobando(seleccionadaActual) : undefined}
-          onAnular={puedeEditar ? async () => {
-            try {
-              await anularEntrada(seleccionadaActual.id);
-              toast('Entrada anulada');
-              await qc.invalidateQueries({ queryKey: ['almacen', 'entradas'] });
-              setSeleccionada(null);
-            } catch (err) { toast(errorMessage(err), 'error'); }
-          } : undefined}
+          entrada={seleccionada}
+          onVolver={() => setSeleccionadaId(null)}
+          onEditar={puedeEditar && estadoEditable(seleccionada.estado) ? () => setFormulario({ entrada: seleccionada }) : undefined}
+          onAdjuntos={() => setAdjuntosId(seleccionada.id)}
+          onAprobar={puedeAprobar && categoriaEstado(seleccionada.estado) === 'registradas' ? () => setAprobando(seleccionada) : undefined}
+          onAnular={puedeEditar && !String(seleccionada.estado ?? '').toLowerCase().includes('anul') ? () => setAnulando(seleccionada) : undefined}
+          onEliminar={puedeEliminar ? () => setPorEliminar(seleccionada) : undefined}
+          onPdf={() => { void verPdf(seleccionada, false); }}
+          onVistaPrevia={() => { void verPdf(seleccionada, true); }}
+          generandoPdf={generandoPdf}
+          unidadDe={id => unidadDe(id) || null}
         />
       ) : entradas.length === 0 ? (
-        <EmptyState icon={<PackagePlus size={22} />} title="Sin entradas registradas">
-          {puedeCrear ? <>Registra la primera entrada de almacén con <strong>Nueva entrada</strong>.</> : 'Cuando almacén registre compras, aparecerán aquí.'}
+        <EmptyState icon={<PackagePlus size={22} />} title="Sin órdenes de compra">
+          {puedeCrear ? <>Registra la primera con <strong>Nueva orden</strong>.</> : 'Cuando almacén registre compras, aparecerán aquí.'}
         </EmptyState>
       ) : (
         <div>
-          {/* Métricas rápidas */}
-          <div className="inv-metricas" style={{ marginBottom: 'var(--s-4)' }}>
+          {/* Totales del filtro */}
+          <div className="oc-metricas" style={{ marginBottom: 'var(--s-4)' }}>
             <div className="inv-metrica">
-              <span className="inv-metrica__num">{resumen.total}</span>
-              <span className="inv-metrica__label">Total</span>
+              <span className="inv-metrica__num">{kpis.total}</span>
+              <span className="inv-metrica__label">Total O.C.</span>
             </div>
             <div className="inv-metrica">
-              <span className={`inv-metrica__num${resumen.pendientes ? ' inv-metrica__num--warning' : ''}`}>{resumen.pendientes}</span>
-              <span className="inv-metrica__label">Pendientes</span>
-            </div>
-            <div className="inv-metrica">
-              <span className="inv-metrica__num" style={{ fontSize: '1.25rem' }}>
-                {formatSoles(resumen.monto)}
-              </span>
+              <span className="inv-metrica__num" style={{ fontSize: '1.25rem' }}>{formatSoles(kpis.monto)}</span>
               <span className="inv-metrica__label">Monto total</span>
+            </div>
+            <div className="inv-metrica">
+              <span className="inv-metrica__num">{kpis.proveedores}</span>
+              <span className="inv-metrica__label">Proveedores</span>
+            </div>
+            <div className="inv-metrica">
+              <span className="inv-metrica__num">{kpis.unidades.toLocaleString('es-PE')}</span>
+              <span className="inv-metrica__label">Unidades pedidas</span>
             </div>
           </div>
 
           {/* Filtros */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)', marginBottom: 'var(--s-4)' }}>
-            <SearchField value={busqueda} onChange={setBusqueda} placeholder="Proveedor, N° documento o motivo" />
-            <SegmentedControl<FiltroEstado> block label="Estado" value={filtroEstado} onChange={setFiltroEstado}
+          <div className="oc-filtros" style={{ marginBottom: 'var(--s-4)' }}>
+            <SegmentedControl<FiltroEstado> block label="Estado" value={estado} onChange={elegirEstado}
               options={[
-                { value: 'todos', label: 'Todas' },
-                { value: 'pendientes', label: 'Pendientes de aprobación' },
-                { value: 'aprobadas', label: 'Aprobadas' },
-                { value: 'anuladas', label: 'Anuladas' },
+                { value: 'registradas', label: `Registradas (${conteo.registradas})` },
+                { value: 'aprobadas', label: `Aprobadas (${conteo.aprobadas})` },
+                { value: 'procesadas', label: `Procesadas (${conteo.procesadas})` },
+                { value: 'todas', label: `Todas (${conteo.todas})` },
               ]} />
+            <SearchField value={busqueda} onChange={setBusqueda} placeholder="Código, proveedor, documento, placa o artículo" />
+            <div className="oc-filtros__fila">
+              <div className="oc-fechas">
+                <TextInput type="date" aria-label="Desde" value={desde} onChange={ev => setDesde(ev.target.value)} />
+                <span className="t-footnote c-secondary">a</span>
+                <TextInput type="date" aria-label="Hasta" value={hasta} onChange={ev => setHasta(ev.target.value)} />
+                <button type="button" className="oc-cotizacion__quitar" aria-label="Quitar fechas"
+                  onClick={() => { setDesde(''); setHasta(''); }}>×</button>
+              </div>
+              {esTabla && (
+                <SegmentedControl<Vista> label="Vista" value={vista} onChange={setVista}
+                  options={[{ value: 'articulos', label: 'Por artículos' }, { value: 'ordenes', label: 'Por órdenes' }]} />
+              )}
+              <span className="badge" style={{ marginLeft: 'auto' }}>
+                {visibles.length} {visibles.length === 1 ? 'registro' : 'registros'}
+              </span>
+            </div>
           </div>
 
           {visibles.length === 0 ? (
-            <EmptyState icon={<SearchX size={22} />} title="Ninguna entrada coincide">
-              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setFiltroEstado('todos'); }}>Quitar filtros</button>
+            <EmptyState icon={<SearchX size={22} />} title="Ninguna orden coincide">
+              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setDesde(''); setHasta(''); setEstado('todas'); }}>
+                Quitar filtros
+              </button>
             </EmptyState>
-          ) : (
-            <div className="tarjeta__lista">
-              <AnimatePresence initial={false}>
-                {visibles.map(e => (
-                  <motion.div key={e.id} layout={!reduce} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring}>
-                    <button type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setSeleccionada(e); }}>
-                      <div className="mov-fila__icon" style={{ background: `var(--${estadoTono(e.estado)}-tint)`, color: `var(--${estadoTono(e.estado)}-ink)` }}>
-                        <PackagePlus size={16} />
-                      </div>
-                      <div className="mov-fila__cuerpo">
-                        <span className="mov-fila__titulo">{e.proveedor_nombre || e.motivo_entrada || `Entrada ${e.id}`}</span>
-                        <span className="mov-fila__sub">{tipoDeOrden(e.tipo_orden)} · <FechaCorta fecha={e.fecha} /> · {e.items?.length ?? 0} ítem{e.items?.length !== 1 ? 's' : ''}</span>
-                      </div>
-                      <div className="mov-fila__derecha">
-                        {/* total_pen se guarda en soles: en entradas USD se muestra el total en dólares */}
-                        <span className="mov-fila__monto">
-                          <MontoFmt monto={e.moneda === 'USD' && e.tipo_cambio ? e.total_pen / e.tipo_cambio : e.total_pen} moneda={e.moneda} />
-                        </span>
-                        <span className={`inv-badge inv-badge--${estadoTono(e.estado) === 'green' ? 'ok' : estadoTono(e.estado) === 'red' ? 'critical' : 'warning'}`}>{etiquetaEstadoEntrada(e.estado)}</span>
-                      </div>
-                    </button>
-                  </motion.div>
+          ) : esTabla ? (
+            <>
+              <TablaRedimensionable id="almacen-ordenes-compra" columnas={COLUMNAS} ariaLabel="Órdenes de compra" altoMax="68vh">
+                {filas.map(f => (
+                  <FilaOC key={f.key} orden={f.orden} item={f.item} vista={vista} {...acciones} />
                 ))}
-              </AnimatePresence>
-            </div>
+              </TablaRedimensionable>
+              <Paginacion pag={pag} total={totalPag} onCambiar={setPagina} />
+            </>
+          ) : (
+            <>
+              <div className="oc-tarjetas-lista">
+                <AnimatePresence initial={false}>
+                  {paginaOrdenes.map(o => (
+                    <motion.div key={o.id} layout={!reduce} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring}>
+                      <TarjetaOrden orden={o} acciones={acciones} />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+              <Paginacion pag={pag} total={totalPag} onCambiar={setPagina} />
+            </>
           )}
         </div>
       )}
@@ -246,15 +514,24 @@ export function EntradasPage() {
         onClose={() => setFormulario(null)}
         onGuardado={() => {
           setFormulario(null);
-          qc.invalidateQueries({ queryKey: ['almacen', 'entradas'] });
-          qc.invalidateQueries({ queryKey: ['almacen', 'inventario'] });
+          void qc.invalidateQueries({ queryKey: ['almacen', 'entradas'] });
+          void qc.invalidateQueries({ queryKey: ['almacen', 'inventario'] });
         }}
       />
+
+      <AdjuntosEntradaSheet
+        open={adjuntos !== null}
+        entrada={adjuntos}
+        onClose={() => setAdjuntosId(null)}
+        onGuardado={() => setAdjuntosId(null)}
+      />
+
+      <ImportarEntradasSheet open={importando} onClose={() => setImportando(false)} inventario={inventario} />
 
       <Sheet
         open={!!aprobando}
         onClose={() => !enviandoAprobacion && setAprobando(null)}
-        title={`Aprobar orden ${aprobando?.id ?? ''}`}
+        title={`Aprobar orden ${aprobando ? codigoLimpio(aprobando.id) : ''}`}
         footer={
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <Button variant="secondary" onClick={() => setAprobando(null)} disabled={enviandoAprobacion}>Cancelar</Button>
@@ -273,141 +550,81 @@ export function EntradasPage() {
         </div>
       </Sheet>
 
+      <Sheet
+        open={!!anulando}
+        onClose={() => !enviandoAnulacion && setAnulando(null)}
+        title={`Anular orden ${anulando ? codigoLimpio(anulando.id) : ''}`}
+        footer={
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <Button variant="secondary" onClick={() => setAnulando(null)} disabled={enviandoAnulacion}>Cancelar</Button>
+            <Button variant="danger" onClick={confirmarAnulacion} loading={enviandoAnulacion}>Anular orden</Button>
+          </div>
+        }
+      >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--label-2)' }}>Motivo de la anulación *</span>
+          <TextInput value={motivoAnulacion} onChange={ev => setMotivoAnulacion(ev.target.value)} placeholder="Ej: proveedor canceló la compra" autoFocus />
+        </label>
+      </Sheet>
+
       <ConfirmSheet
         open={!!porEliminar}
         onClose={() => !eliminando && setPorEliminar(null)}
         onConfirm={confirmarEliminar}
         loading={eliminando}
-        title={`¿Eliminar entrada #${porEliminar?.id}?`}
-        message="Se eliminará la entrada y se revertirán los movimientos de stock asociados."
+        title={`¿Eliminar la orden ${porEliminar ? codigoLimpio(porEliminar.id) : ''}?`}
+        message="Se eliminarán sus artículos y se revertirán los movimientos de stock asociados."
         confirmLabel="Eliminar"
       />
     </Page>
   );
 }
 
-// ─── Detalle de una entrada ───────────────────────────────────────────────────
-
-interface DetalleProps {
-  entrada: EntradaInv;
-  onVolver: () => void;
-  onEditar?: () => void;
-  onEliminar?: () => void;
-  onAprobar?: () => void;
-  onAnular?: () => void;
+/** Tarjeta de una orden para pantallas pequeñas (el clásico muestra tarjetas en el celular) */
+function TarjetaOrden({ orden: o, acciones }: { orden: EntradaInv; acciones: AccionesFila }) {
+  const moneda = o.moneda === 'USD' ? 'USD' : 'PEN';
+  const items = o.items ?? [];
+  const totalCant = items.reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
+  const tipo = esServicio(o.tipo_orden) ? 'Orden de servicio' : 'Orden de compra';
+  return (
+    <article className="oc-tarjeta-orden">
+      <div className="oc-tarjeta-orden__cab">
+        <button type="button" className="oc-codigo" onClick={() => acciones.onVer(o)}>{codigoLimpio(o.id)}</button>
+        <EstadoBadge estado={o.estado} />
+      </div>
+      <div className="oc-chips">
+        <span className="oc-chip">{tipo}</span>
+        <span className="oc-chip oc-chip--mono">{o.centro_costo || 'CC-100'}</span>
+        {o.placa && <span className="oc-chip oc-chip--mono">{o.placa}</span>}
+      </div>
+      <span style={{ fontWeight: 700, fontSize: '0.9375rem' }}>{o.proveedor_nombre || o.motivo_entrada || 'Sin proveedor'}</span>
+      {o.motivo_entrada && o.proveedor_nombre && <span className="t-footnote c-secondary">{o.motivo_entrada}</span>}
+      <span className="t-footnote c-secondary">
+        {o.fecha ? formatFechaPe(String(o.fecha).split('T')[0]) : '—'} · {items.length} {items.length === 1 ? 'ítem' : 'ítems'} · {totalCant.toLocaleString('es-PE', { maximumFractionDigits: 2 })} u.
+      </span>
+      <div className="oc-tarjeta-orden__pie">
+        <span className="oc-tarjeta-orden__monto">
+          {formatMoneda(totalOrden(o), moneda)}
+          {moneda === 'USD' && <small>{formatSoles(Number(o.total_pen) || 0)}</small>}
+        </span>
+        <div className="oc-tarjeta-orden__acciones">
+          <Button size="sm" variant="secondary" icon={<Eye size={14} />} onClick={() => acciones.onVer(o)}>Detalle</Button>
+          <Button size="sm" variant="secondary" icon={<FileDown size={14} />} onClick={() => acciones.onPdf(o)}>PDF</Button>
+          <MenuOtros soloIcono label="Acciones" opciones={menuDe(o, acciones)} />
+        </div>
+      </div>
+    </article>
+  );
 }
 
-function EntradaDetalle({ entrada: e, onVolver, onEditar, onEliminar, onAprobar, onAnular }: DetalleProps) {
-  const tono = estadoTono(e.estado);
-  const total = e.items?.reduce((s, i) => s + (i.importe || 0), 0) ?? e.total_pen;
-  const { data: proveedores } = useProveedores();
-  const proveedor = (proveedores ?? []).find(p => p.id === e.proveedor_id) ?? null;
-  const dinero = (n: number) => formatMoneda(n, e.moneda);
-  const { user } = useAuth();
-  const toast = useToast();
-  const empresa = useEmpresaDocumentos().data ?? null;
-  const { data: inventario } = useInventario();
-  const [generandoPdf, setGenerandoPdf] = useState(false);
-
-  async function descargarPdf() {
-    setGenerandoPdf(true);
-    try {
-      // La unidad de medida no se guarda con la línea: se toma del artículo del inventario
-      const unidades = new Map((inventario ?? []).map(a => [a.id, a.unidad ?? undefined]));
-      const conUnidad = { ...e, items: (e.items ?? []).map(i => ({ ...i, item_unidad: i.item_unidad ?? unidades.get(i.inventario_id ?? '') })) };
-      const blob = await pdfEntrada({ entrada: conUnidad, proveedor, empresa, usuario: user?.name ?? '' });
-      descargarArchivo(blob, `Orden_de_Compra_${e.id}.pdf`);
-    } catch (err) {
-      toast(errorMessage(err), 'error');
-    } finally {
-      setGenerandoPdf(false);
-    }
-  }
-
+/** Paginación del listado (20 órdenes por página, como el clásico) */
+function Paginacion({ pag, total, onCambiar }: { pag: number; total: number; onCambiar: (n: number) => void }) {
+  if (total <= 1) return null;
   return (
-    <div className="inv-ficha">
-      <div className="tarjeta__barra">
-        <button type="button" className="tarjeta__volver" onClick={onVolver}>
-          <span style={{ fontSize: '1.2rem' }}>‹</span> Entradas
-        </button>
-        <div className="tarjeta__barra-acciones">
-          <MenuOtros opciones={[
-            onEditar && e.estado !== 'Anulado' && { label: 'Editar', onSelect: onEditar },
-            onAnular && e.estado !== 'Anulado' && { label: 'Anular entrada', destructiva: true, separado: true, onSelect: onAnular },
-            onEliminar && { label: 'Eliminar', destructiva: true, onSelect: onEliminar },
-          ]} />
-        </div>
-      </div>
-
-      <div className="inv-ficha__hero" style={{ paddingTop: 'var(--s-2)' }}>
-        <div className="inv-ficha__imagen-vacia"><PackagePlus size={28} /></div>
-        <span className="inv-ficha__id">Entrada {e.id}</span>
-        <h2 className="inv-ficha__nombre">{e.proveedor_nombre || e.motivo_entrada || 'Sin proveedor'}</h2>
-        <span className={`inv-badge inv-badge--${tono === 'green' ? 'ok' : tono === 'red' ? 'critical' : 'warning'}`}>{etiquetaEstadoEntrada(e.estado)}</span>
-      </div>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)', justifyContent: 'center' }}>
-        {onAprobar && <Button variant="primary" onClick={onAprobar}>Aprobar O/C</Button>}
-        <Button variant="secondary" loading={generandoPdf} onClick={descargarPdf}>Descargar PDF</Button>
-      </div>
-
-      <div>
-        <p className="tarjeta__grupo-titulo">Datos generales</p>
-        <div className="tarjeta__lista">
-          <div className="dato"><span className="dato__label">Tipo</span><span className="dato__valor">{tipoDeOrden(e.tipo_orden)}</span></div>
-          {e.fecha && <div className="dato"><span className="dato__label">Fecha</span><span className="dato__valor">{formatFechaPe(e.fecha)}</span></div>}
-          {e.documento_referencia && <div className="dato"><span className="dato__label">N° documento</span><span className="dato__valor dato__valor--mono">{e.documento_referencia}</span></div>}
-          <div className="dato"><span className="dato__label">Condición de pago</span><span className="dato__valor">{e.condicion_pago || 'Al contado'}{e.condicion_pago?.startsWith('A cr') && e.dias_credito ? ` · ${e.dias_credito} días` : ''}</span></div>
-          <div className="dato"><span className="dato__label">Moneda</span><span className="dato__valor">{e.moneda === 'USD' ? `Dólares · TC ${e.tipo_cambio ?? '—'}` : 'Soles'}</span></div>
-          {e.motivo_entrada && <div className="dato"><span className="dato__label">Motivo</span><span className="dato__valor">{e.motivo_entrada}</span></div>}
-          {proveedor && <div className="dato"><span className="dato__label">RUC proveedor</span><span className="dato__valor dato__valor--mono">{proveedor.ruc || 'Sin RUC registrado'}</span></div>}
-          {(e.creado_por || e.solicitante) && <div className="dato"><span className="dato__label">Solicitante</span><span className="dato__valor">{e.solicitante || e.creado_por}</span></div>}
-          {e.observaciones && <div className="dato"><span className="dato__label">Observaciones</span><span className="dato__valor">{e.observaciones}</span></div>}
-        </div>
-      </div>
-
-      {e.items && e.items.length > 0 && (
-        <div>
-          <p className="tarjeta__grupo-titulo">Artículos ({e.items.length})</p>
-          <div className="tarjeta__lista" style={{ overflow: 'auto' }}>
-            <table className="inv-kardex">
-              <thead>
-                <tr>
-                  <th>Artículo</th>
-                  <th style={{ textAlign: 'right' }}>Cant.</th>
-                  <th style={{ textAlign: 'right' }}>P.U.</th>
-                  <th style={{ textAlign: 'right' }}>Importe</th>
-                </tr>
-              </thead>
-              <tbody>
-                {e.items.map((it, i) => (
-                  <tr key={i}>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{it.descripcion || it.inventario_id || '—'}</div>
-                      {it.item_codigo_articulo && <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{it.item_codigo_articulo}</div>}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>{it.cantidad} {it.item_unidad ?? ''}</td>
-                    <td style={{ textAlign: 'right', color: 'var(--label-2)' }}>
-                      {formatMoneda(it.costo_unitario ?? 0, it.moneda)}
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                      {dinero(it.importe ?? 0)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={3} style={{ textAlign: 'right', fontWeight: 700, padding: 'var(--s-2) var(--s-3)' }}>Total</td>
-                  <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '1rem', padding: 'var(--s-2) var(--s-3)' }}>
-                    {dinero(total)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
+    <nav className="oc-paginacion" aria-label="Paginación" style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', padding: 'var(--s-3) 0' }}>
+      <Button size="sm" variant="secondary" disabled={pag <= 1} onClick={() => onCambiar(pag - 1)}>‹ Anterior</Button>
+      <span className="t-footnote c-secondary" style={{ fontVariantNumeric: 'tabular-nums' }}>Página {pag} de {total}</span>
+      <Button size="sm" variant="secondary" disabled={pag >= total} onClick={() => onCambiar(pag + 1)}>Siguiente ›</Button>
+    </nav>
   );
 }

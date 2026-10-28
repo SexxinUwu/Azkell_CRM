@@ -1,0 +1,161 @@
+/* Órdenes de compra (entradas): formulario, ficha, pasos de trazabilidad y tarjetas del listado */
+
+.oc-form { display: flex; flex-direction: column; gap: var(--s-6); }
+.oc-mono { font-family: var(--font-mono); }
+.oc-oculto { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.oc-error { color: var(--red); margin: 0; }
+.oc-solo-lectura { background: var(--surface-sunken); color: var(--label-2); }
+
+/* Cotización */
+.oc-cotizacion { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); min-height: 2.5rem; }
+.oc-cotizacion__nombre { display: inline-flex; align-items: center; gap: var(--s-1); font-size: 0.8125rem; color: var(--label-1); min-width: 0; overflow-wrap: anywhere; }
+.oc-cotizacion__nombre--vacio { color: var(--label-3); }
+.oc-cotizacion__quitar {
+  display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem;
+  border: 0; border-radius: var(--r-full); background: var(--fill-1); color: var(--label-2); cursor: pointer; flex-shrink: 0;
+}
+
+/* Líneas de artículos */
+.oc-lineas__cabecera { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.oc-lineas { display: flex; flex-direction: column; gap: var(--s-3); }
+.oc-linea {
+  position: relative; display: flex; flex-direction: column; gap: var(--s-2);
+  padding: var(--s-3); border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--separator);
+}
+.oc-linea--sube { border-color: var(--red); }
+.oc-linea--baja { border-color: var(--green); }
+.oc-linea__fila { display: flex; align-items: center; gap: var(--s-2); }
+.oc-linea__articulo { flex: 1; min-width: 0; }
+.oc-linea__campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: var(--s-2); }
+.oc-linea__indice {
+  position: absolute; top: var(--s-2); right: var(--s-3); font-size: 0.6875rem; color: var(--label-3); font-variant-numeric: tabular-nums;
+}
+.oc-campo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.oc-campo > span { font-size: 0.6875rem; font-weight: 600; color: var(--label-2); letter-spacing: 0.01em; }
+.oc-campo .input { min-height: 2.25rem; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+
+.oc-icono {
+  display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; flex-shrink: 0;
+  border: 0; border-radius: var(--r-md); cursor: pointer;
+}
+.oc-icono--qr { background: var(--accent-tint); color: var(--accent-ink); }
+.oc-icono--quitar { background: var(--fill-1); color: var(--label-2); }
+
+.oc-alerta { display: flex; align-items: center; gap: var(--s-2); }
+.oc-alerta__chip { font-size: 0.6875rem; font-weight: 700; padding: 2px 8px; border-radius: var(--r-full); }
+.oc-alerta__chip--sube { background: var(--fill-1); color: var(--red); }
+.oc-alerta__chip--baja { background: var(--fill-1); color: var(--green); }
+.oc-alerta__texto { font-size: 0.75rem; color: var(--label-2); font-variant-numeric: tabular-nums; }
+
+/* Pie fijo del formulario */
+.oc-pie { display: flex; flex-direction: column; gap: var(--s-2); }
+.oc-pie__desglose { display: flex; justify-content: space-between; gap: var(--s-3); font-size: 0.8125rem; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.oc-pie__igv { color: var(--amber); }
+.oc-pie__total { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
+.oc-pie__etiqueta { font-size: 0.8125rem; font-weight: 600; color: var(--label-2); }
+.oc-pie__monto { font-size: 1.25rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.oc-pie__monto small { font-size: 0.75rem; font-weight: 600; color: var(--label-2); margin-left: 6px; }
+.oc-pie__acciones { display: flex; gap: var(--s-2); }
+
+/* ── Ficha de la orden ── */
+.oc-ficha { display: flex; flex-direction: column; gap: var(--s-4); }
+.oc-banner { display: flex; flex-direction: column; gap: 2px; padding: var(--s-3) var(--s-4); border-radius: var(--r-lg); font-size: 0.875rem; }
+.oc-banner strong { font-size: 0.9375rem; }
+.oc-banner--gris { background: var(--fill-1); color: var(--label-1); }
+.oc-banner--verde { background: var(--accent-tint); color: var(--green); }
+.oc-banner--azul { background: var(--accent-tint); color: var(--blue); }
+.oc-banner--ambar { background: var(--fill-1); color: var(--amber); }
+.oc-banner--rojo { background: var(--fill-1); color: var(--red); }
+
+/* Pasos de trazabilidad */
+.oc-pasos { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2); padding-top: var(--s-2); }
+.oc-pasos::before {
+  content: ''; position: absolute; top: calc(var(--s-2) + 14px); left: 12.5%; right: 12.5%; height: 3px; border-radius: 2px; background: var(--fill-2);
+}
+.oc-pasos__relleno {
+  position: absolute; top: calc(var(--s-2) + 14px); left: 12.5%; height: 3px; border-radius: 2px; background: var(--green);
+  transition: width 0.4s ease;
+}
+.oc-paso { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-width: 0; }
+.oc-paso__nodo {
+  width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--fill-2); color: #fff; font-size: 0.8125rem;
+}
+.oc-paso__nodo--ok { background: var(--green); }
+.oc-paso__nodo--alerta { background: var(--amber); }
+.oc-paso__nodo--rojo { background: var(--red); }
+.oc-paso__nodo--parcial { background: var(--blue); }
+.oc-paso__titulo { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--label-2); }
+.oc-paso__texto { font-size: 0.75rem; color: var(--label-1); font-weight: 600; overflow-wrap: anywhere; }
+.oc-paso__sub { font-size: 0.6875rem; color: var(--label-3); }
+
+.oc-progreso { display: flex; flex-direction: column; gap: 4px; }
+.oc-progreso__cab { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.oc-progreso__barra { height: 6px; border-radius: 3px; background: var(--fill-2); overflow: hidden; }
+.oc-progreso__relleno { height: 100%; border-radius: 3px; background: var(--blue); transition: width 0.4s ease; }
+.oc-progreso__relleno--completo { background: var(--green); }
+
+.oc-tarjetas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+.oc-tarjeta { padding: var(--s-3); border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--separator); min-width: 0; }
+.oc-tarjeta__etiqueta { display: block; font-size: 0.6875rem; font-weight: 600; color: var(--label-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.oc-tarjeta__valor { display: block; margin-top: 2px; font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere; }
+.oc-tarjeta__extra { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--label-2); }
+
+.oc-docs { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.oc-doc {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: var(--r-full);
+  font-size: 0.75rem; font-weight: 600; text-decoration: none; border: 1px solid var(--separator);
+}
+.oc-doc--ok { background: var(--accent-tint); color: var(--green); border-color: transparent; }
+.oc-doc--falta { color: var(--label-3); font-style: italic; font-weight: 500; }
+
+.oc-tabla-redim-wrap { overflow-x: auto; }
+.oc-importe { font-variant-numeric: tabular-nums; font-weight: 700; }
+.oc-badge--sky { background: var(--accent-tint); color: var(--blue); }
+
+/* Enlaces de adjuntos en las tablas */
+.oc-adj { font-size: 0.75rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.oc-adj:hover { text-decoration: underline; }
+.oc-adj--rojo { color: var(--red); }
+.oc-adj--azul { color: var(--accent-ink); }
+.oc-adj--verde { color: var(--green); }
+.oc-adj--subir {
+  background: none; border: 0; padding: 0; cursor: pointer; color: var(--label-3);
+  font-size: 0.75rem; font-weight: 600; text-decoration: underline dotted;
+}
+
+/* Hoja de adjuntos */
+.oc-adjuntos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-3); }
+.oc-adjunto {
+  display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-3);
+  border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--separator); min-width: 0;
+}
+.oc-adjunto__titulo { font-size: 0.8125rem; font-weight: 700; color: var(--label-1); }
+.oc-adjunto__actual { display: flex; align-items: center; gap: var(--s-2); }
+.oc-archivo { padding: 6px; font-size: 0.8125rem; }
+
+/* ── Listado ── */
+.oc-tarjetas-lista { display: flex; flex-direction: column; gap: var(--s-3); }
+.oc-paginacion { display: flex; align-items: center; justify-content: center; gap: var(--s-3); padding: var(--s-3) 0; }
+.oc-metricas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2); }
+.oc-filtros { display: flex; flex-direction: column; gap: var(--s-3); }
+.oc-filtros__fila { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
+.oc-fechas { display: flex; align-items: center; gap: var(--s-2); }
+.oc-fechas .input { min-height: 2.25rem; width: auto; font-size: 0.8125rem; }
+.oc-tarjeta-orden { display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-3); border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--separator); }
+.oc-tarjeta-orden__cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.oc-codigo { font-family: var(--font-mono); font-weight: 700; font-size: 0.9375rem; color: var(--accent-ink); background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.oc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.oc-chip { font-size: 0.6875rem; font-weight: 600; padding: 2px 8px; border-radius: var(--r-full); background: var(--fill-1); color: var(--label-1); }
+.oc-chip--mono { font-family: var(--font-mono); }
+.oc-tarjeta-orden__pie { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--separator); }
+.oc-tarjeta-orden__monto { font-weight: 800; font-variant-numeric: tabular-nums; }
+.oc-tarjeta-orden__monto small { display: block; font-size: 0.6875rem; font-weight: 600; color: var(--label-2); }
+.oc-tarjeta-orden__acciones { display: flex; align-items: center; gap: var(--s-2); }
+
+@media (max-width: 639px) {
+  .oc-adjuntos { grid-template-columns: 1fr; }
+  .oc-tarjetas { grid-template-columns: 1fr; }
+  .oc-metricas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .oc-pie__acciones { flex-direction: column-reverse; }
+}

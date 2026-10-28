@@ -3,21 +3,25 @@ import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { useToast } from '../../core/ui/Toast';
-import { errorMessage } from '../../core/api/client';
+import { api, errorMessage } from '../../core/api/client';
 import { guardarProveedor, type ProveedorInv } from './api';
 
 interface Props {
   open: boolean;
   proveedor: ProveedorInv | null;
+  /** Datos con los que se abre al crear (alta rápida desde una orden de compra) */
+  inicial?: { nombre?: string; ruc?: string } | null;
   onClose: () => void;
-  onGuardado: () => void;
+  /** Recibe el id del proveedor guardado */
+  onGuardado: (id?: string) => void;
 }
 
 const MONEDAS = ['PEN', 'USD'];
 
-export function ProveedorFormulario({ open, proveedor: p, onClose, onGuardado }: Props) {
+export function ProveedorFormulario({ open, proveedor: p, inicial, onClose, onGuardado }: Props) {
   const toast = useToast();
   const [guardando, setGuardando] = useState(false);
+  const [consultando, setConsultando] = useState(false);
 
   const [nombre, setNombre] = useState('');
   const [ruc, setRuc] = useState('');
@@ -46,16 +50,48 @@ export function ProveedorFormulario({ open, proveedor: p, onClose, onGuardado }:
       setMonedaPago(p.moneda_pago ?? 'PEN');
       setObservaciones(p.observaciones ?? '');
     } else {
-      setNombre(''); setRuc(''); setContacto(''); setTelefono(''); setCorreo('');
+      setNombre(inicial?.nombre ?? ''); setRuc(inicial?.ruc ?? ''); setContacto(''); setTelefono(''); setCorreo('');
       setDireccion(''); setBanco(''); setCuenta(''); setCci(''); setMonedaPago('PEN'); setObservaciones('');
     }
-  }, [open, p]);
+  }, [open, p, inicial?.nombre, inicial?.ruc]);
+
+  /** Consulta RUC o DNI (como el clásico): completa la razón social y la dirección, o el nombre de la persona */
+  async function consultarDocumento(texto: string) {
+    const numero = texto.replace(/\D/g, '');
+    const tipo = numero.length === 11 ? 'RUC' : numero.length === 8 ? 'DNI' : null;
+    if (!tipo) { toast('Escribe un RUC de 11 dígitos o un DNI de 8', 'error'); return; }
+    setConsultando(true);
+    try {
+      const d = await api<Record<string, string | undefined>>('/proxy/documento', { query: { tipo, numero } });
+      setRuc(numero);
+      if (tipo === 'RUC') {
+        setNombre(actual => (actual.trim() ? actual : (d.nombre ?? '')));
+        setDireccion(d.direccion ?? '');
+      } else {
+        const completo = [d.nombres, d.apellidoPaterno, d.apellidoMaterno].filter(Boolean).join(' ');
+        setNombre(actual => (actual.trim() ? actual : completo));
+      }
+      toast('Datos consultados');
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+    } finally {
+      setConsultando(false);
+    }
+  }
+
+  // Alta rápida con RUC o DNI ya escrito: la consulta corre sola al abrir
+  useEffect(() => {
+    if (!open || p || !inicial?.ruc) return;
+    const numero = inicial.ruc.replace(/\D/g, '');
+    if (numero.length === 8 || numero.length === 11) void consultarDocumento(numero);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, p, inicial?.ruc]);
 
   async function guardar() {
     if (!nombre.trim()) { toast('El nombre es obligatorio', 'error'); return; }
     setGuardando(true);
     try {
-      await guardarProveedor({
+      const res = (await guardarProveedor({
         nombre: nombre.trim(),
         ruc: ruc || null,
         contacto: contacto || null,
@@ -67,9 +103,9 @@ export function ProveedorFormulario({ open, proveedor: p, onClose, onGuardado }:
         cci: cci || null,
         moneda_pago: monedaPago || null,
         observaciones: observaciones || null,
-      }, p?.id);
+      }, p?.id)) as { id?: string | number } | undefined;
       toast(p ? 'Proveedor actualizado' : 'Proveedor registrado');
-      onGuardado();
+      onGuardado(p ? p.id : res?.id != null ? String(res.id) : undefined);
     } catch (err) {
       toast(errorMessage(err), 'error');
     } finally {
@@ -89,6 +125,9 @@ export function ProveedorFormulario({ open, proveedor: p, onClose, onGuardado }:
           <Field label="RUC / Documento">
             {pp => <TextInput {...pp} value={ruc} placeholder="20XXXXXXXXX" onChange={ev => setRuc(ev.target.value)} />}
           </Field>
+          <Button variant="secondary" loading={consultando} onClick={() => consultarDocumento(ruc)} style={{ alignSelf: 'end' }}>
+            Consultar RUC / DNI
+          </Button>
           <Field label="Contacto">
             {pp => <TextInput {...pp} value={contacto} placeholder="Nombre del asesor" onChange={ev => setContacto(ev.target.value)} />}
           </Field>

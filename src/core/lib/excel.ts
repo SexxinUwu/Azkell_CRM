@@ -1,11 +1,15 @@
 // Exportar tablas a Excel (.xlsx) desde cualquier pantalla. Carga la librería solo al usarla.
 // Date = fecha nativa de Excel (aaaa-mm-dd, o aaaa-mm-dd hh:mm:ss si trae hora, como el clásico). Se arma con UTC para que la hora no cambie.
-type Celda = string | number | Date | null | undefined;
+/** Texto con enlace (p. ej. "Ver factura" que abre el archivo) */
+export interface CeldaEnlace { texto: string; enlace: string }
+type Celda = string | number | Date | CeldaEnlace | null | undefined;
+const esEnlace = (c: Celda): c is CeldaEnlace => typeof c === 'object' && c !== null && !(c instanceof Date) && 'enlace' in c;
 
 // Fechas como fecha y hora reales de Excel (no texto): así las tablas dinámicas y los filtros por fecha funcionan.
 // El texto 'AAAA-MM-DD' o 'AAAA-MM-DD HH:mm[:ss]' ya viene en hora local; se arma con UTC para que la hora no cambie.
 const FECHA_HORA = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/;
 function celdaDe(c: Celda) {
+  if (esEnlace(c)) return { value: c.texto, hyperlink: c.enlace };
   if (c instanceof Date) {
     if (Number.isNaN(c.getTime())) return '';
     const conHora = c.getUTCHours() !== 0 || c.getUTCMinutes() !== 0 || c.getUTCSeconds() !== 0;
