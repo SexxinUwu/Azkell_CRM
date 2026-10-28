@@ -56,8 +56,6 @@ export function htmlEntradaPdf(d: DatosEntradaPdf): string {
   const credito = (e.condicion_pago ?? '').toLowerCase().startsWith('a cr');
   const condicion = credito ? `CRÉDITO${e.dias_credito ? ` / ${e.dias_credito} DÍAS` : ''}` : 'CONTADO';
   const vencimiento = credito ? sumarDias(e.fecha, Number(e.dias_credito) || 0) : fechaTexto(e.fecha);
-  const equivalenteSoles = e.moneda === 'USD' && e.tipo_cambio ? total * e.tipo_cambio : null;
-  const aprobado = !!(e.autoriza || e.aprobado_por) && (e.estado ?? '').toLowerCase().startsWith('aprob');
   // Título del documento: "ORDEN DE COMPRA" para las compras; otros tipos muestran su nombre
   const titulo = e.tipo_orden && !/orden de compra/i.test(e.tipo_orden) ? e.tipo_orden.toUpperCase() : 'ORDEN DE COMPRA';
 
@@ -71,10 +69,9 @@ export function htmlEntradaPdf(d: DatosEntradaPdf): string {
   const datosOrden = [
     dato('Fecha de emisión', fechaTexto(e.fecha)),
     dato('Moneda', e.moneda === 'USD' ? 'Dólares (US$)' : 'Soles (S/)'),
-    dato('Tipo de cambio SUNAT', e.moneda === 'USD' && e.tipo_cambio ? String(e.tipo_cambio) : 'No aplica'),
+    dato('Tipo de cambio', e.moneda === 'USD' && e.tipo_cambio ? String(e.tipo_cambio) : 'No aplica'),
     dato('Condición de pago', condicion),
     dato('Fecha de vencimiento', vencimiento ?? '—'),
-    dato('N° documento proveedor', e.documento_referencia || '—'),
   ].join('');
 
   const filas = (e.items ?? []).map((it, i) => {
@@ -92,18 +89,8 @@ export function htmlEntradaPdf(d: DatosEntradaPdf): string {
     ['Subtotal', `${sym}\u00A0${num(subtotal)}`],
     [conIgv ? 'IGV (18 %)' : 'IGV', conIgv ? `${sym}\u00A0${num(igv)}` : 'No aplica'],
   ].map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span style="color:#6e6e73">${esc(k)}</span><span style="font-family:'SF Mono',Menlo,monospace">${esc(v)}</span></div>`).join('')
-    + `<div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:15px;font-weight:700;border-top:1px solid #d2d2d7;margin-top:4px"><span>TOTAL</span><span style="font-family:'SF Mono',Menlo,monospace">${esc(sym)}\u00A0${num(total)}</span></div>`
-    + (equivalenteSoles != null ? `<div style="font-size:11px;color:#6e6e73;text-align:right;margin-top:4px">Equivalente S/\u00A0${num(equivalenteSoles)} (TC ${esc(e.tipo_cambio)})</div>` : '');
+    + `<div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:15px;font-weight:700;border-top:1px solid #d2d2d7;margin-top:4px"><span>TOTAL</span><span style="font-family:'SF Mono',Menlo,monospace">${esc(sym)}\u00A0${num(total)}</span></div>`;
 
-  const firmaSolicitante = e.solicitante || e.creado_por || '';
-  const firmaGerencia = aprobado ? (e.autoriza || e.aprobado_por || '') : '';
-  const bloqueFirma = (titulo: string, nombre: string, extra = '') => `
-    <div style="flex:1;text-align:center">
-      <div style="height:56px"></div>
-      <div style="border-top:1px solid #1d1d1f;padding-top:4px;font-size:11px;font-weight:600">${esc(titulo)}</div>
-      <div style="font-size:11px;color:#6e6e73">${esc(nombre || ' ')}</div>
-      ${extra ? `<div style="font-size:10px;color:#6e6e73">${esc(extra)}</div>` : ''}
-    </div>`;
 
   const emitido = new Date().toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
   return `
@@ -143,13 +130,7 @@ export function htmlEntradaPdf(d: DatosEntradaPdf): string {
 
     ${e.observaciones || e.motivo_entrada ? `<div style="margin-top:12px;font-size:11px;color:#334155"><strong>Motivo:</strong> ${esc(e.motivo_entrada || '—')}${e.observaciones ? `<br><strong>Observaciones:</strong> ${esc(e.observaciones)}` : ''}</div>` : ''}
 
-    <div style="display:flex;gap:24px;margin-top:26px">
-      ${bloqueFirma('Solicitante / Almacén', firmaSolicitante)}
-      ${bloqueFirma('V°B° Aprobación Gerencia', firmaGerencia, aprobado && e.fecha_aprobacion ? fechaTexto(e.fecha_aprobacion) : 'Pendiente de aprobación')}
-    </div>
-
-    <div style="margin-top:18px;padding-top:6px;border-top:1px solid #d2d2d7;font-size:10px;color:#6e6e73;display:flex;justify-content:space-between">
-      <span>Generado en Azkell Fleet por ${esc(d.usuario || 'sistema')}</span>
+    <div style="margin-top:18px;padding-top:6px;border-top:1px solid #d2d2d7;font-size:10px;color:#6e6e73;display:flex;justify-content:flex-end">
       <span>Emitido ${esc(emitido)}</span>
     </div>
   </div>`;
