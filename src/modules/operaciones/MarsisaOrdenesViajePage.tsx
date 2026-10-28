@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, ChevronLeft, ChevronRight, FileSpreadsheet, RefreshCw, Route, SearchX, Truck } from 'lucide-react';
+import { ArrowUpRight, ChevronLeft, ChevronRight, FileSpreadsheet, Pencil, RefreshCw, Route, SearchX, Truck } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -97,6 +97,7 @@ const COLUMNAS_RUTAS: ColumnaTabla[] = [
   { id: 'servicio', titulo: 'Tipo de servicio', ancho: 160 },
   { id: 'peso', titulo: 'Peso carga', ancho: 120, alinear: 'right' },
   { id: 'estado', titulo: 'Estado', ancho: 130, alinear: 'center' },
+  { id: 'editar', titulo: '', ancho: 64, minimo: 56, alinear: 'center' },
 ];
 
 // Operaciones › Órdenes de viaje Marsisa: órdenes sincronizadas desde el sistema de Marsisa (solo consulta).
@@ -110,6 +111,7 @@ export function MarsisaOrdenesViajePage() {
   const [tramo, setTramo] = useState<Tramo>('TODOS');
   const [pagina, setPagina] = useState(1);
   const [abierto, setAbierto] = useState<ViajeMarsisa | null>(null);
+  const [editando, setEditando] = useState<RutaMarsisa | null>(null);
   const [sync, setSync] = useState(false);
 
   const viajesQ = useQuery<ViajeMarsisa[]>({
@@ -280,11 +282,17 @@ export function MarsisaOrdenesViajePage() {
                   <Celda>{r.tipo_servicio || 'ESTÁNDAR'}</Celda>
                   <Celda alinear="right" mono>{TN(n(r.peso_total))}</Celda>
                   <Celda alinear="center"><Badge tone={toneDeEstado(r.estado)}>{estadoTexto(r.estado)}</Badge></Celda>
+                  <Celda alinear="center">
+                    <Button variant="plain" size="sm" iconOnly icon={<Pencil size={15} />} title="Editar peso"
+                      aria-label={`Editar peso del tramo ${r.viaje}`} onClick={e => { e.stopPropagation(); setEditando(r); }} />
+                  </Celda>
                 </tr>
               );
             })}
           </TablaRedimensionable>
         )}
+
+        {editando && <EditarPesoSheet key={editando.id} tramo={editando} onClose={() => setEditando(null)} />}
 
         {!cargando && !error && total > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-3)', flexWrap: 'wrap', fontSize: '0.8125rem', color: 'var(--label-2)' }}>
@@ -309,5 +317,55 @@ export function MarsisaOrdenesViajePage() {
         )}
       </Sheet>
     </Page>
+  );
+}
+
+/** Cambia el peso de un tramo (ida o retorno). Se guarda en kg en el servidor; aquí se escribe en toneladas. */
+function EditarPesoSheet({ tramo, onClose }: { tramo: RutaMarsisa; onClose: () => void }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [valor, setValor] = useState(() => (n(tramo.peso_total) / 1000).toFixed(2));
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const tipo = Number(tramo.es_retorno) === 1 ? 'retorno' : 'ida';
+
+  async function guardar() {
+    const tn = Number(valor.replace(',', '.'));
+    if (!Number.isFinite(tn) || tn < 0 || tn > 100) {
+      setError('Escribe un peso entre 0 y 100 TN');
+      return;
+    }
+    setGuardando(true);
+    setError(null);
+    try {
+      await api(`/operaciones/marsisa-ordenes-viaje/rutas/${tramo.id}`, { method: 'PUT', body: { peso_tn: tn } });
+      toast('Peso actualizado');
+      // Refresca viajes, tramos y análisis de combustible, que suman estos pesos
+      await qc.invalidateQueries({ queryKey: ['operaciones'] });
+      onClose();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <Sheet open onClose={() => { if (!guardando) onClose(); }} title={`Peso del tramo de ${tipo}`}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button>
+          <Button variant="primary" loading={guardando} onClick={guardar}>Guardar</Button>
+        </>
+      }>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+        <p className="t-footnote c-secondary">Viaje {tramo.viaje} · {tramo.ruta || 'Sin ruta'}</p>
+        {error && <Notice tone="error">{error}</Notice>}
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--label-2)' }}>Peso carga (TN)</span>
+          <TextInput inputMode="decimal" value={valor} onChange={e => setValor(e.target.value)} />
+        </label>
+      </div>
+    </Sheet>
   );
 }

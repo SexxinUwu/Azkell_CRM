@@ -657,6 +657,34 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
     });
 
     // ── PUT /api/operaciones/ordenes-viaje/:viaje (Editar Orden de Viaje) ───
+    // Peso de un tramo (ida o retorno) de una orden de viaje Marsisa. Se guarda en kg; la pantalla lo pide en toneladas.
+    router.put('/marsisa-ordenes-viaje/rutas/:id', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const id = Number(req.params.id);
+            const tn = Number((req.body || {}).peso_tn);
+            if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Tramo no válido' });
+            if (!Number.isFinite(tn) || tn < 0 || tn > 100) return res.status(400).json({ error: 'El peso debe estar entre 0 y 100 TN' });
+
+            const [previo] = await tdb.query(
+                'SELECT id, viaje, ruta, es_retorno, peso_total FROM marsisa_ordenes_viaje_rutas WHERE id = ? LIMIT 1', [id]);
+            if (!previo.length) return res.status(404).json({ error: 'El tramo no existe' });
+
+            const kg = Math.round(tn * 1000 * 100) / 100;
+            await tdb.query('UPDATE marsisa_ordenes_viaje_rutas SET peso_total = ? WHERE id = ?', [kg, id]);
+
+            const tramo = Number(previo[0].es_retorno) === 1 ? 'retorno' : 'ida';
+            if (typeof logAudit === 'function') {
+                logAudit(req, 'OPERACIONES', 'Órdenes de viaje', 'EDITÓ PESO DE TRAMO',
+                    `Viaje ${previo[0].viaje} · ${tramo} · ${previo[0].ruta || 'sin ruta'}: ${Number(previo[0].peso_total || 0)} kg → ${kg} kg`);
+            }
+            res.json({ ok: true, id, peso_total: kg });
+        } catch (err) {
+            console.error('[PUT /marsisa-ordenes-viaje/rutas/:id]', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     router.put('/ordenes-viaje/:viaje', async (req, res) => {
         try {
             const tdb = getDb(req);
