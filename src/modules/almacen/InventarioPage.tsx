@@ -1,5 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -16,7 +15,6 @@ import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { formatSoles } from '../../core/lib/format';
 import { abrirClasico } from '../../core/layout/navigation';
@@ -34,6 +32,8 @@ import './almacen.css';
 type Filtro = 'todos' | 'ok' | 'warning' | 'critical';
 type Pestana = 'fisicos' | 'servicios';
 const ESTADO_TEXTO = { ok: 'Stock OK', warning: 'Stock bajo', critical: '¡Reponer!' } as const;
+/** Filas por tanda en la lista: el resto se carga con "Cargar más" */
+const FILAS_PAGINA = 40;
 
 /** Servicios (SERV-…) no se descuentan físicamente: van en su propia pestaña */
 const esServicio = (a: ArticuloInv) => a.tipo === 'Servicio' || a.id.toUpperCase().startsWith('SERV');
@@ -52,11 +52,11 @@ function Kpi({ etiqueta, valor, tono, icono }: { etiqueta: string; valor: number
 }
 
 /** Fila de la lista: mismo formato que el clásico (miniatura, nombre, familia • código, chips, estado, cantidad y precio) */
-function FilaArticulo({ a, activo, onClick }: { a: ArticuloInv; activo: boolean; onClick: () => void }) {
+const FilaArticulo = memo(function FilaArticulo({ a, activo, onAbrir }: { a: ArticuloInv; activo: boolean; onAbrir: (a: ArticuloInv) => void }) {
   const tono = stockTono(a);
   const costo = a.moneda === 'USD' ? Number(a.costo_soles ?? 0) : Number(a.costo_referencial ?? 0);
   return (
-    <button type="button" className={`inv-card pressable${activo ? ' inv-card--activo' : ''}`} onClick={onClick}>
+    <button type="button" className={`inv-card pressable${activo ? ' inv-card--activo' : ''}`} onClick={() => onAbrir(a)}>
       {a.imagen_url
         ? <img src={a.imagen_url} alt="" className="inv-card__foto" />
         : <div className={`inv-card__icono${tono !== 'ok' ? ` inv-card__icono--${tono}` : ''}`}><Package size={22} strokeWidth={1.8} /></div>}
@@ -80,7 +80,7 @@ function FilaArticulo({ a, activo, onClick }: { a: ArticuloInv; activo: boolean;
       </div>
     </button>
   );
-}
+});
 
 export function InventarioPage() {
   const { data, isLoading, isError, error } = useInventario();
@@ -89,7 +89,6 @@ export function InventarioPage() {
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
-  const reduce = useReducedMotion();
 
   const [enPortal, setEnPortal] = useState(true);
   const [almacenSel, setAlmacenSel] = useState<string | null>(null);
@@ -99,6 +98,8 @@ export function InventarioPage() {
   const [filtro, setFiltro] = useState<Filtro>('todos');
   const [familias, setFamilias] = useState<string[]>([]);
   const [seleccionado, setSeleccionado] = useState<ArticuloInv | null>(null);
+  const [abierto, setAbierto] = useState(false);
+  const [cuantos, setCuantos] = useState(FILAS_PAGINA);
   const [formulario, setFormulario] = useState<{ articulo: ArticuloInv | null } | null>(null);
   const [porEliminar, setPorEliminar] = useState<ArticuloInv | null>(null);
   const [eliminando, setEliminando] = useState(false);
@@ -140,14 +141,20 @@ export function InventarioPage() {
     };
   }, [base, visibles, hayFiltros]);
 
-  function abrir(a: ArticuloInv) {
+  const abrir = useCallback((a: ArticuloInv) => {
     haptic('selection');
     setSeleccionado(a);
-  }
+    setAbierto(true);
+  }, []);
+
+  // Al cambiar búsqueda o filtros, la lista vuelve a la primera tanda
+  useEffect(() => {
+    setCuantos(FILAS_PAGINA);
+  }, [busqueda, anaquel, filtro, familias, pestana, almacenSel]);
 
   function elegirAlmacen(nombre: string | null) {
     setAlmacenSel(nombre);
-    setSeleccionado(null);
+    setAbierto(false);
     setEnPortal(false);
   }
 
@@ -192,8 +199,8 @@ export function InventarioPage() {
   const ficha = seleccionado && (
     <InventarioFicha
       articulo={seleccionado}
-      onEditar={puedeEditar ? () => { setFormulario({ articulo: seleccionado }); setSeleccionado(null); } : undefined}
-      onEliminar={puedeEliminar ? () => { setPorEliminar(seleccionado); setSeleccionado(null); } : undefined}
+      onEditar={puedeEditar ? () => { setAbierto(false); setFormulario({ articulo: seleccionado }); } : undefined}
+      onEliminar={puedeEliminar ? () => { setAbierto(false); setPorEliminar(seleccionado); } : undefined}
       onActualizado={() => qc.invalidateQueries({ queryKey: ['almacen', 'inventario'] })}
     />
   );
@@ -282,15 +289,16 @@ export function InventarioPage() {
             </EmptyState>
           ) : (
             <div className="inv-lista">
-              <AnimatePresence initial={false}>
-                {visibles.map(a => (
-                  <motion.div key={a.id} layout={!reduce} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring}>
-                    <FilaArticulo a={a} activo={seleccionado?.id === a.id} onClick={() => abrir(a)} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+              {visibles.slice(0, cuantos).map(a => (
+                <FilaArticulo key={a.id} a={a} activo={abierto && seleccionado?.id === a.id} onAbrir={abrir} />
+              ))}
+              {visibles.length > cuantos && (
+                <button type="button" className="mov__mas pressable" onClick={() => setCuantos(n => n + FILAS_PAGINA)}>
+                  Cargar más · {visibles.length - cuantos} restantes
+                </button>
+              )}
               <p style={{ textAlign: 'center', color: 'var(--label-2)', fontSize: '0.8125rem', padding: 'var(--s-4) 0' }}>
-                {visibles.length} artículo{visibles.length !== 1 ? 's' : ''}
+                Mostrando {Math.min(cuantos, visibles.length)} de {visibles.length} artículo{visibles.length !== 1 ? 's' : ''}
               </p>
             </div>
           )}
@@ -298,7 +306,7 @@ export function InventarioPage() {
       )}
 
       {/* Ficha del artículo: ventana sobre la lista */}
-      <Sheet open={!!seleccionado && !enPortal} onClose={() => setSeleccionado(null)} title="Artículo" ancho>
+      <Sheet open={abierto && !!seleccionado && !enPortal} onClose={() => setAbierto(false)} title="Artículo" ancho ligera>
         {ficha}
       </Sheet>
 
@@ -311,7 +319,7 @@ export function InventarioPage() {
           qc.invalidateQueries({ queryKey: ['almacen', 'inventario'] }).then(() => {
             if (id) {
               const nuevo = qc.getQueryData<ArticuloInv[]>(['almacen', 'inventario'])?.find(a => a.id === id);
-              if (nuevo) setSeleccionado(nuevo);
+              if (nuevo) { setSeleccionado(nuevo); setAbierto(true); }
             }
           });
         }}

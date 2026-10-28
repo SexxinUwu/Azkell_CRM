@@ -2759,26 +2759,37 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             const regDate = inv[0]?.fecha_regularizacion || null;
 
             targetDb.query(`
-            SELECT 'Entrada' AS tipo, e.fecha, e.created_at, e.id AS doc_id, e.proveedor_nombre AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe, e.tipo_cambio
+            SELECT 'Entrada' AS tipo, e.fecha, e.created_at, e.id AS doc_id, e.proveedor_nombre AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe, e.tipo_cambio, ((? IS NULL) OR COALESCE(e.created_at, e.fecha) > ?) AS posterior
             FROM detalle_entradas_inv d JOIN entradas_inv e ON e.id=d.entrada_id
             WHERE d.inventario_id=? AND (e.estado IS NULL OR e.estado != 'Anulado') AND (e.tipo_orden = 'Entrada directa' OR e.tipo_orden = 'Ajuste')
             UNION ALL
-            SELECT 'Recepción OC' AS tipo, DATE(r.fecha_recepcion) AS fecha, r.fecha_recepcion AS created_at, r.oc_id AS doc_id, CONCAT('Recepción OC / ', COALESCE(r.almacen,'ALM CENTRAL'), ' - ', COALESCE(r.usuario,'')) AS contraparte, dr.cantidad_recibida AS cantidad, dr.costo_unitario, dr.moneda, (dr.cantidad_recibida * dr.costo_unitario) AS importe, e.tipo_cambio
+            SELECT 'Recepción OC' AS tipo, DATE(r.fecha_recepcion) AS fecha, r.fecha_recepcion AS created_at, r.oc_id AS doc_id, CONCAT('Recepción OC / ', COALESCE(r.almacen,'ALM CENTRAL'), ' - ', COALESCE(r.usuario,'')) AS contraparte, dr.cantidad_recibida AS cantidad, dr.costo_unitario, dr.moneda, (dr.cantidad_recibida * dr.costo_unitario) AS importe, e.tipo_cambio, ((? IS NULL) OR COALESCE(r.created_at, r.fecha_recepcion) > ?) AS posterior
             FROM detalle_recepciones_oc dr 
             JOIN recepciones_oc r ON r.id=dr.recepcion_id
             JOIN entradas_inv e ON e.id=r.oc_id
             WHERE dr.inventario_id=? AND (e.estado IS NULL OR (e.estado != 'Anulado' AND LOWER(e.estado) NOT LIKE '%anul%' AND LOWER(e.estado) NOT LIKE '%rechaz%'))
             UNION ALL
-            SELECT 'Salida' AS tipo, s.fecha, s.created_at, s.id AS doc_id, CONCAT(s.tipo_destino,' / ',COALESCE(s.placa,s.responsable,'—')) AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe, s.tipo_cambio
+            SELECT 'Salida' AS tipo, s.fecha, s.created_at, s.id AS doc_id, CONCAT(s.tipo_destino,' / ',COALESCE(s.placa,s.responsable,'—')) AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe, s.tipo_cambio, ((? IS NULL) OR COALESCE(s.created_at, s.fecha) > ?) AS posterior
             FROM detalle_salidas_inv d JOIN salidas_inv s ON s.id=d.salida_id
             WHERE d.inventario_id=? AND (s.estado IS NULL OR s.estado = 'Despachado')
             ORDER BY fecha ASC, created_at ASC, doc_id ASC
-        `, [id, id, id], (err, rows) => {
+        `, [regDate, regDate, id, regDate, regDate, id, regDate, regDate, id], (err, rows) => {
                 if (err) return res.status(500).json({ error: err.message });
-                // Costo promedio ponderado en soles: cada entrada recalcula el promedio; las salidas salen al promedio vigente
+                // Igual que el stock actual: el saldo arranca en la última regularización (stock_regularizado)
+                // y solo suma o resta los movimientos posteriores a ella. Lo anterior ya está dentro de esa base.
                 let saldo = base;
                 let promedio = inv[0] && inv[0].moneda !== 'USD' ? (parseFloat(inv[0].costo_referencial) || 0) : 0;
-                rows.forEach(r => {
+                const movimientos = [];
+                if (regDate) {
+                    movimientos.push({
+                        tipo: 'Regularización', fecha: regDate, created_at: regDate, doc_id: null,
+                        contraparte: 'Stock físico (regularización)', cantidad: 0,
+                        costo_unitario: null, costo_unitario_soles: null,
+                        costo_promedio: +promedio.toFixed(4), saldo: parseFloat(saldo.toFixed(4)),
+                        valor_saldo: +(Math.max(saldo, 0) * promedio).toFixed(2),
+                    });
+                }
+                rows.filter(r => Number(r.posterior) === 1).forEach(r => {
                     const cant = parseFloat(r.cantidad || 0);
                     const tc = String(r.moneda || '').toUpperCase() === 'USD' ? (parseFloat(r.tipo_cambio) || 1) : 1;
                     if (r.tipo === 'Entrada' || r.tipo === 'Recepción OC') {
@@ -2794,8 +2805,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     r.costo_promedio = +promedio.toFixed(4);
                     r.valor_saldo = +(Math.max(saldo, 0) * promedio).toFixed(2);
                     r.saldo = parseFloat(saldo.toFixed(4));
+                    movimientos.push(r);
                 });
-                res.json({ stock_base: base, fecha_regularizacion: regDate, movimientos: rows });
+                res.json({ stock_base: base, fecha_regularizacion: regDate, movimientos });
             });
         });
     });

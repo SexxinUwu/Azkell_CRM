@@ -20,6 +20,8 @@ interface SheetProps {
   anclaAbajo?: boolean;
   /** Diálogo ancho en escritorio (formularios con tablas) */
   ancho?: boolean;
+  /** Animación corta solo con transform y opacidad (sin desenfoque): para fichas grandes que se abren muy seguido */
+  ligera?: boolean;
 }
 
 /**
@@ -29,7 +31,7 @@ interface SheetProps {
  *   el impulso del dedo (skill apple-design §6) para decidir si cierra o vuelve.
  * Entra y sale por el mismo camino (§7). Escape cierra. El foco vuelve al disparador.
  */
-export function Sheet({ open, onClose, title, children, footer, anclaAbajo = false, ancho = false }: SheetProps) {
+export function Sheet({ open, onClose, title, children, footer, anclaAbajo = false, ancho = false, ligera = false }: SheetProps) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
   const titleId = useId();
   const dragControls = useDragControls();
@@ -80,14 +82,19 @@ export function Sheet({ open, onClose, title, children, footer, anclaAbajo = fal
   }
 
   const abajo = anclaAbajo || isMobile;
-  const panelMotion = abajo
-    ? { initial: { y: '112%' }, animate: { y: 0 }, exit: { y: '112%' }, transition: spring } // 112 %: la hoja flota separada del borde
-    : {
-        initial: { opacity: 0, scale: 0.96, filter: 'blur(6px)' },
-        animate: { opacity: 1, scale: 1, filter: 'blur(0px)' },
-        exit: { opacity: 0, scale: 0.96, filter: 'blur(6px)' },
-        transition: spring,
-      };
+  const rapida = { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const };
+  const panelMotion = ligera
+    ? abajo
+      ? { initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' }, transition: rapida }
+      : { initial: { opacity: 0, scale: 0.98 }, animate: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.98 }, transition: rapida }
+    : abajo
+      ? { initial: { y: '112%' }, animate: { y: 0 }, exit: { y: '112%' }, transition: spring } // 112 %: la hoja flota separada del borde
+      : {
+          initial: { opacity: 0, scale: 0.96, filter: 'blur(6px)' },
+          animate: { opacity: 1, scale: 1, filter: 'blur(0px)' },
+          exit: { opacity: 0, scale: 0.96, filter: 'blur(6px)' },
+          transition: spring,
+        };
 
   return createPortal(
     <AnimatePresence>

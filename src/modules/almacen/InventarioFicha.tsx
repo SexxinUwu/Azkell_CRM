@@ -9,7 +9,8 @@ import { RegularizarSheet } from './RegularizarSheet';
 import { api } from '../../core/api/client';
 import { useToast } from '../../core/ui/Toast';
 import { imprimirEtiqueta } from './etiquetaArticulo';
-import { formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
+import { formatMoneda, formatSoles } from '../../core/lib/format';
+import { KardexMovimientos } from './KardexMovimientos';
 
 interface Props {
   articulo: ArticuloInv;
@@ -66,7 +67,7 @@ export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, o
   const capacidad = a.stock_max > 0 ? Math.min(100, Math.round((stock / a.stock_max) * 100)) : null;
   const codigoBarra = a.codigo_barras || a.id;
 
-  const { data: kardexData } = useKardex(a.id);
+  const { data: kardexData, isLoading: cargandoKardex } = useKardex(a.id);
   const kardex = kardexData?.items;
 
   let marcasArr: string[] = [];
@@ -188,38 +189,13 @@ export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, o
         </section>
       )}
 
-      {/* Kardex reciente */}
-      {kardex && kardex.length > 0 && (
-        <section className="inv-tarjeta">
-          <h3 className="inv-tarjeta__titulo">Últimos movimientos</h3>
-          <div style={{ overflow: 'auto' }}>
-            <table className="inv-kardex">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Tipo</th>
-                  <th>Documento</th>
-                  <th style={{ textAlign: 'right' }}>Cant.</th>
-                  <th style={{ textAlign: 'right' }}>Saldo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {kardex.slice(0, 15).map((k, i) => (
-                  <tr key={i}>
-                    <td>{formatFechaPe(k.fecha)}</td>
-                    <td><span className={k.tipo === 'ENTRADA' ? 'inv-kardex__entrada' : 'inv-kardex__salida'}>{k.tipo}</span></td>
-                    <td style={{ color: 'var(--label-2)' }}>{k.documento ?? '—'}</td>
-                    <td style={{ textAlign: 'right' }} className={k.tipo === 'ENTRADA' ? 'inv-kardex__entrada' : 'inv-kardex__salida'}>
-                      {k.tipo === 'ENTRADA' ? '+' : '-'}{Math.abs(k.cantidad)}
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{k.saldo}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+      {/* Movimientos: el más reciente primero, con saldo desde la última regularización */}
+      <section className="inv-tarjeta">
+        <h3 className="inv-tarjeta__titulo">Movimientos</h3>
+        {cargandoKardex
+          ? <p className="inv-tarjeta__nota">Cargando movimientos…</p>
+          : <KardexMovimientos items={kardex ?? []} />}
+      </section>
 
       <RegularizarSheet
         open={regularizando}

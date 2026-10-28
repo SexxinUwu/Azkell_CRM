@@ -293,10 +293,8 @@
 }
 .inv-card:hover { background: var(--fill-subtle); }
 .inv-card:active { background: var(--fill); }
-.inv-card--activo { background: var(--ink); color: var(--label-inverse); box-shadow: none; }
-.inv-card--activo .inv-card__sub,
-.inv-card--activo .inv-card__unidad,
-.inv-card--activo .inv-card__limites { color: rgba(255,255,255,0.6); }
+.inv-card--activo,
+.inv-card--activo:hover { background: var(--accent-tint); box-shadow: inset 3px 0 0 var(--accent); }
 
 .inv-card__icono {
   width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0;
@@ -343,4 +341,37 @@
 @media (max-width: 600px) {
   .inv-card { padding: 12px 14px; gap: 12px; }
   .inv-card__icono, .inv-card__foto { width: 44px; height: 44px; }
+}
+
+/* ─── Movimientos del artículo (ficha) y botón "Cargar más" ─── */
+.mov { display: flex; flex-direction: column; gap: var(--s-3); }
+.mov__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.mov__item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: var(--r-lg);
+  background: var(--surface); box-shadow: 0 0 0 0.5px var(--separator);
+}
+.mov__icono {
+  width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+  display: grid; place-items: center; background: var(--fill); color: var(--label-2);
+}
+.mov__item--entrada .mov__icono { background: var(--green-tint); color: var(--green-ink); }
+.mov__item--salida .mov__icono { background: var(--red-tint); color: var(--red-ink); }
+.mov__item--regularizacion .mov__icono { background: var(--amber-tint); color: var(--amber-ink); }
+.mov__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mov__cab { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.mov__tipo { font-size: 0.8125rem; font-weight: 700; }
+.mov__fecha { font-size: 0.75rem; color: var(--label-2); font-family: var(--font-mono); white-space: nowrap; }
+.mov__detalle { font-size: 0.8125rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mov__doc { font-size: 0.6875rem; color: var(--label-3); font-family: var(--font-mono); }
+.mov__cifras { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+.mov__cantidad { font-size: 1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mov__item--entrada .mov__cantidad { color: var(--green-ink); }
+.mov__item--salida .mov__cantidad { color: var(--red-ink); }
+.mov__saldo { font-size: 0.75rem; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.mov__saldo b { color: var(--ink); font-weight: 700; }
+.mov__valor { font-size: 0.6875rem; color: var(--label-3); }
+.mov__mas {
+  align-self: center; padding: 10px 18px; border: none; border-radius: 999px;
+  background: var(--fill); color: var(--accent-ink); font-size: 0.8125rem; font-weight: 600; cursor: pointer;
 }
