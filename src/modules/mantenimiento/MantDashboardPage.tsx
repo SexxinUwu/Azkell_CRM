@@ -368,7 +368,7 @@ export function MantDashboardPage() {
           <div className="mant-grid">
             <div className="mant-col-7">
               <Tarjeta titulo="Últimos cambios de preventivo" icono={<Clock size={15} />}>
-                <TablaRedimensionable id="dash-ultimos-cambios" columnas={COL_CAMBIOS} ariaLabel="Últimos cambios de preventivo" altoMax="45vh">
+                <TablaRedimensionable id="dash-ultimos-cambios" columnas={COL_CAMBIOS} ariaLabel="Últimos cambios de preventivo" altoMax="45vh" className="tabla-sin-barras">
                   {cambios.map((f, i) => (
                     <tr key={`${frPlaca(f)}-${frFecha(f)}-${i}`}>
                       <Celda mono>{fechaDMY(frFechaIso(f))}</Celda>
@@ -399,7 +399,7 @@ export function MantDashboardPage() {
           <div className="mant-grid">
             <div className="mant-col-12">
               <Tarjeta titulo="Unidades en taller" icono={<Wrench size={15} />}>
-                <TablaRedimensionable id="dash-en-taller" columnas={COL_TALLER} ariaLabel="Unidades en taller y su rampa" altoMax="45vh">
+                <TablaRedimensionable id="dash-en-taller" columnas={COL_TALLER} ariaLabel="Unidades en taller y su rampa" altoMax="45vh" className="tabla-sin-barras">
                   {tallerRows.map(f => (
                     <tr key={f.placa}>
                       <Celda><LicensePlate plate={f.placa} size="sm" /></Celda>
@@ -433,7 +433,7 @@ export function MantDashboardPage() {
             </div>
             <div className="mant-col-7">
               <Tarjeta titulo="Ingresos por placa" icono={<Truck size={15} />}>
-                <TablaRedimensionable id="ingresos-placas" columnas={COL_PLACAS} ariaLabel="Ingresos por placa" altoMax="45vh">
+                <TablaRedimensionable id="ingresos-placas" columnas={COL_PLACAS} ariaLabel="Ingresos por placa" altoMax="45vh" className="tabla-sin-barras">
                   {placasIngreso.map(p => (
                     <tr key={p.placa} onClick={() => setPlacaSel(p.placa)} style={{ cursor: 'pointer' }}>
                       <Celda><LicensePlate plate={p.placa} size="sm" /></Celda>
@@ -485,7 +485,7 @@ export function MantDashboardPage() {
           )}
 
           <Tarjeta titulo="Ingresos por placa y fecha" icono={<Wrench size={15} />}>
-            <TablaRedimensionable id="ingresos-dia" columnas={COL_DIA} ariaLabel="Ingresos por placa y fecha" altoMax="50vh">
+            <TablaRedimensionable id="ingresos-dia" columnas={COL_DIA} ariaLabel="Ingresos por placa y fecha" altoMax="50vh" className="tabla-sin-barras">
               {porDia.map(g => (
                 <tr key={`${g.placa}|${g.fecha}`} onClick={() => setPlacaSel(g.placa)} style={{ cursor: 'pointer' }}>
                   <Celda><LicensePlate plate={g.placa} size="sm" /></Celda>
