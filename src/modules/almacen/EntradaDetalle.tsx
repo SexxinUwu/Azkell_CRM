@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { Check, CircleAlert, CreditCard, Shield, Package, X } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Ban, BadgeCheck, Check, CircleAlert, CreditCard, Eye, FileDown, Package, Paperclip, Pencil, Shield, Trash2, X } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
 import { formatFechaPe, formatMoneda } from '../../core/lib/format';
@@ -24,6 +24,8 @@ interface Props {
   unidadDe: (inventarioId: string | null) => string | null;
 }
 
+type EstadoPaso = 'hecho' | 'actual' | 'alerta' | 'rojo' | 'pendiente';
+
 const TONO_BADGE: Record<TonoEstado, string> = {
   gray: '', green: 'badge--green', sky: 'oc-badge--sky', amber: 'badge--amber', red: 'badge--red',
 };
@@ -38,7 +40,7 @@ function notaGerencia(texto: string): string {
 const fechaCorta = (s: string | null | undefined) => (s ? formatFechaPe(String(s).split('T')[0]) : '—');
 
 export function EntradaDetalle({
-  entrada: e, onVolver, onEditar, onAdjuntos, onAprobar, onAnular, onEliminar, onPdf, onVistaPrevia, generandoPdf, unidadDe,
+  entrada: e, onEditar, onAdjuntos, onAprobar, onAnular, onEliminar, onPdf, onVistaPrevia, generandoPdf, unidadDe,
 }: Props) {
   const items = e.items ?? [];
   const moneda = e.moneda === 'USD' ? 'USD' : 'PEN';
@@ -84,11 +86,19 @@ export function EntradaDetalle({
     banner = { tono: 'oc-banner--gris', titulo: 'REGISTRADA', texto: 'En espera de visto bueno presupuestario por Gerencia.' };
   }
 
-  // Pasos: registro → aprobación → pago → recepción
-  const ancho = recepCompleta ? 1 : procesado ? 2 / 3 : aprobadoReal ? 1 / 3 : 0;
-  const nodoAprob = aprobadoReal ? 'ok' : observado ? 'alerta' : anulado ? 'rojo' : '';
+  // Línea de vida: registro → aprobación → pago → recepción
+  const estadoAprob: EstadoPaso = anulado ? 'rojo' : observado ? 'alerta' : aprobadoReal ? 'hecho' : 'actual';
   const pagoOk = procesado || recepCompleta;
-  const nodoRecep = recepCompleta ? 'ok' : recepParcial ? 'parcial' : '';
+  const estadoPago: EstadoPaso = pagoOk ? 'hecho' : aprobadoReal ? 'actual' : 'pendiente';
+  const estadoRecep: EstadoPaso = recepCompleta ? 'hecho' : (recepParcial || pagoOk) ? 'actual' : 'pendiente';
+  const pasos: Array<{ titulo: string; texto: string; estado: EstadoPaso; icono: ReactNode }> = [
+    { titulo: 'Registro', texto: fechaCorta(e.fecha || e.created_at), estado: 'hecho', icono: <Check size={16} strokeWidth={2.4} /> },
+    { titulo: 'Aprobación', texto: aprobador || '—', estado: estadoAprob, icono: observado ? <CircleAlert size={16} /> : anulado ? <X size={16} /> : <Shield size={16} /> },
+    { titulo: 'Pago', texto: pagoOk ? 'Pago registrado' : 'Por liquidar', estado: estadoPago, icono: <CreditCard size={16} /> },
+    { titulo: 'Recepción', texto: recepCompleta ? '100 % recepcionado' : recepParcial ? `${pct} % recepcionado` : '0 % recepcionado', estado: estadoRecep, icono: <Package size={16} /> },
+  ];
+  const avance = pasos.reduce((s, p) => s + (p.estado === 'hecho' ? 1 : p.estado === 'actual' ? 0.5 : 0), 0);
+  const fraccionLinea = Math.min(1, Math.max(0, avance / (pasos.length - 1)));
 
   const docs = [
     { etiqueta: 'Cotización', url: e.url_cotizacion_presigned || e.url_cotizacion },
@@ -96,59 +106,48 @@ export function EntradaDetalle({
     { etiqueta: 'Voucher', url: e.url_voucher_presigned || e.url_voucher },
   ];
 
+  // Motivos: los mismos campos del formulario
   const naturaleza = naturalezaDeSubMotivo(e.sub_motivo);
   const pago = `${moneda === 'USD' ? 'Dólares (US$)' : 'Soles (S/)'} · ${(e.condicion_pago || 'Al contado').toUpperCase()}${e.condicion_pago?.startsWith('A cr') && (e.dias_credito || e.dias_pagar) ? ` · ${e.dias_credito || e.dias_pagar} días` : ''}`;
   const esSrv = esServicio(e.tipo_orden);
   const tituloTipo = esSrv ? 'Orden de servicio' : 'Orden de compra';
 
   const menu: Array<OpcionOtros | false | null | undefined> = [
-    onEditar && { label: 'Editar orden', onSelect: onEditar },
-    { label: 'Adjuntos y sustentos', detalle: 'Cotización, factura y voucher', onSelect: onAdjuntos },
-    onAnular && { label: 'Anular orden', destructiva: true, separado: true, onSelect: onAnular },
-    onEliminar && { label: 'Eliminar', destructiva: true, onSelect: onEliminar },
+    onEditar && { label: 'Editar orden', icon: <Pencil size={17} />, onSelect: onEditar },
+    { label: 'Adjuntos y sustentos', icon: <Paperclip size={17} />, detalle: 'Cotización, factura y voucher', onSelect: onAdjuntos },
+    onAnular && { label: 'Anular orden', icon: <Ban size={17} />, destructiva: true, separado: true, onSelect: onAnular },
+    onEliminar && { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, onSelect: onEliminar },
   ];
 
   return (
     <div className="oc-ficha">
-      <div className="tarjeta__barra">
-        <button type="button" className="tarjeta__volver" onClick={onVolver}>
-          <span style={{ fontSize: '1.2rem' }}>‹</span> Órdenes
-        </button>
-        <div className="tarjeta__barra-acciones">
-          <MenuOtros opciones={menu} />
+      {/* Cabecera: identificación, estado y menú */}
+      <header className="oc-hero">
+        <div className="oc-hero__izq">
+          <span className="oc-hero__id">{tituloTipo} N° {codigoLimpio(e.id)}</span>
+          <h2 className="oc-hero__titulo">{e.proveedor_nombre || e.motivo_entrada || 'Sin proveedor'}</h2>
+          <span className={`badge ${TONO_BADGE[etiqueta.tono]}`.trim()}>{etiqueta.texto}</span>
         </div>
-      </div>
-
-      {/* Cabecera */}
-      <div className="inv-ficha__hero" style={{ paddingTop: 'var(--s-2)' }}>
-        <span className="inv-ficha__id">{tituloTipo} N° {codigoLimpio(e.id)}</span>
-        <h2 className="inv-ficha__nombre">{e.proveedor_nombre || e.motivo_entrada || 'Sin proveedor'}</h2>
-        <span className={`badge ${TONO_BADGE[etiqueta.tono]}`.trim()}>{etiqueta.texto}</span>
-      </div>
+        <MenuOtros opciones={menu} />
+      </header>
 
       {/* Acciones principales */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)', justifyContent: 'center' }}>
-        {onAprobar && <Button variant="primary" onClick={onAprobar}>Aprobar O/C</Button>}
-        <Button variant="secondary" loading={generandoPdf} onClick={onPdf}>Descargar PDF</Button>
-        <Button variant="plain" onClick={onVistaPrevia}>Vista previa</Button>
+      <div className="oc-acciones">
+        {onAprobar && <Button variant="primary" icon={<BadgeCheck size={16} />} onClick={onAprobar}>Aprobar O/C</Button>}
+        <Button variant="secondary" icon={<FileDown size={16} />} loading={generandoPdf} onClick={onPdf}>Descargar PDF</Button>
+        <Button variant="plain" icon={<Eye size={16} />} onClick={onVistaPrevia}>Vista previa</Button>
       </div>
 
-      {/* Estado y trazabilidad */}
+      {/* Estado */}
       <div className={`oc-banner ${banner.tono}`} role="status">
         <strong>{banner.titulo}</strong>
         <span>{banner.texto}</span>
       </div>
 
-      <div className="oc-pasos" aria-label="Trazabilidad de la orden">
-        <div className="oc-pasos__relleno" style={{ width: `${75 * ancho}%` }} />
-        <Paso titulo="Registro" nodo="ok" icono={<Check size={14} />} texto={fechaCorta(e.fecha || e.created_at)} />
-        <Paso titulo="Aprobación" nodo={nodoAprob} icono={observado ? <CircleAlert size={14} /> : anulado ? <X size={14} /> : <Shield size={14} />}
-          texto={aprobador || '—'} />
-        <Paso titulo="Pago" nodo={pagoOk ? 'ok' : ''} icono={<CreditCard size={14} />} texto={pagoOk ? 'Pago registrado' : 'Por liquidar'} />
-        <Paso titulo="Recepción" nodo={nodoRecep} icono={<Package size={14} />}
-          texto={recepCompleta ? '100 % recepcionado' : recepParcial ? `${pct} % recepcionado` : '0 % recepcionado'} />
-      </div>
+      {/* Línea de vida animada */}
+      <LineaDeVida pasos={pasos} fraccion={fraccionLinea} />
 
+      {/* Avance de recepción */}
       <div className="oc-progreso">
         <div className="oc-progreso__cab">
           <span>{recibido} de {totalCant} unidades recepcionadas ({items.length} {items.length === 1 ? 'renglón' : 'renglones'})</span>
@@ -159,20 +158,35 @@ export function EntradaDetalle({
         </div>
       </div>
 
-      {/* Datos */}
-      <div className="oc-tarjetas">
-        <Tarjeta etiqueta="Solicitante" valor={e.autoriza || e.solicitante || '—'} />
-        <Tarjeta etiqueta="Creada por" valor={e.creador_nombre || e.creado_por || '—'} />
-        <Tarjeta etiqueta="Fecha de emisión" valor={fechaCorta(e.fecha)} />
-        <Tarjeta etiqueta="Destino" valor={e.placa ? `Unidad ${e.placa}` : (e.centro_costo || 'Almacén central')} />
-        <Tarjeta etiqueta="Proveedor" valor={e.proveedor_nombre || 'Proveedor general'} extra={e.proveedor_ruc ? `RUC ${e.proveedor_ruc}` : undefined} />
-        <Tarjeta etiqueta="Documento del proveedor" valor={e.documento_referencia || '—'} />
-        <Tarjeta etiqueta="Motivo" valor={e.motivo_entrada || '—'} extra={e.sub_motivo ? `${naturaleza || 'Gasto'} · ${e.sub_motivo}` : undefined} />
-        <Tarjeta etiqueta="Condición de pago" valor={pago} extra={`Centro de costos ${e.centro_costo || 'CC-100'} · Prioridad ${e.prioridad || 'Normal'}`} />
+      {/* Datos, agrupados */}
+      <div className="oc-datos">
+        <Grupo titulo="Solicitud">
+          <Dato etiqueta="Solicitante (autoriza)" valor={e.autoriza || e.solicitante || '—'} />
+          <Dato etiqueta="Creada por" valor={e.creador_nombre || e.creado_por || '—'} />
+        </Grupo>
+        <Grupo titulo="Emisión y destino">
+          <Dato etiqueta="Fecha de emisión" valor={fechaCorta(e.fecha)} />
+          <Dato etiqueta="Destino / unidad" valor={e.placa ? `Unidad ${e.placa}` : 'Almacén central'} />
+          <Dato etiqueta="Centro de costos" valor={e.centro_costo || 'CC-100'} />
+          <Dato etiqueta="Prioridad" valor={e.prioridad || 'Normal'} />
+        </Grupo>
+        <Grupo titulo="Proveedor">
+          <Dato etiqueta="Razón social" valor={e.proveedor_nombre || 'Proveedor general'} extra={e.proveedor_ruc ? `RUC ${e.proveedor_ruc}` : undefined} />
+          <Dato etiqueta="Documento del proveedor" valor={e.documento_referencia || '—'} />
+        </Grupo>
+        <Grupo titulo="Documentos y pago">
+          <Dato etiqueta="Condición de pago" valor={pago} />
+        </Grupo>
+        <Grupo titulo="Motivo" ancho>
+          <Dato etiqueta="Motivo de compra / ingreso" valor={e.motivo_entrada || '—'} />
+          <Dato etiqueta="Motivo (naturaleza del gasto)" valor={naturaleza || '—'} />
+          <Dato etiqueta="Sub motivo (detalle)" valor={e.sub_motivo || '—'} />
+        </Grupo>
       </div>
 
+      {/* Documentos */}
       <div>
-        <p className="tarjeta__grupo-titulo">Documentos</p>
+        <p className="oc-seccion">Documentos</p>
         <div className="oc-docs">
           {docs.map(d => d.url
             ? <a key={d.etiqueta} className="oc-doc oc-doc--ok" href={d.url} target="_blank" rel="noreferrer">{d.etiqueta}</a>
@@ -181,87 +195,98 @@ export function EntradaDetalle({
       </div>
 
       {e.observaciones && (
-        <div className="tarjeta">
-          <p className="tarjeta__grupo-titulo" style={{ marginTop: 0 }}>Observaciones</p>
-          <p style={{ margin: 0, fontSize: '0.875rem' }}>{e.observaciones}</p>
+        <div className="oc-bloque">
+          <p className="oc-seccion">Observaciones</p>
+          <p className="oc-texto">{e.observaciones}</p>
         </div>
       )}
 
-      {/* Artículos */}
+      {/* Artículos: lista que se lee bien en el teléfono */}
       <div>
-        <p className="tarjeta__grupo-titulo">Artículos ({items.length})</p>
+        <p className="oc-seccion">Artículos ({items.length})</p>
         {items.length === 0 ? (
           <p className="t-footnote c-secondary">No hay artículos en esta orden.</p>
         ) : (
-          <div className="tarjeta__lista" style={{ overflow: 'auto' }}>
-            <table className="inv-kardex">
-              <thead>
-                <tr>
-                  <th style={{ width: 28 }}>#</th>
-                  <th>Código</th>
-                  <th>Descripción</th>
-                  <th style={{ textAlign: 'center' }}>U.M.</th>
-                  <th style={{ textAlign: 'right' }}>Cant.</th>
-                  <th style={{ textAlign: 'right' }}>P. unit.</th>
-                  <th style={{ textAlign: 'right' }}>Importe</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it, i) => (
-                  <tr key={it.id ?? i}>
-                    <td>{i + 1}</td>
-                    <td className="oc-mono" style={{ fontSize: '0.75rem' }}>{it.inventario_id || '—'}</td>
-                    <td style={{ fontWeight: 600 }}>{descripcionArticulo(it.descripcion, it.inventario_id) || it.inventario_id || '—'}</td>
-                    <td style={{ textAlign: 'center' }}>{it.item_unidad || unidadDe(it.inventario_id) || 'UND'}</td>
-                    <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{Number(it.cantidad).toLocaleString('es-PE', { maximumFractionDigits: 3 })}</td>
-                    <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatMoneda(it.costo_unitario, moneda)}</td>
-                    <td className="oc-importe" style={{ textAlign: 'right' }}>
-                      {formatMoneda(Number(it.importe) || (Number(it.cantidad) || 0) * (Number(it.costo_unitario) || 0), moneda)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="oc-items">
+            {items.map((it, i) => {
+              const importe = Number(it.importe) || (Number(it.cantidad) || 0) * (Number(it.costo_unitario) || 0);
+              return (
+                <li key={it.id ?? i} className="oc-item">
+                  <span className="oc-item__n">{i + 1}</span>
+                  <div className="oc-item__cuerpo">
+                    <span className="oc-item__nombre">{descripcionArticulo(it.descripcion, it.inventario_id) || it.inventario_id || '—'}</span>
+                    <span className="oc-item__meta">
+                      <span className="oc-mono">{it.inventario_id || '—'}</span>
+                      {' · '}{it.item_unidad || unidadDe(it.inventario_id) || 'UND'}
+                      {' · '}{Number(it.cantidad).toLocaleString('es-PE', { maximumFractionDigits: 3 })} × {formatMoneda(it.costo_unitario, moneda)}
+                    </span>
+                  </div>
+                  <strong className="oc-item__importe">{formatMoneda(importe, moneda)}</strong>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
 
       {/* Total */}
-      <div className="tarjeta" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-        <span className="t-footnote c-secondary">SON: {numeroALetras(totalReal)} {moneda === 'USD' ? 'DÓLARES AMERICANOS' : 'SOLES'}</span>
+      <div className="oc-total">
+        <span className="oc-total__son">SON: {numeroALetras(totalReal)} {moneda === 'USD' ? 'DÓLARES AMERICANOS' : 'SOLES'}</span>
         {conIgv && (
-          <span className="t-footnote c-secondary">
-            Gravado {formatMoneda(gravado, moneda)} · IGV 18 % {formatMoneda(igv, moneda)}
-          </span>
+          <span className="oc-total__desglose">Gravado {formatMoneda(gravado, moneda)} · IGV 18 % {formatMoneda(igv, moneda)}</span>
         )}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <span style={{ fontWeight: 700 }}>Total neto</span>
-          <span className="oc-pie__monto">{formatMoneda(totalReal, moneda)}</span>
+        <div className="oc-total__fila">
+          <span>Total neto</span>
+          <strong className="oc-total__monto">{formatMoneda(totalReal, moneda)}</strong>
         </div>
         {moneda === 'USD' && tc > 0 && (
-          <span className="t-footnote c-secondary" style={{ textAlign: 'right' }}>Equivale a {formatMoneda(totalReal * tc, 'PEN')} (T/C {tc})</span>
+          <span className="oc-total__equivale">Equivale a {formatMoneda(totalReal * tc, 'PEN')} (T/C {tc})</span>
         )}
       </div>
     </div>
   );
 }
 
-function Paso({ titulo, nodo, icono, texto }: { titulo: string; nodo: string; icono: ReactNode; texto: string }) {
+/** Línea de vida: la barra crece al abrir y los pasos aparecen uno a uno; el paso actual pulsa */
+function LineaDeVida({ pasos, fraccion }: { pasos: Array<{ titulo: string; texto: string; estado: EstadoPaso; icono: ReactNode }>; fraccion: number }) {
+  const [listo, setListo] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setListo(true), 60);
+    return () => window.clearTimeout(t);
+  }, []);
   return (
-    <div className="oc-paso">
-      <span className={`oc-paso__nodo${nodo ? ` oc-paso__nodo--${nodo}` : ''}`}>{icono}</span>
-      <span className="oc-paso__titulo">{titulo}</span>
-      <span className="oc-paso__texto">{texto}</span>
+    <div className="oc-linea" aria-label="Línea de vida de la orden">
+      <div className="oc-linea__pista">
+        <div className="oc-linea__relleno" style={{ transform: `scaleX(${listo ? fraccion : 0})` }} />
+      </div>
+      <div className="oc-linea__pasos">
+        {pasos.map((p, i) => (
+          <div key={p.titulo} className={`oc-linea__paso oc-linea__paso--${p.estado}`} style={{ animationDelay: `${i * 140}ms` }}>
+            <span className="oc-linea__nodo">{p.icono}</span>
+            <span className="oc-linea__titulo">{p.titulo}</span>
+            <span className="oc-linea__texto">{p.texto}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-function Tarjeta({ etiqueta, valor, extra }: { etiqueta: string; valor: string; extra?: string }) {
+function Grupo({ titulo, ancho, children }: { titulo: string; ancho?: boolean; children: ReactNode }) {
   return (
-    <div className="oc-tarjeta">
-      <span className="oc-tarjeta__etiqueta">{etiqueta}</span>
-      <span className="oc-tarjeta__valor">{valor}</span>
-      {extra && <span className="oc-tarjeta__extra">{extra}</span>}
+    <section className={`oc-grupo${ancho ? ' oc-grupo--ancho' : ''}`}>
+      <h3 className="oc-grupo__titulo">{titulo}</h3>
+      <div className="oc-grupo__datos">{children}</div>
+    </section>
+  );
+}
+
+function Dato({ etiqueta, valor, extra }: { etiqueta: string; valor: string; extra?: string }) {
+  return (
+    <div className="oc-dato">
+      <span className="oc-dato__etiqueta">{etiqueta}</span>
+      <span className="oc-dato__valor">{valor}</span>
+      {extra && <span className="oc-dato__extra">{extra}</span>}
     </div>
   );
 }
