@@ -1119,6 +1119,31 @@ module.exports = function (db, broadcast, logAudit) {
     // ============================================================
     // 9. 📊 ANÁLISIS DINÁMICO POR VIAJE CON COMPARATIVA DE RENDIMIENTO TEÓRICO
     // ============================================================
+    // Totales crudos de los vales por fecha del vale (lo que se compró): no se reparten por viaje, así un vale del mes anterior no entra
+    router.get('/resumen-vales', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const { fecha_desde, fecha_hasta } = req.query;
+            const valesTable = getValesTable(req);
+            const where = ["estado != 'ANULADO'"];
+            const params = [];
+            if (fecha_desde) { where.push('fecha >= ?'); params.push(`${fecha_desde} 00:00:00`); }
+            if (fecha_hasta) { where.push('fecha <= ?'); params.push(`${fecha_hasta} 23:59:59`); }
+            const esUrea = "(UPPER(tipo_combustible) LIKE '%UREA%' OR UPPER(tipo_combustible) LIKE '%ADBLUE%' OR UPPER(tipo_combustible) LIKE '%DEF%')";
+            const [rows] = await tdb.query(
+                `SELECT ${esUrea} AS es_urea, COUNT(*) AS vales, COALESCE(SUM(galones), 0) AS galones, COALESCE(SUM(importe), 0) AS importe
+                 FROM ${valesTable} WHERE ${where.join(' AND ')} GROUP BY es_urea`, params);
+            const bloque = (u) => {
+                const r = rows.find(x => Number(x.es_urea) === u) || {};
+                return { vales: Number(r.vales || 0), galones: Number(r.galones || 0), importe: Number(r.importe || 0) };
+            };
+            res.json({ ok: true, diesel: bloque(0), urea: bloque(1) });
+        } catch (err) {
+            console.error('[GET /combustible/resumen-vales]', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     router.get('/analisis-viajes', async (req, res) => {
         try {
             const tdb = getDb(req);

@@ -1020,52 +1020,83 @@
     };
 
     // Calcular y Renderizar Métricas Bento (KPIs)
+    // Recorrido y km por galón: solo viajes de odómetro válido (un odómetro mal digitado infla el promedio)
     window.caRenderKPIs = function() {
         const fuelFilter = window._caFiltrosState?.combustible || document.getElementById('ca-filter-fuel')?.value || 'D2';
         const trips = window._caFilteredTrips;
         const totalViajes = trips.length;
+        const LIMITE_KM_VIAJE = 3000;
 
-        let totalGalones = 0;
-        let totalGasto = 0;
-        let totalKm = 0;
+        let totalKmValido = 0;
+        let totalGalValido = 0;
+        let viajesValidos = 0;
         let totalValesCount = 0;
 
         trips.forEach(t => {
             const fs = (fuelFilter !== 'ALL' && t.fuelStats) ? (t.fuelStats[fuelFilter] || t.fuelStats[fuelFilter.toUpperCase()] || (fuelFilter === 'D2' ? (t.fuelStats['D2'] || t.fuelStats['DIÉSEL B5']) : t.fuelStats['UREA']) || Object.values(t.fuelStats)[0]) : null;
             const totGal = fs ? fs.totalGalones : t.totalGalones;
-            const totGas = fs ? fs.totalGasto : t.totalGasto;
             const recKm = fs ? fs.recorridoKm : t.recorridoKm;
             const vales = fs ? fs.vouchers.filter(v => !v.esPuntoPartida).length : (t.vouchersPropiosCount || t.vouchers.length);
+            const kmValido = !t.odometroInconsistente && recKm > 0 && recKm <= LIMITE_KM_VIAJE;
 
-            totalGalones += totGal;
-            totalGasto += totGas;
-            totalKm += recKm;
             totalValesCount += vales;
+            if (kmValido) {
+                totalKmValido += recKm;
+                totalGalValido += totGal;
+                viajesValidos++;
+            }
         });
 
-        const promGalViaje = totalViajes > 0 ? (totalGalones / totalViajes) : 0;
-        const promPrecioGal = totalGalones > 0 ? (totalGasto / totalGalones) : 0;
-        const promKmGal = (totalGalones > 0 && totalKm > 0) ? (totalKm / totalGalones) : 0;
+        const promKmGal = totalGalValido > 0 ? (totalKmValido / totalGalValido) : 0;
 
         const elV = document.getElementById('ca-kpi-total-viajes');
-        const elG = document.getElementById('ca-kpi-total-galones');
-        const elI = document.getElementById('ca-kpi-total-gasto');
         const elK = document.getElementById('ca-kpi-total-km');
-
+        const elKG = document.getElementById('ca-kpi-kmgal');
         if (elV) elV.textContent = totalViajes.toLocaleString();
-        if (elG) elG.textContent = totalGalones.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        if (elI) elI.textContent = 'S/ ' + totalGasto.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        if (elK) elK.textContent = totalKm.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km';
+        if (elK) elK.textContent = totalKmValido.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km';
+        if (elKG) elKG.textContent = promKmGal.toFixed(2);
 
         const subV = document.getElementById('ca-kpi-viajes-sub');
-        const subG = document.getElementById('ca-kpi-galones-sub');
-        const subI = document.getElementById('ca-kpi-gasto-sub');
         const subK = document.getElementById('ca-kpi-km-sub');
-
+        const subKG = document.getElementById('ca-kpi-kmgal-sub');
         if (subV) subV.textContent = `${totalValesCount} vales individuales${fuelFilter !== 'ALL' ? ' (' + fuelFilter + ')' : ''}`;
-        if (subG) subG.textContent = `${promGalViaje.toFixed(1)} Gal/viaje prom.`;
-        if (subI) subI.textContent = `S/ ${promPrecioGal.toFixed(2)} / Galón prom.`;
-        if (subK) subK.textContent = `${promKmGal.toFixed(2)} Km/Gal promedio`;
+        if (subK) subK.textContent = `${viajesValidos} de ${totalViajes} viajes con odómetro válido`;
+        if (subKG) subKG.textContent = `Con ${viajesValidos} de ${totalViajes} viajes de odómetro válido`;
+
+        window.caRenderResumenVales(fuelFilter);
+    };
+
+    // Galones y gasto: totales crudos de los vales por fecha del vale (lo que se compró), sin repartir por viaje
+    window.caRenderResumenVales = async function(fuelFilter) {
+        const pedido = (window._caResumenPedido = (window._caResumenPedido || 0) + 1);
+        const trips = window._caFilteredTrips || [];
+        const dFrom = document.getElementById('ca-filter-date-from')?.value || '';
+        const dTo = document.getElementById('ca-filter-date-to')?.value || '';
+        const p = new URLSearchParams({ modulo: _caGetModuloParam() });
+        if (dFrom) p.set('fecha_desde', dFrom);
+        if (dTo) p.set('fecha_hasta', dTo);
+        try {
+            const res = await fetch(`/api/combustible/resumen-vales?${p}`);
+            const data = await res.json();
+            if (pedido !== window._caResumenPedido) return; // llegó una respuesta más vieja
+            if (!data.ok) return;
+            const bloque = fuelFilter === 'UREA' ? data.urea
+                : fuelFilter === 'ALL' ? { galones: data.diesel.galones + data.urea.galones, importe: data.diesel.importe + data.urea.importe }
+                : data.diesel;
+
+            const galones = bloque.galones;
+            const gasto = bloque.importe;
+            const elG = document.getElementById('ca-kpi-total-galones');
+            const elI = document.getElementById('ca-kpi-total-gasto');
+            const subG = document.getElementById('ca-kpi-galones-sub');
+            const subI = document.getElementById('ca-kpi-gasto-sub');
+            if (elG) elG.textContent = galones.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (elI) elI.textContent = 'S/ ' + gasto.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (subG) subG.textContent = `${(trips.length ? galones / trips.length : 0).toFixed(1)} Gal/viaje prom.`;
+            if (subI) subI.textContent = `S/ ${(galones > 0 ? gasto / galones : 0).toFixed(2)} / Galón prom.`;
+        } catch (e) {
+            console.error('Error cargando resumen de vales:', e);
+        }
     };
 
     // Helper: Buscar consumo teórico en Galones según Sentido (IDA / RETORNO), Ruta, Peso (Regla de Techo) y Motor (BÚSQUEDA ESTRICTA)

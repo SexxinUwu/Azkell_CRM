@@ -17,6 +17,8 @@ import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { analizarViaje, type AnalisisViaje, type MatrizCalc, type TramoCalc, type ViajeCalc } from './analisisCalculo';
 
+interface BloqueVales { vales: number; galones: number; importe: number }
+interface ResumenVales { ok?: boolean; diesel: BloqueVales; urea: BloqueVales }
 interface Stats { fechaInicio?: string; fechaFin?: string; vouchers?: Voucher[]; kmInicio: number; kmFin: number; recorridoKm: number; totalGalones: number; totalGasto: number; rendimiento: number }
 interface Voucher { conductor?: string; id: number | string; fecha?: string; producto?: string; galones?: number; importe?: number; odometro?: number; estacion?: string; esPuntoPartida?: boolean; tipo?: string; peso?: number }
 interface Trip {
@@ -325,6 +327,18 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     staleTime: 60_000,
   });
 
+  // Totales crudos de los vales por fecha del vale (lo que se compró), sin repartir por viaje
+  const valesQ = useQuery<ResumenVales>({
+    queryKey: ['operaciones', 'resumen-vales', modulo, desde, hasta],
+    queryFn: () => {
+      const p = new URLSearchParams({ modulo });
+      if (desde) p.set('fecha_desde', desde);
+      if (hasta) p.set('fecha_hasta', hasta);
+      return api<ResumenVales>(`/combustible/resumen-vales?${p}`);
+    },
+    staleTime: 60_000,
+  });
+
   // Matriz teórica (la misma que la pantalla de matriz): base de los cálculos de teórico por tramo
   const matrizQ = useQuery<MatrizCalc[]>({
     queryKey: ['operaciones', 'matriz'],
@@ -410,14 +424,16 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     },
   });
   const resumen = useMemo(() => {
-    const gal = visibles.reduce((s, t) => s + cifras(t).galones, 0);
-    const gasto = visibles.reduce((s, t) => s + cifras(t).gasto, 0);
+    // Galones y gasto de los vales crudos (diésel o urea según la pantalla); mientras llegan, se suman los viajes
+    const crudo = valesQ.data ? (urea ? valesQ.data.urea : valesQ.data.diesel) : null;
+    const gal = crudo ? crudo.galones : visibles.reduce((s, t) => s + cifras(t).galones, 0);
+    const gasto = crudo ? crudo.importe : visibles.reduce((s, t) => s + cifras(t).gasto, 0);
     // Km por galón solo con viajes de odómetro válido: un odómetro mal digitado (p. ej. 7.444.183 km en un viaje) infla el promedio
     const razonables = visibles.filter(t => !t.odometroInconsistente && n(t.recorridoKm) > 0 && n(t.recorridoKm) <= LIMITE_KM_VIAJE);
     const kmRazonables = razonables.reduce((s, t) => s + n(t.recorridoKm), 0);
     const galRazonables = razonables.reduce((s, t) => s + cifras(t).galones, 0);
     return { viajes: visibles.length, gal, gasto, kmGal: galRazonables > 0 ? kmRazonables / galRazonables : 0, razonables: razonables.length, pendientes: visibles.filter(t => t.estadoAuditoria === 'PENDIENTE').length };
-  }, [visibles]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visibles, valesQ.data, urea]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = trips.find(x => x.viaje === abierto) ?? null;
   const Icono = urea ? Droplets : Fuel;
