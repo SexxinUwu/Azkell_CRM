@@ -159,7 +159,7 @@ export function KardexPage() {
                         <Package size={16} />
                       </div>
                       <div className="mov-fila__cuerpo">
-                        <span className="mov-fila__titulo">{a.articulo || a.descripcion}</span>
+                        <span className="mov-fila__titulo">{a.descripcion || a.articulo}</span>
                         <span className="mov-fila__sub">
                           {a.id}{a.familia ? ` · ${a.familia}` : ''}
                         </span>

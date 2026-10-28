@@ -89,8 +89,8 @@ export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualiza
         <div className="ficha__identidad">
           <div className="ficha__chips">
             {a.familia && <span className="ficha__chip">{a.familia}</span>}
-            <span className="ficha__mono">SKU {a.id}</span>
-            {a.codigo_articulo && <span className="ficha__mono ficha__mono--acento">OEM {a.codigo_articulo}</span>}
+            <span className="ficha__mono">{a.id}</span>
+            {a.codigo_articulo && <span className="ficha__mono ficha__mono--acento">Cód. Int. {a.codigo_articulo}</span>}
           </div>
         </div>
         <div className="ficha__acciones">
@@ -146,8 +146,7 @@ export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualiza
         {/* Columna derecha: identidad del producto, costos y pestañas */}
         <section className="ficha__columna ficha__columna--info">
           <div className="ficha__bloque" style={{ '--i': 0 } as CSSProperties}>
-            {a.marca && <p className="ficha__marca">{a.marca}</p>}
-            <h2 className="ficha__titulo">{a.articulo || a.descripcion}</h2>
+            <h2 className="ficha__titulo">{a.descripcion || a.articulo}</h2>
             {a.observaciones && <p className="ficha__descripcion">{a.observaciones}</p>}
           </div>
 
@@ -192,7 +191,8 @@ export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualiza
 
           {pestana === 'especificaciones' ? (
             <div className="ficha__datos ficha__panel" role="tabpanel">
-              <Dato etiqueta="Código de parte" valor={a.codigo_articulo} />
+              <Dato etiqueta="Código interno" valor={a.id} />
+              <Dato etiqueta="Código Int." valor={a.codigo_articulo} />
               <Dato etiqueta="Código ítem" valor={a.codigo_item} />
               <Dato etiqueta="Código de barras" valor={a.codigo_barras} />
               <Dato etiqueta="Familia" valor={a.familia} />

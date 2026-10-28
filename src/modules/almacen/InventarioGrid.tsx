@@ -42,7 +42,7 @@ export const ProductoCard = memo(function ProductoCard({ a, onAbrir }: Props) {
   return (
     <article className={`prod prod--${tono}`}>
       <div className="prod__tarjeta" role="button" tabIndex={0} onClick={() => onAbrir(a)} onKeyDown={alTeclear}
-        aria-label={`Ver ${a.articulo || a.descripcion}`}>
+        aria-label={`Ver ${a.descripcion || a.articulo}`}>
         <header className="prod__cabecera">
           <span className="prod__codigo">{a.id}</span>
           {ubicacion && <span className="prod__ubicacion"><MapPin size={12} /> {ubicacion}</span>}
@@ -53,14 +53,14 @@ export const ProductoCard = memo(function ProductoCard({ a, onAbrir }: Props) {
           {a.imagen_url
             ? <img src={a.imagen_url} alt="" loading="lazy" />
             : <Package size={48} strokeWidth={1.3} />}
-          {a.codigo_articulo && <span className="prod__oem">OEM: {a.codigo_articulo}</span>}
+          {a.codigo_articulo && <span className="prod__oem">Cód. Int.: {a.codigo_articulo}</span>}
         </div>
 
         <div className="prod__marca">
           <span>{a.marca || '—'}</span>
           <span>{a.familia || ''}</span>
         </div>
-        <h3 className="prod__titulo">{a.articulo || a.descripcion}</h3>
+        <h3 className="prod__titulo">{a.descripcion || a.articulo}</h3>
 
         {marcas.length > 0 && (
           <div className="prod__compat">
