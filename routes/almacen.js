@@ -2,6 +2,12 @@ const express = require('express');
 const { tipoCambioSunat } = require('../services/tipo_cambio');
 const { crearLlantasDeRecepcion } = require('../services/neumaticos_codigo');
 const router = express.Router();
+
+// Nombre de las llantas: marca + modelo + medida (p. ej. "MICHELIN XMULTI 295/80R22.5").
+// Los demás artículos siguen la regla general (artículo, código, compatibles, marca).
+const esFamiliaLlanta = f => String(f || '').trim().toUpperCase() === 'NEUMATICOS';
+const nombreLlanta = ({ marca, modelo, medida }) =>
+    [marca, modelo, medida].map(v => String(v || '').trim()).filter(Boolean).join(' ');
     // Compra o artículo en dólares sin tipo de cambio: se toma el de la SUNAT del día (nunca 1)
     const tcSunatSiFalta = async (req, res, next) => {
         try {
@@ -656,6 +662,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         if (codigo_articulo) descGenerada += ' ' + String(codigo_articulo).trim();
         if (marcasArr.length) descGenerada += ' - ' + marcasArr.join(', ');
         if (marca) descGenerada += ' / ' + String(marca).trim();
+        // Llantas: marca + modelo + medida (si no hay medida ni modelo, queda la regla general)
+        const nombreLl = esFamiliaLlanta(familia) ? nombreLlanta({ marca, modelo: req.body.modelo, medida: req.body.medida }) : '';
+        if (nombreLl) descGenerada = nombreLl;
         const descFinal = descGenerada || descripcion || 'Sin nombre';
 
         const isServ = (tipo === 'Servicio' || tipo === 'SERV' || /^(servicio|mantenimiento|reparacion|alquiler|flete|torno|taxi|mano de obra|lavado|planchado|pintura|diagnostico|auxilio|grua)/i.test((articulo || '').trim()) || /^(servicio|mantenimiento|reparacion|alquiler|flete|torno|taxi|mano de obra|lavado|planchado|pintura|diagnostico|auxilio|grua)/i.test((descripcion || '').trim()));
@@ -736,6 +745,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         if (codigo_articulo) descGenerada += ' ' + String(codigo_articulo).trim();
         if (marcasArr.length) descGenerada += ' - ' + marcasArr.join(', ');
         if (marca) descGenerada += ' / ' + String(marca).trim();
+        // Llantas: marca + modelo + medida (si no hay medida ni modelo, queda la regla general)
+        const nombreLl = esFamiliaLlanta(familia) ? nombreLlanta({ marca, modelo: req.body.modelo, medida: req.body.medida }) : '';
+        if (nombreLl) descGenerada = nombreLl;
         const descFinal = descGenerada || descripcion || 'Sin nombre';
 
         const oldId = req.params.id;

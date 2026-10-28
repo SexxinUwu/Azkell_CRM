@@ -164,7 +164,9 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
   const marcasOpc = [...new Set((marcasPlacasQ.data ?? []).map(m => String(m).trim().toUpperCase()).filter(Boolean))].sort();
 
   const marcasU = marcasUnidad.join(', ');
-  const nombreGenerado = `${articulo.trim()}${codigoArticulo.trim() ? ' ' + codigoArticulo.trim() : ''}${marcasU ? ' - ' + marcasU : ''}${marca ? ' / ' + marca : ''}`.trim();
+  const nombreGenerado = llanta
+    ? [marca, modeloLlanta, medida].map(v => v.trim()).filter(Boolean).join(' ')
+    : `${articulo.trim()}${codigoArticulo.trim() ? ' ' + codigoArticulo.trim() : ''}${marcasU ? ' - ' + marcasU : ''}${marca ? ' / ' + marca : ''}`.trim();
 
   async function guardar() {
     if (!articulo.trim()) { toast('Ingresa el nombre del artículo', 'error'); return; }
@@ -193,6 +195,8 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
         sistema: sistema || null,
         sub_sistema: subSistema || null,
         cantidad_inicial: !a ? (parseFloat(cantidadInicial) || 0) : undefined,
+        medida: llanta ? medida : undefined,
+        modelo: llanta ? modeloLlanta : undefined,
       } as Partial<ArticuloNuevo>;
 
       const res = await guardarArticulo(body, a?.id) as { id?: string } | undefined;

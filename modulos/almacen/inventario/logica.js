@@ -561,6 +561,13 @@ window._invActualizarPreview = function() {
     if (marcasU) nombre += ' - ' + marcasU;
     if (marca)   nombre += ' / ' + marca;
 
+    // Llantas: marca + modelo + medida
+    if (((document.getElementById('inv-f-familia') || {}).value || '').trim().toUpperCase() === 'NEUMATICOS') {
+        var medLl = ((document.getElementById('inv-f-llanta-medida') || {}).value || '').trim();
+        var modLl = ((document.getElementById('inv-f-llanta-modelo') || {}).value || '').trim();
+        nombre = [marca, modLl, medLl].filter(Boolean).join(' ');
+    }
+
     var prev = document.getElementById('inv-nombre-preview');
     if (prev) {
         if (nombre.trim()) {
@@ -2135,7 +2142,9 @@ window.guardarArticuloInv = function(event) {
         stock_min:     gN('inv-f-stock-min'),
         stock_max:     gN('inv-f-stock-max'),
         cantidad_inicial: gN('inv-f-cantidad-inicial'),
-        codigo_barras: g('inv-f-codigo-barras') || null
+        codigo_barras: g('inv-f-codigo-barras') || null,
+        medida:        g('inv-f-llanta-medida') || null,
+        modelo:        g('inv-f-llanta-modelo') || null
     };
 
     var url    = id ? '/api/almacen/inventario/' + encodeURIComponent(id) : '/api/almacen/inventario';
