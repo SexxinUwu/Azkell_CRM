@@ -565,7 +565,8 @@ window._invActualizarPreview = function() {
     if (((document.getElementById('inv-f-familia') || {}).value || '').trim().toUpperCase() === 'NEUMATICOS') {
         var medLl = ((document.getElementById('inv-f-llanta-medida') || {}).value || '').trim();
         var modLl = ((document.getElementById('inv-f-llanta-modelo') || {}).value || '').trim();
-        nombre = [marca, modLl, medLl].filter(Boolean).join(' ');
+        var medModLl = [medLl, modLl].filter(Boolean).join(' ');
+        if (medModLl) nombre = ['Llanta', medModLl, marca ? '/ ' + marca : ''].filter(Boolean).join(' ');
     }
 
     var prev = document.getElementById('inv-nombre-preview');

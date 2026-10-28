@@ -56,6 +56,14 @@ const grilla = (columnas: string): CSSProperties => ({
   display: 'grid', gridTemplateColumns: columnas, gap: 'var(--s-3)',
 });
 
+// Llantas: "Llanta <medida> <modelo> / <marca>". Sin medida ni modelo no hay nombre de llanta.
+function nombreLlanta(medida: string, modelo: string, marca: string): string {
+  const medMod = [medida, modelo].map(v => v.trim()).filter(Boolean).join(' ');
+  if (!medMod) return '';
+  const mar = marca.trim();
+  return ['Llanta', medMod, mar ? '/ ' + mar : ''].filter(Boolean).join(' ');
+}
+
 export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }: Props) {
   const toast = useToast();
   const almacenesQ = useAlmacenesLista();
@@ -164,9 +172,7 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
   const marcasOpc = [...new Set((marcasPlacasQ.data ?? []).map(m => String(m).trim().toUpperCase()).filter(Boolean))].sort();
 
   const marcasU = marcasUnidad.join(', ');
-  const nombreGenerado = llanta
-    ? [marca, modeloLlanta, medida].map(v => v.trim()).filter(Boolean).join(' ')
-    : `${articulo.trim()}${codigoArticulo.trim() ? ' ' + codigoArticulo.trim() : ''}${marcasU ? ' - ' + marcasU : ''}${marca ? ' / ' + marca : ''}`.trim();
+  const nombreGenerado = (llanta && nombreLlanta(medida, modeloLlanta, marca)) || `${articulo.trim()}${codigoArticulo.trim() ? ' ' + codigoArticulo.trim() : ''}${marcasU ? ' - ' + marcasU : ''}${marca ? ' / ' + marca : ''}`.trim();
 
   async function guardar() {
     if (!articulo.trim()) { toast('Ingresa el nombre del artículo', 'error'); return; }

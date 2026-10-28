@@ -3,11 +3,16 @@ const { tipoCambioSunat } = require('../services/tipo_cambio');
 const { crearLlantasDeRecepcion } = require('../services/neumaticos_codigo');
 const router = express.Router();
 
-// Nombre de las llantas: marca + modelo + medida (p. ej. "MICHELIN XMULTI 295/80R22.5").
+// Nombre de las llantas: "Llanta <medida> <modelo> / <marca>" (p. ej. "Llanta 295/80R22.5 XMULTI / MICHELIN").
+// Sin medida ni modelo no hay nombre de llanta y queda la regla general.
 // Los demás artículos siguen la regla general (artículo, código, compatibles, marca).
 const esFamiliaLlanta = f => String(f || '').trim().toUpperCase() === 'NEUMATICOS';
-const nombreLlanta = ({ marca, modelo, medida }) =>
-    [marca, modelo, medida].map(v => String(v || '').trim()).filter(Boolean).join(' ');
+const nombreLlanta = ({ marca, modelo, medida }) => {
+    const medMod = [medida, modelo].map(v => String(v || '').trim()).filter(Boolean).join(' ');
+    if (!medMod) return '';
+    const mar = String(marca || '').trim();
+    return ['Llanta', medMod, mar ? '/ ' + mar : ''].filter(Boolean).join(' ');
+};
     // Compra o artículo en dólares sin tipo de cambio: se toma el de la SUNAT del día (nunca 1)
     const tcSunatSiFalta = async (req, res, next) => {
         try {
