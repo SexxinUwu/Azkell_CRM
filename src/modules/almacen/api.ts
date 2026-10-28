@@ -440,6 +440,8 @@ export interface RecepcionOC {
   autoriza: string;
   almacen: string;
   moneda: string;
+  /** Solo O/C en dólares: S/ por USD de la compra. `importe` viene siempre en soles (total_pen). */
+  tipo_cambio?: number | null;
   importe: number;
   condicion_pago?: string | null;
   dias_credito?: number | null;

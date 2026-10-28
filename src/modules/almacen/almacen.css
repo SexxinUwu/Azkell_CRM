@@ -589,3 +589,59 @@
 
 /* Costos de la ficha: en dólares son cuatro casillas, en soles tres o una */
 .ficha__costos-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+
+/* ─── Recepción de compras ──────────────────────────────────────────────── */
+/* Indicadores que también filtran (como las tarjetas del clásico) */
+.rec-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-3); }
+@media (max-width: 700px) { .rec-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); } }
+.rec-kpi {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+  width: 100%; padding: var(--s-3) var(--s-4); border-radius: var(--r-lg);
+  background: var(--fill-subtle); border: 0.5px solid var(--separator);
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+.rec-kpi:hover { background: var(--fill); }
+.rec-kpi[aria-pressed='true'] { background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.rec-kpi__cuerpo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+/* Filas de órdenes */
+.rec-fila {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4); min-height: 4.25rem;
+  border-bottom: 0.5px solid var(--separator);
+}
+.rec-fila:last-child { border-bottom: none; }
+.rec-fila:hover { background: var(--fill-subtle); }
+.rec-fila__abrir {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s-3);
+  padding: 0; border: none; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+.rec-fila__icono {
+  width: 2.25rem; height: 2.25rem; border-radius: var(--r-md); flex-shrink: 0;
+  display: grid; place-items: center;
+}
+.rec-fila__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rec-fila__titulo { font-size: 0.9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-fila__sub { font-size: 0.75rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-fila__etiquetas { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-top: 2px; }
+.rec-fila__derecha { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; }
+.rec-fila__importe { font-size: 0.875rem; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rec-fila__avance { font-size: 0.6875rem; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Barra de avance (lista y ficha) */
+.rec-progreso { display: block; width: 5.5rem; height: 4px; border-radius: 99px; background: var(--fill); overflow: hidden; }
+.rec-progreso--ancho { width: 100%; height: 6px; }
+.rec-progreso__barra { display: block; height: 100%; border-radius: 99px; background: var(--green); transition: width 500ms var(--ease-out); }
+@media (max-width: 480px) { .rec-progreso { width: 3.5rem; } }
+
+/* Ficha: resumen de la entrega en curso y líneas de entrada */
+.rec-resumen {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4); border-radius: var(--r-lg); background: var(--fill);
+}
+.rec-entrada { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.rec-entrada .input { width: 6.5rem; text-align: right; font-variant-numeric: tabular-nums; }
+.rec-entrada .select { flex: 1; min-width: 8rem; }
+.rec-entregas { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.rec-entregas__titulo { flex: 1; min-width: 8rem; font-weight: 700; font-size: 0.875rem; }
