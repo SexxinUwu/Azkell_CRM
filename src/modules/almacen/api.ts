@@ -225,6 +225,8 @@ export interface ItemSalida {
 export interface SalidaInv {
   id: number;
   fecha: string | null;
+  /** Solo lo muestra el clásico; el alta no lo guarda en el servidor */
+  tipo_orden?: string | null;
   tipo_destino: string | null;
   placa: string | null;
   responsable: string | null;
@@ -235,12 +237,33 @@ export interface SalidaInv {
   observaciones: string | null;
   ticket_ot: string | null;
   creado_por: string | null;
+  /** 'Despachado' | 'Anulado' | 'Pendiente'; vacío cuenta como pendiente (igual que el clásico) */
+  estado?: string | null;
+  motivo_anulacion?: string | null;
   total_pen: number;
   created_at: string;
   items: ItemSalida[];
 }
 
-export const TIPOS_DESTINO = ['Vehiculo', 'Taller', 'Obra', 'Oficina', 'Otro'];
+export type EstadoSalida = 'Pendiente' | 'Despachado' | 'Anulado';
+
+export function estadoSalida(s: Pick<SalidaInv, 'estado'>): EstadoSalida {
+  if (s.estado === 'Despachado') return 'Despachado';
+  if (s.estado === 'Anulado') return 'Anulado';
+  return 'Pendiente';
+}
+
+/** Valores que guarda el servidor en tipo_destino (el clásico muestra "Vehículo / Unidad" y "Personal / Taller") */
+export const TIPOS_DESTINO = ['Vehiculo', 'Personal'] as const;
+export const ETIQUETA_DESTINO: Record<string, string> = { Vehiculo: 'Vehículo / Unidad', Personal: 'Personal / Taller' };
+
+export const TIPO_ORDEN_SALIDA = 'Orden de Salida';
+export const TIPO_ORDEN_AJUSTE = 'Ajuste de Inventario (Resta)';
+
+/** Costo de salida: el costo en soles del artículo (igual que el servidor al crear la salida) */
+export function costoSolesArticulo(a: Pick<ArticuloInv, 'costo_soles' | 'costo_referencial'>): number {
+  return Number(a.costo_soles) || Number(a.costo_referencial) || 0;
+}
 
 export function useSalidas() {
   return useQuery<SalidaInv[]>({
@@ -250,13 +273,66 @@ export function useSalidas() {
   });
 }
 
+/** Alta (POST) o edición (PUT con accion 'editar'; el servidor rechaza un PUT sin acción) */
 export async function guardarSalida(data: Partial<SalidaInv> & { items: ItemSalida[] }, id?: number) {
-  if (id) return api(`/almacen/salidas/${id}`, { method: 'PUT', body: data });
+  if (id) return api(`/almacen/salidas/${id}`, { method: 'PUT', body: { accion: 'editar', ...data } });
   return api('/almacen/salidas', { method: 'POST', body: data });
+}
+
+/** Despacha los ítems indicados (o todos si la lista va vacía). Lo no despachado pasa a una salida pendiente nueva. */
+export async function despacharSalida(id: number, itemIds: number[], usuario: string) {
+  return api<{ ok?: boolean; parcial?: boolean; nuevo_pendiente_id?: string | number }>(`/almacen/salidas/${id}`, {
+    method: 'PUT', body: { accion: 'despachar', item_ids: itemIds, usuario },
+  });
+}
+
+export async function anularSalida(id: number, motivo: string, usuario: string) {
+  return api(`/almacen/salidas/${id}`, { method: 'PUT', body: { accion: 'anular', motivo, usuario } });
 }
 
 export async function eliminarSalida(id: number) {
   return api(`/almacen/salidas/${id}`, { method: 'DELETE' });
+}
+
+// ─── Catálogos de la solicitud de salida ────────────────────────────────────
+
+/** Kit de mantenimiento: repuestos preconfigurados para una marca y modelo */
+export interface KitItemSalida {
+  id: number | string;
+  marca_vehiculo: string;
+  modelo_vehiculo: string;
+  tipo_mp: string;
+  nombre_kit: string | null;
+  item_nombre: string;
+  cantidad: number;
+  unidad_medida: string | null;
+  costo_unitario: number;
+}
+
+/** Kits de la marca y modelo (el servidor compara en mayúsculas) */
+export function useKitsVehiculo(marca: string, modelo: string, enabled: boolean) {
+  return useQuery<KitItemSalida[]>({
+    queryKey: ['almacen', 'kits-salida', marca, modelo],
+    queryFn: async () => (await api<{ data?: KitItemSalida[] }>('/mantenimiento-kits', { query: { marca, modelo } })).data ?? [],
+    enabled,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** Placa con su marca y modelo (para el selector de placa y para los kits) */
+export interface PlacaSalida {
+  placa: string;
+  marca?: string | null;
+  modelo?: string | null;
+  modelo_uts?: string | null;
+}
+
+export function usePlacasSalida() {
+  return useQuery<PlacaSalida[]>({
+    queryKey: ['almacen', 'placas-salida'],
+    queryFn: async () => (await api<{ data?: PlacaSalida[] }>('/placas-lista')).data ?? [],
+    staleTime: 5 * 60_000,
+  });
 }
 
 // ─── Kardex ─────────────────────────────────────────────────────────────────
