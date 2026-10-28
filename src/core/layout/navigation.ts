@@ -148,8 +148,7 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Almacén',
     items: [
-      { key: 'almacen-dashboard', label: 'Dashboard financiero', clasico: 'almacen/dashboard-financiero', icon: BarChart3, permissions: ver('inv') },
-      { key: 'almacen-costos', label: 'Costos de almacén', clasico: 'almacen/costos', icon: Boxes, permissions: ver('inv') },
+      { key: 'almacen-dashboard', label: 'Dashboard', to: '/almacen/dashboard', icon: BarChart3, permissions: ver('inv') },
       { key: 'inventario', label: 'Inventario', clasico: 'almacen/inventario', icon: Boxes, permissions: ver('inv') },
       { key: 'entradas', label: 'Órdenes de compra', clasico: 'almacen/entradas', icon: PackagePlus, permissions: ver('ent_inv') },
       { key: 'recepcion', label: 'Recepción de compras', clasico: 'almacen/recepcion-compras', icon: PackagePlus, permissions: ver('rec_compras', 'ent_inv', 'inv') },

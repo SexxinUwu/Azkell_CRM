@@ -29,7 +29,7 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'MANTENIMIENTO', key: 'incidencias_ruta', nombre: 'Incidencias en Ruta', desc: 'Reportes e incidencias de auxilio en ruta', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'otros_mant', nombre: 'Otros (Catálogos y Parámetros)', desc: 'Hub de mantenimiento, plan, KPIs y configuraciones MP', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'cfg_fleetrun', nombre: 'Configuración de Umbrales Fleetrun', desc: 'Definir umbrales de alerta preventiva por UTS', lcad: true },
-  { grupo: 'ALMACÉN', key: 'dash_alm', nombre: 'Dashboard Financiero', desc: 'Analítica de almacén', lcad: true },
+  { grupo: 'ALMACÉN', key: 'dash_alm', nombre: 'Dashboard', desc: 'Analítica de almacén', lcad: true },
   { grupo: 'ALMACÉN', key: 'inv', nombre: 'Inventario', desc: 'Catálogo de artículos', lcad: true },
   { grupo: 'ALMACÉN', key: 'ent_inv', nombre: 'Órdenes de Compra', desc: 'Ingresos al almacén', lcad: true },
   { grupo: 'ALMACÉN', key: 'rec_compras', nombre: 'Recepción de Compras', desc: 'Recepción e ingreso de compras aprobadas', lcad: true },

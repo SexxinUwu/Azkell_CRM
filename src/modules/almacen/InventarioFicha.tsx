@@ -4,7 +4,7 @@ import JsBarcode from 'jsbarcode';
 import { Edit, MapPin, Package, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { stockTono, useKardex, type ArticuloInv } from './api';
+import { costoUnitarioSoles, stockTono, useKardex, valorEnStock, type ArticuloInv } from './api';
 import { RegularizarSheet } from './RegularizarSheet';
 import { api } from '../../core/api/client';
 import { useToast } from '../../core/ui/Toast';
@@ -76,10 +76,9 @@ export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualiza
   const marcas = marcasCompatibles(a);
   const ubicacion = [a.ubicacion, a.anaquel ? `Anaquel ${a.anaquel}` : ''].filter(Boolean).join(' • ');
 
-  // Costo promedio ponderado (S/): el último movimiento del kardex lo trae; si no hay movimientos, el referencial
-  const ultimo = kardex.length > 0 ? kardex[kardex.length - 1] : null;
-  const costoPromedio = ultimo?.costo_promedio ?? (a.moneda === 'USD' ? Number(a.costo_soles ?? 0) : Number(a.costo_referencial ?? 0));
-  const valorStock = stock * costoPromedio;
+  // Todo se valoriza en soles: ver costoUnitarioSoles y valorEnStock en api.ts
+  const costoSolesUnit = costoUnitarioSoles(a);
+  const valorStock = valorEnStock(a);
   const pctStock = a.stock_max > 0 ? Math.min(100, Math.round((stock / a.stock_max) * 100)) : 0;
 
   return (
@@ -153,17 +152,30 @@ export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualiza
           <div className="ficha__bloque ficha__costos" style={{ '--i': 1 } as CSSProperties}>
             <div className="ficha__costos-cabecera">
               <span className="ficha__titulo-bloque">Estructura de costos</span>
-              <span className="ficha__mono">Costo promedio ponderado</span>
+              <span className="ficha__mono">Valores en soles</span>
             </div>
             <div className="ficha__costos-grid">
-              <div className="ficha__costo">
-                <span>Costo referencial</span>
-                <strong>{formatMoneda(Number(a.costo_referencial ?? 0), a.moneda)}</strong>
-              </div>
-              <div className="ficha__costo">
-                <span>Costo promedio (S/)</span>
-                <strong>{formatSoles(costoPromedio)}</strong>
-              </div>
+              {a.moneda === 'USD' ? (
+                <>
+                  <div className="ficha__costo">
+                    <span>Costo original</span>
+                    <strong>{formatMoneda(Number(a.costo_referencial ?? 0), 'USD')}</strong>
+                  </div>
+                  <div className="ficha__costo">
+                    <span>Tipo de cambio</span>
+                    <strong>{Number(a.tipo_cambio ?? 0).toFixed(2)}</strong>
+                  </div>
+                  <div className="ficha__costo">
+                    <span>Costo en soles</span>
+                    <strong>{formatSoles(costoSolesUnit)}</strong>
+                  </div>
+                </>
+              ) : (
+                <div className="ficha__costo">
+                  <span>Costo en soles</span>
+                  <strong>{formatSoles(costoSolesUnit)}</strong>
+                </div>
+              )}
               <div className="ficha__costo ficha__costo--oscuro">
                 <span>Valor en stock</span>
                 <strong>{formatSoles(valorStock)}</strong>

@@ -551,3 +551,20 @@ export function repartirPorAlmacen(items: ArticuloInv[], registrados: string[]) 
   }
   return { porAlmacen, sinAlmacen };
 }
+
+/**
+ * Costo unitario en soles. Todo el inventario se valoriza en soles: un artículo en dólares se
+ * convierte con el tipo de cambio que tiene guardado (costo_soles = costo × tipo de cambio de la entrada).
+ */
+export function costoUnitarioSoles(a: ArticuloInv): number {
+  if (a.moneda === 'USD') {
+    return Number(a.costo_soles) || (Number(a.costo_referencial) || 0) * (Number(a.tipo_cambio) || 0);
+  }
+  return Number(a.costo_referencial) || 0;
+}
+
+/** Valor del stock en soles. Solo cuentan los artículos con existencias positivas. */
+export function valorEnStock(a: ArticuloInv): number {
+  const stock = Number(a.stock_actual);
+  return stock > 0 ? stock * costoUnitarioSoles(a) : 0;
+}

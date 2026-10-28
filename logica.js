@@ -359,7 +359,6 @@ window.verificarSesionGuardada = function() {
 
     // ALMACÉN
     var showAlmacenHub = _cHub('hub_almacen');
-    var vDashAlm = showAlmacenHub && _cL('dash_alm');
     var vInv     = showAlmacenHub && _cL('inv');
     var vEnt     = showAlmacenHub && _cL('ent_inv');
     var vRec     = showAlmacenHub && (_cL('rec_compras') || _cL('ent_inv') || _cL('inv'));
@@ -367,8 +366,6 @@ window.verificarSesionGuardada = function() {
     var vKardex  = showAlmacenHub && _cL('kardex');
     var vProv    = showAlmacenHub && _cL('prov_inv');
 
-    safe('nav-finanzas-inv',        vDashAlm);
-    safe('mbnav-finanzas-inv',      vDashAlm);
     safe('nav-inventario',      vInv);
     safe('mbnav-inventario',    vInv);
     safe('nav-entradas-inv',    vEnt);
@@ -385,7 +382,7 @@ window.verificarSesionGuardada = function() {
     safe('nav-almacen-otros', vAlmOtros);
     safe('mbnav-almacen-otros', vAlmOtros);
 
-    var showAlm = vDashAlm || vInv || vEnt || vRec || vSal || vKardex || vProv || vAlmOtros;
+    var showAlm = vInv || vEnt || vRec || vSal || vKardex || vProv || vAlmOtros;
     safe('wrap-almacen', showAlm);
     safe('bnav-almacen', showAlm);
 
@@ -765,7 +762,6 @@ window.verificarSesionGuardada = function() {
             'mantenimiento/kpis-taller': 'otros_mant',
             'mantenimiento/productividad': 'otros_mant',
             'mantenimiento/finanzas-taller': 'otros_mant',
-            'almacen/dashboard-financiero': 'dash_alm',
             'almacen/inventario': 'inv',
             'almacen/entradas': 'ent_inv',
             'almacen/recepcion-compras': 'rec_compras',
@@ -957,7 +953,7 @@ window.verificarSesionGuardada = function() {
         'mantenimiento/neumaticos-analisis': 1, 'mantenimiento/neumaticos-ultimas': 1, 'mantenimiento/incidencias-ruta': 1,
         'flota/disponibilidad': 1, 'flota/ubicacion': 1, 'flota/documentos': 1,
         'flota/almacen-flota': 1,
-        'almacen/dashboard-financiero': 1, 'almacen/inventario': 1, 'almacen/entradas': 1,
+        'almacen/inventario': 1, 'almacen/entradas': 1,
         'almacen/recepcion-compras': 1, 'almacen/salidas': 1, 'almacen/kardex': 1, 'almacen/proveedores': 1,
         'directorio/conductores': 1, 'directorio/clientes': 1,
         'rrhh/personal': 1, 'rrhh/asistencia': 1, 'rrhh/nomina': 1,
@@ -3999,13 +3995,11 @@ var NOMBRES_MODULOS_RECIENTES = {
     'mantenimiento/kits-mp':          'Kits MP',
     'mantenimiento/tipos-mp':         'Tipos MP',
     'mantenimiento/config-metrica':   'Config. Métrica',
-    'almacen/dashboard-financiero': 'Dashboard Financiero',
     'almacen/inventario':         'Inventario',
     'almacen/entradas':           'Entradas',
     'almacen/salidas':            'Salidas',
     'almacen/proveedores':        'Proveedores',
     'almacen/kardex':             'Kardex',
-    'almacen/costos':             'Costos',
     'almacen/unidades':           'Unidades',
     'almacen/sistemas':           'Sistemas',
     'almacen/familias':           'Familias',
@@ -4032,13 +4026,11 @@ var ICONOS_MODULOS_RECIENTES = {
     'mantenimiento/kits-mp':          'bi-tools',
     'mantenimiento/tipos-mp':         'bi-card-list',
     'mantenimiento/config-metrica':   'bi-speedometer2',
-    'almacen/dashboard-financiero': 'bi-pie-chart-fill',
     'almacen/inventario':         'bi-box-fill',
     'almacen/entradas':           'bi-arrow-down-circle-fill',
     'almacen/salidas':            'bi-arrow-up-circle-fill',
     'almacen/proveedores':        'bi-building-fill',
     'almacen/kardex':             'bi-journal-text',
-    'almacen/costos':             'bi-graph-up-arrow',
     'almacen/unidades':           'bi-rulers',
     'almacen/sistemas':           'bi-diagram-3-fill',
     'almacen/familias':           'bi-tags-fill',
@@ -4140,7 +4132,6 @@ const TITULOS_MODULOS = {
     'mantenimiento/kits-mp':          'Kits de Mantenimiento',
     'mantenimiento/tipos-mp':         'Tipos de Preventivo',
     'mantenimiento/config-metrica':   'Config. Métrica por Placa',
-    'almacen/dashboard-financiero': 'Dashboard Financiero',
     'almacen/inventario':          'Inventario',
     'almacen/unidades':            'Unidades de Medida',
     'almacen/sistemas':            'Sistemas y Sub-Sistemas',
@@ -4236,14 +4227,12 @@ const MENU_IDS = {
     'mantenimiento/kpis-taller':       'nav-otros-mant',
     'mantenimiento/productividad':     'nav-otros-mant',
     'mantenimiento/finanzas-taller':   'nav-otros-mant',
-    'almacen/dashboard-financiero': 'nav-finanzas-inv',
     'almacen/inventario':          'nav-inventario',
     'almacen/entradas':            'nav-entradas-inv',
     'almacen/recepcion-compras':   'nav-recepcion-compras',
     'almacen/salidas':             'nav-salidas-inv',
     'almacen/proveedores':         'nav-proveedores-inv',
     'almacen/kardex':              'nav-kardex',
-    'almacen/costos':              'nav-costos-inv',
     'almacen/otros':               'nav-almacen-otros',
     'almacen/unidades':            'nav-almacen-otros',
     'almacen/sistemas':            'nav-almacen-otros',
@@ -4281,14 +4270,12 @@ const MENU_SECTION = {
     'mantenimiento/inspecciones': 'mantenimiento',
     'flota/placas':       'flota',
     'mantenimiento/fleetrun':     'mantenimiento',
-    'almacen/dashboard-financiero': 'almacen',
     'almacen/inventario':         'almacen',
     'almacen/entradas':           'almacen',
     'almacen/recepcion-compras':  'almacen',
     'almacen/salidas':            'almacen',
     'almacen/proveedores':        'almacen',
     'almacen/kardex':             'almacen',
-    'almacen/costos':             'almacen',
     'almacen/unidades':           'almacen',
     'almacen/sistemas':           'almacen',
     'almacen/familias':           'almacen',
@@ -4389,7 +4376,6 @@ const BREADCRUMB_MAP = {
     'flota/placas':       ['Flota','Placas'],
     'mantenimiento/fleetrun':     ['Mantenimiento','Fleetrun'],
     'mantenimiento/otros':        ['Mantenimiento','Otros'],
-    'almacen/dashboard-financiero': ['Almacén','Dashboard Financiero'],
     'almacen/inventario':         ['Almacén','Inventario'],
     'almacen/otros':               ['Almacén','Catálogos'],
     'almacen/almacenes':           ['Almacén','Catálogos','Almacenes & Sucursales'],

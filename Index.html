@@ -301,13 +301,6 @@
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-almacen">
-                        <!-- Analítica -->
-                        <div class="nav-sub-label"><i class="bi bi-graph-up me-1"></i><span>Analítica</span></div>
-                        <a id="nav-finanzas-inv" class="nav-item" onclick="cargarModuloAislado('almacen/dashboard-financiero')">
-                            <i class="bi bi-pie-chart-fill nav-icon"></i>
-                            <span class="link-text">Dashboard Financiero</span>
-                        </a>
-                        
                         <!-- Movimientos -->
                         <div class="nav-sub-label"><i class="bi bi-arrow-left-right me-1"></i><span data-i18n="nav.movimientos">Movimientos</span></div>
                         <a id="nav-inventario" class="nav-item" onclick="cargarModuloAislado('almacen/inventario')">
@@ -1202,14 +1195,6 @@
                     <div class="bnav-row-content">
                         <p class="bnav-row-title">Recepción de Compras</p>
                         <p class="bnav-row-desc">Ingreso físico y verificación de guías/facturas</p>
-                    </div>
-                    <i class="bi bi-chevron-right bnav-row-chevron"></i>
-                </div>
-                <div id="mbnav-finanzas-inv" class="bnav-row-item" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/dashboard-financiero'); setBottomNavActive('bnav-almacen');">
-                    <div class="bnav-row-icon" style="color: #8b5cf6;"><i class="bi bi-pie-chart"></i></div>
-                    <div class="bnav-row-content">
-                        <p class="bnav-row-title">Dashboard Financiero</p>
-                        <p class="bnav-row-desc">Valorización y análisis de inventario</p>
                     </div>
                     <i class="bi bi-chevron-right bnav-row-chevron"></i>
                 </div>

@@ -586,3 +586,6 @@
   .prod::before { animation: none !important; }
   .prod__tarjeta, .prod__imagen img, .prod__mas, .ficha__barra-relleno, .prod__nivel span { transition: none; }
 }
+
+/* Costos de la ficha: en dólares son cuatro casillas, en soles tres o una */
+.ficha__costos-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }

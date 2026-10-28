@@ -1,7 +1,7 @@
 import { memo, type KeyboardEvent } from 'react';
 import { MapPin, Package, Plus } from 'lucide-react';
 import { formatSoles } from '../../core/lib/format';
-import { stockTono, type ArticuloInv } from './api';
+import { costoUnitarioSoles, stockTono, valorEnStock, type ArticuloInv } from './api';
 
 const ESTADO_TEXTO = { ok: 'En stock', warning: 'Reponer', critical: 'Sin stock' } as const;
 
@@ -30,7 +30,7 @@ export const ProductoCard = memo(function ProductoCard({ a, onAbrir }: Props) {
   const tono = stockTono(a);
   const stock = Number(a.stock_actual);
   const unidad = a.unidad ?? 'Unidades';
-  const costo = a.moneda === 'USD' ? Number(a.costo_soles ?? 0) : Number(a.costo_referencial ?? 0);
+  const costo = costoUnitarioSoles(a);
   const marcas = marcasCompatibles(a);
   const nivel = a.stock_max > 0 ? Math.min(100, Math.round((stock / a.stock_max) * 100)) : 0;
   const ubicacion = [a.ubicacion, a.anaquel ? `Anq ${a.anaquel}` : ''].filter(Boolean).join(' • ');
@@ -75,7 +75,7 @@ export const ProductoCard = memo(function ProductoCard({ a, onAbrir }: Props) {
           <div>
             <span className="prod__etiqueta">Costo ref.</span>
             <strong>{formatSoles(costo)} <small>/ {unidad}</small></strong>
-            <span className="prod__valor">Valor stock {formatSoles(stock * costo)}</span>
+            <span className="prod__valor">Valor stock {formatSoles(valorEnStock(a))}</span>
           </div>
           <span className="prod__mas" aria-hidden="true"><Plus size={18} /></span>
         </footer>

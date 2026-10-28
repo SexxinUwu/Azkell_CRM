@@ -18,7 +18,7 @@ import { haptic } from '../../core/lib/haptics';
 import { formatSoles } from '../../core/lib/format';
 import { abrirClasico } from '../../core/layout/navigation';
 import {
-  claveAlmacen, coincideInv, eliminarArticulo, familiasUnicas, SIN_ALMACEN, useAlmacenesLista,
+  claveAlmacen, coincideInv, eliminarArticulo, familiasUnicas, SIN_ALMACEN, useAlmacenesLista, valorEnStock,
   useInventario, stockTono, type ArticuloInv,
 } from './api';
 import { InventarioFicha } from './InventarioFicha';
@@ -38,8 +38,8 @@ const PRIORIDAD: Record<'ok' | 'warning' | 'critical', number> = { critical: 0, 
 
 /** Servicios (SERV-…) no se descuentan físicamente: van en su propia pestaña */
 const esServicio = (a: ArticuloInv) => a.tipo === 'Servicio' || a.id.toUpperCase().startsWith('SERV');
-/** Valor del stock al costo referencial (en la moneda que maneja cada artículo, convertido a soles) */
-const valorItem = (a: ArticuloInv) => Number(a.stock_actual) * (a.moneda === 'USD' ? Number(a.costo_soles ?? 0) : Number(a.costo_referencial ?? 0));
+/** Valor del stock en soles (solo artículos con existencias) */
+const valorItem = valorEnStock;
 
 function Kpi({ etiqueta, valor, sub, icono, tono, accion }: {
   etiqueta: string; valor: ReactNode; sub: ReactNode; icono: ReactNode;
@@ -238,7 +238,7 @@ export function InventarioPage() {
           {/* ─── Indicadores ─── */}
           <div className="inv-kpis">
             <Kpi etiqueta="Valorización total" valor={formatSoles(indicadores.valor)} tono="valor"
-              icono={<DollarSign size={18} />} sub="Stock × costo referencial" />
+              icono={<DollarSign size={18} />} sub="Solo con stock · en soles" />
             <Kpi etiqueta="Artículos activos" valor={indicadores.total} icono={<Boxes size={18} />}
               sub={tituloAlmacen} />
             <Kpi etiqueta="Alerta de reposición" valor={indicadores.bajo + indicadores.sinStock} tono="warning"

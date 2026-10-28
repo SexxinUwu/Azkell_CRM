@@ -39,10 +39,10 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'recepcion', label: 'Recepción de compras', to: '/almacen/recepcion-compras', icon: 'PackagePlus', permisos: ['rec_compras.ver', 'ent_inv.ver'] },
   },
   {
-    path: 'almacen/dashboard-financiero/*',
+    path: 'almacen/dashboard/*',
     permisos: ['dash_alm.ver', 'inv.ver'],
-    Page: lazy(() => import('./DashboardFinancieroPage').then(m => ({ default: m.DashboardFinancieroPage }))),
-    nav: { key: 'almacen-dashboard', label: 'Dashboard financiero', to: '/almacen/dashboard-financiero', icon: 'BarChart2', permisos: ['dash_alm.ver', 'inv.ver'] },
+    Page: lazy(() => import('./DashboardPage').then(m => ({ default: m.DashboardPage }))),
+    nav: { key: 'almacen-dashboard', label: 'Dashboard', to: '/almacen/dashboard', icon: 'BarChart2', permisos: ['dash_alm.ver', 'inv.ver'] },
   },
   {
     path: 'almacen/otros/*',
@@ -54,11 +54,5 @@ export const RUTAS: RutaModulo[] = [
     path: 'almacen/configuracion/*',
     permisos: ['cfg_almacen.ver', 'inv.ver'],
     Page: lazy(() => import('./AlmacenConfiguracionPage').then(m => ({ default: m.AlmacenConfiguracionPage }))),
-  },
-  {
-    path: 'almacen/costos/*',
-    permisos: ['dash_alm.ver', 'inv.ver'],
-    Page: lazy(() => import('./CostosPage').then(m => ({ default: m.CostosPage }))),
-    nav: { key: 'almacen-costos', label: 'Costos de almacén', to: '/almacen/costos', icon: 'Boxes', permisos: ['dash_alm.ver', 'inv.ver'] },
   },
 ];
