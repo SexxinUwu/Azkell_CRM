@@ -505,8 +505,8 @@
 
 /* ─── Filtros del dashboard: fecha y empresa en una sola fila y de la misma altura ─── */
 .mant-dash-filtros { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-4); }
-.mant-dash-filtros .aud-fecha { flex: 0 0 auto; width: 10.5rem; height: 2.75rem; min-height: 2.75rem; padding: 0 var(--s-2) 0 var(--s-3); }
-.mant-dash-filtros .aud-fecha input { font-size: 0.875rem; }
+.mant-dash-filtros .aud-fecha { flex: 0 0 auto; width: 12.5rem; height: 2.75rem; min-height: 2.75rem; padding: 0 var(--s-2) 0 var(--s-3); }
+.mant-dash-filtros .aud-fecha input { font-size: 0.875rem; min-width: 8.75rem; }
 .mant-dash-empresa { flex: 1 1 18rem; min-width: 0; max-width: 26rem; margin-left: auto; }
 .mant-dash-empresa .msel__boton { height: 2.75rem; padding: 0 var(--s-3); }
 

@@ -83,19 +83,17 @@
 }
 .nl-lista__flecha { flex-shrink: 0; color: var(--label-2); }
 
-/* ─── Casilla de selección con check animado ─── */
-.nl-casilla { position: relative; display: inline-flex; width: 22px; height: 22px; cursor: pointer; }
+/* ─── Casilla de selección (diseño de referencia: cuadro y check que se dibuja) ─── */
+.nl-casilla { position: relative; display: inline-block; width: 28px; height: 28px; color: var(--label); cursor: pointer; }
 .nl-casilla input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.nl-casilla svg { display: block; overflow: visible; pointer-events: none; }
-.nl-casilla__caja { fill: var(--surface); stroke: var(--label-3); stroke-width: 1.5; transition: fill 0.2s ease, stroke 0.2s ease; }
-.nl-casilla__check { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;
-  stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset 0.35s ease; }
-.nl-casilla input:checked ~ svg .nl-casilla__caja { fill: var(--accent); stroke: var(--accent); }
-.nl-casilla input:checked ~ svg .nl-casilla__check { stroke-dashoffset: 0; }
-.nl-casilla input:focus-visible ~ svg .nl-casilla__caja { stroke: var(--accent); stroke-width: 2; }
+.nl-casilla svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.nl-casilla__trazo { stroke-dasharray: 400; stroke-dashoffset: 400; transition: stroke-dashoffset 0.5s; opacity: 0; }
+.nl-casilla input:checked ~ svg .nl-casilla__trazo { stroke-dashoffset: 0; opacity: 1; }
+.nl-casilla input:focus-visible ~ svg rect { stroke: var(--accent); }
 
 /* ─── Ventana previa de códigos de fuego ─── */
 .nl-previa { width: 100%; border-collapse: collapse; }
 .nl-previa th { text-align: left; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-2); padding: 8px 10px; border-bottom: 0.5px solid var(--separator); }
 .nl-previa td { padding: 9px 10px; border-bottom: 0.5px solid var(--separator); font-size: 0.875rem; }
 .nl-previa tbody tr:nth-child(odd) td { background: var(--fill-subtle); }
+.nl-previa__medida { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--label-2); }

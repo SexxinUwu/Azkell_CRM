@@ -186,14 +186,16 @@ function SituacionChip({ texto }: { texto: string }) {
   return <span className={`nl-situacion nl-situacion--${TONO_SITUACION[texto] ?? 'gris'}`}>{texto}</span>;
 }
 
-/** Casilla con el check que se dibuja al marcarla (mismo efecto que la casilla de referencia) */
+/** Casilla de la referencia: cuadro y check que se dibuja al marcarla */
 function CasillaSeleccion({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
   return (
     <label className="nl-casilla" onClick={e => e.stopPropagation()}>
       <input type="checkbox" checked={checked} onChange={onChange} aria-label={label} />
-      <svg width={22} height={22} viewBox="0 0 24 24" aria-hidden="true">
-        <rect x={2} y={2} width={20} height={20} rx={5} className="nl-casilla__caja" />
-        <path d="M6.5 12.5l3.5 3.5 7.5-8" className="nl-casilla__check" />
+      <svg viewBox="0 0 95 95" aria-hidden="true">
+        <rect x={30} y={20} width={50} height={50} stroke="currentColor" strokeWidth={2} fill="none" />
+        <g transform="translate(0,-952.36222)">
+          <path d="m 56,963 c -102,122 6,9 7,9 17,-5 -66,69 -38,52 122,-77 -7,14 18,4 29,-11 45,-43 23,-4" stroke="currentColor" strokeWidth={3} fill="none" className="nl-casilla__trazo" />
+        </g>
       </svg>
     </label>
   );
@@ -273,7 +275,7 @@ function GenerarCodigosSheet({ open, onClose, seleccionados, onAsignado }: {
               {previa.map(({ l, codigo }) => (
                 <tr key={l.codigo}>
                   <td className="nl-codigo">{codigo ?? <span className="nl-conteo">No asignable</span>}</td>
-                  <td className="nl-codigo">{l.codigo}</td>
+                  <td><span className="nl-codigo">{l.codigo}</span><span className="nl-previa__medida">{l.medida || '—'}</span></td>
                 </tr>
               ))}
             </tbody>
