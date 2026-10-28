@@ -7,7 +7,7 @@ import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { MultiSelect } from '../../core/ui/MultiSelect';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
-import { guardarArticulo, useAlmacenesLista, type ArticuloInv, type ArticuloNuevo } from './api';
+import { guardarArticulo, useAlmacenesLista, useTipoCambioSunat, type ArticuloInv, type ArticuloNuevo } from './api';
 import { InventarioImagen } from './InventarioImagen';
 import { NuevaOpcionSheet } from './NuevaOpcionSheet';
 
@@ -102,6 +102,11 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
 
   const llanta = familia.trim().toUpperCase() === FAMILIA_LLANTA;
   const tcPorDefecto = Number(configQ.data?.tipo_cambio) || 3.7;
+  // En dólares, el tipo de cambio es el de la SUNAT del día (se llena solo; la persona lo puede cambiar)
+  const sunat = useTipoCambioSunat(open && moneda === 'USD' && !a);
+  useEffect(() => {
+    if (moneda === 'USD' && !a && sunat.data?.venta) setTipoCambio(String(sunat.data.venta));
+  }, [moneda, sunat.data, a]);
 
   useEffect(() => {
     if (!open) return;
@@ -342,7 +347,7 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
           </Field>
         </div>
         {moneda === 'USD' && (
-          <Field label="T/C USD → S/">
+          <Field label="T/C USD → S/" hint={sunat.data?.venta ? `SUNAT venta del ${sunat.data.fecha}` : undefined}>
             {p => <TextInput {...p} type="number" min={0.01} step="0.0001" value={tipoCambio} placeholder={String(tcPorDefecto)} onChange={e => setTipoCambio(e.target.value)} />}
           </Field>
         )}

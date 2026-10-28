@@ -1,6 +1,19 @@
 const express = require('express');
+const { tipoCambioSunat } = require('../services/tipo_cambio');
 const { crearLlantasDeRecepcion } = require('../services/neumaticos_codigo');
 const router = express.Router();
+    // Compra o artículo en dólares sin tipo de cambio: se toma el de la SUNAT del día (nunca 1)
+    const tcSunatSiFalta = async (req, res, next) => {
+        try {
+            const b = req.body || {};
+            if (String(b.moneda || '').toUpperCase() === 'USD' && !(parseFloat(b.tipo_cambio) > 0)) {
+                b.tipo_cambio = (await tipoCambioSunat()).venta;
+            }
+            next();
+        } catch (e) {
+            res.status(503).json({ error: 'Falta el tipo de cambio y no se pudo consultar la SUNAT: ' + e.message });
+        }
+    };
 const { createApprovalToken } = require('../services/ocApprovalService');
 const { fechaVencimiento, normalizarCondicion } = require('../services/condicion_oc');
 const { sendApprovalWhatsapp, sendTreasuryNotificationWhatsapp } = require('../services/whatsappService');
@@ -621,7 +634,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
-    router.post('/inventario', (req, res) => {
+    router.post('/inventario', tcSunatSiFalta, (req, res) => {
         const { articulo, codigo_articulo, descripcion, familia, almacen, unidad, moneda, costo_referencial,
             tipo_cambio, cantidad_inicial,
             proveedor_id, marca, observaciones,
@@ -705,7 +718,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         }
     });
 
-    router.put('/inventario/:id', (req, res) => {
+    router.put('/inventario/:id', tcSunatSiFalta, (req, res) => {
         const { articulo, codigo_articulo, descripcion, familia, almacen, unidad, moneda, costo_referencial,
             tipo_cambio,
             proveedor_id, marca, observaciones, activo,
@@ -1548,7 +1561,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
-    router.post('/entradas', (req, res) => {
+    router.post('/entradas', tcSunatSiFalta, (req, res) => {
         const tdb = getDb(req);
         const {
             fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv,
@@ -1620,8 +1633,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                 const costoOrig = parseFloat(d.costo_unitario);
                                 const costoSoles = isUSD ? costoOrig * tc : costoOrig;
                                 tdb.query(
-                                    'UPDATE inventario SET costo_referencial=?, costo_soles=?, tipo_cambio=? WHERE id=? AND activo=1',
-                                    [costoOrig, costoSoles, isUSD ? tc : null, invId],
+                                    'UPDATE inventario SET moneda=?, costo_referencial=?, costo_soles=?, tipo_cambio=? WHERE id=? AND activo=1',
+                                    [isUSD ? 'USD' : 'PEN', costoOrig, costoSoles, isUSD ? tc : null, invId],
                                     () => { 
                                         if (++done === toUpdate.length) {
                                             despacharAprobacionWhatsAppAlmacen(req, tdb, id, req.body).catch(e => console.error('[WhatsApp OC] Background error:', e));
@@ -1655,7 +1668,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         }
     });
 
-    router.put('/entradas/:id', (req, res) => {
+    router.put('/entradas/:id', tcSunatSiFalta, (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;
         const {
@@ -1726,8 +1739,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                 const costoOrig = parseFloat(d.costo_unitario);
                                 const costoSoles = isUSD ? costoOrig * tc : costoOrig;
                                 tdb.query(
-                                    'UPDATE inventario SET costo_referencial=?, costo_soles=?, tipo_cambio=? WHERE id=? AND activo=1',
-                                    [costoOrig, costoSoles, isUSD ? tc : null, invId],
+                                    'UPDATE inventario SET moneda=?, costo_referencial=?, costo_soles=?, tipo_cambio=? WHERE id=? AND activo=1',
+                                    [isUSD ? 'USD' : 'PEN', costoOrig, costoSoles, isUSD ? tc : null, invId],
                                     () => { if (++done === toUpdate.length) if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id }); }
                                 );
                             });
@@ -2864,9 +2877,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     if (tcOC > 0) tipoCambio = tcOC;
                 }
                 if (esUSD && !(tipoCambio > 0)) {
-                    // Sin tipo de cambio en el envío: último TC guardado en el inventario, o 3.75 si no hay ninguno
-                    const [ultimo] = await conn.query('SELECT tipo_cambio FROM inventario WHERE tipo_cambio > 0 ORDER BY updated_at DESC LIMIT 1');
-                    tipoCambio = Number(ultimo && ultimo[0] && ultimo[0].tipo_cambio) || 3.75;
+                    // Sin tipo de cambio: el de la SUNAT del día
+                    tipoCambio = (await tipoCambioSunat()).venta;
                 }
                 const fechaDia = fechaHoraSQL.slice(0, 10);
                 const idsInv = [...new Set(items.map(it => it.inventario_id).filter(Boolean))];

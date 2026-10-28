@@ -326,6 +326,15 @@ window._entOnMonedaChange = function() {
     var moneda = (document.getElementById('ent-f-moneda') || {}).value;
     var tcRow = document.getElementById('ent-f-tc-box');
     if (tcRow) tcRow.style.display = moneda === 'USD' ? 'block' : 'none';
+    // En dólares, el tipo de cambio es el de la SUNAT del día
+    if (moneda === 'USD') {
+        var tcEl = document.getElementById('ent-f-tc');
+        if (tcEl && !tcEl.value) {
+            fetch('/api/tipo-cambio/sunat').then(function(r) { return r.ok ? r.json() : null; })
+                .then(function(j) { if (j && j.ok && j.venta && !tcEl.value) tcEl.value = j.venta; })
+                .catch(function() {});
+        }
+    }
     window._entActualizarTotal();
 };
 
@@ -335,8 +344,6 @@ window._entCargarConfig = function() {
         .then(function(cfg) {
             window._entTC = parseFloat(cfg.tipo_cambio) || 3.4;
             if (window._entTC === 3.7) window._entTC = 3.4;
-            var tcEl = document.getElementById('ent-f-tc');
-            if (tcEl) tcEl.value = window._entTC;
         }).catch(function() {});
 };
 

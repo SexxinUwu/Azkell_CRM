@@ -107,7 +107,7 @@ window.init_inventario = function() {
         var row = document.getElementById('inv-tc-row');
         if (row) row.style.display = m === 'USD' ? 'block' : 'none';
         var tcEl = document.getElementById('inv-f-tc');
-        if (tcEl && !tcEl.value) tcEl.value = window._invTC || 3.70;
+        if (m === 'USD' && tcEl && !tcEl.value) window._invTCSunat(tcEl);
     });
     // Al seleccionar sistema → actualizar opciones de sub-sistema
     window._cbOnSelect('inv-f-sistema', function() { window._invFiltrarSubSistemas(); });
@@ -348,6 +348,14 @@ window._invFiltrarSubSistemas = function() {
     window._cbInit('inv-f-sub-sistema', items, 'Buscar sub-sistema…');
     if (prev && subsNombres.indexOf(prev) >= 0) window._cbSet('inv-f-sub-sistema', prev, prev);
     else window._cbReset('inv-f-sub-sistema');
+};
+
+// Tipo de cambio de la SUNAT del día (venta), para llenar el campo en dólares
+window._invTCSunat = function(el) {
+    fetch('/api/tipo-cambio/sunat')
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(j) { if (j && j.ok && j.venta && el && !el.value) el.value = j.venta; })
+        .catch(function() {});
 };
 
 window._invCargarFamilias = function() {
