@@ -1,12 +1,12 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, CircleAlert, FileSpreadsheet, Fuel, Pencil, Plus, RefreshCw, SearchX, Trash2, Upload, X } from 'lucide-react';
+import { Ban, CircleAlert, FileSpreadsheet, Fuel, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Trash2, Upload, X } from 'lucide-react';
 import { ImportarValesSheet } from './ImportarValesSheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import '../../core/ui/acciones-iconos.css';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -217,14 +217,28 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
         subtitle={q.isLoading ? 'Cargando…' : `${k?.totalVales ?? 0} vales`}
         actions={
           <>
-            <MenuOtros opciones={[
-              { label: 'Exportar Excel', detalle: `${lista.length} de esta página`, icon: <FileSpreadsheet size={17} />, onSelect: () => exportar() },
-              { label: 'Importar desde Excel', icon: <Upload size={17} />, separado: true, onSelect: () => setImportando(true) },
-              ...(esMarsisa ? [
-                { label: 'Sincronizar nuevos vales', detalle: 'Trae de MarsisaSoft solo los que faltan', icon: <RefreshCw size={17} />, onSelect: () => setSincronizar(true) },
-                { label: 'Forzar resincronización completa', detalle: 'Borra los vales de Marsisa y los vuelve a traer', icon: <RefreshCw size={17} />, separado: true, onSelect: () => setResetear(true) },
-              ] : []),
-            ]} />
+            <div className="acciones-iconos">
+              <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--verde"
+                data-tip="Exportar Excel" aria-label="Exportar Excel" onClick={() => exportar()}>
+                <FileSpreadsheet size={17} />
+              </button>
+              <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--violeta"
+                data-tip="Importar desde Excel" aria-label="Importar desde Excel" onClick={() => setImportando(true)}>
+                <Upload size={17} />
+              </button>
+              {esMarsisa && (
+                <>
+                  <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul"
+                    data-tip="Sincronizar nuevos vales" aria-label="Sincronizar nuevos vales" onClick={() => setSincronizar(true)}>
+                    <RefreshCw size={17} />
+                  </button>
+                  <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--rojo"
+                    data-tip="Forzar resincronización completa" aria-label="Forzar resincronización completa" onClick={() => setResetear(true)}>
+                    <RotateCcw size={17} />
+                  </button>
+                </>
+              )}
+            </div>
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ vale: null })}>Nuevo vale</Button>}
           </>
         }
