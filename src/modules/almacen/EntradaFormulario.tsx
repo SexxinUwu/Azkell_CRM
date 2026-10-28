@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Paperclip, Plus, ScanLine, X } from 'lucide-react';
+import { Package, Paperclip, Plus, ScanLine, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
@@ -211,9 +211,12 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
     .filter(a => esArticuloServicio(a) === servicio)
     .map(a => ({
       value: a.id,
-      label: `${a.id} — ${a.articulo || a.descripcion || ''}`,
-      description: [a.marca, a.familia].filter(Boolean).join(' · ') || undefined,
-      keywords: [a.codigo_articulo, a.codigo_barras, a.descripcion].filter(Boolean).join(' '),
+      label: a.descripcion || a.articulo || a.id,
+      description: [a.id, a.marca, a.familia].filter(Boolean).join(' · '),
+      keywords: [a.codigo_articulo, a.codigo_barras, a.articulo].filter(Boolean).join(' '),
+      icon: a.imagen_url
+        ? <img src={a.imagen_url} alt="" className="oc-opcion__foto" loading="lazy" />
+        : <span className="oc-opcion__sin-foto"><Package size={15} strokeWidth={1.8} /></span>,
     }));
 
   const opcionesProveedores: ComboboxOption[] = proveedores.map(p => ({
@@ -500,9 +503,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
         <div className="oc-form">
 
           {/* Datos de la orden */}
-          <section className="form-section">
-            <h3 className="form-section__title">Datos de la orden</h3>
-            <div className="form-grid">
+          <section className="oc-card">
+            <h3 className="oc-card__titulo">Datos de la orden</h3>
+            <div className="oc-grid">
               <Field label="N° de orden">
                 {p => <TextInput {...p} readOnly value={codigoMostrado} className="oc-mono" />}
               </Field>
@@ -534,9 +537,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           </section>
 
           {/* Destino y motivo */}
-          <section className="form-section">
-            <h3 className="form-section__title">{servicio ? 'Servicio y vehículo' : 'Vehículo y motivo'}</h3>
-            <div className="form-grid">
+          <section className="oc-card">
+            <h3 className="oc-card__titulo">{servicio ? 'Servicio y vehículo' : 'Vehículo y motivo'}</h3>
+            <div className="oc-grid">
               {servicio ? (
                 <>
                   <Field label="OT asociada (opcional)">
@@ -569,9 +572,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           </section>
 
           {/* Concepto, centro de costo y autorización */}
-          <section className="form-section">
-            <h3 className="form-section__title">Concepto y autorización</h3>
-            <div className="form-grid">
+          <section className="oc-card">
+            <h3 className="oc-card__titulo">Concepto y autorización</h3>
+            <div className="oc-grid">
               <Field label="Autoriza / solicitante *" error={mostrar(errorCab.autoriza)}>
                 {p => (
                   <SelectInput {...p} value={autoriza} onChange={ev => setAutoriza(ev.target.value)}>
@@ -605,9 +608,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           </section>
 
           {/* Proveedor y cuentas */}
-          <section className="form-section">
-            <h3 className="form-section__title">Proveedor y cuentas bancarias</h3>
-            <div className="form-grid">
+          <section className="oc-card">
+            <h3 className="oc-card__titulo">Proveedor y cuentas bancarias</h3>
+            <div className="oc-grid">
               <Field label="Proveedor *" error={mostrar(errorCab.proveedor)} hint={proveedor ? (proveedor.ruc ? `RUC ${proveedor.ruc}` : 'Este proveedor no tiene RUC registrado') : 'Si no está en la lista, escríbelo y regístralo ahí mismo'}>
                 {p => (
                   <Combobox
@@ -646,9 +649,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           </section>
 
           {/* Condiciones de pago y cotización */}
-          <section className="form-section">
-            <h3 className="form-section__title">Condiciones de pago y cotización</h3>
-            <div className="form-grid">
+          <section className="oc-card">
+            <h3 className="oc-card__titulo">Condiciones de pago y cotización</h3>
+            <div className="oc-grid">
               <Field label="Condición de pago *">
                 {p => (
                   <SelectInput {...p} value={condicion} onChange={ev => { setCondicion(ev.target.value); if (ev.target.value !== 'A crédito') setDiasCredito('0'); else if (!num(diasCredito)) setDiasCredito('30'); }}>
@@ -700,9 +703,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           </section>
 
           {/* Artículos */}
-          <section className="form-section">
+          <section className="oc-card">
             <div className="oc-lineas__cabecera">
-              <h3 className="form-section__title" style={{ margin: 0 }}>{servicio ? 'Servicios' : 'Artículos'}</h3>
+              <h3 className="oc-card__titulo" style={{ margin: 0 }}>{servicio ? 'Servicios' : 'Artículos'}</h3>
               <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setLineas(prev => [...prev, nuevaLinea()])}>
                 Agregar
               </Button>

@@ -6,7 +6,6 @@ import { exportarConsolidadoOC, exportarDetalleArticulosOC, descargarPlantillaEn
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
-import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
 import { TablaRedimensionable, Celda, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
@@ -33,6 +32,7 @@ import { AdjuntosEntradaSheet } from './AdjuntosEntradaSheet';
 import { ImportarEntradasSheet } from './ImportarEntradasSheet';
 import { pdfEntrada } from './entradaPdf';
 import './entradas.css';
+import './almacen.css';
 
 /** Permisos para aprobar (V°B°): el mismo acceso que el menú de Aprobación de O/C (gerencia) o su módulo de aprobación */
 const PERMISOS_APROBAR = ['gerencia.ver', 'aprob_oc.crear', 'aprob_oc.editar'];
@@ -68,6 +68,15 @@ const TONO_CLASE: Record<TonoEstado, string> = { gray: '', green: 'badge--green'
 function EstadoBadge({ estado }: { estado: string | null }) {
   const e = etiquetaEstado(estado);
   return <span className={`badge ${TONO_CLASE[e.tono]}`.trim()}>{e.texto}</span>;
+}
+
+/** Mismo día del mes anterior (28/10 → 28/09); si el mes anterior es más corto, el último día de ese mes */
+function mesAtras(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const anio = m === 1 ? y - 1 : y;
+  const mes = m === 1 ? 12 : m - 1;
+  const ultimo = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
+  return `${anio}-${String(mes).padStart(2, '0')}-${String(Math.min(d, ultimo)).padStart(2, '0')}`;
 }
 
 /** Importe en la moneda de la orden; si falta, se calcula desde el total en soles */
@@ -204,10 +213,10 @@ export function EntradasPage() {
   const inventario = inventarioQ.data ?? [];
 
   const [busqueda, setBusqueda] = useState('');
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
+  const [desde, setDesde] = useState(() => mesAtras(hoyLima()));
+  const [hasta, setHasta] = useState(() => hoyLima());
   const [estado, setEstado] = useState<FiltroEstado>('registradas');
-  const [vista, setVista] = useState<Vista>('articulos');
+  const [vista] = useState<Vista>('articulos');
   const [pagina, setPagina] = useState(1);
   const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<{ entrada: EntradaInv | null } | null>(null);
@@ -439,13 +448,6 @@ export function EntradasPage() {
 
           {/* Filtros */}
           <div className="oc-filtros" style={{ marginBottom: 'var(--s-4)' }}>
-            <SegmentedControl<FiltroEstado> block label="Estado" value={estado} onChange={elegirEstado}
-              options={[
-                { value: 'registradas', label: `Registradas (${conteo.registradas})` },
-                { value: 'aprobadas', label: `Aprobadas (${conteo.aprobadas})` },
-                { value: 'procesadas', label: `Procesadas (${conteo.procesadas})` },
-                { value: 'todas', label: `Todas (${conteo.todas})` },
-              ]} />
             <SearchField value={busqueda} onChange={setBusqueda} placeholder="Código, proveedor, documento, placa o artículo" />
             <div className="oc-filtros__fila">
               <div className="oc-fechas">
@@ -455,10 +457,6 @@ export function EntradasPage() {
                 <button type="button" className="oc-cotizacion__quitar" aria-label="Quitar fechas"
                   onClick={() => { setDesde(''); setHasta(''); }}>×</button>
               </div>
-              {esTabla && (
-                <SegmentedControl<Vista> label="Vista" value={vista} onChange={setVista}
-                  options={[{ value: 'articulos', label: 'Por artículos' }, { value: 'ordenes', label: 'Por órdenes' }]} />
-              )}
               <span className="badge" style={{ marginLeft: 'auto' }}>
                 {visibles.length} {visibles.length === 1 ? 'registro' : 'registros'}
               </span>
