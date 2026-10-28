@@ -1,15 +1,17 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ImageOff } from 'lucide-react';
+import { ImageOff, QrCode } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
-import type { ArticuloInv } from './api';
 import { Sheet } from '../../core/ui/Sheet';
+import { useToast } from '../../core/ui/Toast';
+import { formatSoles } from '../../core/lib/format';
+import { costoSolesArticulo, type ArticuloInv } from './api';
+import { EscanerCodigo } from './EscanerCodigo';
 
 // Selectores buscables de la Solicitud de Salida: calcados de los del clásico (solicitante con buscador,
-// artículo con código, descripción y stock) y con la foto de cada artículo.
-// Las fotos vienen de S3 con una URL firmada que cambia en cada consulta; el service worker (sw.js) las guarda
-// por su ruta sin la firma, así que cada foto se descarga una sola vez aunque se recargue la lista.
+// artículo con código, marca, sistema, costo en soles y stock) y con la foto de cada artículo.
+// Las fotos vienen de S3 con una URL firmada; el service worker las guarda por su ruta sin la firma.
 
 const MAX_FILAS = 80;
 
@@ -121,49 +123,89 @@ function Miniatura({ url, nombre }: { url: string | null; nombre: string }) {
   );
 }
 
-/** Artículo del almacén: el campo muestra el elegido; al tocarlo se abre una hoja con buscador y la lista (foto, código y stock) */
-export function ArticuloSelector({ value, articulos, onSelect, invalido }: {
-  value: string; articulos: ArticuloInv[]; onSelect: (a: ArticuloInv) => void; invalido?: boolean;
+/** Texto de búsqueda de un artículo: código, código de barras, nombre, familia, marca y sistema */
+function textoBusqueda(a: ArticuloInv) {
+  return `${a.id} ${a.codigo_articulo ?? ''} ${a.codigo_barras ?? ''} ${a.articulo} ${a.descripcion} ${a.familia ?? ''} ${a.marca ?? ''} ${a.sistema ?? ''}`.toUpperCase();
+}
+
+/** Artículo del almacén: el campo muestra el elegido; al tocarlo se abre una hoja con buscador y la lista
+ *  (foto, código, marca, sistema, costo en soles y stock). El botón QR lee el código con la cámara. */
+export function ArticuloSelector({ value, articulos, onSelect, invalido, id }: {
+  value: string; articulos: ArticuloInv[]; onSelect: (a: ArticuloInv) => void; invalido?: boolean; id?: string;
 }) {
   const [abierto, setAbierto] = useState(false);
+  const [escaneando, setEscaneando] = useState(false);
   const [q, setQ] = useState('');
+  const toast = useToast();
   const { visibles, total } = useMemo(() => {
     const n = q.trim().toUpperCase();
-    const lista = n
-      ? articulos.filter(a => `${a.id} ${a.codigo_articulo ?? ''} ${a.articulo} ${a.descripcion} ${a.familia ?? ''}`.toUpperCase().includes(n))
-      : articulos;
+    const lista = n ? articulos.filter(a => textoBusqueda(a).includes(n)) : articulos;
     return { visibles: lista.slice(0, MAX_FILAS), total: lista.length };
   }, [articulos, q]);
 
+  function elegir(a: ArticuloInv) {
+    onSelect(a);
+    setAbierto(false);
+  }
+
+  function alEscanear(codigo: string) {
+    setEscaneando(false);
+    const c = codigo.trim().toUpperCase();
+    const hallado = articulos.find(a => a.id.toUpperCase() === c || (a.codigo_barras ?? '').trim().toUpperCase() === c);
+    if (!hallado) { toast(`Artículo no encontrado: ${codigo}`, 'error'); return; }
+    onSelect(hallado);
+    toast(`Artículo: ${hallado.articulo || hallado.id}`);
+  }
+
   return (
-    <>
-      <button type="button" className="input" aria-invalid={invalido || undefined} onClick={() => { setQ(''); setAbierto(true); }}
-        style={{ textAlign: 'left', fontSize: '0.875rem', minHeight: '2.25rem', width: '100%', cursor: 'pointer', color: value ? 'var(--label)' : 'var(--label-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+    <div style={{ display: 'flex', gap: 6, alignItems: 'stretch', minWidth: 0 }}>
+      <button id={id} type="button" className="input" aria-invalid={invalido || undefined} onClick={() => { setQ(''); setAbierto(true); }}
+        style={{ textAlign: 'left', fontSize: '0.875rem', minHeight: '2.5rem', width: '100%', minWidth: 0, cursor: 'pointer', color: value ? 'var(--label)' : 'var(--label-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {value || 'Elegir artículo…'}
+      </button>
+      <button type="button" className="sal-escanear" onClick={() => setEscaneando(true)} aria-label="Escanear código de barras o QR" title="Escanear código de barras o QR">
+        <QrCode size={18} />
       </button>
       <Sheet open={abierto} onClose={() => setAbierto(false)} title="Buscar artículo">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          <input className="input" autoFocus value={q} onChange={e => setQ(e.target.value)}
-            placeholder="Código, nombre o familia..." style={{ fontSize: '1rem', minHeight: 44 }} />
+          <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+            <input className="input" autoFocus value={q} onChange={e => setQ(e.target.value)}
+              placeholder="Código, código de barras, nombre, marca…" style={{ fontSize: '1rem', minHeight: 44, flex: 1 }} />
+            <button type="button" className="sal-escanear" style={{ width: 44, height: 44 }} onClick={() => { setAbierto(false); setEscaneando(true); }} aria-label="Escanear código">
+              <QrCode size={18} />
+            </button>
+          </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>
             {total} artículo(s){total > visibles.length ? ` · mostrando ${visibles.length}, escribe para afinar` : ''}
           </div>
-          <div role="listbox" style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', maxHeight: 'min(60dvh, 520px)', border: '1px solid var(--separator)', borderRadius: 12 }}>
+          <div role="listbox" className="sal-art-lista">
             {visibles.length === 0 && <div style={{ padding: 16, color: 'var(--label-2)', fontSize: '0.875rem' }}>Sin resultados para “{q}”.</div>}
-            {visibles.map(a => (
-              <button key={a.id} type="button" role="option" aria-selected={a.articulo === value}
-                onClick={() => { onSelect(a); setAbierto(false); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', minHeight: 60, padding: '8px 12px', border: 0, borderBottom: '1px solid var(--separator)', background: a.articulo === value ? 'var(--accent-tint)' : 'transparent', cursor: 'pointer', color: 'var(--label)' }}>
-                <Miniatura url={a.imagen_url} nombre={a.articulo} />
-                <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.articulo || a.descripcion}</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{a.codigo_articulo || a.id} · Stock: <b>{Number(a.stock_actual).toLocaleString('es-PE', { maximumFractionDigits: 2 })}</b>{a.unidad ? ` ${a.unidad}` : ''}</span>
-                </span>
-              </button>
-            ))}
+            {visibles.map(a => {
+              const costo = costoSolesArticulo(a);
+              const stock = Number(a.stock_actual) || 0;
+              return (
+                <button key={a.id} type="button" role="option" aria-selected={a.articulo === value}
+                  onClick={() => elegir(a)} className="sal-art-opcion" data-seleccionado={a.articulo === value || undefined}>
+                  <Miniatura url={a.imagen_url} nombre={a.articulo} />
+                  <span className="sal-art-opcion__texto">
+                    <span className="sal-art-opcion__nombre">{a.articulo || a.descripcion}</span>
+                    <span className="sal-art-opcion__meta">
+                      {a.codigo_articulo || a.id}{a.marca ? ` · ${a.marca}` : ''}{a.sistema ? ` · ${a.sistema}` : ''}
+                    </span>
+                    <span className="sal-art-opcion__meta">
+                      <span className={stock > 0 ? 'sal-stock sal-stock--ok' : 'sal-stock sal-stock--no'}>
+                        {stock > 0 ? `Stock: ${Number(stock).toLocaleString('es-PE', { maximumFractionDigits: 2 })}${a.unidad ? ` ${a.unidad}` : ''}` : 'Sin stock'}
+                      </span>
+                      <span className="sal-art-opcion__costo">{formatSoles(costo)}</span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </Sheet>
-    </>
+      <EscanerCodigo open={escaneando} onClose={() => setEscaneando(false)} onLeido={alEscanear} titulo="Escanear artículo" />
+    </div>
   );
 }
