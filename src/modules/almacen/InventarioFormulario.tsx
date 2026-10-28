@@ -56,12 +56,12 @@ const grilla = (columnas: string): CSSProperties => ({
   display: 'grid', gridTemplateColumns: columnas, gap: 'var(--s-3)',
 });
 
-// Llantas: "Llanta <medida> <modelo> / <marca>". Sin medida ni modelo no hay nombre de llanta.
+// Llantas: "Llanta <marca> <medida> <modelo>". Sin medida ni modelo no hay nombre de llanta.
 function nombreLlanta(medida: string, modelo: string, marca: string): string {
   const medMod = [medida, modelo].map(v => v.trim()).filter(Boolean).join(' ');
   if (!medMod) return '';
   const mar = marca.trim();
-  return ['Llanta', medMod, mar ? '/ ' + mar : ''].filter(Boolean).join(' ');
+  return ['Llanta', mar, medMod].filter(Boolean).join(' ');
 }
 
 export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }: Props) {

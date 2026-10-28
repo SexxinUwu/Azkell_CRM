@@ -566,7 +566,7 @@ window._invActualizarPreview = function() {
         var medLl = ((document.getElementById('inv-f-llanta-medida') || {}).value || '').trim();
         var modLl = ((document.getElementById('inv-f-llanta-modelo') || {}).value || '').trim();
         var medModLl = [medLl, modLl].filter(Boolean).join(' ');
-        if (medModLl) nombre = ['Llanta', medModLl, marca ? '/ ' + marca : ''].filter(Boolean).join(' ');
+        if (medModLl) nombre = ['Llanta', marca, medModLl].filter(Boolean).join(' ');
     }
 
     var prev = document.getElementById('inv-nombre-preview');
