@@ -1,6 +1,7 @@
 // Almacén: Inventario, Entradas, Salidas, Kardex, Recepción de compras, Proveedores
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
+import type { CuentaBancaria, ModoIgv } from './entradaReglas';
 
 // ─── Inventario ─────────────────────────────────────────────────────────────
 
@@ -90,48 +91,118 @@ export async function regularizarStock(id: string, stock_fisico: number, motivo:
   return api(`/almacen/inventario/${id}/regularizar`, { method: 'POST', body: { stock_fisico, motivo } });
 }
 
-// ─── Entradas ───────────────────────────────────────────────────────────────
+// ─── Entradas (órdenes de compra) ───────────────────────────────────────────
+// Mismas reglas que el clásico (modulos/almacen/entradas). Las reglas puras están en entradaReglas.ts.
 
 export interface ItemEntrada {
   id?: number;
   inventario_id: string | null;
   descripcion: string;
   cantidad: number;
+  /** Precio unitario. Con IGV cuando la orden lleva IGV (así lo guarda el clásico). */
   costo_unitario: number;
   moneda: string;
+  /** cantidad × costo_unitario */
   importe: number;
   item_unidad?: string;
   item_codigo_articulo?: string;
+  cantidad_recibida?: number;
 }
 
-/** Entrada tal como la devuelve el servidor (columnas de entradas_inv). El código es texto: ENT-2026-00120 */
+/** Entrada tal como la devuelve el servidor (columnas de entradas_inv + datos que arma el listado). Código: ENT-2026-00120 */
 export interface EntradaInv {
   id: string;
   fecha: string | null;
-  tipo_orden: string | null;        // 'Orden de compra' | 'Entrada directa' | 'Ajuste' | …
+  tipo_orden: string | null;
   proveedor_id: string | null;
   proveedor_nombre: string | null;
+  proveedor_ruc?: string | null;
   documento_referencia: string | null;
   moneda: string;
   tipo_cambio: number | null;
+  /** Total en soles (el listado lo convierte con el tipo de cambio) */
   total_pen: number;
-  condicion_pago: string | null;    // 'Al contado' | 'A crédito'
+  /** Total en la moneda de la orden */
+  total_oc?: number;
+  condicion_pago: string | null;
   dias_credito: number | null;
-  estado: string | null;            // 'Registrado' (inicial) → 'Aprobado' | 'Anulado' | 'Rechazado'
+  dias_pagar?: number | null;
+  estado: string | null;
   motivo_entrada: string | null;
   motivo_anulacion: string | null;
   solicitante: string | null;
   placa: string | null;
+  ot_id?: string | null;
   observaciones: string | null;
   creado_por: string | null;
+  creador_nombre?: string | null;
   created_at: string;
   items: ItemEntrada[];
-  tipo_igv: string | null;          // 'sin_igv' | 'mas_igv'
-  autoriza: string | null;          // quien aprobó (V°B° de gerencia)
+  tipo_igv: string | null;
+  autoriza: string | null;
   aprobado_por: string | null;
+  aprobador_nombre?: string | null;
   fecha_aprobacion: string | null;
+  centro_costo?: string | null;
+  sub_motivo?: string | null;
+  prioridad?: string | null;
+  serie?: string | null;
+  numero_correlativo?: string | null;
+  cuenta_bancaria_proveedor?: string | null;
+  cuenta_bancaria_empresa?: string | null;
+  estado_factura?: string | null;
+  numero_operacion?: string | null;
+  url_cotizacion?: string | null;
+  url_cotizacion_presigned?: string | null;
+  url_factura?: string | null;
+  url_factura_presigned?: string | null;
+  url_voucher?: string | null;
+  url_voucher_presigned?: string | null;
   total_recibido?: number;
   cant_recepciones?: number;
+}
+
+/** Ítem tal como se envía al servidor */
+export interface ItemEnvio {
+  inventario_id: string | null;
+  descripcion: string;
+  cantidad: number;
+  costo_unitario: number;
+  moneda: string;
+  importe: number;
+}
+
+/** Cuerpo de alta y edición de una orden (POST / PUT /almacen/entradas) */
+export interface PayloadEntrada {
+  fecha: string;
+  serie?: string;
+  numero_correlativo?: string;
+  tipo_orden: string;
+  proveedor_id: string | null;
+  proveedor_nombre: string | null;
+  cuenta_bancaria_proveedor: string | null;
+  cuenta_bancaria_empresa: string | null;
+  solicitante: string | null;
+  autoriza: string;
+  centro_costo: string;
+  sub_motivo: string;
+  motivo_entrada: string;
+  placa: string | null;
+  ot_id: string | null;
+  documento_referencia: string | null;
+  estado_factura?: string;
+  moneda: string;
+  tipo_cambio: number | null;
+  tipo_igv: ModoIgv;
+  condicion_pago: string;
+  dias_credito: number;
+  dias_pagar: number;
+  prioridad: string;
+  observaciones: string | null;
+  creado_por: string | null;
+  /** undefined: no se cambia; null: se quita */
+  url_cotizacion?: string | null;
+  items: ItemEnvio[];
 }
 
 /** Aprueba (V°B°) una orden de compra. El servidor también avisa a Tesorería por WhatsApp (comportamiento de producción). */
@@ -152,43 +223,6 @@ export function useEmpresaDocumentos() {
   });
 }
 
-export const TIPOS_ENTRADA = ['Compra', 'Transferencia', 'Devolución', 'Donación', 'Ajuste', 'Otro'];
-export const CONDICIONES_PAGO = ['Al contado', 'A crédito'];
-
-/** Tipo de la interfaz → tipo_orden del servidor (el clásico guarda "Orden de compra" para las compras) */
-export const tipoOrdenDe = (tipo: string): string => (tipo === 'Compra' ? 'Orden de compra' : tipo);
-
-/** tipo_orden del servidor → tipo de la interfaz */
-export function tipoDeOrden(tipoOrden: string | null | undefined): string {
-  const t = (tipoOrden ?? '').trim().toLowerCase();
-  if (t.startsWith('orden de compra')) return 'Compra';
-  const hallado = TIPOS_ENTRADA.find(x => x.toLowerCase() === t);
-  return hallado ?? 'Otro';
-}
-
-/**
- * Grupo de un estado de entrada para la pantalla. 'Registrado' y 'Pendiente' son sinónimos:
- * ambos esperan aprobación. La etiqueta muestra 'Registrada' para el estado inicial del servidor.
- */
-export type GrupoEntrada = 'pendientes' | 'aprobadas' | 'anuladas' | 'otras';
-export function grupoEntrada(estado: string | null | undefined): GrupoEntrada {
-  const e = (estado ?? 'Registrado').trim().toLowerCase();
-  if (e === 'registrado' || e === 'registrada' || e === 'pendiente') return 'pendientes';
-  if (e.startsWith('aprob') || e.startsWith('autoriz') || e === 'procesado' || e === 'procesada' || e === 'pagado' || e === 'pagada') return 'aprobadas';
-  if (e.startsWith('anul')) return 'anuladas';
-  return 'otras';
-}
-export function etiquetaEstadoEntrada(estado: string | null | undefined): string {
-  const e = (estado ?? 'Registrado').trim();
-  const l = e.toLowerCase();
-  if (l === 'registrado' || l === 'registrada') return 'Registrada';
-  if (l === 'pendiente') return 'Pendiente';
-  if (l.startsWith('aprob')) return 'Aprobada';
-  if (l.startsWith('anul')) return 'Anulada';
-  if (l.startsWith('rechaz')) return 'Rechazada';
-  return e;
-}
-
 export function useEntradas() {
   return useQuery<EntradaInv[]>({
     queryKey: ['almacen', 'entradas'],
@@ -197,17 +231,152 @@ export function useEntradas() {
   });
 }
 
-export async function guardarEntrada(data: Partial<EntradaInv> & { items: ItemEntrada[] }, id?: string | number) {
-  if (id) return api(`/almacen/entradas/${id}`, { method: 'PUT', body: data });
+export async function guardarEntrada(data: PayloadEntrada, id?: string | number) {
+  if (id) return api(`/almacen/entradas/${encodeURIComponent(String(id))}`, { method: 'PUT', body: data });
   return api('/almacen/entradas', { method: 'POST', body: data });
 }
 
 export async function eliminarEntrada(id: string | number) {
-  return api(`/almacen/entradas/${id}`, { method: 'DELETE' });
+  return api(`/almacen/entradas/${encodeURIComponent(String(id))}`, { method: 'DELETE' });
 }
 
-export async function anularEntrada(id: string | number, motivo = 'Anulada desde Almacén') {
-  return api(`/almacen/entradas/${id}/anular`, { method: 'PUT', body: { motivo } });
+export async function anularEntrada(id: string | number, motivo: string) {
+  return api(`/almacen/entradas/${encodeURIComponent(String(id))}/anular`, { method: 'PUT', body: { motivo } });
+}
+
+/** Próximo correlativo de la orden (ENT-2026-00120). Se pide cada vez que se abre el formulario. */
+export function useProximoCodigoEntrada(enabled: boolean) {
+  return useQuery<{ codigo?: string }>({
+    queryKey: ['almacen', 'entradas', 'proximo-codigo'],
+    queryFn: () => api('/almacen/entradas/proximo-codigo', { query: { anio: new Date().getFullYear() } }),
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
+  });
+}
+
+// ─── Adjuntos (cotización, factura, voucher) ────────────────────────────────
+
+export type TipoAdjunto = 'cotizacion' | 'factura' | 'voucher';
+
+/** Sube la cotización al abrir el archivo en el formulario: devuelve la URL final en S3 */
+export async function subirCotizacion(file: File): Promise<string> {
+  const q = { filename: file.name, contentType: file.type || 'application/pdf', tipo: 'cotizacion' };
+  const url = await api<{ uploadUrl?: string; fileUrl?: string; error?: string }>('/almacen/entradas/upload-url', { query: q });
+  if (!url.uploadUrl) throw new Error(url.error || 'No se obtuvo URL de subida');
+  const put = await fetch(url.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type || 'application/pdf' } });
+  if (!put.ok) throw new Error('Error transfiriendo el archivo a AWS S3');
+  return url.fileUrl ?? '';
+}
+
+export async function eliminarAdjunto(id: string, tipo: TipoAdjunto) {
+  return api(`/almacen/entradas/${encodeURIComponent(id)}/archivo/${tipo}`, { method: 'DELETE' });
+}
+
+export interface AdjuntoNuevo { file: File; tipo: TipoAdjunto; documento_referencia?: string; numero_operacion?: string }
+
+/**
+ * Sube los archivos nuevos directo a S3 (URLs prefirmadas) y luego confirma en la base de datos.
+ * Igual que el clásico: un voucher pasa la orden a "Procesado"; la factura guarda su N° de comprobante.
+ */
+export async function guardarAdjuntos(id: string, lista: AdjuntoNuevo[], extra: { documento_referencia: string; numero_operacion: string }) {
+  const exitosos: Array<{ tipo: TipoAdjunto; finalUrl: string; s3Key: string; documento_referencia?: string; numero_operacion?: string }> = [];
+  if (lista.length) {
+    const pre = await api<{ urls?: Array<{ uploadUrl: string; finalUrl: string; s3Key: string; tipo: TipoAdjunto }> }>(
+      `/almacen/entradas/${encodeURIComponent(id)}/archivos/presigned`,
+      { method: 'POST', body: { archivos: lista.map(a => ({ fileName: a.file.name, contentType: a.file.type || 'application/pdf', tipo: a.tipo })) } },
+    );
+    const urls = pre.urls ?? [];
+    if (!urls.length) throw new Error('No se generaron URLs de subida');
+    await Promise.all(lista.map(async (a, i) => {
+      const u = urls[i];
+      if (!u?.uploadUrl) throw new Error(`No hay URL para ${a.tipo}`);
+      const put = await fetch(u.uploadUrl, { method: 'PUT', body: a.file });
+      if (!put.ok) throw new Error(`Error al transferir ${a.tipo} a AWS S3 (HTTP ${put.status})`);
+      exitosos.push({ tipo: a.tipo, finalUrl: u.finalUrl, s3Key: u.s3Key, documento_referencia: a.documento_referencia, numero_operacion: a.numero_operacion });
+    }));
+  }
+  return api(`/almacen/entradas/${encodeURIComponent(id)}/archivos/confirmar`, {
+    method: 'POST',
+    body: { exitosos, documento_referencia: extra.documento_referencia, numero_operacion: extra.numero_operacion },
+  });
+}
+
+// ─── Catálogos para el formulario ───────────────────────────────────────────
+
+export interface PlacaLista { placa: string; cliente: string | null }
+
+/** Placas de la flota (las mismas que el clásico: el campo placa de la tabla placas) */
+export function usePlacasLista() {
+  return useQuery<PlacaLista[]>({
+    queryKey: ['almacen', 'placas-lista'],
+    queryFn: async () => {
+      const r = await api<PlacaLista[] | { data?: PlacaLista[] }>('/placas-lista');
+      const lista = Array.isArray(r) ? r : (r.data ?? []);
+      return lista
+        .map(p => ({ placa: String(p.placa ?? '').toUpperCase(), cliente: (p as { cliente?: string | null }).cliente ?? null }))
+        .filter(p => p.placa)
+        .sort((a, b) => a.placa.localeCompare(b.placa));
+    },
+    staleTime: 300_000,
+  });
+}
+
+export interface OtLista { id_ot: string; placa: string | null }
+
+/** Órdenes de trabajo del taller (para vincular una orden de servicio) */
+export function useOrdenesTrabajoLista() {
+  return useQuery<OtLista[]>({
+    queryKey: ['almacen', 'ordenes-trabajo'],
+    queryFn: async () => {
+      const r = await api<Array<{ id_ot?: string | null; placa?: string | null }> | null>('/ordenes-trabajo');
+      return (r ?? [])
+        .map(o => ({ id_ot: String(o.id_ot ?? '').toUpperCase(), placa: o.placa ? String(o.placa).toUpperCase() : null }))
+        .filter(o => o.id_ot);
+    },
+    staleTime: 120_000,
+  });
+}
+
+export interface CuentaEmpresa extends CuentaBancaria { id?: number | string; banco: string | null }
+
+/** Cuentas de la empresa; si el servidor no tiene ninguna, se usan los bancos de Tesorería activos (como el clásico) */
+export function useEmpresaCuentas() {
+  return useQuery<CuentaEmpresa[]>({
+    queryKey: ['almacen', 'empresa-cuentas'],
+    queryFn: async () => {
+      const r = await api<CuentaEmpresa[] | { data?: CuentaEmpresa[] }>('/almacen/empresa-cuentas');
+      const lista = Array.isArray(r) ? r : (r.data ?? []);
+      if (lista.length) return lista;
+      try {
+        const bancos = await api<{ ok?: boolean; data?: Array<CuentaEmpresa & { estado?: string | null }> }>('/tesoreria/bancos');
+        return (bancos.data ?? []).filter(b => b.estado === 'ACTIVO' || !b.estado);
+      } catch {
+        return [];
+      }
+    },
+    staleTime: 60_000,
+  });
+}
+
+/** Cuentas bancarias de un proveedor cuando la lista de proveedores no las trae */
+export function useCuentasProveedor(provId: string | null, enabled: boolean) {
+  return useQuery<CuentaBancaria[]>({
+    queryKey: ['almacen', 'proveedores', provId ?? '', 'cuentas'],
+    queryFn: async () => (await api<CuentaBancaria[] | null>(`/almacen/proveedores/${encodeURIComponent(provId ?? '')}/cuentas`)) ?? [],
+    enabled: enabled && !!provId,
+    staleTime: 60_000,
+  });
+}
+
+/** Configuración de almacén (tipo de cambio de respaldo) */
+export function useConfiguracionAlmacen() {
+  return useQuery<Record<string, string>>({
+    queryKey: ['almacen', 'configuracion'],
+    queryFn: () => api<Record<string, string>>('/almacen/configuracion'),
+    staleTime: 5 * 60_000,
+  });
 }
 
 // ─── Salidas ────────────────────────────────────────────────────────────────
@@ -406,6 +575,8 @@ export interface ProveedorInv {
   moneda_pago: string | null;
   observaciones: string | null;
   estado: string | null;
+  /** Todas sus cuentas bancarias (la orden de compra elige una) */
+  cuentas?: CuentaBancaria[];
 }
 
 interface ProveedorServidor {
@@ -418,7 +589,7 @@ interface ProveedorServidor {
   direccion: string | null;
   estado: string | null;
   observaciones: string | null;
-  cuentas?: Array<{ banco: string | null; moneda: string | null; numero_cuenta: string | null }>;
+  cuentas?: Array<{ banco: string | null; moneda: string | null; numero_cuenta: string | null; tipo_cuenta?: string | null; detraccion?: number | boolean | null }>;
 }
 
 const MARCA_CONTACTO = 'Contacto: ';
@@ -442,6 +613,9 @@ function proveedorDesdeServidor(p: ProveedorServidor): ProveedorInv {
     moneda_pago: cuenta?.moneda ?? null,
     observaciones: obs.split('\n').filter(l => !l.startsWith(MARCA_CONTACTO)).join('\n') || null,
     estado: p.estado,
+    cuentas: (p.cuentas ?? []).map(c => ({
+      banco: c.banco, moneda: c.moneda, numero_cuenta: c.numero_cuenta, tipo_cuenta: c.tipo_cuenta ?? null, detraccion: c.detraccion ?? null,
+    })),
   };
 }
 
