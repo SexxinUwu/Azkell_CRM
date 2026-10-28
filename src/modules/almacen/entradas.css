@@ -144,7 +144,7 @@
 .oc-filtros { display: flex; flex-direction: column; gap: var(--s-3); }
 .oc-filtros__fila { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
 .oc-fechas { display: flex; align-items: center; gap: var(--s-2); }
-.oc-fechas .input { min-height: 2.25rem; width: auto; font-size: 0.8125rem; }
+.oc-fechas .input { min-height: 2.25rem; width: auto; min-width: 9.5rem; font-size: 0.8125rem; }
 .oc-tarjeta-orden { display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-3); border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--separator); }
 .oc-tarjeta-orden__cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
 .oc-codigo { font-family: var(--font-mono); font-weight: 700; font-size: 0.9375rem; color: var(--accent-ink); background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
