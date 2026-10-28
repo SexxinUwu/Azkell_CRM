@@ -1,36 +1,38 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import JsBarcode from 'jsbarcode';
-import { ChevronLeft, Edit, Package, Printer, RefreshCw, Trash2 } from 'lucide-react';
+import { Edit, MapPin, Package, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { stockLabel, stockTono, useKardex, type ArticuloInv } from './api';
+import { stockTono, useKardex, type ArticuloInv } from './api';
 import { RegularizarSheet } from './RegularizarSheet';
 import { api } from '../../core/api/client';
 import { useToast } from '../../core/ui/Toast';
 import { imprimirEtiqueta } from './etiquetaArticulo';
 import { formatMoneda, formatSoles } from '../../core/lib/format';
 import { KardexMovimientos } from './KardexMovimientos';
+import { marcasCompatibles } from './InventarioGrid';
 
 interface Props {
   articulo: ArticuloInv;
-  onVolver?: () => void;
   onEditar?: () => void;
   onEliminar?: () => void;
   onActualizado?: () => void;
 }
 
 interface DatosLlanta { medida: string | null; modelo: string | null; cocada_inicial: number | null }
+type Pestana = 'especificaciones' | 'movimientos';
 
-/** Campo de la ficha: la etiqueta va encima del valor. Sin valor, no se muestra. */
-function Campo({ etiqueta, valor, ancho, children }: { etiqueta: string; valor?: ReactNode; ancho?: 'doble' | 'completo'; children?: ReactNode }) {
+const ESTADO_TEXTO = { ok: 'Stock óptimo', warning: 'Stock bajo', critical: 'Sin stock' } as const;
+
+/** Casilla de dato: la etiqueta va encima del valor. Sin valor, no se muestra. */
+function Dato({ etiqueta, valor, children }: { etiqueta: string; valor?: ReactNode; children?: ReactNode }) {
   const contenido = children ?? valor;
   if (contenido == null || contenido === '') return null;
-  const clase = ancho === 'completo' ? ' inv-campo--completo' : ancho === 'doble' ? ' inv-campo--doble' : '';
   return (
-    <div className={`inv-campo${clase}`}>
-      <span className="inv-campo__etiqueta">{etiqueta}</span>
-      <span className="inv-campo__valor">{contenido}</span>
+    <div className="ficha__dato">
+      <span className="ficha__dato-etiqueta">{etiqueta}</span>
+      <span className="ficha__dato-valor">{contenido}</span>
     </div>
   );
 }
@@ -41,17 +43,19 @@ function CodigoBarras({ valor }: { valor: string }) {
   useEffect(() => {
     if (!ref.current) return;
     try {
-      JsBarcode(ref.current, valor, { format: 'CODE128', width: 2, height: 64, displayValue: true, fontSize: 14, margin: 0 });
+      JsBarcode(ref.current, valor, { format: 'CODE128', width: 1.6, height: 48, displayValue: true, fontSize: 12, margin: 0 });
     } catch {
       // Un valor que CODE128 no puede codificar deja el recuadro vacío
     }
   }, [valor]);
-  return <div className="inv-barcode"><svg ref={ref} className="inv-barcode__svg" /></div>;
+  return <svg ref={ref} className="ficha__barcode" />;
 }
 
-export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, onActualizado }: Props) {
-  const [regularizando, setRegularizando] = useState(false);
+export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualizado }: Props) {
   const toast = useToast();
+  const [regularizando, setRegularizando] = useState(false);
+  const [pestana, setPestana] = useState<Pestana>('especificaciones');
+
   // Llantas (familia NEUMATICOS): medida, modelo y cocada viven en neumaticos_articulo
   const esLlanta = (a.familia ?? '').trim().toUpperCase() === 'NEUMATICOS';
   const llantaQ = useQuery<{ data?: DatosLlanta | null }>({
@@ -61,32 +65,35 @@ export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, o
   });
   const llanta = llantaQ.data?.data;
 
+  const { data: kardexData, isLoading: cargandoKardex } = useKardex(a.id);
+  const kardex = kardexData?.items ?? [];
+
   const tono = stockTono(a);
   const stock = Number(a.stock_actual);
   const stockTexto = stock % 1 === 0 ? String(stock) : stock.toFixed(2);
-  const capacidad = a.stock_max > 0 ? Math.min(100, Math.round((stock / a.stock_max) * 100)) : null;
+  const unidad = a.unidad ?? 'Unidades';
   const codigoBarra = a.codigo_barras || a.id;
+  const marcas = marcasCompatibles(a);
+  const ubicacion = [a.ubicacion, a.anaquel ? `Anaquel ${a.anaquel}` : ''].filter(Boolean).join(' • ');
 
-  const { data: kardexData, isLoading: cargandoKardex } = useKardex(a.id);
-  const kardex = kardexData?.items;
-
-  let marcasArr: string[] = [];
-  try { marcasArr = JSON.parse(a.marca_unidad ?? '[]'); } catch { /* */ }
+  // Costo promedio ponderado (S/): el último movimiento del kardex lo trae; si no hay movimientos, el referencial
+  const ultimo = kardex.length > 0 ? kardex[kardex.length - 1] : null;
+  const costoPromedio = ultimo?.costo_promedio ?? (a.moneda === 'USD' ? Number(a.costo_soles ?? 0) : Number(a.costo_referencial ?? 0));
+  const valorStock = stock * costoPromedio;
+  const pctStock = a.stock_max > 0 ? Math.min(100, Math.round((stock / a.stock_max) * 100)) : 0;
 
   return (
-    <div className="inv-det">
-      {/* Barra superior: título y acciones */}
-      <div className="inv-det__barra">
-        {onVolver && (
-          <button type="button" className="tarjeta__volver" onClick={onVolver}>
-            <ChevronLeft size={20} /> Inventario
-          </button>
-        )}
-        <div className="inv-det__titulo">
-          <h2 className="inv-det__nombre">{a.articulo || a.descripcion}</h2>
-          <span className="inv-det__id">{a.id} • CB: {codigoBarra}</span>
+    <div className="ficha">
+      {/* Encabezado: identificación y acciones */}
+      <header className="ficha__cabecera">
+        <div className="ficha__identidad">
+          <div className="ficha__chips">
+            {a.familia && <span className="ficha__chip">{a.familia}</span>}
+            <span className="ficha__mono">SKU {a.id}</span>
+            {a.codigo_articulo && <span className="ficha__mono ficha__mono--acento">OEM {a.codigo_articulo}</span>}
+          </div>
         </div>
-        <div className="inv-det__acciones">
+        <div className="ficha__acciones">
           <Button variant="secondary" size="sm" icon={<Printer size={15} />}
             onClick={() => { if (!imprimirEtiqueta(a)) toast('No se pudo abrir la etiqueta. Permite las ventanas emergentes para este sitio.', 'error'); }}>
             Imprimir
@@ -94,108 +101,124 @@ export function InventarioFicha({ articulo: a, onVolver, onEditar, onEliminar, o
           <Button variant="secondary" size="sm" icon={<RefreshCw size={15} />} onClick={() => setRegularizando(true)}>Regularizar</Button>
           {onEditar && <Button variant="primary" size="sm" icon={<Edit size={15} />} onClick={onEditar}>Editar</Button>}
           <MenuOtros opciones={[
-            { label: 'Regularizar stock', icon: <RefreshCw size={17} />, onSelect: () => setRegularizando(true) },
-            onEliminar && { label: 'Eliminar artículo', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: onEliminar },
+            onEliminar && { label: 'Eliminar artículo', icon: <Trash2 size={17} />, destructiva: true, onSelect: onEliminar },
           ]} />
         </div>
-      </div>
+      </header>
 
-      {/* Foto y stock actual */}
-      <div className="inv-det__resumen">
-        <section className="inv-tarjeta">
-          {a.imagen_url
-            ? <img src={a.imagen_url} alt={a.articulo} className="inv-det__foto" />
-            : <div className="inv-det__foto-vacia"><Package size={28} /></div>}
-          <p className="inv-tarjeta__nota">Foto del producto</p>
-        </section>
+      <div className="ficha__cuerpo">
+        {/* Columna izquierda: imagen, ubicación y compatibilidad */}
+        <aside className="ficha__columna ficha__columna--media">
+          <div className="ficha__bloque" style={{ '--i': 0 } as CSSProperties}>
+            <div className="ficha__foto">
+              <span className={`ficha__estado ficha__estado--${tono}`}>{ESTADO_TEXTO[tono]} ({stockTexto} disp.)</span>
+              {a.imagen_url
+                ? <img src={a.imagen_url} alt={a.articulo} />
+                : <Package size={56} strokeWidth={1.3} />}
+            </div>
+          </div>
 
-        <section className="inv-tarjeta">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--s-2)' }}>
-            <span className="inv-kpi__etiqueta">Stock físico actual</span>
-            <span className={`inv-estado inv-estado--${tono}`}>{stockLabel(a)}</span>
+          <div className="ficha__bloque" style={{ '--i': 1 } as CSSProperties}>
+            <h3 className="ficha__titulo-bloque"><MapPin size={15} /> Ubicación física</h3>
+            <div className="ficha__tres">
+              <Dato etiqueta="Almacén" valor={a.almacen || 'Sin almacén'} />
+              <Dato etiqueta="Anaquel" valor={a.anaquel} />
+              <Dato etiqueta="Ubicación" valor={a.ubicacion} />
+            </div>
+            {!ubicacion && <p className="ficha__nota">Sin ubicación registrada.</p>}
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--s-2)' }}>
-            <span className="inv-det__stock-num">{stockTexto}</span>
-            <span className="inv-det__stock-unidad">{a.unidad ?? 'Unidades'}</span>
-          </div>
-          {capacidad !== null && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-1)' }}>
-              <div className="inv-det__capacidad-texto">
-                <span>Capacidad de almacén</span>
-                <span>{capacidad}% ({stockTexto} / {a.stock_max})</span>
-              </div>
-              <div className="inv-det__capacidad-barra">
-                <div className={`inv-det__capacidad-relleno${tono !== 'ok' ? ` inv-det__capacidad-relleno--${tono}` : ''}`} style={{ width: `${capacidad}%` }} />
+
+          {marcas.length > 0 && (
+            <div className="ficha__bloque" style={{ '--i': 2 } as CSSProperties}>
+              <h3 className="ficha__titulo-bloque">Homologado para flota</h3>
+              <div className="ficha__chips-wrap">
+                {marcas.map(m => <span key={m} className="ficha__chip ficha__chip--check">{m}</span>)}
               </div>
             </div>
           )}
-          <p className="inv-tarjeta__nota">Mínimo: {a.stock_min} · Máximo: {a.stock_max}</p>
+
+          <div className="ficha__bloque" style={{ '--i': 3 } as CSSProperties}>
+            <h3 className="ficha__titulo-bloque">Código de barras</h3>
+            <div className="ficha__barras"><CodigoBarras valor={codigoBarra} /></div>
+          </div>
+        </aside>
+
+        {/* Columna derecha: identidad del producto, costos y pestañas */}
+        <section className="ficha__columna ficha__columna--info">
+          <div className="ficha__bloque" style={{ '--i': 0 } as CSSProperties}>
+            {a.marca && <p className="ficha__marca">{a.marca}</p>}
+            <h2 className="ficha__titulo">{a.articulo || a.descripcion}</h2>
+            {a.observaciones && <p className="ficha__descripcion">{a.observaciones}</p>}
+          </div>
+
+          <div className="ficha__bloque ficha__costos" style={{ '--i': 1 } as CSSProperties}>
+            <div className="ficha__costos-cabecera">
+              <span className="ficha__titulo-bloque">Estructura de costos</span>
+              <span className="ficha__mono">Costo promedio ponderado</span>
+            </div>
+            <div className="ficha__costos-grid">
+              <div className="ficha__costo">
+                <span>Costo referencial</span>
+                <strong>{formatMoneda(Number(a.costo_referencial ?? 0), a.moneda)}</strong>
+              </div>
+              <div className="ficha__costo">
+                <span>Costo promedio (S/)</span>
+                <strong>{formatSoles(costoPromedio)}</strong>
+              </div>
+              <div className="ficha__costo ficha__costo--oscuro">
+                <span>Valor en stock</span>
+                <strong>{formatSoles(valorStock)}</strong>
+              </div>
+            </div>
+            <div className="ficha__stock">
+              <div className="ficha__stock-texto">
+                <span>Stock actual</span>
+                <span><b>{stockTexto}</b> {unidad} · Mín {a.stock_min} · Máx {a.stock_max}</span>
+              </div>
+              <div className="ficha__barra">
+                <div className={`ficha__barra-relleno ficha__barra-relleno--${tono}`} style={{ width: `${pctStock}%` }} />
+              </div>
+            </div>
+          </div>
+
+          <div className="ficha__pestanas" role="tablist" aria-label="Detalle del artículo" style={{ '--i': 2 } as CSSProperties}>
+            <button type="button" role="tab" aria-selected={pestana === 'especificaciones'}
+              className={`ficha__pestana${pestana === 'especificaciones' ? ' ficha__pestana--activa' : ''}`}
+              onClick={() => setPestana('especificaciones')}>Especificaciones</button>
+            <button type="button" role="tab" aria-selected={pestana === 'movimientos'}
+              className={`ficha__pestana${pestana === 'movimientos' ? ' ficha__pestana--activa' : ''}`}
+              onClick={() => setPestana('movimientos')}>Movimientos</button>
+          </div>
+
+          {pestana === 'especificaciones' ? (
+            <div className="ficha__datos ficha__panel" role="tabpanel">
+              <Dato etiqueta="Código de parte" valor={a.codigo_articulo} />
+              <Dato etiqueta="Código ítem" valor={a.codigo_item} />
+              <Dato etiqueta="Código de barras" valor={a.codigo_barras} />
+              <Dato etiqueta="Familia" valor={a.familia} />
+              <Dato etiqueta="Tipo" valor={a.tipo} />
+              <Dato etiqueta="Sub-tipo" valor={a.sub_tipo} />
+              <Dato etiqueta="Sistema" valor={a.sistema} />
+              <Dato etiqueta="Subsistema" valor={a.sub_sistema} />
+              <Dato etiqueta="Unidad de medida" valor={unidad} />
+              <Dato etiqueta="Moneda" valor={a.moneda} />
+              <Dato etiqueta="Último proveedor" valor={a.ultimo_proveedor} />
+              <Dato etiqueta="Estado">
+                <span className={`ficha__estado-chip ficha__estado-chip--${a.estado_art === 'Inactivo' ? 'critical' : 'ok'}`}>{a.estado_art ?? 'Activo'}</span>
+              </Dato>
+              {esLlanta && <Dato etiqueta="Medida" valor={llanta?.medida} />}
+              {esLlanta && <Dato etiqueta="Modelo" valor={llanta?.modelo} />}
+              {esLlanta && <Dato etiqueta="Cocada inicial (mm)" valor={llanta?.cocada_inicial} />}
+            </div>
+          ) : (
+            <div className="ficha__panel" role="tabpanel">
+              {cargandoKardex
+                ? <p className="ficha__nota">Cargando movimientos…</p>
+                : <KardexMovimientos items={kardex} />}
+            </div>
+          )}
         </section>
       </div>
-
-      {/* Código de barras y SKU */}
-      <section className="inv-tarjeta">
-        <h3 className="inv-tarjeta__titulo"><Package size={15} /> Código de barras y SKU</h3>
-        <CodigoBarras valor={codigoBarra} />
-        <p className="inv-tarjeta__nota" style={{ textAlign: 'center' }}>SKU: {a.id} • CB oficial: {codigoBarra}</p>
-      </section>
-
-      {/* Ficha técnica */}
-      <section className="inv-tarjeta">
-        <h3 className="inv-tarjeta__titulo">Ficha técnica y almacenamiento</h3>
-        <div className="inv-campos">
-          <Campo etiqueta="Nombre / descripción del artículo" valor={a.descripcion || a.articulo} ancho="completo" />
-          <Campo etiqueta="Código interno" valor={a.id} />
-          <Campo etiqueta="Código de barra" valor={a.codigo_barras} />
-          <Campo etiqueta="Código de parte" valor={a.codigo_articulo} />
-          <Campo etiqueta="Código ítem" valor={a.codigo_item} />
-          <Campo etiqueta="Familia" valor={a.familia} />
-          <Campo etiqueta="Tipo" valor={a.tipo} />
-          <Campo etiqueta="Sub-tipo" valor={a.sub_tipo} />
-          <Campo etiqueta="Marca" valor={a.marca} />
-          <Campo etiqueta="Almacén" valor={a.almacen} />
-          <Campo etiqueta="Anaquel / fila" valor={a.anaquel} />
-          <Campo etiqueta="Ubicación" valor={a.ubicacion} />
-          <Campo etiqueta="Sistema" valor={a.sistema} />
-          <Campo etiqueta="Subsistema" valor={a.sub_sistema} />
-          <Campo etiqueta="Unidad de medida" valor={a.unidad} />
-          <Campo etiqueta="Estado">
-            <span className={`inv-estado inv-estado--${a.estado_art === 'Inactivo' ? 'critical' : 'ok'}`}>{a.estado_art ?? 'Activo'}</span>
-          </Campo>
-          <Campo etiqueta="Stock mínimo" valor={`${a.stock_min} ${a.unidad ?? ''}`.trim()} />
-          <Campo etiqueta="Stock máximo" valor={`${a.stock_max} ${a.unidad ?? ''}`.trim()} />
-          <Campo etiqueta="Último proveedor (OC / entrada)" valor={a.ultimo_proveedor} ancho="doble" />
-          {marcasArr.length > 0 && <Campo etiqueta="Compatible con" valor={marcasArr.join(', ')} ancho="completo" />}
-          {esLlanta && <Campo etiqueta="Medida" valor={llanta?.medida} />}
-          {esLlanta && <Campo etiqueta="Modelo" valor={llanta?.modelo} />}
-          {esLlanta && <Campo etiqueta="Cocada inicial (mm)" valor={llanta?.cocada_inicial} />}
-        </div>
-      </section>
-
-      {/* Costos */}
-      <section className="inv-tarjeta">
-        <h3 className="inv-tarjeta__titulo">Costos</h3>
-        <div className="inv-campos">
-          <Campo etiqueta="Costo referencial (moneda y T/C)" valor={formatMoneda(Number(a.costo_referencial ?? 0), a.moneda)} ancho="doble" />
-          {a.moneda === 'USD' && a.tipo_cambio != null && <Campo etiqueta="Tipo de cambio" valor={`S/ ${Number(a.tipo_cambio).toFixed(3)}`} />}
-          {a.moneda === 'USD' && <Campo etiqueta="Costo en soles" valor={formatSoles(Number(a.costo_soles ?? 0))} />}
-        </div>
-      </section>
-
-      {a.observaciones && (
-        <section className="inv-tarjeta">
-          <h3 className="inv-tarjeta__titulo">Notas</h3>
-          <p className="inv-tarjeta__nota" style={{ whiteSpace: 'pre-wrap', color: 'var(--ink)' }}>{a.observaciones}</p>
-        </section>
-      )}
-
-      {/* Movimientos: el más reciente primero, con saldo desde la última regularización */}
-      <section className="inv-tarjeta">
-        <h3 className="inv-tarjeta__titulo">Movimientos</h3>
-        {cargandoKardex
-          ? <p className="inv-tarjeta__nota">Cargando movimientos…</p>
-          : <KardexMovimientos items={kardex ?? []} />}
-      </section>
 
       <RegularizarSheet
         open={regularizando}

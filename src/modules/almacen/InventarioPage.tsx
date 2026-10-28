@@ -1,15 +1,14 @@
-import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowUpRight, Boxes, CircleCheck, Clock, FileSpreadsheet, LayoutGrid, Package,
-  PackageMinus, PackagePlus, Plus, RefreshCw, SearchX, Table2, Truck, TriangleAlert, Warehouse,
+  ArrowUpRight, Boxes, DollarSign, FileSpreadsheet, LayoutGrid, Package, PackageMinus,
+  PackagePlus, PackageX, Plus, RefreshCw, SearchX, TriangleAlert,
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
-import { MultiSelect } from '../../core/ui/MultiSelect';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
@@ -25,62 +24,38 @@ import {
 import { InventarioFicha } from './InventarioFicha';
 import { InventarioFormulario } from './InventarioFormulario';
 import { InventarioPortal } from './InventarioPortal';
+import { ProductoCard } from './InventarioGrid';
 import { ImportarInventario } from './ImportarInventario';
 import { descargarPlantilla, exportar } from './excelInventario';
 import './almacen.css';
 
 type Filtro = 'todos' | 'ok' | 'warning' | 'critical';
 type Pestana = 'fisicos' | 'servicios';
-const ESTADO_TEXTO = { ok: 'Stock OK', warning: 'Stock bajo', critical: '¡Reponer!' } as const;
-/** Filas por tanda en la lista: el resto se carga con "Cargar más" */
-const FILAS_PAGINA = 40;
+type Orden = 'relevancia' | 'nombre' | 'stock' | 'valor';
+/** Tarjetas por tanda: el resto se carga con "Cargar más" */
+const TARJETAS_PAGINA = 24;
+const PRIORIDAD: Record<'ok' | 'warning' | 'critical', number> = { critical: 0, warning: 1, ok: 2 };
 
 /** Servicios (SERV-…) no se descuentan físicamente: van en su propia pestaña */
 const esServicio = (a: ArticuloInv) => a.tipo === 'Servicio' || a.id.toUpperCase().startsWith('SERV');
-const dosDecimales = (n: number) => n.toFixed(2);
+/** Valor del stock al costo referencial (en la moneda que maneja cada artículo, convertido a soles) */
+const valorItem = (a: ArticuloInv) => Number(a.stock_actual) * (a.moneda === 'USD' ? Number(a.costo_soles ?? 0) : Number(a.costo_referencial ?? 0));
 
-function Kpi({ etiqueta, valor, tono, icono }: { etiqueta: string; valor: number; tono?: 'ok' | 'warning' | 'critical'; icono: ReactNode }) {
+function Kpi({ etiqueta, valor, sub, icono, tono, accion }: {
+  etiqueta: string; valor: ReactNode; sub: ReactNode; icono: ReactNode;
+  tono?: 'ok' | 'warning' | 'critical' | 'valor'; accion?: ReactNode;
+}) {
   return (
     <div className="inv-kpi">
-      <div>
+      <div className="inv-kpi__cuerpo">
         <div className="inv-kpi__etiqueta">{etiqueta}</div>
         <div className={`inv-kpi__valor${tono ? ` inv-kpi__valor--${tono}` : ''}`}>{valor}</div>
+        <div className="inv-kpi__sub">{sub}{accion}</div>
       </div>
-      <span className={`inv-kpi__icono${tono ? ` inv-kpi__icono--${tono}` : ''}`}>{icono}</span>
+      <span className={`inv-kpi__icono${tono && tono !== 'valor' ? ` inv-kpi__icono--${tono}` : ''}`}>{icono}</span>
     </div>
   );
 }
-
-/** Fila de la lista: mismo formato que el clásico (miniatura, nombre, familia • código, chips, estado, cantidad y precio) */
-const FilaArticulo = memo(function FilaArticulo({ a, activo, onAbrir }: { a: ArticuloInv; activo: boolean; onAbrir: (a: ArticuloInv) => void }) {
-  const tono = stockTono(a);
-  const costo = a.moneda === 'USD' ? Number(a.costo_soles ?? 0) : Number(a.costo_referencial ?? 0);
-  return (
-    <button type="button" className={`inv-card pressable${activo ? ' inv-card--activo' : ''}`} onClick={() => onAbrir(a)}>
-      {a.imagen_url
-        ? <img src={a.imagen_url} alt="" className="inv-card__foto" />
-        : <div className={`inv-card__icono${tono !== 'ok' ? ` inv-card__icono--${tono}` : ''}`}><Package size={22} strokeWidth={1.8} /></div>}
-      <div className="inv-card__cuerpo">
-        <span className="inv-card__nombre">{a.articulo || a.descripcion}</span>
-        <span className="inv-card__sub">{[a.familia, a.id].filter(Boolean).join(' • ')}</span>
-        <div className="inv-card__chips">
-          <span className="inv-chip inv-chip--almacen"><Warehouse size={12} /> {a.almacen || 'Sin almacén'}</span>
-          {a.anaquel && <span className="inv-chip"><Table2 size={12} /> Anaquel: {a.anaquel}</span>}
-          {a.ultimo_proveedor && <span className="inv-chip"><Truck size={12} /> {a.ultimo_proveedor}</span>}
-        </div>
-        <span className={`inv-estado inv-estado--${tono}`}>{ESTADO_TEXTO[tono]}</span>
-      </div>
-      <div className="inv-card__stock">
-        <div className="inv-card__cantidad">
-          <span className="inv-card__num">{dosDecimales(Number(a.stock_actual))}</span>
-          <span className="inv-card__unidad">{a.unidad ?? 'Unidades'}</span>
-        </div>
-        <span className="inv-card__costo">{formatSoles(costo)}</span>
-        <span className="inv-card__limites">Min: {a.stock_min} | Máx: {a.stock_max}</span>
-      </div>
-    </button>
-  );
-});
 
 export function InventarioPage() {
   const { data, isLoading, isError, error } = useInventario();
@@ -96,10 +71,11 @@ export function InventarioPage() {
   const [busqueda, setBusqueda] = useState('');
   const [anaquel, setAnaquel] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todos');
-  const [familias, setFamilias] = useState<string[]>([]);
+  const [familia, setFamilia] = useState('');
+  const [orden, setOrden] = useState<Orden>('relevancia');
   const [seleccionado, setSeleccionado] = useState<ArticuloInv | null>(null);
   const [abierto, setAbierto] = useState(false);
-  const [cuantos, setCuantos] = useState(FILAS_PAGINA);
+  const [cuantos, setCuantos] = useState(TARJETAS_PAGINA);
   const [formulario, setFormulario] = useState<{ articulo: ArticuloInv | null } | null>(null);
   const [porEliminar, setPorEliminar] = useState<ArticuloInv | null>(null);
   const [eliminando, setEliminando] = useState(false);
@@ -110,7 +86,7 @@ export function InventarioPage() {
   const puedeEliminar = can('inv.eliminar');
 
   const items = useMemo(() => data ?? [], [data]);
-  const familiasDisp = useMemo(() => familiasUnicas(items), [items]);
+  const familias = useMemo(() => familiasUnicas(items), [items]);
   // Solo los almacenes registrados: el campo almacén de los artículos es texto libre y no cuenta como almacén
   const almacenes = useMemo(() => (almacenesQ.data ?? []).map(a => a.nombre), [almacenesQ.data]);
   const registrados = useMemo(() => new Set(almacenes.map(claveAlmacen)), [almacenes]);
@@ -126,25 +102,37 @@ export function InventarioPage() {
     i.activo && esServicio(i) === (pestana === 'servicios') && enAlmacen(i),
   ), [items, pestana, enAlmacen]);
 
-  const visibles = useMemo(() => base.filter(i =>
+  const filtrados = useMemo(() => base.filter(i =>
     (filtro === 'todos' || stockTono(i) === filtro) &&
-    (!familias.length || familias.includes(i.familia ?? '')) &&
+    (!familia || i.familia === familia) &&
     (!anaquel.trim() || (i.anaquel ?? '').toUpperCase().includes(anaquel.trim().toUpperCase())) &&
     coincideInv(i, busqueda),
-  ), [base, filtro, familias, anaquel, busqueda]);
+  ), [base, filtro, familia, anaquel, busqueda]);
 
-  const hayFiltros = !!busqueda || !!anaquel.trim() || filtro !== 'todos' || familias.length > 0;
+  // Orden: primero lo que hay que reponer (sin stock, bajo) y luego por nombre
+  const visibles = useMemo(() => {
+    const lista = [...filtrados];
+    switch (orden) {
+      case 'nombre': return lista.sort((x, y) => (x.articulo || '').localeCompare(y.articulo || '', 'es'));
+      case 'stock': return lista.sort((x, y) => Number(x.stock_actual) - Number(y.stock_actual));
+      case 'valor': return lista.sort((x, y) => valorItem(y) - valorItem(x));
+      default: return lista.sort((x, y) =>
+        PRIORIDAD[stockTono(x)] - PRIORIDAD[stockTono(y)] || (x.articulo || '').localeCompare(y.articulo || '', 'es'));
+    }
+  }, [filtrados, orden]);
 
-  // Con búsqueda o filtros, los contadores son de lo filtrado; sin ellos, los totales de la pestaña
-  const metricas = useMemo(() => {
-    const lista = hayFiltros ? visibles : base;
+  const hayFiltros = !!busqueda || !!anaquel.trim() || filtro !== 'todos' || !!familia;
+
+  // Con búsqueda o filtros, los indicadores son de lo filtrado; sin ellos, los totales de la pestaña
+  const indicadores = useMemo(() => {
+    const lista = hayFiltros ? filtrados : base;
     return {
       total: lista.length,
-      ok: lista.filter(i => stockTono(i) === 'ok').length,
+      valor: lista.reduce((s, i) => s + valorItem(i), 0),
       bajo: lista.filter(i => stockTono(i) === 'warning').length,
       sinStock: lista.filter(i => stockTono(i) === 'critical').length,
     };
-  }, [base, visibles, hayFiltros]);
+  }, [base, filtrados, hayFiltros]);
 
   const abrir = useCallback((a: ArticuloInv) => {
     haptic('selection');
@@ -154,8 +142,8 @@ export function InventarioPage() {
 
   // Al cambiar búsqueda o filtros, la lista vuelve a la primera tanda
   useEffect(() => {
-    setCuantos(FILAS_PAGINA);
-  }, [busqueda, anaquel, filtro, familias, pestana, almacenSel]);
+    setCuantos(TARJETAS_PAGINA);
+  }, [busqueda, anaquel, filtro, familia, pestana, almacenSel, orden]);
 
   function elegirAlmacen(nombre: string | null) {
     setAlmacenSel(nombre);
@@ -211,6 +199,7 @@ export function InventarioPage() {
   );
 
   const tituloAlmacen = almacenSel === SIN_ALMACEN ? 'Sin almacén válido' : (almacenSel ?? 'Todos los almacenes');
+  const enPantalla = visibles.slice(0, cuantos);
 
   return (
     <Page>
@@ -225,7 +214,7 @@ export function InventarioPage() {
       ) : enPortal ? (
         <InventarioPortal items={items} almacenes={almacenes} onElegir={elegirAlmacen} />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
+        <div className="inv-pagina">
           {/* ─── Encabezado ─── */}
           <header className="inv-head">
             <div className="inv-head__icono"><Package size={22} /></div>
@@ -248,10 +237,15 @@ export function InventarioPage() {
 
           {/* ─── Indicadores ─── */}
           <div className="inv-kpis">
-            <Kpi etiqueta="Total artículos" valor={metricas.total} icono={<Boxes size={18} />} />
-            <Kpi etiqueta="Stock óptimo" valor={metricas.ok} tono="ok" icono={<CircleCheck size={18} />} />
-            <Kpi etiqueta="Stock bajo / alerta" valor={metricas.bajo} tono="warning" icono={<Clock size={18} />} />
-            <Kpi etiqueta="Sin stock / quiebre" valor={metricas.sinStock} tono="critical" icono={<TriangleAlert size={18} />} />
+            <Kpi etiqueta="Valorización total" valor={formatSoles(indicadores.valor)} tono="valor"
+              icono={<DollarSign size={18} />} sub="Stock × costo referencial" />
+            <Kpi etiqueta="Artículos activos" valor={indicadores.total} icono={<Boxes size={18} />}
+              sub={tituloAlmacen} />
+            <Kpi etiqueta="Alerta de reposición" valor={indicadores.bajo + indicadores.sinStock} tono="warning"
+              icono={<TriangleAlert size={18} />} sub="Bajo el mínimo"
+              accion={<button type="button" className="inv-kpi__enlace" onClick={() => setFiltro('critical')}>Filtrar críticos</button>} />
+            <Kpi etiqueta="Sin stock" valor={indicadores.sinStock} tono="critical" icono={<PackageX size={18} />}
+              sub="Reponer cuanto antes" />
           </div>
 
           {/* ─── Búsqueda y filtros ─── */}
@@ -267,45 +261,60 @@ export function InventarioPage() {
                 { value: 'servicios', label: 'Catálogo servicios' },
               ]} />
           </div>
-          <div className="inv-barra">
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <SegmentedControl<Filtro> block label="Estado" value={filtro} onChange={setFiltro}
-                options={[
-                  { value: 'todos', label: 'Todos' },
-                  { value: 'warning', label: 'Bajo' },
-                  { value: 'critical', label: 'Sin stock' },
-                  { value: 'ok', label: 'OK' },
-                ]} />
-            </div>
-            {familiasDisp.length > 1 && (
-              <MultiSelect label="Familia" value={familias} onChange={setFamilias} options={familiasDisp} />
-            )}
+
+          <div className="inv-pastillas" role="group" aria-label="Familia">
+            <button type="button" className={`inv-pastilla${!familia ? ' inv-pastilla--activa' : ''}`} onClick={() => setFamilia('')}>
+              Todos los artículos
+            </button>
+            {familias.map(f => (
+              <button key={f} type="button" className={`inv-pastilla${familia === f ? ' inv-pastilla--activa' : ''}`}
+                onClick={() => setFamilia(f)}>{f}</button>
+            ))}
           </div>
 
-          {/* ─── Lista ─── */}
+          <div className="inv-barra inv-barra--fila">
+            <SegmentedControl<Filtro> label="Estado" value={filtro} onChange={setFiltro}
+              options={[
+                { value: 'todos', label: 'Todos' },
+                { value: 'warning', label: 'Bajo' },
+                { value: 'critical', label: 'Sin stock' },
+                { value: 'ok', label: 'OK' },
+              ]} />
+            <label className="inv-orden">
+              <span>Orden</span>
+              <select value={orden} onChange={e => setOrden(e.target.value as Orden)}>
+                <option value="relevancia">Relevancia</option>
+                <option value="nombre">Nombre</option>
+                <option value="stock">Stock menor</option>
+                <option value="valor">Mayor valor</option>
+              </select>
+            </label>
+          </div>
+
+          {/* ─── Tarjetas de producto ─── */}
           {visibles.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="Ningún artículo coincide">
               {hayFiltros && (
                 <button type="button" className="placas-limpiar"
-                  onClick={() => { setBusqueda(''); setAnaquel(''); setFiltro('todos'); setFamilias([]); }}>
+                  onClick={() => { setBusqueda(''); setAnaquel(''); setFiltro('todos'); setFamilia(''); }}>
                   Quitar filtros
                 </button>
               )}
             </EmptyState>
           ) : (
-            <div className="inv-lista">
-              {visibles.slice(0, cuantos).map(a => (
-                <FilaArticulo key={a.id} a={a} activo={abierto && seleccionado?.id === a.id} onAbrir={abrir} />
-              ))}
+            <>
+              <div className="prod-grid">
+                {enPantalla.map(a => <ProductoCard key={a.id} a={a} onAbrir={abrir} />)}
+              </div>
               {visibles.length > cuantos && (
-                <button type="button" className="mov__mas pressable" onClick={() => setCuantos(n => n + FILAS_PAGINA)}>
+                <button type="button" className="mov__mas pressable inv-mas" onClick={() => setCuantos(n => n + TARJETAS_PAGINA)}>
                   Cargar más · {visibles.length - cuantos} restantes
                 </button>
               )}
-              <p style={{ textAlign: 'center', color: 'var(--label-2)', fontSize: '0.8125rem', padding: 'var(--s-4) 0' }}>
-                Mostrando {Math.min(cuantos, visibles.length)} de {visibles.length} artículo{visibles.length !== 1 ? 's' : ''}
+              <p className="inv-contador">
+                Mostrando {enPantalla.length} de {visibles.length} artículo{visibles.length !== 1 ? 's' : ''}
               </p>
-            </div>
+            </>
           )}
         </div>
       )}
