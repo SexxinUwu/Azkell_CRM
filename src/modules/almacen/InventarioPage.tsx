@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import {
-  ArrowUpRight, Boxes, DollarSign, FileSpreadsheet, LayoutGrid, Package, PackageMinus,
-  PackagePlus, PackageX, Plus, RefreshCw, SearchX, TriangleAlert,
-} from 'lucide-react';
+import { Boxes, DollarSign, FileSpreadsheet, LayoutGrid, Package, PackageMinus, PackagePlus, PackageX, Plus, RefreshCw, SearchX, TriangleAlert } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
@@ -16,7 +13,6 @@ import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { formatSoles } from '../../core/lib/format';
-import { abrirClasico } from '../../core/layout/navigation';
 import {
   claveAlmacen, coincideInv, eliminarArticulo, familiasUnicas, SIN_ALMACEN, useAlmacenesLista, valorEnStock,
   useInventario, stockTono, type ArticuloInv,
@@ -183,8 +179,6 @@ export function InventarioPage() {
         onSelect: () => setImportando(true) },
       puedeCrear && { label: 'Descargar plantilla', icon: <FileSpreadsheet size={17} />,
         onSelect: async () => { try { await descargarPlantilla(); } catch (err) { toast(errorMessage(err), 'error'); } } },
-      { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true,
-        onSelect: () => abrirClasico('almacen/inventario') },
     ]} />
   );
 

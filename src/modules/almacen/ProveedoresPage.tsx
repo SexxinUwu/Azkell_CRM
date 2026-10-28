@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Building2, Download, FileSpreadsheet, MessageCircle, Phone, Plus, SearchX, Upload } from 'lucide-react';
+import { Building2, Download, FileSpreadsheet, MessageCircle, Phone, Plus, SearchX, Upload } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -12,7 +12,6 @@ import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { exportarExcel } from '../../core/lib/excel';
 import { initials } from '../../core/lib/format';
 import { whatsapp } from '../conductores/api';
@@ -94,7 +93,6 @@ export function ProveedoresPage() {
                     .catch(err => toast(errorMessage(err), 'error')) },
                 puedeCrear && { label: 'Importar Excel', detalle: 'Con revisión antes de guardar', icon: <Upload size={17} />, separado: true, onSelect: () => setImportando(true) },
                 puedeCrear && { label: 'Descargar plantilla', icon: <Download size={17} />, onSelect: () => descargarPlantillaProveedores().catch(err => toast(errorMessage(err), 'error')) },
-                { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('almacen/proveedores') },
               ]} />
               {puedeCrear && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ proveedor: null })}>

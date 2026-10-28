@@ -1,7 +1,7 @@
 import './almacen.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CircleCheck, Clock, FileSpreadsheet, FileText, Hourglass, ImageIcon, PackagePlus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
+import { CircleCheck, Clock, FileSpreadsheet, FileText, Hourglass, ImageIcon, PackagePlus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -13,7 +13,6 @@ import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { formatDolares, formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/format';
 import { eliminarRecepcion, useRecepcionesOC, type HistorialRecepcion, type RecepcionOC } from './api';
 import { RegistrarRecepcion } from './RegistrarRecepcion';
@@ -139,7 +138,6 @@ export function RecepcionComprasPage() {
             <MenuOtros opciones={[
               { label: 'Actualizar', detalle: 'Trae las recepciones del servidor', icon: <RefreshCw size={17} />, onSelect: actualizar },
               { label: 'Exportar Excel', detalle: `${visibles.length} órdenes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('almacen/recepcion-compras') },
             ]} />
           }
         />

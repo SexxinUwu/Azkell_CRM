@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import './almacen.css';
-import { ArrowUpRight, FileSpreadsheet, History, Package, SearchX } from 'lucide-react';
+import { FileSpreadsheet, History, Package, SearchX } from 'lucide-react';
 import { PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { errorMessage } from '../../core/api/client';
-import { abrirClasico } from '../../core/layout/navigation';
 import { exportarExcel } from '../../core/lib/excel';
 import { useToast } from '../../core/ui/Toast';
 import { stockLabel, stockTono, useInventario, useKardex, type ArticuloInv } from './api';
@@ -101,7 +100,6 @@ export function KardexPage() {
         actions={
           <MenuOtros opciones={[
             seleccionado && { label: 'Exportar Excel', detalle: `${movimientosFiltrados.length} movimientos`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('almacen/kardex') },
           ]} />
         }
       />

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, FileText, PackageMinus, Plus, SearchX, Trash2 } from 'lucide-react';
+import { FileText, PackageMinus, Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, TextInput } from '../../core/ui/Field';
@@ -12,7 +12,6 @@ import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { descargarArchivo } from '../../core/lib/pdf';
 import { exportarExcel } from '../../core/lib/excel';
 import { formatFechaPe, formatSoles } from '../../core/lib/format';
@@ -252,7 +251,6 @@ export function SalidasPage() {
             <MenuOtros opciones={[
               { label: 'Exportar a Excel', onSelect: exportar, detalle: 'Lo que se ve con los filtros actuales' },
               { label: 'Actualizar', onSelect: () => { void refetch(); } },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('almacen/salidas'), separado: true },
             ]} />
             {puedeCrear && (
               <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ salida: null })}>
