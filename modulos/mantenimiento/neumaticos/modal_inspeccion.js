@@ -1789,6 +1789,25 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
         window._neuSeleccionarPosicion(sId);
     };
 
+    // Llena marca, medida, modelo, mediciones y estado con los datos de la última inspección de la posición
+    const aplicarUltimaInspeccion = function(prev) {
+            const marcaPrev = window._neuNormalizarMarca(prev.marca || 'WINDPOWER');
+            const medidaPrev = window._neuNormalizarMedida(prev.medida || '295/80R22.5');
+            const modeloPrev = String(prev.modelo || 'PROGUO1').trim().toUpperCase();
+            if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = marcaPrev;
+            if (document.getElementById('neu-sel-medida')) document.getElementById('neu-sel-medida').value = medidaPrev;
+            if (document.getElementById('neu-sel-modelo')) document.getElementById('neu-sel-modelo').value = modeloPrev;
+            window._neuSetR('r1', prev.r1 || 12);
+            window._neuSetR('r2', prev.r2 || 12);
+            window._neuSetR('r3', prev.r3 || 12);
+            window._neuSetR('r4', prev.r4 || 0);
+            if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = prev.presion_actual || 100;
+            if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = prev.presion_actual || 100;
+            if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = prev.estado || 'NUEVA';
+            window._neuSetAccionSelect('Inspección');
+            if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
+    };
+
     // ── MANEJO DEL FORMULARIO DE LLANTA Y MEDICIONES TÁCTILES ─────────────────────
     window._neuSeleccionarPosicion = function(pos) {
         window._neuPosicionActiva = String(pos);
@@ -1854,22 +1873,10 @@ window.NEU_MM_CRITICO = window.NEU_MM_CRITICO || 3;
                     }
                 }
             });
-            const prev = window._neuUltimaInspeccionMap[posKey];
-            const marcaPrev = window._neuNormalizarMarca(prev.marca || 'WINDPOWER');
-            const medidaPrev = window._neuNormalizarMedida(prev.medida || '295/80R22.5');
-            const modeloPrev = String(prev.modelo || 'PROGUO1').trim().toUpperCase();
-            if (document.getElementById('neu-sel-marca')) document.getElementById('neu-sel-marca').value = marcaPrev;
-            if (document.getElementById('neu-sel-medida')) document.getElementById('neu-sel-medida').value = medidaPrev;
-            if (document.getElementById('neu-sel-modelo')) document.getElementById('neu-sel-modelo').value = modeloPrev;
-            window._neuSetR('r1', prev.r1 || 12);
-            window._neuSetR('r2', prev.r2 || 12);
-            window._neuSetR('r3', prev.r3 || 12);
-            window._neuSetR('r4', prev.r4 || 0);
-            if (document.getElementById('neu-input-pres-ant')) document.getElementById('neu-input-pres-ant').value = prev.presion_actual || 100;
-            if (document.getElementById('neu-input-pres-act')) document.getElementById('neu-input-pres-act').value = prev.presion_actual || 100;
-            if (document.getElementById('neu-sel-estado')) document.getElementById('neu-sel-estado').value = prev.estado || 'NUEVA';
-            window._neuSetAccionSelect('Inspección');
-            if (document.getElementById('neu-sel-rot')) document.getElementById('neu-sel-rot').value = 'NO';
+            if (tieneHistorial) aplicarUltimaInspeccion(window._neuUltimaInspeccionMap[posKey]);
+        } else if (tieneHistorial) {
+            // Llanta nueva en esta inspección: se llena con la última inspección de la placa
+            aplicarUltimaInspeccion(window._neuUltimaInspeccionMap[posKey]);
         } else {
             // Posición o placa nueva sin registro previo -> Por defecto 'Instalación'
             window._neuSetAccionSelect('Instalación');
