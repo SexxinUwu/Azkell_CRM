@@ -529,3 +529,25 @@ export function almacenesUnicos(items: ArticuloInv[]): string[] {
 export function tiposUnicos(items: ArticuloInv[]): string[] {
   return [...new Set(items.map(i => i.tipo).filter(Boolean) as string[])].sort();
 }
+
+/** Valor del filtro de la pantalla de almacenes para los artículos sin almacén válido */
+export const SIN_ALMACEN = '__sin_almacen__';
+
+/** Clave para comparar nombres de almacén: sin mayúsculas ni espacios sobrantes */
+export const claveAlmacen = (nombre: string | null | undefined) => (nombre ?? '').trim().toLowerCase();
+
+/**
+ * Reparte los artículos entre los almacenes registrados. El campo almacén de un artículo es texto libre:
+ * lo que no coincide con ningún almacén registrado (vacío, otra escritura, errores de tipeo) queda aparte.
+ */
+export function repartirPorAlmacen(items: ArticuloInv[], registrados: string[]) {
+  const porClave = new Map(registrados.map(n => [claveAlmacen(n), n] as const));
+  const porAlmacen = new Map<string, ArticuloInv[]>(registrados.map(n => [n, []] as const));
+  const sinAlmacen: ArticuloInv[] = [];
+  for (const i of items) {
+    const nombre = porClave.get(claveAlmacen(i.almacen));
+    if (nombre) porAlmacen.get(nombre)?.push(i);
+    else sinAlmacen.push(i);
+  }
+  return { porAlmacen, sinAlmacen };
+}

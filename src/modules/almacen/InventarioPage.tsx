@@ -19,7 +19,7 @@ import { haptic } from '../../core/lib/haptics';
 import { formatSoles } from '../../core/lib/format';
 import { abrirClasico } from '../../core/layout/navigation';
 import {
-  almacenesUnicos, coincideInv, eliminarArticulo, familiasUnicas, useAlmacenesLista,
+  claveAlmacen, coincideInv, eliminarArticulo, familiasUnicas, SIN_ALMACEN, useAlmacenesLista,
   useInventario, stockTono, type ArticuloInv,
 } from './api';
 import { InventarioFicha } from './InventarioFicha';
@@ -64,7 +64,7 @@ const FilaArticulo = memo(function FilaArticulo({ a, activo, onAbrir }: { a: Art
         <span className="inv-card__nombre">{a.articulo || a.descripcion}</span>
         <span className="inv-card__sub">{[a.familia, a.id].filter(Boolean).join(' • ')}</span>
         <div className="inv-card__chips">
-          <span className="inv-chip inv-chip--almacen"><Warehouse size={12} /> {a.almacen || 'Central'}</span>
+          <span className="inv-chip inv-chip--almacen"><Warehouse size={12} /> {a.almacen || 'Sin almacén'}</span>
           {a.anaquel && <span className="inv-chip"><Table2 size={12} /> Anaquel: {a.anaquel}</span>}
           {a.ultimo_proveedor && <span className="inv-chip"><Truck size={12} /> {a.ultimo_proveedor}</span>}
         </div>
@@ -111,15 +111,20 @@ export function InventarioPage() {
 
   const items = useMemo(() => data ?? [], [data]);
   const familiasDisp = useMemo(() => familiasUnicas(items), [items]);
-  const almacenes = useMemo(
-    () => [...new Set([...(almacenesQ.data ?? []).map(a => a.nombre), ...almacenesUnicos(items)])],
-    [almacenesQ.data, items],
-  );
+  // Solo los almacenes registrados: el campo almacén de los artículos es texto libre y no cuenta como almacén
+  const almacenes = useMemo(() => (almacenesQ.data ?? []).map(a => a.nombre), [almacenesQ.data]);
+  const registrados = useMemo(() => new Set(almacenes.map(claveAlmacen)), [almacenes]);
+
+  const enAlmacen = useCallback((i: ArticuloInv) => {
+    if (!almacenSel) return true;
+    if (almacenSel === SIN_ALMACEN) return !registrados.has(claveAlmacen(i.almacen));
+    return claveAlmacen(i.almacen) === claveAlmacen(almacenSel);
+  }, [almacenSel, registrados]);
 
   // Lo que muestra la pantalla antes de buscar: almacén elegido y pestaña (físicos o servicios)
   const base = useMemo(() => items.filter(i =>
-    i.activo && esServicio(i) === (pestana === 'servicios') && (!almacenSel || i.almacen === almacenSel),
-  ), [items, pestana, almacenSel]);
+    i.activo && esServicio(i) === (pestana === 'servicios') && enAlmacen(i),
+  ), [items, pestana, enAlmacen]);
 
   const visibles = useMemo(() => base.filter(i =>
     (filtro === 'todos' || stockTono(i) === filtro) &&
@@ -205,7 +210,7 @@ export function InventarioPage() {
     />
   );
 
-  const tituloAlmacen = almacenSel ?? 'Todos los almacenes';
+  const tituloAlmacen = almacenSel === SIN_ALMACEN ? 'Sin almacén válido' : (almacenSel ?? 'Todos los almacenes');
 
   return (
     <Page>
