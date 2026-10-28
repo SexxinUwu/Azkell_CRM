@@ -1,0 +1,72 @@
+/* Pantalla de error: cara animada (404 y sin conexión) */
+
+.pe {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--s-5); min-height: 60vh; padding: var(--s-8) var(--s-4); text-align: center;
+  color: var(--ink);
+}
+.pe--completa {
+  position: fixed; inset: 0; z-index: 950; min-height: 0;
+  background: var(--bg);
+}
+
+.pe__cara { width: 200px; height: auto; color: var(--ink); }
+.pe__texto { display: flex; flex-direction: column; gap: var(--s-2); max-width: 26rem; }
+.pe__titulo { margin: 0; font-size: 1.375rem; font-weight: 800; letter-spacing: -0.02em; }
+.pe__detalle { margin: 0; font-size: 0.9375rem; color: var(--label-2); line-height: 1.45; }
+
+/* Animación de la cara: ojos que suben, parpadeo, pupilas que miran, nariz y boca que se dibujan */
+.pe__cara .pe-face__eyes,
+.pe__cara .pe-face__eye-lid,
+.pe__cara .pe-face__mouth-left,
+.pe__cara .pe-face__mouth-right,
+.pe__cara .pe-face__nose,
+.pe__cara .pe-face__pupil {
+  animation: pe-ojos 1s 0.3s forwards;
+}
+.pe__cara .pe-face__eye-lid,
+.pe__cara .pe-face__pupil {
+  animation-duration: 4s;
+  animation-delay: 1.3s;
+  animation-iteration-count: infinite;
+}
+.pe__cara .pe-face__eye-lid { animation-name: pe-parpado; }
+.pe__cara .pe-face__pupil { animation-name: pe-pupila; }
+.pe__cara .pe-face__mouth-left { animation-name: pe-boca-izq; }
+.pe__cara .pe-face__mouth-right { animation-name: pe-boca-der; }
+.pe__cara .pe-face__nose { animation-name: pe-nariz; }
+
+@keyframes pe-ojos {
+  from { transform: translateY(112.5px); }
+  to { transform: translateY(15px); }
+}
+@keyframes pe-parpado {
+  0%, 40%, 45%, 100% { transform: translateY(0); }
+  42.5% { transform: translateY(17.5px); }
+}
+@keyframes pe-pupila {
+  0%, 37.5%, 40%, 45%, 87.5%, 100% { stroke-dashoffset: 0; transform: translate(0, 0); }
+  12.5%, 25%, 62.5%, 75% { transform: translate(-35px, 0); }
+  42.5% { stroke-dashoffset: 35; transform: translate(0, 17.5px); }
+}
+@keyframes pe-boca-izq {
+  from, 50% { stroke-dashoffset: -102; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes pe-boca-der {
+  from, 50% { stroke-dashoffset: 102; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes pe-nariz {
+  from { transform: translate(0, 0); }
+  to { transform: translate(0, 22.5px); }
+}
+
+/* Con "reducir movimiento" la cara queda dibujada en su posición final, sin animación */
+@media (prefers-reduced-motion: reduce) {
+  .pe__cara * { animation: none !important; }
+  .pe__cara .pe-face__eyes { transform: translateY(15px); }
+  .pe__cara .pe-face__nose { transform: translate(0, 22.5px); }
+  .pe__cara .pe-face__mouth-left,
+  .pe__cara .pe-face__mouth-right { stroke-dashoffset: 0; }
+}

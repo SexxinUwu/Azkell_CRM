@@ -1,7 +1,7 @@
 // Rutas de la app nueva (publicada en /app/). Cada módulo aporta sus páginas desde src/modules/<modulo>/.
 // Las pantallas que aún no se migran se abren en la versión actual (ver core/layout/navigation.ts).
 import { lazy } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { RequirePermission, RequireSession } from './core/auth/guards';
 import { AppShell } from './core/layout/AppShell';
 import { LoginPage } from './modules/auth/LoginPage';
@@ -13,6 +13,7 @@ import { PerfilPage } from './modules/perfil/PerfilPage';
 import { EditarPerfilPage } from './modules/perfil/EditarPerfilPage';
 import { Inactividad } from './core/auth/Inactividad';
 import { RUTAS_MODULOS } from './core/layout/navigation';
+import { PantallaError } from './core/ui/PantallaError';
 // Pantallas de módulos: se descargan aparte, al abrirlas (el marco de la app ya está en pantalla)
 const PlacasPage = lazy(() => import('./modules/placas/PlacasPage').then(m => ({ default: m.PlacasPage })));
 const InspeccionesPage = lazy(() => import('./modules/inspecciones/InspeccionesPage').then(m => ({ default: m.InspeccionesPage })));
@@ -52,7 +53,7 @@ export default function App() {
           {RUTAS_MODULOS.map(({ path, permisos, Page }) => (
             <Route key={path} path={path} element={<RequirePermission any={permisos}><Page /></RequirePermission>} />
           ))}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<PantallaError tipo="no-encontrado" />} />
         </Route>
       </Routes>
     </BrowserRouter>
