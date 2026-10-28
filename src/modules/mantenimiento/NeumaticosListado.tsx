@@ -186,6 +186,90 @@ function SituacionChip({ texto }: { texto: string }) {
   return <span className={`nl-situacion nl-situacion--${TONO_SITUACION[texto] ?? 'gris'}`}>{texto}</span>;
 }
 
+/** Casilla con el check que se dibuja al marcarla (mismo efecto que la casilla de referencia) */
+function CasillaSeleccion({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
+  return (
+    <label className="nl-casilla" onClick={e => e.stopPropagation()}>
+      <input type="checkbox" checked={checked} onChange={onChange} aria-label={label} />
+      <svg width={22} height={22} viewBox="0 0 24 24" aria-hidden="true">
+        <rect x={2} y={2} width={20} height={20} rx={5} className="nl-casilla__caja" />
+        <path d="M6.5 12.5l3.5 3.5 7.5-8" className="nl-casilla__check" />
+      </svg>
+    </label>
+  );
+}
+
+/** Código de fuego que recibiría la llanta n-ésima de la secuencia (misma forma que el servidor) */
+const codigoPrevisto = (letra: string, anio: number, n: number) => `${letra}${String(anio).slice(-2)}${String(n).padStart(5, '0')}`;
+
+/** Máximo de códigos por vez (lo mismo que el servidor) */
+const MAX_POR_VEZ = 200;
+
+/** Ventana previa: a la izquierda el código que se asignará, a la derecha el neumático elegido */
+function GenerarCodigosSheet({ open, onClose, seleccionados, onAsignado }: {
+  open: boolean; onClose: () => void; seleccionados: LlantaListado[]; onAsignado: () => void;
+}) {
+  const config = useConfigCodigo();
+  const [generando, setGenerando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const letra = config.data?.letra ?? null;
+  const anio = config.data?.anio ?? 0;
+  const ultimo = config.data?.ultimo ?? 0;
+  const demasiados = seleccionados.length > MAX_POR_VEZ;
+
+  async function asignar() {
+    setGenerando(true);
+    setError(null);
+    try {
+      const r = await api<{ ok?: boolean; error?: string; asignados: { id_neumatico: string; codigo: string }[] }>(
+        '/neumaticos/codigo-fuego/generar', { method: 'POST', body: { ids: seleccionados.map(l => l.codigo) } });
+      if (r.ok === false) throw new Error(r.error ?? 'No se pudieron generar los códigos');
+      onAsignado();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setGenerando(false);
+    }
+  }
+
+  return (
+    <Sheet open={open} onClose={() => { if (!generando) onClose(); }} title="Generar códigos de fuego"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={generando}>Cancelar</Button>
+          <Button variant="primary" loading={generando} disabled={!letra || demasiados || seleccionados.length === 0} onClick={asignar}>
+            Asignar {seleccionados.length} {seleccionados.length === 1 ? 'código' : 'códigos'}
+          </Button>
+        </>
+      }>
+      {config.isLoading ? <PageLoader /> : config.isError ? <Notice tone="error">{errorMessage(config.error)}</Notice> : !letra ? (
+        <Notice tone="error">Falta configurar la letra del código de fuego de la empresa (botón «Código de fuego»).</Notice>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+          {demasiados && <Notice tone="error">Se pueden generar hasta {MAX_POR_VEZ} códigos por vez.</Notice>}
+          {error && <Notice tone="error">{error}</Notice>}
+          <p className="nl-conteo">
+            Los códigos se asignan en orden, desde <strong>{codigoPrevisto(letra, anio, ultimo + 1)}</strong>.
+          </p>
+          <table className="nl-previa" aria-label="Códigos de fuego a asignar">
+            <thead>
+              <tr><th>Código de fuego</th><th>Neumático</th></tr>
+            </thead>
+            <tbody>
+              {seleccionados.map((l, i) => (
+                <tr key={l.codigo}>
+                  <td className="nl-codigo">{codigoPrevisto(letra, anio, ultimo + i + 1)}</td>
+                  <td className="nl-codigo">{l.codigo}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
 export function NeumaticosListado() {
   const navigate = useNavigate();
   const movil = useMediaQuery(MOBILE_QUERY);
@@ -195,7 +279,7 @@ export function NeumaticosListado() {
   const [exportando, setExportando] = useState(false);
   const [errorExcel, setErrorExcel] = useState<string | null>(null);
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
-  const [generando, setGenerando] = useState(false);
+  const [previaAbierta, setPreviaAbierta] = useState(false);
   const [configAbierta, setConfigAbierta] = useState(false);
   const qc = useQueryClient();
   const toast = useToast();
@@ -227,24 +311,6 @@ export function NeumaticosListado() {
 
   function alternarTodas() {
     setSeleccion(todasSeleccionadas ? new Set() : new Set(seleccionables));
-  }
-
-  async function generar() {
-    const ids = [...seleccion];
-    if (ids.length === 0) return;
-    setGenerando(true);
-    try {
-      const r = await api<{ ok?: boolean; error?: string; asignados: { id_neumatico: string; codigo: string }[] }>(
-        '/neumaticos/codigo-fuego/generar', { method: 'POST', body: { ids } });
-      if (r.ok === false) throw new Error(r.error ?? 'No se pudieron generar los códigos');
-      toast(`Se generaron ${r.asignados.length} códigos de fuego`);
-      setSeleccion(new Set());
-      await qc.invalidateQueries({ queryKey: ['mant', 'neumaticos'] });
-    } catch (e) {
-      toast(errorMessage(e), 'error');
-    } finally {
-      setGenerando(false);
-    }
   }
 
   const abrirFicha = (codigo: string) => navigate(`/mantenimiento/neumaticos-ficha/${encodeURIComponent(codigo)}`);
@@ -310,7 +376,7 @@ export function NeumaticosListado() {
             {todasSeleccionadas ? 'Quitar selección' : `Seleccionar sin código (${seleccionables.length})`}
           </Button>
           {seleccion.size > 0 && (
-            <Button variant="primary" loading={generando} onClick={generar}>
+            <Button variant="primary" onClick={() => setPreviaAbierta(true)}>
               Generar código de fuego ({seleccion.size})
             </Button>
           )}
@@ -331,8 +397,7 @@ export function NeumaticosListado() {
           {filas.map(l => (
             <li key={l.codigo} className="nl-lista__item" style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
               {l.situacion === SIN_CODIGO && (
-                <input type="checkbox" checked={seleccion.has(l.codigo)} onChange={() => alternar(l.codigo)}
-                  aria-label={`Seleccionar ${l.codigo}`} style={{ width: 22, height: 22, flexShrink: 0 }} />
+                <CasillaSeleccion checked={seleccion.has(l.codigo)} onChange={() => alternar(l.codigo)} label={`Seleccionar ${l.codigo}`} />
               )}
               <button type="button" className="nl-lista__abrir" onClick={() => abrirFicha(l.codigo)}>
                 <span className="nl-lista__cuerpo">
@@ -356,8 +421,7 @@ export function NeumaticosListado() {
             <tr key={l.codigo} className="nl-fila" onClick={() => abrirFicha(l.codigo)}>
               <Celda alinear="center">
                 {l.situacion === SIN_CODIGO && (
-                  <input type="checkbox" checked={seleccion.has(l.codigo)} onChange={() => alternar(l.codigo)}
-                    onClick={e => e.stopPropagation()} aria-label={`Seleccionar ${l.codigo}`} />
+                  <CasillaSeleccion checked={seleccion.has(l.codigo)} onChange={() => alternar(l.codigo)} label={`Seleccionar ${l.codigo}`} />
                 )}
               </Celda>
               <Celda mono><span className="nl-codigo">{l.codigo}</span></Celda>
@@ -375,6 +439,14 @@ export function NeumaticosListado() {
           ))}
         </TablaRedimensionable>
       )}
+      <GenerarCodigosSheet open={previaAbierta} onClose={() => setPreviaAbierta(false)}
+        seleccionados={filas.filter(l => seleccion.has(l.codigo))}
+        onAsignado={() => {
+          setPreviaAbierta(false);
+          setSeleccion(new Set());
+          toast('Códigos de fuego asignados');
+          void qc.invalidateQueries({ queryKey: ['mant', 'neumaticos'] });
+        }} />
       <ConfigCodigoSheet open={configAbierta} onClose={() => setConfigAbierta(false)} />
     </Page>
   );
