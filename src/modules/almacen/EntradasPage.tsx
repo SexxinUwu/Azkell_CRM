@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CircleCheck, ClipboardList, Coins, Eye, FileSpreadsheet, FileDown, Package, PackagePlus, Pencil, Plus, Paperclip, RefreshCw, SearchX, Trash2, Upload } from 'lucide-react';
+import { CircleCheck, ClipboardList, Coins, Download, Eye, FileSpreadsheet, FileDown, Package, PackagePlus, Pencil, Plus, Paperclip, RefreshCw, SearchX, Trash2, Upload } from 'lucide-react';
 import { exportarConsolidadoOC, exportarDetalleArticulosOC, descargarPlantillaEntradas } from './exportarEntradas';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -15,11 +15,10 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { descargarArchivo } from '../../core/lib/pdf';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
 import {
-  aprobarEntrada, anularEntrada, eliminarEntrada, useEmpresaDocumentos, useEntradas, useInventario, useProveedores,
+  anularEntrada, eliminarEntrada, useEmpresaDocumentos, useEntradas, useInventario, useProveedores,
   type EntradaInv, type ItemEntrada,
 } from './api';
 import {
@@ -35,7 +34,6 @@ import './entradas.css';
 import './almacen.css';
 
 /** Permisos para aprobar (V°B°): el mismo acceso que el menú de Aprobación de O/C (gerencia) o su módulo de aprobación */
-const PERMISOS_APROBAR = ['gerencia.ver', 'aprob_oc.crear', 'aprob_oc.editar'];
 const POR_PAGINA = 20;
 /** Desde esta anchura se muestra la tabla; antes, tarjetas (como el clásico: d-md-none / d-none d-md-block) */
 const TABLA_QUERY = '(min-width: 768px)';
@@ -63,7 +61,7 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'factura', titulo: 'Factura', ancho: 100, alinear: 'center' },
 ];
 
-const TONO_CLASE: Record<TonoEstado, string> = { gray: '', green: 'badge--green', sky: 'oc-badge--sky', amber: 'badge--amber', red: 'badge--red' };
+const TONO_CLASE: Record<TonoEstado, string> = { gray: 'oc-estado--gris', green: 'oc-estado--verde', sky: 'oc-estado--azul', amber: 'badge--amber', red: 'badge--red' };
 
 function EstadoBadge({ estado }: { estado: string | null }) {
   const e = etiquetaEstado(estado);
@@ -98,7 +96,6 @@ interface AccionesFila {
   onAdjuntos: (o: EntradaInv) => void;
   onPdf: (o: EntradaInv) => void;
   onEditar?: (o: EntradaInv) => void;
-  onAprobar?: (o: EntradaInv) => void;
   onEliminar?: (o: EntradaInv) => void;
 }
 
@@ -108,7 +105,6 @@ function menuDe(o: EntradaInv, a: AccionesFila): Array<OpcionOtros | false | nul
     { label: 'Adjuntos y sustentos', icon: <Paperclip size={17} />, onSelect: () => a.onAdjuntos(o) },
     { label: 'Imprimir PDF', icon: <FileDown size={17} />, onSelect: () => a.onPdf(o) },
     a.onEditar && estadoEditable(o.estado) && { label: 'Editar orden', icon: <Pencil size={17} />, onSelect: () => a.onEditar?.(o) },
-    a.onAprobar && categoriaEstado(o.estado) === 'registradas' && { label: 'Aprobar O/C', icon: <CircleCheck size={17} />, onSelect: () => a.onAprobar?.(o) },
     a.onEliminar && { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: () => a.onEliminar?.(o) },
   ];
 }
@@ -222,9 +218,6 @@ export function EntradasPage() {
   const [formulario, setFormulario] = useState<{ entrada: EntradaInv | null } | null>(null);
   const [porEliminar, setPorEliminar] = useState<EntradaInv | null>(null);
   const [eliminando, setEliminando] = useState(false);
-  const [aprobando, setAprobando] = useState<EntradaInv | null>(null);
-  const [comentarioAprobacion, setComentarioAprobacion] = useState('');
-  const [enviandoAprobacion, setEnviandoAprobacion] = useState(false);
   const [anulando, setAnulando] = useState<EntradaInv | null>(null);
   const [motivoAnulacion, setMotivoAnulacion] = useState('');
   const [enviandoAnulacion, setEnviandoAnulacion] = useState(false);
@@ -235,7 +228,6 @@ export function EntradasPage() {
   const puedeCrear = can('ent_inv.crear');
   const puedeEditar = can('ent_inv.editar');
   const puedeEliminar = can('ent_inv.eliminar');
-  const puedeAprobar = can(...PERMISOS_APROBAR);
 
   useEffect(() => { setPagina(1); }, [busqueda, desde, hasta, estado]);
 
@@ -286,7 +278,6 @@ export function EntradasPage() {
     onAdjuntos: o => setAdjuntosId(o.id),
     onPdf: o => { void verPdf(o, false); },
     onEditar: puedeEditar ? o => setFormulario({ entrada: o }) : undefined,
-    onAprobar: puedeAprobar ? o => setAprobando(o) : undefined,
     onEliminar: puedeEliminar ? o => (estadoEditable(o.estado) ? setPorEliminar(o) : undefined) : undefined,
   };
 
@@ -312,23 +303,6 @@ export function EntradasPage() {
       toast(errorMessage(err), 'error');
     } finally {
       setGenerandoPdf(false);
-    }
-  }
-
-  async function confirmarAprobacion() {
-    if (!aprobando) return;
-    setEnviandoAprobacion(true);
-    try {
-      await aprobarEntrada(aprobando.id, comentarioAprobacion, user?.name ?? 'Gerencia');
-      toast('Orden aprobada');
-      haptic('success');
-      setAprobando(null);
-      setComentarioAprobacion('');
-      await qc.invalidateQueries({ queryKey: ['almacen', 'entradas'] });
-    } catch (err) {
-      toast(errorMessage(err), 'error');
-    } finally {
-      setEnviandoAprobacion(false);
     }
   }
 
@@ -379,13 +353,6 @@ export function EntradasPage() {
   }
 
   const soloDetalle = !!seleccionada;
-  const menuPrincipal: Array<OpcionOtros | false | null | undefined> = [
-    { label: 'Exportar a Excel', detalle: `${visibles.length} ${visibles.length === 1 ? 'orden' : 'órdenes'} filtradas · ${vista === 'ordenes' ? 'por órdenes' : 'por artículos'}`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-    { label: 'Descargar plantilla', icon: <ArrowUpRight size={17} />, onSelect: async () => { await descargarPlantillaEntradas(); } },
-    puedeCrear && { label: 'Importar desde Excel', icon: <Upload size={17} />, onSelect: () => setImportando(true) },
-    { label: 'Actualizar', icon: <RefreshCw size={17} />, onSelect: () => { void qc.invalidateQueries({ queryKey: ['almacen', 'entradas'] }); } },
-    { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('almacen/entradas') },
-  ];
 
   return (
     <Page>
@@ -396,7 +363,22 @@ export function EntradasPage() {
           subtitle={isLoading ? 'Cargando…' : `${entradas.length} ${entradas.length === 1 ? 'orden' : 'órdenes'}${conteo.registradas ? ` · ${conteo.registradas} pendientes de aprobación` : ''}`}
           actions={
             <>
-              <MenuOtros opciones={menuPrincipal} />
+              <div className="oc-acciones">
+                <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Exportar a Excel" aria-label="Exportar a Excel" onClick={exportar}>
+                  <FileSpreadsheet size={17} />
+                </button>
+                <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Descargar plantilla" aria-label="Descargar plantilla" onClick={() => { void descargarPlantillaEntradas(); }}>
+                  <Download size={17} />
+                </button>
+                {puedeCrear && (
+                  <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Importar desde Excel" aria-label="Importar desde Excel" onClick={() => setImportando(true)}>
+                    <Upload size={17} />
+                  </button>
+                )}
+                <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Actualizar" aria-label="Actualizar" onClick={() => { void qc.invalidateQueries({ queryKey: ['almacen', 'entradas'] }); }}>
+                  <RefreshCw size={17} />
+                </button>
+              </div>
               {puedeCrear && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ entrada: null })}>
                   Nueva orden
@@ -491,7 +473,6 @@ export function EntradasPage() {
           onVolver={() => setSeleccionadaId(null)}
           onEditar={puedeEditar && estadoEditable(seleccionada.estado) ? () => setFormulario({ entrada: seleccionada }) : undefined}
           onAdjuntos={() => setAdjuntosId(seleccionada.id)}
-          onAprobar={puedeAprobar && categoriaEstado(seleccionada.estado) === 'registradas' ? () => setAprobando(seleccionada) : undefined}
           onAnular={puedeEditar && !String(seleccionada.estado ?? '').toLowerCase().includes('anul') ? () => setAnulando(seleccionada) : undefined}
           onEliminar={puedeEliminar && estadoEditable(seleccionada.estado) ? () => setPorEliminar(seleccionada) : undefined}
           onPdf={() => { void verPdf(seleccionada, false); }}
@@ -510,28 +491,6 @@ export function EntradasPage() {
       />
 
       <ImportarEntradasSheet open={importando} onClose={() => setImportando(false)} inventario={inventario} />
-
-      <Sheet
-        open={!!aprobando}
-        onClose={() => !enviandoAprobacion && setAprobando(null)}
-        title={`Aprobar orden ${aprobando ? codigoLimpio(aprobando.id) : ''}`}
-        footer={
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => setAprobando(null)} disabled={enviandoAprobacion}>Cancelar</Button>
-            <Button variant="primary" onClick={confirmarAprobacion} loading={enviandoAprobacion}>Aprobar O/C</Button>
-          </div>
-        }
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <p className="t-footnote c-secondary">
-            Al aprobar, la orden queda lista para Recepción de compras (si es a crédito; las de contado esperan el pago en Tesorería).
-          </p>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--label-2)' }}>Nota de gerencia (opcional)</span>
-            <TextInput value={comentarioAprobacion} onChange={ev => setComentarioAprobacion(ev.target.value)} placeholder="Ej: aprobado con precio negociado" />
-          </label>
-        </div>
-      </Sheet>
 
       <Sheet
         open={!!anulando}

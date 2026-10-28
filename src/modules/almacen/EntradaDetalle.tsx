@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Ban, BadgeCheck, Check, CircleAlert, CreditCard, Eye, FileDown, Package, Paperclip, Pencil, Shield, Trash2, X } from 'lucide-react';
+import { Ban, Check, CircleAlert, CreditCard, Eye, FileDown, Package, Paperclip, Pencil, Shield, Trash2, X } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
 import { formatFechaPe, formatMoneda } from '../../core/lib/format';
@@ -14,7 +14,6 @@ interface Props {
   onVolver: () => void;
   onEditar?: () => void;
   onAdjuntos: () => void;
-  onAprobar?: () => void;
   onAnular?: () => void;
   onEliminar?: () => void;
   onPdf: () => void;
@@ -27,7 +26,7 @@ interface Props {
 type EstadoPaso = 'hecho' | 'actual' | 'alerta' | 'rojo' | 'pendiente';
 
 const TONO_BADGE: Record<TonoEstado, string> = {
-  gray: '', green: 'badge--green', sky: 'oc-badge--sky', amber: 'badge--amber', red: 'badge--red',
+  gray: 'oc-estado--gris', green: 'oc-estado--verde', sky: 'oc-estado--azul', amber: 'badge--amber', red: 'badge--red',
 };
 
 /** Saca la nota de gerencia de una observación: "[Nota Gerencia: texto]" → "texto" */
@@ -40,7 +39,7 @@ function notaGerencia(texto: string): string {
 const fechaCorta = (s: string | null | undefined) => (s ? formatFechaPe(String(s).split('T')[0]) : '—');
 
 export function EntradaDetalle({
-  entrada: e, onEditar, onAdjuntos, onAprobar, onAnular, onEliminar, onPdf, onVistaPrevia, generandoPdf, unidadDe,
+  entrada: e, onEditar, onAdjuntos, onAnular, onEliminar, onPdf, onVistaPrevia, generandoPdf, unidadDe,
 }: Props) {
   const items = e.items ?? [];
   const moneda = e.moneda === 'USD' ? 'USD' : 'PEN';
@@ -133,7 +132,6 @@ export function EntradaDetalle({
 
       {/* Acciones principales */}
       <div className="oc-acciones">
-        {onAprobar && <Button variant="primary" icon={<BadgeCheck size={16} />} onClick={onAprobar}>Aprobar O/C</Button>}
         <Button variant="secondary" icon={<FileDown size={16} />} loading={generandoPdf} onClick={onPdf}>Descargar PDF</Button>
         <Button variant="plain" icon={<Eye size={16} />} onClick={onVistaPrevia}>Vista previa</Button>
       </div>
@@ -166,13 +164,12 @@ export function EntradaDetalle({
         </Grupo>
         <Grupo titulo="Emisión y destino">
           <Dato etiqueta="Fecha de emisión" valor={fechaCorta(e.fecha)} />
-          <Dato etiqueta="Destino / unidad" valor={e.placa ? `Unidad ${e.placa}` : 'Almacén central'} />
+          <Dato etiqueta={e.placa ? 'Placa' : 'Destino'} valor={e.placa || 'Almacén central'} />
           <Dato etiqueta="Centro de costos" valor={e.centro_costo || 'CC-100'} />
           <Dato etiqueta="Prioridad" valor={e.prioridad || 'Normal'} />
         </Grupo>
         <Grupo titulo="Proveedor">
-          <Dato etiqueta="Razón social" valor={e.proveedor_nombre || 'Proveedor general'} extra={e.proveedor_ruc ? `RUC ${e.proveedor_ruc}` : undefined} />
-          <Dato etiqueta="Documento del proveedor" valor={e.documento_referencia || '—'} />
+          <Dato etiqueta="Razón social" valor={e.proveedor_nombre || 'Proveedor general'} extra={e.proveedor_ruc ? `RUC ${e.proveedor_ruc}` : undefined} ancho />
         </Grupo>
         <Grupo titulo="Documentos y pago">
           <Dato etiqueta="Condición de pago" valor={pago} />
@@ -281,9 +278,9 @@ function Grupo({ titulo, ancho, children }: { titulo: string; ancho?: boolean; c
   );
 }
 
-function Dato({ etiqueta, valor, extra }: { etiqueta: string; valor: string; extra?: string }) {
+function Dato({ etiqueta, valor, extra, ancho }: { etiqueta: string; valor: string; extra?: string; ancho?: boolean }) {
   return (
-    <div className="oc-dato">
+    <div className={`oc-dato${ancho ? ' oc-dato--ancho' : ''}`}>
       <span className="oc-dato__etiqueta">{etiqueta}</span>
       <span className="oc-dato__valor">{valor}</span>
       {extra && <span className="oc-dato__extra">{extra}</span>}
