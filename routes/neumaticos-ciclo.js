@@ -982,12 +982,14 @@ module.exports = function (db) {
             const mediciones = await medicionesLlanta(p, base.id_neumatico);
 
             // Presión: última medición con valor y todas en orden cronológico para la gráfica
-            const conPresion = mediciones.filter(m => psiValido(m.presion_actual) != null);
+            // La presión actual se muestra tal cual se guardó (también 0); la anterior no se usa aquí
+            const valorPresion = v => (v == null || !Number.isFinite(Number(v)) ? null : Number(v));
+            const conPresion = mediciones.filter(m => valorPresion(m.presion_actual) != null);
             const ultimaPresion = conPresion[0] || null;
             const presion = {
-                ultima_medicion: ultimaPresion ? psiValido(ultimaPresion.presion_actual) : null,
-                fecha: ultimaPresion ? ultimaPresion.fecha : null,
-                historial: conPresion.slice().reverse().map(m => ({ fecha: m.fecha, valor: psiValido(m.presion_actual) })),
+                ultima_medicion: ultimaPresion ? valorPresion(ultimaPresion.presion_actual) : null,
+                fecha: ultimaPresion ? ultimaPresion.fecha_hora || ultimaPresion.fecha : null,
+                historial: conPresion.slice().reverse().map(m => ({ fecha: m.fecha_hora || m.fecha, valor: valorPresion(m.presion_actual) })),
             };
 
             // Surco: última medición; el desgaste es la medición anterior menos la actual (positivo = desgaste)

@@ -39,7 +39,8 @@ const COLOR_TIPO: Record<Tipo, string> = {
 };
 
 /** OT que todavía no terminan: la unidad sigue en taller */
-const ESTADOS_ABIERTOS: string[] = ['Pendiente', 'En Proceso', 'Pausada'];
+// OT que siguen en taller. Las OT de la base pueden venir como 'Abierto' (sin distinguir mayúsculas)
+const ESTADOS_ABIERTOS: string[] = ['pendiente', 'en proceso', 'pausada', 'abierto'];
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -203,7 +204,7 @@ export function MantDashboardPage() {
   }, [otsRango]);
 
   // Estado actual (no depende del rango)
-  const enTaller = useMemo(() => (otsQ.data ?? []).filter(o => ESTADOS_ABIERTOS.includes(o.estado) && enEmpresa(o.placa)), [otsQ.data, placasEmpresa]);
+  const enTaller = useMemo(() => (otsQ.data ?? []).filter(o => ESTADOS_ABIERTOS.includes(String(o.estado ?? '').trim().toLowerCase()) && enEmpresa(o.placa)), [otsQ.data, placasEmpresa]);
   const enRampa = useMemo(() => (rampasQ.data ?? []).filter(e => e.estado === 'Activo' && enEmpresa(e.placa)), [rampasQ.data, placasEmpresa]);
 
   // Unidades en taller: una fila por placa, con su OT abierta y su visita a rampa si la tiene

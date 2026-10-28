@@ -29,7 +29,9 @@
 .rt-caja {
   overflow: auto; max-height: calc(100dvh - 360px); min-height: 240px; border-radius: var(--r-xl);
   background: var(--surface); box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
+  scrollbar-width: none; -ms-overflow-style: none;
 }
+.rt-caja::-webkit-scrollbar { display: none; }
 .rt { width: 100%; min-width: 960px; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 0.74rem; }
 .rt th {
   position: sticky; top: 0; z-index: 1; padding: 8px 10px; text-align: left; white-space: nowrap;
