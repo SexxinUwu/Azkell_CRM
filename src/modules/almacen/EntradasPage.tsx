@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, CircleCheck, ClipboardList, Coins, Eye, FileSpreadsheet, FileDown, Package, PackagePlus, Pencil, Plus, Paperclip, RefreshCw, SearchX, Trash2, Upload } from 'lucide-react';
@@ -24,7 +24,7 @@ import {
 } from './api';
 import {
   categoriaEstado, codigoLimpio, descripcionArticulo, etiquetaEstado, esServicio, filtrarOrdenes, hoyLima, itemsVisibles, kpisOrdenes,
-  rangoParaCategoria, cabeceraCoincide, estadoEditable, type FiltroEstado, type TonoEstado,
+  cabeceraCoincide, estadoEditable, type FiltroEstado, type TonoEstado,
 } from './entradaReglas';
 import { EntradaFormulario } from './EntradaFormulario';
 import { EntradaDetalle } from './EntradaDetalle';
@@ -215,7 +215,7 @@ export function EntradasPage() {
   const [busqueda, setBusqueda] = useState('');
   const [desde, setDesde] = useState(() => mesAtras(hoyLima()));
   const [hasta, setHasta] = useState(() => hoyLima());
-  const [estado, setEstado] = useState<FiltroEstado>('registradas');
+  const [estado, setEstado] = useState<FiltroEstado>('todas');
   const [vista] = useState<Vista>('articulos');
   const [pagina, setPagina] = useState(1);
   const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
@@ -237,29 +237,7 @@ export function EntradasPage() {
   const puedeEliminar = can('ent_inv.eliminar');
   const puedeAprobar = can(...PERMISOS_APROBAR);
 
-  // Al cargar, el filtro empieza en «Registradas» con sus fechas (como el clásico)
-  const iniciado = useRef(false);
-  useEffect(() => {
-    if (iniciado.current || !data) return;
-    iniciado.current = true;
-    elegirEstado('registradas');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
-
   useEffect(() => { setPagina(1); }, [busqueda, desde, hasta, estado]);
-
-  /** Cambia el estado y pone las fechas que corresponden (clásico: _entCambiarEstadoFiltro) */
-  function elegirEstado(nuevo: FiltroEstado) {
-    setEstado(nuevo);
-    const hoy = hoyLima();
-    if (nuevo === 'todas') {
-      setDesde(d => d || hoy);
-      setHasta(h => h || hoy);
-      return;
-    }
-    const rango = rangoParaCategoria(nuevo, entradas, hoy);
-    if (rango) { setDesde(rango.desde); setHasta(rango.hasta); }
-  }
 
   const visibles = useMemo(
     () => filtrarOrdenes(entradas, { busqueda, desde, hasta, estado }),
