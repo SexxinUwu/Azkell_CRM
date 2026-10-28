@@ -216,13 +216,22 @@ function GenerarCodigosSheet({ open, onClose, seleccionados, onAsignado }: {
   const anio = config.data?.anio ?? 0;
   const ultimo = config.data?.ultimo ?? 0;
   const demasiados = seleccionados.length > MAX_POR_VEZ;
+  const esProvisional = (l: LlantaListado) => l.codigo.toUpperCase().startsWith('PROV-');
+  const aAsignar = seleccionados.filter(l => !esProvisional(l));
+  const provisionales = seleccionados.length - aAsignar.length;
+  let siguiente = ultimo;
+  const previa = seleccionados.map(l => {
+    if (esProvisional(l)) return { l, codigo: null as string | null };
+    siguiente += 1;
+    return { l, codigo: codigoPrevisto(letra ?? '', anio, siguiente) };
+  });
 
   async function asignar() {
     setGenerando(true);
     setError(null);
     try {
       const r = await api<{ ok?: boolean; error?: string; asignados: { id_neumatico: string; codigo: string }[] }>(
-        '/neumaticos/codigo-fuego/generar', { method: 'POST', body: { ids: seleccionados.map(l => l.codigo) } });
+        '/neumaticos/codigo-fuego/generar', { method: 'POST', body: { ids: aAsignar.map(l => l.codigo) } });
       if (r.ok === false) throw new Error(r.error ?? 'No se pudieron generar los códigos');
       onAsignado();
     } catch (e) {
@@ -237,8 +246,8 @@ function GenerarCodigosSheet({ open, onClose, seleccionados, onAsignado }: {
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={generando}>Cancelar</Button>
-          <Button variant="primary" loading={generando} disabled={!letra || demasiados || seleccionados.length === 0} onClick={asignar}>
-            Asignar {seleccionados.length} {seleccionados.length === 1 ? 'código' : 'códigos'}
+          <Button variant="primary" loading={generando} disabled={!letra || demasiados || aAsignar.length === 0} onClick={asignar}>
+            Asignar {aAsignar.length} {aAsignar.length === 1 ? 'código' : 'códigos'}
           </Button>
         </>
       }>
@@ -248,6 +257,11 @@ function GenerarCodigosSheet({ open, onClose, seleccionados, onAsignado }: {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           {demasiados && <Notice tone="error">Se pueden generar hasta {MAX_POR_VEZ} códigos por vez.</Notice>}
           {error && <Notice tone="error">{error}</Notice>}
+          {provisionales > 0 && (
+            <p className="nl-conteo">
+              {provisionales} {provisionales === 1 ? 'llanta tiene' : 'llantas tienen'} código provisional: no reciben código de fuego y no se asignan.
+            </p>
+          )}
           <p className="nl-conteo">
             Los códigos se asignan en orden, desde <strong>{codigoPrevisto(letra, anio, ultimo + 1)}</strong>.
           </p>
@@ -256,9 +270,9 @@ function GenerarCodigosSheet({ open, onClose, seleccionados, onAsignado }: {
               <tr><th>Código de fuego</th><th>Neumático</th></tr>
             </thead>
             <tbody>
-              {seleccionados.map((l, i) => (
+              {previa.map(({ l, codigo }) => (
                 <tr key={l.codigo}>
-                  <td className="nl-codigo">{codigoPrevisto(letra, anio, ultimo + i + 1)}</td>
+                  <td className="nl-codigo">{codigo ?? <span className="nl-conteo">No asignable</span>}</td>
                   <td className="nl-codigo">{l.codigo}</td>
                 </tr>
               ))}
@@ -370,11 +384,13 @@ export function NeumaticosListado() {
         )}
       </div>
 
-      {seleccionables.length > 0 && (
+      {filas.length > 0 && (
         <div className="nl-barra">
-          <Button variant="plain" onClick={alternarTodas}>
-            {todasSeleccionadas ? 'Quitar selección' : `Seleccionar sin código (${seleccionables.length})`}
-          </Button>
+          {seleccionables.length > 0 && (
+            <Button variant="plain" onClick={alternarTodas}>
+              {todasSeleccionadas ? 'Quitar selección' : `Seleccionar sin código (${seleccionables.length})`}
+            </Button>
+          )}
           {seleccion.size > 0 && (
             <Button variant="primary" onClick={() => setPreviaAbierta(true)}>
               Generar código de fuego ({seleccion.size})
@@ -396,9 +412,7 @@ export function NeumaticosListado() {
         <ul className="nl-lista" aria-label="Neumáticos">
           {filas.map(l => (
             <li key={l.codigo} className="nl-lista__item" style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
-              {l.situacion === SIN_CODIGO && (
-                <CasillaSeleccion checked={seleccion.has(l.codigo)} onChange={() => alternar(l.codigo)} label={`Seleccionar ${l.codigo}`} />
-              )}
+              <CasillaSeleccion checked={seleccion.has(l.codigo)} onChange={() => alternar(l.codigo)} label={`Seleccionar ${l.codigo}`} />
               <button type="button" className="nl-lista__abrir" onClick={() => abrirFicha(l.codigo)}>
                 <span className="nl-lista__cuerpo">
                   <span className="nl-lista__fila">
@@ -420,9 +434,7 @@ export function NeumaticosListado() {
           {filas.map(l => (
             <tr key={l.codigo} className="nl-fila" onClick={() => abrirFicha(l.codigo)}>
               <Celda alinear="center">
-                {l.situacion === SIN_CODIGO && (
-                  <CasillaSeleccion checked={seleccion.has(l.codigo)} onChange={() => alternar(l.codigo)} label={`Seleccionar ${l.codigo}`} />
-                )}
+                <CasillaSeleccion checked={seleccion.has(l.codigo)} onChange={() => alternar(l.codigo)} label={`Seleccionar ${l.codigo}`} />
               </Celda>
               <Celda mono><span className="nl-codigo">{l.codigo}</span></Celda>
               <Celda>{vidaTexto(l.vida)}</Celda>
