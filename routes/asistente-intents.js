@@ -54,14 +54,19 @@ function detectReport(message) {
 
   const tipo =
     /(fleetrun|mantenimiento preventivo|mant[. ]prev|tipo_mp)/.test(t) ? 'fleetrun'
+    : /(costo|gasto)/.test(t) && /(taller|\bots?\b|orden(es)? de trabajo)/.test(t) ? 'costos_ot'
+    : /(orden(es)? de trabajo|\bots?\b)/.test(t) ? 'ordenes_trabajo'
     : /(inspecci[oó]n|inspecciones|rampa|checklist|tecnica|tecnico)/.test(t) ? 'inspecciones'
+    : /(neum[aá]tico|llanta)/.test(t) ? 'neumaticos'
+    : /(orden(es)? de compra|compras)/.test(t) ? 'compras'
+    : /(inventario|almac[eé]n|art[ií]culo|stock)/.test(t) ? 'inventario'
     : /(conductor|chofer|chofer|lista de conductores|directorio)/.test(t) ? 'conductores'
     : /(placa|vehiculo|unidad|flota|camion|remolque|tracto)/.test(t) ? 'placas'
     : null;
   if (!tipo) return null;
 
   const formato = /\bpdf\b/.test(t) ? 'pdf' : 'excel';
-  const rangeTypes = ['inspecciones', 'fleetrun'];
+  const rangeTypes = ['inspecciones', 'fleetrun', 'costos_ot', 'ordenes_trabajo', 'compras'];
   const range = rangeTypes.includes(tipo) ? parseRange(t) : undefined;
   return { tipo, formato, ...range };
 }

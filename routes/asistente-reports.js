@@ -1,14 +1,32 @@
 // Datos de los reportes del asistente. Los permisos se verifican aquí; los datos van
 // directo al navegador, que arma el archivo. Gemini nunca ve datos de la empresa.
 
+const { COSTO_OT_SQL } = require('../services/costos_taller');
+const { STOCK_SQL } = require('../services/almacen_stock');
+
+// Permisos de taller: los mismos que acepta GET /ordenes-trabajo (routes/taller.js y rbac.js)
+const PERMISOS_TALLER = ['ot.ver', 'status_rampa.ver', 'trabajos_ot.ver', 'reportes_ot.ver', 'sal_inv.ver'];
+
 const REPORTS = {
   placas: { label: 'Vehículos de la flota', perm: 'placas.ver', range: false },
   inspecciones: { label: 'Inspecciones técnicas', perm: 'insp.ver', range: true },
   conductores: { label: 'Directorio de conductores', perm: 'cond.ver', range: false },
   fleetrun: { label: 'Datos de mantenimiento Fleetrun', perm: 'fleet.ver', range: true },
+  costos_ot: { label: 'Costos de órdenes de trabajo', perm: PERMISOS_TALLER, range: true },
+  ordenes_trabajo: { label: 'Órdenes de trabajo', perm: PERMISOS_TALLER, range: true },
+  compras: { label: 'Órdenes de compra', perm: 'ent_inv.ver', range: true },
+  inventario: { label: 'Inventario de almacén', perm: 'inv.ver', range: false },
+  neumaticos: { label: 'Neumáticos', perm: 'neumaticos.ver', range: false },
 };
 
+// Tipo y técnico de una OT: viven en detalles_json (los mismos campos que usa el dashboard de taller)
+const OT_TIPO_SQL = "COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(o.detalles_json, '$.tipo_ot')), ''), '')";
+const OT_TECNICO_SQL = "COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(o.detalles_json, '$.tecnicos_str')), ''), JSON_UNQUOTE(JSON_EXTRACT(o.detalles_json, '$.tecnico_lider')), '')";
+// Día inicial desde 00:00 y día final hasta 23:59:59 (las fechas de OT y compras son datetime)
+const rangoParams = (desde, hasta) => [`${desde} 00:00:00`, `${hasta} 23:59:59`];
+
 function tienePermiso(user, clave) {
+  if (Array.isArray(clave)) return clave.some(c => tienePermiso(user, c));
   if (!user) return false;
   if ((user.correo || '').toLowerCase() === 'admin@azkell.com') return true;
   const rol = (user.rol || '').toLowerCase();
@@ -256,7 +274,178 @@ async function buildReport(db, user, tipo, query) {
     };
   }
 
+  if (tipo === 'costos_ot') {
+    const { fromKey, toKey } = resolveRange(query.desde, query.hasta);
+    const rows = await db_query(targetDb,
+      `SELECT COALESCE(NULLIF(o.id_ot, ''), o.ticket_entrada) AS ot, o.placa, ${OT_TIPO_SQL} AS tipo, ${OT_TECNICO_SQL} AS tecnico,
+              DATE_FORMAT(o.fecha_ingreso, '%Y-%m-%d') AS fecha, ${COSTO_OT_SQL} AS costo_total
+       FROM ordenes_trabajo o
+       WHERE o.fecha_ingreso BETWEEN ? AND ?
+       ORDER BY costo_total DESC LIMIT 3000`,
+      rangoParams(fromKey, toKey)
+    );
+    return {
+      title: REPORTS.costos_ot.label,
+      subtitle: `Del ${fromKey} al ${toKey} · Generado el ${subtitle}`,
+      columns: [
+        { key: 'ot', label: 'OT' },
+        { key: 'placa', label: 'Placa' },
+        { key: 'tipo', label: 'Tipo' },
+        { key: 'tecnico', label: 'Técnico' },
+        { key: 'fecha', label: 'Fecha ingreso' },
+        { key: 'costo_total', label: 'Costo total', type: 'money' },
+      ],
+      rows: rows.map(r => ({
+        ot: r.ot ?? '',
+        placa: r.placa ?? '',
+        tipo: r.tipo ?? '',
+        tecnico: r.tecnico ?? '',
+        fecha: r.fecha ?? '',
+        costo_total: Number(r.costo_total) || 0,
+      })),
+      truncated: rows.length >= 3000,
+    };
+  }
+
+  if (tipo === 'ordenes_trabajo') {
+    const { fromKey, toKey } = resolveRange(query.desde, query.hasta);
+    const rows = await db_query(targetDb,
+      `SELECT COALESCE(NULLIF(o.id_ot, ''), o.ticket_entrada) AS ot, o.placa, o.estado, ${OT_TIPO_SQL} AS tipo, ${OT_TECNICO_SQL} AS tecnico,
+              DATE_FORMAT(o.fecha_ingreso, '%Y-%m-%d %H:%i') AS fecha_ingreso, DATE_FORMAT(o.fecha_hora_salida, '%Y-%m-%d %H:%i') AS fecha_salida
+       FROM ordenes_trabajo o
+       WHERE o.fecha_ingreso BETWEEN ? AND ?
+       ORDER BY o.fecha_ingreso DESC LIMIT 3000`,
+      rangoParams(fromKey, toKey)
+    );
+    return {
+      title: REPORTS.ordenes_trabajo.label,
+      subtitle: `Del ${fromKey} al ${toKey} · Generado el ${subtitle}`,
+      columns: [
+        { key: 'ot', label: 'OT' },
+        { key: 'placa', label: 'Placa' },
+        { key: 'estado', label: 'Estado' },
+        { key: 'tipo', label: 'Tipo' },
+        { key: 'tecnico', label: 'Técnico' },
+        { key: 'fecha_ingreso', label: 'Ingreso' },
+        { key: 'fecha_salida', label: 'Salida' },
+      ],
+      rows: rows.map(r => ({
+        ot: r.ot ?? '',
+        placa: r.placa ?? '',
+        estado: r.estado ?? '',
+        tipo: r.tipo ?? '',
+        tecnico: r.tecnico ?? '',
+        fecha_ingreso: r.fecha_ingreso ?? '',
+        fecha_salida: r.fecha_salida ?? '',
+      })),
+      truncated: rows.length >= 3000,
+    };
+  }
+
+  if (tipo === 'compras') {
+    const { fromKey, toKey } = resolveRange(query.desde, query.hasta);
+    const rows = await db_query(targetDb,
+      `SELECT e.id, DATE_FORMAT(e.fecha, '%Y-%m-%d') AS fecha, e.proveedor_nombre, e.documento_referencia, e.placa, e.estado, e.total_pen
+       FROM entradas_inv e
+       WHERE e.tipo_orden = 'Orden de compra' AND e.fecha BETWEEN ? AND ?
+       ORDER BY e.fecha DESC LIMIT 3000`,
+      rangoParams(fromKey, toKey)
+    );
+    return {
+      title: REPORTS.compras.label,
+      subtitle: `Del ${fromKey} al ${toKey} · Generado el ${subtitle}`,
+      columns: [
+        { key: 'id', label: 'Código' },
+        { key: 'fecha', label: 'Fecha' },
+        { key: 'proveedor', label: 'Proveedor' },
+        { key: 'documento', label: 'Documento' },
+        { key: 'placa', label: 'Placa' },
+        { key: 'estado', label: 'Estado' },
+        { key: 'total', label: 'Total', type: 'money' },
+      ],
+      rows: rows.map(r => ({
+        id: r.id ?? '',
+        fecha: r.fecha ?? '',
+        proveedor: r.proveedor_nombre ?? '',
+        documento: r.documento_referencia ?? '',
+        placa: r.placa ?? '',
+        estado: r.estado ?? '',
+        total: Number(r.total_pen) || 0,
+      })),
+      truncated: rows.length >= 3000,
+    };
+  }
+
+  if (tipo === 'inventario') {
+    // Mismo cálculo de stock que el inventario de almacén (services/almacen_stock.js)
+    const rows = await db_query(targetDb, STOCK_SQL, []);
+    return {
+      title: REPORTS.inventario.label,
+      subtitle: `Stock al ${subtitle}`,
+      columns: [
+        { key: 'id', label: 'Código' },
+        { key: 'articulo', label: 'Artículo' },
+        { key: 'familia', label: 'Familia' },
+        { key: 'almacen', label: 'Almacén' },
+        { key: 'unidad', label: 'Unidad' },
+        { key: 'stock_actual', label: 'Stock actual', type: 'number' },
+        { key: 'stock_min', label: 'Stock mínimo', type: 'number' },
+        { key: 'costo_unit', label: 'Costo unitario', type: 'money' },
+      ],
+      rows: rows.slice(0, 3000).map(r => ({
+        id: r.id ?? '',
+        articulo: r.descripcion ?? '',
+        familia: r.familia ?? '',
+        almacen: r.almacen ?? '',
+        unidad: r.unidad ?? '',
+        stock_actual: Number(r.stock_actual) || 0,
+        stock_min: Number(r.stock_min) || 0,
+        costo_unit: Number(r.costo_soles) || 0,
+      })),
+      truncated: rows.length > 3000,
+    };
+  }
+
+  if (tipo === 'neumaticos') {
+    const rows = await db_query(targetDb,
+      `SELECT id_neumatico, codigo_llanta, marca, medida, estado_operativo, placa_actual, posicion_actual,
+              remanente_actual, km_acumulado, costo_compra
+       FROM neumaticos_hoja_vida
+       ORDER BY placa_actual, posicion_actual LIMIT 3000`,
+      []
+    );
+    return {
+      title: REPORTS.neumaticos.label,
+      subtitle: `Generado el ${subtitle}`,
+      columns: [
+        { key: 'id_neumatico', label: 'Código' },
+        { key: 'codigo_llanta', label: 'Código llanta' },
+        { key: 'marca', label: 'Marca' },
+        { key: 'medida', label: 'Medida' },
+        { key: 'estado_operativo', label: 'Estado' },
+        { key: 'placa', label: 'Placa' },
+        { key: 'posicion', label: 'Posición' },
+        { key: 'remanente', label: 'Remanente (mm)', type: 'number' },
+        { key: 'km_acumulado', label: 'Km acumulado', type: 'number' },
+        { key: 'costo_compra', label: 'Costo compra', type: 'money' },
+      ],
+      rows: rows.map(r => ({
+        id_neumatico: r.id_neumatico ?? '',
+        codigo_llanta: r.codigo_llanta ?? '',
+        marca: r.marca ?? '',
+        medida: r.medida ?? '',
+        estado_operativo: r.estado_operativo ?? '',
+        placa: r.placa_actual ?? '',
+        posicion: r.posicion_actual ?? '',
+        remanente: r.remanente_actual != null ? Number(r.remanente_actual) : null,
+        km_acumulado: r.km_acumulado != null ? Number(r.km_acumulado) : null,
+        costo_compra: r.costo_compra != null ? Number(r.costo_compra) : null,
+      })),
+      truncated: rows.length >= 3000,
+    };
+  }
+
   throw { status: 400, message: 'Tipo de reporte no reconocido.' };
 }
 
-module.exports = { REPORTS, availableReports, buildReport, resolveRange, todayForPrompt, filtrosPlaca, filtrosPlacasDelMensaje, tituloReporte, condicionesPlaca };
+module.exports = { REPORTS, availableReports, buildReport, resolveRange, todayForPrompt, filtrosPlaca, filtrosPlacasDelMensaje, tituloReporte, condicionesPlaca, tienePermiso, db_query, rangoParams, OT_TIPO_SQL, OT_TECNICO_SQL };

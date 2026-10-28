@@ -2,7 +2,7 @@
 // persona) y el archivo se arma aquí, en el navegador. Las librerías se cargan solo al usarlas.
 import { api } from '../../core/api/client';
 
-export type ReportType = 'placas' | 'inspecciones' | 'conductores' | 'fleetrun';
+export type ReportType = 'placas' | 'inspecciones' | 'conductores' | 'fleetrun' | 'costos_ot' | 'ordenes_trabajo' | 'compras' | 'inventario' | 'neumaticos';
 export interface ReportRequest {
   tipo: ReportType;
   formato: 'excel' | 'pdf';
@@ -29,11 +29,13 @@ interface ReportData {
 export interface ReportFile { blob: Blob; fileName: string; rows: number; truncated: boolean }
 
 const integer = new Intl.NumberFormat('es-PE', { maximumFractionDigits: 0 });
+const money = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function display(value: string | number | null | undefined, type: ReportColumn['type']): string {
   if (value == null || value === '') return '';
   if (typeof value !== 'number') return String(value);
   if (type === 'number') return integer.format(value);
+  if (type === 'money') return `S/ ${money.format(value)}`;
   return String(value);
 }
 

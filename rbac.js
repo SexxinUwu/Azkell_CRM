@@ -105,6 +105,10 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/script/actualizar') || path.startsWith('/script/editar')) accion = 'e';
     else if (path.startsWith('/script/eliminar')) accion = 'd';
 
+    // Asistente: cada reporte y cada consulta del chat verifica sus propios permisos (routes/asistente-*.js).
+    // Sin esta regla, cualquier usuario que no fuera admin recibía "Ruta no mapeada" al escribir en el chat.
+    if (path.startsWith('/asistente')) return next();
+
     // FLOTA Y MÓDULOS
     if (path.startsWith('/disponibilidad-flota') || path.toLowerCase().includes('disponibilidad')) mod = ['disponibilidad', 'fleet', 'placas'];
     else if (path.startsWith('/roles')) mod = 'roles';

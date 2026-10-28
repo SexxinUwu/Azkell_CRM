@@ -1,5 +1,5 @@
 // Conocimiento del asistente: cómo se usa Azkell Fleet. Es lo único que se le da a Gemini.
-// No incluye datos de la empresa (placas, clientes, OT): el asistente no los ve nunca.
+// No incluye datos de la empresa (placas, clientes, OT): esos datos llegan solo por las herramientas de routes/asistente-consultas.js.
 // Si cambia una pantalla o una regla, cambia también este texto.
 
 const KNOWLEDGE = `
@@ -67,7 +67,8 @@ Sistema integral de gestión de flotas (Lima, Perú): vehículos, mantenimiento,
 
 ## Reportes (desde este asistente)
 - Pide el reporte en el chat, por ejemplo "reporte de placas en Excel" o "inspecciones de este mes en PDF".
-- Reportes disponibles según tus permisos: placas (catálogo de vehículos), inspecciones técnicas (por fechas), directorio de conductores, y datos Fleetrun (por fechas).
+- Reportes disponibles según tus permisos: placas (catálogo de vehículos), inspecciones técnicas (por fechas), directorio de conductores, datos Fleetrun (por fechas), costos de órdenes de trabajo (por fechas), órdenes de trabajo (por fechas), órdenes de compra (por fechas), inventario de almacén y neumáticos.
+- Preguntas con cifras de taller (por ejemplo, las OT de mayor costo o el costo por placa o por mes): el asistente las responde con datos de la empresa, según tus permisos.
 - Los pedidos claros ("lista de conductores en Excel") se preparan al instante aunque el asistente esté sin cuota.
 - Aparece una tarjeta con el archivo listo para descargar o ver.
 
