@@ -309,7 +309,7 @@ export function EntradasPage() {
     onPdf: o => { void verPdf(o, false); },
     onEditar: puedeEditar ? o => setFormulario({ entrada: o }) : undefined,
     onAprobar: puedeAprobar ? o => setAprobando(o) : undefined,
-    onEliminar: puedeEliminar ? o => setPorEliminar(o) : undefined,
+    onEliminar: puedeEliminar ? o => (estadoEditable(o.estado) ? setPorEliminar(o) : undefined) : undefined,
   };
 
   /** PDF de la orden: se descarga o se abre como vista previa */
@@ -515,7 +515,7 @@ export function EntradasPage() {
           onAdjuntos={() => setAdjuntosId(seleccionada.id)}
           onAprobar={puedeAprobar && categoriaEstado(seleccionada.estado) === 'registradas' ? () => setAprobando(seleccionada) : undefined}
           onAnular={puedeEditar && !String(seleccionada.estado ?? '').toLowerCase().includes('anul') ? () => setAnulando(seleccionada) : undefined}
-          onEliminar={puedeEliminar ? () => setPorEliminar(seleccionada) : undefined}
+          onEliminar={puedeEliminar && estadoEditable(seleccionada.estado) ? () => setPorEliminar(seleccionada) : undefined}
           onPdf={() => { void verPdf(seleccionada, false); }}
           onVistaPrevia={() => { void verPdf(seleccionada, true); }}
           generandoPdf={generandoPdf}

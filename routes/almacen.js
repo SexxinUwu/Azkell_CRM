@@ -1685,7 +1685,17 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         }
     });
 
-    router.put('/entradas/:id', tcSunatSiFalta, (req, res) => {
+    // Una orden aprobada (o más adelante: pagada, recibida, anulada o rechazada) ya no se edita ni se elimina
+    const ordenEditable = (req, res, next) => {
+        getDb(req).query('SELECT estado FROM entradas_inv WHERE id = ? LIMIT 1', [req.params.id], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            const est = String(rows && rows[0] ? rows[0].estado || '' : '').toLowerCase().trim();
+            const bloqueado = /^(aprobad[oa]|autorizad[oa]|procesad[oa]|pagad[oa]|recibid[oa]|finalizad[oa])$/.test(est) || est.includes('anul') || est.includes('rechaz');
+            if (bloqueado) return res.status(409).json({ error: `La orden está ${rows[0].estado}: no se puede editar ni eliminar` });
+            next();
+        });
+    };
+    router.put('/entradas/:id', tcSunatSiFalta, ordenEditable, (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;
         const {
@@ -1767,7 +1777,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             }
         );
     });
-    router.delete('/entradas/:id', (req, res) => {
+    router.delete('/entradas/:id', ordenEditable, (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;
         const cleanId = String(id).replace(/^ENT-/i, '');
