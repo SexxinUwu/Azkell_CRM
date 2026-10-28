@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CircleCheck, Eye, FileSpreadsheet, FileDown, PackagePlus, Pencil, Plus, Paperclip, RefreshCw, SearchX, Trash2, Upload } from 'lucide-react';
+import { ArrowUpRight, CircleCheck, ClipboardList, Coins, Eye, FileSpreadsheet, FileDown, Package, PackagePlus, Pencil, Plus, Paperclip, RefreshCw, SearchX, Trash2, Upload } from 'lucide-react';
 import { exportarConsolidadoOC, exportarDetalleArticulosOC, descargarPlantillaEntradas } from './exportarEntradas';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -172,6 +172,20 @@ function FilaOC({ orden: o, item, vista, ...acciones }: FilaProps) {
       {totales}
       {cola}
     </tr>
+  );
+}
+
+/** Tarjeta de indicador de la lista: mismo diseño que el inventario */
+function KpiOC({ etiqueta, valor, sub, icono, tono }: { etiqueta: string; valor: string; sub?: string; icono: React.ReactNode; tono?: 'ok' | 'warning' | 'valor' }) {
+  return (
+    <div className="inv-kpi">
+      <div className="inv-kpi__cuerpo">
+        <div className="inv-kpi__etiqueta">{etiqueta}</div>
+        <div className={`inv-kpi__valor${tono ? ` inv-kpi__valor--${tono}` : ''}`}>{valor}</div>
+        {sub && <div className="inv-kpi__sub">{sub}</div>}
+      </div>
+      <span className={`inv-kpi__icono${tono && tono !== 'valor' ? ` inv-kpi__icono--${tono}` : ''}`}>{icono}</span>
+    </div>
   );
 }
 
@@ -408,20 +422,6 @@ export function EntradasPage() {
 
       {isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
-      ) : seleccionada ? (
-        <EntradaDetalle
-          entrada={seleccionada}
-          onVolver={() => setSeleccionadaId(null)}
-          onEditar={puedeEditar && estadoEditable(seleccionada.estado) ? () => setFormulario({ entrada: seleccionada }) : undefined}
-          onAdjuntos={() => setAdjuntosId(seleccionada.id)}
-          onAprobar={puedeAprobar && categoriaEstado(seleccionada.estado) === 'registradas' ? () => setAprobando(seleccionada) : undefined}
-          onAnular={puedeEditar && !String(seleccionada.estado ?? '').toLowerCase().includes('anul') ? () => setAnulando(seleccionada) : undefined}
-          onEliminar={puedeEliminar ? () => setPorEliminar(seleccionada) : undefined}
-          onPdf={() => { void verPdf(seleccionada, false); }}
-          onVistaPrevia={() => { void verPdf(seleccionada, true); }}
-          generandoPdf={generandoPdf}
-          unidadDe={id => unidadDe(id) || null}
-        />
       ) : entradas.length === 0 ? (
         <EmptyState icon={<PackagePlus size={22} />} title="Sin órdenes de compra">
           {puedeCrear ? <>Registra la primera con <strong>Nueva orden</strong>.</> : 'Cuando almacén registre compras, aparecerán aquí.'}
@@ -429,23 +429,12 @@ export function EntradasPage() {
       ) : (
         <div>
           {/* Totales del filtro */}
-          <div className="oc-metricas" style={{ marginBottom: 'var(--s-4)' }}>
-            <div className="inv-metrica">
-              <span className="inv-metrica__num">{kpis.total}</span>
-              <span className="inv-metrica__label">Total O.C.</span>
-            </div>
-            <div className="inv-metrica">
-              <span className="inv-metrica__num" style={{ fontSize: '1.25rem' }}>{formatSoles(kpis.monto)}</span>
-              <span className="inv-metrica__label">Monto total</span>
-            </div>
-            <div className="inv-metrica">
-              <span className="inv-metrica__num">{kpis.proveedores}</span>
-              <span className="inv-metrica__label">Proveedores</span>
-            </div>
-            <div className="inv-metrica">
-              <span className="inv-metrica__num">{kpis.unidades.toLocaleString('es-PE')}</span>
-              <span className="inv-metrica__label">Unidades pedidas</span>
-            </div>
+          {/* Totales del filtro */}
+          <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
+            <KpiOC etiqueta="Órdenes" valor={String(kpis.total)} sub="Del filtro seleccionado" icono={<ClipboardList size={18} />} />
+            <KpiOC etiqueta="Monto total (S/)" valor={formatSoles(kpis.monto)} sub="Valor en soles" icono={<Coins size={18} />} tono="valor" />
+            <KpiOC etiqueta="Pendientes de aprobación" valor={String(conteo.registradas)} sub="Estado registrada" icono={<CircleCheck size={18} />} tono="warning" />
+            <KpiOC etiqueta="Unidades pedidas" valor={kpis.unidades.toLocaleString('es-PE')} sub={`${kpis.proveedores} proveedores`} icono={<Package size={18} />} />
           </div>
 
           {/* Filtros */}
@@ -518,6 +507,24 @@ export function EntradasPage() {
           void qc.invalidateQueries({ queryKey: ['almacen', 'inventario'] });
         }}
       />
+
+      <Sheet open={!!seleccionada} onClose={() => setSeleccionadaId(null)} title="Orden de compra" ancho ligera>
+        {seleccionada && (
+          <EntradaDetalle
+          entrada={seleccionada}
+          onVolver={() => setSeleccionadaId(null)}
+          onEditar={puedeEditar && estadoEditable(seleccionada.estado) ? () => setFormulario({ entrada: seleccionada }) : undefined}
+          onAdjuntos={() => setAdjuntosId(seleccionada.id)}
+          onAprobar={puedeAprobar && categoriaEstado(seleccionada.estado) === 'registradas' ? () => setAprobando(seleccionada) : undefined}
+          onAnular={puedeEditar && !String(seleccionada.estado ?? '').toLowerCase().includes('anul') ? () => setAnulando(seleccionada) : undefined}
+          onEliminar={puedeEliminar ? () => setPorEliminar(seleccionada) : undefined}
+          onPdf={() => { void verPdf(seleccionada, false); }}
+          onVistaPrevia={() => { void verPdf(seleccionada, true); }}
+          generandoPdf={generandoPdf}
+          unidadDe={id => unidadDe(id) || null}
+          />
+        )}
+      </Sheet>
 
       <AdjuntosEntradaSheet
         open={adjuntos !== null}
