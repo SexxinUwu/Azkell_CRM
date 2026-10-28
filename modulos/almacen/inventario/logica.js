@@ -355,7 +355,8 @@ window._invTCSunat = function(el) {
     fetch('/api/tipo-cambio/sunat')
         .then(function(r) { return r.ok ? r.json() : null; })
         .then(function(j) { if (j && j.ok && j.venta && el && !el.value) el.value = j.venta; })
-        .catch(function() {});
+        .catch(function() {})
+        .then(function() { if (el && !el.value) el.value = window._invTC || 3.70; });
 };
 
 window._invCargarFamilias = function() {

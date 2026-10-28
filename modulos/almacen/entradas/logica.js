@@ -332,7 +332,8 @@ window._entOnMonedaChange = function() {
         if (tcEl && !tcEl.value) {
             fetch('/api/tipo-cambio/sunat').then(function(r) { return r.ok ? r.json() : null; })
                 .then(function(j) { if (j && j.ok && j.venta && !tcEl.value) tcEl.value = j.venta; })
-                .catch(function() {});
+                .catch(function() {})
+                .then(function() { if (!tcEl.value) tcEl.value = window._entTC || 3.40; });
         }
     }
     window._entActualizarTotal();

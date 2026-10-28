@@ -347,7 +347,7 @@ export function InventarioFormulario({ open, articulo: a, onClose, onGuardado }:
           </Field>
         </div>
         {moneda === 'USD' && (
-          <Field label="T/C USD → S/" hint={sunat.data?.venta ? `SUNAT venta del ${sunat.data.fecha}` : undefined}>
+          <Field label="T/C USD → S/" hint={sunat.data?.venta ? `SUNAT venta del ${sunat.data.fecha}` : sunat.isError ? 'SUNAT no respondió: escribe el tipo de cambio' : sunat.isFetching ? 'Consultando el tipo de cambio SUNAT…' : undefined}>
             {p => <TextInput {...p} type="number" min={0.01} step="0.0001" value={tipoCambio} placeholder={String(tcPorDefecto)} onChange={e => setTipoCambio(e.target.value)} />}
           </Field>
         )}
