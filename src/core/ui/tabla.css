@@ -7,6 +7,9 @@
   overscroll-behavior: contain;
 }
 
+.tabla-sin-barras { scrollbar-width: none; -ms-overflow-style: none; }
+.tabla-sin-barras::-webkit-scrollbar { display: none; }
+
 .tabla-redim__tabla {
   table-layout: fixed;
   border-collapse: separate;

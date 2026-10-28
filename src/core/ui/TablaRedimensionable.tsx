@@ -22,6 +22,8 @@ interface Props {
   // Color de la cabecera de toda la tabla (las columnas con `fondo` lo sobreescriben)
   colorEncabezado?: string;
   colorTextoEncabezado?: string;
+  // Clase extra del contenedor con scroll (p. ej. para ocultar sus barras)
+  className?: string;
 }
 
 const CLAVE = (id: string) => `fleet_tabla_${id}`;
@@ -45,7 +47,7 @@ function guardarMapa(id: string, mapa: Record<string, number>) {
 
 // Tabla con columnas redimensionables como en Excel: arrastra el borde derecho del encabezado,
 // o haz doble clic para ajustar la columna al contenido más ancho.
-export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh', ariaLabel, colorEncabezado, colorTextoEncabezado }: Props) {
+export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh', ariaLabel, colorEncabezado, colorTextoEncabezado, className }: Props) {
   const [mapa, setMapa] = useState<Record<string, number>>(() => leerMapa(id));
   const tablaRef = useRef<HTMLTableElement>(null);
   const anchos = columnas.map(c => Math.max(c.minimo ?? 56, mapa[c.id] ?? c.ancho));
@@ -100,7 +102,7 @@ export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh',
   }
 
   return (
-    <div className="tabla-redim" style={{ maxHeight: altoMax }}>
+    <div className={`tabla-redim${className ? ` ${className}` : ''}`} style={{ maxHeight: altoMax }}>
       {/* Ocupa todo el ancho disponible: si sobra espacio, las columnas se reparten el excedente */}
       <table ref={tablaRef} aria-label={ariaLabel} className="tabla-redim__tabla" style={{ width: '100%', minWidth: total }}>
         <colgroup>{anchos.map((a, i) => <col key={columnas[i].id} style={{ width: a }} />)}</colgroup>

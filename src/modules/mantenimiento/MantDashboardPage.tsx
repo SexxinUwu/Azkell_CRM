@@ -382,7 +382,7 @@ export function MantDashboardPage() {
             </div>
             <div className="mant-col-5">
               <Tarjeta titulo="Último trabajo por técnico" icono={<CircleDollarSign size={15} />}>
-                <TablaRedimensionable id="dash-tecnicos" columnas={COL_TECNICOS} ariaLabel="Último trabajo por técnico" altoMax="45vh">
+                <TablaRedimensionable id="dash-tecnicos" columnas={COL_TECNICOS} ariaLabel="Último trabajo por técnico" altoMax="45vh" className="tabla-sin-barras">
                   {ultimoTecnico.map(([nombre, t]) => (
                     <tr key={nombre}>
                       <Celda>{nombre}</Celda>
