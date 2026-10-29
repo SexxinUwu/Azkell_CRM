@@ -5018,16 +5018,26 @@ app.use('/api/almacen', almacenRoutes);
 
 
 // ── Integraciones API (GET / PUT) ────────────────────────────────
+// Secretos: la lista nunca trae el valor completo. Solo indica si está configurado y, si el valor es largo, los últimos 4 caracteres.
+const CLAVES_SECRETAS = ['wialon_token', 'sunat_clave_sol', 'sunat_client_secret'];
+const MASCARA = '••••';
+const enmascararSecreto = (v) => {
+    const texto = v ? String(v) : '';
+    return { valor: texto ? MASCARA + (texto.length >= 12 ? texto.slice(-4) : '') : null, configurado: !!texto };
+};
+
 app.get('/api/integraciones', (req, res) => {
     db.query('SELECT clave, valor, descripcion, actualizado_por, actualizado_en FROM integraciones_api ORDER BY id', (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        res.json(rows.map(r => (CLAVES_SECRETAS.includes(r.clave) ? { ...r, ...enmascararSecreto(r.valor) } : r)));
     });
 });
 
 app.put('/api/integraciones', (req, res) => {
     const { clave, valor, actualizado_por } = req.body;
     if (!clave) return res.status(400).json({ error: 'clave requerida' });
+    // Un secreto vacío o con la máscara de GET no se escribe: no borra ni pisa el valor guardado
+    if (CLAVES_SECRETAS.includes(clave) && (!valor || String(valor).startsWith(MASCARA))) return res.json({ ok: true, sinCambios: true });
     db.query(
         `INSERT INTO integraciones_api (clave, valor, actualizado_por)
          VALUES (?, ?, ?)
