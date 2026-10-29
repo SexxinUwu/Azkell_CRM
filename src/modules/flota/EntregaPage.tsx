@@ -3,11 +3,11 @@ import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, ClipboardList, FileSpreadsheet, FileText, ListChecks, MessageCircle, Plus, SearchX, Trash2 } from 'lucide-react';
+import '../../core/ui/acciones-iconos.css';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, TextInput } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -125,13 +125,22 @@ export function EntregaPage() {
         title="Entrega de vehículos"
         subtitle={q.isLoading ? 'Cargando…' : `${lista.length} actas`}
         actions={
-          <>
-            <MenuOtros opciones={[
-              { label: 'Exportar Excel', detalle: `${visibles.length} actas`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Plantilla de inventario', detalle: 'Categorías e ítems que se califican', icon: <ListChecks size={17} />, separado: true, onSelect: () => setPlantillaAbierta(true) },
-            ]} />
-            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNueva(true)}>Nueva acta</Button>}
-          </>
+          <div className="acciones-iconos">
+            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--verde"
+              data-tip="Exportar Excel" aria-label="Exportar Excel" onClick={exportar}>
+              <FileSpreadsheet size={17} />
+            </button>
+            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--ambar"
+              data-tip="Plantilla de inventario" aria-label="Plantilla de inventario" onClick={() => setPlantillaAbierta(true)}>
+              <ListChecks size={17} />
+            </button>
+            {puedeCrear && (
+              <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul"
+                data-tip="Nueva acta" aria-label="Nueva acta" onClick={() => setNueva(true)}>
+                <Plus size={17} />
+              </button>
+            )}
+          </div>
         }
       />
 

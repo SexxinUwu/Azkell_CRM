@@ -1,4 +1,5 @@
 import './ce-portal-lista.css';
+import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState } from 'react';
 import { CalendarCheck, CarFront, ClipboardList, Eye, FileSpreadsheet, FileText, LayoutGrid, MessageCircle, Pencil, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
@@ -99,11 +100,28 @@ export function CeLista({
           </div>
         </div>
         <div className="cep-header__acciones">
-          <Button variant="secondary" icon={<LayoutGrid size={16} />} onClick={onEmpresas}>Empresas</Button>
-          <Button variant="secondary" icon={<SlidersHorizontal size={16} />} onClick={onPlantilla}>Plantilla</Button>
-          <Button variant="secondary" icon={<RefreshCw size={16} />} loading={actualizando} onClick={onActualizar}>Actualizar</Button>
-          <Button variant="secondary" icon={<FileSpreadsheet size={16} />} loading={exportando} onClick={exportar}>Excel</Button>
-          <Button variant="primary" icon={<Plus size={16} />} onClick={() => { haptic('selection'); onRegistrar(); }}>Registrar entrega</Button>
+          <div className="acciones-iconos">
+            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul"
+              data-tip="Empresas" aria-label="Empresas" onClick={onEmpresas}>
+              <LayoutGrid size={17} />
+            </button>
+            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--ambar"
+              data-tip="Plantilla" aria-label="Plantilla de inventario" onClick={onPlantilla}>
+              <SlidersHorizontal size={17} />
+            </button>
+            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--violeta"
+              data-tip="Actualizar" aria-label="Actualizar" disabled={actualizando} onClick={onActualizar}>
+              <RefreshCw size={17} className={actualizando ? 'cep-girando' : undefined} />
+            </button>
+            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--verde"
+              data-tip="Exportar Excel" aria-label="Exportar Excel" disabled={exportando} onClick={exportar}>
+              <FileSpreadsheet size={17} />
+            </button>
+            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul"
+              data-tip="Registrar entrega" aria-label="Registrar entrega" onClick={() => { haptic('selection'); onRegistrar(); }}>
+              <Plus size={17} />
+            </button>
+          </div>
         </div>
       </header>
 

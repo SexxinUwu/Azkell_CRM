@@ -1,7 +1,7 @@
 import './ce-plantilla.css';
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { CircleAlert, Info, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
@@ -14,12 +14,15 @@ import type { CategoriaPlantilla } from './ce-tipos';
 
 const copia = (c: CategoriaPlantilla[]): CategoriaPlantilla[] => JSON.parse(JSON.stringify(c));
 
-const nuevaCategoria = (): CategoriaPlantilla => ({ id: `cat_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, titulo: '', items: [] });
+// Mismos textos por defecto que el clásico (una categoría o ítem nuevo se renombra al momento)
+const nuevaCategoria = (): CategoriaPlantilla => ({ id: `cat_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, titulo: 'Nueva Categoría', items: [] });
+const NUEVO_ITEM = 'Nuevo Ítem de Revisión';
 
 /**
  * Editor de la plantilla de inventario (Entrega de vehículos › Plantilla).
  * Categorías e ítems que se califican (B / R / M) en cada acta. Es corporativa: vale para toda la empresa
- * y no cambia las actas ya hechas. "De fábrica" reemplaza lo que se ve por la plantilla original; se guarda al pulsar Guardar.
+ * y no cambia las actas ya hechas (plantilla inmutable: aplica a futuros registros). "De fábrica" reemplaza lo que se ve
+ * por la plantilla original; se guarda al pulsar Guardar plantilla.
  */
 export function CePlantilla({ abierta, onCerrar }: { abierta: boolean; onCerrar: () => void }) {
   const toast = useToast();
@@ -30,6 +33,7 @@ export function CePlantilla({ abierta, onCerrar }: { abierta: boolean; onCerrar:
   const [intento, setIntento] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restaurar, setRestaurar] = useState(false);
+  const [porQuitar, setPorQuitar] = useState<number | null>(null);
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
@@ -76,7 +80,7 @@ export function CePlantilla({ abierta, onCerrar }: { abierta: boolean; onCerrar:
         footer={<>
           <Button variant="secondary" icon={<RotateCcw size={16} />} onClick={() => setRestaurar(true)} disabled={bloqueada}>De fábrica</Button>
           <Button variant="secondary" onClick={onCerrar}>Cancelar</Button>
-          <Button variant="primary" onClick={guardar} loading={guardando} disabled={bloqueada || guardando}>Guardar</Button>
+          <Button variant="primary" onClick={guardar} loading={guardando} disabled={bloqueada || guardando}>Guardar plantilla</Button>
         </>}>
         <div className="ce-plantilla">
           {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
@@ -85,14 +89,14 @@ export function CePlantilla({ abierta, onCerrar }: { abierta: boolean; onCerrar:
               No se pudo leer la plantilla del servidor. Revisa la conexión y vuelve a abrir esta ventana.
             </Notice>
           )}
-          <p className="t-footnote c-secondary ce-plantilla__ayuda">
-            Las categorías e ítems de abajo son los que se califican (Bueno, Regular, Malo) en cada acta nueva.
-            Se guardan en el servidor y valen para toda la empresa.
-          </p>
+          <Notice tone="accent" icon={<Info size={16} />}>
+            <strong>Plantilla inmutable:</strong> los cambios se aplican exclusivamente a futuros registros, conservando íntegro el historial anterior.
+            Las categorías e ítems se califican (Bueno, Regular, Malo) en cada acta nueva y valen para toda la empresa.
+          </Notice>
 
           {cargando && <p className="t-footnote c-secondary">Cargando plantilla…</p>}
           {!cargando && !sinConexion && cats.length === 0 && (
-            <p className="t-footnote c-secondary">No hay categorías. Agrega una para comenzar.</p>
+            <p className="t-footnote c-secondary">No hay categorías. Crea una nueva con “Añadir Nueva Categoría”.</p>
           )}
 
           {cats.map((c, i) => {
@@ -100,8 +104,9 @@ export function CePlantilla({ abierta, onCerrar }: { abierta: boolean; onCerrar:
             return (
               <section key={c.id} className="ce-plantilla__cat" aria-label={c.titulo || 'Categoría sin nombre'}>
                 <div className="ce-plantilla__cat-cab">
+                  <span className="ce-plantilla__num" aria-hidden>{i + 1}</span>
                   <div className="ce-plantilla__cat-nombre">
-                    <Field label="Categoría" error={sinNombre ? 'Escribe un nombre para la categoría.' : null}>
+                    <Field label="Nombre de categoría" error={sinNombre ? 'Escribe un nombre para la categoría.' : null}>
                       {p => (
                         <TextInput {...p} value={c.titulo} placeholder="Nombre de la categoría" disabled={bloqueada}
                           onChange={e => cambiarCat(i, x => ({ ...x, titulo: e.target.value }))} />
@@ -110,7 +115,7 @@ export function CePlantilla({ abierta, onCerrar }: { abierta: boolean; onCerrar:
                   </div>
                   <Button variant="secondary" iconOnly icon={<Trash2 size={16} />} disabled={bloqueada}
                     aria-label={`Eliminar categoría ${c.titulo || 'sin nombre'}`}
-                    onClick={() => setCats(l => l.filter((_, j) => j !== i))} />
+                    onClick={() => setPorQuitar(i)} />
                 </div>
 
                 <ul className="ce-plantilla__items">
@@ -127,21 +132,27 @@ export function CePlantilla({ abierta, onCerrar }: { abierta: boolean; onCerrar:
                 </ul>
 
                 <Button variant="secondary" icon={<Plus size={16} />} disabled={bloqueada}
-                  onClick={() => cambiarCat(i, x => ({ ...x, items: [...x.items, ''] }))}>Añadir ítem</Button>
+                  onClick={() => cambiarCat(i, x => ({ ...x, items: [...x.items, NUEVO_ITEM] }))}>Añadir Subcategoría</Button>
               </section>
             );
           })}
 
           <Button variant="secondary" icon={<Plus size={16} />} disabled={bloqueada}
-            onClick={() => setCats(l => [...l, nuevaCategoria()])}>Nueva categoría</Button>
+            onClick={() => setCats(l => [...l, nuevaCategoria()])}>Añadir Nueva Categoría</Button>
         </div>
       </Sheet>
 
       <ConfirmSheet open={restaurar} onClose={() => setRestaurar(false)}
         onConfirm={() => { setCats(copia(PLANTILLA_FABRICA)); setError(null); setRestaurar(false); }}
         title="¿Volver a la plantilla de fábrica?"
-        message="Se reemplaza lo que ves por las categorías originales. No se guarda hasta que pulses Guardar."
+        message="Se reemplaza lo que ves por las categorías originales. No se guarda hasta que pulses Guardar plantilla."
         confirmLabel="Restaurar" />
+
+      <ConfirmSheet open={porQuitar !== null} onClose={() => setPorQuitar(null)}
+        onConfirm={() => { if (porQuitar !== null) setCats(l => l.filter((_, j) => j !== porQuitar)); setPorQuitar(null); }}
+        title="¿Eliminar esta categoría?"
+        message="Se quita la categoría completa con todos sus ítems. No se guarda hasta que pulses Guardar plantilla."
+        confirmLabel="Eliminar" />
     </>
   );
 }

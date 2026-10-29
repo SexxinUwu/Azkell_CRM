@@ -31,6 +31,22 @@
   min-width: 0;
 }
 
+/* Número de la categoría, como en el clásico (1, 2, 3…) */
+.ce-plantilla__num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-bottom: 0.4rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 .ce-plantilla__items {
   list-style: none;
   margin: 0;

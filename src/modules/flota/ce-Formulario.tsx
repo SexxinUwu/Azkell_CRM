@@ -12,8 +12,10 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { dayKey, formatFechaPe } from '../../core/lib/format';
+import { descargarArchivo } from '../../core/lib/pdf';
 import { CeCroquis, type CroquisValor } from './ce-croquis';
 import { FirmaPad, type FirmaHandle } from './ce-firmas';
+import { generarPdfEntrega, nombrePdfEntrega } from './ce-pdf';
 import { PLANTILLA_FABRICA, cargarPlantilla, claveItem, leerPartes } from './ce-plantilla';
 import type { CategoriaPlantilla, EntregaVehiculo } from './ce-tipos';
 
@@ -156,6 +158,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
   const [errores, setErrores] = useState<Partial<Record<CampoNombre, string>>>({});
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
   const [buscar, setBuscar] = useState('');
   const [abiertos, setAbiertos] = useState<Record<string, boolean>>({});
   const [cargado, setCargado] = useState(nuevo);
@@ -330,6 +333,24 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
     return e;
   }
 
+  /** PDF oficial del acta (el clásico lo imprime al guardar). Si falla, el acta ya quedó guardada. */
+  async function descargarActa(r: EntregaVehiculo) {
+    try {
+      const blob = await generarPdfEntrega(r);
+      descargarArchivo(blob, nombrePdfEntrega(r));
+    } catch (err) {
+      toast(`No se pudo generar el PDF: ${errorMessage(err)}`, 'error');
+    }
+  }
+
+  async function pdfDelRegistro() {
+    const r = detalle.data ?? registro;
+    if (!r) return;
+    haptic('selection');
+    setGenerandoPdf(true);
+    try { await descargarActa(r); } finally { setGenerandoPdf(false); }
+  }
+
   async function guardar() {
     const e = validar();
     setErrores(e);
@@ -378,9 +399,12 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
       const guardado = await api<{ data?: EntregaVehiculo }>(`/seguridad/entrega-vehiculos/${encodeURIComponent(idFinal)}`)
         .then(x => x.data)
         .catch(() => undefined);
+      const registroFinal = guardado ?? ({ ...payload, id: idFinal } as unknown as EntregaVehiculo);
       haptic('success');
       toast(nuevo ? 'Acta de entrega guardada' : 'Acta de entrega actualizada');
-      onGuardado(guardado ?? ({ ...payload, id: idFinal } as unknown as EntregaVehiculo));
+      onGuardado(registroFinal);
+      // Como el clásico, al guardar sale el PDF del acta
+      void descargarActa(registroFinal);
     } catch (err) {
       setErrorGeneral(errorMessage(err));
       haptic('warning');
@@ -423,7 +447,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
   const cabecera = (
     <div className="ce-f__cabecera">
       <div className="ce-f__cabecera-izq">
-        <Button variant="plain" size="sm" icon={<ArrowLeft size={18} />} onClick={onCerrar}>Volver</Button>
+        <Button variant="plain" size="sm" icon={<ArrowLeft size={18} />} onClick={onCerrar}>Volver a la lista</Button>
         <div>
           <h2 className="ce-f__titulo-pagina">{titulo}</h2>
           <p className="ce-f__subtitulo">{subtitulo}</p>
@@ -538,7 +562,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
             </div>
           </div>
           {!soloLectura && (
-            <Button variant="secondary" size="sm" icon={<CheckCheck size={16} />} onClick={marcarTodoBueno}>Todo en buen estado</Button>
+            <Button variant="secondary" size="sm" icon={<CheckCheck size={16} />} onClick={marcarTodoBueno}>Todo en Buen Estado (B)</Button>
           )}
         </div>
 
@@ -668,14 +692,14 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
         <div className="ce-firmas">
           <FirmaPad
             ref={firmaEntrega}
-            titulo="Entrega"
+            titulo="Entregado por"
             nombre={campos.quien_entrega}
             imagen={firmasGuardadas.entrega}
             editable={!soloLectura}
           />
           <FirmaPad
             ref={firmaRecibe}
-            titulo="Recibe"
+            titulo="Recibido por"
             nombre={campos.quien_recibe.toUpperCase() || 'CONDUCTOR / RECEPTOR'}
             imagen={firmasGuardadas.recibe}
             editable={!soloLectura}
@@ -685,12 +709,15 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
 
       <div className="ce-f__barra-acciones">
         {soloLectura ? (
-          <Button variant="primary" onClick={onCerrar}>Cerrar</Button>
+          <>
+            <Button variant="secondary" icon={<FileText size={16} />} loading={generandoPdf} onClick={pdfDelRegistro}>Generar PDF</Button>
+            <Button variant="primary" onClick={onCerrar}>Cerrar</Button>
+          </>
         ) : (
           <>
             <Button variant="secondary" onClick={onCerrar} disabled={enviando}>Cancelar</Button>
             <Button variant="primary" onClick={guardar} loading={enviando} disabled={!cargado}>
-              {nuevo ? 'Guardar acta' : 'Guardar cambios'}
+              {nuevo ? 'Guardar y generar PDF' : 'Actualizar y generar PDF'}
             </Button>
           </>
         )}

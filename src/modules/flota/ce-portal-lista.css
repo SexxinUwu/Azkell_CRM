@@ -160,6 +160,15 @@
 }
 .cep-header__sub { margin: 2px 0 0; font-size: 0.8125rem; color: var(--label-2); }
 .cep-header__acciones { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+/* Iconos de cabecera: respuesta al presionar y giro mientras se actualiza (con reducción de movimiento, sin giro) */
+.cep-header__acciones .acciones-iconos__boton { transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.cep-header__acciones .acciones-iconos__boton:active:not(:disabled) { transform: scale(0.94); }
+.cep-girando { animation: cep-giro 0.9s linear infinite; }
+@keyframes cep-giro { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .cep-girando { animation: none; }
+  .cep-header__acciones .acciones-iconos__boton { transition: none; }
+}
 
 /* ── Listado: KPI ─────────────────────────────────────────────────────────── */
 .cep-kpis {
