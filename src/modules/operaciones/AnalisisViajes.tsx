@@ -428,8 +428,10 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     const gal = crudo ? crudo.galones : visibles.reduce((s, t) => s + cifras(t).galones, 0);
     const gasto = crudo ? crudo.importe : visibles.reduce((s, t) => s + cifras(t).gasto, 0);
     // Km por galón solo con viajes de odómetro válido: un odómetro mal digitado (p. ej. 7.444.183 km en un viaje) infla el promedio
-    const razonables = visibles.filter(t => !t.odometroInconsistente && n(t.recorridoKm) > 0 && n(t.recorridoKm) <= LIMITE_KM_VIAJE);
-    const kmRazonables = razonables.reduce((s, t) => s + n(t.recorridoKm), 0);
+    // Como el clásico: el recorrido es el del bloque de diésel del viaje (urea, el general)
+    const kmDelViaje = (t: Trip) => (urea ? n(t.recorridoKm) : n(bloqueD2(t)?.recorridoKm ?? t.recorridoKm));
+    const razonables = visibles.filter(t => !t.odometroInconsistente && kmDelViaje(t) > 0 && kmDelViaje(t) <= LIMITE_KM_VIAJE);
+    const kmRazonables = razonables.reduce((s, t) => s + kmDelViaje(t), 0);
     const galRazonables = razonables.reduce((s, t) => s + cifras(t).galones, 0);
     return { viajes: visibles.length, gal, gasto, kmGal: galRazonables > 0 ? kmRazonables / galRazonables : 0, razonables: razonables.length, pendientes: visibles.filter(t => t.estadoAuditoria === 'PENDIENTE').length };
   }, [visibles, valesQ.data, urea]); // eslint-disable-line react-hooks/exhaustive-deps
