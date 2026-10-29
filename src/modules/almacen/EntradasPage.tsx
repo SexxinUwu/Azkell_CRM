@@ -6,6 +6,7 @@ import { exportarConsolidadoOC, exportarDetalleArticulosOC, descargarPlantillaEn
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
+import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
 import { TablaRedimensionable, Celda, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
@@ -177,20 +178,6 @@ function FilaOC({ orden: o, item, vista, ...acciones }: FilaProps) {
       {totales}
       {cola}
     </tr>
-  );
-}
-
-/** Tarjeta de indicador de la lista: mismo diseño que el inventario */
-function KpiOC({ etiqueta, valor, sub, icono, tono }: { etiqueta: string; valor: string; sub?: string; icono: React.ReactNode; tono?: 'ok' | 'warning' | 'valor' }) {
-  return (
-    <div className="inv-kpi">
-      <div className="inv-kpi__cuerpo">
-        <div className="inv-kpi__etiqueta">{etiqueta}</div>
-        <div className={`inv-kpi__valor${tono ? ` inv-kpi__valor--${tono}` : ''}`}>{valor}</div>
-        {sub && <div className="inv-kpi__sub">{sub}</div>}
-      </div>
-      <span className={`inv-kpi__icono${tono && tono !== 'valor' ? ` inv-kpi__icono--${tono}` : ''}`}>{icono}</span>
-    </div>
   );
 }
 
@@ -400,10 +387,10 @@ export function EntradasPage() {
           {/* Totales del filtro */}
           {/* Totales del filtro */}
           <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
-            <KpiOC etiqueta="Órdenes" valor={String(kpis.total)} sub="Del filtro seleccionado" icono={<ClipboardList size={18} />} />
-            <KpiOC etiqueta="Monto total (S/)" valor={formatSoles(kpis.monto)} sub="Valor en soles" icono={<Coins size={18} />} tono="valor" />
-            <KpiOC etiqueta="Pendientes de aprobación" valor={String(conteo.registradas)} sub="Estado registrada" icono={<CircleCheck size={18} />} tono="warning" />
-            <KpiOC etiqueta="Unidades pedidas" valor={kpis.unidades.toLocaleString('es-PE')} sub={`${kpis.proveedores} proveedores`} icono={<Package size={18} />} />
+            <KpiTarjeta etiqueta="Órdenes" valor={String(kpis.total)} sub="Del filtro seleccionado" icono={<ClipboardList size={18} />} />
+            <KpiTarjeta etiqueta="Monto total (S/)" valor={formatSoles(kpis.monto)} sub="Valor en soles" icono={<Coins size={18} />} tono="valor" />
+            <KpiTarjeta etiqueta="Pendientes de aprobación" valor={String(conteo.registradas)} sub="Estado registrada" icono={<CircleCheck size={18} />} tono="warning" />
+            <KpiTarjeta etiqueta="Unidades pedidas" valor={kpis.unidades.toLocaleString('es-PE')} sub={`${kpis.proveedores} proveedores`} icono={<Package size={18} />} />
           </div>
 
           {/* Filtros */}

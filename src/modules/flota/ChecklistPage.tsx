@@ -1,14 +1,18 @@
 import './checklist.css';
 import './ce-portal-lista.css';
 import '../../core/ui/acciones-iconos.css';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import '../almacen/almacen.css';
+import '../almacen/entradas.css';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCheck, ClipboardCheck, Clock, Eye, FileSpreadsheet, FileText, Mail, MapPin, MoreVertical, Pencil, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2, Wrench } from 'lucide-react';
+import { CheckCheck, ClipboardCheck, ClipboardList, Clock, Eye, FileDown, FileSpreadsheet, Mail, MapPin, Pencil, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { EmptyState, Notice, Page } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
+import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
+import { SearchField, TextInput } from '../../core/ui/Field';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { ConfirmSheet } from '../../core/ui/Sheet';
+import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
+import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -16,7 +20,7 @@ import { compartirPDF, descargarArchivo } from '../../core/lib/pdf';
 import { exportarExcel } from '../../core/lib/excel';
 import { formatFechaHoraPe } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
-import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
+import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { usePlacas } from '../placas/api';
 import { useChecklist, useConfigSistemas, type ReporteFalla } from './api';
 import { ReporteFallaNuevo } from './ReporteFallaNuevo';
@@ -34,12 +38,15 @@ interface Permisos { editar: boolean; ots: boolean; eliminar: boolean }
 // Empresas del filtro (las mismas del clásico)
 const EMPRESAS = ['MARSISA S.A.C.', 'ROSYMAR PERU S.A.C.', 'TRAHESA S.A.C.', 'YOGUI TRANSPORT S.A.C.'];
 const CLAVES_EMPRESA: Array<[string, string]> = [['MARSISA', EMPRESAS[0]], ['ROSYMAR', EMPRESAS[1]], ['TRAHESA', EMPRESAS[2]], ['YOGUI', EMPRESAS[3]]];
+/** Desde esta anchura se muestra la tabla; antes, tarjetas (igual que Órdenes de compra) */
+const TABLA_QUERY = '(min-width: 768px)';
 
 const limpia = (s: unknown) => String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const hoyLima = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 const estadoDe = (f: ReporteFalla) => f.estado || 'Pendiente';
 const etiquetaEstado = (e: string) => (e === 'En Proceso' ? 'En taller' : e);
 const colorEstado = (e: string) => (e === 'Pendiente' ? 'amber' : e === 'En Proceso' ? 'blue' : e === 'Finalizado' ? 'green' : 'neutral');
+const TONO_ESTADO: Record<string, string> = { amber: 'badge--amber', blue: 'oc-estado--azul', green: 'oc-estado--verde', neutral: 'oc-estado--gris' };
 
 function canonEmpresa(raw: unknown): string {
   const s = String(raw ?? '').trim().toUpperCase();
@@ -50,17 +57,17 @@ function canonEmpresa(raw: unknown): string {
 }
 
 const COLUMNAS: ColumnaTabla[] = [
-  { id: 'folio', titulo: 'Folio', ancho: 170 },
-  { id: 'fecha', titulo: 'Fecha', ancho: 150 },
-  { id: 'tracto', titulo: 'Tracto', ancho: 120 },
+  { id: 'acciones', titulo: 'Acciones', ancho: 72, minimo: 64, alinear: 'center' },
+  { id: 'folio', titulo: 'Folio', ancho: 150 },
+  { id: 'fecha', titulo: 'Fecha', ancho: 160 },
+  { id: 'tracto', titulo: 'Tracto', ancho: 110 },
   { id: 'remolque', titulo: 'Remolque', ancho: 120 },
-  { id: 'conductor', titulo: 'Conductor / Ruta', ancho: 250 },
-  { id: 'estado', titulo: 'Estado', ancho: 130, alinear: 'center' },
+  { id: 'conductor', titulo: 'Conductor / Ruta', ancho: 240 },
+  { id: 'estado', titulo: 'Estado', ancho: 120, alinear: 'center' },
   { id: 'ots', titulo: 'OTs generadas', ancho: 230 },
-  { id: 'acc', titulo: 'Acciones', ancho: 150, alinear: 'center' },
 ];
 
-/** Reporte de fallas: calca de la pantalla del clásico (totales, filtros, tabla, plantilla, formulario, OTs y PDF). */
+/** Reporte de fallas: calca de la pantalla del clásico con el diseño de Órdenes de compra (totales, filtros, tabla, plantilla, formulario, OTs y PDF). */
 export function ChecklistPage() {
   const [vista, setVista] = useState<Vista>('lista');
   const [desde, setDesde] = useState(hoyLima());
@@ -83,7 +90,7 @@ export function ChecklistPage() {
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
-  const movil = useMediaQuery(MOBILE_QUERY);
+  const esTabla = useMediaQuery(TABLA_QUERY);
   const puedeCrear = can('checklist.crear');
   const permisos: Permisos = {
     editar: can('checklist.editar', 'checklist.crear'),
@@ -118,7 +125,7 @@ export function ChecklistPage() {
         .some(x => String(x ?? '').toUpperCase().includes(q)));
     }
     return lista;
-  }, [porEmpresa, filtroEstado, busqueda]);
+  }, [porEmpresa, filtroEstado, busqueda, clientePorPlaca]);
 
   const detalle = items.find(f => String(f.id) === String(detalleId)) ?? null;
   const formulario = (
@@ -189,6 +196,19 @@ export function ChecklistPage() {
     else if (a === 'eliminar') setPorEliminar(f);
   }
 
+  /** Acciones de cada reporte: mismo menú «⋯» que Órdenes de compra */
+  function opcionesDe(f: ReporteFalla): Array<OpcionOtros | false | null | undefined> {
+    const final = /final|anula/i.test(f.estado);
+    return [
+      { label: 'Ver detalle', icon: <Eye size={17} />, onSelect: () => accion('detalle', f) },
+      { label: 'Imprimir PDF F-MAN-001', icon: <FileDown size={17} />, disabled: !cfg.data || generandoPdf, onSelect: () => accion('pdf', f) },
+      permisos.editar && !final && { label: 'Editar reporte', icon: <Pencil size={17} />, onSelect: () => accion('editar', f) },
+      permisos.ots && { label: 'Generar / ver OTs', icon: <Wrench size={17} />, onSelect: () => accion('ots', f) },
+      { label: 'Enviar por correo', icon: <Mail size={17} />, onSelect: () => accion('correo', f) },
+      permisos.eliminar && { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: () => accion('eliminar', f) },
+    ];
+  }
+
   if (vista === 'plantilla') {
     return (
       <Page>
@@ -197,80 +217,71 @@ export function ChecklistPage() {
     );
   }
 
-  const kpis = [
-    { id: 'total', filtro: 'TODOS' as FiltroEstado, etiqueta: 'Total reportes', valor: cifras.total, fondo: 'var(--blue-tint)', color: 'var(--blue-ink)', Icono: FileText },
-    { id: 'pend', filtro: 'Pendiente' as FiltroEstado, etiqueta: 'Pendientes', valor: cifras.pendientes, fondo: 'var(--amber-tint)', color: 'var(--amber-ink)', Icono: Clock },
-    { id: 'proc', filtro: 'En Proceso' as FiltroEstado, etiqueta: 'En taller / OTs', valor: cifras.proceso, fondo: 'var(--accent-tint, var(--blue-tint))', color: 'var(--accent)', Icono: Wrench },
-    { id: 'fin', filtro: 'Finalizado' as FiltroEstado, etiqueta: 'Finalizados', valor: cifras.finalizados, fondo: 'var(--green-tint)', color: 'var(--green-ink)', Icono: CheckCheck },
-  ];
   const cargando = isLoading;
+  const pendientesTotal = items.filter(f => estadoDe(f) === 'Pendiente').length;
+  const kpis: Array<{ id: string; filtro: FiltroEstado; etiqueta: string; valor: number; sub: string; tono?: 'ok' | 'warning' | 'valor'; icono: ReactNode }> = [
+    { id: 'total', filtro: 'TODOS', etiqueta: 'Total reportes', valor: cifras.total, sub: 'Del rango seleccionado', icono: <ClipboardList size={18} /> },
+    { id: 'pend', filtro: 'Pendiente', etiqueta: 'Pendientes', valor: cifras.pendientes, sub: 'Estado pendiente', tono: 'warning', icono: <Clock size={18} /> },
+    { id: 'proc', filtro: 'En Proceso', etiqueta: 'En taller / OTs', valor: cifras.proceso, sub: 'Estado en taller', tono: 'valor', icono: <Wrench size={18} /> },
+    { id: 'fin', filtro: 'Finalizado', etiqueta: 'Finalizados', valor: cifras.finalizados, sub: 'Estado finalizado', tono: 'ok', icono: <CheckCheck size={18} /> },
+  ];
 
   return (
     <Page>
-      <header className="cep-header">
-        <div className="cep-header__izq">
-          <span className="cep-header__icono" aria-hidden><ClipboardCheck size={22} /></span>
-          <div>
-            <h2 className="cep-header__titulo">Reporte de Fallas</h2>
-            <p className="cep-header__sub">Control de incidencias de flota y órdenes de servicio</p>
-          </div>
-        </div>
-        <div className="cep-header__acciones">
-          <div className="acciones-iconos">
-            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--violeta"
-              data-tip="Actualizar" aria-label="Actualizar" disabled={isFetching} onClick={() => { haptic('selection'); qc.invalidateQueries({ queryKey: ['flota', 'checklist'] }); }}>
-              <RefreshCw size={17} className={isFetching ? 'cep-girando' : undefined} />
-            </button>
-            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--ambar"
-              data-tip="Plantilla" aria-label="Plantilla de reporte de fallas" onClick={() => { haptic('selection'); setVista('plantilla'); }}>
-              <SlidersHorizontal size={17} />
-            </button>
-            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--verde"
-              data-tip="Exportar Excel" aria-label="Exportar Excel" disabled={exportando || items.length === 0} onClick={exportar}>
-              <FileSpreadsheet size={17} />
-            </button>
-          </div>
-          {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => { haptic('selection'); setNuevo(true); }}>Nuevo reporte</Button>}
-        </div>
-      </header>
-
-      <div className="cep-kpis ck-kpis">
-        {kpis.map(k => (
-          <button key={k.id} type="button" aria-pressed={filtroEstado === k.filtro}
-            className={`cep-kpi ck-kpi--boton${filtroEstado === k.filtro ? ' ck-kpi--activo' : ''}`}
-            onClick={() => { haptic('selection'); setFiltroEstado(k.filtro); }}>
-            <span className="cep-kpi__icono" style={{ background: k.fondo, color: k.color }} aria-hidden><k.Icono size={18} /></span>
-            <div className="cep-kpi__cuerpo">
-              <span className="cep-kpi__valor">{k.valor}</span>
-              <span className="cep-kpi__etiqueta">{k.etiqueta}</span>
+      <PageHeader
+        eyebrow="Flota"
+        title="Reporte de fallas"
+        subtitle={cargando ? 'Cargando…' : `${items.length} ${items.length === 1 ? 'reporte' : 'reportes'}${pendientesTotal ? ` · ${pendientesTotal} pendientes` : ''}`}
+        actions={
+          <>
+            <div className="oc-acciones">
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--verde"
+                data-tip="Exportar Excel" aria-label="Exportar Excel" disabled={exportando || items.length === 0} onClick={exportar}>
+                <FileSpreadsheet size={17} />
+              </button>
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--azul"
+                data-tip="Plantilla" aria-label="Plantilla de reporte de fallas" onClick={() => { haptic('selection'); setVista('plantilla'); }}>
+                <SlidersHorizontal size={17} />
+              </button>
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--celeste"
+                data-tip="Actualizar" aria-label="Actualizar" disabled={isFetching} onClick={() => { haptic('selection'); qc.invalidateQueries({ queryKey: ['flota', 'checklist'] }); }}>
+                <RefreshCw size={17} className={isFetching ? 'cep-girando' : undefined} />
+              </button>
             </div>
-          </button>
+            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => { haptic('selection'); setNuevo(true); }}>Nuevo reporte</Button>}
+          </>
+        }
+      />
+
+      <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
+        {kpis.map(k => (
+          <KpiTarjeta key={k.id} className="ck-kpi" etiqueta={k.etiqueta} valor={String(k.valor)} sub={k.sub} icono={k.icono} tono={k.tono}
+            activo={filtroEstado === k.filtro} onClick={() => { haptic('selection'); setFiltroEstado(k.filtro); }} />
         ))}
       </div>
 
-      <div className="cep-barra ck-barra">
-        <div className="cep-barra__buscar">
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar folio, placa, conductor..." />
+      <div className="oc-filtros" style={{ marginBottom: 'var(--s-4)' }}>
+        <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar folio, placa, conductor…" />
+        <div className="oc-filtros__fila">
+          <div className="oc-fechas">
+            <TextInput type="date" aria-label="Desde" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} />
+            <span className="t-footnote c-secondary">a</span>
+            <TextInput type="date" aria-label="Hasta" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} />
+            <Button variant="secondary" size="sm" onClick={hoy}>Hoy</Button>
+          </div>
+          <div className="ck-empresas" role="group" aria-label="Empresa">
+            {['TODAS', ...EMPRESAS].map(e => (
+              <button key={e} type="button" aria-pressed={filtroEmpresa === e}
+                className={`ck-empresas__op${filtroEmpresa === e ? ' ck-empresas__op--activa' : ''}`}
+                onClick={() => { haptic('selection'); setFiltroEmpresa(e); }}>
+                {e === 'TODAS' ? 'Todas' : e}
+              </button>
+            ))}
+          </div>
+          <span className="badge" style={{ marginLeft: 'auto' }}>
+            {cargando ? 'Cargando…' : `${visibles.length} ${visibles.length === 1 ? 'reporte' : 'reportes'}`}
+          </span>
         </div>
-        <div className="ck-fechas">
-          <input type="date" className="input" aria-label="Desde" title="Desde" value={desde} max={hasta || undefined}
-            onChange={e => setDesde(e.target.value)} />
-          <span className="t-footnote c-secondary">a</span>
-          <input type="date" className="input" aria-label="Hasta" title="Hasta" value={hasta} min={desde || undefined}
-            onChange={e => setHasta(e.target.value)} />
-          <Button variant="secondary" size="sm" onClick={hoy}>Hoy</Button>
-        </div>
-        <span className="cep-barra__conteo">{cargando ? 'Cargando…' : `${visibles.length} ${visibles.length === 1 ? 'reporte' : 'reportes'}`}</span>
-      </div>
-
-      <div className="ck-empresas" role="group" aria-label="Empresa">
-        {['TODAS', ...EMPRESAS].map(e => (
-          <button key={e} type="button" aria-pressed={filtroEmpresa === e}
-            className={`ck-empresas__op${filtroEmpresa === e ? ' ck-empresas__op--activa' : ''}`}
-            onClick={() => { haptic('selection'); setFiltroEmpresa(e); }}>
-            {e === 'TODAS' ? 'Todas' : e}
-          </button>
-        ))}
       </div>
 
       {isError ? <Notice tone="error">{errorMessage(error)}</Notice> : cargando ? <PageLoader variante="camion" /> : visibles.length === 0 ? (
@@ -279,50 +290,34 @@ export function ChecklistPage() {
             ? <Button variant="secondary" size="sm" onClick={() => setBusqueda('')}>Quitar búsqueda</Button>
             : 'No hay reportes de fallas en este rango de fechas.'}
         </EmptyState>
-      ) : movil ? (
-        <ul className="cep-lista" aria-label="Reportes de fallas">
-          {visibles.map(f => (
-            <li key={String(f.id)} className="cep-lista__item" onClick={() => accion('detalle', f)} style={{ cursor: 'pointer' }}>
-              <div className="cep-lista__cuerpo">
-                <div className="cep-lista__fila">
-                  <span className="cep-placa">{f.placa_tracto || '—'}</span>
-                  {f.placa_remolque && <span className="cep-inv">+ {f.placa_remolque}</span>}
-                </div>
-                <span className="cep-lista__titulo">{f.conductor || 'Sin conductor'}</span>
-                <span className="cep-lista__sub"><MapPin size={12} /> {f.procedencia || 'En ruta'}</span>
-                <span className="cep-lista__sub">{f.folio} · {formatFechaHoraPe(f.fecha_reporte)}</span>
-                <OtsChips falla={f} />
-              </div>
-              <div className="cep-lista__acciones" onClick={e => e.stopPropagation()}>
-                <span className={`ot-estado ot-estado--${colorEstado(estadoDe(f))}`}>{etiquetaEstado(estadoDe(f))}</span>
-                <AccionesFila falla={f} pdfListo={!!cfg.data && !generandoPdf} permisos={permisos} onAccion={accion} />
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
+      ) : esTabla ? (
         <TablaRedimensionable id="checklist-fallas" columnas={COLUMNAS} ariaLabel="Reportes de fallas" altoMax="68vh">
           {visibles.map(f => (
-            <tr key={String(f.id)} onClick={() => accion('detalle', f)} style={{ cursor: 'pointer' }}>
-              <Celda mono>
-                <span className="cep-inv">{f.folio}</span>
+            <tr key={String(f.id)}>
+              <Celda alinear="center"><MenuOtros soloIcono label="Acciones" opciones={opcionesDe(f)} /></Celda>
+              <Celda>
+                <button type="button" className="oc-codigo" onClick={() => accion('detalle', f)} title="Ver detalle">{f.folio}</button>
                 {f.orden_viaje && <span className="t-footnote c-secondary" style={{ display: 'block' }}>{f.orden_viaje}</span>}
               </Celda>
-              <Celda mono>{formatFechaHoraPe(f.fecha_reporte)}</Celda>
-              <Celda><span className="cep-placa">{f.placa_tracto || '—'}</span></Celda>
-              <Celda><span className="cep-placa">{f.placa_remolque || '—'}</span></Celda>
+              <Celda>{formatFechaHoraPe(f.fecha_reporte)}</Celda>
+              <Celda mono>{f.placa_tracto || '—'}</Celda>
+              <Celda mono>{f.placa_remolque || '—'}</Celda>
               <Celda>
-                <span className="cep-recorte" style={{ fontWeight: 600 }}>{f.conductor || 'Sin conductor'}</span>
-                <span className="cep-recorte cep-muted" style={{ display: 'block', fontSize: '0.8125rem' }}><MapPin size={12} /> {f.procedencia || 'En ruta'}</span>
+                <span style={{ display: 'block', fontWeight: 600 }}>{f.conductor || 'Sin conductor'}</span>
+                <span className="t-footnote c-secondary"><MapPin size={12} /> {f.procedencia || 'En ruta'}</span>
               </Celda>
-              <Celda alinear="center"><span className={`ot-estado ot-estado--${colorEstado(estadoDe(f))}`}>{etiquetaEstado(estadoDe(f))}</span></Celda>
+              <Celda alinear="center"><EstadoBadge estado={estadoDe(f)} /></Celda>
               <Celda><OtsChips falla={f} /></Celda>
-              <Celda alinear="center">
-                <AccionesFila falla={f} pdfListo={!!cfg.data && !generandoPdf} permisos={permisos} onAccion={accion} />
-              </Celda>
             </tr>
           ))}
         </TablaRedimensionable>
+      ) : (
+        <div className="oc-tarjetas-lista">
+          {visibles.map(f => (
+            <TarjetaFalla key={String(f.id)} falla={f} opciones={opcionesDe(f)} pdfListo={!!cfg.data && !generandoPdf}
+              onDetalle={() => accion('detalle', f)} onPdf={() => accion('pdf', f)} />
+          ))}
+        </div>
       )}
 
       {formulario}
@@ -346,6 +341,11 @@ export function ChecklistPage() {
   );
 }
 
+/** Estado del reporte con el mismo color que las órdenes de compra */
+function EstadoBadge({ estado }: { estado: string }) {
+  return <span className={`badge ${TONO_ESTADO[colorEstado(estado)] ?? ''}`.trim()}>{etiquetaEstado(estado)}</span>;
+}
+
 /** OTs generadas del reporte: chips con número y placa */
 function OtsChips({ falla }: { falla: ReporteFalla }) {
   const ots = leerOts(falla.ots_generadas_json);
@@ -357,45 +357,31 @@ function OtsChips({ falla }: { falla: ReporteFalla }) {
   );
 }
 
-/** Acciones de cada fila: PDF directo y menú con el resto */
-function AccionesFila({ falla, pdfListo, permisos, onAccion }: {
-  falla: ReporteFalla; pdfListo: boolean; permisos: Permisos; onAccion: (a: AccionFila, f: ReporteFalla) => void;
+/** Reporte en pantallas pequeñas: tarjeta igual que las órdenes de compra */
+function TarjetaFalla({ falla: f, opciones, pdfListo, onDetalle, onPdf }: {
+  falla: ReporteFalla; opciones: Array<OpcionOtros | false | null | undefined>; pdfListo: boolean; onDetalle: () => void; onPdf: () => void;
 }) {
-  const [abierto, setAbierto] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const final = /final|anula/i.test(falla.estado);
-
-  useEffect(() => {
-    if (!abierto) return;
-    const fuera = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setAbierto(false); };
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setAbierto(false); };
-    document.addEventListener('pointerdown', fuera);
-    document.addEventListener('keydown', esc);
-    return () => { document.removeEventListener('pointerdown', fuera); document.removeEventListener('keydown', esc); };
-  }, [abierto]);
-
-  const ir = (a: AccionFila) => { setAbierto(false); haptic('selection'); onAccion(a, falla); };
-
   return (
-    <div className="cep-acciones" role="group" aria-label={`Acciones del reporte ${falla.folio}`} onClick={e => e.stopPropagation()}>
-      <Button variant="plain" size="sm" iconOnly icon={<FileText size={16} />} title="Descargar PDF F-MAN-001"
-        aria-label={`PDF del reporte ${falla.folio}`} disabled={!pdfListo} onClick={() => ir('pdf')} />
-      <div className="ck-menu" ref={ref}>
-        <Button variant="plain" size="sm" iconOnly icon={<MoreVertical size={16} />} title="Más acciones"
-          aria-label={`Más acciones del reporte ${falla.folio}`} aria-haspopup="menu" aria-expanded={abierto}
-          onClick={() => { haptic('selection'); setAbierto(a => !a); }} />
-        {abierto && (
-          <div className="ck-menu__lista" role="menu">
-            <button type="button" role="menuitem" className="ck-menu__op" onClick={() => ir('detalle')}><Eye size={16} /> Ver detalle</button>
-            {permisos.editar && !final && <button type="button" role="menuitem" className="ck-menu__op" onClick={() => ir('editar')}><Pencil size={16} /> Editar reporte</button>}
-            {permisos.ots && <button type="button" role="menuitem" className="ck-menu__op" onClick={() => ir('ots')}><Wrench size={16} /> Generar / ver OTs</button>}
-            <button type="button" role="menuitem" className="ck-menu__op" onClick={() => ir('correo')}><Mail size={16} /> Enviar por correo</button>
-            {permisos.eliminar && (
-              <button type="button" role="menuitem" className="ck-menu__op ck-menu__op--peligro" onClick={() => ir('eliminar')}><Trash2 size={16} /> Eliminar</button>
-            )}
-          </div>
-        )}
+    <article className="oc-tarjeta-orden">
+      <div className="oc-tarjeta-orden__cab">
+        <button type="button" className="oc-codigo" onClick={onDetalle}>{f.folio}</button>
+        <EstadoBadge estado={estadoDe(f)} />
       </div>
-    </div>
+      <div className="oc-chips">
+        <span className="oc-chip oc-chip--mono">{f.placa_tracto || '—'}</span>
+        {f.placa_remolque && <span className="oc-chip oc-chip--mono">{f.placa_remolque}</span>}
+      </div>
+      <span style={{ fontWeight: 700, fontSize: '0.9375rem' }}>{f.conductor || 'Sin conductor'}</span>
+      <span className="t-footnote c-secondary"><MapPin size={12} /> {f.procedencia || 'En ruta'}</span>
+      <span className="t-footnote c-secondary">{formatFechaHoraPe(f.fecha_reporte)}</span>
+      <OtsChips falla={f} />
+      <div className="oc-tarjeta-orden__pie">
+        <div className="oc-tarjeta-orden__acciones" style={{ marginLeft: 'auto' }}>
+          <Button size="sm" variant="secondary" icon={<Eye size={14} />} onClick={onDetalle}>Detalle</Button>
+          <Button size="sm" variant="secondary" icon={<FileDown size={14} />} disabled={!pdfListo} onClick={onPdf}>PDF</Button>
+          <MenuOtros soloIcono label="Acciones" opciones={opciones} />
+        </div>
+      </div>
+    </article>
   );
 }
