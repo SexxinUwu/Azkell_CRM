@@ -181,7 +181,7 @@ export function CeLista({
           ))}
         </ul>
       ) : (
-        <TablaRedimensionable id="checklist-entrega" columnas={COLUMNAS} ariaLabel="Actas de entrega de vehículos" altoMax="68vh">
+        <TablaRedimensionable id="checklist-entrega" columnas={COLUMNAS} ariaLabel="Actas de entrega de vehículos" altoMax="calc(100dvh - 300px)" className="tabla-sin-barras">
           {visibles.map(r => (
             <tr key={String(r.id)}>
               <Celda mono><span className="cep-inv">{folio(r)}</span></Celda>
@@ -208,13 +208,13 @@ function Acciones({ registro, ocupado, puedeEliminar, onAccion }: {
   const n = folio(registro);
   const accion = (a: AccionFila) => () => onAccion(a, registro);
   return (
-    <div className="cep-acciones" role="group" aria-label={`Acciones del acta ${n}`}>
-      <Button variant="plain" size="sm" iconOnly icon={<Eye size={16} />} title="Ver detalle" aria-label={`Ver acta ${n}`} disabled={ocupado} onClick={accion('ver')} />
-      <Button variant="plain" size="sm" iconOnly icon={<Pencil size={16} />} title="Editar acta" aria-label={`Editar acta ${n}`} disabled={ocupado} onClick={accion('editar')} />
-      <Button variant="plain" size="sm" iconOnly icon={<FileText size={16} />} title="Descargar PDF" aria-label={`PDF del acta ${n}`} disabled={ocupado} onClick={accion('pdf')} />
-      <Button variant="plain" size="sm" iconOnly icon={<MessageCircle size={16} />} title="Enviar por WhatsApp" aria-label={`Enviar acta ${n} por WhatsApp`} disabled={ocupado} onClick={accion('whatsapp')} />
+    <div className="cep-acciones acciones-iconos" role="group" aria-label={`Acciones del acta ${n}`}>
+      <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Ver detalle" icon={<Eye size={16} />} aria-label={`Ver acta ${n}`} disabled={ocupado} onClick={accion('ver')} />
+      <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--ambar" data-tip="Editar acta" icon={<Pencil size={16} />} aria-label={`Editar acta ${n}`} disabled={ocupado} onClick={accion('editar')} />
+      <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Ver PDF" icon={<FileText size={16} />} aria-label={`PDF del acta ${n}`} disabled={ocupado} onClick={accion('pdf')} />
+      <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Enviar por WhatsApp" icon={<MessageCircle size={16} />} aria-label={`Enviar acta ${n} por WhatsApp`} disabled={ocupado} onClick={accion('whatsapp')} />
       {puedeEliminar && (
-        <Button variant="plain" size="sm" iconOnly className="cep-btn-peligro" icon={<Trash2 size={16} />} title="Eliminar acta (solo administrador)" aria-label={`Eliminar acta ${n}`} disabled={ocupado} onClick={accion('eliminar')} />
+        <Button variant="plain" size="sm" iconOnly className="cep-btn-peligro acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Eliminar acta" icon={<Trash2 size={16} />} aria-label={`Eliminar acta ${n}`} disabled={ocupado} onClick={accion('eliminar')} />
       )}
     </div>
   );

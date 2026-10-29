@@ -2,7 +2,7 @@
 // Mismo documento que el clásico (modulos/flota/entrega-vehiculos/logica.js › _evConstruirHtmlPDF, _evRenderPdfBlob,
 // _evGetPdfFilename, evCompartirWhatsApp). El clásico usa Tailwind; aquí los estilos van en línea para que el PDF
 // salga igual en cualquier pantalla. html2pdf se carga desde /libs/html2pdf.bundle.min.js (core/lib/pdf.ts).
-import { compartirPDF, generarPDFBlob, montarParaPDF } from '../../core/lib/pdf';
+import { compartirPDF, generarPDFBlob } from '../../core/lib/pdf';
 import { svgDiagramaEntrega, type EstiloCarroceria } from './ce-croquis';
 import { cargarPlantilla, calificacionDe, leerPartes, PLANTILLA_FABRICA, type Calificacion } from './ce-plantilla';
 import type { CategoriaPlantilla, EntregaVehiculo } from './ce-tipos';
@@ -165,14 +165,30 @@ const OPCIONES = { orientacion: 'portrait' as const, margen: 0, escala: 2.8 };
 async function conElemento<T>(html: string, usar: (el: HTMLElement) => Promise<T>): Promise<T> {
   const el = document.createElement('div');
   el.innerHTML = html;
-  const quitar = montarParaPDF(el);
-  try { return await usar(el); } finally { quitar(); }
+  // Tamaño real de A4 detrás de la página: con tamaño cero el PDF sale en blanco
+  el.style.cssText = 'position:fixed;left:0;top:0;width:794px;background:#fff;z-index:-1;pointer-events:none;';
+  document.body.appendChild(el);
+  try { return await usar(el); } finally { el.remove(); }
 }
 
 /**
  * PDF del acta. Las partes se califican con la plantilla vigente de la empresa; si el servidor no responde,
  * se usa la de fábrica (el clásico usaba la copia local).
  */
+/** Abre el PDF del acta en una pestaña nueva (no lo descarga). La pestaña se abre antes de generarlo para que el navegador no la bloquee. */
+export async function abrirPdfEntrega(r: EntregaVehiculo): Promise<void> {
+  const ventana = window.open('', '_blank');
+  try {
+    const blob = await generarPdfEntrega(r);
+    const url = URL.createObjectURL(blob);
+    if (ventana) ventana.location.href = url;
+    else window.open(url, '_blank');
+  } catch (err) {
+    ventana?.close();
+    throw err;
+  }
+}
+
 export async function generarPdfEntrega(r: EntregaVehiculo): Promise<Blob> {
   const grupos = (await cargarPlantilla()) ?? PLANTILLA_FABRICA;
   const html = htmlActaEntrega(r, grupos, logoEmpresa());

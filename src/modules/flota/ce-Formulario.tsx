@@ -14,10 +14,9 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { dayKey, formatFechaPe } from '../../core/lib/format';
-import { descargarArchivo } from '../../core/lib/pdf';
 import { CeCroquis, type CroquisValor } from './ce-croquis';
 import { FirmaPad, type FirmaHandle } from './ce-firmas';
-import { generarPdfEntrega, nombrePdfEntrega } from './ce-pdf';
+import { abrirPdfEntrega } from './ce-pdf';
 import { PLANTILLA_FABRICA, cargarPlantilla, claveItem, leerPartes } from './ce-plantilla';
 import type { CategoriaPlantilla, EntregaVehiculo } from './ce-tipos';
 
@@ -338,8 +337,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
   /** PDF oficial del acta (el clásico lo imprime al guardar). Si falla, el acta ya quedó guardada. */
   async function descargarActa(r: EntregaVehiculo) {
     try {
-      const blob = await generarPdfEntrega(r);
-      descargarArchivo(blob, nombrePdfEntrega(r));
+      await abrirPdfEntrega(r);
     } catch (err) {
       toast(`No se pudo generar el PDF: ${errorMessage(err)}`, 'error');
     }

@@ -7,12 +7,11 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { ADMIN } from '../../core/auth/permisos';
 import { haptic } from '../../core/lib/haptics';
-import { descargarArchivo } from '../../core/lib/pdf';
 import { CePortal, type StatsEntrega } from './ce-Portal';
 import { CeLista, type AccionFila, type CifrasLista } from './ce-Lista';
 import { CeFormulario } from './ce-Formulario';
 import { CePlantilla } from './ce-PlantillaEditor';
-import { generarPdfEntrega, compartirEntregaWhatsApp, nombrePdfEntrega } from './ce-pdf';
+import { abrirPdfEntrega, compartirEntregaWhatsApp } from './ce-pdf';
 import { exportarEntregasExcel } from './ce-excel';
 import { cargarPlantilla } from './ce-plantilla';
 import type { EntregaVehiculo } from './ce-tipos';
@@ -116,8 +115,7 @@ export function ChecklistEntregaPage() {
         setFormulario({ registro: d, modo: a === 'ver' ? 'ver' : 'editar' });
         setVista('formulario');
       } else if (a === 'pdf') {
-        const blob = await generarPdfEntrega(d);
-        descargarArchivo(blob, nombrePdfEntrega(d));
+        await abrirPdfEntrega(d);
         haptic('success');
       } else {
         await compartirEntregaWhatsApp(d);
