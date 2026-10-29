@@ -222,13 +222,15 @@ function Sunat({ filas, cargado }: { filas: Fila[]; cargado: boolean }) {
   const [ocupado, setOcupado] = useState(false);
   const [prueba, setPrueba] = useState<Prueba>(null);
 
-  // intgCargar: al cargar, los campos se llenan con lo guardado
+  // intgCargar: al cargar, se llenan los datos no secretos. La clave SOL y el client secret no se precargan:
+  // el servidor no los envía, y solo se guardan si el usuario escribe uno nuevo.
   if (cargado && !cargadoEn) {
     setCargadoEn(true);
-    setV({
-      ruc: valorDe(filas, 'sunat_ruc_emisor'), usuario: valorDe(filas, 'sunat_usuario_sol'), clave: valorDe(filas, 'sunat_clave_sol'),
-      id: valorDe(filas, 'sunat_client_id'), secreto: valorDe(filas, 'sunat_client_secret'),
-    });
+    setV(a => ({
+      ...a,
+      ruc: valorDe(filas, 'sunat_ruc_emisor'), usuario: valorDe(filas, 'sunat_usuario_sol'),
+      id: valorDe(filas, 'sunat_client_id'),
+    }));
   }
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV(a => ({ ...a, [k]: e.target.value }));
   const alternarVer = (campo: string) => setVer(s => ({ ...s, [campo]: !s[campo] }));
@@ -238,9 +240,12 @@ function Sunat({ filas, cargado }: { filas: Fila[]; cargado: boolean }) {
     : !cargado ? { texto: 'Sin probar', clase: 'pending' }
     : valorDe(filas, 'sunat_client_id') ? { texto: 'Configurado', clase: 'ok' } : { texto: 'Sin configurar', clase: 'pending' };
 
+  // Los secretos solo se envían si el usuario escribió uno nuevo; un campo vacío conserva el valor guardado
   const pares = (): Array<[string, string]> => [
-    ['sunat_ruc_emisor', v.ruc], ['sunat_usuario_sol', v.usuario], ['sunat_clave_sol', v.clave],
-    ['sunat_client_id', v.id], ['sunat_client_secret', v.secreto], ['sunat_modo_entorno', 'produccion'],
+    ['sunat_ruc_emisor', v.ruc], ['sunat_usuario_sol', v.usuario],
+    ['sunat_client_id', v.id], ['sunat_modo_entorno', 'produccion'],
+    ...(v.clave ? [['sunat_clave_sol', v.clave] as [string, string]] : []),
+    ...(v.secreto ? [['sunat_client_secret', v.secreto] as [string, string]] : []),
   ];
 
   async function guardarCredenciales() {
