@@ -305,6 +305,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [canActivo, setCanActivo] = useState(false);
   const [mostrarObs, setMostrarObs] = useState(false);
+  const [ocultarSinViaje, setOcultarSinViaje] = useState(false);
   const [pagina, setPagina] = useState(1);
   const [tamano, setTamano] = useState(50);
   const toast = useToast();
@@ -387,6 +388,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const conductores = useMemo(() => [...new Set(trips.map(t => t.conductor).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [trips]);
   const visibles = useMemo(() => trips
     .filter(t => (!auditoria || t.estadoAuditoria === auditoria) && (!placaF || t.placa === placaF) && (!conductorF || t.conductor === conductorF))
+    .filter(t => !ocultarSinViaje || !t.viaje.startsWith('SIN-VIAJE'))
     .sort((a, b) => {
       const sinA = a.viaje.startsWith('SIN-VIAJE') ? 1 : 0;
       const sinB = b.viaje.startsWith('SIN-VIAJE') ? 1 : 0;
@@ -399,7 +401,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         case 'cost_desc': return n(b.totalGasto) - n(a.totalGasto);
         default: return b.viaje.localeCompare(a.viaje, undefined, { numeric: true });
       }
-    }), [trips, auditoria, placaF, conductorF, orden]);
+    }), [trips, auditoria, placaF, conductorF, orden, ocultarSinViaje]);
   const paginas = Math.max(1, Math.ceil(visibles.length / tamano));
   const pagActual = Math.min(pagina, paginas);
   const pagina_ = useMemo(() => visibles.slice((pagActual - 1) * tamano, pagActual * tamano), [visibles, pagActual, tamano]);
@@ -594,6 +596,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
           {!urea && (
             <>
               <Button variant={mostrarObs ? 'primary' : 'secondary'} onClick={() => setMostrarObs(v => !v)}>{mostrarObs ? 'Ocultar observaciones' : 'Ver observaciones'}</Button>
+              <Button variant={ocultarSinViaje ? 'primary' : 'secondary'} onClick={() => setOcultarSinViaje(v => !v)}>{ocultarSinViaje ? 'Mostrar compras sin viaje' : 'Ocultar compras sin viaje'}</Button>
               <Button variant={canActivo ? 'primary' : 'secondary'} icon={<RefreshCw size={15} />} onClick={() => { haptic('selection'); setCanActivo(a => !a); }}
                 title="Consulta el recorrido y rendimiento que reporta el GPS (Wialon) para las filas de esta página">
                 {canActivo ? 'CAN (GPS) activo' : 'Consultar CAN (GPS)'}
