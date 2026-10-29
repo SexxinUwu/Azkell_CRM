@@ -1,6 +1,6 @@
 const express = require('express');
 const { tipoCambioSunat } = require('../services/tipo_cambio');
-const { crearLlantasDeRecepcion } = require('../services/neumaticos_codigo');
+const { crearLlantasDeRecepcion, borrarLlantasDeRecepcion } = require('../services/neumaticos_codigo');
 const router = express.Router();
 
 // Nombre de las llantas: "Llanta <marca> <medida> <modelo>" (p. ej. "Llanta MICHELIN 295/80R22.5 XMULTI").
@@ -1718,10 +1718,18 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             }
         );
     });
-    router.delete('/entradas/:id', ordenEditable, (req, res) => {
+    router.delete('/entradas/:id', ordenEditable, async (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;
         const cleanId = String(id).replace(/^ENT-/i, '');
+
+        // 0. Llantas que dieron de alta las recepciones de esta OC: se quitan solo si ninguna se ha movido
+        try {
+            const [recsOc] = await tdb.query('SELECT id FROM recepciones_oc WHERE oc_id = ?', [id]);
+            for (const r of recsOc) await borrarLlantasDeRecepcion(tdb, r.id);
+        } catch (errLl) {
+            return res.status(409).json({ error: errLl.message });
+        }
 
         // 1. Eliminar movimientos de tesorería asociados a la OC (pagos / egresos)
         tdb.query(
@@ -3006,6 +3014,13 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
                 const rec = rows[0];
                 const oc_id = rec.oc_id;
+
+                // Llantas que dio de alta esta recepción: se quitan solo si ninguna se ha movido
+                try {
+                    await borrarLlantasDeRecepcion(targetDb, rec.id);
+                } catch (errLl) {
+                    return res.status(409).json({ error: errLl.message });
+                }
 
                 // Borrar foto de S3 si existe
                 if (rec.sustento_url) {

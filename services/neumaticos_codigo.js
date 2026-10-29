@@ -99,6 +99,25 @@ async function crearLlantasDeRecepcion(conn, { recepcionId, linea, inventarioId,
     return creadas;
 }
 
+/**
+ * Quita las llantas que dio de alta una recepción de compra (SFC-R{recepcion}-L{linea}-{k}).
+ * Solo si ninguna se ha movido: si tiene movimientos distintos de la alta, no se borra nada y lanza error.
+ */
+async function borrarLlantasDeRecepcion(conn, recepcionId) {
+    const patron = `${PREFIJO_RECEPCION}R${recepcionId}-L%`;
+    const [movidas] = await conn.query(
+        `SELECT DISTINCT m.id_neumatico FROM neumaticos_movimientos m
+         WHERE m.id_neumatico LIKE ? AND m.tipo <> ?`, [patron, MOV_ALTA]);
+    if (movidas.length) {
+        const err = new Error(`No se puede eliminar: ${movidas.length} llanta(s) de esta recepción ya se movieron (por ejemplo ${movidas[0].id_neumatico}).`);
+        err.codigo = 'LLANTAS_MOVIDAS';
+        throw err;
+    }
+    await conn.query('DELETE FROM neumaticos_movimientos WHERE id_neumatico LIKE ?', [patron]);
+    const [res] = await conn.query('DELETE FROM neumaticos_hoja_vida WHERE id_neumatico LIKE ?', [patron]);
+    return res.affectedRows || 0;
+}
+
 module.exports = {
     ALMACEN_NUEVAS,
     PREFIJO_PROVISIONAL,
@@ -108,4 +127,5 @@ module.exports = {
     leerLetra,
     asignarCodigosFuego,
     crearLlantasDeRecepcion,
+    borrarLlantasDeRecepcion,
 };
