@@ -48,7 +48,7 @@
 .ce-f__icono--ambar { background: var(--amber-tint); color: var(--amber-ink); }
 .ce-f__icono--gris { background: var(--gray-tint); color: var(--gray-ink); }
 
-.ce-f .input[readonly] { background: var(--fill); color: var(--label-2); }
+.ce-f .input[readonly] { background: var(--fill); color: var(--label); }
 .ce-f__mayus { text-transform: uppercase; }
 .ce-f__mono { font-family: var(--font-mono); }
 .ce-f__textarea { min-height: 84px; resize: vertical; }
