@@ -3,7 +3,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;600;700&display=swap');
 
 .fman, .fman * { box-sizing: border-box; font-family: 'Oswald', 'Inter', sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-.fman .page-a4 { width: 210mm; min-height: 292mm; height: 292mm; background: #ffffff; padding: 4mm 8mm; border: 1px solid #cbd5e1; box-shadow: 0 4px 15px rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: space-between; color: #000; font-size: 9px; line-height: 1.25; }
+.fman .page-a4 { width: 210mm; min-height: 296mm; height: 296mm; background: #ffffff; padding: 4mm 8mm; border: 1px solid #cbd5e1; box-shadow: 0 4px 15px rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: space-between; color: #000; font-size: 9px; line-height: 1.25; }
 @media print {
   .fman .page-a4 { border: none !important; box-shadow: none !important; padding: 0 !important; width: 100% !important; min-height: 288mm !important; height: 288mm !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; }
 }

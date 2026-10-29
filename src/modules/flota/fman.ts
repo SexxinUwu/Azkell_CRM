@@ -1,6 +1,8 @@
 // Formato F-MAN-001 (Reporte de Fallas Flota Pesada): cuadrícula de ✓ / ✕ por ítem de tracto y carreta,
 // detalle de cada falla, conformidad y firma. Portado de la versión actual (Modulos/mantenimiento/checklist/logica.js).
-import { generarPDFBlob, montarParaPDF } from '../../core/lib/pdf';
+import './fman.css';
+import { generarPDFBlob } from '../../core/lib/pdf';
+import { conElemento } from './ce-pdf';
 import type { ReporteFalla } from './api';
 
 export interface SistemaCfg { key: string; title: string; items: Array<string | { id?: string; label?: string }> }
@@ -199,14 +201,12 @@ export function htmlFman(r: ReporteFalla, cfg: ConfigSistemas, logo: string = LO
   </div></div>`;
 }
 
-/** PDF del formato F-MAN-001 para compartir o descargar */
+/**
+ * PDF del formato F-MAN-001 para compartir o descargar. La hoja mide A4 (210 × 296 mm) y va en flujo normal
+ * sin márgenes: con márgenes de 10 mm el área útil es menor que la hoja y se cortaban la derecha y el final.
+ */
 export async function pdfFman(r: ReporteFalla, cfg: ConfigSistemas): Promise<Blob> {
-  const el = document.createElement('div');
-  el.innerHTML = htmlFman(r, cfg);
-  const quitar = montarParaPDF(el);
-  try {
-    return await generarPDFBlob(el, { orientacion: 'portrait' });
-  } finally { quitar(); }
+  return conElemento(htmlFman(r, cfg), el => generarPDFBlob(el, { orientacion: 'portrait', margen: 0 }));
 }
 
 /** Texto que acompaña el PDF por WhatsApp (el mismo que usa la versión actual) */

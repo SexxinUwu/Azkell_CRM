@@ -165,7 +165,7 @@ export function htmlActaEntrega(r: EntregaVehiculo, grupos: CategoriaPlantilla[]
 const OPCIONES = { orientacion: 'portrait' as const, margen: 0, escala: 2.8 };
 
 /** Monta el acta fuera de la vista, la convierte a PDF y la desmonta */
-async function conElemento<T>(html: string, usar: (el: HTMLElement) => Promise<T>): Promise<T> {
+export async function conElemento<T>(html: string, usar: (el: HTMLElement) => Promise<T>): Promise<T> {
   // html2canvas sale en blanco si el acta está en posición absoluta o fija: va en el flujo normal de la página,
   // tapada por una pantalla blanca con el camión mientras se genera.
   const el = document.createElement('div');
