@@ -106,7 +106,7 @@ function menuDe(o: EntradaInv, a: AccionesFila): Array<OpcionOtros | false | nul
     { label: 'Adjuntos y sustentos', icon: <Paperclip size={17} />, onSelect: () => a.onAdjuntos(o) },
     { label: 'Imprimir PDF', icon: <FileDown size={17} />, onSelect: () => a.onPdf(o) },
     a.onEditar && estadoEditable(o.estado) && { label: 'Editar orden', icon: <Pencil size={17} />, onSelect: () => a.onEditar?.(o) },
-    a.onEliminar && { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: () => a.onEliminar?.(o) },
+    a.onEliminar && estadoEditable(o.estado) && { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: () => a.onEliminar?.(o) },
   ];
 }
 
