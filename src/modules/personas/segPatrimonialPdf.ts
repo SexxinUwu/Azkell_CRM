@@ -1,8 +1,6 @@
 // Status "Unidades en Base" (F-SEG-0010): calca de _subBuildPdfHtml, subDeterminarTipo y _subFormatNombreConductor
 // del clásico (modulos/seguridad/unidades-base/logica.js). El HTML y sus estilos en línea son los del clásico.
-// La versión actual lo imprime en una ventana; aquí el mismo HTML se convierte en PDF con conElemento (ce-pdf.ts).
-import { descargarArchivo, generarPDFBlob } from '../../core/lib/pdf';
-import { conElemento } from '../flota/ce-pdf';
+// Exporta como el clásico (subExportarPDF): abre una ventana con el documento y manda imprimir al cargar.
 
 /** Forma de cada unidad del panorama en vivo (routes/seguridad.js › panorama-en-vivo) */
 export interface UnidadBaseReporte {
@@ -156,17 +154,85 @@ export function htmlStatusUnidadesBase(items: UnidadBaseReporte[], fechaFiltro: 
         `;
 }
 
-/** Descarga el F-SEG-0010 con el mismo nombre que el clásico al compartirlo: "dd/mm/aaaa - Status Unidades en Base.pdf" */
-export async function descargarStatusUnidadesBase(items: UnidadBaseReporte[]): Promise<void> {
+/**
+ * subExportarPDF del clásico: abre la ventana con el documento (estilos y botón "Imprimir / Guardar PDF" del clásico)
+ * y lo imprime al cargar. Devuelve false si el navegador bloqueó la ventana (el clásico avisa con alert).
+ */
+export function abrirStatusUnidadesBase(items: UnidadBaseReporte[]): boolean {
   // Igual que el clásico: fecha del filtro (por defecto, hoy en UTC) y logo de la empresa o el de respaldo
   const fechaFiltro = new Date().toISOString().split('T')[0];
-  const fParts = fechaFiltro.split('-');
-  const fechaFormateada = fParts.length === 3 ? `${fParts[2]}/${fParts[1]}/${fParts[0]}` : fechaFiltro;
   let logo = '';
   try { logo = localStorage.getItem('fleet_empresa_logo') || ''; } catch { /* sin almacenamiento */ }
   const w = window as unknown as { _LOGO_BASE64?: string };
   const logoUrl = logo || w._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
-  const html = htmlStatusUnidadesBase(items, fechaFiltro, 'TODAS', logoUrl);
-  const blob = await conElemento(html, el => generarPDFBlob(el, { orientacion: 'portrait', margen: 0, escala: 2.8 }));
-  descargarArchivo(blob, `${fechaFormateada.replace(/\//g, '-')} - Status Unidades en Base.pdf`);
+  const htmlFinal = htmlStatusUnidadesBase(items, fechaFiltro, 'TODAS', logoUrl);
+
+  const ventana = window.open('', '_blank');
+  if (!ventana) {
+    window.alert('Por favor, permite ventanas emergentes para generar el PDF.');
+    return false;
+  }
+
+  ventana.document.write(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <title>Status Unidades en Base — F-SEG-0010</title>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+                <style>
+                    * { box-sizing: border-box; }
+                    body {
+                        background-color: #525659;
+                        margin: 0;
+                        padding: 20px 10px;
+                        font-family: 'Inter', -apple-system, sans-serif;
+                        color: #000000;
+                        display: flex;
+                        justify-content: center;
+                    }
+                    .btn-print-fixed {
+                        position: fixed;
+                        top: 16px;
+                        right: 20px;
+                        z-index: 9999;
+                        background: #111827;
+                        color: #ffffff;
+                        border: 1px solid #374151;
+                        border-radius: 6px;
+                        padding: 8px 18px;
+                        font-weight: 700;
+                        font-size: 13px;
+                        cursor: pointer;
+                        box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
+                    .btn-print-fixed:hover { background: #1f2937; }
+                    @media print {
+                        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+                        body { background: #ffffff !important; padding: 0 !important; }
+                        .btn-print-fixed { display: none !important; }
+                        @page { size: A4 portrait; margin: 8mm; }
+                    }
+                </style>
+            </head>
+            <body>
+                <button class="btn-print-fixed" onclick="window.print()">
+                    🖨️ Imprimir / Guardar PDF
+                </button>
+                <div style="background:#ffffff; box-shadow:0 4px 25px rgba(0,0,0,0.4);">
+                    ${htmlFinal}
+                </div>
+                <script>
+                    window.onload = function() {
+                        setTimeout(function() { window.print(); }, 500);
+                    };
+                </script>
+            </body>
+            </html>
+        `);
+  ventana.document.close();
+  return true;
 }

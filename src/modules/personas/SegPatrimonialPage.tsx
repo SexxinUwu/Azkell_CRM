@@ -10,7 +10,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
 import { UnidadesBase } from './UnidadesBase';
-import { descargarStatusUnidadesBase } from './segPatrimonialPdf';
+import { abrirStatusUnidadesBase } from './segPatrimonialPdf';
 
 interface UnidadBase {
   placa?: string;
@@ -59,7 +59,6 @@ function MiniDonut({ pct, color }: { pct: number; color: string }) {
 export function SegPatrimonialPage() {
   const [busqueda, setBusqueda] = useState('');
   const [vista, setVista] = useState<'panorama' | 'empresas' | 'base'>('panorama');
-  const [generando, setGenerando] = useState(false);
   const toast = useToast();
 
   const panorama = useQuery<UnidadBase[]>({
@@ -105,13 +104,10 @@ export function SegPatrimonialPage() {
 
   const pctRuta = lista.length > 0 ? Math.round((enRuta.length / lista.length) * 100) : 0;
 
-  // Igual que subExportarPDF del clásico: sin registros avisa; si hay, genera el F-SEG-0010 de lo que se ve
-  async function exportarPdf() {
+  // Igual que subExportarPDF del clásico: sin registros avisa; si hay, abre la ventana de impresión del F-SEG-0010
+  function exportarPdf() {
     if (!visibles.length) { toast('No hay registros para exportar en esta fecha'); return; }
-    setGenerando(true);
-    try { await descargarStatusUnidadesBase(visibles); }
-    catch (err) { toast(errorMessage(err), 'error'); }
-    finally { setGenerando(false); }
+    abrirStatusUnidadesBase(visibles);
   }
 
   return (
@@ -122,7 +118,7 @@ export function SegPatrimonialPage() {
         subtitle={lista.length > 0 ? `${enRuta.length} en ruta · ${enBase.length} en base · ${lista.length} total` : 'Cargando unidades…'}
         actions={
           <>
-            <Button variant="plain" className="btn--icono btn--icono-pdf" icon={<FileText size={18} />} loading={generando}
+            <Button variant="plain" className="btn--icono btn--icono-pdf" icon={<FileText size={18} />}
               aria-label="Exportar reporte PDF (F-SEG-0010)" title="Exportar reporte PDF (F-SEG-0010)" onClick={exportarPdf} />
             <MenuOtros opciones={[
               { label: 'Ver garita', icon: <Shield size={17} />, onSelect: () => abrirClasico('seguridad/unidades') },

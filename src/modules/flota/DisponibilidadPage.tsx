@@ -5,9 +5,10 @@ import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { BarChart3, LayoutGrid } from 'lucide-react';
-import { Briefcase, FileSpreadsheet, FileText, Gauge, MapPin, MessageCircle, Navigation, Pencil, Plus, RefreshCw, SearchX, Trash2, Wrench } from 'lucide-react';
+import { ArrowUpRight, Briefcase, FileSpreadsheet, FileText, Gauge, MapPin, MessageCircle, Navigation, Pencil, Plus, RefreshCw, SearchX, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
+import { MenuOtros } from '../../core/ui/MenuOtros';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
@@ -19,6 +20,7 @@ import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
 import { spring } from '../../core/lib/motion';
+import { abrirClasico } from '../../core/layout/navigation';
 import { estadoDispColor, useDisponibilidad, useUbicacionesGps, type UbicacionGps, type VehiculoDisponibilidad } from './api';
 import { DisponibilidadFormulario } from './DisponibilidadFormulario';
 import { compartirDisponibilidadPDF, descargarDisponibilidadPDF } from './disponibilidadReporte';
@@ -195,6 +197,9 @@ export function DisponibilidadPage() {
               disabled={!visibles.length} onClick={pdf} />
             <Button variant="plain" className="btn--icono btn--icono-excel" icon={<FileSpreadsheet size={18} />} aria-label="Exportar Excel" title="Exportar Excel"
               disabled={!visibles.length} onClick={excel} />
+            <MenuOtros opciones={[
+              { label: 'GPS, conductores y reportes', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/disponibilidad') },
+            ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ veh: null })}>Registrar unidad</Button>}
           </div>
         }
