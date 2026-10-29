@@ -309,6 +309,10 @@ table[aria-label="Órdenes de compra"] tbody tr:hover td { background: color-mix
 .oc-card__cuerpo { display: flex; flex-direction: column; gap: 14px; padding: 16px; }
 .oc-grid { gap: 14px 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .oc-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Dos casillas en la misma fila, cada una ocupa su mitad completa */
+.oc-grid--dos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.oc-grid--dos .field, .oc-grid--dos .combobox, .oc-grid--dos .select { width: 100%; max-width: none; }
+@media (max-width: 640px) { .oc-grid--dos { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 720px) { .oc-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 480px) { .oc-grid--3, .oc-grid { grid-template-columns: 1fr; } }
 .oc-grid .field__label { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-2); margin-bottom: 2px; }

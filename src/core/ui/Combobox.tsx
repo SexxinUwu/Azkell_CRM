@@ -110,6 +110,8 @@ export function Combobox({
   function openList() {
     if (disabled) return;
     setOpen(true);
+    // Escritorio: si la lista no cabe debajo de la casilla dentro de su hoja o contenedor, se sube el campo
+    if (!window.matchMedia(MOBILE_QUERY).matches) requestAnimationFrame(subirSiNoCabe);
     // En el celular el teclado tapa media pantalla: sube la casilla para ver los resultados
     if (window.matchMedia(MOBILE_QUERY).matches) {
       setTimeout(() => {
@@ -118,6 +120,18 @@ export function Combobox({
         (input?.closest<HTMLElement>('.field') ?? input)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 280);
     }
+  }
+
+  /** Alto de la lista desplegable (18rem): debe caber debajo de la casilla dentro del contenedor con scroll */
+  const ALTO_LISTA = 288;
+  function subirSiNoCabe() {
+    const input = inputRef.current;
+    if (!input) return;
+    const campo = input.closest<HTMLElement>('.field') ?? input;
+    let contenedor = campo.parentElement;
+    while (contenedor && !/(auto|scroll)/.test(getComputedStyle(contenedor).overflowY)) contenedor = contenedor.parentElement;
+    const fondo = contenedor ? contenedor.getBoundingClientRect().bottom : window.innerHeight;
+    if (fondo - input.getBoundingClientRect().bottom < ALTO_LISTA) campo.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function close() {

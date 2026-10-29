@@ -624,7 +624,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           </Seccion>
 
           <Seccion tono="verde" icono={<Landmark size={15} />} titulo="Proveedor y cuentas bancarias">
-            <div className="oc-grid">
+            <div className="oc-grid oc-grid--dos">
               <Field label="Proveedor *" error={mostrar(errorCab.proveedor)} hint={proveedor ? (proveedor.ruc ? `RUC ${proveedor.ruc}` : 'Este proveedor no tiene RUC registrado') : 'Si no está en la lista, escríbelo y regístralo ahí mismo'}>
                 {p => (
                   <Combobox
