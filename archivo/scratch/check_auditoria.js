@@ -4,7 +4,7 @@ require('dotenv').config();
 (async () => {
     const conn = await mysql.createConnection({
         host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USER || 'root',
+        user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
         database: 'azkell_tenant_marsisa'
     });

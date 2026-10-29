@@ -11,8 +11,8 @@ const mysql = require('mysql2/promise');
     for (const db of dbs) {
         const c = await mysql.createConnection({
             host: '82.39.109.226',
-            user: 'root',
-            password: process.env.SCRIPTS_DB_ROOT_PASSWORD,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
             port: 3306,
             database: db
         });

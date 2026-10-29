@@ -9,10 +9,15 @@ const tenantPoolsMap = new Map();
 
 // Configuración base de MySQL desde variables de entorno
 const DB_HOST = process.env.DB_HOST || 'localhost';
-const DB_USER = process.env.DB_USER || 'root';
+const DB_USER = process.env.DB_USER;
 const DB_PASSWORD = process.env.DB_PASSWORD || '';
 const DB_PORT = process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306;
 const DB_SSL = process.env.DB_HOST && (process.env.DB_HOST.includes('railway') || process.env.DB_HOST.includes('aiven') || process.env.DB_SSL === 'true') ? { rejectUnauthorized: false } : undefined;
+
+/** Falla con un mensaje claro si falta DB_USER. Nunca se conecta con un usuario por defecto (root). */
+function exigirDBUser() {
+    if (!DB_USER) throw new Error('Falta la variable DB_USER (usuario de MySQL). Configúrala en el entorno; la app no usa root por defecto.');
+}
 
 // Pool Maestro
 const MASTER_DB_NAME = process.env.MASTER_DB_NAME || 'azkell_master';
@@ -21,6 +26,7 @@ let masterPool = null;
 
 function getMasterPool() {
     if (!masterPool) {
+        exigirDBUser();
         masterPool = mysql.createPool({
             host: DB_HOST,
             user: DB_USER,
@@ -92,6 +98,7 @@ function getTenantPool(dbName) {
         return tenantPoolsMap.get(dbName);
     }
 
+    exigirDBUser();
     const pool = mysql.createPool({
         host: DB_HOST,
         user: DB_USER,
@@ -382,6 +389,7 @@ module.exports = {
     getMasterPool,
     getTenantPool,
     getAllActiveTenants,
-    resolveTenantMiddleware
+    resolveTenantMiddleware,
+    exigirDBUser
 };
 

@@ -4,8 +4,8 @@ async function main() {
     try {
         const pool = mysql.createPool({ 
             host: '82.39.109.226', 
-            user: 'root', 
-            password: process.env.SCRIPTS_DB_ROOT_PASSWORD, 
+            user: process.env.DB_USER, 
+            password: process.env.DB_PASSWORD, 
             database: 'azkell_fleet', 
             port: 3306 
         });

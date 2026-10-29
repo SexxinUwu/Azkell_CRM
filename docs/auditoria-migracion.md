@@ -77,7 +77,8 @@ La app se conecta a MySQL con `root`, y ese usuario está abierto a internet. La
 - [~] **S6. Retirar `root` de la app.** Estado el 2026-10-29:
   - Código: `scripts/prisma_empresas.js` (`npm run db:estado` / `db:deploy`) ya usa `DB_USER` y `DB_PASSWORD`. Ningún script activo de `scripts/` ni de `services/` lee `SCRIPTS_DB_ROOT_PASSWORD`, así que no hubo cambios de código.
   - `npm run db:estado` ejecutado en solo lectura: la maestra y las 4 empresas (marsisa, rosymarperu, yoguitransport, trahesa) están al día. `db:deploy` no se ejecutó, porque aplica migraciones.
-  - Pendiente: (1) quitar `SCRIPTS_DB_ROOT_PASSWORD` de Coolify cuando se confirme que nada la usa; (2) `services/tenant_provisioner.js` y `services/tenant_master.js` usan `root` como valor por defecto si falta `DB_USER`; quitar ese respaldo; (3) los scripts de `archivo/` (históricos) leen `SCRIPTS_DB_ROOT_PASSWORD` y conectan como `root` a una IP fija; no están en npm. Decidir si se borran.
+  - Hecho: `services/tenant_master.js` y `services/tenant_provisioner.js` ya no usan `root`; si falta `DB_USER`, fallan con un error claro. Los scripts de `archivo/` usan `DB_USER` y `DB_PASSWORD`.
+  - Pendiente: (1) quitar `SCRIPTS_DB_ROOT_PASSWORD` de Coolify; (2) 17 scripts de `scripts/` todavía usan `|| 'root'` como respaldo de `DB_USER`; (3) `archivo/scripts-historicos` conserva una IP fija.
 - [ ] **S7. Restringir `root` a acceso local** en el servidor MySQL (sin acceso remoto).
 - [ ] **S8. Rotación de credenciales** (ver lista S9). Se rota después de S5 para no cortar el servicio a mitad.
 - [ ] **S9. Credenciales a rotar** (nombres de variables; los valores no se escriben aquí):

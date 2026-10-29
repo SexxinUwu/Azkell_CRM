@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2');
-const pool = mysql.createPool({ host: '82.39.109.226', user: 'root', password: process.env.SCRIPTS_DB_ROOT_PASSWORD, database: 'azkell_fleet', port: 3306 });
+const pool = mysql.createPool({ host: '82.39.109.226', user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: 'azkell_fleet', port: 3306 });
 
 const app = express();
 app.use(bodyParser.json());

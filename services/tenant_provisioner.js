@@ -8,16 +8,17 @@ const bcrypt = require('bcryptjs');
 const { spawnSync } = require('child_process');
 const path = require('path');
 const { sembrarEmpresa } = require('./tenant_seeds');
-const { getMasterPool, getTenantPool } = require('./tenant_master');
+const { getMasterPool, getTenantPool, exigirDBUser } = require('./tenant_master');
 
 const DB_HOST = process.env.DB_HOST || 'localhost';
-const DB_USER = process.env.DB_USER || 'root';
+const DB_USER = process.env.DB_USER;
 const DB_PASSWORD = process.env.DB_PASSWORD || '';
 const DB_PORT = process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306;
 const DB_SSL = process.env.DB_HOST && (process.env.DB_HOST.includes('railway') || process.env.DB_HOST.includes('aiven') || process.env.DB_SSL === 'true') ? { rejectUnauthorized: false } : undefined;
 
 /** URL de una base de empresa para Prisma (la contraseña va en la URL y nunca se imprime) */
 function urlDeBase(dbName) {
+    exigirDBUser();
     const ssl = process.env.DB_SSL === 'true' ? '?sslaccept=accept_invalid_certs' : '';
     return `mysql://${encodeURIComponent(DB_USER)}:${encodeURIComponent(DB_PASSWORD)}@${DB_HOST}:${DB_PORT}/${dbName}${ssl}`;
 }
@@ -45,6 +46,7 @@ function migrarEmpresa(dbName) {
  * Autoprovisiona una nueva empresa cliente (Tenant) en el SaaS.
  */
 async function provisionNewTenant({ slug, nombre_empresa, ruc, admin_email, admin_password, plan = 'Profesional', max_unidades = 100 }) {
+    exigirDBUser();
     if (!slug || !nombre_empresa || !admin_email || !admin_password) {
         throw new Error('Parametros incompletos para provisionar empresa (slug, nombre_empresa, admin_email, admin_password)');
     }
