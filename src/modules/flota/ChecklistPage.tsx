@@ -67,7 +67,7 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'conductor', titulo: 'Conductor / Ruta', ancho: 240 },
   { id: 'estado', titulo: 'Estado', ancho: 120, alinear: 'center' },
   { id: 'ots', titulo: 'OTs generadas', ancho: 230 },
-  { id: 'creado', titulo: 'Registrado por', ancho: 200 },
+  { id: 'creado', titulo: 'Usuario de creación', ancho: 200 },
 ];
 
 /** Reporte de fallas: calca de la pantalla del clásico con el diseño de Órdenes de compra (totales, filtros, tabla, plantilla, formulario, OTs y PDF). */
