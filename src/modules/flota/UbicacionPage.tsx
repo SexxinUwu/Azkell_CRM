@@ -4,19 +4,17 @@ import './disponibilidad.css';
 import './ubicacion.css';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowUpRight, Briefcase, ChevronDown, ChevronLeft, MapPin, MessageCircle, Navigation, RefreshCw, Route, Truck, Wrench, X } from 'lucide-react';
+import { Briefcase, ChevronDown, ChevronLeft, MapPin, MessageCircle, Navigation, RefreshCw, Route, Truck, Wrench, X } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { errorMessage } from '../../core/api/client';
 import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
 import { haptic } from '../../core/lib/haptics';
 import { spring } from '../../core/lib/motion';
-import { abrirClasico } from '../../core/layout/navigation';
 import { COLOR_ESTADO, UbicacionMapa, type CapaMapa } from './UbicacionMapa';
 import { PanelHistorial, type Velocidad } from './UbicacionPlayback';
 import { useHistorial } from './UbicacionHistorial';
@@ -38,14 +36,11 @@ const coincideSegmento = (u: UnidadMapa, s: Segmento) =>
 // Agrupación de la lista: por empresa o por grupo de Wialon (Líquidos, Carga Seca, GLP…).
 // Criterio: una unidad aparece en CADA grupo de Wialon al que pertenece (igual que el clásico, que usa unitIds por grupo);
 // sin grupo va a "Sin grupo". Se ignoran los grupos técnicos de consulta (TEMP / CONSULTA), como en el clásico.
-type Agrupar = 'empresa' | 'wialon';
-const AGRUPAR_OPCIONES: Array<{ value: Agrupar; label: string }> = [{ value: 'empresa', label: 'Empresa' }, { value: 'wialon', label: 'Grupo Wialon' }];
+type Agrupar = 'empresa' | 'individual';
+const AGRUPAR_OPCIONES: Array<{ value: Agrupar; label: string }> = [{ value: 'empresa', label: 'Empresa' }, { value: 'individual', label: 'Individual' }];
 const CLAVE_AGRUPAR = 'fleet_gps_agrupar';
-const SIN_GRUPO = 'Sin grupo';
-const gruposDeUnidad = (u: UnidadMapa) =>
-  (u.grupos ?? []).filter(n => { const m = n.toUpperCase(); return !m.includes('TEMP') && !m.includes('CONSULTA'); });
 function agrupacionGuardada(): Agrupar {
-  try { return localStorage.getItem(CLAVE_AGRUPAR) === 'wialon' ? 'wialon' : 'empresa'; } catch { return 'empresa'; }
+  try { const v = localStorage.getItem(CLAVE_AGRUPAR); return v === 'individual' || v === 'wialon' ? 'individual' : 'empresa'; } catch { return 'empresa'; }
 }
 
 const rumboTexto = (grados: number) => CARDINALES[Math.round(((grados % 360) + 360) % 360 / 45) % 8];
@@ -107,24 +102,16 @@ export function UbicacionPage() {
 
   // La lista se agrupa por empresa o por grupo de Wialon (una unidad puede salir en varios grupos)
   const grupos = useMemo(() => {
-    const m = new Map<string, { clave: string; nombre: string; units: UnidadMapa[] }>();
-    const meter = (clave: string, nombre: string, u: UnidadMapa) => {
-      const g = m.get(clave) ?? { clave, nombre, units: [] };
+    // Individual: una sola lista con todas las unidades, sin cabeceras de empresa
+    if (agrupar === 'individual') return [{ clave: 'todas', nombre: 'Todas las unidades', units: lista, plana: true }];
+    const m = new Map<string, { clave: string; nombre: string; units: UnidadMapa[]; plana?: boolean }>();
+    for (const u of lista) {
+      const clave = claveEmpresa(u.empresa) || 'OTRAS';
+      const g = m.get(clave) ?? { clave, nombre: empresas.find(e => e.clave === clave)?.nombre ?? 'Otras unidades', units: [] };
       g.units.push(u);
       m.set(clave, g);
-    };
-    for (const u of lista) {
-      if (agrupar === 'wialon') {
-        const gs = gruposDeUnidad(u);
-        if (!gs.length) meter('w:' + SIN_GRUPO, SIN_GRUPO, u);
-        for (const n of gs) meter('w:' + n.toUpperCase(), n, u);
-      } else {
-        const clave = claveEmpresa(u.empresa) || 'OTRAS';
-        meter(clave, empresas.find(e => e.clave === clave)?.nombre ?? 'Otras unidades', u);
-      }
     }
-    // "Sin grupo" siempre al final
-    return [...m.values()].sort((a, b) => (a.nombre === SIN_GRUPO ? 1 : 0) - (b.nombre === SIN_GRUPO ? 1 : 0) || a.nombre.localeCompare(b.nombre, 'es'));
+    return [...m.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   }, [lista, empresas, agrupar]);
 
   const cifras = useMemo(() => {
@@ -267,9 +254,6 @@ export function UbicacionPage() {
             </span>
             <Button variant="plain" iconOnly className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
               disabled={isFetching} onClick={() => refetch()} />
-            <MenuOtros opciones={[
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/ubicacion') },
-            ]} />
           </>
         }
       />
@@ -323,6 +307,9 @@ export function UbicacionPage() {
               </div>
               <ul className="gps-lista__items">
                 {grupos.map(g => {
+                  if (g.plana) {
+                    return <li key={g.clave} className="gps-grupo"><ul className="gps-grupo__unidades">{g.units.map(filaUnidad)}</ul></li>;
+                  }
                   const visiblesGrupo = g.units.filter(u => !ocultas.has(u.placa)).length;
                   const todasGrupo = visiblesGrupo === g.units.length;
                   const ningunaGrupo = visiblesGrupo === 0;
