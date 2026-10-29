@@ -14,3 +14,11 @@
 .acciones-iconos__boton.acciones-iconos__boton--violeta { color: #6d28d9; background: rgba(124, 58, 237, 0.14); }
 .acciones-iconos__boton.acciones-iconos__boton--rojo { color: var(--red-ink); background: rgba(255, 59, 48, 0.12); }
 .acciones-iconos__boton.acciones-iconos__boton--ambar { color: #b45309; background: rgba(245, 158, 11, 0.16); }
+
+/* Nombre de la acción en la página (TooltipFijo.tsx): no lo recorta ninguna tabla con scroll */
+.tooltip-fijo { display: inline-flex; }
+.tooltip-fijo__texto {
+  position: fixed; transform: translate(-50%, -100%); padding: 5px 10px; border-radius: 8px;
+  background: #1d1d1f; color: #fff; font-size: 0.75rem; font-weight: 600; white-space: nowrap;
+  pointer-events: none; z-index: 9999;
+}

@@ -3,6 +3,7 @@ import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState } from 'react';
 import { CalendarCheck, CarFront, ClipboardList, Eye, FileSpreadsheet, FileText, LayoutGrid, MessageCircle, Pencil, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
+import { TooltipFijo } from '../../core/ui/TooltipFijo';
 import { Badge, EmptyState, Notice } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
@@ -209,12 +210,22 @@ function Acciones({ registro, ocupado, puedeEliminar, onAccion }: {
   const accion = (a: AccionFila) => () => onAccion(a, registro);
   return (
     <div className="cep-acciones acciones-iconos" role="group" aria-label={`Acciones del acta ${n}`}>
-      <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Ver detalle" icon={<Eye size={16} />} aria-label={`Ver acta ${n}`} disabled={ocupado} onClick={accion('ver')} />
-      <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--ambar" data-tip="Editar acta" icon={<Pencil size={16} />} aria-label={`Editar acta ${n}`} disabled={ocupado} onClick={accion('editar')} />
-      <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Ver PDF" icon={<FileText size={16} />} aria-label={`PDF del acta ${n}`} disabled={ocupado} onClick={accion('pdf')} />
-      <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Enviar por WhatsApp" icon={<MessageCircle size={16} />} aria-label={`Enviar acta ${n} por WhatsApp`} disabled={ocupado} onClick={accion('whatsapp')} />
+      <TooltipFijo texto="Ver detalle">
+        <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--azul" icon={<Eye size={16} />} aria-label={`Ver acta ${n}`} disabled={ocupado} onClick={accion('ver')} />
+      </TooltipFijo>
+      <TooltipFijo texto="Editar acta">
+        <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--ambar" icon={<Pencil size={16} />} aria-label={`Editar acta ${n}`} disabled={ocupado} onClick={accion('editar')} />
+      </TooltipFijo>
+      <TooltipFijo texto="Ver PDF">
+        <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--rojo" icon={<FileText size={16} />} aria-label={`PDF del acta ${n}`} disabled={ocupado} onClick={accion('pdf')} />
+      </TooltipFijo>
+      <TooltipFijo texto="Enviar por WhatsApp">
+        <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" icon={<MessageCircle size={16} />} aria-label={`Enviar acta ${n} por WhatsApp`} disabled={ocupado} onClick={accion('whatsapp')} />
+      </TooltipFijo>
       {puedeEliminar && (
-        <Button variant="plain" size="sm" iconOnly className="cep-btn-peligro acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Eliminar acta" icon={<Trash2 size={16} />} aria-label={`Eliminar acta ${n}`} disabled={ocupado} onClick={accion('eliminar')} />
+        <TooltipFijo texto="Eliminar acta">
+          <Button variant="plain" size="sm" iconOnly className="cep-btn-peligro acciones-iconos__boton acciones-iconos__boton--rojo" icon={<Trash2 size={16} />} aria-label={`Eliminar acta ${n}`} disabled={ocupado} onClick={accion('eliminar')} />
+        </TooltipFijo>
       )}
     </div>
   );
