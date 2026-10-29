@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowUpRight, CheckCircle2, CircleAlert, FileSpreadsheet, MapPin, Pencil, Play, Plus, RefreshCw, SearchX, Trash2, Truck,
+  ArrowUpRight, CheckCircle2, CircleAlert, Eye, FileSpreadsheet, MapPin, Pencil, Play, Plus, RefreshCw, SearchX, Trash2, Truck,
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -21,6 +21,7 @@ import type { ReactNode } from 'react';
 import { OrdenServicioSheet } from './OrdenServicioSheet';
 import { SeccionGastosViaje, SeccionOrdenesServicioViaje } from './ViajeExtras';
 import { SeccionGpsViaje, SeccionValesViaje } from './ViajeCombustibleGps';
+import { MonitoreoViajeSheet, type ViajeMonitoreo } from './ViajeMonitoreo';
 import { abrirClasico } from '../../core/layout/navigation';
 import { usePlacas } from '../placas/api';
 
@@ -129,6 +130,7 @@ export function OrdenesViajePage() {
   const [nuevaOS, setNuevaOS] = useState<string | null>(null);
   const [sincronizar, setSincronizar] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
+  const [monitoreo, setMonitoreo] = useState<ViajeMonitoreo | null>(null);
 
   const { data, isLoading, isError, error } = useViajes(q);
   const docsVencidos = useDocumentosVencidos();
@@ -238,6 +240,7 @@ export function OrdenesViajePage() {
                   <Celda alinear="right" mono>{recorrido != null && recorrido >= 0 ? recorrido.toLocaleString('es-PE') : '—'}</Celda>
                   <Celda>
                     <span style={{ display: 'inline-flex', gap: 'var(--s-1)' }} onClick={ev => ev.stopPropagation()}>
+                      <Button variant="secondary" icon={<Eye size={15} />} aria-label={`Ver monitoreo del viaje ${v.viaje}`} title="Ver monitoreo detallado del viaje" onClick={() => setMonitoreo(v)}>{''}</Button>
                       {puedeEditar && v.estado !== 'FINALIZADO' && v.estado !== 'LIQUIDADO' && v.estado !== 'ANULADO' && (
                         <Button variant="secondary" icon={<Pencil size={15} />} aria-label={`Editar viaje ${v.viaje}`} onClick={() => setFormulario({ viaje: v })}>{''}</Button>
                       )}
@@ -265,6 +268,7 @@ export function OrdenesViajePage() {
         onEliminar={puedeEliminar && abierto ? () => setPorEliminar(abierto) : undefined}
         onNuevaOS={puedeEditar && abierto ? () => { setNuevaOS(abierto.viaje); setAbiertoId(null); } : undefined}
       />
+      <MonitoreoViajeSheet viaje={monitoreo} onClose={() => setMonitoreo(null)} />
       <OrdenServicioSheet open={!!nuevaOS} orden={null} viajeInicial={nuevaOS ?? ''} onClose={() => { setNuevaOS(null); refrescar(); }} />
       <ConfirmSheet open={sincronizar} onClose={() => !sincronizando && setSincronizar(false)} loading={sincronizando}
         title="¿Sincronizar viajes con MarsisaSoft?" message="Trae los viajes nuevos desde la base externa. Los que ya existen no se duplican." confirmLabel="Sincronizar"

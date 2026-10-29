@@ -9,12 +9,13 @@ import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { SwitchRow } from '../../core/ui/forms';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { useToast } from '../../core/ui/Toast';
-import { errorMessage } from '../../core/api/client';
+import { api, errorMessage } from '../../core/api/client';
+import { useCssClasico } from '../../core/lib/clasicoCss';
 import { formatPlateInput, normalizePlate } from '../../core/lib/peru';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { actualizarPlaca, crearPlaca, sumaTanques, useMetricas, useNombresWialon, type Placa } from './api';
-import { COMBUSTIBLES, UTS_OPCIONES, opcionesUnicas, valorExistente } from './valoresPlaca';
+import { COMBUSTIBLES, UTS_OPCIONES, normalizarCombustible, opcionesUnicas, valorExistente } from './valoresPlaca';
 import { normalizarTipo, TIPOS_UNIDAD } from './tiposUnidad';
 
 const VACIA: Placa = {
@@ -27,6 +28,14 @@ const VACIA: Placa = {
 type Campo = keyof Placa;
 const NUMERICOS: Campo[] = ['tanque1', 'tanque2', 'tanque3', 'cargaUtil', 'pesoNeto', 'pesoBruto', 'tara'];
 const sinGuion = (s: string) => s.replace(/[-\s]/g, '').toUpperCase();
+const CSS_CLASICO = ['/libs/bootstrap.min.css', '/libs/bootstrap-icons.css'] as const;
+
+// Respuesta de /api/proxy/placa (consultarDatosPlaca del clásico)
+interface DatosPlacaClasico {
+  placa?: string; encontrado?: boolean; cliente?: string; ruc_dni?: string; marca?: string; modelo?: string; tipo?: string;
+  sub_tipo?: string; color?: string; nro_motor?: string; nro_caja?: string; nro_corona?: string; nro_vin?: string;
+  configuracion?: string; anio?: string | number; combustible?: string; carga_util?: string | number; peso_neto?: string | number; peso_bruto?: string | number;
+}
 
 function validar(p: Placa, modo: 'crear' | 'editar', existentes: Placa[]): Partial<Record<Campo, string>> {
   const e: Partial<Record<Campo, string>> = {};
@@ -64,11 +73,64 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
   const [tocados, setTocados] = useState<Set<Campo>>(new Set());
   const [intento, setIntento] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [consultando, setConsultando] = useState<'placa' | 'documento' | null>(null);
+  // Bootstrap solo mientras el formulario está abierto (los botones usan las clases de la versión actual)
+  useCssClasico(open ? CSS_CLASICO : []);
 
   // Cada vez que se abre, parte de la placa (o vacía)
   useEffect(() => {
     if (open) { setP(placa ?? VACIA); setTocados(new Set()); setIntento(false); }
   }, [open, placa]);
+
+  // consultarDatosPlaca del clásico: llena la ficha con SUNARP/MTC (o la base) y sobrescribe lo que trae
+  async function consultarPlaca() {
+    const num = p.placa.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!num) { toast('Ingresa el número de placa', 'error'); return; }
+    setConsultando('placa');
+    try {
+      const d = await api<DatosPlacaClasico>('/proxy/placa', { query: { numero: num } });
+      if (d.placa) setP(x => ({ ...x, placa: d.placa as string }));
+      if (d.encontrado === false) { toast(`Placa formateada como ${d.placa || num}. Lista para registrar.`); return; }
+      setP(x => ({
+        ...x,
+        ...(d.cliente ? { cliente: d.cliente } : {}),
+        ...(d.ruc_dni ? { ruc: d.ruc_dni } : {}),
+        ...(d.marca ? { marca: d.marca } : {}),
+        ...(d.modelo ? { modelo: d.modelo } : {}),
+        ...(d.tipo ? { tipo: normalizarTipo(d.tipo) } : {}),
+        ...(d.sub_tipo ? { subTipo: d.sub_tipo } : {}),
+        ...(d.color ? { color: d.color } : {}),
+        ...(d.nro_motor ? { nroMotor: d.nro_motor } : {}),
+        ...(d.nro_caja ? { nroCaja: d.nro_caja } : {}),
+        ...(d.nro_corona ? { nroCorona: d.nro_corona } : {}),
+        ...(d.nro_vin ? { vin: d.nro_vin } : {}),
+        ...(d.configuracion ? { configuracion: d.configuracion } : {}),
+        ...(d.anio ? { anio: String(d.anio) } : {}),
+        ...(d.combustible ? { combustible: normalizarCombustible(d.combustible) } : {}),
+        ...(d.carga_util ? { cargaUtil: String(d.carga_util) } : {}),
+        ...(d.peso_neto ? { pesoNeto: String(d.peso_neto) } : {}),
+        ...(d.peso_bruto ? { pesoBruto: String(d.peso_bruto) } : {}),
+      }));
+      toast('Ficha técnica obtenida');
+    } catch {
+      toast('No se encontraron datos automáticos para esta placa', 'error');
+    } finally { setConsultando(null); }
+  }
+
+  // consultarDocNuevoCliente del clásico: RUC (SUNAT) u DNI (RENIEC); el nombre pasa a Cliente
+  async function consultarDocumento() {
+    const num = p.ruc.trim();
+    if (!num) return;
+    const tipo = num.length === 11 ? 'RUC' : num.length === 8 ? 'DNI' : 'RUC';
+    setConsultando('documento');
+    try {
+      const d = await api<{ nombre?: string; razon_social?: string }>('/proxy/documento', { query: { tipo, numero: num } });
+      const nombre = d.nombre || d.razon_social;
+      if (nombre) { setP(x => ({ ...x, cliente: nombre.toUpperCase() })); toast('Datos SUNAT/RENIEC obtenidos'); }
+    } catch {
+      toast('No se encontró RUC/DNI en SUNAT/RENIEC', 'error');
+    } finally { setConsultando(null); }
+  }
 
   const errores = useMemo(() => validar(p, modo, existentes), [p, modo, existentes]);
   const error = (c: Campo) => ((intento || tocados.has(c)) ? errores[c] : undefined) ?? null;
@@ -177,9 +239,15 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
           <div className="form-grid">
             <Field label="Placa" error={error('placa')} hint={modo === 'editar' ? 'La placa no se puede cambiar.' : undefined} wide>
               {props => (
-                <TextInput {...props} {...texto('placa', formatPlateInput)}
-                  disabled={modo === 'editar'} placeholder="ABC-123" className="plate-input" autoComplete="off"
-                  autoCapitalize="characters" spellCheck={false} autoFocus={modo === 'crear'} />
+                <div className="input-group">
+                  <TextInput {...props} {...texto('placa', formatPlateInput)}
+                    disabled={modo === 'editar'} placeholder="ABC-123" className="plate-input" autoComplete="off"
+                    autoCapitalize="characters" spellCheck={false} autoFocus={modo === 'crear'}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); consultarPlaca(); } }} />
+                  <button className="btn btn-primary btn-sm fw-bold" type="button" onClick={consultarPlaca} disabled={consultando !== null} title="Buscar Ficha Técnica">
+                    <i className={consultando === 'placa' ? 'spinner-border spinner-border-sm' : 'bi bi-search'}></i>
+                  </button>
+                </div>
               )}
             </Field>
             <Field label="Cliente" wide>
@@ -192,8 +260,16 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
                   onCreate={t => set('cliente', t.trim().toUpperCase())} createLabel="Usar" />
               )}
             </Field>
-            <Field label="RUC o DNI" error={error('ruc')}>
-              {props => <TextInput {...props} {...texto('ruc', v => v.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" />}
+            <Field label="RUC / DNI" error={error('ruc')}>
+              {props => (
+                <div className="input-group">
+                  <TextInput {...props} {...texto('ruc', v => v.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" maxLength={11} placeholder="Ingrese RUC o DNI"
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); consultarDocumento(); } }} />
+                  <button className="btn btn-primary btn-sm fw-bold" type="button" onClick={consultarDocumento} disabled={consultando !== null} title="Buscar en SUNAT / RENIEC">
+                    <i className={consultando === 'documento' ? 'spinner-border spinner-border-sm me-1' : 'bi bi-search me-1'}></i>Buscar
+                  </button>
+                </div>
+              )}
             </Field>
             <Field label="Año" error={error('anio')}>
               {props => <TextInput {...props} {...texto('anio', v => v.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="2024" />}
