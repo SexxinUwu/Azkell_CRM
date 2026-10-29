@@ -17,6 +17,7 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
+import { exportarExcel } from '../../core/lib/excel';
 import { coincide, eliminarConductor, useConductores, whatsapp, type Conductor } from './api';
 import { ConductorFicha } from './ConductorFicha';
 import { ConductorFormulario } from './ConductorFormulario';
@@ -26,6 +27,19 @@ import './conductores.css';
 
 type FiltroEstado = 'todos' | 'activos' | 'inactivos';
 const activo = (c: Conductor) => c.estado.toLowerCase() === 'activo';
+
+// Excel con las mismas columnas y formato que el clásico (Directorio_Personal): nombre en título, teléfono solo dígitos, TERCERO → 3ro.
+const nombreTitulo = (s: string) => s.replace(/Ã'/g, 'Ñ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+const exportarConductores = (filas: Conductor[]) => exportarExcel('Directorio_Personal', 'Conductores',
+  ['Nombre', 'Empresa', 'DNI', 'Licencia', 'Teléfono', 'Estado'],
+  filas.map(c => [
+    c.nombre ? nombreTitulo(c.nombre) : '',
+    c.empresa.replace(/TERCERO/gi, '3ro'),
+    c.dni,
+    c.licencia,
+    c.telefono.replace(/\D/g, ''),
+    c.estado,
+  ]));
 
 // Directorio › Conductores: consulta, alta, edición, importación y eliminación.
 export function ConductoresPage() {
@@ -92,6 +106,8 @@ export function ConductoresPage() {
         actions={
           <>
             <MenuOtros opciones={[
+              { label: 'Exportar Excel', detalle: `${visibles.length} ${visibles.length === 1 ? 'persona' : 'personas'} con los filtros actuales`, icon: <FileSpreadsheet size={17} />,
+                onSelect: () => exportarConductores(visibles).catch(err => toast(errorMessage(err), 'error')) },
               puedeCrear && { label: 'Importar desde Excel', detalle: 'Agrega conductores en lote', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
               { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('directorio/conductores') },
             ]} />
