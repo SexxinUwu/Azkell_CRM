@@ -106,7 +106,7 @@ export function htmlActaEntrega(r: EntregaVehiculo, grupos: CategoriaPlantilla[]
         <div style="font-size:7.5px;color:#64748b;font-weight:600;text-transform:uppercase">${rol}</div></div></div>`;
 
   return `
-  <div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;width:900px;background:#fff;padding:12px;box-sizing:border-box">
+  <div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;width:100%;background:#fff;padding:12px;box-sizing:border-box">
     <div style="${caja}">
       <div style="display:grid;grid-template-columns:3fr 6fr 3fr;border-bottom:1.5px solid ${NAVY}">
         <div style="padding:8px;text-align:center;border-right:1.5px solid ${NAVY};display:flex;flex-direction:column;align-items:center;justify-content:center">
@@ -166,8 +166,8 @@ const OPCIONES = { orientacion: 'portrait' as const, margen: 0, escala: 2.8 };
 
 /** Monta el acta fuera de la vista, la convierte a PDF y la desmonta */
 async function conElemento<T>(html: string, usar: (el: HTMLElement) => Promise<T>): Promise<T> {
-  // Medido en Chrome: html2canvas sale en blanco si el acta está en posición absoluta o fija. En el flujo normal
-  // de la página sí captura. Por eso el acta va en el flujo y una pantalla blanca la tapa mientras se genera.
+  // html2canvas sale en blanco si el acta está en posición absoluta o fija: va en el flujo normal de la página,
+  // tapada por una pantalla blanca con el camión mientras se genera.
   const el = document.createElement('div');
   el.innerHTML = html;
   el.style.cssText = 'width:794px;background:#fff;';
@@ -176,6 +176,17 @@ async function conElemento<T>(html: string, usar: (el: HTMLElement) => Promise<T
   tapa.innerHTML = renderToStaticMarkup(createElement(CargaCamion, { texto: 'Generando PDF…' }));
   document.body.append(el, tapa);
   try {
+    // Imágenes (logo, firmas, croquis) y fuentes cargadas antes de capturar: si no, la primera captura sale en blanco
+    await Promise.all(Array.from(el.querySelectorAll('img')).map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r; })));
+    await document.fonts?.ready;
+    await new Promise(r => setTimeout(r, 120));
+    // Una sola hoja A4 (297 mm = 1122 px a 96 dpi): si el acta es más alta, se reduce en proporción
+    const altoA4 = 1122;
+    const alto = el.offsetHeight;
+    if (alto > altoA4) {
+      el.style.transformOrigin = 'top left';
+      el.style.transform = `scale(${altoA4 / alto})`;
+    }
     return await usar(el);
   } finally {
     el.remove();
@@ -190,6 +201,12 @@ async function conElemento<T>(html: string, usar: (el: HTMLElement) => Promise<T
 /** Abre el PDF del acta en una pestaña nueva (no lo descarga). La pestaña se abre antes de generarlo para que el navegador no la bloquee. */
 export async function abrirPdfEntrega(r: EntregaVehiculo): Promise<void> {
   const ventana = window.open('', '_blank');
+  if (ventana) {
+    // La pestaña copia los estilos de la app y muestra el camión mientras se genera el PDF
+    ventana.document.head.innerHTML = document.head.innerHTML;
+    ventana.document.body.style.cssText = 'margin:0;background:#fff;';
+    ventana.document.body.innerHTML = renderToStaticMarkup(createElement(CargaCamion, { texto: 'Generando PDF…' }));
+  }
   try {
     const blob = await generarPdfEntrega(r);
     const url = URL.createObjectURL(blob);
