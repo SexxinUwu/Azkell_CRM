@@ -10,7 +10,8 @@ import { SwitchRow } from '../../core/ui/forms';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
-import { useCssClasico } from '../../core/lib/clasicoCss';
+import { Plus, Search } from 'lucide-react';
+import { NuevoClienteSheet } from './NuevoClienteSheet';
 import { formatPlateInput, normalizePlate } from '../../core/lib/peru';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
@@ -28,10 +29,9 @@ const VACIA: Placa = {
 type Campo = keyof Placa;
 const NUMERICOS: Campo[] = ['tanque1', 'tanque2', 'tanque3', 'cargaUtil', 'pesoNeto', 'pesoBruto', 'tara'];
 const sinGuion = (s: string) => s.replace(/[-\s]/g, '').toUpperCase();
-const CSS_CLASICO = ['/libs/bootstrap.min.css', '/libs/bootstrap-icons.css'] as const;
 
-// Respuesta de /api/proxy/placa (consultarDatosPlaca del clásico)
-interface DatosPlacaClasico {
+// Respuesta de /api/proxy/placa (SUNARP/MTC o la base): solo se usan los campos que llegan con valor
+interface DatosPlacaServidor {
   placa?: string; encontrado?: boolean; cliente?: string; ruc_dni?: string; marca?: string; modelo?: string; tipo?: string;
   sub_tipo?: string; color?: string; nro_motor?: string; nro_caja?: string; nro_corona?: string; nro_vin?: string;
   configuracion?: string; anio?: string | number; combustible?: string; carga_util?: string | number; peso_neto?: string | number; peso_bruto?: string | number;
@@ -73,22 +73,16 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
   const [tocados, setTocados] = useState<Set<Campo>>(new Set());
   const [intento, setIntento] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [consultando, setConsultando] = useState<'placa' | 'documento' | null>(null);
-  // Bootstrap solo mientras el formulario está abierto (los botones usan las clases de la versión actual)
-  useCssClasico(open ? CSS_CLASICO : []);
+  const [consultandoPlaca, setConsultandoPlaca] = useState(false);
+  const [nuevoCliente, setNuevoCliente] = useState(false);
 
-  // Cada vez que se abre, parte de la placa (o vacía)
-  useEffect(() => {
-    if (open) { setP(placa ?? VACIA); setTocados(new Set()); setIntento(false); }
-  }, [open, placa]);
-
-  // consultarDatosPlaca del clásico: llena la ficha con SUNARP/MTC (o la base) y sobrescribe lo que trae
+  // Datos de la placa (consultarDatosPlaca de la versión actual): SUNARP/MTC o la base; llena la ficha con lo que llega
   async function consultarPlaca() {
     const num = p.placa.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (!num) { toast('Ingresa el número de placa', 'error'); return; }
-    setConsultando('placa');
+    setConsultandoPlaca(true);
     try {
-      const d = await api<DatosPlacaClasico>('/proxy/placa', { query: { numero: num } });
+      const d = await api<DatosPlacaServidor>('/proxy/placa', { query: { numero: num } });
       if (d.placa) setP(x => ({ ...x, placa: d.placa as string }));
       if (d.encontrado === false) { toast(`Placa formateada como ${d.placa || num}. Lista para registrar.`); return; }
       setP(x => ({
@@ -114,23 +108,13 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
       toast('Ficha técnica obtenida');
     } catch {
       toast('No se encontraron datos automáticos para esta placa', 'error');
-    } finally { setConsultando(null); }
+    } finally { setConsultandoPlaca(false); }
   }
 
-  // consultarDocNuevoCliente del clásico: RUC (SUNAT) u DNI (RENIEC); el nombre pasa a Cliente
-  async function consultarDocumento() {
-    const num = p.ruc.trim();
-    if (!num) return;
-    const tipo = num.length === 11 ? 'RUC' : num.length === 8 ? 'DNI' : 'RUC';
-    setConsultando('documento');
-    try {
-      const d = await api<{ nombre?: string; razon_social?: string }>('/proxy/documento', { query: { tipo, numero: num } });
-      const nombre = d.nombre || d.razon_social;
-      if (nombre) { setP(x => ({ ...x, cliente: nombre.toUpperCase() })); toast('Datos SUNAT/RENIEC obtenidos'); }
-    } catch {
-      toast('No se encontró RUC/DNI en SUNAT/RENIEC', 'error');
-    } finally { setConsultando(null); }
-  }
+  // Cada vez que se abre, parte de la placa (o vacía)
+  useEffect(() => {
+    if (open) { setP(placa ?? VACIA); setTocados(new Set()); setIntento(false); }
+  }, [open, placa]);
 
   const errores = useMemo(() => validar(p, modo, existentes), [p, modo, existentes]);
   const error = (c: Campo) => ((intento || tocados.has(c)) ? errores[c] : undefined) ?? null;
@@ -208,6 +192,7 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
   };
 
   return (
+    <>
     <Sheet
       open={open}
       onClose={onClose}
@@ -239,37 +224,35 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
           <div className="form-grid">
             <Field label="Placa" error={error('placa')} hint={modo === 'editar' ? 'La placa no se puede cambiar.' : undefined} wide>
               {props => (
-                <div className="input-group">
-                  <TextInput {...props} {...texto('placa', formatPlateInput)}
-                    disabled={modo === 'editar'} placeholder="ABC-123" className="plate-input" autoComplete="off"
-                    autoCapitalize="characters" spellCheck={false} autoFocus={modo === 'crear'}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); consultarPlaca(); } }} />
-                  <button className="btn btn-primary btn-sm fw-bold" type="button" onClick={consultarPlaca} disabled={consultando !== null} title="Buscar Ficha Técnica">
-                    <i className={consultando === 'placa' ? 'spinner-border spinner-border-sm' : 'bi bi-search'}></i>
-                  </button>
+                <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <TextInput {...props} {...texto('placa', formatPlateInput)}
+                      disabled={modo === 'editar'} placeholder="ABC-123" className="plate-input" autoComplete="off"
+                      autoCapitalize="characters" spellCheck={false} autoFocus={modo === 'crear'}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); consultarPlaca(); } }} />
+                  </div>
+                  <Button variant="secondary" icon={<Search size={16} />} aria-label="Buscar ficha técnica" title="Buscar Ficha Técnica"
+                    loading={consultandoPlaca} onClick={consultarPlaca}>{''}</Button>
                 </div>
               )}
             </Field>
             <Field label="Cliente" wide>
               {props => (
-                <Combobox {...props} options={clientes} value={p.cliente || null} placeholder="Busca o escribe el cliente"
-                  onChange={v => {
-                    const ruc = clientes.find(c => c.value === v)?.description;
-                    setP(x => ({ ...x, cliente: v ?? '', ruc: ruc && !x.ruc ? ruc : x.ruc }));
-                  }}
-                  onCreate={t => set('cliente', t.trim().toUpperCase())} createLabel="Usar" />
-              )}
-            </Field>
-            <Field label="RUC / DNI" error={error('ruc')}>
-              {props => (
-                <div className="input-group">
-                  <TextInput {...props} {...texto('ruc', v => v.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" maxLength={11} placeholder="Ingrese RUC o DNI"
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); consultarDocumento(); } }} />
-                  <button className="btn btn-primary btn-sm fw-bold" type="button" onClick={consultarDocumento} disabled={consultando !== null} title="Buscar en SUNAT / RENIEC">
-                    <i className={consultando === 'documento' ? 'spinner-border spinner-border-sm me-1' : 'bi bi-search me-1'}></i>Buscar
-                  </button>
+                <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Combobox {...props} options={clientes} value={p.cliente || null} placeholder="Busca o escribe el cliente"
+                      onChange={v => {
+                        const ruc = clientes.find(c => c.value === v)?.description;
+                        setP(x => ({ ...x, cliente: v ?? '', ruc: ruc && !x.ruc ? ruc : x.ruc }));
+                      }}
+                      onCreate={t => set('cliente', t.trim().toUpperCase())} createLabel="Usar" />
+                  </div>
+                  <Button variant="secondary" icon={<Plus size={16} />} aria-label="Nuevo cliente" title="Nuevo Cliente" onClick={() => setNuevoCliente(true)}>{''}</Button>
                 </div>
               )}
+            </Field>
+            <Field label="RUC o DNI" error={error('ruc')}>
+              {props => <TextInput {...props} {...texto('ruc', v => v.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" />}
             </Field>
             <Field label="Año" error={error('anio')}>
               {props => <TextInput {...props} {...texto('anio', v => v.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="2024" />}
@@ -351,5 +334,8 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
         </section>
       </div>
     </Sheet>
+    <NuevoClienteSheet open={nuevoCliente} onClose={() => setNuevoCliente(false)}
+      onAgregar={c => { setP(x => ({ ...x, cliente: c.nombre, ruc: c.ruc || x.ruc })); setNuevoCliente(false); }} />
+    </>
   );
 }

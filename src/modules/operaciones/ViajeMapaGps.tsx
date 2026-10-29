@@ -15,7 +15,7 @@ const UMBRAL_EXCESO = 80;
 const UMBRAL_PARADA_MIN = 3;
 
 let cargaLeaflet: Promise<Leaflet> | null = null;
-export function cargarLeaflet(): Promise<Leaflet> {
+function cargarLeaflet(): Promise<Leaflet> {
   if (cargaLeaflet) return cargaLeaflet;
   cargaLeaflet = new Promise((resolve, reject) => {
     const w = window as unknown as { L?: Leaflet };
