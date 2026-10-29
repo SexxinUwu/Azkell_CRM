@@ -1,88 +1,87 @@
-import { api } from '../../core/api/client';
-import { exportarExcel } from '../../core/lib/excel';
+import { api, ApiError } from '../../core/api/client';
 
-// Excel de kits: copia del clásico (modulos/mantenimiento/kits-mp): mismos encabezados, misma plantilla,
-// misma lectura (columnas por nombre, con alias minúsculas) y mismos mensajes.
-
-export interface ItemKitImport {
-  marca_vehiculo: string;
-  modelo_vehiculo: string;
-  tipo_mp: string;
-  nombre_kit: string;
-  item_nombre: string;
-  cantidad: number;
-  unidad_medida: string;
-  costo_unitario: number;
-  costo_total: number;
-  observaciones: string;
-}
-
-const CABECERA_PLANTILLA = ['Marca', 'Modelo', 'Tipo MP', 'Alias Kit', 'Repuesto / Ítem', 'Cantidad', 'Unidad', 'Costo Unitario', 'Observaciones'];
-const EJEMPLO_PLANTILLA: (string | number)[][] = [
-  ['VOLVO', 'FH 500', 'MP1', 'Kit Filtros Motor', 'FILTRO DE ACEITE', 2, 'UND', 65, 'Cambio preventivo'],
-  ['VOLVO', 'FH 500', 'MP1', 'Kit Filtros Motor', 'ACEITE DE MOTOR 15W-40', 10, 'GAL', 85, ''],
-];
-
-export const descargarPlantillaKits = () =>
-  exportarExcel('Plantilla_Kits_Mantenimiento', 'Plantilla_Kits', CABECERA_PLANTILLA, EJEMPLO_PLANTILLA);
+// Excel de kits: copia de modulos/mantenimiento/kits-mp/logica.js (kitsDescargarPlantilla, kitsExportarExcel,
+// kitsImportarExcel). Usa la misma librería (xlsx / SheetJS), los mismos nombres de hoja y de archivo,
+// los mismos encabezados y los mismos mensajes (alert).
 
 type Registro = Record<string, unknown>;
 
-// Primer valor "verdadero" entre las columnas aceptadas (igual que `r['Marca'] || r['marca'] || ''`)
-const pick = (r: Registro, ...claves: string[]): unknown => {
-  let valor: unknown = '';
-  for (const c of claves) {
-    valor = r[c];
-    if (valor) return valor;
-  }
-  return valor;
-};
-const texto = (v: unknown) => String(v ?? '').trim();
+export async function descargarPlantillaKits() {
+  const XLSX = await import('xlsx');
+  const plantillaData = [
+    { 'Marca': 'VOLVO', 'Modelo': 'FH 500', 'Tipo MP': 'MP1', 'Alias Kit': 'Kit Filtros Motor', 'Repuesto / Ítem': 'FILTRO DE ACEITE', 'Cantidad': 2, 'Unidad': 'UND', 'Costo Unitario': 65.00, 'Observaciones': 'Cambio preventivo' },
+    { 'Marca': 'VOLVO', 'Modelo': 'FH 500', 'Tipo MP': 'MP1', 'Alias Kit': 'Kit Filtros Motor', 'Repuesto / Ítem': 'ACEITE DE MOTOR 15W-40', 'Cantidad': 10, 'Unidad': 'GAL', 'Costo Unitario': 85.00, 'Observaciones': '' },
+  ];
+  const ws = XLSX.utils.json_to_sheet(plantillaData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Plantilla_Kits');
+  XLSX.writeFile(wb, 'Plantilla_Kits_Mantenimiento.xlsx');
+}
 
-/** Lee la primera hoja: la fila 1 son los encabezados y se omiten las filas vacías (como sheet_to_json). */
-async function registrosDeHoja(archivo: File): Promise<Registro[]> {
-  const { readSheet } = await import('read-excel-file/browser');
-  let filas: unknown[][];
+/** kitsExportarExcel: las filas que se ven (filtradas), con las mismas columnas del clásico. */
+export async function exportarKitsExcel(filas: Registro[]) {
+  const XLSX = await import('xlsx');
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Kits_MP');
+  XLSX.writeFile(wb, `Kits_Mantenimiento_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+/**
+ * kitsImportarExcel: lee la primera hoja, arma los ítems y los envía. Los mensajes son los del clásico.
+ * Devuelve true si la tabla debe recargarse (el clásico recarga tras avisar).
+ */
+export async function importarKitsExcel(archivo: File): Promise<boolean> {
+  let items: Registro[];
   try {
-    filas = (await readSheet(archivo)) as unknown[][];
-  } catch {
-    throw new Error('Error leyendo el archivo Excel.');
-  }
-  const [cabecera, ...datos] = filas;
-  if (!cabecera) return [];
-  const claves = cabecera.map(c => String(c ?? ''));
-  return datos
-    .filter(f => f.some(c => c !== null && c !== undefined && String(c) !== ''))
-    .map(f => Object.fromEntries(claves.map((k, i) => [k, f[i] ?? ''])));
-}
-
-/** Convierte el Excel en ítems listos para POST /mantenimiento-kits/importarMasivo. Lanza error con el mensaje del clásico. */
-export async function leerKitsExcel(archivo: File): Promise<ItemKitImport[]> {
-  const registros = await registrosDeHoja(archivo);
-  if (!registros.length) throw new Error('El archivo Excel está vacío.');
-
-  const items = registros.map(r => {
-    const cantidad = parseFloat(String(pick(r, 'Cantidad', 'cantidad') || 1)) || 1;
-    const costo = parseFloat(String(pick(r, 'Costo Unitario', 'costo_unitario') || 0)) || 0;
-    return {
-      marca_vehiculo: texto(pick(r, 'Marca', 'marca')).toUpperCase(),
-      modelo_vehiculo: texto(pick(r, 'Modelo', 'modelo') || 'TODOS LOS MODELOS').toUpperCase(),
-      tipo_mp: texto(pick(r, 'Tipo MP', 'tipo_mp') || 'MP1').toUpperCase(),
-      nombre_kit: texto(pick(r, 'Alias Kit', 'nombre_kit')),
-      item_nombre: texto(pick(r, 'Repuesto / Ítem', 'item_nombre', 'Repuesto')),
-      cantidad,
-      unidad_medida: texto(pick(r, 'Unidad', 'unidad_medida') || 'UND').toUpperCase(),
-      costo_unitario: costo,
-      costo_total: cantidad * costo,
-      observaciones: texto(pick(r, 'Observaciones', 'observaciones')),
+    const XLSX = await import('xlsx');
+    const wb = XLSX.read(new Uint8Array(await archivo.arrayBuffer()), { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json<Registro>(ws);
+    if (!json.length) {
+      window.alert('El archivo Excel está vacío.');
+      return false;
+    }
+    // r['Marca'] || r['marca'] || '' … igual que el clásico (el .trim() de un número lanza error y cae en "Error leyendo")
+    const pick = (r: Registro, ...claves: string[]) => {
+      let v: unknown = '';
+      for (const c of claves) { v = r[c]; if (v) return v; }
+      return v;
     };
-  }).filter(x => x.marca_vehiculo && x.item_nombre);
+    items = json.map(r => {
+      const costo = parseFloat(String(pick(r, 'Costo Unitario', 'costo_unitario') || 0)) || 0;
+      const cantidad = parseFloat(String(pick(r, 'Cantidad', 'cantidad') || 1)) || 1;
+      return {
+        marca_vehiculo: (pick(r, 'Marca', 'marca') as string || '').trim().toUpperCase(),
+        modelo_vehiculo: ((pick(r, 'Modelo', 'modelo') as string) || 'TODOS LOS MODELOS').trim().toUpperCase(),
+        tipo_mp: ((pick(r, 'Tipo MP', 'tipo_mp') as string) || 'MP1').trim().toUpperCase(),
+        nombre_kit: ((pick(r, 'Alias Kit', 'nombre_kit') as string) || '').trim(),
+        item_nombre: ((pick(r, 'Repuesto / Ítem', 'item_nombre', 'Repuesto') as string) || '').trim(),
+        cantidad,
+        unidad_medida: ((pick(r, 'Unidad', 'unidad_medida') as string) || 'UND').trim().toUpperCase(),
+        costo_unitario: costo,
+        costo_total: cantidad * costo,
+        observaciones: ((pick(r, 'Observaciones', 'observaciones') as string) || '').trim(),
+      };
+    }).filter(x => x.marca_vehiculo && x.item_nombre);
+    if (!items.length) {
+      window.alert('No se encontraron registros válidos con columnas Marca y Repuesto.');
+      return false;
+    }
+  } catch {
+    window.alert('Error leyendo el archivo Excel.');
+    return false;
+  }
 
-  if (!items.length) throw new Error('No se encontraron registros válidos con columnas Marca y Repuesto.');
-  return items;
-}
-
-/** Envía los ítems (el servidor inserta cada uno como ítem nuevo). */
-export async function importarKitsMasivo(items: ItemKitImport[]) {
-  await api('/mantenimiento-kits/importarMasivo', { method: 'POST', body: { items } });
+  // El clásico avisa el éxito cuando el servidor responde (aunque sea con error HTTP) y solo avisa error si no hubo respuesta
+  try {
+    await api('/mantenimiento-kits/importarMasivo', { method: 'POST', body: { items } });
+  } catch (err) {
+    if (!(err instanceof ApiError) || err.status === 0) {
+      window.alert('Error al enviar la importación masiva.');
+      return false;
+    }
+  }
+  window.alert(`Se importaron ${items.length} registros exitosamente.`);
+  return true;
 }

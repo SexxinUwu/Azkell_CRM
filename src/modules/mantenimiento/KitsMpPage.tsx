@@ -9,9 +9,8 @@ import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
-import { exportarExcel } from '../../core/lib/excel';
 import { abrirClasico } from '../../core/layout/navigation';
-import { descargarPlantillaKits, importarKitsMasivo, leerKitsExcel } from './kitsExcel';
+import { descargarPlantillaKits, exportarKitsExcel, importarKitsExcel } from './kitsExcel';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -120,33 +119,31 @@ export function KitsMpPage() {
 
   // Exporta lo que se ve (filtrado), con las mismas columnas del clásico (kitsExportarExcel)
   async function exportar() {
-    if (!itemsVisibles) { toast('No hay datos para exportar.', 'error'); return; }
-    const filas = gruposFiltrados.flatMap(g => g.items.map(it => [
-      g.marca, g.modelo, g.tipo_mp, g.nombre_kit, it.item_nombre ?? '',
-      Number(it.cantidad) || 0, it.unidad_medida || 'UND', Number(it.costo_unitario) || 0, Number(it.costo_total) || 0, '',
-    ]));
+    if (!itemsVisibles) { window.alert('No hay datos para exportar.'); return; }
+    const filas = gruposFiltrados.flatMap(g => g.items.map(it => ({
+      'Marca': g.marca,
+      'Modelo': g.modelo,
+      'Tipo MP': g.tipo_mp,
+      'Alias Kit': g.nombre_kit || '',
+      'Repuesto / Ítem': it.item_nombre,
+      'Cantidad': it.cantidad,
+      'Unidad': it.unidad_medida,
+      'Costo Unitario (S/)': it.costo_unitario,
+      'Costo Total (S/)': it.costo_total,
+      'Observaciones': '',
+    })));
     try {
-      await exportarExcel('Kits_Mantenimiento', 'Kits_MP',
-        ['Marca', 'Modelo', 'Tipo MP', 'Alias Kit', 'Repuesto / Ítem', 'Cantidad', 'Unidad', 'Costo Unitario (S/)', 'Costo Total (S/)', 'Observaciones'], filas);
+      await exportarKitsExcel(filas);
     } catch (e) {
-      toast(errorMessage(e), 'error');
+      window.alert(errorMessage(e));
     }
   }
 
-  // Importación directa, como el clásico (kitsImportarExcel): sin vista previa
+  // Importación directa, como el clásico (kitsImportarExcel): sin vista previa, con sus avisos
   async function subirExcel(archivo: File | undefined) {
     if (!archivo) return;
     try {
-      const items = await leerKitsExcel(archivo);
-      try {
-        await importarKitsMasivo(items);
-        toast(`Se importaron ${items.length} registros exitosamente.`);
-        qc.invalidateQueries({ queryKey: ['mant', 'kits-mp'] });
-      } catch {
-        toast('Error al enviar la importación masiva.', 'error');
-      }
-    } catch (e) {
-      toast(errorMessage(e), 'error');
+      if (await importarKitsExcel(archivo)) qc.invalidateQueries({ queryKey: ['mant', 'kits-mp'] });
     } finally {
       if (inputExcel.current) inputExcel.current.value = '';
     }
@@ -209,7 +206,7 @@ export function KitsMpPage() {
             </Button>
             <MenuOtros opciones={[
               { label: '1. Descargar Plantilla', icon: <FileSpreadsheet size={17} />,
-                onSelect: () => descargarPlantillaKits().catch(e => toast(errorMessage(e), 'error')) },
+                onSelect: () => descargarPlantillaKits() },
               { label: '2. Subir Excel', icon: <Upload size={17} />, onSelect: () => inputExcel.current?.click() },
               { label: 'Exportar Excel', icon: <Download size={17} />, onSelect: exportar },
               { label: 'Abrir versión completa', icon: <ArrowUpRight size={17} />, separado: true,
@@ -346,7 +343,7 @@ export function KitsMpPage() {
         </div>
       )}
 
-      <input ref={inputExcel} type="file" accept=".xlsx" hidden onChange={e => subirExcel(e.target.files?.[0])} />
+      <input ref={inputExcel} type="file" accept=".xlsx,.xls" hidden onChange={e => subirExcel(e.target.files?.[0])} />
 
       <ConfirmSheet
         open={!!confirmEliminar}

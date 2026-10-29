@@ -13,7 +13,6 @@ import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/Ta
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 
@@ -163,12 +162,14 @@ export function OrdenesServicioPage() {
     } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
   }
 
-  // Excel igual que el clásico (osExportarExcel): el texto de cada celda de la tabla visible, sin la columna de Observaciones
+  // Excel igual que el clásico (osExportarExcel → descargarExcelDinamico): el texto de cada celda de la tabla
+  // visible, sin la columna de Observaciones; hoja "Datos" y archivo "Ordenes_de_Servicio_Azkell.xlsx"
   async function exportar() {
-    try {
-      await exportarExcel('Ordenes_de_Servicio_Azkell', 'Datos', CABECERA_EXCEL, visibles.map(filaExcelClasica));
-      haptic('success');
-    } catch (err) { toast(errorMessage(err), 'error'); }
+    const XLSX = await import('xlsx');
+    const ws = XLSX.utils.aoa_to_sheet([CABECERA_EXCEL, ...visibles.map(filaExcelClasica)]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+    XLSX.writeFile(wb, 'Ordenes_de_Servicio_Azkell.xlsx');
   }
 
   // Igual que el clásico (osImprimirTabla): window.print() de la pantalla
