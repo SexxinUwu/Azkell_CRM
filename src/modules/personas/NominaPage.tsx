@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CircleAlert, FileSpreadsheet, Paperclip, Plus, Receipt, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, CircleAlert, FileSpreadsheet, Paperclip, Plus, Printer, Receipt, ShieldCheck } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -15,11 +15,12 @@ import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
 import { formatFechaPe, formatSoles } from '../../core/lib/format';
+import { imprimirBoleta } from './nominaBoleta';
 
 interface Fila {
   id: number; nombre_completo: string; documento: string; cargo: string; rol: string;
   dias_trabajados: number; faltas: number; minutos_tardanza: number;
-  sueldo_basico: number; asignacion_familiar: number; horas_extras_importe: number; total_ingresos: number;
+  sueldo_basico: number; asignacion_familiar: number; bono_fijo: number; horas_extras_importe: number; total_ingresos: number;
   descuento_pension: number; regimen_pensionario: string; descuento_faltas: number; descuento_tardanzas: number;
   total_descuentos: number; neto_pagar: number; banco: string; cuenta: string; cci: string;
   [k: string]: unknown;
@@ -83,6 +84,13 @@ export function NominaPage() {
       }
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
+  }
+
+  function imprimirBoletaActual() {
+    if (!boleta) return;
+    const periodo = `${String(mes).padStart(2, '0')}/${anio}`;
+    if (imprimirBoleta(boleta, periodo)) haptic('success');
+    else toast('El navegador bloqueó la ventana. Permite las ventanas emergentes para este sitio.', 'error');
   }
 
   const cargando = vista === 'planilla' ? planilla.isLoading : sst.isLoading;
@@ -173,7 +181,10 @@ export function NominaPage() {
         )}
       </div>
 
-      <Sheet open={!!boleta} onClose={() => setBoleta(null)} title={boleta ? `Boleta · ${boleta.nombre_completo}` : ''} footer={<Button variant="secondary" onClick={() => setBoleta(null)}>Cerrar</Button>}>
+      <Sheet open={!!boleta} onClose={() => setBoleta(null)} title={boleta ? `Boleta · ${boleta.nombre_completo}` : ''} footer={<>
+          <Button variant="secondary" onClick={() => setBoleta(null)}>Cerrar</Button>
+          <Button variant="primary" icon={<Printer size={16} />} onClick={imprimirBoletaActual}>Imprimir boleta</Button>
+        </>}>
         {boleta && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
             <div className="inv-metricas">
