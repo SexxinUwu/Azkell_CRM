@@ -1,12 +1,12 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, ChevronLeft, ChevronRight, FileSpreadsheet, Pencil, RefreshCw, Route, SearchX, Truck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileSpreadsheet, Pencil, RefreshCw, Route, SearchX, Truck } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { LicensePlate } from '../../core/ui/LicensePlate';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import '../../core/ui/acciones-iconos.css';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
@@ -15,7 +15,6 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 
 // Órdenes de viaje de Marsisa: misma información y reglas que el clásico (modulos/operaciones/marsisa-ordenes-viaje).
 // Solo consulta: los datos vienen sincronizados desde el sistema de Marsisa.
@@ -205,10 +204,12 @@ export function MarsisaOrdenesViajePage() {
         subtitle={cargando ? 'Cargando…' : `${kpis.viajes} viajes · ${kpis.ordenes} órdenes de servicio`}
         actions={
           <>
-            <MenuOtros opciones={[
-              { label: 'Exportar Excel', detalle: `${total} ${modo === 'viajes' ? 'viajes' : 'órdenes'}`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('operaciones/marsisa-ordenes-viaje') },
-            ]} />
+            <div className="acciones-iconos">
+              <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--verde"
+                data-tip="Exportar Excel" aria-label="Exportar Excel" onClick={() => exportar()}>
+                <FileSpreadsheet size={17} />
+              </button>
+            </div>
             {can('op_ordenes_viaje.editar', 'op_ordenes_viaje.crear', 'op_programacion.editar') && (
               <Button variant="primary" icon={<RefreshCw size={16} />} onClick={sincronizar} loading={sync}>Sincronizar</Button>
             )}
