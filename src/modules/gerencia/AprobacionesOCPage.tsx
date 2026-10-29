@@ -2,7 +2,7 @@ import '../mantenimiento/mant.css';
 import './gerencia.css';
 import './gerencia-oc.css';
 import { useMemo, useState } from 'react';
-import { ArrowUpRight, Building2, CalendarDays, CheckCircle, ClipboardCheck, Eye, FileDown, LayoutGrid, List, RefreshCw, SearchX, ShieldCheck, User, XCircle } from 'lucide-react';
+import { ArrowUpRight, Building2, CalendarDays, CheckCircle, ClipboardCheck, Eye, LayoutGrid, List, RefreshCw, SearchX, ShieldCheck, User, XCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page } from '../../core/ui/Display';
@@ -322,7 +322,6 @@ export function AprobacionesOCPage() {
             </div>
             <MenuOtros opciones={[
               { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('gerencia/aprobaciones-oc') },
-              { label: 'Exportar acta', icon: <FileDown size={17} />, onSelect: () => abrirClasico('gerencia/aprobaciones-oc') },
             ]} />
           </div>
         </header>
