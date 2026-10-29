@@ -1,13 +1,18 @@
-import type { ReactNode } from 'react';
-import { CheckCircle2, Paperclip, Wallet } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { CheckCircle2, FileDown, Paperclip, Wallet } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { Badge } from '../../core/ui/Display';
 import { Sheet } from '../../core/ui/Sheet';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import { useToast } from '../../core/ui/Toast';
+import { api, errorMessage } from '../../core/api/client';
 import { formatFechaHoraPe, formatFechaPe, formatMoneda } from '../../core/lib/format';
+import type { ArticuloInv, EmpresaDocumentos } from '../almacen/api';
 import {
   codigoOC, esCredito, esPendiente, esPagada, esUSD, importeOC, numeroALetras, renglonLimpio, vencimiento, type OrdenPago,
 } from './pago-datos';
+import { pdfOrdenPago } from './pago-pdf';
 
 const COLUMNAS_ITEMS: ColumnaTabla[] = [
   { id: 'n', titulo: '#', ancho: 44, alinear: 'center' },
@@ -70,6 +75,40 @@ export function PagoDetalleSheet({ oc, open, onClose, onProcesar }: {
   const items = oc?.items ?? [];
   const total = items.length ? items.reduce((s, it) => s + (it.importe || 0), 0) : importe;
 
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [generando, setGenerando] = useState(false);
+
+  /** Ver PDF: mismo documento que el clásico. Unidades del inventario y datos de la empresa se piden con caché. */
+  async function verPdf(o: OrdenPago) {
+    // La pestaña se abre antes de generar el PDF: si no, el navegador la bloquea por no venir de un gesto directo
+    const ventana = window.open('', '_blank');
+    if (ventana) {
+      ventana.document.title = `Orden ${codigoOC(o)}`;
+      ventana.document.body.textContent = 'Generando PDF…';
+    }
+    setGenerando(true);
+    try {
+      const [inventario, empresa] = await Promise.all([
+        qc.ensureQueryData({ queryKey: ['almacen', 'inventario'], queryFn: () => api<ArticuloInv[]>('/almacen/inventario'), staleTime: 60_000 })
+          .catch(() => [] as ArticuloInv[]),
+        qc.ensureQueryData({ queryKey: ['almacen', 'empresa-documentos'], queryFn: () => api<EmpresaDocumentos>('/almacen/empresa-documentos'), staleTime: 600_000 })
+          .catch(() => null),
+      ]);
+      const unidades = new Map(inventario.map(a => [a.id, a.unidad ?? undefined]));
+      const blob = await pdfOrdenPago(o, empresa, id => (id ? unidades.get(id) : undefined));
+      const url = URL.createObjectURL(blob);
+      if (ventana) ventana.location.href = url;
+      else toast('Permite las ventanas emergentes para ver el PDF.', 'error');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      ventana?.close();
+      toast(errorMessage(err), 'error');
+    } finally {
+      setGenerando(false);
+    }
+  }
+
   return (
     <Sheet
       open={open}
@@ -79,6 +118,11 @@ export function PagoDetalleSheet({ oc, open, onClose, onProcesar }: {
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+          {oc && (
+            <Button variant="secondary" icon={<FileDown size={16} />} loading={generando} onClick={() => void verPdf(oc)}>
+              Ver PDF
+            </Button>
+          )}
           {oc && pendiente && (
             <Button variant="primary" icon={<Wallet size={16} />} onClick={() => onProcesar(oc)}>Procesar pago</Button>
           )}

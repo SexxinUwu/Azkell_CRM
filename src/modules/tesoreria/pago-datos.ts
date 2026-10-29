@@ -28,6 +28,8 @@ export interface OrdenPago {
   importe?: number | string;
   total_pen?: number | string;
   tipo_cambio?: number | string;
+  /** sin_igv | mas_igv (el PDF la usa cuando no hay total en soles) */
+  tipo_igv?: string;
   placa?: string;
   ot_id?: string;
   creado_por?: string;
