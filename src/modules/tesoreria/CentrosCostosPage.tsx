@@ -1,7 +1,8 @@
 import '../mantenimiento/mant.css';
+import './centros-costos.css';
 import { useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Boxes } from 'lucide-react';
+import { Boxes, Building2, Megaphone, Truck, Wrench } from 'lucide-react';
 import { CrudLista } from '../../core/ui/CrudLista';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -21,6 +22,15 @@ const NIVELES = [
 const ESTADOS = [{ value: 'ACTIVO', label: 'Activo' }, { value: 'INACTIVO', label: 'Inactivo' }];
 const conPlaca = (c: CentroCosto) => c.requiere_placa === true || Number(c.requiere_placa) === 1;
 
+// Tarjetas de resumen del clásico (modulos/tesoreria/centros-costos/vista.html): textos fijos, mismos colores.
+// Los iconos son equivalentes de lucide (el clásico usa Bootstrap Icons).
+const TARJETAS_AREA = [
+  { etiqueta: 'Administración (CC-100)', valor: 'Cuenta 941', icono: <Building2 size={18} />, fondo: '#e0e7ff', color: '#4338ca' },
+  { etiqueta: 'Ventas & Comercial (CC-200)', valor: 'Cuenta 951', icono: <Megaphone size={18} />, fondo: '#fef3c7', color: '#b45309' },
+  { etiqueta: 'Operaciones de Ruta (CC-300)', valor: 'Cuenta 911 (Costo Directo)', icono: <Truck size={18} />, fondo: '#dcfce7', color: '#15803d' },
+  { etiqueta: 'Taller & Mantenimiento (CC-400)', valor: 'Cuenta 912 (Indirecto)', icono: <Wrench size={18} />, fondo: '#f3e8ff', color: '#7e22ce' },
+];
+
 // Tesorería › Centros de costos y motivos de gasto
 export function CentrosCostosPage() {
   const [vista, setVista] = useState<Vista>('centros');
@@ -39,8 +49,6 @@ function Centros({ arriba }: { arriba: ReactNode }) {
   const w = can('tesoreria_centros_costos.crear', 'tesoreria_caja.crear');
   const d = can('tesoreria_centros_costos.eliminar', 'tesoreria_caja.eliminar');
   const lista: CentroCosto[] = q.data ?? [];
-  const activos = lista.filter(c => c.estado === 'ACTIVO').length;
-  const exigenPlaca = lista.filter(conPlaca).length;
 
   return (
     <CrudLista<CentroCosto>
@@ -48,11 +56,20 @@ function Centros({ arriba }: { arriba: ReactNode }) {
       datos={lista} cargando={q.isLoading} error={q.isError ? q.error : undefined} idDe={c => c.id}
       arriba={<>
         {arriba}
-        {lista.length > 0 && (
-          <p className="t-callout c-secondary" style={{ margin: '0 var(--s-2)' }}>
-            {activos} activos · {exigenPlaca} exigen placa
-          </p>
-        )}
+        <div className="cc-kpis-grid" style={{ margin: '0 var(--s-2)' }}>
+          {TARJETAS_AREA.map(t => (
+            <div key={t.etiqueta} className="cc-kpi-card">
+              <div className="cc-kpi-icon" style={{ background: t.fondo, color: t.color }}>{t.icono}</div>
+              <div>
+                <span className="text-muted small fw-semibold d-block">{t.etiqueta}</span>
+                <span className="fw-bolder text-dark fs-6">{t.valor}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="t-callout c-secondary" style={{ margin: '0 var(--s-2)' }}>
+          {lista.length} Centros Registrados
+        </p>
       </>}
       principal={c => `${c.codigo} · ${c.nombre}`}
       secundaria={c => [c.nivel, c.cuenta_contable && `Cuenta ${c.cuenta_contable}`, conPlaca(c) ? 'Exige placa' : ''].filter(Boolean).join(' · ')}
@@ -77,7 +94,6 @@ function Centros({ arriba }: { arriba: ReactNode }) {
         encabezados: ['Código', 'Nombre', 'Nivel', 'Cuenta contable', 'Exige placa', 'Estado', 'Descripción'],
         fila: c => [c.codigo, c.nombre, c.nivel, c.cuenta_contable, conPlaca(c) ? 'Sí' : 'No', c.estado, c.descripcion],
       }}
-      clasico="tesoreria/centros-costos"
     />
   );
 }
