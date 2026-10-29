@@ -16,8 +16,6 @@ import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { analizarViaje, type AnalisisViaje, type MatrizCalc, type TramoCalc, type ViajeCalc } from './analisisCalculo';
 
-interface BloqueVales { vales: number; galones: number; importe: number }
-interface ResumenVales { ok?: boolean; diesel: BloqueVales; urea: BloqueVales }
 interface Stats { fechaInicio?: string; fechaFin?: string; vouchers?: Voucher[]; kmInicio: number; kmFin: number; recorridoKm: number; totalGalones: number; totalGasto: number; rendimiento: number }
 interface Voucher { conductor?: string; id: number | string; fecha?: string; producto?: string; galones?: number; importe?: number; odometro?: number; estacion?: string; esPuntoPartida?: boolean; tipo?: string; peso?: number }
 interface Trip {
@@ -321,18 +319,6 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     staleTime: 60_000,
   });
 
-  // Totales crudos de los vales por fecha del vale (lo que se compró), sin repartir por viaje
-  const valesQ = useQuery<ResumenVales>({
-    queryKey: ['operaciones', 'resumen-vales', modulo, desde, hasta],
-    queryFn: () => {
-      const p = new URLSearchParams({ modulo });
-      if (desde) p.set('fecha_desde', desde);
-      if (hasta) p.set('fecha_hasta', hasta);
-      return api<ResumenVales>(`/combustible/resumen-vales?${p}`);
-    },
-    staleTime: 60_000,
-  });
-
   // Matriz teórica (la misma que la pantalla de matriz): base de los cálculos de teórico por tramo
   const matrizQ = useQuery<MatrizCalc[]>({
     queryKey: ['operaciones', 'matriz'],
@@ -437,22 +423,21 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       return Object.fromEntries((r.results ?? []).map(x => [String(x.id), { data: x.data, error: x.error }]));
     },
   });
+  // Como el clásico: el recorrido es el del bloque de diésel del viaje (urea, el general)
+  const kmDelViaje = (t: Trip) => (urea ? n(t.recorridoKm) : n(bloqueD2(t)?.recorridoKm ?? t.recorridoKm));
+  // Regla: las tarjetas son el reflejo exacto de los viajes visibles en la tabla (fechas, búsqueda, filtros y «ocultar compras sin viaje» incluidos)
   const resumen = useMemo(() => {
-    // Galones y gasto de los vales crudos (diésel o urea según la pantalla); mientras llegan, se suman los viajes
-    const crudo = valesQ.data ? (urea ? valesQ.data.urea : valesQ.data.diesel) : null;
-    // Si se ocultan las compras sin viaje, también salen de las tarjetas (sus galones y gasto se restan del total de vales)
-    const sinViaje = ocultarSinViaje ? trips.filter(t => t.viaje.startsWith('SIN-VIAJE')) : [];
-    const galSinViaje = sinViaje.reduce((s, t) => s + cifras(t).galones, 0);
-    const gasSinViaje = sinViaje.reduce((s, t) => s + cifras(t).gasto, 0);
-    const gal = crudo ? crudo.galones - galSinViaje : visibles.reduce((s, t) => s + cifras(t).galones, 0);
-    const gasto = crudo ? crudo.importe - gasSinViaje : visibles.reduce((s, t) => s + cifras(t).gasto, 0);
-    // Km por galón solo con viajes de odómetro válido: un odómetro mal digitado (p. ej. 7.444.183 km en un viaje) infla el promedio
-    // Como el clásico: el recorrido es el del bloque de diésel del viaje (urea, el general)
-    const kmDelViaje = (t: Trip) => (urea ? n(t.recorridoKm) : n(bloqueD2(t)?.recorridoKm ?? t.recorridoKm));
+    const gal = visibles.reduce((s, t) => s + cifras(t).galones, 0);
+    const gasto = visibles.reduce((s, t) => s + cifras(t).gasto, 0);
+    // Km por galón solo con viajes de odómetro válido (un odómetro mal digitado infla el promedio) y con galones > 0
     const razonables = visibles.filter(t => !t.odometroInconsistente && kmDelViaje(t) > 0 && kmDelViaje(t) <= LIMITE_KM_VIAJE);
     const kmRazonables = razonables.reduce((s, t) => s + kmDelViaje(t), 0);
-    return { viajes: visibles.length, gal, gasto, km: kmRazonables, kmGal: gal > 0 ? kmRazonables / gal : 0, razonables: razonables.length, pendientes: visibles.filter(t => t.estadoAuditoria === 'PENDIENTE').length };
-  }, [visibles, valesQ.data, urea, trips, ocultarSinViaje]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Un viaje sin galones no entra al cociente: sus km inflarían el rendimiento
+    const conGalones = razonables.filter(t => cifras(t).galones > 0);
+    const kmConGalones = conGalones.reduce((s, t) => s + kmDelViaje(t), 0);
+    const galConKm = conGalones.reduce((s, t) => s + cifras(t).galones, 0);
+    return { viajes: visibles.length, gal, gasto, km: kmRazonables, validos: razonables.length, galConKm, kmGal: galConKm > 0 ? kmConGalones / galConKm : 0, razonables: conGalones.length, pendientes: visibles.filter(t => t.estadoAuditoria === 'PENDIENTE').length };
+  }, [visibles, urea]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = trips.find(x => x.viaje === abierto) ?? null;
   const Icono = urea ? Droplets : Fuel;
@@ -572,11 +557,11 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
             detalle={resumen.gal > 0 ? `S/ ${fmt(resumen.gasto / resumen.gal, 2)} por galón en promedio` : 'Sin galones'} />
           {!urea && (
             <KpiCard titulo="Recorrido total" valor={`${fmt(resumen.km, 2)} km`} color="var(--amber-ink)"
-              detalle={`${resumen.razonables} de ${resumen.viajes} viajes con odómetro válido`} />
+              detalle={`${resumen.validos} de ${resumen.viajes} viajes con odómetro válido`} />
           )}
           {!urea && (
             <KpiCard titulo="Km por galón" valor={fmt(resumen.kmGal, 2)} color="var(--amber-ink)"
-              detalle={`Recorrido total entre ${fmt(resumen.gal, 2)} galones del rango`} />
+              detalle={`Recorrido de ${resumen.razonables} viajes válidos entre ${fmt(resumen.galConKm, 2)} galones de esos viajes`} />
           )}
         </div>
 
@@ -645,7 +630,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                           {AUDIT.map(a => <option key={a} value={a}>{a}</option>)}
                         </select>
                       ) : <Pastilla color={color}>{x.estadoAuditoria}</Pastilla>}
-                      {(x.odometroInconsistente || n(x.recorridoKm) > LIMITE_KM_VIAJE) && (
+                      {(x.odometroInconsistente || kmDelViaje(x) > LIMITE_KM_VIAJE) && (
                         <span title="Odómetro inconsistente: km final menor al inicial o salto anómalo (más de 3.000 km)" style={{ display: 'inline-flex', flexShrink: 0 }}>
                           <AlertTriangle size={14} style={{ color: 'var(--red-ink)' }} aria-label="Odómetro inconsistente" />
                         </span>
