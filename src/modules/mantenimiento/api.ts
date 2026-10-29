@@ -762,35 +762,148 @@ export function usePlanificacion(mes: number, anio: number) {
 }
 
 // ─── Incidencias en ruta ──────────────────────────────────────────────────────
+export interface CostoIncidencia { concepto: string; monto: number }
+
 export interface IncidenciaRuta {
-  id: number | string;
+  id: number;
+  codigo: string | null;
   fecha_falla: string | null;
-  placa: string | null;
+  placa: string;
   conductor: string | null;
+  marca: string | null;
   ubicacion: string | null;
+  tipo_unidad: string | null;
+  transbordo: 'SI' | 'NO';
   motivo: string | null;
   falla: string | null;
   area_responsable: string | null;
+  responsable: string | null;
+  costos_detalle: CostoIncidencia[];
   total_costo: number | string | null;
-  solucionado: string | null;
-  [key: string]: unknown;
+  solucionado: 'Pendiente' | 'Atendido';
+  observaciones: string | null;
+  creado_por: string | null;
 }
 
-export function useIncidencias(pagina = 1, limit = 50, busqueda = '') {
-  return useQuery<{ data: IncidenciaRuta[]; total: number }>({
-    queryKey: ['mant', 'incidencias', pagina, limit, busqueda],
-    queryFn: () => {
-      const p = new URLSearchParams({ limit: String(limit), page: String(pagina) });
-      if (busqueda) p.set('search', busqueda);
-      return api(`/mantenimiento/incidencias-ruta?${p.toString()}`).then(
-        (r: unknown) => {
-          if (Array.isArray(r)) return { data: r as IncidenciaRuta[], total: (r as IncidenciaRuta[]).length };
-          const obj = r as { data?: IncidenciaRuta[]; total?: number };
-          return { data: obj.data ?? [], total: obj.total ?? 0 };
-        }
-      );
-    },
+export interface KpisIncidencias {
+  totalRegistros: number;
+  totalPendientes: number;
+  totalAtendidos: number;
+  costoTotalAcumulado: number | string;
+}
+
+export interface ListaIncidencias {
+  ok: boolean;
+  data: IncidenciaRuta[];
+  kpis: KpisIncidencias;
+  total: number;
+  totalPages: number;
+  page: number;
+}
+
+export interface FiltrosIncidencias {
+  page: number;
+  limit: number;
+  search: string;
+  mes: string;
+  placa: string;
+  area: string;
+  solucionado: string;
+  sortField: string;
+  sortDir: 'ASC' | 'DESC';
+}
+
+// Los filtros en "ALL" o vacíos no se envían: el servidor los trata como sin filtro
+function queryIncidencias(f: Partial<FiltrosIncidencias> & { anio?: number }) {
+  return Object.fromEntries(
+    Object.entries(f).filter(([, v]) => v !== undefined && v !== '' && v !== 'ALL'),
+  ) as Record<string, string | number>;
+}
+
+export function useListaIncidencias(filtros: FiltrosIncidencias) {
+  return useQuery<ListaIncidencias>({
+    queryKey: ['mant', 'incidencias', 'lista', filtros],
+    queryFn: () => api<ListaIncidencias>('/mantenimiento/incidencias-ruta', { query: queryIncidencias(filtros) }),
     staleTime: 30_000,
     placeholderData: prev => prev,
+  });
+}
+
+export interface AnaliticaIncidencias {
+  ok: boolean;
+  anio: number;
+  resumen: {
+    total: number;
+    totalCosto: number;
+    costoPromedio: number;
+    totalTransbordos: number;
+    tasaTransbordo: number;
+    totalPendientes: number;
+    totalAtendidos: number;
+  };
+  mensual: { labels: string[]; incidencias: number[]; costos: number[] };
+  topPlacas: { placa: string; count: number; costo: number; tipo: string }[];
+  areaMap: Record<string, number>;
+  topResponsables: { nombre: string; count: number }[];
+  topFallas: { falla: string; count: number }[];
+}
+
+export function useAnaliticaIncidencias(anio: number) {
+  return useQuery<AnaliticaIncidencias>({
+    queryKey: ['mant', 'incidencias', 'analitica', anio],
+    queryFn: () => api<AnaliticaIncidencias>('/mantenimiento/incidencias-ruta/analytics', { query: { anio } }),
+    staleTime: 60_000,
+  });
+}
+
+export interface CatalogoIncidencias {
+  data: { placa: string; marca: string; tipo: string }[];
+  conductores: string[];
+}
+
+export function useCatalogoIncidencias() {
+  return useQuery<CatalogoIncidencias>({
+    queryKey: ['mant', 'incidencias', 'catalogo'],
+    queryFn: () => api<CatalogoIncidencias>('/mantenimiento/incidencias-ruta/catalogo-placas'),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export interface DatosIncidencia {
+  fecha_falla: string;
+  placa: string;
+  conductor: string;
+  marca: string;
+  ubicacion: string;
+  tipo_unidad: string;
+  transbordo: 'SI' | 'NO';
+  motivo: string;
+  falla: string;
+  area_responsable: string;
+  responsable: string;
+  costos_detalle: CostoIncidencia[];
+  solucionado: 'Pendiente' | 'Atendido';
+  observaciones: string;
+}
+
+/** Alta (id nulo) o edición de una incidencia */
+export function guardarIncidencia(id: number | null, datos: DatosIncidencia) {
+  return id == null
+    ? api('/mantenimiento/incidencias-ruta', { method: 'POST', body: datos })
+    : api(`/mantenimiento/incidencias-ruta/${id}`, { method: 'PUT', body: datos });
+}
+
+export function cambiarSolucionIncidencia(id: number) {
+  return api<{ ok: boolean; nuevoEstado: string }>(`/mantenimiento/incidencias-ruta/${id}/toggle-solucion`, { method: 'PATCH' });
+}
+
+export function eliminarIncidencia(id: number) {
+  return api(`/mantenimiento/incidencias-ruta/${id}`, { method: 'DELETE' });
+}
+
+export function importarIncidencias(registros: unknown[]) {
+  return api<{ ok: boolean; insertados: number; errores: number }>('/mantenimiento/incidencias-ruta/importar', {
+    method: 'POST',
+    body: { registros },
   });
 }

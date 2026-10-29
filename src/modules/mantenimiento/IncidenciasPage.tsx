@@ -1,288 +1,365 @@
-import { formatFechaPe, formatSoles } from '../../core/lib/format';
-import './mant.css';
-import { useState, type FormEvent } from 'react';
-import { ArrowLeft, ArrowRight, ArrowUpRight, Plus, ShieldCheck } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, FileDown, FileUp, Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import '../../core/ui/acciones-iconos.css';
+import './incidencias.css';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
-import { Sheet } from '../../core/ui/Sheet';
-import { api, errorMessage } from '../../core/api/client';
+import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
+import { SearchField, SelectInput } from '../../core/ui/Field';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { ConfirmSheet } from '../../core/ui/Sheet';
+import { LicensePlate } from '../../core/ui/LicensePlate';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import { useToast } from '../../core/ui/Toast';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { errorMessage } from '../../core/api/client';
+import { formatFechaPe, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
-import { useIncidencias, type IncidenciaRuta } from './api';
+import {
+  cambiarSolucionIncidencia,
+  eliminarIncidencia,
+  useCatalogoIncidencias,
+  useListaIncidencias,
+  type FiltrosIncidencias,
+  type IncidenciaRuta,
+} from './api';
+import { IncidenciaSheet } from './IncidenciaSheet';
+import { ImportarIncidenciasSheet, descargarPlantillaIncidencias } from './ImportarIncidenciasSheet';
+import { IncidenciasGraficas } from './IncidenciasGraficas';
 
-const LIMITE = 50;
-const SOLUCION_INICIAL = { fecha_falla: '', placa: '', conductor: '', motivo: '', falla: '', ubicacion: '', area_responsable: 'Mantenimiento', solucionado: 'Pendiente', observaciones: '' };
+// Incidencias en ruta (Mantenimiento). Calca de la versión actual (modulos/mantenimiento/incidencias-ruta):
+// tarjetas de totales que filtran, filtros, tabla ordenable por columna, cambio rápido de estado,
+// alta y edición, borrado, importación desde Excel, plantilla y la pestaña de gráficas.
 
-interface CatalogoIncidencias {
-  data: { placa: string; marca: string; tipo: string }[];
-  conductores: string[];
+type Vista = 'matriz' | 'graficas';
+type Kpi = 'todas' | 'pendientes' | 'atendidas' | 'costo';
+type FiltrosTabla = Omit<FiltrosIncidencias, 'limit'>;
+
+interface ColumnaIncidencia extends ColumnaTabla {
+  /** Campo por el que ordena el servidor; si no hay, la columna no se ordena */
+  orden?: string;
 }
 
-const campo = { width: '100%', boxSizing: 'border-box' as const, padding: '8px 11px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', fontSize: '0.875rem' };
-const etiqueta = { fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)', display: 'block', marginBottom: 4 };
+const LIMITE = 50;
+const FILTROS_INICIALES: FiltrosTabla = {
+  page: 1, search: '', mes: 'ALL', placa: 'ALL', area: 'ALL', solucionado: 'ALL', sortField: 'fecha_falla', sortDir: 'DESC',
+};
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const AREAS = ['Mantenimiento', 'Flota', 'Operaciones'];
+const TONO_AREA: Record<string, 'accent' | 'ink' | 'amber'> = { Mantenimiento: 'accent', Flota: 'ink', Operaciones: 'amber' };
+// Campos que arrancan ordenados de mayor a menor (fecha, costo, id); el resto de A a Z
+const ORDEN_DESCENDENTE = ['fecha_falla', 'total_costo', 'id'];
+
+const COLUMNAS: ColumnaIncidencia[] = [
+  { id: 'fecha', titulo: 'Fecha', ancho: 112, orden: 'fecha_falla' },
+  { id: 'placa', titulo: 'Placa', ancho: 124, orden: 'placa' },
+  { id: 'conductor', titulo: 'Conductor', ancho: 180, orden: 'conductor' },
+  { id: 'marca', titulo: 'Marca', ancho: 110, orden: 'marca' },
+  { id: 'ubicacion', titulo: 'Ubicación', ancho: 200, orden: 'ubicacion' },
+  { id: 'tipo', titulo: 'Unidad / tipo', ancho: 130, orden: 'tipo_unidad' },
+  { id: 'transbordo', titulo: 'Transbordo', ancho: 116, alinear: 'center', orden: 'transbordo' },
+  { id: 'motivo', titulo: 'Motivo', ancho: 240, orden: 'motivo' },
+  { id: 'falla', titulo: 'Falla', ancho: 320, orden: 'falla' },
+  { id: 'area', titulo: 'Área resp.', ancho: 144, orden: 'area_responsable' },
+  { id: 'responsable', titulo: 'Responsable', ancho: 160, orden: 'responsable' },
+  { id: 'desglose', titulo: 'Desglose de costos', ancho: 220 },
+  { id: 'total', titulo: 'Total costo', ancho: 130, alinear: 'right', orden: 'total_costo' },
+  { id: 'solucion', titulo: 'Solución', ancho: 132, alinear: 'center', orden: 'solucionado' },
+  { id: 'observaciones', titulo: 'Observaciones', ancho: 220 },
+  { id: 'acciones', titulo: 'Acciones', ancho: 96, alinear: 'center' },
+];
 
 export function IncidenciasPage() {
   const qc = useQueryClient();
-  const [pagina, setPagina] = useState(1);
-  const [busqueda, setBusqueda] = useState('');
-  const [busquedaActiva, setBusquedaActiva] = useState('');
-  const [seleccionada, setSeleccionada] = useState<IncidenciaRuta | null>(null);
-  const [mostrarForm, setMostrarForm] = useState(false);
-  const [form, setForm] = useState(SOLUCION_INICIAL);
-  const [enviando, setEnviando] = useState(false);
-  const [errorForm, setErrorForm] = useState('');
+  const avisar = useToast();
+  const { can } = useAuth();
+  const puedeCrear = can('incidencias_ruta.crear');
+  const puedeEditar = can('incidencias_ruta.editar');
+  const puedeEliminar = can('incidencias_ruta.eliminar');
 
-  const { data, isLoading, isError, error, isFetching } = useIncidencias(pagina, LIMITE, busquedaActiva);
-  const items = data?.data ?? [];
-  const total = data?.total ?? 0;
-  const totalPaginas = Math.ceil(total / LIMITE) || 1;
+  const [vista, setVista] = useState<Vista>('matriz');
+  const [texto, setTexto] = useState('');
+  const [filtros, setFiltros] = useState<FiltrosTabla>(FILTROS_INICIALES);
+  const [formulario, setFormulario] = useState<{ incidencia: IncidenciaRuta | null } | null>(null);
+  const [importando, setImportando] = useState(false);
+  const [aEliminar, setAEliminar] = useState<IncidenciaRuta | null>(null);
+  const [eliminando, setEliminando] = useState(false);
 
-  const catalogo = useQuery<CatalogoIncidencias>({
-    queryKey: ['mant', 'incidencias', 'catalogo'],
-    queryFn: () => api<CatalogoIncidencias>('/mantenimiento/incidencias-ruta/catalogo-placas'),
-    enabled: mostrarForm,
-    staleTime: 5 * 60_000,
-  });
+  const lista = useListaIncidencias({ ...filtros, limit: LIMITE });
+  const catalogo = useCatalogoIncidencias();
 
-  function buscar() {
-    setBusquedaActiva(busqueda);
-    setPagina(1);
+  // La búsqueda espera una pausa de 300 ms antes de consultar, como en el clásico
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const buscado = texto.trim();
+      setFiltros(f => (f.search === buscado ? f : { ...f, search: buscado, page: 1 }));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [texto]);
+
+  const items = lista.data?.data ?? [];
+  const kpis = lista.data?.kpis;
+  const total = lista.data?.total ?? 0;
+  const totalPaginas = lista.data?.totalPages ?? 1;
+  const pagina = filtros.page;
+  const filtrosActivos = texto.trim() !== '' || filtros.mes !== 'ALL' || filtros.placa !== 'ALL' || filtros.area !== 'ALL' || filtros.solucionado !== 'ALL';
+
+  const kpiActivo: Kpi = filtros.sortField === 'total_costo' ? 'costo'
+    : filtros.solucionado === 'Pendiente' ? 'pendientes'
+    : filtros.solucionado === 'Atendido' ? 'atendidas'
+    : 'todas';
+
+  function cambiar(cambios: Partial<FiltrosTabla>) {
+    setFiltros(f => ({ ...f, page: 1, ...cambios }));
   }
 
-  function abrirRegistro() {
-    setForm(SOLUCION_INICIAL);
-    setErrorForm('');
-    setMostrarForm(true);
+  function ordenar(campo: string) {
+    haptic('selection');
+    setFiltros(f => {
+      const sortDir: 'ASC' | 'DESC' = f.sortField !== campo
+        ? (ORDEN_DESCENDENTE.includes(campo) ? 'DESC' : 'ASC')
+        : (f.sortDir === 'ASC' ? 'DESC' : 'ASC');
+      return { ...f, sortField: campo, sortDir, page: 1 };
+    });
   }
 
-  async function registrar(e: FormEvent) {
-    e.preventDefault();
-    if (!form.fecha_falla || !form.placa) {
-      setErrorForm('Fecha de falla y placa son obligatorios.');
-      return;
-    }
-    setEnviando(true);
-    setErrorForm('');
+  function filtrarPorKpi(k: Kpi) {
+    haptic('selection');
+    if (k === 'todas') cambiar({ solucionado: 'ALL', sortField: 'fecha_falla', sortDir: 'DESC' });
+    if (k === 'pendientes') cambiar({ solucionado: 'Pendiente' });
+    if (k === 'atendidas') cambiar({ solucionado: 'Atendido' });
+    if (k === 'costo') cambiar({ solucionado: 'ALL', sortField: 'total_costo', sortDir: 'DESC' });
+  }
+
+  function limpiarFiltros() {
+    haptic('selection');
+    setTexto('');
+    setFiltros(FILTROS_INICIALES);
+  }
+
+  function refrescar() {
+    qc.invalidateQueries({ queryKey: ['mant', 'incidencias'] });
+  }
+
+  async function alternarSolucion(inc: IncidenciaRuta) {
+    haptic('selection');
     try {
-      await api('/mantenimiento/incidencias-ruta', { method: 'POST', body: form });
-      qc.invalidateQueries({ queryKey: ['mant', 'incidencias'] });
-      setMostrarForm(false);
+      await cambiarSolucionIncidencia(inc.id);
+      haptic('success');
+      refrescar();
     } catch (err) {
-      setErrorForm(errorMessage(err));
-    } finally {
-      setEnviando(false);
+      haptic('warning');
+      avisar(errorMessage(err), 'error');
     }
   }
 
-  const soloDetalle = !!seleccionada;
+  async function confirmarEliminar() {
+    if (!aEliminar) return;
+    setEliminando(true);
+    try {
+      await eliminarIncidencia(aEliminar.id);
+      haptic('success');
+      avisar('Incidencia eliminada');
+      setAEliminar(null);
+      refrescar();
+    } catch (err) {
+      haptic('warning');
+      avisar(errorMessage(err), 'error');
+    } finally {
+      setEliminando(false);
+    }
+  }
+
+  // Encabezado ordenable: el botón cambia el orden en el servidor (página 1)
+  const columnas: ColumnaTabla[] = COLUMNAS.map(c => ({
+    ...c,
+    titulo: c.orden ? (
+      <button type="button" className={`inc-orden${filtros.sortField === c.orden ? ' is-activo' : ''}`} onClick={() => ordenar(c.orden!)}>
+        {c.titulo}
+        {filtros.sortField !== c.orden ? <ArrowUpDown size={13} aria-hidden /> : filtros.sortDir === 'ASC' ? <ArrowUp size={13} aria-hidden /> : <ArrowDown size={13} aria-hidden />}
+      </button>
+    ) : c.titulo,
+  }));
+
+  const acciones: ReactNode = vista === 'matriz' ? (
+    <div className="acciones-iconos">
+      {puedeCrear && <Accion tip="Registrar incidencia" tono="verde" icono={<Plus size={18} />} onClick={() => { haptic('selection'); setFormulario({ incidencia: null }); }} />}
+      {puedeCrear && <Accion tip="Importar desde Excel" tono="violeta" icono={<FileUp size={18} />} onClick={() => { haptic('selection'); setImportando(true); }} />}
+      <Accion tip="Descargar plantilla Excel" tono="azul" icono={<FileDown size={18} />} onClick={() => { haptic('selection'); descargarPlantillaIncidencias(); }} />
+      <Accion tip="Actualizar" icono={<RefreshCw size={18} />} onClick={() => { haptic('selection'); lista.refetch(); }} />
+    </div>
+  ) : null;
 
   return (
     <Page>
-      {!soloDetalle && (
-        <PageHeader
-          eyebrow="Mantenimiento"
-          title="Incidencias en ruta"
-          subtitle={isLoading ? 'Cargando…' : `${total} registros`}
-          actions={
-            <MenuOtros opciones={[
-              { label: 'Registrar incidencia', icon: <Plus size={17} />, onSelect: abrirRegistro },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/incidencias-ruta') },
-            ]} />
-          }
-        />
-      )}
+      <PageHeader
+        eyebrow="Mantenimiento"
+        title="Incidencias en ruta"
+        subtitle={vista === 'graficas' ? 'Analítica por año' : lista.isLoading ? 'Cargando…' : `${total} registros`}
+        actions={acciones}
+      />
 
-      {isLoading ? <PageLoader /> : isError ? (
-        <Notice tone="error">{errorMessage(error)}</Notice>
-      ) : soloDetalle ? (
-        <IncidenciaDetalle inc={seleccionada} onVolver={() => setSeleccionada(null)} />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
-            <div style={{ flex: 1 }}>
-              <SearchField
-                value={busqueda}
-                onChange={setBusqueda}
-                placeholder="Placa, conductor, motivo, falla…"
-              />
-            </div>
-            <Button variant="primary" onClick={buscar} style={{ flexShrink: 0 }}>
-              Buscar
-            </Button>
+      <div className="inc-barra">
+        <SegmentedControl
+          label="Vista de incidencias"
+          value={vista}
+          onChange={v => { haptic('selection'); setVista(v); }}
+          options={[{ value: 'matriz', label: 'Registros' }, { value: 'graficas', label: 'Gráficas' }]}
+        />
+      </div>
+
+      {vista === 'graficas' ? <IncidenciasGraficas /> : (
+        <div className="inc-matriz">
+          <div className="inc-kpi-grilla">
+            <KpiBoton tono="accent" etiqueta="Total incidencias" valor={String(kpis?.totalRegistros ?? 0)} activo={kpiActivo === 'todas'} onClick={() => filtrarPorKpi('todas')} />
+            <KpiBoton tono="red" etiqueta="Pendientes de solución" valor={String(kpis?.totalPendientes ?? 0)} activo={kpiActivo === 'pendientes'} onClick={() => filtrarPorKpi('pendientes')} />
+            <KpiBoton tono="green" etiqueta="Atendidas / resueltas" valor={String(kpis?.totalAtendidos ?? 0)} activo={kpiActivo === 'atendidas'} onClick={() => filtrarPorKpi('atendidas')} />
+            <KpiBoton tono="amber" etiqueta="Costo total acumulado" valor={formatSoles(Number(kpis?.costoTotalAcumulado ?? 0))} activo={kpiActivo === 'costo'} onClick={() => filtrarPorKpi('costo')} />
           </div>
 
-          {items.length === 0 ? (
+          <div className="inc-filtros">
+            <SearchField value={texto} onChange={setTexto} placeholder="Placa, conductor, motivo, falla…" />
+            <SelectInput aria-label="Mes" value={filtros.mes} onChange={e => cambiar({ mes: e.target.value })}>
+              <option value="ALL">Todos los meses</option>
+              {MESES.map((m, i) => <option key={m} value={String(i + 1)}>{m}</option>)}
+            </SelectInput>
+            <SelectInput aria-label="Placa" value={filtros.placa} onChange={e => cambiar({ placa: e.target.value })}>
+              <option value="ALL">Todas las placas</option>
+              {(catalogo.data?.data ?? []).map(p => <option key={p.placa} value={p.placa}>{p.placa}</option>)}
+            </SelectInput>
+            <SelectInput aria-label="Área responsable" value={filtros.area} onChange={e => cambiar({ area: e.target.value })}>
+              <option value="ALL">Todas las áreas</option>
+              {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+            </SelectInput>
+            <SelectInput aria-label="Estado de la solución" value={filtros.solucionado} onChange={e => cambiar({ solucionado: e.target.value })}>
+              <option value="ALL">Todos los estados</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Atendido">Atendido</option>
+            </SelectInput>
+          </div>
+
+          {lista.isLoading ? <PageLoader /> : lista.isError ? (
+            <Notice tone="error">{errorMessage(lista.error)}</Notice>
+          ) : items.length === 0 ? (
             <EmptyState icon={<ShieldCheck size={22} />} title="Sin incidencias">
-              {busquedaActiva
-                ? <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setBusquedaActiva(''); }}>Quitar búsqueda</button>
-                : 'No hay incidencias registradas para los filtros actuales.'}
+              {filtrosActivos
+                ? <button type="button" className="inc-quitar" onClick={limpiarFiltros}>Quitar filtros</button>
+                : puedeCrear ? <>Registra la primera con <strong>Registrar</strong>.</> : 'No hay incidencias registradas.'}
             </EmptyState>
           ) : (
-            <>
-              <div className="tarjeta__lista" style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 150ms' }}>
-                {items.map((inc, i) => {
-                  const atendido = inc.solucionado !== 'Pendiente';
-                  const tono = atendido ? 'green' : 'red';
+            <div className={`inc-tabla${lista.isFetching ? ' is-cargando' : ''}`}>
+              <TablaRedimensionable id="incidencias-ruta" ariaLabel="Incidencias en ruta" altoMax="64vh" columnas={columnas}>
+                {items.map(inc => {
+                  const atendido = inc.solucionado === 'Atendido';
                   return (
-                    <button key={String(inc.id ?? i)} type="button" className="ot-fila"
-                      onClick={() => { haptic('selection'); setSeleccionada(inc); }}>
-                      <div className="ot-fila__icono" style={{ background: `var(--${tono}-tint)`, color: `var(--${tono}-ink)` }}>
-                        <ShieldCheck size={16} />
-                      </div>
-                      <div className="ot-fila__cuerpo">
-                        <span className="ot-fila__sub" style={{ display: 'flex', gap: '0.375rem' }}>
-                          <span className="ot-fila__placa">{inc.placa ?? '—'}</span>
-                          {inc.conductor ? ` · ${inc.conductor}` : ''}
-                        </span>
-                        <span className="ot-fila__sub">
-                          {inc.motivo ?? '—'}
-                          {inc.falla ? ` — ${inc.falla}` : ''}
-                        </span>
-                      </div>
-                      <div className="ot-fila__derecha">
-                        <span className={`ot-estado ot-estado--${tono}`}>{atendido ? 'Atendido' : 'Pendiente'}</span>
-                        {inc.total_costo != null && Number(inc.total_costo) > 0 && (
-                          <span className="ot-fila__costo">{formatSoles(Number(inc.total_costo))}</span>
-                        )}
-                        <span className="ot-fila__fecha">{formatFechaPe(inc.fecha_falla)}</span>
-                      </div>
-                    </button>
+                    <tr key={inc.id}>
+                      <Celda mono>{formatFechaPe(inc.fecha_falla)}</Celda>
+                      <Celda><LicensePlate plate={inc.placa} size="sm" /></Celda>
+                      <Celda>{inc.conductor || '—'}</Celda>
+                      <Celda>{inc.marca || '—'}</Celda>
+                      <Celda>{inc.ubicacion || '—'}</Celda>
+                      <Celda>{inc.tipo_unidad || 'TRACTO'}</Celda>
+                      <Celda alinear="center"><Badge tone={inc.transbordo === 'SI' ? 'amber' : 'gray'}>{inc.transbordo === 'SI' ? 'SI' : 'NO'}</Badge></Celda>
+                      <Celda>{inc.motivo || '—'}</Celda>
+                      <Celda>{inc.falla || '—'}</Celda>
+                      <Celda><Badge tone={TONO_AREA[inc.area_responsable ?? ''] ?? 'accent'}>{inc.area_responsable || 'Mantenimiento'}</Badge></Celda>
+                      <Celda>{inc.responsable || '—'}</Celda>
+                      <Celda>
+                        {inc.costos_detalle?.length ? (
+                          <ul className="inc-desglose">
+                            {inc.costos_detalle.map((c, i) => (
+                              <li key={i}><span>{c.concepto || 'Gasto'}</span><span className="t-numeric">{formatSoles(Number(c.monto) || 0)}</span></li>
+                            ))}
+                          </ul>
+                        ) : <span className="inc-muted">—</span>}
+                      </Celda>
+                      <Celda mono alinear="right">{formatSoles(Number(inc.total_costo) || 0)}</Celda>
+                      <Celda alinear="center">
+                        <button type="button" className="inc-estado" title="Toca para cambiar el estado"
+                          aria-label={`Marcar como ${atendido ? 'pendiente' : 'atendida'}`} onClick={() => alternarSolucion(inc)}>
+                          <Badge tone={atendido ? 'green' : 'red'}>{atendido ? 'Atendido' : 'Pendiente'}</Badge>
+                        </button>
+                      </Celda>
+                      <Celda>{inc.observaciones || '—'}</Celda>
+                      <Celda alinear="center">
+                        <div className="inc-acciones-fila">
+                          {puedeEditar && (
+                            <button type="button" className="inc-icono" title="Editar" aria-label="Editar incidencia"
+                              onClick={() => { haptic('selection'); setFormulario({ incidencia: inc }); }}>
+                              <Pencil size={15} />
+                            </button>
+                          )}
+                          {puedeEliminar && (
+                            <button type="button" className="inc-icono inc-icono--peligro" title="Eliminar" aria-label="Eliminar incidencia"
+                              onClick={() => { haptic('selection'); setAEliminar(inc); }}>
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
+                      </Celda>
+                    </tr>
                   );
                 })}
-              </div>
+              </TablaRedimensionable>
+            </div>
+          )}
 
-              {totalPaginas > 1 && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--s-3)', padding: 'var(--s-2) 0' }}>
-                  <Button variant="secondary" size="sm" icon={<ArrowLeft size={14} />}
-                    disabled={pagina <= 1}
-                    onClick={() => setPagina(p => Math.max(1, p - 1))}>
-                    Anterior
-                  </Button>
-                  <span style={{ fontSize: '0.875rem', color: 'var(--label-2)' }}>
-                    {pagina} / {totalPaginas}
-                  </span>
-                  <Button variant="secondary" size="sm"
-                    disabled={pagina >= totalPaginas}
-                    onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}>
-                    Siguiente <ArrowRight size={14} />
-                  </Button>
-                </div>
-              )}
-            </>
+          {total > 0 && (
+            <div className="inc-paginacion">
+              <span>Mostrando {(pagina - 1) * LIMITE + 1} a {Math.min(pagina * LIMITE, total)} de {total} registros</span>
+              <div className="inc-paginacion__controles">
+                <Button size="sm" variant="secondary" iconOnly icon={<ChevronLeft size={16} />} aria-label="Página anterior"
+                  disabled={pagina <= 1} onClick={() => setFiltros(f => ({ ...f, page: f.page - 1 }))} />
+                <span className="t-numeric">{pagina} / {totalPaginas}</span>
+                <Button size="sm" variant="secondary" iconOnly icon={<ChevronRight size={16} />} aria-label="Página siguiente"
+                  disabled={pagina >= totalPaginas} onClick={() => setFiltros(f => ({ ...f, page: f.page + 1 }))} />
+              </div>
+            </div>
           )}
         </div>
       )}
 
-      <Sheet
-        open={mostrarForm}
-        onClose={() => setMostrarForm(false)}
-        title="Registrar incidencia en ruta"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setMostrarForm(false)}>Cancelar</Button>
-            <Button variant="primary" loading={enviando} onClick={() => document.getElementById('form-registrar-incidencia')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))}>
-              Registrar
-            </Button>
-          </>
-        }
-      >
-        <form id="form-registrar-incidencia" onSubmit={registrar} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-          {errorForm && <Notice tone="error">{errorForm}</Notice>}
+      <IncidenciaSheet
+        abierto={formulario !== null}
+        incidencia={formulario?.incidencia ?? null}
+        catalogo={catalogo.data}
+        onClose={() => setFormulario(null)}
+      />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div>
-              <label style={etiqueta}>Fecha y hora de la falla *</label>
-              <input type="datetime-local" value={form.fecha_falla} onChange={e => setForm(f => ({ ...f, fecha_falla: e.target.value }))} required style={campo} />
-            </div>
-            <div>
-              <label style={etiqueta}>Placa *</label>
-              <select value={form.placa} onChange={e => setForm(f => ({ ...f, placa: e.target.value }))} required style={campo}>
-                <option value="">Selecciona una placa</option>
-                {(catalogo.data?.data ?? []).map(p => <option key={p.placa} value={p.placa}>{p.placa}{p.marca ? ` · ${p.marca}` : ''}</option>)}
-              </select>
-            </div>
-          </div>
+      <ImportarIncidenciasSheet
+        open={importando}
+        onClose={() => setImportando(false)}
+        catalogo={catalogo.data}
+        alTerminar={refrescar}
+      />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div>
-              <label style={etiqueta}>Conductor</label>
-              <select value={form.conductor} onChange={e => setForm(f => ({ ...f, conductor: e.target.value }))} style={campo}>
-                <option value="">Sin asignar</option>
-                {(catalogo.data?.conductores ?? []).map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={etiqueta}>Ubicación</label>
-              <input value={form.ubicacion} onChange={e => setForm(f => ({ ...f, ubicacion: e.target.value }))} placeholder="Ruta, km o punto de referencia" style={campo} />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div>
-              <label style={etiqueta}>Motivo</label>
-              <input value={form.motivo} onChange={e => setForm(f => ({ ...f, motivo: e.target.value }))} placeholder="Ej: Parada por falla" style={campo} />
-            </div>
-            <div>
-              <label style={etiqueta}>Falla</label>
-              <input value={form.falla} onChange={e => setForm(f => ({ ...f, falla: e.target.value }))} placeholder="Ej: Fuga de aceite" style={campo} />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div>
-              <label style={etiqueta}>Área responsable</label>
-              <input value={form.area_responsable} onChange={e => setForm(f => ({ ...f, area_responsable: e.target.value }))} style={campo} />
-            </div>
-            <div>
-              <label style={etiqueta}>Estado</label>
-              <select value={form.solucionado} onChange={e => setForm(f => ({ ...f, solucionado: e.target.value }))} style={campo}>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Atendido">Atendido</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label style={etiqueta}>Observaciones</label>
-            <textarea value={form.observaciones} onChange={e => setForm(f => ({ ...f, observaciones: e.target.value }))} rows={3} style={{ ...campo, resize: 'vertical' }} />
-          </div>
-        </form>
-      </Sheet>
+      <ConfirmSheet
+        open={aEliminar !== null}
+        onClose={() => setAEliminar(null)}
+        onConfirm={confirmarEliminar}
+        title="Eliminar incidencia"
+        message={aEliminar ? `Se eliminará la incidencia de ${aEliminar.placa} del ${formatFechaPe(aEliminar.fecha_falla)}. No se puede deshacer.` : ''}
+        confirmLabel="Eliminar"
+        loading={eliminando}
+      />
     </Page>
   );
 }
 
-function IncidenciaDetalle({ inc, onVolver }: { inc: IncidenciaRuta; onVolver: () => void }) {
-  const atendido = inc.solucionado !== 'Pendiente';
-  const tono = atendido ? 'green' : 'red';
+function Accion({ tip, tono, icono, onClick }: { tip: string; tono?: 'verde' | 'azul' | 'violeta' | 'rojo' | 'ambar'; icono: ReactNode; onClick: () => void }) {
   return (
-    <div className="ot-ficha">
-      <div className="tarjeta__barra">
-        <button type="button" className="tarjeta__volver" onClick={onVolver}>
-          <span style={{ fontSize: '1.2rem' }}>‹</span> Incidencias
-        </button>
-      </div>
-      <div className="ot-ficha__hero">
-        <span className={`ot-estado ot-estado--${tono}`}>{atendido ? 'Atendido' : 'Pendiente'}</span>
-        <h2 className="ot-ficha__placa">{inc.placa ?? '—'}</h2>
-        <span className="ot-ficha__id">{formatFechaPe(inc.fecha_falla)}</span>
-      </div>
-      <div>
-        <p className="tarjeta__grupo-titulo">Incidencia</p>
-        <div className="tarjeta__lista">
-          {inc.conductor && <div className="dato"><span className="dato__label">Conductor</span><span className="dato__valor">{inc.conductor}</span></div>}
-          {inc.ubicacion && <div className="dato"><span className="dato__label">Ubicación</span><span className="dato__valor">{inc.ubicacion}</span></div>}
-          {inc.motivo && <div className="dato"><span className="dato__label">Motivo</span><span className="dato__valor">{inc.motivo}</span></div>}
-          {inc.falla && <div className="dato"><span className="dato__label">Falla</span><span className="dato__valor">{inc.falla}</span></div>}
-          {inc.area_responsable && <div className="dato"><span className="dato__label">Área responsable</span><span className="dato__valor">{inc.area_responsable}</span></div>}
-          {inc.total_costo != null && Number(inc.total_costo) > 0 && (
-            <div className="dato"><span className="dato__label">Costo total</span><span className="dato__valor" style={{ fontWeight: 700 }}>{formatSoles(Number(inc.total_costo))}</span></div>
-          )}
-        </div>
-      </div>
-    </div>
+    <button type="button" className={`btn btn--secondary btn--icon acciones-iconos__boton${tono ? ` acciones-iconos__boton--${tono}` : ''}`}
+      data-tip={tip} aria-label={tip} onClick={onClick}>
+      {icono}
+    </button>
+  );
+}
+
+function KpiBoton({ tono, etiqueta, valor, activo, onClick }: { tono: string; etiqueta: string; valor: string; activo: boolean; onClick: () => void }) {
+  return (
+    <button type="button" className={`inc-kpi inc-kpi--${tono} inc-kpi--boton${activo ? ' is-activo' : ''}`} aria-pressed={activo} onClick={onClick}>
+      <span className="inc-kpi__valor t-numeric">{valor}</span>
+      <span className="inc-kpi__etiqueta">{etiqueta}</span>
+    </button>
   );
 }
