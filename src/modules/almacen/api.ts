@@ -152,6 +152,9 @@ export interface EntradaInv {
   cuenta_bancaria_empresa?: string | null;
   estado_factura?: string | null;
   numero_operacion?: string | null;
+  /** Quién confirmó el pago y cuándo (los llena Tesorería o Almacén al pagar) */
+  pagado_por?: string | null;
+  fecha_pago?: string | null;
   url_cotizacion?: string | null;
   url_cotizacion_presigned?: string | null;
   url_factura?: string | null;
@@ -242,6 +245,15 @@ export async function eliminarEntrada(id: string | number) {
 
 export async function anularEntrada(id: string | number, motivo: string) {
   return api(`/almacen/entradas/${encodeURIComponent(String(id))}/anular`, { method: 'PUT', body: { motivo } });
+}
+
+/**
+ * Confirma el pago de una orden aprobada: pasa a Procesado, registra el egreso en Caja y sube la constancia.
+ * Usa el mismo endpoint que Tesorería (routes/tesoreria.js); el servidor rechaza órdenes que no estén aprobadas.
+ * FormData: numero_constancia, cuenta_origen, moneda (PEN|USD), monto y voucher (opcional).
+ */
+export async function pagarEntrada(id: string | number, datos: FormData) {
+  return api(`/tesoreria/pago-requerimientos/${encodeURIComponent(String(id))}/procesar`, { method: 'POST', body: datos });
 }
 
 /** Próximo correlativo de la orden (ENT-2026-00120). Se pide cada vez que se abre el formulario. */

@@ -664,7 +664,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
 
           <Seccion tono="rosa" icono={<CreditCard size={15} />} titulo="Condiciones de pago y cotización">
             <div className="oc-grid">
-              <Field label="Condición de pago *">
+              <Field label="Condición de pago *" hint={condicion === 'A crédito' ? undefined : 'Al contado: la orden se paga al aprobarla (Confirmar pago) y se recepciona después.'}>
                 {p => (
                   <SelectInput {...p} value={condicion} onChange={ev => { setCondicion(ev.target.value); if (ev.target.value !== 'A crédito') setDiasCredito('0'); else if (!num(diasCredito)) setDiasCredito('30'); }}>
                     {CONDICIONES_PAGO.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}

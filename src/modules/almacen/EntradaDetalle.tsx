@@ -3,7 +3,8 @@ import { Ban, Check, CircleAlert, CreditCard, Eye, FileDown, Package, Paperclip,
 import { formatFechaPe, formatMoneda } from '../../core/lib/format';
 import { type EntradaInv } from './api';
 import {
-  codigoLimpio, descripcionArticulo, desgloseIgv, etiquetaEstado, esServicio, naturalezaDeSubMotivo, numeroALetras, type TonoEstado,
+  codigoLimpio, descripcionArticulo, desgloseIgv, esCredito, estadoPagable, etiquetaEstado, esServicio, naturalezaDeSubMotivo,
+  numeroALetras, type TonoEstado,
 } from './entradaReglas';
 import './entradas.css';
 
@@ -12,6 +13,8 @@ interface Props {
   onVolver: () => void;
   onEditar?: () => void;
   onAdjuntos: () => void;
+  /** Confirma el pago (Tesorería). Solo se ofrece si la orden está aprobada y el usuario puede pagar. */
+  onConfirmarPago?: () => void;
   onAnular?: () => void;
   onEliminar?: () => void;
   onPdf: () => void;
@@ -37,7 +40,7 @@ function notaGerencia(texto: string): string {
 const fechaCorta = (s: string | null | undefined) => (s ? formatFechaPe(String(s).split('T')[0]) : '—');
 
 export function EntradaDetalle({
-  entrada: e, onEditar, onAdjuntos, onAnular, onEliminar, onPdf, onVistaPrevia, generandoPdf, unidadDe,
+  entrada: e, onEditar, onAdjuntos, onConfirmarPago, onAnular, onEliminar, onPdf, onVistaPrevia, generandoPdf, unidadDe,
 }: Props) {
   const items = e.items ?? [];
   const moneda = e.moneda === 'USD' ? 'USD' : 'PEN';
@@ -63,6 +66,12 @@ export function EntradaDetalle({
     : (observado || anulado ? (e.aprobador_nombre || e.aprobado_por || '') : '—');
   const etiqueta = etiquetaEstado(e.estado);
 
+  // Al contado: la orden se paga antes de recepcionar. A crédito: se recepciona con V°B° y el pago va después.
+  const contado = !esCredito(e.condicion_pago);
+  const diasCredito = Number(e.dias_credito || e.dias_pagar) || 0;
+  // Almacén confirma solo compras al contado; las compras a crédito las paga Tesorería
+  const pagable = estadoPagable(e.estado) && contado;
+
   // Banner de estado (texto como en el clásico)
   let banner: { tono: string; titulo: string; texto: string };
   if (anulado) {
@@ -78,7 +87,10 @@ export function EntradaDetalle({
   } else if (procesado) {
     banner = { tono: 'oc-banner--azul', titulo: 'PROCESADA', texto: 'Pago registrado por Tesorería · En camino a almacén.' };
   } else if (aprobado) {
-    banner = { tono: 'oc-banner--verde', titulo: 'APROBADA', texto: `V°B° presupuestario concedido por ${aprobador}.` };
+    const vb = `V°B° presupuestario concedido por ${aprobador}.`;
+    banner = contado
+      ? { tono: 'oc-banner--ambar', titulo: 'APROBADA · PAGO PENDIENTE', texto: `${vb} Al contado: confirma el pago para que la orden pase a recepción.` }
+      : { tono: 'oc-banner--verde', titulo: 'APROBADA', texto: `${vb} A crédito${diasCredito ? ` a ${diasCredito} días` : ''}: ya puede recepcionarse.` };
   } else {
     banner = { tono: 'oc-banner--gris', titulo: 'REGISTRADA', texto: 'En espera de visto bueno presupuestario por Gerencia.' };
   }
@@ -91,8 +103,8 @@ export function EntradaDetalle({
   const pasos: Array<{ titulo: string; texto: string; estado: EstadoPaso; icono: ReactNode }> = [
     { titulo: 'Registro', texto: fechaCorta(e.fecha || e.created_at), estado: 'hecho', icono: <Check size={16} strokeWidth={2.4} /> },
     { titulo: 'Aprobación', texto: aprobador || '—', estado: estadoAprob, icono: observado ? <CircleAlert size={16} /> : anulado ? <X size={16} /> : <Shield size={16} /> },
-    { titulo: 'Pago', texto: pagoOk ? 'Pago registrado' : 'Por liquidar', estado: estadoPago, icono: <CreditCard size={16} /> },
-    { titulo: 'Recepción', texto: recepCompleta ? '100 % recepcionado' : recepParcial ? `${pct} % recepcionado` : '0 % recepcionado', estado: estadoRecep, icono: <Package size={16} /> },
+    { titulo: 'Pago', texto: pagoOk ? 'Pago registrado' : (contado && aprobadoReal ? 'Al contado · pendiente' : 'Por liquidar'), estado: estadoPago, icono: <CreditCard size={16} /> },
+    { titulo: 'Recepción', texto: recepCompleta ? '100 % recepcionado' : recepParcial ? `${pct} % recepcionado` : (contado && aprobado ? 'Tras el pago' : '0 % recepcionado'), estado: estadoRecep, icono: <Package size={16} /> },
   ];
   const avance = pasos.reduce((s, p) => s + (p.estado === 'hecho' ? 1 : p.estado === 'actual' ? 0.5 : 0), 0);
   const fraccionLinea = Math.min(1, Math.max(0, avance / (pasos.length - 1)));
@@ -124,6 +136,7 @@ export function EntradaDetalle({
       <div className="oc-acciones">
         {onEditar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Editar orden" aria-label="Editar orden" onClick={onEditar}><Pencil size={17} /></button>}
         <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Adjuntos y sustentos" aria-label="Adjuntos y sustentos" onClick={onAdjuntos}><Paperclip size={17} /></button>
+        {onConfirmarPago && pagable && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Confirmar pago" aria-label="Confirmar pago" onClick={onConfirmarPago}><CreditCard size={17} /></button>}
         <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Descargar PDF" aria-label="Descargar PDF" disabled={generandoPdf} onClick={onPdf}><FileDown size={17} /></button>
         <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Vista previa" aria-label="Vista previa" onClick={onVistaPrevia}><Eye size={17} /></button>
         {onAnular && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--peligro" data-tip="Anular orden" aria-label="Anular orden" onClick={onAnular}><Ban size={17} /></button>}
@@ -167,6 +180,10 @@ export function EntradaDetalle({
         </Grupo>
         <Grupo titulo="Documentos y pago">
           <Dato etiqueta="Condición de pago" valor={pago} />
+          {e.numero_operacion && <Dato etiqueta="Constancia / operación" valor={e.numero_operacion} />}
+          {pagoOk && e.pagado_por && (
+            <Dato etiqueta="Pago confirmado por" valor={`${e.pagado_por}${e.fecha_pago ? ` · ${formatFechaPe(String(e.fecha_pago).split(/[T ]/)[0])}` : ''}`} />
+          )}
         </Grupo>
         <Grupo titulo="Motivo" ancho>
           <Dato etiqueta="Motivo de compra / ingreso" valor={e.motivo_entrada || '—'} />

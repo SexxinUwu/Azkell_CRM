@@ -106,6 +106,22 @@ export function AdjuntosEntradaSheet({ open, entrada, onClose, onGuardado }: Pro
 
   const bloque = (tipo: TipoAdjunto, extra?: ReactNode) => {
     const url = urlDe(tipo);
+    // El voucher lo registra el pago oficial (Confirmar pago): así queda el egreso en Caja y Bancos
+    if (tipo === 'voucher') {
+      return (
+        <section className="oc-adjunto" key={tipo}>
+          <span className="oc-adjunto__titulo">{ETIQUETAS[tipo]}</span>
+          {url ? (
+            <a href={url} target="_blank" rel="noreferrer" className="oc-doc oc-doc--ok">Ver voucher actual</a>
+          ) : (
+            <span className="oc-doc oc-doc--falta">Sin voucher</span>
+          )}
+          <p className="t-footnote c-secondary" style={{ margin: 0 }}>
+            El voucher se registra con «Confirmar pago», que también registra el egreso en Caja y Bancos.
+          </p>
+        </section>
+      );
+    }
     return (
       <section className="oc-adjunto" key={tipo}>
         <span className="oc-adjunto__titulo">{ETIQUETAS[tipo]}</span>
@@ -143,7 +159,7 @@ export function AdjuntosEntradaSheet({ open, entrada, onClose, onGuardado }: Pro
       <Sheet open={open} onClose={onClose} title={`Adjuntos · ${codigoLimpio(entrada.id)}`} ancho footer={pie}>
         <div className="oc-form">
           <p className="t-footnote c-secondary" style={{ margin: 0 }}>
-            {entrada.proveedor_nombre ?? 'Sin proveedor'} · Sube la cotización, la factura o el voucher de pago. Un voucher pasa la orden a «Procesada».
+            {entrada.proveedor_nombre ?? 'Sin proveedor'} · Sube la cotización y la factura. El voucher de pago se registra con «Confirmar pago».
           </p>
           <div className="oc-adjuntos">
             {bloque('cotizacion')}

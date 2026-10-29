@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, ClipboardList, Coins, Download, Eye, FileSpreadsheet, FileDown, Package, PackagePlus, Pencil, Plus, Paperclip, RefreshCw, SearchX, Trash2, Upload } from 'lucide-react';
+import { CircleCheck, ClipboardList, Coins, CreditCard, Download, Eye, FileSpreadsheet, FileDown, Package, PackagePlus, Pencil, Plus, Paperclip, RefreshCw, SearchX, Trash2, Upload } from 'lucide-react';
 import { exportarConsolidadoOC, exportarDetalleArticulosOC, descargarPlantillaEntradas } from './exportarEntradas';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -24,11 +24,12 @@ import {
 } from './api';
 import {
   categoriaEstado, codigoLimpio, descripcionArticulo, etiquetaEstado, esServicio, filtrarOrdenes, hoyLima, itemsVisibles, kpisOrdenes,
-  cabeceraCoincide, estadoEditable, type FiltroEstado, type TonoEstado,
+  cabeceraCoincide, estadoEditable, estadoPagable, esCredito, type FiltroEstado, type TonoEstado,
 } from './entradaReglas';
 import { EntradaFormulario } from './EntradaFormulario';
 import { EntradaDetalle } from './EntradaDetalle';
 import { AdjuntosEntradaSheet } from './AdjuntosEntradaSheet';
+import { ConfirmarPagoSheet } from './ConfirmarPagoSheet';
 import { ImportarEntradasSheet } from './ImportarEntradasSheet';
 import { pdfEntrada } from './entradaPdf';
 import './entradas.css';
@@ -98,12 +99,14 @@ interface AccionesFila {
   onPdf: (o: EntradaInv) => void;
   onEditar?: (o: EntradaInv) => void;
   onEliminar?: (o: EntradaInv) => void;
+  onPagar?: (o: EntradaInv) => void;
 }
 
 function menuDe(o: EntradaInv, a: AccionesFila): Array<OpcionOtros | false | null | undefined> {
   return [
     { label: 'Ver detalle', icon: <Eye size={17} />, onSelect: () => a.onVer(o) },
     { label: 'Adjuntos y sustentos', icon: <Paperclip size={17} />, onSelect: () => a.onAdjuntos(o) },
+    a.onPagar && estadoPagable(o.estado) && !esCredito(o.condicion_pago) && { label: 'Confirmar pago', icon: <CreditCard size={17} />, onSelect: () => a.onPagar?.(o) },
     { label: 'Imprimir PDF', icon: <FileDown size={17} />, onSelect: () => a.onPdf(o) },
     a.onEditar && estadoEditable(o.estado) && { label: 'Editar orden', icon: <Pencil size={17} />, onSelect: () => a.onEditar?.(o) },
     a.onEliminar && estadoEditable(o.estado) && { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: () => a.onEliminar?.(o) },
@@ -211,10 +214,14 @@ export function EntradasPage() {
   const [adjuntosId, setAdjuntosId] = useState<string | null>(null);
   const [importando, setImportando] = useState(false);
   const [generandoPdf, setGenerandoPdf] = useState(false);
+  // Hoja de confirmar pago: la key (sesión) la reinicia en cada apertura
+  const [pagar, setPagar] = useState<{ entrada: EntradaInv | null; abierto: boolean; sesion: number }>({ entrada: null, abierto: false, sesion: 0 });
 
   const puedeCrear = can('ent_inv.crear');
   const puedeEditar = can('ent_inv.editar');
   const puedeEliminar = can('ent_inv.eliminar');
+  // Pagar es un acto de Tesorería: mismos permisos que Pago de requerimientos
+  const puedePagar = can('tesoreria_caja.ver', 'tesoreria_pagos.ver');
 
   useEffect(() => { setPagina(1); }, [busqueda, desde, hasta, estado]);
 
@@ -266,6 +273,7 @@ export function EntradasPage() {
     onPdf: o => { void verPdf(o, false); },
     onEditar: puedeEditar ? o => setFormulario({ entrada: o }) : undefined,
     onEliminar: puedeEliminar ? o => (estadoEditable(o.estado) ? setPorEliminar(o) : undefined) : undefined,
+    onPagar: puedePagar ? o => setPagar(p => ({ entrada: o, abierto: true, sesion: p.sesion + 1 })) : undefined,
   };
 
   /** PDF de la orden: se descarga o se abre como vista previa */
@@ -460,6 +468,7 @@ export function EntradasPage() {
           onVolver={() => setSeleccionadaId(null)}
           onEditar={puedeEditar && estadoEditable(seleccionada.estado) ? () => setFormulario({ entrada: seleccionada }) : undefined}
           onAdjuntos={() => setAdjuntosId(seleccionada.id)}
+          onConfirmarPago={puedePagar ? () => setPagar(p => ({ entrada: seleccionada, abierto: true, sesion: p.sesion + 1 })) : undefined}
           onAnular={puedeEditar && !String(seleccionada.estado ?? '').toLowerCase().includes('anul') ? () => setAnulando(seleccionada) : undefined}
           onEliminar={puedeEliminar && estadoEditable(seleccionada.estado) ? () => setPorEliminar(seleccionada) : undefined}
           onPdf={() => { void verPdf(seleccionada, false); }}
@@ -475,6 +484,14 @@ export function EntradasPage() {
         entrada={adjuntos}
         onClose={() => setAdjuntosId(null)}
         onGuardado={() => setAdjuntosId(null)}
+      />
+
+      <ConfirmarPagoSheet
+        key={pagar.sesion}
+        entrada={pagar.entrada}
+        open={pagar.abierto}
+        onClose={() => setPagar(p => ({ ...p, abierto: false }))}
+        onPagado={() => setPagar(p => ({ ...p, abierto: false }))}
       />
 
       <ImportarEntradasSheet open={importando} onClose={() => setImportando(false)} inventario={inventario} />

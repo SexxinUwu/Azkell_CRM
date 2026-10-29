@@ -144,6 +144,26 @@ export function estadoEditable(estado: string | null | undefined): boolean {
   return ['registrado', 'registrada', 'pendiente', 'observado', 'observada'].includes(st) || !estado;
 }
 
+/** Se puede confirmar el pago solo si la orden está aprobada o autorizada (mismo criterio que el servidor) */
+export function estadoPagable(estado: string | null | undefined): boolean {
+  return ['aprobado', 'autorizado'].includes(String(estado ?? '').toLowerCase().trim());
+}
+
+/** Crédito tiene plazo; cualquier otra condición (o ninguna) es al contado, como el clásico */
+export const esCredito = (condicion: string | null | undefined) => /cr[eé]dito/i.test(String(condicion ?? ''));
+
+/** Moneda en dólares (de la orden o de una cuenta bancaria) */
+export function esDolares(moneda: string | null | undefined): boolean {
+  const m = String(moneda ?? '').toUpperCase();
+  return m.includes('DOL') || m.includes('DÓL') || m === 'USD' || m === 'US$';
+}
+
+/** Monto que sale de caja: el total en soles; si la cuenta es en US$, se divide entre el T/C (igual que Tesorería) */
+export function montoPago(totalPen: number, tipoCambio: number, enDolares: boolean): number {
+  if (!enDolares) return Math.round(totalPen * 100) / 100;
+  return tipoCambio > 0 ? Math.round((totalPen / tipoCambio) * 100) / 100 : 0;
+}
+
 export const esServicio = (tipoOrden: string | null | undefined) =>
   String(tipoOrden ?? '').trim().toLowerCase() === 'orden de servicio';
 
