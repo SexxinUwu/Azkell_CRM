@@ -1,13 +1,12 @@
 import '../mantenimiento/mant.css';
 import './gerencia.css';
-import { useMemo, useState, type CSSProperties } from 'react';
-import { ArrowUpRight, CheckCircle, ClipboardCheck, SearchX, XCircle } from 'lucide-react';
+import './gerencia-oc.css';
+import { useMemo, useState } from 'react';
+import { ArrowUpRight, Building2, CalendarDays, CheckCircle, ClipboardCheck, Eye, FileDown, LayoutGrid, List, RefreshCw, SearchX, ShieldCheck, User, XCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, SearchField } from '../../core/ui/Field';
+import { EmptyState, Notice, Page } from '../../core/ui/Display';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { Sheet } from '../../core/ui/Sheet';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { abrirClasico } from '../../core/layout/navigation';
@@ -15,31 +14,21 @@ import { formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format'
 import { haptic } from '../../core/lib/haptics';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { CLAVE_OC, categoriaOc, decidirOrden, useOrdenesCompra, type CategoriaOc, type DecisionOc, type OrdenCompra } from './api';
+import { ConfirmarDecisionSheet } from './ConfirmarDecisionSheet';
 import { DetalleOcSheet, type AccionOc } from './DetalleOcSheet';
 import { chipEstado, nombreLimpio, prioridadUrgente } from './presentacion';
 
-// Celular: menos de 768 px (guía de aprobaciones). Ahí la lista son tarjetas, no tabla.
+// Celular: menos de 768 px. Ahí la lista son tarjetas, no tabla.
 const QUERY_MOVIL = '(max-width: 767px)';
 
-type Filtro = 'pendientes' | 'aprobadas' | 'observadas' | 'rechazadas' | 'todas';
+type Pestana = 'todas' | 'pendientes' | 'aprobadas' | 'rechazadas';
+type Vista = 'tarjetas' | 'tabla';
 
-const FILTRO_CATEGORIA: Record<Exclude<Filtro, 'todas'>, CategoriaOc> = {
-  pendientes: 'pendiente',
-  aprobadas: 'aprobada',
-  observadas: 'observada',
-  rechazadas: 'rechazada',
-};
-
-const TITULO_ACCION: Record<AccionOc, string> = {
-  aprobar: 'Aprobar orden de compra',
-  rechazar: 'Rechazar orden de compra',
-  observar: 'Observar orden de compra',
-};
-
-const ETIQUETA_BOTON: Record<AccionOc, string> = {
-  aprobar: 'Aprobar orden',
-  rechazar: 'Rechazar orden',
-  observar: 'Enviar observación',
+/** Pestañas como en el clásico: "Pendientes" agrupa pendientes y observadas */
+const CATEGORIAS_PESTANA: Record<Exclude<Pestana, 'todas'>, CategoriaOc[]> = {
+  pendientes: ['pendiente', 'observada'],
+  aprobadas: ['aprobada'],
+  rechazadas: ['rechazada'],
 };
 
 const DECISION: Record<AccionOc, DecisionOc> = {
@@ -56,6 +45,12 @@ const PASADO: Record<AccionOc, string> = {
 
 interface Acumulado { n: number; soles: number }
 
+/** Monto en soles: la API lo manda como número (ya normalizado), pero se protege contra vacíos */
+const soles = (v: unknown) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
 function resumir(lista: OrdenCompra[]): Record<CategoriaOc | 'todas', Acumulado> {
   const r: Record<CategoriaOc | 'todas', Acumulado> = {
     pendiente: { n: 0, soles: 0 }, observada: { n: 0, soles: 0 }, aprobada: { n: 0, soles: 0 },
@@ -65,7 +60,7 @@ function resumir(lista: OrdenCompra[]): Record<CategoriaOc | 'todas', Acumulado>
     const c = categoriaOc(o.estado);
     for (const k of [c, 'todas'] as const) {
       r[k].n += 1;
-      r[k].soles += o.total_pen;
+      r[k].soles += soles(o.total_pen);
     }
   }
   return r;
@@ -76,6 +71,90 @@ const esAccionable = (o: OrdenCompra) => {
   return c === 'pendiente' || c === 'observada';
 };
 
+const hoyLima = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+
+/** Mismo día del mes anterior (29/10 → 29/09); si el mes anterior es más corto, su último día */
+function mesAtras(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const anio = m === 1 ? y - 1 : y;
+  const mes = m === 1 ? 12 : m - 1;
+  const ultimo = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
+  return `${anio}-${String(mes).padStart(2, '0')}-${String(Math.min(d, ultimo)).padStart(2, '0')}`;
+}
+
+const fechaDe = (o: OrdenCompra) => String(o.fecha ?? '').slice(0, 10);
+
+/** Tarjeta de una orden, con el mismo orden que el clásico: código y prioridad, importe, datos de la orden, proveedor, solicitante, motivo y acciones */
+function TarjetaOrden({ o, puedeAccionar, onDetalle, onAccion }: {
+  o: OrdenCompra;
+  puedeAccionar: boolean;
+  onDetalle: () => void;
+  onAccion: (tipo: AccionOc) => void;
+}) {
+  const cat = categoriaOc(o.estado);
+  const urgente = prioridadUrgente(o.prioridad);
+  const accionable = esAccionable(o) && puedeAccionar;
+  const solicitante = nombreLimpio(o.solicitante || o.autoriza || o.creador_nombre || o.creado_por);
+  return (
+    <article className={`ga-card ga-card--${cat}`}>
+      <div>
+        <div className="ga-card__cab">
+          <div className="ga-card__izq">
+            <button type="button" className="ga-codigo" onClick={onDetalle} title="Ver detalle">
+              <Eye size={12} aria-hidden style={{ verticalAlign: '-1px', marginRight: 4 }} />{o.id}
+            </button>
+            <span className={`ga-prio ${urgente ? 'ga-prio--urgente' : ''}`}>{urgente ? 'URGENTE' : 'NORMAL'}</span>
+          </div>
+          <div className="ga-importe">
+            <div className="ga-importe__etiqueta">IMPORTE</div>
+            <div className="ga-importe__valor">{formatMoneda(o.total_oc, o.moneda)}</div>
+          </div>
+        </div>
+
+        <div className="ga-meta" style={{ marginTop: 'var(--s-3)' }}>
+          <span><CalendarDays size={12} aria-hidden style={{ verticalAlign: '-1px' }} /> {formatFechaPe(o.fecha)}</span>
+          <span><User size={12} aria-hidden style={{ verticalAlign: '-1px' }} /> <b>{nombreLimpio(o.creador_nombre || o.creado_por)}</b></span>
+          <span className="ga-cc"><Building2 size={11} aria-hidden style={{ verticalAlign: '-1px' }} /> {o.centro_costo || 'CC-100'}</span>
+          <span>Sede Principal</span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)', marginTop: 'var(--s-3)' }}>
+          <div className="ga-bloque">
+            <span className="ga-bloque__etiqueta">Proveedor</span>
+            <span className="ga-bloque__valor" title={o.proveedor_nombre || ''}>{o.proveedor_nombre || 'Sin proveedor'}</span>
+            {o.proveedor_ruc && o.proveedor_ruc !== '-' && <span className="ga-bloque__sub">RUC: {o.proveedor_ruc}</span>}
+          </div>
+          <div className="ga-bloque">
+            <span className="ga-bloque__etiqueta">Solicitante / destino</span>
+            <span className="ga-bloque__valor">{solicitante}</span>
+            <span className="ga-bloque__sub">{o.placa ? `Placa ${o.placa}` : 'Sede Principal / Almacén'}</span>
+          </div>
+          <div className="ga-motivo">
+            <span className="ga-motivo__etiqueta">Motivo</span>
+            <div className="ga-motivo__texto" title={o.motivo_entrada || o.observaciones || ''}>{o.motivo_entrada || o.observaciones || 'Sin motivo especificado'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="ga-card__pie">
+        <button type="button" className="ga-btn ga-btn--detalle" onClick={onDetalle}>
+          <Eye size={14} aria-hidden /> Detalle
+        </button>
+        {accionable ? (
+          <div className="ga-card__acciones">
+            <button type="button" className="ga-btn ga-btn--aprobar" onClick={() => onAccion('aprobar')}>
+              <CheckCircle size={14} aria-hidden /> AUTORIZAR
+            </button>
+            <button type="button" className="ga-btn ga-btn--rechazar" onClick={() => onAccion('rechazar')}>
+              <XCircle size={14} aria-hidden /> DENEGAR
+            </button>
+          </div>
+        ) : chipEstado(o.estado)}
+      </div>
+    </article>
+  );
+}
+
 export function AprobacionesOCPage() {
   const qc = useQueryClient();
   const { can } = useAuth();
@@ -83,8 +162,11 @@ export function AprobacionesOCPage() {
   const puedeAccionar = can('gerencia_aprobaciones_oc.editar');
   const movil = useMediaQuery(QUERY_MOVIL);
 
+  const [desde, setDesde] = useState(() => mesAtras(hoyLima()));
+  const [hasta, setHasta] = useState(() => hoyLima());
   const [busqueda, setBusqueda] = useState('');
-  const [filtro, setFiltro] = useState<Filtro>('pendientes');
+  const [pestana, setPestana] = useState<Pestana>('pendientes');
+  const [vista, setVista] = useState<Vista>('tarjetas');
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [accion, setAccion] = useState<{ tipo: AccionOc; orden: OrdenCompra } | null>(null);
   const [comentario, setComentario] = useState('');
@@ -96,28 +178,49 @@ export function AprobacionesOCPage() {
 
   const { data, isLoading, isError, error } = useOrdenesCompra();
   const lista = useMemo(() => data ?? [], [data]);
-  const resumen = useMemo(() => resumir(lista), [lista]);
+
+  // Órdenes dentro del rango de fechas: los indicadores y las pestañas salen de aquí
+  const enRango = useMemo(() => lista.filter(o => {
+    const f = fechaDe(o);
+    return (!desde || f >= desde) && (!hasta || f <= hasta);
+  }), [lista, desde, hasta]);
+
+  const resumen = useMemo(() => resumir(enRango), [enRango]);
   const detalle = detalleId ? lista.find(o => o.id === detalleId) ?? null : null;
 
-  // Con texto escrito, la búsqueda recorre todas las órdenes (como antes); sin texto, aplica el filtro de los KPI.
   const visibles = useMemo(() => {
     const q = busqueda.trim().toUpperCase();
+    let base = enRango;
+    if (pestana !== 'todas') {
+      const cats = CATEGORIAS_PESTANA[pestana];
+      base = base.filter(o => cats.includes(categoriaOc(o.estado)));
+    }
     if (q) {
-      return lista.filter(o =>
+      base = base.filter(o =>
         [o.id, o.proveedor_nombre, o.proveedor_ruc, o.solicitante, o.placa, o.motivo_entrada, o.centro_costo]
           .some(v => String(v ?? '').toUpperCase().includes(q)),
       );
     }
-    if (filtro === 'todas') return lista;
-    return lista.filter(o => categoriaOc(o.estado) === FILTRO_CATEGORIA[filtro]);
-  }, [lista, busqueda, filtro]);
+    return base;
+  }, [enRango, pestana, busqueda]);
 
-  const kpis: Array<{ key: Filtro; etiqueta: string; acum: Acumulado; color: string }> = [
-    { key: 'pendientes', etiqueta: 'Pendientes', acum: resumen.pendiente, color: 'var(--amber-ink)' },
-    { key: 'aprobadas', etiqueta: 'Aprobadas', acum: resumen.aprobada, color: 'var(--green-ink)' },
-    { key: 'observadas', etiqueta: 'Observadas', acum: resumen.observada, color: 'var(--blue-ink)' },
-    { key: 'rechazadas', etiqueta: 'Rechazadas', acum: resumen.rechazada, color: 'var(--red-ink)' },
-    { key: 'todas', etiqueta: 'Total', acum: resumen.todas, color: 'var(--label-1)' },
+  const contador = (p: Pestana) => {
+    if (p === 'todas') return enRango.length;
+    return CATEGORIAS_PESTANA[p].reduce((s, c) => s + resumen[c].n, 0);
+  };
+
+  const indicadores: Array<{ tono: string; etiqueta: string; pill: string; acum: Acumulado; pie: string }> = [
+    { tono: 'ambar', etiqueta: 'Pendientes', pill: 'Por revisar', acum: resumen.pendiente, pie: 'Importe acumulado' },
+    { tono: 'verde', etiqueta: 'Aprobadas', pill: 'Autorizadas', acum: resumen.aprobada, pie: 'Monto autorizado' },
+    { tono: 'indigo', etiqueta: 'Observadas', pill: 'Esperando datos', acum: resumen.observada, pie: 'En evaluación' },
+    { tono: 'rojo', etiqueta: 'Rechazadas', pill: 'Desestimadas', acum: resumen.rechazada, pie: 'Ahorro / no ejecutado' },
+  ];
+
+  const pestanas: Array<{ key: Pestana; etiqueta: string }> = [
+    { key: 'todas', etiqueta: 'Todos' },
+    { key: 'pendientes', etiqueta: 'Pendientes / Observadas' },
+    { key: 'aprobadas', etiqueta: 'Aprobadas' },
+    { key: 'rechazadas', etiqueta: 'Rechazadas' },
   ];
 
   function abrirAccion(tipo: AccionOc, orden: OrdenCompra) {
@@ -170,15 +273,22 @@ export function AprobacionesOCPage() {
     }
   }
 
+  function limpiarFiltros() {
+    setDesde(mesAtras(hoyLima()));
+    setHasta(hoyLima());
+    setBusqueda('');
+    setPestana('todas');
+  }
+
   function accionesCelda(o: OrdenCompra) {
     if (esAccionable(o) && puedeAccionar) {
       return (
         <div className="gerencia-acciones-fila">
           <button type="button" className="gerencia-accion gerencia-accion--aprobar pressable" onClick={() => abrirAccion('aprobar', o)}>
-            <CheckCircle size={14} aria-hidden /> Aprobar
+            <CheckCircle size={14} aria-hidden /> Autorizar
           </button>
           <button type="button" className="gerencia-accion gerencia-accion--rechazar pressable" onClick={() => abrirAccion('rechazar', o)}>
-            <XCircle size={14} aria-hidden /> Rechazar
+            <XCircle size={14} aria-hidden /> Denegar
           </button>
         </div>
       );
@@ -187,131 +297,154 @@ export function AprobacionesOCPage() {
   }
 
   const pendientes = resumen.pendiente;
-  const titulo = accion ? TITULO_ACCION[accion.tipo] : '';
+  const hayFiltros = desde !== mesAtras(hoyLima()) || hasta !== hoyLima() || !!busqueda || pestana !== 'todas';
 
   return (
     <Page>
-      <PageHeader
-        eyebrow="Gerencia"
-        title="Aprobación de compras"
-        subtitle={pendientes.n > 0 ? `${pendientes.n} pendientes · ${formatSoles(pendientes.soles)}` : 'Sin pendientes'}
-        actions={
-          <MenuOtros opciones={[
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('gerencia/aprobaciones-oc') },
-          ]} />
-        }
-      />
-
-      {msg && (
-        <div style={{ cursor: 'pointer' }} onClick={() => setMsg(null)}>
-          <Notice tone={msg.tipo === 'ok' ? 'success' : 'error'}>{msg.texto}</Notice>
-        </div>
-      )}
-      {isError && <Notice tone="error">{errorMessage(error)}</Notice>}
-
-      {isLoading ? <PageLoader /> : lista.length === 0 ? (
-        <EmptyState icon={<ClipboardCheck size={28} />} title="Sin órdenes de compra">
-          No hay registros disponibles.
-        </EmptyState>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          {/* KPI bento: tocarlos filtra la lista */}
-          <div className="gerencia-kpis">
-            {kpis.map(k => (
-              <button
-                key={k.key}
-                type="button"
-                className="gerencia-kpi pressable"
-                aria-pressed={filtro === k.key}
-                style={{ '--kpi': k.color } as CSSProperties}
-                onClick={() => { haptic('selection'); setFiltro(k.key); }}
-              >
-                <span className="gerencia-kpi__valor">{k.acum.n}</span>
-                <span className="gerencia-kpi__etiqueta">{k.etiqueta}</span>
-                <span className="gerencia-kpi__monto">{formatSoles(k.acum.soles)}</span>
-              </button>
-            ))}
+      <div className="ga-page">
+        {/* Cabecera */}
+        <header className="ga-cab">
+          <div>
+            <span className="ga-pill"><ShieldCheck size={13} aria-hidden /> Dirección ejecutiva</span>
+            <h1 className="ga-titulo">Aprobación de Órdenes de Compra</h1>
+            <p className="ga-sub">
+              Bandeja gerencial para autorización, validación de presupuestos y toma de decisiones en compras y adquisiciones
+              {pendientes.n > 0 ? ` · ${pendientes.n} pendientes` : ''}
+            </p>
           </div>
+          <div className="ga-acciones">
+            <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={() => { void qc.invalidateQueries({ queryKey: CLAVE_OC }); }}>
+              Actualizar
+            </Button>
+            <div className="ga-vista" role="group" aria-label="Forma de la lista">
+              <button type="button" aria-pressed={vista === 'tabla'} title="Lista" aria-label="Ver como lista" onClick={() => setVista('tabla')}><List size={16} /></button>
+              <button type="button" aria-pressed={vista === 'tarjetas'} title="Tarjetas" aria-label="Ver como tarjetas" onClick={() => setVista('tarjetas')}><LayoutGrid size={16} /></button>
+            </div>
+            <MenuOtros opciones={[
+              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('gerencia/aprobaciones-oc') },
+              { label: 'Exportar acta', icon: <FileDown size={17} />, onSelect: () => abrirClasico('gerencia/aprobaciones-oc') },
+            ]} />
+          </div>
+        </header>
 
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por código, proveedor, RUC, solicitante o placa…" />
+        {msg && (
+          <div style={{ cursor: 'pointer' }} onClick={() => setMsg(null)}>
+            <Notice tone={msg.tipo === 'ok' ? 'success' : 'error'}>{msg.texto}</Notice>
+          </div>
+        )}
+        {isError && <Notice tone="error">{errorMessage(error)}</Notice>}
 
-          {visibles.length === 0 ? (
-            <EmptyState icon={<SearchX size={22} />} title="Sin coincidencias">
-              <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Limpiar</button>
-            </EmptyState>
-          ) : movil ? (
-            <div className="gerencia-lista-tarjetas">
-              {visibles.map(o => (
-                <article key={o.id} className="gerencia-tarjeta">
-                  <button type="button" className="gerencia-tarjeta__cuerpo pressable" onClick={() => setDetalleId(o.id)} aria-label={`Ver detalle de ${o.id}`}>
-                    <span className="gerencia-tarjeta__fila">
-                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--accent-ink)' }}>{o.id}</span>
-                      {chipEstado(o.estado)}
-                    </span>
-                    <span className="gerencia-tarjeta__proveedor">{o.proveedor_nombre || 'Sin proveedor'}</span>
-                    <span className="gerencia-tarjeta__fila" style={{ marginTop: 4 }}>
-                      <span className="gerencia-tarjeta__meta" style={{ marginTop: 0 }}>
-                        {formatFechaPe(o.fecha)} · {o.solicitante || o.autoriza || o.creador_nombre || '—'}
-                      </span>
-                      <span className="gerencia-tarjeta__importe">{formatMoneda(o.total_oc, o.moneda)}</span>
-                    </span>
-                    <span className="gerencia-tarjeta__meta">{o.motivo_entrada || o.observaciones || 'Sin motivo especificado'}</span>
-                    <span style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                      <span className={`gerencia-chip ${prioridadUrgente(o.prioridad) ? 'gerencia-chip--urgente' : ''}`}>
-                        {prioridadUrgente(o.prioridad) ? 'URGENTE' : 'NORMAL'}
-                      </span>
-                      {o.placa && <span className="gerencia-chip">{o.placa}</span>}
-                    </span>
-                  </button>
-                  {esAccionable(o) && puedeAccionar && (
-                    <div className="gerencia-tarjeta__acciones">
-                      <button type="button" className="gerencia-accion gerencia-accion--aprobar pressable" onClick={() => abrirAccion('aprobar', o)}>
-                        <CheckCircle size={16} aria-hidden /> Aprobar
-                      </button>
-                      <button type="button" className="gerencia-accion gerencia-accion--rechazar pressable" onClick={() => abrirAccion('rechazar', o)}>
-                        <XCircle size={16} aria-hidden /> Rechazar
-                      </button>
-                    </div>
-                  )}
-                </article>
+        {isLoading ? <PageLoader /> : lista.length === 0 ? (
+          <EmptyState icon={<ClipboardCheck size={28} />} title="Sin órdenes de compra">
+            No hay registros disponibles.
+          </EmptyState>
+        ) : (
+          <>
+            {/* Indicadores */}
+            <div className="ga-kpis">
+              {indicadores.map(k => (
+                <div key={k.etiqueta} className={`ga-kpi ga-kpi--${k.tono}`}>
+                  <div className="ga-kpi__cab">
+                    <span className="ga-kpi__etiqueta">{k.etiqueta}</span>
+                    <span className="ga-kpi__pill">{k.pill}</span>
+                  </div>
+                  <span className="ga-kpi__valor">{k.acum.n}</span>
+                  <span className="ga-kpi__unidad">{k.acum.n === 1 ? 'orden' : 'órdenes'}</span>
+                  <div className="ga-kpi__pie">
+                    <span>{k.pie}:</span>
+                    <b>{formatSoles(k.acum.soles)}</b>
+                  </div>
+                </div>
               ))}
             </div>
-          ) : (
-            <div className="gerencia-tabla-wrap">
-              <table className="gerencia-tabla">
-                <thead>
-                  <tr>
-                    {['Acción', 'Fecha', 'Usuario', 'Orden compra', 'Centro costo', 'Motivo / justificación', 'Solicitante', 'Proveedor', 'Importe'].map(h => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibles.map(o => (
-                    <tr key={o.id}>
-                      <td>{accionesCelda(o)}</td>
-                      <td style={{ whiteSpace: 'nowrap', color: 'var(--label-2)' }}>{formatFechaPe(o.fecha)}</td>
-                      <td style={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{nombreLimpio(o.creador_nombre || o.creado_por)}</td>
-                      <td>
-                        <button type="button" className="gerencia-codigo" onClick={() => setDetalleId(o.id)} title="Ver detalle de la orden">{o.id}</button>
-                      </td>
-                      <td><span className="gerencia-chip">{o.centro_costo || '—'}</span></td>
-                      <td>
-                        <div className="gerencia-celda-recorte" title={o.motivo_entrada || o.observaciones || ''}>
-                          {o.motivo_entrada || o.observaciones || 'Sin motivo'}
-                        </div>
-                      </td>
-                      <td>{o.solicitante || o.autoriza || o.creador_nombre || '—'}</td>
-                      <td>{o.proveedor_nombre || 'Sin proveedor'}</td>
-                      <td className="gerencia-tabla__num">{formatMoneda(o.total_oc, o.moneda)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            {/* Filtros */}
+            <div className="ga-filtros">
+              <div className="ga-filtros__fila">
+                <div className="ga-campo">
+                  <span className="ga-campo__etiqueta">Fecha desde</span>
+                  <input type="date" className="input" aria-label="Fecha desde" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} />
+                </div>
+                <div className="ga-campo">
+                  <span className="ga-campo__etiqueta">Fecha hasta</span>
+                  <input type="date" className="input" aria-label="Fecha hasta" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} />
+                </div>
+                <div className="ga-campo ga-buscar">
+                  <span className="ga-campo__etiqueta">Búsqueda rápida</span>
+                  <input
+                    type="search"
+                    className="input"
+                    value={busqueda}
+                    onChange={e => setBusqueda(e.target.value)}
+                    placeholder="Buscar por N° OC, proveedor, RUC, solicitante o placa…"
+                    aria-label="Buscar órdenes"
+                  />
+                </div>
+              </div>
+              <div className="ga-tabs" role="group" aria-label="Filtrar por estado">
+                {pestanas.map(p => (
+                  <button key={p.key} type="button" className="ga-tab" aria-pressed={pestana === p.key} onClick={() => { haptic('selection'); setPestana(p.key); }}>
+                    {p.etiqueta} <span className="ga-tab__n">{contador(p.key)}</span>
+                  </button>
+                ))}
+                {hayFiltros && <button type="button" className="ga-limpiar" onClick={limpiarFiltros}>Limpiar filtros</button>}
+              </div>
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Órdenes */}
+            {visibles.length === 0 ? (
+              <EmptyState icon={<SearchX size={22} />} title="Sin coincidencias">
+                <button type="button" className="placas-limpiar" onClick={limpiarFiltros}>Limpiar filtros</button>
+              </EmptyState>
+            ) : vista === 'tabla' && !movil ? (
+              <div className="gerencia-tabla-wrap">
+                <table className="gerencia-tabla">
+                  <thead>
+                    <tr>
+                      {['Acción', 'Fecha', 'Usuario', 'Orden compra', 'Centro costo', 'Motivo / justificación', 'Solicitante', 'Proveedor', 'Importe'].map(h => (
+                        <th key={h}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibles.map(o => (
+                      <tr key={o.id}>
+                        <td>{accionesCelda(o)}</td>
+                        <td style={{ whiteSpace: 'nowrap', color: 'var(--label-2)' }}>{formatFechaPe(o.fecha)}</td>
+                        <td style={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{nombreLimpio(o.creador_nombre || o.creado_por)}</td>
+                        <td>
+                          <button type="button" className="gerencia-codigo" onClick={() => setDetalleId(o.id)} title="Ver detalle de la orden">{o.id}</button>
+                        </td>
+                        <td><span className="gerencia-chip">{o.centro_costo || '—'}</span></td>
+                        <td>
+                          <div className="gerencia-celda-recorte" title={o.motivo_entrada || o.observaciones || ''}>
+                            {o.motivo_entrada || o.observaciones || 'Sin motivo'}
+                          </div>
+                        </td>
+                        <td>{nombreLimpio(o.solicitante || o.autoriza || o.creador_nombre || o.creado_por)}</td>
+                        <td>{o.proveedor_nombre || 'Sin proveedor'}</td>
+                        <td className="gerencia-tabla__num">{formatMoneda(o.total_oc, o.moneda)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="ga-grid">
+                {visibles.map(o => (
+                  <TarjetaOrden
+                    key={o.id}
+                    o={o}
+                    puedeAccionar={puedeAccionar}
+                    onDetalle={() => setDetalleId(o.id)}
+                    onAccion={tipo => abrirAccion(tipo, o)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       <DetalleOcSheet
         orden={detalle}
@@ -320,67 +453,22 @@ export function AprobacionesOCPage() {
         onAccion={abrirAccion}
       />
 
-      {/* Confirmación de la decisión (se abre encima del detalle) */}
-      <Sheet
-        open={!!accion}
-        onClose={cerrarAccion}
-        title={titulo}
-        footer={accion && (
-          <>
-            <Button variant="secondary" onClick={cerrarAccion}>Cancelar</Button>
-            <Button
-              variant={accion.tipo === 'aprobar' ? 'primary' : accion.tipo === 'rechazar' ? 'danger' : 'secondary'}
-              onClick={confirmarAccion}
-              loading={procesando}
-              disabled={accion.tipo === 'aprobar' && !confirmado}
-            >
-              {ETIQUETA_BOTON[accion.tipo]}
-            </Button>
-          </>
-        )}
-      >
-        {accion && (
-          <div className="gerencia-ficha" style={{ gap: 'var(--s-4)' }}>
-            <p style={{ margin: 0, fontSize: '0.92rem', color: 'var(--label-2)' }}>
-              Orden <strong style={{ color: 'var(--label-1)' }}>{accion.orden.id}</strong>
-              {' · '}{accion.orden.proveedor_nombre || 'Sin proveedor'}
-              {' · '}<strong style={{ color: 'var(--label-1)' }}>{formatMoneda(accion.orden.total_oc, accion.orden.moneda)}</strong>
-            </p>
-
-            {accion.tipo === 'aprobar' && (
-              <>
-                <label className="gerencia-confirmar">
-                  <input type="checkbox" checked={confirmado} onChange={e => setConfirmado(e.target.checked)} />
-                  Confirmo realizar la autorización
-                </label>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--label-2)' }}>
-                  Se traspasarán estos datos a Pagos de requerimientos en Tesorería.
-                </p>
-              </>
-            )}
-
-            <Field
-              label={accion.tipo === 'aprobar'
-                ? 'Comentario (opcional)'
-                : accion.tipo === 'rechazar' ? 'Motivo del rechazo (obligatorio)' : 'Sustento o cotización que falta (obligatorio)'}
-              error={errCampo}
-            >
-              {p => (
-                <textarea
-                  {...p}
-                  value={comentario}
-                  onChange={e => { setComentario(e.target.value); setErrCampo(undefined); }}
-                  placeholder={accion.tipo === 'observar' ? 'Qué sustento técnico o cotización alternativa necesitas…' : 'Observación o motivo…'}
-                  rows={3}
-                  style={{ width: '100%', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', padding: '8px 10px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
-                />
-              )}
-            </Field>
-
-            {errAccion && <Notice tone="error">{errAccion}</Notice>}
-          </div>
-        )}
-      </Sheet>
+      {accion && (
+        <ConfirmarDecisionSheet
+          open={!!accion}
+          tipo={accion.tipo}
+          orden={accion.orden}
+          comentario={comentario}
+          onComentario={v => { setComentario(v); setErrCampo(undefined); }}
+          confirmado={confirmado}
+          onConfirmado={setConfirmado}
+          procesando={procesando}
+          errAccion={errAccion}
+          errCampo={errCampo}
+          onCerrar={cerrarAccion}
+          onConfirmar={confirmarAccion}
+        />
+      )}
     </Page>
   );
 }
