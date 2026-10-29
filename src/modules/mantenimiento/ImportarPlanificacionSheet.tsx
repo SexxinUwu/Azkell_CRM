@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, FileSpreadsheet } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
@@ -121,7 +122,7 @@ export function ImportarPlanificacionSheet({ open, onClose, mesInicial, anioInic
         <Field label="Año">{p => <TextInput {...p} inputMode="numeric" value={anio} onChange={e => setAnio(Number(e.target.value) || anioInicial)} />}</Field>
 
         <Field label="Archivo Excel (.xlsx)" wide hint={archivo ? `${archivo.name}${registros.length ? ` · ${registros.length} filas válidas` : ''}` : 'PLACA, TIPO_MP, FECHA_INICIO, FECHA_FIN, KM_ESTIMADO…'}>
-          {p => <TextInput {...p} type="file" accept=".xlsx,.xls" disabled={leyendo || enviando} onChange={e => elegir(e.target.files?.[0])} />}
+          {p => <ArchivoInput {...p} accept=".xlsx,.xls" disabled={leyendo || enviando} onChange={a => elegir(a ?? undefined)} />}
         </Field>
 
         {leyendo && <div className="field field--wide"><Notice><FileSpreadsheet size={16} /> Leyendo el archivo…</Notice></div>}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert } from 'lucide-react';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
@@ -101,8 +102,8 @@ export function NotaCreditoSheet({ cuenta, onClose }: { cuenta: CuentaPorCobrar 
     }
   }
 
-  const elegirArchivo = (campo: keyof Archivos, errKey?: Campo) => (e: { target: { files: FileList | null } }) => {
-    setArchivos(a => ({ ...a, [campo]: e.target.files?.[0] ?? null }));
+  const elegirArchivo = (campo: keyof Archivos, errKey?: Campo) => (archivo: File | null) => {
+    setArchivos(a => ({ ...a, [campo]: archivo }));
     if (errKey) setErrores(prev => ({ ...prev, [errKey]: undefined }));
   };
 
@@ -137,10 +138,10 @@ export function NotaCreditoSheet({ cuenta, onClose }: { cuenta: CuentaPorCobrar 
           <Field label="Fecha de la nueva factura" wide error={errores.nuevaFecha}>{p => <TextInput {...p} type="date" value={t.nuevaFecha} onChange={cambiar('nuevaFecha')} />}</Field>
 
           <Field label="PDF o imagen de la nota de crédito" wide hint={archivos.nc?.name} error={errores.archivoNC}>
-            {p => <TextInput {...p} type="file" accept=".pdf,image/*" onChange={elegirArchivo('nc', 'archivoNC')} />}
+            {p => <ArchivoInput {...p} accept=".pdf,image/*" onChange={elegirArchivo('nc', 'archivoNC')} />}
           </Field>
           <Field label="PDF o imagen de la nueva factura" wide hint={archivos.nueva?.name} error={errores.archivoNueva}>
-            {p => <TextInput {...p} type="file" accept=".pdf,image/*" onChange={elegirArchivo('nueva', 'archivoNueva')} />}
+            {p => <ArchivoInput {...p} accept=".pdf,image/*" onChange={elegirArchivo('nueva', 'archivoNueva')} />}
           </Field>
 
           {urlFacturaActual ? (
@@ -149,7 +150,7 @@ export function NotaCreditoSheet({ cuenta, onClose }: { cuenta: CuentaPorCobrar 
             </Field>
           ) : (
             <Field label="PDF de la factura anterior (opcional)" wide hint={archivos.anterior?.name ?? 'Para conservarla en el histórico'}>
-              {p => <TextInput {...p} type="file" accept=".pdf,image/*" onChange={elegirArchivo('anterior')} />}
+              {p => <ArchivoInput {...p} accept=".pdf,image/*" onChange={elegirArchivo('anterior')} />}
             </Field>
           )}
         </div>

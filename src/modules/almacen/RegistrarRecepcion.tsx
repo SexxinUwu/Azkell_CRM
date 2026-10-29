@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
@@ -182,7 +183,7 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
               {p => <TextInput {...p} type="datetime-local" value={fecha} max={ahoraLocal()} onChange={e => setFecha(e.target.value)} />}
             </Field>
             <Field label="Sustento (guía, factura o foto)" hint={archivo ? archivo.name : 'Opcional'}>
-              {p => <TextInput key={archivoKey} {...p} type="file" accept="image/*,application/pdf" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />}
+              {p => <ArchivoInput {...p} key={archivoKey} accept="image/*,application/pdf" onChange={setArchivo} />}
             </Field>
 
             {usd && tcCompra > 0 && (

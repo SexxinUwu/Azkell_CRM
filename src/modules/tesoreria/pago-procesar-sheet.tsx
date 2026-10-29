@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, FileText, Paperclip, X } from 'lucide-react';
 import { api, errorMessage } from '../../core/api/client';
@@ -181,8 +182,7 @@ export function PagoProcesarSheet({ oc, open, onClose }: { oc: OrdenPago | null;
           </Field>
 
           <Field label="Voucher o constancia (opcional)" hint="JPG, PNG o PDF · máximo 25 MB" error={errores.voucher}>
-            {p => <TextInput {...p} type="file" accept="image/*,application/pdf"
-              onChange={e => { elegirVoucher(e.target.files?.[0]); e.target.value = ''; }} />}
+            {p => <ArchivoInput {...p} accept="image/*,application/pdf" onChange={a => elegirVoucher(a ?? undefined)} />}
           </Field>
 
           {voucher && (

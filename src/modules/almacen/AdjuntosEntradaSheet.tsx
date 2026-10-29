@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
@@ -138,15 +139,13 @@ export function AdjuntosEntradaSheet({ open, entrada, onClose, onGuardado }: Pro
         )}
         <Field label="Archivo nuevo" hint={nuevos[tipo] ? `Se subirá: ${nuevos[tipo]?.name}` : undefined}>
           {p => (
-            <input {...p} type="file" accept={ACEPTA} className="input oc-archivo"
-              onChange={ev => {
-                const archivo = ev.target.files?.[0] ?? null;
-                setNuevos(prev => {
-                  const siguiente: Nuevos = { ...prev };
-                  siguiente[tipo] = archivo;
-                  return siguiente;
-                });
-              }} />
+            <ArchivoInput {...p} accept={ACEPTA} onChange={archivo => {
+              setNuevos(prev => {
+                const siguiente: Nuevos = { ...prev };
+                siguiente[tipo] = archivo;
+                return siguiente;
+              });
+            }} />
           )}
         </Field>
         {extra}

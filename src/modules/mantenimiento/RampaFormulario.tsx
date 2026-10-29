@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
@@ -131,7 +132,7 @@ export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial 
         </Field>
         <Field label="Observaciones" wide>{p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} placeholder="Motivo del ingreso" />}</Field>
         <Field label="Evidencia (foto o PDF)" wide hint={evidencia?.name ?? (entrada?.evidencia_url ? 'Ya tiene un archivo; elige otro para reemplazarlo' : undefined)}>
-          {p => <TextInput {...p} type="file" accept="image/*,application/pdf" onChange={e => setEvidencia(e.target.files?.[0] ?? null)} />}
+          {p => <ArchivoInput {...p} accept="image/*,application/pdf" onChange={setEvidencia} />}
         </Field>
       </div>
     </Sheet>

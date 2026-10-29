@@ -1,4 +1,5 @@
 import '../mantenimiento/mant.css';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, CircleAlert, FileSpreadsheet, Paperclip, Plus, Printer, Receipt, ShieldCheck } from 'lucide-react';
@@ -278,7 +279,7 @@ function SstSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
         <Field label="Descripción" wide error={errCampo.desc}>{p => <TextInput {...p} value={desc} onChange={e => { setDesc(e.target.value); setErrCampo({}); }} />}</Field>
         <Field label="Fecha">{p => <TextInput {...p} type="date" value={fecha} onChange={e => setFecha(e.target.value)} />}</Field>
         <Field label="Vencimiento">{p => <TextInput {...p} type="date" value={venc} min={fecha} onChange={e => setVenc(e.target.value)} />}</Field>
-        <Field label="Cargo firmado (PDF o foto)" wide hint={archivo?.name}>{p => <TextInput {...p} type="file" accept="image/*,application/pdf" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />}</Field>
+        <Field label="Cargo firmado (PDF o foto)" wide hint={archivo?.name}>{p => <ArchivoInput {...p} accept="image/*,application/pdf" onChange={setArchivo} />}</Field>
         <label className="field field--wide" style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
           <input type="checkbox" checked={firmado} onChange={e => setFirmado(e.target.checked)} /> Ya está firmado por el colaborador
         </label>

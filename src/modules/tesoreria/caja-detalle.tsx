@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { Ban, CheckCircle2, Paperclip, Pencil, Trash2, Upload } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { Badge, Notice } from '../../core/ui/Display';
@@ -176,10 +177,10 @@ export function DetalleCaja({ mov: m, onClose, onEditar, onCambio }: Props) {
             {p => <TextInput {...p} value={constancia} onChange={e => setConstancia(e.target.value)} />}
           </Field>
           <Field label="Voucher" hint={voucher?.name}>
-            {p => <TextInput {...p} type="file" accept="image/*,application/pdf" onChange={e => setVoucher(e.target.files?.[0] ?? null)} />}
+            {p => <ArchivoInput {...p} accept="image/*,application/pdf" onChange={setVoucher} />}
           </Field>
           <Field label="Sustento" hint={sustento?.name}>
-            {p => <TextInput {...p} type="file" accept="image/*,application/pdf" onChange={e => setSustento(e.target.files?.[0] ?? null)} />}
+            {p => <ArchivoInput {...p} accept="image/*,application/pdf" onChange={setSustento} />}
           </Field>
         </div>
       </Sheet>

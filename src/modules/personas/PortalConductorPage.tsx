@@ -1,4 +1,5 @@
 import '../mantenimiento/mant.css';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, CircleAlert, CloudOff, Paperclip, Plus, Search, Smartphone, Trash2, Truck } from 'lucide-react';
@@ -507,7 +508,7 @@ function GastoSheet({ open, viaje, conductor, onClose, onHecho }: { open: boolea
           {p => <SelectInput {...p} value={motivo} onChange={e => setMotivo(e.target.value)}>{MOTIVOS.map(m => <option key={m} value={m}>{m}</option>)}</SelectInput>}
         </Field>
         <Field label="Importe (S/)">{p => <TextInput {...p} inputMode="decimal" value={importe} onChange={e => setImporte(e.target.value)} autoFocus />}</Field>
-        <Field label="Foto del comprobante" hint={foto?.name}>{p => <TextInput {...p} type="file" accept="image/*" capture="environment" onChange={e => setFoto(e.target.files?.[0] ?? null)} />}</Field>
+        <Field label="Foto del comprobante" hint={foto?.name}>{p => <ArchivoInput {...p} accept="image/*" capture="environment" onChange={setFoto} />}</Field>
         <Field label="Nota" wide>{p => <TextInput {...p} value={nota} onChange={e => setNota(e.target.value)} placeholder="Opcional" />}</Field>
       </div>
     </Sheet>

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
@@ -270,10 +271,10 @@ export function FormularioCuenta({ open, cuenta, existentes, onClose }: {
         <Field label="Observación" wide>{p => <TextInput {...p} value={v.observacion} onChange={alEscribir('observacion')} />}</Field>
 
         <Field label="PDF de la liquidación" hint={archivoLiq?.name ?? archivoActual(cuenta, 'documento')}>
-          {p => <TextInput {...p} type="file" accept=".pdf,image/*" onChange={e => setArchivoLiq(e.target.files?.[0] ?? null)} />}
+          {p => <ArchivoInput {...p} accept=".pdf,image/*" onChange={setArchivoLiq} />}
         </Field>
         <Field label="PDF de la factura" hint={archivoFac?.name ?? archivoActual(cuenta, 'factura_documento')}>
-          {p => <TextInput {...p} type="file" accept=".pdf,image/*" onChange={e => setArchivoFac(e.target.files?.[0] ?? null)} />}
+          {p => <ArchivoInput {...p} accept=".pdf,image/*" onChange={setArchivoFac} />}
         </Field>
       </div>
     </Sheet>

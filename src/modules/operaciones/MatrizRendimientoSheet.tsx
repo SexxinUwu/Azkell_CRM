@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, FileSpreadsheet, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Sheet, ConfirmSheet } from '../../core/ui/Sheet';
@@ -247,7 +248,7 @@ export function MatrizRendimientoPanel({ puedeEditar }: { puedeEditar: boolean }
         <div className="form-grid">
           {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
           <Field label="Archivo Excel (.xlsx)" wide hint={archivo ? archivo.name : 'Primera hoja con los encabezados en la fila 1'}>
-            {p => <TextInput {...p} type="file" accept=".xlsx,.xls,.csv" disabled={leyendo || enviando} onChange={e => elegirArchivo(e.target.files?.[0])} />}
+            {p => <ArchivoInput {...p} accept=".xlsx,.xls,.csv" disabled={leyendo || enviando} onChange={a => elegirArchivo(a ?? undefined)} />}
           </Field>
           {leyendo && <div className="field field--wide"><Notice>Leyendo el archivo…</Notice></div>}
           {filasImp.length > 0 && <div className="field field--wide"><Notice tone="neutral">Las filas se agregan a la matriz actual. Usa "Vaciar" antes si quieres empezar de cero.</Notice></div>}

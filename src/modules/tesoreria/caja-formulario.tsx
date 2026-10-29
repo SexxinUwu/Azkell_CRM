@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQuery } from '@tanstack/react-query';
 import { CircleAlert } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
@@ -368,10 +369,10 @@ export function FormularioCaja({ open, mov, onClose, onGuardado }: Props) {
 
         {seccion('Adjuntos y notas')}
         <Field label="Voucher" hint={voucher?.name}>
-          {p => <TextInput key={`v-${sesion}`} {...p} type="file" accept="image/*,application/pdf" onChange={e => setVoucher(e.target.files?.[0] ?? null)} />}
+          {p => <ArchivoInput {...p} key={`v-${sesion}`} accept="image/*,application/pdf" onChange={setVoucher} />}
         </Field>
         <Field label="Sustento" hint={sustento?.name}>
-          {p => <TextInput key={`s-${sesion}`} {...p} type="file" accept="image/*,application/pdf,.xlsx,.csv" onChange={e => setSustento(e.target.files?.[0] ?? null)} />}
+          {p => <ArchivoInput {...p} key={`s-${sesion}`} accept="image/*,application/pdf,.xlsx,.csv" onChange={setSustento} />}
         </Field>
         {txt('descripcion', 'Descripción', { wide: true })}
         {txt('observacion', 'Observación', { wide: true })}

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, Disc3, FileSpreadsheet } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice } from '../../core/ui/Display';
-import { Field, SearchField, TextInput } from '../../core/ui/Field';
+import { Field, SearchField } from '../../core/ui/Field';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -366,7 +367,7 @@ export function ImportarNeumaticosSheet({ open, onClose }: { open: boolean; onCl
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
         <Field label="Archivo Excel (.xlsx)" wide hint={archivo ? `${archivo.name}${insp.length ? ` · ${insp.length} inspecciones (${llantas} llantas)` : ''}` : 'Usa la plantilla oficial de 27 columnas (la misma que genera Exportar)'}>
-          {p => <TextInput {...p} type="file" accept=".xlsx,.xls" disabled={leyendo || enviando} onChange={e => elegir(e.target.files?.[0])} />}
+          {p => <ArchivoInput {...p} accept=".xlsx,.xls" disabled={leyendo || enviando} onChange={a => elegir(a ?? undefined)} />}
         </Field>
         {leyendo && <div className="field field--wide"><Notice><FileSpreadsheet size={16} /> Leyendo el archivo…</Notice></div>}
         {lectura && lectura.errores.length > 0 && (

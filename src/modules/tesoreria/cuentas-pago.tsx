@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, Paperclip } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
@@ -104,7 +105,7 @@ export function PagoCuenta({ cuenta, usuario, onClose }: { cuenta: CuentaPorCobr
         )}
 
         <Field label="Constancia o voucher (PDF o imagen)" wide hint={archivo?.name ?? (constanciaActual ? undefined : 'Opcional')}>
-          {p => <TextInput {...p} type="file" accept=".pdf,image/*" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />}
+          {p => <ArchivoInput {...p} accept=".pdf,image/*" onChange={setArchivo} />}
         </Field>
         {constanciaActual && !archivo && (
           <div className="field field--wide">

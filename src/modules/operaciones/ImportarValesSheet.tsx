@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, FileSpreadsheet } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { Field, TextInput } from '../../core/ui/Field';
+import { Field } from '../../core/ui/Field';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
@@ -89,7 +90,7 @@ export function ImportarValesSheet({ open, onClose, marsisa }: { open: boolean; 
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
 
         <Field label="Archivo Excel (.xlsx)" wide hint={archivo ? `${archivo.name}${filas.length ? ` · ${filas.length} filas` : ''}` : 'La primera hoja, con los encabezados en la fila 1'}>
-          {p => <TextInput {...p} type="file" accept=".xlsx,.xls" disabled={leyendo || enviando} onChange={e => elegir(e.target.files?.[0])} />}
+          {p => <ArchivoInput {...p} accept=".xlsx,.xls" disabled={leyendo || enviando} onChange={a => elegir(a ?? undefined)} />}
         </Field>
 
         {leyendo && <div className="field field--wide"><Notice><FileSpreadsheet size={16} /> Leyendo el archivo…</Notice></div>}
