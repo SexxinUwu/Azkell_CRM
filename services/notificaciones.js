@@ -48,11 +48,11 @@ function registrar(db, { canal, destino, evento, asunto, estado, error, ref }) {
 
 // ── Canal WhatsApp (Evolution API) ─────────────────────────────────────────
 async function estadoWhatsapp(instancia) {
-  const base = (process.env.EVOLUTION_API_URL || '').replace(/\/$/, '');
-  if (!base || !process.env.EVOLUTION_API_KEY) return { configurado: false, estado: 'sin_configurar' };
-  const inst = instancia || process.env.EVOLUTION_INSTANCE || 'azkell_erp_bot';
+  const base = (process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085').replace(/\/$/, '');
+  const key = process.env.EVOLUTION_API_KEY || 'AZKELL_ERP_WA_SECRET_2026';
+  const inst = instancia || process.env.EVOLUTION_INSTANCE || 'marsisa_bot';
   try {
-    const r = await fetch(`${base}/instance/connectionState/${encodeURIComponent(inst)}`, { headers: { apikey: process.env.EVOLUTION_API_KEY } });
+    const r = await fetch(`${base}/instance/connectionState/${encodeURIComponent(inst)}`, { headers: { apikey: key } });
     if (!r.ok) return { configurado: true, instancia: inst, estado: 'error', detalle: `HTTP ${r.status}` };
     const j = await r.json();
     const state = j?.instance?.state || j?.state || 'desconocido';
@@ -62,14 +62,15 @@ async function estadoWhatsapp(instancia) {
   }
 }
 
-async function enviarWhatsapp(destino, texto) {
+async function enviarWhatsapp(destino, texto, instancia) {
   const numero = aPeru(destino);
   if (!numero) throw new Error('Número de WhatsApp inválido');
-  const inst = process.env.EVOLUTION_INSTANCE || 'azkell_erp_bot';
-  const base = (process.env.EVOLUTION_API_URL || '').replace(/\/$/, '');
+  const base = (process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085').replace(/\/$/, '');
+  const key = process.env.EVOLUTION_API_KEY || 'AZKELL_ERP_WA_SECRET_2026';
+  const inst = instancia || process.env.EVOLUTION_INSTANCE || 'marsisa_bot';
   const r = await fetch(`${base}/message/sendText/${encodeURIComponent(inst)}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: process.env.EVOLUTION_API_KEY },
+    headers: { 'Content-Type': 'application/json', apikey: key },
     body: JSON.stringify({ number: numero, text: texto }),
   });
   if (!r.ok) throw new Error(`Evolution HTTP ${r.status}`);

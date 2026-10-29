@@ -175,14 +175,16 @@ module.exports = (db) => {
 
   // QR para vincular el WhatsApp de la empresa (la instancia se conecta desde el teléfono)
   router.get('/notificaciones/whatsapp/qr', async (req, res) => {
-    const base = (process.env.EVOLUTION_API_URL || '').replace(/\/$/, '');
-    const inst = process.env.EVOLUTION_INSTANCE || 'azkell_erp_bot';
-    if (!base || !process.env.EVOLUTION_API_KEY) return res.status(400).json({ error: 'WhatsApp no está configurado en el servidor' });
+    const base = (process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085').replace(/\/$/, '');
+    const key = process.env.EVOLUTION_API_KEY || 'AZKELL_ERP_WA_SECRET_2026';
+    const inst = (req.tenantSlug && !['admin', 'master', 'localhost'].includes(req.tenantSlug))
+      ? `${req.tenantSlug}_bot`
+      : (process.env.EVOLUTION_INSTANCE || 'marsisa_bot');
     try {
-      const r = await fetch(`${base}/instance/connect/${encodeURIComponent(inst)}`, { headers: { apikey: process.env.EVOLUTION_API_KEY } });
+      const r = await fetch(`${base}/instance/connect/${encodeURIComponent(inst)}`, { headers: { apikey: key } });
       const j = await r.json().catch(() => ({}));
-      if (j?.instance?.state === 'open') return res.json({ conectado: true });
-      res.json({ conectado: false, qr: j.base64 || null, codigo: j.code || j.pairingCode || null });
+      if (j?.instance?.state === 'open') return res.json({ conectado: true, instancia: inst });
+      res.json({ conectado: false, instancia: inst, qr: j.base64 || null, codigo: j.code || j.pairingCode || null });
     } catch (e) {
       res.status(502).json({ error: e.message });
     }

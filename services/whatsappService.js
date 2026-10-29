@@ -3,9 +3,22 @@
  * Soporta instancias y números independientes por cada empresa (Tenant).
  */
 
-const EVOLUTION_URL = process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085';
-const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY;
-const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || 'azkell_erp_bot';
+function getEvolutionConfig() {
+    return {
+        url: (process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085').replace(/\/$/, ''),
+        key: process.env.EVOLUTION_API_KEY || 'AZKELL_ERP_WA_SECRET_2026',
+        defaultInstance: process.env.EVOLUTION_INSTANCE || 'marsisa_bot'
+    };
+}
+
+function resolveInstance(instanceName, tenantSlug) {
+    if (instanceName) return instanceName;
+    if (tenantSlug && !['admin', 'master', 'localhost', 'default', 'app', 'azkell'].includes(tenantSlug)) {
+        return `${tenantSlug}_bot`;
+    }
+    const def = process.env.EVOLUTION_INSTANCE || 'marsisa_bot';
+    return def;
+}
 
 /**
  * Normaliza y formatea el número de teléfono (por defecto formato Perú 51XXXXXXXXX)
@@ -23,14 +36,15 @@ function formatPhone(phone) {
  * Asegura que la instancia de WhatsApp de la empresa exista en Evolution API
  */
 async function ensureInstanceExists(instanceName) {
-    const target = instanceName || DEFAULT_INSTANCE;
-    const url = `${EVOLUTION_URL.replace(/\/$/, '')}/instance/create`;
+    const { url, key, defaultInstance } = getEvolutionConfig();
+    const target = instanceName || defaultInstance;
+    const apiUrl = `${url}/instance/create`;
     try {
-        await fetch(url, {
+        await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'apikey': EVOLUTION_KEY
+                'apikey': key
             },
             body: JSON.stringify({
                 instanceName: target,
@@ -51,7 +65,8 @@ async function sendApprovalWhatsapp({ phone, ocCode, supplier, total, currency, 
     const recipient = formatPhone(phone);
     if (!recipient) throw new Error('Número de teléfono inválido para WhatsApp');
 
-    const finalInstance = instanceName || (tenantSlug ? `${tenantSlug}_bot` : DEFAULT_INSTANCE);
+    const { url, key } = getEvolutionConfig();
+    const finalInstance = resolveInstance(instanceName, tenantSlug);
     await ensureInstanceExists(finalInstance);
 
     const monedaSym = currency === 'USD' ? '$' : 'S/';
@@ -65,8 +80,7 @@ async function sendApprovalWhatsapp({ phone, ocCode, supplier, total, currency, 
 🤝 *Proveedor:* ${supplier}
 💰 *Monto Total:* ${montoFormateado}
 👤 *Solicitado por:* ${solicitadoPor || 'Área de Compras / Taller'}
-${motivo ? `📝 *Motivo:* ${motivo}\n` : ''}
-━━━━━━━━━━━━━━━━━━
+${motivo ? `📝 *Motivo:* ${motivo}\n` : ''}━━━━━━━━━━━━━━━━━━
 📄 *Acción requerida:*
 Revisa el desglose de ítems, precios unitarios y la cotización adjunta antes de autorizar:
 
@@ -82,14 +96,14 @@ ${approvalUrl}
         linkPreview: true
     };
 
-    const url = `${EVOLUTION_URL.replace(/\/$/, '')}/message/sendText/${finalInstance}`;
+    const apiUrl = `${url}/message/sendText/${encodeURIComponent(finalInstance)}`;
     
     try {
-        const res = await fetch(url, {
+        const res = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'apikey': EVOLUTION_KEY
+                'apikey': key
             },
             body: JSON.stringify(payload)
         });
@@ -109,17 +123,26 @@ ${approvalUrl}
 }
 
 /**
- * Envía confirmación al dueño / solicitante cuando la OC fue aprobada o rechazada
+ * Envía confirmación al solicitante / dueño cuando la OC fue aprobada, rechazada u observada
  */
-async function sendDecisionConfirmationWhatsapp({ phone, ocCode, status, reason, tenantSlug, instanceName }) {
+async function sendDecisionConfirmationWhatsapp({ phone, ocCode, status, reason, tenantSlug, instanceName, empresaNombre }) {
     const recipient = formatPhone(phone);
-    if (!recipient) return;
+    if (!recipient) return { success: false, error: 'Número inválido' };
 
-    const finalInstance = instanceName || (tenantSlug ? `${tenantSlug}_bot` : DEFAULT_INSTANCE);
-    const isApproved = status === 'APROBADA';
-    const messageText = isApproved
-        ? `✅ *ORDEN DE COMPRA APROBADA*\n\nLa orden *#${ocCode}* ha sido autorizada satisfactoriamente en el ERP.`
-        : `❌ *ORDEN DE COMPRA OBSERVADA / RECHAZADA*\n\nLa orden *#${ocCode}* ha sido rechazada.\n*Motivo:* ${reason || 'Sin observación especificada'}.`;
+    const { url, key } = getEvolutionConfig();
+    const finalInstance = resolveInstance(instanceName, tenantSlug);
+    const isApproved = status === 'APROBADA' || status === 'Aprobado';
+    const isObserved = status === 'OBSERVADA' || status === 'Observado';
+    const headerEmpresa = empresaNombre ? `🏢 *[${empresaNombre}]*\n` : '';
+
+    let messageText = '';
+    if (isApproved) {
+        messageText = `${headerEmpresa}✅ *ORDEN DE COMPRA APROBADA*\n\nLa orden *#${ocCode}* ha sido autorizada satisfactoriamente en el ERP.`;
+    } else if (isObserved) {
+        messageText = `${headerEmpresa}⚠️ *ORDEN DE COMPRA OBSERVADA*\n\nLa orden *#${ocCode}* tiene observaciones:\n*Motivo:* ${reason || 'Revisar observaciones en el ERP'}.`;
+    } else {
+        messageText = `${headerEmpresa}❌ *ORDEN DE COMPRA RECHAZADA*\n\nLa orden *#${ocCode}* ha sido desestimada.\n*Motivo:* ${reason || 'Sin observación especificada'}.`;
+    }
 
     const payload = {
         number: recipient,
@@ -128,18 +151,25 @@ async function sendDecisionConfirmationWhatsapp({ phone, ocCode, status, reason,
         linkPreview: false
     };
 
-    const url = `${EVOLUTION_URL.replace(/\/$/, '')}/message/sendText/${finalInstance}`;
+    const apiUrl = `${url}/message/sendText/${encodeURIComponent(finalInstance)}`;
     try {
-        await fetch(url, {
+        const res = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'apikey': EVOLUTION_KEY
+                'apikey': key
             },
             body: JSON.stringify(payload)
         });
+        if (!res.ok) {
+            const errText = await res.text();
+            console.error(`⚠️ [WhatsApp Confirmación Error - ${finalInstance}] Status: ${res.status}`, errText);
+            return { success: false, error: errText };
+        }
+        return { success: true };
     } catch (err) {
-        console.error('❌ Error enviando confirmación WhatsApp:', err.message);
+        console.error(`❌ Error enviando confirmación WhatsApp (${finalInstance}):`, err.message);
+        return { success: false, error: err.message };
     }
 }
 
@@ -148,9 +178,10 @@ async function sendDecisionConfirmationWhatsapp({ phone, ocCode, status, reason,
  */
 async function sendTreasuryNotificationWhatsapp({ phone, ocCode, supplier, ruc, total, currency, approverName, reason, bankAccount, tenantSlug, instanceName, empresaNombre }) {
     const recipient = formatPhone(phone);
-    if (!recipient) return;
+    if (!recipient) return { success: false, error: 'Número no configurado' };
 
-    const finalInstance = instanceName || (tenantSlug ? `${tenantSlug}_bot` : DEFAULT_INSTANCE);
+    const { url, key } = getEvolutionConfig();
+    const finalInstance = resolveInstance(instanceName, tenantSlug);
     await ensureInstanceExists(finalInstance);
 
     const monedaSym = currency === 'USD' ? '$' : 'S/';
@@ -174,24 +205,24 @@ ${reason ? `📝 *Motivo:* ${reason}\n` : ''}${bankAccount ? `🏦 *Cuenta Desti
         linkPreview: false
     };
 
-    const url = `${EVOLUTION_URL.replace(/\/$/, '')}/message/sendText/${finalInstance}`;
+    const apiUrl = `${url}/message/sendText/${encodeURIComponent(finalInstance)}`;
     try {
-        const res = await fetch(url, {
+        const res = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'apikey': EVOLUTION_KEY
+                'apikey': key
             },
             body: JSON.stringify(payload)
         });
         if (!res.ok) {
             const errText = await res.text();
-            console.error(`⚠️ [WhatsApp Tesorería Error] Status: ${res.status}`, errText);
+            console.error(`⚠️ [WhatsApp Tesorería Error - ${finalInstance}] Status: ${res.status}`, errText);
             return { success: false, error: errText };
         }
         return { success: true };
     } catch (err) {
-        console.error('❌ Error enviando notificación WhatsApp a Tesorería:', err.message);
+        console.error(`❌ Error enviando notificación WhatsApp a Tesorería (${finalInstance}):`, err.message);
         return { success: false, error: err.message };
     }
 }
@@ -220,7 +251,8 @@ async function sendWarehousePaymentVoucherWhatsapp({
     const recipient = formatPhone(phone);
     if (!recipient) return { success: false, error: 'Número no configurado' };
 
-    const finalInstance = instanceName || (tenantSlug ? `${tenantSlug}_bot` : DEFAULT_INSTANCE);
+    const { url, key } = getEvolutionConfig();
+    const finalInstance = resolveInstance(instanceName, tenantSlug);
     await ensureInstanceExists(finalInstance);
 
     const monedaSym = (currency || 'PEN').toUpperCase() === 'USD' ? '$' : 'S/';
@@ -254,14 +286,14 @@ ${reason ? `📝 *Motivo:* ${reason}\n` : ''}━━━━━━━━━━━�
             delay: 1000
         };
 
-        const mediaApiUrl = `${EVOLUTION_URL.replace(/\/$/, '')}/message/sendMedia/${finalInstance}`;
+        const mediaApiUrl = `${url}/message/sendMedia/${encodeURIComponent(finalInstance)}`;
 
         try {
             const res = await fetch(mediaApiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'apikey': EVOLUTION_KEY
+                    'apikey': key
                 },
                 body: JSON.stringify(mediaPayload)
             });
@@ -270,10 +302,10 @@ ${reason ? `📝 *Motivo:* ${reason}\n` : ''}━━━━━━━━━━━�
                 return { success: true };
             } else {
                 const errText = await res.text();
-                console.warn(`⚠️ [sendMedia Fallback a sendText] Status: ${res.status}`, errText);
+                console.warn(`⚠️ [sendMedia Fallback a sendText - ${finalInstance}] Status: ${res.status}`, errText);
             }
         } catch (errMedia) {
-            console.warn('⚠️ [sendMedia Fallback a sendText Error]:', errMedia.message);
+            console.warn(`⚠️ [sendMedia Fallback a sendText Error - ${finalInstance}]:`, errMedia.message);
         }
     }
 
@@ -285,24 +317,24 @@ ${reason ? `📝 *Motivo:* ${reason}\n` : ''}━━━━━━━━━━━�
         linkPreview: false
     };
 
-    const textUrl = `${EVOLUTION_URL.replace(/\/$/, '')}/message/sendText/${finalInstance}`;
+    const textUrl = `${url}/message/sendText/${encodeURIComponent(finalInstance)}`;
     try {
         const res = await fetch(textUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'apikey': EVOLUTION_KEY
+                'apikey': key
             },
             body: JSON.stringify(textPayload)
         });
         if (!res.ok) {
             const errText = await res.text();
-            console.error(`⚠️ [WhatsApp Almacén Error] Status: ${res.status}`, errText);
+            console.error(`⚠️ [WhatsApp Almacén Error - ${finalInstance}] Status: ${res.status}`, errText);
             return { success: false, error: errText };
         }
         return { success: true };
     } catch (err) {
-        console.error('❌ Error enviando notificación WhatsApp a Almacén:', err.message);
+        console.error(`❌ Error enviando notificación WhatsApp a Almacén (${finalInstance}):`, err.message);
         return { success: false, error: err.message };
     }
 }

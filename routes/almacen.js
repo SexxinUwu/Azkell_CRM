@@ -26,8 +26,7 @@ const nombreLlanta = ({ marca, modelo, medida }) => {
         }
     };
 const { createApprovalToken } = require('../services/ocApprovalService');
-const { fechaVencimiento, normalizarCondicion } = require('../services/condicion_oc');
-const { sendApprovalWhatsapp, sendTreasuryNotificationWhatsapp } = require('../services/whatsappService');
+const { sendApprovalWhatsapp, sendTreasuryNotificationWhatsapp, sendDecisionConfirmationWhatsapp } = require('../services/whatsappService');
 const eventosNotif = require('../services/notificaciones_eventos');
 
 async function despacharAprobacionWhatsAppAlmacen(req, tdb, entradaId, bodyData) {
@@ -1810,28 +1809,35 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 });
             });
 
-            // Sincronizar en ordenes_compra y notificar a Tesorería si fue aprobado
-            if (esAprob) {
-                (async () => {
-                    try {
-                        const promiseDb = typeof tdb.promise === 'function' ? tdb.promise() : tdb;
-                        const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
+            // Sincronizar en ordenes_compra y notificar por WhatsApp
+            (async () => {
+                try {
+                    const promiseDb = typeof tdb.promise === 'function' ? tdb.promise() : tdb;
+                    const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
 
+                    // 1. Obtener teléfonos configurados
+                    let tesoreriaPhone = null;
+                    let gerenciaPhone = null;
+                    let almacenPhone = null;
+                    let empresaNombre = null;
+                    const [cfgRows] = await promiseDb.query("SELECT clave, valor FROM configuracion_erp WHERE clave IN ('tesoreria_whatsapp', 'gerencia_whatsapp', 'almacen_whatsapp', 'empresa_nombre')");
+                    (cfgRows || []).forEach(r => {
+                        if (r.clave === 'tesoreria_whatsapp' && r.valor) tesoreriaPhone = r.valor;
+                        if (r.clave === 'gerencia_whatsapp' && r.valor) gerenciaPhone = r.valor;
+                        if (r.clave === 'almacen_whatsapp' && r.valor) almacenPhone = r.valor;
+                        if (r.clave === 'empresa_nombre' && r.valor) empresaNombre = r.valor;
+                    });
+                    if (!tesoreriaPhone) tesoreriaPhone = process.env.TESORERIA_WHATSAPP || null;
+                    if (!gerenciaPhone) gerenciaPhone = process.env.GERENCIA_WHATSAPP || null;
+                    if (!almacenPhone) almacenPhone = process.env.ALMACEN_WHATSAPP || null;
+
+                    if (esAprob) {
                         await promiseDb.query(
                             "UPDATE ordenes_compra SET estado = 'APROBADA', aprobado_por = ?, aprobado_en = NOW() WHERE codigo = ?",
                             [aprobadorVal, id]
                         );
 
-                        // Obtener datos para WhatsApp de Tesorería
-                        let tesoreriaPhone = null;
-                        let empresaNombre = null;
-                        const [cfgRows] = await promiseDb.query("SELECT clave, valor FROM configuracion_erp WHERE clave IN ('tesoreria_whatsapp', 'empresa_nombre')");
-                        (cfgRows || []).forEach(r => {
-                            if (r.clave === 'tesoreria_whatsapp' && r.valor) tesoreriaPhone = r.valor;
-                            if (r.clave === 'empresa_nombre' && r.valor) empresaNombre = r.valor;
-                        });
-                        if (!tesoreriaPhone) tesoreriaPhone = process.env.TESORERIA_WHATSAPP || null;
-
+                        // Notificar a Tesorería
                         if (tesoreriaPhone) {
                             const [entRows] = await promiseDb.query(
                                 `SELECT e.id, e.proveedor_id, e.proveedor_nombre, e.total_pen, e.moneda, e.tipo_cambio, e.motivo_entrada, 
@@ -1896,11 +1902,42 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                 empresaNombre: empresaNombre
                             });
                         }
-                    } catch(eNotif) {
-                        console.error('[WhatsApp Tesorería - Almacén] Error:', eNotif.message);
+
+                        // Confirmación a Almacén / Solicitante
+                        const receptorConfirmacion = almacenPhone || gerenciaPhone;
+                        if (receptorConfirmacion) {
+                            sendDecisionConfirmationWhatsapp({
+                                phone: receptorConfirmacion,
+                                ocCode: id,
+                                status: 'APROBADA',
+                                reason: comentario || null,
+                                tenantSlug: tenantSlug,
+                                empresaNombre: empresaNombre
+                            }).catch(() => {});
+                        }
+                    } else if (esRech || esObs) {
+                        const nuevoEstadoOc = esRech ? 'RECHAZADA' : 'OBSERVADA';
+                        await promiseDb.query(
+                            "UPDATE ordenes_compra SET estado = ?, motivo_rechazo = ? WHERE codigo = ?",
+                            [nuevoEstadoOc, comentario || null, id]
+                        ).catch(() => {});
+
+                        const receptorConfirmacion = almacenPhone || gerenciaPhone;
+                        if (receptorConfirmacion) {
+                            sendDecisionConfirmationWhatsapp({
+                                phone: receptorConfirmacion,
+                                ocCode: id,
+                                status: nuevoEstadoOc,
+                                reason: comentario || 'Revisar observaciones en el ERP',
+                                tenantSlug: tenantSlug,
+                                empresaNombre: empresaNombre
+                            }).catch(() => {});
+                        }
                     }
-                })();
-            }
+                } catch(eNotif) {
+                    console.error('[WhatsApp Aprobación - Almacén] Error:', eNotif.message);
+                }
+            })();
 
             res.json({ ok: true, estado, aprobado_por: aprobadorVal });
         });
