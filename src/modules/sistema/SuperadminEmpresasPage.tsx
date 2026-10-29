@@ -1,12 +1,12 @@
 import '../mantenimiento/mant.css';
-import { useMemo, useState } from 'react';
+import './superadmin.css';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, Pencil, Plus } from 'lucide-react';
+import { Building2, ExternalLink, Pause, Pencil, Play, Plus, Truck } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
+import { EmptyState, Notice, Page } from '../../core/ui/Display';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
-import { Sheet } from '../../core/ui/Sheet';
-import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
@@ -38,23 +38,15 @@ const validarSubdominio = (s: string): string | null => {
   return null;
 };
 
-const COLUMNAS: ColumnaTabla[] = [
-  { id: 'empresa', titulo: 'Empresa', ancho: 260 },
-  { id: 'subdominio', titulo: 'Subdominio', ancho: 200 },
-  { id: 'base', titulo: 'Base de datos', ancho: 240 },
-  { id: 'estado', titulo: 'Estado', ancho: 130 },
-  { id: 'plan', titulo: 'Plan', ancho: 150 },
-  { id: 'unidades', titulo: 'Unidades máx.', ancho: 140, alinear: 'right' },
-  { id: 'acciones', titulo: 'Acciones', ancho: 110, minimo: 100 },
-];
-
-const tono = (e: string | null) => (e === 'activo' ? 'var(--green-ink)' : e === 'suspendido' ? 'var(--red-ink)' : 'var(--amber-ink)');
 
 export function SuperadminEmpresasPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const { user } = useAuth();
   const soyFundador = esFundadorSaaS(user);
   const [editando, setEditando] = useState<Empresa | null | 'nueva'>(null);
+  const [cambiando, setCambiando] = useState<Empresa | null>(null);
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const lista = useQuery<Empresa[]>({
     queryKey: ['superadmin', 'empresas'],
     queryFn: () => api<Empresa[]>('/superadmin/empresas'),
@@ -63,39 +55,59 @@ export function SuperadminEmpresasPage() {
   });
   const empresas = useMemo(() => lista.data ?? [], [lista.data]);
   const cuenta = (e: string) => empresas.filter(x => x.estado === e).length;
+  const unidades = empresas.reduce((s, e) => s + Number(e.max_unidades ?? 0), 0);
+
+  async function confirmarCambioEstado() {
+    if (!cambiando) return;
+    const nuevo = cambiando.estado === 'activo' ? 'suspendido' : 'activo';
+    setCambiandoEstado(true);
+    try {
+      await api(`/superadmin/empresas/${cambiando.id}/estado`, { method: 'PUT', body: { estado: nuevo } });
+      toast(nuevo === 'activo' ? 'Empresa activada' : 'Empresa suspendida');
+      haptic('success');
+      setCambiando(null);
+      await qc.invalidateQueries({ queryKey: ['superadmin', 'empresas'] });
+    } catch (e) {
+      toast(errorMessage(e), 'error');
+    } finally {
+      setCambiandoEstado(false);
+    }
+  }
 
   if (!soyFundador) {
     return (
       <Page narrow>
-        <PageHeader title="Empresas SaaS" subtitle="Solo el administrador de Azkell puede ver esta sección." />
+        <div className="sa-vacio">Solo el administrador de Azkell puede ver esta sección.</div>
       </Page>
     );
   }
 
   return (
     <Page>
-      <PageHeader eyebrow="Sistema" title="Empresas SaaS"
-        subtitle={lista.isLoading ? 'Cargando…' : `${empresas.length} empresas · ${cuenta('activo')} activas · ${cuenta('suspendido')} suspendidas`}
-        actions={<Button variant="primary" icon={<Plus size={16} />} onClick={() => setEditando('nueva')}>Nueva empresa</Button>} />
+      <section className="sa-hero">
+        <div>
+          <span className="sa-hero__etiqueta">Azkell SaaS Master</span>
+          <h1 className="sa-hero__titulo">Empresas suscritas</h1>
+          <p className="sa-hero__texto">Cada empresa tiene su propia base de datos aislada, con su acceso y su plan.</p>
+        </div>
+        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setEditando('nueva')}>Nueva empresa</Button>
+      </section>
+
+      <div className="sa-stats">
+        <Estadistica etiqueta="Empresas" valor={empresas.length} icono={<Building2 size={18} />} />
+        <Estadistica etiqueta="Activas" valor={cuenta('activo')} color="var(--green-ink)" icono={<Play size={18} />} />
+        <Estadistica etiqueta="Suspendidas" valor={cuenta('suspendido')} color="var(--red-ink)" icono={<Pause size={18} />} />
+        <Estadistica etiqueta="Unidades contratadas" valor={unidades} icono={<Truck size={18} />} />
+      </div>
 
       {lista.isLoading ? <PageLoader /> : lista.isError ? <Notice tone="error">{errorMessage(lista.error)}</Notice> : empresas.length === 0 ? (
         <EmptyState icon={<Building2 size={22} />} title="Sin empresas">Agrega la primera empresa del SaaS.</EmptyState>
       ) : (
-        <TablaRedimensionable id="superadmin-empresas" columnas={COLUMNAS} ariaLabel="Empresas SaaS" altoMax="70vh">
+        <div className="sa-lista">
           {empresas.map(e => (
-            <tr key={e.id}>
-              <Celda>{e.nombre_empresa}{e.ruc ? <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--label-2)' }}>RUC {e.ruc}</span> : null}</Celda>
-              <Celda mono>{e.slug}.azkell.com</Celda>
-              <Celda mono>{e.db_name}</Celda>
-              <Celda><span style={{ color: tono(e.estado), fontWeight: 700 }}>{e.estado ?? '—'}</span></Celda>
-              <Celda>{e.plan || '—'}</Celda>
-              <Celda alinear="right" mono>{e.max_unidades ?? '—'}</Celda>
-              <Celda>
-                <Button variant="secondary" icon={<Pencil size={14} />} aria-label={`Editar ${e.nombre_empresa}`} onClick={() => setEditando(e)}>{''}</Button>
-              </Celda>
-            </tr>
+            <TarjetaEmpresa key={e.id} empresa={e} onEditar={() => setEditando(e)} onCambiarEstado={() => setCambiando(e)} />
           ))}
-        </TablaRedimensionable>
+        </div>
       )}
 
       <EmpresaSheet
@@ -103,7 +115,66 @@ export function SuperadminEmpresasPage() {
         empresa={editando === 'nueva' || editando === null ? null : editando}
         onClose={() => setEditando(null)}
         onGuardado={() => qc.invalidateQueries({ queryKey: ['superadmin', 'empresas'] })} />
+
+      <ConfirmSheet
+        open={!!cambiando}
+        onClose={() => { if (!cambiandoEstado) setCambiando(null); }}
+        onConfirm={confirmarCambioEstado}
+        loading={cambiandoEstado}
+        title={cambiando?.estado === 'activo' ? `¿Suspender ${cambiando?.nombre_empresa ?? ''}?` : `¿Activar ${cambiando?.nombre_empresa ?? ''}?`}
+        message={cambiando?.estado === 'activo'
+          ? 'Sus usuarios no podrán ingresar hasta que la reactives.'
+          : 'Sus usuarios podrán volver a ingresar.'}
+        confirmLabel={cambiando?.estado === 'activo' ? 'Suspender' : 'Activar'} />
     </Page>
+  );
+}
+
+function Estadistica({ etiqueta, valor, color, icono }: { etiqueta: string; valor: number; color?: string; icono: ReactNode }) {
+  return (
+    <div className="sa-stat">
+      <span className="sa-stat__icono" aria-hidden="true">{icono}</span>
+      <span className="sa-stat__etiqueta">{etiqueta}</span>
+      <span className="sa-stat__valor" style={color ? { color } : undefined}>{valor.toLocaleString('es-PE')}</span>
+    </div>
+  );
+}
+
+function TarjetaEmpresa({ empresa: e, onEditar, onCambiarEstado }: {
+  empresa: Empresa; onEditar: () => void; onCambiarEstado: () => void;
+}) {
+  const activa = e.estado === 'activo';
+  const iniciales = e.nombre_empresa.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+  const tonoChip = activa ? 'verde' : e.estado === 'suspendido' ? 'rojo' : 'ambar';
+  return (
+    <article className="sa-card">
+      <header className="sa-card__cab">
+        <span className="sa-card__avatar" aria-hidden="true">{iniciales}</span>
+        <div className="sa-card__titulos">
+          <h2 className="sa-card__nombre">{e.nombre_empresa}</h2>
+          <span className="sa-card__ruc">{e.ruc ? `RUC ${e.ruc}` : 'Sin RUC'}</span>
+        </div>
+        <span className={`sa-chip sa-chip--${tonoChip}`}>{e.estado ?? 'sin estado'}</span>
+      </header>
+      <dl className="sa-card__datos">
+        <div><dt>Acceso</dt><dd className="sa-mono">{e.slug}.azkell.com</dd></div>
+        <div><dt>Base de datos</dt><dd className="sa-mono">{e.db_name}</dd></div>
+        <div><dt>Plan</dt><dd>{e.plan || '—'} · {e.max_unidades ?? '—'} unidades</dd></div>
+        <div><dt>Administrador</dt><dd>{e.admin_email || '—'}</dd></div>
+      </dl>
+      <footer className="sa-card__acciones">
+        <a className="sa-btn sa-btn--primario" href={`https://${e.slug}.azkell.com`} target="_blank" rel="noopener noreferrer">
+          <ExternalLink size={15} aria-hidden="true" /> Entrar
+        </a>
+        <button type="button" className="sa-btn" onClick={onEditar} aria-label={`Editar ${e.nombre_empresa}`}>
+          <Pencil size={15} aria-hidden="true" /> Editar
+        </button>
+        <button type="button" className={`sa-btn ${activa ? 'sa-btn--peligro' : 'sa-btn--exito'}`} onClick={onCambiarEstado}>
+          {activa ? <Pause size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
+          {activa ? 'Suspender' : 'Activar'}
+        </button>
+      </footer>
+    </article>
   );
 }
 

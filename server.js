@@ -842,6 +842,10 @@ app.get('/api/proxy/placa', verifyToken, async (req, res) => {
 
 app.get('/', async (req, res) => {
     try {
+        // SuperAdmin (admin.*): entra directo al panel de empresas de la app nueva
+        if (_isSuperAdminReq(req) && fs.existsSync(path.join(DIST_APP, 'index.html'))) {
+            return res.redirect(302, '/app/sistema/superadmin');
+        }
         let pageTitle = 'Azkell Fleet';
         if (_isSuperAdminReq(req)) {
             pageTitle = 'SuperAdmin SaaS Master — Azkell Fleet';

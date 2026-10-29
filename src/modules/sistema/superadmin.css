@@ -1,0 +1,81 @@
+/* Panel SuperAdmin de empresas (SuperadminEmpresasPage.tsx). Prefijo sa- para no chocar con otros módulos. */
+
+.sa-hero {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap;
+  padding: clamp(20px, 3vw, 32px); border-radius: 24px; color: #fff;
+  background: radial-gradient(120% 140% at 0% 0%, #1f3b6e 0%, #0b1220 55%, #070b14 100%);
+  box-shadow: 0 24px 48px -28px rgba(7, 11, 20, 0.55);
+}
+.sa-hero__etiqueta {
+  display: inline-block; padding: 4px 10px; border-radius: 999px; margin-bottom: 12px;
+  font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.14); color: rgba(255, 255, 255, 0.9);
+}
+.sa-hero__titulo { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.sa-hero__texto { margin: 8px 0 0; font-size: 0.9375rem; color: rgba(255, 255, 255, 0.72); line-height: 1.45; }
+
+.sa-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--s-3); margin: var(--s-4) 0; }
+.sa-stat {
+  display: flex; flex-direction: column; gap: 4px; padding: 18px 20px; border-radius: 20px;
+  background: var(--surface); box-shadow: 0 0 0 0.5px var(--separator), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.sa-stat__icono {
+  width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 8px;
+  background: var(--fill-subtle); color: var(--accent);
+}
+.sa-stat__etiqueta { font-size: 0.8125rem; color: var(--label-2); font-weight: 500; }
+.sa-stat__valor { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--label); }
+
+.sa-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--s-3); }
+.sa-card {
+  display: flex; flex-direction: column; gap: var(--s-3); padding: 20px; border-radius: 22px;
+  background: var(--surface); box-shadow: 0 0 0 0.5px var(--separator), 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.sa-card:hover { box-shadow: 0 0 0 0.5px var(--separator), 0 14px 32px -20px rgba(15, 23, 42, 0.28); transform: translateY(-1px); }
+
+.sa-card__cab { display: flex; align-items: center; gap: 12px; }
+.sa-card__avatar {
+  width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center;
+  font-size: 0.9375rem; font-weight: 700; color: #fff; background: linear-gradient(135deg, #2563eb, #0ea5e9);
+}
+.sa-card__titulos { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.sa-card__nombre { margin: 0; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; color: var(--label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sa-card__ruc { font-size: 0.8125rem; color: var(--label-2); }
+
+.sa-chip { padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-transform: capitalize; white-space: nowrap; }
+.sa-chip--verde { background: var(--green-tint); color: var(--green-ink); }
+.sa-chip--rojo { background: var(--red-tint); color: var(--red-ink); }
+.sa-chip--ambar { background: var(--amber-tint); color: var(--amber-ink); }
+
+.sa-card__datos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin: 0; }
+.sa-card__datos > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sa-card__datos dt { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-3); }
+.sa-card__datos dd { margin: 0; font-size: 0.875rem; color: var(--label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sa-mono { font-family: var(--font-mono); font-size: 0.8125rem !important; }
+
+.sa-card__acciones { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 12px; border-top: 0.5px solid var(--separator); }
+.sa-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 12px; border: 0;
+  font-size: 0.8125rem; font-weight: 600; text-decoration: none; cursor: pointer; color: var(--label);
+  background: var(--fill-subtle); transition: transform 0.12s ease, background 0.15s ease;
+}
+.sa-btn:active { transform: scale(0.97); }
+.sa-btn:hover { background: var(--fill); }
+.sa-btn--primario { background: var(--accent); color: #fff; }
+.sa-btn--primario:hover { background: var(--accent); filter: brightness(1.08); }
+.sa-btn--peligro { color: var(--red-ink); background: var(--red-tint); }
+.sa-btn--exito { color: var(--green-ink); background: var(--green-tint); }
+
+.sa-vacio { padding: 48px 16px; text-align: center; color: var(--label-2); }
+
+@media (max-width: 720px) {
+  .sa-lista { grid-template-columns: 1fr; }
+  .sa-card__datos { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sa-card, .sa-btn { transition: none; }
+  .sa-card:hover { transform: none; }
+  .sa-btn:active { transform: none; }
+}
