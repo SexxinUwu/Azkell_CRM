@@ -91,6 +91,68 @@ table[aria-label="Reportes de fallas"] tbody tr:hover td { background: color-mix
 }
 .ck-doc__estado { font-weight: 700; }
 
+/* ── Detalle del reporte: mismo orden que el clásico (datos, checklist por sistema, detalle de falla, evidencias, OTs) ── */
+.ckd { display: flex; flex-direction: column; gap: var(--s-3); }
+.ckd-card {
+  display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4);
+  background: var(--surface); border-radius: var(--r-lg); border: 1px solid var(--separator);
+}
+.ckd-cabeza { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap; }
+.ckd-titulo { display: flex; align-items: center; gap: var(--s-2); margin: 0; font-size: 1rem; font-weight: 700; }
+.ckd-titulo svg { color: var(--accent); }
+.ckd-subtitulo {
+  margin: var(--s-1) 0 0; font-size: 0.75rem; font-weight: 700; color: var(--label-2);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.ckd-mono { font-family: var(--font-mono); font-size: 0.8125rem; }
+.ckd-placa {
+  display: inline-block; padding: 1px 8px; border-radius: 6px; background: var(--fill-subtle);
+  font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700;
+}
+
+/* Datos del reporte */
+.ckd-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--s-3) var(--s-4); }
+.ckd-dato { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ckd-dato__etiqueta { font-size: 0.6875rem; font-weight: 600; color: var(--label-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.ckd-dato__valor { font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere; }
+
+/* Checklist por sistema: ✓ sin falla, ✕ con falla */
+.ckd-sistemas { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: var(--s-3); }
+.ckd-sistema { border: 1px solid var(--separator); border-radius: var(--r-md); overflow: hidden; background: var(--surface); min-width: 0; }
+.ckd-sistema__cab {
+  padding: var(--s-2) var(--s-3); background: var(--fill-subtle);
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.ckd-item {
+  display: flex; align-items: center; gap: var(--s-2); padding: 6px var(--s-3);
+  border-top: 1px solid var(--separator); font-size: 0.8125rem; color: var(--label-2);
+}
+.ckd-item svg { flex-shrink: 0; color: var(--label-3); }
+.ckd-item--falla { color: var(--red-ink); font-weight: 700; }
+.ckd-item--falla svg { color: var(--red-ink); }
+
+/* Detalle de falla: tabla con desplazamiento horizontal en celular */
+.ckd-tabla { overflow-x: auto; border: 1px solid var(--separator); border-radius: var(--r-md); -webkit-overflow-scrolling: touch; }
+.ckd-tabla table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.8125rem; }
+.ckd-tabla th {
+  text-align: left; padding: var(--s-2) var(--s-3); background: var(--fill-subtle); white-space: nowrap;
+  font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--label-2);
+}
+.ckd-tabla td { padding: var(--s-2) var(--s-3); border-top: 1px solid var(--separator); white-space: nowrap; vertical-align: top; }
+.ckd-tabla td:last-child { white-space: normal; min-width: 220px; }
+.ckd-falla { color: var(--red-ink); font-weight: 700; }
+.ckd-sistema-tag {
+  display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--fill-subtle);
+  font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
+}
+
+/* OTs generadas con su estado actual */
+.ckd-ots { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.ckd-ot {
+  display: inline-flex; align-items: center; gap: var(--s-2); flex-wrap: wrap;
+  padding: 6px 10px; border-radius: var(--r-md); background: var(--fill-subtle);
+}
+
 /* Movimiento reducido: sin transformaciones */
 @media (prefers-reduced-motion: reduce) {
   .ck-kpi, .ck-empresas__op { transition: none; }

@@ -1,14 +1,14 @@
 import './checklist.css';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Pencil, Trash2, Wrench, MessageCircle, Mail } from 'lucide-react';
+import { Check, FileText, Mail, MessageCircle, Pencil, Trash2, Wrench, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { api, errorMessage } from '../../core/api/client';
 import { formatFechaHoraPe } from '../../core/lib/format';
-import { fallaEstadoColor, type ReporteFalla } from './api';
-import { leerFallas, type FallaGuardada } from './fman';
+import { fallaEstadoColor, useConfigSistemas, type ReporteFalla } from './api';
+import { coincide, leerFallas, textoItem, type FallaGuardada, type SistemaCfg } from './fman';
 
 export interface OtGenerada { idOt: string; placa?: string }
 
@@ -25,7 +25,15 @@ function leerLista(valor: unknown): string[] {
   return Array.isArray(d) ? d.filter((x): x is string => typeof x === 'string' && x !== '') : [];
 }
 
-/** Ficha del reporte: datos, fallas marcadas, evidencias, OTs generadas y firma. Calca de "Detalle" del clásico. */
+/** OT tal como la devuelve /ordenes-trabajo: se usa solo para mostrar su estado actual */
+interface OtViva { id_ot?: string | null; ticket_entrada?: string | null; estado?: string | null }
+
+const sinDato = (v: unknown) => (v == null || String(v).trim() === '' ? '—' : String(v));
+
+/**
+ * Ficha del reporte con el mismo orden que el detalle del clásico: datos, checklist por sistema
+ * (✓ sin falla, ✕ con falla) de tracto y carreta, detalle de falla en tabla, evidencias y OTs con su estado.
+ */
 export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeEliminar, pdfListo, onClose,
   onEditar, onGenerarOTs, onPdf, onWhatsApp, onCorreo, onEliminar }: {
   falla: ReporteFalla; open: boolean; puedeEditar: boolean; puedeOTs: boolean; puedeEliminar: boolean; pdfListo: boolean;
@@ -33,13 +41,13 @@ export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeElim
   onCorreo: () => void; onEliminar?: () => void;
 }) {
   const estadoFinal = /final|anula/i.test(falla.estado);
+  const cfg = useConfigSistemas(open);
   const tracto = leerFallas(falla.fallas_tracto_json);
   const remolque = leerFallas(falla.fallas_remolque_json);
   const ots = useMemo(() => leerOts(falla.ots_generadas_json), [falla.ots_generadas_json]);
   const fotos = useMemo(() => leerLista(falla.fotos_json), [falla.fotos_json]);
   // Firma y fotos pueden venir de S3 (URL, se firma al abrir) o guardadas como imagen en base64 (se muestran tal cual)
   const firmaRaw = typeof falla.firma_conductor === 'string' && /^(https?:|data:)/.test(falla.firma_conductor) ? falla.firma_conductor : null;
-  const firmaUrl = firmaRaw;
   const urls = [...fotos, ...(firmaRaw ? [firmaRaw] : [])].filter(u => u.startsWith('http'));
 
   // Evidencias y firma guardadas en S3: se piden con URL firmada al abrir la ficha
@@ -51,15 +59,59 @@ export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeElim
   });
   const src = (u: string) => (u.startsWith('data:') ? u : firmadas.data?.[u] || u);
 
-  const linea = (f: FallaGuardada, i: number, tono: 'tracto' | 'remolque') => (
-    <div key={`${tono}-${i}`} className="dato" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-      <span className="dato__valor" style={{ color: tono === 'tracto' ? 'var(--red-ink)' : 'var(--amber-ink)', fontWeight: 600 }}>
-        {f.sistema ? `${f.sistema}: ` : ''}{f.item}
-      </span>
-      {f.obs && f.obs !== f.item && <span className="t-footnote c-secondary">{f.obs}</span>}
-      {f.fecha && <span className="t-footnote c-secondary">{f.fecha}</span>}
+  // Estado en vivo de cada OT (como el clásico)
+  const otsVivas = useQuery<OtViva[]>({
+    queryKey: ['flota', 'ots-estado'],
+    enabled: open && ots.length > 0,
+    queryFn: async () => {
+      const r = await api<OtViva[] | { data?: OtViva[] }>('/ordenes-trabajo');
+      return Array.isArray(r) ? r : (r.data ?? []);
+    },
+    staleTime: 60_000,
+  });
+  const estadoOt = (idOt: string) => {
+    const o = otsVivas.data?.find(x => x.id_ot === idOt || x.ticket_entrada === idOt);
+    return o?.estado ?? null;
+  };
+
+  const sistemasT: SistemaCfg[] = cfg.data?.tracto ?? [];
+  const sistemasR: SistemaCfg[] = cfg.data?.remolque ?? [];
+  const hayRemolque = !!falla.placa_remolque || remolque.length > 0;
+
+  /** Sistemas del checklist: cada ítem con ✓ si está bien y ✕ si tiene falla */
+  const sistemasHtml = (lista: SistemaCfg[], fallas: FallaGuardada[]) => lista.map(sys => (
+    <div key={sys.key} className="ckd-sistema">
+      <div className="ckd-sistema__cab">{sys.title || sys.key}</div>
+      {sys.items.map(it => {
+        const texto = textoItem(it);
+        const conFalla = coincide(texto, sys.key, fallas);
+        return (
+          <div key={texto} className={`ckd-item${conFalla ? ' ckd-item--falla' : ''}`}>
+            {conFalla ? <X size={14} aria-label="Con falla" /> : <Check size={14} aria-label="Sin falla" />}
+            <span>{texto}</span>
+          </div>
+        );
+      })}
     </div>
-  );
+  ));
+
+  const datos: Array<[string, ReactNode]> = [
+    ['Fecha', sinDato(falla.fecha_reporte ? formatFechaHoraPe(falla.fecha_reporte) : null)],
+    ['Placa principal', sinDato(falla.placa_tracto)],
+    ['Placa remolque', sinDato(falla.placa_remolque)],
+    ['Conductor', sinDato(falla.conductor)],
+    ['Procedencia', sinDato(falla.procedencia)],
+    ['Orden de viaje', sinDato(falla.orden_viaje)],
+    ['Kilometraje (tracto)', falla.km_inicial != null && Number(falla.km_inicial) > 0 ? `${Number(falla.km_inicial).toLocaleString('en-US')} km` : '—'],
+    ['Horas de motor (remolque)', falla.horas_motor != null && String(falla.horas_motor) !== '' ? `${falla.horas_motor} h` : '—'],
+    ['Registrado por', sinDato(falla.creado_por)],
+    ['Registrado el', falla.creado_en ? formatFechaHoraPe(String(falla.creado_en)) : '—'],
+  ];
+
+  const filasFalla = [
+    ...tracto.map(f => ({ ...f, unidad: falla.placa_tracto || 'TRACTO' })),
+    ...remolque.map(f => ({ ...f, unidad: falla.placa_remolque || 'REMOLQUE' })),
+  ];
 
   return (
     <Sheet open={open} onClose={onClose} title={`Reporte de fallas ${falla.folio}`}
@@ -71,60 +123,99 @@ export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeElim
         {onGenerarOTs && puedeOTs && !estadoFinal && <Button variant="primary" icon={<Wrench size={16} />} onClick={onGenerarOTs}>Generar OTs</Button>}
         {onEliminar && puedeEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>}
       </>}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
-          <span className={`ot-estado ot-estado--${fallaEstadoColor(falla)}`}>{falla.estado}</span>
-          <span className="t-footnote c-secondary">{falla.fecha_reporte ? formatFechaHoraPe(falla.fecha_reporte) : '—'}</span>
-        </div>
-
-        <section className="ck-bloque">
-          <p className="ck-bloque__titulo">Datos del reporte</p>
-          <div className="tarjeta__lista">
-            {falla.orden_viaje && <div className="dato"><span className="dato__label">Orden de viaje</span><span className="dato__valor">{falla.orden_viaje}</span></div>}
-            <div className="dato"><span className="dato__label">Camión</span><span className="dato__valor" style={{ fontFamily: 'var(--font-mono)' }}>{falla.placa_tracto || '—'}</span></div>
-            <div className="dato"><span className="dato__label">Carreta</span><span className="dato__valor" style={{ fontFamily: 'var(--font-mono)' }}>{falla.placa_remolque || '—'}</span></div>
-            <div className="dato"><span className="dato__label">Conductor</span><span className="dato__valor">{falla.conductor || '—'}</span></div>
-            <div className="dato"><span className="dato__label">Procedencia</span><span className="dato__valor">{falla.procedencia || '—'}</span></div>
-            {falla.km_inicial != null && Number(falla.km_inicial) > 0 && <div className="dato"><span className="dato__label">Kilometraje</span><span className="dato__valor" style={{ fontFamily: 'var(--font-mono)' }}>{Number(falla.km_inicial).toLocaleString('es-PE')} km</span></div>}
-            {falla.horas_motor != null && String(falla.horas_motor) !== '' && <div className="dato"><span className="dato__label">Horas de motor</span><span className="dato__valor" style={{ fontFamily: 'var(--font-mono)' }}>{String(falla.horas_motor)}</span></div>}
-            {falla.ubicacion_gps && <div className="dato"><span className="dato__label">Ubicación GPS</span><span className="dato__valor">{falla.ubicacion_gps}</span></div>}
-            {!!falla.creado_por && <div className="dato"><span className="dato__label">Registrado por</span><span className="dato__valor">{String(falla.creado_por)}</span></div>}
+      <div className="ckd">
+        {/* 1. Datos del reporte */}
+        <section className="ckd-card">
+          <div className="ckd-cabeza">
+            <h3 className="ckd-titulo"><FileText size={17} /> Datos del reporte</h3>
+            <span className={`ot-estado ot-estado--${fallaEstadoColor(falla)}`}>{falla.estado}</span>
+          </div>
+          <div className="ckd-datos">
+            {datos.map(([etiqueta, valor]) => (
+              <div key={etiqueta} className="ckd-dato">
+                <span className="ckd-dato__etiqueta">{etiqueta}</span>
+                <span className="ckd-dato__valor">{valor}</span>
+              </div>
+            ))}
           </div>
         </section>
 
-        <section className="ck-bloque">
-          <p className="ck-bloque__titulo">Checklist · fallas marcadas</p>
-          {tracto.length + remolque.length === 0 && !falla.fallas_libres_text
-            ? <p className="t-footnote c-secondary">No hay fallas marcadas.</p>
-            : (
-              <div className="tarjeta__lista">
-                {tracto.map((f, i) => linea(f, i, 'tracto'))}
-                {remolque.map((f, i) => linea(f, i, 'remolque'))}
-                {falla.fallas_libres_text && <div className="dato"><span className="dato__label">Observaciones</span><span className="dato__valor">{falla.fallas_libres_text}</span></div>}
-              </div>
-            )}
+        {/* 2. Checklist por sistema */}
+        <section className="ckd-card">
+          <h3 className="ckd-titulo">Checklist</h3>
+          <p className="ckd-subtitulo">Tracto (placa principal)</p>
+          {cfg.isError
+            ? <Notice tone="error">{errorMessage(cfg.error)}</Notice>
+            : <div className="ckd-sistemas">{sistemasHtml(sistemasT, tracto)}</div>}
+          {hayRemolque && (
+            <>
+              <p className="ckd-subtitulo">Carreta / remolque (placa secundaria)</p>
+              <div className="ckd-sistemas">{sistemasHtml(sistemasR, remolque)}</div>
+            </>
+          )}
+          {falla.fallas_libres_text && (
+            <div className="ckd-dato"><span className="ckd-dato__etiqueta">Observaciones</span><span className="ckd-dato__valor">{falla.fallas_libres_text}</span></div>
+          )}
         </section>
 
-        <section className="ck-bloque">
-          <p className="ck-bloque__titulo">Evidencias</p>
+        {/* 3. Detalle de falla */}
+        <section className="ckd-card">
+          <h3 className="ckd-titulo">Detalle de falla</h3>
+          <div className="ckd-tabla">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha reporte</th><th>Unidad</th><th>Sistema</th><th>Ítem</th><th>Descripción de la falla</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filasFalla.length === 0 && (
+                  <tr><td colSpan={5} style={{ color: 'var(--label-2)' }}>Sin fallas observadas registradas.</td></tr>
+                )}
+                {filasFalla.map((f, i) => (
+                  <tr key={i}>
+                    <td className="ckd-mono">{f.fecha || (falla.fecha_reporte ? formatFechaHoraPe(falla.fecha_reporte) : '—')}</td>
+                    <td><span className="ckd-placa">{f.unidad}</span></td>
+                    <td><span className="ckd-sistema-tag">{(f.sistema && f.sistema !== 'GENERAL' ? f.sistema : 'MANUAL').toUpperCase()}</span></td>
+                    <td className="ckd-falla">{f.item || '—'}</td>
+                    <td>{f.obs || f.observacion || 'Sin descripción'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* 4. Evidencias */}
+        <section className="ckd-card">
+          <h3 className="ckd-titulo">Evidencias</h3>
           {fotos.length === 0
             ? <p className="t-footnote c-secondary">Sin evidencias adjuntas.</p>
             : <div className="ck-evidencias">{fotos.map((u, i) => <img key={i} src={src(u)} alt={`Evidencia ${i + 1}`} loading="lazy" />)}</div>}
         </section>
 
-        <section className="ck-bloque">
-          <p className="ck-bloque__titulo">Órdenes de trabajo generadas</p>
+        {/* 5. Órdenes de trabajo generadas, con su estado actual */}
+        <section className="ckd-card">
+          <h3 className="ckd-titulo">Órdenes de trabajo generadas</h3>
           {ots.length === 0
             ? <p className="t-footnote c-secondary">Sin órdenes de trabajo generadas.</p>
-            : <div className="ck-ots">{ots.map(o => <span key={o.idOt} className="ck-ot">{o.idOt}{o.placa ? ` (${o.placa})` : ''}</span>)}</div>}
+            : (
+              <div className="ckd-ots">
+                {ots.map(o => {
+                  const estado = estadoOt(o.idOt);
+                  return (
+                    <span key={o.idOt} className="ckd-ot">
+                      <span className="ckd-mono">{o.idOt}</span>
+                      {o.placa && <span className="ckd-placa">{o.placa}</span>}
+                      {estado && <span className="ot-estado ot-estado--blue">{estado}</span>}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          {otsVivas.isError && <Notice tone="error">{errorMessage(otsVivas.error)}</Notice>}
         </section>
 
-        {firmaUrl && (
-          <section className="ck-bloque">
-            <p className="ck-bloque__titulo">Firma del conductor</p>
-            <img src={src(firmaUrl)} alt="Firma del conductor" style={{ maxHeight: 100, objectFit: 'contain', justifySelf: 'start' }} />
-          </section>
-        )}
         {firmadas.isError && <Notice tone="error">{errorMessage(firmadas.error)}</Notice>}
       </div>
     </Sheet>

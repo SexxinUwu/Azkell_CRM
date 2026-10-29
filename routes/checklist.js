@@ -231,9 +231,10 @@ module.exports = function (db, broadcast, logAudit) {
         const desde = fechaValida(req.query.desde) ? req.query.desde : hoy;
         const hasta = fechaValida(req.query.hasta) ? req.query.hasta : hoy;
         const sql = `
-            SELECT rf.id, rf.folio, rf.orden_viaje, rf.fecha_reporte, rf.placa_tracto, rf.placa_remolque, rf.km_inicial, rf.km_final, rf.horas_motor,
+            SELECT rf.id, rf.folio, rf.orden_viaje, DATE_FORMAT(rf.fecha_reporte, '%Y-%m-%d %H:%i:%s') AS fecha_reporte, rf.placa_tracto, rf.placa_remolque, rf.km_inicial, rf.km_final, rf.horas_motor,
                    rf.conductor, rf.procedencia, rf.ubicacion_gps, rf.fallas_tracto_json, rf.fallas_remolque_json, rf.fallas_libres_text,
-                   rf.fotos_json, rf.firma_conductor, rf.estado, rf.id_rampa, rf.ots_generadas_json, rf.creado_por, rf.creado_en,
+                   rf.fotos_json, rf.firma_conductor, rf.estado, rf.id_rampa, rf.ots_generadas_json, rf.creado_por,
+                   DATE_FORMAT(rf.creado_en, '%Y-%m-%d %H:%i:%s') AS creado_en,
                    COALESCE(p1.cliente, '') AS empresa_tracto,
                    COALESCE(p2.cliente, '') AS empresa_remolque,
                    COALESCE(NULLIF(p1.cliente, ''), NULLIF(p2.cliente, ''), '') AS empresa
@@ -620,6 +621,31 @@ module.exports = function (db, broadcast, logAudit) {
         let kmFinalNum = parseInt(km_final, 10) || 0;
         const critica = [true, 1, '1', 'true'].includes(falla_critica) ? 1 : 0;
 
+        // Regla: una placa con reporte pendiente o en taller no admite otro reporte hasta que todos sus reportes estén finalizados
+        const placasNuevas = [placa_tracto, placa_remolque].map(p => String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '')).filter(Boolean);
+        if (placasNuevas.length) {
+            try {
+                const [abiertos] = await tdb.promise().query(
+                    `SELECT folio, placa_tracto, placa_remolque, estado FROM reportes_fallas
+                     WHERE (estado IS NULL OR estado <> 'Finalizado')
+                       AND (UPPER(REPLACE(REPLACE(placa_tracto, '-', ''), ' ', '')) IN (?) OR UPPER(REPLACE(REPLACE(placa_remolque, '-', ''), ' ', '')) IN (?))
+                     ORDER BY id DESC LIMIT 1`,
+                    [placasNuevas, placasNuevas]
+                );
+                if (abiertos.length) {
+                    const f = abiertos[0];
+                    const norm = x => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    const placa = placasNuevas.find(p => p === norm(f.placa_tracto) || p === norm(f.placa_remolque));
+                    return res.status(409).json({
+                        ok: false,
+                        error: `La placa ${placa} tiene el reporte ${f.folio} (${f.estado || 'Pendiente'}). No se puede generar otro reporte hasta que todos los de esa placa estén finalizados.`,
+                    });
+                }
+            } catch (e) {
+                return res.status(500).json({ ok: false, error: e.message });
+            }
+        }
+
         // Si km no fue ingresado, consultar el kilometraje actual del tracto automáticamente
         if (!kmInicialNum && placa_tracto) {
             try {
@@ -825,7 +851,7 @@ module.exports = function (db, broadcast, logAudit) {
                     JSON.stringify(fotosUrls),
                     firma_conductor || null,
                     critica,
-                    creado_por || 'Sistema'
+                    creado_por || (req.user && req.user.nombre) || 'Sistema'
                 ];
 
                 tdb.query(sql, values, async (errIns, result) => {

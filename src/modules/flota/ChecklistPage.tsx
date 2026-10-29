@@ -43,6 +43,8 @@ const TABLA_QUERY = '(min-width: 768px)';
 
 const limpia = (s: unknown) => String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const hoyLima = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+/** Primer día del mes en curso (Lima): el rango por defecto va del inicio del mes a hoy */
+const inicioMes = () => `${hoyLima().slice(0, 7)}-01`;
 const estadoDe = (f: ReporteFalla) => f.estado || 'Pendiente';
 const etiquetaEstado = (e: string) => (e === 'En Proceso' ? 'En taller' : e);
 const colorEstado = (e: string) => (e === 'Pendiente' ? 'amber' : e === 'En Proceso' ? 'blue' : e === 'Finalizado' ? 'green' : 'neutral');
@@ -65,12 +67,13 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'conductor', titulo: 'Conductor / Ruta', ancho: 240 },
   { id: 'estado', titulo: 'Estado', ancho: 120, alinear: 'center' },
   { id: 'ots', titulo: 'OTs generadas', ancho: 230 },
+  { id: 'creado', titulo: 'Registrado por', ancho: 200 },
 ];
 
 /** Reporte de fallas: calca de la pantalla del clásico con el diseño de Órdenes de compra (totales, filtros, tabla, plantilla, formulario, OTs y PDF). */
 export function ChecklistPage() {
   const [vista, setVista] = useState<Vista>('lista');
-  const [desde, setDesde] = useState(hoyLima());
+  const [desde, setDesde] = useState(inicioMes());
   const [hasta, setHasta] = useState(hoyLima());
   const { data, isLoading, isError, error, isFetching } = useChecklist(desde, hasta);
   const cfg = useConfigSistemas();
@@ -185,7 +188,7 @@ export function ChecklistPage() {
     finally { setExportando(false); }
   }
 
-  function hoy() { setDesde(hoyLima()); setHasta(hoyLima()); }
+  function esteMes() { setDesde(inicioMes()); setHasta(hoyLima()); }
 
   function accion(a: AccionFila, f: ReporteFalla) {
     if (a === 'detalle') setDetalleId(f.id);
@@ -267,7 +270,7 @@ export function ChecklistPage() {
             <TextInput type="date" aria-label="Desde" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} />
             <span className="t-footnote c-secondary">a</span>
             <TextInput type="date" aria-label="Hasta" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} />
-            <Button variant="secondary" size="sm" onClick={hoy}>Hoy</Button>
+            <Button variant="secondary" size="sm" onClick={esteMes}>Este mes</Button>
           </div>
           <div className="ck-empresas" role="group" aria-label="Empresa">
             {['TODAS', ...EMPRESAS].map(e => (
@@ -308,6 +311,7 @@ export function ChecklistPage() {
               </Celda>
               <Celda alinear="center"><EstadoBadge estado={estadoDe(f)} /></Celda>
               <Celda><OtsChips falla={f} /></Celda>
+              <Celda>{quienYCuando(f)}</Celda>
             </tr>
           ))}
         </TablaRedimensionable>
@@ -344,6 +348,17 @@ export function ChecklistPage() {
 /** Estado del reporte con el mismo color que las órdenes de compra */
 function EstadoBadge({ estado }: { estado: string }) {
   return <span className={`badge ${TONO_ESTADO[colorEstado(estado)] ?? ''}`.trim()}>{etiquetaEstado(estado)}</span>;
+}
+
+/** Quién registró el reporte y a qué hora (la hora es la de creación, en Lima) */
+function quienYCuando(f: ReporteFalla) {
+  const cuando = f.creado_en ? formatFechaHoraPe(String(f.creado_en)) : '';
+  return (
+    <>
+      {f.creado_por ? String(f.creado_por) : '—'}
+      {cuando && <span className="t-footnote c-secondary" style={{ display: 'block' }}>{cuando}</span>}
+    </>
+  );
 }
 
 /** OTs generadas del reporte: chips con número y placa */
