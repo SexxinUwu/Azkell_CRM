@@ -355,7 +355,11 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   }, [datos.data, urea]);
 
   // Como el clásico con el filtro D2: las cifras del viaje salen del bloque de diésel (fuelStats.D2) si lo tiene; tabla y Excel usan el mismo
-  const bloqueD2 = (t: Trip) => (urea ? undefined : t.fuelStats?.D2);
+  // Bloque de diésel del viaje, igual que el clásico: la clave puede ser D2 o el nombre del producto (p. ej. DIÉSEL B5)
+  const bloqueD2 = (t: Trip): Stats | undefined => {
+    if (urea) return undefined;
+    return t.fuelStats?.D2 ?? Object.entries(t.fuelStats ?? {}).find(([k]) => !esUrea(k))?.[1];
+  };
   const cifras = (t: Trip) => {
     if (!urea) {
       const d2 = bloqueD2(t);
