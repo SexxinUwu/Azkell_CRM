@@ -4,7 +4,7 @@ import { ChevronDown, CircleAlert, Search, Users, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { Field, SearchField, TextInput } from '../../core/ui/Field';
+import { Field, TextInput } from '../../core/ui/Field';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { SeleccionMultiple, type OpcionSeleccion } from '../../core/ui/SeleccionMultiple';
 import { useToast } from '../../core/ui/Toast';
@@ -78,62 +78,23 @@ function TipoPicker({ id, describedBy, opciones, seleccionados, onToggle }: {
   );
 }
 
-const sinAcentos = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-
-/** Técnicos: mismo modal que el clásico (fleetrunAbrirTecnicos / fleetrunAplicarTecnicos). Se marca en un borrador:
- *  Listo lo aplica (si no pasa de 100 caracteres; si pasa, avisa y sigue abierto) y Cancelar lo descarta. */
-function TecnicoPicker({ id, describedBy, opciones, seleccionados, onAplicar }: {
+/** Técnicos: uno o varios, con el mismo buscador que la placa */
+function TecnicoPicker({ id, describedBy, opciones, seleccionados, onToggle }: {
   id?: string;
   describedBy?: string;
   opciones: string[];
   seleccionados: string[];
-  onAplicar: (nombres: string[]) => void;
+  onToggle: (nombre: string) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
-  const [borrador, setBorrador] = useState<string[]>([]);
-  const [buscar, setBuscar] = useState('');
-  const visibles = opciones.filter(n => sinAcentos(n).includes(sinAcentos(buscar)));
-
-  function abrir() {
-    setBorrador(seleccionados);
-    setBuscar('');
-    setAbierto(true);
-  }
-  function alternar(nombre: string) {
-    setBorrador(prev => (prev.includes(nombre) ? prev.filter(n => n !== nombre) : [...prev, nombre]));
-  }
-  function listo() {
-    if (borrador.join(SEPARADOR_TECNICOS).length > MAX_TECNICOS_BD) {
-      window.alert(`Son demasiados técnicos para guardar (máximo ${MAX_TECNICOS_BD} caracteres). Quita alguno.`);
-      return;
-    }
-    onAplicar(borrador);
-    setAbierto(false);
-  }
-
+  const lista: OpcionSeleccion[] = opciones.map(n => ({ valor: n, titulo: n }));
   return (
     <>
       <CampoElegir id={id} describedBy={describedBy} icono={<Users size={16} aria-hidden />}
-        vacio="Elige uno o varios técnicos…" resumen={seleccionados.join(' · ')} abrir={abrir} />
-      <Sheet open={abierto} onClose={() => setAbierto(false)} title="Técnicos / responsables" ancho
-        footer={<>
-          <Button variant="secondary" onClick={() => setAbierto(false)}>Cancelar</Button>
-          <Button variant="primary" onClick={listo}>Listo</Button>
-        </>}>
-        <SearchField value={buscar} onChange={setBuscar} placeholder="Buscar técnico…" />
-        {opciones.length === 0 ? (
-          <p className="t-footnote c-secondary">No hay técnicos registrados.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-            {visibles.map(n => (
-              <label key={n} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', cursor: 'pointer' }}>
-                <input type="checkbox" checked={borrador.includes(n)} onChange={() => alternar(n)} />
-                <span>{n}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </Sheet>
+        vacio="Elige uno o varios técnicos…" resumen={seleccionados.join(' · ')} abrir={() => setAbierto(true)} />
+      <SeleccionMultiple open={abierto} onClose={() => setAbierto(false)} titulo="Técnicos"
+        opciones={lista} seleccionados={seleccionados} onToggle={onToggle} placeholder="Buscar técnico"
+        vacio="Ningún técnico coincide." />
     </>
   );
 }
@@ -245,6 +206,11 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
     setItems(prev => prev.map((it, k) => (k === i ? { ...it, frec: v, prox: num(v) > 0 ? String(num(kmAct) + num(v)) : it.prox } : it)));
   const editarProx = (i: number, v: string) => setItems(prev => prev.map((it, k) => (k === i ? { ...it, prox: v } : it)));
 
+  /** Marca o desmarca un técnico */
+  function alternarTecnico(nombre: string) {
+    setTecs(prev => (prev.includes(nombre) ? prev.filter(n => n !== nombre) : [...prev, nombre]));
+  }
+
   async function guardar() {
     if (!fecha) { setError('Indica la fecha del mantenimiento.'); return; }
     if (!placa) { setError('Elige la placa de la unidad.'); return; }
@@ -291,8 +257,7 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
     () => [...new Set((tiposMp.data ?? []).map(t => t.toUpperCase()))].sort(),
     [tiposMp.data]);
   const seleccionadosTipos = items.map(i => i.tipo);
-  // Mismo orden que la lista del servidor (el clásico no reordena los técnicos)
-  const opcionesTecnicos = conductores.data ?? [];
+  const opcionesTecnicos = useMemo(() => [...new Set(conductores.data ?? [])].sort((a, b) => a.localeCompare(b, 'es')), [conductores.data]);
 
   return (
     <Sheet open={open} onClose={() => !guardando && onClose()} ancho
@@ -347,8 +312,8 @@ export function FleetrunFormulario({ registro, usuario, open, onClose }: {
 
 
         <div className="form-grid">
-          <Field label="Técnico / Responsable" wide>
-            {p => <TecnicoPicker id={p.id} describedBy={p['aria-describedby']} opciones={opcionesTecnicos} seleccionados={tecs} onAplicar={setTecs} />}
+          <Field label="Técnicos / responsables" wide hint={`Puedes elegir varios. Máximo ${MAX_TECNICOS_BD} caracteres en total.`}>
+            {p => <TecnicoPicker id={p.id} describedBy={p['aria-describedby']} opciones={opcionesTecnicos} seleccionados={tecs} onToggle={alternarTecnico} />}
           </Field>
           <Field label="Observaciones" wide>{p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} placeholder="Opcional" />}</Field>
         </div>

@@ -64,6 +64,8 @@ function Centros({ arriba }: { arriba: ReactNode }) {
   const w = can('tesoreria_centros_costos.crear', 'tesoreria_caja.crear');
   const d = can('tesoreria_centros_costos.eliminar', 'tesoreria_caja.eliminar');
   const lista: CentroCosto[] = q.data ?? [];
+  const activos = lista.filter(c => c.estado === 'ACTIVO').length;
+  const exigenPlaca = lista.filter(conPlaca).length;
 
   return (
     <CrudLista<CentroCosto>
@@ -90,6 +92,11 @@ function Centros({ arriba }: { arriba: ReactNode }) {
             </span>
           </div>
         </div>
+        {lista.length > 0 && (
+          <p className="t-callout c-secondary" style={{ margin: '0 var(--s-2)' }}>
+            {activos} activos · {exigenPlaca} exigen placa
+          </p>
+        )}
       </>}
       principal={c => `${c.codigo} · ${c.nombre}`}
       secundaria={c => [c.nivel, c.cuenta_contable && `Cuenta ${c.cuenta_contable}`, conPlaca(c) ? 'Exige placa' : ''].filter(Boolean).join(' · ')}
